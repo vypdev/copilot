@@ -4,6 +4,7 @@ export interface GithubDeploymentPullRequest {
   body?: string | null;
   state?: string;
   merged?: boolean;
+  merged_at?: string | null;
   auto_merge?: object | null;
   mergeable?: boolean | null;
   mergeable_state?: string;
@@ -38,7 +39,7 @@ export interface GithubDeploymentClient {
       getContent(parameters: Record<string, unknown>): Promise<{ data: unknown }>;
       compareCommits(parameters: Record<string, unknown>): Promise<{ data: { status?: string; merge_base_commit?: { sha?: string } } }>;
       listBranches(parameters: Record<string, unknown>): Promise<{ data: Array<{ name: string }> }>;
-      merge(parameters: Record<string, unknown>): Promise<{ data: { merged: boolean; sha?: string; message?: string } }>;
+      merge(parameters: Record<string, unknown>): Promise<{ data: { sha?: string; message?: string } }>;
     };
     git: {
       getRef(parameters: Record<string, unknown>): Promise<{ data: { object: { sha: string } } }>;

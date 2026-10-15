@@ -285,7 +285,7 @@
       "status": "implemented",
       "scope": "Release and hotfix promotion, publication, reconciliation, and durable recovery",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-16",
+      "lastVerified": "2026-10-15",
       "specs": [
         "specs/configurable-release-orchestration.md",
         "specs/configurable-release-orchestration-traceability.md",
@@ -360,7 +360,7 @@
       "status": "implemented",
       "scope": "Fail-closed validation of required checks and merge-group workflow support",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-14",
+      "lastVerified": "2026-10-15",
       "specs": [
         "specs/merge-queue-readiness.md"
       ],

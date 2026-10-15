@@ -1,4 +1,4 @@
-import { toApplicationError } from "../../errors/application_error";
+import { ApplicationError, toApplicationError } from "../../errors/application_error";
 import type { DeploymentOrchestrationContext } from "../../ports/deployment_orchestration_ports";
 import type { DeploymentOrchestrationDependencies } from "../../services/deployment_orchestration_dependencies";
 import {
@@ -57,7 +57,7 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
     if (context.singleAction.isContinueDeploymentAction) return await this.continueDeployment.invoke(context);
     if (context.singleAction.isPublishedDeploymentAction) return await this.confirmPublication.invoke(context);
     if (context.singleAction.isFailedDeploymentAction) return await this.recordFailure.invoke(context);
-    return undefined;
+    throw new ApplicationError("workflow.invalid-event", "Deployment command does not select a supported phase.");
   }
 
   private async handleFailure(

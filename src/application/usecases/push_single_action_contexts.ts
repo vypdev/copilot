@@ -234,12 +234,26 @@ export function projectDeploymentOrchestrationContext(
         ? { agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('planner') }) }
         : {}),
     labels: Object.freeze({
-      ...source.labels,
+      isRelease: source.labels.isRelease,
+      isHotfix: source.labels.isHotfix,
+      deploy: source.labels.deploy,
+      deployed: source.labels.deployed,
       lifecycle: Object.freeze({ ...source.labels.lifecycle }),
     }),
     deployment: deepFreezeCopy(source.deployment) as DeploymentOrchestrationContext['deployment'],
-    singleAction: Object.freeze({ ...source.singleAction }),
-    pullRequest: Object.freeze({ ...source.pullRequest }),
+    singleAction: Object.freeze({
+      issue: source.singleAction.issue,
+      version: source.singleAction.version,
+      title: source.singleAction.title,
+      changelog: source.singleAction.changelog,
+      operationId: source.singleAction.operationId,
+      message: source.singleAction.message,
+      isPrepareDeploymentAction: source.singleAction.isPrepareDeploymentAction,
+      isContinueDeploymentAction: source.singleAction.isContinueDeploymentAction,
+      isPublishedDeploymentAction: source.singleAction.isPublishedDeploymentAction,
+      isFailedDeploymentAction: source.singleAction.isFailedDeploymentAction,
+    }),
+    pullRequest: Object.freeze({ number: source.pullRequest.number }),
     currentConfiguration: {
       ...source.currentConfiguration,
       ...(source.currentConfiguration.deploymentOrchestration

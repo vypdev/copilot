@@ -1,6 +1,10 @@
 import { DEFAULT_COPILOT_LIFECYCLE_LABELS } from '../../../domain/copilot_lifecycle';
 import { DEFAULT_DEPLOYMENT_CONFIGURATION } from '../../../domain/deployment_configuration';
 import type { DeploymentOrchestrationContext } from '../../ports/deployment_orchestration_ports';
+import { Labels } from '../../../data/model/labels';
+import { SingleAction } from '../../../data/model/single_action';
+import { PullRequest } from '../../../data/model/pull_request';
+import { ACTIONS } from '../../../data/model/action_types';
 import {
   projectAgentActivityContext,
   projectBranchObservationContext,
@@ -117,6 +121,49 @@ function source(): DeepMutable<PushSingleActionContextSource> {
 }
 
 describe('push and single-action context projection', () => {
+  it.each(['release', 'hotfix'].flatMap(kind => [
+    [kind, ACTIONS.PREPARE_DEPLOYMENT, 'isPrepareDeploymentAction'] as const,
+    [kind, ACTIONS.CONTINUE_DEPLOYMENT, 'isContinueDeploymentAction'] as const,
+    [kind, ACTIONS.PUBLISHED_DEPLOYMENT, 'isPublishedDeploymentAction'] as const,
+    [kind, ACTIONS.FAILED_DEPLOYMENT, 'isFailedDeploymentAction'] as const,
+  ]))('preserves %s model getters for %s', (kind, action, selectedFlag) => {
+    const labels = new Labels(
+      'bug', 'bugfix', 'hotfix', 'enhancement', 'feature', 'release', 'question', 'help',
+      'deploy', 'deployed', 'docs', 'documentation', 'chore', 'maintenance',
+      'priority: high', 'priority: medium', 'priority: low', 'priority: none',
+      'size: XXL', 'size: XL', 'size: L', 'size: M', 'size: S', 'size: XS',
+    );
+    labels.currentIssueLabels = [kind, 'deploy'];
+    const singleAction = new SingleAction(action, '42', '3.4.0', 'Release', 'Changes', '', '', '', 'operation-12345678');
+    const pullRequest = new PullRequest(1, 1, { pull_request: { number: 99 } } as PullRequest['inputs']);
+    const input = {
+      ...source(), labels, singleAction, pullRequest,
+      deployment: { ...DEFAULT_DEPLOYMENT_CONFIGURATION },
+      workflows: { release: 'release.yml', hotfix: 'hotfix.yml' },
+    } as unknown as DeploymentOrchestrationContext;
+
+    const projected = projectDeploymentOrchestrationContext(input);
+    expect(projected.singleAction).toMatchObject({
+      issue: 42, version: '3.4.0', title: 'Release', changelog: 'Changes', operationId: 'operation-12345678',
+    });
+    for (const flag of ['isPrepareDeploymentAction', 'isContinueDeploymentAction', 'isPublishedDeploymentAction', 'isFailedDeploymentAction'] as const) {
+      expect(projected.singleAction[flag]).toBe(flag === selectedFlag);
+    }
+    expect(projected.labels).toEqual({
+      isRelease: kind === 'release', isHotfix: kind === 'hotfix',
+      deploy: 'deploy', deployed: 'deployed', lifecycle: DEFAULT_COPILOT_LIFECYCLE_LABELS,
+    });
+    expect(projected.pullRequest).toEqual({ number: 99 });
+    pullRequest.inputs = { pull_request: { number: 100 } } as PullRequest['inputs'];
+    singleAction.currentSingleAction = '';
+    labels.currentIssueLabels = [];
+    expect(projected.singleAction[selectedFlag]).toBe(true);
+    expect(projected.labels.isRelease).toBe(kind === 'release');
+    expect(projected.pullRequest.number).toBe(99);
+    expect(Object.isFrozen(projected.pullRequest)).toBe(true);
+    expect(Object.isFrozen(projected.singleAction)).toBe(true);
+  });
+
   it('copies and freezes deployment publication state', () => {
     const input = source();
     const projected = projectDeploymentPublicationContext(input);

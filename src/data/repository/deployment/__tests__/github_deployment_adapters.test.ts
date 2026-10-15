@@ -41,7 +41,7 @@ function harness() {
     if (graphqlQuery.includes("DeploymentPullRequestQueue")) return { node: { mergeQueueEntry: null } };
     if (graphqlQuery.includes("EnqueueDeploymentPullRequest")) return { enqueuePullRequest: { mergeQueueEntry: { id: "queue-entry" } } };
     if (graphqlQuery.includes("DeploymentWorkflowContracts")) return { repository: { object: { entries: [] } } };
-    return { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } };
+    return { repository: { ref: { id: "target-ref" }, mergeQueue: null } };
   });
   const request = jest.fn().mockResolvedValue({ data: [] });
   const paginate = jest.fn();
@@ -128,6 +128,13 @@ describe("GitHub deployment repository", () => {
       .resolves.toEqual(expect.objectContaining({ state: "closed", merged: true, mergeCommitSha: "c".repeat(40) }));
   });
 
+  it("recognizes a merged PR list response without the detail-only merged flag", async () => {
+    const value = harness();
+    value.paginate.mockResolvedValue([pullRequest({ state: "closed", merged: undefined, merged_at: "2026-10-15T20:53:40Z", merge_commit_sha: "c".repeat(40) })]);
+    await expect(value.pullRequests.findManagedPullRequests(query))
+      .resolves.toEqual([expect.objectContaining({ state: "closed", merged: true, mergeCommitSha: "c".repeat(40) })]);
+  });
+
   it("maps the provider's auto-merge receipt", async () => {
     const value = harness();
     value.pulls.get.mockResolvedValue({ data: pullRequest({ auto_merge: {} }) });
@@ -137,7 +144,7 @@ describe("GitHub deployment repository", () => {
 
   it("reads auto-merge, queue and strict target capabilities", async () => {
     const value = harness();
-    value.graphql.mockResolvedValue({ repository: { ref: { branchProtectionRule: { requiresMergeQueue: true } } } });
+    value.graphql.mockResolvedValue({ repository: { ref: { id: "target-ref" }, mergeQueue: { id: "target-queue" } } });
     await expect(value.targetRules.getTargetCapabilities("owner", "repo", "master", "token"))
       .resolves.toEqual({
         autoMergeAllowed: true,
@@ -147,6 +154,10 @@ describe("GitHub deployment repository", () => {
         mergeQueueProducers: [],
         mergeQueueObservationProblems: [],
       });
+    expect(value.graphql).toHaveBeenCalledWith(expect.stringContaining("mergeQueue(branch: $branch)"), {
+      owner: "owner", repository: "repo", qualifiedName: "refs/heads/master", branch: "master",
+    });
+    expect(value.graphql.mock.calls[0][0]).not.toContain("requiresMergeQueue");
   });
 
   it("reports an immediately mergeable managed PR only when GitHub marks it clean", async () => {
@@ -160,7 +171,9 @@ describe("GitHub deployment repository", () => {
     const value = harness();
     value.repos.getBranchProtection.mockRejectedValue({ status: 404 });
     await expect(value.targetRules.getTargetCapabilities("owner", "repo", "develop", "token"))
-      .resolves.toEqual(expect.objectContaining({ requiresStrictStatusChecks: false }));
+      .resolves.toEqual(expect.objectContaining({
+        requiresStrictStatusChecks: false, mergeQueueRequired: false, mergeQueueObservationProblems: [],
+      }));
   });
 
   it("enables merge-commit auto-merge through GraphQL", async () => {
@@ -214,7 +227,7 @@ describe("GitHub deployment repository", () => {
       if (graphqlQuery.includes("DeploymentWorkflowContracts")) {
         return { repository: { object: { entries: [workflowEntry(supportedWorkflow)] } } };
       }
-      return { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } };
+      return { repository: { ref: { id: "target-ref" }, mergeQueue: null } };
     });
     const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token", {
       candidateHeadSha: "a".repeat(40),
@@ -238,7 +251,7 @@ describe("GitHub deployment repository", () => {
     ] });
     value.graphql.mockImplementation((graphqlQuery: string) => graphqlQuery.includes("DeploymentWorkflowContracts")
       ? { repository: { object: { entries: [workflowEntry("jobs:\n  check:\n    name: CI Check\n    runs-on: ubuntu-latest\n")] } } }
-      : { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } });
+      : { repository: { ref: { id: "target-ref" }, mergeQueue: null } });
     await expect(value.targetRules.getTargetCapabilities("owner", "repo", "master", "token"))
       .resolves.toEqual(expect.objectContaining({
         mergeQueueProducers: [expect.objectContaining({ name: "CI Check", support: "unsupported" })],
@@ -347,24 +360,24 @@ describe("GitHub deployment repository", () => {
     ]));
 
     const unprotectedQueue = harness();
-    unprotectedQueue.graphql.mockResolvedValue({ repository: { ref: { branchProtectionRule: null } } });
+    unprotectedQueue.graphql.mockResolvedValue({ repository: { ref: { id: "target-ref" }, mergeQueue: null } });
     await expect(unprotectedQueue.targetRules.getTargetCapabilities("owner", "repo", "master", "token"))
       .resolves.toEqual(expect.objectContaining({ mergeQueueRequired: false }));
 
     const missingQueueRule = harness();
-    missingQueueRule.graphql.mockResolvedValue({ repository: { ref: {} } });
+    missingQueueRule.graphql.mockResolvedValue({ repository: { ref: { id: "target-ref" } } });
     const queueResult = await missingQueueRule.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(queueResult.mergeQueueObservationProblems).toEqual(expect.arrayContaining([
       expect.objectContaining({ area: "classic-protection", message: expect.stringContaining("omitted") }),
     ]));
 
     const malformedQueueRule = harness();
-    malformedQueueRule.graphql.mockResolvedValue({ repository: { ref: {
-      branchProtectionRule: { requiresMergeQueue: "yes" },
-    } } });
+    malformedQueueRule.graphql.mockResolvedValue({ repository: {
+      ref: { id: "target-ref" }, mergeQueue: { id: 42 },
+    } });
     const malformedQueueResult = await malformedQueueRule.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(malformedQueueResult.mergeQueueObservationProblems).toEqual(expect.arrayContaining([
-      expect.objectContaining({ area: "classic-protection", message: expect.stringContaining("invalid classic merge-queue") }),
+      expect.objectContaining({ area: "classic-protection", message: expect.stringContaining("invalid branch merge-queue") }),
     ]));
 
     const malformedChecks = harness();
@@ -462,7 +475,7 @@ describe("GitHub deployment repository", () => {
     ] });
     value.graphql.mockImplementation((graphqlQuery: string) => graphqlQuery.includes("DeploymentWorkflowContracts")
       ? { repository: { object: null } }
-      : { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } });
+      : { repository: { ref: { id: "target-ref" }, mergeQueue: null } });
     const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueObservationProblems).toEqual([
       expect.objectContaining({ area: "workflow-contract", message: expect.stringContaining("no valid .github/workflows tree") }),
@@ -480,7 +493,7 @@ describe("GitHub deployment repository", () => {
     ] });
     value.graphql.mockImplementation((graphqlQuery: string) => graphqlQuery.includes("DeploymentWorkflowContracts")
       ? { repository: { object: { entries: Array.from({ length: 501 }, () => workflowEntry("jobs: {}")) } } }
-      : { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } });
+      : { repository: { ref: { id: "target-ref" }, mergeQueue: null } });
     const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueObservationProblems[0].message).toContain("more than 500 workflow entries");
   });
@@ -500,7 +513,7 @@ describe("GitHub deployment repository", () => {
         { name: "binary.yml", type: "blob", object: { text: "jobs: {}", byteSize: 8, isBinary: true } },
         { name: "notes.txt", type: "blob", object: { text: "ignored", byteSize: 7, isBinary: false } },
       ] } } }
-      : { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } });
+      : { repository: { ref: { id: "target-ref" }, mergeQueue: null } });
     const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueProducers[0]).toEqual(expect.objectContaining({
       support: "unknown",
@@ -519,7 +532,7 @@ describe("GitHub deployment repository", () => {
     const content = "on:\n  merge_group:\n    types: checks_requested\njobs:\n  ci-check:\n    runs-on: ubuntu-latest\n";
     value.graphql.mockImplementation((graphqlQuery: string) => graphqlQuery.includes("DeploymentWorkflowContracts")
       ? { repository: { object: { entries: [workflowEntry(content)] } } }
-      : { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } });
+      : { repository: { ref: { id: "target-ref" }, mergeQueue: null } });
     await expect(value.targetRules.getTargetCapabilities("owner", "repo", "master", "token"))
       .resolves.toEqual(expect.objectContaining({
         mergeQueueProducers: [expect.objectContaining({ name: "ci-check", support: "supported" })],
@@ -542,7 +555,7 @@ describe("GitHub deployment repository", () => {
     const content = `${trigger}\njobs:\n  check:\n    name: CI Check\n    runs-on: ubuntu-latest\n`;
     value.graphql.mockImplementation((graphqlQuery: string) => graphqlQuery.includes("DeploymentWorkflowContracts")
       ? { repository: { object: { entries: [workflowEntry(content)] } } }
-      : { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } });
+      : { repository: { ref: { id: "target-ref" }, mergeQueue: null } });
     const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueProducers[0]).toEqual(expect.objectContaining({ support: "supported" }));
   });
@@ -561,7 +574,7 @@ describe("GitHub deployment repository", () => {
     ] });
     value.graphql.mockImplementation((graphqlQuery: string) => graphqlQuery.includes("DeploymentWorkflowContracts")
       ? { repository: { object: { entries: [workflowEntry(content)] } } }
-      : { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } });
+      : { repository: { ref: { id: "target-ref" }, mergeQueue: null } });
     const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueProducers[0]).toEqual(expect.objectContaining({ support }));
   });
@@ -587,7 +600,7 @@ describe("GitHub deployment repository", () => {
     ].join("\n");
     value.graphql.mockImplementation((graphqlQuery: string) => graphqlQuery.includes("DeploymentWorkflowContracts")
       ? { repository: { object: { entries: [workflowEntry(content)] } } }
-      : { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } });
+      : { repository: { ref: { id: "target-ref" }, mergeQueue: null } });
     const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueProducers[0]).toEqual(expect.objectContaining({
       support: "unknown",
@@ -609,7 +622,7 @@ describe("GitHub deployment repository", () => {
     const content = `on:\n  merge_group:\njobs:\n  check:\n${jobDefinition}\n`;
     value.graphql.mockImplementation((graphqlQuery: string) => graphqlQuery.includes("DeploymentWorkflowContracts")
       ? { repository: { object: { entries: [workflowEntry(content)] } } }
-      : { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } });
+      : { repository: { ref: { id: "target-ref" }, mergeQueue: null } });
     const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueProducers[0]).toEqual(expect.objectContaining({ support: "unknown" }));
   });
@@ -819,9 +832,17 @@ describe("GitHub deployment repository", () => {
   it("merges the trusted source SHA into an ephemeral branch", async () => {
     const value = harness();
     value.repos.compareCommits.mockResolvedValue({ data: { merge_base_commit: { sha: "f".repeat(40) } } });
-    value.repos.merge.mockResolvedValue({ data: { merged: true, sha: "c".repeat(40) } });
+    value.repos.merge.mockResolvedValue({ data: { sha: "c".repeat(40) } });
     await expect(value.gitRepository.mergeCommitIntoBranch("owner", "repo", "sync/release", "a".repeat(40), "token"))
       .resolves.toBe("c".repeat(40));
+  });
+
+  it("rejects a branch merge response without a commit receipt", async () => {
+    const value = harness();
+    value.repos.compareCommits.mockResolvedValue({ data: { merge_base_commit: { sha: "f".repeat(40) } } });
+    value.repos.merge.mockResolvedValue({ data: {} });
+    await expect(value.gitRepository.mergeCommitIntoBranch("owner", "repo", "sync/release", "a".repeat(40), "token"))
+      .rejects.toThrow("Could not reconcile");
   });
 
   it("reuses an advanced sync branch that still contains its target base", async () => {

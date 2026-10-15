@@ -82,7 +82,7 @@ export class GithubDeploymentGitRepository implements DeploymentGitPort {
       head: sourceSha,
       commit_message: `chore(release): reconcile ${sourceSha.slice(0, 7)} into ${branch}`,
     });
-    if (!data.merged || !data.sha) throw new Error(data.message ?? `Could not reconcile ${sourceSha} into ${branch}.`);
+    if (!data.sha) throw new Error(data.message ?? `Could not reconcile ${sourceSha} into ${branch}.`);
     return data.sha;
   }
 
