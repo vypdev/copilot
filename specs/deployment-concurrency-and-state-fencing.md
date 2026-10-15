@@ -176,7 +176,7 @@ concurrency:
 Their `issue` input remains required but loses the `-1` default. A first
 validation job checks positive safe integer, operation ID/mode requirements,
 version, title, and changelog. All later jobs require it; no write permission,
-checkout credential, OIDC token, or secret is available before validation.
+checkout credential, OIDC token, or configured secret is available before validation.
 The validator MUST use the runtime bundled with `actions/github-script@v9`
 under `permissions: {}` and leave `github-token` unspecified. Its automatic
 `github.token` has no repository permissions; no PAT or configured secret is
