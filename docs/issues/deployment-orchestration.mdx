@@ -394,7 +394,8 @@ npm OIDC. No npm key is stored in GitHub.
 The job checks out the immutable tag, installs the frozen lockfile, validates
 package name/version and tarball contents, smoke-tests the package, skips an
 already-visible exact version, and polls `npm view` every 20 seconds for a
-bounded 120 seconds by default. Before finalization it also verifies that npm's
+bounded 600 seconds (10 minutes) by default. Before finalization it also verifies
+that npm's
 registry `gitHead` matches the accepted production SHA.
 
 The project-specific polling controls are Repository Variables, not Action
@@ -403,7 +404,7 @@ inputs:
 | Variable | Default | Allowed range |
 |---|---:|---:|
 | `NPM_VISIBILITY_POLL_INTERVAL_SECONDS` | `20` seconds | `10`–`60` seconds |
-| `NPM_VISIBILITY_TIMEOUT_SECONDS` | `120` seconds | `60`–`900` seconds |
+| `NPM_VISIBILITY_TIMEOUT_SECONDS` | `600` seconds (10 minutes) | `60`–`900` seconds |
 
 An existing exact version is not blindly accepted: its version and `gitHead`
 must match the checked-out immutable tag.

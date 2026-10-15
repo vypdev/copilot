@@ -64,7 +64,7 @@ The visibility wait is configured with Repository Variables:
 | Variable | Default | Allowed range |
 |---|---:|---:|
 | `NPM_VISIBILITY_POLL_INTERVAL_SECONDS` | `20` seconds | `10`–`60` seconds |
-| `NPM_VISIBILITY_TIMEOUT_SECONDS` | `120` seconds | `60`–`900` seconds |
+| `NPM_VISIBILITY_TIMEOUT_SECONDS` | `600` seconds (10 minutes) | `60`–`900` seconds |
 
 Before testing the lifecycle, the new release, hotfix, and
 `copilot_deployment_orchestration.yml` workflow files must all be present on

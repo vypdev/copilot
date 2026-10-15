@@ -641,6 +641,38 @@ describe('workflow contract validator', () => {
     },
   );
 
+  it.each(mutationWorkflowNames.flatMap(fileName => [
+    { name: 'already visible', timeout: '600', interval: '20', visibleAt: '0', status: 0, elapsed: 0 },
+    { name: 'visible at the ten-minute deadline', timeout: '600', interval: '20', visibleAt: '600', status: 0, elapsed: 600 },
+    { name: 'not visible within ten minutes', timeout: '600', interval: '20', visibleAt: '601', status: 1, elapsed: 600 },
+    { name: 'clamped final interval', timeout: '61', interval: '60', visibleAt: '61', status: 0, elapsed: 61 },
+    { name: 'timeout below the allowed range', timeout: '59', interval: '20', visibleAt: '0', status: 1, elapsed: 0 },
+    { name: 'timeout above the allowed range', timeout: '901', interval: '20', visibleAt: '0', status: 1, elapsed: 0 },
+    { name: 'interval below the allowed range', timeout: '600', interval: '9', visibleAt: '0', status: 1, elapsed: 0 },
+    { name: 'interval above the allowed range', timeout: '600', interval: '61', visibleAt: '0', status: 1, elapsed: 0 },
+  ].map(scenario => ({ fileName, ...scenario }))))('$fileName: npm visibility $name', scenario => {
+    const { workflow } = loadMutationWorkflow('.github/workflows', scenario.fileName);
+    const availability = workflow.jobs['publish-npm'].steps.find((step: { name?: string }) => step.name === 'Wait for npm registry visibility');
+    expect(availability.env.POLL_TIMEOUT).toBe("${{ vars.NPM_VISIBILITY_TIMEOUT_SECONDS || '600' }}");
+    // Unsetting SECONDS makes it an ordinary variable so polling uses a deterministic clock.
+    const script = [
+      'unset SECONDS',
+      'SECONDS=0',
+      'sleep() { SECONDS=$((SECONDS + $1)); }',
+      'npm() { if [ "$SECONDS" -ge "$VISIBLE_AT" ]; then printf "%s" "$RELEASE_VERSION"; else return 1; fi; }',
+      'trap \'printf "elapsed=%s\\n" "$SECONDS"\' EXIT',
+      availability.run,
+    ].join('\n');
+    const result = spawnSync('bash', ['-c', script], {
+      env: { ...process.env, PACKAGE_NAME: '@vypdev/copilot', RELEASE_VERSION: '3.5.0', POLL_TIMEOUT: scenario.timeout, POLL_INTERVAL: scenario.interval, VISIBLE_AT: scenario.visibleAt },
+      encoding: 'utf8',
+      timeout: 5000,
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(scenario.status);
+    expect(result.stdout).toContain(`elapsed=${scenario.elapsed}\n`);
+  });
+
   it('keeps npm publication between tag creation and release finalization', () => {
     const { workflow } = loadMutationWorkflow('.github/workflows', 'release_workflow.yml');
 
@@ -671,7 +703,7 @@ describe('workflow contract validator', () => {
           RELEASE_VERSION: '${{ inputs.version }}',
           POLL_INTERVAL: "${{ vars.NPM_VISIBILITY_POLL_INTERVAL_SECONDS || '20' }}",
         }),
-        run: expect.stringContaining('sleep "$POLL_INTERVAL"'),
+        run: expect.stringContaining('sleep "$delay"'),
       }),
     ]));
     expect(JSON.stringify(workflow.jobs['publish-npm'])).not.toMatch(/NPM_TOKEN|NODE_AUTH_TOKEN/);
