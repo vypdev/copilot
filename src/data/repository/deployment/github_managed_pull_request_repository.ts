@@ -136,7 +136,7 @@ function mapPullRequest(
     headSha: value.head.sha,
     baseBranch: value.base.ref,
     state: value.state === "closed" ? "closed" : "open",
-    merged: value.merged === true,
+    merged: value.merged === true || (typeof value.merged_at === "string" && value.merged_at.length > 0),
     autoMergeEnabled: value.auto_merge !== null && value.auto_merge !== undefined,
     mergeCommitSha: value.merge_commit_sha ?? undefined,
     repositoryFullName: value.base.repo?.full_name ?? value.head.repo?.full_name ?? `${owner}/${repository}`,

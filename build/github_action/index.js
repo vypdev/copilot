@@ -56596,7 +56596,7 @@ function projectDeploymentOrchestrationContext(source) {
             isPublishedDeploymentAction: source.singleAction.isPublishedDeploymentAction,
             isFailedDeploymentAction: source.singleAction.isFailedDeploymentAction,
         }),
-        pullRequest: Object.freeze({ ...source.pullRequest }),
+        pullRequest: Object.freeze({ number: source.pullRequest.number }),
         currentConfiguration: {
             ...source.currentConfiguration,
             ...(source.currentConfiguration.deploymentOrchestration
@@ -71533,7 +71533,7 @@ class GithubDeploymentGitRepository {
             head: sourceSha,
             commit_message: `chore(release): reconcile ${sourceSha.slice(0, 7)} into ${branch}`,
         });
-        if (!data.merged || !data.sha)
+        if (!data.sha)
             throw new Error(data.message ?? `Could not reconcile ${sourceSha} into ${branch}.`);
         return data.sha;
     }
@@ -71673,7 +71673,7 @@ function mapPullRequest(value, owner, repository) {
         headSha: value.head.sha,
         baseBranch: value.base.ref,
         state: value.state === "closed" ? "closed" : "open",
-        merged: value.merged === true,
+        merged: value.merged === true || (typeof value.merged_at === "string" && value.merged_at.length > 0),
         autoMergeEnabled: value.auto_merge !== null && value.auto_merge !== undefined,
         mergeCommitSha: value.merge_commit_sha ?? undefined,
         repositoryFullName: value.base.repo?.full_name ?? value.head.repo?.full_name ?? `${owner}/${repository}`,

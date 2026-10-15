@@ -253,7 +253,7 @@ export function projectDeploymentOrchestrationContext(
       isPublishedDeploymentAction: source.singleAction.isPublishedDeploymentAction,
       isFailedDeploymentAction: source.singleAction.isFailedDeploymentAction,
     }),
-    pullRequest: Object.freeze({ ...source.pullRequest }),
+    pullRequest: Object.freeze({ number: source.pullRequest.number }),
     currentConfiguration: {
       ...source.currentConfiguration,
       ...(source.currentConfiguration.deploymentOrchestration
