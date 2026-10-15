@@ -55,7 +55,6 @@ jobs:
           TITLE: ${{ inputs.title }}
           CHANGELOG: ${{ inputs.changelog }}
         with:
-          github-token: ''
           script: |
             const mode = process.env.MODE;
             const operationId = process.env.OPERATION_ID || '';

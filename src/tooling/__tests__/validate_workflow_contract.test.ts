@@ -609,6 +609,38 @@ describe('workflow contract validator', () => {
     }, 'job prepare-compiled-files must have timeout-minutes 30');
   });
 
+  it.each(mutationDirectories.flatMap(directory => mutationWorkflowNames.map(fileName => [directory, fileName])))(
+    'executes %s/%s input validation with the bundled runtime and default token', (directory, fileName) => {
+      const { workflow } = loadMutationWorkflow(directory, fileName);
+      const step = workflow.jobs.validate.steps[0];
+      expect(step.uses).toBe('actions/github-script@v9');
+      expect(step.with['github-token']).toBeUndefined();
+      expect(step.run).toBeUndefined();
+      expect(workflow.jobs.validate.permissions).toEqual({});
+      const prepare = { MODE: 'prepare', OPERATION_ID: '', VERSION: '3.4.0', ISSUE: '499', TITLE: 'Minor release', CHANGELOG: 'Validated changes' };
+      const publish = { ...prepare, MODE: 'publish', OPERATION_ID: 'release-operation-499', TITLE: '', CHANGELOG: '' };
+      const scenarios = [
+        { env: prepare, valid: true },
+        { env: publish, valid: true },
+        { env: { ...prepare, ISSUE: '-1' }, valid: false },
+        { env: { ...prepare, ISSUE: '9007199254740992' }, valid: false },
+        { env: { ...prepare, VERSION: 'Automatic' }, valid: false },
+        { env: { ...prepare, MODE: 'unknown' }, valid: false },
+        { env: { ...prepare, OPERATION_ID: 'unexpected-operation' }, valid: false },
+        { env: { ...prepare, TITLE: '' }, valid: false },
+        { env: { ...prepare, CHANGELOG: '' }, valid: false },
+        { env: { ...publish, OPERATION_ID: '' }, valid: false },
+        { env: { ...publish, TITLE: 'unexpected title' }, valid: false },
+        { env: { ...publish, CHANGELOG: 'unexpected changelog' }, valid: false },
+      ];
+      for (const scenario of scenarios) {
+        const setFailed = jest.fn();
+        runInNewContext(step.with.script, { process: { env: scenario.env }, core: { setFailed } });
+        expect(setFailed).toHaveBeenCalledTimes(scenario.valid ? 0 : 1);
+      }
+    },
+  );
+
   it('keeps npm publication between tag creation and release finalization', () => {
     const { workflow } = loadMutationWorkflow('.github/workflows', 'release_workflow.yml');
 
@@ -687,8 +719,11 @@ describe('workflow contract validator', () => {
       workflow.jobs.validate['continue-on-error'] = true;
     }, 'validate must not receive job credentials'],
     ['validation token', (workflow: MutationWorkflow) => {
-      workflow.jobs.validate.steps[0].with['github-token'] = '${{ github.token }}';
-    }, 'bounded cross-field inputs without credentials'],
+      workflow.jobs.validate.steps[0].with['github-token'] = '${{ secrets.PAT }}';
+    }, 'default permissionless token'],
+    ['empty validation token override', (workflow: MutationWorkflow) => {
+      workflow.jobs.validate.steps[0].with['github-token'] = '';
+    }, 'default permissionless token'],
     ['missing operation cross-field validation', (workflow: MutationWorkflow) => {
       workflow.jobs.validate.steps[0].with.script = 'const issue = 1; Number.isSafeInteger(issue);';
     }, 'bounded cross-field inputs'],
