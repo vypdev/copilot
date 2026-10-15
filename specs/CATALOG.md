@@ -11,7 +11,7 @@ debt or convert unknown historic intent into a design decision.
 | Capability ID | Status | Scope | Primary SDD | Evidence |
 |---|---|---|---|---|
 | `github-communication-experience` | Implemented | English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces | [Semantic GitHub communication and repository localization](./semantic-github-publication-and-notification.md) + 2 companion | 255 paths · 2026-10-13 |
-| `release-orchestration` | Implemented | Release and hotfix promotion, publication, reconciliation, and durable recovery | [Configurable production-first release orchestration](./configurable-release-orchestration.md) + 2 companion | 52 paths · 2026-10-15 |
+| `release-orchestration` | Implemented | Release and hotfix promotion, publication, reconciliation, and durable recovery | [Configurable production-first release orchestration](./configurable-release-orchestration.md) + 2 companion | 52 paths · 2026-10-16 |
 | `merge-queue-readiness` | Implemented | Fail-closed validation of required checks and merge-group workflow support | [Merge queue readiness and effective target rules](./merge-queue-readiness.md) | 24 paths · 2026-10-15 |
 | `bugbot-review-state-reconciliation` | Implemented | Reconcile review snapshots, findings, threads, comments, and check conclusions | [Bugbot review-state reconciliation](./bugbot-review-state-reconciliation.md) | 59 paths · 2026-10-11 |
 | `execution-lifecycle` | Implemented | Shared GitHub Action lifecycle from event admission through durable user-facing results | [Execution admission, queueing, routing, and result publication](./execution-admission-queue-and-publication.md) + 3 companion | 97 paths · 2026-10-14 |
@@ -48,7 +48,7 @@ debt or convert unknown historic intent into a design decision.
 ### `release-orchestration` — Configurable production-first release orchestration
 
 - Owner: Copilot maintainers
-- Last verified: 2026-10-15
+- Last verified: 2026-10-16
 - Specifications: [`specs/configurable-release-orchestration.md`](./configurable-release-orchestration.md) · [`specs/configurable-release-orchestration-traceability.md`](./configurable-release-orchestration-traceability.md) · [`specs/deployment-concurrency-and-state-fencing.md`](./deployment-concurrency-and-state-fencing.md)
 - Workflows: [`.github/workflows/release_workflow.yml`](../.github/workflows/release_workflow.yml) · [`.github/workflows/hotfix_workflow.yml`](../.github/workflows/hotfix_workflow.yml) · [`.github/workflows/copilot_deployment_orchestration.yml`](../.github/workflows/copilot_deployment_orchestration.yml) · [`setup/workflows/release_workflow.yml`](../setup/workflows/release_workflow.yml) · [`setup/workflows/hotfix_workflow.yml`](../setup/workflows/hotfix_workflow.yml) · [`setup/workflows/copilot_deployment_orchestration.yml`](../setup/workflows/copilot_deployment_orchestration.yml)
 - Entrypoints: [`src/application/usecases/actions/deployment_orchestration_use_case.ts`](../src/application/usecases/actions/deployment_orchestration_use_case.ts)

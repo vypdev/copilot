@@ -388,9 +388,13 @@ to shell arithmetic unchecked.
 
 An accepted publication can remain in npm validation before the version is
 publicly visible. Polling MUST use the full configured elapsed-time window,
-clamp the final sleep to the remaining time, and perform one last visibility
-check at the deadline. It MUST NOT fail one polling interval early or extend a
-final sleep beyond the deadline when timeout and interval are not divisible.
+bound each registry lookup by the remaining budget, and clamp sleeps to that
+budget. It MUST recheck elapsed time after each lookup before accepting its
+result: a response finishing after the deadline cannot establish visibility.
+An in-flight lookup finishing exactly at the deadline may succeed; no lookup
+may start after the budget is exhausted. The bundled runtime of
+`actions/github-script@v9` executes this policy, while the npm job's explicit
+Node setup supplies the npm executable.
 
 ### 6.6 Invalid combinations
 
@@ -1537,12 +1541,15 @@ readability, cover at least the following scenarios.
     cannot advance or publish.
 28. Setup validation rejects all invalid combinations from section 6.6.
 29. Workflow contract tests verify OIDC permissions and npm environment scoping.
-    The npm timing regression budget is 16 deterministic table rows: eight
+    The npm timing regression budget is 24 deterministic table rows: twelve
     scenarios for each active release and hotfix workflow. A fake clock covers
-    immediate visibility, visibility exactly at 600 seconds, timeout after the
-    full window, a non-divisible final interval, and both invalid bounds for
-    timeout and interval. These rows execute the workflow's actual Bash block;
-    they add no real-time waits or separate integration/E2E tests.
+    immediate visibility, a lookup finishing exactly at 600 seconds, timeout
+    after the full window, a non-divisible final interval, invalid bounds and
+    numeric syntax for timeout and interval, a hung lookup killed within its
+    remaining budget, and rejection of a late successful response. These rows
+    execute the workflow's actual bundled JavaScript with a fake clock and
+    process boundary; they add no real-time waits or separate integration/E2E
+    tests.
 30. Architecture tests confirm that GitHub SDK types do not enter application or
     domain policies.
 31. One operation creates exactly one marked issue control center; retries,
