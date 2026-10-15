@@ -177,6 +177,11 @@ Their `issue` input remains required but loses the `-1` default. A first
 validation job checks positive safe integer, operation ID/mode requirements,
 version, title, and changelog. All later jobs require it; no write permission,
 checkout credential, OIDC token, or secret is available before validation.
+The validator MUST use the runtime bundled with `actions/github-script@v9`
+under `permissions: {}` and leave `github-token` unspecified. Its automatic
+`github.token` has no repository permissions; no PAT or configured secret is
+passed, and no host-installed Node executable is required. An explicit empty
+token overrides the Action default and prevents the validator from starting.
 No auxiliary admission job or alternate Action mode exists in release and hotfix workflows.
 
 Managed-PR continuation has two jobs:
@@ -297,7 +302,7 @@ handler per invocation.
 
 `issue` is a required positive workflow input. `operation-id` is empty only for
 `prepare`; every continuation/publication/failure mode requires exact match.
-Invalid cross-field combinations fail in the validation job before credentials
+Invalid cross-field combinations fail in the validation job before deployment credentials
 or mutation authority are exposed.
 
 ## 8. Clean Architecture design
@@ -439,6 +444,9 @@ post-coverage validator enforces that budget after Jest. Other changed modules
 remain subject to repository thresholds of 90/90/88/82. Tests use deterministic
 barriers and provider fakes, never sleeps or live publication.
 Workflow tests parse YAML and expression ASTs.
+The four active/setup release/hotfix validator fixtures MUST each execute valid
+prepare/publish inputs and reject invalid or contradictory inputs. Contract
+mutations MUST reject an empty token override and any explicit credential input.
 
 Human evidence: one controlled release/managed-PR pair must visibly share a
 group and serialize; cancel once after a reversible checkpoint, retry, and
@@ -457,7 +465,7 @@ normal flow appears before internals.
 
 1. Release, hotfix, and managed-PR mutation for one issue resolve the identical
    concurrency group and never overlap.
-2. A malformed/negative issue fails before any credential or write permission is used.
+2. A malformed/negative issue fails before any configured secret or write permission is used; validation uses the bundled runtime and default permissionless token.
 3. Two invocations released from one deterministic barrier yield one effect
    owner; the waiter reloads and no-ops or advances from current state.
 4. A fresh operation persists state version 1/revision 1 before advancing.
@@ -519,3 +527,7 @@ normal flow appears before internals.
   recoverable from durable state and never silently treated as success.
 - Decision: define one initial version-1 state and reject every earlier,
   unversioned, malformed, or future shape; implement no migration path.
+- Live release #499 exposed an empty `github-token` override before preparation;
+  repair #500 retains the bundled runtime and the Action's automatic token under
+  `permissions: {}`. [GitHub Script v9 metadata](https://github.com/actions/github-script/blob/v9/action.yml)
+  defines both defaults.

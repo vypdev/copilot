@@ -42,7 +42,7 @@ jobs:
     permissions: {}
     steps:
       - name: Validate bounded orchestration inputs
-        shell: bash
+        uses: actions/github-script@v9
         env:
           MODE: ${{ inputs.mode }}
           OPERATION_ID: ${{ inputs.operation-id }}
@@ -50,28 +50,27 @@ jobs:
           ISSUE: ${{ inputs.issue }}
           TITLE: ${{ inputs.title }}
           CHANGELOG: ${{ inputs.changelog }}
-        run: |
-          node <<'NODE'
-          const mode = process.env.MODE;
-          const operationId = process.env.OPERATION_ID || '';
-          const version = process.env.VERSION || '';
-          const issueText = process.env.ISSUE || '';
-          const issue = Number(issueText);
-          const title = process.env.TITLE || '';
-          const changelog = process.env.CHANGELOG || '';
-          const errors = [];
-          if (!/^[1-9][0-9]*$/.test(issueText) || !Number.isSafeInteger(issue) || issue < 1) errors.push('Issue must be a positive safe integer.');
-          if (!/^[0-9]+\.[0-9]+\.[0-9]+$/.test(version)) errors.push('Version must use MAJOR.MINOR.PATCH.');
-          if (mode === 'prepare') {
-            if (operationId) errors.push('Operation ID must be empty in prepare mode.');
-            if (!title || title.length > 1000) errors.push('Title must contain 1-1000 characters.');
-            if (!changelog || changelog.length > 50000) errors.push('Changelog must contain 1-50000 characters.');
-          } else if (mode === 'publish') {
-            if (!/^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(operationId)) errors.push('Operation ID is invalid.');
-            if (title || changelog) errors.push('Title and changelog must be empty in publish mode.');
-          } else errors.push('Mode must be prepare or publish.');
-          if (errors.length) throw new Error(errors.join(' '));
-          NODE
+        with:
+          script: |
+            const mode = process.env.MODE;
+            const operationId = process.env.OPERATION_ID || '';
+            const version = process.env.VERSION || '';
+            const issueText = process.env.ISSUE || '';
+            const issue = Number(issueText);
+            const title = process.env.TITLE || '';
+            const changelog = process.env.CHANGELOG || '';
+            const errors = [];
+            if (!/^[1-9][0-9]*$/.test(issueText) || !Number.isSafeInteger(issue) || issue < 1) errors.push('Issue must be a positive safe integer.');
+            if (!/^[0-9]+\.[0-9]+\.[0-9]+$/.test(version)) errors.push('Version must use MAJOR.MINOR.PATCH.');
+            if (mode === 'prepare') {
+              if (operationId) errors.push('Operation ID must be empty in prepare mode.');
+              if (!title || title.length > 1000) errors.push('Title must contain 1-1000 characters.');
+              if (!changelog || changelog.length > 50000) errors.push('Changelog must contain 1-50000 characters.');
+            } else if (mode === 'publish') {
+              if (!/^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(operationId)) errors.push('Operation ID is invalid.');
+              if (title || changelog) errors.push('Title and changelog must be empty in publish mode.');
+            } else errors.push('Mode must be prepare or publish.');
+            if (errors.length) core.setFailed(errors.join(' '));
 
   prepare-version-files:
     name: Prepare and validate hotfix

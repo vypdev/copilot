@@ -610,14 +610,13 @@ describe('workflow contract validator', () => {
   });
 
   it.each(mutationDirectories.flatMap(directory => mutationWorkflowNames.map(fileName => [directory, fileName])))(
-    'executes %s/%s input validation without a GitHub action or credential', (directory, fileName) => {
+    'executes %s/%s input validation with the bundled runtime and default token', (directory, fileName) => {
       const { workflow } = loadMutationWorkflow(directory, fileName);
       const step = workflow.jobs.validate.steps[0];
-      expect(step.uses).toBeUndefined();
-      expect(step.with).toBeUndefined();
-      expect(step.shell).toBe('bash');
-      const match = String(step.run ?? '').match(/^node <<'NODE'\n([\s\S]+)\nNODE\n$/u);
-      expect(match).not.toBeNull();
+      expect(step.uses).toBe('actions/github-script@v9');
+      expect(step.with['github-token']).toBeUndefined();
+      expect(step.run).toBeUndefined();
+      expect(workflow.jobs.validate.permissions).toEqual({});
       const prepare = { MODE: 'prepare', OPERATION_ID: '', VERSION: '3.4.0', ISSUE: '499', TITLE: 'Minor release', CHANGELOG: 'Validated changes' };
       const publish = { ...prepare, MODE: 'publish', OPERATION_ID: 'release-operation-499', TITLE: '', CHANGELOG: '' };
       const scenarios = [
@@ -635,10 +634,9 @@ describe('workflow contract validator', () => {
         { env: { ...publish, CHANGELOG: 'unexpected changelog' }, valid: false },
       ];
       for (const scenario of scenarios) {
-        const result = spawnSync(process.execPath, ['-e', match![1]], { env: scenario.env, encoding: 'utf8' });
-        expect(result.error).toBeUndefined();
-        expect(result.status).toBe(scenario.valid ? 0 : 1);
-        if (!scenario.valid) expect(result.stderr).toContain('Error:');
+        const setFailed = jest.fn();
+        runInNewContext(step.with.script, { process: { env: scenario.env }, core: { setFailed } });
+        expect(setFailed).toHaveBeenCalledTimes(scenario.valid ? 0 : 1);
       }
     },
   );
@@ -721,16 +719,13 @@ describe('workflow contract validator', () => {
       workflow.jobs.validate['continue-on-error'] = true;
     }, 'validate must not receive job credentials'],
     ['validation token', (workflow: MutationWorkflow) => {
-      workflow.jobs.validate.steps[0].with = { 'github-token': '${{ github.token }}' };
-    }, 'bounded cross-field inputs without credentials'],
-    ['token-required validation action', (workflow: MutationWorkflow) => {
-      const step = workflow.jobs.validate.steps[0];
-      step.uses = 'actions/github-script@v9';
-      step.with = { 'github-token': '', script: step.run };
-      delete step.run;
-    }, 'bounded cross-field inputs without credentials'],
+      workflow.jobs.validate.steps[0].with['github-token'] = '${{ secrets.PAT }}';
+    }, 'default permissionless token'],
+    ['empty validation token override', (workflow: MutationWorkflow) => {
+      workflow.jobs.validate.steps[0].with['github-token'] = '';
+    }, 'default permissionless token'],
     ['missing operation cross-field validation', (workflow: MutationWorkflow) => {
-      workflow.jobs.validate.steps[0].run = "node <<'NODE'\nconst issue = 1; Number.isSafeInteger(issue);\nNODE\n";
+      workflow.jobs.validate.steps[0].with.script = 'const issue = 1; Number.isSafeInteger(issue);';
     }, 'bounded cross-field inputs'],
     ['wrong workflow mutex', (workflow: MutationWorkflow) => {
       workflow.concurrency.group = 'unsafe';
