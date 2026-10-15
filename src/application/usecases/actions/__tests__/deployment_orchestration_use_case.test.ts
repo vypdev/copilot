@@ -9,6 +9,9 @@ import {
   readDeploymentOperationState,
 } from "../../../../domain/deployment_state_fence";
 import { ResolveMessageCatalogUseCase } from "../../../usecases/localization/resolve_message_catalog_use_case";
+import { SingleAction } from "../../../../data/model/single_action";
+import { ACTIONS } from "../../../../data/model/action_types";
+import { projectDeploymentOrchestrationContext } from "../../push_single_action_contexts";
 
 const sourceSha = "a".repeat(40);
 const originSha = "b".repeat(40);
@@ -221,11 +224,26 @@ function harness() {
 describe("DeploymentOrchestrationUseCase", () => {
   it("prepares a durable operation and opens exactly one promotion PR", async () => {
     const value = harness();
-    const input = execution("prepare");
+    const source = execution("prepare");
+    source.singleAction = new SingleAction(ACTIONS.PREPARE_DEPLOYMENT, '355', '3.4.0', 'Release', 'Changes');
+    const input = projectDeploymentOrchestrationContext(source);
     const result = await value.useCase.invoke(input);
     expect(result[0].success).toBe(true);
     expect(value.pullRequests.createManagedPullRequest).toHaveBeenCalledTimes(1);
     expect(input.currentConfiguration.deploymentOrchestration).toEqual(expect.objectContaining({ phase: "promotion_pr_pending", promotionPullRequest: 40 }));
+  });
+
+  it("rejects a deployment command with no selected phase instead of reporting an empty success", async () => {
+    const value = harness();
+    const input = execution("prepare");
+    Object.assign(input.singleAction, { isPrepareDeploymentAction: false });
+    const results = await value.useCase.invoke(input);
+
+    expect(results).toHaveLength(1);
+    expect(results[0].success).toBe(false);
+    expect(value.state.save).not.toHaveBeenCalled();
+    expect(value.pullRequests.createManagedPullRequest).not.toHaveBeenCalled();
+    expect(value.continuation.dispatch).not.toHaveBeenCalled();
   });
 
   it("resolves one catalog per destination and snapshots the effective locale profile", async () => {
