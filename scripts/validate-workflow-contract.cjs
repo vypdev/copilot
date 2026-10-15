@@ -836,8 +836,10 @@ function assertNpmPublishJob(relativeFile, job) {
     || availability.env?.RELEASE_VERSION !== '${{ inputs.version }}'
     || !String(availability.run ?? '').includes('npm view "$PACKAGE_NAME@$RELEASE_VERSION" version')
     || availability.env?.POLL_INTERVAL !== "${{ vars.NPM_VISIBILITY_POLL_INTERVAL_SECONDS || '20' }}"
-    || availability.env?.POLL_TIMEOUT !== "${{ vars.NPM_VISIBILITY_TIMEOUT_SECONDS || '120' }}"
-    || !String(availability.run ?? '').includes('sleep "$POLL_INTERVAL"')
+    || availability.env?.POLL_TIMEOUT !== "${{ vars.NPM_VISIBILITY_TIMEOUT_SECONDS || '600' }}"
+    || !String(availability.run ?? '').includes('deadline=$((SECONDS + POLL_TIMEOUT))')
+    || !String(availability.run ?? '').includes('remaining=$((deadline - SECONDS))')
+    || !String(availability.run ?? '').includes('sleep "$delay"')
     || identity?.env?.PACKAGE_NAME !== '@vypdev/copilot'
     || identity.env?.RELEASE_VERSION !== '${{ inputs.version }}'
     || !String(identity.run ?? '').includes('npm view "$PACKAGE_NAME@$RELEASE_VERSION" gitHead')

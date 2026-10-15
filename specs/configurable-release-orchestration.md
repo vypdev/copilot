@@ -379,12 +379,18 @@ Variables for npm visibility checks:
 | Variable | Default | Allowed range |
 |---|---:|---:|
 | `NPM_VISIBILITY_POLL_INTERVAL_SECONDS` | `20` | 10-60 seconds |
-| `NPM_VISIBILITY_TIMEOUT_SECONDS` | `120` | 60-900 seconds |
+| `NPM_VISIBILITY_TIMEOUT_SECONDS` | `600` (10 minutes) | 60-900 seconds |
 
 These are project workflow settings, not generic Action inputs, because the
 reusable setup release template does not require npm. Invalid, missing, or
 out-of-range values fail validation before publication rather than being passed
 to shell arithmetic unchecked.
+
+An accepted publication can remain in npm validation before the version is
+publicly visible. Polling MUST use the full configured elapsed-time window,
+clamp the final sleep to the remaining time, and perform one last visibility
+check at the deadline. It MUST NOT fail one polling interval early or extend a
+final sleep beyond the deadline when timeout and interval are not divisible.
 
 ### 6.6 Invalid combinations
 
@@ -1531,6 +1537,12 @@ readability, cover at least the following scenarios.
     cannot advance or publish.
 28. Setup validation rejects all invalid combinations from section 6.6.
 29. Workflow contract tests verify OIDC permissions and npm environment scoping.
+    The npm timing regression budget is 16 deterministic table rows: eight
+    scenarios for each active release and hotfix workflow. A fake clock covers
+    immediate visibility, visibility exactly at 600 seconds, timeout after the
+    full window, a non-divisible final interval, and both invalid bounds for
+    timeout and interval. These rows execute the workflow's actual Bash block;
+    they add no real-time waits or separate integration/E2E tests.
 30. Architecture tests confirm that GitHub SDK types do not enter application or
     domain policies.
 31. One operation creates exactly one marked issue control center; retries,
