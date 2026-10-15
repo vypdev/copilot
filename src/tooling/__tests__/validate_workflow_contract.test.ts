@@ -66,6 +66,10 @@ const queueFile = path.join(process.cwd(), '.github', 'workflows', 'copilot_issu
 const mutationDirectories = ['.github/workflows', 'setup/workflows'] as const;
 const mutationWorkflowNames = ['release_workflow.yml', 'hotfix_workflow.yml'] as const;
 type MutationWorkflow = { jobs: Record<string, Record<string, any>>; [key: string]: any };
+type RegistryVisibilityCase = {
+  name: string; timeout: string; interval: string; visibleAt: number; success: boolean; elapsed: number;
+  slowAt?: number; lookupDuration?: number; ignoreLookupTimeout?: boolean;
+};
 
 function loadMutationWorkflow(directory: string, fileName: string): { file: string; workflow: MutationWorkflow } {
   const file = path.join(process.cwd(), directory, fileName);
@@ -641,36 +645,50 @@ describe('workflow contract validator', () => {
     },
   );
 
-  it.each(mutationWorkflowNames.flatMap(fileName => [
-    { name: 'already visible', timeout: '600', interval: '20', visibleAt: '0', status: 0, elapsed: 0 },
-    { name: 'visible at the ten-minute deadline', timeout: '600', interval: '20', visibleAt: '600', status: 0, elapsed: 600 },
-    { name: 'not visible within ten minutes', timeout: '600', interval: '20', visibleAt: '601', status: 1, elapsed: 600 },
-    { name: 'clamped final interval', timeout: '61', interval: '60', visibleAt: '61', status: 0, elapsed: 61 },
-    { name: 'timeout below the allowed range', timeout: '59', interval: '20', visibleAt: '0', status: 1, elapsed: 0 },
-    { name: 'timeout above the allowed range', timeout: '901', interval: '20', visibleAt: '0', status: 1, elapsed: 0 },
-    { name: 'interval below the allowed range', timeout: '600', interval: '9', visibleAt: '0', status: 1, elapsed: 0 },
-    { name: 'interval above the allowed range', timeout: '600', interval: '61', visibleAt: '0', status: 1, elapsed: 0 },
-  ].map(scenario => ({ fileName, ...scenario }))))('$fileName: npm visibility $name', scenario => {
+  it.each(mutationWorkflowNames.flatMap(fileName => ([
+    { name: 'already visible', timeout: '600', interval: '20', visibleAt: 0, success: true, elapsed: 0 },
+    { name: 'lookup finishes at the deadline', timeout: '600', interval: '20', visibleAt: 600000, success: true, elapsed: 600000, slowAt: 580000, lookupDuration: 20000 },
+    { name: 'not visible within ten minutes', timeout: '600', interval: '20', visibleAt: 601000, success: false, elapsed: 600000 },
+    { name: 'clamped final interval', timeout: '61', interval: '60', visibleAt: 61000, success: false, elapsed: 61000 },
+    { name: 'timeout below the allowed range', timeout: '59', interval: '20', visibleAt: 0, success: false, elapsed: 0 },
+    { name: 'timeout above the allowed range', timeout: '901', interval: '20', visibleAt: 0, success: false, elapsed: 0 },
+    { name: 'interval below the allowed range', timeout: '600', interval: '9', visibleAt: 0, success: false, elapsed: 0 },
+    { name: 'interval above the allowed range', timeout: '600', interval: '61', visibleAt: 0, success: false, elapsed: 0 },
+    { name: 'lookup is killed at the deadline', timeout: '600', interval: '20', visibleAt: 601000, success: false, elapsed: 600000, slowAt: 580000, lookupDuration: 30000 },
+    { name: 'late successful response is rejected', timeout: '600', interval: '20', visibleAt: 600000, success: false, elapsed: 610000, slowAt: 580000, lookupDuration: 30000, ignoreLookupTimeout: true },
+    { name: 'non-numeric timeout', timeout: '600seconds', interval: '20', visibleAt: 0, success: false, elapsed: 0 },
+    { name: 'non-integer interval', timeout: '600', interval: '20.5', visibleAt: 0, success: false, elapsed: 0 },
+  ] as RegistryVisibilityCase[]).map(scenario => ({ fileName, ...scenario }))))('$fileName: npm visibility $name', async scenario => {
     const { workflow } = loadMutationWorkflow('.github/workflows', scenario.fileName);
     const availability = workflow.jobs['publish-npm'].steps.find((step: { name?: string }) => step.name === 'Wait for npm registry visibility');
     expect(availability.env.POLL_TIMEOUT).toBe("${{ vars.NPM_VISIBILITY_TIMEOUT_SECONDS || '600' }}");
-    // Unsetting SECONDS makes it an ordinary variable so polling uses a deterministic clock.
-    const script = [
-      'unset SECONDS',
-      'SECONDS=0',
-      'sleep() { SECONDS=$((SECONDS + $1)); }',
-      'npm() { if [ "$SECONDS" -ge "$VISIBLE_AT" ]; then printf "%s" "$RELEASE_VERSION"; else return 1; fi; }',
-      'trap \'printf "elapsed=%s\\n" "$SECONDS"\' EXIT',
-      availability.run,
-    ].join('\n');
-    const result = spawnSync('bash', ['-c', script], {
-      env: { ...process.env, PACKAGE_NAME: '@vypdev/copilot', RELEASE_VERSION: '3.5.0', POLL_TIMEOUT: scenario.timeout, POLL_INTERVAL: scenario.interval, VISIBLE_AT: scenario.visibleAt },
-      encoding: 'utf8',
-      timeout: 5000,
+    expect(availability.uses).toBe('actions/github-script@v9');
+    let elapsed = 0;
+    let failure: string | undefined;
+    const lookup = jest.fn((command: string, args: string[], options: { timeout: number; killSignal: string }) => {
+      expect(command).toBe('npm');
+      expect(args).toContain('--fetch-retries=0');
+      expect(options.timeout).toBe(Number(scenario.timeout) * 1000 - elapsed);
+      expect(options.killSignal).toBe('SIGKILL');
+      const duration = elapsed >= (scenario.slowAt ?? Infinity) ? scenario.lookupDuration! : 0;
+      if (duration > options.timeout && !scenario.ignoreLookupTimeout) {
+        elapsed += options.timeout;
+        return { status: null, stdout: '', error: { code: 'ETIMEDOUT' } };
+      }
+      elapsed += duration;
+      return { status: elapsed >= scenario.visibleAt ? 0 : 1, stdout: elapsed >= scenario.visibleAt ? '3.5.0\n' : '' };
     });
-    expect(result.error).toBeUndefined();
-    expect(result.status).toBe(scenario.status);
-    expect(result.stdout).toContain(`elapsed=${scenario.elapsed}\n`);
+    const execution = runInNewContext(`(async () => { ${availability.with.script} })()`, {
+      require: (name: string) => { expect(name).toBe('node:child_process'); return { spawnSync: lookup }; },
+      process: { env: { PACKAGE_NAME: '@vypdev/copilot', RELEASE_VERSION: '3.5.0', POLL_TIMEOUT: scenario.timeout, POLL_INTERVAL: scenario.interval } },
+      Date: { now: () => elapsed },
+      setTimeout: (resolve: () => void, delay: number) => { elapsed += delay; resolve(); },
+      core: { info: jest.fn(), setFailed: (message: string) => { failure = message; } },
+    });
+    const thrown = await execution.then(() => undefined, (error: unknown) => error);
+    expect(thrown === undefined && failure === undefined).toBe(scenario.success);
+    expect(elapsed).toBe(scenario.elapsed);
+    if (!scenario.success && scenario.elapsed === 0) expect(lookup).not.toHaveBeenCalled();
   });
 
   it('keeps npm publication between tag creation and release finalization', () => {
@@ -703,7 +721,8 @@ describe('workflow contract validator', () => {
           RELEASE_VERSION: '${{ inputs.version }}',
           POLL_INTERVAL: "${{ vars.NPM_VISIBILITY_POLL_INTERVAL_SECONDS || '20' }}",
         }),
-        run: expect.stringContaining('sleep "$delay"'),
+        uses: 'actions/github-script@v9',
+        with: expect.objectContaining({ script: expect.stringContaining('timeout: remaining') }),
       }),
     ]));
     expect(JSON.stringify(workflow.jobs['publish-npm'])).not.toMatch(/NPM_TOKEN|NODE_AUTH_TOKEN/);

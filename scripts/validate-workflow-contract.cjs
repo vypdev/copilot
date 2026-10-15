@@ -820,6 +820,7 @@ function assertNpmPublishJob(relativeFile, job) {
   const availability = steps.find(step => step?.name === 'Wait for npm registry visibility');
   const identity = steps.find(step => step?.name === 'Verify published package identity');
   const detection = steps.find(step => step?.name === 'Detect an existing publication');
+  const visibilityScript = String(availability?.with?.script ?? '');
   if (checkout?.with?.ref !== 'v${{ inputs.version }}'
     || checkout.with?.['fetch-depth'] !== 1
     || setupNode?.with?.['node-version'] !== '24.x'
@@ -834,12 +835,16 @@ function assertNpmPublishJob(relativeFile, job) {
     || !String(detection?.run ?? '').includes('npm view "$PACKAGE_NAME@$RELEASE_VERSION" version')
     || availability?.env?.PACKAGE_NAME !== '@vypdev/copilot'
     || availability.env?.RELEASE_VERSION !== '${{ inputs.version }}'
-    || !String(availability.run ?? '').includes('npm view "$PACKAGE_NAME@$RELEASE_VERSION" version')
+    || availability?.uses !== 'actions/github-script@v9'
+    || Object.keys(availability.with ?? {}).join(',') !== 'script'
+    || availability.run !== undefined
     || availability.env?.POLL_INTERVAL !== "${{ vars.NPM_VISIBILITY_POLL_INTERVAL_SECONDS || '20' }}"
     || availability.env?.POLL_TIMEOUT !== "${{ vars.NPM_VISIBILITY_TIMEOUT_SECONDS || '600' }}"
-    || !String(availability.run ?? '').includes('deadline=$((SECONDS + POLL_TIMEOUT))')
-    || !String(availability.run ?? '').includes('remaining=$((deadline - SECONDS))')
-    || !String(availability.run ?? '').includes('sleep "$delay"')
+    || !visibilityScript.includes("spawnSync('npm'")
+    || !visibilityScript.includes('timeout: remaining')
+    || !visibilityScript.includes("killSignal: 'SIGKILL'")
+    || !visibilityScript.includes('completedAt > deadline')
+    || !visibilityScript.includes('Math.min(interval, timeLeft)')
     || identity?.env?.PACKAGE_NAME !== '@vypdev/copilot'
     || identity.env?.RELEASE_VERSION !== '${{ inputs.version }}'
     || !String(identity.run ?? '').includes('npm view "$PACKAGE_NAME@$RELEASE_VERSION" gitHead')

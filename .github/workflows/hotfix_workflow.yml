@@ -278,23 +278,45 @@ jobs:
         if: ${{ steps.registry.outputs.publish == 'true' }}
         run: npm publish --access public
       - name: Wait for npm registry visibility
+        uses: actions/github-script@v9
         env:
           PACKAGE_NAME: '@vypdev/copilot'
           RELEASE_VERSION: ${{ inputs.version }}
           POLL_INTERVAL: ${{ vars.NPM_VISIBILITY_POLL_INTERVAL_SECONDS || '20' }}
           POLL_TIMEOUT: ${{ vars.NPM_VISIBILITY_TIMEOUT_SECONDS || '600' }}
-        run: |
-          [[ "$POLL_INTERVAL" =~ ^[0-9]+$ ]] && [ "$POLL_INTERVAL" -ge 10 ] && [ "$POLL_INTERVAL" -le 60 ] || { echo "::error::NPM visibility interval must be 10-60 seconds."; exit 1; }
-          [[ "$POLL_TIMEOUT" =~ ^[0-9]+$ ]] && [ "$POLL_TIMEOUT" -ge 60 ] && [ "$POLL_TIMEOUT" -le 900 ] || { echo "::error::NPM visibility timeout must be 60-900 seconds."; exit 1; }
-          deadline=$((SECONDS + POLL_TIMEOUT))
-          until [ "$(npm view "$PACKAGE_NAME@$RELEASE_VERSION" version --prefer-online 2>/dev/null || true)" = "$RELEASE_VERSION" ]; do
-            remaining=$((deadline - SECONDS))
-            [ "$remaining" -gt 0 ] || { echo "::error::$PACKAGE_NAME@$RELEASE_VERSION was not visible after $POLL_TIMEOUT seconds."; exit 1; }
-            delay=$POLL_INTERVAL
-            [ "$delay" -le "$remaining" ] || delay=$remaining
-            echo "$PACKAGE_NAME@$RELEASE_VERSION is not visible yet; retrying in $delay seconds."
-            sleep "$delay"
-          done
+        with:
+          script: |
+            const { spawnSync } = require('node:child_process');
+            const readSeconds = (name, min, max) => {
+              const raw = process.env[name] || '';
+              const value = Number(raw);
+              if (!/^[0-9]+$/.test(raw) || !Number.isSafeInteger(value) || value < min || value > max) {
+                throw new Error(`${name} must be ${min}-${max} seconds.`);
+              }
+              return value * 1000;
+            };
+            const interval = readSeconds('POLL_INTERVAL', 10, 60);
+            const timeout = readSeconds('POLL_TIMEOUT', 60, 900);
+            const packageVersion = `${process.env.PACKAGE_NAME}@${process.env.RELEASE_VERSION}`;
+            const deadline = Date.now() + timeout;
+            const fail = () => core.setFailed(`${packageVersion} was not visible after ${timeout / 1000} seconds.`);
+            for (;;) {
+              const remaining = deadline - Date.now();
+              if (remaining <= 0) { fail(); return; }
+              const result = spawnSync('npm', ['view', packageVersion, 'version', '--prefer-online', '--fetch-retries=0', `--fetch-timeout=${remaining}`], {
+                encoding: 'utf8',
+                timeout: remaining,
+                killSignal: 'SIGKILL',
+              });
+              const completedAt = Date.now();
+              if (completedAt > deadline) { fail(); return; }
+              if (!result.error && result.status === 0 && result.stdout.trim() === process.env.RELEASE_VERSION) return;
+              const timeLeft = deadline - completedAt;
+              if (timeLeft <= 0) { fail(); return; }
+              const delay = Math.min(interval, timeLeft);
+              core.info(`${packageVersion} is not visible yet; retrying in ${delay / 1000} seconds.`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+            }
       - name: Verify published package identity
         env:
           PACKAGE_NAME: '@vypdev/copilot'
