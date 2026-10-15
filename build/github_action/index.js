@@ -71720,7 +71720,7 @@ class GithubTargetMergeCapabilitiesInspector {
             client.rest.repos.get({ owner, repo: repository }),
             observeClassicProtection(client, owner, repository, targetBranch),
             observeEffectiveRules(client, owner, repository, targetBranch),
-            observeClassicMergeQueue(client, owner, repository, targetBranch),
+            observeBranchMergeQueue(client, owner, repository, targetBranch),
             options.pullRequest === undefined
                 ? Promise.resolve(undefined)
                 : client.rest.pulls.get({ owner, repo: repository, pull_number: options.pullRequest }).then(({ data }) => data),
@@ -71801,32 +71801,33 @@ async function observeEffectiveRules(client, owner, repository, branch) {
         };
     }
 }
-async function observeClassicMergeQueue(client, owner, repository, branch) {
+async function observeBranchMergeQueue(client, owner, repository, branch) {
     try {
-        const response = await client.graphql(`query DeploymentTargetRules($owner: String!, $repository: String!, $qualifiedName: String!) {
+        const response = await client.graphql(`query DeploymentTargetRules($owner: String!, $repository: String!, $qualifiedName: String!, $branch: String!) {
         repository(owner: $owner, name: $repository) {
-          ref(qualifiedName: $qualifiedName) { branchProtectionRule { requiresMergeQueue } }
+          ref(qualifiedName: $qualifiedName) { id }
+          mergeQueue(branch: $branch) { id }
         }
-      }`, { owner, repository, qualifiedName: `refs/heads/${branch}` });
+      }`, { owner, repository, qualifiedName: `refs/heads/${branch}`, branch });
         const ref = response.repository?.ref;
-        if (!ref)
-            throw new SafeInspectionError("GitHub returned no target ref while reading the classic merge-queue rule.");
-        const rule = ref.branchProtectionRule;
-        if (rule === null)
+        if (!ref?.id)
+            throw new SafeInspectionError("GitHub returned no target ref while reading the branch merge queue.");
+        const queue = response.repository?.mergeQueue;
+        if (queue === null)
             return { value: false };
-        if (rule === undefined)
-            throw new SafeInspectionError("GitHub omitted the classic merge-queue rule from its response.");
-        if (typeof rule.requiresMergeQueue !== "boolean") {
-            throw new SafeInspectionError("GitHub returned an invalid classic merge-queue rule.");
+        if (queue === undefined)
+            throw new SafeInspectionError("GitHub omitted the branch merge queue from its response.");
+        if (typeof queue.id !== "string" || queue.id.length === 0) {
+            throw new SafeInspectionError("GitHub returned an invalid branch merge-queue response.");
         }
-        return { value: rule.requiresMergeQueue };
+        return { value: true };
     }
     catch (error) {
         return {
             value: false,
             problem: {
                 area: "classic-protection",
-                message: `Could not read the classic merge-queue rule: ${safeProviderError(error)}`,
+                message: `Could not read the branch merge queue: ${safeProviderError(error)}`,
             },
         };
     }
