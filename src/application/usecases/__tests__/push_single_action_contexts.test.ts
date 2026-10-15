@@ -3,6 +3,7 @@ import { DEFAULT_DEPLOYMENT_CONFIGURATION } from '../../../domain/deployment_con
 import type { DeploymentOrchestrationContext } from '../../ports/deployment_orchestration_ports';
 import { Labels } from '../../../data/model/labels';
 import { SingleAction } from '../../../data/model/single_action';
+import { PullRequest } from '../../../data/model/pull_request';
 import { ACTIONS } from '../../../data/model/action_types';
 import {
   projectAgentActivityContext,
@@ -134,8 +135,9 @@ describe('push and single-action context projection', () => {
     );
     labels.currentIssueLabels = [kind, 'deploy'];
     const singleAction = new SingleAction(action, '42', '3.4.0', 'Release', 'Changes', '', '', '', 'operation-12345678');
+    const pullRequest = new PullRequest(1, 1, { pull_request: { number: 99 } } as PullRequest['inputs']);
     const input = {
-      ...source(), labels, singleAction,
+      ...source(), labels, singleAction, pullRequest,
       deployment: { ...DEFAULT_DEPLOYMENT_CONFIGURATION },
       workflows: { release: 'release.yml', hotfix: 'hotfix.yml' },
     } as unknown as DeploymentOrchestrationContext;
@@ -151,10 +153,14 @@ describe('push and single-action context projection', () => {
       isRelease: kind === 'release', isHotfix: kind === 'hotfix',
       deploy: 'deploy', deployed: 'deployed', lifecycle: DEFAULT_COPILOT_LIFECYCLE_LABELS,
     });
+    expect(projected.pullRequest).toEqual({ number: 99 });
+    pullRequest.inputs = { pull_request: { number: 100 } } as PullRequest['inputs'];
     singleAction.currentSingleAction = '';
     labels.currentIssueLabels = [];
     expect(projected.singleAction[selectedFlag]).toBe(true);
     expect(projected.labels.isRelease).toBe(kind === 'release');
+    expect(projected.pullRequest.number).toBe(99);
+    expect(Object.isFrozen(projected.pullRequest)).toBe(true);
     expect(Object.isFrozen(projected.singleAction)).toBe(true);
   });
 

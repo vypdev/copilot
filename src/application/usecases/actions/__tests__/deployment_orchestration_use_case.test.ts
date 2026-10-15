@@ -10,6 +10,7 @@ import {
 } from "../../../../domain/deployment_state_fence";
 import { ResolveMessageCatalogUseCase } from "../../../usecases/localization/resolve_message_catalog_use_case";
 import { SingleAction } from "../../../../data/model/single_action";
+import { PullRequest } from "../../../../data/model/pull_request";
 import { ACTIONS } from "../../../../data/model/action_types";
 import { projectDeploymentOrchestrationContext } from "../../push_single_action_contexts";
 
@@ -542,8 +543,12 @@ describe("DeploymentOrchestrationUseCase", () => {
   it("verifies and dispatches publication for a merged promotion event", async () => {
     const value = harness();
     value.pullRequests.getPullRequest.mockResolvedValue(pr({ state: "closed", merged: true, mergeCommitSha: productionSha }));
-    const input = execution("continue", operation("promotion_pr_pending"));
+    const source = execution("continue", operation("promotion_pr_pending"));
+    source.singleAction = new SingleAction(ACTIONS.CONTINUE_DEPLOYMENT, '355', '3.4.0', 'Release', 'Changes', '', '', '', 'operation-12345678');
+    source.pullRequest = new PullRequest(1, 1, { pull_request: { number: 40 } } as PullRequest['inputs']);
+    const input = projectDeploymentOrchestrationContext(source);
     await value.useCase.invoke(input);
+    expect(value.pullRequests.getPullRequest).toHaveBeenCalledWith(40);
     expect(input.currentConfiguration.deploymentOrchestration).toEqual(expect.objectContaining({ phase: "publishing", productionSha }));
     expect(value.continuation.dispatch).toHaveBeenCalledTimes(1);
   });

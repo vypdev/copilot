@@ -128,6 +128,13 @@ describe("GitHub deployment repository", () => {
       .resolves.toEqual(expect.objectContaining({ state: "closed", merged: true, mergeCommitSha: "c".repeat(40) }));
   });
 
+  it("recognizes a merged PR list response without the detail-only merged flag", async () => {
+    const value = harness();
+    value.paginate.mockResolvedValue([pullRequest({ state: "closed", merged: undefined, merged_at: "2026-10-15T20:53:40Z", merge_commit_sha: "c".repeat(40) })]);
+    await expect(value.pullRequests.findManagedPullRequests(query))
+      .resolves.toEqual([expect.objectContaining({ state: "closed", merged: true, mergeCommitSha: "c".repeat(40) })]);
+  });
+
   it("maps the provider's auto-merge receipt", async () => {
     const value = harness();
     value.pulls.get.mockResolvedValue({ data: pullRequest({ auto_merge: {} }) });
@@ -825,9 +832,17 @@ describe("GitHub deployment repository", () => {
   it("merges the trusted source SHA into an ephemeral branch", async () => {
     const value = harness();
     value.repos.compareCommits.mockResolvedValue({ data: { merge_base_commit: { sha: "f".repeat(40) } } });
-    value.repos.merge.mockResolvedValue({ data: { merged: true, sha: "c".repeat(40) } });
+    value.repos.merge.mockResolvedValue({ data: { sha: "c".repeat(40) } });
     await expect(value.gitRepository.mergeCommitIntoBranch("owner", "repo", "sync/release", "a".repeat(40), "token"))
       .resolves.toBe("c".repeat(40));
+  });
+
+  it("rejects a branch merge response without a commit receipt", async () => {
+    const value = harness();
+    value.repos.compareCommits.mockResolvedValue({ data: { merge_base_commit: { sha: "f".repeat(40) } } });
+    value.repos.merge.mockResolvedValue({ data: {} });
+    await expect(value.gitRepository.mergeCommitIntoBranch("owner", "repo", "sync/release", "a".repeat(40), "token"))
+      .rejects.toThrow("Could not reconcile");
   });
 
   it("reuses an advanced sync branch that still contains its target base", async () => {
