@@ -1062,20 +1062,21 @@ function assertDeploymentValidationJob(relativeFile, workflow) {
   }
   const steps = job.steps ?? [];
   const validationStep = steps[0] ?? {};
-  const stepInputs = validationStep.with ?? {};
   const stepEnvironment = validationStep.env ?? {};
-  const script = String(stepInputs.script ?? '');
+  const script = String(validationStep.run ?? '');
   if (steps.length !== 1
-    || validationStep.uses !== 'actions/github-script@v9'
+    || validationStep.uses !== undefined
+    || validationStep.with !== undefined
+    || validationStep.shell !== 'bash'
+    || !/^node <<'NODE'\n[\s\S]+\nNODE\n$/u.test(script)
     || Object.keys(stepEnvironment).sort().join(',') !== 'CHANGELOG,ISSUE,MODE,OPERATION_ID,TITLE,VERSION'
-    || Object.keys(stepInputs).sort().join(',') !== 'github-token,script'
-    || stepInputs['github-token'] !== ''
     || Object.entries(stepEnvironment).some(([key, value]) => /token|secret|pat/i.test(key)
       || /secrets\.|github\.token/i.test(String(value)))
     || !script.includes('Number.isSafeInteger(issue)')
     || !script.includes("mode === 'prepare'")
     || !script.includes("mode === 'publish'")
-    || !script.includes('Operation ID must be empty in prepare mode.')) {
+    || !script.includes('Operation ID must be empty in prepare mode.')
+    || !script.includes("if (errors.length) throw new Error(errors.join(' '));")) {
     throw new Error(`${relativeFile} validate must enforce bounded cross-field inputs without credentials.`);
   }
 }
