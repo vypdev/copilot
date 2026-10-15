@@ -3,7 +3,7 @@
 - Status: Implemented; live rollout, human UX validation, and concurrency
   conformance hardening pending
 - Date: 2026-09-09
-- Last updated: 2026-09-14
+- Last updated: 2026-10-16
 - Owners: Copilot maintainers
 - Scope: release and hotfix promotion, publication, reconciliation, and cleanup
 - Related proposals:
@@ -676,9 +676,33 @@ The application layer shall expose semantic ports for:
 
 GitHub GraphQL/REST details remain in provider adapters.
 
-No check-run polling or direct post-check merge adapter is part of this design.
-Every mode MUST use GitHub's mergeability and protection decisions instead of
-reproducing them from Checks API responses.
+No check-run polling is part of this design. Every mode MUST use GitHub's
+mergeability and protection decisions instead of reproducing them from Checks
+API responses.
+
+In `auto` mode, both promotion and reconciliation MUST use the same readiness
+decision. GitHub only permits enabling native auto-merge while a PR cannot merge
+immediately. A pending advisory check does not necessarily block merging:
+
+| Authoritative GitHub observation | `auto` behavior | Visible outcome |
+|---|---|---|
+| Non-draft, `MERGEABLE`, `CLEAN` or `UNSTABLE` | Request a normal merge pinned to the verified PR head SHA | PR merges if GitHub still accepts all requirements; its close event resumes the operation |
+| Required checks/reviews pending, behind, conflicting, unknown, draft, hooks, or a future merge state | Never request a direct merge; retain the configured native/queue/manual path | GitHub owns the wait; no runner polls checks |
+| Missing/invalid response, read failure, or changed head | Fail closed before a merge mutation | Existing PR and durable operation remain available for recovery |
+| Head moves after inspection | GitHub rejects the expected-SHA merge; do not fall back to an unpinned merge or bypass | Retryable block preserves the PR identity and publication receipts |
+
+The readiness adapter MUST read `headRefOid`, `mergeable`, `mergeStateStatus`,
+and `isDraft` together from GitHub GraphQL. `UNSTABLE` means mergeable with a
+non-passing status; it does not authorize bypassing required checks. Normal merge
+requests MUST include the expected head SHA and remain subject to current
+GitHub branch protection/rulesets. There is no admin bypass or error-triggered
+catch-and-merge fallback. Explicit `auto-merge`, queue, and `create-only` modes
+retain their existing semantics. This fix adds no user configuration or durable
+state migration; a retry re-observes the current provider facts.
+
+For unattended operation, maintainers MUST enable repository auto-merge and
+activate the intended required validation on every target branch. This project's
+`CI Check` is required on `master` and `develop`; RepoWise remains advisory.
 
 Merge queue support MUST be accompanied by a `merge_group` trigger covering
 `checks_requested` in every required GitHub Actions workflow. The explicit
@@ -1267,6 +1291,21 @@ Minimum distribution:
 | Integration/replay/security scenarios | 6 | multi-run lifecycle, concurrent delivery, forged events, strict develop, schema rejection |
 | **Total** | **72** | Cases cannot be double-counted between rows |
 
+The 2026-10-16 ready-PR regression adds or materially updates **29 distinct
+cases** beyond this baseline ledger, without double-counting between areas:
+
+| Area | Cases | Risk covered |
+|---|---:|---|
+| Readiness/merge adapters | 24 | Two ready states; ten non-ready/draft/conflicting/future combinations; eight malformed responses; one sanitized provider failure; changed head; expected-SHA request; post-inspection head conflict |
+| Orchestration | 4 | Pinned promotion, native reconciliation while waiting, pinned ready reconciliation, and retryable promotion after merge rejection |
+| Bound port contract | 1 | Expected head reaches the repository adapter with repository identity and credentials |
+
+These tests use deterministic provider fixtures. Existing queue, explicit-mode,
+replay, and publication tests remain required. Live acceptance records both PR
+merges, their actors, the required CI results, publication receipt, moving major
+tag, and completed launcher state; no manual PR merge may be presented as proof
+of unattended completion. Existing broad UI acceptance gates are unchanged.
+
 ### 18.1 Coverage requirements
 
 The existing global Jest thresholds remain mandatory:
@@ -1505,6 +1544,11 @@ readability, cover at least the following scenarios.
 5. The immutable tag points at the accepted production merge SHA.
 6. A required check remains pending longer than ten minutes; the original
    workflow has already exited and no timeout failure occurs.
+   Both managed phases enable native auto-merge while required validation is
+   pending. A ready non-draft `CLEAN`/`UNSTABLE` PR instead merges at its verified
+   SHA even when advisory checks remain pending. Incomplete readiness or a moved
+   head prevents unsafe merging, and a rejected pinned merge retains retryable
+   operation state without republishing.
 7. Two PRs would otherwise share a release SHA; sync-branch mode generates a
    unique reconciliation SHA and observes only its own target validation.
 8. Development is strict and has advanced; auto back-merge selects a sync branch

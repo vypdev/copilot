@@ -11,6 +11,7 @@ import type {
 } from "../../../domain/merge_queue_readiness";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubDeploymentClient } from "../../../infrastructure/github/ports/github_deployment_provider_port";
+import { observePullRequestReadiness } from "./github_pull_request_readiness_query";
 
 export class GithubTargetMergeCapabilitiesInspector implements TargetMergePolicyInspectionPort {
   constructor(private readonly clientProvider: GithubClientPort<GithubDeploymentClient>) {}
@@ -29,8 +30,8 @@ export class GithubTargetMergeCapabilitiesInspector implements TargetMergePolicy
       observeEffectiveRules(client, owner, repository, targetBranch),
       observeBranchMergeQueue(client, owner, repository, targetBranch),
       options.pullRequest === undefined
-        ? Promise.resolve(undefined)
-        : client.rest.pulls.get({ owner, repo: repository, pull_number: options.pullRequest }).then(({ data }) => data),
+        ? Promise.resolve({ value: undefined, problem: undefined })
+        : observePullRequestReadiness(client, owner, repository, options.pullRequest),
     ]);
     const candidateProblem = options.candidateHeadSha !== undefined && !/^[a-f0-9]{40}$/i.test(options.candidateHeadSha)
       ? {
@@ -40,18 +41,19 @@ export class GithubTargetMergeCapabilitiesInspector implements TargetMergePolicy
       : undefined;
     const candidateHeadChangedProblem = options.candidateHeadSha !== undefined
       && candidateProblem === undefined
-      && pullRequestState !== undefined
-      && pullRequestState.head.sha !== options.candidateHeadSha
+      && pullRequestState.value !== undefined
+      && pullRequestState.value.headSha !== options.candidateHeadSha
       ? {
           area: "workflow-contract" as const,
           message: "The pull request head changed during readiness inspection, so the observed workflow contract is stale.",
         }
       : undefined;
     const effective = normalizeEffectiveRules(classic.value, rulesets.value);
-    const problems = [classic.problem, rulesets.problem, queue.problem, candidateProblem, candidateHeadChangedProblem, ...effective.problems]
+    const problems = [classic.problem, rulesets.problem, queue.problem, pullRequestState.problem,
+      candidateProblem, candidateHeadChangedProblem, ...effective.problems]
       .filter((problem): problem is MergeQueueObservationProblem => problem !== undefined);
     const mergeQueueRequired = queue.value === true || effective.mergeQueueRequired;
-    const candidateHeadSha = options.candidateHeadSha ?? pullRequestState?.head.sha;
+    const candidateHeadSha = options.candidateHeadSha ?? pullRequestState.value?.headSha;
     const producerInspection = mergeQueueRequired
       ? await inspectMergeQueueProducers(
           client,
@@ -67,7 +69,7 @@ export class GithubTargetMergeCapabilitiesInspector implements TargetMergePolicy
     return {
       autoMergeAllowed: repositoryData.allow_auto_merge === true,
       mergeQueueRequired,
-      immediatelyMergeable: pullRequestState?.mergeable === true && pullRequestState.mergeable_state === "clean",
+      immediatelyMergeable: problems.length === 0 && pullRequestState.value?.immediatelyMergeable === true,
       requiresStrictStatusChecks: effective.requiresStrictStatusChecks,
       mergeQueueProducers: producerInspection.producers,
       mergeQueueObservationProblems: [...problems, ...producerInspection.problems],

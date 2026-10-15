@@ -45553,7 +45553,7 @@ exports.ENGLISH_MERGE_QUEUE_MESSAGES = Object.freeze({
     'mergeQueue.decision.queueNotExposed': 'The target does not expose a required merge queue.',
     'mergeQueue.decision.autoMergeConfigured': 'Native auto-merge was explicitly configured.',
     'mergeQueue.decision.autoMergeDisabled': 'Native auto-merge is disabled for this repository.',
-    'mergeQueue.decision.immediatelyMergeable': 'GitHub reports the pull request ready; native auto-merge preserves branch protection.',
+    'mergeQueue.decision.immediatelyMergeable': 'GitHub reports the pull request ready; merge its verified head with branch protection enforced.',
     'mergeQueue.decision.autoMergeAvailable': 'GitHub will merge after checks and reviews complete.',
     'mergeQueue.decision.createOnlyRequired': 'Repository auto-merge is unavailable; maintainer merge is required.',
 });
@@ -45578,7 +45578,7 @@ exports.SPANISH_MERGE_QUEUE_MESSAGES = Object.freeze({
     'mergeQueue.decision.queueNotExposed': 'El destino no expone una merge queue obligatoria.',
     'mergeQueue.decision.autoMergeConfigured': 'El auto-merge nativo se ha configurado explícitamente.',
     'mergeQueue.decision.autoMergeDisabled': 'El auto-merge nativo está deshabilitado en este repositorio.',
-    'mergeQueue.decision.immediatelyMergeable': 'GitHub indica que la pull request está lista; el auto-merge nativo preserva la protección de rama.',
+    'mergeQueue.decision.immediatelyMergeable': 'GitHub indica que la pull request está lista; fusionar su head verificado respetando la protección de rama.',
     'mergeQueue.decision.autoMergeAvailable': 'GitHub hará merge cuando terminen los checks y las revisiones.',
     'mergeQueue.decision.createOnlyRequired': 'El auto-merge del repositorio no está disponible; se requiere el merge de una persona mantenedora.',
 });
@@ -50328,7 +50328,7 @@ class DeploymentOrchestrationRuntime {
     }
     async applyAutoMerge(context, operation, pullRequest, capabilities) {
         if (operation.prMode === "auto" && capabilities.immediatelyMergeable) {
-            await this.dependencies.pullRequests.mergePullRequest(pullRequest.number);
+            await this.dependencies.pullRequests.mergePullRequest(pullRequest.number, pullRequest.headSha);
             return;
         }
         if (!pullRequest.autoMergeEnabled) {
@@ -71651,12 +71651,13 @@ class GithubManagedPullRequestRepository {
             throw new Error("GitHub did not confirm that the pull request entered the merge queue.");
         }
     }
-    async mergePullRequest(owner, repository, pullRequest, token) {
+    async mergePullRequest(owner, repository, pullRequest, expectedHeadSha, token) {
         const { data } = await this.clientProvider.getClient(token).rest.pulls.merge({
             owner,
             repo: repository,
             pull_number: pullRequest,
             merge_method: "merge",
+            sha: expectedHeadSha,
         });
         if (!data.merged || !data.sha)
             throw new Error(data.message ?? `Pull request #${pullRequest} was not merged.`);
@@ -71678,6 +71679,43 @@ function mapPullRequest(value, owner, repository) {
         mergeCommitSha: value.merge_commit_sha ?? undefined,
         repositoryFullName: value.base.repo?.full_name ?? value.head.repo?.full_name ?? `${owner}/${repository}`,
     };
+}
+
+
+/***/ }),
+
+/***/ 33371:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.observePullRequestReadiness = observePullRequestReadiness;
+async function observePullRequestReadiness(client, owner, repository, pullRequest) {
+    try {
+        const response = await client.graphql(`query DeploymentPullRequestReadiness($owner: String!, $repository: String!, $pullRequest: Int!) {
+        repository(owner: $owner, name: $repository) {
+          pullRequest(number: $pullRequest) { headRefOid mergeable mergeStateStatus isDraft }
+        }
+      }`, { owner, repository, pullRequest });
+        const state = response?.repository?.pullRequest;
+        if (!state || typeof state.headRefOid !== "string" || !/^[a-f0-9]{40}$/i.test(state.headRefOid)
+            || typeof state.mergeable !== "string" || !["MERGEABLE", "CONFLICTING", "UNKNOWN"].includes(state.mergeable)
+            || typeof state.mergeStateStatus !== "string" || state.mergeStateStatus.length === 0
+            || typeof state.isDraft !== "boolean") {
+            return { problem: { area: "workflow-contract", message: "GitHub returned incomplete pull-request merge readiness." } };
+        }
+        return {
+            value: {
+                headSha: state.headRefOid,
+                immediatelyMergeable: !state.isDraft && state.mergeable === "MERGEABLE"
+                    && ["CLEAN", "UNSTABLE"].includes(state.mergeStateStatus),
+            },
+        };
+    }
+    catch {
+        return { problem: { area: "workflow-contract", message: "GitHub pull-request merge readiness could not be inspected." } };
+    }
 }
 
 
@@ -71724,6 +71762,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GithubTargetMergeCapabilitiesInspector = void 0;
 const yaml = __importStar(__nccwpck_require__(783));
+const github_pull_request_readiness_query_1 = __nccwpck_require__(33371);
 class GithubTargetMergeCapabilitiesInspector {
     constructor(clientProvider) {
         this.clientProvider = clientProvider;
@@ -71736,8 +71775,8 @@ class GithubTargetMergeCapabilitiesInspector {
             observeEffectiveRules(client, owner, repository, targetBranch),
             observeBranchMergeQueue(client, owner, repository, targetBranch),
             options.pullRequest === undefined
-                ? Promise.resolve(undefined)
-                : client.rest.pulls.get({ owner, repo: repository, pull_number: options.pullRequest }).then(({ data }) => data),
+                ? Promise.resolve({ value: undefined, problem: undefined })
+                : (0, github_pull_request_readiness_query_1.observePullRequestReadiness)(client, owner, repository, options.pullRequest),
         ]);
         const candidateProblem = options.candidateHeadSha !== undefined && !/^[a-f0-9]{40}$/i.test(options.candidateHeadSha)
             ? {
@@ -71747,25 +71786,26 @@ class GithubTargetMergeCapabilitiesInspector {
             : undefined;
         const candidateHeadChangedProblem = options.candidateHeadSha !== undefined
             && candidateProblem === undefined
-            && pullRequestState !== undefined
-            && pullRequestState.head.sha !== options.candidateHeadSha
+            && pullRequestState.value !== undefined
+            && pullRequestState.value.headSha !== options.candidateHeadSha
             ? {
                 area: "workflow-contract",
                 message: "The pull request head changed during readiness inspection, so the observed workflow contract is stale.",
             }
             : undefined;
         const effective = normalizeEffectiveRules(classic.value, rulesets.value);
-        const problems = [classic.problem, rulesets.problem, queue.problem, candidateProblem, candidateHeadChangedProblem, ...effective.problems]
+        const problems = [classic.problem, rulesets.problem, queue.problem, pullRequestState.problem,
+            candidateProblem, candidateHeadChangedProblem, ...effective.problems]
             .filter((problem) => problem !== undefined);
         const mergeQueueRequired = queue.value === true || effective.mergeQueueRequired;
-        const candidateHeadSha = options.candidateHeadSha ?? pullRequestState?.head.sha;
+        const candidateHeadSha = options.candidateHeadSha ?? pullRequestState.value?.headSha;
         const producerInspection = mergeQueueRequired
             ? await inspectMergeQueueProducers(client, owner, repository, repositoryData.id, targetBranch, candidateHeadSha, effective.requiredChecks, effective.requiredWorkflows)
             : { producers: [], problems: [] };
         return {
             autoMergeAllowed: repositoryData.allow_auto_merge === true,
             mergeQueueRequired,
-            immediatelyMergeable: pullRequestState?.mergeable === true && pullRequestState.mergeable_state === "clean",
+            immediatelyMergeable: problems.length === 0 && pullRequestState.value?.immediatelyMergeable === true,
             requiresStrictStatusChecks: effective.requiresStrictStatusChecks,
             mergeQueueProducers: producerInspection.producers,
             mergeQueueObservationProblems: [...problems, ...producerInspection.problems],
@@ -84833,7 +84873,7 @@ function bindManagedPullRequests(port, binding) {
         enableAutoMerge: (pullRequestNodeId) => port.enableAutoMerge(binding.owner, binding.repository, pullRequestNodeId, binding.token),
         isPullRequestQueued: (pullRequestNodeId) => port.isPullRequestQueued(binding.owner, binding.repository, pullRequestNodeId, binding.token),
         enqueuePullRequest: (pullRequestNodeId, expectedHeadSha) => port.enqueuePullRequest(binding.owner, binding.repository, pullRequestNodeId, expectedHeadSha, binding.token),
-        mergePullRequest: (pullRequest) => port.mergePullRequest(binding.owner, binding.repository, pullRequest, binding.token),
+        mergePullRequest: (pullRequest, expectedHeadSha) => port.mergePullRequest(binding.owner, binding.repository, pullRequest, expectedHeadSha, binding.token),
     });
 }
 function bindDeploymentTargetRules(port, binding) {
