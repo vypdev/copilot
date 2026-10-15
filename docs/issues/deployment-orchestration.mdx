@@ -140,9 +140,13 @@ provider mutation. Start a new deployment from valid current configuration.
 
 All release, hotfix, and managed-PR mutation routes for the same launcher issue
 share one repository-and-issue concurrency group. The workflows retain every
-waiting run and never cancel an in-progress deployment owner. A credential-free
-validation job rejects an invalid issue, mode, version, operation ID, title, or
-changelog before a job receives write permission.
+waiting run and never cancel an in-progress deployment owner. A validation job
+with `permissions: {}` rejects an invalid issue, mode, version, operation ID,
+title, or changelog before a job receives write permission. It uses the runtime
+bundled with `actions/github-script@v9` and its automatic token, without a PAT or
+configured secret. Leave `github-token` unspecified: an empty override prevents
+the Action from starting. No host-installed Node executable is required by this
+validation step.
 
 The launcher issue stores only deployment state version 1. The first snapshot is
 revision 1; every accepted state change increments it by exactly one and saves
