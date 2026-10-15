@@ -282,17 +282,18 @@ jobs:
           PACKAGE_NAME: '@vypdev/copilot'
           RELEASE_VERSION: ${{ inputs.version }}
           POLL_INTERVAL: ${{ vars.NPM_VISIBILITY_POLL_INTERVAL_SECONDS || '20' }}
-          POLL_TIMEOUT: ${{ vars.NPM_VISIBILITY_TIMEOUT_SECONDS || '120' }}
+          POLL_TIMEOUT: ${{ vars.NPM_VISIBILITY_TIMEOUT_SECONDS || '600' }}
         run: |
           [[ "$POLL_INTERVAL" =~ ^[0-9]+$ ]] && [ "$POLL_INTERVAL" -ge 10 ] && [ "$POLL_INTERVAL" -le 60 ] || { echo "::error::NPM visibility interval must be 10-60 seconds."; exit 1; }
           [[ "$POLL_TIMEOUT" =~ ^[0-9]+$ ]] && [ "$POLL_TIMEOUT" -ge 60 ] && [ "$POLL_TIMEOUT" -le 900 ] || { echo "::error::NPM visibility timeout must be 60-900 seconds."; exit 1; }
-          attempts=0
-          max_attempts=$(( (POLL_TIMEOUT + POLL_INTERVAL - 1) / POLL_INTERVAL ))
+          deadline=$((SECONDS + POLL_TIMEOUT))
           until [ "$(npm view "$PACKAGE_NAME@$RELEASE_VERSION" version --prefer-online 2>/dev/null || true)" = "$RELEASE_VERSION" ]; do
-            attempts=$((attempts + 1))
-            [ "$attempts" -lt "$max_attempts" ] || { echo "::error::$PACKAGE_NAME@$RELEASE_VERSION was not visible after $POLL_TIMEOUT seconds."; exit 1; }
-            echo "$PACKAGE_NAME@$RELEASE_VERSION is not visible yet; retrying in $POLL_INTERVAL seconds."
-            sleep "$POLL_INTERVAL"
+            remaining=$((deadline - SECONDS))
+            [ "$remaining" -gt 0 ] || { echo "::error::$PACKAGE_NAME@$RELEASE_VERSION was not visible after $POLL_TIMEOUT seconds."; exit 1; }
+            delay=$POLL_INTERVAL
+            [ "$delay" -le "$remaining" ] || delay=$remaining
+            echo "$PACKAGE_NAME@$RELEASE_VERSION is not visible yet; retrying in $delay seconds."
+            sleep "$delay"
           done
       - name: Verify published package identity
         env:

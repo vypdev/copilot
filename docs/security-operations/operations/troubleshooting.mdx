@@ -375,7 +375,10 @@ directory. The lock contains no PAT or other credential.
     5. **npm visibility timeout:** `NPM_VISIBILITY_POLL_INTERVAL_SECONDS` accepts
        10–60 seconds and defaults to 20;
        `NPM_VISIBILITY_TIMEOUT_SECONDS` accepts 60–900 seconds and defaults to
-       120. Rerunning `publish` with the same operation ID verifies and reuses an
+       600 (10 minutes). npm can accept a publication while its validation is
+       still pending; the workflow waits for the full configured window and
+       performs a final visibility check at the deadline. Rerunning `publish`
+       with the same operation ID verifies and reuses an
        already-visible exact version.
     6. **Reconciliation pending:** The package is already public. Complete or
        correct the linked reconciliation PR; never increment or republish the
