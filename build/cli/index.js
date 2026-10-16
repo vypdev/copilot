@@ -42297,7 +42297,7 @@ const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
 const merge_queue_message_catalog_1 = __nccwpck_require__(56033);
 const application_error_message_catalog_1 = __nccwpck_require__(64809);
 const SIMPLE_MESSAGE_KEYS = Object.freeze([
-    'release', 'hotfix', 'currentStatus', 'noAction', 'actionRequired', 'progress',
+    'release', 'hotfix', 'currentStatus', 'noAction', 'completionNotice', 'actionRequired', 'progress',
     'currentTransition', 'whatNext', 'links', 'technical', 'alreadyPublished',
     'notPublished', 'productionUpdated', 'developmentSynchronized', 'yes', 'no',
     'from', 'to', 'state', 'compare', 'controlCenter', 'purpose', 'afterMerge',
@@ -42353,6 +42353,7 @@ exports.DEPLOYMENT_MESSAGE_IDS = Object.freeze([
 const ENGLISH_SIMPLE = Object.freeze({
     release: 'Release', hotfix: 'Hotfix', currentStatus: 'Current status',
     noAction: 'No action is required while GitHub owns the pending transition.', actionRequired: 'Action required',
+    completionNotice: 'Deployment is complete. No further action is required.',
     progress: 'Progress', currentTransition: 'Current transition', whatNext: 'What happens next', links: 'Links',
     technical: 'Technical details', alreadyPublished: 'Package status: already published', notPublished: 'Package status: not published',
     productionUpdated: 'Production updated', developmentSynchronized: 'Development synchronized', yes: 'Yes', no: 'No',
@@ -42385,6 +42386,7 @@ const ENGLISH_SIMPLE = Object.freeze({
 const SPANISH_SIMPLE = Object.freeze({
     release: 'Release', hotfix: 'Hotfix', currentStatus: 'Estado actual',
     noAction: 'No se requiere ninguna acción mientras GitHub gestiona la transición pendiente.', actionRequired: 'Acción necesaria',
+    completionNotice: 'El despliegue ha terminado. No se requiere ninguna acción adicional.',
     progress: 'Progreso', currentTransition: 'Transición actual', whatNext: 'Qué ocurrirá después', links: 'Enlaces',
     technical: 'Detalles técnicos', alreadyPublished: 'Estado del paquete: ya publicado', notPublished: 'Estado del paquete: no publicado',
     productionUpdated: 'Producción actualizada', developmentSynchronized: 'Desarrollo sincronizado', yes: 'Sí', no: 'No',
@@ -42932,6 +42934,8 @@ function nextDescription(operation, messages, catalog) {
     });
 }
 function deploymentAction(operation, messages) {
+    if (operation.phase === 'completed')
+        return { required: false, message: messages.completionNotice };
     const manual = (operation.selectedPrMode ?? operation.prMode) === 'create-only'
         && (operation.phase === 'promotion_pr_pending' || operation.phase === 'reconciliation_pending');
     if (manual)
