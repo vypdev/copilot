@@ -8,7 +8,7 @@ on:
         required: true
         default: prepare
         type: choice
-        options: [prepare, publish]
+        options: [prepare, publish, resume]
       operation-id:
         description: 'Internal durable operation identifier'
         required: false
@@ -66,10 +66,10 @@ jobs:
               if (operationId) errors.push('Operation ID must be empty in prepare mode.');
               if (!title || title.length > 1000) errors.push('Title must contain 1-1000 characters.');
               if (!changelog || changelog.length > 50000) errors.push('Changelog must contain 1-50000 characters.');
-            } else if (mode === 'publish') {
+            } else if (mode === 'publish' || mode === 'resume') {
               if (!/^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(operationId)) errors.push('Operation ID is invalid.');
-              if (title || changelog) errors.push('Title and changelog must be empty in publish mode.');
-            } else errors.push('Mode must be prepare or publish.');
+              if (title || changelog) errors.push('Title and changelog must be empty in publish or resume mode.');
+            } else errors.push('Mode must be prepare, publish, or resume.');
             if (errors.length) core.setFailed(errors.join(' '));
 
   prepare-version-files:
@@ -185,17 +185,66 @@ jobs:
           single-action-version: ${{ inputs.version }}
           token: ${{ secrets.PAT }}
 
+  resume-reconciliation:
+    name: Resume published deployment
+    if: ${{ inputs.mode == 'resume' }}
+    runs-on: ubuntu-latest
+    needs: validate
+    timeout-minutes: 15
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Verify published operation before recovery
+        uses: actions/github-script@v9
+        env:
+          ISSUE: ${{ inputs.issue }}
+          OPERATION_ID: ${{ inputs.operation-id }}
+          VERSION: ${{ inputs.version }}
+        with:
+          script: |
+            const response = await github.rest.issues.get({ ...context.repo, issue_number: Number(process.env.ISSUE) });
+            if (response.data.pull_request) throw new Error('The launcher must be an issue.');
+            const body = response.data.body || '';
+            const start = '<!-- copilot-configuration-start';
+            const end = 'copilot-configuration-end -->';
+            const first = body.indexOf(start);
+            const last = body.indexOf(end, first + start.length);
+            if (first < 0 || last < 0 || body.indexOf(start, first + start.length) >= 0) throw new Error('A unique durable configuration is required.');
+            const payload = JSON.parse(body.slice(first + start.length, last));
+            const state = payload?.deploymentOrchestration;
+            const receipt = state?.publicationReceipt;
+            const phase = state?.phase === 'blocked' && state?.lastFailure?.retryable === true
+              ? state.lastFailure.previousPhase : state?.phase;
+            if (payload?.schemaVersion !== 3 || state?.stateVersion !== 1
+              || !Number.isSafeInteger(state?.revision) || state.revision < 1
+              || state.operationId !== process.env.OPERATION_ID || state.version !== process.env.VERSION
+              || !['reconciliation_pending', 'completed'].includes(phase) || state.publicationVerified !== true
+              || !/^[a-f0-9]{40}$/i.test(state.productionSha || '') || state.tag !== `v${process.env.VERSION}`
+              || receipt?.operationId !== state.operationId || receipt?.productionSha !== state.productionSha
+              || receipt?.tag !== state.tag) throw new Error('Recovery requires the matching, already verified publication and reconciliation state.');
+      - name: Resume reconciliation from verified receipts
+        uses: vypdev/copilot@v3
+        with:
+          single-action: published_deployment_action
+          single-action-issue: ${{ inputs.issue }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
+          single-action-operation-id: ${{ inputs.operation-id }}
+          single-action-version: ${{ inputs.version }}
+          merge-queue-check-attestations: ${{ vars.MERGE_QUEUE_CHECK_ATTESTATIONS || '[]' }}
+          token: ${{ secrets.PAT }}
+
   report-failure:
     name: Report orchestration failure
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [validate, prepare-version-files, promote, publish]
+    needs: [validate, prepare-version-files, promote, publish, resume-reconciliation]
     if: ${{ failure() && needs.validate.result == 'success' }}
     permissions:
       issues: write
     steps:
       - name: Persist publication failure
-        if: ${{ inputs.mode == 'publish' }}
+        if: ${{ inputs.mode == 'publish' || inputs.mode == 'resume' }}
         uses: vypdev/copilot@v3
         with:
           single-action: failed_deployment_action

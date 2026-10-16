@@ -231,12 +231,12 @@ describe("deployment phase handlers", () => {
     );
   });
 
-  it("handles duplicate completed publication without inspecting effects", async () => {
+  it("rechecks receipts on duplicate completed publication", async () => {
     const { runtime, dependencies } = runtimeHarness();
     const reconciliation = { plan: jest.fn() } as unknown as ReconciliationHandler;
     await new ConfirmPublicationHandler(runtime, reconciliation).invoke(context("published", operation("completed")));
     expect(runtime.publishDashboard).toHaveBeenCalled();
-    expect(dependencies.publication.inspect).not.toHaveBeenCalled();
+    expect(dependencies.publication.inspect).toHaveBeenCalled();
   });
 
   it("recovers already verified reconciliation state", async () => {
@@ -404,7 +404,11 @@ describe("deployment phase handlers", () => {
   });
 
   it("plans the next target after accepting one reconciliation PR", async () => {
-    const { runtime } = runtimeHarness();
+    const { runtime, dependencies } = runtimeHarness();
+    dependencies.pullRequests.getPullRequest.mockResolvedValue(managedPullRequest({
+      number: 41, headBranch: "master", headSha: productionSha, baseBranch: "release/next", state: "open", merged: false,
+      body: '<!-- copilot-deployment operation-id="operation-12345678" phase="reconciliation" issue="355" -->',
+    }));
     const targets = [
       {
         targetBranch: "develop",
@@ -428,7 +432,7 @@ describe("deployment phase handlers", () => {
       managedPullRequest({ headBranch: "master", baseBranch: "develop" }),
     );
     expect(result.success).toBe(true);
-    expect(runtime.publishDashboard).toHaveBeenCalled();
+    expect(runtime.configureMergeBehavior).toHaveBeenCalled();
   });
 
   it("presents reconciliation state when no target can be planned", async () => {

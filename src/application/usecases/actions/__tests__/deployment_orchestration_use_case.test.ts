@@ -674,11 +674,134 @@ describe("DeploymentOrchestrationUseCase", () => {
 
   it("does not republish or duplicate reconciliation after a duplicate notification", async () => {
     const value = harness();
+    value.pullRequests.getPullRequest.mockResolvedValue(pr({
+      number: 41, nodeId: "PR_reconcile", autoMergeEnabled: true,
+      body: '<!-- copilot-deployment operation-id="operation-12345678" phase="reconciliation" issue="355" -->',
+      headBranch: "master", headSha: productionSha, baseBranch: "develop",
+    }));
     await value.useCase.invoke(execution("published", operation("reconciliation_pending", {
       reconciliationTargets: [{ targetBranch: "develop", sourceBranch: "master", sourceSha: productionSha, pullRequest: 41, status: "pending" }],
     })));
     expect(value.pullRequests.createManagedPullRequest).not.toHaveBeenCalled();
-    expect(value.labels.setLabels).not.toHaveBeenCalled();
+    expect(value.pullRequests.enableAutoMerge).not.toHaveBeenCalled();
+  });
+
+  it("resumes merge configuration for an already recorded pending reconciliation PR", async () => {
+    const value = harness();
+    value.pullRequests.getPullRequest.mockResolvedValue(pr({
+      number: 41, nodeId: "PR_reconcile",
+      body: '<!-- copilot-deployment operation-id="operation-12345678" phase="reconciliation" issue="355" -->',
+      headBranch: "master", headSha: productionSha, baseBranch: "develop",
+    }));
+    const input = execution("published", operation("reconciliation_pending", {
+      phase: "blocked",
+      lastFailure: { category: "reconciliation", message: "GitHub merge setup failed", retryable: true, previousPhase: "reconciliation_pending" },
+      reconciliationTargets: [{ targetBranch: "develop", sourceBranch: "master", sourceSha: productionSha, pullRequest: 41, status: "pending" }],
+    }));
+    await value.useCase.invoke(input);
+    expect(value.pullRequests.enableAutoMerge).toHaveBeenCalledWith("PR_reconcile");
+    expect(value.pullRequests.createManagedPullRequest).not.toHaveBeenCalled();
+    expect(value.publication.inspect).toHaveBeenCalled();
+    expect(input.currentConfiguration.deploymentOrchestration).toEqual(expect.objectContaining({
+      phase: "reconciliation_pending", publicationVerified: true, lastFailure: null,
+    }));
+  });
+
+  it.each([
+    { body: "missing marker" },
+    { body: '<!-- copilot-deployment operation-id="different-operation" phase="reconciliation" issue="355" -->' },
+    { body: '<!-- copilot-deployment operation-id="operation-12345678" phase="promotion" issue="355" -->' },
+    { body: '<!-- copilot-deployment operation-id="operation-12345678" phase="reconciliation" issue="356" -->' },
+    { repositoryFullName: "foreign/repo" }, { number: 42 }, { headBranch: "other" },
+    { baseBranch: "other" }, { headSha: "f".repeat(40) },
+  ])("rejects a recorded reconciliation PR with changed identity %j", async (overrides) => {
+    const value = harness();
+    value.pullRequests.getPullRequest.mockResolvedValue(pr({
+      number: 41, headBranch: "master", headSha: productionSha, baseBranch: "develop",
+      body: '<!-- copilot-deployment operation-id="operation-12345678" phase="reconciliation" issue="355" -->', ...overrides,
+    }));
+    const input = execution("published", operation("reconciliation_pending", {
+      reconciliationTargets: [{ targetBranch: "develop", sourceBranch: "master", sourceSha: productionSha, pullRequest: 41, status: "pending" }],
+    }));
+    const result = await value.useCase.invoke(input);
+    expect(result[0].success).toBe(false);
+    expect(input.currentConfiguration.deploymentOrchestration?.lastFailure?.retryable).toBe(false);
+    expect(value.pullRequests.enableAutoMerge).not.toHaveBeenCalled();
+    expect(value.pullRequests.mergePullRequest).not.toHaveBeenCalled();
+    expect(value.pullRequests.createManagedPullRequest).not.toHaveBeenCalled();
+  });
+
+  it.each(["operationId", "version"])("rejects stale recovery %s before any effect", async (field) => {
+    const value = harness();
+    const input = execution("published", operation("reconciliation_pending"));
+    Object.assign(input.singleAction, { [field]: "different-value" });
+    expect((await value.useCase.invoke(input))[0].success).toBe(false);
+    expect(value.publication.inspect).not.toHaveBeenCalled();
+    expect(value.pullRequests.getPullRequest).not.toHaveBeenCalled();
+    expect(value.issues.closeIssue).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])("does not retry merge when external receipts are missing/conflicting (%s)", async (conflict) => {
+    const value = harness();
+    value.publication.inspect.mockResolvedValue(conflict ? { kind: "conflict", reason: "Tag moved." } : { kind: "absent", effect: "tag" });
+    const input = execution("published", operation("reconciliation_pending", {
+      phase: "blocked", lastFailure: { category: "reconciliation", message: "Merge setup failed", retryable: true, previousPhase: "reconciliation_pending" },
+      reconciliationTargets: [{ targetBranch: "develop", sourceBranch: "master", sourceSha: productionSha, pullRequest: 41, status: "pending" }],
+    }));
+    expect((await value.useCase.invoke(input))[0].success).toBe(false);
+    expect(value.pullRequests.getPullRequest).not.toHaveBeenCalled();
+    expect(value.pullRequests.enableAutoMerge).not.toHaveBeenCalled();
+    expect(value.git.deleteBranch).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])("recovers a recorded sync PR using its persisted head (merged=%s)", async (merged) => {
+    const value = harness();
+    value.pullRequests.getPullRequest.mockResolvedValue(pr({
+      number: 41, headBranch: "sync/recovery", headSha: "e".repeat(40), baseBranch: "develop",
+      body: '<!-- copilot-deployment operation-id="operation-12345678" phase="reconciliation" issue="355" -->',
+      merged, state: merged ? "closed" : "open", mergeCommitSha: merged ? "f".repeat(40) : undefined,
+    }));
+    const input = execution("published", operation("reconciliation_pending", {
+      reconciliationTargets: [{ targetBranch: "develop", sourceBranch: "master", sourceSha: productionSha,
+        syncBranch: "sync/recovery", syncSha: "e".repeat(40), pullRequest: 41, status: "pending" }],
+    }));
+    expect((await value.useCase.invoke(input))[0].success).toBe(true);
+    expect(value.git.createOrVerifyBranch).not.toHaveBeenCalled();
+    expect(value.pullRequests.createManagedPullRequest).not.toHaveBeenCalled();
+    if (merged) expect(input.currentConfiguration.deploymentOrchestration?.phase).toBe("completed");
+    else expect(value.pullRequests.enableAutoMerge).toHaveBeenCalled();
+  });
+
+  it.each(["closed", "missing-sync-sha", "nonretryable"])("keeps unsafe reconciliation recovery blocked: %s", async (scenario) => {
+    const value = harness();
+    value.pullRequests.getPullRequest.mockResolvedValue(pr({
+      number: 41, headBranch: "master", headSha: productionSha, baseBranch: "develop", state: "closed",
+      body: '<!-- copilot-deployment operation-id="operation-12345678" phase="reconciliation" issue="355" -->',
+    }));
+    const input = execution("published", operation("reconciliation_pending", {
+      ...(scenario === "nonretryable" ? { phase: "blocked", lastFailure: { category: "reconciliation", message: "Identity conflict", retryable: false, previousPhase: "reconciliation_pending" } } : {}),
+      reconciliationTargets: [{ targetBranch: "develop", sourceBranch: "master", sourceSha: productionSha,
+        ...(scenario === "missing-sync-sha" ? { syncBranch: "sync/recovery" } : {}), pullRequest: 41, status: "pending" }],
+    }));
+    expect((await value.useCase.invoke(input))[0].success).toBe(false);
+    expect(value.pullRequests.enableAutoMerge).not.toHaveBeenCalled();
+    expect(value.pullRequests.mergePullRequest).not.toHaveBeenCalled();
+    expect(value.git.deleteBranch).not.toHaveBeenCalled();
+  });
+
+  it("preserves a useful safe failure when native merge configuration fails", async () => {
+    const value = harness();
+    value.pullRequests.enableAutoMerge.mockRejectedValue(new Error("secret provider payload"));
+    value.pullRequests.createManagedPullRequest.mockResolvedValue(pr({
+      number: 41, headBranch: "master", headSha: productionSha, baseBranch: "develop",
+    }));
+    const input = execution("published", operation("publishing"));
+    expect((await value.useCase.invoke(input))[0].success).toBe(false);
+    expect(input.currentConfiguration.deploymentOrchestration?.lastFailure).toEqual(expect.objectContaining({
+      category: "reconciliation", retryable: true,
+      message: expect.stringContaining("configure automatic merge for PR #41"),
+    }));
+    expect(JSON.stringify(input.currentConfiguration)).not.toContain("secret provider payload");
   });
 
   it("recovers a reconciliation PR after cancellation between plan persistence and PR creation", async () => {
