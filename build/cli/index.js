@@ -51973,7 +51973,6 @@ const deployment_message_catalog_1 = __nccwpck_require__(79364);
 const deployment_operation_1 = __nccwpck_require__(92730);
 const merge_queue_readiness_1 = __nccwpck_require__(12515);
 const result_1 = __nccwpck_require__(73817);
-const deployment_merge_effect_error_1 = __nccwpck_require__(72594);
 const deployment_merge_effects_1 = __nccwpck_require__(84387);
 exports.DEPLOYMENT_ORCHESTRATION_TASK_ID = "DeploymentOrchestrationUseCase";
 class DeploymentOrchestrationRuntime {
@@ -52060,7 +52059,7 @@ class DeploymentOrchestrationRuntime {
             const diagnostic = (0, application_error_1.toApplicationError)(cause, "workflow.failed", "Automatic merge setup failed with an unclassified provider rejection.", { retryable: true });
             const message = `GitHub could not configure automatic merge for PR #${pullRequest.number}. ${diagnostic.message} Check the PR and retry the stored ${category} phase.`;
             const error = new application_error_1.ApplicationError(diagnostic.code, message, { cause, retryable: diagnostic.retryable });
-            return { kind: "blocked", result: await this.block(context, managed, category, message, cause instanceof deployment_merge_effect_error_1.DeploymentMergeEffectError || error.retryable, error) };
+            return { kind: "blocked", result: await this.block(context, managed, category, message, error.retryable, error) };
         }
         await this.publishDashboard(context, managed);
         return { kind: "configured", operation: managed };
