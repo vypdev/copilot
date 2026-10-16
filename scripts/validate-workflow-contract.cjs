@@ -975,7 +975,7 @@ function assertSetupFailureReporter(relativeFile, steps, expectedKind) {
 
 function assertDurableFailureReporter(relativeFile, step) {
   const inputs = step?.with ?? {};
-  if (step?.if !== "${{ inputs.mode == 'publish' }}"
+  if (step?.if !== "${{ inputs.mode == 'publish' || inputs.mode == 'resume' }}"
     || inputs['single-action'] !== 'failed_deployment_action'
     || inputs['single-action-issue'] !== '${{ inputs.issue }}'
     || inputs['single-action-operation-id'] !== '${{ inputs.operation-id }}'
@@ -996,14 +996,15 @@ function assertMutationWorkflow(file, workflow) {
   const setup = relativeFile.startsWith('setup/workflows/');
   const finalJob = manifest.file === 'release_workflow.yml' ? 'finalize-release' : 'finalize-hotfix';
   const expectedJobs = setup
-    ? ['validate', 'prepare-version-files', 'promote', 'publish', 'report-failure']
-    : ['validate', 'prepare-version-files', 'prepare-compiled-files', 'promote', 'tag', 'publish-npm', finalJob, 'report-failure'];
+    ? ['validate', 'prepare-version-files', 'promote', 'publish', 'resume-reconciliation', 'report-failure']
+    : ['validate', 'prepare-version-files', 'prepare-compiled-files', 'promote', 'tag', 'publish-npm', finalJob, 'resume-reconciliation', 'report-failure'];
   const actualJobs = Object.keys(workflow.jobs ?? {});
   if (actualJobs.length !== expectedJobs.length || expectedJobs.some(jobId => !actualJobs.includes(jobId))) {
     throw new Error(`${relativeFile} must define the exact validation-first job graph.`);
   }
   assertDeploymentWorkflowConcurrency(relativeFile, workflow);
   assertDeploymentValidationJob(relativeFile, workflow);
+  assertResumeReconciliationJob(relativeFile, workflow.jobs['resume-reconciliation'], setup);
   assertExactNeeds(relativeFile, 'prepare-version-files', workflow.jobs['prepare-version-files'], ['validate']);
   if (setup) {
     assertExactTimeout(relativeFile, 'prepare-version-files', workflow.jobs['prepare-version-files'], 30);
@@ -1013,7 +1014,7 @@ function assertMutationWorkflow(file, workflow) {
     assertFailureReportingJob(
       relativeFile,
       workflow.jobs['report-failure'],
-      ['validate', 'prepare-version-files', 'promote', 'publish'],
+      ['validate', 'prepare-version-files', 'promote', 'publish', 'resume-reconciliation'],
       manifest.file.startsWith('release') ? 'release' : 'hotfix',
     );
   } else {
@@ -1029,7 +1030,7 @@ function assertMutationWorkflow(file, workflow) {
     assertFailureReportingJob(
       relativeFile,
       workflow.jobs['report-failure'],
-      ['validate', 'prepare-version-files', 'prepare-compiled-files', 'promote', 'tag', 'publish-npm', finalJob],
+      ['validate', 'prepare-version-files', 'prepare-compiled-files', 'promote', 'tag', 'publish-npm', finalJob, 'resume-reconciliation'],
       manifest.file.startsWith('release') ? 'release' : 'hotfix',
     );
   }
@@ -1082,6 +1083,7 @@ function assertDeploymentValidationJob(relativeFile, workflow) {
     || !script.includes('Number.isSafeInteger(issue)')
     || !script.includes("mode === 'prepare'")
     || !script.includes("mode === 'publish'")
+    || !script.includes("mode === 'resume'")
     || !script.includes('Operation ID must be empty in prepare mode.')
     || !script.includes("if (errors.length) core.setFailed(errors.join(' '));")) {
     throw new Error(`${relativeFile} validate must enforce bounded cross-field inputs with the bundled runtime and default permissionless token.`);
@@ -1106,7 +1108,7 @@ function assertPhaseConditions(relativeFile, jobs, finalJob) {
   }
   const publishedActions = Object.values(jobs).flatMap(job => job.steps ?? [])
     .filter(step => isCopilotAction(step) && step.with?.['single-action'] === 'published_deployment_action');
-  if (publishedActions.length !== 1) {
+  if (publishedActions.length !== 2) {
     throw new Error(`${relativeFile} must project publication through published_deployment_action.`);
   }
   const trustedContinuations = Object.values(jobs).flatMap(job => job.steps ?? [])
@@ -1119,6 +1121,37 @@ function assertPhaseConditions(relativeFile, jobs, finalJob) {
   if (trustedContinuations.some(step => step.with?.['single-action-operation-id'] !== '${{ inputs.operation-id }}'
     || step.with?.['single-action-version'] !== '${{ inputs.version }}')) {
     throw new Error(`${relativeFile} must bind every publication mutation to inputs.operation-id and inputs.version.`);
+  }
+}
+
+function assertResumeReconciliationJob(relativeFile, job, setup) {
+  assertExactTimeout(relativeFile, 'resume-reconciliation', job, 15);
+  assertExactNeeds(relativeFile, 'resume-reconciliation', job, ['validate']);
+  const permissions = setup ? { issues: 'write', 'pull-requests': 'write' }
+    : { contents: 'read', issues: 'write', 'pull-requests': 'write' };
+  if (job.if !== "${{ inputs.mode == 'resume' }}"
+    || JSON.stringify(job.permissions) !== JSON.stringify(permissions)
+    || job.env !== undefined || Object.hasOwn(job, 'continue-on-error')) {
+    throw new Error(`${relativeFile} recovery must use its exact phase gate and least-privilege permissions.`);
+  }
+  const steps = job.steps ?? [];
+  const proof = steps[0];
+  const recovery = steps.at(-1);
+  if (steps.length !== (setup ? 2 : 3)
+    || steps.some(step => step.if !== undefined || step.run !== undefined || Object.hasOwn(step, 'continue-on-error'))
+    || proof?.uses !== 'actions/github-script@v9'
+    || Object.keys(proof.with ?? {}).join(',') !== 'script'
+    || JSON.stringify(proof.env) !== JSON.stringify({ ISSUE: '${{ inputs.issue }}', OPERATION_ID: '${{ inputs.operation-id }}', VERSION: '${{ inputs.version }}' })
+    || !String(proof.with.script).includes("['reconciliation_pending', 'completed'].includes(phase)")
+    || !String(proof.with.script).includes('state.publicationVerified !== true')
+    || !String(proof.with.script).includes('receipt?.productionSha !== state.productionSha')
+    || recovery?.uses !== (setup ? DISTRIBUTED_COPILOT_ACTION : './')
+    || recovery.with?.['single-action'] !== 'published_deployment_action'
+    || recovery.with?.['single-action-issue'] !== '${{ inputs.issue }}'
+    || recovery.with?.token !== '${{ secrets.PAT }}'
+    || (!setup && (steps[1]?.uses !== CHECKOUT_ACTION || steps[1]?.with?.ref !== '${{ github.sha }}'
+      || steps[1]?.with?.['persist-credentials'] !== false))) {
+    throw new Error(`${relativeFile} recovery must prove existing publication state and invoke only the reconciliation continuation.`);
   }
 }
 

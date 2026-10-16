@@ -182,7 +182,13 @@ export class DeploymentOrchestrationRuntime {
       selectedPrMode: inspection.decision.mode,
     };
     await this.persist(context, managed);
-    await this.applyMergeBehavior(context, operation, pullRequest, inspection);
+    try {
+      await this.applyMergeBehavior(context, operation, pullRequest, inspection);
+    } catch (cause) {
+      const message = `GitHub could not configure automatic merge for PR #${pullRequest.number}. Check the PR and retry the stored ${category} phase.`;
+      const error = new ApplicationError("provider.unavailable", message, { cause, retryable: true });
+      return { kind: "blocked", result: await this.block(context, managed, category, message, true, error) };
+    }
     await this.publishDashboard(context, managed);
     return { kind: "configured", operation: managed };
   }
