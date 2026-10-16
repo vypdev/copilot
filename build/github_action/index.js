@@ -50260,7 +50260,14 @@ class DeploymentOrchestrationRuntime {
             selectedPrMode: inspection.decision.mode,
         };
         await this.persist(context, managed);
-        await this.applyMergeBehavior(context, operation, pullRequest, inspection);
+        try {
+            await this.applyMergeBehavior(context, operation, pullRequest, inspection);
+        }
+        catch (cause) {
+            const message = `GitHub could not configure automatic merge for PR #${pullRequest.number}. Check the PR and retry the stored ${category} phase.`;
+            const error = new application_error_1.ApplicationError("provider.unavailable", message, { cause, retryable: true });
+            return { kind: "blocked", result: await this.block(context, managed, category, message, true, error) };
+        }
         await this.publishDashboard(context, managed);
         return { kind: "configured", operation: managed };
     }
@@ -51190,22 +51197,19 @@ const application_error_1 = __nccwpck_require__(75999);
 const deployment_plan_policy_1 = __nccwpck_require__(8352);
 const deployment_operation_1 = __nccwpck_require__(92730);
 const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
+const deployment_continuation_guard_1 = __nccwpck_require__(1779);
 class ConfirmPublicationHandler {
     constructor(runtime, reconciliation) {
         this.runtime = runtime;
         this.reconciliation = reconciliation;
     }
     async invoke(context) {
-        const operation = await this.resumeRetryableBlock(context, (0, deployment_orchestration_runtime_1.requireDeploymentOperation)(context));
-        if (operation.phase === "reconciliation_pending" && operation.publicationVerified) {
-            return await this.reconciliation.plan(context, operation)
-                ?? (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Publication for ${operation.tag} was already verified; reconciliation state was recovered.`);
-        }
-        if (operation.phase === "completed" && operation.publicationVerified) {
-            await this.runtime.publishDashboard(context, operation);
-            return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Publication for ${operation.tag} was already verified; duplicate notification ignored.`);
-        }
-        assertPublicationPhase(operation);
+        const current = (0, deployment_orchestration_runtime_1.requireDeploymentOperation)(context);
+        const invalid = (0, deployment_continuation_guard_1.validateDeploymentContinuation)(current, context.singleAction.operationId, ["published", "publishing", "promoted", "reconciliation_pending", "completed"], context.singleAction.version);
+        if (invalid)
+            throw new application_error_1.ApplicationError("workflow.stale", invalid);
+        // Verify external receipts before clearing a block or retrying any merge/cleanup effect.
+        const operation = current;
         const productionSha = requireProductionSha(operation);
         const publication = await this.runtime.dependencies.publication.inspect({
             tag: operation.tag,
@@ -51222,8 +51226,18 @@ class ConfirmPublicationHandler {
         if (!reachable) {
             return await this.runtime.block(context, operation, "publication", "Published SHA is not reachable from the stored production branch.", false);
         }
+        const resumed = await this.resumeRetryableBlock(context, operation);
+        if (resumed.phase === "reconciliation_pending" && resumed.publicationVerified) {
+            return await this.reconciliation.plan(context, resumed)
+                ?? (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Publication for ${resumed.tag} was already verified; reconciliation state was recovered.`);
+        }
+        if (resumed.phase === "completed" && resumed.publicationVerified) {
+            await this.runtime.publishDashboard(context, resumed);
+            return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Publication for ${resumed.tag} was already verified; duplicate notification ignored.`);
+        }
+        assertPublicationPhase(resumed);
         const published = {
-            ...operation,
+            ...resumed,
             phase: "published",
             publicationVerified: true,
             publicationReceipt: publication.receipt,
@@ -51542,6 +51556,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ReconciliationHandler = void 0;
 const deployment_plan_policy_1 = __nccwpck_require__(8352);
 const deployment_operation_1 = __nccwpck_require__(92730);
+const managed_pull_request_1 = __nccwpck_require__(95914);
 const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
 class ReconciliationHandler {
     constructor(runtime) {
@@ -51578,10 +51593,12 @@ class ReconciliationHandler {
         return await this.complete(context, updated, ` after reconciliation PR #${pullRequest.number}`);
     }
     async plan(context, operation) {
-        const index = operation.reconciliationTargets.findIndex((target) => target.status === "pending" && target.pullRequest === undefined);
+        const index = operation.reconciliationTargets.findIndex((target) => target.status === "pending");
         if (index < 0)
             return await this.finishOrPresent(context, operation);
         let target = operation.reconciliationTargets[index];
+        if (target.pullRequest !== undefined)
+            return await this.resumePullRequest(context, operation, target);
         const targetRole = (0, deployment_orchestration_runtime_1.reconciliationTargetRole)(operation, target.targetBranch);
         const preflight = await this.runtime.inspectMergeBehavior(context, operation, target.targetBranch, targetRole, target.sourceSha);
         if (preflight.kind === "blocked") {
@@ -51637,6 +51654,26 @@ class ReconciliationHandler {
         await this.runtime.publishDashboard(context, completed);
         await this.runtime.publishMilestone(context, completed, { kind: "orchestration-complete", tag: completed.tag });
         return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Deployment ${completed.tag} completed${completionContext}.`);
+    }
+    async resumePullRequest(context, operation, target) {
+        const pullRequest = await this.runtime.dependencies.pullRequests.getPullRequest(target.pullRequest);
+        const identity = (0, managed_pull_request_1.parseManagedPullRequestMarker)(pullRequest.body);
+        const expectedHead = target.syncBranch ? target.syncSha : target.sourceSha;
+        if (!identity || identity.operationId !== operation.operationId || identity.phase !== "reconciliation"
+            || identity.issue !== context.singleAction.issue || pullRequest.number !== target.pullRequest
+            || pullRequest.repositoryFullName.toLowerCase() !== `${context.owner}/${context.repo}`.toLowerCase()
+            || pullRequest.baseBranch !== target.targetBranch
+            || pullRequest.headBranch !== (target.syncBranch ?? target.sourceBranch)
+            || !expectedHead || pullRequest.headSha !== expectedHead) {
+            return await this.runtime.block(context, operation, "reconciliation", "The recorded reconciliation PR no longer matches its durable identity and head SHA.", false);
+        }
+        if (pullRequest.merged)
+            return await this.accept(context, operation, pullRequest);
+        if (pullRequest.state === "closed") {
+            return await this.runtime.block(context, operation, "reconciliation", `Reconciliation PR #${pullRequest.number} was closed without merge.`, true);
+        }
+        const configured = await this.runtime.configureMergeBehavior(context, operation, pullRequest, "reconciliation", (0, deployment_orchestration_runtime_1.reconciliationTargetRole)(operation, target.targetBranch));
+        return configured.kind === "blocked" ? configured.result : undefined;
     }
     async finishOrPresent(context, operation) {
         if (operation.reconciliationTargets.length > 0
@@ -71695,20 +71732,21 @@ async function observePullRequestReadiness(client, owner, repository, pullReques
     try {
         const response = await client.graphql(`query DeploymentPullRequestReadiness($owner: String!, $repository: String!, $pullRequest: Int!) {
         repository(owner: $owner, name: $repository) {
-          pullRequest(number: $pullRequest) { headRefOid mergeable mergeStateStatus isDraft }
+          pullRequest(number: $pullRequest) { headRefOid mergeable mergeStateStatus isDraft viewerCanEnableAutoMerge }
         }
       }`, { owner, repository, pullRequest });
         const state = response?.repository?.pullRequest;
         if (!state || typeof state.headRefOid !== "string" || !/^[a-f0-9]{40}$/i.test(state.headRefOid)
             || typeof state.mergeable !== "string" || !["MERGEABLE", "CONFLICTING", "UNKNOWN"].includes(state.mergeable)
             || typeof state.mergeStateStatus !== "string" || state.mergeStateStatus.length === 0
-            || typeof state.isDraft !== "boolean") {
+            || typeof state.isDraft !== "boolean" || typeof state.viewerCanEnableAutoMerge !== "boolean") {
             return { problem: { area: "workflow-contract", message: "GitHub returned incomplete pull-request merge readiness." } };
         }
         return {
             value: {
                 headSha: state.headRefOid,
-                immediatelyMergeable: !state.isDraft && state.mergeable === "MERGEABLE"
+                // Prefer GitHub's native waiting mechanism whenever it is available.
+                immediatelyMergeable: !state.viewerCanEnableAutoMerge && !state.isDraft && state.mergeable === "MERGEABLE"
                     && ["CLEAN", "UNSTABLE"].includes(state.mergeStateStatus),
             },
         };

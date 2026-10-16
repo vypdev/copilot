@@ -283,7 +283,7 @@
       "id": "release-orchestration",
       "title": "Configurable production-first release orchestration",
       "status": "implemented",
-      "scope": "Release and hotfix promotion, publication, reconciliation, and durable recovery",
+      "scope": "Release and hotfix promotion, publication, reconciliation, and receipt-verified recovery without republication",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-10-16",
       "specs": [

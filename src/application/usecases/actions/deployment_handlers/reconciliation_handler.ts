@@ -11,6 +11,7 @@ import {
   type DeploymentOperationSnapshot,
 } from "../../../../domain/deployment_operation";
 import type { Result } from "../../../../data/model/result";
+import { parseManagedPullRequestMarker } from "../../../../domain/managed_pull_request";
 import {
   DeploymentOrchestrationRuntime,
   deploymentSuccess,
@@ -89,10 +90,11 @@ export class ReconciliationHandler {
     operation: DeploymentOperationSnapshot,
   ): Promise<Result | undefined> {
     const index = operation.reconciliationTargets.findIndex(
-      (target) => target.status === "pending" && target.pullRequest === undefined,
+      (target) => target.status === "pending",
     );
     if (index < 0) return await this.finishOrPresent(context, operation);
     let target = operation.reconciliationTargets[index];
+    if (target.pullRequest !== undefined) return await this.resumePullRequest(context, operation, target);
     const targetRole = reconciliationTargetRole(operation, target.targetBranch);
     const preflight = await this.runtime.inspectMergeBehavior(
       context,
@@ -197,6 +199,34 @@ export class ReconciliationHandler {
       { kind: "orchestration-complete", tag: completed.tag },
     );
     return deploymentSuccess(`Deployment ${completed.tag} completed${completionContext}.`);
+  }
+
+  private async resumePullRequest(
+    context: DeploymentOrchestrationContext,
+    operation: DeploymentOperationSnapshot,
+    target: DeploymentOperationSnapshot["reconciliationTargets"][number],
+  ): Promise<Result | undefined> {
+    const pullRequest = await this.runtime.dependencies.pullRequests.getPullRequest(target.pullRequest!);
+    const identity = parseManagedPullRequestMarker(pullRequest.body);
+    const expectedHead = target.syncBranch ? target.syncSha : target.sourceSha;
+    if (!identity || identity.operationId !== operation.operationId || identity.phase !== "reconciliation"
+      || identity.issue !== context.singleAction.issue || pullRequest.number !== target.pullRequest
+      || pullRequest.repositoryFullName.toLowerCase() !== `${context.owner}/${context.repo}`.toLowerCase()
+      || pullRequest.baseBranch !== target.targetBranch
+      || pullRequest.headBranch !== (target.syncBranch ?? target.sourceBranch)
+      || !expectedHead || pullRequest.headSha !== expectedHead) {
+      return await this.runtime.block(context, operation, "reconciliation",
+        "The recorded reconciliation PR no longer matches its durable identity and head SHA.", false);
+    }
+    if (pullRequest.merged) return await this.accept(context, operation, pullRequest);
+    if (pullRequest.state === "closed") {
+      return await this.runtime.block(context, operation, "reconciliation",
+        `Reconciliation PR #${pullRequest.number} was closed without merge.`, true);
+    }
+    const configured = await this.runtime.configureMergeBehavior(
+      context, operation, pullRequest, "reconciliation", reconciliationTargetRole(operation, target.targetBranch),
+    );
+    return configured.kind === "blocked" ? configured.result : undefined;
   }
 
   private async finishOrPresent(

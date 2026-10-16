@@ -531,3 +531,14 @@ normal flow appears before internals.
   repair #500 retains the bundled runtime and the Action's automatic token under
   `permissions: {}`. [GitHub Script v9 metadata](https://github.com/actions/github-script/blob/v9/action.yml)
   defines both defaults.
+
+### Published reconciliation recovery
+
+The release/hotfix workflow `resume` mode uses the same issue-scoped workflow
+mutex as prepare/publish. It proves the matching verified publication and effective
+reconciliation/completed phase before invoking the existing continuation. It has
+no publication jobs. Application receipt, PR identity/head, and revision checks
+remain mandatory. A PR merge event waits for this same mutex and then accepts the
+stored target and completes cleanup; no alternate local state writer is added.
+See the #520 regression and test budget in
+[release orchestration](configurable-release-orchestration.md#1801-recorded-reconciliation-recovery-regression-520).

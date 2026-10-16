@@ -13,6 +13,7 @@ interface ReadinessResponse {
       readonly mergeable?: string;
       readonly mergeStateStatus?: string;
       readonly isDraft?: boolean;
+      readonly viewerCanEnableAutoMerge?: boolean;
     } | null;
   } | null;
 }
@@ -27,7 +28,7 @@ export async function observePullRequestReadiness(
     const response = await client.graphql<ReadinessResponse>(
       `query DeploymentPullRequestReadiness($owner: String!, $repository: String!, $pullRequest: Int!) {
         repository(owner: $owner, name: $repository) {
-          pullRequest(number: $pullRequest) { headRefOid mergeable mergeStateStatus isDraft }
+          pullRequest(number: $pullRequest) { headRefOid mergeable mergeStateStatus isDraft viewerCanEnableAutoMerge }
         }
       }`,
       { owner, repository, pullRequest },
@@ -36,13 +37,14 @@ export async function observePullRequestReadiness(
     if (!state || typeof state.headRefOid !== "string" || !/^[a-f0-9]{40}$/i.test(state.headRefOid)
       || typeof state.mergeable !== "string" || !["MERGEABLE", "CONFLICTING", "UNKNOWN"].includes(state.mergeable)
       || typeof state.mergeStateStatus !== "string" || state.mergeStateStatus.length === 0
-      || typeof state.isDraft !== "boolean") {
+      || typeof state.isDraft !== "boolean" || typeof state.viewerCanEnableAutoMerge !== "boolean") {
       return { problem: { area: "workflow-contract", message: "GitHub returned incomplete pull-request merge readiness." } };
     }
     return {
       value: {
         headSha: state.headRefOid,
-        immediatelyMergeable: !state.isDraft && state.mergeable === "MERGEABLE"
+        // Prefer GitHub's native waiting mechanism whenever it is available.
+        immediatelyMergeable: !state.viewerCanEnableAutoMerge && !state.isDraft && state.mergeable === "MERGEABLE"
           && ["CLEAN", "UNSTABLE"].includes(state.mergeStateStatus),
       },
     };

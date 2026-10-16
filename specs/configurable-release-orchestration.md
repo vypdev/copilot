@@ -1306,6 +1306,73 @@ merges, their actors, the required CI results, publication receipt, moving major
 tag, and completed launcher state; no manual PR merge may be presented as proof
 of unattended completion. Existing broad UI acceptance gates are unchanged.
 
+### 18.0.1 Recorded reconciliation recovery regression (#520)
+
+The post-publication recovery change has a **minimum 28-case budget**: 21
+application/replay/security cases (recorded pending PR, duplicate, nine identity
+mismatches, stale ID/version, absent/conflicting receipts, open/merged sync PR,
+closed PR, absent sync proof, nonretryable block, and safe provider diagnostic),
+three adapter cases (native preference for CLEAN/UNSTABLE and missing capability),
+and four active/setup workflow contract cases. Each workflow case executes the
+read-only proof against supported, stale, incomplete, and nonretryable states;
+its fixture rows do not count as additional independent cases. Existing completed
+replay and cleanup tests are retained. Global coverage gates below remain in force;
+no new pure policy is introduced. Provider fixtures and VM script execution use
+no real waits or live service calls. Live evidence must show the existing PR
+merged by automation, unchanged publication identity, and completed durable state.
+
+The observed defect was a pending target with a recorded PR being skipped by the
+planner; retrying publication also failed its correct phase guard. The initial
+provider error was not preserved, so its precise external cause is unknown.
+The intentional contract now prefers native auto-merge whenever GitHub exposes
+it, and records safe PR-specific merge setup diagnostics without provider payloads.
+
+The internal workflow mode enum is `prepare | publish | resume`. `resume` requires
+the existing issue, operation ID, and version; title/changelog MUST be empty. The
+workflow MUST prove schema-v3/state-v1 supported durable state with a safe revision,
+matching publication receipt and verified publication, and an effective phase of
+`reconciliation_pending` or `completed`. A blocked state MUST be retryable. There
+is no state migration, arbitrary script/URL/ref input, or permission to overwrite
+immutable tags. The active workflow executes its immutable dispatch commit; setup
+uses the distributed Action. Operators MUST use a reviewed fix ref for recovery
+of an older published implementation. Rollback removes the new entrypoint without
+modifying existing durable state or published packages.
+
+```mermaid
+flowchart LR
+  A[Published; reconciliation blocked] --> B[Resume under issue mutex]
+  B --> C[Verify identity and live receipts]
+  C --> D[Reload and verify recorded PR]
+  D --> E[Configure automatic merge]
+  E --> F[Merge event verifies reachability]
+  F --> G[Cleanup and completed]
+```
+
+Text equivalent: recovery verifies the existing publication and PR, reapplies
+merge configuration, and lets the merge continuation finish cleanup. It MUST NOT
+create a second PR, publish npm, recreate a Release/tag, or update the major tag.
+Application guards recheck ID/version before effects, current publication receipts
+before clearing a block, and PR marker/number/repository/branches/frozen head before
+merge configuration. A merged sync PR uses its persisted head even after branch
+cleanup. Partial pending and already-completed targets retain ordered processing.
+The application stays provider-neutral; adapters own GitHub readiness observations,
+workflow composition owns the shared mutex, and the existing state boundary owns
+revision fencing. Contract tests enforce the job DAG, phase gates, permissions,
+SDK runtime, and absence of publication steps.
+
+The existing localized dashboard and Job Summary remain the UI, with no new
+comment stream. Representative blocked content: “Release 3.5.2 is published;
+reconciliation needs attention. GitHub could not configure automatic merge for
+PR #519. Check the PR and resume the stored reconciliation phase.” During recovery
+it shows reconciliation pending, links to the existing PR, and requires no human
+merge. Completion shows publication verified, all targets completed, and cleanup
+done. Missing/conflicting receipts or changed head retain actionable blocked facts.
+User/operator documentation is in `/issues/deployment-orchestration` and
+`/development/release-process`; the traceability ledger and catalog evidence are
+updated with the implementation. Acceptance requires the full test/coverage,
+workflow, architecture, documentation, specification, type, lint, build, and package
+gates plus recorded live recovery evidence.
+
 ### 18.1 Coverage requirements
 
 The existing global Jest thresholds remain mandatory:
@@ -1545,7 +1612,7 @@ readability, cover at least the following scenarios.
 6. A required check remains pending longer than ten minutes; the original
    workflow has already exited and no timeout failure occurs.
    Both managed phases enable native auto-merge while required validation is
-   pending. A ready non-draft `CLEAN`/`UNSTABLE` PR instead merges at its verified
+   pending. A ready non-draft `CLEAN`/`UNSTABLE` PR without native auto-merge availability instead merges at its verified
    SHA even when advisory checks remain pending. Incomplete readiness or a moved
    head prevents unsafe merging, and a rejected pinned merge retains retryable
    operation state without republishing.

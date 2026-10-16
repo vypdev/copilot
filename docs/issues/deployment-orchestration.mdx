@@ -520,7 +520,8 @@ publishing
   tag points elsewhere -> stop and resolve the immutable-tag conflict
 
 reconciliation_pending
-  PR open -> merge through normal protection
+  PR open without merge configured -> run resume mode with the existing operation ID and version
+  PR open with merge configured -> let GitHub finish checks and merge automatically
   PR closed unmerged -> correct/reopen it, then replay the continuation
   package is already public -> never change version or republish
 
@@ -536,6 +537,30 @@ If a workflow is canceled between tag creation and npm publication, rerun its
 `publish` mode with the launcher issue and persisted operation ID. If npm or the
 GitHub Release already exists, the continuation verifies and reuses it. An
 immutable version tag at another SHA is never moved.
+
+For an already verified publication blocked during reconciliation or cleanup, run
+`resume` mode on the installed release/hotfix workflow with the existing launcher
+issue, operation ID, and version. Leave title and changelog empty. This mode runs
+only the reconciliation continuation; it never runs npm, tag creation, GitHub
+Release creation, or the major-tag update. Use the reviewed workflow ref containing
+the recovery fix when the published immutable version predates it.
+
+For example, after checking the values in the control center:
+
+```bash
+gh workflow run release_workflow.yml --ref <reviewed-workflow-ref> \
+  -f mode=resume -f issue=517 \
+  -f operation-id=<existing-operation-id> -f version=3.5.2
+```
+
+Recovery verifies the durable publication identity and current tag/Release
+receipts under the same issue-scoped deployment mutex. It reloads the recorded PR,
+checks its marker, repository, branches, and frozen head, and reapplies the normal
+merge policy. A merged PR resumes reachability verification and cleanup. A closed
+unmerged PR remains blocked until corrected; a changed identity/head or conflicting
+receipt fails safely. No PR is duplicated and no publication phase is replayed.
+The existing dashboard remains the primary status surface; a closed launcher or
+`100%` label alone does not prove that its operation reached `completed`.
 
 An issue without a current schema-v3 orchestration block is not resumable. Start
 a fresh deployment operation after confirming that no version tag, npm package,

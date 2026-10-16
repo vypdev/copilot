@@ -38,11 +38,16 @@ For unattended completion, enable repository auto-merge and active required
 validation on both production and development targets. This repository requires
 GitHub Actions `CI Check` on `master` and `develop`; RepoWise is advisory.
 Default `auto` mode enables native auto-merge while a managed PR must wait.
-When GitHub already reports the PR ready, Copilot requests a normal merge pinned
+When native auto-merge is unavailable and GitHub reports the PR ready, Copilot requests a normal merge pinned
 to its verified head SHA. This also handles pending advisory checks, without
 bypassing branch rules. A moved head or failed readiness read blocks safely and
 preserves the operation for retry. Verify that both promotion and reconciliation
 merged automatically before reporting an unattended release as complete.
+
+If publication is already verified and reconciliation setup failed, use the
+workflow's `resume` mode with the stored issue, operation ID, and version. It
+rechecks publication receipts and configures the existing PR without publishing
+npm again. See [recovery by visible phase](/issues/deployment-orchestration#recovery-by-visible-phase).
 
 The npm job installs the frozen dependency graph before validating and smoke-testing the package. After publishing, it waits until `npm view` exposes the exact version, polling every 20 seconds for up to 10 minutes by default. Each lookup is limited to the remaining time, and responses arriving after the deadline are rejected. It then verifies that the registry `gitHead` is the accepted production commit. It uses npm trusted publishing with these least-privilege permissions:
 

@@ -528,7 +528,7 @@ describe('workflow contract validator', () => {
       'single-action-version': '${{ inputs.version }}',
       token: expectedToken,
     }));
-    expect(durable.if).toBe("${{ inputs.mode == 'publish' }}");
+    expect(durable.if).toBe("${{ inputs.mode == 'publish' || inputs.mode == 'resume' }}");
     expect(action.uses).toBe('./');
     expect(action.if).toBe("${{ inputs.mode == 'prepare' }}");
     expect(action.with).toEqual(expect.objectContaining({
@@ -552,7 +552,7 @@ describe('workflow contract validator', () => {
       'single-action-version': '${{ inputs.version }}',
       token: '${{ secrets.PAT }}',
     }));
-    expect(durable.if).toBe("${{ inputs.mode == 'publish' }}");
+    expect(durable.if).toBe("${{ inputs.mode == 'publish' || inputs.mode == 'resume' }}");
     expect(action.uses).toBe('vypdev/copilot@v3');
     expect(action.if).toBe("${{ inputs.mode == 'prepare' }}");
     expect(action.with).toEqual(expect.objectContaining({
@@ -626,6 +626,8 @@ describe('workflow contract validator', () => {
       const scenarios = [
         { env: prepare, valid: true },
         { env: publish, valid: true },
+        { env: { ...publish, MODE: 'resume' }, valid: true },
+        { env: { ...publish, MODE: 'resume', OPERATION_ID: '' }, valid: false },
         { env: { ...prepare, ISSUE: '-1' }, valid: false },
         { env: { ...prepare, ISSUE: '9007199254740992' }, valid: false },
         { env: { ...prepare, VERSION: 'Automatic' }, valid: false },
@@ -641,6 +643,40 @@ describe('workflow contract validator', () => {
         const setFailed = jest.fn();
         runInNewContext(step.with.script, { process: { env: scenario.env }, core: { setFailed } });
         expect(setFailed).toHaveBeenCalledTimes(scenario.valid ? 0 : 1);
+      }
+    },
+  );
+
+  it.each(mutationDirectories.flatMap(directory => mutationWorkflowNames.map(fileName => [directory, fileName]))) (
+    "isolates recovery and executes its durable-state proof in %s/%s", async (directory, fileName) => {
+      const { workflow } = loadMutationWorkflow(directory, fileName);
+      const job = workflow.jobs["resume-reconciliation"];
+      expect(job.needs).toBe("validate");
+      expect(job.if).toBe("${{ inputs.mode == 'resume' }}");
+      expect(job.steps.filter((step: { with?: Record<string, unknown> }) => step.with?.['single-action'])
+        .map((step: { with: Record<string, unknown> }) => step.with['single-action'])).toEqual(['published_deployment_action']);
+      expect(JSON.stringify(job)).not.toMatch(/npm publish|create_tag|create_release|publish_github_action/);
+      const state = { stateVersion: 1, revision: 10, operationId: 'operation-12345678', version: '3.5.2',
+        phase: 'blocked', lastFailure: { retryable: true, previousPhase: 'reconciliation_pending' },
+        publicationVerified: true, productionSha: 'c'.repeat(40), tag: 'v3.5.2',
+        publicationReceipt: { operationId: 'operation-12345678', productionSha: 'c'.repeat(40), tag: 'v3.5.2' } };
+      const scenarios = [
+        { ...state }, { ...state, phase: 'reconciliation_pending' }, { ...state, phase: 'completed' },
+        { ...state, operationId: 'other-operation' }, { ...state, version: '3.5.3' },
+        { ...state, publicationVerified: false }, { ...state, revision: 0 },
+        { ...state, phase: 'publishing' }, { ...state, lastFailure: { retryable: false } },
+        { ...state, publicationReceipt: { ...state.publicationReceipt, productionSha: 'd'.repeat(40) } },
+      ];
+      for (const [index, candidate] of scenarios.entries()) {
+        const github = { rest: { issues: { get: jest.fn().mockResolvedValue({ data: {
+          body: '<!-- copilot-configuration-start' + JSON.stringify({ schemaVersion: 3, deploymentOrchestration: candidate }) + 'copilot-configuration-end -->',
+        } }) } } };
+        const result = runInNewContext('(async () => {' + job.steps[0].with.script + '})()', {
+          github, context: { repo: { owner: 'owner', repo: 'repo' } },
+          process: { env: { ISSUE: '517', OPERATION_ID: state.operationId, VERSION: state.version } },
+        });
+        if (index < 3) await expect(result).resolves.toBeUndefined();
+        else await expect(result).rejects.toThrow('Recovery requires');
       }
     },
   );

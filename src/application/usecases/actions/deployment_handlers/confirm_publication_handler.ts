@@ -16,6 +16,7 @@ import {
   requireDeploymentOperation,
 } from "../../../services/deployment_orchestration_runtime";
 import { ReconciliationHandler } from "./reconciliation_handler";
+import { validateDeploymentContinuation } from "../../../policies/deployment_continuation_guard";
 
 export class ConfirmPublicationHandler {
   constructor(
@@ -24,16 +25,12 @@ export class ConfirmPublicationHandler {
   ) {}
 
   async invoke(context: DeploymentOrchestrationContext): Promise<Result> {
-    const operation = await this.resumeRetryableBlock(context, requireDeploymentOperation(context));
-    if (operation.phase === "reconciliation_pending" && operation.publicationVerified) {
-      return await this.reconciliation.plan(context, operation)
-        ?? deploymentSuccess(`Publication for ${operation.tag} was already verified; reconciliation state was recovered.`);
-    }
-    if (operation.phase === "completed" && operation.publicationVerified) {
-      await this.runtime.publishDashboard(context, operation);
-      return deploymentSuccess(`Publication for ${operation.tag} was already verified; duplicate notification ignored.`);
-    }
-    assertPublicationPhase(operation);
+    const current = requireDeploymentOperation(context);
+    const invalid = validateDeploymentContinuation(current, context.singleAction.operationId,
+      ["published", "publishing", "promoted", "reconciliation_pending", "completed"], context.singleAction.version);
+    if (invalid) throw new ApplicationError("workflow.stale", invalid);
+    // Verify external receipts before clearing a block or retrying any merge/cleanup effect.
+    const operation = current;
     const productionSha = requireProductionSha(operation);
     const publication = await this.runtime.dependencies.publication.inspect({
       tag: operation.tag,
@@ -65,8 +62,18 @@ export class ConfirmPublicationHandler {
         false,
       );
     }
+    const resumed = await this.resumeRetryableBlock(context, operation);
+    if (resumed.phase === "reconciliation_pending" && resumed.publicationVerified) {
+      return await this.reconciliation.plan(context, resumed)
+        ?? deploymentSuccess(`Publication for ${resumed.tag} was already verified; reconciliation state was recovered.`);
+    }
+    if (resumed.phase === "completed" && resumed.publicationVerified) {
+      await this.runtime.publishDashboard(context, resumed);
+      return deploymentSuccess(`Publication for ${resumed.tag} was already verified; duplicate notification ignored.`);
+    }
+    assertPublicationPhase(resumed);
     const published: DeploymentOperationSnapshot = {
-      ...operation,
+      ...resumed,
       phase: "published",
       publicationVerified: true,
       publicationReceipt: publication.receipt,
