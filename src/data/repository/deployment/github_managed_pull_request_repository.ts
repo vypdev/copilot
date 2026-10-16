@@ -11,6 +11,9 @@ import type {
   GithubDeploymentPullRequest,
 } from "../../../infrastructure/github/ports/github_deployment_provider_port";
 
+import { githubDeploymentMergeError } from "./github_deployment_merge_error";
+import { DeploymentMergeEffectError } from "../../../application/errors/deployment_merge_effect_error";
+
 export class GithubManagedPullRequestRepository implements ManagedPullRequestPort {
   constructor(private readonly clientProvider: GithubClientPort<GithubDeploymentClient>) {}
 
@@ -61,15 +64,23 @@ export class GithubManagedPullRequestRepository implements ManagedPullRequestPor
     return mapPullRequest(data, owner, repository);
   }
 
-  async enableAutoMerge(owner: string, repository: string, pullRequestNodeId: string, token: string): Promise<void> {
-    await this.clientProvider.getClient(token).graphql(
-      `mutation EnableDeploymentAutoMerge($pullRequestId: ID!) {
-        enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, mergeMethod: MERGE}) {
-          pullRequest { id }
-        }
-      }`,
-      { pullRequestId: pullRequestNodeId, owner, repository },
-    );
+  async enableAutoMerge(_owner: string, _repository: string, pullRequestNodeId: string, expectedHeadSha: string, token: string): Promise<void> {
+    let response: { enablePullRequestAutoMerge?: { pullRequest?: { id?: string } | null } | null };
+    try {
+      response = await this.clientProvider.getClient(token).graphql(
+        `mutation EnableDeploymentAutoMerge($pullRequestId: ID!, $expectedHeadOid: GitObjectID!) {
+          enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, expectedHeadOid: $expectedHeadOid, mergeMethod: MERGE}) {
+            pullRequest { id }
+          }
+        }`,
+        { pullRequestId: pullRequestNodeId, expectedHeadOid: expectedHeadSha },
+      );
+    } catch (cause) {
+      throw githubDeploymentMergeError("enable-auto-merge", cause);
+    }
+    if (response?.enablePullRequestAutoMerge?.pullRequest?.id !== pullRequestNodeId) {
+      throw new DeploymentMergeEffectError("enable-auto-merge", false, "provider.contract-invalid", "GitHub did not confirm native auto-merge for the expected PR.");
+    }
   }
 
   async isPullRequestQueued(owner: string, repository: string, pullRequestNodeId: string, token: string): Promise<boolean> {
@@ -112,14 +123,17 @@ export class GithubManagedPullRequestRepository implements ManagedPullRequestPor
   }
 
   async mergePullRequest(owner: string, repository: string, pullRequest: number, expectedHeadSha: string, token: string): Promise<string> {
-    const { data } = await this.clientProvider.getClient(token).rest.pulls.merge({
-      owner,
-      repo: repository,
-      pull_number: pullRequest,
-      merge_method: "merge",
-      sha: expectedHeadSha,
-    });
-    if (!data.merged || !data.sha) throw new Error(data.message ?? `Pull request #${pullRequest} was not merged.`);
+    let data: { merged: boolean; sha?: string };
+    try {
+      ({ data } = await this.clientProvider.getClient(token).rest.pulls.merge({
+        owner, repo: repository, pull_number: pullRequest, merge_method: "merge", sha: expectedHeadSha,
+      }));
+    } catch (cause) {
+      throw githubDeploymentMergeError("merge", cause);
+    }
+    if (!data?.merged || typeof data.sha !== "string" || !/^[a-f0-9]{40}$/i.test(data.sha)) {
+      throw new DeploymentMergeEffectError("merge", false, "provider.contract-invalid", "GitHub did not confirm a completed merge with a valid commit SHA.");
+    }
     return data.sha;
   }
 }

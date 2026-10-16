@@ -40,6 +40,7 @@ function harness() {
   };
   const graphql = jest.fn().mockImplementation((graphqlQuery: string) => {
     if (graphqlQuery.includes("DeploymentPullRequestReadiness")) return { repository: { pullRequest: readiness } };
+    if (graphqlQuery.includes("EnableDeploymentAutoMerge")) return { enablePullRequestAutoMerge: { pullRequest: { id: "PR_node" } } };
     if (graphqlQuery.includes("DeploymentPullRequestQueue")) return { node: { mergeQueueEntry: null } };
     if (graphqlQuery.includes("EnqueueDeploymentPullRequest")) return { enqueuePullRequest: { mergeQueueEntry: { id: "queue-entry" } } };
     if (graphqlQuery.includes("DeploymentWorkflowContracts")) return { repository: { object: { entries: [] } } };
@@ -244,8 +245,36 @@ describe("GitHub deployment repository", () => {
 
   it("enables merge-commit auto-merge through GraphQL", async () => {
     const value = harness();
-    await value.pullRequests.enableAutoMerge("owner", "repo", "PR_node", "token");
-    expect(value.graphql).toHaveBeenCalledWith(expect.stringContaining("enablePullRequestAutoMerge"), expect.objectContaining({ pullRequestId: "PR_node" }));
+    await value.pullRequests.enableAutoMerge("owner", "repo", "PR_node", "a".repeat(40), "token");
+    expect(value.graphql).toHaveBeenCalledWith(expect.stringContaining("enablePullRequestAutoMerge"), expect.objectContaining({ pullRequestId: "PR_node", expectedHeadOid: "a".repeat(40) }));
+  });
+
+  it.each([undefined, {}, { enablePullRequestAutoMerge: null },
+    { enablePullRequestAutoMerge: { pullRequest: null } },
+    { enablePullRequestAutoMerge: { pullRequest: { id: "wrong" } } },
+  ])("requires native auto-merge acknowledgement for the same PR: %j", async (response) => {
+    const value = harness(); value.graphql.mockResolvedValue(response);
+    await expect(value.pullRequests.enableAutoMerge("owner", "repo", "PR_node", "a".repeat(40), "token"))
+      .rejects.toEqual(expect.objectContaining({code:"provider.contract-invalid", action:"enable-auto-merge", readinessChanged:false}));
+  });
+
+  it("maps a native clean rejection without losing its safe action", async () => {
+    const value = harness(); value.graphql.mockRejectedValue({ errors:[{type:"UNPROCESSABLE",path:["enablePullRequestAutoMerge"],message:"Pull request Pull request is in clean status"}] });
+    await expect(value.pullRequests.enableAutoMerge("owner", "repo", "PR_node", "a".repeat(40), "token"))
+      .rejects.toEqual(expect.objectContaining({code:"provider.conflict",action:"enable-auto-merge",readinessChanged:true}));
+  });
+
+  it("maps a REST readiness rejection into one reinspection opportunity", async () => {
+    const value = harness(); value.pulls.merge.mockRejectedValue({status:405, message:"secret request payload"});
+    await expect(value.pullRequests.mergePullRequest("owner", "repo", 40, "a".repeat(40), "token"))
+      .rejects.toEqual(expect.objectContaining({code:"provider.conflict",action:"merge",readinessChanged:true,
+        message:"GitHub rejected merge (readiness-changed; HTTP 405)."}));
+  });
+
+  it.each([undefined,"", "not-a-sha"])("rejects incomplete merge success receipts: %j", async (sha) => {
+    const value = harness(); value.pulls.merge.mockResolvedValue({data:{merged:true,sha}});
+    await expect(value.pullRequests.mergePullRequest("owner", "repo", 40, "a".repeat(40), "token"))
+      .rejects.toEqual(expect.objectContaining({code:"provider.contract-invalid",readinessChanged:false}));
   });
 
   it("enqueues a managed PR through GraphQL", async () => {
@@ -852,7 +881,7 @@ describe("GitHub deployment repository", () => {
   it("rejects a merge that GitHub did not perform", async () => {
     const value = harness();
     value.pulls.merge.mockResolvedValue({ data: { merged: false, message: "checks pending" } });
-    await expect(value.pullRequests.mergePullRequest("owner", "repo", 40, "a".repeat(40), "token")).rejects.toThrow("checks pending");
+    await expect(value.pullRequests.mergePullRequest("owner", "repo", 40, "a".repeat(40), "token")).rejects.toEqual(expect.objectContaining({code:"provider.contract-invalid"}));
   });
 
   it("returns the merge SHA after GitHub performs the merge", async () => {
@@ -868,7 +897,7 @@ describe("GitHub deployment repository", () => {
     const value = harness();
     const conflict = Object.assign(new Error("Head branch was modified"), { status: 409 });
     value.pulls.merge.mockRejectedValue(conflict);
-    await expect(value.pullRequests.mergePullRequest("owner", "repo", 40, "a".repeat(40), "token")).rejects.toBe(conflict);
+    await expect(value.pullRequests.mergePullRequest("owner", "repo", 40, "a".repeat(40), "token")).rejects.toEqual(expect.objectContaining({code:"provider.conflict", action:"merge", readinessChanged:false}));
     expect(value.pulls.merge).toHaveBeenCalledTimes(1);
     expect(value.graphql).not.toHaveBeenCalled();
   });
