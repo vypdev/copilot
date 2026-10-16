@@ -259,7 +259,7 @@ describe('push and single-action capability binding', () => {
     await git.listBranches('release/');
     await pullRequests.findManagedPullRequests({ base: 'master' } as never);
     await pullRequests.createManagedPullRequest({ base: 'master', head: 'develop' } as never);
-    await pullRequests.enableAutoMerge('node-1');
+    await pullRequests.enableAutoMerge('node-1', 'head-sha');
     await pullRequests.isPullRequestQueued('node-1');
     await pullRequests.enqueuePullRequest('node-1', 'a'.repeat(40));
     await presentation.findDashboard(42, '<!-- marker -->');
@@ -267,6 +267,7 @@ describe('push and single-action capability binding', () => {
     await presentation.publishMilestone(42, '<!-- milestone -->', 'body');
 
     expect(tagPort.updateTag).toHaveBeenCalledWith('owner', 'repo', 'next', 'stable', 'secret-token');
+    expect(pullRequestPort.enableAutoMerge).toHaveBeenCalledWith('owner', 'repo', 'node-1', 'head-sha', 'secret-token');
     expect(pullRequestPort.enqueuePullRequest).toHaveBeenCalledWith(
       'owner', 'repo', 'node-1', 'a'.repeat(40), 'secret-token',
     );

@@ -72,7 +72,7 @@ export function bindManagedPullRequests(
     findManagedPullRequests: (query) => port.findManagedPullRequests({ ...query, owner: binding.owner, repository: binding.repository, token: binding.token }),
     createManagedPullRequest: (command) => port.createManagedPullRequest({ ...command, owner: binding.owner, repository: binding.repository, token: binding.token }),
     getPullRequest: (pullRequest) => port.getPullRequest(binding.owner, binding.repository, pullRequest, binding.token),
-    enableAutoMerge: (pullRequestNodeId) => port.enableAutoMerge(binding.owner, binding.repository, pullRequestNodeId, binding.token),
+    enableAutoMerge: (pullRequestNodeId, expectedHeadSha) => port.enableAutoMerge(binding.owner, binding.repository, pullRequestNodeId, expectedHeadSha, binding.token),
     isPullRequestQueued: (pullRequestNodeId) => port.isPullRequestQueued(binding.owner, binding.repository, pullRequestNodeId, binding.token),
     enqueuePullRequest: (pullRequestNodeId, expectedHeadSha) => port.enqueuePullRequest(binding.owner, binding.repository, pullRequestNodeId, expectedHeadSha, binding.token),
     mergePullRequest: (pullRequest, expectedHeadSha) => port.mergePullRequest(binding.owner, binding.repository, pullRequest, expectedHeadSha, binding.token),

@@ -695,10 +695,87 @@ The readiness adapter MUST read `headRefOid`, `mergeable`, `mergeStateStatus`,
 and `isDraft` together from GitHub GraphQL. `UNSTABLE` means mergeable with a
 non-passing status; it does not authorize bypassing required checks. Normal merge
 requests MUST include the expected head SHA and remain subject to current
-GitHub branch protection/rulesets. There is no admin bypass or error-triggered
-catch-and-merge fallback. Explicit `auto-merge`, queue, and `create-only` modes
+GitHub branch protection/rulesets. There is no admin bypass or uninspected
+catch-and-merge fallback. The bounded readiness reinspection below is the only
+automatic recovery from a rejected merge effect. Explicit `auto-merge`, queue, and `create-only` modes
 retain their existing semantics. This fix adds no user configuration or durable
 state migration; a retry re-observes the current provider facts.
+
+### Initial merge setup race recovery (#525)
+
+Observed evidence: fresh 3.5.3 (#522) published successfully and created #524,
+then blocked with an unclassified merge effect failure. Original GitHub cause
+was lost; neither a provider outage nor a readiness race is established by that
+message. This change addresses two identified correctness gaps: no recovery
+from the provider's readiness rejection after a snapshot, and loss of the
+attempted action/error classification.
+
+The application MUST preserve the provider-neutral error category and attempted
+merge action. The adapter maps only bounded HTTP statuses and known GraphQL
+rejections; malformed entries cannot be dropped to manufacture an exact clean
+rejection. Provider messages, requests, headers, and unknown error type strings
+MUST NOT enter public state. Unclassified failures are workflow failures, not
+claims of service unavailability. Existing dashboard, locale, comment, and
+correlation contracts remain in force; diagnostic detail uses existing technical
+fields and does not add notifications.
+
+In default `auto` mode only, a rejected normal merge (HTTP 405), or the exact
+native auto-merge clean-state rejection, permits **one** fresh authoritative PR
+and rules/readiness inspection. This is a fixed safety limit, not configuration.
+The service verifies repository, number, node ID, base/head branches, frozen SHA,
+and operation/phase/launcher marker before any alternate effect. Changed
+identity is a nonretryable block; closed-unmerged, unreadable policy, or another
+rejection retains the existing PR and receipts. A concurrently merged matching
+PR or already-enabled matching native wait is accepted without duplication.
+
+```text
+Read current rules -> attempt permitted action
+  -> typed readiness rejection -> re-read same PR and current rules once
+     -> same permitted action: retain block (or accept observed completed effect)
+     -> different permitted action: persist selected mode -> apply once
+```
+
+The second effect MUST be independently authorized by fresh policy. Normal
+merge and native enablement both pin the frozen head (`sha` / `expectedHeadOid`).
+Current queue rules and producer proof remain mandatory. Explicit `auto-merge`,
+`merge-queue`, and `create-only` do not fall back to another mode. There is no
+check polling, admin bypass, automatic retry on permission denial/head conflict,
+or recursive retry. One alternate failure ends the invocation.
+
+Representative retained failure: "GitHub could not configure automatic merge
+for PR #524. GitHub rejected merge (readiness-changed; HTTP 405). Check the PR
+and retry the stored reconciliation phase." Permission errors retain their
+permission classification and nonretryability in both the returned error and
+durable failure. Resume refuses nonretryable state and requires maintainer
+review. The existing dashboard states publication is already successful; a
+maintainer resumes a retryable reconciliation after correcting its cause.
+Pending successful native enablement needs no action; a merge closes the PR and
+normal continuation completes cleanup. Completed state requires every target
+accepted, never just a closed launcher or green publication job.
+
+No new inputs, state schema, migration, SDK/runtime assumptions, or privileges
+are introduced. Existing in-flight version-1 operations use the same
+receipt-verified `resume` workflow. Recovery must not execute npm, version-tag,
+GitHub Release, or major-tag steps. Rollback uses the previous runtime with the
+same retained state; published immutable artifacts remain untouched.
+
+Test budget: **minimum 60 distinct cases**, risk-derived and non-overlapping:
+31 provider mapping/sanitization rows, 27 application race/identity/explicit-mode/
+replay cases, and two adapter/binding expected-head contracts. Additional
+integration cases cover persisted failure diagnostics and the alternate action
+through the real coordinator. Deterministic fakes use no sleeps/providers.
+Global Jest thresholds remain; new service/mapping target at least 95% lines and
+90% branches, with all safety branches exercised. Architecture/cycle, type,
+lint, docs, workflow, specification, bundle and npm package checks remain gates.
+
+Acceptance: a first-attempt reconciliation fixture changing from ready to
+pending establishes native waiting; pending-to-clean establishes an expected-head
+merge. Unknown/denied/head-changed effects never try another action. Same-state
+or twice-rejected cases block once. Existing live 3.5.3 resumes through the
+reviewed Action ref, #524 merges as the Action actor, durable state becomes
+completed, source cleanup occurs, and npm integrity/v3.5.3/v3 remain unchanged.
+This recovery does not count as a fresh unattended-release success; another
+version needs separate authorization.
 
 For unattended operation, maintainers MUST enable repository auto-merge and
 activate the intended required validation on every target branch. This project's

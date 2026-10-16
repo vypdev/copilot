@@ -44,6 +44,15 @@ bypassing branch rules. A moved head or failed readiness read blocks safely and
 preserves the operation for retry. Verify that both promotion and reconciliation
 merged automatically before reporting an unattended release as complete.
 
+If GitHub rejects a merge because readiness changed since the inspection,
+Copilot rechecks the same PR, frozen head, and current target rules once. It
+then applies a different permitted automatic action, such as enabling native
+auto-merge while required CI starts. A second rejection or unchanged decision
+blocks the operation. Permission errors and head conflicts never trigger this
+recovery. Both direct merge and native enablement include the expected head.
+Failure details retain the attempted action and a sanitized error category;
+unclassified failures do not claim a GitHub outage.
+
 If publication is already verified and reconciliation setup failed, use the
 workflow's `resume` mode with the stored issue, operation ID, and version. It
 rechecks publication receipts and configures the existing PR without publishing

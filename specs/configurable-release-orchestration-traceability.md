@@ -132,3 +132,18 @@ receipts and a completed launcher; deterministic fixtures do not establish it.
 | Preserve readiness-based merge policy and safe PR-specific setup failure | orchestration runtime | safe diagnostic and existing adapter tests | Release process |
 | Serialized resume excludes every publication job | active/setup release and hotfix workflows | workflow structure, VM proof, input validation tests | Recovery command |
 | Existing 3.5.2 completes without republish/manual PR merge | durable operation and PR audit | live recovery run and completed issue recorded in implementation PR | Release process |
+
+## Initial merge setup recovery (#525)
+
+| Requirement | Implementation | Evidence | Documentation |
+|---|---|---|---|
+| One reinspection on known readiness rejection, then fresh policy | `deployment_merge_effects.ts` | service race, queue, explicit-mode and bounded-retry tests | Deployment orchestration |
+| Frozen PR identity before alternate effects | merge effects service | ten identity variants, closed/merged/read-failure cases | Deployment orchestration |
+| Safe attempted action and error classification | `github_deployment_merge_error.ts`, runtime | provider mapping/sanitization and coordinator permission case | Release process |
+| Pin native enablement and validate effect acknowledgement | managed PR adapter and bound port | adapter and composition contracts | Release process |
+| Resume 3.5.3 without repeating publication | existing serialized resume workflow | live completed state, #524 Action merge, unchanged npm/tag receipts recorded in PR | Recovery by visible phase |
+
+The minimum 60-case ledger in section 11 is covered by 35 provider mapping rows,
+30 merge-effects service cases, two coordinator integration cases, and native
+acknowledgement/REST receipt/binding contracts. Cases count once. Live recovery
+is distinct from a future fresh unattended-release acceptance test.
