@@ -326,6 +326,7 @@
         "src/data/repository/deployment/github_deployment_git_repository.ts",
         "src/data/repository/deployment/github_managed_pull_request_repository.ts",
         "src/data/repository/deployment/github_target_merge_capabilities_inspector.ts",
+        "src/data/repository/deployment/github_pull_request_readiness_query.ts",
         "src/data/repository/deployment/deployment_state_repository.ts",
         "src/data/repository/release/repository_release_publication_repository.ts",
         "src/infrastructure/github/octokit_deployment_adapter.ts"
@@ -345,7 +346,8 @@
         "src/application/usecases/__tests__/push_single_action_contexts.test.ts",
         "src/data/repository/deployment/__tests__/github_deployment_adapters.test.ts",
         "src/application/__tests__/architecture_boundaries.test.ts",
-        "src/tooling/__tests__/validate_workflow_contract.test.ts"
+        "src/tooling/__tests__/validate_workflow_contract.test.ts",
+        "src/infrastructure/composition/__tests__/push_single_action_capability_port_binding.test.ts"
       ],
       "documentation": [
         "docs/issues/deployment-orchestration.mdx",

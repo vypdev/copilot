@@ -159,10 +159,10 @@ describe('push and single-action capability binding', () => {
     } as never, binding);
 
     await bound.getPullRequest(363);
-    await bound.mergePullRequest(363);
+    await bound.mergePullRequest(363, 'a'.repeat(40));
 
     expect(getPullRequest).toHaveBeenCalledWith('owner', 'repo', 363, 'secret-token');
-    expect(mergePullRequest).toHaveBeenCalledWith('owner', 'repo', 363, 'secret-token');
+    expect(mergePullRequest).toHaveBeenCalledWith('owner', 'repo', 363, 'a'.repeat(40), 'secret-token');
   });
 
   it('binds deployment policy, continuation, and presentation ports', async () => {

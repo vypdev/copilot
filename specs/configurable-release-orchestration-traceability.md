@@ -50,6 +50,15 @@ Repository-wide coverage thresholds remain in `jest.config.js`; architecture,
 workflow, documentation, type, lint, package, build, and Graphify checks are
 separate gates.
 
+The 2026-10-16 ready-PR correction has a separate 29-case ledger in SDD section
+18: 24 adapter cases in `github_deployment_adapters.test.ts`, four orchestration
+cases in `deployment_orchestration_use_case.test.ts`, and one bound-port contract
+in `push_single_action_capability_port_binding.test.ts`. It covers authoritative
+GraphQL readiness, pending advisory checks, both managed phases, fail-closed
+reads/head changes, and the expected-SHA merge mutation. AC-6 maps to this
+additional evidence. Live unattended completion requires both automatic merge
+receipts and a completed launcher; deterministic fixtures do not establish it.
+
 ## Acceptance criteria
 
 | AC | Implementation | Automated evidence | User/operator documentation | Status |
