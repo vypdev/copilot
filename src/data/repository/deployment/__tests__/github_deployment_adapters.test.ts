@@ -259,7 +259,7 @@ describe("GitHub deployment repository", () => {
   });
 
   it("maps a native clean rejection without losing its safe action", async () => {
-    const value = harness(); value.graphql.mockRejectedValue({ errors:[{type:"UNPROCESSABLE",message:"Pull request is in clean status"}] });
+    const value = harness(); value.graphql.mockRejectedValue({ errors:[{type:"UNPROCESSABLE",path:["enablePullRequestAutoMerge"],message:"Pull request Pull request is in clean status"}] });
     await expect(value.pullRequests.enableAutoMerge("owner", "repo", "PR_node", "a".repeat(40), "token"))
       .rejects.toEqual(expect.objectContaining({code:"provider.conflict",action:"enable-auto-merge",readinessChanged:true}));
   });

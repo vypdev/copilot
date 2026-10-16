@@ -79447,7 +79447,9 @@ function githubDeploymentMergeError(action, cause) {
     const limited = status === 429 || types.includes("RATE_LIMITED");
     const unavailable = (status !== undefined && status >= 500) || types.includes("INTERNAL") || types.includes("SERVICE_UNAVAILABLE");
     const cleanRejection = rawErrors.length === 1 && errors.length === 1 && errors[0].type === "UNPROCESSABLE"
-        && errors[0].message === "Pull request is in clean status";
+        && typeof errors[0].message === "string"
+        && ["Pull request is in clean status", "Pull request Pull request is in clean status",
+            "Pull request is in unstable status", "Pull request Pull request is in unstable status"].includes(errors[0].message);
     const readinessChanged = !denied && !limited && !unavailable
         && ((action === "merge" && status === 405) || (action === "enable-auto-merge" && (status === undefined || status === 200) && cleanRejection));
     const code = denied ? "authorization.denied"

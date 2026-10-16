@@ -720,7 +720,7 @@ correlation contracts remain in force; diagnostic detail uses existing technical
 fields and does not add notifications.
 
 In default `auto` mode only, a rejected normal merge (HTTP 405), or the exact
-native auto-merge clean-state rejection, permits **one** fresh authoritative PR
+native auto-merge clean/unstable-state rejection, permits **one** fresh authoritative PR
 and rules/readiness inspection. This is a fixed safety limit, not configuration.
 The service verifies repository, number, node ID, base/head branches, frozen SHA,
 and operation/phase/launcher marker before any alternate effect. Changed
@@ -734,6 +734,13 @@ Read current rules -> attempt permitted action
      -> same permitted action: retain block (or accept observed completed effect)
      -> different permitted action: persist selected mode -> apply once
 ```
+
+Provider fixtures include the reported API messages with a duplicated "Pull
+request" prefix and both clean/unstable ready states. These exact variants are
+observed in [a raw GraphQL failure report](https://github.com/rjwalters/loom/issues/3371)
+and [an auto-merge adapter report](https://github.com/peter-evans/enable-pull-request-automerge/issues/355).
+The prefix variation does not relax the one-error, typed-rejection, same-head,
+and fresh-policy requirements.
 
 The second effect MUST be independently authorized by fresh policy. Normal
 merge and native enablement both pin the frozen head (`sha` / `expectedHeadOid`).
