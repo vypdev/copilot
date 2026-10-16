@@ -1312,8 +1312,7 @@ The post-publication recovery change has a **minimum 28-case budget**: 21
 application/replay/security cases (recorded pending PR, duplicate, nine identity
 mismatches, stale ID/version, absent/conflicting receipts, open/merged sync PR,
 closed PR, absent sync proof, nonretryable block, and safe provider diagnostic),
-three adapter cases (native preference for CLEAN/UNSTABLE and missing capability),
-and four active/setup workflow contract cases. Each workflow case executes the
+and seven workflow cases (four active/setup contracts and three proof-bypass rejections). Each workflow case executes the
 read-only proof against supported, stale, incomplete, and nonretryable states;
 its fixture rows do not count as additional independent cases. Existing completed
 replay and cleanup tests are retained. Global coverage gates below remain in force;
@@ -1324,8 +1323,8 @@ merged by automation, unchanged publication identity, and completed durable stat
 The observed defect was a pending target with a recorded PR being skipped by the
 planner; retrying publication also failed its correct phase guard. The initial
 provider error was not preserved, so its precise external cause is unknown.
-The intentional contract now prefers native auto-merge whenever GitHub exposes
-it, and records safe PR-specific merge setup diagnostics without provider payloads.
+The intentional contract preserves the existing readiness-based merge policy
+and records safe PR-specific merge setup diagnostics without provider payloads.
 
 The internal workflow mode enum is `prepare | publish | resume`. `resume` requires
 the existing issue, operation ID, and version; title/changelog MUST be empty. The
@@ -1612,7 +1611,7 @@ readability, cover at least the following scenarios.
 6. A required check remains pending longer than ten minutes; the original
    workflow has already exited and no timeout failure occurs.
    Both managed phases enable native auto-merge while required validation is
-   pending. A ready non-draft `CLEAN`/`UNSTABLE` PR without native auto-merge availability instead merges at its verified
+   pending. A ready non-draft `CLEAN`/`UNSTABLE` PR instead merges at its verified
    SHA even when advisory checks remain pending. Incomplete readiness or a moved
    head prevents unsafe merging, and a rejected pinned merge retains retryable
    operation state without republishing.

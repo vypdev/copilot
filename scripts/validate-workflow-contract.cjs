@@ -1138,6 +1138,7 @@ function assertResumeReconciliationJob(relativeFile, job, setup) {
   const proof = steps[0];
   const recovery = steps.at(-1);
   if (steps.length !== (setup ? 2 : 3)
+    || steps.some(step => step.if !== undefined || step.run !== undefined || Object.hasOwn(step, 'continue-on-error'))
     || proof?.uses !== 'actions/github-script@v9'
     || Object.keys(proof.with ?? {}).join(',') !== 'script'
     || JSON.stringify(proof.env) !== JSON.stringify({ ISSUE: '${{ inputs.issue }}', OPERATION_ID: '${{ inputs.operation-id }}', VERSION: '${{ inputs.version }}' })
@@ -1146,6 +1147,7 @@ function assertResumeReconciliationJob(relativeFile, job, setup) {
     || !String(proof.with.script).includes('receipt?.productionSha !== state.productionSha')
     || recovery?.uses !== (setup ? DISTRIBUTED_COPILOT_ACTION : './')
     || recovery.with?.['single-action'] !== 'published_deployment_action'
+    || recovery.with?.['single-action-issue'] !== '${{ inputs.issue }}'
     || recovery.with?.token !== '${{ secrets.PAT }}'
     || (!setup && (steps[1]?.uses !== CHECKOUT_ACTION || steps[1]?.with?.ref !== '${{ github.sha }}'
       || steps[1]?.with?.['persist-credentials'] !== false))) {

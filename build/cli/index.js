@@ -79464,21 +79464,20 @@ async function observePullRequestReadiness(client, owner, repository, pullReques
     try {
         const response = await client.graphql(`query DeploymentPullRequestReadiness($owner: String!, $repository: String!, $pullRequest: Int!) {
         repository(owner: $owner, name: $repository) {
-          pullRequest(number: $pullRequest) { headRefOid mergeable mergeStateStatus isDraft viewerCanEnableAutoMerge }
+          pullRequest(number: $pullRequest) { headRefOid mergeable mergeStateStatus isDraft }
         }
       }`, { owner, repository, pullRequest });
         const state = response?.repository?.pullRequest;
         if (!state || typeof state.headRefOid !== "string" || !/^[a-f0-9]{40}$/i.test(state.headRefOid)
             || typeof state.mergeable !== "string" || !["MERGEABLE", "CONFLICTING", "UNKNOWN"].includes(state.mergeable)
             || typeof state.mergeStateStatus !== "string" || state.mergeStateStatus.length === 0
-            || typeof state.isDraft !== "boolean" || typeof state.viewerCanEnableAutoMerge !== "boolean") {
+            || typeof state.isDraft !== "boolean") {
             return { problem: { area: "workflow-contract", message: "GitHub returned incomplete pull-request merge readiness." } };
         }
         return {
             value: {
                 headSha: state.headRefOid,
-                // Prefer GitHub's native waiting mechanism whenever it is available.
-                immediatelyMergeable: !state.viewerCanEnableAutoMerge && !state.isDraft && state.mergeable === "MERGEABLE"
+                immediatelyMergeable: !state.isDraft && state.mergeable === "MERGEABLE"
                     && ["CLEAN", "UNSTABLE"].includes(state.mergeStateStatus),
             },
         };

@@ -129,6 +129,6 @@ receipts and a completed launcher; deterministic fixtures do not establish it.
 |---|---|---|---|
 | Reuse recorded pending PR; verify frozen identity; resume merged cleanup | `reconciliation_handler.ts` | orchestration replay/identity/sync tests | Recovery by visible phase |
 | Recheck operation/version and current publication receipts before effects | `confirm_publication_handler.ts` | stale continuation and receipt tests | Recovery by visible phase |
-| Prefer available native auto-merge; preserve safe PR-specific setup failure | readiness query and orchestration runtime | adapter and safe diagnostic tests | Release process |
+| Preserve readiness-based merge policy and safe PR-specific setup failure | orchestration runtime | safe diagnostic and existing adapter tests | Release process |
 | Serialized resume excludes every publication job | active/setup release and hotfix workflows | workflow structure, VM proof, input validation tests | Recovery command |
 | Existing 3.5.2 completes without republish/manual PR merge | durable operation and PR audit | live recovery run and completed issue recorded in implementation PR | Release process |

@@ -38,7 +38,7 @@ For unattended completion, enable repository auto-merge and active required
 validation on both production and development targets. This repository requires
 GitHub Actions `CI Check` on `master` and `develop`; RepoWise is advisory.
 Default `auto` mode enables native auto-merge while a managed PR must wait.
-When native auto-merge is unavailable and GitHub reports the PR ready, Copilot requests a normal merge pinned
+When GitHub already reports the PR ready, Copilot requests a normal merge pinned
 to its verified head SHA. This also handles pending advisory checks, without
 bypassing branch rules. A moved head or failed readiness read blocks safely and
 preserves the operation for retry. Verify that both promotion and reconciliation

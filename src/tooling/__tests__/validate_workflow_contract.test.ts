@@ -647,6 +647,16 @@ describe('workflow contract validator', () => {
     },
   );
 
+  it.each([
+    ["skipped proof", (job: Record<string, any>) => { job.steps[0].if = "${{ false }}"; }],
+    ["ignored proof failure", (job: Record<string, any>) => { job.steps[0]['continue-on-error'] = true; }],
+    ["different launcher", (job: Record<string, any>) => { job.steps.at(-1).with['single-action-issue'] = '1'; }],
+  ] as const)("rejects recovery proof bypass: %s", (_name, mutate) => {
+    expectMutationRejected('.github/workflows', 'release_workflow.yml', workflow => {
+      mutate(workflow.jobs['resume-reconciliation']);
+    }, 'recovery must prove existing publication state');
+  });
+
   it.each(mutationDirectories.flatMap(directory => mutationWorkflowNames.map(fileName => [directory, fileName]))) (
     "isolates recovery and executes its durable-state proof in %s/%s", async (directory, fileName) => {
       const { workflow } = loadMutationWorkflow(directory, fileName);

@@ -15,7 +15,7 @@ const pullRequest = (overrides: Partial<GithubDeploymentPullRequest> = {}): Gith
 });
 
 function harness() {
-  const readiness = { headRefOid: "a".repeat(40), mergeable: "MERGEABLE", mergeStateStatus: "BLOCKED", isDraft: false, viewerCanEnableAutoMerge: false };
+  const readiness = { headRefOid: "a".repeat(40), mergeable: "MERGEABLE", mergeStateStatus: "BLOCKED", isDraft: false };
   const pulls = {
     list: jest.fn(),
     create: jest.fn(),
@@ -180,13 +180,6 @@ describe("GitHub deployment repository", () => {
       .resolves.toEqual(expect.objectContaining({ immediatelyMergeable: true }));
   });
 
-  it.each(["CLEAN", "UNSTABLE"])("prefers native auto-merge when GitHub offers it in %s", async (mergeStateStatus) => {
-    const value = harness();
-    Object.assign(value.readiness, { mergeStateStatus, viewerCanEnableAutoMerge: true });
-    await expect(value.targetRules.getTargetCapabilities("owner", "repo", "master", "token", { pullRequest: 40 }))
-      .resolves.toEqual(expect.objectContaining({ immediatelyMergeable: false, mergeQueueObservationProblems: [] }));
-  });
-
   it.each([
     ["BLOCKED", "MERGEABLE", false],
     ["BEHIND", "MERGEABLE", false],
@@ -211,9 +204,9 @@ describe("GitHub deployment repository", () => {
     { repository: { pullRequest: null } },
     { repository: { pullRequest: {} } },
     ...[
-      { headRefOid: "short" }, { mergeable: "FUTURE" }, { mergeStateStatus: "" }, { isDraft: undefined }, { viewerCanEnableAutoMerge: undefined },
+      { headRefOid: "short" }, { mergeable: "FUTURE" }, { mergeStateStatus: "" }, { isDraft: undefined },
     ].map((fields) => ({ repository: { pullRequest: {
-      headRefOid: "a".repeat(40), mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", isDraft: false, viewerCanEnableAutoMerge: false, ...fields,
+      headRefOid: "a".repeat(40), mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", isDraft: false, ...fields,
     } } })),
   ])("fails closed on incomplete authoritative readiness %j", async (response) => {
     const value = harness();
