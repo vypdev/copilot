@@ -56,6 +56,9 @@ Complete this once before starting the first production-first operation:
   Actions for this repository;
 - allow merge commits, which `production-lineage` requires for an auditable
   ancestry relationship;
+- activate required validation on every promotion/reconciliation target. This
+  project requires GitHub Actions `CI Check` on both `master` and `develop`;
+  RepoWise remains advisory;
 - enable repository auto-merge if selecting `auto-merge`, or configure every
   required check for `merge_group` if the target requires a merge queue, and
   add an exact attestation only for a producer Copilot cannot inspect;
@@ -81,8 +84,10 @@ already be present when a managed promotion PR closes.
    promotion PR.
 4. Immediately before enqueue, Copilot rereads the policy, confirms whether the
    PR is already queued, and binds the mutation to the verified head SHA.
-   Otherwise it asks GitHub for native auto-merge or leaves a maintainer-owned
-   PR according to configuration.
+   In `auto` mode, a PR GitHub already considers ready merges at the verified
+   head SHA, including when advisory checks are pending. Otherwise it asks
+   GitHub for native auto-merge or leaves a maintainer-owned PR according to
+   configuration.
 5. The preparation run exits successfully. Pending checks are an external wait,
    not a workflow failure.
 6. After the marked PR merges, Copilot verifies its repository, marker, stored
@@ -228,10 +233,13 @@ inherits the commit accepted in production. `canonical-gitflow` instead carries
 the frozen release/hotfix head to development. `manual` publishes but creates no
 reconciliation PR and always leaves the issue open.
 
-`auto` PR mode selects a required merge queue first, native auto-merge when
-available, and otherwise a maintainer-owned PR. Every mode leaves checks,
-reviews, branch protection, and merge timing to GitHub; no release runner polls
-an open PR.
+`auto` PR mode selects a required merge queue first. Otherwise it requests a
+normal merge pinned to the verified head when GitHub reports a non-draft PR as
+`MERGEABLE` with `CLEAN` or `UNSTABLE` readiness. `UNSTABLE` can include advisory
+checks that are still pending. GitHub still enforces all current requirements.
+When the PR must wait, Copilot enables native auto-merge if available, otherwise
+leaves a maintainer-owned PR. Explicit `auto-merge` always uses native auto-merge.
+No release runner polls an open PR.
 
 Queue readiness is fail-closed. Copilot unions classic branch protection with
 repository- and organization-level effective rulesets for the exact target.
@@ -423,6 +431,13 @@ publication succeeds.
 - Enable merge commits for managed production-lineage PRs; squash/rebase do not
   provide the ancestry guarantee required by this strategy.
 - Enable repository auto-merge before explicitly selecting `auto-merge`.
+- GitHub only offers native auto-merge for a PR that cannot merge immediately.
+  If it rejects enabling auto-merge on a ready PR, use the corrected default
+  `auto` mode and retry the operation with its existing identity. Do not remove
+  required checks or merge with an admin bypass. An incomplete readiness read
+  or changed head blocks safely; a fresh retry rechecks GitHub. A package
+  published before a reconciliation failure remains published and is not sent
+  to npm again.
 - When a branch requires a merge queue, every required GitHub Actions check
   must run for `merge_group`. Copilot verifies literal GitHub Actions job names
   automatically and treats third-party or ambiguous producers as unknown until

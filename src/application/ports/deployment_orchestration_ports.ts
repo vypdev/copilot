@@ -79,7 +79,7 @@ export interface ManagedPullRequestPort {
     expectedHeadSha: string,
     token: string,
   ): Promise<void>;
-  mergePullRequest(owner: string, repository: string, pullRequest: number, token: string): Promise<string>;
+  mergePullRequest(owner: string, repository: string, pullRequest: number, expectedHeadSha: string, token: string): Promise<string>;
 }
 
 /** Repository-credential-bound managed pull-request authority. */
@@ -90,7 +90,7 @@ export interface BoundManagedPullRequestPort {
   enableAutoMerge(pullRequestNodeId: string): Promise<void>;
   isPullRequestQueued(pullRequestNodeId: string): Promise<boolean>;
   enqueuePullRequest(pullRequestNodeId: string, expectedHeadSha: string): Promise<void>;
-  mergePullRequest(pullRequest: number): Promise<string>;
+  mergePullRequest(pullRequest: number, expectedHeadSha: string): Promise<string>;
 }
 
 export interface DeploymentGitPort {

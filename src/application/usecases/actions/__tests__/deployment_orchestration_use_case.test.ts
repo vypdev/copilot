@@ -305,7 +305,7 @@ describe("DeploymentOrchestrationUseCase", () => {
     const value = harness();
     value.targetRules.getTargetCapabilities.mockResolvedValue(capabilities({ immediatelyMergeable: true }));
     await value.useCase.invoke(execution("prepare"));
-    expect(value.pullRequests.mergePullRequest).toHaveBeenCalledWith(40);
+    expect(value.pullRequests.mergePullRequest).toHaveBeenCalledWith(40, sourceSha);
     expect(value.pullRequests.enableAutoMerge).not.toHaveBeenCalled();
   });
 
@@ -593,6 +593,41 @@ describe("DeploymentOrchestrationUseCase", () => {
       355, expect.arrayContaining(["release", "deployed", "state:working"]),
     );
     expect(input.currentConfiguration.deploymentOrchestration).toEqual(expect.objectContaining({ phase: "reconciliation_pending", publicationVerified: true }));
+    expect(value.pullRequests.enableAutoMerge).toHaveBeenCalledWith("PR_reconcile");
+    expect(value.pullRequests.mergePullRequest).not.toHaveBeenCalled();
+  });
+
+  it("merges a ready reconciliation PR at the verified production head", async () => {
+    const value = harness();
+    value.targetRules.getTargetCapabilities.mockResolvedValue(capabilities({ immediatelyMergeable: true }));
+    value.pullRequests.createManagedPullRequest.mockResolvedValue(pr({
+      number: 41, nodeId: "PR_reconcile",
+      body: '<!-- copilot-deployment operation-id="operation-12345678" phase="reconciliation" issue="355" -->',
+      headBranch: "master", headSha: productionSha, baseBranch: "develop",
+    }));
+    const input = execution("published", operation("publishing"));
+    const result = await value.useCase.invoke(input);
+    expect(result[0].success).toBe(true);
+    expect(value.pullRequests.mergePullRequest).toHaveBeenCalledWith(41, productionSha);
+    expect(value.pullRequests.enableAutoMerge).not.toHaveBeenCalled();
+    expect(input.currentConfiguration.deploymentOrchestration).toEqual(expect.objectContaining({
+      phase: "reconciliation_pending", publicationVerified: true,
+    }));
+  });
+
+  it("retains a retryable promotion after GitHub rejects the pinned head", async () => {
+    const value = harness();
+    value.targetRules.getTargetCapabilities.mockResolvedValue(capabilities({ immediatelyMergeable: true }));
+    value.pullRequests.mergePullRequest.mockRejectedValue(Object.assign(new Error("Head branch was modified"), { status: 409 }));
+    const input = execution("prepare");
+    const result = await value.useCase.invoke(input);
+    expect(result[0].success).toBe(false);
+    expect(input.currentConfiguration.deploymentOrchestration).toEqual(expect.objectContaining({
+      phase: "blocked", promotionPullRequest: 40,
+      lastFailure: expect.objectContaining({ retryable: true }),
+    }));
+    expect(value.pullRequests.enableAutoMerge).not.toHaveBeenCalled();
+    expect(value.continuation.dispatch).not.toHaveBeenCalled();
   });
 
   it("blocks retryably when the serialized workflow cannot prove a publication effect", async () => {

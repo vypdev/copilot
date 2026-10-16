@@ -15,6 +15,7 @@ const pullRequest = (overrides: Partial<GithubDeploymentPullRequest> = {}): Gith
 });
 
 function harness() {
+  const readiness = { headRefOid: "a".repeat(40), mergeable: "MERGEABLE", mergeStateStatus: "BLOCKED", isDraft: false };
   const pulls = {
     list: jest.fn(),
     create: jest.fn(),
@@ -38,6 +39,7 @@ function harness() {
     deleteRef: jest.fn(),
   };
   const graphql = jest.fn().mockImplementation((graphqlQuery: string) => {
+    if (graphqlQuery.includes("DeploymentPullRequestReadiness")) return { repository: { pullRequest: readiness } };
     if (graphqlQuery.includes("DeploymentPullRequestQueue")) return { node: { mergeQueueEntry: null } };
     if (graphqlQuery.includes("EnqueueDeploymentPullRequest")) return { enqueuePullRequest: { mergeQueueEntry: { id: "queue-entry" } } };
     if (graphqlQuery.includes("DeploymentWorkflowContracts")) return { repository: { object: { entries: [] } } };
@@ -59,6 +61,7 @@ function harness() {
     request,
     graphql,
     paginate,
+    readiness,
   };
 }
 
@@ -160,11 +163,74 @@ describe("GitHub deployment repository", () => {
     expect(value.graphql.mock.calls[0][0]).not.toContain("requiresMergeQueue");
   });
 
-  it("reports an immediately mergeable managed PR only when GitHub marks it clean", async () => {
+  it("reports an immediately mergeable managed PR when GitHub marks it clean", async () => {
     const value = harness();
-    value.pulls.get.mockResolvedValue({ data: pullRequest({ mergeable: true, mergeable_state: "clean" }) });
+    value.readiness.mergeStateStatus = "CLEAN";
     await expect(value.targetRules.getTargetCapabilities("owner", "repo", "master", "token", { pullRequest: 40 }))
       .resolves.toEqual(expect.objectContaining({ immediatelyMergeable: true }));
+    expect(value.graphql).toHaveBeenCalledWith(expect.stringContaining("headRefOid mergeable mergeStateStatus isDraft"), {
+      owner: "owner", repository: "repo", pullRequest: 40,
+    });
+  });
+
+  it("recognizes a ready PR with non-passing advisory checks", async () => {
+    const value = harness();
+    value.readiness.mergeStateStatus = "UNSTABLE";
+    await expect(value.targetRules.getTargetCapabilities("owner", "repo", "master", "token", { pullRequest: 40 }))
+      .resolves.toEqual(expect.objectContaining({ immediatelyMergeable: true }));
+  });
+
+  it.each([
+    ["BLOCKED", "MERGEABLE", false],
+    ["BEHIND", "MERGEABLE", false],
+    ["DIRTY", "MERGEABLE", false],
+    ["UNKNOWN", "MERGEABLE", false],
+    ["HAS_HOOKS", "MERGEABLE", false],
+    ["FUTURE_STATE", "MERGEABLE", false],
+    ["CLEAN", "UNKNOWN", false],
+    ["UNSTABLE", "CONFLICTING", false],
+    ["CLEAN", "MERGEABLE", true],
+    ["UNSTABLE", "MERGEABLE", true],
+  ])("never merges directly for GitHub readiness %s/%s/draft=%s", async (mergeStateStatus, mergeable, isDraft) => {
+    const value = harness();
+    Object.assign(value.readiness, { mergeStateStatus, mergeable, isDraft });
+    await expect(value.targetRules.getTargetCapabilities("owner", "repo", "master", "token", { pullRequest: 40 }))
+      .resolves.toEqual(expect.objectContaining({ immediatelyMergeable: false }));
+  });
+
+  it.each([
+    null,
+    { repository: null },
+    { repository: { pullRequest: null } },
+    { repository: { pullRequest: {} } },
+    ...[
+      { headRefOid: "short" }, { mergeable: "FUTURE" }, { mergeStateStatus: "" }, { isDraft: undefined },
+    ].map((fields) => ({ repository: { pullRequest: {
+      headRefOid: "a".repeat(40), mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", isDraft: false, ...fields,
+    } } })),
+  ])("fails closed on incomplete authoritative readiness %j", async (response) => {
+    const value = harness();
+    const original = value.graphql.getMockImplementation()!;
+    value.graphql.mockImplementation((query: string) => query.includes("DeploymentPullRequestReadiness") ? response : original(query));
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token", { pullRequest: 40 });
+    expect(result.immediatelyMergeable).toBe(false);
+    expect(result.mergeQueueObservationProblems).toEqual([
+      expect.objectContaining({ area: "workflow-contract", message: expect.stringContaining("incomplete pull-request") }),
+    ]);
+  });
+
+  it("fails closed without leaking a readiness provider error", async () => {
+    const value = harness();
+    const original = value.graphql.getMockImplementation()!;
+    value.graphql.mockImplementation((query: string) => {
+      if (query.includes("DeploymentPullRequestReadiness")) throw new Error("secret provider diagnostics");
+      return original(query);
+    });
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token", { pullRequest: 40 });
+    expect(result.immediatelyMergeable).toBe(false);
+    expect(result.mergeQueueObservationProblems).toEqual([
+      { area: "workflow-contract", message: "GitHub pull-request merge readiness could not be inspected." },
+    ]);
   });
 
   it("treats an unprotected branch as non-strict", async () => {
@@ -330,11 +396,7 @@ describe("GitHub deployment repository", () => {
 
   it("fails closed when the pull request head moves during final readiness inspection", async () => {
     const value = harness();
-    value.pulls.get.mockResolvedValue({ data: pullRequest({ head: {
-      ref: "release/3.4.0",
-      sha: "b".repeat(40),
-      repo: { full_name: "owner/repo" },
-    } }) });
+    Object.assign(value.readiness, { headRefOid: "b".repeat(40), mergeStateStatus: "CLEAN" });
     const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token", {
       pullRequest: 40,
       candidateHeadSha: "a".repeat(40),
@@ -342,6 +404,7 @@ describe("GitHub deployment repository", () => {
     expect(result.mergeQueueObservationProblems).toEqual([
       expect.objectContaining({ area: "workflow-contract", message: expect.stringContaining("head changed") }),
     ]);
+    expect(result.immediatelyMergeable).toBe(false);
   });
 
   it("treats partial classic policy responses as unknown", async () => {
@@ -789,13 +852,25 @@ describe("GitHub deployment repository", () => {
   it("rejects a merge that GitHub did not perform", async () => {
     const value = harness();
     value.pulls.merge.mockResolvedValue({ data: { merged: false, message: "checks pending" } });
-    await expect(value.pullRequests.mergePullRequest("owner", "repo", 40, "token")).rejects.toThrow("checks pending");
+    await expect(value.pullRequests.mergePullRequest("owner", "repo", 40, "a".repeat(40), "token")).rejects.toThrow("checks pending");
   });
 
   it("returns the merge SHA after GitHub performs the merge", async () => {
     const value = harness();
     value.pulls.merge.mockResolvedValue({ data: { merged: true, sha: "c".repeat(40) } });
-    await expect(value.pullRequests.mergePullRequest("owner", "repo", 40, "token")).resolves.toBe("c".repeat(40));
+    await expect(value.pullRequests.mergePullRequest("owner", "repo", 40, "a".repeat(40), "token")).resolves.toBe("c".repeat(40));
+    expect(value.pulls.merge).toHaveBeenCalledWith({
+      owner: "owner", repo: "repo", pull_number: 40, merge_method: "merge", sha: "a".repeat(40),
+    });
+  });
+
+  it("propagates GitHub's rejection when the head changes after readiness inspection", async () => {
+    const value = harness();
+    const conflict = Object.assign(new Error("Head branch was modified"), { status: 409 });
+    value.pulls.merge.mockRejectedValue(conflict);
+    await expect(value.pullRequests.mergePullRequest("owner", "repo", 40, "a".repeat(40), "token")).rejects.toBe(conflict);
+    expect(value.pulls.merge).toHaveBeenCalledTimes(1);
+    expect(value.graphql).not.toHaveBeenCalled();
   });
 
   it("returns an exact merge base and rejects a missing one", async () => {

@@ -111,12 +111,13 @@ export class GithubManagedPullRequestRepository implements ManagedPullRequestPor
     }
   }
 
-  async mergePullRequest(owner: string, repository: string, pullRequest: number, token: string): Promise<string> {
+  async mergePullRequest(owner: string, repository: string, pullRequest: number, expectedHeadSha: string, token: string): Promise<string> {
     const { data } = await this.clientProvider.getClient(token).rest.pulls.merge({
       owner,
       repo: repository,
       pull_number: pullRequest,
       merge_method: "merge",
+      sha: expectedHeadSha,
     });
     if (!data.merged || !data.sha) throw new Error(data.message ?? `Pull request #${pullRequest} was not merged.`);
     return data.sha;

@@ -295,6 +295,7 @@ export class DeploymentOrchestrationRuntime {
     if (operation.prMode === "auto" && capabilities.immediatelyMergeable) {
       await this.dependencies.pullRequests.mergePullRequest(
         pullRequest.number,
+        pullRequest.headSha,
       );
       return;
     }
