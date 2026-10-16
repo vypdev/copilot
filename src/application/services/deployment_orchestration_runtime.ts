@@ -37,7 +37,6 @@ import {
 import { Result } from "../../data/model/result";
 import type { DeploymentOrchestrationDependencies } from "./deployment_orchestration_dependencies";
 import { DeploymentStateBoundary } from "./deployment_state_boundary";
-import { DeploymentMergeEffectError } from "../errors/deployment_merge_effect_error";
 import { DeploymentMergeEffects } from "./deployment_merge_effects";
 
 export const DEPLOYMENT_ORCHESTRATION_TASK_ID = "DeploymentOrchestrationUseCase";
@@ -193,7 +192,7 @@ export class DeploymentOrchestrationRuntime {
       const diagnostic = toApplicationError(cause, "workflow.failed", "Automatic merge setup failed with an unclassified provider rejection.", { retryable: true });
       const message = `GitHub could not configure automatic merge for PR #${pullRequest.number}. ${diagnostic.message} Check the PR and retry the stored ${category} phase.`;
       const error = new ApplicationError(diagnostic.code, message, { cause, retryable: diagnostic.retryable });
-      return { kind: "blocked", result: await this.block(context, managed, category, message, cause instanceof DeploymentMergeEffectError || error.retryable, error) };
+      return { kind: "blocked", result: await this.block(context, managed, category, message, error.retryable, error) };
     }
     await this.publishDashboard(context, managed);
     return { kind: "configured", operation: managed };

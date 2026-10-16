@@ -652,7 +652,7 @@ describe("DeploymentOrchestrationUseCase", () => {
     }));
   });
 
-  it("retains the attempted action and permission classification for operator correction", async () => {
+  it("keeps permission failures nonretryable in both returned and durable state", async () => {
     const value = harness();
     value.pullRequests.enableAutoMerge.mockRejectedValue(new DeploymentMergeEffectError(
       "enable-auto-merge", false, "authorization.denied", "GitHub rejected enable-auto-merge (authorization.denied; HTTP 403).",
@@ -662,7 +662,7 @@ describe("DeploymentOrchestrationUseCase", () => {
     expect(result[0].success).toBe(false);
     expect(result[0].errors[0]).toEqual(expect.objectContaining({ code: "authorization.denied", retryable: false }));
     expect(input.currentConfiguration.deploymentOrchestration?.lastFailure).toEqual(expect.objectContaining({
-      category: "promotion", retryable: true, message: expect.stringContaining("enable-auto-merge (authorization.denied; HTTP 403)"),
+      category: "promotion", retryable: false, message: expect.stringContaining("enable-auto-merge (authorization.denied; HTTP 403)"),
     }));
     expect(value.pullRequests.getPullRequest).not.toHaveBeenCalled();
     expect(value.pullRequests.mergePullRequest).not.toHaveBeenCalled();

@@ -744,8 +744,10 @@ or recursive retry. One alternate failure ends the invocation.
 Representative retained failure: "GitHub could not configure automatic merge
 for PR #524. GitHub rejected merge (readiness-changed; HTTP 405). Check the PR
 and retry the stored reconciliation phase." Permission errors retain their
-permission classification. The existing dashboard states publication is already
-successful; the maintainer resumes reconciliation after correcting the cause.
+permission classification and nonretryability in both the returned error and
+durable failure. Resume refuses nonretryable state and requires maintainer
+review. The existing dashboard states publication is already successful; a
+maintainer resumes a retryable reconciliation after correcting its cause.
 Pending successful native enablement needs no action; a merge closes the PR and
 normal continuation completes cleanup. Completed state requires every target
 accepted, never just a closed launcher or green publication job.
