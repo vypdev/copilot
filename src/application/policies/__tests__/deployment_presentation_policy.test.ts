@@ -107,7 +107,7 @@ describe("deployment presentation policy", () => {
 
   it("shows an explicit human action for create-only promotion", () => {
     const body = renderDeploymentDashboard(operation(), context);
-    expect(body).toContain("No action is required");
+    expect(body).toContain("No action is required while GitHub owns the pending transition.");
     expect(renderDeploymentDashboard(operation(undefined, { selectedPrMode: "create-only" }), context)).toContain("Action required");
   });
 
@@ -148,15 +148,22 @@ describe("deployment presentation policy", () => {
     expect(body).toContain("- [ ] Cleanup and issue completion");
   });
 
-  it("renders completed state with a success label", () => {
-    expect(renderDeploymentDashboard(operation("completed", { publicationVerified: true }), context)).toContain("✅ Release `3.4.0`");
+  it("renders completed state with a success label and final guidance", () => {
+    const body = renderDeploymentDashboard(operation("completed", { publicationVerified: true }), context);
+    expect(body).toContain("✅ Release `3.4.0`");
+    expect(body).toContain("Deployment is complete. No further action is required.");
+    expect(body).not.toContain("pending transition");
+    expect(body).not.toContain("### Action required");
   });
 
   it("renders primary Spanish status and instructions", () => {
     const body = renderDeploymentDashboard(operation(), { ...context, issueLocale: "es-ES" });
     expect(body).toContain("Estado actual");
     expect(body).toContain("Qué ocurrirá después");
-    expect(body).toContain("No se requiere ninguna acción");
+    expect(body).toContain("No se requiere ninguna acción mientras GitHub gestiona la transición pendiente.");
+    const completed = renderDeploymentDashboard(operation("completed", { publicationVerified: true }), { ...context, issueLocale: "es-ES" });
+    expect(completed).toContain("El despliegue ha terminado. No se requiere ninguna acción adicional.");
+    expect(completed).not.toContain("transición pendiente");
   });
 
   it("localizes the complete Spanish diagram and promotion PR surface", () => {

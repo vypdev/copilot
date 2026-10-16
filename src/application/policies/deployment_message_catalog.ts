@@ -28,7 +28,7 @@ import {
 } from './application_error_message_catalog';
 
 const SIMPLE_MESSAGE_KEYS = Object.freeze([
-  'release', 'hotfix', 'currentStatus', 'noAction', 'actionRequired', 'progress',
+  'release', 'hotfix', 'currentStatus', 'noAction', 'completionNotice', 'actionRequired', 'progress',
   'currentTransition', 'whatNext', 'links', 'technical', 'alreadyPublished',
   'notPublished', 'productionUpdated', 'developmentSynchronized', 'yes', 'no',
   'from', 'to', 'state', 'compare', 'controlCenter', 'purpose', 'afterMerge',
@@ -109,6 +109,7 @@ export const DEPLOYMENT_MESSAGE_IDS: readonly DeploymentMessageId[] = Object.fre
 const ENGLISH_SIMPLE: Readonly<Record<SimpleMessageKey, string>> = Object.freeze({
   release: 'Release', hotfix: 'Hotfix', currentStatus: 'Current status',
   noAction: 'No action is required while GitHub owns the pending transition.', actionRequired: 'Action required',
+  completionNotice: 'Deployment is complete. No further action is required.',
   progress: 'Progress', currentTransition: 'Current transition', whatNext: 'What happens next', links: 'Links',
   technical: 'Technical details', alreadyPublished: 'Package status: already published', notPublished: 'Package status: not published',
   productionUpdated: 'Production updated', developmentSynchronized: 'Development synchronized', yes: 'Yes', no: 'No',
@@ -142,6 +143,7 @@ const ENGLISH_SIMPLE: Readonly<Record<SimpleMessageKey, string>> = Object.freeze
 const SPANISH_SIMPLE: Readonly<Record<SimpleMessageKey, string>> = Object.freeze({
   release: 'Release', hotfix: 'Hotfix', currentStatus: 'Estado actual',
   noAction: 'No se requiere ninguna acción mientras GitHub gestiona la transición pendiente.', actionRequired: 'Acción necesaria',
+  completionNotice: 'El despliegue ha terminado. No se requiere ninguna acción adicional.',
   progress: 'Progreso', currentTransition: 'Transición actual', whatNext: 'Qué ocurrirá después', links: 'Enlaces',
   technical: 'Detalles técnicos', alreadyPublished: 'Estado del paquete: ya publicado', notPublished: 'Estado del paquete: no publicado',
   productionUpdated: 'Producción actualizada', developmentSynchronized: 'Desarrollo sincronizado', yes: 'Sí', no: 'No',

@@ -285,6 +285,7 @@ function nextDescription(
 }
 
 function deploymentAction(operation: DeploymentOperationSnapshot, messages: DeploymentCopy): { required: boolean; message: string } {
+  if (operation.phase === 'completed') return { required: false, message: messages.completionNotice };
   const manual = (operation.selectedPrMode ?? operation.prMode) === 'create-only'
     && (operation.phase === 'promotion_pr_pending' || operation.phase === 'reconciliation_pending');
   if (manual) return { required: true, message: `${messages.protectedChecks}: ${messages.reviewManagedPr}.` };
