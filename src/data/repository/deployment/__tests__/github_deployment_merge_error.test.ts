@@ -5,6 +5,9 @@ describe("sanitized deployment merge errors", () => {
   it.each([
     ["merge", {status:405}, true, "provider.conflict"],
     ["enable-auto-merge", graphql("UNPROCESSABLE","Pull request is in clean status"), true, "provider.conflict"],
+    ["enable-auto-merge", {errors:[{type:"UNPROCESSABLE",message:"Pull request is in clean status"}, "malformed"]}, false, "provider.conflict"],
+    ["enable-auto-merge", {errors:[null,{type:"UNPROCESSABLE",message:"Pull request is in clean status"}]}, false, "provider.conflict"],
+    ["enable-auto-merge", {errors:[null]}, false, "workflow.failed"],
     ["enable-auto-merge", {status:405}, false, "provider.conflict"],
     ["merge", graphql("UNPROCESSABLE","Pull request is in clean status"), false, "provider.conflict"],
     ["enable-auto-merge", {status:404,errors:[{type:"UNPROCESSABLE",message:"Pull request is in clean status"}]}, false, "provider.not-found"],

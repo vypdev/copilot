@@ -143,7 +143,7 @@ receipts and a completed launcher; deterministic fixtures do not establish it.
 | Pin native enablement and validate effect acknowledgement | managed PR adapter and bound port | adapter and composition contracts | Release process |
 | Resume 3.5.3 without repeating publication | existing serialized resume workflow | live completed state, #524 Action merge, unchanged npm/tag receipts recorded in PR | Recovery by visible phase |
 
-The minimum 60-case ledger in section 11 is covered by 32 provider mapping rows,
+The minimum 60-case ledger in section 11 is covered by 35 provider mapping rows,
 30 merge-effects service cases, two coordinator integration cases, and native
 acknowledgement/REST receipt/binding contracts. Cases count once. Live recovery
 is distinct from a future fresh unattended-release acceptance test.

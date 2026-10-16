@@ -712,7 +712,8 @@ attempted action/error classification.
 
 The application MUST preserve the provider-neutral error category and attempted
 merge action. The adapter maps only bounded HTTP statuses and known GraphQL
-rejections; provider messages, requests, headers, and unknown error type strings
+rejections; malformed entries cannot be dropped to manufacture an exact clean
+rejection. Provider messages, requests, headers, and unknown error type strings
 MUST NOT enter public state. Unclassified failures are workflow failures, not
 claims of service unavailability. Existing dashboard, locale, comment, and
 correlation contracts remain in force; diagnostic detail uses existing technical

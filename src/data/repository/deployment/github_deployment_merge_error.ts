@@ -6,12 +6,13 @@ export function githubDeploymentMergeError(action: DeploymentMergeAction, cause:
   const value = isRecord(cause) ? cause : {};
   const status = typeof value.status === "number" && Number.isInteger(value.status)
     && value.status >= 100 && value.status <= 599 ? value.status : undefined;
-  const errors = Array.isArray(value.errors) ? value.errors.filter(isRecord) : [];
+  const rawErrors = Array.isArray(value.errors) ? value.errors : [];
+  const errors = rawErrors.filter(isRecord);
   const types = errors.map((error) => error.type);
   const denied = status === 401 || status === 403 || types.includes("FORBIDDEN") || types.includes("UNAUTHORIZED");
   const limited = status === 429 || types.includes("RATE_LIMITED");
   const unavailable = (status !== undefined && status >= 500) || types.includes("INTERNAL") || types.includes("SERVICE_UNAVAILABLE");
-  const cleanRejection = errors.length === 1 && errors[0].type === "UNPROCESSABLE"
+  const cleanRejection = rawErrors.length === 1 && errors.length === 1 && errors[0].type === "UNPROCESSABLE"
     && errors[0].message === "Pull request is in clean status";
   const readinessChanged = !denied && !limited && !unavailable
     && ((action === "merge" && status === 405) || (action === "enable-auto-merge" && (status === undefined || status === 200) && cleanRejection));
