@@ -37,6 +37,8 @@ import {
 import { Result } from "../../data/model/result";
 import type { DeploymentOrchestrationDependencies } from "./deployment_orchestration_dependencies";
 import { DeploymentStateBoundary } from "./deployment_state_boundary";
+import { DeploymentMergeEffectError } from "../errors/deployment_merge_effect_error";
+import { DeploymentMergeEffects } from "./deployment_merge_effects";
 
 export const DEPLOYMENT_ORCHESTRATION_TASK_ID = "DeploymentOrchestrationUseCase";
 
@@ -177,17 +179,21 @@ export class DeploymentOrchestrationRuntime {
         result: await this.block(context, operation, category, inspection.reason, true),
       };
     }
-    const managed: DeploymentOperationSnapshot = {
-      ...operation,
-      selectedPrMode: inspection.decision.mode,
-    };
-    await this.persist(context, managed);
+    let managed: DeploymentOperationSnapshot = operation;
     try {
-      await this.applyMergeBehavior(context, operation, pullRequest, inspection);
+      await new DeploymentMergeEffects(this.dependencies.pullRequests).configure(
+        operation, pullRequest, inspection,
+        (current) => this.inspectMergeBehavior(context, operation, current.baseBranch, targetRole, current.headSha, current.number),
+        async (mode) => {
+          managed = { ...operation, selectedPrMode: mode };
+          await this.persist(context, managed);
+        },
+      );
     } catch (cause) {
-      const message = `GitHub could not configure automatic merge for PR #${pullRequest.number}. Check the PR and retry the stored ${category} phase.`;
-      const error = new ApplicationError("provider.unavailable", message, { cause, retryable: true });
-      return { kind: "blocked", result: await this.block(context, managed, category, message, true, error) };
+      const diagnostic = toApplicationError(cause, "workflow.failed", "Automatic merge setup failed with an unclassified provider rejection.", { retryable: true });
+      const message = `GitHub could not configure automatic merge for PR #${pullRequest.number}. ${diagnostic.message} Check the PR and retry the stored ${category} phase.`;
+      const error = new ApplicationError(diagnostic.code, message, { cause, retryable: diagnostic.retryable });
+      return { kind: "blocked", result: await this.block(context, managed, category, message, cause instanceof DeploymentMergeEffectError || error.retryable, error) };
     }
     await this.publishDashboard(context, managed);
     return { kind: "configured", operation: managed };
@@ -263,52 +269,6 @@ export class DeploymentOrchestrationRuntime {
       await this.publishDashboard(context, blocked);
     } catch {
       // Preserve the original provider failure returned by the coordinator.
-    }
-  }
-
-  private async applyMergeBehavior(
-    context: DeploymentOrchestrationContext,
-    operation: DeploymentOperationSnapshot,
-    pullRequest: ManagedPullRequestRecord,
-    inspection: {
-      readonly capabilities: TargetMergeCapabilities;
-      readonly decision: Extract<PullRequestModeDecision, { readonly kind: "mode" }>;
-    },
-  ): Promise<void> {
-    if (inspection.decision.mode === "auto-merge") {
-      await this.applyAutoMerge(context, operation, pullRequest, inspection.capabilities);
-      return;
-    }
-    if (inspection.decision.mode === "merge-queue") {
-      const queued = await this.dependencies.pullRequests.isPullRequestQueued(
-        pullRequest.nodeId,
-      );
-      if (!queued) {
-        await this.dependencies.pullRequests.enqueuePullRequest(
-          pullRequest.nodeId,
-          pullRequest.headSha,
-        );
-      }
-    }
-  }
-
-  private async applyAutoMerge(
-    context: DeploymentOrchestrationContext,
-    operation: DeploymentOperationSnapshot,
-    pullRequest: ManagedPullRequestRecord,
-    capabilities: TargetMergeCapabilities,
-  ): Promise<void> {
-    if (operation.prMode === "auto" && capabilities.immediatelyMergeable) {
-      await this.dependencies.pullRequests.mergePullRequest(
-        pullRequest.number,
-        pullRequest.headSha,
-      );
-      return;
-    }
-    if (!pullRequest.autoMergeEnabled) {
-      await this.dependencies.pullRequests.enableAutoMerge(
-        pullRequest.nodeId,
-      );
     }
   }
 

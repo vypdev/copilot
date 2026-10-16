@@ -12,6 +12,7 @@ import { ResolveMessageCatalogUseCase } from "../../../usecases/localization/res
 import { SingleAction } from "../../../../data/model/single_action";
 import { PullRequest } from "../../../../data/model/pull_request";
 import { ACTIONS } from "../../../../data/model/action_types";
+import { DeploymentMergeEffectError } from "../../../errors/deployment_merge_effect_error";
 import { projectDeploymentOrchestrationContext } from "../../push_single_action_contexts";
 
 const sourceSha = "a".repeat(40);
@@ -593,7 +594,7 @@ describe("DeploymentOrchestrationUseCase", () => {
       355, expect.arrayContaining(["release", "deployed", "state:working"]),
     );
     expect(input.currentConfiguration.deploymentOrchestration).toEqual(expect.objectContaining({ phase: "reconciliation_pending", publicationVerified: true }));
-    expect(value.pullRequests.enableAutoMerge).toHaveBeenCalledWith("PR_reconcile");
+    expect(value.pullRequests.enableAutoMerge).toHaveBeenCalledWith("PR_reconcile", productionSha);
     expect(value.pullRequests.mergePullRequest).not.toHaveBeenCalled();
   });
 
@@ -628,6 +629,43 @@ describe("DeploymentOrchestrationUseCase", () => {
     }));
     expect(value.pullRequests.enableAutoMerge).not.toHaveBeenCalled();
     expect(value.continuation.dispatch).not.toHaveBeenCalled();
+  });
+
+  it("recovers initial reconciliation when required validation appears after ready inspection", async () => {
+    const value = harness();
+    let ready = true;
+    value.targetRules.getTargetCapabilities.mockImplementation(async () => capabilities({ immediatelyMergeable: ready }));
+    const reconcile = pr({ number: 41, nodeId: "PR_reconcile", headBranch: "master", headSha: productionSha,
+      baseBranch: "develop", body: '<!-- copilot-deployment operation-id="operation-12345678" phase="reconciliation" issue="355" -->' });
+    value.pullRequests.createManagedPullRequest.mockResolvedValue(reconcile);
+    value.pullRequests.getPullRequest.mockResolvedValue(reconcile);
+    value.pullRequests.mergePullRequest.mockImplementation(async () => {
+      ready = false;
+      throw new DeploymentMergeEffectError("merge", true, "provider.conflict", "GitHub rejected merge (readiness-changed; HTTP 405).");
+    });
+    const input = execution("published", operation("publishing"));
+    expect((await value.useCase.invoke(input))[0].success).toBe(true);
+    expect(value.pullRequests.createManagedPullRequest).toHaveBeenCalledTimes(1);
+    expect(value.pullRequests.enableAutoMerge).toHaveBeenCalledWith("PR_reconcile", productionSha);
+    expect(input.currentConfiguration.deploymentOrchestration).toEqual(expect.objectContaining({
+      phase: "reconciliation_pending", publicationVerified: true, lastFailure: null,
+    }));
+  });
+
+  it("retains the attempted action and permission classification for operator correction", async () => {
+    const value = harness();
+    value.pullRequests.enableAutoMerge.mockRejectedValue(new DeploymentMergeEffectError(
+      "enable-auto-merge", false, "authorization.denied", "GitHub rejected enable-auto-merge (authorization.denied; HTTP 403).",
+    ));
+    const input = execution("prepare");
+    const result = await value.useCase.invoke(input);
+    expect(result[0].success).toBe(false);
+    expect(result[0].errors[0]).toEqual(expect.objectContaining({ code: "authorization.denied", retryable: false }));
+    expect(input.currentConfiguration.deploymentOrchestration?.lastFailure).toEqual(expect.objectContaining({
+      category: "promotion", retryable: true, message: expect.stringContaining("enable-auto-merge (authorization.denied; HTTP 403)"),
+    }));
+    expect(value.pullRequests.getPullRequest).not.toHaveBeenCalled();
+    expect(value.pullRequests.mergePullRequest).not.toHaveBeenCalled();
   });
 
   it("blocks retryably when the serialized workflow cannot prove a publication effect", async () => {
@@ -699,7 +737,7 @@ describe("DeploymentOrchestrationUseCase", () => {
       reconciliationTargets: [{ targetBranch: "develop", sourceBranch: "master", sourceSha: productionSha, pullRequest: 41, status: "pending" }],
     }));
     await value.useCase.invoke(input);
-    expect(value.pullRequests.enableAutoMerge).toHaveBeenCalledWith("PR_reconcile");
+    expect(value.pullRequests.enableAutoMerge).toHaveBeenCalledWith("PR_reconcile", productionSha);
     expect(value.pullRequests.createManagedPullRequest).not.toHaveBeenCalled();
     expect(value.publication.inspect).toHaveBeenCalled();
     expect(input.currentConfiguration.deploymentOrchestration).toEqual(expect.objectContaining({

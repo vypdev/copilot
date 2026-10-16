@@ -241,6 +241,16 @@ When the PR must wait, Copilot enables native auto-merge if available, otherwise
 leaves a maintainer-owned PR. Explicit `auto-merge` always uses native auto-merge.
 No release runner polls an open PR.
 
+In default `auto` mode, a known GitHub readiness rejection allows one new
+inspection of the same managed PR and current rules. Copilot verifies its
+operation marker, repository, branches, and frozen SHA before choosing an
+alternate permitted action. It never repeats the same rejected action or loops
+after a second rejection. Permission failures, changed heads, and unknown
+provider failures remain blocked. Native auto-merge also pins the expected SHA.
+The dashboard retains the attempted action and safe failure category; after
+correcting an operational cause, use the existing reconciliation-only resume
+flow when publication has already succeeded.
+
 Queue readiness is fail-closed. Copilot unions classic branch protection with
 repository- and organization-level effective rulesets for the exact target.
 Required checks are identified by `(context, integrationId)`—never by a

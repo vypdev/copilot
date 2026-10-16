@@ -38161,6 +38161,27 @@ function runAtApplicationErrorBoundary(operation) {
 
 /***/ }),
 
+/***/ 72594:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DeploymentMergeEffectError = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+/** Semantic effect failure. Only a confirmed readiness rejection permits one new inspection. */
+class DeploymentMergeEffectError extends application_error_1.ApplicationError {
+    constructor(action, readinessChanged, code, message, cause) {
+        super(code, message, { cause });
+        this.action = action;
+        this.readinessChanged = readinessChanged;
+    }
+}
+exports.DeploymentMergeEffectError = DeploymentMergeEffectError;
+
+
+/***/ }),
+
 /***/ 38313:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -51845,6 +51866,91 @@ function bindSddEvidenceReadPorts(ports) {
 
 /***/ }),
 
+/***/ 84387:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DeploymentMergeEffects = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+const deployment_merge_effect_error_1 = __nccwpck_require__(72594);
+const managed_pull_request_1 = __nccwpck_require__(95914);
+/** Applies current policy, with one bounded re-observation after a typed readiness rejection. */
+class DeploymentMergeEffects {
+    constructor(pullRequests) {
+        this.pullRequests = pullRequests;
+    }
+    async configure(operation, pullRequest, inspection, inspect, beforeApply) {
+        await beforeApply(inspection.decision.mode);
+        const action = selectAction(operation, inspection);
+        try {
+            await this.apply(action, pullRequest);
+            return inspection.decision.mode;
+        }
+        catch (error) {
+            if (!(error instanceof deployment_merge_effect_error_1.DeploymentMergeEffectError) || !error.readinessChanged || operation.prMode !== "auto")
+                throw error;
+            const current = await this.pullRequests.getPullRequest(pullRequest.number);
+            assertSamePullRequest(pullRequest, current);
+            if (current.merged)
+                return inspection.decision.mode;
+            if (current.state !== "open")
+                throw new application_error_1.ApplicationError("provider.conflict", "The managed PR was closed without merging.");
+            const refreshed = await inspect(current);
+            if (refreshed.kind === "blocked")
+                throw new application_error_1.ApplicationError("provider.conflict", refreshed.reason);
+            const nextAction = selectAction(operation, refreshed);
+            if (nextAction === action) {
+                if (action === "enable-auto-merge" && current.autoMergeEnabled)
+                    return refreshed.decision.mode;
+                throw error;
+            }
+            await beforeApply(refreshed.decision.mode);
+            await this.apply(nextAction, current);
+            return refreshed.decision.mode;
+        }
+    }
+    async apply(action, pullRequest) {
+        try {
+            if (action === "merge") {
+                await this.pullRequests.mergePullRequest(pullRequest.number, pullRequest.headSha);
+            }
+            else if (action === "enable-auto-merge" && !pullRequest.autoMergeEnabled) {
+                await this.pullRequests.enableAutoMerge(pullRequest.nodeId, pullRequest.headSha);
+            }
+            else if (action === "merge-queue" && !await this.pullRequests.isPullRequestQueued(pullRequest.nodeId)) {
+                await this.pullRequests.enqueuePullRequest(pullRequest.nodeId, pullRequest.headSha);
+            }
+        }
+        catch (cause) {
+            if (cause instanceof application_error_1.ApplicationError)
+                throw cause;
+            throw new application_error_1.ApplicationError("workflow.failed", `Automatic merge action ${action} failed with an unclassified provider rejection.`, { cause, retryable: true });
+        }
+    }
+}
+exports.DeploymentMergeEffects = DeploymentMergeEffects;
+function selectAction(operation, inspection) {
+    if (inspection.decision.mode !== "auto-merge")
+        return inspection.decision.mode;
+    return operation.prMode === "auto" && inspection.capabilities.immediatelyMergeable ? "merge" : "enable-auto-merge";
+}
+function assertSamePullRequest(expected, current) {
+    const marker = (0, managed_pull_request_1.parseManagedPullRequestMarker)(expected.body);
+    const currentMarker = (0, managed_pull_request_1.parseManagedPullRequestMarker)(current.body);
+    if (expected.number !== current.number || expected.nodeId !== current.nodeId
+        || expected.repositoryFullName !== current.repositoryFullName || expected.baseBranch !== current.baseBranch
+        || expected.headBranch !== current.headBranch || expected.headSha !== current.headSha
+        || !marker || !currentMarker || marker.operationId !== currentMarker.operationId
+        || marker.phase !== currentMarker.phase || marker.issue !== currentMarker.issue) {
+        throw new application_error_1.ApplicationError("provider.conflict", "The managed PR identity or frozen head changed during merge setup.", { retryable: false });
+    }
+}
+
+
+/***/ }),
+
 /***/ 77658:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -51867,6 +51973,8 @@ const deployment_message_catalog_1 = __nccwpck_require__(79364);
 const deployment_operation_1 = __nccwpck_require__(92730);
 const merge_queue_readiness_1 = __nccwpck_require__(12515);
 const result_1 = __nccwpck_require__(73817);
+const deployment_merge_effect_error_1 = __nccwpck_require__(72594);
+const deployment_merge_effects_1 = __nccwpck_require__(84387);
 exports.DEPLOYMENT_ORCHESTRATION_TASK_ID = "DeploymentOrchestrationUseCase";
 class DeploymentOrchestrationRuntime {
     constructor(dependencies, stateBoundary) {
@@ -51941,18 +52049,18 @@ class DeploymentOrchestrationRuntime {
                 result: await this.block(context, operation, category, inspection.reason, true),
             };
         }
-        const managed = {
-            ...operation,
-            selectedPrMode: inspection.decision.mode,
-        };
-        await this.persist(context, managed);
+        let managed = operation;
         try {
-            await this.applyMergeBehavior(context, operation, pullRequest, inspection);
+            await new deployment_merge_effects_1.DeploymentMergeEffects(this.dependencies.pullRequests).configure(operation, pullRequest, inspection, (current) => this.inspectMergeBehavior(context, operation, current.baseBranch, targetRole, current.headSha, current.number), async (mode) => {
+                managed = { ...operation, selectedPrMode: mode };
+                await this.persist(context, managed);
+            });
         }
         catch (cause) {
-            const message = `GitHub could not configure automatic merge for PR #${pullRequest.number}. Check the PR and retry the stored ${category} phase.`;
-            const error = new application_error_1.ApplicationError("provider.unavailable", message, { cause, retryable: true });
-            return { kind: "blocked", result: await this.block(context, managed, category, message, true, error) };
+            const diagnostic = (0, application_error_1.toApplicationError)(cause, "workflow.failed", "Automatic merge setup failed with an unclassified provider rejection.", { retryable: true });
+            const message = `GitHub could not configure automatic merge for PR #${pullRequest.number}. ${diagnostic.message} Check the PR and retry the stored ${category} phase.`;
+            const error = new application_error_1.ApplicationError(diagnostic.code, message, { cause, retryable: diagnostic.retryable });
+            return { kind: "blocked", result: await this.block(context, managed, category, message, cause instanceof deployment_merge_effect_error_1.DeploymentMergeEffectError || error.retryable, error) };
         }
         await this.publishDashboard(context, managed);
         return { kind: "configured", operation: managed };
@@ -52005,27 +52113,6 @@ class DeploymentOrchestrationRuntime {
         }
         catch {
             // Preserve the original provider failure returned by the coordinator.
-        }
-    }
-    async applyMergeBehavior(context, operation, pullRequest, inspection) {
-        if (inspection.decision.mode === "auto-merge") {
-            await this.applyAutoMerge(context, operation, pullRequest, inspection.capabilities);
-            return;
-        }
-        if (inspection.decision.mode === "merge-queue") {
-            const queued = await this.dependencies.pullRequests.isPullRequestQueued(pullRequest.nodeId);
-            if (!queued) {
-                await this.dependencies.pullRequests.enqueuePullRequest(pullRequest.nodeId, pullRequest.headSha);
-            }
-        }
-    }
-    async applyAutoMerge(context, operation, pullRequest, capabilities) {
-        if (operation.prMode === "auto" && capabilities.immediatelyMergeable) {
-            await this.dependencies.pullRequests.mergePullRequest(pullRequest.number, pullRequest.headSha);
-            return;
-        }
-        if (!pullRequest.autoMergeEnabled) {
-            await this.dependencies.pullRequests.enableAutoMerge(pullRequest.nodeId);
         }
     }
     async unsupportedMergeBehavior(context, operation, targetRole, targetBranch, capabilities, decision) {
@@ -79341,6 +79428,44 @@ function isNotFound(error) {
 
 /***/ }),
 
+/***/ 30873:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.githubDeploymentMergeError = githubDeploymentMergeError;
+const deployment_merge_effect_error_1 = __nccwpck_require__(72594);
+/** Never copy provider messages, request objects, headers, or arbitrary error types into public state. */
+function githubDeploymentMergeError(action, cause) {
+    const value = isRecord(cause) ? cause : {};
+    const status = typeof value.status === "number" && Number.isInteger(value.status)
+        && value.status >= 100 && value.status <= 599 ? value.status : undefined;
+    const errors = Array.isArray(value.errors) ? value.errors.filter(isRecord) : [];
+    const types = errors.map((error) => error.type);
+    const denied = status === 401 || status === 403 || types.includes("FORBIDDEN") || types.includes("UNAUTHORIZED");
+    const limited = status === 429 || types.includes("RATE_LIMITED");
+    const unavailable = (status !== undefined && status >= 500) || types.includes("INTERNAL") || types.includes("SERVICE_UNAVAILABLE");
+    const cleanRejection = errors.length === 1 && errors[0].type === "UNPROCESSABLE"
+        && errors[0].message === "Pull request is in clean status";
+    const readinessChanged = !denied && !limited && !unavailable
+        && ((action === "merge" && status === 405) || (action === "enable-auto-merge" && (status === undefined || status === 200) && cleanRejection));
+    const code = denied ? "authorization.denied"
+        : limited ? "provider.rate-limited"
+            : unavailable ? "provider.unavailable"
+                : status === 404 || types.includes("NOT_FOUND") ? "provider.not-found"
+                    : status !== undefined || types.length > 0 ? "provider.conflict" : "workflow.failed";
+    const reason = readinessChanged ? "readiness-changed" : code;
+    const http = status === undefined ? "" : `; HTTP ${status}`;
+    return new deployment_merge_effect_error_1.DeploymentMergeEffectError(action, readinessChanged, code, `GitHub rejected ${action} (${reason}${http}).`, cause);
+}
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+
+/***/ }),
+
 /***/ 96483:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -79349,6 +79474,8 @@ function isNotFound(error) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GithubManagedPullRequestRepository = void 0;
 const managed_pull_request_1 = __nccwpck_require__(95914);
+const github_deployment_merge_error_1 = __nccwpck_require__(30873);
+const deployment_merge_effect_error_1 = __nccwpck_require__(72594);
 class GithubManagedPullRequestRepository {
     constructor(clientProvider) {
         this.clientProvider = clientProvider;
@@ -79392,12 +79519,21 @@ class GithubManagedPullRequestRepository {
         });
         return mapPullRequest(data, owner, repository);
     }
-    async enableAutoMerge(owner, repository, pullRequestNodeId, token) {
-        await this.clientProvider.getClient(token).graphql(`mutation EnableDeploymentAutoMerge($pullRequestId: ID!) {
-        enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, mergeMethod: MERGE}) {
-          pullRequest { id }
+    async enableAutoMerge(_owner, _repository, pullRequestNodeId, expectedHeadSha, token) {
+        let response;
+        try {
+            response = await this.clientProvider.getClient(token).graphql(`mutation EnableDeploymentAutoMerge($pullRequestId: ID!, $expectedHeadOid: GitObjectID!) {
+          enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, expectedHeadOid: $expectedHeadOid, mergeMethod: MERGE}) {
+            pullRequest { id }
+          }
+        }`, { pullRequestId: pullRequestNodeId, expectedHeadOid: expectedHeadSha });
         }
-      }`, { pullRequestId: pullRequestNodeId, owner, repository });
+        catch (cause) {
+            throw (0, github_deployment_merge_error_1.githubDeploymentMergeError)("enable-auto-merge", cause);
+        }
+        if (response?.enablePullRequestAutoMerge?.pullRequest?.id !== pullRequestNodeId) {
+            throw new deployment_merge_effect_error_1.DeploymentMergeEffectError("enable-auto-merge", false, "provider.contract-invalid", "GitHub did not confirm native auto-merge for the expected PR.");
+        }
     }
     async isPullRequestQueued(owner, repository, pullRequestNodeId, token) {
         const response = await this.clientProvider.getClient(token).graphql(`query DeploymentPullRequestQueue($pullRequestId: ID!) {
@@ -79421,15 +79557,18 @@ class GithubManagedPullRequestRepository {
         }
     }
     async mergePullRequest(owner, repository, pullRequest, expectedHeadSha, token) {
-        const { data } = await this.clientProvider.getClient(token).rest.pulls.merge({
-            owner,
-            repo: repository,
-            pull_number: pullRequest,
-            merge_method: "merge",
-            sha: expectedHeadSha,
-        });
-        if (!data.merged || !data.sha)
-            throw new Error(data.message ?? `Pull request #${pullRequest} was not merged.`);
+        let data;
+        try {
+            ({ data } = await this.clientProvider.getClient(token).rest.pulls.merge({
+                owner, repo: repository, pull_number: pullRequest, merge_method: "merge", sha: expectedHeadSha,
+            }));
+        }
+        catch (cause) {
+            throw (0, github_deployment_merge_error_1.githubDeploymentMergeError)("merge", cause);
+        }
+        if (!data?.merged || typeof data.sha !== "string" || !/^[a-f0-9]{40}$/i.test(data.sha)) {
+            throw new deployment_merge_effect_error_1.DeploymentMergeEffectError("merge", false, "provider.contract-invalid", "GitHub did not confirm a completed merge with a valid commit SHA.");
+        }
         return data.sha;
     }
 }
@@ -92473,7 +92612,7 @@ function bindManagedPullRequests(port, binding) {
         findManagedPullRequests: (query) => port.findManagedPullRequests({ ...query, owner: binding.owner, repository: binding.repository, token: binding.token }),
         createManagedPullRequest: (command) => port.createManagedPullRequest({ ...command, owner: binding.owner, repository: binding.repository, token: binding.token }),
         getPullRequest: (pullRequest) => port.getPullRequest(binding.owner, binding.repository, pullRequest, binding.token),
-        enableAutoMerge: (pullRequestNodeId) => port.enableAutoMerge(binding.owner, binding.repository, pullRequestNodeId, binding.token),
+        enableAutoMerge: (pullRequestNodeId, expectedHeadSha) => port.enableAutoMerge(binding.owner, binding.repository, pullRequestNodeId, expectedHeadSha, binding.token),
         isPullRequestQueued: (pullRequestNodeId) => port.isPullRequestQueued(binding.owner, binding.repository, pullRequestNodeId, binding.token),
         enqueuePullRequest: (pullRequestNodeId, expectedHeadSha) => port.enqueuePullRequest(binding.owner, binding.repository, pullRequestNodeId, expectedHeadSha, binding.token),
         mergePullRequest: (pullRequest, expectedHeadSha) => port.mergePullRequest(binding.owner, binding.repository, pullRequest, expectedHeadSha, binding.token),

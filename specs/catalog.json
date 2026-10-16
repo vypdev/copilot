@@ -283,7 +283,7 @@
       "id": "release-orchestration",
       "title": "Configurable production-first release orchestration",
       "status": "implemented",
-      "scope": "Release and hotfix promotion, publication, reconciliation, and receipt-verified recovery without republication",
+      "scope": "Release and hotfix promotion, publication, bounded merge readiness recovery, and receipt-verified reconciliation without republication",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-10-16",
       "specs": [
@@ -329,7 +329,10 @@
         "src/data/repository/deployment/github_pull_request_readiness_query.ts",
         "src/data/repository/deployment/deployment_state_repository.ts",
         "src/data/repository/release/repository_release_publication_repository.ts",
-        "src/infrastructure/github/octokit_deployment_adapter.ts"
+        "src/infrastructure/github/octokit_deployment_adapter.ts",
+        "src/application/errors/deployment_merge_effect_error.ts",
+        "src/application/services/deployment_merge_effects.ts",
+        "src/data/repository/deployment/github_deployment_merge_error.ts"
       ],
       "tests": [
         "src/domain/__tests__/deployment_operation.test.ts",
@@ -347,7 +350,9 @@
         "src/data/repository/deployment/__tests__/github_deployment_adapters.test.ts",
         "src/application/__tests__/architecture_boundaries.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
-        "src/infrastructure/composition/__tests__/push_single_action_capability_port_binding.test.ts"
+        "src/infrastructure/composition/__tests__/push_single_action_capability_port_binding.test.ts",
+        "src/application/services/__tests__/deployment_merge_effects.test.ts",
+        "src/data/repository/deployment/__tests__/github_deployment_merge_error.test.ts"
       ],
       "documentation": [
         "docs/issues/deployment-orchestration.mdx",
