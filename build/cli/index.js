@@ -97622,6 +97622,7 @@ const setup_batch_policy_1 = __nccwpck_require__(52214);
 const setup_files_1 = __nccwpck_require__(59126);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const setup_workflow_upgrade_1 = __nccwpck_require__(85493);
+const repository_agent_guidance_policy_1 = __nccwpck_require__(67402);
 /** Existing setup renderers run inside a disposable directory, never in another checkout. */
 class SetupBatchWorkspaceAdapter {
     digest(value) { return (0, node_crypto_1.createHash)('sha256').update(value).digest('hex'); }
@@ -97641,8 +97642,8 @@ class SetupBatchWorkspaceAdapter {
             }
             (0, setup_files_1.ensureGitHubDirs)(root);
             const sourceAction = existing.some(file => file.path.startsWith('.github/workflows/') && (0, setup_workflow_upgrade_1.hasRootLocalSetupAction)(file.content));
-            const sourceGuidance = ['.copilot/AGENT_GUIDE.md', '.copilot/repository-profile.json', '.copilot/setup-manifest.json',
-                '.agents/skills/copilot-repository-workflow/SKILL.md'].every(path => existing.some(file => file.path === path));
+            const sourceGuidance = [repository_agent_guidance_policy_1.REPOSITORY_AGENT_GUIDE_PATH, repository_agent_guidance_policy_1.REPOSITORY_AGENT_PROFILE_PATH, repository_agent_guidance_policy_1.REPOSITORY_AGENT_MANIFEST_PATH,
+                repository_agent_guidance_policy_1.REPOSITORY_AGENT_SKILL_PATH].every(path => existing.some(file => file.path === path));
             const sourceObserver = (0, node_path_1.join)(__dirname, '..', '..', 'setup', 'source-workflows', 'copilot_pull_request_approval.yml');
             const observerPath = '.github/workflows/copilot_pull_request_approval.yml';
             const preserveSourceObserver = configuration.pullRequestApproval.mode !== 'off' && (0, node_fs_1.existsSync)(sourceObserver)

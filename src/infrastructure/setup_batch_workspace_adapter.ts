@@ -9,6 +9,8 @@ import { validSetupBatchAssetPath } from '../application/policies/setup_batch_po
 import { copySetupFiles, ensureGitHubDirs, compareSetupWorkflows } from '../utils/setup_files';
 import { effectiveIssueWorkflowFeatures } from '../application/policies/setup_issue_workflow_policy';
 import { hasRootLocalSetupAction } from '../utils/setup_workflow_upgrade';
+import { REPOSITORY_AGENT_GUIDE_PATH, REPOSITORY_AGENT_PROFILE_PATH, REPOSITORY_AGENT_MANIFEST_PATH,
+  REPOSITORY_AGENT_SKILL_PATH } from '../application/policies/repository_agent_guidance_policy';
 
 /** Existing setup renderers run inside a disposable directory, never in another checkout. */
 export class SetupBatchWorkspaceAdapter implements SetupBatchRenderPort {
@@ -27,8 +29,8 @@ export class SetupBatchWorkspaceAdapter implements SetupBatchRenderPort {
       }
       ensureGitHubDirs(root);
       const sourceAction = existing.some(file => file.path.startsWith('.github/workflows/') && hasRootLocalSetupAction(file.content!));
-      const sourceGuidance = ['.copilot/AGENT_GUIDE.md', '.copilot/repository-profile.json', '.copilot/setup-manifest.json',
-        '.agents/skills/copilot-repository-workflow/SKILL.md'].every(path => existing.some(file => file.path === path));
+      const sourceGuidance = [REPOSITORY_AGENT_GUIDE_PATH, REPOSITORY_AGENT_PROFILE_PATH, REPOSITORY_AGENT_MANIFEST_PATH,
+        REPOSITORY_AGENT_SKILL_PATH].every(path => existing.some(file => file.path === path));
       const sourceObserver = join(__dirname, '..', '..', 'setup', 'source-workflows', 'copilot_pull_request_approval.yml');
       const observerPath = '.github/workflows/copilot_pull_request_approval.yml';
       const preserveSourceObserver = configuration.pullRequestApproval.mode !== 'off' && existsSync(sourceObserver)
