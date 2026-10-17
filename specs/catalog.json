@@ -2192,7 +2192,7 @@
       "status": "implemented",
       "scope": "Generate safe repository-local profiles, guidance, and a skill for agents contributing through configured issues, Action-managed branches, pull requests, and deployment boundaries",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-12",
+      "lastVerified": "2026-10-17",
       "specs": [
         "specs/repository-agent-collaboration-contract.md"
       ],

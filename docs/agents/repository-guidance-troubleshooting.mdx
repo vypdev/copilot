@@ -25,4 +25,6 @@ The named checks cover the manifest, profile schema and runtime parity, guide di
 
 Setup writes each generated artifact atomically and the manifest last. Approved replacements and retirements are copied or moved under `.copilot/setup-backups/`. If a run stops before the manifest advances, rerun with the same configuration: desired bytes are recognized, while unrelated or drifted bytes remain untouched.
 
+Older generated guides may link to `../docs/agents/` files that were never installed in the destination repository. Update Copilot and rerun setup with the same configuration to replace an unchanged, setup-owned guide with absolute links to the shared documentation. The previous guide is backed up. If the guide was edited or is not setup-owned, preserve those edits and follow the normal conflict recovery above.
+
 Do not repair drift by editing `.copilot/repository-profile.json` or its hashes. Change the setup configuration and rerun setup so forms, Variables, workflows, guide, skill, and manifest converge from one plan.

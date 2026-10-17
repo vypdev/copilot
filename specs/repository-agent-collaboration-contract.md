@@ -3,10 +3,10 @@
 - Status: Implemented — automated local gates and Codex dogfood complete; broader agent-discovery UX evidence remains pending
 - Date: 2026-09-16
 - Catalog capability ID: `repository-agent-collaboration`
-- Last verified: 2026-10-12
+- Last verified: 2026-10-17 (portable documentation links, issue #539)
 - Owners: Copilot maintainers
 - Scope: setup-generated, repository-local guidance that lets coding agents collaborate through configured issues, Action-managed branches, pull requests, and deployment boundaries
-- Related issues/PRs: none yet; related SDDs are listed in section 20
+- Related issues/PRs: [#539](https://github.com/vypdev/copilot/issues/539); related SDDs are listed in section 20
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none
 
@@ -761,11 +761,11 @@ optional marker preserves all surrounding `AGENTS.md` text byte-for-byte.
 |---|---:|---|
 | Profile schema, safe projection, canonical rendering | 18 | enabled subsets, labels/forms/branches, allowlist, ordering, digest, unknown schema/keys, secret exclusion |
 | Ownership, setup planning, reconcile, retirement | 20 | new/matching/drifted/unowned, malformed markers, byte preservation, backup, manifest-last, partial rerun, disable/retire |
-| Guide and skill semantic contract | 18 | metadata, trigger scope, issue forms, help no-branch, exact branch rule, local tracking, PR flow, labels/deploy, recovery, internal-agent distinction |
+| Guide and skill semantic contract | 19 | metadata, trigger scope, issue forms, help no-branch, exact branch rule, local tracking, PR flow, labels/deploy, recovery, internal-agent distinction, links in a documentation-free target |
 | Package, doctor, architecture, documentation | 29 | packed assets, installed smoke generation, named read-only checks, no internal prompt import, links/nav, schema fixtures |
 | UX, localization, sanitization, security | 12 | five states, narrow/no-color, escaping, no mentions/secrets/paths, locale fallback, conflict actions |
-| Integration, migration, rollback, dogfood | 12 | existing AGENTS/skills, pointer declined, schema migration, disable/restore, form/profile parity, positive and negative end-to-end flow |
-| **Total** | **109** | No double counting |
+| Integration, migration, rollback, dogfood | 13 | existing AGENTS/skills, pointer declined, schema migration, legacy guide link upgrade, disable/restore, form/profile parity, positive and negative end-to-end flow |
+| **Total** | **111** | No double counting |
 
 The issue-workflow domain and setup/rendering decision policies named by the
 `Configurable issue workflows and repository agent guidance` coverage budget
@@ -793,8 +793,11 @@ and guide readability on GitHub mobile.
 
 README and `docs/features.mdx` describe repository collaborator guidance without
 calling it part of the internal Action runtime. `docs.json` exposes both the
-collaboration and troubleshooting pages. Generated guide links are relative
-where possible and are checked against packaged/default repository fixtures.
+collaboration and troubleshooting pages. Generated links to shared Copilot
+documentation MUST use absolute HTTPS URLs in `vypdev/copilot` on `master`,
+independent of the destination repository. Relative Markdown links MUST resolve
+to artifacts actually installed in that destination; the local profile link
+remains relative. Setup does not copy the upstream documentation tree.
 
 ## 16. Acceptance scenarios
 
@@ -834,6 +837,12 @@ where possible and are checked against packaged/default repository fixtures.
 14. Given this repository's existing `AGENTS.md` and skill, then dogfood setup
     preserves them, adds the bounded collaboration artifacts, and all package,
     doctor, security, and documentation checks pass.
+15. Given a fresh destination without the Copilot documentation tree, then all
+    generated relative Markdown links resolve locally and both shared-document
+    links identify existing upstream pages by absolute URL.
+16. Given a hash-owned legacy guide with relative shared-document links, then
+    setup backs it up, updates the guide and manifest together, keeps the
+    profile digest unchanged, and performs no writes on the next identical run.
 
 ## 17. Requirements traceability
 

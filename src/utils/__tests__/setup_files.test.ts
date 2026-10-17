@@ -125,6 +125,69 @@ describe('setup_files', () => {
     expect(fs.readFileSync(manifestPath, 'utf8')).toBe(manifestBefore);
   });
 
+  it('resolves generated Markdown links without installing the Copilot documentation tree', () => {
+    const sourceRoot = path.resolve(__dirname, '../../..');
+    const configuration = createDefaultSetupConfiguration();
+    ensureGitHubDirs(tmpDir);
+    copySetupFiles(tmpDir, path.join(sourceRoot, 'setup'), configuration.features, { setupConfiguration: configuration });
+
+    const documentationLinks: string[] = [];
+    for (const relative of ['.copilot/AGENT_GUIDE.md', '.agents/skills/copilot-repository-workflow/SKILL.md', 'AGENTS.md']) {
+      const file = path.join(tmpDir, relative);
+      const content = fs.readFileSync(file, 'utf8');
+      for (const match of content.matchAll(/\[[^\]]*\]\(([^)]+)\)/gu)) {
+        const destination = match[1];
+        if (destination.startsWith('https://')) {
+          const url = new URL(destination);
+          expect(url.origin).toBe('https://github.com');
+          expect(url.pathname).toMatch(/^\/vypdev\/copilot\/blob\/master\/docs\/agents\//u);
+          expect(fs.existsSync(path.join(sourceRoot, url.pathname.replace('/vypdev/copilot/blob/master/', '')))).toBe(true);
+          documentationLinks.push(destination);
+        } else {
+          expect(fs.existsSync(path.resolve(path.dirname(file), destination))).toBe(true);
+        }
+      }
+    }
+
+    expect(documentationLinks).toEqual([
+      'https://github.com/vypdev/copilot/blob/master/docs/agents/repository-collaboration.mdx',
+      'https://github.com/vypdev/copilot/blob/master/docs/agents/repository-guidance-troubleshooting.mdx',
+    ]);
+    expect(fs.existsSync(path.join(tmpDir, 'docs'))).toBe(false);
+  });
+
+  it('upgrades an owned guide with legacy documentation links and keeps its backup and manifest consistent', () => {
+    const setupDir = path.resolve(__dirname, '../../../setup');
+    const configuration = createDefaultSetupConfiguration();
+    ensureGitHubDirs(tmpDir);
+    copySetupFiles(tmpDir, setupDir, configuration.features, { setupConfiguration: configuration });
+    const guidePath = path.join(tmpDir, '.copilot/AGENT_GUIDE.md');
+    const manifestPath = path.join(tmpDir, '.copilot/setup-manifest.json');
+    const legacyGuide = fs.readFileSync(guidePath, 'utf8')
+      .split('https://github.com/vypdev/copilot/blob/master/docs/agents/').join('../docs/agents/');
+    fs.writeFileSync(guidePath, legacyGuide);
+    const previousManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    previousManifest.artifacts['.copilot/AGENT_GUIDE.md'].sha256 = createHash('sha256').update(legacyGuide).digest('hex');
+    fs.writeFileSync(manifestPath, `${JSON.stringify(previousManifest, null, 2)}\n`);
+
+    const result = copySetupFiles(tmpDir, setupDir, configuration.features, { setupConfiguration: configuration });
+
+    const currentGuide = fs.readFileSync(guidePath, 'utf8');
+    expect(currentGuide).toContain('https://github.com/vypdev/copilot/blob/master/docs/agents/repository-collaboration.mdx');
+    expect(currentGuide).not.toContain('](../docs/');
+    expect(result.copied).toBe(2);
+    const currentManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    expect(currentManifest.profileDigest).toBe(previousManifest.profileDigest);
+    expect(currentManifest.artifacts['.copilot/AGENT_GUIDE.md'].sha256)
+      .toBe(createHash('sha256').update(currentGuide).digest('hex'));
+    const backups = fs.readdirSync(path.join(tmpDir, '.copilot/setup-backups'), { recursive: true })
+      .filter(file => String(file).endsWith('AGENT_GUIDE.md'));
+    expect(backups).toHaveLength(1);
+    expect(fs.readFileSync(path.join(tmpDir, '.copilot/setup-backups', String(backups[0])), 'utf8')).toBe(legacyGuide);
+    expect(inspectRepositoryAgentGuidance(tmpDir, configuration).filter(check => check.status === 'fail')).toEqual([]);
+    expect(copySetupFiles(tmpDir, setupDir, configuration.features, { setupConfiguration: configuration }).copied).toBe(0);
+  });
+
   it('treats CRLF-only checkout guidance as owned, current, and unchanged on rerun', () => {
     const setupDir = path.resolve(__dirname, '../../../setup');
     const configuration = createDefaultSetupConfiguration();

@@ -29,7 +29,7 @@ debt or convert unknown historic intent into a design decision.
 | `agent-runtime` | Implemented | Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run | [Agent runtime, provider, model, and role routing](./agent-runtime-provider-and-model-routing.md) + 1 companion | 96 paths · 2026-10-14 |
 | `cli-and-single-actions` | As-built baseline | Expose bounded local commands and workflow-dispatched operations through the shared application core | [CLI and single-action execution](./cli-and-single-action-execution.md) | 33 paths · 2026-09-16 |
 | `configurable-issue-workflows` | Implemented | Select one canonical set of issue workflows and enforce its forms, dependencies, branch policy, runtime admission, migration, and diagnosis | [Configurable issue workflows and fail-closed admission](./configurable-issue-workflows-and-admission.md) | 89 paths · 2026-10-13 |
-| `repository-agent-collaboration` | Implemented | Generate safe repository-local profiles, guidance, and a skill for agents contributing through configured issues, Action-managed branches, pull requests, and deployment boundaries | [Repository agent collaboration contract](./repository-agent-collaboration-contract.md) | 47 paths · 2026-10-12 |
+| `repository-agent-collaboration` | Implemented | Generate safe repository-local profiles, guidance, and a skill for agents contributing through configured issues, Action-managed branches, pull requests, and deployment boundaries | [Repository agent collaboration contract](./repository-agent-collaboration-contract.md) | 47 paths · 2026-10-17 |
 | `guarded-pull-request-approval` | Proposed | Specify and locally implement revision-bound, evidence-gated native bot approvals for eligible human pull requests, with safe setup defaults, read-only doctor checks, and explainable recovery | [Guarded pull-request approval and setup readiness](./guarded-pull-request-approval.md) + 2 companion | 90 paths · 2026-10-17 |
 
 ## Evidence map
@@ -246,7 +246,7 @@ debt or convert unknown historic intent into a design decision.
 ### `repository-agent-collaboration` — Repository agent collaboration contract
 
 - Owner: Copilot maintainers
-- Last verified: 2026-10-12
+- Last verified: 2026-10-17
 - Specifications: [`specs/repository-agent-collaboration-contract.md`](./repository-agent-collaboration-contract.md)
 - Workflows: Not applicable for this capability.
 - Entrypoints: [`package.json`](../package.json) · [`src/cli/commands/setup.ts`](../src/cli/commands/setup.ts) · [`src/cli/commands/doctor.ts`](../src/cli/commands/doctor.ts)
