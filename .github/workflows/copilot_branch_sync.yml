@@ -8,17 +8,12 @@ on:
 jobs:
   branch-sync:
     name: Copilot - Branch Sync
-    runs-on: [self-hosted, codex, Linux]
+    runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
       contents: read
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v5
-        with:
-          persist-credentials: false
-
-      - uses: ./
+      - uses: vypdev/copilot@v3
         with:
           single-action: check_branch_sync_action
           token: ${{ secrets.PAT }}

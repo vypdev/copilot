@@ -8,14 +8,11 @@ jobs:
   copilot-pull-requests:
     if: ${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}
     name: Copilot - Pull Request Comment
-    runs-on: [self-hosted, codex, Linux]
+    runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
       checks: write
       contents: read
-    env:
-      # Preparation covers parser whitespace and mentions; authorization stays in the Action.
-      COPILOT_PREPARE_VERIFICATION: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS != '' && ((contains(github.event.comment.body, '/copilot') && ((contains(github.event.comment.body, 'sync-branch') && !contains(github.event.comment.body, '--dry-run')) || contains(github.event.comment.body, 'implement') || contains(github.event.comment.body, 'fix') || contains(github.event.comment.body, 'remember'))) || (vars.COPILOT_BOT_LOGIN != '' && contains(github.event.comment.body, format('@{0}', vars.COPILOT_BOT_LOGIN)) && !contains(github.event.comment.body, '--dry-run'))) }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
@@ -23,35 +20,46 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - name: Prepare repository pnpm
-        if: env.COPILOT_PREPARE_VERIFICATION == 'true'
-        uses: pnpm/action-setup@v5
-        with:
-          version: 10.12.4
-          standalone: false
-          dest: ${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
-
-      - name: Prepare repository Node
-        if: env.COPILOT_PREPARE_VERIFICATION == 'true'
-        uses: actions/setup-node@v7
-        with:
-          node-version: '24.x'
-
-      - name: Install repository verification dependencies
-        if: env.COPILOT_PREPARE_VERIFICATION == 'true'
-        shell: bash
-        run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - uses: ./
+      - uses: vypdev/copilot@v3
         with:
           repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
           issues-locale: ${{ vars.ISSUES_LOCALE || '' }}
           pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || '' }}
           issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
-          issue-managed-branches: true
-          pre-branch-sdd: true
-          ai-ignore-files: build/*,specs/CATALOG.md
+          ai-ignore-files: ${{ vars.AI_IGNORE_FILES || 'build/*' }}
           debug: ${{ vars.DEBUG }}
+          main-branch: ${{ vars.MAIN_BRANCH || 'master' }}
+          development-branch: ${{ vars.DEVELOPMENT_BRANCH || 'develop' }}
+          feature-tree: ${{ vars.FEATURE_TREE || 'feature' }}
+          bugfix-tree: ${{ vars.BUGFIX_TREE || 'bugfix' }}
+          hotfix-tree: ${{ vars.HOTFIX_TREE || 'hotfix' }}
+          release-tree: ${{ vars.RELEASE_TREE || 'release' }}
+          docs-tree: ${{ vars.DOCS_TREE || 'docs' }}
+          chore-tree: ${{ vars.CHORE_TREE || 'chore' }}
+          issue-managed-branches: ${{ vars.ISSUE_MANAGED_BRANCHES || 'true' }}
+          pre-branch-sdd: ${{ vars.PRE_BRANCH_SDD || 'false' }}
+          reopen-issue-on-push: ${{ vars.REOPEN_ISSUE_ON_PUSH || 'true' }}
+          desired-assignees-count: ${{ vars.DESIRED_ASSIGNEES_COUNT || '1' }}
+          desired-reviewers-count: ${{ vars.DESIRED_REVIEWERS_COUNT || '1' }}
+          commit-prefix-transforms: ${{ vars.COMMIT_PREFIX_TRANSFORMS || 'replace-slash' }}
+          ai-pull-request-description-mode: ${{ vars.AI_PULL_REQUEST_DESCRIPTION_MODE || 'replace' }}
+          ai-members-only: ${{ vars.AI_MEMBERS_ONLY || 'false' }}
+          ai-include-reasoning: ${{ vars.AI_INCLUDE_REASONING || 'false' }}
+          bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}
+          bugbot-comment-limit: ${{ vars.BUGBOT_COMMENT_LIMIT || '20' }}
+          bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
+          bugbot-dry-run: ${{ vars.BUGBOT_DRY_RUN || 'false' }}
+          bugbot-effort: ${{ vars.BUGBOT_EFFORT || 'smart' }}
+          bugbot-review-drafts: ${{ vars.BUGBOT_REVIEW_DRAFTS || 'false' }}
+          bugbot-trace-rules: ${{ vars.BUGBOT_TRACE_RULES || 'false' }}
+          bugbot-suggested-changes: ${{ vars.BUGBOT_SUGGESTED_CHANGES || 'true' }}
+          bugbot-telemetry: ${{ vars.BUGBOT_TELEMETRY || 'true' }}
+          bugbot-fail-on-unresolved: ${{ vars.BUGBOT_FAIL_ON_UNRESOLVED || 'false' }}
+          bugbot-organization-rules: ${{ vars.BUGBOT_ORGANIZATION_RULES }}
+          project-column-issue-created: ${{ vars.PROJECT_COLUMN_ISSUE_CREATED || 'Todo' }}
+          project-column-pull-request-created: ${{ vars.PROJECT_COLUMN_PULL_REQUEST_CREATED || 'In Progress' }}
+          project-column-issue-in-progress: ${{ vars.PROJECT_COLUMN_ISSUE_IN_PROGRESS || 'In Progress' }}
+          project-column-pull-request-in-progress: ${{ vars.PROJECT_COLUMN_PULL_REQUEST_IN_PROGRESS || 'In Progress' }}
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
           agent-model: ${{ vars.AGENT_MODEL || 'gpt-6-luna' }}
@@ -84,15 +92,6 @@ jobs:
           tester-executable: ${{ vars.TESTER_EXECUTABLE }}
           project-ids: ${{ vars.PROJECT_IDS }}
           token: ${{ secrets.PAT }}
-          bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
-          bugbot-dry-run: ${{ vars.BUGBOT_DRY_RUN || 'false' }}
-          bugbot-effort: ${{ vars.BUGBOT_EFFORT || 'smart' }}
-          bugbot-review-drafts: ${{ vars.BUGBOT_REVIEW_DRAFTS || 'false' }}
-          bugbot-trace-rules: ${{ vars.BUGBOT_TRACE_RULES || 'false' }}
-          bugbot-suggested-changes: ${{ vars.BUGBOT_SUGGESTED_CHANGES || 'true' }}
-          bugbot-telemetry: ${{ vars.BUGBOT_TELEMETRY || 'true' }}
-          bugbot-fail-on-unresolved: ${{ vars.BUGBOT_FAIL_ON_UNRESOLVED || 'false' }}
-          bugbot-organization-rules: ${{ vars.BUGBOT_ORGANIZATION_RULES }}
         env:
           AGENT_PROVIDER: ${{ vars.AGENT_PROVIDER || 'codex' }}
           AGENT_MODEL_PROVIDER: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}

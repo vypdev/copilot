@@ -1,8 +1,4 @@
 name: Copilot - Pull Request Merge Queue
-
-defaults:
-  run:
-    shell: bash
 run-name: Copilot PR · ${{ github.event_name }}:${{ github.event.action }}
 
 on:
@@ -14,7 +10,7 @@ jobs:
     # GitHub required checks match the job name. Keep this identical to normal
     # PR analysis while isolating merge-group runs in their own workflow.
     name: Copilot - Pull Request
-    runs-on: [self-hosted, codex, Linux]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       checks: write
