@@ -52,12 +52,13 @@ describe('organization reuse provisioning boundary', () => {
     expect(await resolveRemoteConfiguration(f.context, f.dependencies, f.configuration, errors)).toBeDefined();
     expect(errors).toEqual([]);
   });
-  it.each(['binding', 'repository', 'branch', 'access'] as const)('blocks %s drift before files or values change', async change => {
+  it.each(['binding', 'repository', 'branch', 'access', 'visibility'] as const)('blocks %s drift before files or values change', async change => {
     const f = fixture(); const errors: string[] = [];
     const fresh = { ...f.remote };
     if (change === 'binding') fresh.organizationSecrets = [];
     if (change === 'repository') fresh.repositoryId = 8;
     if (change === 'branch') fresh.defaultBranch = 'main';
+    if (change === 'visibility') fresh.repositoryVisibility = 'public';
     if (change === 'access') fresh.organizationVariablesAccess = 'unknown';
     f.dependencies.setupRemoteConfigurationReadPort.inspect.mockResolvedValue(fresh);
     expect(await resolveRemoteConfiguration(f.context, f.dependencies, f.configuration, errors)).toBeUndefined();

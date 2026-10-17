@@ -203,6 +203,17 @@ describe('per-target shared wizard and metadata-only credentials', () => {
     const f = configureFixture(); f.configuration.pullRequestApproval = { ...f.configuration.pullRequestApproval, mode: 'guarded' };
     expect((await f.useCase.execute(f.request))?.blocked?.[0]).toContain('Target-specific'); expect(f.credentials.collect).not.toHaveBeenCalled();
   });
+  it('supports customized settings with existing bindings and collects no Secret values', async () => {
+    const f = configureFixture(); const result = await f.useCase.execute({ ...f.request, configurationSource: 'customize' });
+    expect(result?.blocked).toBeUndefined(); expect(f.wizard.execute).toHaveBeenCalledWith(expect.objectContaining({ configurationSource: 'customize' }));
+    expect(f.credentials.collect).toHaveBeenCalledWith(expect.objectContaining({ configurationSource: 'organization' }));
+  });
+  it('names the credential options needed by customized provider settings', async () => {
+    const f = configureFixture(); f.configuration.agents.findings = { ...f.configuration.agents.findings, provider: 'opencode', modelProvider: 'anthropic' };
+    const result = await f.useCase.execute({ ...f.request, configurationSource: 'customize' });
+    expect(result?.blocked?.join(' ')).toContain('ANTHROPIC_API_KEY');
+    expect(result?.blocked?.join(' ')).toContain('single-repository Customize'); expect(f.credentials.collect).not.toHaveBeenCalled();
+  });
   it('blocks missing bindings without attempting value prompts', async () => {
     const f = configureFixture(); f.shared.pop();
     expect((await f.useCase.execute(f.request))?.blocked?.[0]).toContain('existing credential binding'); expect(f.credentials.collect).not.toHaveBeenCalled();

@@ -56026,7 +56026,7 @@ async function resolveRemoteConfiguration(context, dependencies, setupConfigurat
     }
 }
 function reuseSnapshot(remote) {
-    return JSON.stringify([remote.ownerType, remote.repositoryId, remote.defaultBranch,
+    return JSON.stringify([remote.ownerType, remote.repositoryId, remote.defaultBranch, remote.repositoryVisibility,
         remote.repositoryVariablesAccess, remote.organizationVariablesAccess,
         remote.repositorySecretsAccess, remote.organizationSecretsAccess,
         [...remote.repositoryVariables].sort((a, b) => a.name.localeCompare(b.name)),
@@ -60595,12 +60595,18 @@ class ConfigureSetupBatchTargetUseCase {
             return { configuration,
                 blocked: ['Target-specific configuration and guarded approval checks must be resolved before Apply.'] };
         const access = (0, setup_batch_access_policy_1.planSetupBatchSharedAccess)(configuration, request.target, request.actualRemote, request.shared);
+        const requirements = (0, setup_credential_requirement_policy_1.buildSetupCredentialRequirements)(configuration);
         if (access.missing.length)
-            return { configuration, blocked: ['A required existing credential binding must be provisioned or authorized separately, then inspected again.'] };
+            return { configuration, blocked: access.missing.map(binding => {
+                    const options = requirements.filter(requirement => requirement.name === binding || requirement.alternativeGroups?.includes(binding));
+                    return `A required existing credential binding is unavailable: ${options.map(requirement => requirement.name).join(' or ')}. Provision or authorize a supported binding for this target in GitHub, or run single-repository Customize from that repository; then inspect this batch again.`;
+                }) };
         const pending = access.grants.filter(grant => grant.kind === 'secret').map(grant => grant.name);
         try {
+            // Both batch sources keep Secret bindings. Customize changes settings only;
+            // collecting new credential values belongs to current-repository setup.
             const credentials = await this.ports.credentials.collect({ owner: request.target.owner, repository: request.target.name,
-                setupToken: request.token, requirements: (0, setup_credential_requirement_policy_1.buildSetupCredentialRequirements)(configuration),
+                setupToken: request.token, requirements,
                 manageSecrets: configuration.manageRepositorySecrets, secretStoragePolicy: configuration.storage.secrets,
                 remoteConfiguration: access.projected, configurationSource: 'organization', pendingOrganizationSecretNames: pending,
                 workflowTokenPermissions: (0, setup_token_permission_policy_1.buildWorkflowPatPermissionRequirements)(configuration, access.projected) });
@@ -75399,7 +75405,7 @@ exports.chooseWebSetupScope = chooseWebSetupScope;
 const setup_credential_prompt_adapter_1 = __nccwpck_require__(93232);
 /** The choice is an intent; authenticated inventory still decides whether reuse is possible. */
 async function chooseSetupConfigurationSource(terminal, bridge, batch = false) {
-    const choices = ['Reuse organization configuration', 'Customize configuration'];
+    const choices = ['Reuse organization configuration', batch ? 'Customize settings; keep existing Secrets' : 'Customize configuration'];
     const description = batch
         ? 'Reuse compatible organization settings to skip completed questions, or customize repository settings. Batch setup keeps existing Secret bindings in both paths. Provision missing credentials separately, then inspect again; shared values are never replaced.'
         : 'Reuse compatible organization Variables and existing Secret bindings, keeping repository overrides. Only missing, invalid or repository-specific settings are asked again. Shared values are preserved; reviewed differences become repository overrides. Choose Customize to provision or replace credentials.';

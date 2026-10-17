@@ -34,11 +34,17 @@ export class ConfigureSetupBatchTargetUseCase {
       && result.plan.approvalReadiness.some(check => check.status === 'fail')) return { configuration,
       blocked: ['Target-specific configuration and guarded approval checks must be resolved before Apply.'] };
     const access = planSetupBatchSharedAccess(configuration, request.target, request.actualRemote, request.shared);
-    if (access.missing.length) return { configuration, blocked: ['A required existing credential binding must be provisioned or authorized separately, then inspected again.'] };
+    const requirements = buildSetupCredentialRequirements(configuration);
+    if (access.missing.length) return { configuration, blocked: access.missing.map(binding => {
+      const options = requirements.filter(requirement => requirement.name === binding || requirement.alternativeGroups?.includes(binding));
+      return `A required existing credential binding is unavailable: ${options.map(requirement => requirement.name).join(' or ')}. Provision or authorize a supported binding for this target in GitHub, or run single-repository Customize from that repository; then inspect this batch again.`;
+    }) };
     const pending = access.grants.filter(grant => grant.kind === 'secret').map(grant => grant.name);
     try {
+      // Both batch sources keep Secret bindings. Customize changes settings only;
+      // collecting new credential values belongs to current-repository setup.
       const credentials = await this.ports.credentials.collect({ owner: request.target.owner, repository: request.target.name,
-        setupToken: request.token, requirements: buildSetupCredentialRequirements(configuration),
+        setupToken: request.token, requirements,
         manageSecrets: configuration.manageRepositorySecrets, secretStoragePolicy: configuration.storage.secrets,
         remoteConfiguration: access.projected, configurationSource: 'organization', pendingOrganizationSecretNames: pending,
         workflowTokenPermissions: buildWorkflowPatPermissionRequirements(configuration, access.projected) });

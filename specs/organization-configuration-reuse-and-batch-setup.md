@@ -73,7 +73,8 @@ Not applicable: this is a prospective specification and does not reconstruct an 
 1. Organization-wide selection, cross-organization batches, repository creation, automatic merge, release, tag, deployment, or arbitrary code execution.
 2. Crawling other repositories to infer shared settings, blind copying, or a mandatory GitHub App/control plane.
 3. Importing another codebase's publishing, deployment, CI commands, or approval producers.
-4. Changing the completed setup bugfix or weakening native approval, branch protection, runner-group access, or deployment gates.
+4. Collecting or rotating Secret values in batch v1; missing bindings require separate provisioning.
+5. Changing the completed setup bugfix or weakening native approval, branch protection, runner-group access, or deployment gates.
 
 ### 4.3 Fixed product/safety invariants
 
@@ -126,7 +127,7 @@ Text equivalent: confirm checkout, choose scope, discover and select, configure,
 
 ### 6.2 Alternative paths
 
-- Customize skips reuse and follows existing explicit configuration/replacement contracts.
+- Current-repository Customize follows the existing explicit configuration/replacement contract. Batch Customize changes settings while retaining existing Secret bindings; its label states this limit. Provision missing/replacement credentials through current-repository Customize before restarting batch preflight.
 - Existing repository overrides take precedence and require explicit conflict resolution where they conflict with shared values.
 - A limited credential may show only its limited view. Exact-name selection plus selected-target reconnect is supported; failure to establish access blocks only affected targets.
 - A matching-file target creates no PR; labels, types and resources are still checked and its truthful result is Verification pending. Unchanged is reserved for completely established no-change evidence. Archived, disabled, inaccessible, unsupported, or uninspectable targets cannot be silently included.
@@ -497,9 +498,9 @@ its 14 previously open items; this feature does not close unrelated evidence.
 
 ### Final local gates
 
-The final local suite passes **657 suites / 9,848 tests** (35 pre-existing
+The final local suite passes **657 suites / 9,852 tests** (35 pre-existing
 skips). Coverage is **97.38% lines, 96.23% statements, 97.01% functions and
-93.05% branches**. All eight new pure decision modules pass 100% on all four
+93.06% branches**. All eight new pure decision modules pass 100% on all four
 metrics through the executable budget. Build, package smoke, TypeScript,
 Svelte, lint, documentation, workflow, architecture and specification gates
 pass. Multi-platform PR CI and maintainer review remain required before merge;
@@ -529,3 +530,14 @@ rotations or lost revision evidence block Apply; ordering does not. The terminal
 selector requires entered IDs or the explicit `confirm` action for the displayed
 selection; a blank answer remains in selection. Regression tests exercise both
 actual presentation paths and metadata drift without credential values.
+
+### Review clarification: repository visibility and batch Customize
+
+Single-checkout reuse includes repository visibility in its fresh snapshot, so
+private/public/internal drift blocks before files or values change. Batch
+Customize intentionally customizes non-secret settings while keeping existing
+Secret bindings, as required by the v1 no-value-collection boundary. The source
+choice names that limit in all four locales. Missing bindings identify their
+supported credential options and direct provisioning to the selected target,
+then require a fresh batch preview. A regression covers Customize with existing
+bindings and another covers a newly selected provider whose key is missing.

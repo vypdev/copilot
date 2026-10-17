@@ -4,7 +4,7 @@ import type { WebSetupBridge } from './web_setup_bridge';
 
 /** The choice is an intent; authenticated inventory still decides whether reuse is possible. */
 export async function chooseSetupConfigurationSource(terminal?: TerminalDriver, bridge?: WebSetupBridge, batch = false): Promise<'organization' | 'customize'> {
-  const choices = ['Reuse organization configuration', 'Customize configuration'];
+  const choices = ['Reuse organization configuration', batch ? 'Customize settings; keep existing Secrets' : 'Customize configuration'];
   const description = batch
     ? 'Reuse compatible organization settings to skip completed questions, or customize repository settings. Batch setup keeps existing Secret bindings in both paths. Provision missing credentials separately, then inspect again; shared values are never replaced.'
     : 'Reuse compatible organization Variables and existing Secret bindings, keeping repository overrides. Only missing, invalid or repository-specific settings are asked again. Shared values are preserved; reviewed differences become repository overrides. Choose Customize to provision or replace credentials.';

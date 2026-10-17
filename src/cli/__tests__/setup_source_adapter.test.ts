@@ -23,6 +23,11 @@ describe('shared configuration source intent presentation', () => {
     expect(await chooseSetupConfigurationSource(undefined, { ask } as unknown as WebSetupBridge)).toBe(source);
     expect(ask).toHaveBeenCalledWith(expect.objectContaining({ copyId: 'setup.source', defaultValue: 'Customize configuration' }));
   });
+  it('names the limited Customize behavior explicitly in batch selection', async () => {
+    const ask = jest.fn().mockResolvedValue('Customize settings; keep existing Secrets');
+    expect(await chooseSetupConfigurationSource(undefined, { ask } as unknown as WebSetupBridge, true)).toBe('customize');
+    expect(ask).toHaveBeenCalledWith(expect.objectContaining({ copyId: 'setup.batchSource', choices: ['Reuse organization configuration', 'Customize settings; keep existing Secrets'] }));
+  });
   it('keeps web cancellation distinct from Customize', async () => {
     await expect(chooseSetupConfigurationSource(undefined, { ask: async () => undefined } as unknown as WebSetupBridge))
       .rejects.toBeInstanceOf(SetupTerminalCancelledError);

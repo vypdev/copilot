@@ -182,7 +182,7 @@ export async function resolveRemoteConfiguration(
 }
 
 function reuseSnapshot(remote: SetupRemoteConfiguration): string {
-    return JSON.stringify([remote.ownerType, remote.repositoryId, remote.defaultBranch,
+    return JSON.stringify([remote.ownerType, remote.repositoryId, remote.defaultBranch, remote.repositoryVisibility,
         remote.repositoryVariablesAccess, remote.organizationVariablesAccess,
         remote.repositorySecretsAccess, remote.organizationSecretsAccess,
         [...remote.repositoryVariables].sort((a, b) => a.name.localeCompare(b.name)),
