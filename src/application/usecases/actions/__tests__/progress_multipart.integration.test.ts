@@ -2,13 +2,13 @@ import { CheckProgressUseCase } from '../check_progress_use_case';
 import { projectProgressContext } from '../../push_single_action_contexts';
 import { Ai } from '../../../../data/model/ai';
 import type { Execution } from '../../../../data/model/execution';
-import { partitionProgressDiff, progressEvidenceTooLarge } from '../../../policies/progress_diff_partition_policy';
+import { partitionProgressDiff, progressEvidenceTooLarge, type ProgressDiffChange } from '../../../policies/progress_diff_partition_policy';
 import { ApplicationError } from '../../../errors/application_error';
 import { resolveStaticApplicationErrorCatalog } from '../../../policies/application_error_message_catalog';
 
 const base = 'a'.repeat(40), head = 'b'.repeat(40);
-function fixture() {
-    const diff = partitionProgressDiff(base, head, ['a.ts', 'b.ts'].map(path => ({ path, status: 'modified', additions: 1, deletions: 0, patch: 'x'.repeat(150_000) })));
+function fixture(changes?: readonly ProgressDiffChange[]) {
+    const diff = partitionProgressDiff(base, head, changes ?? ['a.ts', 'b.ts'].map(path => ({ path, status: 'modified', additions: 1, deletions: 0, patch: 'x'.repeat(150_000) })));
     if (diff.kind !== 'partitioned') throw new Error('Expected multipart fixture');
     const context = projectProgressContext({ owner: 'owner', repo: 'repo', issueNumber: 547, tokens: { token: 'token' },
         locale: { repository: 'en-US', issue: 'en-US', pullRequest: 'en-US' },
@@ -33,6 +33,23 @@ function fixture() {
 }
 
 describe('atomic complete multipart progress', () => {
+    it('assesses a complete 299-file aggregate larger than 256 kB without dropping paths or publishing per-part progress', async () => {
+        const paths = Array.from({ length: 299 }, (_, i) => `src/${i}.ts`);
+        const f = fixture(paths.map(path => ({ path, status: 'modified', additions: 1, deletions: 0, patch: 'x'.repeat(1500) })));
+        let index = 0;
+        f.query.mockImplementation(async request => {
+            expect(f.setProgressLabel).not.toHaveBeenCalled();
+            if (request.options?.schemaName === 'progress_partition_facts') {
+                const part = f.diff.partitions[index++];
+                return { outputLocale: 'en-US', partitionId: part.id, files: part.paths.map(path => ({ path, implemented: 'x'.repeat(600), remaining: 'y'.repeat(600) })) };
+            }
+            expect(index).toBe(f.diff.partitions.length); expect(Buffer.byteLength(request.prompt)).toBeGreaterThan(256_000);
+            expect(paths.every(path => request.prompt.includes(path))).toBe(true);
+            return { outputLocale: 'en-US', progress: 70, summary: 'Implemented; verification remains.', remaining: 'Verify behavior.' };
+        });
+        expect((await f.invoke())[0].success).toBe(true);
+        expect(f.query).toHaveBeenCalledTimes(f.diff.partitions.length + 1); expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
+    });
     it('assesses all exact parts before one final percentage and existing label publication', async () => {
         const f = fixture(), results = await f.invoke();
         expect(results[0].success).toBe(true); expect(results[0].payload).toMatchObject({ progress: 70 });

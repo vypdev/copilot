@@ -74,6 +74,9 @@ export function importSetupOrganizationConfiguration(request: SetupOrganizationI
     if (binding.path === 'repository.mainBranch' && value.variable.value !== remote.defaultBranch) {
       record(binding.path, value, explicit(binding.path) ? 'preserved' : 'needs-review', 'target-specific'); continue;
     }
+    if (binding.path.startsWith('projects.') && binding.path !== 'projects.ids' && normalized !== '') {
+      record(binding.path, value, explicit(binding.path) ? 'preserved' : 'needs-review', 'target-specific'); continue;
+    }
     const targetSpecific = binding.path === 'repository.developmentBranch'
       && value.variable.value !== request.observedDevelopmentBranch;
     candidate(binding.path, value, draft => {

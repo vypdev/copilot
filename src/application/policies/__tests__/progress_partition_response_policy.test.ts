@@ -1,4 +1,5 @@
-import { aggregateProgressFacts, parseProgressPartitionFacts, progressPartitionResponseSchema } from '../progress_partition_response_policy';
+import { aggregateProgressFacts, MAX_PROGRESS_AGGREGATE_BYTES, parseProgressPartitionFacts, progressPartitionResponseSchema } from '../progress_partition_response_policy';
+import { MAX_PROGRESS_EVIDENCE_BYTES, partitionProgressDiff } from '../progress_diff_partition_policy';
 
 const part = { id: 'progress-1-of-2', paths: ['src/a.ts', 'src/b.ts'], evidence: 'immutable' };
 const facts = () => part.paths.map(path => ({ path, implemented: 'Adds the intended behavior.', remaining: 'Runtime verification is unknown.' }));
@@ -39,6 +40,18 @@ describe('complete progress partition facts', () => {
         expect(evidence.warning).toContain('not CI/build/test attestation');
     });
     it('rejects oversized UTF-8 aggregate before final assessment', () => {
-        expect(() => aggregateProgressFacts('a', 'b', 'manifest', [[{ path: 'a', implemented: '🧪'.repeat(64_000), remaining: 'unknown' }]])).toThrow(expect.objectContaining({ code: 'validation.evidence-too-large', retryable: false }));
+        expect(() => aggregateProgressFacts('a', 'b', 'manifest', [[{ path: 'a', implemented: '🧪'.repeat(MAX_PROGRESS_AGGREGATE_BYTES / 4), remaining: 'unknown' }]])).toThrow(expect.objectContaining({ code: 'validation.evidence-too-large', retryable: false }));
+    });
+    it('retains all 299 maximum-length file facts even when their aggregate exceeds one source-part budget', () => {
+        const paths = Array.from({ length: 299 }, (_, i) => `src/${i}-${'x'.repeat(800)}.ts`);
+        const diff = partitionProgressDiff('a', 'b', paths.map(path => ({ path, status: 'modified', additions: 1, deletions: 0, patch: 'x'.repeat(1500) })));
+        if (diff.kind !== 'partitioned') throw new Error('Expected complete multipart fixture');
+        const batches = diff.partitions.map(partition => parseProgressPartitionFacts({ outputLocale: 'en-US', partitionId: partition.id,
+            files: partition.paths.map(path => ({ path, implemented: '\u0000'.repeat(600), remaining: '\u0000'.repeat(600) })) }, partition, 'en-US'));
+        const evidence = aggregateProgressFacts('a', 'b', diff.evidence, batches);
+        expect(Buffer.byteLength(evidence)).toBeGreaterThan(MAX_PROGRESS_EVIDENCE_BYTES);
+        expect(Buffer.byteLength(evidence)).toBeLessThanOrEqual(MAX_PROGRESS_AGGREGATE_BYTES);
+        expect(JSON.parse(evidence).files.map((file: { path: string }) => file.path)).toEqual(paths);
+        expect(diff.partitions.every(partition => Buffer.byteLength(partition.evidence) <= MAX_PROGRESS_EVIDENCE_BYTES)).toBe(true);
     });
 });

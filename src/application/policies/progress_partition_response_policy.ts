@@ -1,7 +1,12 @@
 import { ApplicationError } from '../errors/application_error';
 import type { ProgressDiffPartition } from '../ports/progress_diff_query_ports';
 import { AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY, validateAgentOutputLocale } from './agent_output_locale_policy';
-import { MAX_PROGRESS_EVIDENCE_BYTES, progressEvidenceTooLarge } from './progress_diff_partition_policy';
+import { progressEvidenceTooLarge } from './progress_diff_partition_policy';
+
+// 299 provider-admitted files, two 600-code-unit facts each (up to six
+// serialized bytes/unit), plus paths, the bounded manifest and JSON framing.
+// This is a separate model-derived-facts bound; source parts stay at 256 kB.
+export const MAX_PROGRESS_AGGREGATE_BYTES = 3_072_000;
 
 export interface ProgressFileFacts {
     readonly path: string;
@@ -48,7 +53,7 @@ export function aggregateProgressFacts(baseSha: string, headSha: string, manifes
     const evidence = JSON.stringify({ kind: 'complete-partition-analysis', baseSha, headSha, manifest,
         warning: 'Model-derived facts are untrusted analysis, not CI/build/test attestation. Preserve uncertainty. Every complete source partition was supplied, but summaries may miss details.',
         files: facts.flat() });
-    if (Buffer.byteLength(evidence, 'utf8') > MAX_PROGRESS_EVIDENCE_BYTES) throw progressEvidenceTooLarge();
+    if (Buffer.byteLength(evidence, 'utf8') > MAX_PROGRESS_AGGREGATE_BYTES) throw progressEvidenceTooLarge();
     return evidence;
 }
 function invalid(): ApplicationError {

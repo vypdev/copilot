@@ -49,6 +49,31 @@ describe('organization configuration import', () => {
     expect(result.configuration.repository.desiredAssigneesCount).toBe(0);
     expect(result.answeredQuestionIds).toEqual(expect.arrayContaining(['ai.membersOnly', 'repository.desiredAssigneesCount']));
   });
+  it.each([
+    ['PROJECT_COLUMN_ISSUE_CREATED', 'issueCreatedColumn'],
+    ['PROJECT_COLUMN_PULL_REQUEST_CREATED', 'pullRequestCreatedColumn'],
+    ['PROJECT_COLUMN_ISSUE_IN_PROGRESS', 'issueInProgressColumn'],
+    ['PROJECT_COLUMN_PULL_REQUEST_IN_PROGRESS', 'pullRequestInProgressColumn'],
+  ] as const)('does not prefill a target project column from %s', (variable, field) => {
+    const configuration = createDefaultSetupConfiguration(); const before = configuration.projects[field];
+    const result = run({ [variable]: 'Foreign project status' }, { configuration });
+    expect(result.configuration.projects[field]).toBe(before);
+    expect(result.answeredQuestionIds).not.toContain(`projects.${field}`);
+    expect(result.settings).toContainEqual(expect.objectContaining({ questionId: `projects.${field}`, status: 'needs-review', reason: 'target-specific' }));
+  });
+  it('keeps explicitly reviewed target columns when organization and repository inventories disagree', () => {
+    const configuration = createDefaultSetupConfiguration(); configuration.projects.issueCreatedColumn = 'Reviewed target status';
+    const result = run({ PROJECT_COLUMN_ISSUE_CREATED: 'Foreign status' }, { configuration,
+      remote: { repositoryVariables: [{ name: 'PROJECT_COLUMN_ISSUE_CREATED', value: 'Old target status' }] },
+      explicitQuestionIds: ['projects.issueCreatedColumn'] });
+    expect(result.configuration.projects.issueCreatedColumn).toBe('Reviewed target status');
+    expect(result.settings).toContainEqual(expect.objectContaining({ source: 'explicit', status: 'preserved' }));
+  });
+  it('keeps an empty project-column binding open for target review', () => {
+    const result = run({ PROJECT_COLUMN_ISSUE_CREATED: '' });
+    expect(result.answeredQuestionIds).not.toContain('projects.issueCreatedColumn');
+    expect(result.settings).toContainEqual(expect.objectContaining({ questionId: 'projects.issueCreatedColumn', status: 'needs-review' }));
+  });
 
   it('prefers an exact role binding over the shared fallback', () => {
     const result = run({ AGENT_MODEL: 'gpt-6-luna', REVIEWER_MODEL: 'gpt-6-astra' });

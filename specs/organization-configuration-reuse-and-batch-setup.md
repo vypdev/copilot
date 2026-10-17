@@ -784,3 +784,19 @@ three workflow-state transitions before provisioning. The pure retry policy
 requires 100% in all coverage metrics; existing global/module budgets remain.
 User documentation MUST explain bounded waits, renewed review for workflow drift,
 and source-generator recovery before the current-head CI/native review gate.
+
+
+### Target Project column import regression (2026-10-17)
+
+Nonempty Project column Variables MUST be recorded as target-specific review
+work without copying their values into the target draft or marking the question
+answered. A source Project's Status names are not evidence for another Project.
+Explicitly reviewed target columns remain authoritative even if organization
+and repository inventory values differ. Empty bindings remain review work.
+Project IDs still require the existing target selection and discovery checks.
+
+Minimum **six additional cases**: each of the four column bindings, explicitly
+reviewed target values with conflicting inventories, and an empty binding that
+cannot suppress review. The existing exhaustive pure-policy budget remains.
+The setup guide MUST explain that Project columns are selected for the target,
+not silently prefilled from organization defaults.

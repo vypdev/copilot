@@ -45781,12 +45781,17 @@ function progressPercentToColor(percent) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MAX_PROGRESS_AGGREGATE_BYTES = void 0;
 exports.progressPartitionResponseSchema = progressPartitionResponseSchema;
 exports.parseProgressPartitionFacts = parseProgressPartitionFacts;
 exports.aggregateProgressFacts = aggregateProgressFacts;
 const application_error_1 = __nccwpck_require__(75999);
 const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 const progress_diff_partition_policy_1 = __nccwpck_require__(70628);
+// 299 provider-admitted files, two 600-code-unit facts each (up to six
+// serialized bytes/unit), plus paths, the bounded manifest and JSON framing.
+// This is a separate model-derived-facts bound; source parts stay at 256 kB.
+exports.MAX_PROGRESS_AGGREGATE_BYTES = 3072000;
 function progressPartitionResponseSchema(partition) {
     return {
         type: 'object', additionalProperties: false,
@@ -45830,7 +45835,7 @@ function aggregateProgressFacts(baseSha, headSha, manifest, facts) {
     const evidence = JSON.stringify({ kind: 'complete-partition-analysis', baseSha, headSha, manifest,
         warning: 'Model-derived facts are untrusted analysis, not CI/build/test attestation. Preserve uncertainty. Every complete source partition was supplied, but summaries may miss details.',
         files: facts.flat() });
-    if (Buffer.byteLength(evidence, 'utf8') > progress_diff_partition_policy_1.MAX_PROGRESS_EVIDENCE_BYTES)
+    if (Buffer.byteLength(evidence, 'utf8') > exports.MAX_PROGRESS_AGGREGATE_BYTES)
         throw (0, progress_diff_partition_policy_1.progressEvidenceTooLarge)();
     return evidence;
 }
