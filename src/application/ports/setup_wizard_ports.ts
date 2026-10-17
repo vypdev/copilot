@@ -98,6 +98,16 @@ export interface SetupRemoteCredentialHealthPort {
     ): Promise<readonly SetupCredentialCheck[] | undefined>;
 }
 
+/** Resolves and verifies trusted default-branch code internally; callers cannot supply a ref. */
+export interface SetupTrustedCredentialHealthPort {
+    validateTrustedDefault(
+        owner: string,
+        repository: string,
+        operatorToken: string,
+        requirements: readonly SetupCredentialRequirement[],
+    ): Promise<readonly SetupCredentialCheck[] | undefined>;
+}
+
 export interface SetupWorkflowUpdatePromptPort {
     confirmWorkflowUpdates(comparisons: readonly SetupWorkflowComparison[], forcedByFlag: boolean): Promise<boolean>;
 }

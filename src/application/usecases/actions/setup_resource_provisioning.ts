@@ -22,6 +22,7 @@ import type {
 } from '../../ports/setup_wizard_ports';
 import { logError } from '../../ports/logging_ports';
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
+import { planSetupOrganizationVariableReuse, buildSetupOrganizationReuseVariables } from '../../policies/setup_organization_variable_reuse_policy';
 
 export interface SetupResourceProvisioningDependencies {
     setupRepositoryVariablesPort?: BoundSetupRepositoryVariablesCommandPort;
@@ -30,6 +31,7 @@ export interface SetupResourceProvisioningDependencies {
 }
 
 export interface SetupRepositoryContext {
+    setupConfigurationSource?: 'organization' | 'customize';
     setupCredentials?: SetupCredentialCollection;
     setupRemoteConfiguration?: SetupRemoteConfiguration;
 }
@@ -57,8 +59,14 @@ export async function ensureRepositoryVariables(
         return { errors: [VARIABLE_PROVISIONING_UNAVAILABLE], writes: 0 };
     }
     try {
-        const desired = buildSetupRepositoryVariables(setupConfiguration);
-        const groups = groupSetupResources(desired, 'variable', setupConfiguration, remoteConfiguration);
+        const desired = context.setupConfigurationSource === 'organization'
+            ? buildSetupOrganizationReuseVariables(setupConfiguration, remoteConfiguration!)
+            : buildSetupRepositoryVariables(setupConfiguration);
+        const groups = context.setupConfigurationSource === 'organization'
+            ? [{ target: { scope: 'repository' as const, organizationVisibility: 'selected' as const },
+                resources: planSetupOrganizationVariableReuse(desired, remoteConfiguration!).repositoryWrites.map(variable => ({ ...variable })) }]
+                .filter(group => group.resources.length > 0)
+            : groupSetupResources(desired, 'variable', setupConfiguration, remoteConfiguration);
         const result = await upsertVariableGroups(context, dependencies.setupRepositoryVariablesPort, groups);
         const writes = result.created + result.updated;
         if (result.errors.length > 0) {
@@ -101,6 +109,9 @@ export async function ensureRepositorySecrets(
         ...(credentials.workflowPat ? [credentials.workflowPat] : []),
         ...credentials.apiKeys,
     ];
+    if (context.setupConfigurationSource === 'organization' && values.length > 0) {
+        return { errors: ['Organization reuse cannot replace Secret values. Choose Customize and review a separate credential provisioning plan.'], writes: 0 };
+    }
     if (values.length === 0) return { step: '✅ Existing Repository Secrets kept unchanged.', errors: [], writes: 0 };
     if (!dependencies.setupRepositorySecretsPort) {
         return { errors: [SECRET_PROVISIONING_UNAVAILABLE], writes: 0 };
@@ -134,6 +145,23 @@ export async function resolveRemoteConfiguration(
     setupConfiguration: SetupConfiguration | undefined,
     errors: string[],
 ): Promise<SetupRemoteConfiguration | undefined> {
+    if (context.setupConfigurationSource === 'organization') {
+        if (!context.setupRemoteConfiguration || !dependencies.setupRemoteConfigurationReadPort) {
+            errors.push('Organization reuse requires a fresh inventory before Apply. No changes were made.');
+            return undefined;
+        }
+        try {
+            const fresh = await dependencies.setupRemoteConfigurationReadPort.inspect();
+            if (reuseSnapshot(fresh) !== reuseSnapshot(context.setupRemoteConfiguration)) {
+                errors.push('Configuration or access changed after review. Inspect and approve a new plan before applying it.');
+                return undefined;
+            }
+            return fresh;
+        } catch {
+            errors.push('The approved organization configuration could not be revalidated. No changes were made.');
+            return undefined;
+        }
+    }
     if (context.setupRemoteConfiguration) return context.setupRemoteConfiguration;
     if (!dependencies.setupRemoteConfigurationReadPort || !setupConfiguration) return undefined;
     try {
@@ -150,6 +178,15 @@ export async function resolveRemoteConfiguration(
         }
         return undefined;
     }
+}
+
+function reuseSnapshot(remote: SetupRemoteConfiguration): string {
+    return JSON.stringify([remote.ownerType, remote.repositoryId, remote.defaultBranch,
+        remote.repositoryVariablesAccess, remote.organizationVariablesAccess,
+        remote.repositorySecretsAccess, remote.organizationSecretsAccess,
+        [...remote.repositoryVariables].sort((a, b) => a.name.localeCompare(b.name)),
+        [...remote.organizationVariables].sort((a, b) => a.name.localeCompare(b.name)),
+        [...remote.repositorySecrets].sort(), [...remote.organizationSecrets].sort(), remote.organizationWorkflowPat]);
 }
 
 /** Groups resources by their resolved storage target so each provider call is scoped explicitly. */

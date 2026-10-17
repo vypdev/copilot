@@ -1,0 +1,110 @@
+import type { SetupRemoteConfiguration } from '../../../../domain/setup';
+import type { SetupQuestionnaireState, SetupQuestionnaireContext } from '../../../../domain/setup_questionnaire';
+import { createDefaultSetupConfiguration } from '../../../policies/setup_configuration_defaults';
+import { buildSetupRepositoryVariables } from '../../../policies/setup_configuration_plan';
+import { createSetupReviewState, transitionSetupQuestionnaire } from '../../../policies/setup_questionnaire_policy';
+import { SetupWizardUseCase } from '../setup_wizard_use_case';
+
+function fixture(overrides: Partial<SetupRemoteConfiguration> = {}) {
+  const source = createDefaultSetupConfiguration();
+  source.ai.bugbotCommentLimit = 17;
+  source.agents.findings.model = 'gpt-6-luna';
+  const remote: SetupRemoteConfiguration = { ownerType: 'Organization', defaultBranch: 'master', repositoryId: 7,
+    repositoryVisibility: 'private', repositoryVariables: [], repositoryVariablesAccess: 'available',
+    organizationVariables: buildSetupRepositoryVariables(source), organizationVariablesAccess: 'available',
+    repositorySecrets: ['PAT'], repositorySecretsAccess: 'available', organizationSecrets: [],
+    organizationSecretsAccess: 'available', organizationAccess: 'available', ...overrides };
+  const collect = jest.fn(async (state: SetupQuestionnaireState, _context: SetupQuestionnaireContext) => createSetupReviewState(state.draft));
+  const dependencies = { collector: { collect }, planPresenter: { present: jest.fn() },
+    confirmation: { confirm: jest.fn().mockResolvedValue({ kind: 'approved' }) },
+    finalPermissionAudit: { audit: jest.fn().mockResolvedValue({ status: 'accepted' }) },
+    remoteConfiguration: { inspect: jest.fn().mockResolvedValue(remote) } };
+  const request = { mode: 'interactive' as const, configurationSource: 'organization' as const,
+    remoteTarget: { owner: 'acme', repository: 'repo', token: 'fixture-operator-token' },
+    developmentBranchObservedLocally: true, overrides: { pullRequestApproval: { mode: 'off' as const } } };
+  return { source, remote, collect, dependencies, request };
+}
+
+describe('organization import in the shared setup wizard', () => {
+  it('uses imported values and omits their questions in both presentation adapters', async () => {
+    const f = fixture();
+    const result = await new SetupWizardUseCase(f.dependencies).execute(f.request);
+    expect(result.status).toBe('completed');
+    if (result.status !== 'completed') throw new Error('Expected a reviewed plan.');
+    expect(result.configuration.ai.bugbotCommentLimit).toBe(17);
+    expect(result.organizationImport?.inventory).toBe('available');
+    expect(result.plan.organizationReuse?.organizationVariables.length).toBeGreaterThan(10);
+    expect(f.collect.mock.calls[0][1].skipQuestionIds).toContain('storage.variables.defaultScope');
+    expect(f.collect.mock.calls[0][1].skipQuestionIds).toEqual(expect.arrayContaining(['ai.bugbotCommentLimit', 'agents.findings.model']));
+    expect(f.dependencies.finalPermissionAudit.audit).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves explicit configured values ahead of organization defaults', async () => {
+    const f = fixture();
+    const result = await new SetupWizardUseCase(f.dependencies).execute({ ...f.request,
+      overrides: { ...f.request.overrides, ai: { bugbotCommentLimit: 9 } } });
+    expect(result.status).toBe('completed');
+    if (result.status === 'completed') expect(result.configuration.ai.bugbotCommentLimit).toBe(9);
+  });
+
+  it.each(['organizationVariablesAccess', 'repositoryVariablesAccess'] as const)('stops before prompts or write audits when %s is unknown', async field => {
+    const f = fixture({ [field]: 'unknown' });
+    const result = await new SetupWizardUseCase(f.dependencies).execute(f.request);
+    expect(result).toMatchObject({ status: 'blocked', reason: 'remote-storage-unavailable' });
+    expect(f.collect).not.toHaveBeenCalled();
+    expect(f.dependencies.finalPermissionAudit.audit).not.toHaveBeenCalled();
+  });
+
+  it('keeps an unknown owner distinct from a known personal repository', async () => {
+    const f = fixture({ ownerType: 'Unknown' });
+    const result = await new SetupWizardUseCase(f.dependencies).execute(f.request);
+    expect(result).toMatchObject({ status: 'blocked', errors: [expect.stringContaining('inventory must be available')] });
+  });
+
+  it('shows an invalid advanced organization value even in Basic mode', async () => {
+    const f = fixture();
+    f.remote.organizationVariables = f.remote.organizationVariables.map(variable => variable.name === 'BUGBOT_COMMENT_LIMIT'
+      ? { ...variable, value: '101' } : variable);
+    const seen: string[] = [];
+    f.collect.mockImplementation(async (initial, context) => {
+      let state = initial;
+      for (let count = 0; state.question && count < 200; count += 1) {
+        seen.push(state.question.id);
+        state = transitionSetupQuestionnaire(state, { kind: 'answer', value: '' }, context);
+      }
+      return state;
+    });
+    const result = await new SetupWizardUseCase(f.dependencies).execute({ ...f.request, presentationMode: 'basic' });
+    expect(result.status).toBe('completed');
+    expect(seen).toContain('ai.bugbotCommentLimit');
+    expect(seen).not.toContain('agents.findings.model');
+  });
+
+  it('retains the source snapshot and unrelated answered questions across a plan revision', async () => {
+    const f = fixture();
+    f.dependencies.confirmation.confirm.mockReset().mockResolvedValueOnce({ kind: 'revise', group: 'repository' })
+      .mockResolvedValueOnce({ kind: 'approved' });
+    f.collect.mockImplementationOnce(async state => createSetupReviewState(state.draft))
+      .mockImplementationOnce(async state => createSetupReviewState({ ...state.draft,
+        repository: { ...state.draft.repository, desiredReviewersCount: 3 } }));
+    const result = await new SetupWizardUseCase(f.dependencies).execute(f.request);
+    expect(result.status).toBe('completed');
+    if (result.status !== 'completed') throw new Error('Expected a revised plan.');
+    expect(result.configuration.repository.desiredReviewersCount).toBe(3);
+    expect(result.configuration.ai.bugbotCommentLimit).toBe(17);
+    expect(result.organizationImport?.settings.find(setting => setting.questionId === 'ai.bugbotCommentLimit')?.source).toBe('organization');
+    expect(f.collect.mock.calls[1][1].skipQuestionIds).toContain('ai.bugbotCommentLimit');
+    expect(f.collect.mock.calls[1][1].skipQuestionIds).not.toContain('repository.desiredReviewersCount');
+  });
+
+  it('preserves the legacy wizard when organization reuse was not selected', async () => {
+    const f = fixture();
+    const result = await new SetupWizardUseCase(f.dependencies).execute({ ...f.request, configurationSource: 'customize' });
+    expect(result.status).toBe('completed');
+    if (result.status === 'completed') {
+      expect(result.configuration.ai.bugbotCommentLimit).toBe(createDefaultSetupConfiguration().ai.bugbotCommentLimit);
+      expect(result.organizationImport).toBeUndefined();
+    }
+    expect(f.collect.mock.calls[0][1].skipQuestionIds).not.toContain('ai.bugbotCommentLimit');
+  });
+});

@@ -1,9 +1,9 @@
 # Organization Configuration Reuse and Batch Setup
 
-- Status: Draft
+- Status: Implemented — local validation complete; pull-request CI and maintainer review pending
 - Date: 2026-10-17
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: not applicable (prospective companion)
+- Last verified: 2026-10-17 (automated gates, controlled browser journeys and isolated GitHub Variable probes; PR CI remains a separate merge gate)
 - Owners: Copilot maintainers
 - Scope: Reuse compatible organization configuration and create reviewed setup pull requests for one to 25 explicitly selected repositories in one organization.
 - Related issues/PRs: [Issue #538](https://github.com/vypdev/copilot/issues/538); [#536](https://github.com/vypdev/copilot/issues/536); [#537](https://github.com/vypdev/copilot/pull/537); [platform #159](https://github.com/vypdev/platform/issues/159); [platform #166](https://github.com/vypdev/platform/pull/166)
@@ -32,7 +32,7 @@ Organization maintainers currently repeat setup questions and re-enter runtime c
 4. Existing-installation management supports inspection and focused edits, while a full installation asks fresh questions.
 5. No selected-target batch journey, per-target plan journal, or installer-owned bootstrap namespace is established by this proposal's evidence.
 
-These are current facts supported by the supplied catalog and code paths; future paths described below are proposals.
+These are the pre-change facts supported by the original catalog/code paths. The implementation and verification evidence below describe the new contract.
 
 ### 2.3 Evidence
 
@@ -56,7 +56,7 @@ Not applicable: this is a prospective specification and does not reconstruct an 
 | Reviewer | Understand exact setup changes | Setup PR | Files, base/ref, checks, durable operation marker |
 | Operator/support | Recover partial work and verify outcomes | Batch report and doctor | CLI/web status, PR/run links, diagnostics |
 
-**Organization reuse** means consuming compatible existing organization Variables and Secrets without changing their values. **Target** means an explicitly selected same-organization repository ID. **Effective access** is target-specific access after considering organization grants and repository overrides. **Bootstrap namespace** is the documented installer-owned branch namespace used only for an uninstalled target's setup PR. **Verified** means the trusted installed/generated health path has supplied the required evidence; it does not mean merely that a Secret exists or `/user` succeeds. Repository labels, files, branches, CI identities, runner requirements, and health are target-owned facts. Organization inventory owns shared resource names, scopes, values where readable, visibility, and membership.
+**Organization reuse** means consuming compatible existing organization Variables and Secrets without changing their values. **Target** means an explicitly selected same-organization repository ID. **Effective access** is target-specific access after considering organization grants and repository overrides. **Installation namespace** means `setup/copilot/<operation-id>`, owned by the installer for approved batch installation and maintenance PRs. It is separate from Action-owned issue branches in both new and installed repositories. **Verified** means the trusted installed/generated health path has supplied the required evidence; it does not mean merely that a Secret exists or `/user` succeeds. Repository labels, files, branches, CI identities, runner requirements, and health are target-owned facts. Organization inventory owns shared resource names, scopes, values where readable, visibility, and membership.
 
 ## 4. Goals
 
@@ -79,11 +79,11 @@ Not applicable: this is a prospective specification and does not reconstruct an 
 
 1. Default to the current repository. Batch requires explicit selection of 1–25 unique repository IDs in one organization; larger work is split into batches.
 2. Preserve existing Variable values, visibility, and memberships. Existing valid values cause zero update calls. Add only explicitly approved missing repository grants through additive add-one-repository operations.
-3. Reuse never calls Secret create/update/upsert. Existing Secret values are never copied, exported, displayed, logged, or rotated. Missing or uncertain Secret availability blocks that binding pending separate provisioning/customization and fresh inspection.
+3. Reuse never calls Secret create/update/upsert for a managed shared binding. Existing Secret values are never copied, exported, displayed, logged, or rotated. Missing or uncertain Secret availability blocks that binding pending separate provisioning/customization and fresh inspection. Separately approved disposable permission probes retain their existing journal, collision, and cleanup contract; this exception does not permit writing the reused Secret.
 4. Existing overrides remain visible and are never silently deleted or replaced. Resolve conflicts explicitly.
 5. Approval binds to exact targets, operation, resource fingerprints, base revisions, and effects. Drift, credential authority change, or target-set change invalidates approval before writes.
 6. Apply is sequential in v1, has one active Apply per session and one shared-resource writer per organization/operation, with bounded retries. No cross-repository rollback is implied.
-7. New targets use a disclosed installer-owned bootstrap ref and verified default base. Installed targets retain Action-owned issue-branch lifecycle. Never force-push or overwrite human changes.
+7. Batch installation and maintenance use a disclosed installer-owned `setup/copilot/<operation-id>` ref and verified default base. Installed targets retain Action ownership of every managed issue branch. Never force-push or overwrite human changes. The current-checkout path retains its existing local preview/Apply behavior.
 
 ## 5. Current versus proposed product journey
 
@@ -120,7 +120,7 @@ Text equivalent: confirm checkout, choose scope, discover and select, configure,
 4. Offer one choice: “Reuse compatible organization configuration” (recommended) or “Customize configuration.” Explain shared values remain unchanged and selected repositories may need additive access grants. Derive Variable/Secret handling from this choice and storage scope; do not add redundant reuse toggles.
 5. Parse recognized organization Variables into typed configuration. Skip valid answers and ask only missing/invalid values and repository-specific choices. Show provenance: Organization, Repository override, New value, Not verified. Secret values are never imported or shown.
 6. Preflight every target, including installation, verified default/development branches, effective access and shadows, repository-owned labels/forms/guidance, CI producer identities, runners, required capabilities, and credential authority.
-7. Present expandable per-target plans with exact files, grants, new resources, overrides, refs, bases, required permissions, and evidence. A no-op has no PR. Approval snapshots all targets and relevant revisions/fingerprints.
+7. Present expandable per-target plans with exact files, grants, new resources, overrides, refs, bases, required permissions, and evidence. A target whose files match has no PR and remains verification pending after resource checks. Approval snapshots all targets and relevant revisions/fingerprints.
 8. Revalidate identity, revision, and authority before each write. Apply sequentially, report progress immediately, and journal each receipt. On failure, retain successful results and retry only incomplete work after drift review and any renewed approval.
 9. Report each target independently. Require human merge. Run trusted health verification without PR-head code, custom scripts, or model requests.
 
@@ -129,7 +129,7 @@ Text equivalent: confirm checkout, choose scope, discover and select, configure,
 - Customize skips reuse and follows existing explicit configuration/replacement contracts.
 - Existing repository overrides take precedence and require explicit conflict resolution where they conflict with shared values.
 - A limited credential may show only its limited view. Exact-name selection plus selected-target reconnect is supported; failure to establish access blocks only affected targets.
-- A complete no-op reports Unchanged. Archived, disabled, inaccessible, unsupported, or uninspectable targets cannot be silently included.
+- A matching-file target creates no PR; labels, types and resources are still checked and its truthful result is Verification pending. Unchanged is reserved for completely established no-change evidence. Archived, disabled, inaccessible, unsupported, or uninspectable targets cannot be silently included.
 - Mixed Variable/Secret scopes are supported; unavailable Secret evidence blocks only the affected binding/target and does not trigger a write.
 
 ### 6.3 State machine
@@ -157,9 +157,9 @@ Duplicate apply requests join/reject against the active session; they do not cre
 | Setup scope | Enum | This repository | Current repository or selected same-organization repositories | Operation snapshot |
 | Target IDs | Unique repository ID list | Current repository only | 1–25; no duplicates; one org | Journal snapshot |
 | Configuration source | Enum | Reuse compatible organization settings after organization storage is selected | Reuse or Customize | Per operation; no independent Variable/Secret toggle |
-| Apply mode | Enum | Reviewed setup PRs; sequential | PR only in v1 | Operation snapshot |
+| Apply mode | Enum | Current checkout retains local preview/Apply; batch creates reviewed PRs sequentially | Batch is PR-only in v1; no automatic merge | Operation snapshot |
 | Discovery credential | Paired local operator credential | Existing credential's visible scope | Existing limited view; exact-name route and temporary PAT limited to selected IDs | Local session only; excluded from resume/export |
-| Retry count | Bounded policy | Provider adapter default | Finite, documented provider retry bound | Operation; not user-expandable |
+| Retry count | Bounded policy | At most 3 read attempts; inspect uncertain writes | No blind mutation retry; at most 1 guarded retry per paired session after inspection and fresh approval checks | Operation; not user-expandable |
 
 Validation rejects zero or over-25 targets, duplicates, cross-org IDs, unresolved names, archived/disabled/unsupported targets, missing required capabilities, unknown Secret availability for a required binding, invalid/future resume schema, and invalid branch/base. Precedence is explicit reviewed repository choices > existing repository override > accessible compatible organization values > typed defaults; unknown/unsafe bindings require review. Snapshot non-secret plans, IDs, revisions, fingerprints, operation identity, and receipts; reread remote identities/revisions before writes. Credentials remain paired local session state. Absent legacy batch fields mean single repository; unknown future values fail closed. Example: default single repository with reuse selected after choosing organization storage. Alternative: explicit three-target batch with one blocked target and two actionable plans. Branch names, URLs, commands, secrets, and arbitrary code are never accepted as configuration inputs.
 
@@ -196,6 +196,21 @@ flowchart LR
 - Concurrency/idempotency: one active apply per session; one organization shared-resource writer per operation; sequential target writes; durable operation marker plus target identity; inspect before retry after unknown outcomes. Never overwrite human changes.
 - Trust: issue/PR/comment text, repository names, labels, provider responses, and discovered values are untrusted data. Sanitize display; do not render as HTML, command, mention, or arbitrary link. Typed schema parsing and allowlisted URL construction only.
 - Provider error mapping distinguishes absent, forbidden, not found, rate-limited, transient, malformed, and unknown; 404 after grants is not silently treated as absence. Inventory unavailable means unknown, not empty.
+
+#### Installation refs, ownership and recovery
+
+- The application allocates a canonical UUID operation ID. The only batch installation ref is `setup/copilot/<operation-id>`; users cannot supply a different ref, branch template, base, command, or URL. Each repository has its own ref with that same operation ID.
+- The base is the target's authenticated `default_branch` and exact commit observed during preflight. A changed default branch or commit invalidates approval before mutation. Local checkout branch names never determine another target's base.
+- The installer owns this namespace for both bootstrap and maintenance. Existing `feature`, `bugfix`, `release`, and other configured issue refs remain owned by the target Action. An installed target does not need a synthetic issue to receive a setup PR. The generated profile, guide and skill must explain this limited installer contract before the batch entrypoint is enabled.
+- A prepared installation commit has the approved base as parent and an operation receipt in `.copilot/setup-manifest.json`: schema version 1, operation UUID, repository ID, base SHA and plan digest. It contains no credential or Secret value. The ref is created at that complete prepared commit, rather than at an unmarked intermediate base.
+- Recovery requires the exact prepared commit and matching manifest receipt; the ref name alone is not ownership evidence. An unexpected ref, moved head or human change blocks further writes. The installer never force-pushes, deletes an existing branch, or overwrites a PR head.
+- The PR body uses `<!-- copilot-setup-operation:v1:<operation-id>:<repository-id> -->`. Before creating a PR, the adapter looks for that exact target/operation marker. An uncertain create response is inspected before any further request. A matching existing PR is reused; a conflicting open installer PR is surfaced for resume/review instead of creating a duplicate.
+- Read retries are limited to three total attempts and transient/rate-limit evidence. Mutations are not blindly retried. After an unknown outcome, inspect the operation receipt and effective state; at most one guarded retry per paired session is allowed after identity, revision, authority and approval checks pass again. A new session requires explicit resume, fresh planning/approval and unchanged target/base/digest; it never automatically repeats writes. Longer waits pause the target with a retry action rather than expanding this limit.
+- Reuse imports only recognized typed values. CI commands, approval producer identity and branch/runner facts remain target-specific and require their existing checks. Import never executes a discovered command, queries a model, or follows an arbitrary URL. Missing fields and incompatibilities remain explicit questionnaire/review work.
+- The fast reuse journey reads existing trusted health evidence; it does not bootstrap or dispatch a workflow. Evidence must match the packaged template, authenticated default-branch SHA, workflow/repository/run identity and current effective Secret metadata, and be at most five minutes old. Each request is bounded to 15 seconds and the complete evidence query to 30 seconds. Missing or stale evidence means verification pending. An actual failed trusted check blocks reuse. PAT authentication alone remains pending for full runtime capabilities.
+- Recognized Variable imports are bounded to 30,000 characters per value and parsed through typed configuration validation. A user change to a shared answer becomes an explicitly reviewed repository override; it never updates the shared value. Existing same-name repository values retain precedence. Existing shared values, visibility and other repositories' memberships remain unchanged.
+- The installation receipt is a nested `installation` object with schema version 1 inside the existing schema-version-2 setup manifest. Legacy manifests without that optional receipt remain readable. Journals persist only operation/target identities, base and plan digests, effect names and PR/commit receipts; configuration values and file contents stay in the paired process and are not written to the journal.
+- The existing current-checkout Apply path remains available, including non-interactive saved configurations. Batch is an explicit interactive choice in v1; non-interactive requests cannot silently activate it. Both frontends use the same import and batch application decisions.
 
 ### 8.3 Executable architecture constraints
 
@@ -335,7 +350,7 @@ Errors follow impact, cause, action, retained state. Retries are bounded and nev
 - Add a versioned batch journal; reject invalid/future schemas. Credentials are reacquired in paired local session and never migrated into artifacts.
 - Update the PAT contract so reuse does not require re-entry or rewrite, while explicit replacement/new-install flows retain current behavior. Audit available evidence; label unavailable verification pending.
 - Stages: (1) single-repository organization reuse, (2) explicit discovery/preflight, (3) bounded batch PR creation/recovery, (4) shared CLI/web UX, compatibility, and dogfooding. No stage activates batch by default.
-- New uninstalled targets use documented installer-owned bootstrap namespace; exact branch and base appear in approval. Update generated collaboration contract before activation. Installed targets retain Action-owned branch lifecycle. Recovery ownership and cleanup are documented; never invent a managed branch or force-push.
+- Batch targets use `setup/copilot/<operation-id>` for approved bootstrap or maintenance PRs; exact branch and base appear in approval. Update the generated collaboration contract before activation. Installed targets retain Action ownership of managed issue branches. Recovery ownership and cleanup are documented; never invent an issue branch or force-push. The legacy current-checkout Apply path remains available.
 - Rollback disables new entrypoint while retaining journal/PR/grant facts. Reversal of grants is a separate reviewed action because other consumers may rely on them. No automatic cross-repository rollback.
 
 ## 14. Testing strategy and numeric budget
@@ -364,7 +379,7 @@ Retain repository coverage gates in `scripts/coverage-budgets.json`; changed mod
 | Contributor | `docs/development/architecture.mdx` and setup SDDs | Ports, trust boundaries, journal, idempotency, validators | Architecture and spec validators |
 | Security operator | `docs/security-operations/security/credentials.mdx` | Secret no-write, PAT separation, evidence limits | Documentation contract checks |
 
-Update the existing setup-and-doctor, configuration-management, local-web-assistant, and PAT onboarding specifications as implementation proceeds, preserving their ownership contracts. Register this companion under existing `setup-and-doctor`; related web capability remains evidence. Update `specs/catalog.json` and generated `specs/CATALOG.md` only when implemented; this proposal is not implementation evidence. Keep examples synchronized with fixtures. Document bootstrap branch ownership and cleanup before activation.
+Update the existing setup-and-doctor, configuration-management, local-web-assistant, and PAT onboarding specifications as implementation proceeds, preserving their ownership contracts. Register this companion under existing `setup-and-doctor`; related web capability remains evidence. Update `specs/catalog.json` and generated `specs/CATALOG.md` with the implemented source/test evidence; controlled UX and final CI remain explicit gates. Keep examples synchronized with fixtures. Document bootstrap branch ownership and cleanup before activation.
 
 ## 16. Acceptance scenarios
 
@@ -372,11 +387,11 @@ Update the existing setup-and-doctor, configuration-management, local-web-assist
 2. Given a limited credential, when the maintainer selects three exact same-organization repository names, then the UI states the limited discovery view, audits/reconnects with a PAT limited to those reviewed targets, and blocks any target whose access remains unknown.
 3. Given a missing selected-repository grant, when the maintainer approves it, then only the additive target grant is made; existing memberships and visibility remain unchanged and effective inventory is read back.
 4. Given a same-name repository override, when organization reuse is planned, then the override remains visible and no silent replacement occurs.
-5. Given one no-op, one ready target, and one blocked target, when the batch is reviewed/applied, then the no-op has no PR, one PR is created for the ready target, and the blocked target has a reason without erasing other results.
+5. Given one matching-file target, one ready target, and one blocked target, when the batch is reviewed/applied, then the matching-file target has no PR and remains verification pending, one PR is created for the ready target, and the blocked target has a reason without erasing other results.
 6. Given a grant or PR create response is ambiguous, when recovery runs, then the system inspects durable operation marker/target identity before retry and does not duplicate effects.
 7. Given a target/base revision, credential authority, target set, or relevant shared fingerprint changes after approval, when apply begins, then the stale plan is rejected before mutation and requires renewed review.
-8. Given a new repository, when its setup PR is created, then the exact installer-owned bootstrap ref and verified base are disclosed, human merge is required, and installed Action-owned branch behavior is unchanged.
-9. Given a merged PR without trusted health evidence, when status is rendered, then it says Installed; verification pending and does not infer readiness from `/user`, Secret existence, or PR creation.
+8. Given a new or installed batch target, when its setup PR is created, then the exact `setup/copilot/<operation-id>` ref, verified base and manifest receipt are disclosed, human merge is required, and Action-owned issue branches retain their existing lifecycle.
+9. Given a matching-file installation without trusted health evidence, when status is rendered, then it says Verification pending and does not infer readiness from `/user`, Secret existence, or PR creation.
 10. Given malicious repository names/values containing Markdown, HTML, mention, command, or URL syntax, when rendered in CLI/web/report, then they remain inert escaped text and navigation uses allowlisted links.
 11. Given a user navigating with keyboard in each supported locale and a narrow viewport, when selecting targets and reviewing states, then counts, reasons, focus, and primary action remain understandable without color or diagram reliance.
 12. Given existing saved configuration without batch fields, when upgraded, then single-repository behavior remains the default and no batch operation activates.
@@ -406,18 +421,18 @@ Update the existing setup-and-doctor, configuration-management, local-web-assist
 
 ## 19. Definition of Done
 
-- [ ] Every normative requirement maps to acceptance and traceability.
-- [ ] Existing setup contracts are preserved or explicitly amended for PAT reuse and bootstrap ownership.
-- [ ] Architecture boundaries, dependency/cycle checks, structured workflow/schema checks, and journal compatibility checks pass.
-- [ ] Numeric test budget of 104 distinct cases and repository/changed-module coverage requirements pass; pure-policy branches are covered.
-- [ ] Configuration defaults, limits, validation, precedence, persistence, and migration agree.
-- [ ] Pending, action-required, blocked, partial, and completed UI states are reviewed and implemented.
-- [ ] Accessibility, en/es/fr/pt localization, responsive behavior, sanitization, and notification budgets pass.
-- [ ] User, setup, operator, security, migration, recovery, and contributor documentation is discoverable and complete.
-- [ ] Secret no-write, partial-state, retry, idempotency, credential separation, and cleanup requirements pass.
-- [ ] Generated CLI/web assets and specification/catalog, workflow, documentation, packaging, architecture, and coverage validators pass.
-- [ ] `specs/catalog.json` and `specs/CATALOG.md` reflect implementation evidence only after implementation; `pnpm run validate:specifications` passes.
-- [ ] No readiness-blocking decision remains unresolved.
+- [x] Every normative requirement maps to acceptance and traceability.
+- [x] Existing setup contracts are preserved or explicitly amended for PAT reuse and bootstrap ownership.
+- [x] Architecture boundaries, dependency/cycle checks, structured workflow/schema checks, and journal compatibility checks pass.
+- [x] Numeric test budget of 104 distinct cases and repository/changed-module coverage requirements pass; pure-policy branches are covered.
+- [x] Configuration defaults, limits, validation, precedence, persistence, and migration agree.
+- [x] Pending, action-required, blocked, partial, and completed UI states are reviewed and implemented.
+- [x] Accessibility, en/es/fr/pt localization, responsive behavior, sanitization, and notification budgets pass.
+- [x] User, setup, operator, security, migration, recovery, and contributor documentation is discoverable and complete.
+- [x] Secret no-write, partial-state, retry, idempotency, credential separation, and cleanup requirements pass.
+- [x] Generated CLI/web assets and specification/catalog, workflow, documentation, packaging, architecture, and coverage validators pass.
+- [x] `specs/catalog.json` and `specs/CATALOG.md` reflect implementation evidence only after implementation; `pnpm run validate:specifications` passes.
+- [x] No readiness-blocking decision remains unresolved.
 
 ## 20. References and decisions
 
@@ -425,7 +440,67 @@ Update the existing setup-and-doctor, configuration-management, local-web-assist
 - Related owning specifications: `specs/setup-configuration-credentials-and-doctor.md` and related setup/PAT specs in the `setup-and-doctor` capability. `specs/local-web-setup-assistant.md` is related web evidence; it is not the owning capability. This new companion path is `specs/organization-configuration-reuse-and-batch-setup.md` and does not already own itself.
 - Decision: companion under existing `setup-and-doctor`; no new capability ID. Organization reuse is delivered before batch PR orchestration.
 - Decision: limited credential view plus exact-name target entry and selected-target-limited temporary operator PAT; no presumed all-repository access or mandatory GitHub App.
-- Decision: installer-owned bootstrap namespace for uninstalled targets, exact ref/base disclosed, durable per-target receipts; installed repositories retain Action-managed lifecycle. Update generated collaboration contract before activation.
+- Decision: `setup/copilot/<operation-id>` is an installer-owned namespace for batch bootstrap and maintenance PRs, with authenticated default-branch bases, prepared-commit/manifest ownership evidence and durable per-target receipts. Installed repositories retain Action ownership of managed issue branches; current-checkout Apply remains available. Update the generated collaboration contract before activation.
 - Decision: one reuse/customize source choice, 1–25 explicit targets, one active Apply/session, sequential v1, one shared-resource writer per organization/operation, bounded retries, no cross-repo rollback.
 - Rejected alternatives: repeated full questionnaire, scanning other repositories, blind copy, organization-wide selection, automatic merge/deploy, and mandatory hosted control plane.
 - Follow-up outside scope: evaluate GitHub App only if measured PAT discovery/permission limitations justify a separate decision; platform dependency remediation remains separate.
+
+## 21. Verification evidence and bounded recovery
+
+- Shared preparation/credential/session tests cover independent unknown inventories,
+  failed files, pending additive bindings, missing credentials, stale receipts,
+  approval-before-probe ordering, cleanup blocking, stop and one guarded retry.
+- Real GitHub dogfood confirmed empty Variable values return 422 and native
+  comma empty-list values round-trip (201/200) and delete cleanly (204). No
+  probe remains, no Secret value was written and no shared value was changed.
+- Empty collection overrides use the existing native parsers (`,`, or `;`
+  for organization rules), including the published 3.5.6 Action. Empty inherited
+  scalars require an explicit valid value because GitHub cannot store a blank
+  scalar override. This introduces no runtime DSL or sentinel.
+- Current-repository reuse and batch initial PAT bootstrap perform identity/read
+  checks only. Temporary Write probes wait for the final approved plan. Ordinary
+  Customize retains its existing disclosed bootstrap verification.
+- `--resume-operation <UUID>` loads only the private receipt identities, reacquires
+  credentials, re-asks configuration and compares desired digest/base before
+  probes. A merged or otherwise changed default base requires inspection of
+  retained PRs followed by a fresh operation. No background merge/verification
+  monitor or automatic cross-repository rollback is included.
+- GitHub read requests allow three transient attempts, 15 seconds each; explicit
+  rate limits pause immediately instead of creating retry storms. Namespace and
+  membership collections use 30-item pages with a 1,000-resource bound. Repository
+  discovery is limited to 1,000 visible candidates with exact-name lookup.
+
+### Controlled UX evidence — 2026-10-17
+
+The real compiled Svelte frontend and paired loopback bridge were exercised
+with deterministic, credential-free provider fixtures. These are controlled UX
+journeys, not claims of live multi-repository installation:
+
+| Journey | Observed outcome |
+|---|---|
+| New single repository | Review separates repository writes from retained Secrets; decline leaves the plan unapplied. |
+| Existing single repository | Compatible settings and zero Variable writes are shown; retained PAT requests no value. |
+| Mixed targets | Two ready targets and one blocked inventory remain distinct; only ready plans can advance. |
+| Missing selected access | Review discloses one additive PAT grant and its permission probes, with no Secret replacement. |
+| Partial apply / retry | Completed PR stays visible; unfinished target requires another review before retry. |
+| Stop / resume | Keyboard-confirmed stop retains a completed PR and marks pending work stopped; exact receipt/base resume is separately exercised through the application flow. |
+| Limited discovery | Current target remains selected, unavailable write target is disabled, and exact-name/access guidance remains visible. |
+
+Viewport 360×800 has no horizontal overflow. English and Spanish were inspected
+interactively; en/es/fr/pt semantic rendering and controller/disabled states are
+automated. A browser-native confirmation required keyboard confirmation in the
+in-app browser; the resulting retained/canceled states were visibly verified.
+New pure import/access/selection/review policies have an executable 100% coverage
+budget in `scripts/coverage-budgets.json`. Repository-wide coverage budgets and
+all existing capability budgets remain in force. The acceptance ledger retains
+its 14 previously open items; this feature does not close unrelated evidence.
+
+### Final local gates
+
+The final local suite passes **657 suites / 9,835 tests** (35 pre-existing
+skips). Coverage is **97.28% lines, 96.11% statements, 96.87% functions and
+92.90% branches**. All eight new pure decision modules pass 100% on all four
+metrics through the executable budget. Build, package smoke, TypeScript,
+Svelte, lint, documentation, workflow, architecture and specification gates
+pass. Multi-platform PR CI and maintainer review remain required before merge;
+these local results do not authorize merging or publishing this feature.

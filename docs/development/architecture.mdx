@@ -216,7 +216,7 @@ other resource behavior remains intact. The inspector separately reads
 organization namespace metadata to detect a PAT outside the effective inherited
 list; unavailable namespace metadata blocks an organization PAT target. The
 plan/prompt carry only scope, destination and replacement facts, and the web
-Apply comparison includes namespace state. Credential collection always audits
+Apply comparison includes namespace state. Customize credential collection audits
 a supplied PAT and dispatches no health Action to validate its previous stored
 value. No delete, copy, migration or persistent recovery state is introduced.
 
@@ -587,3 +587,27 @@ section. Internal result names, `Result.steps`, and arbitrary error messages rem
 in logs or machine evidence; they are never replayed into the summary. Failures
 show code-specific localized impact, action, and retained-state guidance beside
 the stable code, retry decision, and correlation reference.
+
+## Organization reuse and batch setup boundary
+
+Pure policies own typed imports, explicit/repository/organization precedence,
+credential alternative groups, target bounds, immutable shared-value planning,
+resource access and redacted views. `PrepareSetupBatchUseCase` and
+`ConfigureSetupBatchTargetUseCase` reuse the existing wizard and metadata-only
+credential path. `SetupBatchSessionUseCase` owns reviewed retries and audits;
+`ApplySetupBatchUseCase` persists sequential effects through semantic ports.
+CLI and web adapt input and render the same state; neither owns mutation policy.
+
+GitHub adapters inspect immutable base trees, add one selected repository per
+shared resource, and create a complete commit/ref/PR with an installation
+receipt and durable marker. They expose no shared-value/Secret writer. Unknown
+create responses trigger inspection rather than blind retries. Local journals
+persist only IDs, digests, effect names and PR/commit receipts. Configuration
+values and credentials remain in the paired process. Future schemas, stale
+plans and moved heads fail closed. `setup/copilot/<operation-id>` is an explicit
+installer namespace, separate from Action-managed issue branches.
+
+The trusted credential health adapter is GET-only and pins packaged workflow
+content, default SHA, run identity, freshness and unchanged Secret metadata.
+It never inherits the legacy bootstrap or dispatch adapter. Architecture/cycle,
+SDK contract, replay, drift and presentation tests enforce these boundaries.

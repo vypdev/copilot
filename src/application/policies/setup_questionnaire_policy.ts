@@ -146,11 +146,11 @@ function valueAtPath(value: unknown, path: string): unknown {
     ? (current as Record<string, unknown>)[key] : undefined, value);
 }
 
-export function setupEditableGroups(configuration: SetupConfiguration): readonly SetupQuestion['stateId'][] {
+export function setupEditableGroups(configuration: SetupConfiguration, preserveShared = false): readonly SetupQuestion['stateId'][] {
   // Projects can be enabled at review even if the operator declined it before
   // the PAT handoff. The re-run audits any newly required grant before Apply.
   const visible = questions(configuration, hasIndependentAgentSettings(configuration), { projectsWanted: true }, 'full');
-  return [...new Set(visible.map(item => item.stateId))];
+  return [...new Set(visible.filter(item => !preserveShared || item.stateId !== 'storage').map(item => item.stateId))];
 }
 
 export function transitionSetupQuestionnaire(

@@ -5,6 +5,8 @@
   import CredentialPrompt from './CredentialPrompt.svelte';
   import PlanPrompt from './PlanPrompt.svelte';
   import SetupManagementPanel from './SetupManagementPanel.svelte';
+  import BatchSetupPanel from './BatchSetupPanel.svelte';
+  import RepositorySelector from './RepositorySelector.svelte';
   import QuickSettingPrompt from './QuickSettingPrompt.svelte';
   import { tr } from '../i18n/catalog';
   import { setupLocale } from '../i18n/localeStore';
@@ -23,10 +25,14 @@
 
 <section class="card decision-card" aria-label={tr('currentDecision', $setupLocale)} tabindex="-1" use:focusOnRevision={promptRevision}>
   <div class="card-header"><span class="card-kicker">{tr('currentDecision', $setupLocale)}</span><span class="revision">{tr('session', $setupLocale)} {revision}</span></div>
-  {#if !['question', 'management', 'quick-edit', 'quick-review'].includes(prompt.kind)}<h2>{copy?.title ?? prompt.title}</h2>{/if}
+  {#if !['question', 'management', 'quick-edit', 'quick-review', 'batch-plan', 'batch-result'].includes(prompt.kind)}<h2>{prompt.kind === 'repositories' ? tr('batchReviewSelection', $setupLocale) : copy?.title ?? prompt.title}</h2>{/if}
   {#if copy?.description || ('description' in prompt && prompt.description)}<p class="description">{copy?.description ?? ('description' in prompt ? prompt.description : '')}</p>{/if}
   {#key promptRevision}
-    {#if prompt.kind === 'question'}
+    {#if prompt.kind === 'batch-plan' || prompt.kind === 'batch-result'}
+      <BatchSetupPanel batch={prompt.batch} mode={prompt.kind === 'batch-plan' ? 'review' : 'result'} {controller} {busy} {onSubmit} />
+    {:else if prompt.kind === 'repositories'}
+      <RepositorySelector selection={prompt.selection} {controller} {busy} {onSubmit} />
+    {:else if prompt.kind === 'question'}
       <QuestionPrompt {prompt} {controller} {busy} {onSubmit} {onRetryDiscovery} {onBack} />
     {:else if prompt.kind === 'choice' || prompt.kind === 'confirm'}
       <ChoicePrompt {prompt} {controller} {busy} {onSubmit} />

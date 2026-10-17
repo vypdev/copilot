@@ -15,6 +15,7 @@ export interface SetupSessionPorts {
   readonly repository: () => Promise<SetupSessionDecision>;
   readonly choices: () => Promise<SetupSessionDecision>;
   readonly setupPat: (cleanupPending: () => void) => Promise<SetupSessionDecision>;
+  readonly batch?: (present: (stage: SetupJourneyStage) => void, possibleMutation: () => void) => Promise<{ readonly outcome: SetupJourneyOutcome } | undefined>;
   readonly plan: (cleanupPending: () => void) => Promise<SetupSessionDecision>;
   readonly credentials: (possibleMutation: () => void) => Promise<SetupSessionDecision>;
   readonly authorizeApply: (cleanupPending: () => void) => Promise<SetupSessionDecision>;
@@ -63,6 +64,12 @@ export class SetupSessionCoordinator {
         const after = this.liveOutcome();
         if (after) return this.finish(after);
         if (decision !== 'continue') return this.finish(decision === 'dry-run' ? 'dry-run' : decision);
+        if (stage === 'setup-pat' && this.ports.batch) {
+          const batch = await this.ports.batch(next => {
+            this.stage = next; this.ports.present(next, this.mutationStarted);
+          }, () => this.markPossibleMutation());
+          if (batch) return this.finish(batch.outcome);
+        }
         if (stage === 'repository' && this.ports.manage) {
           const managed = await this.ports.manage(() => { this.stage = 'apply'; this.markPossibleMutation(); },
             effect => this.effects.set(effect.id, Object.freeze({ ...effect })));

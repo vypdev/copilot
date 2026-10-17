@@ -1,3 +1,5 @@
+import type { SetupBatchView } from '../application/contracts/setup_batch_view';
+import { parseSetupBatchSelectionIntent } from '../application/policies/setup_batch_selection_policy';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import type { SetupJourneyView } from '../application/policies/setup_journey_policy';
 import type { SetupPlan, SetupOperationEffect } from '../domain/setup';
@@ -30,6 +32,12 @@ export class WebSetupBridge {
   managementMessage(state: NonNullable<WebSetupView['message']>['managementState']): void {
     this.publish({ message: { text: `Configuration management: ${state}.`, tone: state === 'checking' ? 'info' : state === 'updated' || state === 'connected' || state === 'unchanged' ? 'success' : 'warning', managementState: state } });
   }
+  setBatch(batch: SetupBatchView): void {
+    const stopRequested = this.view.batch?.operationId === batch.operationId && batch.phase === 'applying'
+      ? this.view.batch.stopRequested : false;
+    this.publish({ batch: { ...batch, stopRequested } });
+  }
+
   setRepository(repository: string): void { this.publish({ repository }); }
 
   subscribe(listener: (view: WebSetupView) => void): () => void {
@@ -101,6 +109,9 @@ export class WebSetupBridge {
     if (!this.pending || this.pending.revision !== revision || this.pending.refreshing || this.view.outcome) return false;
     const prompt = this.view.prompt;
     if (prompt && (prompt.kind === 'choice' || prompt.kind === 'confirm') && !prompt.choices.includes(value)) return false;
+    if (prompt?.kind === 'batch-plan' && !['approve', 'decline'].includes(value)) return false;
+    if (prompt?.kind === 'batch-result' && value !== 'finish' && (value !== 'retry' || prompt.batch.retryRemaining <= 0)) return false;
+    if (prompt?.kind === 'repositories' && !parseSetupBatchSelectionIntent(value, prompt.selection)) return false;
     if (prompt?.kind === 'plan' && value !== 'approve' && value !== 'decline'
       && !prompt.editGroups?.some(group => value === `revise:${group}`)) return false;
     if (prompt?.kind === 'management' && !['wizard', 'connect', 'refresh', 'close'].includes(value)
@@ -141,6 +152,10 @@ export class WebSetupBridge {
   }
 
   cancel(): boolean {
+    if (this.view.batch?.phase === 'applying' && !this.view.outcome) {
+      this.publish({ batch: { ...this.view.batch, stopRequested: true } });
+      return true;
+    }
     if (this.view.journey?.mutationStarted || this.view.outcome) return false;
     const pending = this.pending;
     this.pending = undefined;
@@ -242,9 +257,14 @@ function sameCapability(provided: string, expected: string): boolean {
 
 export function toWebSetupPlan(plan: SetupPlan): WebSetupPlan {
   return {
+    deliveryMode: plan.deliveryMode,
+    ...(plan.organizationReuse ? { organizationReuse: { imported: plan.organizationReuse.imported,
+      needsReview: plan.organizationReuse.needsReview, organizationVariables: [...plan.organizationReuse.organizationVariables],
+      repositoryVariables: [...plan.organizationReuse.repositoryVariables], repositoryWrites: [...plan.organizationReuse.repositoryWrites] } } : {}),
     ...(plan.workflowPatStorage ? { workflowPatStorage: {
       scope: plan.workflowPatStorage.scope, destination: plan.workflowPatStorage.destination,
       replacesExisting: plan.workflowPatStorage.replacesExisting,
+      ...(plan.workflowPatStorage.operation ? { operation: plan.workflowPatStorage.operation } : {}),
     } } : {}),
     presentationDefaults: plan.presentationDefaults ?? [],
     permissionProbes: plan.permissionProbes ?? [],

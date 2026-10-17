@@ -50,6 +50,7 @@ export class GithubActionsResourceInspector {
             repositoryVisibility,
             repositorySecrets: repositorySecretsResult.resources,
             repositorySecretsAccess: repositorySecretsResult.access,
+            ...(repositorySecretsResult.revisions ? { repositorySecretRevisions: repositorySecretsResult.revisions } : {}),
             organizationSecrets: organizationSecretsResult.resources.map(resource => resource.name),
             ...(organizationWorkflowPat ? { organizationWorkflowPat } : {}),
             repositoryVariables: repositoryVariablesResult.resources,
@@ -87,12 +88,14 @@ export class GithubActionsResourceInspector {
         client: GithubRepositoryVariablesClient,
         owner: string,
         repository: string,
-    ): Promise<{ resources: string[]; access: NonNullable<SetupRemoteConfiguration['repositorySecretsAccess']> }> {
+    ): Promise<{ resources: string[]; revisions?: SetupRemoteConfiguration['repositorySecretRevisions']; access: NonNullable<SetupRemoteConfiguration['repositorySecretsAccess']> }> {
         const list = client.rest.actions.listRepoSecrets;
         if (!list) return { resources: [], access: 'unknown' };
         try {
             const resources = await listCollection(client, list, { owner, repo: repository, per_page: 100 }, 'secrets');
-            return { resources: resources.map(secret => secret.name), access: 'available' };
+            const revisions = resources.length > 0 && resources.every(secret => typeof secret.updated_at === 'string' && Number.isFinite(Date.parse(secret.updated_at)))
+                ? resources.map(secret => ({ name: secret.name, updatedAt: secret.updated_at! })) : undefined;
+            return { resources: resources.map(secret => secret.name), access: 'available', ...(revisions ? { revisions } : {}) };
         } catch {
             return { resources: [], access: 'unavailable' };
         }

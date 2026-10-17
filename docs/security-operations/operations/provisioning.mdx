@@ -11,3 +11,25 @@ If the browser opener is unavailable, use the loopback URL printed in the
 terminal. The default `copilot setup` remains a fully terminal-driven path.
 
 When running in GitHub Actions, the Action reuses an available selected CLI. If the default command is missing, it installs only the selected provider from its official standalone source into a private job directory. An explicit executable path is never installed or replaced. The installed CLI must report a non-empty version and pass the normal guarded preflight. The Action does not pin an exact CLI version or require npm, pnpm, or `actions/setup-node` in agent workflows. Installation failure is terminal; it never falls back to another provider. See [Agent CLI provisioning](/security-operations/operations/cli-provisioning).
+
+## Setup PRs for selected repositories
+
+Use `copilot setup --web` and choose several same-organization repositories,
+or use `copilot setup --batch` in the terminal. The default remains one current
+repository. Organization reuse preserves shared values and existing Secret
+bindings; each target still receives its own labels and issue types.
+
+The approved installer creates `setup/copilot/<operation-id>` only at a complete
+prepared commit whose parent is the reviewed default-branch SHA. The setup
+manifest contains a metadata-only installation receipt. The installer never
+force-pushes or deletes a ref and never merges a PR. Action-managed issue branches
+keep their existing ownership. An unexpected head or another open installer PR
+requires inspection before continuing.
+
+Completed effects survive stop/failure. Private receipts under
+`~/.copilot/setup-operations/` contain no configuration values or credentials.
+Resume with `copilot setup --web --resume-operation <operation-id>`, re-enter the
+same configuration, review again and supply a current operator PAT. Resume
+requires unchanged target/base/plan identities; otherwise inspect retained PRs
+and start a fresh preview. Do not delete a journal or lock to bypass an active
+setup. Verify the owning process and retained effects before manual recovery.

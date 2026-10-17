@@ -35,3 +35,12 @@ describe('setup remote fact equivalence', () => {
     })).toBe(false);
   });
 });
+
+
+test('repository Secret rotations invalidate effective configuration freshness', () => {
+  const empty = { ownerType: 'Organization', repositoryVisibility: 'private', repositorySecrets: ['PAT'], repositorySecretsAccess: 'available',
+    repositoryVariables: [], repositoryVariablesAccess: 'available', organizationSecrets: [], organizationVariables: [], organizationAccess: 'available', organizationSecretsAccess: 'available', organizationVariablesAccess: 'available' } as import('../../../domain/setup').SetupRemoteConfiguration;
+  const original = { ...empty, repositorySecretRevisions: [{ name: 'PAT', updatedAt: '2026-10-17T00:00:00Z' }] };
+  expect(sameSetupRemoteFacts(original, { ...original, repositorySecretRevisions: [{ name: 'PAT', updatedAt: '2026-10-17T00:01:00Z' }] })).toBe(false);
+  expect(sameSetupRemoteFacts(original, { ...original })).toBe(true);
+});

@@ -12,6 +12,8 @@ import { WebSetupCredentialPrompt, WebSetupPermissionPresenter } from './web_set
 import type { WebSetupBridge } from './web_setup_bridge';
 
 interface CredentialInput {
+  readonly pendingOrganizationSecretNames?: readonly string[];
+  readonly configurationSource?: 'organization' | 'customize';
   readonly owner: string;
   readonly repository: string;
   readonly setupToken: string;
@@ -33,7 +35,7 @@ export async function collectSetupCredentials(input: CredentialInput): Promise<S
   const requirements = buildSetupCredentialRequirements(input.configuration);
   const workflowTokenPermissions = buildWorkflowPatPermissionRequirements(input.configuration, input.remoteConfiguration);
   const githubIdentities = new SetupGithubIdentityQueryAdapter();
-  if (!input.nonInteractive && !input.workflowPat && !input.secret?.PAT) {
+  if (input.configurationSource !== 'organization' && !input.nonInteractive && !input.workflowPat && !input.secret?.PAT) {
     try {
       const guide = buildSetupPatCreationUrl({
         role: 'workflow', owner: input.owner, repository: input.repository, expiresIn: 90,
@@ -47,9 +49,11 @@ export async function collectSetupCredentials(input: CredentialInput): Promise<S
     }
   }
   const credentials = await createSetupCredentialsUseCase(input.prompt, input.permissionPresenter,
-    input.bridge ? { allowPreApplyHealthWorkflow: false } : {
+    { configurationSource: input.configurationSource, ...(input.bridge ? { allowPreApplyHealthWorkflow: false } : {
       onTemporaryWorkflowMutationAttempt: input.possibleMutation,
-    }).collect({
+    }) }).collect({
+    configurationSource: input.configurationSource,
+    pendingOrganizationSecretNames: input.pendingOrganizationSecretNames,
     owner: input.owner, repository: input.repository, setupToken: input.setupToken,
     requirements, manageSecrets: !input.skipSecrets && input.configuration.manageRepositorySecrets,
     secretStoragePolicy: input.configuration.storage.secrets,

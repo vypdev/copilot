@@ -20,6 +20,8 @@ export function registerSetupCommand(program: Command): void {
     .option('--pr-approval-attest-producer', 'Confirm exact check/App/workflow identity and a coverage-enforcing CI step', false)
     .option('--non-interactive', 'Use defaults and config-file values without prompting', false)
     .option('--web', 'Run the optional local browser setup assistant (127.0.0.1 only)', false)
+    .option('--batch', 'Interactively select 1–25 repositories in one organization and create reviewed setup PRs', false)
+    .option('--resume-operation <id>', 'Review and resume an existing batch operation from its private local receipt')
     .option('--yes', 'Apply the plan without the final confirmation prompt', false)
     .option('--confirm-unverifiable-write-permissions', 'Deprecated: rejected because manual confirmation cannot prove PAT Write access', false)
     .option('--dry-run', 'Show the setup plan without changing files or GitHub', false)

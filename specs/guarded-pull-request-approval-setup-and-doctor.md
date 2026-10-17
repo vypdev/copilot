@@ -98,6 +98,19 @@ Not applicable: prospective capability. The observed setup/doctor baseline is no
 
 ## 6. Functional behavior and state model
 
+### Organization reuse draft boundary (issue #538)
+
+An imported policy is a setup proposal, not approval evidence. Reuse clears
+test-producer identities, producer attestation, coverage check identity and
+numeric reporter identity/attestation before target discovery. The existing
+setup-only `allowIncomplete` validation may represent an empty numeric artifact
+workflow while the questionnaire collects that target's producer; numeric
+bounds and field types still apply. A nonempty unmatched workflow is invalid.
+Final installation, parsing and runtime validation remain strict and reject
+this incomplete proposal. The companion
+[organization reuse specification](./organization-configuration-reuse-and-batch-setup.md)
+owns the import journey and its tests.
+
 ### 6.1 Setup sequence
 
 `S5` Add a conditional `pull-request-approval` questionnaire stage after `bugbot` and before `projects`. Skip it when `features.pullRequests=false`; set policy `off` in that case. The recommended answers are `recommend`, development target, selected routine branch kinds, distinct linked issue required, fixed protected-path exclusions, and no acceptance of dismissed findings. Setup asks for exact producer tuples and an explicit operator attestation of their App identity and coverage-enforcing step; it does not silently infer coverage from a green workflow. In non-interactive mode missing explicit producer data is an error with no writes, not an invented default. The plan states that a freshly copied observer will not run until committed on the default branch.

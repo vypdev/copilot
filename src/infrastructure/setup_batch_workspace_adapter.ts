@@ -1,0 +1,59 @@
+import { createHash, randomUUID } from 'node:crypto';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { join, dirname, relative } from 'node:path';
+import { tmpdir } from 'node:os';
+import type { SetupConfiguration } from '../domain/setup';
+import type { SetupBatchFile } from '../domain/setup_batch';
+import type { SetupBatchRenderPort } from '../application/ports/setup_batch_ports';
+import { validSetupBatchAssetPath } from '../application/policies/setup_batch_policy';
+import { copySetupFiles, ensureGitHubDirs, compareSetupWorkflows } from '../utils/setup_files';
+import { effectiveIssueWorkflowFeatures } from '../application/policies/setup_issue_workflow_policy';
+
+/** Existing setup renderers run inside a disposable directory, never in another checkout. */
+export class SetupBatchWorkspaceAdapter implements SetupBatchRenderPort {
+  digest(value: string): string { return createHash('sha256').update(value).digest('hex'); }
+  operationId(): string { return randomUUID(); }
+  async render(configuration: SetupConfiguration, existing: readonly SetupBatchFile[]): Promise<readonly SetupBatchFile[]> {
+    const root = mkdtempSync(join(tmpdir(), 'copilot-setup-render-'));
+    try {
+      if (existing.length > 300 || new Set(existing.map(file => file.path)).size !== existing.length
+        || existing.some(file => !validSetupBatchAssetPath(file.path) || file.content === null
+          || Buffer.byteLength(file.content) > 100_000)
+        || existing.reduce((sum, file) => sum + Buffer.byteLength(file.content ?? ''), 0) > 2_000_000) throw new Error('Setup asset inventory is invalid or exceeds the fixed render budget.');
+      for (const file of existing) {
+        const destination = join(root, file.path); mkdirSync(dirname(destination), { recursive: true });
+        writeFileSync(destination, file.content!, { mode: 0o600 });
+      }
+      ensureGitHubDirs(root);
+      const sourceObserver = join(__dirname, '..', '..', 'setup', 'source-workflows', 'copilot_pull_request_approval.yml');
+      const observerPath = '.github/workflows/copilot_pull_request_approval.yml';
+      const preserveSourceObserver = configuration.pullRequestApproval.mode !== 'off' && existsSync(sourceObserver)
+        && existing.some(file => file.path === observerPath && file.content === readFileSync(sourceObserver, 'utf8'));
+      const changedWorkflows = compareSetupWorkflows(root, effectiveIssueWorkflowFeatures(configuration), undefined, configuration)
+        .filter(workflow => workflow.status === 'changed' && (!preserveSourceObserver || workflow.file !== 'copilot_pull_request_approval.yml')).map(workflow => workflow.file);
+      copySetupFiles(root, undefined, configuration.features, { setupConfiguration: configuration,
+        updateExistingWorkflows: true, approvedWorkflowFiles: changedWorkflows });
+      const previous = new Map(existing.map(file => [file.path, file.content]));
+      const generated = new Map<string, string>();
+      const visit = (directory: string): void => {
+        for (const entry of readdirSync(directory, { withFileTypes: true })) {
+          const path = join(directory, entry.name);
+          if (entry.isDirectory()) visit(path);
+          else if (entry.isFile()) {
+            let key = relative(root, path).split('\\').join('/');
+            const content = readFileSync(path, 'utf8');
+            // Stable backups make a fresh preview reproducible across restarts.
+            if (key.startsWith('.copilot/setup-backups/') && !previous.has(key)) key = `.copilot/setup-backups/${this.digest(content).slice(0, 16)}/${entry.name}`;
+            if (!validSetupBatchAssetPath(key)) throw new Error('Renderer produced an unexpected setup asset.');
+            generated.set(key, content);
+          } else throw new Error('Setup assets must be regular files.');
+        }
+      };
+      visit(root);
+      return [...new Set([...previous.keys(), ...generated.keys()])].sort().flatMap(path => {
+        const content = generated.get(path) ?? null;
+        return previous.get(path) === content ? [] : [{ path, content }];
+      });
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  }
+}

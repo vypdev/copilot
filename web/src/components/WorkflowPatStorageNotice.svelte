@@ -7,8 +7,10 @@
 
 <div class="banner warning" role="note">
   <strong>{tr('patStorageTitle', $setupLocale)}</strong>
-  <p>{tr(storage.replacesExisting ? (storage.scope === 'repository' ? 'patRepositoryReplace' : 'patOrganizationReplace') :
+  <p>{tr(storage.operation === 'retain' ? 'patStorageRetain' : storage.replacesExisting ? (storage.scope === 'repository' ? 'patRepositoryReplace' : 'patOrganizationReplace') :
     (storage.scope === 'repository' ? 'patRepositoryCreate' : 'patOrganizationCreate'), $setupLocale, { destination: storage.destination })}</p>
-  <p>{tr('patReplacementChecks', $setupLocale)}</p>
-  {#if storage.scope === 'organization' && storage.replacesExisting}<p>{tr('patOrganizationImpact', $setupLocale)}</p>{/if}
+  {#if storage.operation !== 'retain'}
+    <p>{tr('patReplacementChecks', $setupLocale)}</p>
+    {#if storage.scope === 'organization' && storage.replacesExisting}<p>{tr('patOrganizationImpact', $setupLocale)}</p>{/if}
+  {/if}
 </div>

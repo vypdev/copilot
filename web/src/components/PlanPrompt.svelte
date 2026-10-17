@@ -27,7 +27,7 @@
 </script>
 
 <div class="plan-review">
-<p class="description">{tr('planBody', $setupLocale)}</p>
+<p class="description">{tr(prompt.plan.deliveryMode === 'pull-request' ? 'batchConfigurationPreview' : prompt.plan.organizationReuse ? 'planReuseBody' : 'planBody', $setupLocale)}</p>
 <section class="plan-decisions" aria-label={tr('planPermissionProbeTitle', $setupLocale)}>
   <h3>{tr('planPermissionProbeTitle', $setupLocale)}</h3>
   <p>{tr('planPermissionProbeBody', $setupLocale)}</p>
@@ -39,6 +39,12 @@
   {/if}
   <ul>{#each prompt.plan.permissionProbes as probe}<li>{permissionTerm($setupLocale, probe.scope)}: {permissionName($setupLocale, probe.permission)}</li>{:else}<li>{tr('none', $setupLocale)}</li>{/each}</ul>
 </section>
+{#if prompt.plan.organizationReuse}
+<section class="plan-decisions"><h3>{tr('organizationReuseTitle', $setupLocale)}</h3>
+  <p>{tr('organizationReuseBody', $setupLocale, { imported: String(prompt.plan.organizationReuse.imported), shared: String(prompt.plan.organizationReuse.organizationVariables.length), overrides: String(prompt.plan.organizationReuse.repositoryVariables.length), writes: String(prompt.plan.organizationReuse.repositoryWrites.length) })}</p>
+  <details><summary>{tr('batchRepositoryOverrides', $setupLocale)}</summary><p>{prompt.plan.organizationReuse.repositoryWrites.join(', ') || tr('none', $setupLocale)}</p></details>
+</section>
+{/if}
 <PlanDecisionSummary decisions={prompt.plan.decisions} />
 {#if prompt.plan.workflowPatStorage}<WorkflowPatStorageNotice storage={prompt.plan.workflowPatStorage} />{/if}
 {#if prompt.plan.presentationDefaults.length}
@@ -53,5 +59,5 @@
     <div class="plan-edit-actions">{#each prompt.editGroups as group}<button type="button" class="secondary-button" onclick={() => onSubmit(`revise:${group}`)} disabled={!controller || busy}>{tr('changeSection', $setupLocale, { section: tr(groupKeys[group], $setupLocale) })}</button>{/each}</div>
   </section>
 {/if}
-<div class="button-row"><ActionButton label={tr('stopHere', $setupLocale)} variant="secondary" onClick={() => onSubmit('decline')} disabled={!controller || busy} /><ActionButton label={tr('approvePlan', $setupLocale)} arrow onClick={() => onSubmit('approve')} disabled={!controller || busy} /></div>
+<div class="button-row"><ActionButton label={tr('stopHere', $setupLocale)} variant="secondary" onClick={() => onSubmit('decline')} disabled={!controller || busy} /><ActionButton label={tr(prompt.plan.deliveryMode === 'pull-request' ? 'batchUseConfiguration' : 'approvePlan', $setupLocale)} arrow onClick={() => onSubmit('approve')} disabled={!controller || busy} /></div>
 </div>

@@ -7,7 +7,8 @@ import {
 } from '../../data/repository/repository_variables_repository';
 import { createRepositoryVariablesClient } from './github_identity_client_factory';
 import { SetupRemoteCredentialHealthBootstrapAdapter } from '../setup_remote_credential_health_adapter';
-import { OctokitCredentialHealthClientAdapter } from '../github/octokit_credential_health_adapter';
+import { OctokitCredentialHealthClientAdapter, OctokitTrustedCredentialHealthClientAdapter } from '../github/octokit_credential_health_adapter';
+import { SetupTrustedCredentialHealthAdapter } from '../setup_trusted_credential_health_adapter';
 import type { SetupTokenPermissionPresenterPort } from '../../application/ports/setup_token_permission_ports';
 import { createSetupTokenPermissionsUseCase } from './setup_token_permissions_composition_root';
 import { VerifyGuidedWorkflowPatIdentityUseCase } from '../../application/usecases/setup/verify_guided_workflow_pat_identity_use_case';
@@ -16,14 +17,14 @@ import { SetupGithubIdentityQueryAdapter } from '../setup_github_identity_query_
 export function createSetupCredentialsUseCase(
     prompt: SetupCredentialPromptPort,
     permissionPresenter?: SetupTokenPermissionPresenterPort,
-    options: { allowPreApplyHealthWorkflow?: boolean; onTemporaryWorkflowMutationAttempt?: () => void } = {},
+    options: { allowPreApplyHealthWorkflow?: boolean; onTemporaryWorkflowMutationAttempt?: () => void; configurationSource?: 'organization' | 'customize' } = {},
 ): SetupCredentialsUseCase {
     const secretNames = new RepositorySecretNamesQueryRepository(createRepositoryVariablesClient());
     return new SetupCredentialsUseCase(
         prompt,
         new SetupCredentialValidationAdapter(),
         secretNames,
-        options.allowPreApplyHealthWorkflow === false
+        options.allowPreApplyHealthWorkflow === false || options.configurationSource === 'organization'
             ? undefined
             : new SetupRemoteCredentialHealthBootstrapAdapter(new OctokitCredentialHealthClientAdapter(), {
                 onTemporaryWorkflowMutationAttempt: options.onTemporaryWorkflowMutationAttempt,
@@ -31,6 +32,8 @@ export function createSetupCredentialsUseCase(
         createSetupTokenPermissionsUseCase(),
         permissionPresenter,
         new VerifyGuidedWorkflowPatIdentityUseCase(new SetupGithubIdentityQueryAdapter()),
+        options.configurationSource === 'organization'
+            ? new SetupTrustedCredentialHealthAdapter(new OctokitTrustedCredentialHealthClientAdapter()) : undefined,
     );
 }
 

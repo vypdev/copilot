@@ -11,6 +11,7 @@ export function sameSetupRemoteFacts(left: SetupRemoteConfiguration, right: Setu
     repositoryVisibility: facts.repositoryVisibility,
     repositorySecrets: [...facts.repositorySecrets].sort(),
     repositorySecretsAccess: facts.repositorySecretsAccess,
+    ...(facts.repositorySecretRevisions ? { repositorySecretRevisions: facts.repositorySecretRevisions.map(secret => JSON.stringify([secret.name, secret.updatedAt])).sort() } : {}),
     organizationSecrets: [...facts.organizationSecrets].sort(),
     organizationWorkflowPat: facts.organizationWorkflowPat,
     repositoryVariables: variables(facts.repositoryVariables),
@@ -22,4 +23,14 @@ export function sameSetupRemoteFacts(left: SetupRemoteConfiguration, right: Setu
     credentialHealthWorkflow: facts.credentialHealthWorkflow,
   });
   return JSON.stringify(normalize(left)) === JSON.stringify(normalize(right));
+}
+
+/** A failed read carries explicit unknown availability; its empty arrays are never absence evidence. */
+export function unavailableSetupRemoteConfiguration(): SetupRemoteConfiguration {
+  return { ownerType: 'Unknown', repositoryVisibility: 'unknown',
+    repositorySecrets: [], repositorySecretsAccess: 'unavailable',
+    organizationSecrets: [], organizationSecretsAccess: 'unavailable',
+    repositoryVariables: [], repositoryVariablesAccess: 'unavailable',
+    organizationVariables: [], organizationVariablesAccess: 'unavailable',
+    organizationAccess: 'unavailable', credentialHealthWorkflow: 'unavailable' };
 }
