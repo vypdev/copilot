@@ -33,3 +33,9 @@ same configuration, review again and supply a current operator PAT. Resume
 requires unchanged target/base/plan identities; otherwise inspect retained PRs
 and start a fresh preview. Do not delete a journal or lock to bypass an active
 setup. Verify the owning process and retained effects before manual recovery.
+
+An interrupted process can leave an exclusive operation lock. Its error links to
+[orphan-lock recovery](/security-operations/operations/troubleshooting#recover-an-orphaned-batch-operation-lock);
+use a maintenance window with all setup owners stopped, preserve the receipt,
+and remove only the confirmed orphan. Resume re-reads shared memberships and
+revisions and requires new review; an old process's grant cache is not restored.

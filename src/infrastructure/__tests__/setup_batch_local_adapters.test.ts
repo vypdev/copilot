@@ -32,6 +32,16 @@ describe('isolated setup rendering and private durable receipts', () => {
     writeFileSync(join(root, `${id}.json.lock`), JSON.stringify({ pid: process.pid, nonce: 'different-owner' }));
     await release(); await expect(journal.lock(id)).rejects.toMatchObject({ code: 'EEXIST' });
   });
+  it('explains exact orphan-lock recovery without reclaiming an unknown owner', async () => {
+    const journal = new SetupBatchJournalAdapter(root);
+    const lockPath = join(root, `${id}.json.lock`);
+    const content = JSON.stringify({ pid: 2147483647, nonce: 'retained-owner' });
+    writeFileSync(lockPath, content);
+    await expect(journal.lock(id)).rejects.toThrow(lockPath);
+    await expect(journal.lock(id)).rejects.toThrow('recover-an-orphaned-batch-operation-lock');
+    expect(readFileSync(lockPath, 'utf8')).toBe(content);
+    rmSync(lockPath); const release = await journal.lock(id); await release();
+  });
   it('rejects path traversal and oversized receipts before reading or writing', async () => {
     const journal = new SetupBatchJournalAdapter(root);
     await expect(journal.load('../other')).rejects.toThrow('identity');
@@ -58,6 +68,23 @@ describe('isolated setup rendering and private durable receipts', () => {
     const renderer = new SetupBatchWorkspaceAdapter(); const configuration = createDefaultSetupConfiguration();
     const first = await renderer.render(configuration, []);
     expect(await renderer.render(configuration, first)).toEqual([]);
+  });
+  it('retains version-owned source guidance and native workflows, including jobs without a root Action step', async () => {
+    const renderer = new SetupBatchWorkspaceAdapter(); const configuration = createDefaultSetupConfiguration();
+    const native = [{ path: '.github/workflows/copilot_issue.yml', content: 'jobs: {native: {steps: [{uses: "./"}]}}\n' },
+      { path: '.github/workflows/copilot_branch_sync.yml', content: 'on: {push: {branches: ["**"]}}\njobs: {sync: {steps: [{uses: "./"}]}}\n' },
+      { path: '.github/workflows/copilot_pull_request_merge_queue.yml', content: 'jobs: {queue: {steps: [{run: "true", shell: bash}]}}\n' }];
+    const guidance = ['.copilot/AGENT_GUIDE.md', '.copilot/repository-profile.json', '.copilot/setup-manifest.json',
+      '.agents/skills/copilot-repository-workflow/SKILL.md', 'AGENTS.md'].map(path => ({ path, content: `retained canonical source artifact: ${path}\n` }));
+    const result = await renderer.render(configuration, [...native, ...guidance]);
+    expect(result.filter(file => [...native, ...guidance].some(existing => existing.path === file.path))).toEqual([]);
+    expect(result.some(file => file.path === '.github/workflows/copilot_pull_request.yml')).toBe(true);
+  });
+  it('generates missing source guidance instead of treating an incomplete source installation as canonical', async () => {
+    const result = await new SetupBatchWorkspaceAdapter().render(createDefaultSetupConfiguration(), [
+      { path: '.github/workflows/copilot_issue.yml', content: 'jobs: {native: {steps: [{uses: "./"}]}}\n' },
+    ]);
+    expect(result.find(file => file.path === '.copilot/repository-profile.json')?.content).toContain('installation');
   });
   it('retains target-specific runner locations in real package templates and keeps the approval observer isolated', async () => {
     const configuration = createDefaultSetupConfiguration();

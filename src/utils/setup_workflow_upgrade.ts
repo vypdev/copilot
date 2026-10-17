@@ -18,6 +18,14 @@ const runner = (value: unknown): boolean => labels(value) || !!object(value)
   && Object.keys(value as object).length > 0
   && (object(value)!.group === undefined || typeof object(value)!.group === 'string' && labels(object(value)!.group))
   && (object(value)!.labels === undefined || labels(object(value)!.labels));
+const callsRootAction = (jobs: Record<string, unknown> | undefined): boolean => !!jobs && Object.values(jobs).some(job => {
+  const steps = object(job)?.steps;
+  return Array.isArray(steps) && steps.some(step => object(step)?.uses === './');
+});
+
+export function hasRootLocalSetupAction(content: string): boolean {
+  return callsRootAction(object(document(content)?.jobs));
+}
 
 /** Keep a target's reviewed execution location while upgrading controlled workflow templates. */
 export function renderSetupWorkflowUpgrade(template: string, existing?: string): string {
@@ -27,20 +35,19 @@ export function renderSetupWorkflowUpgrade(template: string, existing?: string):
   const previousJobs = object(previous.jobs);
   // A root-local Action is source-repository infrastructure, including its
   // release jobs and native validation. Consumer templates cannot replace it.
-  if (previousJobs && Object.values(previousJobs).some(job => {
-    const steps = object(job)?.steps;
-    return Array.isArray(steps) && steps.some(step => object(step)?.uses === './');
-  })) {
+  if (callsRootAction(previousJobs)) {
     const events = previous.on;
     const hasPush = events === 'push' || Array.isArray(events) && events.includes('push')
       || !!object(events) && Object.prototype.hasOwnProperty.call(events, 'push');
-    if (hasPush) {
+    // Branch synchronization deliberately observes every branch. Only the
+    // issue-centric Commit job needs this installation exclusion.
+    if (hasPush && object(previousJobs!['copilot-commits'])) {
       const push = object(object(events)?.push);
       if (!push || !Array.isArray(push.branches) || !push.branches.every(branch => typeof branch === 'string')) {
         throw new Error('Source Action push filters require separate workflow review before setup.');
       }
-      if (!push.branches.includes('!setup/copilot/**')) {
-        push.branches.push('!setup/copilot/**');
+      if (push.branches.at(-1) !== '!setup/copilot/**') {
+        push.branches = [...push.branches.filter(branch => branch !== '!setup/copilot/**'), '!setup/copilot/**'];
         return dump(previous, { noRefs: true, lineWidth: -1 });
       }
     }

@@ -8,6 +8,7 @@ import type { SetupBatchRenderPort } from '../application/ports/setup_batch_port
 import { validSetupBatchAssetPath } from '../application/policies/setup_batch_policy';
 import { copySetupFiles, ensureGitHubDirs, compareSetupWorkflows } from '../utils/setup_files';
 import { effectiveIssueWorkflowFeatures } from '../application/policies/setup_issue_workflow_policy';
+import { hasRootLocalSetupAction } from '../utils/setup_workflow_upgrade';
 
 /** Existing setup renderers run inside a disposable directory, never in another checkout. */
 export class SetupBatchWorkspaceAdapter implements SetupBatchRenderPort {
@@ -25,14 +26,19 @@ export class SetupBatchWorkspaceAdapter implements SetupBatchRenderPort {
         writeFileSync(destination, file.content!, { mode: 0o600 });
       }
       ensureGitHubDirs(root);
+      const sourceAction = existing.some(file => file.path.startsWith('.github/workflows/') && hasRootLocalSetupAction(file.content!));
+      const sourceGuidance = ['.copilot/AGENT_GUIDE.md', '.copilot/repository-profile.json', '.copilot/setup-manifest.json',
+        '.agents/skills/copilot-repository-workflow/SKILL.md'].every(path => existing.some(file => file.path === path));
       const sourceObserver = join(__dirname, '..', '..', 'setup', 'source-workflows', 'copilot_pull_request_approval.yml');
       const observerPath = '.github/workflows/copilot_pull_request_approval.yml';
       const preserveSourceObserver = configuration.pullRequestApproval.mode !== 'off' && existsSync(sourceObserver)
         && existing.some(file => file.path === observerPath && file.content === readFileSync(sourceObserver, 'utf8'));
       const changedWorkflows = compareSetupWorkflows(root, effectiveIssueWorkflowFeatures(configuration), undefined, configuration)
-        .filter(workflow => workflow.status === 'changed' && (!preserveSourceObserver || workflow.file !== 'copilot_pull_request_approval.yml')).map(workflow => workflow.file);
+        .filter(workflow => workflow.status === 'changed' && (!preserveSourceObserver || workflow.file !== 'copilot_pull_request_approval.yml')
+          && (!sourceAction || workflow.file === 'copilot_commit.yml')).map(workflow => workflow.file);
       copySetupFiles(root, undefined, configuration.features, { setupConfiguration: configuration,
-        updateExistingWorkflows: true, approvedWorkflowFiles: changedWorkflows });
+        updateExistingWorkflows: true, approvedWorkflowFiles: changedWorkflows,
+        preserveExistingAgentGuidance: sourceAction && sourceGuidance });
       const previous = new Map(existing.map(file => [file.path, file.content]));
       const generated = new Map<string, string>();
       const visit = (directory: string): void => {

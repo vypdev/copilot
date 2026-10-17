@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { PrepareSetupBatchUseCase } from '../prepare_setup_batch_use_case';
+import { PrepareSetupBatchUseCase, type PrepareSetupBatchRequest } from '../prepare_setup_batch_use_case';
 import { ConfigureSetupBatchTargetUseCase } from '../configure_setup_batch_target_use_case';
 import { SetupBatchSessionUseCase } from '../setup_batch_session_use_case';
 import { ApplySetupBatchUseCase } from '../apply_setup_batch_use_case';
@@ -7,7 +7,7 @@ import { createDefaultSetupConfiguration } from '../../../policies/setup_configu
 import { buildSetupRepositoryVariables, buildSetupPlan } from '../../../policies/setup_configuration_plan';
 import { beginSetupBatchOperation } from '../../../policies/setup_batch_policy';
 import { SetupInteractionCancelledError } from '../../../errors/setup_interaction_cancelled_error';
-import type { SetupBatchOperation, SetupBatchTarget, SetupBatchSharedResource } from '../../../../domain/setup_batch';
+import type { SetupBatchOperation, SetupBatchTarget, SetupBatchSharedResource, SetupBatchPlan, SetupBatchTargetPlan, SetupBatchTargetReceipt } from '../../../../domain/setup_batch';
 import type { SetupRemoteConfiguration } from '../../../../domain/setup';
 
 const id = 'a67c8e40-93be-43ed-a7ed-e07378c7e773';
@@ -102,15 +102,15 @@ describe('read-only per-target preparation', () => {
 async function sessionFixture() {
   const f = fixture(); const plan = await f.prepare.execute(f.request); let saved: SetupBatchOperation | undefined;
   const journal = { load: jest.fn(async () => saved), save: jest.fn(async (operation: SetupBatchOperation) => { saved = operation; }), lock: jest.fn(async () => async () => undefined) };
-  const writer = { revalidate: jest.fn(async () => true), grant: jest.fn(async () => undefined), variables: jest.fn(async () => undefined),
+  const writer = { revalidate: jest.fn<Promise<boolean>, [SetupBatchTargetPlan, string, SetupBatchTargetReceipt['effects']]>(async () => true), grant: jest.fn(async () => undefined), variables: jest.fn(async () => undefined),
     labels: jest.fn(async () => undefined), issueTypes: jest.fn(async () => undefined), prepareCommit: jest.fn(async () => 'c'.repeat(40)),
     branch: jest.fn(async () => undefined), pullRequest: jest.fn(async () => 31) };
-  const presentation = { review: jest.fn(async () => true), active: jest.fn(() => true), progress: jest.fn() };
+  const presentation = { review: jest.fn<Promise<boolean>, [SetupBatchPlan, SetupBatchOperation]>(async () => true), active: jest.fn(() => true), progress: jest.fn() };
   const apply = new ApplySetupBatchUseCase({ writer, journal, presentation: { ...presentation, review: async () => true } });
   const ports = { selection: { execute: jest.fn(async () => ({ token: f.request.token, selected: f.request.selected })) },
-    prepare: { execute: jest.fn(async () => plan) }, writer, apply, journal, presentation, result: jest.fn(async () => 'finish' as 'finish' | 'retry'),
+    prepare: { execute: jest.fn<ReturnType<PrepareSetupBatchUseCase['execute']>, [PrepareSetupBatchRequest]>(async () => plan) }, writer, apply, journal, presentation, result: jest.fn(async () => 'finish' as 'finish' | 'retry'),
     planning: jest.fn(), possibleMutation: jest.fn(), audit: jest.fn(async () => ({ ready: true } as { ready: boolean; cleanupPending?: boolean })) };
-  return { ...f, plan, ports, session: new SetupBatchSessionUseCase(ports), request: { organization: 'acme', currentRepository: 'repo-7', token: f.request.token },
+  return { ...f, inventory: f.ports.inventory, plan, ports, session: new SetupBatchSessionUseCase(ports), request: { organization: 'acme', currentRepository: 'repo-7', token: f.request.token },
     save: (operation: SetupBatchOperation) => { saved = operation; } };
 }
 describe('shared CLI/web batch session', () => {
@@ -216,6 +216,26 @@ describe('shared CLI/web batch session', () => {
     const f = await sessionFixture(); const prior = beginSetupBatchOperation(f.plan); f.save(prior);
     const result = await f.session.execute({ ...f.request, resumeOperationId: id }); expect(result.outcome).toBe('complete');
     expect(f.ports.selection.execute).not.toHaveBeenCalled(); expect(f.ports.prepare.execute).toHaveBeenCalledWith(expect.objectContaining({ operationId: id, selected: f.targets.map(target => ({ id: target.id, name: target.name })) }));
+  });
+  it('rebuilds and reviews changed shared grant revisions before resuming completed access', async () => {
+    const f = await sessionFixture(); const initial = beginSetupBatchOperation(f.plan);
+    f.save({ ...initial, targets: initial.targets.map(target => ({ ...target, status: 'partial', effects: ['access'] })) });
+    const revision = '2026-10-17T14:01:00Z';
+    f.shared[f.shared.length - 1] = { ...f.shared[f.shared.length - 1], updatedAt: revision, selectedRepositoryIds: [7, 8] };
+    f.inventory.effective.mockImplementation(async target => ({ ...f.remote(target), organizationSecrets: ['PAT'] }));
+    f.ports.prepare.execute.mockImplementation(request => f.prepare.execute(request));
+    f.ports.presentation.review.mockImplementation(async plan => {
+      expect(plan.targets.every(target => target.sharedSnapshot.find(resource => resource.name === 'PAT')?.updatedAt === revision)).toBe(true);
+      expect(plan.targets.every(target => target.grants.length === 0)).toBe(true); return true;
+    });
+    f.ports.writer.revalidate.mockImplementation(async plan => {
+      expect(f.ports.presentation.review).toHaveBeenCalledTimes(1);
+      return plan.sharedSnapshot.find(resource => resource.name === 'PAT')?.updatedAt === revision;
+    });
+    const result = await new SetupBatchSessionUseCase(f.ports).execute({ ...f.request, resumeOperationId: id });
+    expect(result.outcome).toBe('complete'); expect(f.ports.writer.grant).not.toHaveBeenCalled();
+    expect(f.ports.audit).toHaveBeenCalledTimes(2);
+    expect(result.operation.targets.every(target => target.status === 'waiting-for-merge')).toBe(true);
   });
   it('rejects stale saved plans before approval, probes or writes', async () => {
     const f = await sessionFixture(); const prior = beginSetupBatchOperation(f.plan);

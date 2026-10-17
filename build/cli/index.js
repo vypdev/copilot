@@ -61982,6 +61982,9 @@ class SetupBatchSessionUseCase {
         const selection = prior ? { token: request.token, selected: prior.targets.map(target => ({ id: target.repositoryId, name: target.repository })) }
             : await this.ports.selection.execute(request);
         this.ports.planning(request.organization);
+        // A receipt stores completed effects, not stale inventory. Always rebuild
+        // the shared revision/membership snapshot on resume and require new review;
+        // a previous process's grant cache is neither needed nor trusted.
         const plan = await this.ports.prepare.execute({ organization: request.organization, ...selection, ...(prior ? { operationId: prior.operationId } : {}) });
         const saved = await this.ports.journal.load(plan.operationId);
         let operation = saved ? (0, setup_batch_policy_1.parseSetupBatchOperation)(saved) : (0, setup_batch_policy_1.beginSetupBatchOperation)(plan);
@@ -97069,6 +97072,9 @@ class SetupBatchGithubApplyAdapter {
         this.read = read;
         this.variableWriter = variableWriter;
         this.resources = resources;
+        // Same-process grants can advance a reviewed timestamp. Cross-process resume
+        // never restores this cache: the session reconstructs and reviews a fresh plan
+        // with current shared metadata before any audit or Apply (including access).
         this.ownAccessRevisions = new Map();
     }
     async revalidate(plan, token, completed) {
@@ -97575,7 +97581,11 @@ class SetupBatchJournalAdapter {
         await this.ensureRoot();
         const destination = `${this.path(id)}.lock`;
         const nonce = (0, node_crypto_1.randomBytes)(16).toString('hex');
-        const file = await (0, promises_1.open)(destination, node_fs_1.constants.O_CREAT | node_fs_1.constants.O_EXCL | node_fs_1.constants.O_WRONLY, 0o600);
+        const file = await (0, promises_1.open)(destination, node_fs_1.constants.O_CREAT | node_fs_1.constants.O_EXCL | node_fs_1.constants.O_WRONLY, 0o600).catch(error => {
+            if (error.code !== 'EEXIST')
+                throw error;
+            throw Object.assign(new Error(`Setup operation ${id} is locked at ${destination}. Stop all setup processes and verify the recorded owner before orphan-lock recovery. See https://github.com/vypdev/copilot/blob/master/docs/security-operations/operations/troubleshooting.mdx#recover-an-orphaned-batch-operation-lock`), { code: 'EEXIST' });
+        });
         try {
             await file.writeFile(JSON.stringify({ pid: process.pid, nonce }));
             await file.sync();
@@ -97611,6 +97621,7 @@ const node_os_1 = __nccwpck_require__(70612);
 const setup_batch_policy_1 = __nccwpck_require__(52214);
 const setup_files_1 = __nccwpck_require__(59126);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
+const setup_workflow_upgrade_1 = __nccwpck_require__(85493);
 /** Existing setup renderers run inside a disposable directory, never in another checkout. */
 class SetupBatchWorkspaceAdapter {
     digest(value) { return (0, node_crypto_1.createHash)('sha256').update(value).digest('hex'); }
@@ -97629,14 +97640,19 @@ class SetupBatchWorkspaceAdapter {
                 (0, node_fs_1.writeFileSync)(destination, file.content, { mode: 0o600 });
             }
             (0, setup_files_1.ensureGitHubDirs)(root);
+            const sourceAction = existing.some(file => file.path.startsWith('.github/workflows/') && (0, setup_workflow_upgrade_1.hasRootLocalSetupAction)(file.content));
+            const sourceGuidance = ['.copilot/AGENT_GUIDE.md', '.copilot/repository-profile.json', '.copilot/setup-manifest.json',
+                '.agents/skills/copilot-repository-workflow/SKILL.md'].every(path => existing.some(file => file.path === path));
             const sourceObserver = (0, node_path_1.join)(__dirname, '..', '..', 'setup', 'source-workflows', 'copilot_pull_request_approval.yml');
             const observerPath = '.github/workflows/copilot_pull_request_approval.yml';
             const preserveSourceObserver = configuration.pullRequestApproval.mode !== 'off' && (0, node_fs_1.existsSync)(sourceObserver)
                 && existing.some(file => file.path === observerPath && file.content === (0, node_fs_1.readFileSync)(sourceObserver, 'utf8'));
             const changedWorkflows = (0, setup_files_1.compareSetupWorkflows)(root, (0, setup_issue_workflow_policy_1.effectiveIssueWorkflowFeatures)(configuration), undefined, configuration)
-                .filter(workflow => workflow.status === 'changed' && (!preserveSourceObserver || workflow.file !== 'copilot_pull_request_approval.yml')).map(workflow => workflow.file);
+                .filter(workflow => workflow.status === 'changed' && (!preserveSourceObserver || workflow.file !== 'copilot_pull_request_approval.yml')
+                && (!sourceAction || workflow.file === 'copilot_commit.yml')).map(workflow => workflow.file);
             (0, setup_files_1.copySetupFiles)(root, undefined, configuration.features, { setupConfiguration: configuration,
-                updateExistingWorkflows: true, approvedWorkflowFiles: changedWorkflows });
+                updateExistingWorkflows: true, approvedWorkflowFiles: changedWorkflows,
+                preserveExistingAgentGuidance: sourceAction && sourceGuidance });
             const previous = new Map(existing.map(file => [file.path, file.content]));
             const generated = new Map();
             const visit = (directory) => {
@@ -103270,7 +103286,7 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
     const pullRequestTemplate = features?.pullRequestTemplate === false
         ? { copied: 0, skipped: 0 }
         : (0, setup_file_copy_1.copySetupFile)(path.join(setupDir, 'pull_request_template.md'), path.join(cwd, '.github', 'pull_request_template.md'), 'setup/pull_request_template.md', '.github/pull_request_template.md');
-    const guidance = options.setupConfiguration
+    const guidance = options.setupConfiguration && !options.preserveExistingAgentGuidance
         ? (0, repository_agent_guidance_1.reconcileRepositoryAgentGuidance)(cwd, options.setupConfiguration)
         : { copied: 0, skipped: 0 };
     return [retired, workflows, approvalWorkflow, issueTemplates, pullRequestTemplate, guidance].reduce((total, current) => ({
@@ -103468,6 +103484,7 @@ function hasValidSetupToken(cwd, override) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.hasRootLocalSetupAction = hasRootLocalSetupAction;
 exports.renderSetupWorkflowUpgrade = renderSetupWorkflowUpgrade;
 const js_yaml_1 = __nccwpck_require__(783);
 const node_util_1 = __nccwpck_require__(47261);
@@ -103490,6 +103507,13 @@ const runner = (value) => labels(value) || !!object(value)
     && Object.keys(value).length > 0
     && (object(value).group === undefined || typeof object(value).group === 'string' && labels(object(value).group))
     && (object(value).labels === undefined || labels(object(value).labels));
+const callsRootAction = (jobs) => !!jobs && Object.values(jobs).some(job => {
+    const steps = object(job)?.steps;
+    return Array.isArray(steps) && steps.some(step => object(step)?.uses === './');
+});
+function hasRootLocalSetupAction(content) {
+    return callsRootAction(object(document(content)?.jobs));
+}
 /** Keep a target's reviewed execution location while upgrading controlled workflow templates. */
 function renderSetupWorkflowUpgrade(template, existing) {
     if (!existing)
@@ -103500,20 +103524,19 @@ function renderSetupWorkflowUpgrade(template, existing) {
     const previousJobs = object(previous.jobs);
     // A root-local Action is source-repository infrastructure, including its
     // release jobs and native validation. Consumer templates cannot replace it.
-    if (previousJobs && Object.values(previousJobs).some(job => {
-        const steps = object(job)?.steps;
-        return Array.isArray(steps) && steps.some(step => object(step)?.uses === './');
-    })) {
+    if (callsRootAction(previousJobs)) {
         const events = previous.on;
         const hasPush = events === 'push' || Array.isArray(events) && events.includes('push')
             || !!object(events) && Object.prototype.hasOwnProperty.call(events, 'push');
-        if (hasPush) {
+        // Branch synchronization deliberately observes every branch. Only the
+        // issue-centric Commit job needs this installation exclusion.
+        if (hasPush && object(previousJobs['copilot-commits'])) {
             const push = object(object(events)?.push);
             if (!push || !Array.isArray(push.branches) || !push.branches.every(branch => typeof branch === 'string')) {
                 throw new Error('Source Action push filters require separate workflow review before setup.');
             }
-            if (!push.branches.includes('!setup/copilot/**')) {
-                push.branches.push('!setup/copilot/**');
+            if (push.branches.at(-1) !== '!setup/copilot/**') {
+                push.branches = [...push.branches.filter(branch => branch !== '!setup/copilot/**'), '!setup/copilot/**'];
                 return (0, js_yaml_1.dump)(previous, { noRefs: true, lineWidth: -1 });
             }
         }

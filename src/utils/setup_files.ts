@@ -54,6 +54,7 @@ export function copySetupFiles(
     updateExistingWorkflows?: boolean;
     approvedWorkflowFiles?: readonly string[];
     setupConfiguration?: Readonly<SetupConfiguration>;
+    preserveExistingAgentGuidance?: boolean;
   } = {},
 ): { copied: number; skipped: number } {
   const setupDir = setupDirOverride ?? path.join(__dirname, '..', '..', 'setup');
@@ -109,7 +110,7 @@ export function copySetupFiles(
       'setup/pull_request_template.md',
       '.github/pull_request_template.md',
     );
-  const guidance = options.setupConfiguration
+  const guidance = options.setupConfiguration && !options.preserveExistingAgentGuidance
     ? reconcileRepositoryAgentGuidance(cwd, options.setupConfiguration)
     : { copied: 0, skipped: 0 };
   return [retired, workflows, approvalWorkflow, issueTemplates, pullRequestTemplate, guidance].reduce((total, current) => ({

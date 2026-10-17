@@ -212,6 +212,24 @@ describe('installer-owned GitHub write boundaries', () => {
     jest.mocked(f.read.sharedMetadata).mockResolvedValue([{ ...resource, updatedAt: '2026-10-17T14:01:00Z' }]);
     expect(await f.writer.revalidate(plan, 'fixture', ['access'])).toBe(true);
   });
+  it('resumes a completed grant with a new adapter and freshly reviewed metadata, while rejecting stale plans and later rotations', async () => {
+    const f = fixture(); const resource = { kind: 'secret' as const, name: 'PAT', visibility: 'selected' as const,
+      updatedAt: '2026-10-17T14:00:00Z', selectedRepositoryIds: [1] };
+    const grant = { kind: 'secret' as const, name: 'PAT', repositoryId: 7 };
+    const originalPlan = { ...f.plan, grants: [grant], sharedSnapshot: [resource] };
+    const observed = { ...resource, updatedAt: '2026-10-17T14:01:00Z', selectedRepositoryIds: [1, 7] };
+    f.shared.mockResolvedValueOnce(resource).mockResolvedValueOnce(observed);
+    f.request.mockResolvedValue({ data: {} });
+    await f.writer.grant(originalPlan, grant, 'fixture');
+    const restarted = new SetupBatchGithubApplyAdapter(f.read, f.variableWriter, f.resources);
+    const metadata = jest.mocked(f.read.sharedMetadata).mockResolvedValue([observed]);
+    expect(await restarted.revalidate(originalPlan, 'fixture', ['access'])).toBe(false);
+    const freshPlan = { ...originalPlan, grants: [], sharedSnapshot: [observed] };
+    expect(await restarted.revalidate(freshPlan, 'fixture', ['access'])).toBe(true);
+    metadata.mockResolvedValue([{ ...observed, updatedAt: '2026-10-17T14:02:00Z' }]);
+    expect(await restarted.revalidate(freshPlan, 'fixture', ['access'])).toBe(false);
+    expect(f.request.mock.calls.filter(([route]) => route.startsWith('PUT '))).toHaveLength(1);
+  });
   it.each([{ route: 'POST /repos/{owner}/{repo}/git/trees', data: { sha: 'HEAD' } },
     { route: 'POST /repos/{owner}/{repo}/git/commits', data: { sha: 'HEAD' } },
     { route: 'GET /repos/{owner}/{repo}/git/commits/{commit_sha}', data: { tree: {} } }])('rejects malformed Git object identities at $route', async ({ route: failed, data }) => {

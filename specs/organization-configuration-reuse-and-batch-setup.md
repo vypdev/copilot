@@ -700,9 +700,15 @@ replacement acceptance uses fresh reviewed plans, never force-pushes their refs.
 
 Root-local `uses: ./` workflows are source Action infrastructure, not consumer
 templates. Setup MUST retain their complete jobs, native validation, release
-steps and permissions. It MAY only append the installer push exclusion to an
-existing explicit string branch-filter list; ambiguous push filters block for
-separate review. This narrow compatibility rule introduces no identity-based
+steps and permissions. It MAY only append the installer push exclusion to the source Commit job
+workflow, after every positive pattern in its explicit string branch-filter
+list; ambiguous Commit push filters block for separate review. Branch Sync MUST
+retain its all-branch observer contract. Source targets also retain existing
+native workflows without root-local steps (including explicit merge-queue Bash)
+and complete existing guide/profile/skill/manifest artifacts, whose version
+belongs to their checked-in generator. Missing artifacts still receive normal
+generation. Broader runner profiles and source/generator migration are tracked
+separately in [#556](https://github.com/vypdev/copilot/issues/556). This narrow compatibility rule introduces no identity-based
 repository allowlist. The original observer isolation rule still applies.
 
 Minimum **39 additional distinct cases**: 36 pure cases for runner forms,
@@ -712,3 +718,33 @@ replacement; one real-package batch/observer isolation case. These extend
 existing coverage thresholds, full local checks and current-head native review.
 Acceptance MUST repeat actual target rendering and inspect the installation PR
 runner selections before describing this regression as fixed.
+
+
+### Interrupted operation recovery acceptance (2026-10-17)
+
+An exclusive-lock collision MUST retain the lock and receipt, report the exact
+operation ID/path and link to operator recovery. Automatic PID-based stale-lock
+reclamation is intentionally unsupported: PID reuse and concurrent acquisition
+cannot establish absence safely. The documented recovery MUST require one
+operator, stopped setup sessions, a quiescent journal directory, verified absent
+owner, removal of only the exact orphaned lock, and fresh reviewed resume.
+Unknown owner identity or access fails closed. Existing nonce-based release
+continues to preserve a replacement owner's lock.
+
+Cross-process resume MUST reconstruct current shared-resource metadata through
+Prepare before review, probes or Apply. Desired plan identity remains stable
+across an operation's own additive membership update, while the newly reviewed
+snapshot contains its observed revision. Completed `access` skips its mutation;
+no old-process revision cache is restored or trusted. A same-name Secret rotation
+after this new review MUST still block; directly replaying a stale plan without
+new Prepare/review MUST also block. No shared values or new durable fields are
+introduced. Journals remain schema v1 and metadata-only.
+
+Minimum **11 additional distinct cases** beyond the 39 runner cases: six pure
+source-classification/filter-order cases, two source workflow/guidance integration
+cases, one orphan-lock diagnostic/explicit recovery case, one restarted adapter
+revision/rotation case and one complete Prepare/session resume case. Existing
+pure helper/global/module budgets, full build, lint/type, docs/spec validation
+and current-head native review remain required. Live source installation checks
+MUST verify Branch Sync filters, merge queue shell, source generator parity and
+retained runners before this compatibility fix is accepted.

@@ -7,6 +7,9 @@ import { createHash } from 'node:crypto';
 
 /** Reused shared resources have an additive access command only. No shared value or Secret writer is injected. */
 export class SetupBatchGithubApplyAdapter implements SetupBatchApplyPort {
+  // Same-process grants can advance a reviewed timestamp. Cross-process resume
+  // never restores this cache: the session reconstructs and reviews a fresh plan
+  // with current shared metadata before any audit or Apply (including access).
   private readonly ownAccessRevisions = new Map<string, { readonly before: string; readonly after: string }>();
   constructor(private readonly read: SetupBatchGithubReadAdapter, private readonly variableWriter: Pick<SetupRepositoryVariablesCommandPort, 'createMissing'>,
     private readonly resources: { labels(plan: SetupBatchTargetPlan, token: string): Promise<void>;

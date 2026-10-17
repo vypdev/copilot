@@ -89687,7 +89687,7 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
     const pullRequestTemplate = features?.pullRequestTemplate === false
         ? { copied: 0, skipped: 0 }
         : (0, setup_file_copy_1.copySetupFile)(path.join(setupDir, 'pull_request_template.md'), path.join(cwd, '.github', 'pull_request_template.md'), 'setup/pull_request_template.md', '.github/pull_request_template.md');
-    const guidance = options.setupConfiguration
+    const guidance = options.setupConfiguration && !options.preserveExistingAgentGuidance
         ? (0, repository_agent_guidance_1.reconcileRepositoryAgentGuidance)(cwd, options.setupConfiguration)
         : { copied: 0, skipped: 0 };
     return [retired, workflows, approvalWorkflow, issueTemplates, pullRequestTemplate, guidance].reduce((total, current) => ({
@@ -89885,6 +89885,7 @@ function hasValidSetupToken(cwd, override) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.hasRootLocalSetupAction = hasRootLocalSetupAction;
 exports.renderSetupWorkflowUpgrade = renderSetupWorkflowUpgrade;
 const js_yaml_1 = __nccwpck_require__(783);
 const node_util_1 = __nccwpck_require__(47261);
@@ -89907,6 +89908,13 @@ const runner = (value) => labels(value) || !!object(value)
     && Object.keys(value).length > 0
     && (object(value).group === undefined || typeof object(value).group === 'string' && labels(object(value).group))
     && (object(value).labels === undefined || labels(object(value).labels));
+const callsRootAction = (jobs) => !!jobs && Object.values(jobs).some(job => {
+    const steps = object(job)?.steps;
+    return Array.isArray(steps) && steps.some(step => object(step)?.uses === './');
+});
+function hasRootLocalSetupAction(content) {
+    return callsRootAction(object(document(content)?.jobs));
+}
 /** Keep a target's reviewed execution location while upgrading controlled workflow templates. */
 function renderSetupWorkflowUpgrade(template, existing) {
     if (!existing)
@@ -89917,20 +89925,19 @@ function renderSetupWorkflowUpgrade(template, existing) {
     const previousJobs = object(previous.jobs);
     // A root-local Action is source-repository infrastructure, including its
     // release jobs and native validation. Consumer templates cannot replace it.
-    if (previousJobs && Object.values(previousJobs).some(job => {
-        const steps = object(job)?.steps;
-        return Array.isArray(steps) && steps.some(step => object(step)?.uses === './');
-    })) {
+    if (callsRootAction(previousJobs)) {
         const events = previous.on;
         const hasPush = events === 'push' || Array.isArray(events) && events.includes('push')
             || !!object(events) && Object.prototype.hasOwnProperty.call(events, 'push');
-        if (hasPush) {
+        // Branch synchronization deliberately observes every branch. Only the
+        // issue-centric Commit job needs this installation exclusion.
+        if (hasPush && object(previousJobs['copilot-commits'])) {
             const push = object(object(events)?.push);
             if (!push || !Array.isArray(push.branches) || !push.branches.every(branch => typeof branch === 'string')) {
                 throw new Error('Source Action push filters require separate workflow review before setup.');
             }
-            if (!push.branches.includes('!setup/copilot/**')) {
-                push.branches.push('!setup/copilot/**');
+            if (push.branches.at(-1) !== '!setup/copilot/**') {
+                push.branches = [...push.branches.filter(branch => branch !== '!setup/copilot/**'), '!setup/copilot/**'];
                 return (0, js_yaml_1.dump)(previous, { noRefs: true, lineWidth: -1 });
             }
         }

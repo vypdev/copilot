@@ -31,6 +31,9 @@ export class SetupBatchSessionUseCase {
     const selection = prior ? { token: request.token, selected: prior.targets.map(target => ({ id: target.repositoryId, name: target.repository })) }
       : await this.ports.selection.execute(request);
     this.ports.planning(request.organization);
+    // A receipt stores completed effects, not stale inventory. Always rebuild
+    // the shared revision/membership snapshot on resume and require new review;
+    // a previous process's grant cache is neither needed nor trusted.
     const plan = await this.ports.prepare.execute({ organization: request.organization, ...selection, ...(prior ? { operationId: prior.operationId } : {}) });
     const saved = await this.ports.journal.load(plan.operationId);
     let operation = saved ? parseSetupBatchOperation(saved) : beginSetupBatchOperation(plan);

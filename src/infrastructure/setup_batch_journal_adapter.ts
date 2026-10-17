@@ -42,7 +42,10 @@ export class SetupBatchJournalAdapter implements SetupBatchJournalPort {
     await this.ensureRoot();
     const destination = `${this.path(id)}.lock`;
     const nonce = randomBytes(16).toString('hex');
-    const file = await open(destination, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY, 0o600);
+    const file = await open(destination, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY, 0o600).catch(error => {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+      throw Object.assign(new Error(`Setup operation ${id} is locked at ${destination}. Stop all setup processes and verify the recorded owner before orphan-lock recovery. See https://github.com/vypdev/copilot/blob/master/docs/security-operations/operations/troubleshooting.mdx#recover-an-orphaned-batch-operation-lock`), { code: 'EEXIST' });
+    });
     try { await file.writeFile(JSON.stringify({ pid: process.pid, nonce })); await file.sync(); }
     finally { await file.close(); }
     return async () => { await readFile(destination, 'utf8').then(content => {

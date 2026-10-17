@@ -469,7 +469,7 @@ retrying; there is no automatic rollback of an unconfirmed remote write.
 | Partial / stopped | Completed grants, repository resources and PRs remain. Inspect their receipts before the explicit retry. |
 | Plan drift / moved head | No overwrite is attempted. Inspect the default branch and existing installer PR; renew the plan instead of force-pushing. |
 | Workflow runners need review | Existing matching jobs retain their static runner labels/group. A dynamic runner expression or unreadable job definition blocks automatic upgrade; review its complete matrix/input contract separately, then prepare again. Newly added jobs keep template defaults and require runner inspection before merge. |
-| Source Action workflows retained | Workflows calling the root-local `./` Action retain their native jobs and release configuration. Setup only adds the installer push exclusion to explicit branch filters; ambiguous filters require separate review. Consumer templates do not replace these source workflows. |
+| Source Action workflows retained | Workflows calling the root-local `./` Action retain their native jobs and release configuration. Setup only adds the installer push exclusion to the source Commit workflow. The all-branch synchronization observer, other native workflows and complete source guidance remain in their existing version. Review their migration with the source generator; consumer templates cannot replace them. |
 | Rate-limited | The target pauses without blind mutation retries. Wait for GitHub access to recover, then inspect and explicitly retry. |
 | Cleanup pending | Resolve the reported temporary probe resource before starting any installation work. |
 
@@ -477,3 +477,36 @@ A new process needs a fresh PAT and review. `--resume-operation <operation-id>`
 reconstructs the same desired plan from the private receipt identities; it
 rejects changed configuration/base/targets before probes. Shared grants are
 additive; cancellation does not roll them back or revoke the operator PAT.
+
+
+### Recover an orphaned batch operation lock
+
+If setup reports an operation is locked, its error gives the exact private lock
+path and operation ID. The lock contains a PID and nonce; a PID alone cannot
+prove ownership because operating systems reuse it. Setup never automatically
+removes an unknown or apparently stale lock.
+
+On the same machine, use a single operator maintenance window:
+
+1. Stop every setup session that could access this journal directory. Prevent
+   new setup sessions during recovery. Do not recover a shared directory while
+   another machine or user can start an owner.
+2. Inspect the exact `<operation-id>.json.lock` and matching `.json` receipt.
+   Check the recorded PID against the process command and start time. On Unix,
+   `kill -0 <recorded-pid>` can establish that a process exists; permission denied
+   or uncertain identity means stop and investigate. Only a confirmed absent
+   owner, with all setup sessions stopped, permits the next step.
+3. Remove only that confirmed orphaned lock (for example,
+   `rm -- "$HOME/.copilot/setup-operations/<operation-id>.json.lock"` on Unix,
+   replacing the placeholder with the ID from the error). Keep the receipt,
+   installer branch and PR. Never remove a live/replaced lock or the directory.
+4. Resume with `copilot setup --batch --resume-operation <operation-id>` and a
+   current temporary PAT. Review the fresh inventory and retained effects before
+   approving probes or writes. Release the maintenance window afterwards.
+
+Resume rebuilds the shared-resource snapshot instead of restoring an old
+process's in-memory grant revisions. A completed access effect does not repeat
+its PUT; the new review uses current memberships and timestamps. Any rotation
+or other revision change after that review still blocks Apply. A stale plan
+passed directly to Apply is deliberately rejected rather than trusting an
+unrecorded grant or ignoring Secret freshness.
