@@ -83,7 +83,9 @@ Review the exact file changes, repository Variable names, additive shared-access
 grants, installation ref, base SHA and temporary permission checks. Approval can
 create/remove test resources and leave GitHub history or notifications. Pending
 cleanup blocks installation. Shared values, visibility and other memberships
-stay unchanged. Apply runs sequentially and opens at most one setup PR per
+stay unchanged. Replaced setup assets have separate backups under
+`.copilot/setup-backups/`, retaining their relative paths even when their names
+and contents match. Apply runs sequentially and opens at most one setup PR per
 changed target in `setup/copilot/<operation-id>`. It never merges, tags,
 releases or deploys. A repository with matching files needs no new PR and remains
 pending verification after resource checks.

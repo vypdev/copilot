@@ -1,9 +1,10 @@
-import { mkdtempSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SetupBatchWorkspaceAdapter } from '../setup_batch_workspace_adapter';
 import { SetupBatchJournalAdapter } from '../setup_batch_journal_adapter';
 import { createDefaultSetupConfiguration } from '../../application/policies/setup_configuration_defaults';
+import * as setupFiles from '../../utils/setup_files';
 import type { SetupBatchOperation } from '../../domain/setup_batch';
 const id = 'a67c8e40-93be-43ed-a7ed-e07378c7e773';
 const operation: SetupBatchOperation = { schemaVersion: 1, operationId: id, organization: 'acme', targets: [{ repositoryId: 7,
@@ -64,6 +65,27 @@ describe('isolated setup rendering and private durable receipts', () => {
     const first = await renderer.render(configuration, existing); const second = await renderer.render(configuration, existing);
     expect(second).toEqual(first);
     expect(first.some(file => file.path.startsWith('.copilot/setup-backups/') && file.content === existing[0].content)).toBe(true);
+  });
+  it('retains separate reproducible backups for equal basenames and content from distinct asset paths', async () => {
+    const renderer = new SetupBatchWorkspaceAdapter(); const configuration = createDefaultSetupConfiguration();
+    const originals = ['.github/workflows/config.yml', '.github/ISSUE_TEMPLATE/config.yml'];
+    let generation = 0;
+    const copy = jest.spyOn(setupFiles, 'copySetupFiles').mockImplementation(directory => {
+      const backup = join(directory, '.copilot', 'setup-backups', `preview-${++generation}`);
+      for (const original of originals) {
+        const destination = join(backup, original);
+        mkdirSync(join(destination, '..'), { recursive: true }); writeFileSync(destination, '# identical original content\n');
+      }
+      return { copied: originals.length, skipped: 0 };
+    });
+    try {
+      const historical = [{ path: '.copilot/setup-backups/history/old.yml', content: '# retained history\n' }];
+      const first = await renderer.render(configuration, historical);
+      expect(first).toHaveLength(2);
+      for (const original of originals) expect(first.find(file => file.path.endsWith(`/${original}`)))
+        .toMatchObject({ content: '# identical original content\n' });
+      expect(await renderer.render(configuration, historical)).toEqual(first);
+    } finally { copy.mockRestore(); }
   });
   it.each([{ path: '../secret', content: 'fixture' }, { path: 'AGENTS.md', content: 'x'.repeat(100_001) },
     { path: 'AGENTS.md', content: null }])('rejects unsafe input before rendering %j', async file => {

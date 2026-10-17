@@ -498,7 +498,7 @@ its 14 previously open items; this feature does not close unrelated evidence.
 
 ### Final local gates
 
-The final local suite passes **657 suites / 9,852 tests** (35 pre-existing
+The final local suite passes **657 suites / 9,853 tests** (35 pre-existing
 skips). Coverage is **97.38% lines, 96.23% statements, 97.01% functions and
 93.06% branches**. All eight new pure decision modules pass 100% on all four
 metrics through the executable budget. Build, package smoke, TypeScript,
@@ -541,3 +541,11 @@ choice names that limit in all four locales. Missing bindings identify their
 supported credential options and direct provisioning to the selected target,
 then require a fresh batch preview. A regression covers Customize with existing
 bindings and another covers a newly selected provider whose key is missing.
+
+### Backup identity regression
+
+Fresh previews retain each generated backup's relative asset path beneath its
+stable content directory. Equal basenames and content from different original
+paths remain separate plan entries. The adapter regression reproduces the
+previous collision, preserves historical backups and verifies reproducibility
+after the timestamp changes.

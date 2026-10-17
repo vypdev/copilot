@@ -42,8 +42,12 @@ export class SetupBatchWorkspaceAdapter implements SetupBatchRenderPort {
           else if (entry.isFile()) {
             let key = relative(root, path).split('\\').join('/');
             const content = readFileSync(path, 'utf8');
-            // Stable backups make a fresh preview reproducible across restarts.
-            if (key.startsWith('.copilot/setup-backups/') && !previous.has(key)) key = `.copilot/setup-backups/${this.digest(content).slice(0, 16)}/${entry.name}`;
+            // Remove only the generated timestamp; preserve each asset's relative
+            // backup path so equal basenames and content cannot collapse.
+            if (key.startsWith('.copilot/setup-backups/') && !previous.has(key)) {
+              const assetPath = key.split('/').slice(3).join('/');
+              key = `.copilot/setup-backups/${this.digest(content).slice(0, 16)}/${assetPath}`;
+            }
             if (!validSetupBatchAssetPath(key)) throw new Error('Renderer produced an unexpected setup asset.');
             generated.set(key, content);
           } else throw new Error('Setup assets must be regular files.');

@@ -97367,9 +97367,12 @@ class SetupBatchWorkspaceAdapter {
                     else if (entry.isFile()) {
                         let key = (0, node_path_1.relative)(root, path).split('\\').join('/');
                         const content = (0, node_fs_1.readFileSync)(path, 'utf8');
-                        // Stable backups make a fresh preview reproducible across restarts.
-                        if (key.startsWith('.copilot/setup-backups/') && !previous.has(key))
-                            key = `.copilot/setup-backups/${this.digest(content).slice(0, 16)}/${entry.name}`;
+                        // Remove only the generated timestamp; preserve each asset's relative
+                        // backup path so equal basenames and content cannot collapse.
+                        if (key.startsWith('.copilot/setup-backups/') && !previous.has(key)) {
+                            const assetPath = key.split('/').slice(3).join('/');
+                            key = `.copilot/setup-backups/${this.digest(content).slice(0, 16)}/${assetPath}`;
+                        }
                         if (!(0, setup_batch_policy_1.validSetupBatchAssetPath)(key))
                             throw new Error('Renderer produced an unexpected setup asset.');
                         generated.set(key, content);
