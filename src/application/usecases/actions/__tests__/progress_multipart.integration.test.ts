@@ -3,6 +3,9 @@ import { projectProgressContext } from '../../push_single_action_contexts';
 import { Ai } from '../../../../data/model/ai';
 import type { Execution } from '../../../../data/model/execution';
 import { partitionProgressDiff, progressEvidenceTooLarge, type ProgressDiffChange } from '../../../policies/progress_diff_partition_policy';
+import { progressPartitionFactLimit } from '../../../policies/progress_partition_response_policy';
+import { AGENT_PROMPT_MAX_BYTES } from '../../../../domain/agent_execution_plan';
+import type { ProgressDiffEvidence } from '../../../ports/progress_diff_query_ports';
 import { ApplicationError } from '../../../errors/application_error';
 import { resolveStaticApplicationErrorCatalog } from '../../../policies/application_error_message_catalog';
 
@@ -16,7 +19,7 @@ function fixture(changes?: readonly ProgressDiffChange[]) {
         commit: { branch: 'bugfix/547-progress' }, branches: { main: 'master', development: 'develop', featureTree: 'feature', bugfixTree: 'bugfix', hotfixTree: 'hotfix', releaseTree: 'release', docsTree: 'docs', choreTree: 'chore' } } as unknown as Execution);
     const setProgressLabel = jest.fn(), setLabels = jest.fn(), isIssueOpen = jest.fn(async () => true);
     const getBranchHeadSha = jest.fn(async (branch: string) => branch === 'develop' ? base : head);
-    const getDiff = jest.fn(async () => diff);
+    const getDiff = jest.fn<Promise<ProgressDiffEvidence>, []>(async () => diff);
     let partIndex = 0;
     const query = jest.fn(async (request: { prompt: string; options?: { schemaName?: string } }): Promise<Record<string, unknown>> => {
         expect(setProgressLabel).not.toHaveBeenCalled(); expect(setLabels).not.toHaveBeenCalled();
@@ -26,24 +29,43 @@ function fixture(changes?: readonly ProgressDiffChange[]) {
         }
         return { outputLocale: 'en-US', progress: 70, summary: 'Implemented; verification remains.', remaining: 'Verify behavior.' };
     });
-    const useCase = new CheckProgressUseCase({ getDescription: jest.fn(async () => 'Implement the described behavior and verify it.') },
+    const getDescription = jest.fn(async () => 'Implement the described behavior and verify it.');
+    const useCase = new CheckProgressUseCase({ getDescription },
         { getLabels: jest.fn(async () => []), setLabels }, { setProgressLabel }, { getListOfBranches: jest.fn(async () => []) },
         { getOpenPullRequestNumbersByHeadBranch: jest.fn(async () => []) }, { query }, { isIssueOpen, getBranchHeadSha }, { getDiff });
-    return { diff, query, setProgressLabel, setLabels, isIssueOpen, getBranchHeadSha, getDiff, invoke: () => useCase.invoke(context) };
+    return { diff, query, getDescription, setProgressLabel, setLabels, isIssueOpen, getBranchHeadSha, getDiff, invoke: () => useCase.invoke(context) };
 }
 
 describe('atomic complete multipart progress', () => {
+    it('rejects an oversized issue before any model or publication', async () => {
+        const f = fixture(); f.getDescription.mockResolvedValue('x'.repeat(AGENT_PROMPT_MAX_BYTES));
+        expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'validation.evidence-too-large', retryable: false });
+        expect(f.query).not.toHaveBeenCalled(); expect(f.setProgressLabel).not.toHaveBeenCalled();
+    });
+    it('preflights every source-part prompt against the unchanged runtime ceiling before the first query', async () => {
+        const f = fixture(['a', 'b'].map(path => ({ path, status: 'modified', additions: 1, deletions: 0, patch: 'x'.repeat(200_000) })));
+        f.getDescription.mockResolvedValue('x'.repeat(350_000));
+        expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'validation.evidence-too-large', retryable: false });
+        expect(f.query).not.toHaveBeenCalled(); expect(f.setProgressLabel).not.toHaveBeenCalled();
+    });
+    it('checks the complete single-part final prompt before calling the runtime', async () => {
+        const f = fixture();
+        f.getDiff.mockResolvedValue({ kind: 'single', baseSha: base, headSha: head, evidence: 'x'.repeat(AGENT_PROMPT_MAX_BYTES) });
+        expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'validation.evidence-too-large', retryable: false });
+        expect(f.query).not.toHaveBeenCalled(); expect(f.setProgressLabel).not.toHaveBeenCalled();
+    });
     it('assesses a complete 299-file aggregate larger than 256 kB without dropping paths or publishing per-part progress', async () => {
         const paths = Array.from({ length: 299 }, (_, i) => `src/${i}.ts`);
         const f = fixture(paths.map(path => ({ path, status: 'modified', additions: 1, deletions: 0, patch: 'x'.repeat(1500) })));
-        let index = 0;
+        let index = 0; const limit = progressPartitionFactLimit(base, head, f.diff.partitions);
         f.query.mockImplementation(async request => {
             expect(f.setProgressLabel).not.toHaveBeenCalled();
             if (request.options?.schemaName === 'progress_partition_facts') {
                 const part = f.diff.partitions[index++];
-                return { outputLocale: 'en-US', partitionId: part.id, files: part.paths.map(path => ({ path, implemented: 'x'.repeat(600), remaining: 'y'.repeat(600) })) };
+                return { outputLocale: 'en-US', partitionId: part.id, files: part.paths.map(path => ({ path, implemented: '\u0000'.repeat(limit), remaining: '\u0000'.repeat(limit) })) };
             }
             expect(index).toBe(f.diff.partitions.length); expect(Buffer.byteLength(request.prompt)).toBeGreaterThan(256_000);
+            expect(Buffer.byteLength(request.prompt)).toBeLessThanOrEqual(AGENT_PROMPT_MAX_BYTES);
             expect(paths.every(path => request.prompt.includes(path))).toBe(true);
             return { outputLocale: 'en-US', progress: 70, summary: 'Implemented; verification remains.', remaining: 'Verify behavior.' };
         });

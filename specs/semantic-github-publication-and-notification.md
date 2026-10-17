@@ -1764,12 +1764,16 @@ metadata only and never prove build/test success. The conservative 300-file
 provider ceiling remains unchanged. Partitions contain complete files, so an
 individual file exceeding the unchanged 256,000-byte serialized evidence budget
 is terminal. At most 16 partitions and one final assessment are allowed. The
-manifest MUST fit 256,000 UTF-8 bytes. The final model-derived facts aggregate
-MUST fit its separate 3,072,000-byte UTF-8 budget: up to 299 admitted files, two
-600-code-unit facts per file (up to six serialized bytes per unit), the bounded
-manifest/paths and JSON framing. Reusing the source-part limit for facts rejected
-valid complete comparisons with many small files. This changes no raw-source
-part bound and drops no paths, facts or uncertainty. These fixed limits
+manifest MUST fit 256,000 UTF-8 bytes. Model-derived facts have a separate maximum
+384,000-byte budget, further reduced by the exact final issue/prompt envelope
+inside the unchanged 524,288-byte runtime ceiling. Before any model request,
+progress analysis reserves every path and JSON framing and derives one prose-length limit
+(up to 600 UTF-16 code units per fact) using worst-case six-byte JSON escaping.
+The provider schema and parser enforce this same limit. Facts are requested
+concisely, never truncated after receipt; every path remains in the final data.
+The aggregate contains compact partition IDs/counts rather than duplicating all
+paths inside an embedded manifest. All source-part prompts are also checked
+against the unchanged runtime ceiling before the first call. These fixed limits
 are intentionally not configurable; there are no new inputs, PAT scopes,
 variables, secrets, flags, saved state or migration. Larger single files and
 larger batches require smaller reviewed changes.
@@ -1784,7 +1788,7 @@ A separate pure response policy validates exact partition identity, requested
 locale, bounded per-file facts and the exact complete assigned path set: missing,
 extra, duplicate, malformed or oversized facts fail closed. The application
 orchestrates sequential bounded agent calls, then a final assessment using only
-the complete manifest and validated facts. Facts are untrusted analysis, never
+the compact partition identities/counts and complete validated per-file facts. Facts are untrusted analysis, never
 instructions or CI attestation. The final model must preserve uncertainty and
 must not average partition percentages. All parts complete before final progress
 assessment; any failed part prevents final assessment and publication.
@@ -1870,17 +1874,22 @@ assessment may be used to achieve green status.
 ### Large-file-list aggregation regression (2026-10-17)
 
 Native review #546 found that a complete 299-file comparison can fit all source
-partitions while its two valid 600-character facts per path exceed one source
-part's 256,000-byte budget. The separate aggregate budget above MUST admit this
-case, including escaped control-character serialization and long valid paths,
-before final assessment. Source parts, the 16-part ceiling, manifest limit,
+partitions while its two long valid facts per path exceed one source
+part's 256,000-byte budget. The adaptive fact limit and separate aggregate budget above MUST admit this
+case within the existing runtime prompt ceiling, including worst-case escaping
+and long valid paths. An issue envelope leaving no space, or any over-budget
+source-part prompt, fails terminally before any model call or publication. Source parts, the 16-part ceiling, manifest limit,
 299-file completeness boundary, locale/exact-path validation and publication
 fences remain unchanged. Over-budget aggregates still report the terminal size
 error; no percentages are averaged and no evidence is silently shortened.
 
-Minimum **two additional cases**: a pure 299-file worst-case serialized-facts
-boundary preserving all paths and source-part bounds, and a complete application
-replay whose final prompt exceeds 256,000 bytes but publishes only after every
-part and one final assessment. Existing pure 100% and orchestration coverage
+Minimum **15 additional distinct cases**: 11 pure cases (the 299-file worst-case
+serialized boundary, five invalid/insufficient budgets, empty assignment, smaller
+schema/parser limit and three invalid aggregation budgets) and four application
+cases (299-file complete replay, oversized issue envelope, oversized source-part
+prompt and oversized single-part final prompt). The existing aggregate oversize
+case is updated rather than counted again. All paths and source-part bounds
+remain intact, and the final replay above 256,000 bytes stays inside 512 KiB.
+Existing pure 100% and orchestration coverage
 budgets, full validation and current-head native review remain required. User
 branch-management documentation states the separate model-facts budget.
