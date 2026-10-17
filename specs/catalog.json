@@ -7,7 +7,7 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-13",
+      "lastVerified": "2026-10-17",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md",
@@ -147,7 +147,10 @@
         "src/infrastructure/github/ports/github_reply_request_client.ts",
         "src/application/policies/retired_progress_presentation_policy.ts",
         "src/application/usecases/actions/retire_progress_use_case.ts",
-        "src/application/usecases/actions/retire_closed_issue_cards_use_case.ts"
+        "src/application/usecases/actions/retire_closed_issue_cards_use_case.ts",
+        "src/application/policies/progress_diff_partition_policy.ts",
+        "src/application/policies/progress_partition_response_policy.ts",
+        "src/application/usecases/actions/summarize_progress_diff_workflow.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -239,7 +242,10 @@
         "src/application/usecases/actions/__tests__/retire_progress_use_case.test.ts",
         "src/application/usecases/actions/__tests__/retire_closed_issue_cards_use_case.test.ts",
         "src/application/usecases/steps/common/__tests__/retired_progress_publication.integration.test.ts",
-        "src/application/usecases/actions/__tests__/progress_native_closure.test.ts"
+        "src/application/usecases/actions/__tests__/progress_native_closure.test.ts",
+        "src/application/policies/__tests__/progress_diff_partition_policy.test.ts",
+        "src/application/policies/__tests__/progress_partition_response_policy.test.ts",
+        "src/application/usecases/actions/__tests__/progress_multipart.integration.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",

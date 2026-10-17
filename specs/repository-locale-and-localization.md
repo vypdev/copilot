@@ -392,7 +392,12 @@ Every product-facing agent query MUST include:
 
 Plan, clarification, estimate, test plan, explanation, diagnosis, analysis,
 findings, PR description, progress summary/remaining work, issue help, Think,
-release prose, and fix summaries all follow this rule.
+release prose, and fix summaries all follow this rule. Bounded multipart progress
+uses a separately inventoried `progress-partition` structured task: every
+intermediate file-fact response must match the exact target locale before it
+can enter the final progress assessment. Intermediate facts never publish a
+percentage or bypass the final locale check; malformed/foreign-locale parts
+retain the prior assessment and fail as unusable agent output.
 
 If `outputLocale` does not match the requested language, the application MAY run
 one language adaptation over prose fields only. If safe adaptation fails, the

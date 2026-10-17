@@ -767,17 +767,41 @@
     {
       "name": "Historical merged SDD authority",
       "missingEntryLabel": "historical merged SDD authority",
-      "rules": [{
-        "files": [
-          "src/application/ports/sdd_evidence_read_ports.ts",
-          "src/application/usecases/sdd/sdd_evidence_query_use_case.ts",
-          "src/data/repository/branch/linked_branch_readiness_repository.ts",
-          "src/infrastructure/composition/sdd_evidence_composition_root.ts"
-        ],
-        "mode": "each",
-        "thresholdProfile": "default"
-      }],
+      "rules": [
+        {
+          "files": [
+            "src/application/ports/sdd_evidence_read_ports.ts",
+            "src/application/usecases/sdd/sdd_evidence_query_use_case.ts",
+            "src/data/repository/branch/linked_branch_readiness_repository.ts",
+            "src/infrastructure/composition/sdd_evidence_composition_root.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
       "successMessage": "historical merged SDD authority coverage: PASS (95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Complete multipart progress",
+      "missingEntryLabel": "complete multipart progress",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/progress_diff_partition_policy.ts",
+            "src/application/policies/progress_partition_response_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/actions/summarize_progress_diff_workflow.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "complete multipart progress coverage: PASS (pure policies 100%; bounded orchestration 95% lines/statements, 90% branches/functions)"
     }
   ]
 }
