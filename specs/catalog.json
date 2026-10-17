@@ -150,7 +150,8 @@
         "src/application/usecases/actions/retire_closed_issue_cards_use_case.ts",
         "src/application/policies/progress_diff_partition_policy.ts",
         "src/application/policies/progress_partition_response_policy.ts",
-        "src/application/usecases/actions/summarize_progress_diff_workflow.ts"
+        "src/application/usecases/actions/summarize_progress_diff_workflow.ts",
+        "src/data/repository/agent_json_schema_validator.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -245,7 +246,8 @@
         "src/application/usecases/actions/__tests__/progress_native_closure.test.ts",
         "src/application/policies/__tests__/progress_diff_partition_policy.test.ts",
         "src/application/policies/__tests__/progress_partition_response_policy.test.ts",
-        "src/application/usecases/actions/__tests__/progress_multipart.integration.test.ts"
+        "src/application/usecases/actions/__tests__/progress_multipart.integration.test.ts",
+        "src/data/repository/__tests__/agent_json_schema_validator.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",

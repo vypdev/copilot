@@ -34,10 +34,11 @@ function matchesType(value: unknown, expected: string): boolean {
 }
 
 function validateString(value: string, schema: JsonSchema, path: string): void {
-    if (typeof schema.minLength === 'number' && value.length < schema.minLength) {
+    const length = [...value].length;
+    if (typeof schema.minLength === 'number' && length < schema.minLength) {
         throw new Error(`Agent response schema violation at ${path}: string is too short.`);
     }
-    if (typeof schema.maxLength === 'number' && value.length > schema.maxLength) {
+    if (typeof schema.maxLength === 'number' && length > schema.maxLength) {
         throw new AgentResponseLengthFailure(path, schema.maxLength);
     }
 }

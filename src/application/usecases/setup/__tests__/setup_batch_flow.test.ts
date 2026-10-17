@@ -1,11 +1,13 @@
 import { createHash } from 'node:crypto';
 import { PrepareSetupBatchUseCase, type PrepareSetupBatchRequest } from '../prepare_setup_batch_use_case';
 import { ConfigureSetupBatchTargetUseCase } from '../configure_setup_batch_target_use_case';
+import { SetupCredentialsUseCase } from '../setup_credentials_use_case';
 import { SetupBatchSessionUseCase } from '../setup_batch_session_use_case';
 import { ApplySetupBatchUseCase } from '../apply_setup_batch_use_case';
 import { createDefaultSetupConfiguration } from '../../../policies/setup_configuration_defaults';
 import { buildSetupRepositoryVariables, buildSetupPlan } from '../../../policies/setup_configuration_plan';
 import { beginSetupBatchOperation } from '../../../policies/setup_batch_policy';
+import { planSetupBatchSharedAccess } from '../../../policies/setup_batch_access_policy';
 import { SetupInteractionCancelledError } from '../../../errors/setup_interaction_cancelled_error';
 import type { SetupBatchOperation, SetupBatchTarget, SetupBatchSharedResource, SetupBatchPlan, SetupBatchTargetPlan, SetupBatchTargetReceipt } from '../../../../domain/setup_batch';
 import type { SetupRemoteConfiguration } from '../../../../domain/setup';
@@ -279,6 +281,40 @@ describe('per-target shared wizard and metadata-only credentials', () => {
       token: 'private-operator-token', configurationSource: 'organization' as const, presentationMode: 'basic' as const };
     return { ...f, wizard, credentials, useCase, request, result };
   }
+  it.each((['organization', 'customize'] as const).flatMap(configurationSource =>
+    (['valid', 'invalid'] as const).map(health => ({ configurationSource, health }))))(
+    'keeps repository PAT precedence in $configurationSource with $health trusted health and no organization grant', async ({ configurationSource, health }) => {
+      const f = configureFixture();
+      const actualRemote: SetupRemoteConfiguration = { ...f.request.actualRemote, repositorySecrets: ['PAT'],
+        repositorySecretRevisions: [{ name: 'PAT', updatedAt: '2026-10-17T00:00:00Z' }] };
+      const access = planSetupBatchSharedAccess(f.configuration, f.request.target, actualRemote, f.shared);
+      expect(access.projected.organizationSecrets).toContain('PAT');
+      expect(access.projected.repositorySecrets).toEqual(['PAT']);
+      expect(access.grants).toEqual([]); expect(access.sharedSnapshot.some(resource => resource.kind === 'secret')).toBe(false);
+      const prompt = { requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(), requestWorkflowPat: jest.fn(),
+        requestApiKey: jest.fn(), chooseExistingCredential: jest.fn(), showCredentialChecks: jest.fn() };
+      const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }),
+        validateCredential: jest.fn() };
+      const trusted = { validateTrustedDefault: jest.fn().mockResolvedValue([{ name: 'PAT', status: health, message: 'trusted check' }]) };
+      const credentials = new SetupCredentialsUseCase(prompt, validation, { list: jest.fn() }, undefined, undefined, undefined, undefined, trusted);
+      const collect = jest.spyOn(credentials, 'collect');
+      const useCase = new ConfigureSetupBatchTargetUseCase({ wizard: f.wizard, credentials });
+      const result = await useCase.execute({ ...f.request, configurationSource, actualRemote, remote: access.projected });
+      expect(collect).toHaveBeenCalledWith(expect.objectContaining({ pendingOrganizationSecretNames: [],
+        remoteConfiguration: expect.objectContaining({ repositorySecrets: ['PAT'], organizationSecrets: ['PAT'] }) }));
+      expect(trusted.validateTrustedDefault).toHaveBeenCalledWith('acme', f.request.target.name, f.request.token,
+        expect.arrayContaining([expect.objectContaining({ name: 'PAT' })]));
+      if (health === 'valid') {
+        expect(result?.blocked).toBeUndefined();
+        await expect(collect.mock.results[0].value).resolves.toMatchObject({ collection: { apiKeys: [],
+          retainedSecrets: [{ name: 'PAT', scope: 'repository', status: 'unverifiable' }] } });
+      } else {
+        expect(result?.blocked?.[0]).toContain('credential did not pass');
+        expect(prompt.showCredentialChecks).not.toHaveBeenCalled();
+      }
+      expect(prompt.requestWorkflowPat).not.toHaveBeenCalled(); expect(prompt.requestApiKey).not.toHaveBeenCalled();
+      expect(f.shared.at(-1)?.selectedRepositoryIds).toEqual([]);
+    });
   it('shares the preview wizard and marks planned credential access as pending', async () => {
     const f = configureFixture(); const result = await f.useCase.execute(f.request); expect(result?.blocked).toBeUndefined();
     expect(f.wizard.execute).toHaveBeenCalledWith(expect.objectContaining({ previewOnly: true, deliveryMode: 'pull-request' }));

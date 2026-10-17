@@ -71115,10 +71115,11 @@ function matchesType(value, expected) {
     return typeof value === expected;
 }
 function validateString(value, schema, path) {
-    if (typeof schema.minLength === 'number' && value.length < schema.minLength) {
+    const length = [...value].length;
+    if (typeof schema.minLength === 'number' && length < schema.minLength) {
         throw new Error(`Agent response schema violation at ${path}: string is too short.`);
     }
-    if (typeof schema.maxLength === 'number' && value.length > schema.maxLength) {
+    if (typeof schema.maxLength === 'number' && length > schema.maxLength) {
         throw new agent_response_length_failure_1.AgentResponseLengthFailure(path, schema.maxLength);
     }
 }

@@ -835,3 +835,16 @@ coordinator retained-result cases. Existing fresh-completion protections remain
 regression evidence and are not counted again. These supplement the three Unicode cases in
 the semantic-publication SDD; all budgets, full validation and native checks remain.
 Operator docs MUST distinguish completing a retained result from repeating writes.
+
+Repository Secret overrides MUST remain the effective binding in both batch
+organization reuse and Customize. A same-name candidate organization Secret in
+the projected inventory does not change scope: the shared snapshot and additive
+grant list exclude the shadowed organization resource. The credential preflight
+retains and checks the repository binding, and an invalid trusted result blocks
+instead of falling back to the organization Secret. This restates the existing
+precedence contract without changing configuration or grants. Minimum **four
+additional composition cases** cover both sources with valid/invalid trusted
+health, using the real credential collector and shared-access planner together;
+each proves no organization grant or Secret-value prompt. Setup operator docs
+must explain that projection does not move a repository Secret to organization
+scope. Existing pure-policy/global/module budgets remain required.

@@ -1897,10 +1897,22 @@ branch-management documentation states the separate model-facts budget.
 
 ### Unicode fact-bound agreement (2026-10-17)
 
-JSON Schema `maxLength` and the response parser MUST both count Unicode code
-points, including supplementary characters. JavaScript UTF-16 string length is
+JSON Schema `maxLength`, the shared local validator's `minLength`/`maxLength`,
+and the response parser MUST all count Unicode code points, including
+supplementary characters. This follows the [JSON Schema string-validation
+contract](https://json-schema.org/draft/2020-12/json-schema-validation#name-maxlength).
+JavaScript UTF-16 string length is
 not the schema boundary. Worst-case JSON escaping remains six bytes per code
 point, so the aggregate arithmetic and fixed runtime/source limits are unchanged.
 Minimum **three additional pure cases** cover the 600-code-point supplementary
 boundary, 601-code-point rejection and the smaller calculated limit. No locale
 or user configuration changes are introduced; all pure coverage budgets remain.
+
+An additional **six distinct cases** MUST cover the local validation boundary:
+four supplementary-character minimum/maximum accept/reject cases and two
+schema-validation-to-progress-parser compositions at the default 600 and an
+adaptive 20 code-point limit. The compositions accept the boundary and reject
+one extra code point at both stages. They supplement, rather than recount, the
+three parser-only cases. Existing response size/prompt byte ceilings and typed,
+sanitized length failures remain unchanged; catalog evidence and operator docs
+must identify the shared local validator.
