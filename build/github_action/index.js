@@ -47360,7 +47360,7 @@ Do not add the \`${profile.deployment.launcherLabel}\` label, dispatch a deploym
 
 Never expose credentials, tokens, private keys, or other secrets in issues, commits, pull requests, logs, or diagnostic comments.
 
-For the full contributor flow, read [repository collaboration](../docs/agents/repository-collaboration.mdx). For drift and recovery, read [guidance troubleshooting](../docs/agents/repository-guidance-troubleshooting.mdx).
+For the full contributor flow, read [repository collaboration](https://github.com/vypdev/copilot/blob/master/docs/agents/repository-collaboration.mdx). For drift and recovery, read [guidance troubleshooting](https://github.com/vypdev/copilot/blob/master/docs/agents/repository-guidance-troubleshooting.mdx).
 `;
 }
 function renderRepositoryAgentSkill() {
