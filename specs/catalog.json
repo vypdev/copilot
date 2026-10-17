@@ -1281,7 +1281,7 @@
       "status": "implemented",
       "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-14",
+      "lastVerified": "2026-10-17",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
         "specs/pre-branch-sdd-gate.md",
@@ -1911,7 +1911,7 @@
       "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-14",
+      "lastVerified": "2026-10-17",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"
@@ -1941,6 +1941,7 @@
         "src/application/policies/setup_configuration_plan.ts",
         "src/application/policies/agent_execution/agent_execution_policy_dispatcher.ts",
         "src/application/policies/agent_execution/codex_execution_plan_policy.ts",
+        "src/application/policies/agent_execution/codex_output_schema_policy.ts",
         "src/application/policies/agent_execution/strict_output_schema_policy.ts",
         "src/application/policies/agent_response_schemas.ts",
         "src/application/usecases/actions/progress_response.ts",
@@ -1970,7 +1971,8 @@
         "src/infrastructure/untrusted_command_environment.ts",
         "scripts/diagnose-windows-powershell-startup.cjs",
         "scripts/diagnose-windows-sandbox-prerequisites.cjs",
-        "src/infrastructure/logging/logger_agent_execution_observer_adapter.ts"
+        "src/infrastructure/logging/logger_agent_execution_observer_adapter.ts",
+        "scripts/coverage-budgets.json"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
@@ -1982,6 +1984,7 @@
         "src/data/repository/__tests__/agent_cli_exit_diagnostic.test.ts",
         "src/data/repository/__tests__/agent_cli_provisioner.test.ts",
         "src/application/policies/__tests__/agent_execution_plan_policy.test.ts",
+        "src/application/policies/__tests__/codex_output_schema_policy.test.ts",
         "src/application/policies/__tests__/agent_response_schemas.test.ts",
         "src/application/policies/__tests__/strict_output_schema_policy.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/schema.test.ts",

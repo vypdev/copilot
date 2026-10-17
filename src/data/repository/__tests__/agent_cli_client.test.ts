@@ -373,7 +373,7 @@ describe('AgentCliClient admitted process execution', () => {
                 }).finally(() => {run.mockRestore();rmSync(executionPlan.runtimeDirectory,{recursive:true,force:true});});
         });
 
-    it('bounds stderr classification to the first 8 KiB', () => {
+    it('classifies a terminal diagnostic after the first 8 KiB of stderr', () => {
         jest.useFakeTimers();
         const executionPlan = plan('unused');
         try {
@@ -381,14 +381,62 @@ describe('AgentCliClient admitted process execution', () => {
             const lifecycle = createAgentProcessLifecycle({ exitCode: 1 } as never, executionPlan,
                 undefined, jest.fn(), reject);
             lifecycle.appendStderr(Buffer.from('x'.repeat(8 * 1024)));
-            lifecycle.appendStderr(Buffer.from('model gpt-6-luna is not available'));
+            lifecycle.appendStderr(Buffer.from('\nmodel gpt-6-luna is not available'));
             lifecycle.onClose(1);
-            expect(reject).toHaveBeenCalledWith(expect.objectContaining({ exitDiagnostic: 'unclassified' }));
+            expect(reject).toHaveBeenCalledWith(expect.objectContaining({ exitDiagnostic: 'reported-model-unavailable' }));
         } finally {
             jest.useRealTimers();
             rmSync(executionPlan.runtimeDirectory, { recursive: true, force: true });
         }
     });
+
+    it.each(['split-terminal', 'single-large-chunk', 'evicted-middle'] as const)(
+        'keeps process failure diagnostics within a bounded stderr tail: %s', scenario => {
+            jest.useFakeTimers();
+            const executionPlan = plan('unused');
+            const diagnostic = 'ERROR: Incomplete response returned, reason: max_output_tokens';
+            const reject = jest.fn();
+            try {
+                const lifecycle = createAgentProcessLifecycle({ exitCode: 1 } as never, executionPlan,
+                    undefined, jest.fn(), reject);
+                const padding = 'private prompt '.repeat(6000);
+                if (scenario === 'split-terminal') {
+                    lifecycle.appendStderr(Buffer.from(`${padding}\n${diagnostic.slice(0, 25)}`));
+                    lifecycle.appendStderr(Buffer.from(`${diagnostic.slice(25)}\n`));
+                } else if (scenario === 'single-large-chunk') {
+                    lifecycle.appendStderr(Buffer.from(`${padding}\n${diagnostic}\n`));
+                } else {
+                    lifecycle.appendStderr(Buffer.from(`${padding}\n${diagnostic}\n${padding}`));
+                }
+                lifecycle.onClose(1);
+                expect(reject).toHaveBeenCalledWith(expect.objectContaining({
+                    category: 'process', retryable: false,
+                    exitDiagnostic: scenario === 'evicted-middle' ? 'unclassified' : 'reported-output-token-limit',
+                }));
+                expect(JSON.stringify(reject.mock.calls)).not.toContain('private prompt');
+            } finally {
+                jest.useRealTimers();
+                rmSync(executionPlan.runtimeDirectory, { recursive: true, force: true });
+            }
+        },
+    );
+
+    it('reports a real child output-token limit after a long prompt without publishing either stream', async () => {
+        const observe = jest.fn();
+        const script = `process.stderr.write('private prompt '.repeat(6000));
+            process.stderr.write('\\nERROR: Incomplete response returned, reason: max_output_tokens\\n', () => process.exit(1));`;
+        const executionPlan = plan(script);
+        await expect(client(executionPlan, { observe }).execute({
+            configuration: { provider: 'codex', model: 'model' }, capability: 'findings',
+            prompt: 'private input', timeoutMs: 5_000,
+        })).rejects.toMatchObject({ category: 'process', exitCode: 1, retryable: false,
+            exitDiagnostic: 'reported-output-token-limit' });
+        expect(observe).toHaveBeenLastCalledWith(expect.objectContaining({
+            state: 'failed', exitDiagnostic: 'reported-output-token-limit',
+        }));
+        expect(JSON.stringify(observe.mock.calls)).not.toMatch(/private prompt|private input|max_output_tokens/);
+        expect(existsSync(executionPlan.runtimeDirectory)).toBe(false);
+    }, MULTI_CASE_TEST_TIMEOUT_MS);
 
     it('rejects process start failures without exposing raw configuration', async () => {
         await expect(client(plan('unused', { executable: process.platform === 'win32'

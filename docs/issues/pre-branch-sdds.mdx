@@ -63,6 +63,13 @@ Automatic updates retain the owning SDD from its original Git commit, including 
 
 ### Draft validation recovery
 
+Drafting aims for a complete compact document: about 6,000 characters for an
+update appendix or 10,000 for a new/companion SDD. These targets leave room for
+the provider to complete its structured response; they do not remove resolved
+requirements or change the acceptance limits below. Codex receives a compatible
+closed JSON shape; Copilot enforces the complete original string-length schema
+locally before any document reaches the writer.
+
 Copilot limits proposed update appendices to 18,000 characters and complete new
 or companion specifications to 70,000. If a generated draft exceeds its limit,
 it tries one concise regeneration for the same owner and answers. Missing
@@ -70,6 +77,14 @@ required sections or a numeric test budget can use that same single attempt.
 All validation and freshness checks still apply. If the second draft still fails,
 no draft is published; existing answers and SDDs are retained. Retry with a proportional
 change or an approved companion specification.
+
+If the Action log reports `reported-output-token-limit`, the provider stopped
+before completing its response. No draft or branch is published for that failed
+generation, and the answered plan is retained. Update Copilot to use the compact
+targets and native-schema compatibility, then rerun the same issue workflow. If it still fails, review concise
+coverage of the resolved scope before another run. This is a different limit
+from a request timeout or a GitHub permission failure; the Action does not
+silently change models, credentials, native JSON shape or hard document limits.
 
 ### Additional clarification rounds
 

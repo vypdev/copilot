@@ -79,6 +79,7 @@ export function createAgentProcessLifecycle(
     const stdoutChunks: Buffer[] = [];
     let stderrBytes = 0;
     const stderrChunks: Buffer[] = [];
+    let stderrTail: Buffer = Buffer.alloc(0);
     let outputBytes = 0;
     let settled = false;
     let terminationError: Error | undefined;
@@ -134,6 +135,9 @@ export function createAgentProcessLifecycle(
             stderrChunks.push(retained);
             stderrBytes += retained.byteLength;
         }
+        const retainedTail = chunk.subarray(-MAX_STDERR_BYTES);
+        const previousTail = stderrTail.subarray(Math.max(0, stderrTail.length + retainedTail.length - MAX_STDERR_BYTES));
+        stderrTail = Buffer.concat([previousTail, retainedTail]);
     };
     const onStdinError = () => beginTermination(new AgentCliError('Unable to send the prompt to the agent CLI.', 'process'));
     const onError = () => finishReject(new AgentCliError('Unable to start agent CLI.', 'process'));
@@ -144,8 +148,11 @@ export function createAgentProcessLifecycle(
         }
         if (code !== 0) {
             const diagnostic = stderrBytes > 0 ? ' Diagnostic output was suppressed for safety.' : '';
+            const terminalDiagnostic = classifyAgentCliExitDiagnostic(stderrTail.toString('utf8'));
             const exitDiagnostic = stderrBytes > 0
-                ? classifyAgentCliExitDiagnostic(Buffer.concat(stderrChunks).toString('utf8'))
+                ? terminalDiagnostic === 'unclassified'
+                    ? classifyAgentCliExitDiagnostic(Buffer.concat(stderrChunks).toString('utf8'))
+                    : terminalDiagnostic
                 : undefined;
             finishReject(new AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75, code ?? undefined, exitDiagnostic));
             return;

@@ -39,6 +39,11 @@ list is fixed by Copilot and cannot be expanded through repository inputs.
 
 The hard maxima are 15 minutes, 512 KiB of prompt bytes, and 4 MiB of combined process output. Structured tasks declare a JSON Schema. Before Codex starts, Copilot requires a closed object schema in which every property is required, optional values are nullable, nested objects reject additional properties, and arrays define their items. Copilot then validates the returned response locally as well. An incompatible contract, invalid or oversized output, and prose-wrapped JSON are rejected; removed response shapes have no legacy conversion path.
 
+For Codex, the native schema preserves that closed JSON shape while string
+length bounds are enforced locally from the complete original schema. This
+provider compatibility projection also covers nested and nullable strings;
+it does not change numeric/array bounds, required fields or local acceptance.
+
 Every product-facing read-only task also receives the canonical effective
 `targetLocale` and must return the exact same tag in required `outputLocale`
 metadata. This covers Think and help answers, recommendations, progress,
@@ -58,6 +63,13 @@ the observer contract.
 The reviewed runtime baseline is Codex `codex-cli 0.156.1`, OpenCode `1.18.3`, and Cursor Agent `2026.09.10-fd3934a`. An available runtime may report any non-empty version and is never silently replaced; an incompatible command surface fails terminally with no provider fallback. See [Agent input reference](/agents/input-reference) and [Agent failure policy](/agents/failure-policy).
 
 When a run rejects process output, its log includes a fixed local cause: `output-limit`, `empty-output`, `malformed-json-event`, `invalid-json-event`, `missing-text-events`, or `unclassified`. These codes distinguish the existing rejection paths without exposing the response or prompt. Inspect the code before retrying or changing a provider integration; a historical log that only says `run/output` cannot establish the cause.
+
+A failed CLI process can report `reported-output-token-limit` when the provider
+cuts off generation before completing its response. This differs from Copilot's
+combined output-byte limit or request timeout. Failure classification checks a
+bounded last 8 KiB of stderr before the existing first 8 KiB, so a long prompt
+cannot hide a terminal diagnostic. Only a fixed hint is logged; neither window
+is published. The hint does not authorize an automatic retry or a settings change.
 
 ## Codex service-runner support
 

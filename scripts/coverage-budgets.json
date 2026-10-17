@@ -120,6 +120,7 @@
             "src/application/policies/agent_execution/provider_execution_policy.ts",
             "src/application/policies/agent_execution/agent_execution_policy_dispatcher.ts",
             "src/application/policies/agent_execution/codex_execution_plan_policy.ts",
+            "src/application/policies/agent_execution/codex_output_schema_policy.ts",
             "src/application/policies/agent_execution/opencode_execution_plan_policy.ts",
             "src/application/policies/agent_execution/cursor_execution_plan_policy.ts",
             "src/infrastructure/agents/agent_runtime_manifest.ts",

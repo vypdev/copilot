@@ -139,7 +139,7 @@ describe('draftSddMarkdown', () => {
       .resolves.toBe('Valid regenerated content');
     expect(query).toHaveBeenCalledTimes(2);
     expect(query.mock.calls[1][0].prompt).toContain('same owner and plan');
-    expect(query.mock.calls[1][0].prompt).toContain('12000 characters');
+    expect(query.mock.calls[1][0].prompt).toContain('6000 characters');
     expect(query.mock.calls[1][0].prompt).not.toContain('untrusted previous draft');
     expect(query.mock.calls[1][0].options).toEqual(query.mock.calls[0][0].options);
   });
@@ -165,4 +165,22 @@ describe('draftSddMarkdown', () => {
     await expect(draftSddMarkdown({ query }, configuration, plan, 'Original prompt')).rejects.toBe(error);
     expect(query).toHaveBeenCalledTimes(1);
   });
+
+  it.each([['update', 18000, 6000], ['companion', 70000, 10000]] as const)(
+    'uses a compact %s draft target while preserving the hard bound, resolved requirements and repair ceiling', async (action, maximum, target) => {
+      const query = jest.fn().mockResolvedValueOnce({ markdown: 'x'.repeat(maximum + 1) })
+        .mockResolvedValueOnce({ markdown: 'Accepted compact complete draft' });
+      const requirements = 'Resolved R1: preserve existing secrets. R2: exact reviewed repositories. R3: numeric tests and recovery.';
+      await expect(draftSddMarkdown({ query }, configuration, { ...plan, action } as SddPlan, requirements))
+        .resolves.toBe('Accepted compact complete draft');
+      expect(query).toHaveBeenCalledTimes(2);
+      for (const [request] of query.mock.calls) {
+        expect(request.prompt).toContain(`aim for ${target} characters`);
+        expect(request.prompt).toContain(requirements);
+        expect(request.prompt).toContain('Preserve the same owner, decisions and requirements');
+        expect(request.options.schema.properties.markdown).toEqual({ type: 'string', minLength: 1800, maxLength: maximum });
+      }
+      expect(query.mock.calls[1][0].prompt).toContain('same owner and plan');
+    },
+  );
 });
