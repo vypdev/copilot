@@ -30,7 +30,10 @@ export class SetupBatchWorkspaceAdapter implements SetupBatchRenderPort {
       ensureGitHubDirs(root);
       const sourceAction = existing.some(file => file.path.startsWith('.github/workflows/') && hasRootLocalSetupAction(file.content!));
       const sourceGuidance = [REPOSITORY_AGENT_GUIDE_PATH, REPOSITORY_AGENT_PROFILE_PATH, REPOSITORY_AGENT_MANIFEST_PATH,
-        REPOSITORY_AGENT_SKILL_PATH].every(path => existing.some(file => file.path === path));
+        REPOSITORY_AGENT_SKILL_PATH].filter(path => existing.some(file => file.path === path));
+      if (sourceAction && sourceGuidance.length > 0 && sourceGuidance.length !== 4) {
+        throw new Error('Source repository guidance is incomplete. Restore it with the checked-in source generator, then review setup again.');
+      }
       const sourceObserver = join(__dirname, '..', '..', 'setup', 'source-workflows', 'copilot_pull_request_approval.yml');
       const observerPath = '.github/workflows/copilot_pull_request_approval.yml';
       const preserveSourceObserver = configuration.pullRequestApproval.mode !== 'off' && existsSync(sourceObserver)
@@ -40,7 +43,7 @@ export class SetupBatchWorkspaceAdapter implements SetupBatchRenderPort {
           && (!sourceAction || workflow.file === 'copilot_commit.yml')).map(workflow => workflow.file);
       copySetupFiles(root, undefined, configuration.features, { setupConfiguration: configuration,
         updateExistingWorkflows: true, approvedWorkflowFiles: changedWorkflows,
-        preserveExistingAgentGuidance: sourceAction && sourceGuidance });
+        preserveExistingAgentGuidance: sourceAction && sourceGuidance.length === 4 });
       const previous = new Map(existing.map(file => [file.path, file.content]));
       const generated = new Map<string, string>();
       const visit = (directory: string): void => {

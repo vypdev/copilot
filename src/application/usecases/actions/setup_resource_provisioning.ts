@@ -1,4 +1,4 @@
-import { setupSecretRevisionSnapshot, hasCompleteSetupSecretRevisions } from '../../policies/setup_remote_facts_policy';
+import { sameSetupRemoteFacts, hasCompleteSetupSecretRevisions } from '../../policies/setup_remote_facts_policy';
 import type {
     SetupConfiguration,
     SetupCredentialCollection,
@@ -165,7 +165,7 @@ export async function resolveRemoteConfiguration(
                 errors.push('Retained Secret revision metadata could not be verified. Restore metadata access and prepare a fresh plan. No changes were made.');
                 return undefined;
             }
-            if (reuseSnapshot(fresh) !== reuseSnapshot(context.setupRemoteConfiguration)) {
+            if (!sameSetupRemoteFacts(fresh, context.setupRemoteConfiguration)) {
                 errors.push('Configuration or access changed after review. Inspect and approve a new plan before applying it.');
                 return undefined;
             }
@@ -191,16 +191,6 @@ export async function resolveRemoteConfiguration(
         }
         return undefined;
     }
-}
-
-function reuseSnapshot(remote: SetupRemoteConfiguration): string {
-    return JSON.stringify([remote.ownerType, remote.repositoryId, remote.defaultBranch, remote.repositoryVisibility,
-        remote.repositoryVariablesAccess, remote.organizationVariablesAccess,
-        remote.repositorySecretsAccess, remote.organizationSecretsAccess,
-        [...remote.repositoryVariables].sort((a, b) => a.name.localeCompare(b.name)),
-        [...remote.organizationVariables].sort((a, b) => a.name.localeCompare(b.name)),
-        [...remote.repositorySecrets].sort(), [...remote.organizationSecrets].sort(), remote.organizationWorkflowPat,
-        setupSecretRevisionSnapshot(remote)]);
 }
 
 /** Groups resources by their resolved storage target so each provider call is scoped explicitly. */

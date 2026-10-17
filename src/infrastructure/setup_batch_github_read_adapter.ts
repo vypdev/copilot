@@ -6,6 +6,7 @@ import type { GithubSetupBatchClient } from './github/ports/github_setup_batch_p
 import { validSetupBatchAssetPath } from '../application/policies/setup_batch_policy';
 import { SETUP_ORGANIZATION_VARIABLE_BINDINGS } from '../application/policies/setup_organization_variable_bindings';
 import { SETUP_CREDENTIAL_HEALTH_BINDINGS } from '../domain/setup_credential_health';
+import { setupBatchRateLimitDelay } from '../application/policies/setup_batch_retry_policy';
 
 const managedVariables = new Set([...SETUP_ORGANIZATION_VARIABLE_BINDINGS.flatMap(binding => [binding.variable, binding.fallbackVariable]),
   'PR_APPROVAL_POLICY', 'COPILOT_ISSUE_WORKFLOW_PROFILE', 'AGENT_ALLOWED_PROVIDERS', 'AGENT_ALLOWED_MODEL_PROVIDERS']);
@@ -17,7 +18,9 @@ export class SetupBatchProviderError extends Error {
   }
 }
 export class SetupBatchGithubTransport {
-  constructor(private readonly provider: GithubClientPort<GithubSetupBatchClient>) {}
+  constructor(private readonly provider: GithubClientPort<GithubSetupBatchClient>, private readonly clock = {
+    now: () => Date.now(), wait: (milliseconds: number): Promise<void> => new Promise(resolve => setTimeout(resolve, milliseconds)),
+  }) {}
   async call(token: string, route: string, parameters: BatchRecord): Promise<unknown> {
     const read = route.startsWith('GET ');
     for (let attempt = 0; attempt < (read ? 3 : 1); attempt += 1) {
@@ -38,6 +41,14 @@ export class SetupBatchGithubTransport {
         const code = error instanceof SetupBatchProviderError ? error.code : rateLimited ? 'rate-limited' : status === 403 ? 'forbidden'
           : status === 404 ? 'not-found' : status === 429 ? 'rate-limited'
             : typeof status === 'number' && status >= 500 ? 'transient' : 'unknown';
+        if (read && code === 'rate-limited' && attempt < 2) {
+          const delay = setupBatchRateLimitDelay(headers, this.clock.now());
+          if (delay !== undefined) {
+            clearTimeout(timer);
+            await this.clock.wait(delay);
+            continue;
+          }
+        }
         if (!read || code !== 'transient' || attempt === 2) throw new SetupBatchProviderError(code);
       } finally { clearTimeout(timer); }
     }

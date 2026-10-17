@@ -792,6 +792,7 @@
             "src/application/policies/setup_organization_variable_reuse_policy.ts",
             "src/application/policies/setup_credential_binding_policy.ts",
             "src/application/policies/setup_batch_policy.ts",
+            "src/application/policies/setup_batch_retry_policy.ts",
             "src/application/policies/setup_batch_selection_policy.ts",
             "src/application/policies/setup_batch_access_policy.ts",
             "src/application/policies/setup_batch_view_policy.ts",

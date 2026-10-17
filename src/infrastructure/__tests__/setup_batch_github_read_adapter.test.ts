@@ -88,6 +88,25 @@ describe('bounded GitHub setup discovery and namespace inspection', () => {
     await expect(f.transport.call('fixture', 'POST /fixed', {})).rejects.toThrow('transient');
     expect(f.request).toHaveBeenCalledTimes(1);
   });
+  it('waits for a provider-directed read retry and does not retry the same mutation', async () => {
+    const f = fixture(); const clock = { now: () => 0, wait: jest.fn(async () => undefined) };
+    const transport = new SetupBatchGithubTransport({ getClient: () => ({ request: f.request }) }, clock);
+    const limited = { status: 429, response: { headers: { 'retry-after': '2' } } };
+    f.request.mockRejectedValueOnce(limited).mockResolvedValueOnce({ data: 'read result' });
+    expect(await transport.call('fixture', 'GET /fixed', {})).toBe('read result');
+    expect(clock.wait).toHaveBeenCalledWith(2000); expect(f.request).toHaveBeenCalledTimes(2);
+    f.request.mockClear().mockRejectedValue(limited); clock.wait.mockClear();
+    await expect(transport.call('fixture', 'PUT /fixed', {})).rejects.toThrow('rate-limited');
+    expect(f.request).toHaveBeenCalledTimes(1); expect(clock.wait).not.toHaveBeenCalled();
+  });
+  it('limits persistent 403 rate-limit responses to three reads and two waits', async () => {
+    const f = fixture(); const clock = { now: () => 0, wait: jest.fn(async () => undefined) };
+    const transport = new SetupBatchGithubTransport({ getClient: () => ({ request: f.request }) }, clock);
+    f.request.mockRejectedValue({ status: 403, response: { headers: { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '15' } } });
+    await expect(transport.call('fixture', 'GET /fixed', {})).rejects.toThrow('rate-limited');
+    expect(f.request).toHaveBeenCalledTimes(3); expect(clock.wait.mock.calls).toHaveLength(2);
+    expect(clock.wait).toHaveBeenNthCalledWith(1, 15000); expect(clock.wait).toHaveBeenNthCalledWith(2, 15000);
+  });
   it('reads only regular allowlisted assets at the reviewed immutable tree and blob identities', async () => {
     const f = fixture(); const content = 'existing guide';
     f.request.mockResolvedValueOnce({ data: { truncated: false, tree: [

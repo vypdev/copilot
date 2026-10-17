@@ -469,8 +469,8 @@ retrying; there is no automatic rollback of an unconfirmed remote write.
 | Partial / stopped | Completed grants, repository resources and PRs remain. Inspect their receipts before the explicit retry. |
 | Plan drift / moved head | No overwrite is attempted. Inspect the default branch and existing installer PR; renew the plan instead of force-pushing. |
 | Workflow runners need review | Existing matching jobs retain their static runner labels/group. A dynamic runner expression or unreadable job definition blocks automatic upgrade; review its complete matrix/input contract separately, then prepare again. Newly added jobs keep template defaults and require runner inspection before merge. |
-| Source Action workflows retained | Workflows calling the root-local `./` Action retain their native jobs and release configuration. Setup only adds the installer push exclusion to the source Commit workflow. The all-branch synchronization observer, other native workflows and complete source guidance remain in their existing version. Review their migration with the source generator; consumer templates cannot replace them. |
-| Rate-limited | The target pauses without blind mutation retries. Wait for GitHub access to recover, then inspect and explicitly retry. |
+| Source Action workflows retained | Workflows calling the root-local `./` Action retain their native jobs and release configuration. Setup only adds the installer push exclusion to the source Commit workflow. The all-branch synchronization observer, other native workflows and complete source guidance remain in their existing version. A partially missing source guidance set blocks rendering: restore it with the checked-in source generator, then inspect again. Review their migration with the source generator; consumer templates cannot replace them. |
+| Rate-limited | Reads honor a valid provider wait of up to 15 seconds, at most twice in three attempts. Missing, invalid or longer waits pause the target. Mutations are not automatically retried. Wait for access to recover, then inspect and explicitly retry. |
 | Cleanup pending | Resolve the reported temporary probe resource before starting any installation work. |
 
 A new process needs a fresh PAT and review. `--resume-operation <operation-id>`
@@ -510,3 +510,9 @@ its PUT; the new review uses current memberships and timestamps. Any rotation
 or other revision change after that review still blocks Apply. A stale plan
 passed directly to Apply is deliberately rejected rather than trusting an
 unrecorded grant or ignoring Secret freshness.
+
+
+When current-repository organization reuse reports configuration/access changed
+after review, inspect the credential-health workflow too. Its installation or
+removal changes required bootstrap permissions. Prepare and approve a fresh plan
+instead of applying a previously audited permission set.

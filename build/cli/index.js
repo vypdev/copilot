@@ -47469,6 +47469,34 @@ function exact(value, keys) { return Object.keys(value).length === keys.length &
 
 /***/ }),
 
+/***/ 70775:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.setupBatchRateLimitDelay = setupBatchRateLimitDelay;
+/** Provider-directed read waits only: at most two waits of 15 seconds per call. */
+function setupBatchRateLimitDelay(headers, now) {
+    if (!Number.isFinite(now))
+        return undefined;
+    const retry = headers?.['retry-after'];
+    const reset = headers?.['x-ratelimit-reset'];
+    let delay;
+    if (typeof retry === 'string' && /^\d+$/u.test(retry))
+        delay = Number(retry) * 1000;
+    else if (typeof retry === 'string' && /^[A-Za-z]{3}, .* GMT$/u.test(retry))
+        delay = Date.parse(retry) - now;
+    else if (retry === undefined && typeof reset === 'string' && /^\d+$/u.test(reset))
+        delay = Number(reset) * 1000 - now;
+    else
+        return undefined;
+    return Number.isFinite(delay) && delay >= 0 && delay <= 15000 ? Math.max(1000, delay) : undefined;
+}
+
+
+/***/ }),
+
 /***/ 1694:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -56168,7 +56196,7 @@ async function resolveRemoteConfiguration(context, dependencies, setupConfigurat
                 errors.push('Retained Secret revision metadata could not be verified. Restore metadata access and prepare a fresh plan. No changes were made.');
                 return undefined;
             }
-            if (reuseSnapshot(fresh) !== reuseSnapshot(context.setupRemoteConfiguration)) {
+            if (!(0, setup_remote_facts_policy_1.sameSetupRemoteFacts)(fresh, context.setupRemoteConfiguration)) {
                 errors.push('Configuration or access changed after review. Inspect and approve a new plan before applying it.');
                 return undefined;
             }
@@ -56194,15 +56222,6 @@ async function resolveRemoteConfiguration(context, dependencies, setupConfigurat
         }
         return undefined;
     }
-}
-function reuseSnapshot(remote) {
-    return JSON.stringify([remote.ownerType, remote.repositoryId, remote.defaultBranch, remote.repositoryVisibility,
-        remote.repositoryVariablesAccess, remote.organizationVariablesAccess,
-        remote.repositorySecretsAccess, remote.organizationSecretsAccess,
-        [...remote.repositoryVariables].sort((a, b) => a.name.localeCompare(b.name)),
-        [...remote.organizationVariables].sort((a, b) => a.name.localeCompare(b.name)),
-        [...remote.repositorySecrets].sort(), [...remote.organizationSecrets].sort(), remote.organizationWorkflowPat,
-        (0, setup_remote_facts_policy_1.setupSecretRevisionSnapshot)(remote)]);
 }
 /** Groups resources by their resolved storage target so each provider call is scoped explicitly. */
 function groupSetupResources(resources, kind, configuration, remoteConfiguration) {
@@ -97308,6 +97327,7 @@ exports.batchSha = batchSha;
 const setup_batch_policy_1 = __nccwpck_require__(52214);
 const setup_organization_variable_bindings_1 = __nccwpck_require__(19698);
 const setup_credential_health_1 = __nccwpck_require__(68136);
+const setup_batch_retry_policy_1 = __nccwpck_require__(70775);
 const managedVariables = new Set([...setup_organization_variable_bindings_1.SETUP_ORGANIZATION_VARIABLE_BINDINGS.flatMap(binding => [binding.variable, binding.fallbackVariable]),
     'PR_APPROVAL_POLICY', 'COPILOT_ISSUE_WORKFLOW_PROFILE', 'AGENT_ALLOWED_PROVIDERS', 'AGENT_ALLOWED_MODEL_PROVIDERS']);
 class SetupBatchProviderError extends Error {
@@ -97318,8 +97338,11 @@ class SetupBatchProviderError extends Error {
 }
 exports.SetupBatchProviderError = SetupBatchProviderError;
 class SetupBatchGithubTransport {
-    constructor(provider) {
+    constructor(provider, clock = {
+        now: () => Date.now(), wait: (milliseconds) => new Promise(resolve => setTimeout(resolve, milliseconds)),
+    }) {
         this.provider = provider;
+        this.clock = clock;
     }
     async call(token, route, parameters) {
         const read = route.startsWith('GET ');
@@ -97345,6 +97368,14 @@ class SetupBatchGithubTransport {
                 const code = error instanceof SetupBatchProviderError ? error.code : rateLimited ? 'rate-limited' : status === 403 ? 'forbidden'
                     : status === 404 ? 'not-found' : status === 429 ? 'rate-limited'
                         : typeof status === 'number' && status >= 500 ? 'transient' : 'unknown';
+                if (read && code === 'rate-limited' && attempt < 2) {
+                    const delay = (0, setup_batch_retry_policy_1.setupBatchRateLimitDelay)(headers, this.clock.now());
+                    if (delay !== undefined) {
+                        clearTimeout(timer);
+                        await this.clock.wait(delay);
+                        continue;
+                    }
+                }
                 if (!read || code !== 'transient' || attempt === 2)
                     throw new SetupBatchProviderError(code);
             }
@@ -97643,7 +97674,10 @@ class SetupBatchWorkspaceAdapter {
             (0, setup_files_1.ensureGitHubDirs)(root);
             const sourceAction = existing.some(file => file.path.startsWith('.github/workflows/') && (0, setup_workflow_upgrade_1.hasRootLocalSetupAction)(file.content));
             const sourceGuidance = [repository_agent_guidance_policy_1.REPOSITORY_AGENT_GUIDE_PATH, repository_agent_guidance_policy_1.REPOSITORY_AGENT_PROFILE_PATH, repository_agent_guidance_policy_1.REPOSITORY_AGENT_MANIFEST_PATH,
-                repository_agent_guidance_policy_1.REPOSITORY_AGENT_SKILL_PATH].every(path => existing.some(file => file.path === path));
+                repository_agent_guidance_policy_1.REPOSITORY_AGENT_SKILL_PATH].filter(path => existing.some(file => file.path === path));
+            if (sourceAction && sourceGuidance.length > 0 && sourceGuidance.length !== 4) {
+                throw new Error('Source repository guidance is incomplete. Restore it with the checked-in source generator, then review setup again.');
+            }
             const sourceObserver = (0, node_path_1.join)(__dirname, '..', '..', 'setup', 'source-workflows', 'copilot_pull_request_approval.yml');
             const observerPath = '.github/workflows/copilot_pull_request_approval.yml';
             const preserveSourceObserver = configuration.pullRequestApproval.mode !== 'off' && (0, node_fs_1.existsSync)(sourceObserver)
@@ -97653,7 +97687,7 @@ class SetupBatchWorkspaceAdapter {
                 && (!sourceAction || workflow.file === 'copilot_commit.yml')).map(workflow => workflow.file);
             (0, setup_files_1.copySetupFiles)(root, undefined, configuration.features, { setupConfiguration: configuration,
                 updateExistingWorkflows: true, approvedWorkflowFiles: changedWorkflows,
-                preserveExistingAgentGuidance: sourceAction && sourceGuidance });
+                preserveExistingAgentGuidance: sourceAction && sourceGuidance.length === 4 });
             const previous = new Map(existing.map(file => [file.path, file.content]));
             const generated = new Map();
             const visit = (directory) => {

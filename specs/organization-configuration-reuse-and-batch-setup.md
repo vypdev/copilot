@@ -466,8 +466,10 @@ Update the existing setup-and-doctor, configuration-management, local-web-assist
   probes. A merged or otherwise changed default base requires inspection of
   retained PRs followed by a fresh operation. No background merge/verification
   monitor or automatic cross-repository rollback is included.
-- GitHub read requests allow three transient attempts, 15 seconds each; explicit
-  rate limits pause immediately instead of creating retry storms. Namespace and
+- GitHub read requests allow three total attempts, 15 seconds per request.
+  Rate-limited reads honor valid provider waits of at most 15 seconds each
+  (at most two waits / 30 seconds total); missing, invalid or longer waits pause
+  the target instead of guessing or creating retry storms. Namespace and
   membership collections use 30-item pages with a 1,000-resource bound. Repository
   discovery is limited to 1,000 visible candidates with exact-name lookup.
 
@@ -706,8 +708,9 @@ list; ambiguous Commit push filters block for separate review. Branch Sync MUST
 retain its all-branch observer contract. Source targets also retain existing
 native workflows without root-local steps (including explicit merge-queue Bash)
 and complete existing guide/profile/skill/manifest artifacts, whose version
-belongs to their checked-in generator. Missing artifacts still receive normal
-generation. Broader runner profiles and source/generator migration are tracked
+belongs to their checked-in generator. An entirely absent guidance set receives normal generation. A partial source
+guidance inventory MUST block before reconciliation: its checked-in generator
+version is required to restore the missing artifact without changing the others. Broader runner profiles and source/generator migration are tracked
 separately in [#556](https://github.com/vypdev/copilot/issues/556). This narrow compatibility rule introduces no identity-based
 repository allowlist. The original observer isolation rule still applies.
 
@@ -748,3 +751,36 @@ pure helper/global/module budgets, full build, lint/type, docs/spec validation
 and current-head native review remain required. Live source installation checks
 MUST verify Branch Sync filters, merge queue shell, source generator parity and
 retained runners before this compatibility fix is accepted.
+
+
+### Follow-up native review acceptance (2026-10-17)
+
+Organization reuse resource provisioning MUST use the shared remote-facts policy,
+including `credentialHealthWorkflow` and organization access. Installing,
+removing or losing visibility of this permission-affecting workflow after review
+invalidates Apply before files or resources change. No separate snapshot may
+omit a field already part of the shared policy.
+
+Rate-limited GET requests MAY retry only within three total request attempts.
+The pure wait policy accepts integer-second or HTTP-date `Retry-After`, otherwise
+an integer Unix `x-ratelimit-reset` when Retry-After is absent. A valid wait is
+0–15,000 ms and uses at least 1,000 ms to prevent an immediate storm; each call
+has at most two waits / 30,000 ms total, in addition to its 15-second request
+bounds. Invalid, past, missing or excessive waits pause with the existing
+rate-limited result and explicit retry action. POST/PUT/PATCH/DELETE do not gain
+automatic retries. These bounds are fixed, with no new operator configuration.
+
+A source Action target with some, but not all, canonical guidance artifacts MUST
+block before copying or reconciling existing artifacts. Operators restore the
+set with that repository's checked-in generator and prepare again. This is an
+intentional fail-closed compatibility boundary: generating one artifact from a
+new package could disagree with an old source generator. Complete source guidance
+continues unchanged; a completely absent set can be generated normally. Broader
+source migration remains in #556.
+
+Minimum **26 additional cases**: 17 pure wait-policy boundaries, two adapter
+retry-count/read-versus-mutation cases, four partial-source inventory cases and
+three workflow-state transitions before provisioning. The pure retry policy
+requires 100% in all coverage metrics; existing global/module budgets remain.
+User documentation MUST explain bounded waits, renewed review for workflow drift,
+and source-generator recovery before the current-head CI/native review gate.

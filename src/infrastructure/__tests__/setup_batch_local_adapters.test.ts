@@ -86,6 +86,21 @@ describe('isolated setup rendering and private durable receipts', () => {
     ]);
     expect(result.find(file => file.path === '.copilot/repository-profile.json')?.content).toContain('installation');
   });
+  it.each(['.copilot/AGENT_GUIDE.md', '.copilot/repository-profile.json', '.copilot/setup-manifest.json',
+    '.agents/skills/copilot-repository-workflow/SKILL.md'])('blocks partial source guidance with missing %s before reconciling any existing artifact', async missing => {
+    const existing = [
+      { path: '.github/workflows/copilot_issue.yml', content: 'jobs: {native: {steps: [{uses: "./"}]}}\n' },
+      ...['.copilot/AGENT_GUIDE.md', '.copilot/repository-profile.json', '.copilot/setup-manifest.json',
+        '.agents/skills/copilot-repository-workflow/SKILL.md'].filter(path => path !== missing)
+        .map(path => ({ path, content: `existing source artifact ${path}` })),
+    ];
+    const before = JSON.stringify(existing); const copy = jest.spyOn(setupFiles, 'copySetupFiles');
+    try {
+      await expect(new SetupBatchWorkspaceAdapter().render(createDefaultSetupConfiguration(), existing))
+        .rejects.toThrow('Restore it with the checked-in source generator');
+      expect(copy).not.toHaveBeenCalled(); expect(JSON.stringify(existing)).toBe(before);
+    } finally { copy.mockRestore(); }
+  });
   it('retains target-specific runner locations in real package templates and keeps the approval observer isolated', async () => {
     const configuration = createDefaultSetupConfiguration();
     configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'recommend' };

@@ -71,6 +71,16 @@ describe('organization reuse provisioning boundary', () => {
     expect(await resolveRemoteConfiguration(f.context, f.dependencies, f.configuration, errors)).toBeDefined();
     expect(errors).toEqual([]);
   });
+  it.each([
+    ['installed', 'missing'], ['missing', 'installed'], ['installed', 'unavailable'],
+  ] as const)('blocks credential-health workflow drift from %s to %s before provisioning', async (before, after) => {
+    const f = fixture(); const errors: string[] = [];
+    f.remote.credentialHealthWorkflow = before;
+    f.dependencies.setupRemoteConfigurationReadPort.inspect.mockResolvedValue({ ...f.remote, credentialHealthWorkflow: after });
+    expect(await resolveRemoteConfiguration(f.context, f.dependencies, f.configuration, errors)).toBeUndefined();
+    expect(errors).toEqual([expect.stringContaining('changed after review')]);
+    for (const writer of [f.upsert, f.scoped, f.secrets, f.scopedSecrets]) expect(writer).not.toHaveBeenCalled();
+  });
   it.each(['binding', 'repository', 'branch', 'access', 'visibility'] as const)('blocks %s drift before files or values change', async change => {
     const f = fixture(); const errors: string[] = [];
     const fresh = { ...f.remote };
