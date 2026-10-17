@@ -47333,7 +47333,7 @@ function planSetupBatchSharedAccess(configuration, target, remote, shared) {
     const requirements = (0, setup_credential_requirement_policy_1.buildSetupCredentialRequirements)(configuration);
     const selected = (0, setup_credential_binding_policy_1.selectedExistingSetupCredentials)(requirements, projected);
     const selectedNames = new Set(selected.map(requirement => requirement.name));
-    const retainedVariables = new Set(variables.retained.filter(binding => binding.scope === 'organization').map(binding => binding.name));
+    const retainedVariables = new Set(variables.retained.filter(binding => binding.scope === 'organization').map(binding => binding.sourceName ?? binding.name));
     // Projection exposes candidate names, not effective scope. Repository Secrets
     // win in credential collection and exclude both shared snapshots and grants.
     const relevant = shared.filter(resource => resource.kind === 'variable' ? retainedVariables.has(resource.name)
@@ -49830,9 +49830,17 @@ function planSetupOrganizationVariableReuse(desired, remote) {
         if (!/^[A-Z][A-Z0-9_]*$/u.test(variable.name) || names.has(variable.name))
             throw new Error('Invalid or duplicate desired Variable name.');
         names.add(variable.name);
-        const effective = repository.get(variable.name) ?? organization.get(variable.name);
-        if (effective && sameReusedSetupVariable(variable.name, effective.value, variable.value))
-            retained.push({ name: variable.name, scope: repository.has(variable.name) ? 'repository' : 'organization' });
+        const fallback = setup_organization_variable_bindings_1.SETUP_ORGANIZATION_VARIABLE_BINDINGS.find(binding => binding.variable === variable.name)?.fallbackVariable;
+        const inherited = fallback ? repository.get(fallback) ?? organization.get(fallback) : undefined;
+        const plannedFallback = fallback && desired.find(candidate => candidate.name === fallback);
+        // A reviewed generic override must not change a task that still needs the old value.
+        const effective = repository.get(variable.name) ?? organization.get(variable.name)
+            ?? (inherited && (!plannedFallback || sameReusedSetupVariable(fallback, inherited.value, plannedFallback.value)) ? inherited : undefined);
+        if (effective && sameReusedSetupVariable(variable.name, effective.value, variable.value)) {
+            const sourceName = effective.name.toUpperCase();
+            retained.push({ name: variable.name, scope: repository.has(sourceName) ? 'repository' : 'organization',
+                ...(sourceName === variable.name ? {} : { sourceName }) });
+        }
         else
             repositoryWrites.push({ ...variable });
     }
@@ -63103,8 +63111,8 @@ class SetupWizardUseCase {
             plan.organizationReuse = {
                 imported: organizationImport?.settings.filter(setting => setting.status === 'imported').length ?? 0,
                 needsReview: organizationImport?.settings.filter(setting => setting.status === 'needs-review').length ?? 0,
-                organizationVariables: reuse.retained.filter(binding => binding.scope === 'organization').map(binding => binding.name),
-                repositoryVariables: reuse.retained.filter(binding => binding.scope === 'repository').map(binding => binding.name),
+                organizationVariables: [...new Set(reuse.retained.filter(binding => binding.scope === 'organization').map(binding => binding.sourceName ?? binding.name))],
+                repositoryVariables: [...new Set(reuse.retained.filter(binding => binding.scope === 'repository').map(binding => binding.sourceName ?? binding.name))],
                 repositoryWrites: reuse.repositoryWrites.map(variable => variable.name),
             };
         }

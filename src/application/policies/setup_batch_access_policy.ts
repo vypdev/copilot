@@ -23,7 +23,7 @@ export function planSetupBatchSharedAccess(configuration: SetupConfiguration, ta
   const requirements = buildSetupCredentialRequirements(configuration);
   const selected = selectedExistingSetupCredentials(requirements, projected);
   const selectedNames = new Set(selected.map(requirement => requirement.name));
-  const retainedVariables = new Set(variables.retained.filter(binding => binding.scope === 'organization').map(binding => binding.name));
+  const retainedVariables = new Set(variables.retained.filter(binding => binding.scope === 'organization').map(binding => binding.sourceName ?? binding.name));
   // Projection exposes candidate names, not effective scope. Repository Secrets
   // win in credential collection and exclude both shared snapshots and grants.
   const relevant = shared.filter(resource => resource.kind === 'variable' ? retainedVariables.has(resource.name)

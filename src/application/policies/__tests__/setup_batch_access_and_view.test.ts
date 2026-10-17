@@ -21,6 +21,21 @@ function fixture() {
   return { configuration, remote, shared };
 }
 describe('consumed shared bindings and redacted review policy', () => {
+  it.each(['organization', 'repository'] as const)('tracks only the real generic %s binding in shared snapshots and grants', scope => {
+    const f = fixture();
+    f.shared = f.shared.filter(resource => !SETUP_AGENT_TASKS.some(task => resource.name.startsWith(`${task.toUpperCase()}_`)));
+    if (scope === 'repository') f.remote.repositoryVariables = f.shared.filter(resource => resource.kind === 'variable' && resource.name.startsWith('AGENT_'))
+      .map(resource => ({ name: resource.name, value: resource.value! }));
+    const result = planSetupBatchSharedAccess(f.configuration, target, f.remote, f.shared);
+    expect(result.variables.repositoryWrites).toEqual([]);
+    const providerGrants = result.grants.filter(grant => grant.kind === 'variable' && grant.name.endsWith('_PROVIDER'));
+    expect(providerGrants).toEqual(scope === 'repository' ? [] : [
+      { kind: 'variable', name: 'AGENT_PROVIDER', repositoryId: target.id },
+      { kind: 'variable', name: 'AGENT_MODEL_PROVIDER', repositoryId: target.id },
+    ]);
+    expect(result.sharedSnapshot.some(resource => SETUP_AGENT_TASKS.some(task => resource.name.startsWith(`${task.toUpperCase()}_`)))).toBe(false);
+    expect(result.sharedSnapshot.some(resource => resource.name === 'AGENT_PROVIDER')).toBe(scope === 'organization');
+  });
   it('projects inspected Secret revisions without claiming that pending access already applies', () => {
     const f = fixture(); const result = planSetupBatchSharedAccess(f.configuration, target, f.remote, f.shared);
     expect(result.projected.organizationSecretRevisions).toEqual([{ name: 'PAT', updatedAt: '2026-10-17T00:00:00Z' }]);

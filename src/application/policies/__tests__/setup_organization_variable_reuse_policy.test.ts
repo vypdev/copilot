@@ -1,5 +1,6 @@
 import { configureSetupOrganizationReuseStorage, planSetupOrganizationVariableReuse, buildSetupOrganizationReuseVariables } from '../setup_organization_variable_reuse_policy';
-import { createDefaultSetupConfiguration } from '../setup_configuration_defaults';
+import { createDefaultSetupConfiguration, SETUP_AGENT_TASKS } from '../setup_configuration_defaults';
+import { importSetupOrganizationConfiguration } from '../setup_organization_import_policy';
 import type { SetupRemoteConfiguration } from '../../../domain/setup';
 const remote = (): SetupRemoteConfiguration => ({ ownerType: 'Organization', repositoryId: 7, repositoryVisibility: 'private',
   repositoryVariablesAccess: 'available', organizationVariablesAccess: 'available', repositorySecretsAccess: 'available',
@@ -8,6 +9,52 @@ const remote = (): SetupRemoteConfiguration => ({ ownerType: 'Organization', rep
   repositorySecrets: ['PAT'], organizationSecrets: ['OPENAI_API_KEY'] });
 
 describe('immutable shared Variable reuse plan', () => {
+  it.each(['organization', 'repository'] as const)('retains generic agent bindings from %s without freezing inherited task values', scope => {
+    const snapshot = remote();
+    const generic = [
+      { name: 'AGENT_PROVIDER', value: 'codex' }, { name: 'AGENT_MODEL_PROVIDER', value: 'openai' },
+      { name: 'AGENT_MODEL', value: 'gpt-6-luna' }, { name: 'AGENT_EFFORT', value: 'high' },
+      { name: 'AGENT_EXECUTABLE', value: '/usr/local/bin/codex' },
+    ];
+    snapshot.organizationVariables = generic;
+    snapshot.repositoryVariables = scope === 'repository' ? generic.map(variable => ({ ...variable })) : [];
+    const before = JSON.stringify(snapshot);
+    const imported = importSetupOrganizationConfiguration({ configuration: createDefaultSetupConfiguration(), remote: snapshot });
+    const desired = buildSetupOrganizationReuseVariables(imported.configuration, snapshot)
+      .filter(variable => generic.some(binding => variable.name === binding.name || SETUP_AGENT_TASKS.some(task => variable.name === binding.name.replace('AGENT_', `${task.toUpperCase()}_`))));
+    const plan = planSetupOrganizationVariableReuse(desired, snapshot);
+    expect(plan.repositoryWrites).toEqual([]);
+    for (const binding of generic) for (const task of SETUP_AGENT_TASKS) {
+      expect(plan.retained).toContainEqual({ name: binding.name.replace('AGENT_', `${task.toUpperCase()}_`), scope, sourceName: binding.name });
+    }
+    const storage = configureSetupOrganizationReuseStorage(imported.configuration, desired, snapshot);
+    expect(storage.storage.variables.overrides.PLANNER_PROVIDER).toBe(scope);
+    expect(JSON.stringify(snapshot)).toBe(before);
+  });
+  it.each([
+    { repository: [{ name: 'AGENT_PROVIDER', value: 'codex' }], organization: [{ name: 'PLANNER_PROVIDER', value: 'cursor' }], retained: false },
+    { repository: [{ name: 'PLANNER_PROVIDER', value: 'cursor' }], organization: [{ name: 'AGENT_PROVIDER', value: 'codex' }], retained: false },
+    { repository: [{ name: 'PLANNER_PROVIDER', value: 'codex' }], organization: [{ name: 'AGENT_PROVIDER', value: 'cursor' }], retained: true },
+    { repository: [{ name: 'AGENT_PROVIDER', value: 'cursor' }], organization: [{ name: 'PLANNER_PROVIDER', value: 'codex' }], retained: true },
+  ])('keeps task-specific precedence ahead of a generic fallback: %j', scenario => {
+    const snapshot = remote(); snapshot.repositoryVariables = scenario.repository; snapshot.organizationVariables = scenario.organization;
+    const desired = [{ name: 'PLANNER_PROVIDER', value: 'codex' }];
+    const plan = planSetupOrganizationVariableReuse(desired, snapshot);
+    expect(plan.repositoryWrites).toEqual(scenario.retained ? [] : desired);
+    if (scenario.retained) expect(plan.retained).toEqual([{ name: 'PLANNER_PROVIDER', scope: scenario.repository[0].name === 'PLANNER_PROVIDER' ? 'repository' : 'organization' }]);
+  });
+  it.each(['codex', 'cursor'])('preserves the reviewed task value %s when its generic binding changes', taskValue => {
+    const snapshot = remote(); snapshot.organizationVariables = [{ name: 'AGENT_PROVIDER', value: 'codex' }];
+    const desired = [{ name: 'AGENT_PROVIDER', value: 'cursor' }, { name: 'PLANNER_PROVIDER', value: taskValue }];
+    expect(planSetupOrganizationVariableReuse(desired, snapshot)).toEqual({ retained: [], repositoryWrites: desired });
+  });
+  it('retains the repository generic override rather than its organization counterpart', () => {
+    const snapshot = remote(); snapshot.repositoryVariables = [{ name: 'agent_provider', value: 'codex' }];
+    snapshot.organizationVariables = [{ name: 'AGENT_PROVIDER', value: 'cursor' }];
+    expect(planSetupOrganizationVariableReuse([{ name: 'PLANNER_PROVIDER', value: 'codex' }], snapshot)).toEqual({
+      retained: [{ name: 'PLANNER_PROVIDER', scope: 'repository', sourceName: 'AGENT_PROVIDER' }], repositoryWrites: [],
+    });
+  });
   it('retains valid approval JSON with equivalent whitespace and property order', () => {
     const policy = { ...createDefaultSetupConfiguration().pullRequestApproval, mode: 'off' };
     const existing = JSON.stringify(Object.fromEntries(Object.entries(policy).reverse()), null, 2);

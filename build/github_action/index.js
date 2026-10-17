@@ -50197,9 +50197,17 @@ function planSetupOrganizationVariableReuse(desired, remote) {
         if (!/^[A-Z][A-Z0-9_]*$/u.test(variable.name) || names.has(variable.name))
             throw new Error('Invalid or duplicate desired Variable name.');
         names.add(variable.name);
-        const effective = repository.get(variable.name) ?? organization.get(variable.name);
-        if (effective && sameReusedSetupVariable(variable.name, effective.value, variable.value))
-            retained.push({ name: variable.name, scope: repository.has(variable.name) ? 'repository' : 'organization' });
+        const fallback = setup_organization_variable_bindings_1.SETUP_ORGANIZATION_VARIABLE_BINDINGS.find(binding => binding.variable === variable.name)?.fallbackVariable;
+        const inherited = fallback ? repository.get(fallback) ?? organization.get(fallback) : undefined;
+        const plannedFallback = fallback && desired.find(candidate => candidate.name === fallback);
+        // A reviewed generic override must not change a task that still needs the old value.
+        const effective = repository.get(variable.name) ?? organization.get(variable.name)
+            ?? (inherited && (!plannedFallback || sameReusedSetupVariable(fallback, inherited.value, plannedFallback.value)) ? inherited : undefined);
+        if (effective && sameReusedSetupVariable(variable.name, effective.value, variable.value)) {
+            const sourceName = effective.name.toUpperCase();
+            retained.push({ name: variable.name, scope: repository.has(sourceName) ? 'repository' : 'organization',
+                ...(sourceName === variable.name ? {} : { sourceName }) });
+        }
         else
             repositoryWrites.push({ ...variable });
     }

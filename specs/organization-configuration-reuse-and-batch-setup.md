@@ -210,6 +210,7 @@ flowchart LR
 - Reuse imports only recognized typed values. CI commands, approval producer identity and branch/runner facts remain target-specific and require their existing checks. Import never executes a discovered command, queries a model, or follows an arbitrary URL. Missing fields and incompatibilities remain explicit questionnaire/review work.
 - The fast reuse journey reads existing trusted health evidence; it does not bootstrap or dispatch a workflow. Evidence must match the packaged template, authenticated default-branch SHA, workflow/repository/run identity and current effective Secret metadata, and be at most five minutes old. Each request is bounded to 15 seconds and the complete evidence query to 30 seconds. Missing or stale evidence means verification pending. An actual failed trusted check blocks reuse. PAT authentication alone remains pending for full runtime capabilities.
 - Recognized Variable imports are bounded to 30,000 characters per value and parsed through typed configuration validation. A user change to a shared answer becomes an explicitly reviewed repository override; it never updates the shared value. Existing same-name repository values retain precedence. Existing shared values, visibility and other repositories' memberships remain unchanged.
+- Agent task Variables MUST retain an equal existing generic fallback when no exact task binding exists. Exact repository/organization task bindings win before generic repository/organization bindings. Review lists the actual consumed name once; additive grants and freshness snapshots refer to that real resource. A reviewed change to the generic binding MUST NOT silently change a task whose desired value still differs. No new configuration option or durable schema is introduced.
 - The installation receipt is a nested `installation` object with schema version 1 inside the existing schema-version-2 setup manifest. Legacy manifests without that optional receipt remain readable. Journals persist only operation/target identities, base and plan digests, effect names and PR/commit receipts; configuration values and file contents stay in the paired process and are not written to the journal.
 - The existing current-checkout Apply path remains available, including non-interactive saved configurations. Batch is an explicit interactive choice in v1; non-interactive requests cannot silently activate it. Both frontends use the same import and batch application decisions.
 
@@ -879,3 +880,23 @@ uploaded current-head Codecov result and verify the latter before merge. The
 setup operator guide records why passing global coverage alone is insufficient
 evidence for a new setup/recovery path. A completed live setup receipt remains
 evidence only for its exact unchanged runtime package.
+
+### Retained generic agent inheritance (2026-10-18)
+
+Review finding [#546](https://github.com/vypdev/copilot/pull/546#discussion_r4304866067)
+showed that import consumed generic agent bindings but planning created redundant
+per-task Variables. Reuse MUST keep that inheritance instead of freezing each
+role at today's generic value. An organization containing only `AGENT_PROVIDER`
+shows that binding once as retained, with no matching `PLANNER_PROVIDER` write.
+A selected-visibility grant, if needed, names `AGENT_PROVIDER` exactly once.
+
+Minimum **13 regression cases** cover generic organization/repository bindings
+(two real import-to-plan compositions covering all five agent fields and every
+role), exact-task precedence (four cases), changed generic values with distinct
+reviewed task answers (two), repository generic shadowing (one), real-resource
+batch snapshots/grants (two), and wizard review provenance (two). The existing
+pure-policy 100% and module/global gates remain. Evidence is in the catalogued
+variable reuse, batch access/view and organization import wizard tests; operator
+setup documentation explains inheritance and explicit overrides. Existing
+operations still require the same reviewed configuration/base/receipt identity;
+a changed plan requires a fresh preview rather than rewriting completed effects.

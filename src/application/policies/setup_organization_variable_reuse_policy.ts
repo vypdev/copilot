@@ -33,7 +33,7 @@ export function buildSetupOrganizationReuseVariables(configuration: SetupConfigu
 }
 
 export interface SetupReusedVariablePlan {
-  readonly retained: readonly { readonly name: string; readonly scope: 'repository' | 'organization' }[];
+  readonly retained: readonly { readonly name: string; readonly scope: 'repository' | 'organization'; readonly sourceName?: string }[];
   /** New or explicitly reviewed target values belong to this repository. Shared values are immutable. */
   readonly repositoryWrites: readonly SetupVariable[];
 }
@@ -44,14 +44,23 @@ export function planSetupOrganizationVariableReuse(desired: readonly SetupVariab
     || remote.organizationVariablesAccess !== 'available') throw new Error('Available organization and repository Variable inventories are required for reuse.');
   const repository = inventory(remote.repositoryVariables);
   const organization = inventory(remote.organizationVariables);
-  const retained: { name: string; scope: 'repository' | 'organization' }[] = [];
+  const retained: { name: string; scope: 'repository' | 'organization'; sourceName?: string }[] = [];
   const repositoryWrites: SetupVariable[] = [];
   const names = new Set<string>();
   for (const variable of desired) {
     if (!/^[A-Z][A-Z0-9_]*$/u.test(variable.name) || names.has(variable.name)) throw new Error('Invalid or duplicate desired Variable name.');
     names.add(variable.name);
-    const effective = repository.get(variable.name) ?? organization.get(variable.name);
-    if (effective && sameReusedSetupVariable(variable.name, effective.value, variable.value)) retained.push({ name: variable.name, scope: repository.has(variable.name) ? 'repository' : 'organization' });
+    const fallback = SETUP_ORGANIZATION_VARIABLE_BINDINGS.find(binding => binding.variable === variable.name)?.fallbackVariable;
+    const inherited = fallback ? repository.get(fallback) ?? organization.get(fallback) : undefined;
+    const plannedFallback = fallback && desired.find(candidate => candidate.name === fallback);
+    // A reviewed generic override must not change a task that still needs the old value.
+    const effective = repository.get(variable.name) ?? organization.get(variable.name)
+      ?? (inherited && (!plannedFallback || sameReusedSetupVariable(fallback!, inherited.value, plannedFallback.value)) ? inherited : undefined);
+    if (effective && sameReusedSetupVariable(variable.name, effective.value, variable.value)) {
+      const sourceName = effective.name.toUpperCase();
+      retained.push({ name: variable.name, scope: repository.has(sourceName) ? 'repository' : 'organization',
+        ...(sourceName === variable.name ? {} : { sourceName }) });
+    }
     else repositoryWrites.push({ ...variable });
   }
   return { retained, repositoryWrites };

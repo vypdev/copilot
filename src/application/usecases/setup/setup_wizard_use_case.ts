@@ -381,8 +381,8 @@ export class SetupWizardUseCase {
       plan.organizationReuse = {
         imported: organizationImport?.settings.filter(setting => setting.status === 'imported').length ?? 0,
         needsReview: organizationImport?.settings.filter(setting => setting.status === 'needs-review').length ?? 0,
-        organizationVariables: reuse.retained.filter(binding => binding.scope === 'organization').map(binding => binding.name),
-        repositoryVariables: reuse.retained.filter(binding => binding.scope === 'repository').map(binding => binding.name),
+        organizationVariables: [...new Set(reuse.retained.filter(binding => binding.scope === 'organization').map(binding => binding.sourceName ?? binding.name))],
+        repositoryVariables: [...new Set(reuse.retained.filter(binding => binding.scope === 'repository').map(binding => binding.sourceName ?? binding.name))],
         repositoryWrites: reuse.repositoryWrites.map(variable => variable.name),
       };
     }

@@ -1,6 +1,6 @@
 import type { SetupRemoteConfiguration } from '../../../../domain/setup';
 import type { SetupQuestionnaireState, SetupQuestionnaireContext } from '../../../../domain/setup_questionnaire';
-import { createDefaultSetupConfiguration } from '../../../policies/setup_configuration_defaults';
+import { createDefaultSetupConfiguration, SETUP_AGENT_TASKS } from '../../../policies/setup_configuration_defaults';
 import { buildSetupRepositoryVariables } from '../../../policies/setup_configuration_plan';
 import { createSetupReviewState, transitionSetupQuestionnaire } from '../../../policies/setup_questionnaire_policy';
 import { SetupWizardUseCase } from '../setup_wizard_use_case';
@@ -28,6 +28,19 @@ function fixture(overrides: Partial<SetupRemoteConfiguration> = {}) {
 }
 
 describe('organization import in the shared setup wizard', () => {
+  it.each(['organization', 'repository'] as const)('shows actual %s fallback names once without proposing task overrides', async scope => {
+    const f = fixture();
+    f.remote.organizationVariables = f.remote.organizationVariables.filter(variable => !SETUP_AGENT_TASKS.some(task => variable.name.startsWith(`${task.toUpperCase()}_`)));
+    if (scope === 'repository') f.remote.repositoryVariables = f.remote.organizationVariables.filter(variable => variable.name.startsWith('AGENT_')).map(variable => ({ ...variable }));
+    const result = await new SetupWizardUseCase(f.dependencies).execute(f.request);
+    expect(result.status).toBe('completed');
+    if (result.status !== 'completed') throw new Error('Expected a reviewed fallback plan.');
+    const review = result.plan.organizationReuse!;
+    expect(review.repositoryWrites).toEqual([]);
+    const names = scope === 'repository' ? review.repositoryVariables : review.organizationVariables;
+    expect(names.filter(name => name === 'AGENT_PROVIDER')).toEqual(['AGENT_PROVIDER']);
+    expect([...review.organizationVariables, ...review.repositoryVariables].some(name => SETUP_AGENT_TASKS.some(task => name.startsWith(`${task.toUpperCase()}_`)))).toBe(false);
+  });
   it('blocks a known personal owner with the specific organization-reuse explanation', async () => {
     const f = fixture({ ownerType: 'User' }); const result = await new SetupWizardUseCase(f.dependencies).execute(f.request);
     expect(result).toMatchObject({ status: 'blocked', errors: [expect.stringContaining('personal repository')] }); expect(f.collect).not.toHaveBeenCalled();

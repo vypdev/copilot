@@ -18,6 +18,10 @@ Use `copilot setup --web` and choose several same-organization repositories,
 or use `copilot setup --batch` in the terminal. The default remains one current
 repository. Organization reuse preserves shared values and existing Secret
 bindings; each target still receives its own labels and issue types.
+Generic agent settings such as `AGENT_PROVIDER` remain inherited when a matching
+task-specific setting is absent. The review lists the actual generic binding
+once; setup does not create redundant task overrides. Exact task bindings take
+precedence, and explicitly changed values remain reviewed repository overrides.
 An existing repository Secret overrides an organization Secret with the same
 name in both batch reuse and Customize. The setup checks and retains that
 repository binding and adds no organization access for it. A failed trusted
