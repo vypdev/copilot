@@ -767,17 +767,81 @@
     {
       "name": "Historical merged SDD authority",
       "missingEntryLabel": "historical merged SDD authority",
-      "rules": [{
-        "files": [
-          "src/application/ports/sdd_evidence_read_ports.ts",
-          "src/application/usecases/sdd/sdd_evidence_query_use_case.ts",
-          "src/data/repository/branch/linked_branch_readiness_repository.ts",
-          "src/infrastructure/composition/sdd_evidence_composition_root.ts"
-        ],
-        "mode": "each",
-        "thresholdProfile": "default"
-      }],
+      "rules": [
+        {
+          "files": [
+            "src/application/ports/sdd_evidence_read_ports.ts",
+            "src/application/usecases/sdd/sdd_evidence_query_use_case.ts",
+            "src/data/repository/branch/linked_branch_readiness_repository.ts",
+            "src/infrastructure/composition/sdd_evidence_composition_root.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
       "successMessage": "historical merged SDD authority coverage: PASS (95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Organization reuse and selected-repository setup",
+      "missingEntryLabel": "organization reuse / batch policy",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/setup_organization_variable_bindings.ts",
+            "src/application/policies/setup_organization_import_policy.ts",
+            "src/application/policies/setup_organization_variable_reuse_policy.ts",
+            "src/application/policies/setup_credential_binding_policy.ts",
+            "src/application/policies/setup_batch_policy.ts",
+            "src/application/policies/setup_batch_retry_policy.ts",
+            "src/application/policies/setup_batch_selection_policy.ts",
+            "src/application/policies/setup_batch_access_policy.ts",
+            "src/application/policies/setup_batch_view_policy.ts",
+            "src/application/policies/setup_remote_facts_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/setup/select_setup_batch_targets_use_case.ts",
+            "src/application/usecases/setup/prepare_setup_batch_use_case.ts",
+            "src/application/usecases/setup/configure_setup_batch_target_use_case.ts",
+            "src/application/usecases/setup/setup_batch_session_use_case.ts",
+            "src/application/usecases/setup/apply_setup_batch_use_case.ts",
+            "src/cli/setup_batch_adapter.ts",
+            "src/infrastructure/setup_batch_github_read_adapter.ts",
+            "src/infrastructure/setup_batch_github_apply_adapter.ts",
+            "src/infrastructure/setup_batch_journal_adapter.ts",
+            "src/infrastructure/setup_batch_workspace_adapter.ts",
+            "src/infrastructure/setup_trusted_credential_health_adapter.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "organization reuse and batch planning coverage: PASS (pure policies 100%; each batch use case, provider and composition adapter 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Complete multipart progress",
+      "missingEntryLabel": "complete multipart progress",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/progress_diff_partition_policy.ts",
+            "src/application/policies/progress_partition_response_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/actions/summarize_progress_diff_workflow.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "complete multipart progress coverage: PASS (pure policies 100%; bounded orchestration 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

@@ -368,6 +368,13 @@ describe('push and single-action context projection', () => {
     expect('currentIssueLabels' in projected.labels).toBe(false);
     expect('isRelease' in projected.labels).toBe(false);
   });
+  it('retains organization reuse authority in the immutable initial setup context', () => {
+    const input = source(); input.inputs = { ...input.inputs, setupConfigurationSource: 'organization' };
+    const projected = projectInitialSetupContext(input);
+    expect(projected.setupConfigurationSource).toBe('organization');
+    expect(Object.isFrozen(projected)).toBe(true);
+    expect(projected.setupCredentials).toEqual(input.inputs.setupCredentials);
+  });
 
   it('rejects non-object setup payloads and non-array workflow updates', () => {
     const input = source();

@@ -1,6 +1,7 @@
 import type { SetupWorkflowPatStorageNotice } from '../domain/setup';
 
 export function workflowPatStorageCopy(storage: SetupWorkflowPatStorageNotice): string {
+    if (storage.operation === 'retain') return `Keep the existing PAT Secret binding in ${storage.destination}. Its value is not requested, copied or replaced. If the binding is missing, setup stops for separate provisioning. Runtime identity and capability verification remain pending.`;
     return [
         storage.replacesExisting
             ? `Secret PAT already exists in ${storage.scope} ${storage.destination}. It will be replaced even when other existing Secrets are preserved.`

@@ -26,6 +26,32 @@ function remoteInspectionClient(getWorkflow: jest.Mock, getContent?: jest.Mock) 
 }
 
 describe('narrow GitHub Actions resource repositories', () => {
+    it('creates only absent Variables and preserves an existing equal value', async () => {
+        const actions = { listRepoVariables: jest.fn(async () => ({ data: { variables: [{ name: 'KEEP', value: 'same' }] } })),
+            createRepoVariable: jest.fn(), updateRepoVariable: jest.fn() };
+        const repository = new RepositoryVariablesCommandRepository({ getClient: () => ({ rest: { actions } }) });
+        expect(await repository.createMissing('owner', 'repo', 'token', [{ name: 'KEEP', value: 'same' }, { name: 'NEW', value: 'new' }]))
+            .toEqual({ created: 1, updated: 0, errors: [] });
+        expect(actions.updateRepoVariable).not.toHaveBeenCalled(); expect(actions.createRepoVariable).toHaveBeenCalledTimes(1);
+    });
+    it('refuses replacement even when the existing value was reviewed', async () => {
+        const actions = { listRepoVariables: jest.fn(async () => ({ data: { variables: [{ name: 'KEEP', value: 'human' }] } })),
+            createRepoVariable: jest.fn(), updateRepoVariable: jest.fn() };
+        const repository = new RepositoryVariablesCommandRepository({ getClient: () => ({ rest: { actions } }) });
+        const result = await repository.createMissing('owner', 'repo', 'token', [{ name: 'KEEP', value: 'desired' }]);
+        expect(result).toMatchObject({ created: 0, updated: 0, errors: [expect.stringContaining('separate manual update')],
+            failures: [{ name: 'KEEP', scope: 'repository', phase: 'update', reason: 'conflict' }] });
+        expect(actions.updateRepoVariable).not.toHaveBeenCalled(); expect(actions.createRepoVariable).not.toHaveBeenCalled();
+    });
+    it('retains a human creation racing the create-only POST without falling back to update', async () => {
+        let human = '';
+        const actions = { listRepoVariables: jest.fn(async () => ({ data: { variables: [] } })),
+            createRepoVariable: jest.fn(async () => { human = 'human value'; throw { status: 422 }; }), updateRepoVariable: jest.fn() };
+        const repository = new RepositoryVariablesCommandRepository({ getClient: () => ({ rest: { actions } }) });
+        expect(await repository.createMissing('owner', 'repo', 'token', [{ name: 'RACE', value: 'desired' }]))
+            .toMatchObject({ created: 0, updated: 0, errors: [expect.any(String)] });
+        expect(human).toBe('human value'); expect(actions.updateRepoVariable).not.toHaveBeenCalled();
+    });
     it('creates missing variables and updates existing variables', async () => {
         const listRepoVariables = jest.fn().mockResolvedValue({ data: { variables: [{ name: 'EXISTING' }] } });
         const createRepoVariable = jest.fn().mockResolvedValue(undefined);

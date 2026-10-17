@@ -1,3 +1,4 @@
+import { unavailableSetupRemoteConfiguration, hasCompleteSetupSecretRevisions } from '../../policies/setup_remote_facts_policy';
 import type {
   SetupConfigurationCollectorPort,
   SetupPlanConfirmationPort,
@@ -39,10 +40,14 @@ import type { SetupApprovalReadinessPort } from '../../ports/setup_approval_read
 import type { SetupApprovalCheckDiscoveryPort } from '../../ports/setup_approval_check_discovery_port';
 import type { SetupProjectDiscoveryPort } from '../../ports/setup_project_discovery_port';
 import { validateDiscoveredProjectStatuses } from '../../policies/setup_project_selection_policy';
-import { buildConfiguredSetupPatPermissionRequirements } from '../../policies/setup_token_permission_policy';
+import { buildConfiguredSetupPatPermissionRequirements, buildSetupOrganizationReusePermissionRequirements, buildSetupBatchPatPermissionRequirements } from '../../policies/setup_token_permission_policy';
 import type { DoctorCheck } from '../../../domain/setup';
 import type { ResolveSetupWorkflowPatConflictUseCase } from './resolve_setup_workflow_pat_conflict_use_case';
 import { setupWorkflowPatStorageNotice } from '../../policies/setup_configuration_storage_policy';
+import { importSetupOrganizationConfiguration } from '../../policies/setup_organization_import_policy';
+import { setupOrganizationExplicitQuestionIds } from '../../policies/setup_organization_variable_bindings';
+import type { SetupOrganizationImportResult } from '../../../domain/setup_organization_reuse';
+import { configureSetupOrganizationReuseStorage, buildSetupOrganizationReuseVariables, planSetupOrganizationVariableReuse } from '../../policies/setup_organization_variable_reuse_policy';
 
 export interface SetupWizardRequest {
   mode: 'interactive' | 'non-interactive';
@@ -51,6 +56,11 @@ export interface SetupWizardRequest {
   skipRepositorySecrets?: boolean;
   previewOnly?: boolean;
   presentationMode?: 'basic' | 'custom';
+  configurationSource?: 'organization' | 'customize';
+  deliveryMode?: 'local' | 'pull-request';
+  installationGrants?: readonly { readonly kind: 'variable' | 'secret' }[];
+  /** Same-session source proposal retained while the user revises a plan group. */
+  organizationImportSnapshot?: SetupOrganizationImportResult;
   developmentBranchObservedLocally?: boolean;
   /** Internal stable presentation snapshot across plan revisions. */
   basicSkippedQuestionIds?: readonly string[];
@@ -72,6 +82,7 @@ export type SetupWizardResult =
       configuration: SetupConfiguration;
       plan: SetupPlan;
       remoteConfiguration?: SetupRemoteConfiguration;
+      organizationImport?: SetupOrganizationImportResult;
     }
   | {
       status: 'cancelled';
@@ -117,9 +128,8 @@ export class SetupWizardUseCase {
   async execute(request: SetupWizardRequest): Promise<SetupWizardResult> {
     const defaults = buildInitialSetupConfiguration(request);
     const effectiveOverrides = request.overrides;
-    const initial = request.permissionIntent ? cloneSetupConfiguration(request.permissionIntent.draft) : defaults;
-    const basicSkippedQuestionIds = request.presentationMode === 'basic'
-      ? request.basicSkippedQuestionIds ?? setupBasicSkippedQuestionIds(initial) : [];
+    let initial = request.permissionIntent ? cloneSetupConfiguration(request.permissionIntent.draft) : defaults;
+    let organizationImport: SetupOrganizationImportResult | undefined;
     let remoteConfiguration: SetupRemoteConfiguration | undefined;
     if (request.remoteTarget) {
       try {
@@ -127,9 +137,9 @@ export class SetupWizardUseCase {
           request.remoteTarget.owner,
           request.remoteTarget.repository,
           request.remoteTarget.token,
-        ) ?? unavailableRemoteConfiguration();
+        ) ?? unavailableSetupRemoteConfiguration();
       } catch {
-        remoteConfiguration = unavailableRemoteConfiguration();
+        remoteConfiguration = unavailableSetupRemoteConfiguration();
       }
     }
     const projectOwnerType = remoteConfiguration?.ownerType ?? 'Unknown';
@@ -137,6 +147,35 @@ export class SetupWizardUseCase {
     if (!explicitMainBranch && remoteConfiguration?.defaultBranch) {
       initial.repository.mainBranch = remoteConfiguration.defaultBranch;
     }
+    if (request.configurationSource === 'organization') {
+      if (request.deliveryMode !== 'pull-request' && remoteConfiguration && !hasCompleteSetupSecretRevisions(remoteConfiguration)) {
+        return { status: 'blocked', reason: 'remote-storage-unavailable', exitCode: 1, configuration: initial,
+          errors: ['Retained Secret revision metadata is incomplete. Restore metadata access and prepare a fresh plan before Apply.'], remoteConfiguration };
+      }
+      if (!request.revision) {
+        for (const kind of ['variables', 'secrets'] as const) {
+          if (!request.overrides?.storage?.[kind]?.defaultScope) initial.storage[kind].defaultScope = 'organization';
+        }
+      }
+      organizationImport = request.revision && request.organizationImportSnapshot
+        ? request.organizationImportSnapshot : importSetupOrganizationConfiguration({ configuration: initial,
+        remote: remoteConfiguration ?? unavailableSetupRemoteConfiguration(),
+        explicitQuestionIds: [...setupOrganizationExplicitQuestionIds(request.overrides),
+          ...(request.permissionIntent?.answeredQuestionIds ?? [])],
+        observedDevelopmentBranch: request.developmentBranchObservedLocally ? initial.repository.developmentBranch : undefined });
+      if (organizationImport.inventory !== 'available') {
+        return { status: 'blocked', reason: 'remote-storage-unavailable', exitCode: 1, configuration: initial,
+          errors: [organizationImport.inventory === 'not-organization'
+            ? 'Organization reuse requires an organization repository. Choose Customize for a personal repository.'
+            : 'Organization and repository Variable inventory must be available before configuration can be reused.'],
+          remoteConfiguration: remoteConfiguration ?? unavailableSetupRemoteConfiguration() };
+      }
+      if (!request.revision) initial = organizationImport.configuration;
+    }
+    const pendingImportedQuestions = organizationImport?.settings.filter(setting => setting.status === 'needs-review').map(setting => setting.questionId) ?? [];
+    const basicSkippedQuestionIds = request.presentationMode === 'basic'
+      ? (request.basicSkippedQuestionIds ?? setupBasicSkippedQuestionIds(initial)).filter(id =>
+        !pendingImportedQuestions.some(path => id === path || id.startsWith(`${path}.`))) : [];
     const defaultValidationErrors = validateSetupConfiguration(initial, { allowIncompleteApproval: true });
     if (defaultValidationErrors.length > 0) {
       throw new ApplicationError(
@@ -169,6 +208,7 @@ export class SetupWizardUseCase {
         projectsWanted: request.revision.group === 'projects' || Boolean(initial.projects.ids.trim()) } : {}),
       ...(!request.revision ? { skipQuestionIds: [...new Set([
         ...(request.permissionIntent?.answeredQuestionIds ?? []),
+        ...(organizationImport?.answeredQuestionIds ?? []),
         ...(request.permissionIntent?.projectsWanted === false ? ['projects.ids'] : []),
         ...basicSkippedQuestionIds,
       ])], ...(request.permissionIntent ? { projectsWanted: request.permissionIntent.projectsWanted } : {}) } : {}),
@@ -180,6 +220,10 @@ export class SetupWizardUseCase {
       discoveryRetryRemaining: { checks: approvalDiscovery ? 2 : 0,
         projects: projectDiscovery && projectDiscovery.status !== 'unsupported' ? 2 : 0 },
     };
+    if (request.configurationSource === 'organization' || request.deliveryMode === 'pull-request') {
+      // Both initial and revision context constructors always assign this collection.
+      context = { ...context, skipQuestionIds: [...new Set([...context.skipQuestionIds!, ...setupQuestionIdsForGroup('storage')])] };
+    }
     const discoveryRefresh = {
       refresh: async (kind: 'checks' | 'projects'): Promise<SetupQuestionnaireContext | undefined> => {
         const target = request.remoteTarget;
@@ -217,6 +261,7 @@ export class SetupWizardUseCase {
     }
 
     const collectedConfiguration = cloneSetupConfiguration(questionnaire.draft);
+    if (request.deliveryMode === 'pull-request') collectedConfiguration.createInitialTag = false;
     if (collectedConfiguration.features.pullRequests === false
       && effectiveOverrides?.pullRequestApproval?.mode === undefined) {
       // The conditional approval questionnaire stage was skipped; its new-install
@@ -234,7 +279,10 @@ export class SetupWizardUseCase {
       );
     }
     let configuration = normalizeSetupConfigurationLocales(collectedConfiguration);
-    if (request.mode === 'interactive' && request.remoteTarget && remoteConfiguration && this.dependencies.workflowPatConflict) {
+    if ((request.configurationSource === 'organization' || request.deliveryMode === 'pull-request') && remoteConfiguration) {
+      configuration = configureSetupOrganizationReuseStorage(configuration, buildSetupOrganizationReuseVariables(configuration, remoteConfiguration), remoteConfiguration);
+    }
+    if (request.configurationSource !== 'organization' && request.deliveryMode !== 'pull-request' && request.mode === 'interactive' && request.remoteTarget && remoteConfiguration && this.dependencies.workflowPatConflict) {
       const resolved = await this.dependencies.workflowPatConflict.execute({ ...request.remoteTarget,
         configuration, remote: remoteConfiguration });
       configuration = resolved.configuration;
@@ -256,7 +304,7 @@ export class SetupWizardUseCase {
     }
     if (remoteConfiguration) {
       const remoteStorageErrors = [
-        ...validateSetupStorageAgainstRemote(configuration, remoteConfiguration),
+        ...validateSetupStorageAgainstRemote(configuration, remoteConfiguration, { retainWorkflowPat: request.configurationSource === 'organization' || request.deliveryMode === 'pull-request' }),
         ...validateSetupManagedResourceInventory(configuration, remoteConfiguration, {
           secrets: buildSetupCredentialRequirements(configuration).map(requirement => requirement.name),
           variables: buildSetupRepositoryVariables(configuration).map(variable => variable.name),
@@ -327,12 +375,29 @@ export class SetupWizardUseCase {
       }
     }
     const plan = buildSetupPlan(configuration, readiness, approvalReadiness);
+    plan.deliveryMode = request.deliveryMode ?? 'local';
+    if ((request.configurationSource === 'organization' || request.deliveryMode === 'pull-request') && remoteConfiguration) {
+      plan.variables = buildSetupOrganizationReuseVariables(configuration, remoteConfiguration);
+      const reuse = planSetupOrganizationVariableReuse(plan.variables, remoteConfiguration);
+      plan.organizationReuse = {
+        imported: organizationImport?.settings.filter(setting => setting.status === 'imported').length ?? 0,
+        needsReview: organizationImport?.settings.filter(setting => setting.status === 'needs-review').length ?? 0,
+        organizationVariables: [...new Set(reuse.retained.filter(binding => binding.scope === 'organization').map(binding => binding.sourceName ?? binding.name))],
+        repositoryVariables: [...new Set(reuse.retained.filter(binding => binding.scope === 'repository').map(binding => binding.sourceName ?? binding.name))],
+        repositoryWrites: reuse.repositoryWrites.map(variable => variable.name),
+      };
+    }
     if (request.remoteTarget && remoteConfiguration && configuration.manageRepositorySecrets) {
       plan.workflowPatStorage = setupWorkflowPatStorageNotice(request.remoteTarget.owner, request.remoteTarget.repository,
         configuration.storage.secrets, remoteConfiguration.repositorySecrets, remoteConfiguration.organizationSecrets,
         remoteConfiguration.organizationWorkflowPat);
+      if (request.configurationSource === 'organization' || request.deliveryMode === 'pull-request') plan.workflowPatStorage = { ...plan.workflowPatStorage, operation: 'retain' };
     }
-    plan.permissionProbes = buildConfiguredSetupPatPermissionRequirements(configuration, remoteConfiguration)
+    plan.permissionProbes = (request.deliveryMode === 'pull-request'
+      ? buildSetupBatchPatPermissionRequirements(configuration, remoteConfiguration, request.installationGrants)
+      : request.configurationSource === 'organization'
+      ? buildSetupOrganizationReusePermissionRequirements(configuration, remoteConfiguration)
+      : buildConfiguredSetupPatPermissionRequirements(configuration, remoteConfiguration))
       .filter(item => item.applicability === 'required' && item.level === 'write')
       .map(item => ({ scope: item.scope, permission: item.permission }));
     if (basicSkippedQuestionIds.length) {
@@ -351,9 +416,11 @@ export class SetupWizardUseCase {
       const answeredQuestionIds = [...new Set([
         ...(request.revision?.answeredQuestionIds ?? []),
         ...(request.permissionIntent?.answeredQuestionIds ?? []),
+        ...(organizationImport?.answeredQuestionIds ?? []),
         ...(questionnaire.answeredQuestionIds ?? []),
       ])];
       return this.execute({ ...request, overrides: cloneSetupConfiguration(configuration), permissionIntent: undefined,
+        ...(organizationImport ? { organizationImportSnapshot: organizationImport } : {}),
         basicSkippedQuestionIds, reviewedGroups: [...new Set([...(request.reviewedGroups ?? []), decision.group])],
         revision: { group: decision.group, answeredQuestionIds } });
     }
@@ -377,6 +444,7 @@ export class SetupWizardUseCase {
     }
     if (request.previewOnly) {
       return { status: 'completed', exitCode: 0, configuration: cloneSetupConfiguration(configuration), plan,
+        ...(organizationImport ? { organizationImport } : {}),
         ...(remoteConfiguration ? { remoteConfiguration } : {}) };
     }
     const audit = this.dependencies.onPermissionCleanupPending
@@ -412,6 +480,7 @@ export class SetupWizardUseCase {
       exitCode: 0,
       configuration: cloneSetupConfiguration(configuration),
       plan,
+      ...(organizationImport ? { organizationImport } : {}),
       ...(remoteConfiguration ? { remoteConfiguration } : {}),
     };
   }
@@ -452,16 +521,4 @@ export function buildInitialSetupConfiguration(request: Pick<SetupWizardRequest,
       defaults.pullRequestApproval = { ...defaults.pullRequestApproval, mode: 'off' };
     }
     return defaults;
-}
-
-/** An unavailable read is explicit, never an authoritative empty inventory. */
-function unavailableRemoteConfiguration(): SetupRemoteConfiguration {
-  return {
-    ownerType: 'Unknown', repositoryVisibility: 'unknown',
-    repositorySecrets: [], repositorySecretsAccess: 'unavailable',
-    organizationSecrets: [], organizationSecretsAccess: 'unavailable',
-    repositoryVariables: [], repositoryVariablesAccess: 'unavailable',
-    organizationVariables: [], organizationVariablesAccess: 'unavailable',
-    organizationAccess: 'unavailable', credentialHealthWorkflow: 'unavailable',
-  };
 }

@@ -1,6 +1,7 @@
 import type { SetupConfiguration, SetupRemoteConfiguration } from '../../domain/setup';
 import { buildSetupRepositoryVariables } from './setup_configuration_plan';
 import { buildSetupCredentialRequirements } from './setup_credential_requirement_policy';
+import { planSetupOrganizationVariableReuse, buildSetupOrganizationReuseVariables } from './setup_organization_variable_reuse_policy';
 import { setupNeedsInitialVersion, effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
 import {
     getSetupResourceStoragePolicy,
@@ -78,6 +79,48 @@ export function buildConfiguredSetupPatPermissionRequirements(
     // grants visible until the final audit can verify the actual owner type.
     return buildSetupPatRequirements(configuration,
         remote?.ownerType === 'Organization' || remote?.ownerType === 'Unknown', remote, undefined, true);
+}
+
+/** Existing shared bindings need read access; only reviewed repository differences need a writer. */
+export function buildSetupOrganizationReusePermissionRequirements(configuration: Readonly<SetupConfiguration>,
+    remote?: Readonly<SetupRemoteConfiguration>): SetupTokenPermissionRequirement[] {
+    const hasVariableWrites = configuration.manageRepositoryVariables && (!remote
+        || planSetupOrganizationVariableReuse(buildSetupOrganizationReuseVariables(configuration, remote), remote).repositoryWrites.length > 0);
+    const local = { ...configuration, manageRepositorySecrets: false, manageRepositoryVariables: hasVariableWrites,
+        storage: { ...configuration.storage, variables: { ...configuration.storage.variables,
+            defaultScope: 'repository' as const, preserveExisting: false, overrides: {} } } };
+    return normalizePermissionRequirements([
+        ...buildSetupPatRequirements(local, true, remote),
+        requirement({ role: 'setup', scope: 'organization', permission: 'Variables', level: 'read',
+            reason: 'Inspect reusable organization configuration without changing its values.', probe: 'variables' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Variables', level: 'read',
+            reason: 'Inspect effective repository overrides.', probe: 'variables' }),
+        ...(configuration.manageRepositorySecrets ? [
+            requirement({ role: 'setup', scope: 'repository', permission: 'Secrets', level: 'read',
+                reason: 'Inspect existing Secret names without reading their values.', probe: 'secrets' }),
+            requirement({ role: 'setup', scope: 'organization', permission: 'Secrets', level: 'read',
+                reason: 'Inspect inherited Secret access without replacing existing bindings.', probe: 'secrets' }),
+            requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'read',
+                reason: 'Inspect existing trusted credential-health evidence.', probe: 'actions' }),
+        ] : []),
+    ]);
+}
+
+export function buildSetupBatchPatPermissionRequirements(configuration: Readonly<SetupConfiguration>,
+    remote?: Readonly<SetupRemoteConfiguration>, grants: readonly { readonly kind: 'variable' | 'secret' }[] = []): SetupTokenPermissionRequirement[] {
+    return normalizePermissionRequirements([
+        requirement({ role: 'setup', scope: 'repository', permission: 'Contents', level: 'write',
+            reason: 'Create the reviewed installation commit and installer-owned branch.', probe: 'contents' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write',
+            reason: 'Include reviewed workflow files in the installation PR.', probe: 'workflows' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Pull requests', level: 'write',
+            reason: 'Create the reviewed installation PR without merging it.', probe: 'pull-requests' }),
+        ...buildSetupOrganizationReusePermissionRequirements({ ...configuration, manageRepositorySecrets: true }, remote),
+        ...(['secret', 'variable'] as const).filter(kind => grants.some(grant => grant.kind === kind)).map(kind => requirement({
+            role: 'setup', scope: 'organization', permission: kind === 'secret' ? 'Secrets' : 'Variables', level: 'write',
+            reason: 'Add only the reviewed repository access to an existing selected resource.', probe: kind === 'secret' ? 'secrets' : 'variables',
+        })),
+    ]);
 }
 
 /** Local requirements plus disclosed health prerequisites for selected Secret management. */

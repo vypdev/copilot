@@ -189,7 +189,7 @@ storage:
 
 Guided setup asks the permission-affecting Secret and Variable management and default-scope questions before the setup PAT is created. After token authentication, the remaining questionnaire inspects the repository and reports repository-scoped resources, organization resources available to that repository, visibility, and access errors. Remote-dependent inherited-resource overrides are asked then; they may require a corrected PAT. Each accepted answer creates a fresh configuration snapshot; defaults, overrides, prior answers, and the result do not share mutable nested references. Repository resources take precedence over organization resources. With `preserveExisting: true`, an effective organization resource is inherited instead of being shadowed by a new repository value; add a name under `storage.secrets.overrides` or `storage.variables.overrides` when a repository-specific value is intentional.
 
-Secret `PAT` is the preservation exception: setup always collects and audits
+In current-repository Customize, Secret `PAT` is the preservation exception: setup collects and audits
 the bot PAT and writes it at `storage.secrets.overrides.PAT` or, if absent,
 `storage.secrets.defaultScope`. Other Secrets and Variables keep their existing
 preservation behavior. An existing PAT in that destination gets an explicit
@@ -331,3 +331,27 @@ reporting the persistence error. Copilot does not treat a failed write as a
 successful run: the recommendation state is therefore not considered
 committed, so a later retry cannot silently rely on stale state. Runs that do
 not have an issue target simply skip this persistence step.
+
+## Organization configuration reuse
+
+Interactive setup offers one source choice: Reuse or Customize. Reuse imports
+only recognized typed settings; explicit choices override repository Variables,
+which override accessible organization Variables, then typed defaults. Unknown
+or invalid inventory is never treated as empty. Unknown settings are ignored.
+Remote commands and approval producer identities are never blindly imported or
+executed. Storage questions are skipped because reuse preserves bindings.
+
+Matching effective Variables cause no value write. A reviewed difference becomes
+a repository Variable, preserving its shared source. Existing repository
+Secrets retain precedence; reuse never moves or rewrites them. Mixed scopes
+remain visible. GitHub rejects empty Variable values: intentionally empty
+collections use the existing native parser's comma/semicolon empty-list format,
+including on older Actions. An inherited nonempty scalar needs an explicit
+valid target value; setup does not pretend it cleared that setting.
+
+Batch is interactive and PR-only: `--batch` cannot be combined with
+`--non-interactive`, `--yes`, `--dry-run`, `--workflow-pat` or `--secret`. Inspect
+and leave the preview to make no changes. Existing non-interactive config files
+retain their single-repository behavior. Target count (1–25), one organization,
+sequential Apply, immutable shared values and no automatic merge are fixed
+rules, not configurable templates.

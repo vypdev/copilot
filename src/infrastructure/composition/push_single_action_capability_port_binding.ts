@@ -400,6 +400,7 @@ export function bindSetupVariables(
   binding: RepositoryCredentialBinding,
 ): BoundSetupRepositoryVariablesCommandPort {
   return Object.freeze<BoundSetupRepositoryVariablesCommandPort>({
+    ...(port.createMissing ? { createMissing: variables => port.createMissing!(binding.owner, binding.repository, binding.token, variables) } : {}),
     upsert: (variables) => port.upsert(binding.owner, binding.repository, binding.token, variables),
     ...(port.upsertScopedVariables ? {
       upsertScopedVariables: (target, variables) => port.upsertScopedVariables!(

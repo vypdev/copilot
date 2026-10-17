@@ -21,15 +21,18 @@ export class SetupPlanConfirmationAdapter implements SetupPlanConfirmationPort {
     const target = plan.configuration.manageRepositoryVariables || plan.configuration.manageRepositorySecrets
       ? 'repository files and selected GitHub Actions resources'
       : 'repository files';
-    const groups = setupEditableGroups(plan.configuration);
+    const groups = setupEditableGroups(plan.configuration, Boolean(plan.organizationReuse) || plan.deliveryMode === 'pull-request');
     while (true) {
-      const result = await this.terminal.readText(`Approve temporary PAT permission probes, then apply this setup plan to ${target}? Tests may create and remove GitHub resources; Issues, Actions, or PR tests may leave notifications or history. Type ? for details or :edit to change an answer. ${color('[N]', 90)}: `);
+      const question = plan.deliveryMode === 'pull-request'
+        ? 'Use this configuration in the batch preview? Nothing is applied until you approve all repository plans.'
+        : `Approve temporary PAT permission probes, then apply this setup plan to ${target}? Tests may create and remove GitHub resources; Issues, Actions, or PR tests may leave notifications or history.`;
+      const result = await this.terminal.readText(`${question} Type ? for details or :edit to change an answer. ${color('[N]', 90)}: `);
       if (result.kind !== 'value') return { kind: 'cancelled' };
       const value = result.value.normalize('NFKC').trim().toLowerCase();
       if (value === '?') {
         console.log(renderBox([
           `This is the final approval. The plan lists ${plan.selectedFiles.length} file(s), ${plan.variables.length} Variable(s), and ${plan.requiredSecrets.length} Secret name(s).`,
-          'Yes starts the listed local and GitHub setup writes. No leaves the plan unapplied.',
+          plan.deliveryMode === 'pull-request' ? 'Yes keeps this configuration for the final batch preview; no permission probe or setup write starts here.' : 'Yes starts the listed local and GitHub setup writes. No leaves the plan unapplied.',
           'Before setup changes, each selected write permission is tested with a temporary resource. The Issues test creates a visible Issue; if GitHub denies deletion, setup closes it, reports its number, and stops. Actions and PR tests can leave history or notifications.',
           ...(plan.permissionProbes?.some(item => item.permission === 'Secrets')
             ? ['GitHub Secret writes are upserts. A random private name and absence check reduce collision risk, but GitHub does not guarantee atomic create-only behavior. An unexpected update stops setup for inspection.'] : []),

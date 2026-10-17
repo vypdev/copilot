@@ -8,6 +8,7 @@ export interface SetupSessionReceipt {
   readonly success: boolean;
   readonly effects: readonly SetupOperationEffect[];
 }
+export interface RetainedSetupEvidence { readonly effects?: true; readonly complete?: true }
 
 /** Semantic work only. Entrypoints adapt prompts, providers and process exit codes. */
 export interface SetupSessionPorts {
@@ -15,12 +16,13 @@ export interface SetupSessionPorts {
   readonly repository: () => Promise<SetupSessionDecision>;
   readonly choices: () => Promise<SetupSessionDecision>;
   readonly setupPat: (cleanupPending: () => void) => Promise<SetupSessionDecision>;
+  readonly batch?: (present: (stage: SetupJourneyStage) => void, possibleMutation: () => void) => Promise<{ readonly outcome: SetupJourneyOutcome; readonly retained?: RetainedSetupEvidence } | undefined>;
   readonly plan: (cleanupPending: () => void) => Promise<SetupSessionDecision>;
   readonly credentials: (possibleMutation: () => void) => Promise<SetupSessionDecision>;
   readonly authorizeApply: (cleanupPending: () => void) => Promise<SetupSessionDecision>;
   readonly apply: (effect: (effect: SetupOperationEffect) => void) => Promise<SetupSessionReceipt>;
   readonly liveness: () => SetupSessionLiveness;
-  readonly present: (stage: SetupJourneyStage, mutationStarted: boolean, outcome?: SetupJourneyOutcome) => void;
+  readonly present: (stage: SetupJourneyStage, mutationStarted: boolean, outcome?: SetupJourneyOutcome, retained?: RetainedSetupEvidence) => void;
   readonly isCancellationError: (error: unknown) => boolean;
 }
 
@@ -63,6 +65,15 @@ export class SetupSessionCoordinator {
         const after = this.liveOutcome();
         if (after) return this.finish(after);
         if (decision !== 'continue') return this.finish(decision === 'dry-run' ? 'dry-run' : decision);
+        if (stage === 'setup-pat' && this.ports.batch) {
+          const batch = await this.ports.batch(next => {
+            this.stage = next; this.ports.present(next, this.mutationStarted);
+          }, () => this.markPossibleMutation());
+          if (batch) {
+            if (batch.outcome === 'complete' && batch.retained?.complete) this.stage = 'apply';
+            return this.finish(batch.outcome, undefined, batch.retained);
+          }
+        }
         if (stage === 'repository' && this.ports.manage) {
           const managed = await this.ports.manage(() => { this.stage = 'apply'; this.markPossibleMutation(); },
             effect => this.effects.set(effect.id, Object.freeze({ ...effect })));
@@ -109,14 +120,15 @@ export class SetupSessionCoordinator {
     return [...this.effects.values()].some(effect => effect.state === 'needs-inspection' || effect.state === 'in-progress');
   }
 
-  private finish(outcome: SetupJourneyOutcome, error?: unknown): SetupSessionRunResult {
+  private finish(outcome: SetupJourneyOutcome, error?: unknown, retained?: RetainedSetupEvidence): SetupSessionRunResult {
     // An interrupted in-flight write must not be reported as no change.
     const finalOutcome = this.mutationStarted && (outcome === 'cancelled' || outcome === 'blocked'
       || (outcome === 'complete' && this.hasUncertainEffect())) ? 'partial' : outcome;
     for (const [id, effect] of this.effects) {
       if (effect.state === 'in-progress') this.effects.set(id, Object.freeze({ ...effect, state: 'needs-inspection' }));
     }
-    this.ports.present(this.stage, this.mutationStarted, finalOutcome);
+    if (retained) this.ports.present(this.stage, this.mutationStarted, finalOutcome, retained);
+    else this.ports.present(this.stage, this.mutationStarted, finalOutcome);
     return { outcome: finalOutcome, mutationStarted: this.mutationStarted,
       effects: [...this.effects.values()], ...(error === undefined ? {} : { error }) };
   }

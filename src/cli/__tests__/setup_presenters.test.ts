@@ -320,6 +320,15 @@ describe('setup presenters and prompt-specific adapters', () => {
       expect(output).toContain('https://docs.page/vypdev/copilot/how-to-use');
     } finally { log.mockRestore(); }
   });
+  it('explains that approving a batch target only prepares the preview and starts no writes', async () => {
+    const log = jest.spyOn(console, 'log').mockImplementation();
+    try {
+      const input = terminal([{ kind: 'value', value: '?' }, { kind: 'value', value: 'no' }]);
+      const plan = buildSetupPlan(createDefaultSetupConfiguration()); plan.deliveryMode = 'pull-request';
+      await expect(new SetupPlanConfirmationAdapter(input, false).confirm(plan)).resolves.toEqual({ kind: 'declined' });
+      expect(log.mock.calls.flat().join('\n')).toContain('no permission probe or setup write starts here');
+    } finally { log.mockRestore(); }
+  });
 
   it('lists editable plan sections, rejects an invalid number, and returns the chosen group', async () => {
     const log = jest.spyOn(console, 'log').mockImplementation();

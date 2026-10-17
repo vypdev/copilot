@@ -11,8 +11,13 @@ import { SetupCredentialPromptAdapter } from './setup_credential_prompt_adapter'
 import { ConsoleSetupTokenPermissionPresenter } from './setup_token_permission_presenter';
 import { WebSetupQuestionnaireCollector, WebSetupCredentialPrompt, WebSetupPermissionPresenter } from './web_setup_adapters';
 import type { WebSetupBridge } from './web_setup_bridge';
+import { buildSetupPatCreationUrl, UnsupportedSetupPatLinkError } from '../application/policies/setup_pat_creation_url_policy';
+import { SetupTerminalCancelledError } from './setup_credential_prompt_adapter';
+import { ApplicationError } from '../application/errors/application_error';
 
 interface SetupPatIntentInput {
+  readonly deliveryMode?: 'local' | 'pull-request';
+  readonly configurationSource?: 'organization' | 'customize';
   readonly owner: string;
   readonly repository: string;
   readonly overrides: SetupConfigurationOverrides;
@@ -38,6 +43,28 @@ export async function collectSetupPatIntent(input: SetupPatIntentInput): Promise
   if (await credentialPrompt.chooseSetupPatMethod() !== 'guided') {
     permissionPresenter.showDetailedRequirements('setup', input.initialRequirements);
     return { requirements: input.initialRequirements };
+  }
+  if (input.configurationSource === 'organization' || input.deliveryMode === 'pull-request') {
+    const owner = await credentialPrompt.chooseSetupOwnerKind();
+    if (owner !== 'Organization') throw new ApplicationError('configuration.invalid',
+      'Organization reuse requires an organization owner. Check the owner or restart with Customize configuration.');
+    permissionPresenter.showDetailedRequirements('setup', input.initialRequirements);
+    const choices = ['Continue to GitHub', 'Enter a PAT manually'];
+    const description = 'These provisional grants inspect existing organization configuration and allow repository setup. Shared Secret values are never requested or replaced. The final plan rechecks exact permissions; authentication evidence can remain pending. Select only the intended repositories in GitHub and delete the temporary PAT afterwards.';
+    const answer = bridge
+      ? await bridge.ask({ kind: 'choice', title: 'Review organization reuse access', copyId: 'setup.reusePatReview', description, choices })
+      : await input.terminal!.readText(`${description}\n1. ${choices[0]}\n2. ${choices[1]}\nChoose 1 to continue: `).then(result =>
+        result.kind === 'value' ? result.value.trim() === '1' ? choices[0] : choices[1] : undefined);
+    if (answer === undefined) throw new SetupTerminalCancelledError();
+    if (answer !== choices[0]) { credentialPrompt.useManualSetupPat(); return { requirements: input.initialRequirements }; }
+    try {
+      credentialPrompt.configureSetupPatGuide(buildSetupPatCreationUrl({ role: 'setup', owner: input.owner,
+        repository: input.repository, expiresIn: 1, requirements: input.initialRequirements }));
+    } catch (error) {
+      if (!(error instanceof UnsupportedSetupPatLinkError)) throw error;
+      credentialPrompt.useManualSetupPat();
+    }
+    return { requirements: input.initialRequirements, assertedOwnerKind: 'Organization' };
   }
   const prepared = await new PrepareSetupPatIntentUseCase({
     collect: (initial, context, pass) => (bridge

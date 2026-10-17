@@ -120,6 +120,15 @@ for (const [relative, role] of Object.entries(generatedArtifactPaths)) {
 
 const profile = JSON.parse(fs.readFileSync(path.join(root, '.copilot/repository-profile.json'), 'utf8'));
 const expectedProfileKeys = ['branches', 'deployment', 'generator', 'issueWorkflows', 'pullRequests', 'schemaVersion'];
+if (profile.installation !== undefined) expectedProfileKeys.push('installation');
+expectedProfileKeys.sort();
+const installer = profile.installation;
+if (installer !== undefined && (!installer || typeof installer !== 'object' || Array.isArray(installer)
+  || JSON.stringify(Object.keys(installer).sort()) !== JSON.stringify(['automaticMerge', 'branchNamespace', 'lifecycleOwner', 'requiresIssue'])
+  || installer.lifecycleOwner !== 'setup-cli' || installer.branchNamespace !== 'setup/copilot/<operation-id>'
+  || installer.requiresIssue !== false || installer.automaticMerge !== false)) {
+  throw new Error('Dogfood installer contract must preserve exact prepared refs and human merge.');
+}
 if (JSON.stringify(Object.keys(profile).sort()) !== JSON.stringify(expectedProfileKeys)
   || profile.schemaVersion !== 2
   || profile.branches?.remoteLifecycleOwner !== 'github-action'
@@ -157,7 +166,7 @@ const internalGuidanceImports = fs.readdirSync(path.join(root, 'src'), { recursi
   .filter(file => file.endsWith('.ts')
     && !file.includes('__tests__')
     && !file.includes('repository_agent_guidance')
-    && file.replaceAll('\\', '/') !== 'application/policies/setup_configuration_plan.ts')
+    && !['application/policies/setup_configuration_plan.ts', 'application/policies/setup_batch_policy.ts'].includes(file.replaceAll('\\', '/')))
   .filter(file => {
     const content = fs.readFileSync(path.join(root, 'src', file), 'utf8');
     return content.includes('.copilot/AGENT_GUIDE.md') || content.includes('copilot-repository-workflow');

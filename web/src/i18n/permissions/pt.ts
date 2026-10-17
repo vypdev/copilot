@@ -1,6 +1,15 @@
 import type { PermissionText } from './en';
 
 export const permissionCopyPt: Readonly<Record<PermissionText, string>> = {
+  "Create the reviewed installation commit and installer-owned branch.": "Criar o commit de instalação revisto e o ramo do instalador.",
+  "Include reviewed workflow files in the installation PR.": "Incluir os workflows revistos na PR de instalação.",
+  "Create the reviewed installation PR without merging it.": "Criar a PR de instalação revista sem a integrar.",
+  "Add only the reviewed repository access to an existing selected resource.": "Adicionar apenas o acesso revisto do repositório a um recurso existente de visibilidade selecionada.",
+  "Inspect reusable organization configuration without changing its values.": "Consultar a configuração reutilizável da organização sem alterar os seus valores.",
+  "Inspect effective repository overrides.": "Consultar os ajustes efetivos do repositório.",
+  "Inspect existing Secret names without reading their values.": "Consultar os nomes dos Secrets existentes sem ler os seus valores.",
+  "Inspect inherited Secret access without replacing existing bindings.": "Consultar o acesso aos Secrets herdados sem substituir as ligações existentes.",
+  "Inspect existing trusted credential-health evidence.": "Consultar as provas fiáveis existentes da verificação das credenciais.",
   'Resolve repository identity and visibility.': 'Verificar a identidade e visibilidade do repositório.',
   'Inspect installed workflows and repository files.': 'Inspecionar os fluxos instalados e os ficheiros do repositório.',
   'Inspect and provision selected GitHub Actions Secrets.': 'Inspecionar e configurar os Secrets do GitHub Actions selecionados.',

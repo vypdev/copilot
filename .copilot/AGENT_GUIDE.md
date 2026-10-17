@@ -33,6 +33,10 @@ If the expected branch is absent or delayed, inspect the Action result and wait 
 
 Help issues are branchless. Code changes require a branch-bearing enabled kind and Action-managed branches.
 
+## Setup installation branches
+
+An explicitly approved batch setup uses the installer-owned namespace `setup/copilot/<operation-id>` for bootstrap or maintenance PRs. It uses each target's authenticated default branch and exact reviewed revision; it does not require a synthetic issue. The installer may create the ref only at its complete prepared commit with a matching installation receipt in `.copilot/setup-manifest.json`. It never force-pushes, deletes an existing branch, or overwrites human changes. An unexpected head blocks recovery. Setup PRs require human review and merge; creating a PR does not mean the installation is verified. This limited installation contract does not grant contributor agents authority over issue branches.
+
 ## Pull requests and deployment
 
 Open or update a pull request linked to the issue, include verification evidence, and respond to checks and review as a human contributor. Leave merge, lifecycle labels, issue types, branch cleanup, release/hotfix transitions, tags, releases, and deployment to maintainers and the Action.

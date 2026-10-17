@@ -1,5 +1,14 @@
 /** Static first-party explanations emitted by the permission policy. */
 export const permissionTexts = [
+  "Create the reviewed installation commit and installer-owned branch.",
+  "Include reviewed workflow files in the installation PR.",
+  "Create the reviewed installation PR without merging it.",
+  "Add only the reviewed repository access to an existing selected resource.",
+  "Inspect reusable organization configuration without changing its values.",
+  "Inspect effective repository overrides.",
+  "Inspect existing Secret names without reading their values.",
+  "Inspect inherited Secret access without replacing existing bindings.",
+  "Inspect existing trusted credential-health evidence.",
   'Resolve repository identity and visibility.',
   'Inspect installed workflows and repository files.',
   'Inspect and provision selected GitHub Actions Secrets.',

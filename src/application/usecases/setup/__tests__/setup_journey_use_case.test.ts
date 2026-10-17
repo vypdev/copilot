@@ -1,6 +1,18 @@
 import { SetupJourneyUseCase } from '../setup_journey_use_case';
 
 describe('setup journey', () => {
+  it('finishes a validated retained installation without asserting a new mutation', () => {
+    const present = jest.fn(); const journey = new SetupJourneyUseCase('owner/repo', { present });
+    expect(() => journey.finish('complete', true)).toThrow('before applying');
+    journey.advance('apply'); journey.finish('complete', true);
+    expect(present).toHaveBeenLastCalledWith(expect.objectContaining({ outcome: 'complete', mutationStarted: false }));
+  });
+  it('retains prior effects for a partial result without treating them as proof of complete installation', () => {
+    const present = jest.fn(); const journey = new SetupJourneyUseCase('owner/repo', { present });
+    journey.advance('plan'); journey.retainPriorEffects();
+    expect(() => journey.finish('complete')).toThrow(); journey.finish('partial');
+    expect(present).toHaveBeenLastCalledWith(expect.objectContaining({ outcome: 'partial', mutationStarted: true }));
+  });
   it('keeps ordered milestones and does not imply changes before apply', () => {
     const present = jest.fn();
     const journey = new SetupJourneyUseCase('owner/repo', { present });

@@ -614,6 +614,36 @@ describe('setup_files', () => {
     expect(fs.readFileSync(path.join(tmpDir, '.copilot', 'setup-backups', backups[0], 'ci.yml'), 'utf8')).toBe('old');
   });
 
+  it('preserves target runner labels in approved upgrades and compares the effective rendered workflow', () => {
+    const setupDir = path.join(tmpDir, 'setup');
+    fs.mkdirSync(path.join(setupDir, 'workflows'), { recursive: true });
+    ensureGitHubDirs(tmpDir);
+    const template = 'name: Updated\njobs:\n  copilot:\n    runs-on: ubuntu-latest\n    steps: []\n';
+    const installed = template.replace('Updated', 'Old').replace('ubuntu-latest', '[self-hosted, codex, Linux]');
+    fs.writeFileSync(path.join(setupDir, 'workflows', 'copilot_issue.yml'), template);
+    const destination = path.join(tmpDir, '.github', 'workflows', 'copilot_issue.yml');
+    fs.writeFileSync(destination, installed);
+    expect(compareSetupWorkflows(tmpDir, undefined, setupDir)[0].status).toBe('changed');
+    copySetupFiles(tmpDir, setupDir, undefined, { updateExistingWorkflows: true, approvedWorkflowFiles: ['copilot_issue.yml'] });
+    const content = fs.readFileSync(destination, 'utf8');
+    expect(content).toContain('name: Updated'); expect(content).toContain('codex'); expect(content).not.toContain('ubuntu-latest');
+    expect(compareSetupWorkflows(tmpDir, undefined, setupDir)[0].status).toBe('unchanged');
+    const backup = fs.readdirSync(path.join(tmpDir, '.copilot', 'setup-backups'))[0];
+    expect(fs.readFileSync(path.join(tmpDir, '.copilot', 'setup-backups', backup, 'copilot_issue.yml'), 'utf8')).toBe(installed);
+  });
+
+  it('blocks a dynamic runner upgrade before replacing or backing up the installed workflow', () => {
+    const setupDir = path.join(tmpDir, 'setup');
+    fs.mkdirSync(path.join(setupDir, 'workflows'), { recursive: true }); ensureGitHubDirs(tmpDir);
+    fs.writeFileSync(path.join(setupDir, 'workflows', 'copilot_issue.yml'), 'jobs:\n  copilot:\n    runs-on: ubuntu-latest\n');
+    const destination = path.join(tmpDir, '.github', 'workflows', 'copilot_issue.yml');
+    const installed = 'jobs:\n  copilot:\n    runs-on: ${{ matrix.runner }}\n';
+    fs.writeFileSync(destination, installed);
+    expect(() => copySetupFiles(tmpDir, setupDir, undefined, { updateExistingWorkflows: true, approvedWorkflowFiles: ['copilot_issue.yml'] })).toThrow('review');
+    expect(fs.readFileSync(destination, 'utf8')).toBe(installed);
+    expect(fs.existsSync(path.join(tmpDir, '.copilot', 'setup-backups'))).toBe(false);
+  });
+
   describe('setup token resolution', () => {
     const key = 'PERSONAL_ACCESS_TOKEN';
     let previous: string | undefined;

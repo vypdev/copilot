@@ -1,6 +1,30 @@
 import { WebSetupBridge } from '../web_setup_bridge';
+import type { SetupBatchView } from '../../application/contracts/setup_batch_view';
 
 describe('WebSetupBridge', () => {
+  const batch = (phase: SetupBatchView['phase'], retryRemaining = 1): SetupBatchView => ({
+    operationId: 'a67c8e40-93be-43ed-a7ed-e07378c7e773', organization: 'acme', phase, targets: [], retryRemaining });
+  test('requests a stop between batch targets without claiming that in-flight changes were cancelled', () => {
+    const bridge = new WebSetupBridge('acme/repo'); bridge.setBatch(batch('applying'));
+    expect(bridge.cancel()).toBe(true); expect(bridge.snapshot().batch?.stopRequested).toBe(true);
+    expect(bridge.snapshot().outcome).toBeUndefined();
+  });
+  test('does not turn a batch stop into a new cancellation after completion', () => {
+    const bridge = new WebSetupBridge('acme/repo'); bridge.setBatch(batch('applying')); bridge.finish('complete', 'Done');
+    expect(bridge.cancel()).toBe(false); expect(bridge.snapshot().outcome).toBe('complete');
+  });
+  test.each(['batch-plan', 'batch-result'] as const)('rejects invalid %s decisions and accepts only its explicit actions', async kind => {
+    const bridge = new WebSetupBridge('acme/repo'); const pending = bridge.ask({ kind, title: 'Batch', batch: batch(kind === 'batch-plan' ? 'review' : 'result') });
+    const revision = bridge.snapshot().promptRevision!;
+    expect(bridge.answer(revision, 'all')).toBe(false);
+    const answer = kind === 'batch-plan' ? 'approve' : 'retry';
+    expect(bridge.answer(revision, answer)).toBe(true); expect(await pending).toBe(answer);
+  });
+  test('rejects a batch retry after its budget is exhausted while preserving the finish action', async () => {
+    const bridge = new WebSetupBridge('acme/repo'); const pending = bridge.ask({ kind: 'batch-result', title: 'Result', batch: batch('result', 0) });
+    const revision = bridge.snapshot().promptRevision!;
+    expect(bridge.answer(revision, 'retry')).toBe(false); expect(bridge.answer(revision, 'finish')).toBe(true); expect(await pending).toBe('finish');
+  });
   test('read-only verification runs only after a completed setup and publishes counts without diagnostic values', async () => {
     const bridge = new WebSetupBridge('owner/repo');
     const run = jest.fn().mockResolvedValue({ healthy: false, pass: 3, warn: 1, fail: 0, skipped: 2,

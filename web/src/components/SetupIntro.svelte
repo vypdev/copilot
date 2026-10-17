@@ -4,10 +4,12 @@
   import { setupLocale } from '../i18n/localeStore';
   import { localizedPromptCopy } from '../i18n/promptCopy';
   export let view: WebSetupView | undefined;
-  $: title = view?.outcome === 'complete' ? tr('completeTitle', $setupLocale)
+  $: title = view?.batch ? tr(view.batch.phase === 'review' ? 'batchReviewTitle' : view.batch.phase === 'applying' ? 'batchProgressTitle' : 'batchResultTitle', $setupLocale)
+    : view?.outcome === 'complete' ? tr('completeTitle', $setupLocale)
     : view?.outcome === 'dry-run' ? tr('previewTitle', $setupLocale)
     : view?.outcome === 'cancelled' ? tr('cancelledTitle', $setupLocale)
     : view?.outcome ? tr('blockedTitle', $setupLocale)
+    : view?.prompt?.kind === 'repositories' ? tr('batchReviewSelection', $setupLocale)
     : view?.prompt?.kind === 'question' ? tr('choices', $setupLocale)
     : view?.prompt?.kind === 'plan' ? tr('plan', $setupLocale)
     : view?.prompt ? localizedPromptCopy(view.prompt, $setupLocale)?.title ?? view.prompt.title : tr('preparing', $setupLocale);

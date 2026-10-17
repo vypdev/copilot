@@ -2,9 +2,9 @@ import { ApplicationError } from '../../application/errors/application_error';
 import type { ProgressDiffEvidence } from '../../application/ports/progress_diff_query_ports';
 import type { GithubBranchComparisonClient } from '../../infrastructure/github/ports/github_branch_provider_ports';
 import type { GithubClientPort } from '../../infrastructure/github/ports/github_client_provider_port';
+import { partitionProgressDiff } from '../../application/policies/progress_diff_partition_policy';
 
 const MAX_COMPARISON_FILES = 300;
-const MAX_EVIDENCE_BYTES = 256_000;
 const STATUSES = new Set(['added', 'removed', 'modified', 'renamed', 'copied', 'changed', 'unchanged']);
 
 /** Reads exact GitHub objects, omitting generated bundle patches but retaining their file facts. */
@@ -25,12 +25,10 @@ export class ProgressDiffRepository {
             const generated = path.startsWith('build/') || path === 'specs/CATALOG.md';
             if (!generated && (file.additions! > 0 || file.deletions! > 0) && (typeof file.patch !== 'string' || !file.patch)) throw unavailable();
             return { path, status: file.status, additions: file.additions!, deletions: file.deletions!,
-                ...(generated ? { evidence: 'generated-metadata-only' } : { patch: file.patch ?? '' }) };
+                ...(generated ? { evidence: 'generated-metadata-only' as const } : { patch: file.patch ?? '' }) };
         });
-        const evidence = JSON.stringify({ kind: 'pinned-branch-comparison', baseSha, headSha, changes });
-        if (Buffer.byteLength(evidence, 'utf8') > MAX_EVIDENCE_BYTES) throw unavailable();
         if (baseSha === headSha && changes.length > 0) throw unavailable('workflow.stale');
-        return Object.freeze({ baseSha, headSha, evidence });
+        return partitionProgressDiff(baseSha, headSha, changes);
     }
 }
 function unavailable(code: 'workflow.stale' | 'provider.unavailable' = 'provider.unavailable'): ApplicationError {

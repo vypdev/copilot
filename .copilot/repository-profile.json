@@ -175,5 +175,11 @@
   "deployment": {
     "agentMayInitiateWithoutExplicitAuthorization": false,
     "launcherLabel": "deploy"
+  },
+  "installation": {
+    "lifecycleOwner": "setup-cli",
+    "branchNamespace": "setup/copilot/<operation-id>",
+    "requiresIssue": false,
+    "automaticMerge": false
   }
 }

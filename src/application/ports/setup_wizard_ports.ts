@@ -98,11 +98,23 @@ export interface SetupRemoteCredentialHealthPort {
     ): Promise<readonly SetupCredentialCheck[] | undefined>;
 }
 
+/** Resolves and verifies trusted default-branch code internally; callers cannot supply a ref. */
+export interface SetupTrustedCredentialHealthPort {
+    validateTrustedDefault(
+        owner: string,
+        repository: string,
+        operatorToken: string,
+        requirements: readonly SetupCredentialRequirement[],
+    ): Promise<readonly SetupCredentialCheck[] | undefined>;
+}
+
 export interface SetupWorkflowUpdatePromptPort {
     confirmWorkflowUpdates(comparisons: readonly SetupWorkflowComparison[], forcedByFlag: boolean): Promise<boolean>;
 }
 
 export interface SetupRepositoryVariablesCommandPort {
+    /** Create absent repository values only; never updates an existing name. */
+    createMissing?(owner: string, repository: string, token: string, variables: readonly { name: string; value: string }[]): Promise<SetupVariablesWriteResult>;
     upsert(
         owner: string,
         repository: string,
@@ -131,6 +143,7 @@ export interface BoundSetupRepositorySecretsCommandPort {
 }
 
 export interface BoundSetupRepositoryVariablesCommandPort {
+    createMissing?(variables: readonly { name: string; value: string }[]): Promise<SetupVariablesWriteResult>;
     upsert(variables: readonly { name: string; value: string }[]): Promise<SetupVariablesWriteResult>;
     upsertScopedVariables?(
         target: SetupResourceTarget,

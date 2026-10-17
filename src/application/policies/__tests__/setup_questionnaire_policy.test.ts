@@ -361,6 +361,34 @@ describe('setup questionnaire policy', () => {
     expect(transitionSetupQuestionnaire(state, { kind: 'answer', value: 'Tests|x|CI' }).validation).toContain('Select 1–8');
   });
 
+  it('preserves exact comma-containing manual CI names for limited-token batch targets', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'recommend' };
+    const context: SetupQuestionnaireContext = { approvalCheckCandidates: [], approvalCheckDiscoveryStatus: 'unavailable' };
+    const state = advanceTo(createSetupQuestionnaire(configuration, context), 'pullRequestApproval.testChecks', context);
+    const selected = transitionSetupQuestionnaire(state, { kind: 'answer', value: 'Backend (format, detekt, test, assemble)|15368|CI;Frontend (lint, format, test, build)|15368|CI' }, context);
+    expect(selected.validation).toBeUndefined();
+    expect(selected.draft.pullRequestApproval.testChecks).toEqual([
+      { name: 'Backend (format, detekt, test, assemble)', sourceAppId: 15368, workflowName: 'CI' },
+      { name: 'Frontend (lint, format, test, build)', sourceAppId: 15368, workflowName: 'CI' },
+    ]);
+    expect(selected.draft.pullRequestApproval.producerAttested).toBe(false);
+    const coverage = advanceTo(selected, 'pullRequestApproval.coverage.checkName', context);
+    expect(coverage.question?.choices).toContain('Backend (format, detekt, test, assemble)');
+  });
+
+  it('keeps comma-separated observed indices compatible with an exact comma-containing tuple', () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'recommend' };
+    const context: SetupQuestionnaireContext = { approvalCheckCandidates: ['Tests', 'Lint'].map(name => ({ name, sourceAppId: 12,
+      workflowName: 'CI', runUrl: 'https://github.com/acme/repo/actions/runs/5', headSha: 'a'.repeat(40), conclusion: 'success' })) };
+    const state = advanceTo(createSetupQuestionnaire(configuration, context), 'pullRequestApproval.testChecks', context);
+    const selected = transitionSetupQuestionnaire(state, { kind: 'answer', value: '1,2;Backend, checks|15368|CI, verified' }, context);
+    expect(selected.validation).toBeUndefined();
+    expect(selected.draft.pullRequestApproval.testChecks.map(check => check.name)).toEqual(['Tests', 'Lint', 'Backend, checks']);
+    expect(selected.draft.pullRequestApproval.testChecks[2].workflowName).toBe('CI, verified');
+  });
+
   it('normalizes observed producer numbers but rejects repeated or out-of-range selections', () => {
     const configuration = createDefaultSetupConfiguration();
     configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'recommend' };
