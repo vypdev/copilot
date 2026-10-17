@@ -1,11 +1,14 @@
 import type { SetupConfiguration, SetupRemoteConfiguration } from '../../../domain/setup';
 import type { SetupTokenPermissionReport, SetupTokenPermissionRequirement } from '../../../domain/setup_token_permissions';
 import { buildSetupPatCreationUrl } from '../../policies/setup_pat_creation_url_policy';
-import { buildConfiguredSetupPatPermissionRequirements, requiredSetupPatPermissionDelta } from '../../policies/setup_token_permission_policy';
+import { buildConfiguredSetupPatPermissionRequirements, buildSetupOrganizationReusePermissionRequirements, buildSetupBatchPatPermissionRequirements, requiredSetupPatPermissionDelta } from '../../policies/setup_token_permission_policy';
 import type { SetupFinalPermissionAuditPort } from '../../ports/setup_wizard_ports';
 import type { SetupTokenPermissionAuditPort, SetupTokenPermissionPresenterPort } from '../../ports/setup_token_permission_ports';
 
 export interface AuditConfiguredSetupPatContext {
+  readonly configurationSource?: 'organization' | 'customize';
+  readonly deliveryMode?: 'local' | 'pull-request';
+  readonly installationGrants?: readonly { readonly kind: 'variable' | 'secret' }[];
   readonly owner: string;
   readonly repository: string;
   readonly token?: string;
@@ -35,7 +38,11 @@ export class AuditConfiguredSetupPatUseCase implements SetupFinalPermissionAudit
     remote?: Readonly<SetupRemoteConfiguration>,
     onCleanupPending?: () => void,
   ): Promise<{ status: 'accepted' } | { status: 'blocked'; errors: readonly string[]; cleanupPending?: true }> {
-    const required = buildConfiguredSetupPatPermissionRequirements(configuration, remote);
+    const required = this.context.deliveryMode === 'pull-request'
+      ? buildSetupBatchPatPermissionRequirements(configuration, remote, this.context.installationGrants)
+      : this.context.configurationSource === 'organization'
+      ? buildSetupOrganizationReusePermissionRequirements(configuration, remote)
+      : buildConfiguredSetupPatPermissionRequirements(configuration, remote);
     this.ports.presenter.showRequirements('setup', required);
     if (this.context.token && (!remote || remote.ownerType === 'Unknown')) {
       return { status: 'blocked', errors: [

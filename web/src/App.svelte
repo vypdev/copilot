@@ -7,6 +7,8 @@
   import StatusBanner from './components/StatusBanner.svelte';
   import PromptCard from './components/PromptCard.svelte';
   import ContextPanel from './components/ContextPanel.svelte';
+  import BatchSafetyBanner from './components/BatchSafetyBanner.svelte';
+  import BatchSetupPanel from './components/BatchSetupPanel.svelte';
   import ResultPanel from './components/ResultPanel.svelte';
   import WaitingPanel from './components/WaitingPanel.svelte';
   import PermissionProgressPanel from './components/PermissionProgressPanel.svelte';
@@ -27,9 +29,8 @@
     const interval = window.setInterval(() => { if ($session.paired && !$session.closed && !$session.view?.outcome) void session.poll(); }, 900);
     return () => { window.clearInterval(interval); unsubscribe(); };
   });
-
   async function cancel(): Promise<void> {
-    if (window.confirm(tr('cancelConfirm', $setupLocale))) await session.cancel();
+    if (window.confirm(tr($session.view?.batch?.phase === 'applying' ? 'batchStopConfirm' : 'cancelConfirm', $setupLocale))) await session.cancel();
   }
 
   async function submit(value: string): Promise<void> {
@@ -70,17 +71,23 @@
       {#if $session.view?.message && !$session.view.outcome}
         <StatusBanner tone={$session.view.message.tone} title={tr($session.view.message.tone === 'success' ? 'checked' : $session.view.message.tone === 'warning' ? 'pleaseNote' : $session.view.message.tone === 'error' ? 'attention' : 'progressUpdate', $setupLocale)} message={localizedMessage($session.view.message, $setupLocale)} link={$session.view.message.link} />
       {/if}
-
+      {#if $session.view?.batch}<BatchSafetyBanner report={$session.view.permissions?.report} />{/if}
       {#if !$session.paired}
         <PairingPanel busy={$session.busy} onPair={session.pair} />
       {:else if $session.view?.outcome}
-        <ResultPanel management={$session.view.surface === 'management'} outcome={$session.view.outcome} detail={$session.view.resultDetail} permissionReport={$session.view.permissions?.report} setupPatCorrection={$session.view.setupPatCorrection} doctor={$session.view.doctor} controller={$session.controller} onDoctor={session.runDoctor} onClose={session.close} />
+        {#if $session.view.batch}<BatchSetupPanel batch={$session.view.batch} mode="closed" controller={$session.controller} busy={$session.busy} />{/if}
+        <ResultPanel batch={Boolean($session.view.batch)} management={$session.view.surface === 'management'} outcome={$session.view.outcome} detail={$session.view.resultDetail} permissionReport={$session.view.permissions?.report} setupPatCorrection={$session.view.setupPatCorrection} doctor={$session.view.doctor} controller={$session.controller} onDoctor={session.runDoctor} onClose={session.close} />
       {:else if $session.view?.prompt}
         <div class="workspace-grid">
           <PromptCard prompt={$session.view.prompt} revision={$session.view.revision} promptRevision={$session.view.promptRevision!} controller={$session.controller} busy={$session.busy} onSubmit={submit} onRetryDiscovery={retryDiscovery} onBack={back} />
           <ContextPanel view={$session.view} />
         </div>
         {#if $session.controller && $session.view.journey?.current !== 'Apply'}<button class="cancel-link" onclick={cancel} disabled={$session.busy}>{tr('cancelSetup', $setupLocale)}</button>{/if}
+      {:else if $session.view?.batch}
+        <BatchSetupPanel batch={$session.view.batch} mode="progress" controller={$session.controller} busy={$session.busy} onStop={cancel} />
+        {#if $session.view.permissions?.progress?.length && !$session.view.permissions.report}
+          <PermissionProgressPanel permissions={$session.view.permissions} />
+        {/if}
       {:else if $session.view?.permissions?.progress?.length && !$session.view.permissions.report}
         <PermissionProgressPanel permissions={$session.view.permissions} />
       {:else}

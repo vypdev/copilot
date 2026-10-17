@@ -47,8 +47,15 @@ import {
 import { setupActionResultFailure, setupResultEffects } from '../setup_result_receipt';
 import { reportSetupFailure, finishWebSetupSession } from '../setup_outcome_adapter';
 import { manageWebSetup } from '../setup_management_adapter';
+import { chooseSetupConfigurationSource, chooseWebSetupScope } from '../setup_source_adapter';
+import { executeSetupBatch } from '../setup_batch_adapter';
+import { setupBatchBranch } from '../../application/policies/setup_batch_policy';
+import { buildSetupBatchPatPermissionRequirements } from '../../application/policies/setup_token_permission_policy';
+import { buildSetupOrganizationReusePermissionRequirements } from '../../application/policies/setup_token_permission_policy';
+import { createDefaultSetupConfiguration, mergeSetupConfiguration } from '../../application/policies/setup_configuration_policy';
 
 export interface SetupExecutionOptions extends SetupCommandOverrideOptions {
+  batch?: boolean; resumeOperation?: string;
   debug?: boolean; token?: string; workflowPat?: string; secret?: Record<string, string>;
   nonInteractive?: boolean; web?: boolean; yes?: boolean; dryRun?: boolean;
   skipSecrets?: boolean; skipVariables?: boolean; updateWorkflows?: boolean;
@@ -78,6 +85,8 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
       let initialHead: string | undefined;
       let overrides!: SetupConfigurationOverrides;
       let presentationMode: 'basic' | 'custom' = 'custom';
+      let configurationSource: 'organization' | 'customize' = 'customize';
+      let batchRequested = Boolean(options.batch || options.resumeOperation);
       let setupPatPermissions = buildSetupPatPermissionRequirements();
       let token: string | undefined;
       let setupPatAccount: string | undefined;
@@ -160,6 +169,27 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
           },
           choices: async (): Promise<SetupSessionDecision> => {
         overrides = loadSetupOverrides(options);
+        if (options.resumeOperation) setupBatchBranch(options.resumeOperation);
+        if (batchRequested && (options.nonInteractive || options.dryRun || options.yes)) {
+          throw new ApplicationError('configuration.invalid', '--batch requires interactive review and cannot be combined with --non-interactive, --dry-run or --yes. You can inspect the batch plan and leave without applying it.');
+        }
+        if (batchRequested && !terminal && !webBridge) {
+          throw new ApplicationError('configuration.invalid', '--batch needs an interactive terminal or --web to select and review repositories.');
+        }
+        if (webBridge && !options.dryRun && !batchRequested) batchRequested = await chooseWebSetupScope(webBridge) === 'selected';
+        if (batchRequested && (options.workflowPat || Object.keys(options.secret ?? {}).length > 0)) {
+          throw new ApplicationError('configuration.invalid', 'Batch setup retains existing Secret bindings. Provision replacement values through current-repository Customize setup, then inspect them again.');
+        }
+        if (!options.nonInteractive && !options.dryRun) {
+          configurationSource = await chooseSetupConfigurationSource(terminal, webBridge, batchRequested);
+          if (configurationSource === 'organization') {
+            if (options.workflowPat || Object.keys(options.secret ?? {}).length > 0) {
+              throw new ApplicationError('configuration.invalid', 'Organization reuse cannot consume replacement Secret values. Choose Customize configuration when supplying --workflow-pat or --secret.');
+            }
+            setupPatPermissions = buildSetupOrganizationReusePermissionRequirements(mergeSetupConfiguration(createDefaultSetupConfiguration(), overrides));
+          }
+          if (batchRequested) setupPatPermissions = buildSetupBatchPatPermissionRequirements(mergeSetupConfiguration(createDefaultSetupConfiguration(), overrides));
+        }
         if (!options.nonInteractive && !options.dryRun) {
           if (webBridge) {
             const depth = await webBridge.ask({ kind: 'choice', title: 'Choose setup detail', copyId: 'setup.depth',
@@ -187,6 +217,8 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
             skipRepositorySecrets: Boolean(options.skipSecrets),
             terminal, bridge: webBridge, journey, credentialPrompt, permissionPresenter,
             initialRequirements: setupPatPermissions,
+            configurationSource,
+            deliveryMode: batchRequested ? 'pull-request' : 'local',
           });
           setupPatPermissions = [...intent.requirements];
           assertedOwnerKind = intent.assertedOwnerKind;
@@ -213,14 +245,24 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
             showCorrectedLink: url => credentialPrompt.showUpdatedSetupPatLink(url, 'bootstrap'),
           }).execute({ owner: gitInfo.owner, repository: gitInfo.repo, token,
             requirements: setupPatPermissions, guided: credentialPrompt.usedGuidedSetupPat,
-            previewOnly: Boolean(options.dryRun),
+            previewOnly: Boolean(options.dryRun || batchRequested || configurationSource === 'organization'),
             onCleanupPending: () => { setupMutationStarted = true; cleanupPending(); } });
         }
         return 'continue';
           },
+          batch: async (present, possibleMutation) => {
+        if (!batchRequested) return undefined;
+        if (!token) throw new ApplicationError('authorization.credential-invalid', 'A temporary setup PAT is required for repository discovery.');
+        const result = await executeSetupBatch({ resumeOperationId: options.resumeOperation, owner: gitInfo.owner, repository: gitInfo.repo, token,
+          configurationSource, presentationMode, overrides, skipVariables: Boolean(options.skipVariables), skipSecrets: Boolean(options.skipSecrets),
+          provisionalRequirements: setupPatPermissions, terminal, bridge: webBridge, credentialPrompt, permissionPresenter, present,
+          possibleMutation: () => { setupMutationStarted = true; setupApplyStarted = true; possibleMutation(); } });
+        return { outcome: result.outcome };
+          },
           plan: async (cleanupPending): Promise<SetupSessionDecision> => {
         logInfo(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
         auditConfiguredSetupPat = new AuditConfiguredSetupPatUseCase({
+          configurationSource,
           owner: gitInfo.owner, repository: gitInfo.repo, token,
           provisionalRequirements: setupPatPermissions, assertedOwnerKind,
           guided: credentialPrompt.usedGuidedSetupPat,
@@ -260,8 +302,9 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
           ...(permissionIntent ? { permissionIntent } : {}),
           skipRepositoryVariables: Boolean(options.skipVariables),
           skipRepositorySecrets: Boolean(options.skipSecrets),
-          previewOnly: Boolean(options.dryRun),
+          previewOnly: Boolean(options.dryRun || batchRequested || configurationSource === 'organization'),
           presentationMode,
+          configurationSource,
           developmentBranchObservedLocally: hasLocalOrTrackedGitBranch(cwd, overrides.repository?.developmentBranch ?? 'develop'),
           ...(token ? { remoteTarget: { owner: gitInfo.owner, repository: gitInfo.repo, token } } : {}),
         });
@@ -300,6 +343,7 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
           },
           credentials: async (possibleMutation): Promise<SetupSessionDecision> => {
         credentialsCollection = await collectSetupCredentials({
+          configurationSource,
           owner: gitInfo.owner, repository: gitInfo.repo, setupToken: token ?? '',
           setupPatAccount, configuration, remoteConfiguration,
           skipSecrets: Boolean(options.skipSecrets), nonInteractive: Boolean(options.nonInteractive),
@@ -330,6 +374,7 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
           credentialsCollection,
           approvedWorkflowFiles,
           remoteConfiguration,
+          configurationSource,
         );
         setupMutationStarted = true;
         setupApplyStarted = true;

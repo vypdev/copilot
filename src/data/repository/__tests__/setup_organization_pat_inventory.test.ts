@@ -41,6 +41,16 @@ describe('organization PAT namespace metadata', () => {
         expect(validateSetupStorageAgainstRemote(config, result)).toEqual([]);
         expect(JSON.stringify(result)).not.toContain('private GitHub detail');
     });
+    test('does not apply replacement-only namespace uncertainty to a retained known inherited PAT', async () => {
+        const f = fixture(); f.client.rest.actions.listOrgSecrets.mockRejectedValue(new Error('denied namespace'));
+        f.client.rest.actions.listRepoOrganizationSecrets.mockResolvedValue({ data: { secrets: [{ name: 'PAT' }] } });
+        const remote = await f.inspector.inspect('owner', 'repo', 'fixture');
+        const config = createDefaultSetupConfiguration(); config.storage.secrets.defaultScope = 'organization';
+        expect(validateSetupStorageAgainstRemote(config, remote, { retainWorkflowPat: true })).toEqual([]);
+        expect(validateSetupStorageAgainstRemote(config, remote)).toContainEqual(expect.stringContaining('Organization PAT Secret inventory'));
+        expect(validateSetupStorageAgainstRemote(config, { ...remote, organizationSecrets: [] }, { retainWorkflowPat: true }))
+          .toContainEqual(expect.stringContaining('Organization PAT Secret inventory'));
+    });
     test('does not query an organization namespace for a personal repository', async () => {
         const f = fixture(); f.client.rest.repos.get.mockResolvedValue({ data: { owner: { type: 'User' }, visibility: 'private', id: 7 } });
         expect((await f.inspector.inspect('owner', 'repo', 'setup-fixture')).organizationWorkflowPat).toBeUndefined();

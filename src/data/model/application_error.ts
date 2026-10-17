@@ -24,6 +24,7 @@ export type ApplicationErrorCode =
     | 'locale.output-invalid'
     | 'locale.translation-failed'
     | 'validation.invalid-input'
+    | 'validation.evidence-too-large'
     | 'workflow.invalid-event'
     | 'workflow.stale'
     | 'workflow.cancelled'
@@ -168,6 +169,12 @@ export const APPLICATION_ERROR_METADATA: Readonly<Record<ApplicationErrorCode, A
         impact: 'The operation did not accept the supplied input.',
         action: 'Correct the input and retry.',
         retainedState: UNCHANGED_STATE,
+    },
+    'validation.evidence-too-large': {
+        kind: 'validation', retryable: false,
+        impact: 'Progress could not be assessed within the fixed evidence limits.',
+        action: 'Reduce the comparison size or split the work into smaller reviewed changes before running a new assessment.',
+        retainedState: 'Existing progress labels and published assessments were preserved.',
     },
     'workflow.invalid-event': {
         kind: 'workflow', retryable: false,

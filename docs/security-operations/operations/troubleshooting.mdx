@@ -457,3 +457,21 @@ corrected setup PAT; the guided link grants Variables Write only at the reviewed
 scope and Variable reads for precedence. Cleanup or read-back uncertainty stops
 the session with an inspection receipt. Check the actual GitHub Variable before
 retrying; there is no automatic rollback of an unconfirmed remote write.
+
+## Reuse and batch setup
+
+| Result | Meaning and next action |
+|---|---|
+| Inventory unavailable | No assumption of absence was made. Restore metadata read access, then inspect the affected repository again. |
+| Required binding missing | Provision the credential separately with current-repository Customize or grant its existing organization binding; reuse never requests or copies its value. |
+| Waiting for merge | The setup PR exists. Review and merge it, then verify the installation. |
+| Verification pending | Available metadata does not prove runtime capabilities. Inspect trusted default-branch checks or run the appropriate doctor verification. |
+| Partial / stopped | Completed grants, repository resources and PRs remain. Inspect their receipts before the explicit retry. |
+| Plan drift / moved head | No overwrite is attempted. Inspect the default branch and existing installer PR; renew the plan instead of force-pushing. |
+| Rate-limited | The target pauses without blind mutation retries. Wait for GitHub access to recover, then inspect and explicitly retry. |
+| Cleanup pending | Resolve the reported temporary probe resource before starting any installation work. |
+
+A new process needs a fresh PAT and review. `--resume-operation <operation-id>`
+reconstructs the same desired plan from the private receipt identities; it
+rejects changed configuration/base/targets before probes. Shared grants are
+additive; cancellation does not roll them back or revoke the operator PAT.

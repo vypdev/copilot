@@ -172,6 +172,7 @@ export function shouldUpsertSetupResource(
 export function validateSetupStorageAgainstRemote(
     configuration: SetupConfiguration,
     remote: SetupRemoteConfiguration,
+    options: { readonly retainWorkflowPat?: boolean } = {},
 ): string[] {
     const errors: string[] = [];
     const policies: Array<[SetupResourceKind, SetupResourceStoragePolicy, boolean]> = [
@@ -194,7 +195,8 @@ export function validateSetupStorageAgainstRemote(
             errors.push(`The setup PAT cannot inspect organization ${kind}s for this repository. Organization ${kind} permissions are required.`);
         }
         if (kind === 'secret' && resolveSetupResourceScope(policy, 'PAT') === 'organization'
-            && remote.organizationWorkflowPat === 'unavailable') {
+            && remote.organizationWorkflowPat === 'unavailable'
+            && !(options.retainWorkflowPat && remote.organizationSecrets.includes('PAT'))) {
             errors.push('Organization PAT Secret inventory is unavailable; setup cannot confirm whether the selected organization PAT will be replaced.');
         }
         if (policy.organizationVisibility === 'selected' && remote.repositoryId === undefined) {

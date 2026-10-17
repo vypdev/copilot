@@ -2762,3 +2762,38 @@ full zoom journey. Client-blocked fixture navigation and unavailable speech
 capture are recorded as limitations, not passes. Self-hosted remains Ubuntu-only
 under the maintainer's temporary instruction; hosted Ubuntu, Windows and macOS
 coverage is retained. No unavailable platform is reclassified as verified.
+
+
+## Organization reuse and batch setup amendment — 2026-10-17
+
+The [organization reuse and batch companion](./organization-configuration-reuse-and-batch-setup.md)
+amends this specification for an explicit interactive source/scope choice.
+Current-repository Customize retains its existing replacement/PAT re-entry
+contract. Organization reuse and batch keep existing effective Secret bindings,
+including PAT, without obtaining or rewriting their values. They read only
+trusted default-branch health evidence; missing evidence remains pending and
+authentication alone is never full capability proof. Single-repository saved
+configurations and current-checkout Apply stay compatible.
+
+Both presentations share typed import/preparation/Apply use cases. Reuse skips
+valid compatible questions and storage/replacement prompts. Batch selects 1–25
+explicit IDs in one organization, reviews each exact base/ref/files/access plan,
+then audits the required temporary Write probes before sequential installation.
+Shared values and visibility remain immutable; only approved additive target
+access is allowed. Installer refs use `setup/copilot/<operation-id>` and matching
+prepared-commit receipts; Action-managed issue branches retain their lifecycle.
+No automatic merge, tag, release or deploy is introduced.
+
+Private metadata-only journals support an explicit same-plan/base resume with
+fresh credentials and review via `--resume-operation`. Changed bases or desired
+plans are rejected before probes. Successful effects remain on stop/failure;
+one guarded retry is available per paired session. A matching-file target gets
+no PR and remains verification pending after label/type/resource checks. A setup
+PR means Waiting for merge, never Installed/Verified.
+
+Evidence: `setup_organization_import_wizard.test.ts`,
+`setup_organization_secret_reuse.test.ts`, `setup_batch_flow.test.ts`,
+`apply_setup_batch_use_case.test.ts`, `setup_batch_github_*_adapter.test.ts`,
+`setup_trusted_health_sdk_contract.integration.test.ts`, and
+`web_setup_batch_components.test.ts`. Owning test budget, migration, UX and
+operational acceptance are in the companion; existing quality gates remain.

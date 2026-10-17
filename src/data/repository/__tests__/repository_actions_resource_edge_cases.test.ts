@@ -38,6 +38,28 @@ describe('Actions resource boundary edge cases', () => {
         await expect(new RepositorySecretNamesQueryRepository(provider).list('owner', 'repo', 'fixture')).rejects.toThrow('invalid data');
         expect(actions.createOrUpdateRepoSecret).not.toHaveBeenCalled();
     });
+    it('projects Secret rotation metadata without exposing provider values', async () => {
+        const { actions, provider } = fixture();
+        actions.listRepoSecrets.mockResolvedValue({ data: { secrets: [{ name: 'PAT', updated_at: '2026-10-17T00:00:00Z', value: 'must-not-leak' }] } });
+        const remote = await new SetupRemoteConfigurationQueryRepository(provider).inspect('owner', 'repo', 'fixture');
+        expect(remote.repositorySecretRevisions).toEqual([{ name: 'PAT', updatedAt: '2026-10-17T00:00:00Z' }]);
+        expect(JSON.stringify(remote)).not.toContain('must-not-leak');
+    });
+    it.each([undefined, 'invalid-date'])('does not invent a Secret revision from invalid metadata %s', async updated_at => {
+        const { actions, provider } = fixture(); actions.listRepoSecrets.mockResolvedValue({ data: { secrets: [{ name: 'PAT', updated_at }] } });
+        const remote = await new SetupRemoteConfigurationQueryRepository(provider).inspect('owner', 'repo', 'fixture');
+        expect(remote.repositorySecretRevisions).toBeUndefined();
+    });
+    it('projects only inherited Secret revision metadata and keeps missing or invalid dates unknown', async () => {
+        const { actions, provider } = fixture();
+        const inspect = () => new SetupRemoteConfigurationQueryRepository(provider).inspect('owner', 'repo', 'fixture');
+        actions.listRepoOrganizationSecrets.mockResolvedValue({ data: { secrets: [{ name: 'PAT', updated_at: '2026-10-17T00:00:00Z', value: 'must-not-leak' }] } });
+        const remote = await inspect(); expect(remote.organizationSecretRevisions).toEqual([{ name: 'PAT', updatedAt: '2026-10-17T00:00:00Z' }]); expect(JSON.stringify(remote)).not.toContain('must-not-leak');
+        for (const updated_at of [undefined, 'invalid-date']) {
+          actions.listRepoOrganizationSecrets.mockResolvedValue({ data: { secrets: [{ name: 'PAT', updated_at }] } });
+          expect((await inspect()).organizationSecretRevisions).toBeUndefined();
+        }
+    });
     it('blocks a Secret query when its SDK endpoint is absent', async () => {
         const { actions, provider } = fixture();
         Reflect.deleteProperty(actions, 'listRepoSecrets');

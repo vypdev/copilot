@@ -1,3 +1,6 @@
+import type { SetupPlan } from '../../domain/setup';
+import type { SetupBatchSelectionView, SetupBatchView } from './setup_batch_view';
+export type { SetupBatchSelectionView, SetupBatchView } from './setup_batch_view';
 import type { SetupJourneyView } from '../policies/setup_journey_policy';
 import type { SetupQuestion, SetupQuestionnaireProgress } from '../../domain/setup_questionnaire';
 export type { SetupApprovalCheckCandidate, SetupProjectCandidate, SetupDiscoveryStatus } from '../../domain/setup_questionnaire';
@@ -27,8 +30,8 @@ export interface SetupQuestionExplanation {
 export type SetupQuestionPresentation = Readonly<Record<'en' | 'es' | 'fr' | 'pt', SetupQuestionExplanation>>;
 
 export type WebSetupPromptCopyId =
-  | 'management.token' | 'management.tokenWrite' | 'repository.confirm' | 'setup.depth' | 'setup.environmentPat' | 'plan.review' | 'workflow.update'
-  | 'setupPat.method' | 'setupPat.ownerKind' | 'setupPat.review' | 'setupPat.entry'
+  | 'management.token' | 'management.tokenWrite' | 'repository.confirm' | 'setup.depth' | 'setup.source' | 'setup.batchSource' | 'setup.scope' | 'batch.token' | 'setup.environmentPat' | 'plan.review' | 'workflow.update'
+  | 'setupPat.method' | 'setupPat.ownerKind' | 'setupPat.review' | 'setup.reusePatReview' | 'setupPat.entry'
   | 'setupPat.confirmAccount' | 'setupPat.confirmUnverifiedAccess' | 'botPat.method' | 'botPat.login'
   | 'botPat.entry.guided' | 'botPat.entry.manual' | 'botPat.identityMismatch' | 'botPat.scopeConflict' | 'botPat.scopeConflictUnavailable' | 'credential.apiKey'
   | 'credential.existing' | 'apply.confirm';
@@ -54,6 +57,8 @@ export type WebSetupMessageCopyId =
   | 'validation.fixedIssues' | 'validation.fixedWorkflowEnabled' | 'validation.fixedWorkflowDisabled';
 
 export type WebSetupPrompt =
+  | ({ kind: 'batch-plan' | 'batch-result'; title: string; batch: SetupBatchView } & WebSetupPromptCopyRef)
+  | ({ kind: 'repositories'; title: string; selection: SetupBatchSelectionView } & WebSetupPromptCopyRef)
   | ({ kind: 'management'; title: string; management: SetupManagementView } & WebSetupPromptCopyRef)
   | ({ kind: 'quick-edit'; title: string; id: string; current: string; presentation?: SetupQuestionPresentation; choices?: readonly string[]; min?: number; max?: number } & WebSetupPromptCopyRef)
   | ({ kind: 'quick-review'; title: string; change: Omit<SetupQuickChange, 'fingerprint'> } & WebSetupPromptCopyRef)
@@ -65,6 +70,8 @@ export type WebSetupPrompt =
   | ({ kind: 'plan'; title: string; plan: WebSetupPlan; editGroups?: readonly SetupQuestion['stateId'][] } & WebSetupPromptCopyRef);
 
 export interface WebSetupPlan {
+  readonly deliveryMode?: SetupPlan['deliveryMode'];
+  readonly organizationReuse?: SetupPlan['organizationReuse'];
   readonly workflowPatStorage?: SetupWorkflowPatStorageNotice;
   readonly presentationDefaults: readonly { readonly group: string; readonly count: number }[];
   readonly permissionProbes: readonly { readonly scope: 'repository' | 'organization'; readonly permission: string }[];
@@ -96,6 +103,7 @@ export interface WebSetupPlan {
 }
 
 export interface WebSetupView {
+  readonly batch?: SetupBatchView;
   readonly surface?: 'management' | 'wizard';
   readonly revision: number;
   readonly promptRevision?: number;

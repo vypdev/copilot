@@ -124,6 +124,7 @@ export interface AgentActivityOutcome {
 }
 
 export interface InitialSetupContext {
+  readonly setupConfigurationSource?: 'organization' | 'customize';
   readonly labels: InitialLabelConfiguration;
   readonly issueTypes: InitialIssueTypeConfiguration;
   readonly setupConfiguration?: Readonly<SetupConfiguration>;
@@ -152,6 +153,7 @@ export interface PushSingleActionContextSource {
     readonly action?: string;
     readonly after?: string;
     readonly setupConfiguration?: unknown;
+    readonly setupConfigurationSource?: unknown;
     readonly setupCredentials?: unknown;
     readonly setupRemoteConfiguration?: unknown;
     readonly setupWorkflowUpdates?: unknown;
@@ -380,6 +382,7 @@ export function projectInitialSetupContext(source: PushSingleActionContextSource
   const remote = asObject<SetupRemoteConfiguration>(source.inputs?.setupRemoteConfiguration);
   return Object.freeze({
     labels: copyInitialLabels(source.labels),
+    ...(source.inputs?.setupConfigurationSource === 'organization' ? { setupConfigurationSource: 'organization' as const } : {}),
     issueTypes: Object.freeze({ ...source.issueTypes }),
     ...(configuration ? { setupConfiguration: deepFreezeCopy(configuration) } : {}),
     ...(credentials ? { setupCredentials: deepFreezeCopy(credentials) } : {}),

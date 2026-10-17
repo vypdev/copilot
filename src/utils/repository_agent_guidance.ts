@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { createHash } from 'node:crypto';
+import type { SetupBatchInstallationReceipt } from '../domain/setup_batch';
 import type { SetupConfiguration } from '../domain/setup';
 import {
   ISSUE_WORKFLOW_CATALOG,
@@ -20,6 +21,7 @@ import {
   type RepositoryAgentArtifact,
 } from '../application/policies/repository_agent_guidance_policy';
 import { logInfo } from './logger';
+import { isSetupBatchInstallationReceipt } from '../application/policies/setup_batch_policy';
 
 type ManagedRole = RepositoryAgentArtifact['role'] | 'pointer';
 
@@ -36,6 +38,7 @@ interface ManagedArtifactRecord {
 }
 
 interface GuidanceManifest {
+  readonly installation?: SetupBatchInstallationReceipt;
   readonly schemaVersion: 2;
   readonly generator: { readonly name: '@vypdev/copilot'; readonly contractVersion: 1 };
   readonly profileDigest: string;
@@ -96,6 +99,7 @@ export function reconcileRepositoryAgentGuidance(
     generator: { name: '@vypdev/copilot', contractVersion: 1 },
     profileDigest: profileRecord.sha256,
     artifacts: Object.fromEntries(Object.entries(records).sort(([left], [right]) => left.localeCompare(right))),
+    ...(prior?.installation ? { installation: prior.installation } : {}),
   };
   const manifestContent = `${JSON.stringify(manifest, null, 2)}\n`;
   if (!fs.existsSync(manifestDestination)
@@ -275,7 +279,8 @@ function readGuidanceManifest(cwd: string): GuidanceManifest | undefined {
   if (!fs.existsSync(manifestPath)) return undefined;
   try {
     const parsed = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as Record<string, unknown>;
-    if (Object.keys(parsed).some(key => !['schemaVersion', 'generator', 'profileDigest', 'artifacts'].includes(key))) return undefined;
+    if (Object.keys(parsed).some(key => !['schemaVersion', 'generator', 'profileDigest', 'artifacts', 'installation'].includes(key))) return undefined;
+    if (parsed.installation !== undefined && !isSetupBatchInstallationReceipt(parsed.installation)) return undefined;
     if (parsed.schemaVersion !== 2 || !isSha256(parsed.profileDigest)) return undefined;
     const generator = parsed.generator as Record<string, unknown> | undefined;
     if (!generator || Object.keys(generator).some(key => !['name', 'contractVersion'].includes(key))
@@ -296,6 +301,7 @@ function readGuidanceManifest(cwd: string): GuidanceManifest | undefined {
       generator: { name: '@vypdev/copilot', contractVersion: 1 },
       profileDigest: parsed.profileDigest as string,
       artifacts: records,
+      ...(isSetupBatchInstallationReceipt(parsed.installation) ? { installation: parsed.installation } : {}),
     };
   } catch {
     return undefined;
@@ -376,8 +382,13 @@ function checkId(role: ManagedRole): string {
 function validRepositoryAgentProfile(content: string): boolean {
   try {
     const parsed: unknown = JSON.parse(content);
-    if (!hasExactKeys(parsed, ['schemaVersion', 'generator', 'issueWorkflows', 'branches', 'pullRequests', 'deployment'])
+    const profileKeys = ['schemaVersion', 'generator', 'issueWorkflows', 'branches', 'pullRequests', 'deployment'];
+    if (isRecord(parsed) && parsed.installation !== undefined) profileKeys.push('installation');
+    if (!hasExactKeys(parsed, profileKeys)
       || parsed.schemaVersion !== 2) return false;
+    if (parsed.installation !== undefined && (!hasExactKeys(parsed.installation, ['lifecycleOwner', 'branchNamespace', 'requiresIssue', 'automaticMerge'])
+      || parsed.installation.lifecycleOwner !== 'setup-cli' || parsed.installation.branchNamespace !== 'setup/copilot/<operation-id>'
+      || parsed.installation.requiresIssue !== false || parsed.installation.automaticMerge !== false)) return false;
     const { generator, issueWorkflows, branches, pullRequests, deployment } = parsed;
     if (!hasExactKeys(generator, ['name', 'contractVersion'])
       || generator.name !== '@vypdev/copilot' || generator.contractVersion !== 2) return false;

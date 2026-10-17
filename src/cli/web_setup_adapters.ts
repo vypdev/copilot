@@ -67,7 +67,7 @@ export class WebSetupPlanPresenter implements SetupPlanPresenterPort {
 export class WebSetupPlanConfirmation implements SetupPlanConfirmationPort {
   constructor(private readonly bridge: WebSetupBridge) {}
   async confirm(plan: SetupPlan): Promise<{ kind: 'approved' | 'declined' | 'cancelled' } | { kind: 'revise'; group: SetupQuestion['stateId'] }> {
-    const groups = setupEditableGroups(plan.configuration);
+    const groups = setupEditableGroups(plan.configuration, Boolean(plan.organizationReuse) || plan.deliveryMode === 'pull-request');
     const response = await this.bridge.ask({ kind: 'plan', title: 'Review your setup plan', copyId: 'plan.review', plan: toWebSetupPlan(plan), editGroups: groups });
     if (response?.startsWith('revise:')) {
       const group = response.slice('revise:'.length) as SetupQuestion['stateId'];

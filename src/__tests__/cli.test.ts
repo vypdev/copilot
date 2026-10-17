@@ -511,6 +511,8 @@ describe('CLI', () => {
       const answerWebPrompt = async (prompt: WebSetupPrompt): Promise<string> => {
         if (prompt.kind === 'management') return 'wizard';
         if (prompt.title === 'Confirm this repository') return 'Yes, this is my repository';
+        if (prompt.copyId === 'setup.scope') return 'This repository';
+        if (prompt.copyId === 'setup.source') return 'Customize configuration';
         if (prompt.title === 'Choose setup detail') return 'Basic guided setup';
         if (prompt.title === 'How will you provide your setup PAT?') return 'Manual PAT';
         if (prompt.title === 'Temporary setup PAT') return 'github_pat_web_setup_test_token';
@@ -1527,7 +1529,8 @@ describe('CLI', () => {
       });
       try {
         await program.parseAsync(['node', 'cli', 'setup']);
-        expect(terminal.readText).toHaveBeenCalledTimes(2);
+        expect(terminal.readText).toHaveBeenCalledTimes(3);
+        expect(terminal.readText).toHaveBeenCalledWith(expect.stringContaining('Reuse organization configuration'));
         expect(terminal.readText).toHaveBeenCalledWith(expect.stringContaining('How much configuration detail'));
         expect(terminal.readSecret).toHaveBeenCalledWith('Setup PAT');
         expect(consoleLogSpy.mock.calls.flat().join('\n')).not.toContain('Revoke temporary setup PAT');

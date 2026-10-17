@@ -109,7 +109,7 @@ clears the rejected input, and verifies the new PAT's numeric identity and
 permissions before continuing. Delete the unused wrong-account PAT in GitHub.
 Closing the session still ends the run; progress is not saved across restarts.
 
-The bot Secret `PAT` is always supplied and validated during setup, even when
+In current-repository **Customize configuration**, the bot Secret `PAT` is supplied and validated, even when
 you preserve other existing Secrets. It uses the scope you selected (or its
 explicit override). The plan and hidden input warn when that destination already
 contains `PAT`; it is replaced only after the new value passes identity, target
@@ -368,7 +368,7 @@ Otherwise setup grants access separately. Missing required capabilities prevent
 the value write, and a rejected required grant prevents a success result. An API
 failure after a value write may require inspecting that resource before retrying.
 
-<Info>GitHub does not reveal Secret values through its API. Copilot validates new credentials with provider metadata requests and may validate existing remote Secrets by dispatching the installed `copilot_credential_health.yml` workflow. Setup proves the exact file on the selected main ref and dispatches that path only when the workflow is also registered or installed on GitHub's default branch. Plain `copilot doctor` may create an Actions run; `copilot doctor --read-only` never dispatches it and leaves Secret values unverified. The health workflow reports each requested credential independently, but that bounded reachability result is not a permission audit. If `PAT` already exists, interactive setup asks you to re-enter it and runs the complete workflow-PAT permission matrix before provisioning; unattended setup must supply `PAT` again or stops before mutation. Temporary workflow bootstrap is available only during setup. A preauthenticated Codex session is runner state, not a Secret: it is accepted only when the runtime preflight can execute `codex login status` successfully.</Info>
+<Info>GitHub does not reveal Secret values through its API. In Customize, Copilot validates new credentials with provider metadata requests and may validate existing remote Secrets by dispatching the installed `copilot_credential_health.yml` workflow. Setup proves the exact file on the selected main ref and dispatches that path only when the workflow is also registered or installed on GitHub's default branch. Plain `copilot doctor` may create an Actions run; `copilot doctor --read-only` never dispatches it and leaves Secret values unverified. The health workflow reports each requested credential independently, but that bounded reachability result is not a permission audit. In Customize, if `PAT` already exists, interactive setup asks you to re-enter it and runs the complete workflow-PAT permission matrix before provisioning; unattended setup must supply `PAT` again or stops before mutation. Temporary workflow bootstrap is available only during setup. A preauthenticated Codex session is runner state, not a Secret: it is accepted only when the runtime preflight can execute `codex login status` successfully.</Info>
 
 Terminal setup may attempt a temporary credential-health workflow creation before
 final Apply when checking existing Secrets. That request can create Git commits
@@ -548,3 +548,25 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     ```
   </Step>
 </Steps>
+
+## Organization reuse and batch permissions
+
+Reuse keeps existing Secret bindings, including `PAT`, without asking for their
+values or dispatching a health workflow. It reads only available trusted health
+evidence from the exact packaged workflow on the authenticated default-branch
+SHA, at most five minutes old. Missing/stale evidence means verification
+pending; a failed trusted check blocks that binding. Authentication does not
+prove the bot's full repository, Projects or approval capabilities.
+
+The operator PAT needs readable repository and organization Actions resource
+metadata. Batch also needs Contents, Workflows and Pull requests Write to open
+setup PRs, plus the target's required label/issue-type grants. Organization
+Variables or Secrets Write is required only for explicitly reviewed additive
+selected-repository grants. No reused Secret or shared Variable value is written.
+The final review lists the exact temporary Write probes; a failed cleanup stops
+all installation work. Organization or runner-group policies are never weakened.
+
+Select repositories explicitly in the PAT settings. The creation link is a
+permission aid; it cannot prove the selected repositories or organization
+approval. A limited discovery view is not an organization inventory guarantee.
+See [the guided batch journey](/how-to-use#reuse-organization-settings-or-configure-several-repositories).

@@ -1,3 +1,4 @@
+import { hasAlternative, runnerAuthenticationCanSatisfyRequirement, runnerAuthenticationCanSatisfyGroup, isRequirementSatisfied, markRequirementSatisfied } from '../../policies/setup_credential_binding_policy';
 import type {
     SetupCredentialCheck,
     SetupCredentialCollection,
@@ -10,6 +11,7 @@ import type {
     SetupCredentialValidationPort,
     SetupRepositorySecretNamesQueryPort,
     SetupRemoteCredentialHealthPort,
+    SetupTrustedCredentialHealthPort,
 } from '../../ports/setup_wizard_ports';
 import type { SetupTokenPermissionAuditPort, SetupTokenPermissionPresenterPort } from '../../ports/setup_token_permission_ports';
 import { ApplicationError } from '../../errors/application_error';
@@ -31,6 +33,8 @@ import {
 } from '../../policies/setup_configuration_storage_policy';
 
 export interface SetupCredentialsRequest {
+    /** Internal batch preflight: namespace bindings whose reviewed access grant is not applied yet. */
+    pendingOrganizationSecretNames?: readonly string[];
     owner: string;
     repository: string;
     setupToken: string;
@@ -41,6 +45,7 @@ export interface SetupCredentialsRequest {
     remoteConfiguration?: SetupRemoteConfiguration;
     workflowTokenPermissions?: readonly SetupTokenPermissionRequirement[];
     selectedProjectNumbers?: string;
+    configurationSource?: 'organization' | 'customize';
 }
 
 export interface SetupCredentialsResult {
@@ -59,6 +64,7 @@ export class SetupCredentialsUseCase {
         private readonly tokenPermissions?: SetupTokenPermissionAuditPort,
         private readonly permissionPresenter?: SetupTokenPermissionPresenterPort,
         private readonly workflowIdentity?: Pick<VerifyGuidedWorkflowPatIdentityUseCase, 'execute'>,
+        private readonly trustedRemoteHealth?: SetupTrustedCredentialHealthPort,
     ) {}
 
     async collect(request: SetupCredentialsRequest): Promise<SetupCredentialsResult> {
@@ -113,6 +119,12 @@ export class SetupCredentialsUseCase {
             ? [...request.remoteConfiguration.repositorySecrets]
             : await this.secrets.list(request.owner, request.repository, request.setupToken);
         const existingOrganizationSecretNames = request.remoteConfiguration?.organizationSecrets ?? [];
+        if (request.configurationSource === 'organization') {
+            if (request.remoteConfiguration?.ownerType !== 'Organization') {
+                throw new ApplicationError('configuration.invalid', 'Organization reuse requires verified organization repository metadata.');
+            }
+            return this.reuseExisting(request, setupCheck, requirements, existingSecretNames, existingOrganizationSecretNames);
+        }
         const workflowTokenPermissions = request.workflowTokenPermissions ?? [];
         const workflowStorage = setupWorkflowPatStorageNotice(request.owner, request.repository, request.secretStoragePolicy,
             existingSecretNames, existingOrganizationSecretNames, request.remoteConfiguration?.organizationWorkflowPat);
@@ -263,6 +275,74 @@ export class SetupCredentialsUseCase {
             existingSecretNames,
         };
     }
+    private async reuseExisting(
+        request: SetupCredentialsRequest,
+        setupCheck: SetupCredentialCheck,
+        requirements: readonly SetupCredentialRequirement[],
+        repositoryNames: readonly string[],
+        organizationNames: readonly string[],
+    ): Promise<SetupCredentialsResult> {
+        const checks: SetupCredentialCheck[] = [setupCheck];
+        const retained: NonNullable<SetupCredentialCollection['retainedSecrets']>[number][] = [];
+        const bindings: { readonly requirement: SetupCredentialRequirement; readonly scope: SetupResourceScope }[] = [];
+        const satisfiedGroups = new Set<string>();
+        for (const requirement of requirements) {
+            if (isRequirementSatisfied(requirement, satisfiedGroups)) continue;
+            const scope = repositoryNames.includes(requirement.name) ? 'repository'
+                : organizationNames.includes(requirement.name) ? 'organization' : undefined;
+            if (!scope) {
+                if (hasAlternative(requirement)) {
+                    checks.push({ name: requirement.name,
+                        status: runnerAuthenticationCanSatisfyRequirement(requirement) ? 'not_required' : 'missing',
+                        message: 'No accessible Secret binding was retained; any selected runner-login alternative still requires verification.' });
+                    continue;
+                }
+                throw new ApplicationError('authorization.credential-invalid',
+                    `${requirement.name} is not available for reuse. Review its access or provision it separately, then inspect again.`);
+            }
+            if (scope === 'organization' && request.remoteConfiguration?.organizationSecretsAccess !== 'available') {
+                throw new ApplicationError('provider.unavailable', 'Organization Secret access is unknown; reuse cannot rely on stale names.');
+            }
+            const policy = request.secretStoragePolicy;
+            if (policy?.preserveExisting === false || (policy?.overrides[requirement.name] !== undefined && policy.overrides[requirement.name] !== scope)) {
+                throw new ApplicationError('configuration.invalid',
+                    `${requirement.name} cannot be moved or replaced by reuse. Review its storage policy or choose Customize.`);
+            }
+            bindings.push({ requirement, scope });
+            markRequirementSatisfied(requirement, satisfiedGroups);
+        }
+        const unsatisfied = [...new Set(requirements.flatMap(requirement => requirement.alternativeGroups ?? []))]
+            .some(group => !satisfiedGroups.has(group) && !runnerAuthenticationCanSatisfyGroup(requirements, group));
+        if (unsatisfied) throw new ApplicationError('authorization.credential-invalid',
+            'A required credential group has no accessible existing binding. Provision or authorize it separately before reuse.');
+        let observed: readonly SetupCredentialCheck[] | undefined;
+        const healthBindings = bindings.filter(binding => binding.scope !== 'organization'
+            || !request.pendingOrganizationSecretNames?.includes(binding.requirement.name));
+        if (this.trustedRemoteHealth && healthBindings.length > 0) {
+            try {
+                observed = await this.trustedRemoteHealth.validateTrustedDefault(
+                    request.owner, request.repository, request.setupToken, healthBindings.map(binding => binding.requirement));
+            } catch { /* Missing trusted evidence is pending; raw provider details stay private. */ }
+        }
+        const observedByName = new Map((observed ?? []).map(check => [check.name, check]));
+        for (const { requirement, scope } of bindings) {
+            const evidence = observedByName.get(requirement.name);
+            if (evidence?.status === 'invalid' || evidence?.status === 'missing') {
+                throw new ApplicationError('authorization.credential-invalid',
+                    `${requirement.name} did not pass its trusted existing-credential check. Inspect that check before reusing it.`);
+            }
+            // Authentication alone cannot prove every workflow permission or native approval readiness.
+            const status = requirement.kind !== 'workflowPat' && evidence?.status === 'valid' ? 'valid' : 'unverifiable';
+            checks.push({ name: requirement.name, sourceScope: scope, status,
+                ...(evidence?.verificationRunUrl ? { verificationRunUrl: evidence.verificationRunUrl } : {}),
+                message: status === 'valid' ? 'Existing credential authenticated through the trusted workflow; its value was preserved.'
+                    : 'Existing Secret retained. Runtime identity and required capability verification remain pending.' });
+            retained.push({ name: requirement.name, scope, status });
+        }
+        this.prompt.showCredentialChecks(checks);
+        return { collection: { apiKeys: [], retainedSecrets: retained }, checks, existingSecretNames: repositoryNames };
+    }
+
     private async requestCredential(
         requirement: SetupCredentialRequirement,
         current?: SetupCredentialCheck,
@@ -309,36 +389,6 @@ function workflowPatReentryCheck(
         status: 'unverifiable',
         message: 'GitHub does not reveal existing Secret values; re-enter the workflow PAT to audit its required permissions before replacing Secret PAT.',
     };
-}
-
-function hasAlternative(requirement: SetupCredentialRequirement): boolean {
-    return (requirement.alternativeGroups?.length ?? 0) > 0;
-}
-
-function runnerAuthenticationCanSatisfyRequirement(requirement: SetupCredentialRequirement): boolean {
-    return Boolean(requirement.alternativeGroups?.length)
-        && requirement.alternativeGroups!.every(group => requirement.runnerAuthenticationGroups?.includes(group));
-}
-
-function runnerAuthenticationCanSatisfyGroup(
-    requirements: readonly SetupCredentialRequirement[],
-    group: string,
-): boolean {
-    return requirements.some(requirement => requirement.runnerAuthenticationGroups?.includes(group));
-}
-
-function isRequirementSatisfied(requirement: SetupCredentialRequirement, satisfiedGroups: ReadonlySet<string>): boolean {
-    return hasAlternative(requirement)
-        ? requirement.alternativeGroups!.every(group => satisfiedGroups.has(group))
-        : satisfiedGroups.has(requirement.name);
-}
-
-function markRequirementSatisfied(requirement: SetupCredentialRequirement, satisfiedGroups: Set<string>): void {
-    if (hasAlternative(requirement)) {
-        for (const group of requirement.alternativeGroups!) satisfiedGroups.add(group);
-        return;
-    }
-    satisfiedGroups.add(requirement.name);
 }
 
 function isAcceptedCredentialCheck(

@@ -45,3 +45,14 @@ as a file; the installer resolves their native local and shared metadata and
 installs the repository checks in both locations. It preserves your configured
 hook path and global chain. Normal commits run the repository build, tests and
 lint through that chain. Nongit package installations remain unchanged.
+
+## Installer-owned setup PRs
+
+An explicitly approved batch setup uses `setup/copilot/<operation-id>` for both
+bootstrap and maintenance. The installer creates it only at a complete prepared
+commit on the authenticated target default SHA, with a matching installation
+receipt in `.copilot/setup-manifest.json`. It never force-pushes or deletes an
+existing ref, and an unexpected head blocks recovery. These setup PRs need no
+synthetic issue and still require human review and merge. This limited installer
+contract does not authorize collaborator agents to invent or change issue refs;
+all managed issue branches retain Action ownership.

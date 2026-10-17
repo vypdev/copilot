@@ -131,12 +131,13 @@ export function validatePullRequestApprovalPolicy(value: unknown, allowIncomplet
             && !value.testChecks.some(item => isRecord(item) && item.name === coverage.checkName)) {
             errors.push('Coverage checkName must match a configured trusted test check.');
         }
+        const awaitingNumericProducer = allowIncomplete && coverage.artifactWorkflowName === '';
         if (coverage.mode === 'numeric' && (!Number.isSafeInteger(coverage.minDiffPercent)
             || Number(coverage.minDiffPercent) < 0 || Number(coverage.minDiffPercent) > 100
-            || !safeName(coverage.artifactWorkflowName))) {
+            || (!safeName(coverage.artifactWorkflowName) && !awaitingNumericProducer))) {
             errors.push('Numeric coverage needs minDiffPercent 0–100 and an exact artifact workflow name.');
         }
-        if (coverage.mode === 'numeric' && Array.isArray(value.testChecks)
+        if (coverage.mode === 'numeric' && !awaitingNumericProducer && Array.isArray(value.testChecks)
             && !value.testChecks.some(item => isRecord(item) && item.workflowName === coverage.artifactWorkflowName)) {
             errors.push('Numeric artifact workflow must match a configured trusted producer.');
         }
