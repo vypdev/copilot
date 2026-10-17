@@ -59,6 +59,17 @@ describe('isolated setup rendering and private durable receipts', () => {
     const first = await renderer.render(configuration, []);
     expect(await renderer.render(configuration, first)).toEqual([]);
   });
+  it('retains target-specific runner locations in real package templates and keeps the approval observer isolated', async () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'recommend' };
+    const content = readFileSync(join(__dirname, '..', '..', '..', 'setup', 'workflows', 'copilot_pull_request.yml'), 'utf8')
+      .replace('runs-on: ubuntu-latest', 'runs-on: [self-hosted, codex, Linux]');
+    const existing = [{ path: '.github/workflows/copilot_pull_request.yml', content }];
+    const result = await new SetupBatchWorkspaceAdapter().render(configuration, existing);
+    const effective = result.find(file => file.path === existing[0].path)?.content ?? content;
+    expect(effective).toContain('codex'); expect(effective).not.toContain('runs-on: ubuntu-latest');
+    expect(result.find(file => file.path === '.github/workflows/copilot_pull_request_approval.yml')?.content).toContain('runs-on: ubuntu-latest');
+  });
   it('produces stable backups across previews and preserves customized human guidance', async () => {
     const renderer = new SetupBatchWorkspaceAdapter(); const configuration = createDefaultSetupConfiguration();
     const existing = [{ path: '.github/workflows/copilot_issue.yml', content: '# reviewed custom workflow\n' }];

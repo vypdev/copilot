@@ -468,6 +468,8 @@ retrying; there is no automatic rollback of an unconfirmed remote write.
 | Verification pending | Available metadata does not prove runtime capabilities. Inspect trusted default-branch checks or run the appropriate doctor verification. |
 | Partial / stopped | Completed grants, repository resources and PRs remain. Inspect their receipts before the explicit retry. |
 | Plan drift / moved head | No overwrite is attempted. Inspect the default branch and existing installer PR; renew the plan instead of force-pushing. |
+| Workflow runners need review | Existing matching jobs retain their static runner labels/group. A dynamic runner expression or unreadable job definition blocks automatic upgrade; review its complete matrix/input contract separately, then prepare again. Newly added jobs keep template defaults and require runner inspection before merge. |
+| Source Action workflows retained | Workflows calling the root-local `./` Action retain their native jobs and release configuration. Setup only adds the installer push exclusion to explicit branch filters; ambiguous filters require separate review. Consumer templates do not replace these source workflows. |
 | Rate-limited | The target pauses without blind mutation retries. Wait for GitHub access to recover, then inspect and explicitly retry. |
 | Cleanup pending | Resolve the reported temporary probe resource before starting any installation work. |
 

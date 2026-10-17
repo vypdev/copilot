@@ -658,3 +658,57 @@ current-head native review remain required. Native acceptance repeats the
 selected copilot/platform plans with zero unnecessary policy rewrites, creates
 only reviewed installer PRs, and compares independent pre/post resource hashes.
 No remaining decision is delegated to a retry or an unknown snapshot.
+
+### Native runner preservation acceptance (2026-10-17)
+
+Operation `0082234b-a58a-47cd-964a-0d9e70bb0717` completed native CLI
+Apply against copilot and platform, with confirmed probe cleanup, exact prepared
+commit parents and matching installation receipts in PRs copilot #550 and
+platform #170. Independent hashes proved all 73 organization Variables, six
+organization Secret metadata records, 12 copilot Variables, three copilot Secret
+metadata records and both existing platform Variables unchanged. The only
+addition was platform's missing `AGENT_ALLOWED_MODELS`. A separate disposable
+Variable test returned 201, then 409 on a competing create, retained the original
+value and confirmed deletion. These are setup effects, not runtime verification.
+
+The installation PR checks exposed a renderer defect: replacing complete
+templates discarded installed self-hosted `runs-on` selections, leaving Codex
+without runner authentication on ubuntu-latest. Before merge, normal and batch
+rendering MUST preserve each existing matching job's static runner string,
+label array or group/labels mapping. Compare and copy MUST use the same effective
+rendering, keep original backups and remain idempotent. Job identity is local to
+that workflow; removed jobs or other targets cannot supply a runner. New jobs
+retain template defaults, and the security-isolated approval observer is excluded
+from this retention. Its runner MUST remain the reviewed observer template.
+
+Preservation is a pure text/YAML helper called by the shared file adapter; it
+adds no configuration, token grant, durable field or provider operation. It
+retains the controlled template's steps, triggers and permissions. Invalid YAML,
+duplicate keys, multiple documents, malformed runner selections or an unexpected
+template layout MUST block rather than claim preservation. A changed workflow
+with a dynamic runner expression MUST require separate review: importing that
+expression alone could lose its matrix, inputs or dependent outputs. Existing
+identical dynamic templates remain unchanged. Batch rendering failure isolates
+the affected target through the existing blocked state before probes or writes.
+
+The primary UI remains the generated workflow diff and waiting-for-merge PR.
+Example: `runs-on: [self-hosted, codex, Linux]` remains on the updated Copilot job;
+a newly added job still shows `ubuntu-latest` and needs infrastructure review.
+Documentation MUST explain retained versus new jobs, dynamic runner recovery
+and the independent observer. Original installer PRs remain unmerged evidence;
+replacement acceptance uses fresh reviewed plans, never force-pushes their refs.
+
+Root-local `uses: ./` workflows are source Action infrastructure, not consumer
+templates. Setup MUST retain their complete jobs, native validation, release
+steps and permissions. It MAY only append the installer push exclusion to an
+existing explicit string branch-filter list; ambiguous push filters block for
+separate review. This narrow compatibility rule introduces no identity-based
+repository allowlist. The original observer isolation rule still applies.
+
+Minimum **39 additional distinct cases**: 36 pure cases for runner forms,
+idempotency, missing/different jobs, dynamic dependencies and malformed/ambiguous
+YAML/layout, source Action preservation and installer push filtering; two compare/copy integration cases for backups and blocking before
+replacement; one real-package batch/observer isolation case. These extend
+existing coverage thresholds, full local checks and current-head native review.
+Acceptance MUST repeat actual target rendering and inspect the installation PR
+runner selections before describing this regression as fixed.

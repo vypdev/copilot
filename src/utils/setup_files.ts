@@ -13,6 +13,7 @@ import {
 } from '../application/policies/setup_issue_workflow_policy';
 import { reconcileRepositoryAgentGuidance } from './repository_agent_guidance';
 import { renderApprovalObserverWorkflow } from '../domain/setup_approval_workflow';
+import { renderSetupWorkflowUpgrade } from './setup_workflow_upgrade';
 
 /**
  * Ensure .github, .github/workflows and .github/ISSUE_TEMPLATE exist; create them if missing.
@@ -82,6 +83,7 @@ export function copySetupFiles(
     {
       overwrite: options.updateExistingWorkflows,
       backupDirectory,
+      renderContent: renderSetupWorkflowUpgrade,
     },
   );
   const approvalWorkflow = options.setupConfiguration?.pullRequestApproval.mode !== 'off' && options.setupConfiguration
@@ -270,7 +272,7 @@ export function compareSetupWorkflows(
       if (!fs.existsSync(destination)) return { file, destination: `.github/workflows/${file}`, status: 'missing' as const };
       const expected = file === 'copilot_pull_request_approval.yml' && configuration
         ? renderApprovalObserverWorkflow(fs.readFileSync(source, 'utf8'), configuration.pullRequestApproval)
-        : fs.readFileSync(source, 'utf8');
+        : renderSetupWorkflowUpgrade(fs.readFileSync(source, 'utf8'), fs.readFileSync(destination, 'utf8'));
       const equal = isLocalSourceApprovalObserver(cwd, destination)
         || expected === fs.readFileSync(destination, 'utf8');
       return { file, destination: `.github/workflows/${file}`, status: equal ? 'unchanged' as const : 'changed' as const };

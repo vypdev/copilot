@@ -89537,11 +89537,15 @@ function copySetupFile(source, destination, displaySource, displayDestination, o
         (0, logger_1.logInfo)(`  ⏭️  ${displayDestination} already exists; skipping.`);
         return { copied: 0, skipped: 1 };
     }
+    const rendered = options.renderContent?.(fs.readFileSync(source, 'utf8'), fs.existsSync(destination) ? fs.readFileSync(destination, 'utf8') : undefined);
     if (fs.existsSync(destination) && options.backupDirectory) {
         fs.mkdirSync(options.backupDirectory, { recursive: true });
         fs.copyFileSync(destination, path.join(options.backupDirectory, path.basename(destination)));
     }
-    fs.copyFileSync(source, destination);
+    if (rendered !== undefined)
+        fs.writeFileSync(destination, rendered);
+    else
+        fs.copyFileSync(source, destination);
     (0, logger_1.logInfo)(`  ${options.overwrite ? '↻ Updated' : '✅ Copied'} ${displaySource} → ${displayDestination}`);
     return { copied: 1, skipped: 0 };
 }
@@ -89614,6 +89618,7 @@ const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const repository_agent_guidance_1 = __nccwpck_require__(38445);
 const setup_approval_workflow_1 = __nccwpck_require__(9512);
+const setup_workflow_upgrade_1 = __nccwpck_require__(85493);
 /**
  * Ensure .github, .github/workflows and .github/ISSUE_TEMPLATE exist; create them if missing.
  * @param cwd - Directory (repo root)
@@ -89667,6 +89672,7 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
             || !fs.existsSync(path.join(cwd, '.github', 'workflows', fileName))), 'setup/workflows', {
         overwrite: options.updateExistingWorkflows,
         backupDirectory,
+        renderContent: setup_workflow_upgrade_1.renderSetupWorkflowUpgrade,
     });
     const approvalWorkflow = options.setupConfiguration?.pullRequestApproval.mode !== 'off' && options.setupConfiguration
         ? copyApprovalObserverWorkflow(cwd, setupDir, options.setupConfiguration, options.updateExistingWorkflows === true, approvedWorkflowFiles, backupDirectory)
@@ -89824,7 +89830,7 @@ function compareSetupWorkflows(cwd, features, setupDirOverride, configuration) {
             return { file, destination: `.github/workflows/${file}`, status: 'missing' };
         const expected = file === 'copilot_pull_request_approval.yml' && configuration
             ? (0, setup_approval_workflow_1.renderApprovalObserverWorkflow)(fs.readFileSync(source, 'utf8'), configuration.pullRequestApproval)
-            : fs.readFileSync(source, 'utf8');
+            : (0, setup_workflow_upgrade_1.renderSetupWorkflowUpgrade)(fs.readFileSync(source, 'utf8'), fs.readFileSync(destination, 'utf8'));
         const equal = isLocalSourceApprovalObserver(cwd, destination)
             || expected === fs.readFileSync(destination, 'utf8');
         return { file, destination: `.github/workflows/${file}`, status: equal ? 'unchanged' : 'changed' };
@@ -89868,6 +89874,116 @@ function getSetupToken(_cwd, override) {
  */
 function hasValidSetupToken(cwd, override) {
     return getSetupToken(cwd, override) !== undefined;
+}
+
+
+/***/ }),
+
+/***/ 85493:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.renderSetupWorkflowUpgrade = renderSetupWorkflowUpgrade;
+const js_yaml_1 = __nccwpck_require__(783);
+const node_util_1 = __nccwpck_require__(47261);
+const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
+const document = (value) => {
+    try {
+        const documents = (0, js_yaml_1.loadAll)(value);
+        if (documents.length > 1)
+            throw new Error('Multiple documents');
+        return object(documents[0]);
+    }
+    catch {
+        throw new Error('Workflow YAML cannot be inspected; review the workflow separately.');
+    }
+};
+const labels = (value) => typeof value === 'string' && value.trim().length > 0
+    || Array.isArray(value) && value.length > 0 && value.every(label => typeof label === 'string' && label.trim().length > 0);
+const runner = (value) => labels(value) || !!object(value)
+    && Object.keys(value).every(key => key === 'group' || key === 'labels')
+    && Object.keys(value).length > 0
+    && (object(value).group === undefined || typeof object(value).group === 'string' && labels(object(value).group))
+    && (object(value).labels === undefined || labels(object(value).labels));
+/** Keep a target's reviewed execution location while upgrading controlled workflow templates. */
+function renderSetupWorkflowUpgrade(template, existing) {
+    if (!existing)
+        return template;
+    const previous = document(existing);
+    if (previous?.jobs === undefined)
+        return template;
+    const previousJobs = object(previous.jobs);
+    // A root-local Action is source-repository infrastructure, including its
+    // release jobs and native validation. Consumer templates cannot replace it.
+    if (previousJobs && Object.values(previousJobs).some(job => {
+        const steps = object(job)?.steps;
+        return Array.isArray(steps) && steps.some(step => object(step)?.uses === './');
+    })) {
+        const events = previous.on;
+        const hasPush = events === 'push' || Array.isArray(events) && events.includes('push')
+            || !!object(events) && Object.prototype.hasOwnProperty.call(events, 'push');
+        if (hasPush) {
+            const push = object(object(events)?.push);
+            if (!push || !Array.isArray(push.branches) || !push.branches.every(branch => typeof branch === 'string')) {
+                throw new Error('Source Action push filters require separate workflow review before setup.');
+            }
+            if (!push.branches.includes('!setup/copilot/**')) {
+                push.branches.push('!setup/copilot/**');
+                return (0, js_yaml_1.dump)(previous, { noRefs: true, lineWidth: -1 });
+            }
+        }
+        return existing;
+    }
+    const templateJobs = object(document(template)?.jobs);
+    if (!previousJobs || !templateJobs)
+        throw new Error('Workflow jobs cannot be inspected; review the workflow separately.');
+    const lines = template.split('\n');
+    let job = '';
+    let insideJobs = false;
+    for (let index = 0; index < lines.length; index++) {
+        if (/^jobs:\s*$/u.test(lines[index])) {
+            insideJobs = true;
+            continue;
+        }
+        if (/^\S/u.test(lines[index]))
+            insideJobs = false;
+        if (!insideJobs)
+            continue;
+        const header = /^ {2}([A-Za-z_][A-Za-z0-9_-]*):\s*(?:#.*)?$/u.exec(lines[index]);
+        if (header)
+            job = header[1];
+        if (!/^ {4}runs-on:/u.test(lines[index]))
+            continue;
+        const retained = object(previousJobs[job])?.['runs-on'];
+        if (retained === undefined)
+            continue;
+        if (!runner(retained))
+            throw new Error('Existing runner selection is invalid; review the workflow separately.');
+        // Expressions can depend on an existing matrix, inputs or other workflow fields
+        // that a new template does not carry. Do not transplant a partial contract.
+        if (JSON.stringify(retained).includes('${{') && existing !== template)
+            throw new Error('Dynamic runner selection requires separate workflow review before setup.');
+        if ((0, node_util_1.isDeepStrictEqual)(retained, object(templateJobs[job])?.['runs-on']))
+            continue;
+        let end = index + 1;
+        while (end < lines.length && (/^ {6}/u.test(lines[end]) || /^\s*$/u.test(lines[end])))
+            end++;
+        const replacement = (0, js_yaml_1.dump)({ 'runs-on': retained }, { noRefs: true, lineWidth: -1 }).trimEnd().split('\n').map(line => `    ${line}`);
+        lines.splice(index, end - index, ...replacement);
+        index += replacement.length - 1;
+    }
+    const rendered = lines.join('\n');
+    const actualJobs = object(document(rendered)?.jobs);
+    for (const [name, value] of Object.entries(templateJobs)) {
+        const retained = object(previousJobs[name])?.['runs-on'];
+        if (retained !== undefined && object(value)?.['runs-on'] !== undefined
+            && !(0, node_util_1.isDeepStrictEqual)(object(actualJobs?.[name])?.['runs-on'], retained)) {
+            throw new Error('Runner preservation could not be verified; review the workflow separately.');
+        }
+    }
+    return rendered;
 }
 
 
