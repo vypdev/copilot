@@ -1,4 +1,4 @@
-import { setupSecretRevisionSnapshot } from '../../policies/setup_remote_facts_policy';
+import { setupSecretRevisionSnapshot, hasCompleteSetupSecretRevisions } from '../../policies/setup_remote_facts_policy';
 import type {
     SetupConfiguration,
     SetupCredentialCollection,
@@ -68,7 +68,15 @@ export async function ensureRepositoryVariables(
                 resources: planSetupOrganizationVariableReuse(desired, remoteConfiguration!).repositoryWrites.map(variable => ({ ...variable })) }]
                 .filter(group => group.resources.length > 0)
             : groupSetupResources(desired, 'variable', setupConfiguration, remoteConfiguration);
-        const result = await upsertVariableGroups(context, dependencies.setupRepositoryVariablesPort, groups);
+        let result: SetupVariablesWriteResult & { unclassifiedErrors: readonly string[] };
+        if (context.setupConfigurationSource === 'organization' && groups.length > 0) {
+            if (!dependencies.setupRepositoryVariablesPort.createMissing
+                || groups[0].resources.some(variable => remoteConfiguration!.repositoryVariables.some(existing => existing.name === variable.name))) {
+                return { errors: ['Reuse cannot replace an existing repository Variable or use an unguarded writer. Review a separate manual update, then prepare a new plan.'], writes: 0 };
+            }
+            const created = await dependencies.setupRepositoryVariablesPort.createMissing(groups[0].resources);
+            result = { ...created, unclassifiedErrors: created.unclassifiedErrors ?? created.errors };
+        } else result = await upsertVariableGroups(context, dependencies.setupRepositoryVariablesPort, groups);
         const writes = result.created + result.updated;
         if (result.errors.length > 0) {
             return result.failures
@@ -153,6 +161,10 @@ export async function resolveRemoteConfiguration(
         }
         try {
             const fresh = await dependencies.setupRemoteConfigurationReadPort.inspect();
+            if (!hasCompleteSetupSecretRevisions(fresh) || !hasCompleteSetupSecretRevisions(context.setupRemoteConfiguration)) {
+                errors.push('Retained Secret revision metadata could not be verified. Restore metadata access and prepare a fresh plan. No changes were made.');
+                return undefined;
+            }
             if (reuseSnapshot(fresh) !== reuseSnapshot(context.setupRemoteConfiguration)) {
                 errors.push('Configuration or access changed after review. Inspect and approve a new plan before applying it.');
                 return undefined;

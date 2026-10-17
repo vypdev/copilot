@@ -794,7 +794,8 @@
             "src/application/policies/setup_batch_policy.ts",
             "src/application/policies/setup_batch_selection_policy.ts",
             "src/application/policies/setup_batch_access_policy.ts",
-            "src/application/policies/setup_batch_view_policy.ts"
+            "src/application/policies/setup_batch_view_policy.ts",
+            "src/application/policies/setup_remote_facts_policy.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"

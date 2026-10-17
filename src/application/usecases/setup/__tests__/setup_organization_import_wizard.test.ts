@@ -12,6 +12,8 @@ function fixture(overrides: Partial<SetupRemoteConfiguration> = {}) {
   const remote: SetupRemoteConfiguration = { ownerType: 'Organization', defaultBranch: 'master', repositoryId: 7,
     repositoryVisibility: 'private', repositoryVariables: [], repositoryVariablesAccess: 'available',
     organizationVariables: buildSetupRepositoryVariables(source), organizationVariablesAccess: 'available',
+    repositorySecretRevisions: (overrides.repositorySecrets ?? ['PAT']).map(name => ({ name, updatedAt: '2026-10-17T00:00:00Z' })),
+    organizationSecretRevisions: (overrides.organizationSecrets ?? []).map(name => ({ name, updatedAt: '2026-10-17T00:00:00Z' })),
     repositorySecrets: ['PAT'], repositorySecretsAccess: 'available', organizationSecrets: [],
     organizationSecretsAccess: 'available', organizationAccess: 'available', ...overrides };
   const collect = jest.fn(async (state: SetupQuestionnaireState, _context: SetupQuestionnaireContext) => createSetupReviewState(state.draft));
@@ -26,6 +28,12 @@ function fixture(overrides: Partial<SetupRemoteConfiguration> = {}) {
 }
 
 describe('organization import in the shared setup wizard', () => {
+  it('blocks missing Secret revision evidence before questions or temporary write probes', async () => {
+    const f = fixture({ repositorySecretRevisions: undefined });
+    const result = await new SetupWizardUseCase(f.dependencies).execute(f.request);
+    expect(result).toMatchObject({ status: 'blocked', errors: [expect.stringContaining('revision metadata is incomplete')] });
+    expect(f.collect).not.toHaveBeenCalled(); expect(f.dependencies.finalPermissionAudit.audit).not.toHaveBeenCalled();
+  });
   it('uses imported values and omits their questions in both presentation adapters', async () => {
     const f = fixture();
     const result = await new SetupWizardUseCase(f.dependencies).execute(f.request);

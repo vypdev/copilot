@@ -601,3 +601,60 @@ Native batch acceptance must still inspect the complete plans, execute Apply,
 verify exact prepared refs/receipts and PRs, and retain waiting-for-merge status
 until a human merges. No release, tag, deploy, shared-value replacement or
 runtime verification is implied by PR creation.
+
+### Atomic Variable preservation and complete Secret freshness (2026-10-17)
+
+Native review of `c56d0d51` found two actionable boundary defects: the batch
+Variable writer could upsert a concurrently edited existing name, and individual
+reuse could equate two missing Secret revision snapshots. Both are corrected
+before native Apply acceptance or merge.
+
+The documented [GitHub Variable create/update API](https://docs.github.com/en/rest/actions/variables#update-a-repository-variable)
+does not expose a revision-precondition parameter for an update. The product
+therefore MUST NOT infer atomic update safety from separate reads. Organization
+reuse and batch setup use a narrow create-only repository Variable capability.
+It MAY retain an already equal value or create an absent name using POST; it
+MUST NOT call update, including after a racing creation, uncertain response or
+retry. A genuinely different existing repository Variable blocks that target
+with a separate reviewed update action. Other ready targets may continue.
+Single-repository Customize retains its explicit replacement contract.
+Valid `PR_APPROVAL_POLICY` JSON with equal decoded content is retained despite
+whitespace or property order. Invalid or behaviorally different policy JSON is
+not equivalent. Shared values and memberships remain unchanged by value reuse.
+
+The application exposes the create-only operation separately from upsert. The
+batch composition injects a frozen facade containing only create-only writes;
+individual reuse selects it explicitly and refuses an older writer lacking the
+capability. The data adapter never falls back from a POST conflict to PATCH.
+Batch preparation identifies existing-name differences before approval. Existing
+journal locking, read-only revalidation and retained-effects recovery remain.
+No new permission, configuration flag, Secret value, durable schema or limit is
+introduced. Legacy journals cannot override the new write boundary.
+
+Every retained repository and inherited Secret name MUST have one matching valid
+revision timestamp before individual reuse Apply. Missing, partial, duplicate,
+extra or invalid revision metadata is unknown, even when repeated reads are
+identical. Empty proven namespaces need no invented timestamp. The wizard stops
+before questions or permission write probes when individual reuse lacks this
+metadata; web reconfirmation and final resource provisioning independently stop
+before their mutations. Batch repository freshness and its shared-resource
+revision snapshots remain mandatory. Reordering complete metadata is harmless.
+
+User-facing blocked content explains either “existing repository Variable needs
+a separate reviewed update” or “retained Secret revision metadata could not be
+verified”, followed by the recovery action and retained-state fact. It MUST NOT
+claim an observed edit when only metadata is unavailable. A new preview is
+required after recovery; no automatic destructive remediation is offered.
+
+A minimum **20 additional distinct runtime cases** covers validated JSON
+formatting versus behavior changes, create-only/no-update and POST collision
+races, unavailable create-only capabilities, per-target conflict isolation,
+missing/partial/duplicate/invalid/extra Secret revisions, empty namespace and
+ordering, individual wizard/web/resource gates before probes/writes, and bound
+credential coordinates. These cases extend existing suites and are disjoint
+from the progress budget. Existing pure/global/module budgets remain enforced.
+Full tests, coverage, build, type/lint, specs/catalog/docs/workflow checks and
+current-head native review remain required. Native acceptance repeats the
+selected copilot/platform plans with zero unnecessary policy rewrites, creates
+only reviewed installer PRs, and compares independent pre/post resource hashes.
+No remaining decision is delegated to a retry or an unknown snapshot.

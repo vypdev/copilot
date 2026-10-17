@@ -8,10 +8,10 @@ function fixture() {
   const remote: SetupRemoteConfiguration = { ownerType: 'Organization', repositoryVisibility: 'private', repositoryId: 7,
     defaultBranch: 'master', organizationAccess: 'available', repositoryVariablesAccess: 'available',
     organizationVariablesAccess: 'available', repositorySecretsAccess: 'available', organizationSecretsAccess: 'available',
-    repositoryVariables: [], organizationVariables: buildSetupRepositoryVariables(configuration), repositorySecrets: [], organizationSecrets: ['PAT'] };
+    repositoryVariables: [], organizationVariables: buildSetupRepositoryVariables(configuration), repositorySecrets: [], organizationSecrets: ['PAT'], organizationSecretRevisions: [{ name: 'PAT', updatedAt: '2026-10-17T00:00:00Z' }] };
   const upsert = jest.fn().mockResolvedValue({ created: 1, updated: 0, errors: [] });
   const scoped = jest.fn(); const secrets = jest.fn(); const scopedSecrets = jest.fn();
-  const dependencies = { setupRepositoryVariablesPort: { upsert, upsertScopedVariables: scoped },
+  const dependencies = { setupRepositoryVariablesPort: { createMissing: upsert, upsert: jest.fn(), upsertScopedVariables: scoped },
     setupRepositorySecretsPort: { upsertSecrets: secrets, upsertScopedSecrets: scopedSecrets },
     setupRemoteConfigurationReadPort: { inspect: jest.fn().mockResolvedValue(remote) } };
   const context = { setupConfigurationSource: 'organization' as const, setupRemoteConfiguration: remote,
@@ -20,6 +20,25 @@ function fixture() {
 }
 
 describe('organization reuse provisioning boundary', () => {
+  it('requires the create-only capability for a missing target override', async () => {
+    const f = fixture(); f.configuration.ai.bugbotCommentLimit = 19;
+    const dependencies = { ...f.dependencies, setupRepositoryVariablesPort: { ...f.dependencies.setupRepositoryVariablesPort, createMissing: undefined } };
+    expect(await ensureRepositoryVariables(f.context, dependencies, f.configuration, f.remote)).toMatchObject({ writes: 0, errors: [expect.stringContaining('unguarded writer')] });
+    expect(f.dependencies.setupRepositoryVariablesPort.upsert).not.toHaveBeenCalled();
+  });
+  it('blocks an existing target override that requires a different value', async () => {
+    const f = fixture(); f.configuration.ai.bugbotCommentLimit = 19;
+    f.remote.repositoryVariables = [{ name: 'BUGBOT_COMMENT_LIMIT', value: 'original' }];
+    expect(await ensureRepositoryVariables(f.context, f.dependencies, f.configuration, f.remote)).toMatchObject({ writes: 0, errors: [expect.stringContaining('separate manual update')] });
+    expect(f.upsert).not.toHaveBeenCalled(); expect(f.dependencies.setupRepositoryVariablesPort.upsert).not.toHaveBeenCalled();
+  });
+  it.each(['repositorySecretRevisions', 'organizationSecretRevisions'] as const)('rejects two identical missing %s readings', async field => {
+    const f = fixture(); f.remote.repositorySecrets = ['PAT']; f.remote.repositorySecretRevisions = [{ name: 'PAT', updatedAt: '2026-10-17T00:00:00Z' }];
+    f.remote[field] = undefined;
+    const errors: string[] = [];
+    expect(await resolveRemoteConfiguration(f.context, f.dependencies, f.configuration, errors)).toBeUndefined();
+    expect(errors).toHaveLength(1); expect(f.upsert).not.toHaveBeenCalled();
+  });
   it('performs zero value writes for an unchanged shared configuration and retained PAT', async () => {
     const f = fixture();
     expect(await ensureRepositoryVariables(f.context, f.dependencies, f.configuration, f.remote)).toMatchObject({ errors: [], writes: 0 });
@@ -55,7 +74,7 @@ describe('organization reuse provisioning boundary', () => {
   it.each(['binding', 'repository', 'branch', 'access', 'visibility'] as const)('blocks %s drift before files or values change', async change => {
     const f = fixture(); const errors: string[] = [];
     const fresh = { ...f.remote };
-    if (change === 'binding') fresh.organizationSecrets = [];
+    if (change === 'binding') { fresh.organizationSecrets = []; fresh.organizationSecretRevisions = []; }
     if (change === 'repository') fresh.repositoryId = 8;
     if (change === 'branch') fresh.defaultBranch = 'main';
     if (change === 'visibility') fresh.repositoryVisibility = 'public';
@@ -66,6 +85,7 @@ describe('organization reuse provisioning boundary', () => {
   });
   it.each(['repositorySecretRevisions', 'organizationSecretRevisions'] as const)('blocks a same-name retained %s rotation before Apply', async field => {
     const f = fixture(); const errors: string[] = [];
+    if (field === 'repositorySecretRevisions') f.remote.repositorySecrets = ['PAT'];
     f.remote[field] = [{ name: 'PAT', updatedAt: '2026-10-17T00:00:00Z' }];
     const fresh = { ...f.remote, [field]: [{ name: 'PAT', updatedAt: '2026-10-17T00:01:00Z' }] };
     f.dependencies.setupRemoteConfigurationReadPort.inspect.mockResolvedValue(fresh);
@@ -75,6 +95,7 @@ describe('organization reuse provisioning boundary', () => {
   });
   it('keeps Secret metadata ordering stable without hiding a lost revision', async () => {
     const f = fixture(); const errors: string[] = [];
+    f.remote.organizationSecrets = ['PAT', 'OTHER'];
     f.remote.organizationSecretRevisions = [{ name: 'PAT', updatedAt: '2026-10-17T00:00:00Z' }, { name: 'OTHER', updatedAt: '2026-10-17T00:00:00Z' }];
     f.dependencies.setupRemoteConfigurationReadPort.inspect.mockResolvedValue({ ...f.remote, organizationSecretRevisions: [...f.remote.organizationSecretRevisions].reverse() });
     expect(await resolveRemoteConfiguration(f.context, f.dependencies, f.configuration, errors)).toBeDefined();

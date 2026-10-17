@@ -102,6 +102,14 @@ export class GithubActionsResourceCommands {
         token: string,
         variables: readonly { name: string; value: string }[],
     ): Promise<SetupVariablesWriteResult> {
+        return this.writeRepositoryVariables(owner, repository, token, variables, true);
+    }
+
+    async createMissing(owner: string, repository: string, token: string, variables: readonly SetupVariable[]): Promise<SetupVariablesWriteResult> {
+        return this.writeRepositoryVariables(owner, repository, token, variables, false);
+    }
+
+    private async writeRepositoryVariables(owner: string, repository: string, token: string, variables: readonly SetupVariable[], allowUpdate: boolean): Promise<SetupVariablesWriteResult> {
         const client = this.githubClient.getClient(token);
         const existingVariables = await listCollection(client, client.rest.actions.listRepoVariables, { owner, repo: repository, per_page: 100 }, 'variables');
         const existingValues = new Map(existingVariables.map(variable => [variable.name, variable.value]));
@@ -114,6 +122,11 @@ export class GithubActionsResourceCommands {
             try {
                 if (existingValues.has(variable.name)) {
                     if (existingValues.get(variable.name) === variable.value) continue;
+                    if (!allowUpdate) {
+                        errors.push(`Repository Variable ${variable.name} already exists with a different value. Review a separate manual update, then prepare setup again.`);
+                        failures.push({ name: variable.name, scope: 'repository', phase: 'update', reason: 'conflict' });
+                        continue;
+                    }
                     await client.rest.actions.updateRepoVariable({ owner, repo: repository, name: variable.name, value: variable.value });
                     updated += 1;
                 } else {

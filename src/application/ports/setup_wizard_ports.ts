@@ -113,6 +113,8 @@ export interface SetupWorkflowUpdatePromptPort {
 }
 
 export interface SetupRepositoryVariablesCommandPort {
+    /** Create absent repository values only; never updates an existing name. */
+    createMissing?(owner: string, repository: string, token: string, variables: readonly { name: string; value: string }[]): Promise<SetupVariablesWriteResult>;
     upsert(
         owner: string,
         repository: string,
@@ -141,6 +143,7 @@ export interface BoundSetupRepositorySecretsCommandPort {
 }
 
 export interface BoundSetupRepositoryVariablesCommandPort {
+    createMissing?(variables: readonly { name: string; value: string }[]): Promise<SetupVariablesWriteResult>;
     upsert(variables: readonly { name: string; value: string }[]): Promise<SetupVariablesWriteResult>;
     upsertScopedVariables?(
         target: SetupResourceTarget,

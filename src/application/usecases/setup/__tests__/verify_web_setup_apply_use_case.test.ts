@@ -8,6 +8,7 @@ import {
 const repository = { owner: 'owner', repository: 'repo', checkoutRoot: '/checkout', branch: 'develop', head: 'a'.repeat(40) };
 const remoteBase: SetupRemoteConfiguration = {
   ownerType: 'User', repositoryId: 42, repositoryVisibility: 'private', defaultBranch: 'main',
+  repositorySecretRevisions: ['PAT', 'OPENAI_API_KEY'].map(name => ({ name, updatedAt: '2026-10-17T00:00:00Z' })),
   repositorySecrets: ['PAT', 'OPENAI_API_KEY'], repositorySecretsAccess: 'available', organizationSecrets: [],
   repositoryVariables: [{ name: 'AGENT_PROVIDER', value: 'codex' }, { name: 'MAIN_BRANCH', value: 'main' }],
   repositoryVariablesAccess: 'available', organizationVariables: [],
@@ -37,6 +38,15 @@ function harness(onPermissionCleanupPending?: () => void) {
 }
 
 describe('VerifyWebSetupApplyUseCase', () => {
+  test.each(['missing', 'partial', 'invalid-date'] as const)('blocks identical %s retained Secret metadata before permission probes', async kind => {
+    const { ports, useCase } = harness();
+    const revisions = kind === 'missing' ? undefined : kind === 'partial' ? remoteBase.repositorySecretRevisions!.slice(0, 1)
+      : remoteBase.repositorySecretRevisions!.map(secret => ({ ...secret, updatedAt: 'invalid' }));
+    const unknown = { ...approvedRemote, repositorySecretRevisions: revisions };
+    jest.spyOn(ports.remote, 'inspect').mockResolvedValue(unknown);
+    await expect(useCase.execute({ ...request, approvedRemote: unknown })).rejects.toThrow('Secret revision metadata could not be verified');
+    expect(ports.permissionAudit.audit).not.toHaveBeenCalled();
+  });
   test('authorizes only after reconfirming local, remote, workflow and PAT facts', async () => {
     const { ports, useCase } = harness();
     expect(await useCase.execute(request)).toBe('approved');
@@ -121,6 +131,7 @@ describe('VerifyWebSetupApplyUseCase', () => {
     jest.spyOn(ports.remote, 'inspect').mockResolvedValue({
       repositoryVariables: [...remoteBase.repositoryVariables].reverse(),
       repositorySecrets: [...remoteBase.repositorySecrets].reverse(),
+      repositorySecretRevisions: [...remoteBase.repositorySecretRevisions!].reverse(),
       ownerType: remoteBase.ownerType, repositoryId: remoteBase.repositoryId,
       organizationSecrets: remoteBase.organizationSecrets, organizationVariables: remoteBase.organizationVariables,
       repositorySecretsAccess: remoteBase.repositorySecretsAccess,

@@ -33,7 +33,8 @@ export function createSetupBatchCompositionRoot() {
     })) as unknown as InitialIssueTypeConfiguration;
     return { labelConfiguration, issueTypes };
   };
-  const writer = new SetupBatchGithubApplyAdapter(read, new RepositoryVariablesCommandRepository(createRepositoryVariablesClient()), {
+  const variables = new RepositoryVariablesCommandRepository(createRepositoryVariablesClient());
+  const writer = new SetupBatchGithubApplyAdapter(read, Object.freeze({ createMissing: variables.createMissing.bind(variables) }), {
     labels: async (plan, token) => {
       const result = await labels.ensureInitialLabels(plan.target.owner, plan.target.name,
         selectedInitialLabels(catalogs(plan).labelConfiguration, plan.configuration), token);

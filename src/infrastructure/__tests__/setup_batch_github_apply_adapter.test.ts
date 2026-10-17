@@ -38,7 +38,7 @@ function fixture() {
   const shared = jest.spyOn(read, 'sharedResource');
   jest.spyOn(read, 'branchExists').mockResolvedValue(true);
   jest.spyOn(read, 'files').mockResolvedValue([]);
-  const variableWriter = { upsert: jest.fn(async () => ({ created: 1, updated: 0, errors: [] as string[] })), upsertScopedVariables: jest.fn() };
+  const variableWriter = { createMissing: jest.fn(async () => ({ created: 1, updated: 0, errors: [] as string[] })), upsert: jest.fn(async () => ({ created: 1, updated: 0, errors: [] as string[] })), upsertScopedVariables: jest.fn() };
   const resources = { labels: jest.fn(async () => undefined), issueTypes: jest.fn(async () => undefined) };
   const writer = new SetupBatchGithubApplyAdapter(read, variableWriter, resources);
   function pull() { return { number: 31, state: 'open', body: setupBatchMarker(operation, 7),
@@ -48,6 +48,13 @@ function fixture() {
     setReceipt: (value: unknown) => { installation = value; } };
 }
 describe('installer-owned GitHub write boundaries', () => {
+  it('never sends an existing reviewed Variable to a replacement writer', async () => {
+    const f = fixture(); const variable = { name: 'MODEL', value: 'original' };
+    const plan = { ...f.plan, remote: { ...f.plan.remote, repositoryVariables: [variable] }, repositoryVariables: [{ name: 'MODEL', value: 'desired' }] };
+    jest.spyOn(f.read, 'effective').mockResolvedValue(plan.remote);
+    await expect(f.writer.variables(plan, 'fixture')).rejects.toThrow('unknown');
+    expect(f.variableWriter.createMissing).not.toHaveBeenCalled(); expect(f.variableWriter.upsert).not.toHaveBeenCalled();
+  });
   it('prepares a complete tree on the exact base and embeds a secret-free receipt before creating a ref', async () => {
     const f = fixture(); expect(await f.writer.prepareCommit(f.plan, operation, 'fixture-token')).toBe(prepared);
     const tree = f.request.mock.calls.find(([route]) => route === 'POST /repos/{owner}/{repo}/git/trees')![1];
@@ -96,7 +103,7 @@ describe('installer-owned GitHub write boundaries', () => {
   it('writes only reviewed repository Variable differences and never a shared value', async () => {
     const f = fixture(); const plan = { ...f.plan, repositoryVariables: [{ name: 'BUGBOT_COMMENT_LIMIT', value: '19' }] };
     await f.writer.variables(plan, 'fixture');
-    expect(f.variableWriter.upsert).toHaveBeenCalledWith('acme', 'repo', 'fixture', plan.repositoryVariables);
+    expect(f.variableWriter.createMissing).toHaveBeenCalledWith('acme', 'repo', 'fixture', plan.repositoryVariables);
     expect(f.variableWriter.upsertScopedVariables).not.toHaveBeenCalled();
   });
   it('preserves a concurrent repository Variable edit', async () => {
@@ -180,7 +187,7 @@ describe('installer-owned GitHub write boundaries', () => {
     await f.writer.variables(plan, 'fixture'); expect(f.variableWriter.upsert).not.toHaveBeenCalled();
     effective.mockResolvedValueOnce({ ...f.plan.remote, repositoryVariablesAccess: 'unavailable' });
     await expect(f.writer.variables(plan, 'fixture')).rejects.toThrow('forbidden');
-    effective.mockResolvedValue(f.plan.remote); f.variableWriter.upsert.mockResolvedValue({ created: 0, updated: 0, errors: ['private'] });
+    effective.mockResolvedValue(f.plan.remote); f.variableWriter.createMissing.mockResolvedValue({ created: 0, updated: 0, errors: ['private'] });
     await expect(f.writer.variables(plan, 'fixture')).rejects.toThrow('unknown');
   });
   it('retains already granted access without an additional PUT', async () => {

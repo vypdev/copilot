@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto';
 /** Reused shared resources have an additive access command only. No shared value or Secret writer is injected. */
 export class SetupBatchGithubApplyAdapter implements SetupBatchApplyPort {
   private readonly ownAccessRevisions = new Map<string, { readonly before: string; readonly after: string }>();
-  constructor(private readonly read: SetupBatchGithubReadAdapter, private readonly variableWriter: SetupRepositoryVariablesCommandPort,
+  constructor(private readonly read: SetupBatchGithubReadAdapter, private readonly variableWriter: Pick<SetupRepositoryVariablesCommandPort, 'createMissing'>,
     private readonly resources: { labels(plan: SetupBatchTargetPlan, token: string): Promise<void>;
       issueTypes(plan: SetupBatchTargetPlan, token: string): Promise<void> }) {}
   async revalidate(plan: SetupBatchTargetPlan, token: string, completed: SetupBatchTargetReceipt['effects']): Promise<boolean> {
@@ -72,8 +72,8 @@ export class SetupBatchGithubApplyAdapter implements SetupBatchApplyPort {
       const current = fresh.repositoryVariables.find(item => item.name === variable.name);
       if (current?.value === variable.value) continue;
       const original = plan.remote.repositoryVariables.find(item => item.name === variable.name);
-      if (current?.value !== original?.value) throw new SetupBatchProviderError('unknown');
-      const result = await this.variableWriter.upsert(plan.target.owner, plan.target.name, token, [variable]);
+      if (current || original || !this.variableWriter.createMissing) throw new SetupBatchProviderError('unknown');
+      const result = await this.variableWriter.createMissing(plan.target.owner, plan.target.name, token, [variable]);
       if (result.errors.length > 0) throw new SetupBatchProviderError('unknown');
     }
   }

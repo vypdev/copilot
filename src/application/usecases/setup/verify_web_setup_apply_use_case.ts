@@ -1,7 +1,7 @@
 import type { SetupConfiguration, SetupRemoteConfiguration } from '../../../domain/setup';
 import { ApplicationError } from '../../errors/application_error';
 import { SetupInteractionCancelledError } from '../../errors/setup_interaction_cancelled_error';
-import { sameSetupRemoteFacts } from '../../policies/setup_remote_facts_policy';
+import { sameSetupRemoteFacts, hasCompleteSetupSecretRevisions } from '../../policies/setup_remote_facts_policy';
 import type { SetupFinalPermissionAuditPort, SetupRemoteConfigurationReadPort } from '../../ports/setup_wizard_ports';
 
 export interface WebSetupRepositoryFacts {
@@ -52,6 +52,9 @@ export class VerifyWebSetupApplyUseCase {
     } catch { /* Unknown selected-ref state must not inherit a provisional value. */ }
     this.assertActive();
     remote = { ...remote, credentialHealthWorkflow };
+    if (!hasCompleteSetupSecretRevisions(remote) || !hasCompleteSetupSecretRevisions(request.approvedRemote)) {
+      throw new ApplicationError('configuration.invalid', 'Retained Secret revision metadata could not be verified. No mutation started; restore metadata access and review a fresh plan.');
+    }
     if (!sameSetupRemoteFacts(remote, request.approvedRemote)) {
       throw new ApplicationError('configuration.invalid', 'GitHub repository facts changed since plan review. No mutation started; restart and review a new plan.');
     }

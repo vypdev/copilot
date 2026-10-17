@@ -77,6 +77,11 @@ export class PrepareSetupBatchUseCase {
       }
       const access = planSetupBatchSharedAccess(configuration, target, remote, shared);
       const { grants } = access;
+      for (const variable of access.variables.repositoryWrites) {
+        if (remote.repositoryVariables.some(existing => existing.name === variable.name)) {
+          blocked.push(`${variable.name}: an existing repository Variable requires a separate reviewed update. Batch setup only creates absent names; update it in GitHub, then prepare a new plan.`);
+        }
+      }
       blocked.push(...access.missing.map(name => `${name}: provision or authorize this existing binding separately, then inspect again.`));
       let files: SetupBatchTargetPlan['files'] = [];
       if (!blocked.length) {

@@ -8,6 +8,20 @@ const remote = (): SetupRemoteConfiguration => ({ ownerType: 'Organization', rep
   repositorySecrets: ['PAT'], organizationSecrets: ['OPENAI_API_KEY'] });
 
 describe('immutable shared Variable reuse plan', () => {
+  it('retains valid approval JSON with equivalent whitespace and property order', () => {
+    const policy = { ...createDefaultSetupConfiguration().pullRequestApproval, mode: 'off' };
+    const existing = JSON.stringify(Object.fromEntries(Object.entries(policy).reverse()), null, 2);
+    const snapshot = remote(); snapshot.repositoryVariables = [{ name: 'PR_APPROVAL_POLICY', value: existing }];
+    expect(planSetupOrganizationVariableReuse([{ name: 'PR_APPROVAL_POLICY', value: JSON.stringify(policy) }], snapshot))
+      .toEqual({ retained: [{ name: 'PR_APPROVAL_POLICY', scope: 'repository' }], repositoryWrites: [] });
+  });
+  it('does not equate invalid or behaviorally different approval JSON', () => {
+    const policy = { ...createDefaultSetupConfiguration().pullRequestApproval, mode: 'off' };
+    for (const value of ['invalid', JSON.stringify({ ...policy, skipWhenHumanApproved: !policy.skipWhenHumanApproved })]) {
+      const snapshot = remote(); snapshot.organizationVariables = [{ name: 'PR_APPROVAL_POLICY', value }];
+      expect(planSetupOrganizationVariableReuse([{ name: 'PR_APPROVAL_POLICY', value: JSON.stringify(policy) }], snapshot).repositoryWrites).toHaveLength(1);
+    }
+  });
   it('retains effective values and plans reviewed differences only in the target repository', () => {
     const snapshot = remote(); const before = JSON.stringify(snapshot);
     expect(planSetupOrganizationVariableReuse([{ name: 'SHARED', value: 'common' }, { name: 'OVERRIDE', value: 'local' },

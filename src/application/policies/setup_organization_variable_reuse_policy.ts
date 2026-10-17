@@ -2,6 +2,8 @@ import type { SetupConfiguration, SetupRemoteConfiguration, SetupVariable } from
 import { buildSetupCredentialRequirements } from './setup_credential_requirement_policy';
 import { buildSetupRepositoryVariables } from './setup_configuration_plan';
 import { SETUP_ORGANIZATION_VARIABLE_BINDINGS } from './setup_organization_variable_bindings';
+import { parsePullRequestApprovalPolicy } from '../../domain/pull_request_approval_policy';
+import { isDeepStrictEqual } from 'node:util';
 
 /** Nonempty separators are native empty lists, including on older Action versions. */
 const emptyLists: Readonly<Record<string, string>> = {
@@ -49,10 +51,18 @@ export function planSetupOrganizationVariableReuse(desired: readonly SetupVariab
     if (!/^[A-Z][A-Z0-9_]*$/u.test(variable.name) || names.has(variable.name)) throw new Error('Invalid or duplicate desired Variable name.');
     names.add(variable.name);
     const effective = repository.get(variable.name) ?? organization.get(variable.name);
-    if (effective?.value === variable.value) retained.push({ name: variable.name, scope: repository.has(variable.name) ? 'repository' : 'organization' });
+    if (effective && sameReusedSetupVariable(variable.name, effective.value, variable.value)) retained.push({ name: variable.name, scope: repository.has(variable.name) ? 'repository' : 'organization' });
     else repositoryWrites.push({ ...variable });
   }
   return { retained, repositoryWrites };
+}
+
+/** Valid policy JSON formatting/key order is not an operator-requested value change. */
+function sameReusedSetupVariable(name: string, existing: string, desired: string): boolean {
+  if (existing === desired) return true;
+  if (name !== 'PR_APPROVAL_POLICY') return false;
+  try { return isDeepStrictEqual(parsePullRequestApprovalPolicy(existing), parsePullRequestApprovalPolicy(desired)); }
+  catch { return false; }
 }
 
 /** Make target overrides visible in the existing plan, audits and storage validation. */

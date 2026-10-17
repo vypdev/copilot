@@ -1,4 +1,4 @@
-import { unavailableSetupRemoteConfiguration } from '../../policies/setup_remote_facts_policy';
+import { unavailableSetupRemoteConfiguration, hasCompleteSetupSecretRevisions } from '../../policies/setup_remote_facts_policy';
 import type {
   SetupConfigurationCollectorPort,
   SetupPlanConfirmationPort,
@@ -148,6 +148,10 @@ export class SetupWizardUseCase {
       initial.repository.mainBranch = remoteConfiguration.defaultBranch;
     }
     if (request.configurationSource === 'organization') {
+      if (request.deliveryMode !== 'pull-request' && remoteConfiguration && !hasCompleteSetupSecretRevisions(remoteConfiguration)) {
+        return { status: 'blocked', reason: 'remote-storage-unavailable', exitCode: 1, configuration: initial,
+          errors: ['Retained Secret revision metadata is incomplete. Restore metadata access and prepare a fresh plan before Apply.'], remoteConfiguration };
+      }
       if (!request.revision) {
         for (const kind of ['variables', 'secrets'] as const) {
           if (!request.overrides?.storage?.[kind]?.defaultScope) initial.storage[kind].defaultScope = 'organization';

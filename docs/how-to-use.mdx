@@ -60,7 +60,13 @@ flowchart LR
 Choose **Reuse compatible organization configuration** to import recognized,
 valid Variables and skip their questions. Repository overrides take precedence;
 explicit answers take precedence over both. Target branches, CI commands and
-approval producer identities still need their own review. The preview shows
+approval producer identities still need their own review. Reuse creates only missing repository
+Variable names. If an existing repository value must change, make a separate
+reviewed update and prepare a fresh plan; batch setup will not overwrite it.
+Equivalent validated approval-policy JSON is retained despite formatting.
+Retained Secrets require complete revision metadata before Apply. If that
+metadata cannot be verified, setup stops and asks for a fresh inspection;
+existing values and completed effects are preserved. The preview shows
 retained shared settings and new repository overrides. Existing Secret values
 are never read, copied, displayed or replaced. A missing required binding blocks
 that repository; provision it separately and inspect again.

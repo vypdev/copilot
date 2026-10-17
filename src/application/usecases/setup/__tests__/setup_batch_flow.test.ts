@@ -34,6 +34,13 @@ function fixture() {
 }
 
 describe('read-only per-target preparation', () => {
+  it('blocks a changed existing repository Variable while allowing another target to continue', async () => {
+    const f = fixture(); f.configuration.ai.bugbotCommentLimit = 19;
+    f.ports.inventory.effective.mockResolvedValueOnce({ ...f.remote(f.targets[0]), repositoryVariables: [{ name: 'BUGBOT_COMMENT_LIMIT', value: '17' }] });
+    const plan = await f.prepare.execute(f.request);
+    expect(plan.targets[0].blocked).toEqual(expect.arrayContaining([expect.stringContaining('separate reviewed update')]));
+    expect(plan.targets[0].files).toEqual([]); expect(plan.targets[1].blocked).toEqual([]);
+  });
   it('reads shared inventory once and plans only additive bindings for selected identities', async () => {
     const f = fixture(); const plan = await f.prepare.execute(f.request);
     expect(f.ports.inventory.shared).toHaveBeenCalledTimes(1);

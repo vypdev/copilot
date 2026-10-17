@@ -50134,6 +50134,8 @@ exports.configureSetupOrganizationReuseStorage = configureSetupOrganizationReuse
 const setup_credential_requirement_policy_1 = __nccwpck_require__(43562);
 const setup_configuration_plan_1 = __nccwpck_require__(87770);
 const setup_organization_variable_bindings_1 = __nccwpck_require__(19698);
+const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+const node_util_1 = __nccwpck_require__(47261);
 /** Nonempty separators are native empty lists, including on older Action versions. */
 const emptyLists = {
     BUGBOT_AUTOFIX_VERIFY_COMMANDS: ',', PROJECT_IDS: ',', AI_IGNORE_FILES: ',', BUGBOT_ORGANIZATION_RULES: ';',
@@ -50176,12 +50178,25 @@ function planSetupOrganizationVariableReuse(desired, remote) {
             throw new Error('Invalid or duplicate desired Variable name.');
         names.add(variable.name);
         const effective = repository.get(variable.name) ?? organization.get(variable.name);
-        if (effective?.value === variable.value)
+        if (effective && sameReusedSetupVariable(variable.name, effective.value, variable.value))
             retained.push({ name: variable.name, scope: repository.has(variable.name) ? 'repository' : 'organization' });
         else
             repositoryWrites.push({ ...variable });
     }
     return { retained, repositoryWrites };
+}
+/** Valid policy JSON formatting/key order is not an operator-requested value change. */
+function sameReusedSetupVariable(name, existing, desired) {
+    if (existing === desired)
+        return true;
+    if (name !== 'PR_APPROVAL_POLICY')
+        return false;
+    try {
+        return (0, node_util_1.isDeepStrictEqual)((0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(existing), (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(desired));
+    }
+    catch {
+        return false;
+    }
 }
 /** Make target overrides visible in the existing plan, audits and storage validation. */
 function configureSetupOrganizationReuseStorage(configuration, desired, remote) {
@@ -50304,10 +50319,13 @@ function validateDiscoveredProjectStatuses(configuration, discovery) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.sameSetupRemoteFacts = sameSetupRemoteFacts;
+exports.hasCompleteSetupSecretRevisions = hasCompleteSetupSecretRevisions;
 exports.unavailableSetupRemoteConfiguration = unavailableSetupRemoteConfiguration;
 exports.setupSecretRevisionSnapshot = setupSecretRevisionSnapshot;
 /** Compare the semantic GitHub facts used by setup, not object/response ordering. */
 function sameSetupRemoteFacts(left, right) {
+    if (!hasCompleteSetupSecretRevisions(left) || !hasCompleteSetupSecretRevisions(right))
+        return false;
     const variables = (items) => items
         .map(item => JSON.stringify([item.name, item.value])).sort();
     const normalize = (facts) => ({
@@ -50329,6 +50347,19 @@ function sameSetupRemoteFacts(left, right) {
         credentialHealthWorkflow: facts.credentialHealthWorkflow,
     });
     return JSON.stringify(normalize(left)) === JSON.stringify(normalize(right));
+}
+/** Unknown revisions cannot establish freshness, even when two unknown reads look equal. */
+function hasCompleteSetupSecretRevisions(remote) {
+    const complete = (names, revisions) => {
+        if (names.length === 0)
+            return revisions === undefined || revisions.length === 0;
+        if (!revisions || revisions.length !== names.length || new Set(names).size !== names.length
+            || revisions.some(secret => typeof secret.name !== 'string' || !Number.isFinite(Date.parse(secret.updatedAt))))
+            return false;
+        return JSON.stringify(revisions.map(secret => secret.name).sort()) === JSON.stringify([...names].sort());
+    };
+    return complete(remote.repositorySecrets, remote.repositorySecretRevisions)
+        && complete(remote.organizationSecrets, remote.organizationSecretRevisions);
 }
 /** A failed read carries explicit unknown availability; its empty arrays are never absence evidence. */
 function unavailableSetupRemoteConfiguration() {
@@ -54011,7 +54042,17 @@ async function ensureRepositoryVariables(context, dependencies, setupConfigurati
                     resources: (0, setup_organization_variable_reuse_policy_1.planSetupOrganizationVariableReuse)(desired, remoteConfiguration).repositoryWrites.map(variable => ({ ...variable })) }]
                 .filter(group => group.resources.length > 0)
             : groupSetupResources(desired, 'variable', setupConfiguration, remoteConfiguration);
-        const result = await upsertVariableGroups(context, dependencies.setupRepositoryVariablesPort, groups);
+        let result;
+        if (context.setupConfigurationSource === 'organization' && groups.length > 0) {
+            if (!dependencies.setupRepositoryVariablesPort.createMissing
+                || groups[0].resources.some(variable => remoteConfiguration.repositoryVariables.some(existing => existing.name === variable.name))) {
+                return { errors: ['Reuse cannot replace an existing repository Variable or use an unguarded writer. Review a separate manual update, then prepare a new plan.'], writes: 0 };
+            }
+            const created = await dependencies.setupRepositoryVariablesPort.createMissing(groups[0].resources);
+            result = { ...created, unclassifiedErrors: created.unclassifiedErrors ?? created.errors };
+        }
+        else
+            result = await upsertVariableGroups(context, dependencies.setupRepositoryVariablesPort, groups);
         const writes = result.created + result.updated;
         if (result.errors.length > 0) {
             return result.failures
@@ -54080,6 +54121,10 @@ async function resolveRemoteConfiguration(context, dependencies, setupConfigurat
         }
         try {
             const fresh = await dependencies.setupRemoteConfigurationReadPort.inspect();
+            if (!(0, setup_remote_facts_policy_1.hasCompleteSetupSecretRevisions)(fresh) || !(0, setup_remote_facts_policy_1.hasCompleteSetupSecretRevisions)(context.setupRemoteConfiguration)) {
+                errors.push('Retained Secret revision metadata could not be verified. Restore metadata access and prepare a fresh plan. No changes were made.');
+                return undefined;
+            }
             if (reuseSnapshot(fresh) !== reuseSnapshot(context.setupRemoteConfiguration)) {
                 errors.push('Configuration or access changed after review. Inspect and approve a new plan before applying it.');
                 return undefined;
@@ -73453,6 +73498,12 @@ class GithubActionsResourceCommands {
         return { created, updated, skipped: 0, errors };
     }
     async upsert(owner, repository, token, variables) {
+        return this.writeRepositoryVariables(owner, repository, token, variables, true);
+    }
+    async createMissing(owner, repository, token, variables) {
+        return this.writeRepositoryVariables(owner, repository, token, variables, false);
+    }
+    async writeRepositoryVariables(owner, repository, token, variables, allowUpdate) {
         const client = this.githubClient.getClient(token);
         const existingVariables = await (0, github_actions_resource_collection_1.listCollection)(client, client.rest.actions.listRepoVariables, { owner, repo: repository, per_page: 100 }, 'variables');
         const existingValues = new Map(existingVariables.map(variable => [variable.name, variable.value]));
@@ -73465,6 +73516,11 @@ class GithubActionsResourceCommands {
                 if (existingValues.has(variable.name)) {
                     if (existingValues.get(variable.name) === variable.value)
                         continue;
+                    if (!allowUpdate) {
+                        errors.push(`Repository Variable ${variable.name} already exists with a different value. Review a separate manual update, then prepare setup again.`);
+                        failures.push({ name: variable.name, scope: 'repository', phase: 'update', reason: 'conflict' });
+                        continue;
+                    }
                     await client.rest.actions.updateRepoVariable({ owner, repo: repository, name: variable.name, value: variable.value });
                     updated += 1;
                 }
@@ -78417,6 +78473,9 @@ exports.SetupRemoteConfigurationQueryRepository = SetupRemoteConfigurationQueryR
 class RepositoryVariablesCommandRepository {
     constructor(githubClient) {
         this.transport = new github_actions_resource_commands_1.GithubActionsResourceCommands(githubClient);
+    }
+    createMissing(owner, repository, token, variables) {
+        return this.transport.createMissing(owner, repository, token, variables);
     }
     upsert(owner, repository, token, variables) {
         return this.transport.upsert(owner, repository, token, variables);
@@ -85851,6 +85910,7 @@ function bindIssueTypes(port, binding) {
 }
 function bindSetupVariables(port, binding) {
     return Object.freeze({
+        ...(port.createMissing ? { createMissing: variables => port.createMissing(binding.owner, binding.repository, binding.token, variables) } : {}),
         upsert: (variables) => port.upsert(binding.owner, binding.repository, binding.token, variables),
         ...(port.upsertScopedVariables ? {
             upsertScopedVariables: (target, variables) => port.upsertScopedVariables(binding.owner, binding.repository, binding.token, target, variables),
