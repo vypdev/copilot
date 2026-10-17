@@ -33,6 +33,7 @@ export interface SetupBatchView {
     readonly permissionProbes?: readonly { readonly scope: 'repository' | 'organization'; readonly permission: string }[];
     readonly retainedSecrets: readonly string[];
     readonly completedEffects: readonly string[];
+    readonly cleanupPending?: true;
     readonly reason?: 'preflight' | 'drift' | 'permission' | 'provider' | 'ownership' | 'cancelled';
     readonly pullRequestUrl?: string;
   }[];

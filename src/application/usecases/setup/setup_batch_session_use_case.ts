@@ -35,6 +35,10 @@ export class SetupBatchSessionUseCase {
     const saved = await this.ports.journal.load(plan.operationId);
     let operation = saved ? parseSetupBatchOperation(saved) : beginSetupBatchOperation(plan);
     assertSetupBatchOperationMatchesPlan(operation, plan);
+    if (operation.targets.some(target => target.cleanupPending)) {
+      await this.ports.result(plan, operation, 0);
+      return { outcome: 'partial', operation };
+    }
     if (operation.targets.every(target => ['blocked', 'waiting-for-merge', 'verification-pending', 'unchanged'].includes(target.status))) {
       await this.ports.result(plan, operation, 0);
       return { outcome: operation.targets.some(target => target.status === 'blocked')
@@ -45,11 +49,16 @@ export class SetupBatchSessionUseCase {
         return { outcome: operation.targets.some(target => target.effects.length > 0) ? 'partial' : 'cancelled', operation };
       }
       if (operation.targets.some(target => ['ready', 'partial', 'cancelled', 'applying'].includes(target.status))) {
-        await this.ports.journal.save(operation);
-        let cleanupPending = false;
-        {
+        let cleanupPending: boolean;
+        const unlock = await this.ports.journal.lock(plan.operationId);
+        try {
+          const latest = await this.ports.journal.load(plan.operationId);
+          if (latest) operation = parseSetupBatchOperation(latest);
+          assertSetupBatchOperationMatchesPlan(operation, plan);
+          cleanupPending = operation.targets.some(target => target.cleanupPending);
+          await this.ports.journal.save(operation);
           for (let index = 0; index < plan.targets.length; index += 1) {
-            if (!this.ports.presentation.active()) break;
+            if (cleanupPending || !this.ports.presentation.active()) break;
             if (!['ready', 'partial', 'cancelled', 'applying'].includes(operation.targets[index].status)) continue;
             let fresh = false;
             let unavailable = false;
@@ -67,17 +76,32 @@ export class SetupBatchSessionUseCase {
             await this.ports.journal.save(operation);
             this.ports.presentation.progress(operation);
             this.ports.possibleMutation();
-            const audit = await this.ports.audit(plan.targets[index], selection.token);
+            let audit: { readonly ready: boolean; readonly cleanupPending?: boolean };
+            let rejected = false;
+            try { audit = await this.ports.audit(plan.targets[index], selection.token); }
+            catch {
+              // A rejected audit has no trustworthy cleanup report. Persist the
+              // uncertainty and stop all further mutation, including on resume.
+              rejected = true;
+              audit = { ready: false, cleanupPending: true };
+            }
             cleanupPending ||= audit.cleanupPending === true;
-            if (!audit.ready) {
+            if (!audit.ready || audit.cleanupPending) {
               operation = { ...operation, targets: operation.targets.map((target, position) => position === index
-                ? { ...target, status: 'blocked' as const, reason: 'permission' as const } : target) };
+                ? { ...target, status: 'blocked' as const, reason: rejected ? 'provider' as const : 'permission' as const,
+                  ...(audit.cleanupPending ? { cleanupPending: true as const } : {}) } : target) };
               await this.ports.journal.save(operation);
               this.ports.presentation.progress(operation);
             }
             if (cleanupPending) break;
           }
-        }
+          if (cleanupPending) {
+            operation = { ...operation, targets: operation.targets.map(target => ['ready', 'applying', 'partial', 'cancelled'].includes(target.status)
+              ? { ...target, status: 'cancelled' as const, reason: 'cancelled' as const } : target) };
+            await this.ports.journal.save(operation);
+            this.ports.presentation.progress(operation);
+          }
+        } finally { await unlock(); }
         if (cleanupPending) {
           await this.ports.result(plan, operation, 0);
           return { outcome: 'partial', operation };

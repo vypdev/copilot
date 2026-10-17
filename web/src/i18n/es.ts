@@ -27,6 +27,7 @@ export const es: Record<keyof typeof en, string> = {
   batchStopping: "Deteniendo el trabajo pendiente tras la petición actual. Los cambios completados se conservarán.",
   batchReasonDrift: "La base revisada o su titularidad han cambiado. Inspecciona el repositorio y revisa un plan nuevo.",
   batchReasonProvider: "GitHub no ha confirmado el último paso. El reintento inspecciona lo existente antes de continuar.",
+  batchCleanupPending: "No se pudo confirmar la limpieza de la comprobación de permisos. El trabajo pendiente está detenido. Revisa el historial de GitHub y el registro local de recuperación; resuelve la limpieza antes de iniciar un setup nuevo. Esta operación no puede reanudar escrituras.",
   batchReasonCancelled: "El trabajo pendiente se detuvo. Se conservaron los cambios completados.",
   batchReasonPreflight: "Revisa el acceso, los secretos requeridos y los ajustes específicos del repositorio antes de continuar.",
   batchOpenPull: "Abrir PR de setup",

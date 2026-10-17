@@ -68,7 +68,7 @@ export function parseSetupBatchOperation(value: unknown): SetupBatchOperation {
     || value.targets.length < 1 || value.targets.length > SETUP_BATCH_MAX_TARGETS) throw new Error('Invalid or unsupported setup operation journal.');
   const ids = new Set<number>();
   for (const target of value.targets) {
-    if (!record(target) || Object.keys(target).some(key => !['repositoryId', 'repository', 'defaultBranch', 'baseSha', 'planDigest', 'status', 'effects', 'preparedCommit', 'pullRequestNumber', 'reason'].includes(key))
+    if (!record(target) || Object.keys(target).some(key => !['repositoryId', 'repository', 'defaultBranch', 'baseSha', 'planDigest', 'status', 'effects', 'preparedCommit', 'pullRequestNumber', 'cleanupPending', 'reason'].includes(key))
       || !positive(target.repositoryId) || ids.has(target.repositoryId) || typeof target.repository !== 'string' || !name.test(target.repository)
       || typeof target.defaultBranch !== 'string' || !validBranch(target.defaultBranch) || typeof target.baseSha !== 'string' || !sha.test(target.baseSha)
       || typeof target.planDigest !== 'string' || !digest.test(target.planDigest)
@@ -77,6 +77,7 @@ export function parseSetupBatchOperation(value: unknown): SetupBatchOperation {
       || target.effects.some(effect => !['access', 'variables', 'labels', 'issue-types', 'branch', 'pull-request'].includes(effect))
       || target.preparedCommit !== undefined && (typeof target.preparedCommit !== 'string' || !sha.test(target.preparedCommit))
       || target.pullRequestNumber !== undefined && !positive(target.pullRequestNumber)
+      || target.cleanupPending !== undefined && target.cleanupPending !== true
       || target.reason !== undefined && !['preflight', 'drift', 'permission', 'provider', 'ownership', 'cancelled'].includes(String(target.reason))) throw new Error('Invalid setup target receipt.');
     ids.add(target.repositoryId);
     if (target.status === 'waiting-for-merge' && (!target.preparedCommit || !target.pullRequestNumber

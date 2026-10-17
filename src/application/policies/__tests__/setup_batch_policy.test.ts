@@ -53,9 +53,12 @@ describe('bounded setup operation and ownership policy', () => {
     const operation = beginSetupBatchOperation(plan());
     expect(parseSetupBatchOperation(operation)).toEqual(operation);
     expect(parseSetupBatchOperation(operation)).not.toBe(operation);
+    const cleanup = { ...operation, targets: [{ ...operation.targets[0], status: 'blocked', reason: 'provider', cleanupPending: true }] };
+    expect(parseSetupBatchOperation(cleanup)).toEqual(cleanup);
     for (const change of [{ schemaVersion: 2 }, { token: 'fixture' }, { targets: [] },
       { targets: [{ ...operation.targets[0], status: 'waiting-for-merge' }] },
       { targets: [{ ...operation.targets[0], secretValue: 'fixture' }] },
+      { targets: [{ ...operation.targets[0], cleanupPending: false }] },
       { targets: [{ ...operation.targets[0], effects: ['branch', 'branch'] }] }]) {
       expect(() => parseSetupBatchOperation({ ...operation, ...change })).toThrow();
     }

@@ -21,6 +21,7 @@ export function buildSetupBatchView(plan: SetupBatchPlan, operation: SetupBatchO
           .filter(requirement => requirement.level === 'write' && requirement.applicability === 'required')
           .map(requirement => ({ scope: requirement.scope, permission: requirement.permission })),
         completedEffects: [...receipt.effects], ...(receipt.reason ? { reason: receipt.reason } : {}),
+        ...(receipt.cleanupPending ? { cleanupPending: true as const } : {}),
         ...(receipt.pullRequestNumber ? { pullRequestUrl: `https://github.com/${encodeURIComponent(target.target.owner)}/${encodeURIComponent(target.target.name)}/pull/${receipt.pullRequestNumber}` } : {}),
       };
     }) };

@@ -13,7 +13,8 @@
     ready: 'batchStatusReady', blocked: 'batchStatusBlocked', applying: 'batchStatusApplying', partial: 'batchStatusPartial',
     'waiting-for-merge': 'batchStatusWaiting', 'verification-pending': 'batchStatusPending', unchanged: 'batchStatusUnchanged', cancelled: 'batchStatusCancelled',
   };
-  $: ready = batch.targets.filter(target => ['ready', 'partial', 'cancelled', 'applying'].includes(target.status));
+  $: ready = batch.targets.some(target => target.cleanupPending) ? []
+    : batch.targets.filter(target => ['ready', 'partial', 'cancelled', 'applying'].includes(target.status));
   function safePull(url: string | undefined): string | undefined {
     return url && /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/pull\/[1-9][0-9]*$/.test(url) ? url : undefined;
   }
@@ -28,8 +29,9 @@
       <section class="batch-target">
         <h3>{target.repository}</h3>
         <p class="target-status" role="status">{tr(statuses[target.status], $setupLocale)}</p>
+        {#if target.cleanupPending}<p class="banner warning" role="alert">{tr('batchCleanupPending', $setupLocale)}</p>{/if}
         {#if target.blockers?.length}<ul>{#each target.blockers as blocker}<li>{blocker}</li>{/each}</ul>{/if}
-        {#if target.reason}<p>{tr(target.reason === 'drift' || target.reason === 'ownership' ? 'batchReasonDrift'
+        {#if target.reason && !target.cleanupPending}<p>{tr(target.reason === 'drift' || target.reason === 'ownership' ? 'batchReasonDrift'
           : target.reason === 'provider' ? 'batchReasonProvider' : target.reason === 'cancelled' ? 'batchReasonCancelled' : 'batchReasonPreflight', $setupLocale)}</p>{/if}
         <details><summary>{tr('batchBranchReview', $setupLocale)}</summary><p><code>{target.installationBranch}</code> → <code>{target.baseBranch}</code></p><code>{target.baseSha}</code></details>
         {#if safePull(target.pullRequestUrl)}<a class="github-link" href={safePull(target.pullRequestUrl)} target="_blank" rel="noopener noreferrer">{tr('batchOpenPull', $setupLocale)} ↗</a>{/if}

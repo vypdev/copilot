@@ -53,6 +53,7 @@ export interface SetupBatchTargetReceipt {
   readonly effects: readonly ('access' | 'variables' | 'labels' | 'issue-types' | 'branch' | 'pull-request')[];
   readonly preparedCommit?: string;
   readonly pullRequestNumber?: number;
+  readonly cleanupPending?: true;
   readonly reason?: 'preflight' | 'drift' | 'permission' | 'provider' | 'ownership' | 'cancelled';
 }
 /** Durable metadata only: no configuration values, file contents, PATs or Secret values. */

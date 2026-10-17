@@ -66,8 +66,8 @@ describe('consumed shared bindings and redacted review policy', () => {
       configuration: f.configuration, remote: f.remote, files: [{ path: 'AGENTS.md', content: 'safe' }], repositoryVariables: [], grants: access.grants, sharedSnapshot: access.sharedSnapshot,
       digest: 'b'.repeat(64), blocked: [] }] };
     const operation = beginSetupBatchOperation(plan);
-    const view = buildSetupBatchView(plan, { ...operation, targets: [{ ...operation.targets[0], reason: 'provider', pullRequestNumber: 31 }] }, 'result', 1);
-    expect(view.targets[0]).toMatchObject({ retainedSecrets: ['PAT'], reason: 'provider', pullRequestUrl: 'https://github.com/acme/repo/pull/31' });
+    const view = buildSetupBatchView(plan, { ...operation, targets: [{ ...operation.targets[0], reason: 'provider', cleanupPending: true, pullRequestNumber: 31 }] }, 'result', 1);
+    expect(view.targets[0]).toMatchObject({ retainedSecrets: ['PAT'], reason: 'provider', cleanupPending: true, pullRequestUrl: 'https://github.com/acme/repo/pull/31' });
     expect(view.targets[0].permissionProbes?.length).toBeGreaterThan(0);
     assertSetupBatchOperationMatchesPlan(operation, plan);
     expect(() => assertSetupBatchOperationMatchesPlan({ ...operation, operationId: 'other' }, plan)).toThrow('does not match');

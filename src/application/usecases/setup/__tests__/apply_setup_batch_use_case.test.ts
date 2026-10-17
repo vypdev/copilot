@@ -55,6 +55,14 @@ describe('sequential reviewed batch Apply', () => {
     await f.useCase.execute(f.plan, 'fixture');
     expect(f.journal.save).not.toHaveBeenCalled(); expect(f.writer.revalidate).not.toHaveBeenCalled();
   });
+  it('refuses direct Apply when any saved target has uncertain permission cleanup', async () => {
+    const f = fixture(); const operation = beginSetupBatchOperation(f.plan);
+    const prior: SetupBatchOperation = { ...operation, targets: [{ ...operation.targets[0], status: 'blocked', cleanupPending: true }, operation.targets[1]] };
+    f.journal.load.mockResolvedValue(prior);
+    expect(await f.useCase.execute(f.plan, 'fixture')).toEqual(prior);
+    expect(f.presentation.review).not.toHaveBeenCalled(); expect(f.writer.revalidate).not.toHaveBeenCalled();
+    expect(f.journal.save).not.toHaveBeenCalled(); expect(f.unlock).toHaveBeenCalledTimes(1);
+  });
   it('blocks stale targets independently and preserves other progress', async () => {
     const f = fixture(); f.writer.revalidate.mockResolvedValueOnce(false);
     const result = await f.useCase.execute(f.plan, 'fixture');

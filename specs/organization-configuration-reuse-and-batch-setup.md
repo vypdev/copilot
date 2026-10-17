@@ -498,9 +498,9 @@ its 14 previously open items; this feature does not close unrelated evidence.
 
 ### Final local gates
 
-The final local suite passes **657 suites / 9,853 tests** (35 pre-existing
-skips). Coverage is **97.38% lines, 96.23% statements, 97.01% functions and
-93.06% branches**. All eight new pure decision modules pass 100% on all four
+The final local suite passes **657 suites / 9,868 tests** (35 pre-existing
+skips). Coverage is **97.38% lines, 96.23% statements, 97.02% functions and
+93.07% branches**. All eight new pure decision modules pass 100% on all four
 metrics through the executable budget. Build, package smoke, TypeScript,
 Svelte, lint, documentation, workflow, architecture and specification gates
 pass. Multi-platform PR CI and maintainer review remain required before merge;
@@ -549,3 +549,23 @@ stable content directory. Equal basenames and content from different original
 paths remain separate plan entries. The adapter regression reproduces the
 previous collision, preserves historical backups and verifies reproducibility
 after the timestamp changes.
+
+### Rejected audit and unavailable Secret revision evidence
+
+A rejected permission audit has no trustworthy cleanup result. Its target is
+persisted as provider-blocked with `cleanupPending: true`; other pending targets
+are stopped, completed effects/PRs remain, and the result is partial. Both the
+shared session and direct Apply reject further writes for that saved operation,
+including after restart. The terminal and all four web locales direct operators
+to inspect GitHub history and the local recovery journal, resolve temporary
+resources, and start a fresh preview. A normal failed audit with confirmed cleanup
+still blocks only its own target.
+Audit probes and receipt updates hold the same exclusive operation lock used by
+Apply, reloading the receipt after acquisition and releasing it before Apply
+acquires its own lock. A concurrent owner cannot overwrite a cleanup incident.
+
+Batch revalidation requires complete, valid repository Secret revision entries
+covering the exact names in both reviewed and current inventories. Two absent
+revision lists cannot establish freshness for nonempty Secret inventories.
+Regression cases cover missing, partial, wrong-name and invalid metadata, harmless
+ordering, rejected audits, durable resume, direct Apply and retained completed PRs.

@@ -27,6 +27,7 @@ export const pt: Record<SetupMessageKey, string> = {
   batchStopping: "A interromper o trabalho pendente após o pedido atual. As alterações concluídas serão mantidas.",
   batchReasonDrift: "A base revista ou a sua titularidade mudou. Inspecione o repositório e reveja um novo plano.",
   batchReasonProvider: "O GitHub não confirmou o último passo. Uma nova tentativa inspeciona os efeitos existentes antes de continuar.",
+  batchCleanupPending: "Não foi possível confirmar a limpeza da verificação de permissões. O trabalho pendente foi interrompido. Verifique o histórico do GitHub e o registro local de recuperação; resolva a limpeza antes de iniciar uma nova configuração. Esta operação não pode retomar gravações.",
   batchReasonCancelled: "O trabalho pendente parou. As alterações concluídas foram mantidas.",
   batchReasonPreflight: "Reveja o acesso, as credenciais necessárias e os ajustes específicos do repositório antes de continuar.",
   batchOpenPull: "Abrir PR de configuração",

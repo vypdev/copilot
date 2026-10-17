@@ -5,6 +5,7 @@ import { buildSetupBatchView } from '../../application/policies/setup_batch_view
 import { unavailableSetupRemoteConfiguration } from '../../application/policies/setup_remote_facts_policy';
 import { beginSetupBatchOperation } from '../../application/policies/setup_batch_policy';
 import { createDefaultSetupConfiguration } from '../../application/policies/setup_configuration_defaults';
+import { tr } from '../../../web/src/i18n/catalog';
 import type { SetupBatchPlan } from '../../domain/setup_batch';
 
 const markup = useWebSetupRenderer();
@@ -35,6 +36,16 @@ describe('batch selection and reviewed plan UI', () => {
     const blocked = await markup('BatchSetupPanel', { batch: batch('blocked'), mode: 'review', controller: true, busy: false });
     const observer = await markup('BatchSetupPanel', { batch: batch(), mode: 'review', controller: false, busy: false });
     expect(blocked).toMatch(/class="primary(?: [^"]*)?"[^>]*disabled/u); expect(observer).toMatch(/class="primary(?: [^"]*)?"[^>]*disabled/u);
+  });
+  test.each(['en', 'es', 'fr', 'pt'] as const)('%s exposes uncertain cleanup and offers no Apply or retry', async locale => {
+    const original = batch('blocked'); const view: SetupBatchView = { ...original,
+      targets: [{ ...original.targets[0], cleanupPending: true, reason: 'provider' },
+        { ...batch().targets[0], repositoryId: 8, repository: 'acme/other' }] };
+    const result = await markup('BatchSetupPanel', { batch: view, mode: 'result', controller: true, busy: false }, locale);
+    expect(result).toContain(tr('batchCleanupPending', locale)); expect(result).not.toContain(tr('batchRetryPending', locale));
+    expect(result).not.toContain(tr('batchReasonProvider', locale)); expect(result).toContain('role="alert"');
+    const review = await markup('BatchSetupPanel', { batch: view, mode: 'review', controller: true, busy: false }, locale);
+    expect(review).toMatch(/class="primary(?: [^"]*)?"[^>]*disabled/u);
   });
   test('retains results on cancellation and accepts only constructed GitHub PR links', async () => {
     const view = batch('partial'); const target = { ...view.targets[0], pullRequestUrl: 'javascript:alert(1)', reason: 'provider' as const };

@@ -93,6 +93,10 @@ pending verification after resource checks.
 A failed target retains its completed effects while other ready targets can
 continue. Stop prevents pending work; it does not remove successful grants or
 PRs. One explicit retry is available in the paired session after another review.
+If a permission audit ends without a confirmed cleanup report, setup saves that
+uncertainty, retains existing effects and stops pending work. The saved operation
+cannot resume writes. Inspect the GitHub history and local recovery journal,
+resolve any temporary resources, then start a fresh setup preview.
 For a closed session, use `copilot setup --web --resume-operation <operation-id>`
 with a fresh temporary PAT and the same configuration. Private local receipts
 contain identities, hashes and completed effects, never credentials, values or
@@ -101,6 +105,9 @@ permission probes. If the base changed (including after a merge), inspect the
 retained PR and start a fresh setup preview instead. A PR means **Waiting for
 merge**; credential metadata or PAT authentication does not prove runtime
 permissions. Delete the temporary operator PAT yourself after finishing.
+
+Batch write preflight requires complete revision metadata for existing repository
+Secrets; matching names alone cannot establish that a credential was not rotated.
 
 ## Recommended installation and initialization
 

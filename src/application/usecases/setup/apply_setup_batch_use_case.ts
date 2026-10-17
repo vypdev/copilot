@@ -16,6 +16,7 @@ export class ApplySetupBatchUseCase {
       const saved = await this.ports.journal.load(plan.operationId);
       let operation = saved ? parseSetupBatchOperation(saved) : initial;
       assertSetupBatchOperationMatchesPlan(operation, plan);
+      if (operation.targets.some(target => target.cleanupPending)) return operation;
       if (!this.ports.presentation.active() || !await this.ports.presentation.review(plan, operation)) return operation;
       await this.ports.journal.save(operation);
       const update = async (index: number, receipt: SetupBatchTargetReceipt): Promise<void> => {

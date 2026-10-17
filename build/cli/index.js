@@ -47309,7 +47309,7 @@ function parseSetupBatchOperation(value) {
         throw new Error('Invalid or unsupported setup operation journal.');
     const ids = new Set();
     for (const target of value.targets) {
-        if (!record(target) || Object.keys(target).some(key => !['repositoryId', 'repository', 'defaultBranch', 'baseSha', 'planDigest', 'status', 'effects', 'preparedCommit', 'pullRequestNumber', 'reason'].includes(key))
+        if (!record(target) || Object.keys(target).some(key => !['repositoryId', 'repository', 'defaultBranch', 'baseSha', 'planDigest', 'status', 'effects', 'preparedCommit', 'pullRequestNumber', 'cleanupPending', 'reason'].includes(key))
             || !positive(target.repositoryId) || ids.has(target.repositoryId) || typeof target.repository !== 'string' || !name.test(target.repository)
             || typeof target.defaultBranch !== 'string' || !validBranch(target.defaultBranch) || typeof target.baseSha !== 'string' || !sha.test(target.baseSha)
             || typeof target.planDigest !== 'string' || !digest.test(target.planDigest)
@@ -47318,6 +47318,7 @@ function parseSetupBatchOperation(value) {
             || target.effects.some(effect => !['access', 'variables', 'labels', 'issue-types', 'branch', 'pull-request'].includes(effect))
             || target.preparedCommit !== undefined && (typeof target.preparedCommit !== 'string' || !sha.test(target.preparedCommit))
             || target.pullRequestNumber !== undefined && !positive(target.pullRequestNumber)
+            || target.cleanupPending !== undefined && target.cleanupPending !== true
             || target.reason !== undefined && !['preflight', 'drift', 'permission', 'provider', 'ownership', 'cancelled'].includes(String(target.reason)))
             throw new Error('Invalid setup target receipt.');
         ids.add(target.repositoryId);
@@ -47411,8 +47412,8 @@ function buildSetupBatchView(plan, operation, phase, retryRemaining) {
                     .filter(requirement => requirement.level === 'write' && requirement.applicability === 'required')
                     .map(requirement => ({ scope: requirement.scope, permission: requirement.permission })),
                 completedEffects: [...receipt.effects], ...(receipt.reason ? { reason: receipt.reason } : {}),
-                ...(receipt.pullRequestNumber ? { pullRequestUrl: `https://github.com/${encodeURIComponent(target.target.owner)}/${encodeURIComponent(target.target.name)}/pull/${receipt.pullRequestNumber}` } : {}),
-            };
+                ...(receipt.cleanupPending ? { cleanupPending: true } : {}),
+                ...(receipt.pullRequestNumber ? { pullRequestUrl: `https://github.com/${encodeURIComponent(target.target.owner)}/${encodeURIComponent(target.target.name)}/pull/${receipt.pullRequestNumber}` } : {}), };
         }) };
 }
 
@@ -60399,6 +60400,8 @@ class ApplySetupBatchUseCase {
             const saved = await this.ports.journal.load(plan.operationId);
             let operation = saved ? (0, setup_batch_policy_1.parseSetupBatchOperation)(saved) : initial;
             (0, setup_batch_policy_1.assertSetupBatchOperationMatchesPlan)(operation, plan);
+            if (operation.targets.some(target => target.cleanupPending))
+                return operation;
             if (!this.ports.presentation.active() || !await this.ports.presentation.review(plan, operation))
                 return operation;
             await this.ports.journal.save(operation);
@@ -61770,6 +61773,10 @@ class SetupBatchSessionUseCase {
         const saved = await this.ports.journal.load(plan.operationId);
         let operation = saved ? (0, setup_batch_policy_1.parseSetupBatchOperation)(saved) : (0, setup_batch_policy_1.beginSetupBatchOperation)(plan);
         (0, setup_batch_policy_1.assertSetupBatchOperationMatchesPlan)(operation, plan);
+        if (operation.targets.some(target => target.cleanupPending)) {
+            await this.ports.result(plan, operation, 0);
+            return { outcome: 'partial', operation };
+        }
         if (operation.targets.every(target => ['blocked', 'waiting-for-merge', 'verification-pending', 'unchanged'].includes(target.status))) {
             await this.ports.result(plan, operation, 0);
             return { outcome: operation.targets.some(target => target.status === 'blocked')
@@ -61780,11 +61787,17 @@ class SetupBatchSessionUseCase {
                 return { outcome: operation.targets.some(target => target.effects.length > 0) ? 'partial' : 'cancelled', operation };
             }
             if (operation.targets.some(target => ['ready', 'partial', 'cancelled', 'applying'].includes(target.status))) {
-                await this.ports.journal.save(operation);
-                let cleanupPending = false;
-                {
+                let cleanupPending;
+                const unlock = await this.ports.journal.lock(plan.operationId);
+                try {
+                    const latest = await this.ports.journal.load(plan.operationId);
+                    if (latest)
+                        operation = (0, setup_batch_policy_1.parseSetupBatchOperation)(latest);
+                    (0, setup_batch_policy_1.assertSetupBatchOperationMatchesPlan)(operation, plan);
+                    cleanupPending = operation.targets.some(target => target.cleanupPending);
+                    await this.ports.journal.save(operation);
                     for (let index = 0; index < plan.targets.length; index += 1) {
-                        if (!this.ports.presentation.active())
+                        if (cleanupPending || !this.ports.presentation.active())
                             break;
                         if (!['ready', 'partial', 'cancelled', 'applying'].includes(operation.targets[index].status))
                             continue;
@@ -61808,17 +61821,37 @@ class SetupBatchSessionUseCase {
                         await this.ports.journal.save(operation);
                         this.ports.presentation.progress(operation);
                         this.ports.possibleMutation();
-                        const audit = await this.ports.audit(plan.targets[index], selection.token);
+                        let audit;
+                        let rejected = false;
+                        try {
+                            audit = await this.ports.audit(plan.targets[index], selection.token);
+                        }
+                        catch {
+                            // A rejected audit has no trustworthy cleanup report. Persist the
+                            // uncertainty and stop all further mutation, including on resume.
+                            rejected = true;
+                            audit = { ready: false, cleanupPending: true };
+                        }
                         cleanupPending || (cleanupPending = audit.cleanupPending === true);
-                        if (!audit.ready) {
+                        if (!audit.ready || audit.cleanupPending) {
                             operation = { ...operation, targets: operation.targets.map((target, position) => position === index
-                                    ? { ...target, status: 'blocked', reason: 'permission' } : target) };
+                                    ? { ...target, status: 'blocked', reason: rejected ? 'provider' : 'permission',
+                                        ...(audit.cleanupPending ? { cleanupPending: true } : {}) } : target) };
                             await this.ports.journal.save(operation);
                             this.ports.presentation.progress(operation);
                         }
                         if (cleanupPending)
                             break;
                     }
+                    if (cleanupPending) {
+                        operation = { ...operation, targets: operation.targets.map(target => ['ready', 'applying', 'partial', 'cancelled'].includes(target.status)
+                                ? { ...target, status: 'cancelled', reason: 'cancelled' } : target) };
+                        await this.ports.journal.save(operation);
+                        this.ports.presentation.progress(operation);
+                    }
+                }
+                finally {
+                    await unlock();
                 }
                 if (cleanupPending) {
                     await this.ports.result(plan, operation, 0);
@@ -73615,6 +73648,8 @@ function printBatch(plan, operation) {
         (0, logger_1.logInfo)(`  setup/copilot/${plan.operationId} → ${target.target.defaultBranch} at ${target.target.baseSha}`);
         if (target.blocked.length)
             (0, logger_1.logInfo)(`  Needs attention: ${target.blocked.join(' ')}`);
+        if (receipt.cleanupPending)
+            (0, logger_1.logInfo)('  Permission-check cleanup could not be confirmed. Pending work is stopped. Inspect GitHub history and the local recovery journal; resolve cleanup before starting a fresh setup. This operation cannot resume writes.');
         if (!target.blocked.length)
             (0, setup_token_permission_policy_1.buildSetupBatchPatPermissionRequirements)(target.configuration, target.remote, target.grants)
                 .filter(requirement => requirement.level === 'write' && requirement.applicability === 'required')
@@ -96820,10 +96855,16 @@ class SetupBatchGithubApplyAdapter {
                 : !effective.organizationVariables.some(variable => variable.name === resource.name && variable.value === resource.value)))
                 return false;
         }
-        const revisions = (remote) => remote.repositorySecretRevisions?.map(secret => JSON.stringify([secret.name, secret.updatedAt])).sort();
-        if (JSON.stringify(revisions(effective)) !== JSON.stringify(revisions(plan.remote)))
-            return false;
-        if (JSON.stringify([...effective.repositorySecrets].sort()) !== JSON.stringify([...plan.remote.repositorySecrets].sort()))
+        const revisions = (remote) => {
+            const entries = remote.repositorySecretRevisions ?? [];
+            if (JSON.stringify(entries.map(secret => secret.name).sort()) !== JSON.stringify([...remote.repositorySecrets].sort())
+                || entries.some(secret => !Number.isFinite(Date.parse(secret.updatedAt))))
+                return undefined;
+            return entries.map(secret => JSON.stringify([secret.name, secret.updatedAt])).sort();
+        };
+        const currentRevisions = revisions(effective);
+        const reviewedRevisions = revisions(plan.remote);
+        if (!currentRevisions || !reviewedRevisions || JSON.stringify(currentRevisions) !== JSON.stringify(reviewedRevisions))
             return false;
         const original = new Map(plan.remote.repositoryVariables.map(variable => [variable.name, variable.value]));
         const intended = new Map(plan.repositoryVariables.map(variable => [variable.name, variable.value]));

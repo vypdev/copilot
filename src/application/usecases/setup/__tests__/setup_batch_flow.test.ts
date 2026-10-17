@@ -139,8 +139,59 @@ describe('shared CLI/web batch session', () => {
   });
   it('stops the whole installation when a permission probe needs cleanup', async () => {
     const f = await sessionFixture(); f.ports.audit.mockResolvedValueOnce({ ready: false, cleanupPending: true });
-    expect((await f.session.execute(f.request)).outcome).toBe('partial'); expect(f.ports.writer.grant).not.toHaveBeenCalled();
+    const result = await f.session.execute(f.request);
+    expect(result.outcome).toBe('partial'); expect(f.ports.writer.grant).not.toHaveBeenCalled();
+    expect(result.operation.targets[0]).toMatchObject({ status: 'blocked', reason: 'permission', cleanupPending: true });
+    expect(result.operation.targets[1].status).toBe('cancelled');
     expect(f.ports.audit).toHaveBeenCalledTimes(1); expect(f.ports.result).toHaveBeenCalledWith(f.plan, expect.anything(), 0);
+  });
+  it('persists an audit rejection as uncertain cleanup and blocks mutation on resume', async () => {
+    const f = await sessionFixture(); f.ports.audit.mockRejectedValueOnce(new Error('private provider response'));
+    const result = await f.session.execute(f.request);
+    expect(result.outcome).toBe('partial');
+    expect(result.operation.targets[0]).toMatchObject({ status: 'blocked', reason: 'provider', cleanupPending: true });
+    expect(result.operation.targets[1].status).toBe('cancelled');
+    expect(f.ports.journal.save).toHaveBeenLastCalledWith(result.operation);
+    expect(JSON.stringify(result)).not.toContain('private provider response');
+    expect(f.ports.writer.grant).not.toHaveBeenCalled(); expect(f.ports.writer.prepareCommit).not.toHaveBeenCalled();
+    const resumed = await f.session.execute({ ...f.request, resumeOperationId: id });
+    expect(resumed).toEqual(result); expect(f.ports.audit).toHaveBeenCalledTimes(1);
+    expect(f.ports.presentation.review).toHaveBeenCalledTimes(1);
+    expect(f.ports.result).toHaveBeenLastCalledWith(f.plan, result.operation, 0);
+  });
+  it('owns the operation lock during audits and releases it before Apply locks again', async () => {
+    const f = await sessionFixture(); let held = false;
+    const release = jest.fn(async () => { held = false; return undefined; });
+    f.ports.journal.lock.mockImplementation(async () => { expect(held).toBe(false); held = true; return release; });
+    f.ports.audit.mockImplementation(async () => { expect(held).toBe(true); return { ready: true }; });
+    expect((await f.session.execute(f.request)).outcome).toBe('complete');
+    expect(f.ports.journal.lock).toHaveBeenCalledTimes(2); expect(release).toHaveBeenCalledTimes(2); expect(held).toBe(false);
+  });
+  it('does not overwrite a receipt or probe when another process owns its lock', async () => {
+    const f = await sessionFixture(); f.ports.journal.lock.mockRejectedValueOnce(new Error('operation busy'));
+    await expect(f.session.execute(f.request)).rejects.toThrow('operation busy');
+    expect(f.ports.journal.save).not.toHaveBeenCalled(); expect(f.ports.audit).not.toHaveBeenCalled();
+  });
+  it('reloads a cleanup incident recorded while waiting to acquire the operation lock', async () => {
+    const f = await sessionFixture(); const operation = beginSetupBatchOperation(f.plan);
+    f.ports.journal.lock.mockImplementationOnce(async () => {
+      f.save({ ...operation, targets: [{ ...operation.targets[0], status: 'blocked', cleanupPending: true }, operation.targets[1]] });
+      return async () => undefined;
+    });
+    const result = await f.session.execute(f.request); expect(result.outcome).toBe('partial');
+    expect(f.ports.audit).not.toHaveBeenCalled(); expect(f.ports.writer.grant).not.toHaveBeenCalled();
+    expect(result.operation.targets[0].cleanupPending).toBe(true); expect(result.operation.targets[1].status).toBe('cancelled');
+  });
+  it('preserves completed PR receipts when a later target audit rejects', async () => {
+    const f = await sessionFixture(); const operation = beginSetupBatchOperation(f.plan);
+    const completed = { ...operation.targets[0], status: 'waiting-for-merge' as const, preparedCommit: 'c'.repeat(40), pullRequestNumber: 31,
+      effects: ['access', 'variables', 'labels', 'issue-types', 'branch', 'pull-request'] as const };
+    f.save({ ...operation, targets: [completed, operation.targets[1]] });
+    f.ports.audit.mockRejectedValueOnce(new Error('timeout'));
+    const result = await f.session.execute({ ...f.request, resumeOperationId: id });
+    expect(result.outcome).toBe('partial'); expect(result.operation.targets[0]).toEqual(completed);
+    expect(result.operation.targets[1]).toMatchObject({ status: 'blocked', cleanupPending: true });
+    expect(f.ports.writer.grant).not.toHaveBeenCalled();
   });
   it('allows one explicit reviewed retry and skips completed repositories and effects', async () => {
     const f = await sessionFixture(); f.ports.writer.branch.mockRejectedValueOnce(new Error('timeout'));

@@ -157,6 +157,23 @@ describe('installer-owned GitHub write boundaries', () => {
     jest.spyOn(f.read, 'effective').mockResolvedValue({ ...plan.remote, repositorySecretRevisions: [{ ...original, updatedAt: '2026-10-17T14:01:00Z' }] });
     expect(await f.writer.revalidate(plan, 'fixture', [])).toBe(false); expect(f.request).not.toHaveBeenCalled();
   });
+  it.each([undefined, [], [{ name: 'OTHER', updatedAt: '2026-10-17T14:00:00Z' }],
+    [{ name: 'PAT', updatedAt: 'unknown' }]])('blocks missing or incomplete repository Secret revisions %j', async revisions => {
+    const f = fixture(); const remote = { ...f.plan.remote, repositorySecrets: ['PAT'], repositorySecretRevisions: revisions };
+    jest.spyOn(f.read, 'effective').mockResolvedValue(remote);
+    expect(await f.writer.revalidate({ ...f.plan, remote }, 'fixture', [])).toBe(false); expect(f.request).not.toHaveBeenCalled();
+  });
+  it('requires complete reviewed and fresh revisions and ignores harmless ordering', async () => {
+    const f = fixture(); const revisions = [{ name: 'PAT', updatedAt: '2026-10-17T14:00:00Z' },
+      { name: 'OTHER', updatedAt: '2026-10-17T14:01:00Z' }];
+    const remote = { ...f.plan.remote, repositorySecrets: ['PAT', 'OTHER'], repositorySecretRevisions: revisions };
+    const effective = jest.spyOn(f.read, 'effective').mockResolvedValue({ ...remote,
+      repositorySecrets: [...remote.repositorySecrets].reverse(), repositorySecretRevisions: [...revisions].reverse() });
+    expect(await f.writer.revalidate({ ...f.plan, remote }, 'fixture', [])).toBe(true);
+    expect(await f.writer.revalidate({ ...f.plan, remote: { ...remote, repositorySecretRevisions: undefined } }, 'fixture', [])).toBe(false);
+    effective.mockResolvedValue({ ...remote, repositorySecretRevisions: undefined });
+    expect(await f.writer.revalidate({ ...f.plan, remote }, 'fixture', [])).toBe(false);
+  });
   it('skips an already written Variable and refuses unavailable or failed writes', async () => {
     const f = fixture(); const variable = { name: 'MODEL', value: 'reviewed' }; const plan = { ...f.plan, repositoryVariables: [variable] };
     const effective = jest.spyOn(f.read, 'effective'); effective.mockResolvedValueOnce({ ...f.plan.remote, repositoryVariables: [variable] });

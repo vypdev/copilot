@@ -25,6 +25,7 @@ export const en = {
   batchStopping: "Stopping pending work after the current request. Completed changes will be retained.",
   batchReasonDrift: "The reviewed base or ownership changed. Inspect the repository and review a fresh plan.",
   batchReasonProvider: "GitHub did not confirm the last step. Retry inspects existing effects before continuing.",
+  batchCleanupPending: "Permission-check cleanup could not be confirmed. Pending work is stopped. Inspect GitHub history and the local recovery journal; resolve cleanup before starting a fresh setup. This operation cannot resume writes.",
   batchReasonCancelled: "Pending work stopped. Completed changes were retained.",
   batchReasonPreflight: "Review repository access, required bindings and target-specific settings before continuing.",
   batchOpenPull: "Open setup PR",

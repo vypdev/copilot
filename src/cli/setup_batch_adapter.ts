@@ -188,6 +188,7 @@ function printBatch(plan: SetupBatchPlan, operation: SetupBatchOperation): void 
     logInfo(`  ${target.target.owner}/${target.target.name}: ${receipt.status}; ${target.files.length} files, ${target.repositoryVariables.length} repository Variables, ${target.grants.length} additive grants.`);
     logInfo(`  setup/copilot/${plan.operationId} → ${target.target.defaultBranch} at ${target.target.baseSha}`);
     if (target.blocked.length) logInfo(`  Needs attention: ${target.blocked.join(' ')}`);
+    if (receipt.cleanupPending) logInfo('  Permission-check cleanup could not be confirmed. Pending work is stopped. Inspect GitHub history and the local recovery journal; resolve cleanup before starting a fresh setup. This operation cannot resume writes.');
     if (!target.blocked.length) buildSetupBatchPatPermissionRequirements(target.configuration, target.remote, target.grants)
       .filter(requirement => requirement.level === 'write' && requirement.applicability === 'required')
       .forEach(requirement => logInfo(`  Temporary permission check: ${requirement.scope} ${requirement.permission} — create, inspect, remove.`));

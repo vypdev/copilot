@@ -29,9 +29,14 @@ export class SetupBatchGithubApplyAdapter implements SetupBatchApplyPort {
       if (!pendingGrant && (resource.kind === 'secret' ? !effective.organizationSecrets.includes(resource.name)
         : !effective.organizationVariables.some(variable => variable.name === resource.name && variable.value === resource.value))) return false;
     }
-    const revisions = (remote: SetupBatchTargetPlan['remote']) => remote.repositorySecretRevisions?.map(secret => JSON.stringify([secret.name, secret.updatedAt])).sort();
-    if (JSON.stringify(revisions(effective)) !== JSON.stringify(revisions(plan.remote))) return false;
-    if (JSON.stringify([...effective.repositorySecrets].sort()) !== JSON.stringify([...plan.remote.repositorySecrets].sort())) return false;
+    const revisions = (remote: SetupBatchTargetPlan['remote']) => {
+      const entries = remote.repositorySecretRevisions ?? [];
+      if (JSON.stringify(entries.map(secret => secret.name).sort()) !== JSON.stringify([...remote.repositorySecrets].sort())
+        || entries.some(secret => !Number.isFinite(Date.parse(secret.updatedAt)))) return undefined;
+      return entries.map(secret => JSON.stringify([secret.name, secret.updatedAt])).sort();
+    };
+    const currentRevisions = revisions(effective); const reviewedRevisions = revisions(plan.remote);
+    if (!currentRevisions || !reviewedRevisions || JSON.stringify(currentRevisions) !== JSON.stringify(reviewedRevisions)) return false;
     const original = new Map(plan.remote.repositoryVariables.map(variable => [variable.name, variable.value]));
     const intended = new Map(plan.repositoryVariables.map(variable => [variable.name, variable.value]));
     for (const variable of effective.repositoryVariables) {

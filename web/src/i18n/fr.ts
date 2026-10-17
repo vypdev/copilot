@@ -27,6 +27,7 @@ export const fr: Record<SetupMessageKey, string> = {
   batchStopping: "Arrêt du travail en attente après la requête actuelle. Les changements réalisés seront conservés.",
   batchReasonDrift: "La base validée ou sa propriété a changé. Inspectez le dépôt et examinez un nouveau plan.",
   batchReasonProvider: "GitHub n’a pas confirmé la dernière étape. Une nouvelle tentative inspecte les effets existants avant de continuer.",
+  batchCleanupPending: "Le nettoyage du contrôle des permissions n’a pas pu être confirmé. Le travail restant est arrêté. Vérifiez l’historique GitHub et le journal local de récupération ; résolvez le nettoyage avant de démarrer une nouvelle configuration. Cette opération ne peut pas reprendre les écritures.",
   batchReasonCancelled: "Le travail en attente s’est arrêté. Les changements réalisés ont été conservés.",
   batchReasonPreflight: "Vérifiez l’accès, les identifiants requis et les réglages propres au dépôt avant de continuer.",
   batchOpenPull: "Ouvrir la PR de configuration",
