@@ -166,6 +166,8 @@ describe('temporary permission resource probes', () => {
         expect(await readdir(folder)).toEqual([]);
     });
 
+    // This integration fixture synchronizes every journal update to disk. Hosted
+    // Windows coverage can exceed Jest's five seconds before cleanup completes.
     it.each([
         { trusted: false, preceding: 0, advanceDefault: false },
         { trusted: true, preceding: 0, advanceDefault: false },
@@ -266,7 +268,7 @@ describe('temporary permission resource probes', () => {
         expect(listedPages).toEqual(preceding === 100 ? [1, 2] : [1]);
         expect(probe.phases).toEqual(['creating', 'reading', 'deleting']);
         expect(await readdir(folder)).toEqual([]);
-    });
+    }, process.platform === 'win32' ? 20_000 : 5_000);
 
     it.each([
         { count: 65, state: 'active', failure: 'could not inspect every candidate' },
