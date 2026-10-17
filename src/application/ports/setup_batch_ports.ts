@@ -7,6 +7,8 @@ export interface SetupBatchDiscoveryPort {
   resolve(organization: string, repository: string, token: string): Promise<SetupBatchTarget>;
 }
 export interface SetupBatchInventoryPort {
+  /** Undefined means access could not establish branch existence; it is never absence. */
+  branchExists(target: SetupBatchTarget, branch: string, token: string): Promise<boolean | undefined>;
   shared(organization: string, token: string): Promise<readonly SetupBatchSharedResource[]>;
   effective(target: SetupBatchTarget, token: string): Promise<SetupRemoteConfiguration>;
   files(target: SetupBatchTarget, token: string): Promise<readonly SetupBatchFile[]>;

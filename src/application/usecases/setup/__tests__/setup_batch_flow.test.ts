@@ -24,7 +24,7 @@ function fixture() {
     repositorySecretsAccess: 'available', organizationSecrets: [], organizationSecretsAccess: 'available', organizationAccess: 'available' });
   const discovery = { resolve: jest.fn(async (_owner: string, name: string) => targets.find(target => target.name === name)!),
     list: jest.fn(async () => ({ targets, truncated: false })) };
-  const inventory = { shared: jest.fn(async () => shared), effective: jest.fn(async (target: SetupBatchTarget) => remote(target)), files: jest.fn(async () => []) };
+  const inventory = { branchExists: jest.fn(async () => true as boolean | undefined), shared: jest.fn(async () => shared), effective: jest.fn(async (target: SetupBatchTarget) => remote(target)), files: jest.fn(async () => []) };
   const renderer = { operationId: () => id, digest: (value: string) => createHash('sha256').update(value).digest('hex'),
     render: jest.fn(async () => [{ path: 'AGENTS.md', content: 'generated guidance' }]) };
   const configure = jest.fn(async () => ({ configuration } as { configuration: typeof configuration; blocked?: readonly string[] }));
@@ -60,6 +60,11 @@ describe('read-only per-target preparation', () => {
     const f = fixture(); f.shared.pop(); const plan = await f.prepare.execute(f.request);
     expect(plan.targets.every(target => target.blocked.some(reason => reason.includes('PAT')))).toBe(true);
     expect(f.ports.renderer.render).not.toHaveBeenCalled();
+  });
+  it.each([false, undefined])('blocks only a target with unestablished development branch %s', async exists => {
+    const f = fixture(); f.ports.inventory.branchExists.mockResolvedValueOnce(exists);
+    const plan = await f.prepare.execute(f.request); expect(plan.targets[0].blocked[0]).toContain('branch');
+    expect(plan.targets[0].files).toEqual([]); expect(plan.targets[1].blocked).toEqual([]);
   });
   it('keeps an explicitly blocked configuration as its own result', async () => {
     const f = fixture(); f.ports.configure.mockResolvedValueOnce({ configuration: f.configuration, blocked: ['Target approval needs review.'] });

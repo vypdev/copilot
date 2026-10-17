@@ -48160,7 +48160,7 @@ function shouldUpsertSetupResource(configuration, kind, name, remote) {
     const explicitOverride = Object.prototype.hasOwnProperty.call(policy.overrides, name);
     return requested === state.effective || explicitOverride || !policy.preserveExisting;
 }
-function validateSetupStorageAgainstRemote(configuration, remote) {
+function validateSetupStorageAgainstRemote(configuration, remote, options = {}) {
     const errors = [];
     const policies = [
         ['secret', getSetupResourceStoragePolicy(configuration, 'secret'), configuration.manageRepositorySecrets],
@@ -48184,7 +48184,8 @@ function validateSetupStorageAgainstRemote(configuration, remote) {
             errors.push(`The setup PAT cannot inspect organization ${kind}s for this repository. Organization ${kind} permissions are required.`);
         }
         if (kind === 'secret' && resolveSetupResourceScope(policy, 'PAT') === 'organization'
-            && remote.organizationWorkflowPat === 'unavailable') {
+            && remote.organizationWorkflowPat === 'unavailable'
+            && !(options.retainWorkflowPat && remote.organizationSecrets.includes('PAT'))) {
             errors.push('Organization PAT Secret inventory is unavailable; setup cannot confirm whether the selected organization PAT will be replaced.');
         }
         if (policy.organizationVisibility === 'selected' && remote.repositoryId === undefined) {
@@ -54511,7 +54512,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
                 return [receipt()];
             }
             const inventoryErrors = [
-                ...(0, setup_configuration_policy_1.validateSetupStorageAgainstRemote)(setupConfiguration, remoteConfiguration),
+                ...(0, setup_configuration_policy_1.validateSetupStorageAgainstRemote)(setupConfiguration, remoteConfiguration, { retainWorkflowPat: request.setupConfigurationSource === 'organization' }),
                 ...(0, setup_configuration_policy_1.validateSetupManagedResourceInventory)(setupConfiguration, remoteConfiguration, {
                     secrets: (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(setupConfiguration).map(requirement => requirement.name),
                     variables: (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(setupConfiguration).map(variable => variable.name),
@@ -61431,6 +61432,13 @@ class PrepareSetupBatchUseCase {
             }
             const configuration = (0, setup_organization_variable_reuse_policy_2.configureSetupOrganizationReuseStorage)(chosen.configuration, (0, setup_organization_variable_reuse_policy_1.buildSetupOrganizationReuseVariables)(chosen.configuration, projected), projected);
             const blocked = [...(0, setup_configuration_validation_1.validateSetupConfiguration)(configuration)];
+            if (configuration.repository.developmentBranch !== target.defaultBranch) {
+                const exists = await this.ports.inventory.branchExists(target, configuration.repository.developmentBranch, request.token);
+                if (exists !== true)
+                    blocked.push(exists === false
+                        ? 'The selected development branch does not exist. Create or select the intended branch, then review this repository again.'
+                        : 'Development branch access is unconfirmed. Restore read access and review this repository again.');
+            }
             const access = (0, setup_batch_access_policy_1.planSetupBatchSharedAccess)(configuration, target, remote, shared);
             const { grants } = access;
             blocked.push(...access.missing.map(name => `${name}: provision or authorize this existing binding separately, then inspect again.`));
@@ -62686,7 +62694,7 @@ class SetupWizardUseCase {
         }
         if (remoteConfiguration) {
             const remoteStorageErrors = [
-                ...(0, setup_configuration_policy_1.validateSetupStorageAgainstRemote)(configuration, remoteConfiguration),
+                ...(0, setup_configuration_policy_1.validateSetupStorageAgainstRemote)(configuration, remoteConfiguration, { retainWorkflowPat: request.configurationSource === 'organization' || request.deliveryMode === 'pull-request' }),
                 ...(0, setup_configuration_policy_1.validateSetupManagedResourceInventory)(configuration, remoteConfiguration, {
                     secrets: (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(configuration).map(requirement => requirement.name),
                     variables: (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(configuration).map(variable => variable.name),
@@ -96777,6 +96785,9 @@ class SetupBatchGithubApplyAdapter {
         const fresh = await this.read.resolve(plan.target.owner, plan.target.name, token);
         if (JSON.stringify(fresh) !== JSON.stringify(plan.target) || fresh.archived || fresh.disabled || !fresh.canPush)
             return false;
+        if (plan.configuration.repository.developmentBranch !== fresh.defaultBranch
+            && await this.read.branchExists(fresh, plan.configuration.repository.developmentBranch, token) !== true)
+            return false;
         const shared = await this.read.sharedMetadata(fresh.owner, token);
         for (const expected of plan.sharedSnapshot) {
             const current = shared.find(resource => resource.kind === expected.kind && resource.name === expected.name);
@@ -97067,6 +97078,15 @@ class SetupBatchGithubReadAdapter {
         if (!batchSha(baseSha))
             throw new SetupBatchProviderError('malformed');
         return { ...target, baseSha };
+    }
+    async branchExists(target, branch, token) {
+        try {
+            const result = batchObject(await this.transport.call(token, 'GET /repos/{owner}/{repo}/git/ref/{ref}', { owner: target.owner, repo: target.name, ref: `heads/${branch}` }));
+            return batchSha(batchObject(result?.object)?.sha) ? true : undefined;
+        }
+        catch (error) {
+            return error instanceof SetupBatchProviderError && error.code === 'not-found' ? false : undefined;
+        }
     }
     effective(target, token) { return this.remote.inspect(target.owner, target.name, token); }
     async shared(organization, token) {

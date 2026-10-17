@@ -69,6 +69,12 @@ export class PrepareSetupBatchUseCase {
       }
       const configuration = configureSetupOrganizationReuseStorage(chosen.configuration, buildSetupOrganizationReuseVariables(chosen.configuration, projected), projected);
       const blocked = [...validateSetupConfiguration(configuration)];
+      if (configuration.repository.developmentBranch !== target.defaultBranch) {
+        const exists = await this.ports.inventory.branchExists(target, configuration.repository.developmentBranch, request.token);
+        if (exists !== true) blocked.push(exists === false
+          ? 'The selected development branch does not exist. Create or select the intended branch, then review this repository again.'
+          : 'Development branch access is unconfirmed. Restore read access and review this repository again.');
+      }
       const access = planSetupBatchSharedAccess(configuration, target, remote, shared);
       const { grants } = access;
       blocked.push(...access.missing.map(name => `${name}: provision or authorize this existing binding separately, then inspect again.`));

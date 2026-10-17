@@ -14,6 +14,8 @@ export class SetupBatchGithubApplyAdapter implements SetupBatchApplyPort {
   async revalidate(plan: SetupBatchTargetPlan, token: string, completed: SetupBatchTargetReceipt['effects']): Promise<boolean> {
     const fresh = await this.read.resolve(plan.target.owner, plan.target.name, token);
     if (JSON.stringify(fresh) !== JSON.stringify(plan.target) || fresh.archived || fresh.disabled || !fresh.canPush) return false;
+    if (plan.configuration.repository.developmentBranch !== fresh.defaultBranch
+      && await this.read.branchExists(fresh, plan.configuration.repository.developmentBranch, token) !== true) return false;
     const shared = await this.read.sharedMetadata(fresh.owner, token);
     for (const expected of plan.sharedSnapshot) {
       const current = shared.find(resource => resource.kind === expected.kind && resource.name === expected.name);

@@ -36,6 +36,7 @@ function fixture() {
   jest.spyOn(read, 'resolve').mockResolvedValue(target); jest.spyOn(read, 'shared').mockResolvedValue([]);
   jest.spyOn(read, 'sharedMetadata').mockResolvedValue([]);
   const shared = jest.spyOn(read, 'sharedResource');
+  jest.spyOn(read, 'branchExists').mockResolvedValue(true);
   jest.spyOn(read, 'files').mockResolvedValue([]);
   const variableWriter = { upsert: jest.fn(async () => ({ created: 1, updated: 0, errors: [] as string[] })), upsertScopedVariables: jest.fn() };
   const resources = { labels: jest.fn(async () => undefined), issueTypes: jest.fn(async () => undefined) };
@@ -122,6 +123,10 @@ describe('installer-owned GitHub write boundaries', () => {
   });
   it.each(['repositoryVariablesAccess', 'repositorySecretsAccess', 'organizationVariablesAccess', 'organizationSecretsAccess'] as const)('blocks unavailable %s before any effect', async field => {
     const f = fixture(); jest.spyOn(f.read, 'effective').mockResolvedValue({ ...f.plan.remote, [field]: 'unavailable' });
+    expect(await f.writer.revalidate(f.plan, 'fixture', [])).toBe(false); expect(f.request).not.toHaveBeenCalled();
+  });
+  it('blocks deletion or inaccessible development branch before setup writes', async () => {
+    const f = fixture(); jest.mocked(f.read.branchExists).mockResolvedValue(false);
     expect(await f.writer.revalidate(f.plan, 'fixture', [])).toBe(false); expect(f.request).not.toHaveBeenCalled();
   });
   it('blocks changed repository identity and missing or rotated shared bindings', async () => {

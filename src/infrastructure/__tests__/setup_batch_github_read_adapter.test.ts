@@ -18,6 +18,15 @@ describe('bounded GitHub setup discovery and namespace inspection', () => {
     expect(await f.adapter.resolve('acme', 'repo-7', 'fixture')).toEqual(f.target);
     expect(f.request).toHaveBeenLastCalledWith('GET /repos/{owner}/{repo}/git/ref/{ref}', expect.objectContaining({ ref: 'heads/master' }));
   });
+  it.each([{ status: 404, expected: false }, { status: 403, expected: undefined }])('keeps missing and forbidden development branches distinct: $status', async ({ status, expected }) => {
+    const f = fixture(); f.request.mockRejectedValue({ status });
+    expect(await f.adapter.branchExists(f.target, 'develop', 'fixture')).toBe(expected);
+  });
+  it('establishes branch existence only from an immutable commit identity', async () => {
+    const f = fixture(); f.request.mockResolvedValueOnce({ data: { object: { sha } } }).mockResolvedValueOnce({ data: {} });
+    expect(await f.adapter.branchExists(f.target, 'develop', 'fixture')).toBe(true);
+    expect(await f.adapter.branchExists(f.target, 'develop', 'fixture')).toBeUndefined();
+  });
   it('rejects cross-organization metadata before looking up a ref', async () => {
     const f = fixture(); f.request.mockResolvedValue({ data: { ...repository(), owner: { id: 4, login: 'other', type: 'Organization' } } });
     await expect(f.adapter.resolve('acme', 'repo-7', 'fixture')).rejects.toThrow('malformed');

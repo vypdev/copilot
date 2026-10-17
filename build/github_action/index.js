@@ -49373,7 +49373,7 @@ function shouldUpsertSetupResource(configuration, kind, name, remote) {
     const explicitOverride = Object.prototype.hasOwnProperty.call(policy.overrides, name);
     return requested === state.effective || explicitOverride || !policy.preserveExisting;
 }
-function validateSetupStorageAgainstRemote(configuration, remote) {
+function validateSetupStorageAgainstRemote(configuration, remote, options = {}) {
     const errors = [];
     const policies = [
         ['secret', getSetupResourceStoragePolicy(configuration, 'secret'), configuration.manageRepositorySecrets],
@@ -49397,7 +49397,8 @@ function validateSetupStorageAgainstRemote(configuration, remote) {
             errors.push(`The setup PAT cannot inspect organization ${kind}s for this repository. Organization ${kind} permissions are required.`);
         }
         if (kind === 'secret' && resolveSetupResourceScope(policy, 'PAT') === 'organization'
-            && remote.organizationWorkflowPat === 'unavailable') {
+            && remote.organizationWorkflowPat === 'unavailable'
+            && !(options.retainWorkflowPat && remote.organizationSecrets.includes('PAT'))) {
             errors.push('Organization PAT Secret inventory is unavailable; setup cannot confirm whether the selected organization PAT will be replaced.');
         }
         if (policy.organizationVisibility === 'selected' && remote.repositoryId === undefined) {
@@ -52423,7 +52424,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
                 return [receipt()];
             }
             const inventoryErrors = [
-                ...(0, setup_configuration_policy_1.validateSetupStorageAgainstRemote)(setupConfiguration, remoteConfiguration),
+                ...(0, setup_configuration_policy_1.validateSetupStorageAgainstRemote)(setupConfiguration, remoteConfiguration, { retainWorkflowPat: request.setupConfigurationSource === 'organization' }),
                 ...(0, setup_configuration_policy_1.validateSetupManagedResourceInventory)(setupConfiguration, remoteConfiguration, {
                     secrets: (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(setupConfiguration).map(requirement => requirement.name),
                     variables: (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(setupConfiguration).map(variable => variable.name),

@@ -299,7 +299,7 @@ export class SetupWizardUseCase {
     }
     if (remoteConfiguration) {
       const remoteStorageErrors = [
-        ...validateSetupStorageAgainstRemote(configuration, remoteConfiguration),
+        ...validateSetupStorageAgainstRemote(configuration, remoteConfiguration, { retainWorkflowPat: request.configurationSource === 'organization' || request.deliveryMode === 'pull-request' }),
         ...validateSetupManagedResourceInventory(configuration, remoteConfiguration, {
           secrets: buildSetupCredentialRequirements(configuration).map(requirement => requirement.name),
           variables: buildSetupRepositoryVariables(configuration).map(variable => variable.name),

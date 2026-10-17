@@ -64,6 +64,13 @@ export class SetupBatchGithubReadAdapter implements SetupBatchDiscoveryPort, Set
     if (!batchSha(baseSha)) throw new SetupBatchProviderError('malformed');
     return { ...target, baseSha };
   }
+  async branchExists(target: SetupBatchTarget, branch: string, token: string): Promise<boolean | undefined> {
+    try {
+      const result = batchObject(await this.transport.call(token, 'GET /repos/{owner}/{repo}/git/ref/{ref}',
+        { owner: target.owner, repo: target.name, ref: `heads/${branch}` }));
+      return batchSha(batchObject(result?.object)?.sha) ? true : undefined;
+    } catch (error) { return error instanceof SetupBatchProviderError && error.code === 'not-found' ? false : undefined; }
+  }
   effective(target: SetupBatchTarget, token: string) { return this.remote.inspect(target.owner, target.name, token); }
   async shared(organization: string, token: string): Promise<readonly SetupBatchSharedResource[]> {
     const resources = await this.sharedMetadata(organization, token);

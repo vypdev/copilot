@@ -497,10 +497,26 @@ its 14 previously open items; this feature does not close unrelated evidence.
 
 ### Final local gates
 
-The final local suite passes **657 suites / 9,835 tests** (35 pre-existing
+The final local suite passes **657 suites / 9,842 tests** (35 pre-existing
 skips). Coverage is **97.28% lines, 96.11% statements, 96.87% functions and
-92.90% branches**. All eight new pure decision modules pass 100% on all four
+92.9% branches**. All eight new pure decision modules pass 100% on all four
 metrics through the executable budget. Build, package smoke, TypeScript,
 Svelte, lint, documentation, workflow, architecture and specification gates
 pass. Multi-platform PR CI and maintainer review remain required before merge;
 these local results do not authorize merging or publishing this feature.
+
+### Live SDK inspection and branch preflight
+
+Read-only SDK dogfooding resolved both actual repositories and their current
+master revisions, verified readable inherited Variables/Secrets, and inspected
+the selected development branch. The available operator credential cannot list
+the organization-wide namespace (`forbidden`). Batch therefore requires a
+properly scoped temporary operator PAT and stops before mutation; this evidence
+is not a live multi-target Apply claim. A known inherited PAT can be retained
+without applying the replacement-only namespace warning, while replacement
+and an unknown/missing binding retain their previous blocking rules.
+
+Preparation establishes the selected development branch before rendering/apply;
+missing and unreadable branches remain distinct per-target blockers. Fresh
+write preflight checks it again. The installer creates only its reviewed setup
+ref and never invents a development ref or initial revision.

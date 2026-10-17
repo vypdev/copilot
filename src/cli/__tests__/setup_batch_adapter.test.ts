@@ -28,7 +28,7 @@ function fixture() {
   const writer = { revalidate: jest.fn(async () => true), grant: jest.fn(async () => undefined), variables: jest.fn(async () => undefined), labels: jest.fn(async () => undefined),
     issueTypes: jest.fn(async () => undefined), prepareCommit: jest.fn(async () => 'c'.repeat(40)), branch: jest.fn(async () => undefined), pullRequest: jest.fn(async () => 31) };
   const composition = { discovery: { resolve: jest.fn(async (_owner: string, name: string) => targets.find(target => target.name === name)!), list: jest.fn(async () => ({ targets, truncated: false })) },
-    inventory: { shared: async () => shared, effective: async (target: typeof targets[number]) => remote(target.id), files: async () => [] },
+    inventory: { branchExists: async () => true, shared: async () => shared, effective: async (target: typeof targets[number]) => remote(target.id), files: async () => [] },
     renderer: { operationId: () => 'a67c8e40-93be-43ed-a7ed-e07378c7e773', digest: () => 'b'.repeat(64), render: async () => [{ path: 'AGENTS.md', content: 'generated' }] },
     journal: { load: async () => saved, save: async (operation: SetupBatchOperation) => { saved = operation; }, lock: async () => async () => undefined }, writer };
   (createSetupBatchCompositionRoot as jest.Mock).mockReturnValue(composition);
