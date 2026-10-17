@@ -23,6 +23,13 @@ function fixture(overrides: Partial<SetupSessionPorts> = {}) {
 }
 
 describe('shared setup session coordinator', () => {
+  test('records a batch write boundary and retains its partial result without invoking single-repository Apply', async () => {
+    const present = jest.fn(); const f = fixture({ present, batch: async (stage, possibleMutation) => {
+      stage('apply'); possibleMutation(); return { outcome: 'partial' };
+    } });
+    expect(await f.coordinator.execute()).toMatchObject({ outcome: 'partial', mutationStarted: true });
+    expect(present).toHaveBeenLastCalledWith('apply', true, 'partial'); expect(f.calls).not.toContain('apply');
+  });
   test('presents validated retained batch completion at Apply without marking a new mutation', async () => {
     const present = jest.fn(); const retained = { effects: true as const, complete: true as const };
     const { coordinator, calls } = fixture({ present, batch: async stage => {

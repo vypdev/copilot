@@ -13,6 +13,83 @@ function fixture() {
   return { request, remote, adapter, target, transport };
 }
 describe('bounded GitHub setup discovery and namespace inspection', () => {
+  it('aborts each stalled read and stops after the bounded third attempt', async () => {
+    jest.useFakeTimers();
+    try {
+      const f = fixture(); f.request.mockImplementation(() => new Promise(() => undefined));
+      const result = expect(f.transport.call('fixture', 'GET /fixed', {})).rejects.toThrow('transient');
+      await jest.advanceTimersByTimeAsync(45_000); await result;
+      expect(f.request).toHaveBeenCalledTimes(3);
+      expect(f.request.mock.calls.every(([, parameters]) => (parameters.request as { signal: AbortSignal }).signal.aborted)).toBe(true);
+      expect(jest.getTimerCount()).toBe(0);
+    } finally { jest.useRealTimers(); }
+  });
+  it.each([{}, Array.from({ length: 101 }, () => repository())])('rejects malformed or oversized repository pages', async data => {
+    const f = fixture(); f.request.mockResolvedValue({ data });
+    await expect(f.adapter.list('acme', 'fixture')).rejects.toThrow('malformed'); expect(f.request).toHaveBeenCalledTimes(1);
+  });
+  it('accepts an authenticated admin capability without assuming push is present', async () => {
+    const f = fixture(); f.request.mockResolvedValue({ data: [{ ...repository(), permissions: { admin: true } }] });
+    expect((await f.adapter.list('acme', 'fixture')).targets[0].canPush).toBe(true);
+  });
+  it('blocks an unresolved immutable default-branch identity', async () => {
+    const f = fixture(); f.request.mockResolvedValueOnce({ data: repository() }).mockResolvedValueOnce({ data: { object: { sha: 'HEAD' } } });
+    await expect(f.adapter.resolve('acme', 'repo-7', 'fixture')).rejects.toThrow('malformed');
+  });
+  it('rejects duplicate managed metadata instead of choosing an arbitrary binding', async () => {
+    const f = fixture(); const item = { name: 'BUGBOT_COMMENT_LIMIT', value: '19', visibility: 'all', updated_at: '2026-10-17T14:00:00Z' };
+    f.request.mockResolvedValue({ data: { total_count: 2, variables: [item, item] } });
+    await expect(f.adapter.shared('acme', 'fixture')).rejects.toThrow('malformed');
+  });
+  it.each(['variable', 'secret'] as const)('reads an exact %s binding and only its selected membership', async kind => {
+    const f = fixture(); const name = kind === 'variable' ? 'BUGBOT_COMMENT_LIMIT' : 'PAT';
+    f.request.mockResolvedValueOnce({ data: { name, value: '19', visibility: kind === 'variable' ? 'all' : 'selected', updated_at: '2026-10-17T14:00:00Z' } })
+      .mockResolvedValueOnce({ data: { total_count: 1, repositories: [{ id: 7 }] } });
+    expect(await f.adapter.sharedResource('acme', kind, name, 'fixture')).toMatchObject({ kind, name, selectedRepositoryIds: kind === 'secret' ? [7] : [] });
+    expect(f.request).toHaveBeenCalledTimes(kind === 'secret' ? 2 : 1);
+  });
+  it('blocks an exact resource endpoint returning another name', async () => {
+    const f = fixture(); f.request.mockResolvedValue({ data: { name: 'OTHER', visibility: 'all', updated_at: '2026-10-17T14:00:00Z' } });
+    await expect(f.adapter.sharedResource('acme', 'secret', 'PAT', 'fixture')).rejects.toThrow('malformed');
+  });
+  it.each([{ repositories: [{ id: 7 }, { id: 7 }] }, { repositories: [{ id: 0 }] }])('rejects ambiguous or invalid selected repository identities', async ({ repositories }) => {
+    const f = fixture(); f.request.mockResolvedValueOnce({ data: { name: 'PAT', visibility: 'selected', updated_at: '2026-10-17T14:00:00Z' } })
+      .mockResolvedValueOnce({ data: { total_count: repositories.length, repositories } });
+    await expect(f.adapter.sharedResource('acme', 'secret', 'PAT', 'fixture')).rejects.toThrow('malformed');
+  });
+  it('blocks collection total changes between pages before trusting incomplete access', async () => {
+    const f = fixture(); f.request.mockResolvedValueOnce({ data: { total_count: 31, secrets: Array.from({ length: 30 }, () => ({})) } })
+      .mockResolvedValueOnce({ data: { total_count: 32, secrets: [{}] } });
+    await expect(f.adapter.collection('fixture', 'GET /fixed', {}, 'secrets')).rejects.toThrow('malformed');
+    expect(f.request).toHaveBeenCalledTimes(2);
+  });
+  it.each([
+    { encoding: 'raw', content: 'a' }, { encoding: 'base64', content: 'x'.repeat(140_001) },
+    { encoding: 'base64', content: Buffer.from('too long').toString('base64') },
+    { encoding: 'base64', content: Buffer.from([255]).toString('base64') },
+  ])('rejects invalid blob content before rendering or writing', async blob => {
+    const f = fixture(); f.request.mockResolvedValueOnce({ data: { truncated: false, tree: [{ path: 'AGENTS.md', type: 'blob', mode: '100644', sha, size: 1 }] } })
+      .mockResolvedValueOnce({ data: blob });
+    await expect(f.adapter.files(f.target, 'fixture')).rejects.toThrow('malformed');
+    expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+  });
+  it('blocks duplicate tree paths instead of choosing one blob', async () => {
+    const f = fixture(); const entry = { path: 'AGENTS.md', type: 'blob', mode: '100644', sha, size: 1 };
+    f.request.mockResolvedValueOnce({ data: { truncated: false, tree: [entry, entry] } })
+      .mockResolvedValue({ data: { encoding: 'base64', content: Buffer.from('a').toString('base64') } });
+    await expect(f.adapter.files(f.target, 'fixture')).rejects.toThrow('malformed');
+  });
+  it('blocks more than 300 admitted assets before fetching any blob', async () => {
+    const f = fixture(); f.request.mockResolvedValue({ data: { truncated: false, tree: Array.from({ length: 301 }, (_, i) => ({
+      path: `.github/workflows/job-${i}.yml`, type: 'blob', mode: '100644', sha, size: 0 })) } });
+    await expect(f.adapter.files(f.target, 'fixture')).rejects.toThrow('malformed'); expect(f.request).toHaveBeenCalledTimes(1);
+  });
+  it('stops the cumulative asset budget before downloading the next oversized total', async () => {
+    const f = fixture(); f.request.mockResolvedValueOnce({ data: { truncated: false, tree: Array.from({ length: 21 }, (_, i) => ({
+      path: `.github/workflows/job-${i}.yml`, type: 'blob', mode: '100644', sha, size: 100_000 })) } })
+      .mockResolvedValue({ data: { encoding: 'base64', content: Buffer.from('a'.repeat(100_000)).toString('base64') } });
+    await expect(f.adapter.files(f.target, 'fixture')).rejects.toThrow('malformed'); expect(f.request).toHaveBeenCalledTimes(21);
+  });
   it('resolves authenticated default branch identity and an immutable base', async () => {
     const f = fixture(); f.request.mockResolvedValueOnce({ data: repository() }).mockResolvedValueOnce({ data: { object: { sha } } });
     expect(await f.adapter.resolve('acme', 'repo-7', 'fixture')).toEqual(f.target);

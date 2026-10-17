@@ -800,9 +800,26 @@
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/setup/select_setup_batch_targets_use_case.ts",
+            "src/application/usecases/setup/prepare_setup_batch_use_case.ts",
+            "src/application/usecases/setup/configure_setup_batch_target_use_case.ts",
+            "src/application/usecases/setup/setup_batch_session_use_case.ts",
+            "src/application/usecases/setup/apply_setup_batch_use_case.ts",
+            "src/cli/setup_batch_adapter.ts",
+            "src/infrastructure/setup_batch_github_read_adapter.ts",
+            "src/infrastructure/setup_batch_github_apply_adapter.ts",
+            "src/infrastructure/setup_batch_journal_adapter.ts",
+            "src/infrastructure/setup_batch_workspace_adapter.ts",
+            "src/infrastructure/setup_trusted_credential_health_adapter.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
         }
       ],
-      "successMessage": "organization reuse and batch planning coverage: PASS (each pure policy 100% lines/statements/branches/functions)"
+      "successMessage": "organization reuse and batch planning coverage: PASS (pure policies 100%; each batch use case, provider and composition adapter 95% lines/statements, 90% branches/functions)"
     },
     {
       "name": "Complete multipart progress",

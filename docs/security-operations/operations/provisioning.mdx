@@ -51,3 +51,9 @@ remain partial. Single-repository terminal reuse still verifies the final Write
 capabilities after plan confirmation; reuse never skips that installation gate.
 Incomplete Secret revision metadata blocks a target during planning, before its
 questionnaire or rendered files are offered for approval.
+
+Setup changes are checked against both the repository coverage budgets and the
+coverage of changed paths, including permission denial, cancellation, incomplete
+inventory and partial recovery. A passing global percentage alone does not prove
+that a new setup or recovery path was exercised. Installation and runtime
+verification still require the separate reviewed receipts and workflow evidence.

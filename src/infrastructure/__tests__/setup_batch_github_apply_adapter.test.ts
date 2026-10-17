@@ -48,6 +48,95 @@ function fixture() {
     setReceipt: (value: unknown) => { installation = value; } };
 }
 describe('installer-owned GitHub write boundaries', () => {
+  it('revalidates an existing effective shared Variable and skips a redundant development-branch lookup', async () => {
+    const f = fixture(); const resource = { kind: 'variable' as const, name: 'BUGBOT_COMMENT_LIMIT', value: '19', visibility: 'all' as const,
+      updatedAt: '2026-10-17T14:00:00Z', selectedRepositoryIds: [] };
+    const plan = { ...f.plan, configuration: { ...f.plan.configuration, repository: { ...f.plan.configuration.repository, developmentBranch: 'master' } }, sharedSnapshot: [resource] };
+    jest.mocked(f.read.sharedMetadata).mockResolvedValue([resource]);
+    const effective = jest.spyOn(f.read, 'effective').mockResolvedValue({ ...f.plan.remote, organizationVariables: [{ name: resource.name, value: resource.value }] });
+    expect(await f.writer.revalidate(plan, 'fixture', [])).toBe(true); expect(f.read.branchExists).not.toHaveBeenCalled();
+    effective.mockResolvedValue({ ...f.plan.remote, organizationVariables: [] });
+    expect(await f.writer.revalidate(plan, 'fixture', [])).toBe(false);
+    const grant = { kind: 'variable' as const, name: resource.name, repositoryId: 7 };
+    expect(await f.writer.revalidate({ ...plan, grants: [grant] }, 'fixture', [])).toBe(true);
+    expect(await f.writer.revalidate({ ...plan, grants: [grant] }, 'fixture', ['access'])).toBe(false);
+  });
+  it('adds only the reviewed Variable membership using the variable access endpoint', async () => {
+    const f = fixture(); const resource = { kind: 'variable' as const, name: 'BUGBOT_COMMENT_LIMIT', value: '19', visibility: 'selected' as const,
+      updatedAt: '2026-10-17T14:00:00Z', selectedRepositoryIds: [1] };
+    const grant = { kind: 'variable' as const, name: resource.name, repositoryId: 7 };
+    f.shared.mockResolvedValueOnce(resource).mockResolvedValueOnce({ ...resource, selectedRepositoryIds: [1, 7] });
+    f.request.mockResolvedValue({ data: {} });
+    await f.writer.grant({ ...f.plan, sharedSnapshot: [resource], grants: [grant] }, grant, 'fixture');
+    expect(f.request).toHaveBeenCalledWith('PUT /orgs/{org}/actions/variables/{name}/repositories/{repository_id}', expect.objectContaining({ name: resource.name, repository_id: 7 }));
+  });
+  it('preserves an original grant error when readback cannot prove retained access', async () => {
+    const f = fixture(); const resource = { kind: 'secret' as const, name: 'PAT', visibility: 'selected' as const,
+      updatedAt: '2026-10-17T14:00:00Z', selectedRepositoryIds: [1] };
+    const grant = { kind: 'secret' as const, name: 'PAT', repositoryId: 7 };
+    f.shared.mockResolvedValue(resource); f.request.mockRejectedValue(new SetupBatchProviderError('forbidden'));
+    await expect(f.writer.grant({ ...f.plan, sharedSnapshot: [resource], grants: [grant] }, grant, 'fixture')).rejects.toThrow('forbidden');
+    expect(f.request).toHaveBeenCalledTimes(1);
+  });
+  it('rejects a reviewed grant without its reviewed resource snapshot before mutation', async () => {
+    const f = fixture(); const grant = { kind: 'secret' as const, name: 'PAT', repositoryId: 7 };
+    f.shared.mockResolvedValue({ kind: 'secret', name: 'PAT', visibility: 'selected', updatedAt: '2026-10-17T14:00:00Z', selectedRepositoryIds: [] });
+    await expect(f.writer.grant({ ...f.plan, grants: [grant] }, grant, 'fixture')).rejects.toThrow('unknown'); expect(f.request).not.toHaveBeenCalled();
+  });
+  it('does not recreate a repository Variable removed after review', async () => {
+    const f = fixture(); const variable = { name: 'MODEL', value: 'reviewed' };
+    await expect(f.writer.variables({ ...f.plan, repositoryVariables: [variable], remote: { ...f.plan.remote, repositoryVariables: [variable] } }, 'fixture')).rejects.toThrow('unknown');
+    expect(f.variableWriter.createMissing).not.toHaveBeenCalled();
+  });
+  it('blocks preparation immediately when the reviewed repository moved', async () => {
+    const f = fixture(); jest.mocked(f.read.resolve).mockResolvedValue({ ...f.plan.target, baseSha: 'f'.repeat(40) });
+    await expect(f.writer.prepareCommit(f.plan, operation, 'fixture')).rejects.toThrow('unknown'); expect(f.request).not.toHaveBeenCalled();
+  });
+  it.each([true, false])('keeps a reviewed existing manifest and explicit file deletion: draft manifest=%s', async inDraft => {
+    const f = fixture(); const manifest = { path: '.copilot/setup-manifest.json', content: JSON.stringify({ schemaVersion: 2, custom: 'retained' }) };
+    jest.mocked(f.read.files).mockResolvedValue([manifest]);
+    const plan = { ...f.plan, files: [...f.plan.files, { path: '.github/workflows/obsolete.yml', content: null }, ...(inDraft ? [manifest] : [])] };
+    await f.writer.prepareCommit(plan, operation, 'fixture');
+    const tree = f.request.mock.calls.find(([route]) => route === 'POST /repos/{owner}/{repo}/git/trees')![1].tree;
+    expect(tree).toEqual(expect.arrayContaining([{ path: '.github/workflows/obsolete.yml', type: 'blob', mode: '100644', sha: null },
+      expect.objectContaining({ path: manifest.path, content: expect.stringContaining('retained') })]));
+    expect(f.read.files).toHaveBeenCalledTimes(inDraft ? 0 : 1);
+  });
+  it('refuses a non-object manifest or invalid operation receipt before any Git write', async () => {
+    const f = fixture();
+    await expect(f.writer.prepareCommit({ ...f.plan, files: [{ path: '.copilot/setup-manifest.json', content: 'null' }] }, operation, 'fixture')).rejects.toThrow('malformed');
+    await expect(f.writer.prepareCommit(f.plan, 'invalid-operation', 'fixture')).rejects.toThrow('malformed');
+    expect(f.request.mock.calls.some(([route]) => route.startsWith('POST '))).toBe(false);
+  });
+  it('does not write a ref when the existing Git ref is malformed or unreadable', async () => {
+    const f = fixture(); const original = f.request.getMockImplementation()!;
+    f.request.mockImplementation((route, parameters) => route.includes('git/ref/') ? Promise.resolve({ data: { object: { sha: 'HEAD' } } }) : original(route, parameters));
+    await expect(f.writer.branch(f.plan, operation, prepared, 'fixture')).rejects.toThrow('malformed');
+    expect(f.request.mock.calls.some(([route]) => route.startsWith('POST '))).toBe(false);
+  });
+  it('requires the exact prepared ref before even inspecting installation PRs', async () => {
+    const f = fixture(); f.setBranch('f'.repeat(40));
+    await expect(f.writer.pullRequest(f.plan, operation, prepared, 'fixture')).rejects.toThrow('unknown');
+    expect(f.request).toHaveBeenCalledTimes(1);
+  });
+  it('ignores unrelated PRs and old closed operations while keeping the exact existing PR', async () => {
+    const f = fixture(); f.setBranch(prepared); f.setPulls([{ head: { ref: 'feature/unrelated' } },
+      { state: 'closed', head: { ref: 'setup/copilot/old-operation' } }, f.pull()]);
+    expect(await f.writer.pullRequest(f.plan, operation, prepared, 'fixture')).toBe(31);
+    expect(f.request.mock.calls.some(([route]) => route.startsWith('POST '))).toBe(false);
+  });
+  it.each([{}, Array.from({ length: 101 }, () => ({})), undefined])('rejects malformed or ambiguous PR inventories before creation', async data => {
+    const f = fixture(); f.setBranch(prepared); const original = f.request.getMockImplementation()!;
+    f.request.mockImplementation((route, parameters) => route === 'GET /repos/{owner}/{repo}/pulls' ? Promise.resolve({ data: data ?? [f.pull(), f.pull()] }) : original(route, parameters));
+    await expect(f.writer.pullRequest(f.plan, operation, prepared, 'fixture')).rejects.toThrow();
+    expect(f.request.mock.calls.some(([route]) => route.startsWith('POST '))).toBe(false);
+  });
+  it('pauses after the fixed PR discovery cap instead of creating against an incomplete inventory', async () => {
+    const f = fixture(); f.setBranch(prepared); f.setPulls(Array.from({ length: 100 }, () => ({ head: { ref: 'feature/other' } })));
+    await expect(f.writer.pullRequest(f.plan, operation, prepared, 'fixture')).rejects.toThrow('malformed');
+    expect(f.request.mock.calls.filter(([route]) => route === 'GET /repos/{owner}/{repo}/pulls')).toHaveLength(10);
+    expect(f.request.mock.calls.some(([route]) => route.startsWith('POST '))).toBe(false);
+  });
   it('never sends an existing reviewed Variable to a replacement writer', async () => {
     const f = fixture(); const variable = { name: 'MODEL', value: 'original' };
     const plan = { ...f.plan, remote: { ...f.plan.remote, repositoryVariables: [variable] }, repositoryVariables: [{ name: 'MODEL', value: 'desired' }] };

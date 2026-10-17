@@ -18,6 +18,29 @@ function fixture(count = 2) {
   return { plan, journal, writer, presentation, unlock, useCase, saved: () => saved };
 }
 describe('sequential reviewed batch Apply', () => {
+  it.each(['cancel', 'drift'] as const)('stops immediately at an effect boundary after %s', async reason => {
+    const f = fixture(1);
+    if (reason === 'cancel') f.presentation.active.mockReturnValueOnce(true).mockReturnValueOnce(true).mockReturnValue(false);
+    else f.writer.revalidate.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    const result = await f.useCase.execute(f.plan, 'fixture');
+    expect(result.targets[0]).toMatchObject({ status: reason === 'cancel' ? 'cancelled' : 'blocked', reason: reason === 'cancel' ? 'cancelled' : 'drift', effects: [] });
+    expect(f.writer.variables).not.toHaveBeenCalled(); expect(f.writer.branch).not.toHaveBeenCalled();
+    expect(f.unlock).toHaveBeenCalledTimes(1);
+  });
+  it('cancels between additive grants without issuing a later access change', async () => {
+    const f = fixture(1); const grants = [{ kind: 'secret' as const, name: 'PAT', repositoryId: 7 }, { kind: 'variable' as const, name: 'MODEL', repositoryId: 7 }];
+    const plan = { ...f.plan, targets: [{ ...f.plan.targets[0], grants }] };
+    f.writer.grant.mockImplementation(async () => { f.presentation.active.mockReturnValue(false); });
+    const result = await f.useCase.execute(plan, 'fixture');
+    expect(result.targets[0]).toMatchObject({ status: 'cancelled', reason: 'cancelled' });
+    expect(f.writer.grant).toHaveBeenCalledTimes(1); expect(f.writer.variables).not.toHaveBeenCalled();
+  });
+  it('completes resource-only setup as verification pending without creating a ref or PR', async () => {
+    const f = fixture(1); const plan = { ...f.plan, targets: [{ ...f.plan.targets[0], files: [] }] };
+    const result = await f.useCase.execute(plan, 'fixture');
+    expect(result.targets[0]).toMatchObject({ status: 'verification-pending', effects: ['access', 'variables', 'labels', 'issue-types'] });
+    expect(f.writer.prepareCommit).not.toHaveBeenCalled(); expect(f.writer.branch).not.toHaveBeenCalled(); expect(f.writer.pullRequest).not.toHaveBeenCalled();
+  });
   it('persists every completed effect and truthfully stops at waiting for merge', async () => {
     const f = fixture(); const order: number[] = [];
     f.writer.pullRequest.mockImplementation(async target => { order.push(target.target.id); return 31; });

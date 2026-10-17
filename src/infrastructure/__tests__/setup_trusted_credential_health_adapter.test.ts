@@ -1,5 +1,7 @@
 import { SetupTrustedCredentialHealthAdapter } from '../setup_trusted_credential_health_adapter';
 import type { SetupCredentialRequirement } from '../../domain/setup';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 const content = 'name: Trusted fixture\non: workflow_dispatch\n';
 const path = '.github/workflows/copilot_credential_health.yml';
@@ -36,6 +38,64 @@ function fixture() {
 }
 
 describe('read-only trusted default-branch credential evidence', () => {
+  it.each([{ id: 0, default_branch: 'master' }, { id: 7, default_branch: '../unsafe' }])('does not inspect code for invalid repository metadata', async metadata => {
+    const f = fixture(); f.client.rest.repos.get.mockResolvedValue({ data: metadata });
+    expect(await f.inspect()).toBeUndefined(); expect(f.client.rest.git.getRef).not.toHaveBeenCalled();
+  });
+  it('requires an immutable default-branch SHA before reading the workflow', async () => {
+    const f = fixture(); f.client.rest.git.getRef.mockResolvedValue({ data: { object: { sha: 'HEAD' } } });
+    expect(await f.inspect()).toBeUndefined(); expect(f.client.rest.repos.getContent).not.toHaveBeenCalled();
+  });
+  it.each([{ id: 9, path, state: 'disabled_manually' }, { id: 0, path, state: 'active' }])('does not trust a disabled or invalid workflow identity', async workflow => {
+    const f = fixture(); f.actions.getWorkflow.mockResolvedValue({ data: workflow });
+    expect(await f.inspect()).toBeUndefined(); expect(f.actions.listWorkflowRuns).not.toHaveBeenCalled();
+  });
+  it('does not treat a malformed workflow-run list as an empty successful check', async () => {
+    const f = fixture(); f.actions.listWorkflowRuns.mockResolvedValue({ data: {} });
+    expect(await f.inspect()).toBeUndefined(); expect(f.actions.listRepoSecrets).not.toHaveBeenCalled();
+  });
+  it.each([false, true])('keeps unavailable organization metadata unknown before/after inspection: after=%s', async after => {
+    const f = fixture(); const valid = { data: { total_count: 2, secrets: f.secrets } };
+    if (after) f.actions.listRepoOrganizationSecrets.mockResolvedValueOnce(valid).mockResolvedValueOnce({ data: {} });
+    else f.actions.listRepoOrganizationSecrets.mockResolvedValue({ data: {} });
+    expect(await f.inspect()).toBeUndefined(); expect(f.actions.createWorkflowDispatch).not.toHaveBeenCalled();
+  });
+  it('does not trust a binding introduced after the pre-inspection inventory', async () => {
+    const f = fixture();
+    f.actions.listRepoOrganizationSecrets.mockResolvedValueOnce({ data: { total_count: 1, secrets: [f.secrets[1]] } })
+      .mockResolvedValueOnce({ data: { total_count: 2, secrets: f.secrets } });
+    expect((await f.inspect())?.[0].status).toBe('unverifiable');
+  });
+  it.each([
+    { status: 'in_progress' }, { run_id: 20 }, { head_sha: 'b'.repeat(40) },
+    { completed_at: 'invalid' }, { completed_at: '2026-99-17T14:00:00Z' },
+    { completed_at: '2026-10-17T13:59:00Z' }, { completed_at: '2026-10-17T14:00:01Z' },
+  ])('keeps mismatched or impossible job completion evidence pending: %j', async change => {
+    const f = fixture(); Object.assign(f.jobs[0], change);
+    expect((await f.inspect())?.[0].status).toBe('unverifiable');
+    expect(f.actions.createWorkflowDispatch).not.toHaveBeenCalled();
+  });
+  it('does not attest an unknown credential binding merely because metadata exists', async () => {
+    const f = fixture(); f.secrets.push({ name: 'UNKNOWN_KEY', updated_at: '2026-10-17T13:00:00Z' });
+    f.actions.listRepoOrganizationSecrets.mockResolvedValue({ data: { total_count: 3, secrets: f.secrets } });
+    const result = await f.adapter.validateTrustedDefault('acme', 'repo', 'fixture', [{ name: 'UNKNOWN_KEY', kind: 'apiKey', description: 'unknown' }]);
+    expect(result?.[0].status).toBe('unverifiable');
+  });
+  it('stops before a provider call when the whole inspection deadline has expired', async () => {
+    const clock = jest.spyOn(Date, 'now').mockReturnValueOnce(0).mockReturnValue(30_001);
+    try {
+      const f = fixture(); expect(await f.inspect()).toBeUndefined(); expect(f.client.rest.repos.get).not.toHaveBeenCalled();
+    } finally { clock.mockRestore(); }
+  });
+  it('loads the packaged workflow and default clock without weakening the exact-template comparison', async () => {
+    const clock = jest.spyOn(Date, 'now').mockReturnValue(now);
+    try {
+      const f = fixture(); const packaged = readFileSync(join(__dirname, '../../../setup/workflows/copilot_credential_health.yml'), 'utf8');
+      f.client.rest.repos.getContent.mockResolvedValue({ data: { path, encoding: 'base64', content: Buffer.from(packaged).toString('base64') } });
+      const result = await new SetupTrustedCredentialHealthAdapter(f.provider).validateTrustedDefault('acme', 'repo', 'fixture', requirements);
+      expect(result?.every(check => check.status === 'valid')).toBe(true);
+    } finally { clock.mockRestore(); }
+  });
   it('accepts fresh exact-template evidence tied to unchanged effective Secret metadata', async () => {
     const f = fixture();
     expect(await f.inspect()).toEqual(requirements.map(requirement => expect.objectContaining({ name: requirement.name,

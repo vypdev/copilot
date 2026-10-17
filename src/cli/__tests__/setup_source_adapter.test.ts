@@ -1,4 +1,4 @@
-import { chooseSetupConfigurationSource } from '../setup_source_adapter';
+import { chooseSetupConfigurationSource, chooseWebSetupScope } from '../setup_source_adapter';
 import { SetupTerminalCancelledError } from '../setup_credential_prompt_adapter';
 import type { TerminalDriver } from '../../application/ports/setup_terminal_ports';
 import type { WebSetupBridge } from '../web_setup_bridge';
@@ -31,5 +31,17 @@ describe('shared configuration source intent presentation', () => {
   it('keeps web cancellation distinct from Customize', async () => {
     await expect(chooseSetupConfigurationSource(undefined, { ask: async () => undefined } as unknown as WebSetupBridge))
       .rejects.toBeInstanceOf(SetupTerminalCancelledError);
+  });
+  it('treats terminal interruption as cancellation, without selecting Customize', async () => {
+    const driver = terminal([]); jest.mocked(driver.readText).mockResolvedValue({ kind: 'cancel' });
+    await expect(chooseSetupConfigurationSource(driver)).rejects.toBeInstanceOf(SetupTerminalCancelledError);
+  });
+  it.each(['This repository', 'Several repositories in this organization'])('maps an explicit browser scope: %s', async answer => {
+    const ask = jest.fn().mockResolvedValue(answer);
+    expect(await chooseWebSetupScope({ ask } as unknown as WebSetupBridge)).toBe(answer === 'This repository' ? 'current' : 'selected');
+    expect(ask).toHaveBeenCalledWith(expect.objectContaining({ copyId: 'setup.scope', defaultValue: 'This repository' }));
+  });
+  it('keeps scope cancellation distinct from a single-repository selection', async () => {
+    await expect(chooseWebSetupScope({ ask: async () => undefined } as unknown as WebSetupBridge)).rejects.toBeInstanceOf(SetupTerminalCancelledError);
   });
 });

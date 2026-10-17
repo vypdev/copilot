@@ -848,3 +848,34 @@ health, using the real credential collector and shared-access planner together;
 each proves no organization grant or Secret-value prompt. Setup operator docs
 must explain that projection does not move a repository Secret to organization
 scope. Existing pure-policy/global/module budgets remain required.
+
+### Adverse-path coverage acceptance (2026-10-18)
+
+The [Codecov report for #546](https://github.com/vypdev/copilot/pull/546#issuecomment-6237429103)
+identified 174 changed lines without complete coverage at `706b7bd5`, despite
+the existing global/pure-policy budgets passing. Acceptance MUST exercise the
+supported failure and recovery behavior at the real entrypoint/application/
+adapter boundaries, including branch partials. The existing configuration,
+runtime byte/resource bounds, credential privacy and remote effects are
+unchanged. Defensive validation MUST NOT be deleted or excluded to increase
+coverage. No threshold or coverage ignore may be weakened.
+
+At least **100 additional distinct cases** are required, distributed without
+double-counting: 25 guided-PAT/source/terminal/CLI decisions; 25 discovery,
+pagination and malformed-provider cases; 20 effect/receipt/permission/cancellation
+cases; 16 trusted-health identity/freshness cases; nine atomic-journal and
+isolated-renderer cases; and five browser stop/action cases. Deterministic clocks
+and provider/filesystem seams replace external services and real waits. Cases
+must assert retained state, absence of unauthorized writes, bounded requests,
+or the visible next action, rather than only calling a line.
+
+Each catalogued new batch use case, GitHub read/apply adapter, private receipt
+store, renderer, trusted-health reader and batch entrypoint composition MUST
+retain at least 95% lines/statements and 90% branches/functions. The original
+pure-policy 100% and all repository budgets remain. The executable module list
+lives in `scripts/coverage-budgets.json`; the new guided-PAT composition tests
+belong in catalog evidence. Report local diff measurements separately from the
+uploaded current-head Codecov result and verify the latter before merge. The
+setup operator guide records why passing global coverage alone is insufficient
+evidence for a new setup/recovery path. A completed live setup receipt remains
+evidence only for its exact unchanged runtime package.

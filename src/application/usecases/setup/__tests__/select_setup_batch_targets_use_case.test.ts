@@ -15,6 +15,48 @@ function fixture() {
   return { discovery, choose, requestToken, active, useCase, request };
 }
 describe('credential-limited repository selection', () => {
+  it.each([
+    { targets: [target(), target(7, 'duplicate-id')] },
+    { targets: [target(), target(8, 'PLATFORM')] },
+    { targets: [target(), { ...target(8, 'other'), ownerId: 4 }] },
+  ])('keeps ambiguous discovery unavailable instead of selecting from it', async result => {
+    const f = fixture(); f.discovery.list.mockResolvedValue({ ...result, truncated: false }); f.choose.mockResolvedValue(undefined);
+    await expect(f.useCase.execute(f.request)).rejects.toBeInstanceOf(SetupInteractionCancelledError);
+    expect(f.choose.mock.calls[0][0]).toMatchObject({ discoveryStatus: 'unavailable', selectedIds: [7] });
+  });
+  it('marks a selected identity unavailable if its re-resolution changes ID', async () => {
+    const f = fixture(); f.discovery.resolve.mockResolvedValueOnce(target()).mockResolvedValueOnce(target(99)); f.choose.mockResolvedValue(undefined);
+    await expect(f.useCase.execute(f.request)).rejects.toBeInstanceOf(SetupInteractionCancelledError);
+    expect(f.choose.mock.calls[0][0].candidates.find(candidate => candidate.id === 7)?.unavailable).toBe('access-unavailable');
+  });
+  it.each([{ archived: true, reason: 'archived' }, { disabled: true, reason: 'disabled' }, { canPush: false, reason: 'read-only' }])(
+    'discloses an unavailable candidate without selecting it: $reason', async ({ reason, ...change }) => {
+      const f = fixture(); f.discovery.list.mockResolvedValue({ targets: [target(), { ...target(8, 'copilot'), ...change }], truncated: false });
+      f.choose.mockResolvedValue(undefined); await expect(f.useCase.execute(f.request)).rejects.toBeInstanceOf(SetupInteractionCancelledError);
+      expect(f.choose.mock.calls[0][0].candidates.find(candidate => candidate.id === 8)?.unavailable).toBe(reason);
+      expect(f.choose.mock.calls[0][0].selectedIds).toEqual([7]);
+    });
+  it('does not preselect an archived current repository', async () => {
+    const f = fixture(); f.discovery.resolve.mockResolvedValue({ ...target(), archived: true }); f.choose.mockResolvedValue(undefined);
+    await expect(f.useCase.execute(f.request)).rejects.toBeInstanceOf(SetupInteractionCancelledError);
+    expect(f.choose.mock.calls[0][0].selectedIds).toEqual([]);
+  });
+  it('rejects a lookup that unexpectedly resolves into another organization', async () => {
+    const f = fixture(); f.discovery.resolve.mockResolvedValueOnce(target()).mockResolvedValueOnce(target()).mockResolvedValueOnce({ ...target(9, 'foreign'), ownerId: 99 });
+    f.choose.mockResolvedValueOnce(JSON.stringify({ action: 'resolve', selectedIds: [7], name: 'foreign' })).mockResolvedValueOnce(undefined);
+    await expect(f.useCase.execute(f.request)).rejects.toBeInstanceOf(SetupInteractionCancelledError);
+    expect(f.choose.mock.calls[1][0].message).toBe('lookup-unavailable');
+  });
+  it('keeps the current PAT and discloses unavailable access when replacement is declined', async () => {
+    const f = fixture(); f.requestToken.mockResolvedValue(undefined);
+    f.choose.mockResolvedValueOnce(JSON.stringify({ action: 'access', selectedIds: [7] })).mockResolvedValueOnce(undefined);
+    await expect(f.useCase.execute(f.request)).rejects.toBeInstanceOf(SetupInteractionCancelledError);
+    expect(f.choose.mock.calls[1][0].message).toBe('access-unavailable'); expect(f.discovery.list).toHaveBeenCalledTimes(1);
+  });
+  it('does not offer selection after the shared session becomes inactive', async () => {
+    const f = fixture(); f.active.mockReturnValue(false);
+    await expect(f.useCase.execute(f.request)).rejects.toBeInstanceOf(SetupInteractionCancelledError); expect(f.choose).not.toHaveBeenCalled();
+  });
   it('defaults to the current identity and never selects another visible repository implicitly', async () => {
     const f = fixture(); f.choose.mockResolvedValue(JSON.stringify({ action: 'select', selectedIds: [7] }));
     expect(await f.useCase.execute(f.request)).toEqual({ token: f.request.token, selected: [{ id: 7, name: 'platform' }] });

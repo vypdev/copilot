@@ -6,6 +6,7 @@ import { SetupBatchJournalAdapter } from '../setup_batch_journal_adapter';
 import { createDefaultSetupConfiguration } from '../../application/policies/setup_configuration_defaults';
 import * as setupFiles from '../../utils/setup_files';
 import type { SetupBatchOperation } from '../../domain/setup_batch';
+import type { Dirent } from 'node:fs';
 const id = 'a67c8e40-93be-43ed-a7ed-e07378c7e773';
 const operation: SetupBatchOperation = { schemaVersion: 1, operationId: id, organization: 'acme', targets: [{ repositoryId: 7,
   repository: 'repo', defaultBranch: 'master', baseSha: 'a'.repeat(40), planDigest: 'b'.repeat(64), status: 'ready', effects: [] }] };
@@ -13,6 +14,78 @@ describe('isolated setup rendering and private durable receipts', () => {
   let root: string;
   beforeEach(() => { root = mkdtempSync(join(tmpdir(), 'copilot-batch-test-')); });
   afterEach(() => { rmSync(root, { recursive: true, force: true }); });
+  it('removes an uncommitted temporary receipt after an atomic rename failure and retains the old receipt', async () => {
+    const journal = new SetupBatchJournalAdapter(root); await journal.save(operation);
+    const filesystem = jest.requireActual<typeof import('node:fs/promises')>('node:fs/promises');
+    const rename = jest.spyOn(filesystem, 'rename').mockRejectedValueOnce(new Error('fixture rename failure'));
+    try {
+      await expect(journal.save({ ...operation, targets: [{ ...operation.targets[0], status: 'partial' }] })).rejects.toThrow('rename failure');
+      expect(await journal.load(id)).toEqual(operation);
+      expect(jest.requireActual<typeof import('node:fs')>('node:fs').readdirSync(root)).toEqual([`${id}.json`]);
+    } finally { rename.mockRestore(); }
+  });
+  it('preserves non-collision lock failures without claiming an orphan or creating a receipt', async () => {
+    const filesystem = jest.requireActual<typeof import('node:fs/promises')>('node:fs/promises');
+    const failure = Object.assign(new Error('fixture access failure'), { code: 'EACCES' });
+    const open = jest.spyOn(filesystem, 'open').mockRejectedValueOnce(failure);
+    try {
+      await expect(new SetupBatchJournalAdapter(root).lock(id)).rejects.toBe(failure);
+      expect(jest.requireActual<typeof import('node:fs')>('node:fs').readdirSync(root)).toEqual([]);
+    } finally { open.mockRestore(); }
+  });
+  it('uses a private journal under the configured home rather than the caller checkout', async () => {
+    const os = jest.requireActual<typeof import('node:os')>('node:os');
+    const home = jest.spyOn(os, 'homedir').mockReturnValue(root);
+    try {
+      const journal = new SetupBatchJournalAdapter(); await journal.save(operation);
+      expect(await journal.load(id)).toEqual(operation);
+      expect(readFileSync(join(root, '.copilot/setup-operations', `${id}.json`), 'utf8')).not.toContain('token');
+    } finally { home.mockRestore(); }
+  });
+  it('does not remove a damaged or foreign-process replacement lock', async () => {
+    const journal = new SetupBatchJournalAdapter(root); const release = await journal.lock(id);
+    const lock = join(root, `${id}.json.lock`);
+    writeFileSync(lock, '{damaged'); await release(); expect(readFileSync(lock, 'utf8')).toBe('{damaged');
+    writeFileSync(lock, JSON.stringify({ pid: process.pid + 1, nonce: 'foreign' }));
+    await release(); expect(JSON.parse(readFileSync(lock, 'utf8')).pid).toBe(process.pid + 1);
+  });
+  it('generates independent valid operation identities', () => {
+    const renderer = new SetupBatchWorkspaceAdapter(); const first = renderer.operationId();
+    expect(first).toMatch(/^[a-f0-9-]{36}$/u); expect(renderer.operationId()).not.toBe(first);
+  });
+  it('rejects an unexpected generated file before returning a partial diff', async () => {
+    const copy = jest.spyOn(setupFiles, 'copySetupFiles').mockImplementation(directory => {
+      writeFileSync(join(directory, 'unexpected.ts'), 'not an installation asset'); return { copied: 1, skipped: 0 };
+    });
+    try { await expect(new SetupBatchWorkspaceAdapter().render(createDefaultSetupConfiguration(), [])).rejects.toThrow('unexpected setup asset'); }
+    finally { copy.mockRestore(); }
+  });
+  it('rejects non-regular generated entries without traversing or following them', async () => {
+    const filesystem = jest.requireActual<typeof import('node:fs')>('node:fs');
+    const list = jest.spyOn(filesystem, 'readdirSync');
+    const copy = jest.spyOn(setupFiles, 'copySetupFiles').mockImplementation(() => {
+      // The renderer requests UTF-8 Dirents; Jest infers Node's final Buffer overload.
+      const entries = [{ name: 'link', isDirectory: () => false, isFile: () => false } as Dirent] as unknown as ReturnType<typeof filesystem.readdirSync>;
+      list.mockReturnValueOnce(entries);
+      return { copied: 0, skipped: 0 };
+    });
+    try { await expect(new SetupBatchWorkspaceAdapter().render(createDefaultSetupConfiguration(), [])).rejects.toThrow('regular files'); }
+    finally { list.mockRestore(); copy.mockRestore(); }
+  });
+  it('represents an intentionally removed generated asset as a reviewed tombstone', async () => {
+    const copy = jest.spyOn(setupFiles, 'copySetupFiles').mockImplementation(directory => {
+      rmSync(join(directory, 'AGENTS.md')); return { copied: 0, skipped: 0 };
+    });
+    try {
+      expect(await new SetupBatchWorkspaceAdapter().render(createDefaultSetupConfiguration(), [{ path: 'AGENTS.md', content: 'previous' }]))
+        .toEqual([{ path: 'AGENTS.md', content: null }]);
+    } finally { copy.mockRestore(); }
+  });
+  it.each(['duplicates', 'count', 'cumulative bytes'])('blocks invalid asset inventory: %s', async kind => {
+    const files = kind === 'duplicates' ? [{ path: 'AGENTS.md', content: 'a' }, { path: 'AGENTS.md', content: 'b' }]
+      : Array.from({ length: kind === 'count' ? 301 : 21 }, (_, i) => ({ path: `.github/workflows/job-${i}.yml`, content: kind === 'count' ? '' : 'x'.repeat(100_000) }));
+    await expect(new SetupBatchWorkspaceAdapter().render(createDefaultSetupConfiguration(), files)).rejects.toThrow('budget');
+  });
   it('persists only validated metadata and rejects future schemas or injected values', async () => {
     const journal = new SetupBatchJournalAdapter(root);
     expect(await journal.load(id)).toBeUndefined();

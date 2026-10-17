@@ -1,4 +1,8 @@
 import { executeSetupBatch } from '../setup_batch_adapter';
+import { SetupCredentialPromptAdapter } from '../setup_credential_prompt_adapter';
+import { ConsoleSetupTokenPermissionPresenter } from '../setup_token_permission_presenter';
+import { SetupInteractionCancelledError } from '../../application/errors/setup_interaction_cancelled_error';
+import type { TerminalReadResult } from '../../application/ports/setup_terminal_ports';
 import { WebSetupBridge } from '../web_setup_bridge';
 import { WebSetupCredentialPrompt, WebSetupPermissionPresenter } from '../web_setup_adapters';
 import { createSetupBatchCompositionRoot } from '../../infrastructure/composition/setup_batch_composition_root';
@@ -64,7 +68,116 @@ function fixture(pendingSecret = false) {
 }
 beforeEach(() => { jest.spyOn(console, 'log').mockImplementation(() => undefined); });
 afterEach(() => { jest.restoreAllMocks(); });
+describe('terminal batch selection, review and recovery', () => {
+  function terminalFixture(selection = ['7,8'], secret: string | null = '') {
+    const f = fixture(); let retry = false; let accept = true; let reads = 0;
+    const readText = jest.fn(async (prompt: string): Promise<TerminalReadResult> => {
+      if (++reads > 300) throw new Error('Unexpected unbounded terminal questioning');
+      let value = '';
+      if (prompt.startsWith('Selected:')) value = selection.shift() ?? '7,8';
+      else if (prompt.startsWith('Use this configuration')) value = 'y';
+      else if (prompt.startsWith('Apply the ready plans?')) value = accept ? 'apply' : 'stop';
+      else if (prompt.startsWith('Inspect existing effects')) { value = retry ? 'retry' : ''; retry = false; }
+      return { kind: 'value' as const, value };
+    });
+    const readSecret = jest.fn(async () => secret === null ? { kind: 'cancel' as const } : { kind: 'value' as const, value: secret });
+    const terminal = { isInteractive: () => true, readText, readSecret, close: jest.fn() };
+    const input = { ...f.input, bridge: undefined, terminal, credentialPrompt: new SetupCredentialPromptAdapter(terminal, {}),
+      permissionPresenter: new ConsoleSetupTokenPermissionPresenter() };
+    return { ...f, input, terminal, retry: () => { retry = true; }, decline: () => { accept = false; } };
+  }
+  it('runs terminal selection and explicit Apply for two targets with no secret input', async () => {
+    const f = terminalFixture(); const result = await executeSetupBatch(f.input);
+    expect(result.outcome).toBe('complete'); expect(f.writer.pullRequest).toHaveBeenCalledTimes(2);
+    expect(f.terminal.readSecret).not.toHaveBeenCalled();
+    expect(f.terminal.readText.mock.calls.filter(([prompt]) => prompt.startsWith('Apply the ready plans?'))).toHaveLength(1);
+  });
+  it('cancels at terminal end-of-input before preparing any target', async () => {
+    const f = terminalFixture(); f.terminal.readText.mockResolvedValueOnce({ kind: 'end-of-input' });
+    await expect(executeSetupBatch(f.input)).rejects.toBeInstanceOf(SetupInteractionCancelledError);
+    expect(f.credentials.collect).not.toHaveBeenCalled(); expect(f.writer.branch).not.toHaveBeenCalled();
+  });
+  it('discloses limited organization discovery while allowing only the confirmed current repository', async () => {
+    const f = terminalFixture(['confirm']); f.composition.discovery.list.mockRejectedValueOnce(new Error('private provider details'));
+    const result = await executeSetupBatch(f.input);
+    expect(result.operation.targets.map(target => target.repositoryId)).toEqual([7]); expect(f.writer.pullRequest).toHaveBeenCalledTimes(1);
+    expect(jest.mocked(console.log).mock.calls.flat().join('\n')).not.toContain('private provider details');
+  });
+  it('can reconnect access from an empty initial selection without selecting new targets implicitly', async () => {
+    const f = terminalFixture(['access', '7,8'], 'replacement');
+    const current = await f.composition.discovery.resolve('acme', 'repo-7');
+    f.composition.discovery.resolve.mockResolvedValueOnce({ ...current, canPush: false });
+    const result = await executeSetupBatch(f.input);
+    expect(result.outcome).toBe('complete'); expect(f.terminal.readSecret).toHaveBeenCalledTimes(1);
+    expect(f.writer.pullRequest).toHaveBeenCalledTimes(2);
+  });
+  it('resolves an exact name before the operator explicitly selects its ID', async () => {
+    const f = terminalFixture(['name:repo-8', '7,8']); await executeSetupBatch(f.input);
+    expect(f.composition.discovery.resolve).toHaveBeenCalledWith('acme', 'repo-8', 'private-operator-token');
+    expect(f.writer.pullRequest).toHaveBeenCalledTimes(2);
+  });
+  it.each(['', 'replacement-private-token'])('keeps or replaces the PAT only after an explicit access decision: %s', async replacement => {
+    const f = terminalFixture(['access', '7,8'], replacement); await executeSetupBatch(f.input);
+    expect(f.terminal.readSecret).toHaveBeenCalledTimes(1);
+    expect(f.composition.discovery.list).toHaveBeenCalledTimes(replacement ? 2 : 1);
+    expect(f.writer.pullRequest).toHaveBeenCalledTimes(2);
+  });
+  it('does not turn secret-entry cancellation into a token replacement or installation', async () => {
+    const f = terminalFixture(['access'], null);
+    await expect(executeSetupBatch(f.input)).rejects.toBeInstanceOf(SetupInteractionCancelledError);
+    expect(f.writer.branch).not.toHaveBeenCalled();
+  });
+  it('does not install after an explicit terminal selection cancellation', async () => {
+    const f = terminalFixture(['cancel']);
+    await expect(executeSetupBatch(f.input)).rejects.toBeInstanceOf(SetupInteractionCancelledError);
+    expect(f.credentials.collect).not.toHaveBeenCalled(); expect(f.writer.branch).not.toHaveBeenCalled();
+  });
+  it('confirms only the current selected repository instead of selecting every discovered ID', async () => {
+    const f = terminalFixture(['confirm']); const result = await executeSetupBatch(f.input);
+    expect(result.operation.targets).toHaveLength(1); expect(result.operation.targets[0].repositoryId).toBe(7);
+    expect(f.writer.pullRequest).toHaveBeenCalledTimes(1);
+  });
+  it('reasks an empty selection and respects a declined batch review', async () => {
+    const f = terminalFixture(['', '7,8']); f.decline(); const result = await executeSetupBatch(f.input);
+    expect(result.outcome).toBe('cancelled'); expect(f.writer.branch).not.toHaveBeenCalled();
+    expect(f.terminal.readText.mock.calls.filter(([prompt]) => prompt.startsWith('Selected:'))).toHaveLength(2);
+  });
+  it.each([true, false])('retains a partial terminal result and retries only on an explicit choice: %s', async retry => {
+    const f = terminalFixture(); f.writer.branch.mockRejectedValueOnce(new Error('uncertain response')); if (retry) f.retry();
+    const result = await executeSetupBatch(f.input);
+    expect(result.outcome).toBe(retry ? 'complete' : 'partial');
+    expect(f.writer.variables).toHaveBeenCalledTimes(2); expect(f.writer.branch).toHaveBeenCalledTimes(retry ? 3 : 2);
+  });
+  it('reconstructs a completed receipt without another terminal Apply or permission audit', async () => {
+    const f = terminalFixture(); const initial = await executeSetupBatch(f.input);
+    f.terminal.readText.mockClear(); f.inspect.mockClear();
+    const result = await executeSetupBatch({ ...f.input, resumeOperationId: initial.operation.operationId });
+    expect(result.outcome).toBe('complete'); expect(f.writer.pullRequest).toHaveBeenCalledTimes(2);
+    expect(f.inspect).not.toHaveBeenCalled();
+    expect(f.terminal.readText.mock.calls.some(([prompt]) => prompt.startsWith('Apply the ready plans?'))).toBe(false);
+  });
+  it.each([false, true])('prints blocked target and cleanup guidance in terminal permission failures (cleanup=%s)', async cleanupPending => {
+    const f = terminalFixture(); f.inspect.mockResolvedValue({ ...f.report, ready: false, checks: [{ id: 'setup.repository.contents', role: 'setup', scope: 'repository',
+      permission: 'Contents', level: 'write', applicability: 'required', reason: 'fixture', probe: 'contents', message: 'denied', status: 'missing', ...(cleanupPending ? { cleanupPending: true as const } : {}) }] });
+    const result = await executeSetupBatch(f.input);
+    expect(result.outcome).toBe(cleanupPending ? 'partial' : 'blocked'); expect(f.writer.branch).not.toHaveBeenCalled();
+    expect(f.terminal.readText.mock.calls.some(([prompt]) => prompt.startsWith('Inspect existing effects'))).toBe(false);
+  });
+});
 describe('real batch entrypoint composition with deterministic provider ports', () => {
+  it('explains excess provisional grants for a guided PAT without modifying shared resources', async () => {
+    const f = fixture(); jest.spyOn(f.input.credentialPrompt, 'usedGuidedSetupPat', 'get').mockReturnValue(true);
+    await executeSetupBatch({ ...f.input, provisionalRequirements: [{ id: 'setup.organization.secrets', role: 'setup', scope: 'organization',
+      permission: 'Secrets', level: 'write', applicability: 'required', reason: 'provisional', probe: 'secrets' }] });
+    expect(f.writer.grant).not.toHaveBeenCalled(); expect(f.writer.pullRequest).toHaveBeenCalledTimes(2);
+  });
+  it('shows the corrected guided PAT link after a failed final audit', async () => {
+    const f = fixture(); jest.spyOn(f.input.credentialPrompt, 'usedGuidedSetupPat', 'get').mockReturnValue(true);
+    const corrected = jest.spyOn(f.input.credentialPrompt, 'showUpdatedSetupPatLink');
+    f.inspect.mockResolvedValue({ ...f.report, ready: false });
+    expect((await executeSetupBatch(f.input)).outcome).toBe('blocked'); expect(corrected).toHaveBeenCalledWith(expect.stringContaining('personal-access-tokens/new'), 'final', expect.any(Array));
+    expect(f.writer.pullRequest).not.toHaveBeenCalled();
+  });
   it('carries inspected Secret revisions through pending additive-grant planning into the real wizard', async () => {
     const f = fixture(true); const result = await executeSetupBatch(f.input);
     expect(result.outcome).toBe('complete'); expect(f.writer.grant).toHaveBeenCalledTimes(2);

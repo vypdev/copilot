@@ -25,6 +25,22 @@ function fixture(overrides: Partial<SetupRemoteConfiguration> = {}) {
 }
 
 describe('metadata-only existing Secret reuse', () => {
+  it('checks only the selected existing alternative and preserves its trusted verification link', async () => {
+    const f = fixture({ repositorySecrets: ['CODEX_API_KEY'] });
+    const first = { ...key, name: 'CODEX_API_KEY', alternativeGroups: ['planner'] };
+    f.trustedHealth.validateTrustedDefault.mockResolvedValue([{ name: first.name, status: 'valid', message: 'authenticated', verificationRunUrl: 'https://github.com/acme/repo/actions/runs/19' }]);
+    const result = await f.useCase.collect({ ...f.request, requirements: [first, { ...key, alternativeGroups: ['planner'] }] });
+    expect(result.collection.retainedSecrets).toEqual([{ name: first.name, scope: 'repository', status: 'valid' }]);
+    expect(result.checks.find(check => check.name === first.name)?.verificationRunUrl).toBe('https://github.com/acme/repo/actions/runs/19');
+    expect(f.trustedHealth.validateTrustedDefault).toHaveBeenCalledWith('acme', 'repo', f.request.setupToken, [first]);
+    expect(f.prompt.requestApiKey).not.toHaveBeenCalled();
+  });
+  it('retains bindings as pending when no trusted-health capability is installed', async () => {
+    const f = fixture(); const collector = new SetupCredentialsUseCase(f.prompt, f.validation, { list: jest.fn() });
+    const result = await collector.collect(f.request);
+    expect(result.collection.retainedSecrets?.every(binding => binding.status === 'unverifiable')).toBe(true);
+    expect(f.legacyHealth.validateExisting).not.toHaveBeenCalled(); expect(f.prompt.requestApiKey).not.toHaveBeenCalled();
+  });
   it('retains PAT and API-key bindings without reading, requesting or auditing their values', async () => {
     const f = fixture();
     const result = await f.useCase.collect(f.request);

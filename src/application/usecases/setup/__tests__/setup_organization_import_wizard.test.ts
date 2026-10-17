@@ -28,6 +28,34 @@ function fixture(overrides: Partial<SetupRemoteConfiguration> = {}) {
 }
 
 describe('organization import in the shared setup wizard', () => {
+  it('blocks a known personal owner with the specific organization-reuse explanation', async () => {
+    const f = fixture({ ownerType: 'User' }); const result = await new SetupWizardUseCase(f.dependencies).execute(f.request);
+    expect(result).toMatchObject({ status: 'blocked', errors: [expect.stringContaining('personal repository')] }); expect(f.collect).not.toHaveBeenCalled();
+  });
+  it('blocks organization reuse without a remote target instead of assuming inventory exists', async () => {
+    const f = fixture(); const result = await new SetupWizardUseCase(f.dependencies).execute({ ...f.request, remoteTarget: undefined });
+    expect(result).toMatchObject({ status: 'blocked', reason: 'remote-storage-unavailable' }); expect(f.dependencies.remoteConfiguration.inspect).not.toHaveBeenCalled();
+    expect(f.collect).not.toHaveBeenCalled();
+  });
+  it('preserves explicit scope choices and reviewed settings across a revision', async () => {
+    const f = fixture(); const wizard = new SetupWizardUseCase(f.dependencies); const initial = await wizard.execute(f.request);
+    if (initial.status !== 'completed') throw new Error('Expected reviewed initial configuration');
+    const result = await wizard.execute({ ...f.request, revision: { group: 'storage', answeredQuestionIds: [] }, organizationImportSnapshot: initial.organizationImport,
+      overrides: { ...initial.configuration, storage: { variables: { ...initial.configuration.storage.variables, defaultScope: 'repository' },
+        secrets: { ...initial.configuration.storage.secrets, defaultScope: 'repository' } } } });
+    expect(result.status).toBe('completed'); expect(f.collect).toHaveBeenCalledTimes(2);
+    if (result.status === 'completed') {
+      expect(result.organizationImport).toEqual(initial.organizationImport);
+      expect(result.configuration.ai.bugbotCommentLimit).toBe(17);
+      expect(result.configuration.storage.variables.defaultScope).toBe('repository');
+    }
+  });
+  it('renders a batch Customize plan without claiming organization settings were imported', async () => {
+    const f = fixture(); const result = await new SetupWizardUseCase(f.dependencies).execute({ ...f.request, configurationSource: 'customize', deliveryMode: 'pull-request', previewOnly: true });
+    expect(result.status).toBe('completed');
+    if (result.status === 'completed') expect(result.plan.organizationReuse).toMatchObject({ imported: 0, needsReview: 0 });
+    expect(f.dependencies.finalPermissionAudit.audit).not.toHaveBeenCalled();
+  });
   it('blocks missing Secret revision evidence before questions or temporary write probes', async () => {
     const f = fixture({ repositorySecretRevisions: undefined });
     const result = await new SetupWizardUseCase(f.dependencies).execute(f.request);

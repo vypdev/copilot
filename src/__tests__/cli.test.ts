@@ -6,6 +6,7 @@
 import { execSync } from 'child_process';
 import { join } from 'node:path';
 import { program } from '../cli';
+import { logError } from '../utils/logger';
 import { runLocalAction } from '../actions/local_action';
 import { ACTIONS } from '../data/model/action_types';
 import { INPUT_KEYS } from '../application/contracts/input_keys';
@@ -991,6 +992,31 @@ describe('CLI', () => {
       account: 'operator', ready: true, confirmationRequired: false, checks: [],
     });
 
+    it.each(['--non-interactive', '--dry-run', '--yes'])('rejects a batch review bypass flag before PAT auditing: %s', async flag => {
+      await program.parseAsync(['node', 'cli', 'setup', '--batch', flag, ...(flag === '--non-interactive' ? ['--yes'] : []), '--token', 'github_pat_fixture_operator_token']);
+      expect(process.exitCode).toBe(1); expect(mockTokenPermissionInspect).not.toHaveBeenCalled(); expect(runLocalAction).not.toHaveBeenCalled();
+      expect(logError).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('--batch requires interactive review') }));
+    });
+    it('rejects batch selection without a terminal or browser before any PAT audit', async () => {
+      const driver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const terminal = jest.spyOn(driver, 'createInteractiveTerminalDriver').mockReturnValue(undefined);
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--batch', '--token', 'github_pat_fixture_operator_token']);
+        expect(process.exitCode).toBe(1); expect(mockTokenPermissionInspect).not.toHaveBeenCalled(); expect(runLocalAction).not.toHaveBeenCalled();
+        expect(logError).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('--batch needs an interactive terminal') }));
+      } finally { terminal.mockRestore(); }
+    });
+    it.each([true, false])('does not accept replacement workflow Secret values in reuse/batch (batch=%s)', async batch => {
+      const driver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const source = require('../cli/setup_source_adapter') as typeof import('../cli/setup_source_adapter');
+      const terminal = jest.spyOn(driver, 'createInteractiveTerminalDriver').mockReturnValue(guidedTerminal());
+      const choice = jest.spyOn(source, 'chooseSetupConfigurationSource').mockResolvedValue('organization');
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--token', 'github_pat_fixture_operator_token', '--workflow-pat', 'github_pat_fixture_workflow_token', ...(batch ? ['--batch'] : [])]);
+        expect(process.exitCode).toBe(1); expect(mockTokenPermissionInspect).not.toHaveBeenCalled(); expect(runLocalAction).not.toHaveBeenCalled();
+        expect(logError).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining(batch ? 'retains existing Secret bindings' : 'cannot consume replacement Secret values') }));
+      } finally { terminal.mockRestore(); choice.mockRestore(); }
+    });
     it.each([true, false])('audits required writes before ordinary terminal organization reuse (allowed=%s)', async allowed => {
       const driver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
       const source = require('../cli/setup_source_adapter') as typeof import('../cli/setup_source_adapter');

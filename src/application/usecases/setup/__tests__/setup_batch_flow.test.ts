@@ -36,6 +36,25 @@ function fixture() {
 }
 
 describe('read-only per-target preparation', () => {
+  it('rejects an archived selected target before inspecting shared resources', async () => {
+    const f = fixture(); f.targets[1] = { ...f.targets[1], archived: true };
+    await expect(f.prepare.execute(f.request)).rejects.toThrow('archived'); expect(f.ports.inventory.shared).not.toHaveBeenCalled();
+  });
+  it('cancels after discovery without inspecting or configuring the next target', async () => {
+    const f = fixture(); f.ports.inventory.shared.mockImplementation(async () => { f.ports.active.mockReturnValue(false); return f.shared; });
+    await expect(f.prepare.execute(f.request)).rejects.toBeInstanceOf(SetupInteractionCancelledError);
+    expect(f.ports.inventory.effective).not.toHaveBeenCalled(); expect(f.ports.configure).not.toHaveBeenCalled();
+  });
+  it('keeps a declined target questionnaire as cancellation before rendering', async () => {
+    const f = fixture(); const prepare = new PrepareSetupBatchUseCase({ ...f.ports, configure: async () => undefined });
+    await expect(prepare.execute(f.request)).rejects.toBeInstanceOf(SetupInteractionCancelledError);
+    expect(f.ports.renderer.render).not.toHaveBeenCalled();
+  });
+  it('does not require a separate development branch when the reviewed target uses its default branch', async () => {
+    const f = fixture(); f.targets.forEach((target, index) => { f.targets[index] = { ...target, defaultBranch: 'develop' }; });
+    const plan = await f.prepare.execute(f.request);
+    expect(plan.targets.every(target => target.blocked.length === 0)).toBe(true); expect(f.ports.inventory.branchExists).not.toHaveBeenCalled();
+  });
   it.each((['repository', 'organization'] as const).flatMap(scope => [
     { kind: 'missing', revisions: undefined }, { kind: 'empty', revisions: [] },
     { kind: 'wrong name', revisions: [{ name: 'OTHER', updatedAt: '2026-10-17T00:00:00Z' }] },
@@ -130,6 +149,29 @@ async function sessionFixture() {
     save: (operation: SetupBatchOperation) => { saved = operation; } };
 }
 describe('shared CLI/web batch session', () => {
+  it('rejects a saved operation from another organization before discovery or preparation', async () => {
+    const f = await sessionFixture(); f.save({ ...beginSetupBatchOperation(f.plan), organization: 'another-org' });
+    await expect(f.session.execute({ ...f.request, resumeOperationId: id })).rejects.toThrow('another organization');
+    expect(f.ports.selection.execute).not.toHaveBeenCalled(); expect(f.ports.prepare.execute).not.toHaveBeenCalled();
+  });
+  it('reports retained completed effects as partial when another target is blocked', async () => {
+    const f = await sessionFixture(); const prior = beginSetupBatchOperation(f.plan);
+    f.save({ ...prior, targets: [{ ...prior.targets[0], status: 'waiting-for-merge', preparedCommit: 'c'.repeat(40), pullRequestNumber: 31,
+      effects: ['access', 'variables', 'labels', 'issue-types', 'branch', 'pull-request'] }, { ...prior.targets[1], status: 'blocked' }] });
+    expect((await f.session.execute(f.request)).outcome).toBe('partial');
+    expect(f.ports.presentation.review).not.toHaveBeenCalled(); expect(f.ports.audit).not.toHaveBeenCalled();
+  });
+  it('retains prior effects when the operator declines resumed partial work', async () => {
+    const f = await sessionFixture(); const prior = beginSetupBatchOperation(f.plan);
+    f.save({ ...prior, targets: [{ ...prior.targets[0], status: 'partial', effects: ['variables'] }, prior.targets[1]] });
+    f.ports.presentation.review.mockResolvedValue(false);
+    expect((await f.session.execute(f.request)).outcome).toBe('partial'); expect(f.ports.audit).not.toHaveBeenCalled();
+  });
+  it('honors an explicit inactive session before offering batch review', async () => {
+    const f = await sessionFixture();
+    expect((await new SetupBatchSessionUseCase({ ...f.ports, sessionActive: () => false }).execute(f.request)).outcome).toBe('cancelled');
+    expect(f.ports.presentation.review).not.toHaveBeenCalled(); expect(f.ports.audit).not.toHaveBeenCalled();
+  });
   it('requires batch approval before temporary probes and installs sequentially', async () => {
     const f = await sessionFixture(); f.ports.audit.mockImplementation(async () => {
       expect(f.ports.presentation.review).toHaveBeenCalledTimes(1); expect(f.ports.possibleMutation).toHaveBeenCalled(); return { ready: true };
@@ -281,6 +323,18 @@ describe('per-target shared wizard and metadata-only credentials', () => {
       token: 'private-operator-token', configurationSource: 'organization' as const, presentationMode: 'basic' as const };
     return { ...f, wizard, credentials, useCase, request, result };
   }
+  it.each(['cancelled', 'blocked'])('does not collect credentials after a %s target wizard', async status => {
+    const f = configureFixture(); f.wizard.execute.mockResolvedValue({ ...f.result, status });
+    if (status === 'cancelled') await expect(f.useCase.execute(f.request)).rejects.toBeInstanceOf(SetupInteractionCancelledError);
+    else expect((await f.useCase.execute(f.request))?.blocked?.[0]).toContain('requires attention');
+    expect(f.credentials.collect).not.toHaveBeenCalled();
+  });
+  it('requires native guarded-approval readiness even when the local policy is valid', async () => {
+    const f = configureFixture(); f.configuration.pullRequestApproval = { ...f.configuration.pullRequestApproval, mode: 'guarded',
+      producerAttested: true, testChecks: [{ name: 'CI', workflowName: 'CI', sourceAppId: 15368 }], coverage: { mode: 'check', checkName: 'CI' } };
+    f.wizard.execute.mockResolvedValue({ ...f.result, plan: { ...f.result.plan, approvalReadiness: [{ id: 'native-rules', status: 'fail', message: 'Rules require review.' }] } });
+    expect((await f.useCase.execute(f.request))?.blocked?.[0]).toContain('Target-specific'); expect(f.credentials.collect).not.toHaveBeenCalled();
+  });
   it.each((['organization', 'customize'] as const).flatMap(configurationSource =>
     (['valid', 'invalid'] as const).map(health => ({ configurationSource, health }))))(
     'keeps repository PAT precedence in $configurationSource with $health trusted health and no organization grant', async ({ configurationSource, health }) => {
