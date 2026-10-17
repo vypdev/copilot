@@ -34,6 +34,21 @@ describe('complete progress partition facts', () => {
         const value = response(); value.files[0].implemented = 'x'.repeat(600); value.files[1].remaining = 'Untrusted: /copilot deploy @all';
         expect(parse(value)).toEqual(value.files);
     });
+    it('accepts the schema boundary of 600 supplementary Unicode code points', () => {
+        const value = response(); value.files[0].implemented = '🧪'.repeat(600);
+        expect(parse(value)[0].implemented).toBe(value.files[0].implemented);
+        expect(value.files[0].implemented.length).toBe(1200);
+    });
+    it('rejects 601 supplementary code points just like schema maxLength', () => {
+        const value = response(); value.files[0].implemented = '🧪'.repeat(601);
+        expect(() => parse(value)).toThrow(expect.objectContaining({ code: 'agent.failed' }));
+    });
+    it('applies the calculated code-point limit equally to supplementary characters', () => {
+        const value = { ...response(), files: part.paths.map(path => ({ path, implemented: '🧪'.repeat(20), remaining: 'Unknown' })) };
+        expect(parseProgressPartitionFacts(value, part, 'en-US', 20)).toHaveLength(2);
+        value.files[0].implemented += '🧪';
+        expect(() => parseProgressPartitionFacts(value, part, 'en-US', 20)).toThrow();
+    });
     it('aggregates every validated path with immutable identity and explicit uncertainty', () => {
         const evidence = JSON.parse(aggregateProgressFacts('a', 'b', [part], [parse(response()), []]));
         expect(evidence).toMatchObject({ baseSha: 'a', headSha: 'b', partitions: [{ id: part.id, fileCount: 2 }], files: facts() });

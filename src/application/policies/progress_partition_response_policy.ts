@@ -42,7 +42,7 @@ export function parseProgressPartitionFacts(response: unknown, partition: Progre
         if (Object.keys(file).sort().join(',') !== 'implemented,path,remaining' || typeof file.path !== 'string'
             || !partition.paths.includes(file.path) || seen.has(file.path)) throw invalid();
         seen.add(file.path);
-        if (![file.implemented, file.remaining].every(value => typeof value === 'string' && value.trim().length > 0 && value.length <= factLimit)) throw invalid();
+        if (![file.implemented, file.remaining].every(value => typeof value === 'string' && value.trim().length > 0 && [...value].length <= factLimit)) throw invalid();
         return Object.freeze({ path: file.path, implemented: file.implemented as string, remaining: file.remaining as string });
     });
     return Object.freeze(facts);
@@ -55,7 +55,7 @@ function serializeProgressFacts(baseSha: string, headSha: string, partitions: re
         files: facts.flat() });
 }
 
-/** Reserve exact paths/framing, then budget worst-case JSON escaping (six bytes/code unit). */
+/** Reserve exact paths/framing, then budget worst-case JSON escaping (six bytes/code point). */
 export function progressPartitionFactLimit(baseSha: string, headSha: string, partitions: readonly ProgressDiffPartition[], budget = MAX_PROGRESS_AGGREGATE_BYTES): number {
     const empty = partitions.map(partition => partition.paths.map(path => ({ path, implemented: '', remaining: '' })));
     const count = empty.reduce((sum, files) => sum + files.length, 0);

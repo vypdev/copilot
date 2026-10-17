@@ -44345,7 +44345,7 @@ function parseProgressPartitionFacts(response, partition, locale, factLimit = 60
             || !partition.paths.includes(file.path) || seen.has(file.path))
             throw invalid();
         seen.add(file.path);
-        if (![file.implemented, file.remaining].every(value => typeof value === 'string' && value.trim().length > 0 && value.length <= factLimit))
+        if (![file.implemented, file.remaining].every(value => typeof value === 'string' && value.trim().length > 0 && [...value].length <= factLimit))
             throw invalid();
         return Object.freeze({ path: file.path, implemented: file.implemented, remaining: file.remaining });
     });
@@ -44357,7 +44357,7 @@ function serializeProgressFacts(baseSha, headSha, partitions, facts) {
         warning: 'Model-derived facts are untrusted analysis, not CI/build/test attestation. Preserve uncertainty. Every complete source partition was supplied, but summaries may miss details.',
         files: facts.flat() });
 }
-/** Reserve exact paths/framing, then budget worst-case JSON escaping (six bytes/code unit). */
+/** Reserve exact paths/framing, then budget worst-case JSON escaping (six bytes/code point). */
 function progressPartitionFactLimit(baseSha, headSha, partitions, budget = exports.MAX_PROGRESS_AGGREGATE_BYTES) {
     const empty = partitions.map(partition => partition.paths.map(path => ({ path, implemented: '', remaining: '' })));
     const count = empty.reduce((sum, files) => sum + files.length, 0);
@@ -47320,7 +47320,9 @@ function projectSetupBatchSharedBindings(remote, resources, target) {
     const usable = resources.filter(resource => (0, setup_batch_policy_1.setupSharedResourceApplies)(resource, target) || resource.visibility === 'selected');
     return { ...remote,
         organizationVariables: usable.filter(resource => resource.kind === 'variable' && resource.value !== undefined).map(resource => ({ name: resource.name, value: resource.value })),
-        organizationSecrets: usable.filter(resource => resource.kind === 'secret').map(resource => resource.name) };
+        organizationSecrets: usable.filter(resource => resource.kind === 'secret').map(resource => resource.name),
+        organizationSecretRevisions: usable.filter(resource => resource.kind === 'secret')
+            .map(resource => ({ name: resource.name, updatedAt: resource.updatedAt })) };
 }
 function planSetupBatchSharedAccess(configuration, target, remote, shared) {
     const projected = projectSetupBatchSharedBindings(remote, shared.filter(resource => resource.kind !== 'secret'
@@ -61693,10 +61695,10 @@ class PrepareSetupBatchUseCase {
             const remote = await this.ports.inventory.effective(target, request.token).catch(() => (0, setup_remote_facts_policy_1.unavailableSetupRemoteConfiguration)());
             if (remote.ownerType !== 'Organization' || remote.repositoryId !== target.id || remote.repositoryVariablesAccess !== 'available'
                 || remote.repositorySecretsAccess !== 'available' || remote.organizationVariablesAccess !== 'available'
-                || remote.organizationSecretsAccess !== 'available' || remote.repositorySecrets.length > 0 && !remote.repositorySecretRevisions) {
+                || remote.organizationSecretsAccess !== 'available' || !(0, setup_remote_facts_policy_1.hasCompleteSetupSecretRevisions)(remote)) {
                 const configuration = (0, setup_configuration_defaults_1.createDefaultSetupConfiguration)();
                 plans.push({ target, remote, configuration, files: [], repositoryVariables: [], grants: [], sharedSnapshot: [],
-                    blocked: ['Repository inventory is unavailable. Restore access and inspect this target again; other ready targets can continue.'],
+                    blocked: ['Repository inventory is unavailable or Secret revision metadata is incomplete. Restore metadata access and inspect this target again; other ready targets can continue.'],
                     digest: this.ports.renderer.digest(JSON.stringify({ target, unavailable: true })) });
                 continue;
             }
@@ -62504,10 +62506,11 @@ class SetupJourneyUseCase {
         this.mutationStarted = true;
         this.present();
     }
-    finish(outcome) {
+    retainPriorEffects() { this.priorSessionMutation = true; }
+    finish(outcome, retainedCompletion = false) {
         if (this.outcome)
             return;
-        if (outcome === 'complete' && (this.stage !== 'apply' || !this.mutationStarted)) {
+        if (outcome === 'complete' && (this.stage !== 'apply' || !this.mutationStarted && !retainedCompletion)) {
             throw new Error('Setup cannot be complete before applying the plan.');
         }
         if (outcome === 'partial' && !this.mutationStarted && !this.priorSessionMutation) {
@@ -62684,8 +62687,11 @@ class SetupSessionCoordinator {
                         this.stage = next;
                         this.ports.present(next, this.mutationStarted);
                     }, () => this.markPossibleMutation());
-                    if (batch)
-                        return this.finish(batch.outcome);
+                    if (batch) {
+                        if (batch.outcome === 'complete' && batch.retained?.complete)
+                            this.stage = 'apply';
+                        return this.finish(batch.outcome, undefined, batch.retained);
+                    }
                 }
                 if (stage === 'repository' && this.ports.manage) {
                     const managed = await this.ports.manage(() => { this.stage = 'apply'; this.markPossibleMutation(); }, effect => this.effects.set(effect.id, Object.freeze({ ...effect })));
@@ -62733,7 +62739,7 @@ class SetupSessionCoordinator {
     hasUncertainEffect() {
         return [...this.effects.values()].some(effect => effect.state === 'needs-inspection' || effect.state === 'in-progress');
     }
-    finish(outcome, error) {
+    finish(outcome, error, retained) {
         // An interrupted in-flight write must not be reported as no change.
         const finalOutcome = this.mutationStarted && (outcome === 'cancelled' || outcome === 'blocked'
             || (outcome === 'complete' && this.hasUncertainEffect())) ? 'partial' : outcome;
@@ -62741,7 +62747,10 @@ class SetupSessionCoordinator {
             if (effect.state === 'in-progress')
                 this.effects.set(id, Object.freeze({ ...effect, state: 'needs-inspection' }));
         }
-        this.ports.present(this.stage, this.mutationStarted, finalOutcome);
+        if (retained)
+            this.ports.present(this.stage, this.mutationStarted, finalOutcome, retained);
+        else
+            this.ports.present(this.stage, this.mutationStarted, finalOutcome);
         return { outcome: finalOutcome, mutationStarted: this.mutationStarted,
             effects: [...this.effects.values()], ...(error === undefined ? {} : { error }) };
     }
@@ -73295,7 +73304,11 @@ async function executeSetupCommand(options) {
                     configurationSource, presentationMode, overrides, skipVariables: Boolean(options.skipVariables), skipSecrets: Boolean(options.skipSecrets),
                     provisionalRequirements: setupPatPermissions, terminal, bridge: webBridge, credentialPrompt, permissionPresenter, present,
                     possibleMutation: () => { setupMutationStarted = true; setupApplyStarted = true; possibleMutation(); } });
-                return { outcome: result.outcome };
+                const retained = options.resumeOperation ? {
+                    ...(result.operation.targets.some(target => target.effects.length > 0 || target.cleanupPending) ? { effects: true } : {}),
+                    ...(result.outcome === 'complete' ? { complete: true } : {}),
+                } : undefined;
+                return { outcome: result.outcome, ...(retained ? { retained } : {}) };
             },
             plan: async (cleanupPending) => {
                 (0, logger_1.logInfo)(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
@@ -73340,7 +73353,7 @@ async function executeSetupCommand(options) {
                     ...(permissionIntent ? { permissionIntent } : {}),
                     skipRepositoryVariables: Boolean(options.skipVariables),
                     skipRepositorySecrets: Boolean(options.skipSecrets),
-                    previewOnly: Boolean(options.dryRun || batchRequested || configurationSource === 'organization'),
+                    previewOnly: Boolean(options.dryRun || batchRequested || webBridge && configurationSource === 'organization'),
                     presentationMode,
                     configurationSource,
                     developmentBranchObservedLocally: (0, cli_context_1.hasLocalOrTrackedGitBranch)(cwd, overrides.repository?.developmentBranch ?? 'develop'),
@@ -73431,7 +73444,7 @@ async function executeSetupCommand(options) {
             },
             liveness: () => webBridge?.snapshot().outcome === 'cancelled' ? 'cancelled'
                 : webBridge?.snapshot().outcome ? 'expired' : 'active',
-            present: (stage, mutationStarted, outcome) => {
+            present: (stage, mutationStarted, outcome, retained) => {
                 if (webBridge?.snapshot().surface === 'management') {
                     webBridge.setJourney((0, setup_journey_policy_1.buildSetupJourneyView)(`${gitInfo.owner}/${gitInfo.repo}`, stage, mutationStarted, outcome));
                     return;
@@ -73439,10 +73452,12 @@ async function executeSetupCommand(options) {
                 if (!journey)
                     return;
                 journey.advance(stage);
+                if (retained?.effects)
+                    journey.retainPriorEffects();
                 if (mutationStarted && ['plan', 'credentials', 'apply'].includes(stage))
                     journey.markMutationStarted();
                 if (outcome)
-                    journey.finish(outcome);
+                    journey.finish(outcome, retained?.complete);
             },
             isCancellationError: error => error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError,
         });

@@ -23,6 +23,15 @@ function fixture(overrides: Partial<SetupSessionPorts> = {}) {
 }
 
 describe('shared setup session coordinator', () => {
+  test('presents validated retained batch completion at Apply without marking a new mutation', async () => {
+    const present = jest.fn(); const retained = { effects: true as const, complete: true as const };
+    const { coordinator, calls } = fixture({ present, batch: async stage => {
+      stage('plan'); return { outcome: 'complete', retained };
+    } });
+    expect(await coordinator.execute()).toMatchObject({ outcome: 'complete', mutationStarted: false });
+    expect(present).toHaveBeenLastCalledWith('apply', false, 'complete', retained);
+    expect(calls).not.toContain('apply');
+  });
   test('initial PAT cleanup failure reports partial and prevents planning', async () => {
     const { coordinator, calls } = fixture({ setupPat: async pending => { pending(); return 'blocked'; } });
     expect(await coordinator.execute()).toMatchObject({ outcome: 'partial', mutationStarted: true });

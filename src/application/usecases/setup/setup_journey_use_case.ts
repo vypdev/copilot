@@ -13,7 +13,7 @@ export class SetupJourneyUseCase {
   private choiceReviewPass = 1;
 
   constructor(private readonly repository: string, private readonly presenter: SetupJourneyPresenterPort,
-    private readonly priorSessionMutation = false) {}
+    private priorSessionMutation = false) {}
 
   advance(stage: SetupJourneyStage): void {
     if (this.outcome) throw new Error('Cannot advance a finished setup journey.');
@@ -44,9 +44,11 @@ export class SetupJourneyUseCase {
     this.present();
   }
 
-  finish(outcome: SetupJourneyOutcome): void {
+  retainPriorEffects(): void { this.priorSessionMutation = true; }
+
+  finish(outcome: SetupJourneyOutcome, retainedCompletion = false): void {
     if (this.outcome) return;
-    if (outcome === 'complete' && (this.stage !== 'apply' || !this.mutationStarted)) {
+    if (outcome === 'complete' && (this.stage !== 'apply' || !this.mutationStarted && !retainedCompletion)) {
       throw new Error('Setup cannot be complete before applying the plan.');
     }
     if (outcome === 'partial' && !this.mutationStarted && !this.priorSessionMutation) {

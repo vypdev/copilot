@@ -39,3 +39,11 @@ An interrupted process can leave an exclusive operation lock. Its error links to
 use a maintenance window with all setup owners stopped, preserve the receipt,
 and remove only the confirmed orphan. Resume re-reads shared memberships and
 revisions and requires new review; an old process's grant cache is not restored.
+
+A completed-operation resume reconstructs the reviewed plan and returns its
+existing PR/result without repeating permission-write probes or installation
+effects. It can finish successfully without a new write. Partial retained effects
+remain partial. Single-repository terminal reuse still verifies the final Write
+capabilities after plan confirmation; reuse never skips that installation gate.
+Incomplete Secret revision metadata blocks a target during planning, before its
+questionnaire or rendered files are offered for approval.

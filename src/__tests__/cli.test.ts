@@ -563,6 +563,25 @@ describe('CLI', () => {
         }));
         expect(bridge.snapshot().doctor).toEqual({ status: 'complete', healthy: true, pass: 0, warn: 0, fail: 0, skipped: 0 });
       });
+      it('keeps organization-reuse write audits behind the browser Apply confirmation', async () => {
+        const original = mockTokenPermissionInspect.getMockImplementation()!;
+        mockRemoteConfigurationInspect.mockResolvedValue({ ...defaultRemoteConfiguration, ownerType: 'Organization',
+          repositoryId: 42, defaultBranch: 'master', organizationAccess: 'available',
+          organizationSecretsAccess: 'available', organizationVariablesAccess: 'available' });
+        ask.mockImplementation(async (prompt: WebSetupPrompt) => prompt.copyId === 'setup.source'
+          ? 'Reuse organization configuration' : answerWebPrompt(prompt));
+        mockTokenPermissionInspect.mockImplementation(async request => {
+          if (request.requirements.some(requirement => requirement.level === 'write')) {
+            expect(ask.mock.calls.some(([prompt]) => prompt.title === 'Apply this setup now?')).toBe(true);
+          }
+          return original(request);
+        });
+        try {
+          await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets', '--skip-variables']);
+          expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
+          expect(runLocalAction).toHaveBeenCalledTimes(1); expect(process.exitCode).toBeUndefined();
+        } finally { mockTokenPermissionInspect.mockReset().mockImplementation(original); }
+      });
 
       it('retains a management mutation receipt and stops before the full installer after an uncertain quick write', async () => {
         const management = require('../cli/setup_management_adapter') as typeof import('../cli/setup_management_adapter');
@@ -970,6 +989,58 @@ describe('CLI', () => {
     const acceptedSetupPatReport = () => ({
       role: 'setup' as const, identityStatus: 'valid' as const, identityMessage: 'verified',
       account: 'operator', ready: true, confirmationRequired: false, checks: [],
+    });
+
+    it.each([true, false])('audits required writes before ordinary terminal organization reuse (allowed=%s)', async allowed => {
+      const driver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const source = require('../cli/setup_source_adapter') as typeof import('../cli/setup_source_adapter');
+      const terminal = jest.spyOn(driver, 'createInteractiveTerminalDriver').mockReturnValue(guidedTerminal());
+      const choice = jest.spyOn(source, 'chooseSetupConfigurationSource').mockResolvedValue('organization');
+      const original = mockTokenPermissionInspect.getMockImplementation()!;
+      mockRemoteConfigurationInspect.mockResolvedValue({ ...defaultRemoteConfiguration, ownerType: 'Organization',
+        repositoryId: 42, defaultBranch: 'master', organizationAccess: 'available',
+        organizationSecretsAccess: 'available', organizationVariablesAccess: 'available' });
+      mockTokenPermissionInspect.mockImplementation(async request => ({ ...acceptedSetupPatReport(),
+        ready: allowed || request.requirements.every(requirement => requirement.level !== 'write'),
+        checks: request.requirements.map(requirement => ({ ...requirement,
+          status: !allowed && requirement.level === 'write' ? 'missing' as const : 'verified' as const, message: 'fixture capability' })),
+      }));
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--token', 'github_pat_fixture_operator_token',
+          '--yes', '--pr-approval-mode', 'off', '--skip-secrets', '--skip-variables']);
+        expect(mockTokenPermissionInspect.mock.calls[0][0].requirements.every(requirement => requirement.level === 'read')).toBe(true);
+        expect(mockTokenPermissionInspect.mock.calls.some(([request]) => request.requirements.some(requirement => requirement.level === 'write'))).toBe(true);
+        expect(runLocalAction).toHaveBeenCalledTimes(allowed ? 1 : 0);
+        expect(process.exitCode).toBe(allowed ? undefined : 1);
+      } finally { terminal.mockRestore(); choice.mockRestore(); mockTokenPermissionInspect.mockReset().mockImplementation(original); }
+    });
+
+    it.each(['complete', 'partial', 'cleanup', 'unproven'] as const)('handles batch receipt outcome %s without inventing a fresh write', async state => {
+      const driver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const source = require('../cli/setup_source_adapter') as typeof import('../cli/setup_source_adapter');
+      const batch = require('../cli/setup_batch_adapter') as typeof import('../cli/setup_batch_adapter');
+      const terminal = jest.spyOn(driver, 'createInteractiveTerminalDriver').mockReturnValue(guidedTerminal());
+      const choice = jest.spyOn(source, 'chooseSetupConfigurationSource').mockResolvedValue('organization');
+      const operationId = 'a67c8e40-93be-43ed-a7ed-e07378c7e773';
+      const execute = jest.spyOn(batch, 'executeSetupBatch').mockImplementation(async input => {
+        input.present('plan');
+        return { outcome: state === 'partial' || state === 'cleanup' ? 'partial' : 'complete', operation: {
+          schemaVersion: 1, organization: 'test-owner', operationId, targets: [{ repositoryId: 42, repository: 'test-repo',
+            defaultBranch: 'master', baseSha: 'a'.repeat(40), planDigest: 'b'.repeat(64), status: 'waiting-for-merge',
+            effects: ['access', 'variables', 'labels', 'issue-types', 'branch', 'pull-request'], preparedCommit: 'c'.repeat(40), pullRequestNumber: 31,
+            ...(state === 'cleanup' ? { status: 'blocked', effects: [], preparedCommit: undefined, pullRequestNumber: undefined, cleanupPending: true } as const : {}) }],
+        } };
+      });
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--token', 'github_pat_fixture_operator_token',
+          ...(state === 'unproven' ? ['--batch'] : ['--resume-operation', operationId])]);
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(mockTokenPermissionInspect.mock.calls.every(([request]) => request.requirements.every(requirement => requirement.level === 'read'))).toBe(true);
+        expect(process.exitCode).toBe(state === 'complete' ? undefined : 1);
+        const output = consoleLogSpy.mock.calls.flat().join('\n');
+        expect(output).toContain(state === 'complete' ? 'Complete: setup applied successfully.'
+          : state === 'partial' || state === 'cleanup' ? 'Partial: changes may exist' : 'Blocked: setup cannot continue.');
+      } finally { terminal.mockRestore(); choice.mockRestore(); execute.mockRestore(); }
     });
 
     it('carries guided intent through the final audit and prepares the separate bot link', async () => {

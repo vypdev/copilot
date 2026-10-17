@@ -257,7 +257,11 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
           configurationSource, presentationMode, overrides, skipVariables: Boolean(options.skipVariables), skipSecrets: Boolean(options.skipSecrets),
           provisionalRequirements: setupPatPermissions, terminal, bridge: webBridge, credentialPrompt, permissionPresenter, present,
           possibleMutation: () => { setupMutationStarted = true; setupApplyStarted = true; possibleMutation(); } });
-        return { outcome: result.outcome };
+        const retained = options.resumeOperation ? {
+          ...(result.operation.targets.some(target => target.effects.length > 0 || target.cleanupPending) ? { effects: true as const } : {}),
+          ...(result.outcome === 'complete' ? { complete: true as const } : {}),
+        } : undefined;
+        return { outcome: result.outcome, ...(retained ? { retained } : {}) };
           },
           plan: async (cleanupPending): Promise<SetupSessionDecision> => {
         logInfo(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
@@ -302,7 +306,7 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
           ...(permissionIntent ? { permissionIntent } : {}),
           skipRepositoryVariables: Boolean(options.skipVariables),
           skipRepositorySecrets: Boolean(options.skipSecrets),
-          previewOnly: Boolean(options.dryRun || batchRequested || configurationSource === 'organization'),
+          previewOnly: Boolean(options.dryRun || batchRequested || webBridge && configurationSource === 'organization'),
           presentationMode,
           configurationSource,
           developmentBranchObservedLocally: hasLocalOrTrackedGitBranch(cwd, overrides.repository?.developmentBranch ?? 'develop'),
@@ -401,15 +405,16 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
           },
           liveness: () => webBridge?.snapshot().outcome === 'cancelled' ? 'cancelled'
             : webBridge?.snapshot().outcome ? 'expired' : 'active',
-          present: (stage, mutationStarted, outcome) => {
+          present: (stage, mutationStarted, outcome, retained) => {
             if (webBridge?.snapshot().surface === 'management') {
               webBridge.setJourney(buildSetupJourneyView(`${gitInfo.owner}/${gitInfo.repo}`, stage, mutationStarted, outcome));
               return;
             }
             if (!journey) return;
             journey.advance(stage);
+            if (retained?.effects) journey.retainPriorEffects();
             if (mutationStarted && ['plan','credentials','apply'].includes(stage)) journey.markMutationStarted();
-            if (outcome) journey.finish(outcome);
+            if (outcome) journey.finish(outcome, retained?.complete);
           },
           isCancellationError: error => error instanceof SetupTerminalCancelledError,
         });

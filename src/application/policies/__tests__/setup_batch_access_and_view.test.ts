@@ -7,6 +7,7 @@ import { selectedExistingSetupCredentials } from '../setup_credential_binding_po
 import { setupOrganizationExplicitQuestionIds } from '../setup_organization_variable_bindings';
 import { importSetupOrganizationConfiguration } from '../setup_organization_import_policy';
 import { configureSetupOrganizationReuseStorage } from '../setup_organization_variable_reuse_policy';
+import { hasCompleteSetupSecretRevisions } from '../setup_remote_facts_policy';
 import type { SetupBatchPlan, SetupBatchSharedResource, SetupBatchTarget } from '../../../domain/setup_batch';
 import type { SetupRemoteConfiguration } from '../../../domain/setup';
 const target: SetupBatchTarget = { id: 7, ownerId: 3, owner: 'acme', name: 'repo', baseSha: 'a'.repeat(40), defaultBranch: 'master', private: true, archived: false, disabled: false, canPush: true };
@@ -20,6 +21,13 @@ function fixture() {
   return { configuration, remote, shared };
 }
 describe('consumed shared bindings and redacted review policy', () => {
+  it('projects inspected Secret revisions without claiming that pending access already applies', () => {
+    const f = fixture(); const result = planSetupBatchSharedAccess(f.configuration, target, f.remote, f.shared);
+    expect(result.projected.organizationSecretRevisions).toEqual([{ name: 'PAT', updatedAt: '2026-10-17T00:00:00Z' }]);
+    expect(hasCompleteSetupSecretRevisions(result.projected)).toBe(true);
+    expect(result.grants).toContainEqual({ kind: 'secret', name: 'PAT', repositoryId: target.id });
+    expect(f.remote.organizationSecrets).toEqual([]); expect(f.shared.at(-1)?.selectedRepositoryIds).toEqual([]);
+  });
   it('does not grant access to an unused credential alternative or a shadowed binding', () => {
     const f = fixture(); f.remote.repositorySecrets = ['PAT', 'OPENAI_API_KEY'];
     f.shared.push({ kind: 'secret', name: 'OPENAI_API_KEY', visibility: 'selected', selectedRepositoryIds: [], updatedAt: '2026-10-17T00:00:00Z' });

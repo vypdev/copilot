@@ -16,14 +16,16 @@ jest.mock('../../infrastructure/composition/setup_token_permissions_composition_
 jest.mock('../../infrastructure/composition/setup_doctor_composition_root', () => ({ createSetupMergeQueueReadinessUseCase: () => ({ inspect: async () => [] }) }));
 jest.mock('../../infrastructure/github_setup_project_discovery_adapter', () => ({ GithubSetupProjectDiscoveryAdapter: class { async discover() { return { status: 'empty', candidates: [] }; } } }));
 
-function fixture() {
+function fixture(pendingSecret = false) {
   const configuration = createDefaultSetupConfiguration(); configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'off' }; configuration.createInitialTag = false;
   const targets = [7, 8].map(id => ({ id, ownerId: 3, owner: 'acme', name: `repo-${id}`, defaultBranch: 'master', baseSha: 'a'.repeat(40), private: true, archived: false, disabled: false, canPush: true }));
   const remote = (id: number): SetupRemoteConfiguration => ({ ownerType: 'Organization', repositoryId: id, defaultBranch: 'master', repositoryVisibility: 'private',
     repositoryVariables: [], repositoryVariablesAccess: 'available', organizationVariables: buildSetupRepositoryVariables(configuration), organizationVariablesAccess: 'available',
-    repositorySecrets: [], repositorySecretsAccess: 'available', organizationSecrets: ['PAT'], organizationSecretsAccess: 'available', organizationAccess: 'available' });
+    repositorySecrets: [], repositorySecretsAccess: 'available', organizationSecrets: pendingSecret ? [] : ['PAT'],
+    organizationSecretRevisions: pendingSecret ? [] : [{ name: 'PAT', updatedAt: '2026-10-17T00:00:00Z' }],
+    organizationSecretsAccess: 'available', organizationAccess: 'available' });
   const shared = [...buildSetupRepositoryVariables(configuration).map(variable => ({ ...variable, kind: 'variable', visibility: 'all', updatedAt: '2026-10-17T00:00:00Z', selectedRepositoryIds: [] })),
-    { kind: 'secret', name: 'PAT', visibility: 'all', updatedAt: '2026-10-17T00:00:00Z', selectedRepositoryIds: [] }];
+    { kind: 'secret', name: 'PAT', visibility: pendingSecret ? 'selected' : 'all', updatedAt: '2026-10-17T00:00:00Z', selectedRepositoryIds: [] }];
   let saved: SetupBatchOperation | undefined;
   const writer = { revalidate: jest.fn(async () => true), grant: jest.fn(async () => undefined), variables: jest.fn(async () => undefined), labels: jest.fn(async () => undefined),
     issueTypes: jest.fn(async () => undefined), prepareCommit: jest.fn(async () => 'c'.repeat(40)), branch: jest.fn(async () => undefined), pullRequest: jest.fn(async () => 31) };
@@ -63,6 +65,13 @@ function fixture() {
 beforeEach(() => { jest.spyOn(console, 'log').mockImplementation(() => undefined); });
 afterEach(() => { jest.restoreAllMocks(); });
 describe('real batch entrypoint composition with deterministic provider ports', () => {
+  it('carries inspected Secret revisions through pending additive-grant planning into the real wizard', async () => {
+    const f = fixture(true); const result = await executeSetupBatch(f.input);
+    expect(result.outcome).toBe('complete'); expect(f.writer.grant).toHaveBeenCalledTimes(2);
+    expect(f.writer.grant).toHaveBeenNthCalledWith(1, expect.anything(), { kind: 'secret', name: 'PAT', repositoryId: 7 }, expect.any(String));
+    expect(f.writer.grant).toHaveBeenNthCalledWith(2, expect.anything(), { kind: 'secret', name: 'PAT', repositoryId: 8 }, expect.any(String));
+    expect(f.approvals()).toBe(1);
+  });
   it('runs the shared configuration and Apply flow, leaving two PRs waiting for merge', async () => {
     const f = fixture(); const result = await executeSetupBatch(f.input);
     expect(result.outcome).toBe('complete'); expect(result.operation.targets.map(target => target.status)).toEqual(['waiting-for-merge', 'waiting-for-merge']);

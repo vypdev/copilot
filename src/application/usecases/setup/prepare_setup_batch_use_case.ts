@@ -2,7 +2,7 @@ import type { SetupConfiguration, SetupRemoteConfiguration } from '../../../doma
 import type { SetupBatchPlan, SetupBatchSharedResource, SetupBatchTarget, SetupBatchTargetPlan } from '../../../domain/setup_batch';
 import type { SetupBatchDiscoveryPort, SetupBatchInventoryPort, SetupBatchRenderPort } from '../../ports/setup_batch_ports';
 import { setupBatchBranch, validateSetupBatchTargets } from '../../policies/setup_batch_policy';
-import { unavailableSetupRemoteConfiguration } from '../../policies/setup_remote_facts_policy';
+import { hasCompleteSetupSecretRevisions, unavailableSetupRemoteConfiguration } from '../../policies/setup_remote_facts_policy';
 import { createDefaultSetupConfiguration } from '../../policies/setup_configuration_defaults';
 import { buildSetupOrganizationReuseVariables } from '../../policies/setup_organization_variable_reuse_policy';
 import { buildSetupRepositoryVariables } from '../../policies/setup_configuration_plan';
@@ -51,10 +51,10 @@ export class PrepareSetupBatchUseCase {
       const remote = await this.ports.inventory.effective(target, request.token).catch(() => unavailableSetupRemoteConfiguration());
       if (remote.ownerType !== 'Organization' || remote.repositoryId !== target.id || remote.repositoryVariablesAccess !== 'available'
         || remote.repositorySecretsAccess !== 'available' || remote.organizationVariablesAccess !== 'available'
-        || remote.organizationSecretsAccess !== 'available' || remote.repositorySecrets.length > 0 && !remote.repositorySecretRevisions) {
+        || remote.organizationSecretsAccess !== 'available' || !hasCompleteSetupSecretRevisions(remote)) {
         const configuration = createDefaultSetupConfiguration();
         plans.push({ target, remote, configuration, files: [], repositoryVariables: [], grants: [], sharedSnapshot: [],
-          blocked: ['Repository inventory is unavailable. Restore access and inspect this target again; other ready targets can continue.'],
+          blocked: ['Repository inventory is unavailable or Secret revision metadata is incomplete. Restore metadata access and inspect this target again; other ready targets can continue.'],
           digest: this.ports.renderer.digest(JSON.stringify({ target, unavailable: true })) });
         continue;
       }

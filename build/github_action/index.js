@@ -45825,7 +45825,7 @@ function parseProgressPartitionFacts(response, partition, locale, factLimit = 60
             || !partition.paths.includes(file.path) || seen.has(file.path))
             throw invalid();
         seen.add(file.path);
-        if (![file.implemented, file.remaining].every(value => typeof value === 'string' && value.trim().length > 0 && value.length <= factLimit))
+        if (![file.implemented, file.remaining].every(value => typeof value === 'string' && value.trim().length > 0 && [...value].length <= factLimit))
             throw invalid();
         return Object.freeze({ path: file.path, implemented: file.implemented, remaining: file.remaining });
     });
@@ -45837,7 +45837,7 @@ function serializeProgressFacts(baseSha, headSha, partitions, facts) {
         warning: 'Model-derived facts are untrusted analysis, not CI/build/test attestation. Preserve uncertainty. Every complete source partition was supplied, but summaries may miss details.',
         files: facts.flat() });
 }
-/** Reserve exact paths/framing, then budget worst-case JSON escaping (six bytes/code unit). */
+/** Reserve exact paths/framing, then budget worst-case JSON escaping (six bytes/code point). */
 function progressPartitionFactLimit(baseSha, headSha, partitions, budget = exports.MAX_PROGRESS_AGGREGATE_BYTES) {
     const empty = partitions.map(partition => partition.paths.map(path => ({ path, implemented: '', remaining: '' })));
     const count = empty.reduce((sum, files) => sum + files.length, 0);

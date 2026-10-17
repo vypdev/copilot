@@ -1768,7 +1768,7 @@ manifest MUST fit 256,000 UTF-8 bytes. Model-derived facts have a separate maxim
 384,000-byte budget, further reduced by the exact final issue/prompt envelope
 inside the unchanged 524,288-byte runtime ceiling. Before any model request,
 progress analysis reserves every path and JSON framing and derives one prose-length limit
-(up to 600 UTF-16 code units per fact) using worst-case six-byte JSON escaping.
+(up to 600 Unicode code points per fact) using worst-case six-byte JSON escaping per code point.
 The provider schema and parser enforce this same limit. Facts are requested
 concisely, never truncated after receipt; every path remains in the final data.
 The aggregate contains compact partition IDs/counts rather than duplicating all
@@ -1893,3 +1893,14 @@ remain intact, and the final replay above 256,000 bytes stays inside 512 KiB.
 Existing pure 100% and orchestration coverage
 budgets, full validation and current-head native review remain required. User
 branch-management documentation states the separate model-facts budget.
+
+
+### Unicode fact-bound agreement (2026-10-17)
+
+JSON Schema `maxLength` and the response parser MUST both count Unicode code
+points, including supplementary characters. JavaScript UTF-16 string length is
+not the schema boundary. Worst-case JSON escaping remains six bytes per code
+point, so the aggregate arithmetic and fixed runtime/source limits are unchanged.
+Minimum **three additional pure cases** cover the 600-code-point supplementary
+boundary, 601-code-point rejection and the smaller calculated limit. No locale
+or user configuration changes are introduced; all pure coverage budgets remain.

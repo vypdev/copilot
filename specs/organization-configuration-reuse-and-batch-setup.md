@@ -800,3 +800,38 @@ reviewed target values with conflicting inventories, and an empty binding that
 cannot suppress review. The existing exhaustive pure-policy budget remains.
 The setup guide MUST explain that Project columns are selected for the target,
 not silently prefilled from organization defaults.
+
+
+### Final permission audit and retained-result recovery (2026-10-17)
+
+Ordinary single-repository terminal organization reuse MUST run the wizard's
+final configured Write-capability audit after plan confirmation and before
+installation. Its initial bootstrap remains read-only. Browser reuse keeps its
+existing deferred Apply audit, and batch planning remains preview-only because
+its reviewed per-target audit owns that boundary. Dry runs remain read-only.
+
+Batch preparation MUST require complete valid repository and organization Secret
+revision entries before questioning/rendering a target. Empty, missing, wrong-name,
+extra or invalid-timestamp metadata for a nonempty namespace blocks that target
+before approval; other ready targets continue. Projected selected-scope bindings
+carry the inspected shared revisions while their explicit grants remain pending;
+metadata projection is never proof that access already applies.
+
+A validated completed batch receipt MAY finish the outer journey without a new
+mutation. The batch result carries narrow retained-completion/effects evidence
+only after operation/plan matching. The coordinator advances the presentation to
+its result stage and the journey accepts that explicit proof; it does not call
+Apply or mark a new mutation. Partial retained effects remain partial. Prior
+management changes or an unproven fresh result cannot certify installation.
+Receipt schema and remote effects are unchanged. CLI completion exits zero and
+retains the exact existing PR; incomplete/partial outcomes retain their existing
+nonzero result. Both frontends share the same coordinator semantics.
+
+Minimum **22 additional distinct cases**: two terminal read/write-audit outcomes,
+one browser deferred-audit case, ten
+incomplete revision cases across repository/organization namespaces, two projected
+revision/pending-grant cases, four CLI retained/unproven/uncertain-cleanup outcomes, three journey/
+coordinator retained-result cases. Existing fresh-completion protections remain
+regression evidence and are not counted again. These supplement the three Unicode cases in
+the semantic-publication SDD; all budgets, full validation and native checks remain.
+Operator docs MUST distinguish completing a retained result from repeating writes.

@@ -34,6 +34,20 @@ function fixture() {
 }
 
 describe('read-only per-target preparation', () => {
+  it.each((['repository', 'organization'] as const).flatMap(scope => [
+    { kind: 'missing', revisions: undefined }, { kind: 'empty', revisions: [] },
+    { kind: 'wrong name', revisions: [{ name: 'OTHER', updatedAt: '2026-10-17T00:00:00Z' }] },
+    { kind: 'invalid timestamp', revisions: [{ name: 'PAT', updatedAt: 'invalid' }] },
+    { kind: 'extra entry', revisions: [{ name: 'PAT', updatedAt: '2026-10-17T00:00:00Z' }, { name: 'EXTRA', updatedAt: '2026-10-17T00:00:00Z' }] },
+  ].map(item => ({ scope, ...item }))))('blocks $scope Secret metadata: $kind before configuration or rendering', async ({ scope, revisions }) => {
+    const f = fixture();
+    f.ports.inventory.effective.mockResolvedValueOnce({ ...f.remote(f.targets[0]),
+      [`${scope}Secrets`]: ['PAT'], [`${scope}SecretRevisions`]: revisions });
+    const plan = await f.prepare.execute(f.request);
+    expect(plan.targets[0].blocked[0]).toContain('Secret revision metadata is incomplete');
+    expect(plan.targets[0].files).toEqual([]); expect(plan.targets[1].blocked).toEqual([]);
+    expect(f.ports.configure).toHaveBeenCalledTimes(1); expect(f.ports.renderer.render).toHaveBeenCalledTimes(1);
+  });
   it('blocks a changed existing repository Variable while allowing another target to continue', async () => {
     const f = fixture(); f.configuration.ai.bugbotCommentLimit = 19;
     f.ports.inventory.effective.mockResolvedValueOnce({ ...f.remote(f.targets[0]), repositoryVariables: [{ name: 'BUGBOT_COMMENT_LIMIT', value: '17' }] });
@@ -222,7 +236,8 @@ describe('shared CLI/web batch session', () => {
     f.save({ ...initial, targets: initial.targets.map(target => ({ ...target, status: 'partial', effects: ['access'] })) });
     const revision = '2026-10-17T14:01:00Z';
     f.shared[f.shared.length - 1] = { ...f.shared[f.shared.length - 1], updatedAt: revision, selectedRepositoryIds: [7, 8] };
-    f.inventory.effective.mockImplementation(async target => ({ ...f.remote(target), organizationSecrets: ['PAT'] }));
+    f.inventory.effective.mockImplementation(async target => ({ ...f.remote(target), organizationSecrets: ['PAT'],
+      organizationSecretRevisions: [{ name: 'PAT', updatedAt: revision }] }));
     f.ports.prepare.execute.mockImplementation(request => f.prepare.execute(request));
     f.ports.presentation.review.mockImplementation(async plan => {
       expect(plan.targets.every(target => target.sharedSnapshot.find(resource => resource.name === 'PAT')?.updatedAt === revision)).toBe(true);

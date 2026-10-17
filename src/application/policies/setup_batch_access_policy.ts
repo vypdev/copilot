@@ -9,7 +9,9 @@ export function projectSetupBatchSharedBindings(remote: SetupRemoteConfiguration
   const usable = resources.filter(resource => setupSharedResourceApplies(resource, target) || resource.visibility === 'selected');
   return { ...remote,
     organizationVariables: usable.filter(resource => resource.kind === 'variable' && resource.value !== undefined).map(resource => ({ name: resource.name, value: resource.value! })),
-    organizationSecrets: usable.filter(resource => resource.kind === 'secret').map(resource => resource.name) };
+    organizationSecrets: usable.filter(resource => resource.kind === 'secret').map(resource => resource.name),
+    organizationSecretRevisions: usable.filter(resource => resource.kind === 'secret')
+      .map(resource => ({ name: resource.name, updatedAt: resource.updatedAt })) };
 }
 export function planSetupBatchSharedAccess(configuration: SetupConfiguration, target: SetupBatchTarget,
   remote: SetupRemoteConfiguration, shared: readonly SetupBatchSharedResource[]) {
