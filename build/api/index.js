@@ -84,6 +84,7 @@ exports.PRODUCT_FACING_AGENT_TASKS = [
     'think',
     'answer-issue-help',
     'progress',
+    'progress-partition',
     'recommend-steps',
     'pull-request-description',
     'bugbot-review',
@@ -92,6 +93,7 @@ const PRODUCT_FACING_AGENT_SCHEMA_NAMES = Object.freeze({
     think: 'think_response',
     'answer-issue-help': 'answer_issue_help_response',
     progress: 'progress_response',
+    'progress-partition': 'progress_partition_facts',
     'recommend-steps': 'recommend_steps_response',
     'pull-request-description': 'pull_request_description_response',
     'bugbot-review': 'bugbot_findings',
@@ -5252,6 +5254,12 @@ exports.APPLICATION_ERROR_METADATA = {
         impact: 'The operation did not accept the supplied input.',
         action: 'Correct the input and retry.',
         retainedState: UNCHANGED_STATE,
+    },
+    'validation.evidence-too-large': {
+        kind: 'validation', retryable: false,
+        impact: 'Progress could not be assessed within the fixed evidence limits.',
+        action: 'Reduce the comparison size or split the work into smaller reviewed changes before running a new assessment.',
+        retainedState: 'Existing progress labels and published assessments were preserved.',
     },
     'workflow.invalid-event': {
         kind: 'workflow', retryable: false,

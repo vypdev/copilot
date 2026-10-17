@@ -256,7 +256,10 @@ when the setup PAT has `Actions: read` and `Checks: read`. Open the linked run
 and verify the job and its mandatory coverage step before confirming the
 producer attestation. A green check is not evidence of a coverage threshold.
 If no reliable candidates can be read, enter the exact tuple manually; the
-assistant does not guess an App ID. The coverage check selector only offers
+assistant does not guess an App ID. Exact check and workflow names may contain
+commas, including `Backend (format, detekt, test, assemble)`; commas inside an
+explicit `name|App ID|workflow` tuple are preserved. Separate multiple tuples
+with semicolons. The coverage check selector only offers
 checks you selected as trusted producers. `check` mode trusts a CI job that
 fails below your coverage budget; `numeric` mode additionally needs the
 `copilot-diff-coverage-v1` reporter artifact and explicit verification.
@@ -658,7 +661,7 @@ and roles:
 | `copilot_pull_request_review_state.yml` | Reconciles lifecycle labels from submitted, edited, or dismissed reviews in a fixed, isolated review-state check. |
 | `copilot_pull_request_approval.yml` | Optional trusted default-branch observer for evidence-gated native bot approvals; setup renders its exact CI producer names. |
 | `copilot_pull_request_merge_queue.yml` | Reports the existing `Copilot - Pull Request` required-check context for `merge_group` without adding a skipped merge job to normal PR runs. |
-| `copilot_commit.yml` | Runs the issue-centric push pipeline (all branches except main/develop by default): native issue state and size/progress. It also runs Bugbot when the branch has no open PR; otherwise the PR synchronization event owns review. |
+| `copilot_commit.yml` | Runs the issue-centric push pipeline (all branches except main/develop and the installer-owned `setup/copilot/` namespace by default): native issue state and size/progress. It also runs Bugbot when the branch has no open PR; otherwise the PR synchronization event owns review. |
 | `copilot_branch_sync.yml` | Lightweight push observer on all branches: detects parent/working drift and maintains a synchronization notice without loading Bugbot or an agent. |
 | `copilot_issue_comment.yml` | Runs on explicitly addressed issue comments: e.g. Think action (answer questions). |
 | `copilot_pull_request_comment.yml` | Runs on explicitly addressed PR review comments, including translation checks. |

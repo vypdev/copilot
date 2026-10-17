@@ -47,6 +47,16 @@ describe('pinned bounded progress diff', () => {
         const f = fixture(); Object.assign(f.file, { additions: 0, deletions: 0, patch: undefined });
         expect(JSON.parse((await f.read()).evidence).changes[0].patch).toBe('');
     });
+    it('admits a proven 299-file inventory while keeping the 300-file ceiling', async () => {
+        const f = fixture(); f.data.files = Array.from({ length: 299 }, (_, n) => ({ ...f.file, filename: `src/${n}.ts` }));
+        expect(JSON.parse((await f.read()).evidence).changes).toHaveLength(299);
+    });
+    it('partitions complete large provider evidence but preserves genuine transport errors', async () => {
+        const f = fixture(); f.data.files = ['a', 'b'].map(filename => ({ ...f.file, filename, patch: 'x'.repeat(150_000) }));
+        expect(await f.read()).toMatchObject({ kind: 'partitioned', partitions: expect.any(Array) });
+        const transport = new Error('private provider failure'); f.compareCommits.mockRejectedValue(transport);
+        await expect(f.read()).rejects.toBe(transport);
+    });
     it.each(['short', 'UPPERCASE'])('rejects %s object identity before provider access', async scenario => {
         const f = fixture(); await expect(f.read(scenario === 'short' ? 'abc123' : base.toUpperCase().replace(/a/gu, 'A'))).rejects.toMatchObject({ code: 'workflow.stale' });
         expect(f.getClient).not.toHaveBeenCalled();
@@ -63,7 +73,7 @@ describe('pinned bounded progress diff', () => {
         if (scenario === 'empty path') f.file.filename = '';
         if (scenario === 'non-string path') f.file.filename = 42 as never;
         if (scenario === 'oversized filename') f.file.filename = 'x'.repeat(1025);
-        await expect(f.read(base, scenario === 'same-object nonempty diff' ? base : head)).rejects.toMatchObject({ code: scenario === 'same-object nonempty diff' ? 'workflow.stale' : 'provider.unavailable' });
+        await expect(f.read(base, scenario === 'same-object nonempty diff' ? base : head)).rejects.toMatchObject({ code: scenario === 'same-object nonempty diff' ? 'workflow.stale' : scenario.startsWith('oversized') && scenario !== 'oversized filename' ? 'validation.evidence-too-large' : 'provider.unavailable' });
     });
     it.each([undefined, -1, 0.5])('rejects unproven numeric file facts %s', async additions => {
         const f = fixture(); Object.assign(f.file, { additions }); await expect(f.read()).rejects.toMatchObject({ code: 'provider.unavailable' });

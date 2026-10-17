@@ -801,6 +801,28 @@
         }
       ],
       "successMessage": "organization reuse and batch planning coverage: PASS (each pure policy 100% lines/statements/branches/functions)"
+    },
+    {
+      "name": "Complete multipart progress",
+      "missingEntryLabel": "complete multipart progress",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/progress_diff_partition_policy.ts",
+            "src/application/policies/progress_partition_response_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/actions/summarize_progress_diff_workflow.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "complete multipart progress coverage: PASS (pure policies 100%; bounded orchestration 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

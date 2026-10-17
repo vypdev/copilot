@@ -589,7 +589,7 @@ function parseAnswer(question: SetupQuestion, raw: string): { value: string | nu
   }
   if (question.id === 'pullRequestApproval.testChecks') {
     const entries = (input || String(question.defaultValue)).split(';').map(item => item.trim()).filter(Boolean)
-      .flatMap(item => item.split(',').map(value => value.trim()).filter(Boolean))
+      .flatMap(item => item.includes('|') ? [item] : item.split(',').map(value => value.trim()).filter(Boolean))
       .map(item => {
         const index = Number(item) - 1;
         const candidate = Number.isSafeInteger(index) && /^[1-9]\d*$/u.test(item) ? question.producerCandidates?.[index] : undefined;

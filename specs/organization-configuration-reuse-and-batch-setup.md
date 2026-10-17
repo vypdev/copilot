@@ -569,3 +569,35 @@ covering the exact names in both reviewed and current inventories. Two absent
 revision lists cannot establish freshness for nonempty Secret inventories.
 Regression cases cover missing, partial, wrong-name and invalid metadata, harmless
 ordering, rejected audits, durable resume, direct Apply and retained completed PRs.
+
+
+### Native limited-PAT acceptance correction (2026-10-17)
+
+A real preparation of `vypdev/copilot` and `vypdev/platform` authenticated and
+read the organization namespace successfully. Copilot imported 57 settings,
+retained 61 organization and seven repository Variables, and proposed only a
+repository `PR_APPROVAL_POLICY` serialization. Both targets preserve Secrets;
+this preparation is not a completed Apply or runtime verification.
+
+Platform's PAT intentionally lacks optional `Checks: read`; its existing
+recommendation policy can use manual producer identities. Native Backend and
+Frontend check names contain commas. The web helper rejected them and the
+questionnaire split explicit tuples on commas. Both surfaces MUST preserve
+commas inside exact `name|App ID|workflow` tuples. Comma-separated numeric
+observed selections remain compatible, semicolons separate exact tuples, and
+pipe/semicolon/newline constraints and eight-producer bounds remain. Existing
+producer attestation stays false; entering a tuple does not grant approval or
+certify coverage. All four web locales explain this boundary. Two new
+questionnaire cases cover actual Backend/Frontend identities and mixed legacy
+indices plus a comma-containing workflow; existing two web-helper rows now
+verify exact preservation. User setup docs explain the syntax.
+
+Installer PRs intentionally have no synthetic issue. Source and distributed
+issue-centric Commit workflows MUST exclude `setup/copilot/**` from their push
+subscription; normal PR review and repository CI remain enabled. A structural
+workflow validator and two directory cases reject removal of this exclusion.
+This is route ownership, not a successful progress assessment or a CI exemption.
+Native batch acceptance must still inspect the complete plans, execute Apply,
+verify exact prepared refs/receipts and PRs, and retain waiting-for-merge status
+until a human merges. No release, tag, deploy, shared-value replacement or
+runtime verification is implied by PR creation.

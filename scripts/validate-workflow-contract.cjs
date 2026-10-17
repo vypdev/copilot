@@ -1241,6 +1241,9 @@ function assertQueueWorkflow(file, workflow) {
   }
   const queueJob = workflow.jobs?.[manifest.jobId];
   if (!queueJob) throw new Error(`${relativeFile} must define queue job ${manifest.jobId}.`);
+  if (manifest.file === 'copilot_commit.yml' && !workflow.on?.push?.branches?.includes('!setup/copilot/**')) {
+    throw new Error(`${relativeFile} must exclude installer-owned setup/copilot branches from issue-centric push analysis.`);
+  }
   if (manifest.file === 'copilot_issue.yml' && !workflow.on?.issues?.types?.includes('closed')) {
     throw new Error(`${relativeFile} must subscribe to native closed issue events.`);
   }

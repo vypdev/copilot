@@ -104,6 +104,13 @@ const validWorkflow = {
 };
 
 describe('workflow contract validator', () => {
+  it.each(['.github/workflows', 'setup/workflows'])('excludes issue-less installer pushes from Commit in %s', directory => {
+    const { file, workflow } = loadMutationWorkflow(directory, 'copilot_commit.yml');
+    expect(() => validateWorkflow(file, workflow)).not.toThrow();
+    workflow.on.push.branches = workflow.on.push.branches.filter((branch: string) => branch !== '!setup/copilot/**');
+    expect(() => validateWorkflow(file, workflow)).toThrow('exclude installer-owned setup/copilot branches');
+  });
+
   it('keeps branch and SDD configuration consistent across issue, PR, review and push callbacks', () => {
     for (const directory of ['.github/workflows', 'setup/workflows']) {
       for (const fileName of ['copilot_issue.yml', 'copilot_issue_comment.yml', 'copilot_commit.yml',
