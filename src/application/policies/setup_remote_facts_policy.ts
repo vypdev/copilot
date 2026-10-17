@@ -11,7 +11,7 @@ export function sameSetupRemoteFacts(left: SetupRemoteConfiguration, right: Setu
     repositoryVisibility: facts.repositoryVisibility,
     repositorySecrets: [...facts.repositorySecrets].sort(),
     repositorySecretsAccess: facts.repositorySecretsAccess,
-    ...(facts.repositorySecretRevisions ? { repositorySecretRevisions: facts.repositorySecretRevisions.map(secret => JSON.stringify([secret.name, secret.updatedAt])).sort() } : {}),
+    secretRevisions: setupSecretRevisionSnapshot(facts),
     organizationSecrets: [...facts.organizationSecrets].sort(),
     organizationWorkflowPat: facts.organizationWorkflowPat,
     repositoryVariables: variables(facts.repositoryVariables),
@@ -33,4 +33,10 @@ export function unavailableSetupRemoteConfiguration(): SetupRemoteConfiguration 
     repositoryVariables: [], repositoryVariablesAccess: 'unavailable',
     organizationVariables: [], organizationVariablesAccess: 'unavailable',
     organizationAccess: 'unavailable', credentialHealthWorkflow: 'unavailable' };
+}
+
+/** Stable metadata only: a retained Secret rotation invalidates the reviewed snapshot. */
+export function setupSecretRevisionSnapshot(remote: SetupRemoteConfiguration): readonly unknown[] {
+  return [remote.repositorySecretRevisions, remote.organizationSecretRevisions]
+    .map(revisions => revisions?.map(secret => JSON.stringify([secret.name, secret.updatedAt])).sort());
 }

@@ -1,3 +1,4 @@
+import { setupSecretRevisionSnapshot } from '../../policies/setup_remote_facts_policy';
 import type {
     SetupConfiguration,
     SetupCredentialCollection,
@@ -186,7 +187,8 @@ function reuseSnapshot(remote: SetupRemoteConfiguration): string {
         remote.repositorySecretsAccess, remote.organizationSecretsAccess,
         [...remote.repositoryVariables].sort((a, b) => a.name.localeCompare(b.name)),
         [...remote.organizationVariables].sort((a, b) => a.name.localeCompare(b.name)),
-        [...remote.repositorySecrets].sort(), [...remote.organizationSecrets].sort(), remote.organizationWorkflowPat]);
+        [...remote.repositorySecrets].sort(), [...remote.organizationSecrets].sort(), remote.organizationWorkflowPat,
+        setupSecretRevisionSnapshot(remote)]);
 }
 
 /** Groups resources by their resolved storage target so each provider call is scoped explicitly. */

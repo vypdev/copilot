@@ -52,6 +52,8 @@ export class GithubActionsResourceInspector {
             repositorySecretsAccess: repositorySecretsResult.access,
             ...(repositorySecretsResult.revisions ? { repositorySecretRevisions: repositorySecretsResult.revisions } : {}),
             organizationSecrets: organizationSecretsResult.resources.map(resource => resource.name),
+            ...(organizationSecretsResult.resources.length > 0 && organizationSecretsResult.resources.every(secret => typeof secret.updated_at === 'string' && Number.isFinite(Date.parse(secret.updated_at)))
+                ? { organizationSecretRevisions: organizationSecretsResult.resources.map(secret => ({ name: secret.name, updatedAt: secret.updated_at! })) } : {}),
             ...(organizationWorkflowPat ? { organizationWorkflowPat } : {}),
             repositoryVariables: repositoryVariablesResult.resources,
             repositoryVariablesAccess: repositoryVariablesResult.access,

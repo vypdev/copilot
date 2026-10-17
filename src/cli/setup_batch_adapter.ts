@@ -82,11 +82,11 @@ export async function executeSetupBatch(input: BatchInput) {
       logInfo('Select 1–25 repositories by ID. Discovery shows only repositories this PAT can access; there is no implicit all-repositories selection.');
       if (view.discoveryStatus === 'unavailable' || view.truncated || view.message) logInfo('Discovery is limited or needs attention. Use name:<repository> to inspect an exact name, or access to replace the temporary PAT.');
       view.candidates.forEach(candidate => logInfo(`  ${candidate.id} — ${candidate.name}${candidate.unavailable ? ` (${candidate.unavailable})` : ''}`));
-      const value = await readText(`Selected: ${view.selectedIds.join(', ') || 'none'}. Enter IDs, name:<repository>, access, or cancel: `);
+      const value = await readText(`Selected: ${view.selectedIds.join(', ') || 'none'}. Enter IDs, confirm to keep this selection, name:<repository>, access, or cancel: `);
       if (value === 'cancel') return undefined;
       if (value === 'access') return JSON.stringify({ action: 'access', selectedIds: view.selectedIds });
       if (value.startsWith('name:')) return JSON.stringify({ action: 'resolve', selectedIds: view.selectedIds, name: value.slice(5).trim() });
-      const ids = value ? value.split(',').map(id => Number(id.trim())) : view.selectedIds;
+      const ids = value === 'confirm' ? view.selectedIds : value ? value.split(',').map(id => Number(id.trim())) : [];
       return JSON.stringify({ action: 'select', selectedIds: ids });
     },
     requestToken: async repositories => {

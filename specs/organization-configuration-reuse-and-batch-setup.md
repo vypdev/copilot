@@ -497,9 +497,9 @@ its 14 previously open items; this feature does not close unrelated evidence.
 
 ### Final local gates
 
-The final local suite passes **657 suites / 9,842 tests** (35 pre-existing
-skips). Coverage is **97.28% lines, 96.11% statements, 96.87% functions and
-92.9% branches**. All eight new pure decision modules pass 100% on all four
+The final local suite passes **657 suites / 9,848 tests** (35 pre-existing
+skips). Coverage is **97.38% lines, 96.23% statements, 97.01% functions and
+93.05% branches**. All eight new pure decision modules pass 100% on all four
 metrics through the executable budget. Build, package smoke, TypeScript,
 Svelte, lint, documentation, workflow, architecture and specification gates
 pass. Multi-platform PR CI and maintainer review remain required before merge;
@@ -520,3 +520,12 @@ Preparation establishes the selected development branch before rendering/apply;
 missing and unreadable branches remain distinct per-target blockers. Fresh
 write preflight checks it again. The installer creates only its reviewed setup
 ref and never invents a development ref or initial revision.
+
+### Automatic-review follow-up
+
+The single-checkout reuse preflight compares both repository and inherited
+organization Secret revision metadata in addition to names/access. Same-name
+rotations or lost revision evidence block Apply; ordering does not. The terminal
+selector requires entered IDs or the explicit `confirm` action for the displayed
+selection; a blank answer remains in selection. Regression tests exercise both
+actual presentation paths and metadata drift without credential values.

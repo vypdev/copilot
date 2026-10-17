@@ -51759,6 +51759,7 @@ function validateQuickSetting(id, raw) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.sameSetupRemoteFacts = sameSetupRemoteFacts;
 exports.unavailableSetupRemoteConfiguration = unavailableSetupRemoteConfiguration;
+exports.setupSecretRevisionSnapshot = setupSecretRevisionSnapshot;
 /** Compare the semantic GitHub facts used by setup, not object/response ordering. */
 function sameSetupRemoteFacts(left, right) {
     const variables = (items) => items
@@ -51770,7 +51771,7 @@ function sameSetupRemoteFacts(left, right) {
         repositoryVisibility: facts.repositoryVisibility,
         repositorySecrets: [...facts.repositorySecrets].sort(),
         repositorySecretsAccess: facts.repositorySecretsAccess,
-        ...(facts.repositorySecretRevisions ? { repositorySecretRevisions: facts.repositorySecretRevisions.map(secret => JSON.stringify([secret.name, secret.updatedAt])).sort() } : {}),
+        secretRevisions: setupSecretRevisionSnapshot(facts),
         organizationSecrets: [...facts.organizationSecrets].sort(),
         organizationWorkflowPat: facts.organizationWorkflowPat,
         repositoryVariables: variables(facts.repositoryVariables),
@@ -51791,6 +51792,11 @@ function unavailableSetupRemoteConfiguration() {
         repositoryVariables: [], repositoryVariablesAccess: 'unavailable',
         organizationVariables: [], organizationVariablesAccess: 'unavailable',
         organizationAccess: 'unavailable', credentialHealthWorkflow: 'unavailable' };
+}
+/** Stable metadata only: a retained Secret rotation invalidates the reviewed snapshot. */
+function setupSecretRevisionSnapshot(remote) {
+    return [remote.repositorySecretRevisions, remote.organizationSecretRevisions]
+        .map(revisions => revisions?.map(secret => JSON.stringify([secret.name, secret.updatedAt])).sort());
 }
 
 
@@ -55900,6 +55906,7 @@ exports.ensureRepositoryVariables = ensureRepositoryVariables;
 exports.ensureRepositorySecrets = ensureRepositorySecrets;
 exports.resolveRemoteConfiguration = resolveRemoteConfiguration;
 exports.groupSetupResources = groupSetupResources;
+const setup_remote_facts_policy_1 = __nccwpck_require__(92567);
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
@@ -56024,7 +56031,8 @@ function reuseSnapshot(remote) {
         remote.repositorySecretsAccess, remote.organizationSecretsAccess,
         [...remote.repositoryVariables].sort((a, b) => a.name.localeCompare(b.name)),
         [...remote.organizationVariables].sort((a, b) => a.name.localeCompare(b.name)),
-        [...remote.repositorySecrets].sort(), [...remote.organizationSecrets].sort(), remote.organizationWorkflowPat]);
+        [...remote.repositorySecrets].sort(), [...remote.organizationSecrets].sort(), remote.organizationWorkflowPat,
+        (0, setup_remote_facts_policy_1.setupSecretRevisionSnapshot)(remote)]);
 }
 /** Groups resources by their resolved storage target so each provider call is scoped explicitly. */
 function groupSetupResources(resources, kind, configuration, remoteConfiguration) {
@@ -73478,14 +73486,14 @@ async function executeSetupBatch(input) {
             if (view.discoveryStatus === 'unavailable' || view.truncated || view.message)
                 (0, logger_1.logInfo)('Discovery is limited or needs attention. Use name:<repository> to inspect an exact name, or access to replace the temporary PAT.');
             view.candidates.forEach(candidate => (0, logger_1.logInfo)(`  ${candidate.id} — ${candidate.name}${candidate.unavailable ? ` (${candidate.unavailable})` : ''}`));
-            const value = await readText(`Selected: ${view.selectedIds.join(', ') || 'none'}. Enter IDs, name:<repository>, access, or cancel: `);
+            const value = await readText(`Selected: ${view.selectedIds.join(', ') || 'none'}. Enter IDs, confirm to keep this selection, name:<repository>, access, or cancel: `);
             if (value === 'cancel')
                 return undefined;
             if (value === 'access')
                 return JSON.stringify({ action: 'access', selectedIds: view.selectedIds });
             if (value.startsWith('name:'))
                 return JSON.stringify({ action: 'resolve', selectedIds: view.selectedIds, name: value.slice(5).trim() });
-            const ids = value ? value.split(',').map(id => Number(id.trim())) : view.selectedIds;
+            const ids = value === 'confirm' ? view.selectedIds : value ? value.split(',').map(id => Number(id.trim())) : [];
             return JSON.stringify({ action: 'select', selectedIds: ids });
         },
         requestToken: async (repositories) => {
@@ -82464,6 +82472,8 @@ class GithubActionsResourceInspector {
             repositorySecretsAccess: repositorySecretsResult.access,
             ...(repositorySecretsResult.revisions ? { repositorySecretRevisions: repositorySecretsResult.revisions } : {}),
             organizationSecrets: organizationSecretsResult.resources.map(resource => resource.name),
+            ...(organizationSecretsResult.resources.length > 0 && organizationSecretsResult.resources.every(secret => typeof secret.updated_at === 'string' && Number.isFinite(Date.parse(secret.updated_at)))
+                ? { organizationSecretRevisions: organizationSecretsResult.resources.map(secret => ({ name: secret.name, updatedAt: secret.updated_at })) } : {}),
             ...(organizationWorkflowPat ? { organizationWorkflowPat } : {}),
             repositoryVariables: repositoryVariablesResult.resources,
             repositoryVariablesAccess: repositoryVariablesResult.access,

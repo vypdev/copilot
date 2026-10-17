@@ -90,4 +90,29 @@ describe('real batch entrypoint composition with deterministic provider ports', 
     const result = await executeSetupBatch(f.input); expect(result.outcome).toBe('partial'); expect(f.writer.pullRequest).not.toHaveBeenCalled();
     expect(f.bridge.snapshot().permissions?.report?.checks[0].cleanupPending).toBe(true);
   });
+  it('requires IDs or explicit confirmation in the terminal and ignores an untouched blank selection', async () => {
+    const f = fixture(); let selections = 0; let questions = 0;
+    const readText = jest.fn(async (prompt: string) => {
+      if (++questions > 200) throw new Error('Unexpected questionnaire loop');
+      if (prompt.startsWith('Selected:')) return { kind: 'value' as const, value: ++selections === 1 ? '' : 'confirm' };
+      return { kind: 'value' as const, value: prompt.startsWith('Use this configuration') ? 'yes' : prompt.startsWith('Apply the ready plans?') ? 'apply' : '' };
+    });
+    const terminal = { isInteractive: () => true, readText, readSecret: jest.fn(), close: jest.fn() };
+    const result = await executeSetupBatch({ ...f.input, bridge: undefined, terminal });
+    expect(selections).toBe(2); expect(result.operation.targets.map(target => target.repositoryId)).toEqual([7]);
+    expect(f.writer.pullRequest).toHaveBeenCalledTimes(1);
+  });
+  it('supports explicit terminal IDs, an exact-name lookup and one reviewed partial retry', async () => {
+    const f = fixture(); f.writer.branch.mockRejectedValueOnce(new Error('response uncertain')); let selections = 0;
+    const readText = jest.fn(async (prompt: string) => {
+      if (prompt.startsWith('Selected:')) return { kind: 'value' as const, value: ++selections === 1 ? 'name:repo-8' : '7,8' };
+      const value = prompt.startsWith('Use this configuration') ? 'yes' : prompt.startsWith('Apply the ready plans?') ? 'apply'
+        : prompt.startsWith('Inspect existing effects') ? 'retry' : '';
+      return { kind: 'value' as const, value };
+    });
+    const terminal = { isInteractive: () => true, readText, readSecret: jest.fn(), close: jest.fn() };
+    expect((await executeSetupBatch({ ...f.input, bridge: undefined, terminal })).outcome).toBe('complete');
+    expect(f.writer.pullRequest).toHaveBeenCalledTimes(2); expect(f.writer.branch).toHaveBeenCalledTimes(3);
+  });
+
 });

@@ -219,6 +219,7 @@ export interface SetupRemoteConfiguration {
     repositorySecretRevisions?: readonly { readonly name: string; readonly updatedAt: string }[];
     repositorySecretsAccess: 'available' | 'unavailable' | 'unknown';
     organizationSecrets: readonly string[];
+    organizationSecretRevisions?: readonly { readonly name: string; readonly updatedAt: string }[];
     /** Organization namespace PAT metadata, including a Secret not yet shared with this repository. */
     organizationWorkflowPat?: 'present' | 'absent' | 'unavailable';
     repositoryVariables: readonly SetupVariable[];

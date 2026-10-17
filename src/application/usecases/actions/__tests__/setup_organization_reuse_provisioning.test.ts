@@ -63,6 +63,23 @@ describe('organization reuse provisioning boundary', () => {
     expect(await resolveRemoteConfiguration(f.context, f.dependencies, f.configuration, errors)).toBeUndefined();
     expect(errors).toEqual([expect.stringContaining('changed after review')]);
   });
+  it.each(['repositorySecretRevisions', 'organizationSecretRevisions'] as const)('blocks a same-name retained %s rotation before Apply', async field => {
+    const f = fixture(); const errors: string[] = [];
+    f.remote[field] = [{ name: 'PAT', updatedAt: '2026-10-17T00:00:00Z' }];
+    const fresh = { ...f.remote, [field]: [{ name: 'PAT', updatedAt: '2026-10-17T00:01:00Z' }] };
+    f.dependencies.setupRemoteConfigurationReadPort.inspect.mockResolvedValue(fresh);
+    expect(await resolveRemoteConfiguration(f.context, f.dependencies, f.configuration, errors)).toBeUndefined();
+    expect(errors).toEqual([expect.stringContaining('changed after review')]);
+    for (const writer of [f.upsert, f.scoped, f.secrets, f.scopedSecrets]) expect(writer).not.toHaveBeenCalled();
+  });
+  it('keeps Secret metadata ordering stable without hiding a lost revision', async () => {
+    const f = fixture(); const errors: string[] = [];
+    f.remote.organizationSecretRevisions = [{ name: 'PAT', updatedAt: '2026-10-17T00:00:00Z' }, { name: 'OTHER', updatedAt: '2026-10-17T00:00:00Z' }];
+    f.dependencies.setupRemoteConfigurationReadPort.inspect.mockResolvedValue({ ...f.remote, organizationSecretRevisions: [...f.remote.organizationSecretRevisions].reverse() });
+    expect(await resolveRemoteConfiguration(f.context, f.dependencies, f.configuration, errors)).toBeDefined();
+    f.dependencies.setupRemoteConfigurationReadPort.inspect.mockResolvedValue({ ...f.remote, organizationSecretRevisions: undefined });
+    expect(await resolveRemoteConfiguration(f.context, f.dependencies, f.configuration, errors)).toBeUndefined();
+  });
   it('blocks missing reader or failed reinspection without exposing provider details', async () => {
     const f = fixture(); const missing: string[] = []; const failed: string[] = [];
     expect(await resolveRemoteConfiguration(f.context, {}, f.configuration, missing)).toBeUndefined();
