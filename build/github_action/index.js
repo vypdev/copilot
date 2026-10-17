@@ -39628,13 +39628,12 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildCodexExecutionPolicy = buildCodexExecutionPolicy;
 const agent_execution_plan_1 = __nccwpck_require__(12253);
 const provider_execution_policy_1 = __nccwpck_require__(50480);
-const strict_output_schema_policy_1 = __nccwpck_require__(56743);
+const codex_output_schema_policy_1 = __nccwpck_require__(71503);
 function buildCodexExecutionPolicy(input) {
     const { configuration } = input;
     if (configuration.provider !== 'codex')
         throw new Error('Codex policy requires Codex configuration.');
-    if (input.outputSchema)
-        (0, strict_output_schema_policy_1.assertStrictOutputSchema)(input.outputSchema);
+    const nativeSchema = input.outputSchema ? (0, codex_output_schema_policy_1.projectCodexOutputSchema)(input.outputSchema) : undefined;
     const workspaceMode = (0, agent_execution_plan_1.workspaceModeForCapability)(input.capability);
     const outputSchemaPath = input.outputSchema
         ? (0, provider_execution_policy_1.managedArtifactPath)(input.runtimeDirectory, 'response.schema.json')
@@ -39642,7 +39641,7 @@ function buildCodexExecutionPolicy(input) {
     const moduleCache = (0, provider_execution_policy_1.managedArtifactPath)(input.runtimeDirectory, 'shell/local/powershell-module-analysis.cache');
     const artifacts = outputSchemaPath ? [{
             path: outputSchemaPath,
-            contents: JSON.stringify(input.outputSchema),
+            contents: JSON.stringify(nativeSchema),
             purpose: 'output-schema',
         }] : [];
     const argv = [
@@ -39693,6 +39692,38 @@ function buildCodexExecutionPolicy(input) {
 }
 function tomlString(value) {
     return JSON.stringify(value);
+}
+
+
+/***/ }),
+
+/***/ 71503:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectCodexOutputSchema = projectCodexOutputSchema;
+const strict_output_schema_policy_1 = __nccwpck_require__(56743);
+/** Keep string-size acceptance local; Codex's native decoder receives the compatible closed shape. */
+function projectCodexOutputSchema(schema) {
+    (0, strict_output_schema_policy_1.assertStrictOutputSchema)(schema);
+    return projectNode(schema);
+}
+function projectNode(schema) {
+    const projected = { ...schema };
+    const types = typeof schema.type === 'string' ? [schema.type] : schema.type;
+    if (types.includes('string')) {
+        delete projected.minLength;
+        delete projected.maxLength;
+    }
+    if (types.includes('object')) {
+        projected.properties = Object.fromEntries(Object.entries(schema.properties)
+            .map(([name, nested]) => [name, projectNode(nested)]));
+    }
+    if (types.includes('array'))
+        projected.items = projectNode(schema.items);
+    return projected;
 }
 
 
@@ -47360,7 +47391,7 @@ Do not add the \`${profile.deployment.launcherLabel}\` label, dispatch a deploym
 
 Never expose credentials, tokens, private keys, or other secrets in issues, commits, pull requests, logs, or diagnostic comments.
 
-For the full contributor flow, read [repository collaboration](../docs/agents/repository-collaboration.mdx). For drift and recovery, read [guidance troubleshooting](../docs/agents/repository-guidance-troubleshooting.mdx).
+For the full contributor flow, read [repository collaboration](https://github.com/vypdev/copilot/blob/master/docs/agents/repository-collaboration.mdx). For drift and recovery, read [guidance troubleshooting](https://github.com/vypdev/copilot/blob/master/docs/agents/repository-guidance-troubleshooting.mdx).
 `;
 }
 function renderRepositoryAgentSkill() {
@@ -57354,6 +57385,7 @@ const agent_response_length_failure_1 = __nccwpck_require__(28528);
 /** Size and typed format failures share one regeneration; the writer still validates every candidate. */
 async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
     const maximum = plan.action === 'update' ? pre_branch_sdd_1.SDD_MAX_UPDATE_CHARACTERS : pre_branch_sdd_1.SDD_MAX_DRAFT_CHARACTERS;
+    const target = Math.min(10000, Math.floor(maximum / 3));
     const schema = {
         type: 'object',
         properties: { markdown: { type: 'string', minLength: pre_branch_sdd_1.SDD_MIN_DRAFT_CHARACTERS, maxLength: maximum } },
@@ -57361,7 +57393,7 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
     };
     let problem = 'size';
     let formatReason = 'required-heading';
-    const contractPrompt = `${prompt}\n\nDraft contract: keep the complete draft within ${maximum} characters; aim for ${Math.floor(maximum * 2 / 3)} characters. Preserve the same owner, decisions and requirements. Include these literal canonical heading prefixes as Markdown headings, with the shown capitalization:\n${pre_branch_sdd_1.SDD_REQUIRED_HEADINGS.join('\n')}\nUse the canonical numeric test-budget table in section 14: Area | Minimum distinct cases | Behaviors/risks covered. Every allocation and the Total must be a positive integer, and the Total must equal the sum of the allocations. A justified positive integer sentence of distinct tests or cases is also accepted. Return only the required JSON.`;
+    const contractPrompt = `${prompt}\n\nDraft contract: keep the complete draft within ${maximum} characters; aim for ${target} characters. Preserve the same owner, decisions and requirements. Include these literal canonical heading prefixes as Markdown headings, with the shown capitalization:\n${pre_branch_sdd_1.SDD_REQUIRED_HEADINGS.join('\n')}\nUse the canonical numeric test-budget table in section 14: Area | Minimum distinct cases | Behaviors/risks covered. Every allocation and the Total must be a positive integer, and the Total must equal the sum of the allocations. A justified positive integer sentence of distinct tests or cases is also accepted. Return only the required JSON.`;
     for (let attempt = 0; attempt < 2; attempt++) {
         let value;
         try {
@@ -69610,6 +69642,7 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject, onToo
     const stdoutChunks = [];
     let stderrBytes = 0;
     const stderrChunks = [];
+    let stderrTail = Buffer.alloc(0);
     let outputBytes = 0;
     let settled = false;
     let terminationError;
@@ -69675,6 +69708,9 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject, onToo
             stderrChunks.push(retained);
             stderrBytes += retained.byteLength;
         }
+        const retainedTail = chunk.subarray(-MAX_STDERR_BYTES);
+        const previousTail = stderrTail.subarray(Math.max(0, stderrTail.length + retainedTail.length - MAX_STDERR_BYTES));
+        stderrTail = Buffer.concat([previousTail, retainedTail]);
     };
     const onStdinError = () => beginTermination(new agent_cli_contracts_1.AgentCliError('Unable to send the prompt to the agent CLI.', 'process'));
     const onError = () => finishReject(new agent_cli_contracts_1.AgentCliError('Unable to start agent CLI.', 'process'));
@@ -69685,8 +69721,11 @@ function createAgentProcessLifecycle(child, plan, signal, resolve, reject, onToo
         }
         if (code !== 0) {
             const diagnostic = stderrBytes > 0 ? ' Diagnostic output was suppressed for safety.' : '';
+            const terminalDiagnostic = (0, agent_cli_exit_diagnostic_1.classifyAgentCliExitDiagnostic)(stderrTail.toString('utf8'));
             const exitDiagnostic = stderrBytes > 0
-                ? (0, agent_cli_exit_diagnostic_1.classifyAgentCliExitDiagnostic)(Buffer.concat(stderrChunks).toString('utf8'))
+                ? terminalDiagnostic === 'unclassified'
+                    ? (0, agent_cli_exit_diagnostic_1.classifyAgentCliExitDiagnostic)(Buffer.concat(stderrChunks).toString('utf8'))
+                    : terminalDiagnostic
                 : undefined;
             finishReject(new agent_cli_contracts_1.AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75, code ?? undefined, exitDiagnostic));
             return;
@@ -69876,6 +69915,9 @@ function classifyAgentCliToolDiagnostic(stderr) {
 }
 /** Provider stderr is untrusted and may contain credentials. Return a fixed code only. */
 function classifyAgentCliExitDiagnostic(stderr) {
+    if (/^ERROR: Incomplete response returned, reason: max_output_tokens\r?$/mu.test(stderr)) {
+        return 'reported-output-token-limit';
+    }
     const toolDiagnostic = classifyAgentCliToolDiagnostic(stderr);
     if (toolDiagnostic)
         return toolDiagnostic;

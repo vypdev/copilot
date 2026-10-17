@@ -707,7 +707,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-13",
+      "lastVerified": "2026-10-17",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
@@ -903,7 +903,9 @@
         "src/data/repository/github/__tests__/runtime_doctor_repository.test.ts",
         "src/infrastructure/composition/__tests__/github_runtime_doctor_composition_root.test.ts",
         "src/application/policies/__tests__/runtime_doctor_agent_activity.test.ts",
-        "src/application/policies/__tests__/doctor_workflow_matrix_policy.test.ts"
+        "src/application/policies/__tests__/doctor_workflow_matrix_policy.test.ts",
+        "src/application/policies/__tests__/setup_approval_operator_permissions.test.ts",
+        "src/application/usecases/setup/__tests__/audit_configured_setup_pat_use_case.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -1279,7 +1281,7 @@
       "status": "implemented",
       "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-14",
+      "lastVerified": "2026-10-17",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
         "specs/pre-branch-sdd-gate.md",
@@ -1909,7 +1911,7 @@
       "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-14",
+      "lastVerified": "2026-10-17",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"
@@ -1939,6 +1941,7 @@
         "src/application/policies/setup_configuration_plan.ts",
         "src/application/policies/agent_execution/agent_execution_policy_dispatcher.ts",
         "src/application/policies/agent_execution/codex_execution_plan_policy.ts",
+        "src/application/policies/agent_execution/codex_output_schema_policy.ts",
         "src/application/policies/agent_execution/strict_output_schema_policy.ts",
         "src/application/policies/agent_response_schemas.ts",
         "src/application/usecases/actions/progress_response.ts",
@@ -1968,7 +1971,8 @@
         "src/infrastructure/untrusted_command_environment.ts",
         "scripts/diagnose-windows-powershell-startup.cjs",
         "scripts/diagnose-windows-sandbox-prerequisites.cjs",
-        "src/infrastructure/logging/logger_agent_execution_observer_adapter.ts"
+        "src/infrastructure/logging/logger_agent_execution_observer_adapter.ts",
+        "scripts/coverage-budgets.json"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
@@ -1980,6 +1984,7 @@
         "src/data/repository/__tests__/agent_cli_exit_diagnostic.test.ts",
         "src/data/repository/__tests__/agent_cli_provisioner.test.ts",
         "src/application/policies/__tests__/agent_execution_plan_policy.test.ts",
+        "src/application/policies/__tests__/codex_output_schema_policy.test.ts",
         "src/application/policies/__tests__/agent_response_schemas.test.ts",
         "src/application/policies/__tests__/strict_output_schema_policy.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/schema.test.ts",
@@ -2190,7 +2195,7 @@
       "status": "implemented",
       "scope": "Generate safe repository-local profiles, guidance, and a skill for agents contributing through configured issues, Action-managed branches, pull requests, and deployment boundaries",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-12",
+      "lastVerified": "2026-10-17",
       "specs": [
         "specs/repository-agent-collaboration-contract.md"
       ],
@@ -2257,7 +2262,7 @@
       "status": "proposed",
       "scope": "Specify and locally implement revision-bound, evidence-gated native bot approvals for eligible human pull requests, with safe setup defaults, read-only doctor checks, and explainable recovery",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-13",
+      "lastVerified": "2026-10-17",
       "specs": [
         "specs/guarded-pull-request-approval.md",
         "specs/guarded-pull-request-approval-setup-and-doctor.md",
@@ -2348,7 +2353,9 @@
         "src/application/usecases/__tests__/pull_request_readiness_security_integration.test.ts",
         "src/data/repository/pull_request/__tests__/pull_request_status_query_repository.test.ts",
         "src/infrastructure/composition/__tests__/pull_request_status_composition_root.test.ts",
-        "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts"
+        "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts",
+        "src/application/policies/__tests__/setup_approval_operator_permissions.test.ts",
+        "src/application/usecases/setup/__tests__/audit_configured_setup_pat_use_case.test.ts"
       ],
       "documentation": [
         "docs/authentication.mdx",

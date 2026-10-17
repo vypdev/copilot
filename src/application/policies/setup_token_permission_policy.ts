@@ -55,7 +55,7 @@ export function buildSetupPatPermissionRequirements(): SetupTokenPermissionRequi
         requirement({ role: 'setup', scope: 'repository', permission: 'Issues', level: 'write', applicability: 'conditional', condition: 'Issue workflows enabled', reason: 'Provision labels and issue resources.', probe: 'issues' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'write', applicability: 'conditional', condition: 'Credential health enabled', reason: 'Inspect and dispatch credential-health workflows.', probe: 'actions' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'read', idSuffix: 'read', applicability: 'conditional', condition: 'Pull-request approval enabled', reason: 'Inspect CI workflow runs and jobs for exact producer identities.', probe: 'actions' }),
-        requirement({ role: 'setup', scope: 'repository', permission: 'Checks', level: 'read', applicability: 'conditional', condition: 'Pull-request approval enabled', reason: 'Discover exact CI check and producer identities.', probe: 'checks' }),
+        requirement({ role: 'setup', scope: 'repository', permission: 'Checks', level: 'read', applicability: 'conditional', condition: 'Guarded pull-request approval enabled', reason: 'Discover exact CI check and producer identities for guarded approval.', probe: 'checks' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Administration', level: 'read', applicability: 'conditional', condition: 'Release, hotfix, or guarded approval enabled', reason: 'Inspect branch protection and rulesets.', probe: 'administration' }),
         requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write', applicability: 'conditional', condition: 'Temporary health workflow required', reason: 'Bootstrap a missing credential-health workflow.', probe: 'workflows' }),
         requirement({ role: 'setup', scope: 'organization', permission: 'Secrets', level: 'write', applicability: 'conditional', condition: 'Organization Secret storage selected', reason: 'Inspect and provision organization Actions Secrets.', probe: 'secrets' }),
@@ -198,7 +198,12 @@ function buildSetupPatRequirements(
         })] : []),
         ...(approvalEnabled ? [
             requirement({ role: 'setup', scope: 'repository', permission: 'Actions', level: 'read', reason: 'Inspect CI workflow runs and jobs for approval evidence.', probe: 'actions' }),
-            requirement({ role: 'setup', scope: 'repository', permission: 'Checks', level: 'read', reason: 'Discover exact CI check and producer identities.', probe: 'checks' }),
+        ] : []),
+        // Recommendation installs can use explicitly selected producer tuples
+        // while discovery remains unverified. Fine-grained operator PATs cannot
+        // call the Checks API; guarded setup and the runtime bot still need it.
+        ...(guardedApproval ? [
+            requirement({ role: 'setup', scope: 'repository', permission: 'Checks', level: 'read', reason: 'Discover exact CI check and producer identities for guarded approval.', probe: 'checks' }),
         ] : []),
         ...(needsCredentialHealthBootstrap || needsBotActionsFixture ? [
             requirement({ role: 'setup', scope: 'repository', permission: 'Workflows', level: 'write',

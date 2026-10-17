@@ -4,12 +4,12 @@ import {
     type ProviderExecutionPolicy,
     type ProviderExecutionPolicyInput,
 } from './provider_execution_policy';
-import { assertStrictOutputSchema } from './strict_output_schema_policy';
+import { projectCodexOutputSchema } from './codex_output_schema_policy';
 
 export function buildCodexExecutionPolicy(input: ProviderExecutionPolicyInput): ProviderExecutionPolicy {
     const { configuration } = input;
     if (configuration.provider !== 'codex') throw new Error('Codex policy requires Codex configuration.');
-    if (input.outputSchema) assertStrictOutputSchema(input.outputSchema);
+    const nativeSchema = input.outputSchema ? projectCodexOutputSchema(input.outputSchema) : undefined;
     const workspaceMode = workspaceModeForCapability(input.capability);
     const outputSchemaPath = input.outputSchema
         ? managedArtifactPath(input.runtimeDirectory, 'response.schema.json')
@@ -17,7 +17,7 @@ export function buildCodexExecutionPolicy(input: ProviderExecutionPolicyInput): 
     const moduleCache = managedArtifactPath(input.runtimeDirectory, 'shell/local/powershell-module-analysis.cache');
     const artifacts = outputSchemaPath ? [{
         path: outputSchemaPath,
-        contents: JSON.stringify(input.outputSchema),
+        contents: JSON.stringify(nativeSchema),
         purpose: 'output-schema' as const,
     }] : [];
     const argv = [

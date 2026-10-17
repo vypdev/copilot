@@ -6,7 +6,7 @@
 - Last verified: not applicable; setup/runtime permission parity inspected 2026-10-11 after live recommendation policy-read failure
 - Owners: Copilot product and engineering maintainers
 - Scope: install, validate, diagnose, document, and safely roll back the guarded approval policy defined in [the runtime SDD](./guarded-pull-request-approval.md).
-- Related issues/PRs: none linked; this is the configuration/operations companion to the runtime SDD.
+- Related issues/PRs: [#536](https://github.com/vypdev/copilot/issues/536), recommendation setup with a fine-grained operator PAT; this is the configuration/operations companion to the runtime SDD.
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none on the default; recommendation-only is the first-install choice and guarded approval requires explicit operator attestation.
 
@@ -122,6 +122,28 @@ legacy commit statuses as test producers; do not propose them as selectable
 equivalents. Private-repository discovery may require conditional setup PAT
 `Checks: read` and `Actions: read`, disclosed before PAT creation; refusal
 keeps the manual path without falsely identifying an App.
+
+The temporary **setup PAT** MUST NOT require Checks access for `recommend`
+installation. Dogfooding [#536](https://github.com/vypdev/copilot/issues/536)
+confirmed a 403 and no selectable Checks permission in GitHub's fine-grained
+PAT form, consistent with its [documented limitations](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#fine-grained-personal-access-tokens-limitations).
+The intent link and final permission audit MUST permit the manual exact-producer
+path with Actions read, preserving unverified discovery/readiness diagnostics.
+Guarded setup MUST still require Checks read; the runtime bot's evidence grants
+in both active modes remain unchanged. No new setting or stored schema is added.
+The pure permission policy owns this distinction; the final audit continues to
+block missing required grants and never accepts a manual permission bypass.
+
+```text
+recommend + exact producer input -> operator audit without Checks
+-> plan with unverified producer/readiness facts -> recommendation-only install
+guarded + missing Checks -> blocked before installation -> use a compatible credential
+```
+
+Text equivalent: recommendation setup may install the reviewed exact producer
+configuration without claiming discovery or native approval readiness; guarded
+setup remains blocked when its Checks capability is unavailable. Runtime
+evidence, branch rules, attestations and approval authorization are unchanged.
 
 The setup plan MUST display, in order: configured mode; PR scope and fixed exclusions; selected test/coverage producer names and source IDs; Bugbot review floor and path exclusions; effective branch-rule/stale-dismissal readiness for each selected target; workflow files and event names; runtime PAT identity/permission status; Secret/Variable names only; and a one-line outcome (`can approve after installation`, `installed but recommendation only`, or `setup blocked`). `--dry-run` performs no writes and needs no token for local-only preview, marking remote facts `unverified` rather than passing them. `--non-interactive --yes` approves only the complete plan and cannot choose an ambiguous producer or credential.
 
@@ -349,6 +371,16 @@ Setup records a policy digest, selected resource names, producer identities, eff
 
 The minimum **87 distinct setup/doctor cases** is derived from config safety, generated workflow privileges, secret identity, partial multi-resource installation, and diagnosis drift. Five additional recommendation-mode cases cover approval-only grants, repository evidence reads, selected organization capabilities, a per-variable scope override, and a preserved inherited policy. It does not double-count the runtime SDD's 116 cases; the combined implementation floor is **203**.
 
+Incremental budget for #536: **8 distinct regression cases**, comprising six
+pure-policy cases (`off`, `recommend`, `guarded` for intent URLs and final grants)
+and two application audit cases replaying an operator PAT with unavailable
+Checks access. Recommendation succeeds; guarded remains blocked without a
+confirmation bypass. Existing runtime permission and localized permission-copy
+fixtures MUST continue to pass. Live evidence uses the one-day platform setup
+PAT and an explicit exact-producer configuration, records only sanitized
+capability outcomes, and distinguishes installation from default-branch/runtime
+readiness. Existing coverage thresholds remain in force.
+
 | Area | Minimum cases | Required risk cases |
 |---|---:|---|
 | Domain/defaults/codec/validation | 25 | every field/bound, absent/unknown version, invalid combinations, precedence, explicit vs default severity; recommend-mode permissions and scope parity |
@@ -392,6 +424,7 @@ Documentation must explain that `CI Check` and source App ID in examples are rep
 15. Given selected CI and Bugbot producer completions in either order, the observer is awakened after each, queries all current evidence, and can approve only after the final required fact; `check_run` is not relied upon.
 16. Given the approval Check is configured as required, setup and doctor report the dependency cycle and runtime posts no approval.
 17. Given recommend mode with other runtime routes disabled, setup requests the observer's evidence reads and assessment-card PR write, without Actions/Contents/Issues write. Repository policy remains repository-scoped; selected overrides and preserved inherited policy add only organization Variables read. Off mode does not request approval grants. Recommendation mode never submits a native approval.
+18. Given a fine-grained operator PAT without Checks API access and an explicitly selected valid producer tuple, recommendation setup's intent link and final audit do not request Checks; the plan retains unverified producer/readiness facts and no native approval is authorized. Guarded setup with that same missing capability is blocked. The stored bot PAT still needs all runtime evidence permissions in both active modes. Authentication documentation explains the supported manual path and compatible-credential recovery.
 
 ## 17. Requirements traceability
 

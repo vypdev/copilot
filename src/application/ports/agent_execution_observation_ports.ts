@@ -40,6 +40,7 @@ export type AgentExecutionExitDiagnostic =
     | 'reported-unsupported-option'
     | 'reported-unsupported-configuration'
     | 'reported-transport-or-rate-limit'
+    | 'reported-output-token-limit'
     | 'unclassified';
 
 /** Fixed local output rejection cause; never derived by interpolating provider bytes. */

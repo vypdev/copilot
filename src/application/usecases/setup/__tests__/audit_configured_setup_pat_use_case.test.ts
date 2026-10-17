@@ -33,6 +33,27 @@ function harness(options: { token?: string; guided?: boolean; assertedOwnerKind?
 describe('AuditConfiguredSetupPatUseCase', () => {
   const configuration = createDefaultSetupConfiguration();
 
+  test.each(['recommend', 'guarded'] as const)(
+    '%s setup audits an operator PAT without Checks access', async mode => {
+      const { ports, useCase } = harness({ token: 'test-token' });
+      const selected = { ...configuration, pullRequestApproval: { ...configuration.pullRequestApproval, mode } };
+      jest.spyOn(ports.permissions, 'inspect').mockImplementation(async request => ({
+        ...report,
+        checks: request.requirements.map(requirement => ({
+          ...requirement,
+          status: requirement.permission === 'Checks' ? 'missing' : 'verified',
+          message: requirement.permission === 'Checks' ? 'Fine-grained PAT cannot call Checks API.' : 'verified',
+        })),
+        ready: !request.requirements.some(requirement => requirement.permission === 'Checks'),
+      }));
+
+      expect(await useCase.audit(selected, remote)).toEqual(mode === 'recommend'
+        ? { status: 'accepted' }
+        : { status: 'blocked', errors: [expect.stringContaining('did not pass every capability check')] });
+      expect(ports.confirmUnverifiable).not.toHaveBeenCalled();
+    },
+  );
+
   test('reports final grants and audits the supplied PAT without mutations', async () => {
     const { ports, useCase } = harness({ token: 'test-token' });
     expect(await useCase.audit(configuration, remote)).toEqual({ status: 'accepted' });

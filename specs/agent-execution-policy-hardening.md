@@ -2,7 +2,7 @@
 
 - Status: Implemented — automated gates complete; controlled provider smoke remains external
 - Date: 2026-09-11
-- Last updated: 2026-10-12
+- Last updated: 2026-10-17
 - Catalog capability ID: `agent-runtime`
 - Last verified: 2026-09-12 in the P1-C implementation worktree
 - Owners: Copilot maintainers and security reviewers
@@ -414,6 +414,15 @@ array defines its item schema. Optional values are represented by a required
 nullable field, never by omitting the property. An incompatible schema is a
 local planning error and cannot reach the provider.
 
+The Codex policy projects that validated contract into a native-compatible
+schema by omitting only string `minLength`/`maxLength` at schema nodes, including
+nullable strings and strings nested in object properties or array items. It
+MUST preserve literal property names, required lists, closed objects, type/enum
+constraints and numeric/array bounds. It MUST NOT mutate the caller's original
+schema: every returned response still undergoes all original local acceptance
+checks. This is a fixed provider adaptation, not an application/SDD exception
+or configurable relaxation. OpenCode and Cursor policies remain unchanged.
+
 Controlled configuration sets web search disabled, multi-agent disabled,
 skill dependency installation disabled, history persistence none, workspace
 network false, no extra/temp writable roots, no login shell, no inherited secret
@@ -635,7 +644,7 @@ runtime identity and fixed-plan checks before spawn.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **32 distinct cases**; parameterized provider/role rows
+This SDD owns at least **48 distinct cases**; parameterized provider/role rows
 count separately only when authority/argv differs.
 
 | Area | Minimum cases | Required risks |
@@ -648,7 +657,9 @@ count separately only when authority/argv differs.
 | UX/sanitization | 1 | rejection/partial view without sensitive fields |
 | Integration/security | 2 | effective sandbox matrix and env/credential isolation |
 | Output rejection diagnostics | 8 | Six closed local causes, forged-diagnostic suppression, real-child observer propagation; existing size fixtures retain both stream assertions |
-| **Total** | **32** | no double counting |
+| Terminal process diagnostics | 8 | Exact output-token-limit line, prose/other-reason rejection, split/large/evicted tail cases, actual child privacy/cleanup, fixed logger propagation |
+| Codex native string-bound compatibility | 8 | Immutable input, nested/nullable strings, literal keyword property names, unchanged string constraints, numeric/array bounds, loose-schema rejection and real adapter minimum/maximum acceptance |
+| **Total** | **48** | no double counting |
 
 All provider plan, role authority, executable, and runtime-manifest policies require
 100% enumerated branch coverage. Changed process/provider modules require 95%
@@ -734,6 +745,37 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
       waiver, or unresolved provider decision remains.
 
 ## 20. References and decisions
+
+### Terminal provider output-limit diagnosis (2026-10-17)
+
+The controlled #541 reproduction of #538 ended with the official CLI's exact
+terminal line `ERROR: Incomplete response returned, reason: max_output_tokens`.
+The initial 8 KiB of stderr had been occupied by prompt content, concealing that
+diagnostic. On a nonzero exit the adapter MUST inspect a separate last-8-KiB
+window first, falling back to the existing first-8-KiB diagnostic when the tail
+is unclassified. Both windows are bounded; raw stderr remains unpublished.
+The exact terminal output-limit line maps only to the closed hint
+`reported-output-token-limit`. Bare prose mentioning the reason and another
+incomplete-response reason do not match. A hint cannot establish successful
+output, change authorization, widen process limits or grant an automatic retry.
+
+The existing 4-MiB combined output counter, 15-minute request ceiling, cleanup,
+failure identity and exit-75 retry rule remain mandatory. Successful CLI tool
+hints retain their existing first-8-KiB behavior. No new configuration or UI
+comment is introduced; the technical log shows
+`Agent execution failed (run/process, exit 1, reported-output-token-limit).`
+The normal failure card and retained-state semantics remain unchanged. Operator
+recovery is documented in the execution/failure policy and pre-branch SDD page.
+
+The same controlled request with its native string bounds omitted completed and
+passed the real local SDD/catalog writer. Native-compatible shape enforcement
+and full local acceptance therefore remain separate responsibilities. The
+official [Structured Outputs guide](https://developers.openai.com/api/docs/guides/structured-outputs)
+documents a provider-specific schema subset; the reproduction is the evidence
+for this adaptation, not a universal claim that length keywords always fail.
+See `codex_output_schema_policy.ts` and its eight risk-derived cases. The
+pre-branch gate continues to use its unchanged full application schema and
+publication proofs.
 
 - Parent: `architecture-quality-and-scalability-hardening.md`.
 - Baseline: `agent-runtime-provider-and-model-routing.md`.
