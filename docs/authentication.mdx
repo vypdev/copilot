@@ -154,9 +154,15 @@ reference](https://docs.github.com/en/rest/checks/runs#list-check-runs-for-a-git
 lists fine-grained PATs with `Checks: read`. The published [PAT URL-permission
 table](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#repository-permissions)
 does not list `checks`, although the form may currently accept `checks=read`.
-The guided setup and bot links include it when required, but you must inspect
-the final GitHub form and permission audit. If the form ignores that field,
-select `Checks: read` manually or use a compatible credential. Setup never
+Recommendation-only setup does not require Checks access on the temporary
+operator PAT. If check discovery is unavailable, enter the exact CI check,
+source App ID and workflow manually; producer evidence remains unverified
+until independently attested. This permits a fine-grained setup PAT without
+claiming native approval readiness. Guarded setup and the runtime bot in both
+active modes still require Checks access. Use a compatible credential for
+those roles if GitHub does not offer the permission; do not keep recreating
+fine-grained PATs to request an unavailable grant. The guided links include
+Checks when required, but the final API audit determines access. Setup never
 assumes that a prefilled URL proves API access. Existing command-line token flags also remain, but putting
 a PAT in a command can expose it in shell history or process listings.
 
