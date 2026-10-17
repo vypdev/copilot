@@ -51,66 +51,65 @@ export class SetupBatchSessionUseCase {
       if (!(this.ports.sessionActive?.() ?? this.ports.presentation.active()) || !await this.ports.presentation.review(plan, operation)) {
         return { outcome: operation.targets.some(target => target.effects.length > 0) ? 'partial' : 'cancelled', operation };
       }
-      if (operation.targets.some(target => ['ready', 'partial', 'cancelled', 'applying'].includes(target.status))) {
-        let cleanupPending: boolean;
-        const unlock = await this.ports.journal.lock(plan.operationId);
-        try {
-          const latest = await this.ports.journal.load(plan.operationId);
-          if (latest) operation = parseSetupBatchOperation(latest);
-          assertSetupBatchOperationMatchesPlan(operation, plan);
-          cleanupPending = operation.targets.some(target => target.cleanupPending);
-          await this.ports.journal.save(operation);
-          for (let index = 0; index < plan.targets.length; index += 1) {
-            if (cleanupPending || !this.ports.presentation.active()) break;
-            if (!['ready', 'partial', 'cancelled', 'applying'].includes(operation.targets[index].status)) continue;
-            let fresh = false;
-            let unavailable = false;
-            try { fresh = await this.ports.writer.revalidate(plan.targets[index], selection.token, operation.targets[index].effects); }
-            catch { unavailable = true; }
-            if (!fresh) {
-              operation = { ...operation, targets: operation.targets.map((target, position) => position === index
-                ? { ...target, status: 'blocked' as const, reason: unavailable ? 'provider' as const : 'drift' as const } : target) };
-              await this.ports.journal.save(operation);
-              this.ports.presentation.progress(operation);
-              continue;
-            }
+      // Terminal receipts returned above; latest per-target status is checked again under the lock.
+      let cleanupPending: boolean;
+      const unlock = await this.ports.journal.lock(plan.operationId);
+      try {
+        const latest = await this.ports.journal.load(plan.operationId);
+        if (latest) operation = parseSetupBatchOperation(latest);
+        assertSetupBatchOperationMatchesPlan(operation, plan);
+        cleanupPending = operation.targets.some(target => target.cleanupPending);
+        await this.ports.journal.save(operation);
+        for (let index = 0; index < plan.targets.length; index += 1) {
+          if (cleanupPending || !this.ports.presentation.active()) break;
+          if (!['ready', 'partial', 'cancelled', 'applying'].includes(operation.targets[index].status)) continue;
+          let fresh = false;
+          let unavailable = false;
+          try { fresh = await this.ports.writer.revalidate(plan.targets[index], selection.token, operation.targets[index].effects); }
+          catch { unavailable = true; }
+          if (!fresh) {
             operation = { ...operation, targets: operation.targets.map((target, position) => position === index
-              ? { ...target, status: 'applying' as const } : target) };
+              ? { ...target, status: 'blocked' as const, reason: unavailable ? 'provider' as const : 'drift' as const } : target) };
             await this.ports.journal.save(operation);
             this.ports.presentation.progress(operation);
-            this.ports.possibleMutation();
-            let audit: { readonly ready: boolean; readonly cleanupPending?: boolean };
-            let rejected = false;
-            try { audit = await this.ports.audit(plan.targets[index], selection.token); }
-            catch {
-              // A rejected audit has no trustworthy cleanup report. Persist the
-              // uncertainty and stop all further mutation, including on resume.
-              rejected = true;
-              audit = { ready: false, cleanupPending: true };
-            }
-            cleanupPending ||= audit.cleanupPending === true;
-            if (!audit.ready || audit.cleanupPending) {
-              operation = { ...operation, targets: operation.targets.map((target, position) => position === index
-                ? { ...target, status: 'blocked' as const, reason: rejected ? 'provider' as const : 'permission' as const,
-                  ...(audit.cleanupPending ? { cleanupPending: true as const } : {}) } : target) };
-              await this.ports.journal.save(operation);
-              this.ports.presentation.progress(operation);
-            }
-            if (cleanupPending) break;
+            continue;
           }
-          if (cleanupPending) {
-            operation = { ...operation, targets: operation.targets.map(target => ['ready', 'applying', 'partial', 'cancelled'].includes(target.status)
-              ? { ...target, status: 'cancelled' as const, reason: 'cancelled' as const } : target) };
+          operation = { ...operation, targets: operation.targets.map((target, position) => position === index
+            ? { ...target, status: 'applying' as const } : target) };
+          await this.ports.journal.save(operation);
+          this.ports.presentation.progress(operation);
+          this.ports.possibleMutation();
+          let audit: { readonly ready: boolean; readonly cleanupPending?: boolean };
+          let rejected = false;
+          try { audit = await this.ports.audit(plan.targets[index], selection.token); }
+          catch {
+            // A rejected audit has no trustworthy cleanup report. Persist the
+            // uncertainty and stop all further mutation, including on resume.
+            rejected = true;
+            audit = { ready: false, cleanupPending: true };
+          }
+          cleanupPending ||= audit.cleanupPending === true;
+          if (!audit.ready || audit.cleanupPending) {
+            operation = { ...operation, targets: operation.targets.map((target, position) => position === index
+              ? { ...target, status: 'blocked' as const, reason: rejected ? 'provider' as const : 'permission' as const,
+                ...(audit.cleanupPending ? { cleanupPending: true as const } : {}) } : target) };
             await this.ports.journal.save(operation);
             this.ports.presentation.progress(operation);
           }
-        } finally { await unlock(); }
-        if (cleanupPending) {
-          await this.ports.result(plan, operation, 0);
-          return { outcome: 'partial', operation };
+          if (cleanupPending) break;
         }
-        operation = await this.ports.apply.execute(plan, selection.token);
+        if (cleanupPending) {
+          operation = { ...operation, targets: operation.targets.map(target => ['ready', 'applying', 'partial', 'cancelled'].includes(target.status)
+            ? { ...target, status: 'cancelled' as const, reason: 'cancelled' as const } : target) };
+          await this.ports.journal.save(operation);
+          this.ports.presentation.progress(operation);
+        }
+      } finally { await unlock(); }
+      if (cleanupPending) {
+        await this.ports.result(plan, operation, 0);
+        return { outcome: 'partial', operation };
       }
+      operation = await this.ports.apply.execute(plan, selection.token);
       const retryRemaining = 1 - attempt;
       const decision = await this.ports.result(plan, operation, retryRemaining);
       if (decision !== 'retry' || retryRemaining === 0 || !operation.targets.some(target => ['partial', 'cancelled', 'applying'].includes(target.status))) break;

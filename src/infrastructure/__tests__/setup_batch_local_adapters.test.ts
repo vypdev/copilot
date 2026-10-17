@@ -14,6 +14,15 @@ describe('isolated setup rendering and private durable receipts', () => {
   let root: string;
   beforeEach(() => { root = mkdtempSync(join(tmpdir(), 'copilot-batch-test-')); });
   afterEach(() => { rmSync(root, { recursive: true, force: true }); });
+  it('rejects a journal root that ceases to be a directory before opening any receipt', async () => {
+    const fs = jest.requireActual<typeof import('node:fs/promises')>('node:fs/promises');
+    const info = await fs.lstat(root, { bigint: true });
+    const stat = jest.spyOn(fs, 'lstat').mockResolvedValueOnce(Object.assign(info, { isDirectory: () => false }));
+    try {
+      await expect(new SetupBatchJournalAdapter(root).save(operation)).rejects.toThrow('directory must be private');
+      expect(jest.requireActual<typeof import('node:fs')>('node:fs').readdirSync(root)).toEqual([]);
+    } finally { stat.mockRestore(); }
+  });
   it('removes an uncommitted temporary receipt after an atomic rename failure and retains the old receipt', async () => {
     const journal = new SetupBatchJournalAdapter(root); await journal.save(operation);
     const filesystem = jest.requireActual<typeof import('node:fs/promises')>('node:fs/promises');
@@ -23,6 +32,17 @@ describe('isolated setup rendering and private durable receipts', () => {
       expect(await journal.load(id)).toEqual(operation);
       expect(jest.requireActual<typeof import('node:fs')>('node:fs').readdirSync(root)).toEqual([`${id}.json`]);
     } finally { rename.mockRestore(); }
+  });
+  it('retains the previous receipt and the original failure if temporary-file cleanup also fails', async () => {
+    const journal = new SetupBatchJournalAdapter(root); await journal.save(operation);
+    const fs = jest.requireActual<typeof import('node:fs/promises')>('node:fs/promises');
+    const failure = new Error('fixture atomic rename failure');
+    const rename = jest.spyOn(fs, 'rename').mockRejectedValueOnce(failure);
+    const unlink = jest.spyOn(fs, 'unlink').mockRejectedValueOnce(new Error('fixture cleanup denied'));
+    try {
+      await expect(journal.save({ ...operation, targets: [{ ...operation.targets[0], status: 'partial' }] })).rejects.toBe(failure);
+      expect(await journal.load(id)).toEqual(operation);
+    } finally { rename.mockRestore(); unlink.mockRestore(); }
   });
   it('preserves non-collision lock failures without claiming an orphan or creating a receipt', async () => {
     const filesystem = jest.requireActual<typeof import('node:fs/promises')>('node:fs/promises');
@@ -136,6 +156,23 @@ describe('isolated setup rendering and private durable receipts', () => {
     const content = readFileSync(join(__dirname, '..', '..', '..', 'setup', 'source-workflows', 'copilot_pull_request_approval.yml'), 'utf8');
     const result = await renderer.render(configuration, [{ path: '.github/workflows/copilot_pull_request_approval.yml', content }]);
     expect(result.some(file => file.path === '.github/workflows/copilot_pull_request_approval.yml')).toBe(false);
+  });
+  it('keeps an exact source approval observer even if the workflow comparator proposes replacing it', async () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'recommend' };
+    const content = readFileSync(join(__dirname, '../../../setup/source-workflows/copilot_pull_request_approval.yml'), 'utf8');
+    const compare = jest.spyOn(setupFiles, 'compareSetupWorkflows').mockReturnValue([
+      { file: 'copilot_pull_request_approval.yml', destination: '.github/workflows/copilot_pull_request_approval.yml', status: 'changed' },
+      { file: 'copilot_issue.yml', destination: '.github/workflows/copilot_issue.yml', status: 'changed' },
+    ]);
+    try {
+      const result = await new SetupBatchWorkspaceAdapter().render(configuration, [
+        { path: '.github/workflows/copilot_issue.yml', content: 'name: old consumer\njobs: {}\n' },
+        { path: '.github/workflows/copilot_pull_request_approval.yml', content },
+      ]);
+      expect(result.some(file => file.path === '.github/workflows/copilot_pull_request_approval.yml')).toBe(false);
+      expect(result.some(file => file.path === '.github/workflows/copilot_issue.yml')).toBe(false);
+    } finally { compare.mockRestore(); }
   });
   it('has no file effects when the target already matches the renderer', async () => {
     const renderer = new SetupBatchWorkspaceAdapter(); const configuration = createDefaultSetupConfiguration();

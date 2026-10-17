@@ -28,6 +28,15 @@ function fixture(overrides: Partial<SetupRemoteConfiguration> = {}) {
 }
 
 describe('organization import in the shared setup wizard', () => {
+  it('retains explicitly reviewed mixed storage scopes on the first reuse preview', async () => {
+    const f = fixture();
+    const result = await new SetupWizardUseCase(f.dependencies).execute({ ...f.request, overrides: {
+      ...f.request.overrides, storage: { variables: { defaultScope: 'repository' }, secrets: { defaultScope: 'organization' } } } });
+    expect(result.status).toBe('completed');
+    if (result.status !== 'completed') throw new Error('Expected a reviewed mixed-scope plan.');
+    expect(result.configuration.storage.variables.defaultScope).toBe('repository');
+    expect(result.configuration.storage.secrets.defaultScope).toBe('organization');
+  });
   it.each(['organization', 'repository'] as const)('shows actual %s fallback names once without proposing task overrides', async scope => {
     const f = fixture();
     f.remote.organizationVariables = f.remote.organizationVariables.filter(variable => !SETUP_AGENT_TASKS.some(task => variable.name.startsWith(`${task.toUpperCase()}_`)));

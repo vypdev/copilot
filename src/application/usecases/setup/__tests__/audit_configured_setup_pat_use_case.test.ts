@@ -20,7 +20,6 @@ function harness(options: { token?: string; guided?: boolean; assertedOwnerKind?
   const ports: AuditConfiguredSetupPatPorts = {
     permissions: { inspect: jest.fn(async () => report) },
     presenter: { showRequirements: jest.fn(), showReport: jest.fn() },
-    confirmUnverifiable: jest.fn(async () => true),
     showOwnerMismatch: jest.fn(), showExcessGrants: jest.fn(), showUpdatedLink: jest.fn(),
   };
   const context = {
@@ -50,7 +49,6 @@ describe('AuditConfiguredSetupPatUseCase', () => {
       expect(await useCase.audit(selected, remote)).toEqual(mode === 'recommend'
         ? { status: 'accepted' }
         : { status: 'blocked', errors: [expect.stringContaining('did not pass every capability check')] });
-      expect(ports.confirmUnverifiable).not.toHaveBeenCalled();
     },
   );
 
@@ -62,7 +60,6 @@ describe('AuditConfiguredSetupPatUseCase', () => {
     }));
     expect(ports.presenter.showRequirements).toHaveBeenCalledWith('setup', expect.any(Array));
     expect(ports.presenter.showReport).toHaveBeenCalledWith(report);
-    expect(ports.confirmUnverifiable).not.toHaveBeenCalled();
   });
 
   test('passes approved Project numbers to the exact-resource read audit', async () => {
@@ -135,13 +132,12 @@ describe('AuditConfiguredSetupPatUseCase', () => {
     const { ports, useCase } = harness({ token: 'test-token' });
     jest.spyOn(ports.permissions, 'inspect').mockResolvedValue({ ...report, ready: false, confirmationRequired: true });
     expect(await useCase.audit(configuration, remote)).toEqual(expect.objectContaining({ status: 'blocked' }));
-    expect(ports.confirmUnverifiable).not.toHaveBeenCalled();
+    expect(ports).not.toHaveProperty('confirmUnverifiable');
   });
 
-  test('declined unverifiable writes block the final plan', async () => {
+  test('unverifiable guided writes block the final plan and offer a corrected PAT link', async () => {
     const { ports, useCase } = harness({ token: 'test-token', guided: true });
     jest.spyOn(ports.permissions, 'inspect').mockResolvedValue({ ...report, ready: false, confirmationRequired: true });
-    jest.spyOn(ports, 'confirmUnverifiable').mockResolvedValue(false);
     expect(await useCase.audit(configuration, remote)).toEqual(expect.objectContaining({ status: 'blocked' }));
     expect(ports.showUpdatedLink).toHaveBeenCalledTimes(1);
   });

@@ -900,3 +900,32 @@ variable reuse, batch access/view and organization import wizard tests; operator
 setup documentation explains inheritance and explicit overrides. Existing
 operations still require the same reviewed configuration/base/receipt identity;
 a changed plan requires a fresh preview rather than rewriting completed effects.
+
+### Complete changed-path coverage (2026-10-18)
+
+The final uploaded report MUST have no incomplete executable changed lines;
+97.90210% with 36 remaining lines is not the completion criterion. Add at least
+**35 distinct regressions** beyond the generic-inheritance fix: 14 CLI/context/
+confirmation/cancellation cases, 12 provider/inventory/trusted-health cases,
+five journal/renderer/profile cases, three credential-composition cases and
+one explicit mixed-storage wizard case. Existing global and per-module gates
+remain; no ignore, threshold or provider bound may be weakened.
+
+Pagination retains the 1,000-resource maximum, 30-item Variable pages (at most
+34 reads), and 100-item Secret pages (at most ten reads per snapshot). Stable
+totals, full intermediate pages and exact terminal counts prove termination;
+reject oversized, short, changing or duplicate inventories. Read retries still
+stop after three attempts and writes after one. Exhaustive terminal-state
+partitioning removes redundant unreachable control flow; latest receipt/status
+and cleanup checks still run under the exclusive lock. Remove the unused final
+Write-audit confirmation capability: only verified capabilities authorize Apply.
+
+Executable acceptance covers exact default-backoff timing, maximum complete
+inventories, deterministic file ordering, failed temporary-file cleanup,
+untrusted metadata shapes, missing packaged health assets, rejected profile
+schema/extensions, exact credential/client binding, owner drift, early progress,
+controller cancellation and blocked target explanations. Source-observer tests
+must enable the approval feature and prove preservation even when the comparator
+proposes a replacement. Operator documentation distinguishes completed path
+coverage from installation/runtime verification. Report measured local diff
+coverage and the uploaded current-head Codecov report separately.

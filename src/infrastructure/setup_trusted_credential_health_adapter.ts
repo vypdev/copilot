@@ -85,7 +85,8 @@ async function secretMetadata(client: GithubTrustedCredentialHealthClient, targe
 async function secretCollection(read: (parameters: RecordValue) => Promise<unknown>, target: RecordValue): Promise<ReadonlyMap<string, number> | undefined> {
   const result = new Map<string, number>();
   let expectedTotal: number | undefined;
-  for (let page = 1; page <= MAX_PAGES; page += 1) {
+  // Stable bounded totals and full intermediate pages imply at most MAX_PAGES reads.
+  for (let page = 1; ; page += 1) {
     const collection = data(await read({ ...target, page, per_page: 100 }));
     const total = collection?.total_count;
     if (!collection || !Number.isSafeInteger(total) || Number(total) < 0 || Number(total) > MAX_PAGES * 100
@@ -101,7 +102,6 @@ async function secretCollection(read: (parameters: RecordValue) => Promise<unkno
     if (result.size === expectedTotal) return result;
     if (result.size > expectedTotal || collection.secrets.length < 100) return undefined;
   }
-  return undefined;
 }
 
 function evidence(requirement: SetupCredentialRequirement, before: Secrets, after: Secrets,

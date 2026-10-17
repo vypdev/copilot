@@ -22,7 +22,7 @@ export class SetupBatchWorkspaceAdapter implements SetupBatchRenderPort {
       if (existing.length > 300 || new Set(existing.map(file => file.path)).size !== existing.length
         || existing.some(file => !validSetupBatchAssetPath(file.path) || file.content === null
           || Buffer.byteLength(file.content) > 100_000)
-        || existing.reduce((sum, file) => sum + Buffer.byteLength(file.content ?? ''), 0) > 2_000_000) throw new Error('Setup asset inventory is invalid or exceeds the fixed render budget.');
+        || existing.reduce((sum, file) => sum + Buffer.byteLength(file.content!), 0) > 2_000_000) throw new Error('Setup asset inventory is invalid or exceeds the fixed render budget.');
       for (const file of existing) {
         const destination = join(root, file.path); mkdirSync(dirname(destination), { recursive: true });
         writeFileSync(destination, file.content!, { mode: 0o600 });

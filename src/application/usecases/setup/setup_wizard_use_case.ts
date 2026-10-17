@@ -221,7 +221,8 @@ export class SetupWizardUseCase {
         projects: projectDiscovery && projectDiscovery.status !== 'unsupported' ? 2 : 0 },
     };
     if (request.configurationSource === 'organization' || request.deliveryMode === 'pull-request') {
-      context = { ...context, skipQuestionIds: [...new Set([...(context.skipQuestionIds ?? []), ...setupQuestionIdsForGroup('storage')])] };
+      // Both initial and revision context constructors always assign this collection.
+      context = { ...context, skipQuestionIds: [...new Set([...context.skipQuestionIds!, ...setupQuestionIdsForGroup('storage')])] };
     }
     const discoveryRefresh = {
       refresh: async (kind: 'checks' | 'projects'): Promise<SetupQuestionnaireContext | undefined> => {

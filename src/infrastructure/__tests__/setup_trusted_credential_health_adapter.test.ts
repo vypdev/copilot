@@ -38,6 +38,33 @@ function fixture() {
 }
 
 describe('read-only trusted default-branch credential evidence', () => {
+  it.each([0, 99])('rejects incomplete Secret pages rather than attesting credentials: %s entries', async count => {
+    const f = fixture();
+    f.actions.listRepoSecrets.mockResolvedValue({ data: { total_count: 100, secrets: Array.from({ length: count }, (_, i) => ({ name: `KEY_${i}`, updated_at: '2026-10-17T13:00:00Z' })) } });
+    expect(await f.inspect()).toBeUndefined();
+    expect(f.actions.listRepoSecrets).toHaveBeenCalledTimes(1); expect(f.actions.listJobsForWorkflowRun).not.toHaveBeenCalled();
+  });
+  it('admits 1,000 Secret metadata records with ten reads per snapshot and no value access', async () => {
+    const f = fixture();
+    f.actions.listRepoSecrets.mockImplementation(async ({ page }: { page: number }) => ({ data: { total_count: 1000,
+      secrets: Array.from({ length: 100 }, (_, i) => ({ name: `KEY_${(page - 1) * 100 + i}`, updated_at: '2026-10-17T13:00:00Z' })) } }));
+    expect((await f.inspect())?.every(check => check.status === 'valid')).toBe(true);
+    expect(f.actions.listRepoSecrets).toHaveBeenCalledTimes(20);
+    expect(Math.max(...f.actions.listRepoSecrets.mock.calls.map(([parameters]) => parameters.page))).toBe(10);
+  });
+  it.each([null, [], 'not metadata'])('rejects a non-object provider response without probing or launching code: %j', async response => {
+    const f = fixture(); f.client.rest.repos.get.mockResolvedValue(response);
+    expect(await f.inspect()).toBeUndefined(); expect(f.client.rest.git.getRef).not.toHaveBeenCalled();
+  });
+  it('leaves health unverifiable when the packaged trusted workflow is unavailable', async () => {
+    const fs = jest.requireActual<typeof import('node:fs')>('node:fs');
+    const read = jest.spyOn(fs, 'readFileSync').mockImplementationOnce(() => { throw new Error('fixture package asset unavailable'); });
+    try {
+      const f = fixture(); const adapter = new SetupTrustedCredentialHealthAdapter(f.provider);
+      expect(await adapter.validateTrustedDefault('acme', 'repo', 'fixture', requirements)).toBeUndefined();
+      expect(f.provider.getClient).not.toHaveBeenCalled();
+    } finally { read.mockRestore(); }
+  });
   it.each([{ id: 0, default_branch: 'master' }, { id: 7, default_branch: '../unsafe' }])('does not inspect code for invalid repository metadata', async metadata => {
     const f = fixture(); f.client.rest.repos.get.mockResolvedValue({ data: metadata });
     expect(await f.inspect()).toBeUndefined(); expect(f.client.rest.git.getRef).not.toHaveBeenCalled();

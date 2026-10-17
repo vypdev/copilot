@@ -1,5 +1,5 @@
 import type { SetupConfiguration, SetupRemoteConfiguration } from '../../../domain/setup';
-import type { SetupTokenPermissionReport, SetupTokenPermissionRequirement } from '../../../domain/setup_token_permissions';
+import type { SetupTokenPermissionRequirement } from '../../../domain/setup_token_permissions';
 import { buildSetupPatCreationUrl } from '../../policies/setup_pat_creation_url_policy';
 import { buildConfiguredSetupPatPermissionRequirements, buildSetupOrganizationReusePermissionRequirements, buildSetupBatchPatPermissionRequirements, requiredSetupPatPermissionDelta } from '../../policies/setup_token_permission_policy';
 import type { SetupFinalPermissionAuditPort } from '../../ports/setup_wizard_ports';
@@ -20,7 +20,6 @@ export interface AuditConfiguredSetupPatContext {
 export interface AuditConfiguredSetupPatPorts {
   readonly permissions: SetupTokenPermissionAuditPort;
   readonly presenter: SetupTokenPermissionPresenterPort;
-  confirmUnverifiable(report: SetupTokenPermissionReport): Promise<boolean>;
   showOwnerMismatch(asserted: 'Organization' | 'User', actual: 'Organization' | 'User'): void;
   showExcessGrants(grants: readonly string[]): void;
   showUpdatedLink(url: string, addedGrants: readonly string[]): void;

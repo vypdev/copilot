@@ -23,7 +23,7 @@ export class SetupBatchGithubTransport {
   }) {}
   async call(token: string, route: string, parameters: BatchRecord): Promise<unknown> {
     const read = route.startsWith('GET ');
-    for (let attempt = 0; attempt < (read ? 3 : 1); attempt += 1) {
+    for (let attempt = 0; ; attempt += 1) {
       const controller = new AbortController();
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {
@@ -39,7 +39,7 @@ export class SetupBatchGithubTransport {
         const headers = batchObject(batchObject(record?.response)?.headers);
         const rateLimited = status === 429 || status === 403 && (headers?.['x-ratelimit-remaining'] === '0' || headers?.['retry-after'] !== undefined);
         const code = error instanceof SetupBatchProviderError ? error.code : rateLimited ? 'rate-limited' : status === 403 ? 'forbidden'
-          : status === 404 ? 'not-found' : status === 429 ? 'rate-limited'
+          : status === 404 ? 'not-found'
             : typeof status === 'number' && status >= 500 ? 'transient' : 'unknown';
         if (read && code === 'rate-limited' && attempt < 2) {
           const delay = setupBatchRateLimitDelay(headers, this.clock.now());
@@ -49,10 +49,9 @@ export class SetupBatchGithubTransport {
             continue;
           }
         }
-        if (!read || code !== 'transient' || attempt === 2) throw new SetupBatchProviderError(code);
+        if (!read || code !== 'transient' || attempt >= 2) throw new SetupBatchProviderError(code);
       } finally { clearTimeout(timer); }
     }
-    throw new SetupBatchProviderError('unknown');
   }
 }
 export class SetupBatchGithubReadAdapter implements SetupBatchDiscoveryPort, SetupBatchInventoryPort {
@@ -127,7 +126,8 @@ export class SetupBatchGithubReadAdapter implements SetupBatchDiscoveryPort, Set
     // Actions Variable endpoints document a 30-item page maximum. Keep the same
     // bounded 1,000-resource ceiling across Secret and membership inventories.
     const pageSize = 30;
-    for (let page = 1; page <= 34; page += 1) {
+    // A stable total <= 1,000 and full 30-item intermediate pages bound this to 34 reads.
+    for (let page = 1; ; page += 1) {
       const response = batchObject(await this.transport.call(token, route, { ...parameters, per_page: pageSize, page }));
       if (!response || !Number.isSafeInteger(response.total_count) || Number(response.total_count) < 0 || Number(response.total_count) > 1000
         || !Array.isArray(response[key]) || response[key].length > pageSize || total !== undefined && total !== response.total_count) throw new SetupBatchProviderError('malformed');
@@ -135,7 +135,6 @@ export class SetupBatchGithubReadAdapter implements SetupBatchDiscoveryPort, Set
       if (result.length === total) return result;
       if (result.length > total || response[key].length < pageSize) throw new SetupBatchProviderError('malformed');
     }
-    throw new SetupBatchProviderError('malformed');
   }
   async files(target: SetupBatchTarget, token: string): Promise<readonly SetupBatchFile[]> {
     const response = batchObject(await this.transport.call(token, 'GET /repos/{owner}/{repo}/git/trees/{tree_sha}',

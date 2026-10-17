@@ -70,7 +70,6 @@ export async function executeSetupBatch(input: BatchInput) {
     installationGrants: grants, provisionalRequirements: input.provisionalRequirements, assertedOwnerKind: 'Organization',
     guided: input.credentialPrompt.usedGuidedSetupPat,
   }, { permissions: tokenPermissions, presenter: input.permissionPresenter,
-    confirmUnverifiable: report => input.credentialPrompt.confirmUnverifiableTokenPermissions(report),
     showOwnerMismatch: () => logInfo('The authenticated organization differs from the reviewed owner. Stop and inspect the target.'),
     showExcessGrants: grants => logInfo(`The reviewed plan no longer needs: ${grants.join(', ')}.`),
     showUpdatedLink: (url, grants) => input.credentialPrompt.showUpdatedSetupPatLink(url, 'final', grants),

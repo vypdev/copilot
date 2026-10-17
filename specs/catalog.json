@@ -978,7 +978,8 @@
         "src/infrastructure/__tests__/setup_batch_composition.test.ts",
         "src/infrastructure/__tests__/setup_batch_guidance_compatibility.test.ts",
         "src/utils/__tests__/setup_workflow_upgrade.test.ts",
-        "src/cli/__tests__/setup_pat_intent_adapter.test.ts"
+        "src/cli/__tests__/setup_pat_intent_adapter.test.ts",
+        "src/application/usecases/__tests__/push_single_action_contexts.test.ts"
       ],
       "documentation": [
         "README.md",

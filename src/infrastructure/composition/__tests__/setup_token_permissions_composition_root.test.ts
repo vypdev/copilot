@@ -7,8 +7,19 @@ import {
     createSetupRemoteConfigurationReadPort,
 } from '../setup_credentials_composition_root';
 import { createSetupTokenPermissionsUseCase } from '../setup_token_permissions_composition_root';
+import { SetupTrustedCredentialHealthAdapter } from '../../setup_trusted_credential_health_adapter';
+import { OctokitTrustedCredentialHealthClientAdapter } from '../../github/octokit_credential_health_adapter';
+import * as octokit from '../../github/octokit_client_resolver';
 
 describe('setup token permission composition roots', () => {
+    it('binds trusted read-only health requests to the supplied setup credential', () => {
+        const client = { marker: 'fixture client' };
+        const resolve = jest.spyOn(octokit, 'getOctokitClient').mockReturnValue(client);
+        try {
+            expect(new OctokitTrustedCredentialHealthClientAdapter().getClient('fixture-setup-token')).toBe(client);
+            expect(resolve).toHaveBeenCalledTimes(1); expect(resolve).toHaveBeenCalledWith('fixture-setup-token');
+        } finally { resolve.mockRestore(); }
+    });
     it('composes the permission audit use case from concrete query adapters', () => {
         expect(createSetupTokenPermissionsUseCase()).toBeInstanceOf(SetupTokenPermissionsUseCase);
     });
@@ -28,5 +39,11 @@ describe('setup token permission composition roots', () => {
 
         expect(remoteHealth(createSetupCredentialsUseCase(prompt))).toBeDefined();
         expect(remoteHealth(createSetupCredentialsUseCase(prompt, undefined, { allowPreApplyHealthWorkflow: false }))).toBeUndefined();
+    });
+    it('composes organization reuse with read-only trusted evidence and no bootstrap authority', () => {
+        const useCase = createSetupCredentialsUseCase({} as SetupCredentialPromptPort, undefined, { configurationSource: 'organization' });
+        const capabilities = useCase as unknown as { remoteHealth?: unknown; trustedRemoteHealth?: unknown };
+        expect(capabilities.remoteHealth).toBeUndefined();
+        expect(capabilities.trustedRemoteHealth).toBeInstanceOf(SetupTrustedCredentialHealthAdapter);
     });
 });

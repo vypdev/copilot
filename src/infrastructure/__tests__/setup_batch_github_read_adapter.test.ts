@@ -13,6 +13,38 @@ function fixture() {
   return { request, remote, adapter, target, transport };
 }
 describe('bounded GitHub setup discovery and namespace inspection', () => {
+  it('uses the bounded default backoff clock after an explicit GitHub rate limit', async () => {
+    jest.useFakeTimers();
+    try {
+      const f = fixture(); f.request.mockRejectedValueOnce({ status: 429, response: { headers: { 'retry-after': '1' } } }).mockResolvedValueOnce({ data: [] });
+      const result = f.adapter.list('acme', 'fixture');
+      await jest.advanceTimersByTimeAsync(1000);
+      expect(await result).toEqual({ targets: [], truncated: false });
+      expect(f.request).toHaveBeenCalledTimes(2); expect(jest.getTimerCount()).toBe(0);
+    } finally { jest.useRealTimers(); }
+  });
+  it('returns deterministic asset order independent of GitHub tree order', async () => {
+    const f = fixture(); f.request.mockResolvedValueOnce({ data: { truncated: false, tree: ['AGENTS.md', '.copilot/AGENT_GUIDE.md'].map(path => ({ path, type: 'blob', mode: '100644', sha, size: 1 })) } })
+      .mockResolvedValue({ data: { encoding: 'base64', content: Buffer.from('a').toString('base64') } });
+    expect((await f.adapter.files(f.target, 'fixture')).map(file => file.path)).toEqual(['.copilot/AGENT_GUIDE.md', 'AGENTS.md']);
+    expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+  });
+  it('admits the exact 1,000-item inventory ceiling in at most 34 requests', async () => {
+    const f = fixture();
+    f.request.mockImplementation(async (_route, parameters) => ({ data: { total_count: 1000,
+      variables: Array.from({ length: Number(parameters.page) === 34 ? 10 : 30 }, (_, i) => ({ name: `V_${(Number(parameters.page) - 1) * 30 + i}` })) } }));
+    expect(await f.adapter.collection('fixture', 'GET /fixed', {}, 'variables')).toHaveLength(1000);
+    expect(f.request).toHaveBeenCalledTimes(34);
+    expect(f.request).toHaveBeenLastCalledWith('GET /fixed', expect.objectContaining({ page: 34, per_page: 30 }));
+  });
+  it('inspects selected repository access for a Variable without replacing the membership set', async () => {
+    const f = fixture();
+    f.request.mockResolvedValueOnce({ data: { name: 'BUGBOT_COMMENT_LIMIT', value: '20', visibility: 'selected', updated_at: '2026-10-17T14:00:00Z' } })
+      .mockResolvedValueOnce({ data: { total_count: 1, repositories: [{ id: 7 }] } });
+    expect(await f.adapter.sharedResource('acme', 'variable', 'BUGBOT_COMMENT_LIMIT', 'fixture')).toMatchObject({ selectedRepositoryIds: [7] });
+    expect(f.request).toHaveBeenLastCalledWith('GET /orgs/{org}/actions/variables/{name}/repositories', expect.objectContaining({ name: 'BUGBOT_COMMENT_LIMIT' }));
+    expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+  });
   it('aborts each stalled read and stops after the bounded third attempt', async () => {
     jest.useFakeTimers();
     try {

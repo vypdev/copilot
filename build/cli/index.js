@@ -62069,79 +62069,78 @@ class SetupBatchSessionUseCase {
             if (!(this.ports.sessionActive?.() ?? this.ports.presentation.active()) || !await this.ports.presentation.review(plan, operation)) {
                 return { outcome: operation.targets.some(target => target.effects.length > 0) ? 'partial' : 'cancelled', operation };
             }
-            if (operation.targets.some(target => ['ready', 'partial', 'cancelled', 'applying'].includes(target.status))) {
-                let cleanupPending;
-                const unlock = await this.ports.journal.lock(plan.operationId);
-                try {
-                    const latest = await this.ports.journal.load(plan.operationId);
-                    if (latest)
-                        operation = (0, setup_batch_policy_1.parseSetupBatchOperation)(latest);
-                    (0, setup_batch_policy_1.assertSetupBatchOperationMatchesPlan)(operation, plan);
-                    cleanupPending = operation.targets.some(target => target.cleanupPending);
-                    await this.ports.journal.save(operation);
-                    for (let index = 0; index < plan.targets.length; index += 1) {
-                        if (cleanupPending || !this.ports.presentation.active())
-                            break;
-                        if (!['ready', 'partial', 'cancelled', 'applying'].includes(operation.targets[index].status))
-                            continue;
-                        let fresh = false;
-                        let unavailable = false;
-                        try {
-                            fresh = await this.ports.writer.revalidate(plan.targets[index], selection.token, operation.targets[index].effects);
-                        }
-                        catch {
-                            unavailable = true;
-                        }
-                        if (!fresh) {
-                            operation = { ...operation, targets: operation.targets.map((target, position) => position === index
-                                    ? { ...target, status: 'blocked', reason: unavailable ? 'provider' : 'drift' } : target) };
-                            await this.ports.journal.save(operation);
-                            this.ports.presentation.progress(operation);
-                            continue;
-                        }
+            // Terminal receipts returned above; latest per-target status is checked again under the lock.
+            let cleanupPending;
+            const unlock = await this.ports.journal.lock(plan.operationId);
+            try {
+                const latest = await this.ports.journal.load(plan.operationId);
+                if (latest)
+                    operation = (0, setup_batch_policy_1.parseSetupBatchOperation)(latest);
+                (0, setup_batch_policy_1.assertSetupBatchOperationMatchesPlan)(operation, plan);
+                cleanupPending = operation.targets.some(target => target.cleanupPending);
+                await this.ports.journal.save(operation);
+                for (let index = 0; index < plan.targets.length; index += 1) {
+                    if (cleanupPending || !this.ports.presentation.active())
+                        break;
+                    if (!['ready', 'partial', 'cancelled', 'applying'].includes(operation.targets[index].status))
+                        continue;
+                    let fresh = false;
+                    let unavailable = false;
+                    try {
+                        fresh = await this.ports.writer.revalidate(plan.targets[index], selection.token, operation.targets[index].effects);
+                    }
+                    catch {
+                        unavailable = true;
+                    }
+                    if (!fresh) {
                         operation = { ...operation, targets: operation.targets.map((target, position) => position === index
-                                ? { ...target, status: 'applying' } : target) };
+                                ? { ...target, status: 'blocked', reason: unavailable ? 'provider' : 'drift' } : target) };
                         await this.ports.journal.save(operation);
                         this.ports.presentation.progress(operation);
-                        this.ports.possibleMutation();
-                        let audit;
-                        let rejected = false;
-                        try {
-                            audit = await this.ports.audit(plan.targets[index], selection.token);
-                        }
-                        catch {
-                            // A rejected audit has no trustworthy cleanup report. Persist the
-                            // uncertainty and stop all further mutation, including on resume.
-                            rejected = true;
-                            audit = { ready: false, cleanupPending: true };
-                        }
-                        cleanupPending || (cleanupPending = audit.cleanupPending === true);
-                        if (!audit.ready || audit.cleanupPending) {
-                            operation = { ...operation, targets: operation.targets.map((target, position) => position === index
-                                    ? { ...target, status: 'blocked', reason: rejected ? 'provider' : 'permission',
-                                        ...(audit.cleanupPending ? { cleanupPending: true } : {}) } : target) };
-                            await this.ports.journal.save(operation);
-                            this.ports.presentation.progress(operation);
-                        }
-                        if (cleanupPending)
-                            break;
+                        continue;
                     }
-                    if (cleanupPending) {
-                        operation = { ...operation, targets: operation.targets.map(target => ['ready', 'applying', 'partial', 'cancelled'].includes(target.status)
-                                ? { ...target, status: 'cancelled', reason: 'cancelled' } : target) };
+                    operation = { ...operation, targets: operation.targets.map((target, position) => position === index
+                            ? { ...target, status: 'applying' } : target) };
+                    await this.ports.journal.save(operation);
+                    this.ports.presentation.progress(operation);
+                    this.ports.possibleMutation();
+                    let audit;
+                    let rejected = false;
+                    try {
+                        audit = await this.ports.audit(plan.targets[index], selection.token);
+                    }
+                    catch {
+                        // A rejected audit has no trustworthy cleanup report. Persist the
+                        // uncertainty and stop all further mutation, including on resume.
+                        rejected = true;
+                        audit = { ready: false, cleanupPending: true };
+                    }
+                    cleanupPending || (cleanupPending = audit.cleanupPending === true);
+                    if (!audit.ready || audit.cleanupPending) {
+                        operation = { ...operation, targets: operation.targets.map((target, position) => position === index
+                                ? { ...target, status: 'blocked', reason: rejected ? 'provider' : 'permission',
+                                    ...(audit.cleanupPending ? { cleanupPending: true } : {}) } : target) };
                         await this.ports.journal.save(operation);
                         this.ports.presentation.progress(operation);
                     }
-                }
-                finally {
-                    await unlock();
+                    if (cleanupPending)
+                        break;
                 }
                 if (cleanupPending) {
-                    await this.ports.result(plan, operation, 0);
-                    return { outcome: 'partial', operation };
+                    operation = { ...operation, targets: operation.targets.map(target => ['ready', 'applying', 'partial', 'cancelled'].includes(target.status)
+                            ? { ...target, status: 'cancelled', reason: 'cancelled' } : target) };
+                    await this.ports.journal.save(operation);
+                    this.ports.presentation.progress(operation);
                 }
-                operation = await this.ports.apply.execute(plan, selection.token);
             }
+            finally {
+                await unlock();
+            }
+            if (cleanupPending) {
+                await this.ports.result(plan, operation, 0);
+                return { outcome: 'partial', operation };
+            }
+            operation = await this.ports.apply.execute(plan, selection.token);
             const retryRemaining = 1 - attempt;
             const decision = await this.ports.result(plan, operation, retryRemaining);
             if (decision !== 'retry' || retryRemaining === 0 || !operation.targets.some(target => ['partial', 'cancelled', 'applying'].includes(target.status)))
@@ -62962,7 +62961,8 @@ class SetupWizardUseCase {
                 projects: projectDiscovery && projectDiscovery.status !== 'unsupported' ? 2 : 0 },
         };
         if (request.configurationSource === 'organization' || request.deliveryMode === 'pull-request') {
-            context = { ...context, skipQuestionIds: [...new Set([...(context.skipQuestionIds ?? []), ...(0, setup_questionnaire_policy_1.setupQuestionIdsForGroup)('storage')])] };
+            // Both initial and revision context constructors always assign this collection.
+            context = { ...context, skipQuestionIds: [...new Set([...context.skipQuestionIds, ...(0, setup_questionnaire_policy_1.setupQuestionIdsForGroup)('storage')])] };
         }
         const discoveryRefresh = {
             refresh: async (kind) => {
@@ -73330,7 +73330,6 @@ async function executeSetupCommand(options) {
                 }, {
                     permissions: tokenPermissions,
                     presenter: permissionPresenter,
-                    confirmUnverifiable: report => credentialPrompt.confirmUnverifiableTokenPermissions(report),
                     showOwnerMismatch: (asserted, actual) => (0, logger_1.logInfo)(`The owner was declared ${asserted}, but GitHub reports ${actual}. The guided link is no longer valid for this plan.`),
                     showExcessGrants: grants => (0, logger_1.logInfo)(`The final plan no longer requires grants suggested earlier: ${grants.join(', ')}. Your PAT may have excess access; replace it in GitHub if least privilege is required.`),
                     showUpdatedLink: (url, grants) => credentialPrompt.showUpdatedSetupPatLink(url, 'final', grants),
@@ -73814,7 +73813,6 @@ async function executeSetupBatch(input) {
         installationGrants: grants, provisionalRequirements: input.provisionalRequirements, assertedOwnerKind: 'Organization',
         guided: input.credentialPrompt.usedGuidedSetupPat,
     }, { permissions: tokenPermissions, presenter: input.permissionPresenter,
-        confirmUnverifiable: report => input.credentialPrompt.confirmUnverifiableTokenPermissions(report),
         showOwnerMismatch: () => (0, logger_1.logInfo)('The authenticated organization differs from the reviewed owner. Stop and inspect the target.'),
         showExcessGrants: grants => (0, logger_1.logInfo)(`The reviewed plan no longer needs: ${grants.join(', ')}.`),
         showUpdatedLink: (url, grants) => input.credentialPrompt.showUpdatedSetupPatLink(url, 'final', grants),
@@ -97408,7 +97406,7 @@ class SetupBatchGithubTransport {
     }
     async call(token, route, parameters) {
         const read = route.startsWith('GET ');
-        for (let attempt = 0; attempt < (read ? 3 : 1); attempt += 1) {
+        for (let attempt = 0;; attempt += 1) {
             const controller = new AbortController();
             let timer;
             try {
@@ -97428,7 +97426,7 @@ class SetupBatchGithubTransport {
                 const headers = batchObject(batchObject(record?.response)?.headers);
                 const rateLimited = status === 429 || status === 403 && (headers?.['x-ratelimit-remaining'] === '0' || headers?.['retry-after'] !== undefined);
                 const code = error instanceof SetupBatchProviderError ? error.code : rateLimited ? 'rate-limited' : status === 403 ? 'forbidden'
-                    : status === 404 ? 'not-found' : status === 429 ? 'rate-limited'
+                    : status === 404 ? 'not-found'
                         : typeof status === 'number' && status >= 500 ? 'transient' : 'unknown';
                 if (read && code === 'rate-limited' && attempt < 2) {
                     const delay = (0, setup_batch_retry_policy_1.setupBatchRateLimitDelay)(headers, this.clock.now());
@@ -97438,14 +97436,13 @@ class SetupBatchGithubTransport {
                         continue;
                     }
                 }
-                if (!read || code !== 'transient' || attempt === 2)
+                if (!read || code !== 'transient' || attempt >= 2)
                     throw new SetupBatchProviderError(code);
             }
             finally {
                 clearTimeout(timer);
             }
         }
-        throw new SetupBatchProviderError('unknown');
     }
 }
 exports.SetupBatchGithubTransport = SetupBatchGithubTransport;
@@ -97534,7 +97531,8 @@ class SetupBatchGithubReadAdapter {
         // Actions Variable endpoints document a 30-item page maximum. Keep the same
         // bounded 1,000-resource ceiling across Secret and membership inventories.
         const pageSize = 30;
-        for (let page = 1; page <= 34; page += 1) {
+        // A stable total <= 1,000 and full 30-item intermediate pages bound this to 34 reads.
+        for (let page = 1;; page += 1) {
             const response = batchObject(await this.transport.call(token, route, { ...parameters, per_page: pageSize, page }));
             if (!response || !Number.isSafeInteger(response.total_count) || Number(response.total_count) < 0 || Number(response.total_count) > 1000
                 || !Array.isArray(response[key]) || response[key].length > pageSize || total !== undefined && total !== response.total_count)
@@ -97546,7 +97544,6 @@ class SetupBatchGithubReadAdapter {
             if (result.length > total || response[key].length < pageSize)
                 throw new SetupBatchProviderError('malformed');
         }
-        throw new SetupBatchProviderError('malformed');
     }
     async files(target, token) {
         const response = batchObject(await this.transport.call(token, 'GET /repos/{owner}/{repo}/git/trees/{tree_sha}', { owner: target.owner, repo: target.name, tree_sha: target.baseSha, recursive: '1' }));
@@ -97726,7 +97723,7 @@ class SetupBatchWorkspaceAdapter {
             if (existing.length > 300 || new Set(existing.map(file => file.path)).size !== existing.length
                 || existing.some(file => !(0, setup_batch_policy_1.validSetupBatchAssetPath)(file.path) || file.content === null
                     || Buffer.byteLength(file.content) > 100000)
-                || existing.reduce((sum, file) => sum + Buffer.byteLength(file.content ?? ''), 0) > 2000000)
+                || existing.reduce((sum, file) => sum + Buffer.byteLength(file.content), 0) > 2000000)
                 throw new Error('Setup asset inventory is invalid or exceeds the fixed render budget.');
             for (const file of existing) {
                 const destination = (0, node_path_1.join)(root, file.path);
@@ -100637,7 +100634,8 @@ async function secretMetadata(client, target) {
 async function secretCollection(read, target) {
     const result = new Map();
     let expectedTotal;
-    for (let page = 1; page <= MAX_PAGES; page += 1) {
+    // Stable bounded totals and full intermediate pages imply at most MAX_PAGES reads.
+    for (let page = 1;; page += 1) {
         const collection = data(await read({ ...target, page, per_page: 100 }));
         const total = collection?.total_count;
         if (!collection || !Number.isSafeInteger(total) || Number(total) < 0 || Number(total) > MAX_PAGES * 100
@@ -100657,7 +100655,6 @@ async function secretCollection(read, target) {
         if (result.size > expectedTotal || collection.secrets.length < 100)
             return undefined;
     }
-    return undefined;
 }
 function evidence(requirement, before, after, run, jobs, url, now) {
     const pending = () => ({ name: requirement.name, status: 'unverifiable',

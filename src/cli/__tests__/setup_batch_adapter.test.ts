@@ -14,6 +14,9 @@ import type { SetupBatchOperation } from '../../domain/setup_batch';
 import type { SetupRemoteConfiguration } from '../../domain/setup';
 import type { WebSetupPrompt } from '../../application/contracts/web_setup_view';
 import type { SetupTokenPermissionReport } from '../../domain/setup_token_permissions';
+import { SetupBatchSessionUseCase, type SetupBatchSessionPorts } from '../../application/usecases/setup/setup_batch_session_use_case';
+import { SetupWizardUseCase } from '../../application/usecases/setup/setup_wizard_use_case';
+import { beginSetupBatchOperation } from '../../application/policies/setup_batch_policy';
 jest.mock('../../infrastructure/composition/setup_batch_composition_root', () => ({ createSetupBatchCompositionRoot: jest.fn() }));
 jest.mock('../../infrastructure/composition/setup_credentials_composition_root', () => ({ createSetupCredentialsUseCase: jest.fn(), createSetupRemoteConfigurationReadPort: jest.fn() }));
 jest.mock('../../infrastructure/composition/setup_token_permissions_composition_root', () => ({ createSetupTokenPermissionsUseCase: jest.fn() }));
@@ -86,6 +89,21 @@ describe('terminal batch selection, review and recovery', () => {
       permissionPresenter: new ConsoleSetupTokenPermissionPresenter() };
     return { ...f, input, terminal, retry: () => { retry = true; }, decline: () => { accept = false; } };
   }
+  it('describes an unavailable candidate without installing it or implicitly selecting alternatives', async () => {
+    const f = terminalFixture(['7']);
+    const targets = (await f.composition.discovery.list()).targets;
+    f.composition.discovery.list.mockResolvedValue({ targets: targets.map(target => target.id === 8 ? { ...target, archived: true } : target), truncated: false });
+    const result = await executeSetupBatch(f.input);
+    expect(result.operation.targets.map(target => target.repositoryId)).toEqual([7]);
+    expect(jest.mocked(console.log).mock.calls.flat().join('\n')).toContain('archived');
+    expect(f.writer.pullRequest).toHaveBeenCalledTimes(1);
+  });
+  it('prints blocked target reasons and offers no write probes for an unready development branch', async () => {
+    const f = terminalFixture(); f.composition.inventory.branchExists = async () => false;
+    const result = await executeSetupBatch(f.input);
+    expect(result.outcome).toBe('blocked'); expect(f.writer.branch).not.toHaveBeenCalled();
+    expect(jest.mocked(console.log).mock.calls.flat().join('\n')).toContain('Needs attention:');
+  });
   it('runs terminal selection and explicit Apply for two targets with no secret input', async () => {
     const f = terminalFixture(); const result = await executeSetupBatch(f.input);
     expect(result.outcome).toBe('complete'); expect(f.writer.pullRequest).toHaveBeenCalledTimes(2);
@@ -165,6 +183,48 @@ describe('terminal batch selection, review and recovery', () => {
   });
 });
 describe('real batch entrypoint composition with deterministic provider ports', () => {
+  it('handles early progress callbacks without inventing an approved plan or installation', async () => {
+    const f = fixture();
+    jest.spyOn(SetupBatchSessionUseCase.prototype, 'execute').mockImplementation(async function (this: SetupBatchSessionUseCase) {
+      const ports = (this as unknown as { ports: SetupBatchSessionPorts }).ports;
+      const plan = await ports.prepare.execute({ organization: 'acme', token: 'fixture', selected: [{ id: 7, name: 'repo-7' }] });
+      const operation = beginSetupBatchOperation(plan);
+      ports.presentation.progress(operation); ports.possibleMutation();
+      return { outcome: 'blocked', operation };
+    });
+    expect((await executeSetupBatch(f.input)).outcome).toBe('blocked');
+    expect(f.bridge.snapshot().batch).toBeUndefined(); expect(f.writer.branch).not.toHaveBeenCalled();
+    expect(f.input.possibleMutation).toHaveBeenCalledTimes(1);
+  });
+  it('rejects owner-type drift in the final audit with a visible corrective explanation', async () => {
+    const f = fixture();
+    jest.spyOn(SetupBatchSessionUseCase.prototype, 'execute').mockImplementation(async function (this: SetupBatchSessionUseCase) {
+      const ports = (this as unknown as { ports: SetupBatchSessionPorts }).ports;
+      const plan = await ports.prepare.execute({ organization: 'acme', token: 'fixture', selected: [{ id: 7, name: 'repo-7' }] });
+      const operation = beginSetupBatchOperation(plan);
+      expect(await ports.audit({ ...plan.targets[0], configuration: { ...plan.targets[0].configuration, manageRepositoryVariables: false },
+        remote: { ...plan.targets[0].remote, ownerType: 'User' } }, 'fixture')).toEqual({ ready: false, cleanupPending: false });
+      return { outcome: 'blocked', operation };
+    });
+    expect((await executeSetupBatch(f.input)).outcome).toBe('blocked');
+    expect(jest.mocked(console.log).mock.calls.flat().join('\n')).toContain('authenticated organization differs');
+    expect(f.writer.branch).not.toHaveBeenCalled(); expect(f.inspect).not.toHaveBeenCalled();
+  });
+  it('keeps cancellation between target preparation and the wizard from starting any write', async () => {
+    const f = fixture(); const original = SetupWizardUseCase.prototype.execute;
+    jest.spyOn(SetupWizardUseCase.prototype, 'execute').mockImplementation(function (this: SetupWizardUseCase, request) {
+      f.bridge.finish('cancelled', 'fixture stop before target questioning');
+      return original.call(this, request);
+    });
+    await expect(executeSetupBatch(f.input)).rejects.toBeInstanceOf(SetupInteractionCancelledError);
+    expect(f.writer.branch).not.toHaveBeenCalled(); expect(f.writer.variables).not.toHaveBeenCalled();
+  });
+  it('explains replacement PAT access for the current repository when no targets are selected', async () => {
+    const f = fixture();
+    jest.mocked(f.bridge.ask).mockImplementationOnce(async () => JSON.stringify({ action: 'access', selectedIds: [] }));
+    await executeSetupBatch(f.input);
+    expect(f.prompts).toContainEqual(expect.objectContaining({ kind: 'secret', copyValues: { repositories: 'repo-7' } }));
+  });
   it('explains excess provisional grants for a guided PAT without modifying shared resources', async () => {
     const f = fixture(); jest.spyOn(f.input.credentialPrompt, 'usedGuidedSetupPat', 'get').mockReturnValue(true);
     await executeSetupBatch({ ...f.input, provisionalRequirements: [{ id: 'setup.organization.secrets', role: 'setup', scope: 'organization',

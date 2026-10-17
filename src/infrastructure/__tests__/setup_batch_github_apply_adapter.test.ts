@@ -48,6 +48,11 @@ function fixture() {
     setReceipt: (value: unknown) => { installation = value; } };
 }
 describe('installer-owned GitHub write boundaries', () => {
+  it('reuses the exact complete prepared branch without posting another ref', async () => {
+    const f = fixture(); f.setBranch(prepared);
+    await expect(f.writer.branch(f.plan, operation, prepared, 'fixture')).resolves.toBeUndefined();
+    expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+  });
   it('revalidates an existing effective shared Variable and skips a redundant development-branch lookup', async () => {
     const f = fixture(); const resource = { kind: 'variable' as const, name: 'BUGBOT_COMMENT_LIMIT', value: '19', visibility: 'all' as const,
       updatedAt: '2026-10-17T14:00:00Z', selectedRepositoryIds: [] };

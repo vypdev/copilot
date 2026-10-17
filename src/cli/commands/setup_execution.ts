@@ -273,7 +273,6 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
         }, {
           permissions: tokenPermissions,
           presenter: permissionPresenter,
-          confirmUnverifiable: report => credentialPrompt.confirmUnverifiableTokenPermissions(report),
           showOwnerMismatch: (asserted, actual) => logInfo(`The owner was declared ${asserted}, but GitHub reports ${actual}. The guided link is no longer valid for this plan.`),
           showExcessGrants: grants => logInfo(`The final plan no longer requires grants suggested earlier: ${grants.join(', ')}. Your PAT may have excess access; replace it in GitHub if least privilege is required.`),
           showUpdatedLink: (url, grants) => credentialPrompt.showUpdatedSetupPatLink(url, 'final', grants),

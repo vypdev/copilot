@@ -34,6 +34,14 @@ describe('batch receipts and legacy guidance compatibility', () => {
     expect(inspectRepositoryAgentGuidance(root)[0].status).toBe('warn');
     expect(reconcileRepositoryAgentGuidance(root, f.configuration)).toEqual({ copied: 0, skipped: 1 });
   });
+  it.each([{ schemaVersion: 3 }, { unexpected: true }])('rejects an unsupported profile contract even when its digests match: %j', async change => {
+    const f = await install(); const path = join(root, '.copilot/repository-profile.json');
+    const content = JSON.stringify({ ...JSON.parse(readFileSync(path, 'utf8')), ...change }); writeFileSync(path, content);
+    f.manifest.artifacts['.copilot/repository-profile.json'].sha256 = hash(content); f.manifest.profileDigest = hash(content);
+    writeFileSync(f.manifestPath, JSON.stringify(f.manifest));
+    expect(inspectRepositoryAgentGuidance(root).find(item => item.id === 'agent-profile-schema')?.status).toBe('fail');
+    expect(readFileSync(path, 'utf8')).toBe(content);
+  });
   it.each([undefined, { lifecycleOwner: 'setup-cli', branchNamespace: 'setup/copilot/<operation-id>', requiresIssue: false, automaticMerge: false },
     { lifecycleOwner: 'foreign' }, { lifecycleOwner: 'setup-cli', branchNamespace: 'feature/<id>', requiresIssue: false, automaticMerge: false },
     { lifecycleOwner: 'setup-cli', branchNamespace: 'setup/copilot/<operation-id>', requiresIssue: true, automaticMerge: false },
