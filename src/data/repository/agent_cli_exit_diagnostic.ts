@@ -8,6 +8,9 @@ export function classifyAgentCliToolDiagnostic(stderr: string): AgentExecutionTo
 
 /** Provider stderr is untrusted and may contain credentials. Return a fixed code only. */
 export function classifyAgentCliExitDiagnostic(stderr: string): AgentExecutionExitDiagnostic {
+    if (/^ERROR: Incomplete response returned, reason: max_output_tokens\r?$/mu.test(stderr)) {
+        return 'reported-output-token-limit';
+    }
     const toolDiagnostic = classifyAgentCliToolDiagnostic(stderr);
     if (toolDiagnostic) return toolDiagnostic;
     if (/\b(?:authentication (?:failed|required)|unauthorized|unauthenticated|invalid api key|not logged in|login required|http 401)\b/iu.test(stderr)) {

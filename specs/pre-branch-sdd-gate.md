@@ -3,7 +3,7 @@
 - Status: Implemented — automated verification complete; live provider UX review pending
 - Date: 2026-09-17
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: 2026-09-17 on `codex/issue-start-sdd-gate`
+- Last verified: 2026-10-17 (compact draft targets and provider output-limit diagnosis, #541)
 - Owners: Copilot maintainers
 - Scope: clarify, update, validate, and publish the owning SDD before eligible branch-based work
 - Related issues/PRs: none; local design work; companion SDD `issue-start-and-branch-readiness.md`
@@ -554,7 +554,7 @@ authority is explicit; placeholder repository links and self-owned new companion
 are not supported evidence. Authorized retained answers resolve their decisions
 across rounds. These inputs remain data and grant no model or workspace authority.
 
-The following **149 distinct cases** are a floor derived from eligibility,
+The following **151 distinct cases** are a floor derived from eligibility,
 clarification, source freshness, publication races, partial writes, and SDD
 ownership/validation.
 
@@ -577,7 +577,8 @@ ownership/validation.
 | Draft format and final clarification recovery | 11 | Two typed content repair reasons, exhausted format, unexpected writer failure, both mixed size/format orders, final round completion, fourth question rejection, full writer/freshness revalidation, missing prepared value and localized closed recovery |
 | Native schema length rejection recovery | 9 | Actual findings adapter rejection/repair, exhausted schema repair, foreign path/bound and forged diagnostic rejection, short response rejection, mixed writer/schema failures and typed validator metadata |
 | Canonical numeric table budgets | 20 | Three valid table/owner routes, twelve invalid or misplaced table cases, unsafe integer rejection, positive/zero prose compatibility, immutable owner failure identity, actual findings acceptance and real scratch-worktree owner preservation |
-| **Total** | **149** | No case counted twice |
+| Compact generation targets | 2 | Update and companion target size, unchanged hard schema bounds, original resolved requirements and shared two-attempt ceiling |
+| **Total** | **151** | No case counted twice |
 
 The Windows adapter fixture MUST inject a destination creation immediately
 before the no-replace operation, assert that the operation fails with the
@@ -825,7 +826,7 @@ nothing; two failed candidates retain the same answer history and do not create
 a third attempt. Documentation explains this table contract and the owner boundary.
 
 The answered doctor issue #461 failed because the update writer allowed 18,000
-characters while the agent schema allowed 70,000. Draft schemas MUST share the
+characters while the agent schema allowed 70,000. Application response schemas MUST share the
 immutable domain limits: 1,800 minimum, 18,000 update maximum, 70,000
 companion/new maximum. An oversized structured response may be regenerated once
 for the same owner and answered plan, without echoing its untrusted contents.
@@ -840,7 +841,7 @@ preparation and retained answers/SDDs. No new configuration flag.
 
 Flow: analysis and required answers -> bounded draft -> optional single size
 regeneration -> unchanged validation/freshness -> publication, or blocked.
-Acceptance: the provider schema for an update has maxLength 18000; two oversized
+Acceptance: the application schema for an update has maxLength 18000; two oversized
 responses publish no draft; a base change after regeneration remains blocked.
 
 The live #463 retry rejected an oversized response in local schema validation
@@ -849,7 +850,7 @@ typed maximum-length rejection with the local field path and maximum, never
 provider content. Only `$.markdown` with this request's exact action-specific
 maximum may enter the existing single regeneration. String-matched diagnostics,
 foreign fields/bounds, minimum-length violations, malformed JSON and provider
-failures never authorize a retry. Native schema rejection, accepted oversized
+failures never authorize a retry. Local maximum-length rejection, accepted oversized
 output and writer format failure share the same two-attempt ceiling. Nine
 additional cases include the real adapter/parser/helper path.
 
@@ -857,9 +858,45 @@ Both attempts receive the literal canonical heading prefixes from the same
 constant used by writer validation, preserving capitalization and Markdown
 syntax. The prompt accepts the canonical justified numeric test-budget table
 or a positive integer sentence describing distinct tests or cases. The first attempt
-also targets two thirds of the hard maximum. These instructions do not relax
+targets 6,000 characters for an update and 10,000 for a new or companion SDD.
+These are preferred generation sizes, not acceptance limits. These instructions do not relax
 validation, change ownership or truncate a resolved requirement. This addresses
 the repeated required-format rejection in the final clarification of #464.
+
+### Provider output-token limits during drafting (2026-10-17)
+
+Issue [#538](https://github.com/vypdev/copilot/issues/538) failed before SDD or
+branch publication. A controlled reproduction in
+[#541](https://github.com/vypdev/copilot/issues/541) using the public issue,
+immutable catalog/template/standard, configured model and official CLI 0.163.0
+reproduced `Incomplete response returned, reason: max_output_tokens`. This is
+a provider generation-capacity failure, not proof of a Copilot request timeout,
+missing authorization or an unsupported native schema.
+
+Drafting MUST prefer a compact complete document: the target is the smaller of
+10,000 characters and one third of the action-specific hard maximum. The full
+application/local schema MUST retain the 1,800 minimum and 18,000/70,000 maxima.
+The Codex native artifact MUST preserve the strict closed JSON shape while
+omitting string `minLength` and `maxLength`; the original acceptance schema is
+not mutated. This projection is owned by the provider policy, never by the SDD
+use case or user configuration. Both
+the first draft and the existing single size/format repair retain the same
+owner, answers, resolved requirements, required headings, numeric test budget,
+documentation and acceptance. No content is truncated or published on failure.
+Provider failures remain terminal and do not gain an automatic retry.
+
+The compact target alone reproduced the same failure. With native string bounds
+omitted, the controlled 0.163.0 request produced a complete response which passed
+the real scratch-worktree SDD/catalog writer. This establishes the compatibility
+correction for this request; it does not assert every bounded native schema fails.
+
+Flow: answered plan -> compact target -> closed native shape -> full local schema ->
+unchanged writer/freshness proof -> Action-owned publication. A failed provider
+process leaves answers and existing SDDs intact; its fixed terminal diagnostic
+is documented in the agent execution contract. There is no new setting, state
+marker, timeline card, model selection or credential requirement. The two
+compact-target tests belong to this SDD; sixteen provider projection/diagnostic cases are counted
+once in the agent execution hardening SDD.
 
 
 ### Clarification history and safe durable state (2026-10-11)

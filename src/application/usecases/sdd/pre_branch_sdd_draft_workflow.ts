@@ -18,6 +18,7 @@ export async function draftSddMarkdown(
   validate?: (markdown: string) => Promise<void>,
 ): Promise<string> {
   const maximum = plan.action === 'update' ? SDD_MAX_UPDATE_CHARACTERS : SDD_MAX_DRAFT_CHARACTERS;
+  const target = Math.min(10_000, Math.floor(maximum / 3));
   const schema = {
     type: 'object',
     properties: { markdown: { type: 'string', minLength: SDD_MIN_DRAFT_CHARACTERS, maxLength: maximum } },
@@ -25,7 +26,7 @@ export async function draftSddMarkdown(
   };
   let problem: 'size' | 'format' = 'size';
   let formatReason: 'required-heading' | 'test-budget' = 'required-heading';
-  const contractPrompt = `${prompt}\n\nDraft contract: keep the complete draft within ${maximum} characters; aim for ${Math.floor(maximum * 2 / 3)} characters. Preserve the same owner, decisions and requirements. Include these literal canonical heading prefixes as Markdown headings, with the shown capitalization:\n${SDD_REQUIRED_HEADINGS.join('\n')}\nUse the canonical numeric test-budget table in section 14: Area | Minimum distinct cases | Behaviors/risks covered. Every allocation and the Total must be a positive integer, and the Total must equal the sum of the allocations. A justified positive integer sentence of distinct tests or cases is also accepted. Return only the required JSON.`;
+  const contractPrompt = `${prompt}\n\nDraft contract: keep the complete draft within ${maximum} characters; aim for ${target} characters. Preserve the same owner, decisions and requirements. Include these literal canonical heading prefixes as Markdown headings, with the shown capitalization:\n${SDD_REQUIRED_HEADINGS.join('\n')}\nUse the canonical numeric test-budget table in section 14: Area | Minimum distinct cases | Behaviors/risks covered. Every allocation and the Total must be a positive integer, and the Total must equal the sum of the allocations. A justified positive integer sentence of distinct tests or cases is also accepted. Return only the required JSON.`;
   for (let attempt = 0; attempt < 2; attempt++) {
     let value;
     try {

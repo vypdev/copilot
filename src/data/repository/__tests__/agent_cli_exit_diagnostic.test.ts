@@ -12,6 +12,9 @@ describe('agent CLI exit diagnostics', () => {
         ['error loading config: unknown configuration key features.multi_agent', 'reported-unsupported-configuration'],
         ['request failed: connection reset', 'reported-transport-or-rate-limit'],
         ['provider request failed: HTTP 429', 'reported-transport-or-rate-limit'],
+        ['ERROR: Incomplete response returned, reason: max_output_tokens', 'reported-output-token-limit'],
+        ['The issue mentions max_output_tokens and an incomplete response', 'unclassified'],
+        ['ERROR: Incomplete response returned, reason: content_filter', 'unclassified'],
         ['secret=fixture-private-value; provider failed', 'unclassified'],
     ] as const)('classifies only a fixed code for %s', (stderr, expected) => {
         const diagnostic = classifyAgentCliExitDiagnostic(stderr);

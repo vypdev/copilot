@@ -116,17 +116,17 @@ describe('LoggerAgentExecutionObserverAdapter', () => {
         expect(JSON.stringify((logInfo as jest.Mock).mock.calls)).not.toContain('SECRET_PROVIDER_OUTPUT');
     });
 
-    it('logs only the fixed diagnostic code after a failed CLI process', () => {
+    it.each(['reported-model-unavailable', 'reported-output-token-limit'] as const)('logs only the fixed %s diagnostic after a failed CLI process', exitDiagnostic => {
         const observer = new LoggerAgentExecutionObserverAdapter();
         observer.observe({
             state: 'failed', phase: 'run', provider: 'codex', capability: 'findings',
             durationMilliseconds: 10, failureCategory: 'process', semanticCode: 'agent.failed',
-            retryable: false, exitCode: 1, exitDiagnostic: 'reported-model-unavailable',
+            retryable: false, exitCode: 1, exitDiagnostic,
         });
         expect(logInfo).toHaveBeenCalledWith(
-            'Agent execution failed (run/process, exit 1, reported-model-unavailable).',
+            `Agent execution failed (run/process, exit 1, ${exitDiagnostic}).`,
             false,
-            { agentExecution: expect.objectContaining({ exitDiagnostic: 'reported-model-unavailable' }) },
+            { agentExecution: expect.objectContaining({ exitDiagnostic }) },
         );
     });
 });

@@ -51,6 +51,14 @@ process completion from the reported sandbox tool failure. This hint does not
 change the process result, authorize a retry or certify capability success.
 Model prose and unknown or truncated provider text are not diagnostic evidence.
 
+Nonzero exits also inspect a separate last-8-KiB stderr window before falling
+back to the first window. The exact CLI terminal output-token-limit line maps
+to `reported-output-token-limit`; response content, raw stderr and prompts stay
+private. That failure still stops the capability. For SDD drafting, use the
+[compact generation and recovery guidance](/issues/pre-branch-sdds#draft-validation-recovery)
+before rerunning the same issue; changing tokens or permissions does not address
+a provider output-token limit.
+
 ## Cost rule
 
 A real provider request MUST be authorized before execution when it can incur usage charges or consume plan quotas. Binary/version/help checks are not evidence of successful model authentication.
