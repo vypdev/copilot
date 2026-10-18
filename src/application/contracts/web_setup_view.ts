@@ -70,6 +70,7 @@ export type WebSetupPrompt =
   | ({ kind: 'plan'; title: string; plan: WebSetupPlan; editGroups?: readonly SetupQuestion['stateId'][] } & WebSetupPromptCopyRef);
 
 export interface WebSetupPlan {
+  readonly installationReview?: SetupPlan['installationReview'];
   readonly deliveryMode?: SetupPlan['deliveryMode'];
   readonly organizationReuse?: SetupPlan['organizationReuse'];
   readonly workflowPatStorage?: SetupWorkflowPatStorageNotice;

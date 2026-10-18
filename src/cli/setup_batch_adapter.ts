@@ -1,3 +1,4 @@
+import { createSetupRunnerDiscovery } from '../infrastructure/composition/setup_runner_composition_root';
 import type { TerminalDriver } from '../application/ports/setup_terminal_ports';
 import type { SetupConfigurationOverrides } from '../application/policies/setup_configuration_policy';
 import type { SetupBatchPlan, SetupBatchOperation, SetupBatchTarget, SetupBatchGrant } from '../domain/setup_batch';
@@ -11,7 +12,7 @@ import { SetupQuestionnaireController, SetupWizardUseCase } from '../application
 import { AuditConfiguredSetupPatUseCase } from '../application/usecases/setup/audit_configured_setup_pat_use_case';
 import { planSetupBatchSharedAccess } from '../application/policies/setup_batch_access_policy';
 import { buildSetupBatchView } from '../application/policies/setup_batch_view_policy';
-import { buildSetupBatchPatPermissionRequirements } from '../application/policies/setup_token_permission_policy';
+import { buildSetupBatchPatPermissionRequirements, withSetupRunnerDiscoveryPermissions } from '../application/policies/setup_token_permission_policy';
 import { buildSetupPatCreationUrl } from '../application/policies/setup_pat_creation_url_policy';
 import { createDefaultSetupConfiguration } from '../application/policies/setup_configuration_defaults';
 import { SetupInteractionCancelledError } from '../application/errors/setup_interaction_cancelled_error';
@@ -33,6 +34,9 @@ import type { WebSetupBridge } from './web_setup_bridge';
 import type { SetupTokenPermissionRequirement, SetupTokenPermissionReport } from '../domain/setup_token_permissions';
 import type { SetupJourneyStage } from '../application/policies/setup_journey_policy';
 import { logInfo } from '../utils/logger';
+import { renderSetupInstallationReview } from './setup_installation_review_presenter';
+import { reusableSetupRunnerDefaults } from '../application/policies/setup_runner_policy';
+import type { SetupRunnerConfiguration } from '../domain/setup_runner';
 
 interface BatchInput {
   readonly resumeOperationId?: string;
@@ -57,6 +61,7 @@ export async function executeSetupBatch(input: BatchInput) {
   let currentOperation: SetupBatchOperation | undefined;
   let retryRemaining = 1;
   let failedPermissionReport: SetupTokenPermissionReport | undefined;
+  let sharedRunnerDefaults: SetupRunnerConfiguration | undefined;
   const alive = () => !input.bridge?.snapshot().outcome;
   const approved = () => alive() && !input.bridge?.snapshot().batch?.stopRequested
     && (approvedGeneration === undefined || approvedGeneration === input.bridge?.controllerGeneration());
@@ -89,9 +94,11 @@ export async function executeSetupBatch(input: BatchInput) {
       return JSON.stringify({ action: 'select', selectedIds: ids });
     },
     requestToken: async repositories => {
-      const requirements = buildSetupBatchPatPermissionRequirements(createDefaultSetupConfiguration());
+      const configuration = createDefaultSetupConfiguration();
+      configuration.runners = { ...configuration.runners!, discover: input.overrides.runners?.discover ?? sharedRunnerDefaults?.discover };
+      const requirements = withSetupRunnerDiscoveryPermissions(buildSetupBatchPatPermissionRequirements(configuration), configuration, 'Organization');
       input.permissionPresenter.showDetailedRequirements('setup', requirements);
-      const link = buildSetupPatCreationUrl({ owner: input.owner, repository: input.repository, role: 'setup', expiresIn: 1, requirements });
+      const link = buildSetupPatCreationUrl({ owner: input.owner, repository: input.repository, role: 'setup', expiresIn: 1, requirements, includeConditionalSetupGrants: true });
       if (input.bridge) return input.bridge.ask({ kind: 'secret', title: 'Temporary PAT for selected repositories', optional: true,
         link, copyId: 'batch.token', copyValues: { repositories: repositories.join(', ') || input.repository } });
       logInfo(`Create a temporary PAT limited to ${repositories.join(', ') || input.repository}. ${link}`);
@@ -114,13 +121,19 @@ export async function executeSetupBatch(input: BatchInput) {
           inspectCredentialHealthWorkflow: (...args) => remoteReader.inspectCredentialHealthWorkflow!(...args) },
         mergeQueueReadiness: createSetupMergeQueueReadinessUseCase(), approvalReadiness: new GithubSetupApprovalReadinessAdapter(),
         approvalCheckDiscovery: new GithubSetupApprovalCheckDiscoveryAdapter(), projectDiscovery: new GithubSetupProjectDiscoveryAdapter(),
+        runnerDiscovery: createSetupRunnerDiscovery(),
         sessionLiveness: () => alive() ? 'active' : 'cancelled',
       });
-      return new ConfigureSetupBatchTargetUseCase({ wizard, credentials: createSetupCredentialsUseCase(input.credentialPrompt,
+      const runnerDefaults = input.overrides.runners?.mode !== undefined ? input.overrides.runners
+        : { ...reusableSetupRunnerDefaults(sharedRunnerDefaults, projected), ...input.overrides.runners };
+      if (Object.keys(runnerDefaults).length) logInfo('The runner choice is prefilled for this target. Review its group/labels and change it for a repository exception; installation still waits for the combined review.');
+      const chosen = await new ConfigureSetupBatchTargetUseCase({ wizard, credentials: createSetupCredentialsUseCase(input.credentialPrompt,
         input.permissionPresenter, { configurationSource: 'organization', allowPreApplyHealthWorkflow: false }) }).execute({
         target, remote: projected, actualRemote: context.remote, shared: context.shared, token: privateToken,
-        configurationSource: input.configurationSource, overrides: input.overrides, presentationMode: input.presentationMode,
+        configurationSource: input.configurationSource, overrides: { ...input.overrides, runners: runnerDefaults }, presentationMode: input.presentationMode,
         skipVariables: input.skipVariables, skipSecrets: input.skipSecrets });
+      if (chosen?.configuration.runners) sharedRunnerDefaults = chosen.configuration.runners;
+      return chosen;
     },
   });
   const presentation: SetupBatchPresentationPort = { active: approved,
@@ -187,6 +200,7 @@ function printBatch(plan: SetupBatchPlan, operation: SetupBatchOperation): void 
     logInfo(`  ${target.target.owner}/${target.target.name}: ${receipt.status}; ${target.files.length} files, ${target.repositoryVariables.length} repository Variables, ${target.grants.length} additive grants.`);
     logInfo(`  setup/copilot/${plan.operationId} → ${target.target.defaultBranch} at ${target.target.baseSha}`);
     if (target.blocked.length) logInfo(`  Needs attention: ${target.blocked.join(' ')}`);
+    if (target.installationReview) logInfo(renderSetupInstallationReview(target.installationReview));
     if (receipt.cleanupPending) logInfo('  Permission-check cleanup could not be confirmed. Pending work is stopped. Inspect GitHub history and the local recovery journal; resolve cleanup before starting a fresh setup. This operation cannot resume writes.');
     if (!target.blocked.length) buildSetupBatchPatPermissionRequirements(target.configuration, target.remote, target.grants)
       .filter(requirement => requirement.level === 'write' && requirement.applicability === 'required')

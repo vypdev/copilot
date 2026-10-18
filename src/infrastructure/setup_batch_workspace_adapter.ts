@@ -9,24 +9,25 @@ import { validSetupBatchAssetPath } from '../application/policies/setup_batch_po
 import { copySetupFiles, ensureGitHubDirs, compareSetupWorkflows } from '../utils/setup_files';
 import { effectiveIssueWorkflowFeatures } from '../application/policies/setup_issue_workflow_policy';
 import { hasRootLocalSetupAction } from '../utils/setup_workflow_upgrade';
+import { inspectSetupInstallation } from '../utils/setup_installation_review';
 import { REPOSITORY_AGENT_GUIDE_PATH, REPOSITORY_AGENT_PROFILE_PATH, REPOSITORY_AGENT_MANIFEST_PATH,
   REPOSITORY_AGENT_SKILL_PATH } from '../application/policies/repository_agent_guidance_policy';
 
 /** Existing setup renderers run inside a disposable directory, never in another checkout. */
 export class SetupBatchWorkspaceAdapter implements SetupBatchRenderPort {
+  async review(configuration: SetupConfiguration, existing: readonly SetupBatchFile[]) {
+    const root = mkdtempSync(join(tmpdir(), 'copilot-setup-review-'));
+    try {
+      seedWorkspace(root, existing);
+      return inspectSetupInstallation(root, configuration);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  }
   digest(value: string): string { return createHash('sha256').update(value).digest('hex'); }
   operationId(): string { return randomUUID(); }
   async render(configuration: SetupConfiguration, existing: readonly SetupBatchFile[]): Promise<readonly SetupBatchFile[]> {
     const root = mkdtempSync(join(tmpdir(), 'copilot-setup-render-'));
     try {
-      if (existing.length > 300 || new Set(existing.map(file => file.path)).size !== existing.length
-        || existing.some(file => !validSetupBatchAssetPath(file.path) || file.content === null
-          || Buffer.byteLength(file.content) > 100_000)
-        || existing.reduce((sum, file) => sum + Buffer.byteLength(file.content!), 0) > 2_000_000) throw new Error('Setup asset inventory is invalid or exceeds the fixed render budget.');
-      for (const file of existing) {
-        const destination = join(root, file.path); mkdirSync(dirname(destination), { recursive: true });
-        writeFileSync(destination, file.content!, { mode: 0o600 });
-      }
+      seedWorkspace(root, existing);
       ensureGitHubDirs(root);
       const sourceAction = existing.some(file => file.path.startsWith('.github/workflows/') && hasRootLocalSetupAction(file.content!));
       const sourceGuidance = [REPOSITORY_AGENT_GUIDE_PATH, REPOSITORY_AGENT_PROFILE_PATH, REPOSITORY_AGENT_MANIFEST_PATH,
@@ -70,5 +71,15 @@ export class SetupBatchWorkspaceAdapter implements SetupBatchRenderPort {
         return previous.get(path) === content ? [] : [{ path, content }];
       });
     } finally { rmSync(root, { recursive: true, force: true }); }
+  }
+}
+
+function seedWorkspace(root: string, existing: readonly SetupBatchFile[]): void {
+  if (existing.length > 300 || new Set(existing.map(file => file.path)).size !== existing.length
+    || existing.some(file => !validSetupBatchAssetPath(file.path) || file.content === null || Buffer.byteLength(file.content) > 100_000)
+    || existing.reduce((sum, file) => sum + Buffer.byteLength(file.content!), 0) > 2_000_000) throw new Error('Setup asset inventory is invalid or exceeds the fixed render budget.');
+  for (const file of existing) {
+    const destination = join(root, file.path); mkdirSync(dirname(destination), { recursive: true });
+    writeFileSync(destination, file.content!, { mode: 0o600 });
   }
 }

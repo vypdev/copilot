@@ -7,7 +7,7 @@ export type CopyStats = { copied: number; skipped: number };
 export interface CopyOptions {
   overwrite?: boolean;
   backupDirectory?: string;
-  renderContent?: (template: string, existing?: string) => string;
+  renderContent?: (template: string, existing?: string, file?: string) => string;
 }
 
 export function copySetupFile(source: string, destination: string, displaySource: string, displayDestination: string, options: CopyOptions = {}): CopyStats {
@@ -16,7 +16,7 @@ export function copySetupFile(source: string, destination: string, displaySource
     logInfo(`  ⏭️  ${displayDestination} already exists; skipping.`);
     return { copied: 0, skipped: 1 };
   }
-  const rendered = options.renderContent?.(fs.readFileSync(source, 'utf8'), fs.existsSync(destination) ? fs.readFileSync(destination, 'utf8') : undefined);
+  const rendered = options.renderContent?.(fs.readFileSync(source, 'utf8'), fs.existsSync(destination) ? fs.readFileSync(destination, 'utf8') : undefined, path.basename(source));
   if (fs.existsSync(destination) && options.backupDirectory) {
     fs.mkdirSync(options.backupDirectory, { recursive: true });
     fs.copyFileSync(destination, path.join(options.backupDirectory, path.basename(destination)));

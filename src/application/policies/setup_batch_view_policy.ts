@@ -12,6 +12,7 @@ export function buildSetupBatchView(plan: SetupBatchPlan, operation: SetupBatchO
       const receipt = operation.targets[index];
       if (!receipt || receipt.repositoryId !== target.target.id) throw new Error('Setup receipt identity mismatch.');
       return { repositoryId: target.target.id, repository: `${target.target.owner}/${target.target.name}`, status: receipt.status,
+        ...(target.installationReview ? { installationReview: target.installationReview } : {}),
         installationBranch: setupBatchBranch(plan.operationId), baseBranch: target.target.defaultBranch, baseSha: target.target.baseSha, blockers: [...target.blocked],
         files: target.files.map(file => ({ path: file.path, content: file.content })),
         repositoryVariables: target.repositoryVariables.map(variable => variable.name),

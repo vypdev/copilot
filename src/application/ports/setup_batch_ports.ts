@@ -14,6 +14,7 @@ export interface SetupBatchInventoryPort {
   files(target: SetupBatchTarget, token: string): Promise<readonly SetupBatchFile[]>;
 }
 export interface SetupBatchRenderPort {
+  review?(configuration: SetupConfiguration, existing: readonly SetupBatchFile[]): Promise<import('../../domain/setup_runner').SetupInstallationReview>;
   render(configuration: SetupConfiguration, existing: readonly SetupBatchFile[]): Promise<readonly SetupBatchFile[]>;
   digest(value: string): string;
   operationId(): string;

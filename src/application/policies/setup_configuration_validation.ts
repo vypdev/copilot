@@ -9,9 +9,11 @@ import { ISSUE_WORKFLOW_KINDS } from '../../domain/issue_workflow_profile';
 import { effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
 import { validatePullRequestApprovalPolicy } from '../../domain/pull_request_approval_policy';
 import { parseSetupProjectSelection } from './setup_project_selection_policy';
+import { validateSetupRunners } from './setup_runner_policy';
 
 export function validateSetupConfiguration(configuration: SetupConfiguration, options: { allowIncompleteApproval?: boolean } = {}): string[] {
     const errors: string[] = [];
+    errors.push(...validateSetupRunners(configuration.runners));
     const projectSelection = parseSetupProjectSelection(configuration.projects.ids);
     if ('error' in projectSelection || projectSelection.value !== configuration.projects.ids) {
         errors.push('Project IDs must be a comma-separated list of 1–10 distinct positive Project URL numbers; PVT_ node IDs are not accepted.');

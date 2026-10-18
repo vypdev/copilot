@@ -1,5 +1,6 @@
 import type { SetupConfiguration, SetupRemoteConfiguration } from './setup';
 import type { PullRequestApprovalProducer } from './pull_request_approval_policy';
+import type { SetupRunnerProfile, SetupRunnerInventory } from './setup_runner';
 
 export const SETUP_QUESTIONNAIRE_STATE_ORDER = [
   'capabilities',
@@ -52,6 +53,10 @@ export interface SetupApprovalCheckCandidate {
 }
 
 export interface SetupQuestion {
+  readonly runnerProfiles?: readonly SetupRunnerProfile[];
+  readonly runnerRegistryStatus?: 'available' | 'missing' | 'invalid' | 'unavailable';
+  readonly runnerRegistryScope?: 'repository' | 'organization';
+  readonly runnerInventory?: SetupRunnerInventory;
   readonly stateId: Exclude<SetupQuestionnaireStateId, 'review' | 'confirmation' | 'completed' | 'cancelled'>;
   readonly id: string;
   readonly label: string;
@@ -99,6 +104,7 @@ export type SetupQuestionnaireEvent =
   | { readonly kind: 'end-of-input' };
 
 export interface SetupQuestionnaireContext {
+  readonly runnerInventory?: SetupRunnerInventory;
   readonly remote?: SetupRemoteConfiguration;
   readonly variableNames?: readonly string[];
   readonly secretNames?: readonly string[];

@@ -231,7 +231,7 @@ describe('setup questionnaire policy', () => {
 
   it('enters review immediately when the permission-intent phase has no open questions', () => {
     const ids = [
-      'features.issues', 'features.pullRequests', 'issueWorkflows.enabled', 'pullRequestApproval.mode',
+      'runners.discover', 'features.issues', 'features.pullRequests', 'issueWorkflows.enabled', 'pullRequestApproval.mode',
       'projects.enabled', 'manageRepositoryVariables', 'manageRepositorySecrets',
       'storage.variables.defaultScope', 'storage.variables.preserveExisting',
       'storage.secrets.defaultScope', 'storage.secrets.preserveExisting',

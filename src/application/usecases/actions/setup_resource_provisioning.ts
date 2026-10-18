@@ -1,4 +1,5 @@
 import { sameSetupRemoteFacts, hasCompleteSetupSecretRevisions } from '../../policies/setup_remote_facts_policy';
+import { setupRunnerProfileIsFresh } from '../../policies/setup_runner_policy';
 import type {
     SetupConfiguration,
     SetupCredentialCollection,
@@ -154,13 +155,21 @@ export async function resolveRemoteConfiguration(
     setupConfiguration: SetupConfiguration | undefined,
     errors: string[],
 ): Promise<SetupRemoteConfiguration | undefined> {
+    let runnerRemote: SetupRemoteConfiguration | undefined;
+    if (setupConfiguration?.runners?.mode === 'organization-profile') {
+        try { runnerRemote = await dependencies.setupRemoteConfigurationReadPort?.inspect(); } catch { /* Unknown cannot establish profile freshness. */ }
+        if (!runnerRemote || !setupRunnerProfileIsFresh(setupConfiguration.runners, runnerRemote)) {
+            errors.push('The reviewed runner registry changed or is unavailable. No changes were made; inspect and approve a fresh profile snapshot.');
+            return undefined;
+        }
+    }
     if (context.setupConfigurationSource === 'organization') {
         if (!context.setupRemoteConfiguration || !dependencies.setupRemoteConfigurationReadPort) {
             errors.push('Organization reuse requires a fresh inventory before Apply. No changes were made.');
             return undefined;
         }
         try {
-            const fresh = await dependencies.setupRemoteConfigurationReadPort.inspect();
+            const fresh = runnerRemote ?? await dependencies.setupRemoteConfigurationReadPort.inspect();
             if (!hasCompleteSetupSecretRevisions(fresh) || !hasCompleteSetupSecretRevisions(context.setupRemoteConfiguration)) {
                 errors.push('Retained Secret revision metadata could not be verified. Restore metadata access and prepare a fresh plan. No changes were made.');
                 return undefined;
@@ -175,6 +184,7 @@ export async function resolveRemoteConfiguration(
             return undefined;
         }
     }
+    if (runnerRemote) return runnerRemote;
     if (context.setupRemoteConfiguration) return context.setupRemoteConfiguration;
     if (!dependencies.setupRemoteConfigurationReadPort || !setupConfiguration) return undefined;
     try {

@@ -23,6 +23,7 @@ export class ConsoleSetupQuestionRenderer implements SetupQuestionRenderer {
             ].join('\n')
           : [
               'First, choose the setup options that affect your temporary PAT permissions.',
+              'For full workflow contents, start with copilot setup --web. Terminal logs show routes and file actions.',
               'These answers carry into the later full wizard and are not asked there again',
               'unless you choose to review them here. No GitHub changes happen in this step.',
             ].join('\n'),
@@ -53,7 +54,13 @@ export class ConsoleSetupQuestionRenderer implements SetupQuestionRenderer {
         const fixed = question.fixedWorkflowFeatures?.[kind];
         return fixed === undefined ? [] : [`  Configuration fixes features.${kind}=${fixed}; ${fixed ? 'keep' : 'leave'} ${kind} ${fixed ? 'selected' : 'unselected'} unless you edit --config/flags.`];
       }).join('\n');
-    const heading = `${step}${question.label}\n  ${help.summary}\n  Suggested: ${formatDefault(question.defaultValue)}${source}. ${help.documentation.title}: ${help.documentation.url}\n  Type ? for detailed help; type :back to return to the previous question without clearing saved answers.${fixedWorkflowNote ? `\n${fixedWorkflowNote}` : ''}${discoveryNote(question)}`;
+    const runnerNote = question.id.startsWith('runners.') && question.id !== 'runners.discover' ? [
+      `Registry: ${question.runnerRegistryStatus}${question.runnerRegistryScope ? ` (${question.runnerRegistryScope})` : ''}. Inventory: ${question.runnerInventory?.status ?? 'unavailable'}. No access is granted by selection.`,
+      ...(question.runnerProfiles ?? []).map(profile => `${profile.id}: group ${profile.group || '(labels only)'}; ${profile.labels.join(', ')}; validation ${profile.validation}`),
+      ...(question.runnerInventory?.groups ?? []).map(group => `Observed group ${group.name}: ${group.access}`),
+      ...(question.runnerInventory?.candidates ?? []).slice(0, 10).map(candidate => `Observed labels: ${candidate.labels.join(', ')} · ${candidate.status}${candidate.busy ? ' · busy' : ''}`),
+    ].join('\n  ') : '';
+    const heading = `${step}${help.label}\n  ${help.summary}\n  Suggested: ${formatDefault(question.defaultValue)}${source}. ${help.documentation.title}: ${help.documentation.url}\n  Type ? for detailed help; type :back to return to the previous question without clearing saved answers.${fixedWorkflowNote ? `\n${fixedWorkflowNote}` : ''}${discoveryNote(question)}${runnerNote ? `\n  ${runnerNote}` : ''}`;
     const reviewedStatuses = question.projectStatusValues?.map(item => `  ${item.transition}: ${item.value}`).join('\n');
     const fallback = formatDefault(question.defaultValue);
     if (question.kind === 'choice') {

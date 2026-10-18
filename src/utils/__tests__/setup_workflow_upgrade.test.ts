@@ -6,11 +6,11 @@ const selected = (content: string) => (load(content) as { jobs: { copilot: { 'ru
 
 describe('setup retains reviewed target workflow runners', () => {
   it('retains source Action jobs, permissions and release customizations instead of consumer templates', () => {
-    const existing = 'on: [pull_request]\njobs:\n  native:\n    runs-on: [self-hosted, codex]\n    permissions: {contents: write}\n    steps:\n      - uses: ./\n  publish:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npm publish --access public\n';
+    const existing = 'on: [pull_request]\njobs:\n  native:\n    runs-on: [self-hosted, codex]\n    permissions: {contents: write}\n    steps:\n      - uses: ./\n        with: {single-action: check_branch_sync_action}\n  publish:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npm publish --access public\n';
     expect(renderSetupWorkflowUpgrade(workflow('ubuntu-latest'), existing)).toBe(existing);
   });
   it('adds only the installer exclusion to a source Action push workflow and retains all parsed fields', () => {
-    const existing = 'on:\n  push:\n    branches: ["**", "!master"]\njobs:\n  copilot-commits:\n    runs-on: [self-hosted, codex]\n    steps:\n      - uses: ./\n';
+    const existing = 'on:\n  push:\n    branches: ["**", "!master"]\njobs:\n  copilot-commits:\n    runs-on: [self-hosted, codex]\n    steps:\n      - uses: ./\n        with: {single-action: check_branch_sync_action}\n';
     const result = renderSetupWorkflowUpgrade(workflow('ubuntu-latest'), existing);
     const expected = load(existing) as { on: { push: { branches: string[] } } };
     expected.on.push.branches.push('!setup/copilot/**');
@@ -18,24 +18,24 @@ describe('setup retains reviewed target workflow runners', () => {
     expect(renderSetupWorkflowUpgrade(workflow('ubuntu-latest'), result)).toBe(result);
   });
   it.each(['branches: invalid', 'branches: [42]'])('blocks ambiguous source Action push filters %s', filters => {
-    const existing = `on:\n  push:\n    ${filters}\njobs:\n  copilot-commits:\n    steps:\n      - uses: ./\n`;
+    const existing = `on:\n  push:\n    ${filters}\njobs:\n  copilot-commits:\n    steps:\n      - uses: ./\n        with: {single-action: check_branch_sync_action}\n`;
     expect(() => renderSetupWorkflowUpgrade(workflow('ubuntu-latest'), existing)).toThrow('review');
   });
   it.each(['on: [push]', 'on: push', 'on: {push: null}'])('blocks implicit source Action push filters %s', events => {
-    const existing = `${events}\njobs:\n  copilot-commits:\n    steps:\n      - uses: ./\n`;
+    const existing = `${events}\njobs:\n  copilot-commits:\n    steps:\n      - uses: ./\n        with: {single-action: check_branch_sync_action}\n`;
     expect(() => renderSetupWorkflowUpgrade(workflow('ubuntu-latest'), existing)).toThrow('review');
   });
   it('keeps the all-branch source observer unchanged', () => {
-    const existing = 'on: {push: {branches: ["**"]}}\njobs:\n  branch-sync:\n    steps:\n      - uses: ./\n';
+    const existing = 'on: {push: {branches: ["**"]}}\njobs:\n  branch-sync:\n    steps:\n      - uses: ./\n        with: {single-action: check_branch_sync_action}\n';
     expect(renderSetupWorkflowUpgrade(workflow('ubuntu-latest'), existing)).toBe(existing);
   });
   it('places the source Commit installer exclusion after all positive patterns', () => {
-    const existing = 'on: {push: {branches: ["!setup/copilot/**", "**"]}}\njobs:\n  copilot-commits:\n    steps:\n      - uses: ./\n';
+    const existing = 'on: {push: {branches: ["!setup/copilot/**", "**"]}}\njobs:\n  copilot-commits:\n    steps:\n      - uses: ./\n        with: {single-action: check_branch_sync_action}\n';
     const result = load(renderSetupWorkflowUpgrade(workflow('ubuntu-latest'), existing)) as { on: { push: { branches: string[] } } };
     expect(result.on.push.branches).toEqual(['**', '!setup/copilot/**']);
   });
   it.each([
-    ['jobs: {native: {steps: [{uses: "./"}]}}', true],
+    ['jobs: {native: {steps: [{uses: "./", with: {single-action: check_branch_sync_action}}]}}', true],
     ['jobs: {native: {steps: [{uses: "./sub-action"}]}}', false],
     ['# uses: ./\njobs: {native: {steps: null}}', false],
     ['# no workflow', false],
@@ -87,5 +87,20 @@ describe('setup retains reviewed target workflow runners', () => {
   it('blocks an unexpected template layout rather than silently retaining the default runner', () => {
     const template = 'jobs: {copilot: {runs-on: ubuntu-latest}}\n';
     expect(() => renderSetupWorkflowUpgrade(template, workflow('self-hosted'))).toThrow('verified');
+  });
+});
+
+describe('source detection requires Copilot-specific invocation evidence', () => {
+  test.each([
+    [{ uses: './' }, false],
+    [{ uses: './', with: { token: 'fixture', 'single-action': 'unrelated' } }, false],
+    [{ uses: './', with: { 'single-action': ['check_branch_sync_action'] } }, false],
+    [{ uses: './', with: { 'issue-workflow-profile': '{}', 'agent-provider': 'codex' } }, true],
+    [{ uses: './', with: { 'pr-approval-observer': true, 'pr-approval-policy': '{}' } }, true],
+    [{ uses: './', with: { 'pr-approval-observer': 'true', 'pr-approval-policy': '{}' } }, true],
+    [{ uses: './', with: { 'pr-approval-observer': true } }, false],
+    [{ uses: './', with: { 'issue-workflow-profile': '{}' } }, false],
+  ])('classifies the explicit root invocation %j', (step, expected) => {
+    expect(hasRootLocalSetupAction(dump({ jobs: { fixture: { steps: [step] } } }))).toBe(expected);
   });
 });

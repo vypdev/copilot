@@ -17,6 +17,7 @@ import { buildSetupActionInputs } from '../../application/policies/setup_configu
 import { selectedInitialIssueTypes, selectedInitialLabels } from '../../application/policies/setup_issue_resource_policy';
 import type { InitialIssueTypeConfiguration, InitialLabelConfiguration } from '../../application/ports/issue_management_ports';
 import type { SetupBatchTargetPlan } from '../../domain/setup_batch';
+import { createSetupRunnerDiscovery } from './setup_runner_composition_root';
 
 export function createSetupBatchCompositionRoot() {
   const transport = new SetupBatchGithubTransport({ getClient: token => getOctokitClient<GithubSetupBatchClient>(token) });
@@ -45,5 +46,5 @@ export function createSetupBatchCompositionRoot() {
       if (result.errors.length) throw new SetupBatchProviderError('unknown');
     },
   });
-  return { discovery: read, inventory: read, writer, renderer: new SetupBatchWorkspaceAdapter(), journal: new SetupBatchJournalAdapter() };
+  return { discovery: read, inventory: read, writer, renderer: new SetupBatchWorkspaceAdapter(), journal: new SetupBatchJournalAdapter(), runnerDiscovery: createSetupRunnerDiscovery() };
 }

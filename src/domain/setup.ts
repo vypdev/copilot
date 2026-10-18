@@ -14,6 +14,7 @@ import type {
 } from './deployment_configuration';
 import type { IssueWorkflowKind } from './issue_workflow_profile';
 import type { PullRequestApprovalPolicy } from './pull_request_approval_policy';
+import type { SetupRunnerConfiguration, SetupInstallationReview } from './setup_runner';
 
 export type SetupFeature =
     | 'issues'
@@ -105,6 +106,8 @@ export interface SetupProjectConfiguration {
 }
 
 export interface SetupConfiguration {
+    /** Absent legacy configuration retains installed routing. */
+    runners?: SetupRunnerConfiguration;
     features: SetupFeatures;
     agents: SetupAgentConfiguration;
     repository: SetupRepositoryConfiguration;
@@ -261,6 +264,7 @@ export interface SetupVariable {
 }
 
 export interface SetupPlan {
+    installationReview?: SetupInstallationReview;
     deliveryMode?: 'local' | 'pull-request';
     organizationReuse?: {
         readonly imported: number;

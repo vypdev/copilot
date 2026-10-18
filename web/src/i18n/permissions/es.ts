@@ -1,6 +1,10 @@
 import type { PermissionText } from './en';
 
 export const permissionCopyEs: Readonly<Record<PermissionText, string>> = {
+  "Optional runner discovery selected": "Consulta opcional de runners seleccionada",
+  "Optional organization runner discovery selected": "Consulta opcional de runners de organización seleccionada",
+  "List existing repository self-hosted runners without changing access.": "Consultar los runners self-hosted existentes del repositorio sin cambiar su acceso.",
+  "List existing eligible runner groups and their runners; manual routing remains available without this grant.": "Consultar los grupos de runners accesibles y sus runners; la configuración manual sigue disponible sin este permiso.",
   "Create the reviewed installation commit and installer-owned branch.": "Crear el commit de instalación revisado y la rama del instalador.",
   "Include reviewed workflow files in the installation PR.": "Incluir los workflows revisados en la PR de instalación.",
   "Create the reviewed installation PR without merging it.": "Crear la PR de instalación revisada sin fusionarla.",

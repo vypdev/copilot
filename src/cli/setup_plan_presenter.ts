@@ -4,6 +4,7 @@ import type { SetupPlan } from '../domain/setup';
 import { color, doctorIcon, formatTask, renderBox } from './setup_prompt_rendering';
 import { FIXED_APPROVAL_EXCLUSIONS } from '../domain/pull_request_approval_policy';
 import { workflowPatStorageCopy } from './setup_workflow_pat_storage_copy';
+import { renderSetupInstallationReview } from './setup_installation_review_presenter';
 
 export class ConsoleSetupPlanPresenter implements SetupPlanPresenterPort {
   present(plan: SetupPlan): void {
@@ -23,6 +24,7 @@ export function renderSetupPlan(plan: SetupPlan): string {
   const content = [
     color('Capabilities', 36), enabledFeatures || '  (none)', '',
     color('Agent routing', 36), agents, '',
+    ...(plan.installationReview ? [renderSetupInstallationReview(plan.installationReview), ''] : []),
     color('Pull-request approval', 36),
     `  Mode: ${approval.mode} (new setup; absent runtime policy stays off)`,
     `  Scope: ${approval.targetRoles.join(', ')} / ${approval.branchKinds.join(', ')}; linked issue ${approval.requireLinkedIssue ? 'required' : 'optional'}`,

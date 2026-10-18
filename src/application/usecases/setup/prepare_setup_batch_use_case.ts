@@ -10,6 +10,7 @@ import { configureSetupOrganizationReuseStorage } from '../../policies/setup_org
 import { projectSetupBatchSharedBindings, planSetupBatchSharedAccess } from '../../policies/setup_batch_access_policy';
 import { validateSetupConfiguration } from '../../policies/setup_configuration_validation';
 import { SetupInteractionCancelledError } from '../../errors/setup_interaction_cancelled_error';
+import { setupRunnerReadiness } from '../../policies/setup_runner_policy';
 
 export interface PrepareSetupBatchRequest {
   readonly organization: string;
@@ -18,6 +19,7 @@ export interface PrepareSetupBatchRequest {
   readonly operationId?: string;
 }
 export interface PrepareSetupBatchPorts {
+  readonly runnerDiscovery?: import('../../ports/setup_runner_ports').SetupRunnerDiscoveryPort;
   readonly discovery: SetupBatchDiscoveryPort;
   readonly inventory: SetupBatchInventoryPort;
   readonly renderer: SetupBatchRenderPort;
@@ -84,15 +86,23 @@ export class PrepareSetupBatchUseCase {
       }
       blocked.push(...access.missing.map(name => `${name}: provision or authorize this existing binding separately, then inspect again.`));
       let files: SetupBatchTargetPlan['files'] = [];
+      let installationReview: SetupBatchTargetPlan['installationReview'];
       if (!blocked.length) {
         try {
           const existing = await this.ports.inventory.files(target, request.token);
-          files = await this.ports.renderer.render(configuration, existing);
+          const review = await this.ports.renderer.review?.(configuration, existing);
+          if (review) {
+            const inventory = configuration.runners?.discover ? await this.ports.runnerDiscovery?.discover(target.owner, target.name, request.token, 'Organization')
+              .catch(() => ({ status: 'unavailable' as const, candidates: [], groups: [] })) : undefined;
+            installationReview = { ...review, jobs: review.jobs.map(job => ({ ...job, status: setupRunnerReadiness(job.runsOn, inventory) })) };
+            blocked.push(...review.blockers);
+          }
+          if (!blocked.length) files = await this.ports.renderer.render(configuration, existing);
         } catch {
           blocked.push('Setup files could not be inspected or rendered within the fixed asset budget. Inspect this target before retrying; other ready targets can continue.');
         }
       }
-      const basis = { target, configuration, remote, files, repositoryVariables: access.variables.repositoryWrites, grants, sharedSnapshot: access.sharedSnapshot, blocked };
+      const basis = { target, configuration, remote, files, ...(installationReview ? { installationReview } : {}), repositoryVariables: access.variables.repositoryWrites, grants, sharedSnapshot: access.sharedSnapshot, blocked };
       // The desired contract stays stable after our own grants and Variable writes.
       // Observed facts are freshly reviewed and revalidated, never persisted as values.
       const digest = this.ports.renderer.digest(JSON.stringify({ target, configuration, files,

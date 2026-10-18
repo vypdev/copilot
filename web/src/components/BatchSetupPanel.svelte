@@ -3,6 +3,7 @@
   import { permissionName, permissionTerm } from '../i18n/permissionTerms';
   import { tr, type SetupMessageKey } from '../i18n/catalog';
   import { setupLocale } from '../i18n/localeStore';
+  import InstallationReview from './InstallationReview.svelte';
   export let batch: SetupBatchView;
   export let controller: boolean;
   export let busy: boolean;
@@ -28,6 +29,7 @@
     {#each batch.targets as target (target.repositoryId)}
       <section class="batch-target">
         <h3>{target.repository}</h3>
+        {#if target.installationReview}<InstallationReview review={target.installationReview} />{/if}
         <p class="target-status" role="status">{tr(statuses[target.status], $setupLocale)}</p>
         {#if target.cleanupPending}<p class="banner warning" role="alert">{tr('batchCleanupPending', $setupLocale)}</p>{/if}
         {#if target.blockers?.length}<ul>{#each target.blockers as blocker}<li>{blocker}</li>{/each}</ul>{/if}

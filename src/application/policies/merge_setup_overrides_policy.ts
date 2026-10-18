@@ -15,6 +15,7 @@ export function mergeSetupOverrides(
   return {
     ...fileOverrides,
     ...flagOverrides,
+    runners: { ...fileOverrides.runners, ...flagOverrides.runners },
     features: { ...fileOverrides.features, ...flagOverrides.features },
     agents,
     repository: { ...fileOverrides.repository, ...flagOverrides.repository },

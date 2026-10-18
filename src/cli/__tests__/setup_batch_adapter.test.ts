@@ -110,6 +110,16 @@ describe('terminal batch selection, review and recovery', () => {
     expect(f.terminal.readSecret).not.toHaveBeenCalled();
     expect(f.terminal.readText.mock.calls.filter(([prompt]) => prompt.startsWith('Apply the ready plans?'))).toHaveLength(1);
   });
+  it('prints the actual per-target installation review without logging workflow bodies', async () => {
+    const f = terminalFixture();
+    Object.assign(f.composition.renderer, { review: async () => ({ blockers: [], assets: [], jobs: [],
+      changes: [{ path: '.github/workflows/copilot_issue.yml', before: null, after: 'private-custom-credential-literal' }] }) });
+    const result = await executeSetupBatch(f.input);
+    expect(result.outcome).toBe('complete');
+    const output = jest.mocked(console.log).mock.calls.flat().join('\n');
+    expect(output).toContain('Create .github/workflows/copilot_issue.yml');
+    expect(output).not.toContain('private-custom-credential-literal');
+  });
   it('cancels at terminal end-of-input before preparing any target', async () => {
     const f = terminalFixture(); f.terminal.readText.mockResolvedValueOnce({ kind: 'end-of-input' });
     await expect(executeSetupBatch(f.input)).rejects.toBeInstanceOf(SetupInteractionCancelledError);
@@ -183,6 +193,21 @@ describe('terminal batch selection, review and recovery', () => {
   });
 });
 describe('real batch entrypoint composition with deterministic provider ports', () => {
+  it('keeps an explicit hosted override for each target instead of replacing it with shared defaults', async () => {
+    const f = fixture(); const execute = jest.spyOn(SetupWizardUseCase.prototype, 'execute');
+    const result = await executeSetupBatch({ ...f.input, overrides: { ...f.input.overrides, runners: { mode: 'hosted' } } });
+    expect(result.outcome).toBe('complete'); expect(execute).toHaveBeenCalledTimes(2);
+    for (const [request] of execute.mock.calls) expect(request.overrides?.runners).toEqual({ mode: 'hosted' });
+  });
+  it('does not propagate runner defaults from a blocked legacy target without runner settings', async () => {
+    const f = fixture(); const legacy = createDefaultSetupConfiguration(); delete legacy.runners;
+    const execute = jest.spyOn(SetupWizardUseCase.prototype, 'execute').mockResolvedValueOnce({ status: 'blocked', configuration: legacy,
+      reason: 'setup-permissions-unavailable', exitCode: 1, errors: ['Fixture requires attention.'] });
+    const result = await executeSetupBatch(f.input);
+    expect(result.operation.targets[0].status).toBe('blocked'); expect(result.operation.targets[1].status).toBe('waiting-for-merge');
+    expect(execute.mock.calls[1][0].overrides?.runners).toEqual({});
+    expect(f.writer.pullRequest).toHaveBeenCalledTimes(1);
+  });
   it('handles early progress callbacks without inventing an approved plan or installation', async () => {
     const f = fixture();
     jest.spyOn(SetupBatchSessionUseCase.prototype, 'execute').mockImplementation(async function (this: SetupBatchSessionUseCase) {
@@ -297,4 +322,15 @@ describe('real batch entrypoint composition with deterministic provider ports', 
     expect(f.writer.pullRequest).toHaveBeenCalledTimes(2); expect(f.writer.branch).toHaveBeenCalledTimes(3);
   });
 
+});
+
+test('replacement batch PAT links retain the reviewed optional organization runner grant', async () => {
+  const f = fixture(); f.selection('access');
+  await executeSetupBatch({ ...f.input, overrides: { ...f.input.overrides, runners: { discover: true } } });
+  const prompt = f.prompts.find(prompt => prompt.kind === 'secret' && prompt.copyId === 'batch.token');
+  expect(prompt?.kind).toBe('secret');
+  if (prompt?.kind !== 'secret') throw new Error('Expected replacement PAT guide');
+  expect(new URL(prompt.link!).searchParams.get('organization_self_hosted_runners')).toBe('read');
+  expect(new URL(prompt.link!).searchParams.get('administration')).toBe('read');
+  expect(JSON.stringify(f.bridge.snapshot())).not.toContain('replacement-private-token');
 });
