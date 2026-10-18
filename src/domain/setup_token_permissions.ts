@@ -29,7 +29,8 @@ export type SetupTokenPermissionProbe =
     | 'workflows'
     | 'members'
     | 'issue-types'
-    | 'projects';
+    | 'projects'
+    | 'runner-groups';
 
 /** Secret-free permission metadata derived from selected setup capabilities. */
 export interface SetupTokenPermissionRequirement {

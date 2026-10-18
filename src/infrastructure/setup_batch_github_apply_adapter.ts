@@ -4,6 +4,9 @@ import type { SetupRepositoryVariablesCommandPort } from '../application/ports/s
 import { isSetupBatchInstallationReceipt, setupBatchBranch, setupBatchMarker } from '../application/policies/setup_batch_policy';
 import { batchObject, batchPositive, batchSha, SetupBatchGithubReadAdapter, SetupBatchProviderError } from './setup_batch_github_read_adapter';
 import { createHash } from 'node:crypto';
+import { SETUP_RUNNER_REGISTRY } from '../domain/setup_runner';
+import { setupRunnerProfileIsFresh } from '../application/policies/setup_runner_policy';
+import { setupRunnerInstallationSummary } from '../application/policies/setup_runner_installation_summary_policy';
 
 /** Reused shared resources have an additive access command only. No shared value or Secret writer is injected. */
 export class SetupBatchGithubApplyAdapter implements SetupBatchApplyPort {
@@ -27,6 +30,12 @@ export class SetupBatchGithubApplyAdapter implements SetupBatchApplyPort {
     const effective = await this.read.effective(fresh, token);
     if (effective.repositoryVariablesAccess !== 'available' || effective.repositorySecretsAccess !== 'available'
       || effective.organizationVariablesAccess !== 'available' || effective.organizationSecretsAccess !== 'available') return false;
+    if (plan.configuration.runners?.mode === 'organization-profile') {
+      if (!setupRunnerProfileIsFresh(plan.configuration.runners, effective)) return false;
+      const registry = shared.filter(resource => resource.kind === 'variable' && resource.name === SETUP_RUNNER_REGISTRY);
+      const profileFacts = { ...effective, organizationVariables: registry.map(resource => ({ name: resource.name, value: resource.value ?? '' })) };
+      if (!setupRunnerProfileIsFresh(plan.configuration.runners, profileFacts)) return false;
+    }
     for (const resource of plan.sharedSnapshot) {
       const pendingGrant = !completed.includes('access') && plan.grants.some(grant => grant.kind === resource.kind && grant.name === resource.name);
       if (!pendingGrant && (resource.kind === 'secret' ? !effective.organizationSecrets.includes(resource.name)
@@ -143,7 +152,7 @@ export class SetupBatchGithubApplyAdapter implements SetupBatchApplyPort {
     try {
       await this.read.transport.call(token, 'POST /repos/{owner}/{repo}/pulls', { owner: plan.target.owner, repo: plan.target.name,
         head: branch, base: plan.target.defaultBranch, title: 'chore: configure Copilot',
-        body: `${setupBatchMarker(operationId, plan.target.id)}\n\nConfigure Copilot using the reviewed setup plan. Shared Secret values are retained.\n\n**Status:** PR created; installation awaits human review and merge. Runtime credential and capability verification remain pending.\n\nReview the generated workflows, repository guidance and configuration before merging. Setup never merges, releases or deploys this PR.` });
+        body: `${setupBatchMarker(operationId, plan.target.id)}\n\nConfigure Copilot using the reviewed setup plan. Shared Secret values are retained.\n\n**Status:** PR created; installation awaits human review and merge. Runtime credential and capability verification remain pending.\n\nReview the generated workflows, repository guidance and configuration before merging. Setup never merges, releases or deploys this PR.${setupRunnerInstallationSummary(plan)}` });
     } catch { /* Inspect the durable marker after any uncertain create response. */ }
     const number = await inspect(); if (!number) throw new SetupBatchProviderError('unknown');
     return number;

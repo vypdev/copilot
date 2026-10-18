@@ -430,6 +430,7 @@ function assertRunner(file, workflow) {
     }
     let expected = ['self-hosted', 'codex'];
     if (relativeFile.startsWith('setup/workflows/')
+      || relativeFile === '.github/workflows/copilot_credential_health.yml'
       || (/^\.github\/workflows\/(?:release|hotfix)_workflow\.yml$/.test(relativeFile) && jobId === 'publish-npm')) {
       expected = ['ubuntu-latest'];
     } else if (relativeFile === '.github/workflows/copilot_pull_request_approval.yml') {

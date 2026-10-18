@@ -123,13 +123,31 @@ export function buildSetupBatchPatPermissionRequirements(configuration: Readonly
     ]);
 }
 
+/** Optional inventory grants are disclosed and prefilled, never mandatory for manual routing. */
+export function withSetupRunnerDiscoveryPermissions(requirements: readonly SetupTokenPermissionRequirement[],
+    configuration: Readonly<SetupConfiguration>, ownerKind: 'Organization' | 'User'): SetupTokenPermissionRequirement[] {
+    const required = [...requirements];
+    if (configuration.runners?.discover) {
+        const discovery = [
+            requirement({ role: 'setup', scope: 'repository', permission: 'Administration', level: 'read',
+                applicability: 'conditional', condition: 'Optional runner discovery selected',
+                reason: 'List existing repository self-hosted runners without changing access.', probe: 'administration' }),
+            ...(ownerKind === 'Organization' ? [requirement({ role: 'setup', scope: 'organization', permission: 'Self-hosted runners', level: 'read',
+                applicability: 'conditional', condition: 'Optional organization runner discovery selected',
+                reason: 'List existing eligible runner groups and their runners; manual routing remains available without this grant.', probe: 'runner-groups' })] : []),
+        ];
+        required.push(...discovery.filter(candidate => !required.some(item => item.scope === candidate.scope && item.permission === candidate.permission)));
+    }
+    return required;
+}
+
 /** Local requirements plus disclosed health prerequisites for selected Secret management. */
 export function buildSetupPatIntentPermissionRequirements(
     configuration: Readonly<SetupConfiguration>,
     ownerKind: 'Organization' | 'User',
     projectsWanted = configuration.projects.ids.trim().length > 0,
 ): SetupTokenPermissionRequirement[] {
-    const required = buildSetupPatRequirements(configuration, ownerKind === 'Organization', undefined, projectsWanted);
+    const required = withSetupRunnerDiscoveryPermissions(buildSetupPatRequirements(configuration, ownerKind === 'Organization', undefined, projectsWanted), configuration, ownerKind);
     if (!configuration.manageRepositorySecrets) return required;
     // Prefill these possible health-check grants without treating unknown remote
     // inventory/workflow state as permission to run their write probes now.

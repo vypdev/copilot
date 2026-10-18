@@ -257,6 +257,7 @@ function sameCapability(provided: string, expected: string): boolean {
 
 export function toWebSetupPlan(plan: SetupPlan): WebSetupPlan {
   return {
+    ...(plan.installationReview ? { installationReview: plan.installationReview } : {}),
     deliveryMode: plan.deliveryMode,
     ...(plan.organizationReuse ? { organizationReuse: { imported: plan.organizationReuse.imported,
       needsReview: plan.organizationReuse.needsReview, organizationVariables: [...plan.organizationReuse.organizationVariables],

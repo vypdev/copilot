@@ -44188,6 +44188,7 @@ function mergeSetupOverrides(fileOverrides, flagOverrides) {
     return {
         ...fileOverrides,
         ...flagOverrides,
+        runners: { ...fileOverrides.runners, ...flagOverrides.runners },
         features: { ...fileOverrides.features, ...flagOverrides.features },
         agents,
         repository: { ...fileOverrides.repository, ...flagOverrides.repository },
@@ -47479,7 +47480,7 @@ function validSetupBatchAssetPath(path) {
         return false;
     return path === 'AGENTS.md' || path === '.agents/skills/copilot-repository-workflow/SKILL.md'
         || /^\.github\/(?:workflows|ISSUE_TEMPLATE)\/[A-Za-z0-9_.-]+\.(?:yml|yaml)$/u.test(path)
-        || path === '.github/pull_request_template.md' || /^\.copilot\/(?:repository-profile|setup-manifest)\.json$/u.test(path)
+        || path === '.github/pull_request_template.md' || /^\.copilot\/(?:repository-profile|setup-manifest|runner-profile)\.json$/u.test(path)
         || path === '.copilot/AGENT_GUIDE.md' || path.startsWith('.copilot/setup-backups/');
 }
 function validBranch(value) {
@@ -47577,6 +47578,7 @@ function buildSetupBatchView(plan, operation, phase, retryRemaining) {
             if (!receipt || receipt.repositoryId !== target.target.id)
                 throw new Error('Setup receipt identity mismatch.');
             return { repositoryId: target.target.id, repository: `${target.target.owner}/${target.target.name}`, status: receipt.status,
+                ...(target.installationReview ? { installationReview: target.installationReview } : {}),
                 installationBranch: (0, setup_batch_policy_1.setupBatchBranch)(plan.operationId), baseBranch: target.target.defaultBranch, baseSha: target.target.baseSha, blockers: [...target.blocked],
                 files: target.files.map(file => ({ path: file.path, content: file.content })),
                 repositoryVariables: target.repositoryVariables.map(variable => variable.name),
@@ -47610,6 +47612,8 @@ function cloneSetupConfiguration(configuration) {
     ]));
     return {
         ...configuration,
+        ...(configuration.runners ? { runners: { ...configuration.runners, labels: [...configuration.runners.labels],
+                ...(configuration.runners.source ? { source: { ...configuration.runners.source } } : {}) } } : {}),
         features: { ...configuration.features },
         agents,
         repository: {
@@ -47667,6 +47671,7 @@ const deployment_configuration_1 = __nccwpck_require__(22495);
 const locale_1 = __nccwpck_require__(15386);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
+const setup_runner_1 = __nccwpck_require__(94301);
 exports.SETUP_AGENT_TASKS = [
     'planner',
     'findings',
@@ -47724,6 +47729,7 @@ function createDefaultSetupConfiguration() {
     const agents = Object.fromEntries(exports.SETUP_AGENT_TASKS.map(task => [task, defaultRole()]));
     const features = Object.fromEntries(Object.keys(exports.SETUP_FEATURE_DESCRIPTIONS).map(feature => [feature, feature !== 'inactiveIssueClosure']));
     return {
+        runners: { ...setup_runner_1.DEFAULT_SETUP_RUNNERS, labels: [] },
         features,
         agents,
         repository: {
@@ -47813,6 +47819,8 @@ function mergeSetupConfiguration(base, overrides = {}) {
     }
     return {
         ...base,
+        runners: { ...setup_runner_1.DEFAULT_SETUP_RUNNERS, ...base.runners, ...overrides.runners,
+            labels: [...(overrides.runners?.labels ?? base.runners?.labels ?? [])] },
         features,
         agents,
         repository: { ...base.repository, ...(overrides.repository ?? {}) },
@@ -47902,6 +47910,7 @@ function buildSetupPlan(configuration, mergeQueueReadiness = [], approvalReadine
             .filter(file => configuration.features.release !== false || file !== 'release.yml')
             .filter(file => configuration.features.hotfix !== false || file !== 'hotfix.yml');
     const selectedFiles = [
+        ...(configuration.runners && configuration.runners.mode !== 'retain' ? ['.copilot/runner-profile.json'] : []),
         ...workflowFiles.map(file => `workflows/${file}`),
         ...issueTemplateFiles.map(file => `ISSUE_TEMPLATE/${file}`),
         ...(configuration.features.pullRequestTemplate === false ? [] : ['pull_request_template.md']),
@@ -47961,6 +47970,7 @@ function setupPlanGuardPaths(plan) {
         repository_agent_guidance_policy_1.REPOSITORY_AGENT_GUIDE_PATH,
         repository_agent_guidance_policy_1.REPOSITORY_AGENT_SKILL_PATH,
         repository_agent_guidance_policy_1.REPOSITORY_AGENT_POINTER_PATH,
+        '.copilot/runner-profile.json',
     ];
     return [...new Set([...selected, ...retiredCandidates, ...guidanceCandidates])].sort();
 }
@@ -48474,8 +48484,10 @@ const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 const setup_project_selection_policy_1 = __nccwpck_require__(73750);
+const setup_runner_policy_1 = __nccwpck_require__(91027);
 function validateSetupConfiguration(configuration, options = {}) {
     const errors = [];
+    errors.push(...(0, setup_runner_policy_1.validateSetupRunners)(configuration.runners));
     const projectSelection = (0, setup_project_selection_policy_1.parseSetupProjectSelection)(configuration.projects.ids);
     if ('error' in projectSelection || projectSelection.value !== configuration.projects.ids) {
         errors.push('Project IDs must be a comma-separated list of 1–10 distinct positive Project URL numbers; PVT_ node IDs are not accepted.');
@@ -49928,6 +49940,7 @@ const QUERY_PERMISSIONS = {
         Projects: 'organization_projects',
         // GitHub's PAT form documents this organization permission as "members".
         Members: 'members',
+        'Self-hosted runners': 'organization_self_hosted_runners',
     },
 };
 class UnsupportedSetupPatLinkError extends Error {
@@ -49996,6 +50009,8 @@ const setup_token_permission_policy_1 = __nccwpck_require__(99590);
 /** Local inputs with explicit precedence are decisions, not questions. */
 function fixedSetupPatIntentQuestionIds(overrides, skipVariables, skipSecrets) {
     const fixed = [];
+    if (overrides.runners?.discover !== undefined)
+        fixed.push('runners.discover');
     for (const feature of ['issues', 'pullRequests', 'release', 'hotfix']) {
         if (overrides.features?.[feature] !== undefined)
             fixed.push(`features.${feature}`);
@@ -50163,6 +50178,8 @@ const docs = {
 /** Links are selected from source-controlled constants, never derived from answers or remote text. */
 function setupQuestionDocumentation(question) {
     const id = question.id;
+    if (id.startsWith('runners.'))
+        return { title: 'Runner profiles', url: 'https://docs.page/vypdev/copilot/configuration#runner-profiles' };
     if (id === 'issueWorkflows.enabled')
         return docs.issueWorkflows;
     if (id === 'features.issues')
@@ -50309,6 +50326,7 @@ function frenchQuestionExplanation(question, documentation) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.setupQuestionPresentation = setupQuestionPresentation;
+const setup_runner_guidance_policy_1 = __nccwpck_require__(10741);
 const setup_question_translations_1 = __nccwpck_require__(3927);
 const setup_question_documentation_policy_1 = __nccwpck_require__(75280);
 const setup_question_purpose_policy_1 = __nccwpck_require__(77947);
@@ -50383,6 +50401,8 @@ const section = {
     storage: { en: { summary: 'Choose where GitHub Actions Variables and Secrets live.', when: 'Applies when provisioning is enabled.', example: 'Repository scope is the simplest default.', effect: 'Affects visibility, permission grants, and precedence.', verify: 'Check the selected scope and shadow warnings in the plan.' }, es: { summary: 'Elige dónde se guardan Variables y Secrets de GitHub Actions.', when: 'Se aplica si activaste su configuración.', example: 'El ámbito de repositorio es el predeterminado más sencillo.', effect: 'Afecta a visibilidad, permisos y precedencia.', verify: 'Revisa el ámbito y los avisos de superposición en el plan.' } },
 };
 function setupQuestionPresentation(question) {
+    if (setup_runner_guidance_policy_1.SETUP_RUNNER_QUESTION_IDS.includes(question.id))
+        return (0, setup_runner_guidance_policy_1.setupRunnerGuidance)(question);
     const copy = special[question.id] ?? section[question.stateId];
     const purpose = (0, setup_question_purpose_policy_1.setupQuestionPurpose)(question);
     const documentation = (0, setup_question_documentation_policy_1.setupQuestionDocumentation)(question);
@@ -50949,13 +50969,14 @@ function setupQuestionPurposeFrPt(question, locale) {
 /***/ }),
 
 /***/ 77947:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.setupQuestionPurposes = void 0;
 exports.setupQuestionPurpose = setupQuestionPurpose;
+const setup_runner_guidance_policy_1 = __nccwpck_require__(10741);
 /** Field-specific meaning for choices whose label alone is easy to misinterpret. */
 exports.setupQuestionPurposes = {
     'issueWorkflows.enabled': { en: 'Choose the issue workflows Copilot may run; each type has different branch, label and automation effects.', es: 'Elige los flujos de issues que podrá ejecutar Copilot; cada tipo tiene efectos distintos sobre ramas, etiquetas y automatización.' },
@@ -51007,6 +51028,10 @@ exports.setupQuestionPurposes = {
     manageRepositorySecrets: { en: 'Allow setup to validate and install required GitHub Actions Secrets, including the bot PAT when needed.', es: 'Permite a setup validar e instalar Secrets de GitHub Actions, incluido el PAT del bot cuando haga falta.' },
 };
 function setupQuestionPurpose(question) {
+    if (setup_runner_guidance_policy_1.SETUP_RUNNER_QUESTION_IDS.includes(question.id)) {
+        const presentation = (0, setup_runner_guidance_policy_1.setupRunnerGuidance)(question);
+        return { en: presentation.en.summary, es: presentation.es.summary };
+    }
     const exact = exports.setupQuestionPurposes[question.id];
     if (exact)
         return exact;
@@ -51204,9 +51229,11 @@ const setup_configuration_clone_policy_1 = __nccwpck_require__(85881);
 const setup_configuration_defaults_1 = __nccwpck_require__(23381);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const setup_project_selection_policy_1 = __nccwpck_require__(73750);
+const setup_runner_question_policy_1 = __nccwpck_require__(91198);
 const AGENT_PROVIDERS = ['codex', 'opencode', 'cursor'];
 const MODEL_PROVIDERS = ['openai', 'anthropic', 'google', 'openrouter', 'opencode', 'local'];
 const PERMISSION_INTENT_QUESTION_IDS = new Set([
+    'runners.discover',
     'features.issues', 'features.pullRequests', 'issueWorkflows.enabled',
     'pullRequestApproval.mode', 'projects.enabled',
     'manageRepositoryVariables', 'manageRepositorySecrets',
@@ -51360,7 +51387,11 @@ function transitionSetupQuestionnaire(state, event, context = {}) {
     const configureIndependently = state.question.id === 'agents.configureIndependently'
         ? Boolean(parsed.value)
         : state.configureIndependently;
-    const draft = applyAnswer(state.draft, state.question, parsed.value, state.configureIndependently);
+    const runnerAnswer = state.question.id.startsWith('runners.')
+        ? (0, setup_runner_question_policy_1.applySetupRunnerAnswer)(state.draft, state.question, String(parsed.value), context) : undefined;
+    if (runnerAnswer?.error)
+        return { ...state, validation: runnerAnswer.error };
+    const draft = runnerAnswer?.configuration ?? applyAnswer(state.draft, state.question, parsed.value, state.configureIndependently);
     draft.createInitialTag = (0, setup_issue_workflow_policy_1.setupNeedsInitialVersion)(draft);
     const projectsWanted = state.question.id === 'projects.enabled' ? Boolean(parsed.value) : state.projectsWanted;
     const answeredQuestionIds = [...(state.answeredQuestionIds ?? []), state.question.id];
@@ -51454,6 +51485,7 @@ function definitions() {
             choices: ['prompt', 'create-if-missing', 'disabled'],
             applies: draft => draft.repositoryAgentGuidance.enabled,
         },
+        ...(0, setup_runner_question_policy_1.setupRunnerQuestions)(),
         ...setup_configuration_defaults_1.SETUP_AGENT_TASKS.map((task) => ({
             stateId: 'agent-runtime', id: `agents.${task}.provider`, label: `${formatTask(task)} runtime`, kind: 'choice', choices: AGENT_PROVIDERS,
         })),
@@ -51652,7 +51684,7 @@ function toQuestion(definition, draft, context) {
     const projectCandidates = context.projectDiscovery?.candidates ?? [];
     const projectStatus = statusQuestion
         ? (0, setup_project_selection_policy_1.sharedProjectStatusOptions)(draft.projects.ids, projectCandidates) : undefined;
-    return {
+    return (0, setup_runner_question_policy_1.setupRunnerQuestion)({
         stateId: definition.stateId,
         id: definition.id,
         label: definition.label,
@@ -51687,7 +51719,7 @@ function toQuestion(definition, draft, context) {
             ? { suggestionSource: context.branchSources.development } : {}),
         ...((definition.id === 'issueWorkflows.enabled' || definition.id === 'features.issues') && context.fixedWorkflowFeatures
             ? { fixedWorkflowFeatures: context.fixedWorkflowFeatures } : {}),
-    };
+    }, context);
 }
 function readPath(configuration, path, allowedNames) {
     const value = path.split('.').reduce((current, key) => current[key], configuration);
@@ -52020,6 +52052,353 @@ function setupSecretRevisionSnapshot(remote) {
 
 /***/ }),
 
+/***/ 10741:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SETUP_RUNNER_QUESTION_IDS = void 0;
+exports.setupRunnerGuidance = setupRunnerGuidance;
+const copy = {
+    en: { labels: ['Where should Copilot jobs run?', 'Reusable runner profile', 'Existing runner group (empty uses labels)', 'Exact runner labels, comma-separated', 'Ordinary validation runner'],
+        summary: 'Keep installed routing, choose GitHub-hosted jobs, or explicitly select an existing self-hosted profile.',
+        where: 'Changes generated workflow runs-on values; runner access, Secrets and authentication are separate.',
+        how: 'Retain keeps existing jobs. Hosted explicitly replaces managed agent/validation routes. A reusable profile comes from COPILOT_RUNNER_PROFILES; manual entry needs exact existing group and labels.',
+        why: 'Different job roles have different trust and runtime requirements.', effect: 'Observer and publication routes stay independent. Native source workflows remain visible exceptions. Nothing grants access or falls back silently.',
+        verify: 'Review effective YAML, repository access and runner authentication. Busy/offline means pending capacity; unknown access needs verification.', example: 'Group vypdev; labels self-hosted,codex,Linux; ordinary validation hosted.' },
+    es: { labels: ['¿Dónde deben ejecutarse los jobs de Copilot?', 'Perfil de runners reutilizable', 'Grupo de runners existente (vacío usa etiquetas)', 'Etiquetas exactas del runner, separadas por comas', 'Runner para validaciones ordinarias'],
+        summary: 'Conserva las rutas instaladas, elige runners de GitHub o selecciona expresamente un perfil self-hosted existente.',
+        where: 'Cambia runs-on en los workflows generados; acceso, Secrets y autenticación se verifican por separado.',
+        how: 'Conservar mantiene los jobs existentes. GitHub sustituye expresamente las rutas gestionadas de agente y validación. Un perfil reutilizable procede de COPILOT_RUNNER_PROFILES; la entrada manual necesita el grupo y las etiquetas exactos.',
+        why: 'Cada tipo de job tiene requisitos de confianza y ejecución distintos.', effect: 'Observador y publicación conservan rutas independientes. Los workflows nativos se muestran como excepciones. No se concede acceso ni se cambia de entorno automáticamente.',
+        verify: 'Revisa YAML, acceso del repositorio y autenticación del runner. Ocupado o desconectado indica capacidad pendiente; acceso desconocido requiere verificación.', example: 'Grupo vypdev; etiquetas self-hosted,codex,Linux; validación ordinaria en GitHub.' },
+    fr: { labels: ['Où exécuter les jobs Copilot ?', 'Profil de runners réutilisable', 'Groupe existant (vide utilise les étiquettes)', 'Étiquettes exactes séparées par des virgules', 'Runner de validation ordinaire'],
+        summary: 'Conservez les routes installées, choisissez GitHub ou sélectionnez explicitement un profil auto-hébergé existant.',
+        where: 'Modifie runs-on dans les workflows générés ; accès, Secrets et authentification restent distincts.',
+        how: 'Conserver maintient les jobs existants. GitHub remplace explicitement les routes gérées. Le profil partagé provient de COPILOT_RUNNER_PROFILES ; la saisie manuelle exige le groupe et les étiquettes exacts.',
+        why: 'Chaque rôle a des exigences de confiance et d’exécution distinctes.', effect: 'Observation et publication gardent leurs routes. Les workflows natifs restent des exceptions visibles. Aucun accès accordé ni repli automatique.',
+        verify: 'Vérifiez le YAML, l’accès du dépôt et l’authentification. Occupé/hors ligne indique une capacité en attente ; l’accès inconnu doit être vérifié.', example: 'Groupe vypdev ; étiquettes self-hosted,codex,Linux ; validation sur GitHub.' },
+    pt: { labels: ['Onde executar os jobs do Copilot?', 'Perfil reutilizável de runners', 'Grupo existente (vazio usa etiquetas)', 'Etiquetas exatas separadas por vírgulas', 'Runner de validação normal'],
+        summary: 'Mantenha as rotas instaladas, escolha GitHub ou selecione explicitamente um perfil self-hosted existente.',
+        where: 'Altera runs-on nos workflows gerados; acesso, Secrets e autenticação são independentes.',
+        how: 'Manter conserva os jobs existentes. GitHub substitui explicitamente as rotas geridas. O perfil partilhado vem de COPILOT_RUNNER_PROFILES; a entrada manual exige grupo e etiquetas exatos.',
+        why: 'Cada função tem requisitos de confiança e execução diferentes.', effect: 'Observador e publicação mantêm rotas independentes. Workflows nativos são exceções visíveis. Não concede acesso nem muda automaticamente de ambiente.',
+        verify: 'Reveja YAML, acesso do repositório e autenticação. Ocupado/offline indica capacidade pendente; acesso desconhecido exige verificação.', example: 'Grupo vypdev; etiquetas self-hosted,codex,Linux; validação normal no GitHub.' },
+};
+const fields = ['mode', 'profileId', 'group', 'labels', 'validation'];
+exports.SETUP_RUNNER_QUESTION_IDS = [...fields, 'discover'].map(field => `runners.${field}`);
+const discoveryCopy = {
+    en: ['Discover existing runners and groups?', 'Optional: prefill repository Administration read and organization Self-hosted runners read in the setup PAT link. Disabled by default; exact manual routing needs neither discovery grant.', 'Temporary setup PAT only. Discovery reads inventory after PAT verification, never changes runner access, and keeps exact manual routing available when skipped or denied.'],
+    es: ['¿Consultar los runners y grupos existentes?', 'Opcional: incluye Administration de repositorio y Self-hosted runners de organización en lectura en el enlace del PAT. Desactivado por defecto; puedes indicar una ruta manual exacta sin estos permisos de consulta.', 'Solo afecta al PAT temporal de setup. Consulta el inventario tras verificarlo, nunca cambia el acceso a runners y permite indicar la ruta manual si se omite o deniega la consulta.'],
+    fr: ['Consulter les runners et groupes existants ?', 'Facultatif : préremplit Administration du dépôt et Self-hosted runners de l’organisation en lecture dans le lien PAT. Désactivé par défaut ; une route manuelle exacte reste possible sans ces droits de consultation.', 'Concerne uniquement le PAT temporaire. Consulte l’inventaire après vérification, ne modifie jamais les accès et permet une route manuelle si la consultation est ignorée ou refusée.'],
+    pt: ['Consultar runners e grupos existentes?', 'Opcional: inclui Administration do repositório e Self-hosted runners da organização em leitura no link do PAT. Desativado por padrão; uma rota manual exata continua disponível sem estas permissões de consulta.', 'Afeta apenas o PAT temporário. Consulta o inventário após a verificação, nunca altera o acesso e permite uma rota manual se a consulta for ignorada ou negada.'],
+};
+function setupRunnerGuidance(question) {
+    const index = fields.indexOf(question.id.slice('runners.'.length));
+    return Object.fromEntries(Object.entries(copy).map(([locale, value]) => [locale, {
+            label: question.id === 'runners.discover' ? discoveryCopy[locale][0] : value.labels[index],
+            summary: question.id === 'runners.discover' ? discoveryCopy[locale][1] : value.summary, when: value.where, where: question.id === 'runners.discover' ? discoveryCopy[locale][2] : value.where,
+            how: question.id === 'runners.discover' ? discoveryCopy[locale][1] : value.how, why: value.why,
+            effect: question.id === 'runners.discover' ? discoveryCopy[locale][2] : value.effect, verify: value.verify, example: value.example,
+            documentation: { title: value.labels[0], url: 'https://docs.page/vypdev/copilot/configuration#runner-profiles' },
+        }]));
+}
+
+
+/***/ }),
+
+/***/ 14706:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.setupRunnerInstallationSummary = setupRunnerInstallationSummary;
+const setup_runner_policy_1 = __nccwpck_require__(91027);
+/** Public installation PR content. Registry values and credentials never enter it. */
+function setupRunnerInstallationSummary(plan) {
+    const review = plan.installationReview;
+    const runners = plan.configuration.runners;
+    if (!review && (!runners || runners.mode === 'retain'))
+        return '';
+    const jobs = review?.jobs ?? [];
+    const assets = review?.assets ?? [];
+    const route = (0, setup_runner_policy_1.selectedSetupRunsOn)(runners, 'agent');
+    return ['\n\n## Runner routing and installation parity',
+        `**Profile choice:** ${runners?.mode ?? 'retain'}. Existing native source workflows remain per-job exceptions.`,
+        `**Reviewed plan:** \`${plan.digest}\`.`,
+        ...(route ? ['Selected managed agent route:', '```json', JSON.stringify(route, null, 2), '```'] : ['Installed per-job routing is retained.']),
+        `**Observations:** ${jobs.filter(job => job.status === 'pending-capacity').length} pending capacity; ${jobs.filter(job => job.status === 'access-unknown').length} access unverified; ${jobs.filter(job => job.status === 'unavailable').length} unavailable.`,
+        `**Parity:** ${assets.filter(asset => asset.status === 'source-only').length} source extensions; ${assets.filter(asset => asset.status === 'missing').length} missing assets (including disabled optional capabilities); ${assets.filter(asset => asset.status === 'customized').length} customized; ${assets.filter(asset => asset.status === 'incompatible').length} incompatible metadata retained or blocked before regeneration.`,
+        'Inspect the complete Files changed view and `.copilot/runner-profile.json`. Any replacements retain setup backups under `.copilot/setup-backups/`.',
+        'Runner access, capacity and agent authentication are separate. Selection grants no group access and never falls back to another runner. Human merge and actual trusted workflow verification remain pending.',
+    ].join('\n');
+}
+
+
+/***/ }),
+
+/***/ 91027:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.validSetupRunnerProfile = validSetupRunnerProfile;
+exports.parseSetupRunnerProfiles = parseSetupRunnerProfiles;
+exports.setupRunnerRegistry = setupRunnerRegistry;
+exports.validateSetupRunners = validateSetupRunners;
+exports.selectSetupRunnerMode = selectSetupRunnerMode;
+exports.setupRunnerProfileIsFresh = setupRunnerProfileIsFresh;
+exports.reusableSetupRunnerDefaults = reusableSetupRunnerDefaults;
+exports.setupRunnerRole = setupRunnerRole;
+exports.selectedSetupRunsOn = selectedSetupRunsOn;
+exports.setupRunnerReadiness = setupRunnerReadiness;
+const setup_runner_1 = __nccwpck_require__(94301);
+const sensitive_text_1 = __nccwpck_require__(47122);
+const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const exact = (value, keys) => Object.keys(value).every(key => keys.includes(key));
+const literal = (value, empty = false) => typeof value === 'string' && value.length <= 100
+    && (empty || value.trim().length > 0) && value === value.trim() && !/[\p{Cc}\p{Cf}${}<>]/u.test(value)
+    && (0, sensitive_text_1.redactSensitiveText)(value) === value;
+const id = (value) => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_.-]{0,49}$/u.test(value)
+    && (0, sensitive_text_1.redactSensitiveText)(value) === value;
+function validSetupRunnerProfile(value) {
+    if (!object(value) || !exact(value, ['id', 'group', 'labels', 'validation']) || !id(value.id)
+        || !literal(value.group, true) || !['hosted', 'agent'].includes(String(value.validation))
+        || !Array.isArray(value.labels) || value.labels.length < 1 || value.labels.length > 10
+        || !value.labels.every(label => literal(label)))
+        return false;
+    const labels = value.labels.map(label => label.toLowerCase());
+    return new Set(labels).size === labels.length && labels.includes('self-hosted')
+        && !labels.includes('windows') && (labels.includes('linux') || labels.includes('macos'));
+}
+function parseSetupRunnerProfiles(value) {
+    if (value.length > 16000)
+        return undefined;
+    try {
+        const parsed = JSON.parse(value);
+        if (!object(parsed) || !exact(parsed, ['schemaVersion', 'profiles']) || parsed.schemaVersion !== 1
+            || !Array.isArray(parsed.profiles) || parsed.profiles.length < 1 || parsed.profiles.length > 10
+            || !parsed.profiles.every(validSetupRunnerProfile))
+            return undefined;
+        const profiles = parsed.profiles;
+        if (new Set(profiles.map(profile => profile.id.toLowerCase())).size !== profiles.length)
+            return undefined;
+        return profiles.map(profile => ({ ...profile, labels: [...profile.labels] }));
+    }
+    catch {
+        return undefined;
+    }
+}
+/** A repository override shadows the organization registry even when it is invalid. */
+function setupRunnerRegistry(remote) {
+    if (!remote || remote.repositoryVariablesAccess !== 'available')
+        return { profiles: [], status: 'unavailable' };
+    const repository = remote.repositoryVariables.filter(variable => variable.name.toUpperCase() === setup_runner_1.SETUP_RUNNER_REGISTRY);
+    const organization = remote.organizationVariables.filter(variable => variable.name.toUpperCase() === setup_runner_1.SETUP_RUNNER_REGISTRY);
+    const entries = repository.length ? repository : organization;
+    if (!repository.length && remote.organizationVariablesAccess !== 'available')
+        return { profiles: [], status: 'unavailable' };
+    if (!entries.length)
+        return { profiles: [], status: 'missing' };
+    const profiles = entries.length === 1 ? parseSetupRunnerProfiles(entries[0].value) : undefined;
+    const scope = repository.length ? 'repository' : 'organization';
+    return profiles ? { profiles, status: 'available', scope, source: { scope, value: entries[0].value } }
+        : { profiles: [], status: 'invalid', scope };
+}
+function validateSetupRunners(value) {
+    if (value === undefined)
+        return [];
+    const invalid = ['Runner configuration is invalid. Choose retain/hosted, or an exact Linux/macOS self-hosted profile; review group, unique labels and registry version.'];
+    if (!object(value) || !exact(value, ['mode', 'profileId', 'group', 'labels', 'validation', 'source', 'discover'])
+        || value.discover !== undefined && typeof value.discover !== 'boolean'
+        || !['retain', 'hosted', 'organization-profile', 'manual-self-hosted'].includes(String(value.mode))
+        || !literal(value.group, true) || typeof value.profileId !== 'string'
+        || !Array.isArray(value.labels) || !['hosted', 'agent'].includes(String(value.validation)))
+        return invalid;
+    if (value.mode === 'retain' || value.mode === 'hosted')
+        return value.group === '' && value.profileId === ''
+            && value.labels.length === 0 && value.validation === 'hosted' && value.source === undefined ? [] : invalid;
+    if (!validSetupRunnerProfile({ id: value.profileId || 'manual', group: value.group, labels: value.labels, validation: value.validation }))
+        return invalid;
+    if (value.mode === 'manual-self-hosted')
+        return value.profileId === '' && value.source === undefined ? [] : invalid;
+    if (!id(value.profileId) || !object(value.source) || !exact(value.source, ['scope', 'value'])
+        || !['repository', 'organization'].includes(String(value.source.scope)) || typeof value.source.value !== 'string')
+        return invalid;
+    const selected = parseSetupRunnerProfiles(value.source.value)?.find(profile => profile.id === value.profileId);
+    return selected && selected.group === value.group && selected.validation === value.validation
+        && JSON.stringify(selected.labels) === JSON.stringify(value.labels) ? [] : invalid;
+}
+function selectSetupRunnerMode(mode) {
+    return mode === 'manual-self-hosted'
+        ? { mode, profileId: '', group: '', labels: ['self-hosted', 'Linux'], validation: 'hosted' }
+        : { ...setup_runner_1.DEFAULT_SETUP_RUNNERS, mode, labels: [] };
+}
+function setupRunnerProfileIsFresh(configuration, remote) {
+    if (configuration?.mode !== 'organization-profile')
+        return true;
+    const registry = setupRunnerRegistry(remote);
+    return registry.status === 'available' && registry.source?.scope === configuration.source?.scope
+        && registry.source?.value === configuration.source?.value;
+}
+/** A prior target supplies visible defaults only; registry overrides resolve again for this target. */
+function reusableSetupRunnerDefaults(previous, remote) {
+    if (!previous || previous.mode === 'retain')
+        return undefined;
+    if (previous.mode === 'organization-profile') {
+        const registry = setupRunnerRegistry(remote);
+        const profile = registry.profiles.find(profile => profile.id === previous.profileId);
+        if (!profile)
+            return undefined;
+        return { mode: previous.mode, profileId: profile.id, group: profile.group, labels: [...profile.labels], validation: profile.validation, source: registry.source,
+            ...(previous.discover !== undefined ? { discover: previous.discover } : {}) };
+    }
+    return { ...previous, labels: [...previous.labels] };
+}
+/** Security roles are fixed by the template catalog, never guessed from user job names. */
+function setupRunnerRole(file, job) {
+    const agentJobs = {
+        'copilot_issue.yml': 'copilot-issues', 'copilot_issue_comment.yml': 'copilot-issues',
+        'copilot_pull_request.yml': 'copilot-pull-requests', 'copilot_pull_request_comment.yml': 'copilot-pull-requests',
+        'copilot_commit.yml': 'copilot-commits', 'agent-cli-provisioning.yml': 'verify-agent-clis',
+    };
+    if (agentJobs[file] === job)
+        return 'agent';
+    if (file === 'copilot_pull_request_approval.yml' && job === 'observe-approval')
+        return 'observer';
+    if (file === 'copilot_pull_request_merge_queue.yml' && job === 'copilot-pull-request-required-check')
+        return 'isolated';
+    if (['release_workflow.yml', 'hotfix_workflow.yml'].includes(file)) {
+        if (['publish', 'publish-npm'].includes(job))
+            return 'publication';
+        if (['validate', 'prepare-version-files', 'promote', 'resume-reconciliation', 'report-failure'].includes(job))
+            return 'validation';
+    }
+    const validationJobs = {
+        'copilot_branch_sync.yml': ['branch-sync'], 'copilot_close_inactive_issues.yml': ['copilot-inactive-issues'],
+        'copilot_pull_request_review_state.yml': ['copilot-pull-request-review-state'],
+        'copilot_deployment_orchestration.yml': ['resolve-operation', 'mutate'],
+        'copilot_credential_health.yml': ['verify-pat', 'verify-openai', 'verify-anthropic', 'verify-google', 'verify-openrouter', 'verify-cursor', 'verify-opencode', 'verify-codex-api-key'],
+    };
+    return validationJobs[file]?.includes(job) ? 'validation' : undefined;
+}
+function selectedSetupRunsOn(configuration, role) {
+    if (!configuration || configuration.mode === 'retain' || role === undefined
+        || ['observer', 'publication', 'isolated'].includes(role))
+        return undefined;
+    if (configuration.mode === 'hosted' || role === 'validation' && configuration.validation === 'hosted')
+        return 'ubuntu-latest';
+    return configuration.group ? { group: configuration.group, labels: [...configuration.labels] } : [...configuration.labels];
+}
+function setupRunnerReadiness(route, inventory) {
+    if (JSON.stringify(route).includes('${{'))
+        return 'access-unknown';
+    const group = typeof route === 'object' && !Array.isArray(route) ? route.group : undefined;
+    const raw = typeof route === 'string' || Array.isArray(route) ? route : route.labels;
+    const labels = (typeof raw === 'string' ? [raw] : raw ?? []).map(label => label.toLowerCase());
+    if (!group && labels.length === 1 && /^(ubuntu|macos|windows)-(latest|[0-9][a-z0-9.-]*)$/u.test(labels[0]))
+        return 'hosted';
+    if (!inventory || inventory.status !== 'available')
+        return 'access-unknown';
+    const matches = inventory.candidates.filter(candidate => (!group || candidate.group === group)
+        && labels.every(label => candidate.labels.some(actual => actual.toLowerCase() === label)));
+    if (!matches.length)
+        return group && inventory.groups.some(candidate => candidate.name === group && candidate.access === 'confirmed')
+            ? 'unavailable' : 'access-unknown';
+    const authorized = matches.filter(candidate => candidate.access === 'confirmed');
+    if (!authorized.length)
+        return 'access-unknown';
+    return authorized.some(candidate => candidate.status === 'online' && !candidate.busy) ? 'ready' : 'pending-capacity';
+}
+
+
+/***/ }),
+
+/***/ 91198:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.setupRunnerQuestions = setupRunnerQuestions;
+exports.setupRunnerQuestion = setupRunnerQuestion;
+exports.applySetupRunnerAnswer = applySetupRunnerAnswer;
+const setup_runner_1 = __nccwpck_require__(94301);
+const setup_runner_policy_1 = __nccwpck_require__(91027);
+function setupRunnerQuestions() {
+    const manual = (draft) => draft.runners?.mode === 'manual-self-hosted';
+    return [
+        { stateId: 'agent-runtime', id: 'runners.discover', label: 'Discover existing runners and groups (optional read-only PAT permissions)?', kind: 'boolean',
+            read: (draft) => draft.runners?.discover ?? false },
+        { stateId: 'agent-runtime', id: 'runners.mode', label: 'Where should Copilot jobs run?', kind: 'choice',
+            choices: ['retain', 'hosted', 'organization-profile', 'manual-self-hosted'], read: (draft) => draft.runners?.mode ?? 'retain' },
+        { stateId: 'agent-runtime', id: 'runners.profileId', label: 'Reusable runner profile', kind: 'choice',
+            applies: (draft) => draft.runners?.mode === 'organization-profile' },
+        { stateId: 'agent-runtime', id: 'runners.group', label: 'Existing runner group (empty selects by labels)', kind: 'text', applies: manual },
+        { stateId: 'agent-runtime', id: 'runners.labels', label: 'Exact runner labels, comma-separated (include self-hosted and Linux or macOS)', kind: 'text',
+            read: (draft) => draft.runners.labels.join(','), applies: manual },
+        { stateId: 'agent-runtime', id: 'runners.validation', label: 'Ordinary validation jobs: hosted, or the selected agent runner?', kind: 'choice',
+            choices: ['hosted', 'agent'], applies: manual },
+    ];
+}
+function setupRunnerQuestion(question, context) {
+    if (!question.id.startsWith('runners.') || question.id === 'runners.discover')
+        return question;
+    const registry = (0, setup_runner_policy_1.setupRunnerRegistry)(context.remote);
+    return { ...question, runnerProfiles: registry.profiles, runnerRegistryStatus: registry.status, runnerRegistryScope: registry.scope, runnerInventory: context.runnerInventory,
+        ...(question.id === 'runners.mode' ? { choices: ['retain', 'hosted', ...(registry.status === 'available' ? ['organization-profile'] : []), 'manual-self-hosted'] } : {}),
+        ...(question.id === 'runners.profileId' ? { choices: registry.profiles.map(profile => profile.id) } : {}) };
+}
+function applySetupRunnerAnswer(configuration, question, input, context) {
+    const current = configuration.runners ?? setup_runner_1.DEFAULT_SETUP_RUNNERS;
+    let runners;
+    if (question.id === 'runners.discover') {
+        return { configuration: { ...configuration, runners: { ...current, discover: input === 'true' } } };
+    }
+    else if (question.id === 'runners.mode') {
+        const mode = input;
+        if (mode === 'organization-profile') {
+            const registry = (0, setup_runner_policy_1.setupRunnerRegistry)(context.remote);
+            const profile = registry.profiles.find(profile => profile.id === current.profileId) ?? registry.profiles[0];
+            if (!profile)
+                return { error: 'No valid effective runner registry is available. Enter an exact manual profile or repair COPILOT_RUNNER_PROFILES.' };
+            runners = { mode, profileId: profile.id, group: profile.group, labels: [...profile.labels], validation: profile.validation, source: registry.source };
+        }
+        else
+            runners = (0, setup_runner_policy_1.selectSetupRunnerMode)(mode);
+    }
+    else if (question.id === 'runners.profileId') {
+        const registry = (0, setup_runner_policy_1.setupRunnerRegistry)(context.remote);
+        const profile = registry.profiles.find(profile => profile.id === input);
+        if (!profile)
+            return { error: 'The selected runner profile is unavailable. Review the registry or enter a manual profile.' };
+        runners = { mode: 'organization-profile', profileId: profile.id, group: profile.group, labels: [...profile.labels], validation: profile.validation, source: registry.source };
+    }
+    else if (question.id === 'runners.labels') {
+        const labels = input.split(',').map(label => label.trim());
+        if (!(0, setup_runner_policy_1.validSetupRunnerProfile)({ id: 'manual', group: current.group, labels, validation: current.validation })) {
+            return { error: 'Use 1–10 unique literal labels including self-hosted and Linux or macOS. Expressions and Windows service routes are unsupported.' };
+        }
+        runners = { ...current, labels };
+    }
+    else if (question.id === 'runners.group') {
+        if (!(0, setup_runner_policy_1.validSetupRunnerProfile)({ id: 'manual', group: input, labels: current.labels, validation: current.validation })) {
+            return { error: 'Enter an existing literal runner group of at most 100 characters, or leave it empty. Expressions and control characters are unsupported.' };
+        }
+        runners = { ...current, group: input };
+    }
+    else
+        runners = { ...current, validation: input };
+    return { configuration: { ...configuration, runners: { ...runners,
+                ...(current.discover !== undefined ? { discover: current.discover } : {}) } } };
+}
+
+
+/***/ }),
+
 /***/ 64662:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -52161,6 +52540,7 @@ exports.buildSetupPatPermissionRequirements = buildSetupPatPermissionRequirement
 exports.buildConfiguredSetupPatPermissionRequirements = buildConfiguredSetupPatPermissionRequirements;
 exports.buildSetupOrganizationReusePermissionRequirements = buildSetupOrganizationReusePermissionRequirements;
 exports.buildSetupBatchPatPermissionRequirements = buildSetupBatchPatPermissionRequirements;
+exports.withSetupRunnerDiscoveryPermissions = withSetupRunnerDiscoveryPermissions;
 exports.buildSetupPatIntentPermissionRequirements = buildSetupPatIntentPermissionRequirements;
 exports.buildSetupPatIntentUncertainty = buildSetupPatIntentUncertainty;
 exports.requiredSetupPatPermissionDelta = requiredSetupPatPermissionDelta;
@@ -52254,9 +52634,25 @@ function buildSetupBatchPatPermissionRequirements(configuration, remote, grants 
         })),
     ]);
 }
+/** Optional inventory grants are disclosed and prefilled, never mandatory for manual routing. */
+function withSetupRunnerDiscoveryPermissions(requirements, configuration, ownerKind) {
+    const required = [...requirements];
+    if (configuration.runners?.discover) {
+        const discovery = [
+            requirement({ role: 'setup', scope: 'repository', permission: 'Administration', level: 'read',
+                applicability: 'conditional', condition: 'Optional runner discovery selected',
+                reason: 'List existing repository self-hosted runners without changing access.', probe: 'administration' }),
+            ...(ownerKind === 'Organization' ? [requirement({ role: 'setup', scope: 'organization', permission: 'Self-hosted runners', level: 'read',
+                    applicability: 'conditional', condition: 'Optional organization runner discovery selected',
+                    reason: 'List existing eligible runner groups and their runners; manual routing remains available without this grant.', probe: 'runner-groups' })] : []),
+        ];
+        required.push(...discovery.filter(candidate => !required.some(item => item.scope === candidate.scope && item.permission === candidate.permission)));
+    }
+    return required;
+}
 /** Local requirements plus disclosed health prerequisites for selected Secret management. */
 function buildSetupPatIntentPermissionRequirements(configuration, ownerKind, projectsWanted = configuration.projects.ids.trim().length > 0) {
-    const required = buildSetupPatRequirements(configuration, ownerKind === 'Organization', undefined, projectsWanted);
+    const required = withSetupRunnerDiscoveryPermissions(buildSetupPatRequirements(configuration, ownerKind === 'Organization', undefined, projectsWanted), configuration, ownerKind);
     if (!configuration.manageRepositorySecrets)
         return required;
     // Prefill these possible health-check grants without treating unknown remote
@@ -56134,6 +56530,7 @@ exports.ensureRepositorySecrets = ensureRepositorySecrets;
 exports.resolveRemoteConfiguration = resolveRemoteConfiguration;
 exports.groupSetupResources = groupSetupResources;
 const setup_remote_facts_policy_1 = __nccwpck_require__(92567);
+const setup_runner_policy_1 = __nccwpck_require__(91027);
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
@@ -56228,13 +56625,24 @@ async function ensureRepositorySecrets(context, dependencies, setupConfiguration
     }
 }
 async function resolveRemoteConfiguration(context, dependencies, setupConfiguration, errors) {
+    let runnerRemote;
+    if (setupConfiguration?.runners?.mode === 'organization-profile') {
+        try {
+            runnerRemote = await dependencies.setupRemoteConfigurationReadPort?.inspect();
+        }
+        catch { /* Unknown cannot establish profile freshness. */ }
+        if (!runnerRemote || !(0, setup_runner_policy_1.setupRunnerProfileIsFresh)(setupConfiguration.runners, runnerRemote)) {
+            errors.push('The reviewed runner registry changed or is unavailable. No changes were made; inspect and approve a fresh profile snapshot.');
+            return undefined;
+        }
+    }
     if (context.setupConfigurationSource === 'organization') {
         if (!context.setupRemoteConfiguration || !dependencies.setupRemoteConfigurationReadPort) {
             errors.push('Organization reuse requires a fresh inventory before Apply. No changes were made.');
             return undefined;
         }
         try {
-            const fresh = await dependencies.setupRemoteConfigurationReadPort.inspect();
+            const fresh = runnerRemote ?? await dependencies.setupRemoteConfigurationReadPort.inspect();
             if (!(0, setup_remote_facts_policy_1.hasCompleteSetupSecretRevisions)(fresh) || !(0, setup_remote_facts_policy_1.hasCompleteSetupSecretRevisions)(context.setupRemoteConfiguration)) {
                 errors.push('Retained Secret revision metadata could not be verified. Restore metadata access and prepare a fresh plan. No changes were made.');
                 return undefined;
@@ -56250,6 +56658,8 @@ async function resolveRemoteConfiguration(context, dependencies, setupConfigurat
             return undefined;
         }
     }
+    if (runnerRemote)
+        return runnerRemote;
     if (context.setupRemoteConfiguration)
         return context.setupRemoteConfiguration;
     if (!dependencies.setupRemoteConfigurationReadPort || !setupConfiguration)
@@ -61674,6 +62084,7 @@ const setup_organization_variable_reuse_policy_2 = __nccwpck_require__(63882);
 const setup_batch_access_policy_1 = __nccwpck_require__(15486);
 const setup_configuration_validation_1 = __nccwpck_require__(13339);
 const setup_interaction_cancelled_error_1 = __nccwpck_require__(38313);
+const setup_runner_policy_1 = __nccwpck_require__(91027);
 /** Sequential read-only planning; shared namespace metadata is inspected once per operation. */
 class PrepareSetupBatchUseCase {
     constructor(ports) {
@@ -61740,16 +62151,25 @@ class PrepareSetupBatchUseCase {
             }
             blocked.push(...access.missing.map(name => `${name}: provision or authorize this existing binding separately, then inspect again.`));
             let files = [];
+            let installationReview;
             if (!blocked.length) {
                 try {
                     const existing = await this.ports.inventory.files(target, request.token);
-                    files = await this.ports.renderer.render(configuration, existing);
+                    const review = await this.ports.renderer.review?.(configuration, existing);
+                    if (review) {
+                        const inventory = configuration.runners?.discover ? await this.ports.runnerDiscovery?.discover(target.owner, target.name, request.token, 'Organization')
+                            .catch(() => ({ status: 'unavailable', candidates: [], groups: [] })) : undefined;
+                        installationReview = { ...review, jobs: review.jobs.map(job => ({ ...job, status: (0, setup_runner_policy_1.setupRunnerReadiness)(job.runsOn, inventory) })) };
+                        blocked.push(...review.blockers);
+                    }
+                    if (!blocked.length)
+                        files = await this.ports.renderer.render(configuration, existing);
                 }
                 catch {
                     blocked.push('Setup files could not be inspected or rendered within the fixed asset budget. Inspect this target before retrying; other ready targets can continue.');
                 }
             }
-            const basis = { target, configuration, remote, files, repositoryVariables: access.variables.repositoryWrites, grants, sharedSnapshot: access.sharedSnapshot, blocked };
+            const basis = { target, configuration, remote, files, ...(installationReview ? { installationReview } : {}), repositoryVariables: access.variables.repositoryWrites, grants, sharedSnapshot: access.sharedSnapshot, blocked };
             // The desired contract stays stable after our own grants and Variable writes.
             // Observed facts are freshly reviewed and revalidated, never persisted as values.
             const digest = this.ports.renderer.digest(JSON.stringify({ target, configuration, files,
@@ -62857,6 +63277,7 @@ exports.SetupTokenPermissionsUseCase = SetupTokenPermissionsUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupWizardUseCase = void 0;
 exports.buildInitialSetupConfiguration = buildInitialSetupConfiguration;
+const setup_runner_policy_1 = __nccwpck_require__(91027);
 const setup_remote_facts_policy_1 = __nccwpck_require__(92567);
 const application_error_1 = __nccwpck_require__(75999);
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
@@ -62934,7 +63355,10 @@ class SetupWizardUseCase {
             && (request.permissionIntent?.projectsWanted !== false || request.revision?.group === 'projects')
             && request.remoteTarget && this.dependencies.projectDiscovery
             ? await this.dependencies.projectDiscovery.discover(request.remoteTarget.owner, projectOwnerType, request.remoteTarget.token).catch(() => ({ status: 'unavailable', candidates: [] })) : undefined;
+        let runnerInventory = initial.runners?.discover && request.remoteTarget && this.dependencies.runnerDiscovery
+            ? await this.dependencies.runnerDiscovery.discover(request.remoteTarget.owner, request.remoteTarget.repository, request.remoteTarget.token, projectOwnerType).catch(() => ({ status: 'unavailable', candidates: [], groups: [] })) : undefined;
         let context = {
+            ...(runnerInventory ? { runnerInventory } : {}),
             ...(remoteConfiguration ? { remote: remoteConfiguration } : {}),
             branchSources: { main: explicitMainBranch ? 'configuration' : remoteConfiguration?.defaultBranch ? 'github' : 'default',
                 development: request.overrides?.repository?.developmentBranch !== undefined ? 'configuration'
@@ -62948,6 +63372,7 @@ class SetupWizardUseCase {
                 projectsWanted: request.revision.group === 'projects' || Boolean(initial.projects.ids.trim()) } : {}),
             ...(!request.revision ? { skipQuestionIds: [...new Set([
                         ...(request.permissionIntent?.answeredQuestionIds ?? []),
+                        ...(request.overrides?.runners?.discover !== undefined ? ['runners.discover'] : []),
                         ...(organizationImport?.answeredQuestionIds ?? []),
                         ...(request.permissionIntent?.projectsWanted === false ? ['projects.ids'] : []),
                         ...basicSkippedQuestionIds,
@@ -63014,6 +63439,11 @@ class SetupWizardUseCase {
             throw new application_error_1.ApplicationError('configuration.invalid', `Invalid setup configuration:\n${validationErrors.map((error) => `- ${error}`).join('\n')}`);
         }
         let configuration = (0, setup_configuration_policy_1.normalizeSetupConfigurationLocales)(collectedConfiguration);
+        if (!configuration.runners?.discover)
+            runnerInventory = undefined;
+        else if (!initial.runners?.discover && request.remoteTarget && this.dependencies.runnerDiscovery) {
+            runnerInventory = await this.dependencies.runnerDiscovery.discover(request.remoteTarget.owner, request.remoteTarget.repository, request.remoteTarget.token, projectOwnerType).catch(() => ({ status: 'unavailable', candidates: [], groups: [] }));
+        }
         if ((request.configurationSource === 'organization' || request.deliveryMode === 'pull-request') && remoteConfiguration) {
             configuration = (0, setup_organization_variable_reuse_policy_1.configureSetupOrganizationReuseStorage)(configuration, (0, setup_organization_variable_reuse_policy_1.buildSetupOrganizationReuseVariables)(configuration, remoteConfiguration), remoteConfiguration);
         }
@@ -63104,6 +63534,11 @@ class SetupWizardUseCase {
             }
         }
         const plan = (0, setup_configuration_policy_1.buildSetupPlan)(configuration, readiness, approvalReadiness);
+        if (this.dependencies.installationReview && request.deliveryMode !== 'pull-request') {
+            const review = await this.dependencies.installationReview.inspect(configuration);
+            plan.installationReview = { ...review, jobs: review.jobs.map(job => ({ ...job,
+                    status: (0, setup_runner_policy_1.setupRunnerReadiness)(job.runsOn, runnerInventory) })) };
+        }
         plan.deliveryMode = request.deliveryMode ?? 'local';
         if ((request.configurationSource === 'organization' || request.deliveryMode === 'pull-request') && remoteConfiguration) {
             plan.variables = (0, setup_organization_variable_reuse_policy_1.buildSetupOrganizationReuseVariables)(configuration, remoteConfiguration);
@@ -63146,6 +63581,7 @@ class SetupWizardUseCase {
             const answeredQuestionIds = [...new Set([
                     ...(request.revision?.answeredQuestionIds ?? []),
                     ...(request.permissionIntent?.answeredQuestionIds ?? []),
+                    ...(request.overrides?.runners?.discover !== undefined ? ['runners.discover'] : []),
                     ...(organizationImport?.answeredQuestionIds ?? []),
                     ...(questionnaire.answeredQuestionIds ?? []),
                 ])];
@@ -63172,10 +63608,23 @@ class SetupWizardUseCase {
                 configuration: (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration), errors: ['The local setup session expired before permission checks began.'],
                 ...(remoteConfiguration ? { remoteConfiguration } : {}) };
         }
+        if (plan.installationReview?.blockers.length)
+            throw new application_error_1.ApplicationError('configuration.invalid', plan.installationReview.blockers.join(' '));
         if (request.previewOnly) {
             return { status: 'completed', exitCode: 0, configuration: (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration), plan,
                 ...(organizationImport ? { organizationImport } : {}),
                 ...(remoteConfiguration ? { remoteConfiguration } : {}) };
+        }
+        if (configuration.runners?.mode === 'organization-profile') {
+            const target = request.remoteTarget;
+            let fresh;
+            try {
+                fresh = target && await this.dependencies.remoteConfiguration?.inspect(target.owner, target.repository, target.token);
+            }
+            catch { /* A failed read cannot establish profile freshness. */ }
+            if (!fresh || !(0, setup_runner_policy_1.setupRunnerProfileIsFresh)(configuration.runners, fresh)) {
+                throw new application_error_1.ApplicationError('configuration.invalid', 'The runner registry changed or is unavailable. No permission probes or installation writes started; review a fresh profile snapshot.');
+            }
         }
         const audit = this.dependencies.onPermissionCleanupPending
             ? await this.dependencies.finalPermissionAudit.audit(configuration, remoteConfiguration, this.dependencies.onPermissionCleanupPending)
@@ -63338,6 +63787,7 @@ exports.VerifyWebSetupApplyUseCase = void 0;
 const application_error_1 = __nccwpck_require__(75999);
 const setup_interaction_cancelled_error_1 = __nccwpck_require__(38313);
 const setup_remote_facts_policy_1 = __nccwpck_require__(92567);
+const setup_runner_policy_1 = __nccwpck_require__(91027);
 /** Authorizes one web Apply against the facts the operator actually reviewed. */
 class VerifyWebSetupApplyUseCase {
     constructor(ports) {
@@ -63363,7 +63813,7 @@ class VerifyWebSetupApplyUseCase {
         if (!(0, setup_remote_facts_policy_1.hasCompleteSetupSecretRevisions)(remote) || !(0, setup_remote_facts_policy_1.hasCompleteSetupSecretRevisions)(request.approvedRemote)) {
             throw new application_error_1.ApplicationError('configuration.invalid', 'Retained Secret revision metadata could not be verified. No mutation started; restore metadata access and review a fresh plan.');
         }
-        if (!(0, setup_remote_facts_policy_1.sameSetupRemoteFacts)(remote, request.approvedRemote)) {
+        if (!(0, setup_remote_facts_policy_1.sameSetupRemoteFacts)(remote, request.approvedRemote) || !(0, setup_runner_policy_1.setupRunnerProfileIsFresh)(request.configuration.runners, remote)) {
             throw new application_error_1.ApplicationError('configuration.invalid', 'GitHub repository facts changed since plan review. No mutation started; restart and review a new plan.');
         }
         const audit = this.ports.onPermissionCleanupPending
@@ -73056,6 +73506,7 @@ function registerSetupCommand(program) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.executeSetupCommand = executeSetupCommand;
+const setup_runner_composition_root_1 = __nccwpck_require__(80035);
 const local_action_1 = __nccwpck_require__(76102);
 const setup_files_1 = __nccwpck_require__(59126);
 const logger_1 = __nccwpck_require__(91151);
@@ -73275,6 +73726,8 @@ async function executeSetupCommand(options) {
                         deliveryMode: batchRequested ? 'pull-request' : 'local',
                     });
                     setupPatPermissions = [...intent.requirements];
+                    if (intent.runnerDiscovery !== undefined)
+                        overrides = { ...overrides, runners: { ...overrides.runners, discover: intent.runnerDiscovery } };
                     assertedOwnerKind = intent.assertedOwnerKind;
                     permissionIntent = intent.permissionIntent;
                 }
@@ -73353,6 +73806,7 @@ async function executeSetupCommand(options) {
                     approvalReadiness: new setup_approval_readiness_adapter_1.GithubSetupApprovalReadinessAdapter(),
                     approvalCheckDiscovery: new github_setup_approval_check_discovery_adapter_1.GithubSetupApprovalCheckDiscoveryAdapter(),
                     projectDiscovery: new github_setup_project_discovery_adapter_1.GithubSetupProjectDiscoveryAdapter(),
+                    runnerDiscovery: (0, setup_runner_composition_root_1.createSetupRunnerDiscovery)(), installationReview: (0, setup_runner_composition_root_1.createSetupInstallationReview)(),
                     ...(webBridge ? { sessionLiveness: () => webBridge.snapshot().outcome === 'cancelled' ? 'cancelled'
                             : webBridge.snapshot().outcome ? 'expired' : 'active' } : {}),
                 });
@@ -73764,6 +74218,7 @@ function setupApplySnapshotMatches(repositoryRoot, selectedFiles, expected) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.executeSetupBatch = executeSetupBatch;
+const setup_runner_composition_root_1 = __nccwpck_require__(80035);
 const select_setup_batch_targets_use_case_1 = __nccwpck_require__(60527);
 const prepare_setup_batch_use_case_1 = __nccwpck_require__(14769);
 const configure_setup_batch_target_use_case_1 = __nccwpck_require__(5278);
@@ -73789,6 +74244,8 @@ const setup_plan_presenter_1 = __nccwpck_require__(33441);
 const setup_confirmation_adapter_1 = __nccwpck_require__(5502);
 const web_setup_adapters_1 = __nccwpck_require__(60574);
 const logger_1 = __nccwpck_require__(91151);
+const setup_installation_review_presenter_1 = __nccwpck_require__(22953);
+const setup_runner_policy_1 = __nccwpck_require__(91027);
 /** Presentation and composition only; shared application use cases own selection, configuration and Apply. */
 async function executeSetupBatch(input) {
     const composition = (0, setup_batch_composition_root_1.createSetupBatchCompositionRoot)();
@@ -73799,6 +74256,7 @@ async function executeSetupBatch(input) {
     let currentOperation;
     let retryRemaining = 1;
     let failedPermissionReport;
+    let sharedRunnerDefaults;
     const alive = () => !input.bridge?.snapshot().outcome;
     const approved = () => alive() && !input.bridge?.snapshot().batch?.stopRequested
         && (approvedGeneration === undefined || approvedGeneration === input.bridge?.controllerGeneration());
@@ -73837,9 +74295,11 @@ async function executeSetupBatch(input) {
             return JSON.stringify({ action: 'select', selectedIds: ids });
         },
         requestToken: async (repositories) => {
-            const requirements = (0, setup_token_permission_policy_1.buildSetupBatchPatPermissionRequirements)((0, setup_configuration_defaults_1.createDefaultSetupConfiguration)());
+            const configuration = (0, setup_configuration_defaults_1.createDefaultSetupConfiguration)();
+            configuration.runners = { ...configuration.runners, discover: input.overrides.runners?.discover ?? sharedRunnerDefaults?.discover };
+            const requirements = (0, setup_token_permission_policy_1.withSetupRunnerDiscoveryPermissions)((0, setup_token_permission_policy_1.buildSetupBatchPatPermissionRequirements)(configuration), configuration, 'Organization');
             input.permissionPresenter.showDetailedRequirements('setup', requirements);
-            const link = (0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({ owner: input.owner, repository: input.repository, role: 'setup', expiresIn: 1, requirements });
+            const link = (0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({ owner: input.owner, repository: input.repository, role: 'setup', expiresIn: 1, requirements, includeConditionalSetupGrants: true });
             if (input.bridge)
                 return input.bridge.ask({ kind: 'secret', title: 'Temporary PAT for selected repositories', optional: true,
                     link, copyId: 'batch.token', copyValues: { repositories: repositories.join(', ') || input.repository } });
@@ -73864,13 +74324,21 @@ async function executeSetupBatch(input) {
                     inspectCredentialHealthWorkflow: (...args) => remoteReader.inspectCredentialHealthWorkflow(...args) },
                 mergeQueueReadiness: (0, setup_doctor_composition_root_1.createSetupMergeQueueReadinessUseCase)(), approvalReadiness: new setup_approval_readiness_adapter_1.GithubSetupApprovalReadinessAdapter(),
                 approvalCheckDiscovery: new github_setup_approval_check_discovery_adapter_1.GithubSetupApprovalCheckDiscoveryAdapter(), projectDiscovery: new github_setup_project_discovery_adapter_1.GithubSetupProjectDiscoveryAdapter(),
+                runnerDiscovery: (0, setup_runner_composition_root_1.createSetupRunnerDiscovery)(),
                 sessionLiveness: () => alive() ? 'active' : 'cancelled',
             });
-            return new configure_setup_batch_target_use_case_1.ConfigureSetupBatchTargetUseCase({ wizard, credentials: (0, setup_credentials_composition_root_1.createSetupCredentialsUseCase)(input.credentialPrompt, input.permissionPresenter, { configurationSource: 'organization', allowPreApplyHealthWorkflow: false }) }).execute({
+            const runnerDefaults = input.overrides.runners?.mode !== undefined ? input.overrides.runners
+                : { ...(0, setup_runner_policy_1.reusableSetupRunnerDefaults)(sharedRunnerDefaults, projected), ...input.overrides.runners };
+            if (Object.keys(runnerDefaults).length)
+                (0, logger_1.logInfo)('The runner choice is prefilled for this target. Review its group/labels and change it for a repository exception; installation still waits for the combined review.');
+            const chosen = await new configure_setup_batch_target_use_case_1.ConfigureSetupBatchTargetUseCase({ wizard, credentials: (0, setup_credentials_composition_root_1.createSetupCredentialsUseCase)(input.credentialPrompt, input.permissionPresenter, { configurationSource: 'organization', allowPreApplyHealthWorkflow: false }) }).execute({
                 target, remote: projected, actualRemote: context.remote, shared: context.shared, token: privateToken,
-                configurationSource: input.configurationSource, overrides: input.overrides, presentationMode: input.presentationMode,
+                configurationSource: input.configurationSource, overrides: { ...input.overrides, ...(runnerDefaults ? { runners: runnerDefaults } : {}) }, presentationMode: input.presentationMode,
                 skipVariables: input.skipVariables, skipSecrets: input.skipSecrets
             });
+            if (chosen?.configuration.runners)
+                sharedRunnerDefaults = chosen.configuration.runners;
+            return chosen;
         },
     });
     const presentation = { active: approved,
@@ -73949,6 +74417,8 @@ function printBatch(plan, operation) {
         (0, logger_1.logInfo)(`  setup/copilot/${plan.operationId} → ${target.target.defaultBranch} at ${target.target.baseSha}`);
         if (target.blocked.length)
             (0, logger_1.logInfo)(`  Needs attention: ${target.blocked.join(' ')}`);
+        if (target.installationReview)
+            (0, logger_1.logInfo)((0, setup_installation_review_presenter_1.renderSetupInstallationReview)(target.installationReview));
         if (receipt.cleanupPending)
             (0, logger_1.logInfo)('  Permission-check cleanup could not be confirmed. Pending work is stopped. Inspect GitHub history and the local recovery journal; resolve cleanup before starting a fresh setup. This operation cannot resume writes.');
         if (!target.blocked.length)
@@ -74134,6 +74604,7 @@ const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const merge_queue_readiness_1 = __nccwpck_require__(12515);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const SETUP_OVERRIDE_KEYS = new Set([
+    'runners',
     'features',
     'agents',
     'repository',
@@ -74233,6 +74704,23 @@ function loadSetupConfigurationOverrides(filePath) {
     validateStorage(raw.storage);
     validateIssueWorkflows(raw.issueWorkflows);
     validateGuidance(raw.repositoryAgentGuidance);
+    if (raw.runners !== undefined) {
+        validateObject(raw.runners, 'runners');
+        const runners = raw.runners;
+        validateObjectKeys(runners, new Set(['mode', 'profileId', 'group', 'labels', 'validation', 'source', 'discover']), 'runners');
+        validateBooleanProperty(runners, 'discover');
+        for (const key of ['mode', 'profileId', 'group', 'validation']) {
+            if (runners[key] !== undefined && typeof runners[key] !== 'string')
+                throw new Error(`runners.${key} must be a string.`);
+        }
+        if (runners.labels !== undefined && (!Array.isArray(runners.labels) || !runners.labels.every(label => typeof label === 'string')))
+            throw new Error('runners.labels must be a list of literal strings.');
+        if (runners.source !== undefined) {
+            validateObject(runners.source, 'runners.source');
+            validateObjectKeys(runners.source, new Set(['scope', 'value']), 'runners.source');
+            validateStringValues(runners.source, 'runners.source');
+        }
+    }
     return raw;
 }
 function validateApprovalOverride(value) {
@@ -74884,6 +75372,30 @@ function doctorCheckLabel(id, catalog = (0, setup_doctor_message_catalog_1.resol
 
 /***/ }),
 
+/***/ 22953:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.renderSetupInstallationReview = renderSetupInstallationReview;
+const setup_terminal_choice_policy_1 = __nccwpck_require__(64662);
+function renderSetupInstallationReview(review) {
+    const content = (value) => value.split('\n').map(setup_terminal_choice_policy_1.safeTerminalChoiceText).join('\n');
+    return ['Runner routing and installation parity',
+        'Access and capacity are observations, not runner authentication or runtime verification. Unknown access needs administrator verification; busy/offline keeps the route and waits for capacity.',
+        ...review.jobs.map(job => `  ${job.file} / ${job.job}: ${job.role} · ${job.status}${job.retained ? ' · retained' : ''}\n    runs-on: ${JSON.stringify(job.runsOn)}`),
+        'Asset inventory (disabled optional capabilities remain visible):',
+        ...review.assets.map(asset => `  ${asset.path}: ${asset.status}${asset.enabled ? '' : ' · disabled'}`),
+        ...review.blockers.map(blocker => `  Blocked: ${blocker}`),
+        'Complete workflow and routing changes (credential-like literals redacted):',
+        ...review.changes.map(change => `  ${change.path}\n--- before ---\n${content(change.before ?? '(missing)')}\n--- after ---\n${content(change.after ?? '(removed)')}`),
+    ].join('\n');
+}
+
+
+/***/ }),
+
 /***/ 20462:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -75081,6 +75593,9 @@ async function finishWebSetupSession(bridge, server, exitCode) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.collectSetupPatIntent = collectSetupPatIntent;
 const prepare_setup_pat_intent_use_case_1 = __nccwpck_require__(69277);
+const setup_configuration_defaults_1 = __nccwpck_require__(23381);
+const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
+const setup_token_permission_policy_1 = __nccwpck_require__(99590);
 const setup_questionnaire_controller_1 = __nccwpck_require__(41644);
 const logger_1 = __nccwpck_require__(91151);
 const setup_question_renderer_1 = __nccwpck_require__(89481);
@@ -75099,7 +75614,20 @@ async function collectSetupPatIntent(input) {
         const owner = await credentialPrompt.chooseSetupOwnerKind();
         if (owner !== 'Organization')
             throw new application_error_1.ApplicationError('configuration.invalid', 'Organization reuse requires an organization owner. Check the owner or restart with Customize configuration.');
-        permissionPresenter.showDetailedRequirements('setup', input.initialRequirements);
+        let runnerDiscovery = input.overrides.runners?.discover;
+        const draft = (0, setup_configuration_defaults_1.mergeSetupConfiguration)((0, setup_configuration_defaults_1.createDefaultSetupConfiguration)(), input.overrides);
+        if (runnerDiscovery === undefined) {
+            const context = { skipQuestionIds: (0, setup_questionnaire_policy_1.setupQuestionContentInventory)().filter(question => question.id !== 'runners.discover').map(question => question.id) };
+            const collector = bridge ? new web_setup_adapters_1.WebSetupQuestionnaireCollector(bridge)
+                : new setup_questionnaire_controller_1.SetupQuestionnaireController(input.terminal, new setup_question_renderer_1.ConsoleSetupQuestionRenderer('permission-intent'));
+            const state = await collector.collect((0, setup_questionnaire_policy_1.createSetupPermissionIntentQuestionnaire)(draft, context), context);
+            if (state.terminal === 'cancelled')
+                throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
+            runnerDiscovery = state.draft.runners?.discover === true;
+        }
+        draft.runners = { ...draft.runners, discover: runnerDiscovery };
+        const requirements = (0, setup_token_permission_policy_1.withSetupRunnerDiscoveryPermissions)(input.initialRequirements, draft, 'Organization');
+        permissionPresenter.showDetailedRequirements('setup', requirements);
         const choices = ['Continue to GitHub', 'Enter a PAT manually'];
         const description = 'These provisional grants inspect existing organization configuration and allow repository setup. Shared Secret values are never requested or replaced. The final plan rechecks exact permissions; authentication evidence can remain pending. Select only the intended repositories in GitHub and delete the temporary PAT afterwards.';
         const answer = bridge
@@ -75109,18 +75637,18 @@ async function collectSetupPatIntent(input) {
             throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
         if (answer !== choices[0]) {
             credentialPrompt.useManualSetupPat();
-            return { requirements: input.initialRequirements };
+            return { requirements, runnerDiscovery };
         }
         try {
             credentialPrompt.configureSetupPatGuide((0, setup_pat_creation_url_policy_1.buildSetupPatCreationUrl)({ role: 'setup', owner: input.owner,
-                repository: input.repository, expiresIn: 1, requirements: input.initialRequirements }));
+                repository: input.repository, expiresIn: 1, requirements, includeConditionalSetupGrants: true }));
         }
         catch (error) {
             if (!(error instanceof setup_pat_creation_url_policy_1.UnsupportedSetupPatLinkError))
                 throw error;
             credentialPrompt.useManualSetupPat();
         }
-        return { requirements: input.initialRequirements, assertedOwnerKind: 'Organization' };
+        return { requirements, runnerDiscovery, assertedOwnerKind: 'Organization' };
     }
     const prepared = await new prepare_setup_pat_intent_use_case_1.PrepareSetupPatIntentUseCase({
         collect: (initial, context, pass) => (bridge
@@ -75185,6 +75713,7 @@ const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const setup_prompt_rendering_1 = __nccwpck_require__(76673);
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 const setup_workflow_pat_storage_copy_1 = __nccwpck_require__(97798);
+const setup_installation_review_presenter_1 = __nccwpck_require__(22953);
 class ConsoleSetupPlanPresenter {
     present(plan) {
         console.log(renderSetupPlan(plan));
@@ -75203,6 +75732,7 @@ function renderSetupPlan(plan) {
     const content = [
         (0, setup_prompt_rendering_1.color)('Capabilities', 36), enabledFeatures || '  (none)', '',
         (0, setup_prompt_rendering_1.color)('Agent routing', 36), agents, '',
+        ...(plan.installationReview ? [(0, setup_installation_review_presenter_1.renderSetupInstallationReview)(plan.installationReview), ''] : []),
         (0, setup_prompt_rendering_1.color)('Pull-request approval', 36),
         `  Mode: ${approval.mode} (new setup; absent runtime policy stays off)`,
         `  Scope: ${approval.targetRoles.join(', ')} / ${approval.branchKinds.join(', ')}; linked issue ${approval.requireLinkedIssue ? 'required' : 'optional'}`,
@@ -75458,7 +75988,13 @@ class ConsoleSetupQuestionRenderer {
                 const fixed = question.fixedWorkflowFeatures?.[kind];
                 return fixed === undefined ? [] : [`  Configuration fixes features.${kind}=${fixed}; ${fixed ? 'keep' : 'leave'} ${kind} ${fixed ? 'selected' : 'unselected'} unless you edit --config/flags.`];
             }).join('\n');
-        const heading = `${step}${question.label}\n  ${help.summary}\n  Suggested: ${formatDefault(question.defaultValue)}${source}. ${help.documentation.title}: ${help.documentation.url}\n  Type ? for detailed help; type :back to return to the previous question without clearing saved answers.${fixedWorkflowNote ? `\n${fixedWorkflowNote}` : ''}${discoveryNote(question)}`;
+        const runnerNote = question.id.startsWith('runners.') && question.id !== 'runners.discover' ? [
+            `Registry: ${question.runnerRegistryStatus}${question.runnerRegistryScope ? ` (${question.runnerRegistryScope})` : ''}. Inventory: ${question.runnerInventory?.status ?? 'unavailable'}. No access is granted by selection.`,
+            ...(question.runnerProfiles ?? []).map(profile => `${profile.id}: group ${profile.group || '(labels only)'}; ${profile.labels.join(', ')}; validation ${profile.validation}`),
+            ...(question.runnerInventory?.groups ?? []).map(group => `Observed group ${group.name}: ${group.access}`),
+            ...(question.runnerInventory?.candidates ?? []).slice(0, 10).map(candidate => `Observed labels: ${candidate.labels.join(', ')} · ${candidate.status}${candidate.busy ? ' · busy' : ''}`),
+        ].join('\n  ') : '';
+        const heading = `${step}${help.label}\n  ${help.summary}\n  Suggested: ${formatDefault(question.defaultValue)}${source}. ${help.documentation.title}: ${help.documentation.url}\n  Type ? for detailed help; type :back to return to the previous question without clearing saved answers.${fixedWorkflowNote ? `\n${fixedWorkflowNote}` : ''}${discoveryNote(question)}${runnerNote ? `\n  ${runnerNote}` : ''}`;
         const reviewedStatuses = question.projectStatusValues?.map(item => `  ${item.transition}: ${item.value}`).join('\n');
         const fallback = formatDefault(question.defaultValue);
         if (question.kind === 'choice') {
@@ -76759,6 +77295,7 @@ function sameCapability(provided, expected) {
 }
 function toWebSetupPlan(plan) {
     return {
+        ...(plan.installationReview ? { installationReview: plan.installationReview } : {}),
         deliveryMode: plan.deliveryMode,
         ...(plan.organizationReuse ? { organizationReuse: { imported: plan.organizationReuse.imported,
                 needsReview: plan.organizationReuse.needsReview, organizationVariables: [...plan.organizationReuse.organizationVariables],
@@ -91850,6 +92387,21 @@ exports.SETUP_CREDENTIAL_HEALTH_BINDINGS = {
 
 /***/ }),
 
+/***/ 94301:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DEFAULT_SETUP_RUNNERS = exports.SETUP_RUNNER_REGISTRY = void 0;
+exports.SETUP_RUNNER_REGISTRY = 'COPILOT_RUNNER_PROFILES';
+exports.DEFAULT_SETUP_RUNNERS = Object.freeze({
+    mode: 'retain', profileId: '', group: '', labels: Object.freeze([]), validation: 'hosted',
+});
+
+
+/***/ }),
+
 /***/ 24596:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -95078,6 +95630,7 @@ const issue_resource_input_policy_1 = __nccwpck_require__(28615);
 const yml_utils_1 = __nccwpck_require__(61788);
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const setup_issue_resource_policy_1 = __nccwpck_require__(67323);
+const setup_runner_composition_root_1 = __nccwpck_require__(80035);
 function createSetupBatchCompositionRoot() {
     const transport = new setup_batch_github_read_adapter_1.SetupBatchGithubTransport({ getClient: token => (0, octokit_client_resolver_1.getOctokitClient)(token) });
     const read = new setup_batch_github_read_adapter_1.SetupBatchGithubReadAdapter(transport, (0, setup_credentials_composition_root_1.createSetupRemoteConfigurationReadPort)());
@@ -95105,7 +95658,7 @@ function createSetupBatchCompositionRoot() {
                 throw new setup_batch_github_read_adapter_1.SetupBatchProviderError('unknown');
         },
     });
-    return { discovery: read, inventory: read, writer, renderer: new setup_batch_workspace_adapter_1.SetupBatchWorkspaceAdapter(), journal: new setup_batch_journal_adapter_1.SetupBatchJournalAdapter() };
+    return { discovery: read, inventory: read, writer, renderer: new setup_batch_workspace_adapter_1.SetupBatchWorkspaceAdapter(), journal: new setup_batch_journal_adapter_1.SetupBatchJournalAdapter(), runnerDiscovery: (0, setup_runner_composition_root_1.createSetupRunnerDiscovery)() };
 }
 
 
@@ -95181,6 +95734,28 @@ function createSetupDoctorUseCase() {
         approvalReadiness: new setup_approval_readiness_adapter_1.GithubSetupApprovalReadinessAdapter(),
         catalogResolver,
     });
+}
+
+
+/***/ }),
+
+/***/ 80035:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createSetupRunnerDiscovery = createSetupRunnerDiscovery;
+exports.createSetupInstallationReview = createSetupInstallationReview;
+const setup_runner_discovery_adapter_1 = __nccwpck_require__(17495);
+const setup_batch_github_read_adapter_1 = __nccwpck_require__(9703);
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
+const setup_installation_review_1 = __nccwpck_require__(23799);
+function createSetupRunnerDiscovery() {
+    return new setup_runner_discovery_adapter_1.SetupRunnerDiscoveryAdapter(new setup_batch_github_read_adapter_1.SetupBatchGithubTransport({ getClient: token => (0, octokit_client_resolver_1.getOctokitClient)(token) }));
+}
+function createSetupInstallationReview(root = process.cwd()) {
+    return { inspect: async (configuration) => (0, setup_installation_review_1.inspectSetupInstallation)(root, configuration) };
 }
 
 
@@ -97145,6 +97720,9 @@ exports.SetupBatchGithubApplyAdapter = void 0;
 const setup_batch_policy_1 = __nccwpck_require__(52214);
 const setup_batch_github_read_adapter_1 = __nccwpck_require__(9703);
 const node_crypto_1 = __nccwpck_require__(6005);
+const setup_runner_1 = __nccwpck_require__(94301);
+const setup_runner_policy_1 = __nccwpck_require__(91027);
+const setup_runner_installation_summary_policy_1 = __nccwpck_require__(14706);
 /** Reused shared resources have an additive access command only. No shared value or Secret writer is injected. */
 class SetupBatchGithubApplyAdapter {
     constructor(read, variableWriter, resources) {
@@ -97173,6 +97751,14 @@ class SetupBatchGithubApplyAdapter {
         if (effective.repositoryVariablesAccess !== 'available' || effective.repositorySecretsAccess !== 'available'
             || effective.organizationVariablesAccess !== 'available' || effective.organizationSecretsAccess !== 'available')
             return false;
+        if (plan.configuration.runners?.mode === 'organization-profile') {
+            if (!(0, setup_runner_policy_1.setupRunnerProfileIsFresh)(plan.configuration.runners, effective))
+                return false;
+            const registry = shared.filter(resource => resource.kind === 'variable' && resource.name === setup_runner_1.SETUP_RUNNER_REGISTRY);
+            const profileFacts = { ...effective, organizationVariables: registry.map(resource => ({ name: resource.name, value: resource.value ?? '' })) };
+            if (!(0, setup_runner_policy_1.setupRunnerProfileIsFresh)(plan.configuration.runners, profileFacts))
+                return false;
+        }
         for (const resource of plan.sharedSnapshot) {
             const pendingGrant = !completed.includes('access') && plan.grants.some(grant => grant.kind === resource.kind && grant.name === resource.name);
             if (!pendingGrant && (resource.kind === 'secret' ? !effective.organizationSecrets.includes(resource.name)
@@ -97326,7 +97912,7 @@ class SetupBatchGithubApplyAdapter {
         try {
             await this.read.transport.call(token, 'POST /repos/{owner}/{repo}/pulls', { owner: plan.target.owner, repo: plan.target.name,
                 head: branch, base: plan.target.defaultBranch, title: 'chore: configure Copilot',
-                body: `${(0, setup_batch_policy_1.setupBatchMarker)(operationId, plan.target.id)}\n\nConfigure Copilot using the reviewed setup plan. Shared Secret values are retained.\n\n**Status:** PR created; installation awaits human review and merge. Runtime credential and capability verification remain pending.\n\nReview the generated workflows, repository guidance and configuration before merging. Setup never merges, releases or deploys this PR.` });
+                body: `${(0, setup_batch_policy_1.setupBatchMarker)(operationId, plan.target.id)}\n\nConfigure Copilot using the reviewed setup plan. Shared Secret values are retained.\n\n**Status:** PR created; installation awaits human review and merge. Runtime credential and capability verification remain pending.\n\nReview the generated workflows, repository guidance and configuration before merging. Setup never merges, releases or deploys this PR.${(0, setup_runner_installation_summary_policy_1.setupRunnerInstallationSummary)(plan)}` });
         }
         catch { /* Inspect the durable marker after any uncertain create response. */ }
         const number = await inspect();
@@ -97388,8 +97974,9 @@ const setup_batch_policy_1 = __nccwpck_require__(52214);
 const setup_organization_variable_bindings_1 = __nccwpck_require__(19698);
 const setup_credential_health_1 = __nccwpck_require__(68136);
 const setup_batch_retry_policy_1 = __nccwpck_require__(70775);
+const setup_runner_1 = __nccwpck_require__(94301);
 const managedVariables = new Set([...setup_organization_variable_bindings_1.SETUP_ORGANIZATION_VARIABLE_BINDINGS.flatMap(binding => [binding.variable, binding.fallbackVariable]),
-    'PR_APPROVAL_POLICY', 'COPILOT_ISSUE_WORKFLOW_PROFILE', 'AGENT_ALLOWED_PROVIDERS', 'AGENT_ALLOWED_MODEL_PROVIDERS']);
+    'PR_APPROVAL_POLICY', 'COPILOT_ISSUE_WORKFLOW_PROFILE', 'AGENT_ALLOWED_PROVIDERS', 'AGENT_ALLOWED_MODEL_PROVIDERS', setup_runner_1.SETUP_RUNNER_REGISTRY]);
 class SetupBatchProviderError extends Error {
     constructor(code) {
         super(`GitHub setup request is ${code}. Inspect access or retry the pending target.`);
@@ -97712,24 +98299,26 @@ const setup_batch_policy_1 = __nccwpck_require__(52214);
 const setup_files_1 = __nccwpck_require__(59126);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const setup_workflow_upgrade_1 = __nccwpck_require__(85493);
+const setup_installation_review_1 = __nccwpck_require__(23799);
 const repository_agent_guidance_policy_1 = __nccwpck_require__(67402);
 /** Existing setup renderers run inside a disposable directory, never in another checkout. */
 class SetupBatchWorkspaceAdapter {
+    async review(configuration, existing) {
+        const root = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-setup-review-'));
+        try {
+            seedWorkspace(root, existing);
+            return (0, setup_installation_review_1.inspectSetupInstallation)(root, configuration);
+        }
+        finally {
+            (0, node_fs_1.rmSync)(root, { recursive: true, force: true });
+        }
+    }
     digest(value) { return (0, node_crypto_1.createHash)('sha256').update(value).digest('hex'); }
     operationId() { return (0, node_crypto_1.randomUUID)(); }
     async render(configuration, existing) {
         const root = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-setup-render-'));
         try {
-            if (existing.length > 300 || new Set(existing.map(file => file.path)).size !== existing.length
-                || existing.some(file => !(0, setup_batch_policy_1.validSetupBatchAssetPath)(file.path) || file.content === null
-                    || Buffer.byteLength(file.content) > 100000)
-                || existing.reduce((sum, file) => sum + Buffer.byteLength(file.content), 0) > 2000000)
-                throw new Error('Setup asset inventory is invalid or exceeds the fixed render budget.');
-            for (const file of existing) {
-                const destination = (0, node_path_1.join)(root, file.path);
-                (0, node_fs_1.mkdirSync)((0, node_path_1.dirname)(destination), { recursive: true });
-                (0, node_fs_1.writeFileSync)(destination, file.content, { mode: 0o600 });
-            }
+            seedWorkspace(root, existing);
             (0, setup_files_1.ensureGitHubDirs)(root);
             const sourceAction = existing.some(file => file.path.startsWith('.github/workflows/') && (0, setup_workflow_upgrade_1.hasRootLocalSetupAction)(file.content));
             const sourceGuidance = [repository_agent_guidance_policy_1.REPOSITORY_AGENT_GUIDE_PATH, repository_agent_guidance_policy_1.REPOSITORY_AGENT_PROFILE_PATH, repository_agent_guidance_policy_1.REPOSITORY_AGENT_MANIFEST_PATH,
@@ -97783,6 +98372,17 @@ class SetupBatchWorkspaceAdapter {
     }
 }
 exports.SetupBatchWorkspaceAdapter = SetupBatchWorkspaceAdapter;
+function seedWorkspace(root, existing) {
+    if (existing.length > 300 || new Set(existing.map(file => file.path)).size !== existing.length
+        || existing.some(file => !(0, setup_batch_policy_1.validSetupBatchAssetPath)(file.path) || file.content === null || Buffer.byteLength(file.content) > 100000)
+        || existing.reduce((sum, file) => sum + Buffer.byteLength(file.content), 0) > 2000000)
+        throw new Error('Setup asset inventory is invalid or exceeds the fixed render budget.');
+    for (const file of existing) {
+        const destination = (0, node_path_1.join)(root, file.path);
+        (0, node_fs_1.mkdirSync)((0, node_path_1.dirname)(destination), { recursive: true });
+        (0, node_fs_1.writeFileSync)(destination, file.content, { mode: 0o600 });
+    }
+}
 
 
 /***/ }),
@@ -99653,6 +100253,8 @@ function probeUrl(owner, repository, requirement) {
             return `${organizationRoot}/issue-types?per_page=1`;
         if (requirement.probe === 'projects')
             return `${organizationRoot}/projectsV2?per_page=100`;
+        if (requirement.probe === 'runner-groups')
+            return `${organizationRoot}/actions/runner-groups?per_page=1`;
         return undefined;
     }
     if (requirement.probe === 'metadata')
@@ -99701,7 +100303,7 @@ function hasSetupPermissionReadShape(probe, payload) {
     if (['contents', 'issues', 'pull-requests', 'workflows', 'issue-types'].includes(probe)) {
         return collection(payload);
     }
-    const field = { actions: 'workflows', checks: 'check_runs', variables: 'variables', secrets: 'secrets' }[probe];
+    const field = { actions: 'workflows', checks: 'check_runs', variables: 'variables', secrets: 'secrets', 'runner-groups': 'runner_groups' }[probe];
     return field !== undefined && record(payload) && collection(payload[field]);
 }
 
@@ -100349,6 +100951,111 @@ function readHealthWorkflow() {
         return '';
     }
 }
+
+
+/***/ }),
+
+/***/ 17495:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupRunnerDiscoveryAdapter = void 0;
+const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? value : undefined;
+const text = (value) => typeof value === 'string' && value.length > 0 && value.length <= 100 && !/[\p{Cc}\p{Cf}${}<>]/u.test(value);
+const positive = (value) => Number.isSafeInteger(value) && Number(value) > 0;
+/** Fixed GET routes only. Discovery never registers runners, grants access or schedules jobs. */
+class SetupRunnerDiscoveryAdapter {
+    constructor(transport) {
+        this.transport = transport;
+    }
+    async discover(owner, repository, token, ownerType) {
+        const candidates = [];
+        const groups = [];
+        let incomplete = false;
+        try {
+            const local = await this.collection(token, 'GET /repos/{owner}/{repo}/actions/runners', { owner, repo: repository }, 'runners');
+            candidates.push(...local.map(value => this.runner(value, 'confirmed')));
+        }
+        catch {
+            incomplete = true;
+        }
+        if (ownerType === 'Organization') {
+            try {
+                const eligible = await this.collection(token, 'GET /orgs/{org}/actions/runner-groups', { org: owner, visible_to_repository: repository }, 'runner_groups');
+                // A single operation never fans out over an unbounded group inventory.
+                if (eligible.length > 10)
+                    throw new Error('Runner group discovery exceeds its bounded fan-out.');
+                for (const value of eligible) {
+                    const group = record(value);
+                    if (!positive(group?.id) || !text(group?.name) || typeof group?.restricted_to_workflows !== 'boolean'
+                        || groups.some(existing => existing.name === group.name))
+                        throw new Error('Invalid runner group inventory.');
+                    const access = group.restricted_to_workflows ? 'unknown' : 'confirmed';
+                    groups.push({ name: group.name, access });
+                    if (candidates.length === 1000) {
+                        incomplete = true;
+                        break;
+                    }
+                    try {
+                        const runners = await this.collection(token, 'GET /orgs/{org}/actions/runner-groups/{runner_group_id}/runners', { org: owner, runner_group_id: group.id }, 'runners', 1000 - candidates.length);
+                        candidates.push(...runners.map(value => ({ ...this.runner(value, access), group: group.name })));
+                    }
+                    catch {
+                        incomplete = true;
+                    }
+                }
+            }
+            catch {
+                incomplete = true;
+            }
+        }
+        else if (ownerType === 'Unknown')
+            incomplete = true;
+        return { status: incomplete ? candidates.length || groups.length ? 'incomplete' : 'unavailable' : 'available',
+            candidates, groups };
+    }
+    runner(value, access) {
+        const runner = record(value);
+        if (!positive(runner?.id) || !['online', 'offline'].includes(String(runner?.status)) || typeof runner?.busy !== 'boolean'
+            || !Array.isArray(runner?.labels) || runner.labels.length < 1 || runner.labels.length > 100)
+            throw new Error('Invalid runner inventory.');
+        const labels = runner.labels.map(label => record(label)?.name);
+        if (!labels.every(text) || new Set(labels.map(label => label.toLowerCase())).size !== labels.length)
+            throw new Error('Invalid runner labels.');
+        return { id: runner.id, labels, status: runner.status, busy: runner.busy, access };
+    }
+    async collection(token, route, parameters, field, limit = 1000) {
+        const result = [];
+        const ids = new Set();
+        let total;
+        // Stable total <= 1,000 and full 100-entry intermediate pages bound this
+        // loop to ten requests; every partial/oversized page fails closed below.
+        for (let page = 1;; page++) {
+            const response = record(await this.transport.call(token, route, { ...parameters, per_page: 100, page }));
+            const count = response?.total_count;
+            const entries = response?.[field];
+            if (!Number.isSafeInteger(count) || Number(count) < 0 || Number(count) > limit || !Array.isArray(entries)
+                || entries.length > 100 || total !== undefined && count !== total)
+                throw new Error('Incomplete runner discovery.');
+            total = Number(count);
+            for (const entry of entries) {
+                const itemId = record(entry)?.id;
+                if (!positive(itemId) || ids.has(itemId))
+                    throw new Error('Invalid runner discovery identity.');
+                ids.add(itemId);
+                result.push(entry);
+            }
+            if (result.length === total)
+                return result;
+            if (entries.length !== 100 || result.length > total)
+                throw new Error('Incomplete runner discovery.');
+        }
+    }
+}
+exports.SetupRunnerDiscoveryAdapter = SetupRunnerDiscoveryAdapter;
 
 
 /***/ }),
@@ -103230,7 +103937,7 @@ function copySetupFile(source, destination, displaySource, displayDestination, o
         (0, logger_1.logInfo)(`  ⏭️  ${displayDestination} already exists; skipping.`);
         return { copied: 0, skipped: 1 };
     }
-    const rendered = options.renderContent?.(fs.readFileSync(source, 'utf8'), fs.existsSync(destination) ? fs.readFileSync(destination, 'utf8') : undefined);
+    const rendered = options.renderContent?.(fs.readFileSync(source, 'utf8'), fs.existsSync(destination) ? fs.readFileSync(destination, 'utf8') : undefined, path.basename(source));
     if (fs.existsSync(destination) && options.backupDirectory) {
         fs.mkdirSync(options.backupDirectory, { recursive: true });
         fs.copyFileSync(destination, path.join(options.backupDirectory, path.basename(destination)));
@@ -103312,6 +104019,8 @@ const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const repository_agent_guidance_1 = __nccwpck_require__(38445);
 const setup_approval_workflow_1 = __nccwpck_require__(9512);
 const setup_workflow_upgrade_1 = __nccwpck_require__(85493);
+const setup_installation_review_1 = __nccwpck_require__(23799);
+const repository_agent_guidance_policy_1 = __nccwpck_require__(67402);
 /**
  * Ensure .github, .github/workflows and .github/ISSUE_TEMPLATE exist; create them if missing.
  * @param cwd - Directory (repo root)
@@ -103346,6 +104055,13 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
     const setupDir = setupDirOverride ?? path.join(__dirname, '..', '..', 'setup');
     if (!fs.existsSync(setupDir))
         return { copied: 0, skipped: 0 };
+    const installationReview = options.setupConfiguration && (0, setup_installation_review_1.inspectSetupInstallation)(cwd, options.setupConfiguration, setupDir);
+    if (installationReview?.blockers.length)
+        throw new Error(installationReview.blockers.join(' '));
+    const preserveSourceGuidance = installationReview?.assets.some(asset => asset.path === repository_agent_guidance_policy_1.REPOSITORY_AGENT_GUIDE_PATH && asset.status === 'source-only');
+    const sourceInstallation = installationReview?.assets.some(asset => asset.path.startsWith('.github/workflows/') && asset.status === 'source-only');
+    const snapshotContent = options.setupConfiguration && (0, setup_installation_review_1.renderSetupRunnerSnapshot)(options.setupConfiguration);
+    const snapshotPath = path.join(cwd, setup_installation_review_1.SETUP_RUNNER_SNAPSHOT);
     const approvedWorkflowFiles = new Set(options.approvedWorkflowFiles ?? []);
     const effectiveFeatures = options.setupConfiguration
         ? (0, setup_issue_workflow_policy_1.effectiveIssueWorkflowFeatures)(options.setupConfiguration)
@@ -103359,17 +104075,20 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
         : { copied: 0, skipped: 0 };
     const workflows = (0, setup_file_copy_1.copySetupDirectory)(path.join(setupDir, 'workflows'), path.join(cwd, '.github', 'workflows'), (fileName) => (fileName.endsWith('.yml') || fileName.endsWith('.yaml'))
         && fileName !== 'copilot_pull_request_approval.yml'
+        && (!sourceInstallation || fileName === 'copilot_commit.yml' || !fs.existsSync(path.join(cwd, '.github', 'workflows', fileName)))
         && (0, setup_workflow_catalog_1.isSetupWorkflowEnabled)(fileName, effectiveFeatures)
         && (!options.updateExistingWorkflows
             || approvedWorkflowFiles.has(fileName)
             || !fs.existsSync(path.join(cwd, '.github', 'workflows', fileName))), 'setup/workflows', {
         overwrite: options.updateExistingWorkflows,
         backupDirectory,
-        renderContent: setup_workflow_upgrade_1.renderSetupWorkflowUpgrade,
+        renderContent: (template, existing, file) => (0, setup_workflow_upgrade_1.renderSetupWorkflowUpgrade)(template, existing, options.setupConfiguration && file ? { file, runners: options.setupConfiguration.runners } : undefined),
     });
-    const approvalWorkflow = options.setupConfiguration?.pullRequestApproval.mode !== 'off' && options.setupConfiguration
-        ? copyApprovalObserverWorkflow(cwd, setupDir, options.setupConfiguration, options.updateExistingWorkflows === true, approvedWorkflowFiles, backupDirectory)
-        : { copied: 0, skipped: 0 };
+    const approvalWorkflow = sourceInstallation && fs.existsSync(path.join(cwd, '.github/workflows/copilot_pull_request_approval.yml'))
+        ? { copied: 0, skipped: 1 }
+        : options.setupConfiguration?.pullRequestApproval.mode !== 'off' && options.setupConfiguration
+            ? copyApprovalObserverWorkflow(cwd, setupDir, options.setupConfiguration, options.updateExistingWorkflows === true, approvedWorkflowFiles, backupDirectory)
+            : { copied: 0, skipped: 0 };
     const issueTemplates = options.setupConfiguration
         ? copySelectedIssueForms(cwd, setupDir, options.setupConfiguration)
         : (0, setup_file_copy_1.copySetupDirectory)(path.join(setupDir, 'ISSUE_TEMPLATE'), path.join(cwd, '.github', 'ISSUE_TEMPLATE'), (fileName) => features?.issueTemplates !== false
@@ -103380,10 +104099,20 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
     const pullRequestTemplate = features?.pullRequestTemplate === false
         ? { copied: 0, skipped: 0 }
         : (0, setup_file_copy_1.copySetupFile)(path.join(setupDir, 'pull_request_template.md'), path.join(cwd, '.github', 'pull_request_template.md'), 'setup/pull_request_template.md', '.github/pull_request_template.md');
-    const guidance = options.setupConfiguration && !options.preserveExistingAgentGuidance
+    const guidance = options.setupConfiguration && !options.preserveExistingAgentGuidance && !preserveSourceGuidance
         ? (0, repository_agent_guidance_1.reconcileRepositoryAgentGuidance)(cwd, options.setupConfiguration)
         : { copied: 0, skipped: 0 };
-    return [retired, workflows, approvalWorkflow, issueTemplates, pullRequestTemplate, guidance].reduce((total, current) => ({
+    const snapshot = { copied: 0, skipped: 0 };
+    if (snapshotContent) {
+        if (fs.existsSync(snapshotPath) && fs.readFileSync(snapshotPath, 'utf8') === snapshotContent)
+            snapshot.skipped++;
+        else {
+            backupSetupAsset(cwd, setup_installation_review_1.SETUP_RUNNER_SNAPSHOT, 'runner-profile');
+            atomicWriteSetupAsset(snapshotPath, snapshotContent);
+            snapshot.copied++;
+        }
+    }
+    return [retired, workflows, approvalWorkflow, issueTemplates, pullRequestTemplate, guidance, snapshot].reduce((total, current) => ({
         copied: total.copied + current.copied,
         skipped: total.skipped + current.skipped,
     }), { copied: 0, skipped: 0 });
@@ -103512,6 +104241,8 @@ function compareSetupWorkflows(cwd, features, setupDirOverride, configuration) {
     const sourceDirectory = path.join(setupDir, 'workflows');
     if (!fs.existsSync(sourceDirectory))
         return [];
+    const sourceInstallation = configuration && (0, setup_installation_review_1.inspectSetupInstallation)(cwd, configuration, setupDir).assets
+        .some(asset => asset.path.startsWith('.github/workflows/') && asset.status === 'source-only');
     return fs.readdirSync(sourceDirectory)
         .filter(file => (file.endsWith('.yml') || file.endsWith('.yaml')) && (0, setup_workflow_catalog_1.isSetupWorkflowEnabled)(file, features)
         && (file !== 'copilot_pull_request_approval.yml' || (configuration && configuration.pullRequestApproval.mode !== 'off')))
@@ -103521,9 +104252,11 @@ function compareSetupWorkflows(cwd, features, setupDirOverride, configuration) {
         const destination = path.join(cwd, '.github', 'workflows', file);
         if (!fs.existsSync(destination))
             return { file, destination: `.github/workflows/${file}`, status: 'missing' };
+        if (sourceInstallation && file !== 'copilot_commit.yml')
+            return { file, destination: `.github/workflows/${file}`, status: 'unchanged' };
         const expected = file === 'copilot_pull_request_approval.yml' && configuration
             ? (0, setup_approval_workflow_1.renderApprovalObserverWorkflow)(fs.readFileSync(source, 'utf8'), configuration.pullRequestApproval)
-            : (0, setup_workflow_upgrade_1.renderSetupWorkflowUpgrade)(fs.readFileSync(source, 'utf8'), fs.readFileSync(destination, 'utf8'));
+            : (0, setup_workflow_upgrade_1.renderSetupWorkflowUpgrade)(fs.readFileSync(source, 'utf8'), fs.readFileSync(destination, 'utf8'), configuration ? { file, runners: configuration.runners } : undefined);
         const equal = isLocalSourceApprovalObserver(cwd, destination)
             || expected === fs.readFileSync(destination, 'utf8');
         return { file, destination: `.github/workflows/${file}`, status: equal ? 'unchanged' : 'changed' };
@@ -103572,6 +104305,169 @@ function hasValidSetupToken(cwd, override) {
 
 /***/ }),
 
+/***/ 23799:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SETUP_RUNNER_SNAPSHOT = void 0;
+exports.renderSetupRunnerSnapshot = renderSetupRunnerSnapshot;
+exports.compatibleSetupRunnerSnapshot = compatibleSetupRunnerSnapshot;
+exports.inspectSetupInstallation = inspectSetupInstallation;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const js_yaml_1 = __nccwpck_require__(783);
+const node_crypto_1 = __nccwpck_require__(6005);
+const setup_workflow_catalog_1 = __nccwpck_require__(24596);
+const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
+const setup_runner_policy_1 = __nccwpck_require__(91027);
+const setup_workflow_upgrade_1 = __nccwpck_require__(85493);
+const setup_approval_workflow_1 = __nccwpck_require__(9512);
+const sensitive_text_1 = __nccwpck_require__(47122);
+const repository_agent_guidance_policy_1 = __nccwpck_require__(67402);
+exports.SETUP_RUNNER_SNAPSHOT = '.copilot/runner-profile.json';
+const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? value : undefined;
+const read = (path) => (0, node_fs_1.existsSync)(path) ? (0, node_fs_1.readFileSync)(path, 'utf8') : undefined;
+function renderSetupRunnerSnapshot(configuration) {
+    if (!configuration.runners || configuration.runners.mode === 'retain')
+        return undefined;
+    const errors = (0, setup_runner_policy_1.validateSetupRunners)(configuration.runners);
+    if (errors.length)
+        throw new Error(errors.join(' '));
+    const { source, discover: _discover, ...runners } = configuration.runners;
+    return `${JSON.stringify({ schemaVersion: 1, runners, ...(source ? { source: { scope: source.scope,
+                registryDigest: (0, node_crypto_1.createHash)('sha256').update(source.value).digest('hex') } } : {}) }, null, 2)}\n`;
+}
+function compatibleSetupRunnerSnapshot(content) {
+    try {
+        const value = object(JSON.parse(content));
+        if (!value || Object.keys(value).some(key => !['schemaVersion', 'runners', 'source'].includes(key)) || value.schemaVersion !== 1)
+            return false;
+        const runners = object(value.runners);
+        if (!runners || ['source', 'discover'].some(key => Object.prototype.hasOwnProperty.call(runners, key)))
+            return false;
+        if (runners.mode !== 'organization-profile')
+            return value.source === undefined && (0, setup_runner_policy_1.validateSetupRunners)(runners).length === 0;
+        const source = object(value.source);
+        if (!source || Object.keys(source).length !== 2 || !['repository', 'organization'].includes(String(source.scope))
+            || typeof source.registryDigest !== 'string' || !/^[a-f0-9]{64}$/u.test(source.registryDigest))
+            return false;
+        return (0, setup_runner_policy_1.validateSetupRunners)({ ...runners, source: { scope: source.scope, value: JSON.stringify({ schemaVersion: 1,
+                    profiles: [{ id: runners.profileId, group: runners.group, labels: runners.labels, validation: runners.validation }] }) } }).length === 0;
+    }
+    catch {
+        return false;
+    }
+}
+/** Read-only parity and before/after review uses the exact same renderer as Apply. */
+function inspectSetupInstallation(root, configuration, setup = (0, node_path_1.join)(__dirname, '..', '..', 'setup')) {
+    const assets = [];
+    const jobs = [];
+    const changes = [];
+    const blockers = [];
+    const addJobs = (file, content, retained) => {
+        const documents = (0, js_yaml_1.loadAll)(content);
+        if (documents.length !== 1)
+            throw new Error('Workflow review needs exactly one YAML document.');
+        const parsedJobs = object(object(documents[0])?.jobs);
+        if (!parsedJobs)
+            throw new Error('Workflow jobs are unavailable for review.');
+        for (const [job, raw] of Object.entries(parsedJobs)) {
+            const runsOn = object(raw)?.['runs-on'];
+            if (runsOn === undefined)
+                continue; // reusable workflow calls have no runner
+            jobs.push({ file, job, role: (0, setup_runner_policy_1.setupRunnerRole)(file, job) ?? 'validation',
+                runsOn: runsOn, status: 'access-unknown', retained });
+            if (jobs.length > 200)
+                throw new Error('Workflow review exceeds its fixed 200-job budget.');
+        }
+    };
+    const directory = (0, node_path_1.join)(root, '.github', 'workflows');
+    const sourceFiles = (0, node_fs_1.existsSync)((0, node_path_1.join)(setup, 'workflows')) ? (0, node_fs_1.readdirSync)((0, node_path_1.join)(setup, 'workflows')).filter(file => file.endsWith('.yml') || file.endsWith('.yaml')) : [];
+    const installedFiles = (0, node_fs_1.existsSync)(directory) ? (0, node_fs_1.readdirSync)(directory).filter(file => file.endsWith('.yml') || file.endsWith('.yaml')) : [];
+    if (installedFiles.length > 100)
+        throw new Error('Workflow review exceeds its fixed 100-file budget.');
+    const existing = new Map(installedFiles.map(file => {
+        const content = (0, node_fs_1.readFileSync)((0, node_path_1.join)(directory, file), 'utf8');
+        if (Buffer.byteLength(content) > 100000)
+            throw new Error('Workflow review exceeds its per-file budget.');
+        return [file, content];
+    }));
+    if ([...existing.values()].reduce((sum, value) => sum + Buffer.byteLength(value), 0) > 2000000)
+        throw new Error('Workflow review exceeds its byte budget.');
+    const source = [...existing.values()].some(setup_workflow_upgrade_1.hasRootLocalSetupAction);
+    const features = (0, setup_issue_workflow_policy_1.effectiveIssueWorkflowFeatures)(configuration);
+    for (const file of sourceFiles) {
+        const path = `.github/workflows/${file}`;
+        const before = existing.get(file);
+        const enabled = (0, setup_workflow_catalog_1.isSetupWorkflowEnabled)(file, features) && (file !== 'copilot_pull_request_approval.yml' || configuration.pullRequestApproval.mode !== 'off');
+        const template = (0, node_fs_1.readFileSync)((0, node_path_1.join)(setup, 'workflows', file), 'utf8');
+        const preserved = source && before !== undefined;
+        const after = !enabled ? before : preserved && file !== 'copilot_commit.yml' ? before
+            : file === 'copilot_pull_request_approval.yml' ? (0, setup_approval_workflow_1.renderApprovalObserverWorkflow)(template, configuration.pullRequestApproval)
+                : (0, setup_workflow_upgrade_1.renderSetupWorkflowUpgrade)(template, before, { file, runners: configuration.runners });
+        assets.push({ path, enabled, status: before === undefined ? 'missing' : preserved ? 'source-only'
+                : before === after && (before === template || (configuration.runners?.mode ?? 'retain') !== 'retain') ? 'shared' : 'customized' });
+        if (enabled && after !== undefined) {
+            addJobs(file, after, preserved || configuration.runners?.mode === 'retain' || !configuration.runners);
+        }
+        if (enabled && before !== after)
+            changes.push({ path, before: before === undefined ? null : (0, sensitive_text_1.redactSensitiveText)(before), after: after === undefined ? null : (0, sensitive_text_1.redactSensitiveText)(after) });
+    }
+    for (const file of installedFiles.filter(file => !sourceFiles.includes(file))) {
+        assets.push({ path: `.github/workflows/${file}`, enabled: true, status: source ? 'source-only' : 'customized' });
+        addJobs(file, existing.get(file), true);
+    }
+    for (const file of (0, node_fs_1.existsSync)((0, node_path_1.join)(setup, 'ISSUE_TEMPLATE')) ? (0, node_fs_1.readdirSync)((0, node_path_1.join)(setup, 'ISSUE_TEMPLATE')) : []) {
+        const path = `.github/ISSUE_TEMPLATE/${file}`;
+        const before = read((0, node_path_1.join)(root, path));
+        assets.push({ path, enabled: features.issueTemplates !== false && features.issues !== false,
+            status: before === undefined ? 'missing' : before === read((0, node_path_1.join)(setup, 'ISSUE_TEMPLATE', file)) ? 'shared' : 'customized' });
+    }
+    const guidance = [repository_agent_guidance_policy_1.REPOSITORY_AGENT_GUIDE_PATH, repository_agent_guidance_policy_1.REPOSITORY_AGENT_PROFILE_PATH, repository_agent_guidance_policy_1.REPOSITORY_AGENT_MANIFEST_PATH, repository_agent_guidance_policy_1.REPOSITORY_AGENT_SKILL_PATH];
+    for (const path of guidance) {
+        // Markdown guidance is collaborator input, never runtime instructions.
+        // Parity needs its presence only; decode controlled JSON metadata separately.
+        const present = (0, node_fs_1.existsSync)((0, node_path_1.join)(root, path));
+        let compatible = true;
+        if (present && path.endsWith('.json')) {
+            try {
+                const data = object(JSON.parse((0, node_fs_1.readFileSync)((0, node_path_1.join)(root, path), 'utf8')));
+                const generator = object(data?.generator);
+                // Profile and ownership-manifest generator contracts are distinct.
+                const contract = path === repository_agent_guidance_policy_1.REPOSITORY_AGENT_PROFILE_PATH ? 2 : 1;
+                compatible = data?.schemaVersion === 2 && generator?.name === '@vypdev/copilot'
+                    && Object.keys(generator).length === 2 && generator.contractVersion === contract;
+            }
+            catch {
+                compatible = false;
+            }
+        }
+        assets.push({ path, enabled: configuration.repositoryAgentGuidance.enabled,
+            status: !present ? 'missing' : !compatible ? 'incompatible' : source ? 'source-only' : 'shared' });
+        if (!compatible && configuration.repositoryAgentGuidance.enabled && !source)
+            blockers.push(`${path}: unsupported generator metadata. Retain the asset or restore a compatible generator before regeneration.`);
+    }
+    const presentGuidance = guidance.filter(path => (0, node_fs_1.existsSync)((0, node_path_1.join)(root, path))).length;
+    if (source && presentGuidance > 0 && presentGuidance !== guidance.length)
+        blockers.push('Source guidance is incomplete. Restore it with the checked-in source generator before setup.');
+    const before = read((0, node_path_1.join)(root, exports.SETUP_RUNNER_SNAPSHOT));
+    const after = renderSetupRunnerSnapshot(configuration);
+    assets.push({ path: exports.SETUP_RUNNER_SNAPSHOT, enabled: after !== undefined || before !== undefined,
+        status: before === undefined ? 'missing' : !compatibleSetupRunnerSnapshot(before) ? 'incompatible' : before === after || after === undefined ? 'shared' : 'customized' });
+    if (after !== undefined && before !== after)
+        changes.push({ path: exports.SETUP_RUNNER_SNAPSHOT,
+            before: before === undefined ? null : (0, sensitive_text_1.redactSensitiveText)(before), after: (0, sensitive_text_1.redactSensitiveText)(after) });
+    if (after !== undefined && before !== undefined && !compatibleSetupRunnerSnapshot(before))
+        blockers.push('Runner snapshot is incompatible. Retain it or restore a supported version before replacing routing.');
+    return { assets, jobs, changes, blockers };
+}
+
+
+/***/ }),
+
 /***/ 85493:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -103582,6 +104478,7 @@ exports.hasRootLocalSetupAction = hasRootLocalSetupAction;
 exports.renderSetupWorkflowUpgrade = renderSetupWorkflowUpgrade;
 const js_yaml_1 = __nccwpck_require__(783);
 const node_util_1 = __nccwpck_require__(47261);
+const setup_runner_policy_1 = __nccwpck_require__(91027);
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
 const document = (value) => {
     try {
@@ -103609,13 +104506,18 @@ function hasRootLocalSetupAction(content) {
     return callsRootAction(object(document(content)?.jobs));
 }
 /** Keep a target's reviewed execution location while upgrading controlled workflow templates. */
-function renderSetupWorkflowUpgrade(template, existing) {
-    if (!existing)
+function renderSetupWorkflowUpgrade(template, existing, selection) {
+    const errors = (0, setup_runner_policy_1.validateSetupRunners)(selection?.runners);
+    if (errors.length)
+        throw new Error(errors.join(' '));
+    if (!selection && !existing)
         return template;
-    const previous = document(existing);
-    if (previous?.jobs === undefined)
+    const previous = existing ? document(existing) : undefined;
+    if (!selection && previous?.jobs === undefined)
         return template;
-    const previousJobs = object(previous.jobs);
+    const previousJobs = previous?.jobs === undefined ? {} : object(previous.jobs);
+    if (!previousJobs)
+        throw new Error('Workflow jobs cannot be inspected; review the workflow separately.');
     // A root-local Action is source-repository infrastructure, including its
     // release jobs and native validation. Consumer templates cannot replace it.
     if (callsRootAction(previousJobs)) {
@@ -103656,7 +104558,9 @@ function renderSetupWorkflowUpgrade(template, existing) {
             job = header[1];
         if (!/^ {4}runs-on:/u.test(lines[index]))
             continue;
-        const retained = object(previousJobs[job])?.['runs-on'];
+        const role = selection && (0, setup_runner_policy_1.setupRunnerRole)(selection.file, job);
+        const retained = (0, setup_runner_policy_1.selectedSetupRunsOn)(selection?.runners, role)
+            ?? object(previousJobs[job])?.['runs-on'];
         if (retained === undefined)
             continue;
         if (!runner(retained))
@@ -103677,7 +104581,8 @@ function renderSetupWorkflowUpgrade(template, existing) {
     const rendered = lines.join('\n');
     const actualJobs = object(document(rendered)?.jobs);
     for (const [name, value] of Object.entries(templateJobs)) {
-        const retained = object(previousJobs[name])?.['runs-on'];
+        const retained = (0, setup_runner_policy_1.selectedSetupRunsOn)(selection?.runners, selection && (0, setup_runner_policy_1.setupRunnerRole)(selection.file, name))
+            ?? object(previousJobs[name])?.['runs-on'];
         if (retained !== undefined && object(value)?.['runs-on'] !== undefined
             && !(0, node_util_1.isDeepStrictEqual)(object(actualJobs?.[name])?.['runs-on'], retained)) {
             throw new Error('Runner preservation could not be verified; review the workflow separately.');

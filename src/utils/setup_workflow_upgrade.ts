@@ -1,5 +1,7 @@
 import { dump, loadAll } from 'js-yaml';
 import { isDeepStrictEqual } from 'node:util';
+import type { SetupRunnerConfiguration } from '../domain/setup_runner';
+import { selectedSetupRunsOn, setupRunnerRole, validateSetupRunners } from '../application/policies/setup_runner_policy';
 
 const object = (value: unknown): Record<string, unknown> | undefined =>
   value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
@@ -28,15 +30,19 @@ export function hasRootLocalSetupAction(content: string): boolean {
 }
 
 /** Keep a target's reviewed execution location while upgrading controlled workflow templates. */
-export function renderSetupWorkflowUpgrade(template: string, existing?: string): string {
-  if (!existing) return template;
-  const previous = document(existing);
-  if (previous?.jobs === undefined) return template;
-  const previousJobs = object(previous.jobs);
+export function renderSetupWorkflowUpgrade(template: string, existing?: string,
+  selection?: { readonly file: string; readonly runners?: SetupRunnerConfiguration }): string {
+  const errors = validateSetupRunners(selection?.runners);
+  if (errors.length) throw new Error(errors.join(' '));
+  if (!selection && !existing) return template;
+  const previous = existing ? document(existing) : undefined;
+  if (!selection && previous?.jobs === undefined) return template;
+  const previousJobs = previous?.jobs === undefined ? {} : object(previous.jobs);
+  if (!previousJobs) throw new Error('Workflow jobs cannot be inspected; review the workflow separately.');
   // A root-local Action is source-repository infrastructure, including its
   // release jobs and native validation. Consumer templates cannot replace it.
   if (callsRootAction(previousJobs)) {
-    const events = previous.on;
+    const events = previous!.on;
     const hasPush = events === 'push' || Array.isArray(events) && events.includes('push')
       || !!object(events) && Object.prototype.hasOwnProperty.call(events, 'push');
     // Branch synchronization deliberately observes every branch. Only the
@@ -51,7 +57,7 @@ export function renderSetupWorkflowUpgrade(template: string, existing?: string):
         return dump(previous, { noRefs: true, lineWidth: -1 });
       }
     }
-    return existing;
+    return existing!;
   }
   const templateJobs = object(document(template)?.jobs);
   if (!previousJobs || !templateJobs) throw new Error('Workflow jobs cannot be inspected; review the workflow separately.');
@@ -65,7 +71,9 @@ export function renderSetupWorkflowUpgrade(template: string, existing?: string):
     const header = /^ {2}([A-Za-z_][A-Za-z0-9_-]*):\s*(?:#.*)?$/u.exec(lines[index]);
     if (header) job = header[1];
     if (!/^ {4}runs-on:/u.test(lines[index])) continue;
-    const retained = object(previousJobs[job])?.['runs-on'];
+    const role = selection && setupRunnerRole(selection.file, job);
+    const retained = selectedSetupRunsOn(selection?.runners, role)
+      ?? object(previousJobs[job])?.['runs-on'];
     if (retained === undefined) continue;
     if (!runner(retained)) throw new Error('Existing runner selection is invalid; review the workflow separately.');
     // Expressions can depend on an existing matrix, inputs or other workflow fields
@@ -81,7 +89,8 @@ export function renderSetupWorkflowUpgrade(template: string, existing?: string):
   const rendered = lines.join('\n');
   const actualJobs = object(document(rendered)?.jobs);
   for (const [name, value] of Object.entries(templateJobs)) {
-    const retained = object(previousJobs[name])?.['runs-on'];
+    const retained = selectedSetupRunsOn(selection?.runners, selection && setupRunnerRole(selection.file, name))
+      ?? object(previousJobs[name])?.['runs-on'];
     if (retained !== undefined && object(value)?.['runs-on'] !== undefined
       && !isDeepStrictEqual(object(actualJobs?.[name])?.['runs-on'], retained)) {
       throw new Error('Runner preservation could not be verified; review the workflow separately.');

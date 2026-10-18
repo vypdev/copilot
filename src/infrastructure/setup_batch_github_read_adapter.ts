@@ -7,9 +7,10 @@ import { validSetupBatchAssetPath } from '../application/policies/setup_batch_po
 import { SETUP_ORGANIZATION_VARIABLE_BINDINGS } from '../application/policies/setup_organization_variable_bindings';
 import { SETUP_CREDENTIAL_HEALTH_BINDINGS } from '../domain/setup_credential_health';
 import { setupBatchRateLimitDelay } from '../application/policies/setup_batch_retry_policy';
+import { SETUP_RUNNER_REGISTRY } from '../domain/setup_runner';
 
 const managedVariables = new Set([...SETUP_ORGANIZATION_VARIABLE_BINDINGS.flatMap(binding => [binding.variable, binding.fallbackVariable]),
-  'PR_APPROVAL_POLICY', 'COPILOT_ISSUE_WORKFLOW_PROFILE', 'AGENT_ALLOWED_PROVIDERS', 'AGENT_ALLOWED_MODEL_PROVIDERS']);
+  'PR_APPROVAL_POLICY', 'COPILOT_ISSUE_WORKFLOW_PROFILE', 'AGENT_ALLOWED_PROVIDERS', 'AGENT_ALLOWED_MODEL_PROVIDERS', SETUP_RUNNER_REGISTRY]);
 
 export type BatchRecord = Record<string, unknown>;
 export class SetupBatchProviderError extends Error {

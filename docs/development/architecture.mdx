@@ -4,6 +4,26 @@ description: Clean Architecture boundaries for agent execution and workflow auto
 ---
 # Architecture
 
+### Setup runner profiles and installation parity
+
+`setup_runner_policy` owns pure registry validation, precedence, fixed job roles,
+route selection and access/capacity classification. The shared questionnaire owns
+answers for CLI and web. `SetupRunnerDiscoveryPort` exposes read-only inventory;
+the GitHub adapter uses fixed bounded GET routes and treats permission/shape
+failures as unavailable evidence. Presentation never registers runners, changes
+group membership or chooses a fallback environment.
+
+The installation review adapter uses the same workflow upgrade renderer as copy
+and batch preparation. Reviews carry typed role routes, asset classifications,
+blockers and redacted before/after content. Existing whole source workflows and
+generator-owned guidance are preserved. Shared profile source values stay in
+the private operation; the repository snapshot contains only the selected route
+and a source digest. Final profile freshness checks run before permission probes
+and again before writes. Existing plan hashes, private journals, backups and
+immutable installer commits remain the state/recovery boundary. The catalogued
+[runner/parity specification](https://github.com/vypdev/copilot/blob/master/specs/setup-runner-profiles-and-installation-parity.md)
+defines the contract and test distribution.
+
 Guarded PR approval uses a separate trusted observer entrypoint, a pure domain decision (`pull_request_approval`), a read-before-write application use case, and a GitHub adapter. The adapter owns exact producer/rule/review queries and the `commit_id`-pinned native review. Its PR assessment card and supplemental Check are derived UI; GitHub's native review is authoritative. The observer has no PR-head checkout or agent invocation. See the [runtime SDD](../../specs/guarded-pull-request-approval.md) and [setup/doctor SDD](../../specs/guarded-pull-request-approval-setup-and-doctor.md).
 
 Web configuration management has its own `ManageSetupUseCase` over semantic

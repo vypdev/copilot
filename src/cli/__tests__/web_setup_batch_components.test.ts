@@ -57,10 +57,12 @@ describe('batch selection and reviewed plan UI', () => {
   test('builds a value-free view with metadata and only safe file content', () => {
     const configuration = createDefaultSetupConfiguration(); const remote = unavailableSetupRemoteConfiguration();
     const plan: SetupBatchPlan = { operationId: batch().operationId, organization: 'acme', targets: [{ configuration, remote,
+      installationReview: { jobs: [], assets: [], changes: [], blockers: [] },
       target: { id: 7, ownerId: 3, owner: 'acme', name: 'repo', defaultBranch: 'master', baseSha: 'a'.repeat(40), private: true, archived: false, disabled: false, canPush: true },
       digest: 'b'.repeat(64), files: [], repositoryVariables: [{ name: 'MODEL', value: 'private-configuration' }], grants: [], sharedSnapshot: [], blocked: ['Read access is unavailable.'] }] };
     const operation = beginSetupBatchOperation(plan); const view = buildSetupBatchView(plan, operation, 'review', 1);
     expect(view.targets[0].blockers).toEqual(['Read access is unavailable.']); expect(JSON.stringify(view)).not.toContain('private-configuration');
+    expect(view.targets[0].installationReview).toEqual({ jobs: [], assets: [], changes: [], blockers: [] });
     expect(() => buildSetupBatchView(plan, { ...operation, targets: [] }, 'review', 1)).toThrow('identity mismatch');
   });
 });

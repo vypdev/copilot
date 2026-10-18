@@ -1,3 +1,4 @@
+import { setupRunnerReadiness, setupRunnerProfileIsFresh } from '../../policies/setup_runner_policy';
 import { unavailableSetupRemoteConfiguration, hasCompleteSetupSecretRevisions } from '../../policies/setup_remote_facts_policy';
 import type {
   SetupConfigurationCollectorPort,
@@ -108,6 +109,8 @@ export type SetupWizardResult =
     };
 
 export interface SetupWizardDependencies {
+  runnerDiscovery?: import('../../ports/setup_runner_ports').SetupRunnerDiscoveryPort;
+  installationReview?: import('../../ports/setup_runner_ports').SetupInstallationReviewPort;
   workflowPatConflict?: Pick<ResolveSetupWorkflowPatConflictUseCase, 'execute'>;
   collector?: SetupConfigurationCollectorPort;
   planPresenter: SetupPlanPresenterPort;
@@ -194,7 +197,11 @@ export class SetupWizardUseCase {
       ? await this.dependencies.projectDiscovery.discover(
           request.remoteTarget.owner, projectOwnerType, request.remoteTarget.token,
         ).catch(() => ({ status: 'unavailable' as const, candidates: [] })) : undefined;
+    let runnerInventory = initial.runners?.discover && request.remoteTarget && this.dependencies.runnerDiscovery
+      ? await this.dependencies.runnerDiscovery.discover(request.remoteTarget.owner, request.remoteTarget.repository,
+        request.remoteTarget.token, projectOwnerType).catch(() => ({ status: 'unavailable' as const, candidates: [], groups: [] })) : undefined;
     let context: SetupQuestionnaireContext = {
+      ...(runnerInventory ? { runnerInventory } : {}),
       ...(remoteConfiguration ? { remote: remoteConfiguration } : {}),
       branchSources: { main: explicitMainBranch ? 'configuration' : remoteConfiguration?.defaultBranch ? 'github' : 'default',
         development: request.overrides?.repository?.developmentBranch !== undefined ? 'configuration'
@@ -208,6 +215,7 @@ export class SetupWizardUseCase {
         projectsWanted: request.revision.group === 'projects' || Boolean(initial.projects.ids.trim()) } : {}),
       ...(!request.revision ? { skipQuestionIds: [...new Set([
         ...(request.permissionIntent?.answeredQuestionIds ?? []),
+        ...(request.overrides?.runners?.discover !== undefined ? ['runners.discover'] : []),
         ...(organizationImport?.answeredQuestionIds ?? []),
         ...(request.permissionIntent?.projectsWanted === false ? ['projects.ids'] : []),
         ...basicSkippedQuestionIds,
@@ -279,6 +287,11 @@ export class SetupWizardUseCase {
       );
     }
     let configuration = normalizeSetupConfigurationLocales(collectedConfiguration);
+    if (!configuration.runners?.discover) runnerInventory = undefined;
+    else if (!initial.runners?.discover && request.remoteTarget && this.dependencies.runnerDiscovery) {
+      runnerInventory = await this.dependencies.runnerDiscovery.discover(request.remoteTarget.owner, request.remoteTarget.repository,
+        request.remoteTarget.token, projectOwnerType).catch(() => ({ status: 'unavailable' as const, candidates: [], groups: [] }));
+    }
     if ((request.configurationSource === 'organization' || request.deliveryMode === 'pull-request') && remoteConfiguration) {
       configuration = configureSetupOrganizationReuseStorage(configuration, buildSetupOrganizationReuseVariables(configuration, remoteConfiguration), remoteConfiguration);
     }
@@ -375,6 +388,11 @@ export class SetupWizardUseCase {
       }
     }
     const plan = buildSetupPlan(configuration, readiness, approvalReadiness);
+    if (this.dependencies.installationReview && request.deliveryMode !== 'pull-request') {
+      const review = await this.dependencies.installationReview.inspect(configuration);
+      plan.installationReview = { ...review, jobs: review.jobs.map(job => ({ ...job,
+        status: setupRunnerReadiness(job.runsOn, runnerInventory) })) };
+    }
     plan.deliveryMode = request.deliveryMode ?? 'local';
     if ((request.configurationSource === 'organization' || request.deliveryMode === 'pull-request') && remoteConfiguration) {
       plan.variables = buildSetupOrganizationReuseVariables(configuration, remoteConfiguration);
@@ -416,6 +434,7 @@ export class SetupWizardUseCase {
       const answeredQuestionIds = [...new Set([
         ...(request.revision?.answeredQuestionIds ?? []),
         ...(request.permissionIntent?.answeredQuestionIds ?? []),
+        ...(request.overrides?.runners?.discover !== undefined ? ['runners.discover'] : []),
         ...(organizationImport?.answeredQuestionIds ?? []),
         ...(questionnaire.answeredQuestionIds ?? []),
       ])];
@@ -442,10 +461,20 @@ export class SetupWizardUseCase {
         configuration: cloneSetupConfiguration(configuration), errors: ['The local setup session expired before permission checks began.'],
         ...(remoteConfiguration ? { remoteConfiguration } : {}) };
     }
+    if (plan.installationReview?.blockers.length) throw new ApplicationError('configuration.invalid', plan.installationReview.blockers.join(' '));
     if (request.previewOnly) {
       return { status: 'completed', exitCode: 0, configuration: cloneSetupConfiguration(configuration), plan,
         ...(organizationImport ? { organizationImport } : {}),
         ...(remoteConfiguration ? { remoteConfiguration } : {}) };
+    }
+    if (configuration.runners?.mode === 'organization-profile') {
+      const target = request.remoteTarget;
+      let fresh: SetupRemoteConfiguration | undefined;
+      try { fresh = target && await this.dependencies.remoteConfiguration?.inspect(target.owner, target.repository, target.token); }
+      catch { /* A failed read cannot establish profile freshness. */ }
+      if (!fresh || !setupRunnerProfileIsFresh(configuration.runners, fresh)) {
+        throw new ApplicationError('configuration.invalid', 'The runner registry changed or is unavailable. No permission probes or installation writes started; review a fresh profile snapshot.');
+      }
     }
     const audit = this.dependencies.onPermissionCleanupPending
       ? await this.dependencies.finalPermissionAudit.audit(

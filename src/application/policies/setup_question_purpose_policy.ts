@@ -1,4 +1,5 @@
 import type { SetupQuestion } from '../../domain/setup_questionnaire';
+import { SETUP_RUNNER_QUESTION_IDS, setupRunnerGuidance } from './setup_runner_guidance_policy';
 
 type Purpose = Readonly<{ en: string; es: string }>;
 
@@ -54,6 +55,10 @@ export const setupQuestionPurposes: Readonly<Record<string, Purpose>> = {
 };
 
 export function setupQuestionPurpose(question: SetupQuestion): Purpose | undefined {
+  if (SETUP_RUNNER_QUESTION_IDS.includes(question.id)) {
+    const presentation = setupRunnerGuidance(question);
+    return { en: presentation.en.summary, es: presentation.es.summary };
+  }
   const exact = setupQuestionPurposes[question.id];
   if (exact) return exact;
   if (question.id.startsWith('features.')) return {

@@ -34,6 +34,7 @@ const docs = {
 /** Links are selected from source-controlled constants, never derived from answers or remote text. */
 export function setupQuestionDocumentation(question: Pick<SetupQuestion, 'id' | 'stateId'>): SetupQuestionDocumentation {
   const id = question.id;
+  if (id.startsWith('runners.')) return { title: 'Runner profiles', url: 'https://docs.page/vypdev/copilot/configuration#runner-profiles' };
   if (id === 'issueWorkflows.enabled') return docs.issueWorkflows;
   if (id === 'features.issues') return docs.issueWorkflows;
   if (id === 'features.pullRequests') return docs.pullRequestWorkflows;

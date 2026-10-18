@@ -31,6 +31,7 @@ export type SetupBatchSharedMetadata =
 export interface SetupBatchGrant { readonly kind: 'variable' | 'secret'; readonly name: string; readonly repositoryId: number }
 export interface SetupBatchFile { readonly path: string; readonly content: string | null }
 export interface SetupBatchTargetPlan {
+  readonly installationReview?: import('./setup_runner').SetupInstallationReview;
   readonly target: SetupBatchTarget;
   readonly configuration: SetupConfiguration;
   readonly remote: SetupRemoteConfiguration;

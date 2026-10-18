@@ -89,7 +89,7 @@ export function validSetupBatchAssetPath(path: string): boolean {
   if (path.length > 240 || path.split('/').some(part => !part || part === '.' || part === '..') || /[^A-Za-z0-9_./-]/u.test(path)) return false;
   return path === 'AGENTS.md' || path === '.agents/skills/copilot-repository-workflow/SKILL.md'
     || /^\.github\/(?:workflows|ISSUE_TEMPLATE)\/[A-Za-z0-9_.-]+\.(?:yml|yaml)$/u.test(path)
-    || path === '.github/pull_request_template.md' || /^\.copilot\/(?:repository-profile|setup-manifest)\.json$/u.test(path)
+    || path === '.github/pull_request_template.md' || /^\.copilot\/(?:repository-profile|setup-manifest|runner-profile)\.json$/u.test(path)
     || path === '.copilot/AGENT_GUIDE.md' || path.startsWith('.copilot/setup-backups/');
 }
 function validBranch(value: string): boolean {

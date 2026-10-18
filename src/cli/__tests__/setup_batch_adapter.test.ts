@@ -298,3 +298,14 @@ describe('real batch entrypoint composition with deterministic provider ports', 
   });
 
 });
+
+test('replacement batch PAT links retain the reviewed optional organization runner grant', async () => {
+  const f = fixture(); f.selection('access');
+  await executeSetupBatch({ ...f.input, overrides: { ...f.input.overrides, runners: { discover: true } } });
+  const prompt = f.prompts.find(prompt => prompt.kind === 'secret' && prompt.copyId === 'batch.token');
+  expect(prompt?.kind).toBe('secret');
+  if (prompt?.kind !== 'secret') throw new Error('Expected replacement PAT guide');
+  expect(new URL(prompt.link!).searchParams.get('organization_self_hosted_runners')).toBe('read');
+  expect(new URL(prompt.link!).searchParams.get('administration')).toBe('read');
+  expect(JSON.stringify(f.bridge.snapshot())).not.toContain('replacement-private-token');
+});

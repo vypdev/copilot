@@ -39,6 +39,7 @@ export function buildSetupPlan(
             .filter(file => configuration.features.release !== false || file !== 'release.yml')
             .filter(file => configuration.features.hotfix !== false || file !== 'hotfix.yml');
     const selectedFiles = [
+        ...(configuration.runners && configuration.runners.mode !== 'retain' ? ['.copilot/runner-profile.json'] : []),
         ...workflowFiles.map(file => `workflows/${file}`),
         ...issueTemplateFiles.map(file => `ISSUE_TEMPLATE/${file}`),
         ...(configuration.features.pullRequestTemplate === false ? [] : ['pull_request_template.md']),
@@ -95,6 +96,7 @@ export function setupPlanGuardPaths(plan: Readonly<SetupPlan>): string[] {
         REPOSITORY_AGENT_GUIDE_PATH,
         REPOSITORY_AGENT_SKILL_PATH,
         REPOSITORY_AGENT_POINTER_PATH,
+        '.copilot/runner-profile.json',
     ];
     return [...new Set([...selected, ...retiredCandidates, ...guidanceCandidates])].sort();
 }

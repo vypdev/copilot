@@ -38,6 +38,15 @@ function harness(onPermissionCleanupPending?: () => void) {
 }
 
 describe('VerifyWebSetupApplyUseCase', () => {
+  test('a missing selected registry blocks even when other reviewed facts match', async () => {
+    const { ports, useCase } = harness();
+    const profile = { id: 'shared', group: 'vypdev', labels: ['self-hosted', 'Linux'], validation: 'hosted' as const };
+    const configuration = { ...request.configuration, runners: { mode: 'organization-profile' as const, profileId: profile.id,
+      group: profile.group, labels: profile.labels, validation: profile.validation,
+      source: { scope: 'organization' as const, value: JSON.stringify({ schemaVersion: 1, profiles: [profile] }) } } };
+    await expect(useCase.execute({ ...request, configuration })).rejects.toThrow('facts changed');
+    expect(ports.permissionAudit.audit).not.toHaveBeenCalled();
+  });
   test.each(['missing', 'partial', 'invalid-date'] as const)('blocks identical %s retained Secret metadata before permission probes', async kind => {
     const { ports, useCase } = harness();
     const revisions = kind === 'missing' ? undefined : kind === 'partial' ? remoteBase.repositorySecretRevisions!.slice(0, 1)

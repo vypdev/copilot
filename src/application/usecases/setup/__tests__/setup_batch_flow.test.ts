@@ -14,7 +14,8 @@ import type { SetupRemoteConfiguration } from '../../../../domain/setup';
 
 const id = 'a67c8e40-93be-43ed-a7ed-e07378c7e773';
 function fixture() {
-  const configuration = createDefaultSetupConfiguration(); configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'off' }; configuration.createInitialTag = false;
+  const configuration = createDefaultSetupConfiguration();
+  configuration.runners = { ...configuration.runners!, discover: true }; configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'off' }; configuration.createInitialTag = false;
   const targets: SetupBatchTarget[] = [7, 8].map(number => ({ id: number, ownerId: 3, owner: 'acme', name: `repo-${number}`,
     defaultBranch: 'master', baseSha: 'a'.repeat(40), private: true, archived: false, disabled: false, canPush: true }));
   const shared: SetupBatchSharedResource[] = [...buildSetupRepositoryVariables(configuration).map(variable => ({ kind: 'variable' as const,
@@ -36,6 +37,20 @@ function fixture() {
 }
 
 describe('read-only per-target preparation', () => {
+  it.each(['available', 'unavailable', 'absent', 'blocked'] as const)('reviews runner routing and retains target isolation with %s discovery', async status => {
+    const f = fixture(); const review = { blockers: status === 'blocked' ? ['Restore a compatible generator.'] : [], assets: [], changes: [],
+      jobs: [{ file: 'copilot_issue.yml', job: 'copilot-issues', role: 'agent' as const, runsOn: ['self-hosted', 'Linux'], retained: false, status: 'access-unknown' as const }] };
+    const discover = jest.fn(async () => { if (status === 'unavailable') throw new Error('denied'); return { status: 'available' as const,
+      groups: [], candidates: [{ id: 1, labels: ['self-hosted', 'Linux'], access: 'confirmed' as const, status: 'online' as const, busy: true }] }; });
+    const prepare = new PrepareSetupBatchUseCase({ ...f.ports, renderer: { ...f.ports.renderer, review: async () => review },
+      ...(status === 'absent' ? {} : { runnerDiscovery: { discover } }) });
+    const plan = await prepare.execute(f.request);
+    expect(plan.targets[0].installationReview?.jobs[0].status).toBe(status === 'available' || status === 'blocked' ? 'pending-capacity' : 'access-unknown');
+    if (status === 'blocked') { expect(plan.targets[0].blocked).toContain('Restore a compatible generator.'); expect(f.ports.renderer.render).not.toHaveBeenCalled(); }
+    else expect(plan.targets[0].files).toHaveLength(1);
+    // Capacity is not part of the stable configuration/files plan identity.
+    expect(plan.targets[0].digest).toMatch(/^[a-f0-9]{64}$/u);
+  });
   it('rejects an archived selected target before inspecting shared resources', async () => {
     const f = fixture(); f.targets[1] = { ...f.targets[1], archived: true };
     await expect(f.prepare.execute(f.request)).rejects.toThrow('archived'); expect(f.ports.inventory.shared).not.toHaveBeenCalled();

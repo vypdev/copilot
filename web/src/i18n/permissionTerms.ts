@@ -8,7 +8,7 @@ export type PermissionTerm = 'repository' | 'organization' | 'read' | 'write'
   | 'required' | 'conditional' | 'verified' | 'available' | 'missing' | 'unverifiable';
 export type PermissionName = 'Metadata' | 'Contents' | 'Secrets' | 'Variables' | 'Issues'
   | 'Actions' | 'Checks' | 'Administration' | 'Workflows' | 'Issue Types'
-  | 'Projects' | 'Pull requests' | 'Members';
+  | 'Projects' | 'Pull requests' | 'Members' | 'Self-hosted runners';
 
 const names = { en: namesEn, es: namesEs, fr: namesFr, pt: namesPt } as const;
 

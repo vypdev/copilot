@@ -22,6 +22,7 @@ const QUERY_PERMISSIONS: Readonly<Record<SetupTokenPermissionScope, Readonly<Rec
         Projects: 'organization_projects',
         // GitHub's PAT form documents this organization permission as "members".
         Members: 'members',
+        'Self-hosted runners': 'organization_self_hosted_runners',
     },
 };
 

@@ -1,3 +1,4 @@
+import { createSetupRunnerDiscovery, createSetupInstallationReview } from '../../infrastructure/composition/setup_runner_composition_root';
 import { runLocalAction } from '../../actions/local_action';
 import { getSetupToken } from '../../utils/setup_files';
 import { logError, logInfo } from '../../utils/logger';
@@ -221,6 +222,7 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
             deliveryMode: batchRequested ? 'pull-request' : 'local',
           });
           setupPatPermissions = [...intent.requirements];
+          if (intent.runnerDiscovery !== undefined) overrides = { ...overrides, runners: { ...overrides.runners, discover: intent.runnerDiscovery } };
           assertedOwnerKind = intent.assertedOwnerKind;
           permissionIntent = intent.permissionIntent;
         }
@@ -296,6 +298,7 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
           approvalReadiness: new GithubSetupApprovalReadinessAdapter(),
           approvalCheckDiscovery: new GithubSetupApprovalCheckDiscoveryAdapter(),
           projectDiscovery: new GithubSetupProjectDiscoveryAdapter(),
+          runnerDiscovery: createSetupRunnerDiscovery(), installationReview: createSetupInstallationReview(),
           ...(webBridge ? { sessionLiveness: () => webBridge.snapshot().outcome === 'cancelled' ? 'cancelled'
             : webBridge.snapshot().outcome ? 'expired' : 'active' } : {}),
         });

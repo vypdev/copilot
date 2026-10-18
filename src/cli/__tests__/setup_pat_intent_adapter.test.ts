@@ -17,7 +17,7 @@ function fixture() {
     scope: 'repository', permission: 'Metadata', level: 'read', applicability: 'required', reason: 'Identify selected targets.', probe: 'metadata' }];
   const bridge = new WebSetupBridge('acme/repo');
   const ask = jest.spyOn(bridge, 'ask').mockResolvedValue('Continue to GitHub');
-  const input = { owner: 'acme', repository: 'repo', overrides: {}, skipRepositoryVariables: false,
+  const input = { owner: 'acme', repository: 'repo', overrides: { runners: { discover: false } }, skipRepositoryVariables: false,
     skipRepositorySecrets: false, configurationSource: 'organization' as const,
     credentialPrompt, permissionPresenter, initialRequirements, bridge };
   return { input, credentialPrompt, guide, manual, detailed, ask };
@@ -26,7 +26,7 @@ afterEach(() => jest.restoreAllMocks());
 describe('guided existing-organization PAT access review', () => {
   it('links the reviewed least-privilege grants without collecting configuration or credentials', async () => {
     const f = fixture(); const result = await collectSetupPatIntent(f.input);
-    expect(result).toEqual({ requirements: f.input.initialRequirements, assertedOwnerKind: 'Organization' });
+    expect(result).toEqual({ requirements: f.input.initialRequirements, runnerDiscovery: false, assertedOwnerKind: 'Organization' });
     const url = new URL(f.guide.mock.calls[0][0]);
     expect(Object.fromEntries(url.searchParams)).toMatchObject({ target_name: 'acme', expires_in: '1', metadata: 'read' });
     expect(f.ask).toHaveBeenCalledTimes(1); expect(f.ask).toHaveBeenCalledWith(expect.objectContaining({ copyId: 'setup.reusePatReview' }));
@@ -45,7 +45,7 @@ describe('guided existing-organization PAT access review', () => {
   });
   it('retains the manual choice without inventing an owner assertion', async () => {
     const f = fixture(); f.ask.mockResolvedValue('Enter a PAT manually');
-    expect(await collectSetupPatIntent(f.input)).toEqual({ requirements: f.input.initialRequirements });
+    expect(await collectSetupPatIntent(f.input)).toEqual({ requirements: f.input.initialRequirements, runnerDiscovery: false });
     expect(f.manual).toHaveBeenCalledTimes(1); expect(f.guide).not.toHaveBeenCalled();
   });
   it('keeps browser cancellation distinct from manual entry', async () => {
@@ -77,4 +77,33 @@ describe('guided existing-organization PAT access review', () => {
     await expect(collectSetupPatIntent({ ...f.input, owner: '../other' })).rejects.toThrow('Invalid PAT form');
     expect(f.manual).not.toHaveBeenCalled(); expect(f.guide).not.toHaveBeenCalled();
   });
+});
+
+
+test.each(['organization', 'customize'] as const)('guided %s batch access asks runner discovery before generating the PAT link', async configurationSource => {
+  const f = fixture();
+  f.ask.mockImplementation(async prompt => prompt.kind === 'question' ? 'true' : 'Continue to GitHub');
+  const result = await collectSetupPatIntent({ ...f.input, overrides: {}, configurationSource, deliveryMode: 'pull-request' });
+  expect(result.runnerDiscovery).toBe(true);
+  expect(new URL(f.guide.mock.calls[0][0]).searchParams.get('organization_self_hosted_runners')).toBe('read');
+  expect(new URL(f.guide.mock.calls[0][0]).searchParams.get('administration')).toBe('read');
+  expect(f.ask.mock.calls[0][0]).toMatchObject({ kind: 'question', phase: 'permission-intent', question: { id: 'runners.discover' } });
+  expect(f.ask.mock.calls[1][0]).toMatchObject({ copyId: 'setup.reusePatReview' });
+});
+
+test('canceling runner discovery stops before any PAT link or permission review', async () => {
+  const f = fixture(); f.ask.mockResolvedValue(undefined);
+  await expect(collectSetupPatIntent({ ...f.input, overrides: {} })).rejects.toBeInstanceOf(SetupTerminalCancelledError);
+  expect(f.guide).not.toHaveBeenCalled(); expect(f.detailed).not.toHaveBeenCalled();
+});
+
+test('the terminal offers the same optional runner grant before organization PAT entry', async () => {
+  const f = fixture();
+  const terminal = { isInteractive: () => true, readText: jest.fn()
+    .mockResolvedValueOnce({ kind: 'value', value: 'yes' }).mockResolvedValueOnce({ kind: 'value', value: '1' }),
+    readSecret: jest.fn(), close: jest.fn() };
+  const result = await collectSetupPatIntent({ ...f.input, overrides: {}, bridge: undefined, terminal });
+  expect(result.runnerDiscovery).toBe(true);
+  expect(new URL(f.guide.mock.calls[0][0]).searchParams.get('organization_self_hosted_runners')).toBe('read');
+  expect(terminal.readSecret).not.toHaveBeenCalled();
 });

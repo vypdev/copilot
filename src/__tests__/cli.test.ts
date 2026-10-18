@@ -1100,6 +1100,24 @@ describe('CLI', () => {
         expect(process.exitCode).toBe(1); expect(runLocalAction).not.toHaveBeenCalled(); expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
       } finally { terminal.mockRestore(); choice.mockRestore(); intent.mockRestore(); token.mockRestore(); }
     });
+    it('carries reviewed runner discovery intent into the authenticated batch configuration', async () => {
+      const driver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const source = require('../cli/setup_source_adapter') as typeof import('../cli/setup_source_adapter');
+      const pat = require('../cli/setup_pat_intent_adapter') as typeof import('../cli/setup_pat_intent_adapter');
+      const prompt = require('../cli/setup_credential_prompt_adapter') as typeof import('../cli/setup_credential_prompt_adapter');
+      const batch = require('../cli/setup_batch_adapter') as typeof import('../cli/setup_batch_adapter');
+      const terminal = jest.spyOn(driver, 'createInteractiveTerminalDriver').mockReturnValue(guidedTerminal());
+      const choice = jest.spyOn(source, 'chooseSetupConfigurationSource').mockResolvedValue('organization');
+      const intent = jest.spyOn(pat, 'collectSetupPatIntent').mockResolvedValue({ requirements: [], runnerDiscovery: true });
+      const token = jest.spyOn(prompt.SetupCredentialPromptAdapter.prototype, 'requestSetupPat').mockResolvedValue('github_pat_fixture_operator_token');
+      const execute = jest.spyOn(batch, 'executeSetupBatch').mockResolvedValue({ outcome: 'blocked', operation: { schemaVersion: 1, organization: 'test-owner', operationId: 'a67c8e40-93be-43ed-a7ed-e07378c7e773', targets: [] } });
+      mockTokenPermissionInspect.mockResolvedValue(acceptedSetupPatReport());
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--batch']);
+        expect(execute).toHaveBeenCalledWith(expect.objectContaining({ overrides: expect.objectContaining({ runners: { discover: true } }) }));
+        expect(runLocalAction).not.toHaveBeenCalled();
+      } finally { terminal.mockRestore(); choice.mockRestore(); intent.mockRestore(); token.mockRestore(); execute.mockRestore(); }
+    });
     it('refuses batch discovery if a coordinator invokes it before authenticating a setup PAT', async () => {
       const { executeSetupCommand } = require('../cli/commands/setup_execution') as typeof import('../cli/commands/setup_execution');
       const sequence = jest.spyOn(SetupSessionCoordinator.prototype, 'execute').mockImplementation(async function (this: SetupSessionCoordinator) {

@@ -1,4 +1,7 @@
 import { PrepareSetupPatIntentUseCase } from '../application/usecases/setup/prepare_setup_pat_intent_use_case';
+import { createDefaultSetupConfiguration, mergeSetupConfiguration } from '../application/policies/setup_configuration_defaults';
+import { createSetupPermissionIntentQuestionnaire, setupQuestionContentInventory } from '../application/policies/setup_questionnaire_policy';
+import { withSetupRunnerDiscoveryPermissions } from '../application/policies/setup_token_permission_policy';
 import type { SetupConfigurationOverrides } from '../application/policies/setup_configuration_policy';
 import { SetupQuestionnaireController } from '../application/usecases/setup/setup_questionnaire_controller';
 import type { SetupJourneyUseCase } from '../application/usecases/setup/setup_journey_use_case';
@@ -32,6 +35,7 @@ interface SetupPatIntentInput {
 }
 
 export interface SetupPatIntentResult {
+  readonly runnerDiscovery?: boolean;
   readonly requirements: readonly SetupTokenPermissionRequirement[];
   readonly assertedOwnerKind?: 'Organization' | 'User';
   readonly permissionIntent?: { draft: SetupConfiguration; answeredQuestionIds: readonly string[]; projectsWanted: boolean };
@@ -48,7 +52,19 @@ export async function collectSetupPatIntent(input: SetupPatIntentInput): Promise
     const owner = await credentialPrompt.chooseSetupOwnerKind();
     if (owner !== 'Organization') throw new ApplicationError('configuration.invalid',
       'Organization reuse requires an organization owner. Check the owner or restart with Customize configuration.');
-    permissionPresenter.showDetailedRequirements('setup', input.initialRequirements);
+    let runnerDiscovery = input.overrides.runners?.discover;
+    const draft = mergeSetupConfiguration(createDefaultSetupConfiguration(), input.overrides);
+    if (runnerDiscovery === undefined) {
+      const context = { skipQuestionIds: setupQuestionContentInventory().filter(question => question.id !== 'runners.discover').map(question => question.id) };
+      const collector = bridge ? new WebSetupQuestionnaireCollector(bridge)
+        : new SetupQuestionnaireController(input.terminal!, new ConsoleSetupQuestionRenderer('permission-intent'));
+      const state = await collector.collect(createSetupPermissionIntentQuestionnaire(draft, context), context);
+      if (state.terminal === 'cancelled') throw new SetupTerminalCancelledError();
+      runnerDiscovery = state.draft.runners?.discover === true;
+    }
+    draft.runners = { ...draft.runners!, discover: runnerDiscovery };
+    const requirements = withSetupRunnerDiscoveryPermissions(input.initialRequirements, draft, 'Organization');
+    permissionPresenter.showDetailedRequirements('setup', requirements);
     const choices = ['Continue to GitHub', 'Enter a PAT manually'];
     const description = 'These provisional grants inspect existing organization configuration and allow repository setup. Shared Secret values are never requested or replaced. The final plan rechecks exact permissions; authentication evidence can remain pending. Select only the intended repositories in GitHub and delete the temporary PAT afterwards.';
     const answer = bridge
@@ -56,15 +72,15 @@ export async function collectSetupPatIntent(input: SetupPatIntentInput): Promise
       : await input.terminal!.readText(`${description}\n1. ${choices[0]}\n2. ${choices[1]}\nChoose 1 to continue: `).then(result =>
         result.kind === 'value' ? result.value.trim() === '1' ? choices[0] : choices[1] : undefined);
     if (answer === undefined) throw new SetupTerminalCancelledError();
-    if (answer !== choices[0]) { credentialPrompt.useManualSetupPat(); return { requirements: input.initialRequirements }; }
+    if (answer !== choices[0]) { credentialPrompt.useManualSetupPat(); return { requirements, runnerDiscovery }; }
     try {
       credentialPrompt.configureSetupPatGuide(buildSetupPatCreationUrl({ role: 'setup', owner: input.owner,
-        repository: input.repository, expiresIn: 1, requirements: input.initialRequirements }));
+        repository: input.repository, expiresIn: 1, requirements, includeConditionalSetupGrants: true }));
     } catch (error) {
       if (!(error instanceof UnsupportedSetupPatLinkError)) throw error;
       credentialPrompt.useManualSetupPat();
     }
-    return { requirements: input.initialRequirements, assertedOwnerKind: 'Organization' };
+    return { requirements, runnerDiscovery, assertedOwnerKind: 'Organization' };
   }
   const prepared = await new PrepareSetupPatIntentUseCase({
     collect: (initial, context, pass) => (bridge

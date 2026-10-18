@@ -21,6 +21,7 @@ export interface SetupBatchView {
   readonly retryRemaining: number;
   readonly targets: readonly {
     readonly repositoryId: number;
+    readonly installationReview?: import('../../domain/setup_runner').SetupInstallationReview;
     readonly repository: string;
     readonly installationBranch: string;
     readonly baseBranch: string;

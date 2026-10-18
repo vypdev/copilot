@@ -45,6 +45,10 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 
 ## Setup and diagnosis
 
+- [ ] The runner review shows the intended group/labels for every target; access, capacity and agent authentication have been checked separately.
+- [ ] Agent, ordinary validation, trusted observers, merge-group checks and publication retain their intended routes; native source extensions are visible exceptions.
+- [ ] `COPILOT_RUNNER_PROFILES`, when used, contains only supported non-secret profiles. Repository overrides, registry freshness, optional inventory failures and exact manual fallback have been reviewed.
+- [ ] The parity inventory and complete changes have been inspected; unknown generator metadata is retained or repaired with its compatible generator. Backups and installation receipts remain available.
 - [ ] The selected issue workflows start with `in-progress`; `branched` is treated as an Action-verified result.
 - [ ] `issue-managed-branches` is enabled for release/hotfix and whenever `pre-branch-sdd` is enabled.
 - [ ] Before enabling `pre-branch-sdd`, the repository has a validated SDD catalog, standard, template, and a configured agent that can return structured responses.

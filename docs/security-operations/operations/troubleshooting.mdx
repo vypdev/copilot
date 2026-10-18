@@ -5,6 +5,21 @@ description: Common issues and solutions when using Copilot
 
 # Troubleshooting
 
+For setup runner selection, use the named state to choose the next action:
+
+| State | Meaning and next action |
+|---|---|
+| Access unverified | Inventory is unavailable/incomplete, a group is workflow-restricted, or the exact route is unobserved. Ask an organization administrator to verify repository and workflow access, or enter a known manual profile. Selection never grants access. |
+| Capacity pending | Matching authorized runners were observed busy/offline. Keep the route, check the runner service and refresh setup/readiness when capacity returns. No hosted fallback occurs. |
+| Unavailable | A confirmed eligible group has no runner matching all labels. Correct the exact group/labels or restore the intended runner, then review again. |
+| Incompatible generator | Retain the asset or restore a compatible generator/snapshot. Do not replace source guidance or native release/CI jobs with consumer templates. |
+| Registry changed | Setup stopped before probes/writes. Restart profile review against the current effective registry; preserve existing installer PRs and receipts. |
+
+Runner availability does not prove Codex authentication or runtime tools. Merge
+the reviewed installation PR through the normal process, then run the appropriate
+provisioning/credential checks and actual trusted workflow. See
+[runner profiles](/configuration#runner-profiles) for schema, limits and snapshots.
+
 If guarded PR approval is missing, run `copilot doctor` and inspect the ordered `approval.*` checks. A missing `PR_APPROVAL_POLICY` is safely off; a copied observer that has not reached the default branch cannot receive `workflow_run` wakeups. Correct the named CI producer, Bugbot completeness, runtime PAT, or stale-dismissal rule, then manually dispatch **Copilot - Pull Request Approval** with the PR number. An ambiguous review POST is read-first on retry; never blindly submit a second approval. See [guarded approval](/pull-requests/guarded-approval).
 
 This guide helps you resolve common issues you might encounter while using Copilot. Expand the section that matches your problem.

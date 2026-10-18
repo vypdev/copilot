@@ -1,5 +1,9 @@
 /** Static first-party explanations emitted by the permission policy. */
 export const permissionTexts = [
+  "Optional runner discovery selected",
+  "Optional organization runner discovery selected",
+  "List existing repository self-hosted runners without changing access.",
+  "List existing eligible runner groups and their runners; manual routing remains available without this grant.",
   "Create the reviewed installation commit and installer-owned branch.",
   "Include reviewed workflow files in the installation PR.",
   "Create the reviewed installation PR without merging it.",

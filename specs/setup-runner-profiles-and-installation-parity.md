@@ -1,6 +1,6 @@
 # Runner Profiles and Installation Parity
 
-- Status: Draft
+- Status: Ready for implementation
 - Date: 2026-10-18
 - Catalog capability ID: `setup-and-doctor`
 - Last verified: not applicable (prospective companion)
@@ -40,7 +40,7 @@ The first three items describe current behavior from supplied issue and catalog 
 ### 2.3 Evidence
 
 - Code/spec ownership: catalog capability `setup-and-doctor`; current owning specifications listed above; cataloged batch setup ports, policies, use cases, and CLI/web adapters.
-- Concrete evidence: issue #556 records previews #550 and `vypdev/platform#170` that replaced routing/workflows, corrected PRs #555 and `vypdev/platform#175`, and source validator findings from run `39080887942` / smoke run `39069446089`.
+- Concrete evidence: issue #556 records previews #550 and `vypdev/platform#170` that replaced routing/workflows, corrected PRs #555 and `vypdev/platform#175`, and source validator findings from smoke run `39069446089`. SDD admission run `39080887942` stopped on the appendix size limit; the compact companion was published successfully by run `39081097654`.
 - Compatibility fixtures required: preserve Branch Sync all-branch coverage, merge-queue explicit Bash shell, fork/merge-group hosted isolation, trusted-default observer checkout, source Action references, release/npm jobs, and installer exclusions.
 - Unknowns: exact existing UI components and provider endpoints to reuse are implementation discovery; they do not alter the product contract.
 
@@ -147,12 +147,12 @@ Duplicate planning is idempotent for the same target, profile snapshot, generato
 | Profile source | Enum | `retain` if installed routing exists; otherwise `hosted` | `retain`, `hosted`, `organization-profile`, `manual-self-hosted` | Operation; snapshot in reviewed plan |
 | Agent runner group | Bounded string | Existing value; for vypdev profile `vypdev` | 1–100 characters; GitHub-supported group name | Organization profile or repository exception; snapshot |
 | Agent labels | Ordered unique list | Existing values; vypdev profile: `self-hosted`, `codex`, `Linux` | 1–10 labels, each 1–100 characters | Same as group |
-| Repository exception | Bounded mapping | None | Explicit target repository to profile override; max 100 targets per operation | Operation snapshot |
-| Generator version | Version identifier | Installed compatible version | Exact supported version; unknown/future version is not regenerated | Per asset/plan |
+| Repository exception | Bounded mapping | None | Explicit target repository to profile override; existing maximum 25 targets per operation | Operation snapshot |
+| Generator compatibility (observed) | Contract metadata | Retain the compatible installed generator | Profile schema 2/contract 2, manifest schema 2/contract 1, runner snapshot schema 1; unknown/future metadata is retained or blocks regeneration | Per asset/plan; select a compatible CLI/source generator outside the wizard |
 
 Validation rejects empty labels, duplicate labels, control characters, unsupported YAML values, unbounded target lists, and profile fields that attempt to set credentials, arbitrary commands, refs, or URLs. Group and labels do not prove authorization. Job-role routes are not user-configurable as a single global override.
 
-Precedence is: explicit repository exception > explicitly selected organization profile snapshot > retained repository routing > hosted default when no routing exists. The operator must confirm any replacement. Plans snapshot values at review; if target configuration or generator compatibility changes before Apply, setup invalidates the stale plan and re-reads facts. Missing fields in older profiles use the safe default and show a migration note; unknown future fields are preserved for review but not executed.
+Precedence is: explicit repository exception > explicitly selected organization profile snapshot > retained repository routing > hosted default when no routing exists. The operator must confirm any replacement. Plans snapshot values at review; if target configuration or generator compatibility changes before Apply, setup invalidates the stale plan and re-reads facts. An absent legacy runners configuration means retain. Incomplete registry entries and unknown future registry fields/versions are rejected and surfaced for review; they never infer access.
 
 Recommended example: retain current routing for existing targets and reuse an organization agent profile with group `vypdev` and labels `self-hosted`, `codex`, `Linux`; keep observer and release routes independent. Meaningful alternative: explicitly choose hosted agent execution where appropriate and review the hosted YAML. Never configurable: secret access, group membership, observer isolation, hosted OIDC publication, or automatic fallback.
 
@@ -185,7 +185,7 @@ flowchart LR
 - Pure decisions: schema validation, profile precedence, per-role route resolution, readiness classification, asset parity, version compatibility, diff safety, and retry target selection.
 - Application contracts: immutable target facts, profile snapshot, `RunnerRolePlan`, `AssetFinding`, `SetupPlan`, `ApplyReceipt`, and typed failure result. No secret material is present.
 - Semantic ports: read existing routing/assets; optionally enumerate eligible groups/labels; inspect repository access evidence; create reviewed PR; write/verify backup; read generator compatibility metadata.
-- Durable state/schema ownership: setup plan and journal own operation IDs, snapshot hashes, target receipts, backup references, and generator version; they never own Secret values.
+- Durable state/schema ownership: the plan owns target/configuration snapshots and rendered files; the private journal owns operation IDs, plan digests, target receipt transitions and exact prepared commits. Generator contracts and backups remain reviewed repository assets, bound by the commit and plan digest. The journal contains neither configuration values nor Secret values.
 - Concurrency/idempotency: bind Apply to plan hash and fresh target facts; deduplicate by operation/target; serialize conflicting writes per repository; partial retry excludes completed targets.
 - Trust: issue, PR, workflow, repository, and inventory text are untrusted data. Parse profile fields against bounded schemas; render/sanitize Markdown and URLs; never execute discovered strings.
 - Provider mapping: permission denial becomes `inventory-unavailable` or `access-unknown`, not empty inventory; busy/offline becomes `pending-capacity`; not-found and malformed provider responses remain distinct actionable errors.
@@ -223,7 +223,7 @@ The setup plan keeps the selected route and will not switch to hosted execution.
 
 ## Links
 
-[Review platform installation diff](https://github.com/vypdev/platform/compare/HEAD...setup-plan) · [Runner access guidance](https://github.com/vypdev/copilot/blob/main/docs/how-to-use.mdx)
+[Review platform installation diff](https://github.com/vypdev/platform/pull/175/files) · [Runner access guidance](https://github.com/vypdev/copilot/blob/master/docs/how-to-use.mdx)
 
 <details>
 <summary>Technical details</summary>
@@ -241,9 +241,9 @@ Required variants use the same hierarchy:
 
 ### 9.3 Issue, PR, and comment behavior
 
-- PR title: `chore(setup): configure runner profile and reconcile installation`; one PR per target repository, deterministic target-specific body and plan marker.
+- PR title retains `chore: configure Copilot`; one PR per target repository, deterministic target-specific body and plan marker. A runner/parity section records the selected managed agent route, source exceptions, observation counts, asset counts, plan digest, backup location and verification handoff. Registry source values never enter the PR body.
 - Merge creates the reviewed repository changes; close leaves repository content unchanged; retry only resumes incomplete targets after fresh planning. Merge does not trigger setup automation beyond existing repository workflows.
-- Durable marker stores plan ID/hash, target, profile snapshot identifier (not secrets), generator version, and backup references. Updates are idempotent and preserve human edits by invalidating stale diffs.
+- The existing installer marker and manifest receipt retain operation ID, repository identity, reviewed base SHA and plan digest. That digest binds the snapshot files; generator contracts remain in guidance metadata and backups remain tree assets. No receipt/journal schema changes or registry values are persisted in the private journal. Updates are idempotent and preserve human edits by invalidating stale diffs.
 - No setup comments are required. At most one updated status comment per operation if an existing lifecycle requires it; checks and labels are supplemental.
 - Link each target to its PR, full comparison, backup artifact, relevant run, and recovery documentation.
 
@@ -283,23 +283,24 @@ Errors follow `impact -> cause -> action -> retained state`. An already created 
 
 ## 13. Compatibility, migration, rollout, and rollback
 
-Existing installations are read before planning. The proposed diff preserves current routing and customizations unless explicitly replaced. Organization profiles snapshot into each reviewed installation and do not mutate the source profile or shared resources. Older profiles without role metadata map to retained routes or explicit hosted defaults and require review; future/unknown schema versions cannot be applied automatically.
+Existing installations are read before planning. The proposed diff preserves current routing and customizations unless explicitly replaced. Organization profiles snapshot into each reviewed installation and do not mutate the source profile or shared resources. Existing installations without runner metadata retain their routes or explicitly select hosted defaults. Registry schema 1 requires complete role metadata; future/unknown schema versions cannot be applied automatically. A changed CLI/generator can change the plan digest: keep prior journals and PRs, resume with the matching generator or start a fresh reviewed operation; never rewrite an old receipt or force-adopt an existing branch.
 
 Roll out behind the existing setup admission path after parity fixtures pass. First exercise a clean consumer, organization-profile reuse across selected repositories, and an existing source installation. Keep backup copies and full diffs for every target. Rollback means close an unmerged PR or revert the merged commit using its backup; never auto-revert unrelated human changes. Enabling the two optional source workflows requires compatible source definitions and validators in the same reviewed change.
 
 ## 14. Testing strategy and numeric budget
 
-The initial floor is 48 distinct cases. The allocations below are disjoint; parameterized rows count only when they exercise distinct behavior. Existing repository budgets and thresholds remain in force.
+The initial floor is 56 distinct cases. The allocations below are disjoint; parameterized rows count only when they exercise distinct behavior. Existing repository budgets and thresholds remain in force.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Profile validation and precedence | 10 | Bounds, invalid fields, defaults, retained routing, organization reuse, repository exception, unknown schema |
 | Job routing and isolation | 10 | Agent/validation/observer/publication routes, auth prerequisite, shell, fork and merge-group isolation, OIDC |
+| Guided discovery authorization | 8 | Default off, reviewed read-only prefill, personal owner, manual recovery, fixed config, conditional audit, retained choice and private intent |
 | Discovery and access failure | 8 | Optional inventory, permission denial, unknown access, busy/offline capacity, malformed and unsupported evidence |
 | Source/consumer parity and version compatibility | 8 | Asset classifications, source extensions, missing optional workflows, generator mismatch, shell/trigger/Action/release regressions |
 | CLI/web UX | 6 | Shared states, pending/action/blocked/partial/complete content, accessible and sanitized output |
 | Migration/idempotency/partial recovery | 6 | Backup, stale plan, repeated setup, customization preservation, partial batch retry, rollback evidence |
-| **Total** | **48** | No double counting |
+| **Total** | **56** | No double counting |
 
 New pure decisions require 100% branch coverage. Repository-wide coverage budgets remain unchanged; changed modules must meet or exceed their existing configured thresholds. Add table-driven domain tests, application replay/race tests, adapter contract tests, structural YAML/workflow checks, security tests for untrusted content, and golden UX fixtures with semantic assertions. Use deterministic IDs, clocks, and fakes; no real waits or live services in automated tests. Manual UX evidence must show readable role routing, readiness, and full diff in CLI and web at narrow and normal widths. Controlled live acceptance covers a clean consumer, organization-profile reuse across selected repositories, and an existing source installation.
 
@@ -372,3 +373,88 @@ Document backup, migration, manual YAML ownership, and rollback. Examples must m
 - Related evidence: [#538](https://github.com/vypdev/copilot/issues/538), [#546](https://github.com/vypdev/copilot/issues/546), [#555](https://github.com/vypdev/copilot/pull/555), [#559](https://github.com/vypdev/copilot/pull/559), [platform#175](https://github.com/vypdev/platform/pull/175).
 - Decisions: additive companion under `setup-and-doctor`; retain installed routing by default; use explicit hosted default when absent; reusable profiles are non-secret snapshots; optional read-only discovery; preserve per-role security routes; classify intentional source extensions and require compatible rendering.
 - Outside scope: automatic merge/release, group access changes, Secret handling, vulnerability remediation, and replacing the existing Action-owned lifecycle.
+
+### Concrete configuration and adapter contract (2026-10-18)
+
+`SetupConfiguration.runners` is additive; absence means `retain`. Its fields are
+`mode` (`retain`, `hosted`, `organization-profile`, `manual-self-hosted`),
+`profileId` (empty or 1–50 safe identifier characters), `group` (empty or 1–100
+single-line literal characters), `labels` (1–10 unique literal labels of 1–100
+characters for a selected self-hosted route), and `validation` (`hosted` or
+`agent`). Group and label inputs reject expressions and control characters.
+Self-hosted selections require `self-hosted` and a Linux or macOS label because
+the generated workflows require Bash; Windows service Codex execution is outside
+this contract. The validation choice is an advanced exception, never a global
+replacement. Agent CLI provisioning uses the agent route. Credential health and
+ordinary automation use the validation route. Merge-group checks and consumer
+approval observers keep their trusted hosted templates. Consumer publication
+and source npm/OIDC jobs keep their publication route.
+
+An existing non-secret Variable `COPILOT_RUNNER_PROFILES` contains
+`{"schemaVersion":1,"profiles":[{"id":"vypdev-agent","group":"vypdev","labels":["self-hosted","codex","Linux"],"validation":"hosted"}]}`.
+At most ten distinct profiles and 16,000 characters are accepted. Unknown schema
+versions and fields are rejected with a recovery action rather than executed.
+An existing repository Variable wins over the organization Variable; an invalid
+repository override cannot expose a shadowed organization profile as effective.
+Setup reads this registry and snapshots a chosen profile; it never writes the
+registry or adds repository access to it. The effective selected snapshot is
+recorded in `.copilot/runner-profile.json`, with source scope and a digest for
+freshness checks; unselected profiles are never copied into the repository. Manual selection creates no Variable or Secret. Selection is
+per target, so the existing batch configuration review provides visible target
+exceptions. Profile-source drift invalidates Apply before permission probes.
+
+Before PAT collection in Customize, organization reuse and multi-repository setup, the shared permission-intent questionnaire asks the optional
+boolean `runners.discover` (default false). Opting in discloses and prefills
+repository Administration read and organization Self-hosted runners read via
+`administration=read` and `organization_self_hosted_runners=read`. Personal
+owners get only the repository grant. Conditional discovery grants never block
+manual configuration, are never added to the workflow PAT, and remain distinct
+from runner access changes. Fixed config skips the repeated intent question;
+the final questionnaire retains that explicit choice. Batch target defaults and replacement PAT links preserve it without dropping the previous target’s selected route. Discovery runs only when
+enabled, including when enabled later using an existing PAT. The selected-route
+snapshot excludes this local intent. The PAT link leaves GitHub repository
+selection to the operator.
+
+Read-only discovery has a separate semantic port. Fixed GitHub routes inspect
+repository-local runners and, where allowed, organization groups filtered by
+`visible_to_repository`, then matching group runners. Each collection is bounded
+to 1,000 entries and ten pages of 100. Group fan-out is limited to ten
+eligible groups and the combined runner inventory to 1,000 entries. Group visibility is not enough to establish
+workflow/ref eligibility when `restricted_to_workflows` is true: report access
+unknown. A failed/truncated/malformed collection cannot establish absence. An
+empty repository-local list does not establish absence of organization runners.
+Capacity is observational and never participates in plan identity: busy/offline
+produces pending capacity without changing YAML or claiming runtime verification.
+Manual access remains unverified and can be explicitly reviewed for an
+installation PR; unsupported routing blocks. Setup never schedules a probe job
+or changes runner permissions during discovery.
+
+Source workflows with root-local Action execution and source-owned guidance
+remain preserved as complete assets. Explicit profile replacement affects
+managed consumer jobs and newly enabled optional source workflows; native source
+extensions retain their routes and are shown as exceptions. Source validation
+and fixture checks must continue to detect loss of native jobs, shells, trust
+conditions and branch filters. The parity inventory includes disabled optional
+assets, so missing health/provisioning workflows remain visible even when their
+features are off. Unknown generator metadata is classified as incompatible and
+retained or blocked before regeneration; setup does not claim it can migrate a
+future generator. Full before/after workflow content is available in review,
+with credential-like literals redacted in presentation, and existing backup and
+immutable installer receipts remain the recovery mechanism.
+
+Primary provider references:
+[runner API](https://docs.github.com/en/rest/actions/self-hosted-runners),
+[group API](https://docs.github.com/en/rest/actions/self-hosted-runner-groups), and
+[workflow routing](https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/use-in-a-workflow).
+
+
+The profile schema and guidance ownership manifest use distinct generator
+contracts: repository-profile schema 2/contract 2 and setup-manifest schema
+2/contract 1. Swapping those versions is incompatible, even though both documents
+use schema version 2. Batch defaults reuse the preceding explicit runner choice
+for the next target, visibly before its questionnaire; registry precedence is
+resolved again for that target, and every repository can choose an exception.
+A selected registry's repository/organization scope is shown even when its value
+is invalid, without exposing that invalid value. Recognizable credential material
+is rejected from literal IDs, groups and labels before it can reach presentation
+or a snapshot.

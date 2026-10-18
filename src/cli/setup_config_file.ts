@@ -9,6 +9,7 @@ import { normalizeMergeQueueCheckAttestations } from '../domain/merge_queue_read
 import { ISSUE_WORKFLOW_KINDS, type IssueWorkflowKind } from '../domain/issue_workflow_profile';
 
 const SETUP_OVERRIDE_KEYS = new Set([
+    'runners',
     'features',
     'agents',
     'repository',
@@ -116,6 +117,21 @@ export function loadSetupConfigurationOverrides(filePath: string): SetupConfigur
     validateStorage(raw.storage);
     validateIssueWorkflows(raw.issueWorkflows);
     validateGuidance(raw.repositoryAgentGuidance);
+    if (raw.runners !== undefined) {
+        validateObject(raw.runners, 'runners');
+        const runners = raw.runners as Record<string, unknown>;
+        validateObjectKeys(runners, new Set(['mode', 'profileId', 'group', 'labels', 'validation', 'source', 'discover']), 'runners');
+        validateBooleanProperty(runners, 'discover');
+        for (const key of ['mode', 'profileId', 'group', 'validation']) {
+            if (runners[key] !== undefined && typeof runners[key] !== 'string') throw new Error(`runners.${key} must be a string.`);
+        }
+        if (runners.labels !== undefined && (!Array.isArray(runners.labels) || !runners.labels.every(label => typeof label === 'string'))) throw new Error('runners.labels must be a list of literal strings.');
+        if (runners.source !== undefined) {
+            validateObject(runners.source, 'runners.source');
+            validateObjectKeys(runners.source as Record<string, unknown>, new Set(['scope', 'value']), 'runners.source');
+            validateStringValues(runners.source as Record<string, unknown>, 'runners.source');
+        }
+    }
     return raw as SetupConfigurationOverrides;
 }
 

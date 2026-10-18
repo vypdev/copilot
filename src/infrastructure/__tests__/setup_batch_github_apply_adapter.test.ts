@@ -48,6 +48,24 @@ function fixture() {
     setReceipt: (value: unknown) => { installation = value; } };
 }
 describe('installer-owned GitHub write boundaries', () => {
+  it('snapshots a shared runner profile without granting registry or group access and blocks drift', async () => {
+    const f = fixture(); const profile = { id: 'shared', group: 'vypdev', labels: ['self-hosted', 'Linux'], validation: 'hosted' as const };
+    const value = JSON.stringify({ schemaVersion: 1, profiles: [profile] });
+    const resource = { kind: 'variable' as const, name: 'COPILOT_RUNNER_PROFILES', value, visibility: 'selected' as const, updatedAt: '2026-10-18T00:00:00Z', selectedRepositoryIds: [999] };
+    const configuration = { ...f.plan.configuration, runners: { mode: 'organization-profile' as const, profileId: profile.id,
+      group: profile.group, labels: profile.labels, validation: profile.validation, source: { scope: 'organization' as const, value } } };
+    const plan = { ...f.plan, configuration };
+    const effective = jest.spyOn(f.read, 'effective').mockResolvedValue({ ...f.plan.remote,
+      organizationVariables: [{ name: resource.name, value }] });
+    jest.mocked(f.read.sharedMetadata).mockResolvedValue([resource]);
+    expect(await f.writer.revalidate(plan, 'fixture', [])).toBe(true); expect(plan.grants).toEqual([]);
+    jest.mocked(f.read.sharedMetadata).mockResolvedValue([{ ...resource, value: value + ' ' }]);
+    expect(await f.writer.revalidate(plan, 'fixture', [])).toBe(false);
+    jest.mocked(f.read.sharedMetadata).mockResolvedValue([resource]);
+    effective.mockResolvedValue({ ...f.plan.remote, organizationVariables: [] });
+    expect(await f.writer.revalidate(plan, 'fixture', [])).toBe(false);
+    expect(f.variableWriter.createMissing).not.toHaveBeenCalled(); expect(f.request).not.toHaveBeenCalled();
+  });
   it('reuses the exact complete prepared branch without posting another ref', async () => {
     const f = fixture(); f.setBranch(prepared);
     await expect(f.writer.branch(f.plan, operation, prepared, 'fixture')).resolves.toBeUndefined();
@@ -348,4 +366,27 @@ describe('installer-owned GitHub write boundaries', () => {
     expect(f.request.mock.calls.filter(([route]) => route === 'POST /repos/{owner}/{repo}/pulls')).toHaveLength(1);
   });
 
+});
+
+test('real namespace parsing includes the selected runner registry for Apply freshness without granting registry access', async () => {
+  const f = fixture();
+  const profile = { id: 'shared', group: 'vypdev', labels: ['self-hosted', 'Linux'], validation: 'hosted' as const };
+  const value = JSON.stringify({ schemaVersion: 1, profiles: [profile] });
+  const configuration = { ...f.plan.configuration, runners: { mode: 'organization-profile' as const,
+    profileId: profile.id, group: profile.group, labels: profile.labels, validation: profile.validation,
+    source: { scope: 'organization' as const, value } } };
+  jest.spyOn(f.read, 'effective').mockResolvedValue({ ...f.plan.remote, organizationVariables: [{ name: 'COPILOT_RUNNER_PROFILES', value }] });
+  jest.mocked(f.read.sharedMetadata).mockRestore();
+  f.request.mockImplementation(async route => {
+    if (route === 'GET /orgs/{org}/actions/variables') return { data: { total_count: 2, variables: [
+      { name: 'COPILOT_RUNNER_PROFILES', value, visibility: 'selected', updated_at: '2026-10-18T00:00:00Z' },
+      { name: 'UNMANAGED_SETTING', value: 'leave alone', visibility: 'all', updated_at: '2026-10-18T00:00:00Z' },
+    ] } };
+    if (route === 'GET /orgs/{org}/actions/secrets') return { data: { total_count: 0, secrets: [] } };
+    throw new Error('Unexpected provider write or access grant');
+  });
+  expect(await f.read.sharedMetadata('acme', 'fixture')).toEqual([expect.objectContaining({ name: 'COPILOT_RUNNER_PROFILES', value })]);
+  expect(await f.writer.revalidate({ ...f.plan, configuration }, 'fixture', [])).toBe(true);
+  expect(f.request.mock.calls.every(([route]) => route.startsWith('GET '))).toBe(true);
+  expect(f.variableWriter.createMissing).not.toHaveBeenCalled(); expect(f.resources.labels).not.toHaveBeenCalled();
 });
