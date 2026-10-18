@@ -8,7 +8,7 @@ import type { SetupBatchRenderPort } from '../application/ports/setup_batch_port
 import { validSetupBatchAssetPath } from '../application/policies/setup_batch_policy';
 import { copySetupFiles, ensureGitHubDirs, compareSetupWorkflows } from '../utils/setup_files';
 import { effectiveIssueWorkflowFeatures } from '../application/policies/setup_issue_workflow_policy';
-import { hasRootLocalSetupAction } from '../utils/setup_workflow_upgrade';
+import { hasRootLocalSetupAction, isSourceSetupPushWorkflow } from '../utils/setup_workflow_upgrade';
 import { inspectSetupInstallation } from '../utils/setup_installation_review';
 import { REPOSITORY_AGENT_GUIDE_PATH, REPOSITORY_AGENT_PROFILE_PATH, REPOSITORY_AGENT_MANIFEST_PATH,
   REPOSITORY_AGENT_SKILL_PATH } from '../application/policies/repository_agent_guidance_policy';
@@ -41,7 +41,7 @@ export class SetupBatchWorkspaceAdapter implements SetupBatchRenderPort {
         && existing.some(file => file.path === observerPath && file.content === readFileSync(sourceObserver, 'utf8'));
       const changedWorkflows = compareSetupWorkflows(root, effectiveIssueWorkflowFeatures(configuration), undefined, configuration)
         .filter(workflow => workflow.status === 'changed' && (!preserveSourceObserver || workflow.file !== 'copilot_pull_request_approval.yml')
-          && (!sourceAction || workflow.file === 'copilot_commit.yml')).map(workflow => workflow.file);
+          && (!sourceAction || isSourceSetupPushWorkflow(workflow.file))).map(workflow => workflow.file);
       copySetupFiles(root, undefined, configuration.features, { setupConfiguration: configuration,
         updateExistingWorkflows: true, approvedWorkflowFiles: changedWorkflows,
         preserveExistingAgentGuidance: sourceAction && sourceGuidance.length === 4 });

@@ -5,7 +5,7 @@ description: Detect parent-branch drift on every push and safely align issue or 
 
 # Branch synchronization
 
-Copilot can watch parent-to-child branch relationships and keep the related open issue's branch status current when its working branch falls behind. Detection is intentionally separate from the normal commit workflow: `copilot_branch_sync.yml` listens to pushes on **all branches**, performs GitHub metadata and comparison requests, and never loads Bugbot or a code-changing agent. English is the default. English and Spanish notices use bundled catalogs; another configured BCP-47 locale may make one schema-constrained language request for the complete branch-notice catalog. Invalid or unavailable localization falls back atomically to English before any comment is written.
+Copilot can watch parent-to-child branch relationships and keep the related open issue's branch status current when its working branch falls behind. Detection is intentionally separate from the normal commit workflow: `copilot_branch_sync.yml` listens to pushes on **all ordinary branches** (including bot and installer pushes), excluding the reserved `copilot-permission-test-*` refs used for setup permission checks, performs GitHub metadata and comparison requests, and never loads Bugbot or a code-changing agent. English is the default. English and Spanish notices use bundled catalogs; another configured BCP-47 locale may make one schema-constrained language request for the complete branch-notice catalog. Invalid or unavailable localization falls back atomically to English before any comment is written.
 
 This separation keeps pushes to `main`, `master`, `develop`, release branches, and intermediate feature branches observable without paying the cost or accepting the noise of the full commit-analysis pipeline.
 
@@ -209,7 +209,7 @@ exists. Its default exclusion of `master` and `develop` avoids irrelevant issue
 lookup, agent provisioning, duplicate PR analysis, higher API/model usage, and
 bot feedback loops on integration branches.
 
-The lightweight observer provides the useful part of all-branch visibility without broadening that expensive workflow. Repositories may still remove the commit-workflow exclusions deliberately, but branch synchronization does not require doing so.
+The lightweight observer provides the useful part of ordinary-branch visibility without broadening that expensive workflow. Repositories may still remove the commit-workflow exclusions deliberately, but branch synchronization does not require doing so.
 
 This repository runs agent-capable synchronization on the shared Mac/Ubuntu
 `codex` pool. Windows services omit `codex`; no new Windows Codex synchronization

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - '**'
+      - '!copilot-permission-test-*'
 
 jobs:
   branch-sync:

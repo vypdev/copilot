@@ -730,7 +730,11 @@
         ".github/workflows/copilot_issue_comment.yml",
         ".github/workflows/copilot_pull_request_comment.yml",
         ".github/workflows/agent-cli-provisioning.yml",
-        ".github/workflows/copilot_credential_health.yml"
+        ".github/workflows/copilot_credential_health.yml",
+        ".github/workflows/copilot_commit.yml",
+        ".github/workflows/copilot_branch_sync.yml",
+        "setup/workflows/copilot_commit.yml",
+        "setup/workflows/copilot_branch_sync.yml"
       ],
       "entrypoints": [
         "src/cli/commands/setup.ts",
@@ -882,7 +886,8 @@
         "src/infrastructure/composition/setup_runner_composition_root.ts",
         "src/utils/setup_installation_review.ts",
         "src/cli/setup_installation_review_presenter.ts",
-        "src/application/policies/setup_runner_installation_summary_policy.ts"
+        "src/application/policies/setup_runner_installation_summary_policy.ts",
+        "src/utils/setup_files.ts"
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
@@ -1017,7 +1022,8 @@
         "docs/single-actions/workflow-and-cli.mdx",
         "docs/security-operations/operations/verification.mdx",
         "docs/development/setup-pat-provider-audit-2026-10-06.md",
-        "docs/issues/comment-commands.mdx"
+        "docs/issues/comment-commands.mdx",
+        "docs/issues/branch-synchronization.mdx"
       ]
     },
     {
@@ -1833,7 +1839,7 @@
       "status": "implemented",
       "scope": "Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-13",
+      "lastVerified": "2026-10-18",
       "specs": [
         "specs/branch-synchronization-and-conflict-recovery.md"
       ],

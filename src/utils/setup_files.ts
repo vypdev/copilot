@@ -13,7 +13,7 @@ import {
 } from '../application/policies/setup_issue_workflow_policy';
 import { reconcileRepositoryAgentGuidance } from './repository_agent_guidance';
 import { renderApprovalObserverWorkflow } from '../domain/setup_approval_workflow';
-import { renderSetupWorkflowUpgrade } from './setup_workflow_upgrade';
+import { renderSetupWorkflowUpgrade, isSourceSetupPushWorkflow } from './setup_workflow_upgrade';
 import { inspectSetupInstallation, renderSetupRunnerSnapshot, SETUP_RUNNER_SNAPSHOT } from './setup_installation_review';
 import { REPOSITORY_AGENT_GUIDE_PATH } from '../application/policies/repository_agent_guidance_policy';
 
@@ -84,7 +84,7 @@ export function copySetupFiles(
     path.join(cwd, '.github', 'workflows'),
     (fileName) => (fileName.endsWith('.yml') || fileName.endsWith('.yaml'))
       && fileName !== 'copilot_pull_request_approval.yml'
-      && (!sourceInstallation || fileName === 'copilot_commit.yml' || !fs.existsSync(path.join(cwd, '.github', 'workflows', fileName)))
+      && (!sourceInstallation || isSourceSetupPushWorkflow(fileName) || !fs.existsSync(path.join(cwd, '.github', 'workflows', fileName)))
       && isSetupWorkflowEnabled(fileName, effectiveFeatures)
       && (!options.updateExistingWorkflows
         || approvedWorkflowFiles.has(fileName)
@@ -94,7 +94,7 @@ export function copySetupFiles(
       overwrite: options.updateExistingWorkflows,
       backupDirectory,
       renderContent: (template, existing, file) => renderSetupWorkflowUpgrade(template, existing,
-        options.setupConfiguration && file ? { file, runners: options.setupConfiguration.runners } : undefined),
+        options.setupConfiguration && file ? { file, runners: options.setupConfiguration.runners, source: sourceInstallation } : undefined),
     },
   );
   const approvalWorkflow = sourceInstallation && fs.existsSync(path.join(cwd, '.github/workflows/copilot_pull_request_approval.yml'))
@@ -293,11 +293,11 @@ export function compareSetupWorkflows(
       const source = path.join(sourceDirectory, file);
       const destination = path.join(cwd, '.github', 'workflows', file);
       if (!fs.existsSync(destination)) return { file, destination: `.github/workflows/${file}`, status: 'missing' as const };
-      if (sourceInstallation && file !== 'copilot_commit.yml') return { file, destination: `.github/workflows/${file}`, status: 'unchanged' as const };
+      if (sourceInstallation && !isSourceSetupPushWorkflow(file)) return { file, destination: `.github/workflows/${file}`, status: 'unchanged' as const };
       const expected = file === 'copilot_pull_request_approval.yml' && configuration
         ? renderApprovalObserverWorkflow(fs.readFileSync(source, 'utf8'), configuration.pullRequestApproval)
         : renderSetupWorkflowUpgrade(fs.readFileSync(source, 'utf8'), fs.readFileSync(destination, 'utf8'),
-          configuration ? { file, runners: configuration.runners } : undefined);
+          configuration ? { file, runners: configuration.runners, source: sourceInstallation } : undefined);
       const equal = isLocalSourceApprovalObserver(cwd, destination)
         || expected === fs.readFileSync(destination, 'utf8');
       return { file, destination: `.github/workflows/${file}`, status: equal ? 'unchanged' as const : 'changed' as const };

@@ -7,6 +7,7 @@ import { createDefaultSetupConfiguration } from '../../application/policies/setu
 import * as setupFiles from '../../utils/setup_files';
 import type { SetupBatchOperation } from '../../domain/setup_batch';
 import type { Dirent } from 'node:fs';
+import { load } from 'js-yaml';
 const id = 'a67c8e40-93be-43ed-a7ed-e07378c7e773';
 const operation: SetupBatchOperation = { schemaVersion: 1, operationId: id, organization: 'acme', targets: [{ repositoryId: 7,
   repository: 'repo', defaultBranch: 'master', baseSha: 'a'.repeat(40), planDigest: 'b'.repeat(64), status: 'ready', effects: [] }] };
@@ -187,8 +188,45 @@ describe('isolated setup rendering and private durable receipts', () => {
     const guidance = ['.copilot/AGENT_GUIDE.md', '.copilot/repository-profile.json', '.copilot/setup-manifest.json',
       '.agents/skills/copilot-repository-workflow/SKILL.md', 'AGENTS.md'].map(path => ({ path, content: `retained canonical source artifact: ${path}\n` }));
     const result = await renderer.render(configuration, [...native, ...guidance]);
-    expect(result.filter(file => [...native, ...guidance].some(existing => existing.path === file.path))).toEqual([]);
+    expect(result.filter(file => [...native.filter(item => !item.path.endsWith('copilot_branch_sync.yml')), ...guidance]
+      .some(existing => existing.path === file.path))).toEqual([]);
+    const observer = result.find(file => file.path.endsWith('/workflows/copilot_branch_sync.yml'));
+    const expectedObserver = load(native[1].content) as { on: { push: { branches: string[] } } };
+    expectedObserver.on.push.branches.push('!copilot-permission-test-*');
+    expect(load(observer!.content!)).toEqual(expectedObserver);
     expect(result.some(file => file.path === '.github/workflows/copilot_pull_request.yml')).toBe(true);
+  });
+  it.each(['copilot_commit.yml', 'copilot_branch_sync.yml'].flatMap(name =>
+    [{ label: 'LF', newline: '\n' }, { label: 'CRLF', newline: '\r\n' }].map(ending => ({ name, ...ending }))))(
+    'upgrades probe admission in native source $name with $label without changing its jobs or user workflows', async ({ name, newline }) => {
+      const renderer = new SetupBatchWorkspaceAdapter(); const configuration = createDefaultSetupConfiguration();
+      const path = `.github/workflows/${name}`;
+      const content = readFileSync(join(process.cwd(), path), 'utf8')
+        .replace(/\r?\n/gu, newline).replace(/^ {6}- '!copilot-permission-test-\*'\r?\n/mu, '');
+      expect(content).not.toContain("'!copilot-permission-test-*'");
+      const user = { path: '.github/workflows/user-ci.yml', content: 'on: push\njobs: {ci: {runs-on: ubuntu-latest, steps: [{run: "echo user"}]}}\n' };
+      const existing = [{ path, content }, user];
+      const result = await renderer.render(configuration, existing);
+      const updated = result.find(file => file.path === path)?.content;
+      expect(updated).toBeDefined();
+      const expected = load(content) as { on: { push: { branches: string[] } } };
+      expected.on.push.branches.push('!copilot-permission-test-*');
+      expect(load(updated!)).toEqual(expected);
+      expect(result.some(file => file.path === user.path)).toBe(false);
+      expect(result.some(file => file.path.startsWith('.copilot/setup-backups/') && file.content === content)).toBe(true);
+      const merged = new Map([...existing, ...result].map(file => [file.path, file]));
+      expect(await renderer.render(configuration, [...merged.values()])).toEqual([]);
+    },
+  );
+  it('preserves source push jobs without a root-local action step during the reviewed upgrade', async () => {
+    const renderer = new SetupBatchWorkspaceAdapter(); const configuration = createDefaultSetupConfiguration();
+    const source = { path: '.github/workflows/copilot_issue.yml', content: 'jobs: {native: {steps: [{uses: "./", with: {single-action: check_branch_sync_action}}]}}\n' };
+    const path = '.github/workflows/copilot_branch_sync.yml';
+    const content = 'on: {push: {branches: ["**"]}}\njobs: {custom: {runs-on: ubuntu-latest, permissions: {contents: read}, steps: [{run: "echo native", shell: bash}]}}\n';
+    const result = await renderer.render(configuration, [source, { path, content }]);
+    const expected = load(content) as { on: { push: { branches: string[] } } };
+    expected.on.push.branches.push('!copilot-permission-test-*');
+    expect(load(result.find(file => file.path === path)!.content!)).toEqual(expected);
   });
   it('generates missing source guidance instead of treating an incomplete source installation as canonical', async () => {
     const result = await new SetupBatchWorkspaceAdapter().render(createDefaultSetupConfiguration(), [

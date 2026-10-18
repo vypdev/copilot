@@ -38,9 +38,14 @@ export function hasRootLocalSetupAction(content: string): boolean {
   return callsRootAction(object(document(content)?.jobs));
 }
 
+/** Source push workflows receive only owned namespace filters, retaining native jobs. */
+export function isSourceSetupPushWorkflow(file: string): boolean {
+  return ['copilot_commit.yml', 'copilot_branch_sync.yml'].includes(file);
+}
+
 /** Keep a target's reviewed execution location while upgrading controlled workflow templates. */
 export function renderSetupWorkflowUpgrade(template: string, existing?: string,
-  selection?: { readonly file: string; readonly runners?: SetupRunnerConfiguration }): string {
+  selection?: { readonly file: string; readonly runners?: SetupRunnerConfiguration; readonly source?: boolean }): string {
   const errors = validateSetupRunners(selection?.runners);
   if (errors.length) throw new Error(errors.join(' '));
   if (!selection && !existing) return template;
@@ -48,21 +53,28 @@ export function renderSetupWorkflowUpgrade(template: string, existing?: string,
   if (!selection && previous?.jobs === undefined) return template;
   const previousJobs = previous?.jobs === undefined ? {} : object(previous.jobs);
   if (!previousJobs) throw new Error('Workflow jobs cannot be inspected; review the workflow separately.');
+  if (selection?.source === true && existing !== undefined && previous?.jobs === undefined) {
+    throw new Error('Source workflow jobs cannot be inspected; review the workflow separately.');
+  }
   // A root-local Copilot invocation is source-repository infrastructure, including its
   // release jobs and native validation. Consumer templates cannot replace it.
-  if (callsRootAction(previousJobs)) {
+  if (selection?.source === true && existing !== undefined || callsRootAction(previousJobs)) {
     const events = previous!.on;
     const hasPush = events === 'push' || Array.isArray(events) && events.includes('push')
       || !!object(events) && Object.prototype.hasOwnProperty.call(events, 'push');
-    // Branch synchronization deliberately observes every branch. Only the
-    // issue-centric Commit job needs this installation exclusion.
-    if (hasPush && object(previousJobs!['copilot-commits'])) {
+    // Preserve native jobs while excluding disposable probes at push admission.
+    // Branch Sync still observes installer and ordinary branches, including bot pushes.
+    const exclusions = selection?.file === 'copilot_commit.yml' || object(previousJobs['copilot-commits'])
+      ? ['!setup/copilot/**', '!copilot-permission-test-*']
+      : selection?.file === 'copilot_branch_sync.yml' || object(previousJobs['branch-sync']) ? ['!copilot-permission-test-*'] : [];
+    if (hasPush && exclusions.length > 0) {
       const push = object(object(events)?.push);
       if (!push || !Array.isArray(push.branches) || !push.branches.every(branch => typeof branch === 'string')) {
         throw new Error('Source Action push filters require separate workflow review before setup.');
       }
-      if (push.branches.at(-1) !== '!setup/copilot/**') {
-        push.branches = [...push.branches.filter(branch => branch !== '!setup/copilot/**'), '!setup/copilot/**'];
+      const branches = [...push.branches.filter(branch => !exclusions.includes(branch)), ...exclusions];
+      if (!isDeepStrictEqual(push.branches, branches)) {
+        push.branches = branches;
         return dump(previous, { noRefs: true, lineWidth: -1 });
       }
     }
