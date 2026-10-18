@@ -196,23 +196,28 @@ describe('isolated setup rendering and private durable receipts', () => {
     expect(load(observer!.content!)).toEqual(expectedObserver);
     expect(result.some(file => file.path === '.github/workflows/copilot_pull_request.yml')).toBe(true);
   });
-  it.each(['copilot_commit.yml', 'copilot_branch_sync.yml'])('upgrades probe admission in native source %s without changing its jobs or user workflows', async name => {
-    const renderer = new SetupBatchWorkspaceAdapter(); const configuration = createDefaultSetupConfiguration();
-    const path = `.github/workflows/${name}`;
-    const content = readFileSync(join(process.cwd(), path), 'utf8').replace("      - '!copilot-permission-test-*'\n", '');
-    const user = { path: '.github/workflows/user-ci.yml', content: 'on: push\njobs: {ci: {runs-on: ubuntu-latest, steps: [{run: "echo user"}]}}\n' };
-    const existing = [{ path, content }, user];
-    const result = await renderer.render(configuration, existing);
-    const updated = result.find(file => file.path === path)?.content;
-    expect(updated).toBeDefined();
-    const expected = load(content) as { on: { push: { branches: string[] } } };
-    expected.on.push.branches.push('!copilot-permission-test-*');
-    expect(load(updated!)).toEqual(expected);
-    expect(result.some(file => file.path === user.path)).toBe(false);
-    expect(result.some(file => file.path.startsWith('.copilot/setup-backups/') && file.content === content)).toBe(true);
-    const merged = new Map([...existing, ...result].map(file => [file.path, file]));
-    expect(await renderer.render(configuration, [...merged.values()])).toEqual([]);
-  });
+  it.each(['copilot_commit.yml', 'copilot_branch_sync.yml'].flatMap(name =>
+    [{ label: 'LF', newline: '\n' }, { label: 'CRLF', newline: '\r\n' }].map(ending => ({ name, ...ending }))))(
+    'upgrades probe admission in native source $name with $label without changing its jobs or user workflows', async ({ name, newline }) => {
+      const renderer = new SetupBatchWorkspaceAdapter(); const configuration = createDefaultSetupConfiguration();
+      const path = `.github/workflows/${name}`;
+      const content = readFileSync(join(process.cwd(), path), 'utf8')
+        .replace(/\r?\n/gu, newline).replace(/^ {6}- '!copilot-permission-test-\*'\r?\n/mu, '');
+      expect(content).not.toContain("'!copilot-permission-test-*'");
+      const user = { path: '.github/workflows/user-ci.yml', content: 'on: push\njobs: {ci: {runs-on: ubuntu-latest, steps: [{run: "echo user"}]}}\n' };
+      const existing = [{ path, content }, user];
+      const result = await renderer.render(configuration, existing);
+      const updated = result.find(file => file.path === path)?.content;
+      expect(updated).toBeDefined();
+      const expected = load(content) as { on: { push: { branches: string[] } } };
+      expected.on.push.branches.push('!copilot-permission-test-*');
+      expect(load(updated!)).toEqual(expected);
+      expect(result.some(file => file.path === user.path)).toBe(false);
+      expect(result.some(file => file.path.startsWith('.copilot/setup-backups/') && file.content === content)).toBe(true);
+      const merged = new Map([...existing, ...result].map(file => [file.path, file]));
+      expect(await renderer.render(configuration, [...merged.values()])).toEqual([]);
+    },
+  );
   it('preserves source push jobs without a root-local action step during the reviewed upgrade', async () => {
     const renderer = new SetupBatchWorkspaceAdapter(); const configuration = createDefaultSetupConfiguration();
     const source = { path: '.github/workflows/copilot_issue.yml', content: 'jobs: {native: {steps: [{uses: "./", with: {single-action: check_branch_sync_action}}]}}\n' };
