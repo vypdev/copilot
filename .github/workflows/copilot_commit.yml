@@ -1,21 +1,22 @@
 name: Copilot - Commit
-
-on:
+'on':
   push:
     branches:
       - '**'
       - '!master'
       - '!develop'
-
+      - '!setup/copilot/**'
 defaults:
   run:
     shell: bash
-
 jobs:
   copilot-commits:
     if: ${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}
     name: Copilot - Commit
-    runs-on: [self-hosted, codex, Linux]
+    runs-on:
+      - self-hosted
+      - codex
+      - Linux
     timeout-minutes: 120
     concurrency:
       group: copilot-push-${{ github.repository }}-${{ github.ref_name }}
@@ -28,7 +29,6 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-
       - name: Fetch push review range
         if: github.event.after != '0000000000000000000000000000000000000000'
         env:
@@ -40,7 +40,6 @@ jobs:
           if [ "$BRANCH_CREATED" != "true" ] && ! git cat-file -e "${BEFORE_SHA}^{commit}"; then
             echo "::notice::The previous push commit is unavailable; Bugbot will use its documented fallback scope."
           fi
-
       - uses: ./
         with:
           repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
