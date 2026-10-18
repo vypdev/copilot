@@ -207,6 +207,19 @@ function assertCopilotActionInputs(file, workflow) {
 }
 
 function runnerLabels(value) {
+  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    const literal = text => typeof text === 'string' && text.length > 0 && text.length <= 100
+      && text === text.trim() && !/[\p{Cc}\p{Cf}${}<>]/u.test(text);
+    const labels = Array.isArray(value.labels) ? value.labels : [value.labels];
+    if (Object.keys(value).some(key => !['group', 'labels'].includes(key))
+      || ('group' in value && !literal(value.group))
+      || labels.length < 1 || labels.length > 10 || !labels.every(literal)
+      || new Set(labels.map(label => label.toLowerCase())).size !== labels.length
+      || !labels.includes('self-hosted')) {
+      throw new Error('runs-on object must contain only an optional literal group and 1–10 unique literal self-hosted labels.');
+    }
+    return labels;
+  }
   return Array.isArray(value) ? value.map(String) : [String(value)];
 }
 
