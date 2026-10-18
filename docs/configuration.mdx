@@ -383,6 +383,10 @@ validation, credential health and lifecycle helpers use GitHub-hosted runners
 unless you explicitly choose the agent route for validation. Approval observers,
 merge-group checks and publication keep independent routes. Copilot's native
 source workflows retain their own reviewed routes and appear as exceptions.
+Source detection requires Copilot-specific inputs on a root-local invocation;
+an unrelated `uses: ./` does not suppress consumer upgrades. The provisioning
+check verifies `codex exec --help`, `opencode run --help` or Cursor's supported
+help surface, including rejection when a configured headless command is broken.
 
 An organization administrator can define the non-secret Actions Variable
 `COPILOT_RUNNER_PROFILES` through GitHub settings:

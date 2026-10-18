@@ -429,7 +429,9 @@ Manual access remains unverified and can be explicitly reviewed for an
 installation PR; unsupported routing blocks. Setup never schedules a probe job
 or changes runner permissions during discovery.
 
-Source workflows with root-local Action execution and source-owned guidance
+Source detection requires a root-local invocation with Copilot-specific runtime inputs, a canonical single-action command, or the explicit approval-observer contract. An unrelated local root Action never suppresses consumer upgrades. Provisioning exercises the provider-specific non-interactive help command and rejects a missing/broken headless surface. Repository-controlled terminal metadata is control-stripped, and questions without a default show the localized empty label.
+
+Source workflows with root-local Copilot Action execution and source-owned guidance
 remain preserved as complete assets. Explicit profile replacement affects
 managed consumer jobs and newly enabled optional source workflows; native source
 extensions retain their routes and are shown as exceptions. Source validation

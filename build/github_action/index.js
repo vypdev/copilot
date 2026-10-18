@@ -90326,6 +90326,7 @@ exports.renderSetupWorkflowUpgrade = renderSetupWorkflowUpgrade;
 const js_yaml_1 = __nccwpck_require__(783);
 const node_util_1 = __nccwpck_require__(47261);
 const setup_runner_policy_1 = __nccwpck_require__(91027);
+const action_types_1 = __nccwpck_require__(19625);
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
 const document = (value) => {
     try {
@@ -90345,9 +90346,19 @@ const runner = (value) => labels(value) || !!object(value)
     && Object.keys(value).length > 0
     && (object(value).group === undefined || typeof object(value).group === 'string' && labels(object(value).group))
     && (object(value).labels === undefined || labels(object(value).labels));
+const copilotCommands = new Set(Object.values(action_types_1.ACTIONS));
 const callsRootAction = (jobs) => !!jobs && Object.values(jobs).some(job => {
     const steps = object(job)?.steps;
-    return Array.isArray(steps) && steps.some(step => object(step)?.uses === './');
+    return Array.isArray(steps) && steps.some(step => {
+        const invocation = object(step);
+        const inputs = object(invocation?.with);
+        if (invocation?.uses !== './' || !inputs)
+            return false;
+        return typeof inputs['issue-workflow-profile'] === 'string' && typeof inputs['agent-provider'] === 'string'
+            || typeof inputs['single-action'] === 'string' && copilotCommands.has(inputs['single-action'])
+            || (inputs['pr-approval-observer'] === 'true' || inputs['pr-approval-observer'] === true)
+                && typeof inputs['pr-approval-policy'] === 'string';
+    });
 });
 function hasRootLocalSetupAction(content) {
     return callsRootAction(object(document(content)?.jobs));
@@ -90365,7 +90376,7 @@ function renderSetupWorkflowUpgrade(template, existing, selection) {
     const previousJobs = previous?.jobs === undefined ? {} : object(previous.jobs);
     if (!previousJobs)
         throw new Error('Workflow jobs cannot be inspected; review the workflow separately.');
-    // A root-local Action is source-repository infrastructure, including its
+    // A root-local Copilot invocation is source-repository infrastructure, including its
     // release jobs and native validation. Consumer templates cannot replace it.
     if (callsRootAction(previousJobs)) {
         const events = previous.on;

@@ -70,7 +70,11 @@ jobs:
             fi
             actual_version="$($executable --version | head -n 1)"
             [[ -n "${actual_version// }" ]] || { echo "$provider returned empty version output" >&2; exit 1; }
-            "$executable" --help >/dev/null
+            case "$provider" in
+              codex) "$executable" exec --help >/dev/null ;;
+              opencode) "$executable" run --help >/dev/null ;;
+              cursor) "$executable" --help >/dev/null ;;
+            esac
             [[ " $checked " == *" $provider "* ]] || checked="$checked $provider"
           done
 

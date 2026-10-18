@@ -48,7 +48,7 @@ describe('explicit routing preserves job contracts', () => {
     expect(renderSetupWorkflowUpgrade(template, undefined, { file: 'custom.yml', runners: configuration().runners })).toBe(template);
   });
   test('source root-local jobs retain complete content', () => {
-    const source = single('[self-hosted, native, Linux]').replace('run: echo fixture', 'uses: ./');
+    const source = single('[self-hosted, native, Linux]').replace('run: echo fixture', 'uses: ./\n        with: {single-action: check_branch_sync_action}');
     expect(renderSetupWorkflowUpgrade(single('ubuntu-latest'), source, { file: 'copilot_issue.yml', runners: selectSetupRunnerMode('hosted') })).toBe(source);
   });
   test('invalid selection fails before rendering YAML', () => expect(() => renderSetupWorkflowUpgrade(single('ubuntu-latest'), undefined,
@@ -60,6 +60,18 @@ describe('installation parity and reviewed migration', () => {
   const write = (path: string, content: string) => { const absolute = join(root, path); mkdirSync(dirname(absolute), { recursive: true }); writeFileSync(absolute, content); };
   beforeEach(() => { root = mkdtempSync(join(tmpdir(), 'copilot-runner-parity-')); });
   afterEach(() => rmSync(root, { recursive: true, force: true }));
+  test('an unrelated root action does not suppress consumer workflow upgrades', () => {
+    const config = configuration();
+    write('.github/workflows/build.yml', 'jobs: {build: {runs-on: ubuntu-latest, steps: [{uses: "./"}]}}\n');
+    write('.github/workflows/copilot_issue.yml', single('[self-hosted, old, Linux]'));
+    const review = inspectSetupInstallation(root, config);
+    expect(review.assets.find(asset => asset.path === '.github/workflows/copilot_issue.yml')?.status).toBe('customized');
+    expect(review.jobs.find(job => job.file === 'copilot_issue.yml')?.runsOn).toEqual({ group: 'vypdev', labels: config.runners.labels });
+    expect(compareSetupWorkflows(root, config.features, undefined, config).find(workflow => workflow.file === 'copilot_issue.yml')?.status).toBe('changed');
+    copySetupFiles(root, undefined, config.features, { setupConfiguration: config, updateExistingWorkflows: true, approvedWorkflowFiles: ['copilot_issue.yml'] });
+    expect(parsed(readFileSync(join(root, '.github/workflows/copilot_issue.yml'), 'utf8')).jobs['copilot-issues']['runs-on']).toEqual({ group: 'vypdev', labels: config.runners.labels });
+    expect(readFileSync(join(root, '.github/workflows/build.yml'), 'utf8')).toContain('uses: "./"');
+  });
   test('clean preview includes every optional asset and separates roles', () => {
     const config = configuration(); config.pullRequestApproval = { ...config.pullRequestApproval, mode: 'recommend' };
     const review = inspectSetupInstallation(root, config);
@@ -104,7 +116,7 @@ describe('installation parity and reviewed migration', () => {
     expect(existsSync(join(root, '.copilot/setup-backups'))).toBe(true);
   });
   test('source inventory preserves native workflows and generator-owned guidance', () => {
-    write('.github/workflows/copilot_issue.yml', single('[self-hosted, native, Linux]').replace('run: echo fixture', 'uses: ./'));
+    write('.github/workflows/copilot_issue.yml', single('[self-hosted, native, Linux]').replace('run: echo fixture', 'uses: ./\n        with: {single-action: check_branch_sync_action}'));
     write('.github/workflows/native-ci.yml', workflow('  own-ci:\n    runs-on: ${{ matrix.os }}\n    steps:\n      - run: echo native\n'));
     for (const path of ['.copilot/AGENT_GUIDE.md', '.copilot/repository-profile.json', '.copilot/setup-manifest.json', '.agents/skills/copilot-repository-workflow/SKILL.md']) write(path, readFileSync(join(packageRoot, path), 'utf8'));
     const review = inspectSetupInstallation(root, configuration());
@@ -117,7 +129,7 @@ describe('installation parity and reviewed migration', () => {
     expect(readFileSync(join(root, '.github/workflows/native-ci.yml'), 'utf8')).toContain('echo native');
   });
   test('partial source guidance blocks before any copy', () => {
-    write('.github/workflows/copilot_issue.yml', single('[self-hosted, Linux]').replace('run: echo fixture', 'uses: ./'));
+    write('.github/workflows/copilot_issue.yml', single('[self-hosted, Linux]').replace('run: echo fixture', 'uses: ./\n        with: {single-action: check_branch_sync_action}'));
     write('.copilot/AGENT_GUIDE.md', 'source guide');
     expect(inspectSetupInstallation(root, configuration()).blockers).toContain('Source guidance is incomplete. Restore it with the checked-in source generator before setup.');
     expect(() => copySetupFiles(root, undefined, configuration().features, { setupConfiguration: configuration() })).toThrow('Source guidance is incomplete');
@@ -195,7 +207,7 @@ describe('installation parity and reviewed migration', () => {
     expect(compatibleSetupRunnerSnapshot(JSON.stringify({ schemaVersion: 1, runners: configuration().runners, source: snapshot.source }))).toBe(false);
   });
   test.each(['jobs: {}\n---\njobs: {}', 'name: invalid native workflow'])('source native YAML must remain inspectable: %s', invalid => {
-    write('.github/workflows/copilot_issue.yml', single('[self-hosted, Linux]').replace('run: echo fixture', 'uses: ./'));
+    write('.github/workflows/copilot_issue.yml', single('[self-hosted, Linux]').replace('run: echo fixture', 'uses: ./\n        with: {single-action: check_branch_sync_action}'));
     write('.github/workflows/native-ci.yml', invalid);
     expect(() => inspectSetupInstallation(root, configuration())).toThrow(/Workflow/u);
   });

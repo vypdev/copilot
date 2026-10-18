@@ -2,6 +2,7 @@ import { dump, loadAll } from 'js-yaml';
 import { isDeepStrictEqual } from 'node:util';
 import type { SetupRunnerConfiguration } from '../domain/setup_runner';
 import { selectedSetupRunsOn, setupRunnerRole, validateSetupRunners } from '../application/policies/setup_runner_policy';
+import { ACTIONS } from '../data/model/action_types';
 
 const object = (value: unknown): Record<string, unknown> | undefined =>
   value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
@@ -20,9 +21,17 @@ const runner = (value: unknown): boolean => labels(value) || !!object(value)
   && Object.keys(value as object).length > 0
   && (object(value)!.group === undefined || typeof object(value)!.group === 'string' && labels(object(value)!.group))
   && (object(value)!.labels === undefined || labels(object(value)!.labels));
+const copilotCommands = new Set<string>(Object.values(ACTIONS));
 const callsRootAction = (jobs: Record<string, unknown> | undefined): boolean => !!jobs && Object.values(jobs).some(job => {
   const steps = object(job)?.steps;
-  return Array.isArray(steps) && steps.some(step => object(step)?.uses === './');
+  return Array.isArray(steps) && steps.some(step => {
+    const invocation = object(step); const inputs = object(invocation?.with);
+    if (invocation?.uses !== './' || !inputs) return false;
+    return typeof inputs['issue-workflow-profile'] === 'string' && typeof inputs['agent-provider'] === 'string'
+      || typeof inputs['single-action'] === 'string' && copilotCommands.has(inputs['single-action'])
+      || (inputs['pr-approval-observer'] === 'true' || inputs['pr-approval-observer'] === true)
+        && typeof inputs['pr-approval-policy'] === 'string';
+  });
 });
 
 export function hasRootLocalSetupAction(content: string): boolean {
@@ -39,7 +48,7 @@ export function renderSetupWorkflowUpgrade(template: string, existing?: string,
   if (!selection && previous?.jobs === undefined) return template;
   const previousJobs = previous?.jobs === undefined ? {} : object(previous.jobs);
   if (!previousJobs) throw new Error('Workflow jobs cannot be inspected; review the workflow separately.');
-  // A root-local Action is source-repository infrastructure, including its
+  // A root-local Copilot invocation is source-repository infrastructure, including its
   // release jobs and native validation. Consumer templates cannot replace it.
   if (callsRootAction(previousJobs)) {
     const events = previous!.on;

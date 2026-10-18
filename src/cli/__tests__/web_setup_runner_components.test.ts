@@ -75,3 +75,16 @@ test('pre-PAT discovery intent does not claim that inventory was already inspect
   const html = await markup('RunnerQuestionDetails', { question: { id: 'runners.discover' } }, 'es');
   expect(html).not.toContain('role="status"'); expect(html).not.toContain(runnerText('unavailable', 'es'));
 });
+
+test.each(['en', 'es', 'fr', 'pt'] as const)('%s uses a localized empty suggestion when the profile question has no default', locale => {
+  expect(suggestedQuestionAnswer({ id: 'runners.profileId', stateId: 'agent-runtime', label: 'Profile', kind: 'choice' }, locale)).toBe(tr('none', locale));
+});
+
+test('terminal review strips controls from every repository-controlled metadata field', () => {
+  const unsafe = 'visible\u001b[2J\r\n\u202Ehidden';
+  const result = renderSetupInstallationReview({ blockers: [unsafe], jobs: [{ ...review.jobs[0], file: unsafe, job: unsafe }],
+    assets: [{ path: unsafe, status: 'customized', enabled: true }], changes: [{ path: unsafe, before: 'safe\ncontent', after: null }] });
+  for (const control of ['\u001b', '\r', '\u202E']) expect(result).not.toContain(control);
+  expect(result).not.toContain(unsafe);
+  expect(result).toContain('safe\ncontent'); expect(result).toContain('visible[2Jhidden');
+});

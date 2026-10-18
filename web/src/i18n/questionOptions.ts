@@ -37,9 +37,9 @@ export function isQuestionOptionLocalized(questionId: string, option: string, lo
 
 export const optionCatalogs = catalogs;
 
-export function suggestedQuestionAnswer(question: SetupQuestion, locale: SetupLocale): string {
+export function suggestedQuestionAnswer(question: Omit<SetupQuestion, 'defaultValue'> & { readonly defaultValue?: SetupQuestion['defaultValue'] }, locale: SetupLocale): string {
   if (typeof question.defaultValue === 'boolean') return tr(question.defaultValue ? 'yes' : 'no', locale);
-  if (question.defaultValue === '') return tr('none', locale);
+  if (question.defaultValue === undefined || question.defaultValue === '') return tr('none', locale);
   return question.kind === 'choice' || question.kind === 'multi-select'
     ? questionOptionLabel(question.id, String(question.defaultValue), locale) : String(question.defaultValue);
 }

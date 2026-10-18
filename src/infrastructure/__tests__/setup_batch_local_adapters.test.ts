@@ -181,8 +181,8 @@ describe('isolated setup rendering and private durable receipts', () => {
   });
   it('retains version-owned source guidance and native workflows, including jobs without a root Action step', async () => {
     const renderer = new SetupBatchWorkspaceAdapter(); const configuration = createDefaultSetupConfiguration();
-    const native = [{ path: '.github/workflows/copilot_issue.yml', content: 'jobs: {native: {steps: [{uses: "./"}]}}\n' },
-      { path: '.github/workflows/copilot_branch_sync.yml', content: 'on: {push: {branches: ["**"]}}\njobs: {sync: {steps: [{uses: "./"}]}}\n' },
+    const native = [{ path: '.github/workflows/copilot_issue.yml', content: 'jobs: {native: {steps: [{uses: "./", with: {single-action: check_branch_sync_action}}]}}\n' },
+      { path: '.github/workflows/copilot_branch_sync.yml', content: 'on: {push: {branches: ["**"]}}\njobs: {sync: {steps: [{uses: "./", with: {single-action: check_branch_sync_action}}]}}\n' },
       { path: '.github/workflows/copilot_pull_request_merge_queue.yml', content: 'jobs: {queue: {steps: [{run: "true", shell: bash}]}}\n' }];
     const guidance = ['.copilot/AGENT_GUIDE.md', '.copilot/repository-profile.json', '.copilot/setup-manifest.json',
       '.agents/skills/copilot-repository-workflow/SKILL.md', 'AGENTS.md'].map(path => ({ path, content: `retained canonical source artifact: ${path}\n` }));
@@ -192,14 +192,14 @@ describe('isolated setup rendering and private durable receipts', () => {
   });
   it('generates missing source guidance instead of treating an incomplete source installation as canonical', async () => {
     const result = await new SetupBatchWorkspaceAdapter().render(createDefaultSetupConfiguration(), [
-      { path: '.github/workflows/copilot_issue.yml', content: 'jobs: {native: {steps: [{uses: "./"}]}}\n' },
+      { path: '.github/workflows/copilot_issue.yml', content: 'jobs: {native: {steps: [{uses: "./", with: {single-action: check_branch_sync_action}}]}}\n' },
     ]);
     expect(result.find(file => file.path === '.copilot/repository-profile.json')?.content).toContain('installation');
   });
   it.each(['.copilot/AGENT_GUIDE.md', '.copilot/repository-profile.json', '.copilot/setup-manifest.json',
     '.agents/skills/copilot-repository-workflow/SKILL.md'])('blocks partial source guidance with missing %s before reconciling any existing artifact', async missing => {
     const existing = [
-      { path: '.github/workflows/copilot_issue.yml', content: 'jobs: {native: {steps: [{uses: "./"}]}}\n' },
+      { path: '.github/workflows/copilot_issue.yml', content: 'jobs: {native: {steps: [{uses: "./", with: {single-action: check_branch_sync_action}}]}}\n' },
       ...['.copilot/AGENT_GUIDE.md', '.copilot/repository-profile.json', '.copilot/setup-manifest.json',
         '.agents/skills/copilot-repository-workflow/SKILL.md'].filter(path => path !== missing)
         .map(path => ({ path, content: `existing source artifact ${path}` })),

@@ -75384,12 +75384,12 @@ function renderSetupInstallationReview(review) {
     const content = (value) => value.split('\n').map(setup_terminal_choice_policy_1.safeTerminalChoiceText).join('\n');
     return ['Runner routing and installation parity',
         'Access and capacity are observations, not runner authentication or runtime verification. Unknown access needs administrator verification; busy/offline keeps the route and waits for capacity.',
-        ...review.jobs.map(job => `  ${job.file} / ${job.job}: ${job.role} · ${job.status}${job.retained ? ' · retained' : ''}\n    runs-on: ${JSON.stringify(job.runsOn)}`),
+        ...review.jobs.map(job => `  ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(job.file)} / ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(job.job)}: ${job.role} · ${job.status}${job.retained ? ' · retained' : ''}\n    runs-on: ${JSON.stringify(job.runsOn)}`),
         'Asset inventory (disabled optional capabilities remain visible):',
-        ...review.assets.map(asset => `  ${asset.path}: ${asset.status}${asset.enabled ? '' : ' · disabled'}`),
-        ...review.blockers.map(blocker => `  Blocked: ${blocker}`),
+        ...review.assets.map(asset => `  ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(asset.path)}: ${asset.status}${asset.enabled ? '' : ' · disabled'}`),
+        ...review.blockers.map(blocker => `  Blocked: ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(blocker)}`),
         'Complete workflow and routing changes (credential-like literals redacted):',
-        ...review.changes.map(change => `  ${change.path}\n--- before ---\n${content(change.before ?? '(missing)')}\n--- after ---\n${content(change.after ?? '(removed)')}`),
+        ...review.changes.map(change => `  ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(change.path)}\n--- before ---\n${content(change.before ?? '(missing)')}\n--- after ---\n${content(change.after ?? '(removed)')}`),
     ].join('\n');
 }
 
@@ -104479,6 +104479,7 @@ exports.renderSetupWorkflowUpgrade = renderSetupWorkflowUpgrade;
 const js_yaml_1 = __nccwpck_require__(783);
 const node_util_1 = __nccwpck_require__(47261);
 const setup_runner_policy_1 = __nccwpck_require__(91027);
+const action_types_1 = __nccwpck_require__(19625);
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
 const document = (value) => {
     try {
@@ -104498,9 +104499,19 @@ const runner = (value) => labels(value) || !!object(value)
     && Object.keys(value).length > 0
     && (object(value).group === undefined || typeof object(value).group === 'string' && labels(object(value).group))
     && (object(value).labels === undefined || labels(object(value).labels));
+const copilotCommands = new Set(Object.values(action_types_1.ACTIONS));
 const callsRootAction = (jobs) => !!jobs && Object.values(jobs).some(job => {
     const steps = object(job)?.steps;
-    return Array.isArray(steps) && steps.some(step => object(step)?.uses === './');
+    return Array.isArray(steps) && steps.some(step => {
+        const invocation = object(step);
+        const inputs = object(invocation?.with);
+        if (invocation?.uses !== './' || !inputs)
+            return false;
+        return typeof inputs['issue-workflow-profile'] === 'string' && typeof inputs['agent-provider'] === 'string'
+            || typeof inputs['single-action'] === 'string' && copilotCommands.has(inputs['single-action'])
+            || (inputs['pr-approval-observer'] === 'true' || inputs['pr-approval-observer'] === true)
+                && typeof inputs['pr-approval-policy'] === 'string';
+    });
 });
 function hasRootLocalSetupAction(content) {
     return callsRootAction(object(document(content)?.jobs));
@@ -104518,7 +104529,7 @@ function renderSetupWorkflowUpgrade(template, existing, selection) {
     const previousJobs = previous?.jobs === undefined ? {} : object(previous.jobs);
     if (!previousJobs)
         throw new Error('Workflow jobs cannot be inspected; review the workflow separately.');
-    // A root-local Action is source-repository infrastructure, including its
+    // A root-local Copilot invocation is source-repository infrastructure, including its
     // release jobs and native validation. Consumer templates cannot replace it.
     if (callsRootAction(previousJobs)) {
         const events = previous.on;
