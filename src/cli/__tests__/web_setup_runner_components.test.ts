@@ -40,7 +40,7 @@ describe('runner routing and parity review UI', () => {
     const plan = { ...buildSetupPlan(createDefaultSetupConfiguration()), installationReview: review };
     expect(toWebSetupPlan(plan).installationReview).toEqual(review);
     const terminal = renderSetupInstallationReview(review);
-    expect(terminal).toContain('pending-capacity'); expect(terminal).toContain('vypdev'); expect(terminal).toContain('\nruns-on:');
+    expect(terminal).toContain('pending-capacity'); expect(terminal).toContain('vypdev'); expect(terminal).toContain('runs-on:');
     expect(renderSetupPlan(plan)).toContain('pending-capacity');
   });
   test.each(['en', 'es', 'fr', 'pt'] as const)('%s exposes manual recovery when discovery is unavailable', async locale => {
@@ -86,7 +86,7 @@ test('terminal review strips controls from every repository-controlled metadata 
     assets: [{ path: unsafe, status: 'customized', enabled: true }], changes: [{ path: unsafe, before: 'safe\ncontent', after: null }] });
   for (const control of ['\u001b', '\r', '\u202E']) expect(result).not.toContain(control);
   expect(result).not.toContain(unsafe);
-  expect(result).toContain('safe\ncontent'); expect(result).toContain('visible[2Jhidden');
+  expect(result).not.toContain('safe\ncontent'); expect(result).toContain('visible[2Jhidden');
 });
 
 test('serialized runner routes strip C1 controls that JSON.stringify preserves', () => {
@@ -99,5 +99,24 @@ test.each(['en', 'es', 'fr', 'pt'] as const)('%s discloses the actual limit of w
   const html = await markup('InstallationReview', { review }, locale);
   expect(html).toContain(runnerText('redactionNotice', locale));
   expect(runnerText('redactionNotice', locale)).not.toBe('redactionNotice');
-  expect(renderSetupInstallationReview(review)).toContain('other literal values may remain');
+  expect(renderSetupInstallationReview(review)).toContain('literal contents omitted from terminal logs');
+});
+
+
+test('terminal summaries never log workflow literal values, including unrecognized custom secrets', () => {
+  const privateValue = 'custom-sensitive-literal-not-a-known-token';
+  const result = renderSetupInstallationReview({ ...review, changes: [
+    { path: 'created.yml', before: null, after: `env:\n  CUSTOM_CREDENTIAL: ${privateValue}` },
+    { path: 'updated.yml', before: `run: echo ${privateValue}`, after: `env:\n  CUSTOM: ${privateValue}` },
+    { path: 'removed.yml', before: privateValue, after: null },
+  ] });
+  expect(result).not.toContain(privateValue); expect(result).not.toContain('CUSTOM_CREDENTIAL');
+  expect(result).toContain('Create created.yml'); expect(result).toContain('Update updated.yml'); expect(result).toContain('Remove removed.yml');
+  expect(result).toContain('--web');
+});
+
+test.each(['en', 'es', 'fr', 'pt'] as const)('%s identifies credential verification separately from ordinary validation', async locale => {
+  const html = await markup('InstallationReview', { review: { ...review, jobs: [{ ...review.jobs[0], role: 'credential-health', runsOn: 'ubuntu-latest', status: 'hosted' }] } }, locale);
+  expect(html).toContain(runnerText('credential-health', locale)); expect(runnerText('credential-health', locale)).not.toBe('credential-health');
+  expect(html).toContain('ubuntu-latest');
 });

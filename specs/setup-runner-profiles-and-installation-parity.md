@@ -57,7 +57,7 @@ Not applicable: this is a prospective companion and does not reconstruct an impl
 | Copilot maintainer | Reconcile source and consumer assets | Source setup/parity review | Inventory, compatibility results, PR diff |
 | Reviewer/operator | Verify outcome and recover safely | Installation PR/checks | Job summary, checks, troubleshooting docs |
 
-A **profile** is bounded non-secret routing configuration. A **role** is an execution purpose: agent, ordinary validation, trusted observer, or release/publication. **Readiness** means the plan has sufficient evidence to propose the selected route; it does not guarantee capacity or group authorization. **Parity inventory** classifies each relevant asset as shared/generated, intentional source-only extension, missing, customized, or incompatible with the installed generator version. **Snapshot** means the reviewed profile values stored in a proposed installation plan; it is not a Secret copy.
+A **profile** is bounded non-secret routing configuration. A **role** is an execution purpose: agent, ordinary validation, hosted credential verification, trusted observer, or release/publication. **Readiness** means the plan has sufficient evidence to propose the selected route; it does not guarantee capacity or group authorization. **Parity inventory** classifies each relevant asset as shared/generated, intentional source-only extension, missing, customized, or incompatible with the installed generator version. **Snapshot** means the reviewed profile values stored in a proposed installation plan; it is not a Secret copy.
 
 ## 4. Goals
 
@@ -302,7 +302,7 @@ The initial floor is 56 distinct cases. The allocations below are disjoint; para
 | Migration/idempotency/partial recovery | 6 | Backup, stale plan, repeated setup, customization preservation, partial batch retry, rollback evidence |
 | **Total** | **56** | No double counting |
 
-New pure decisions require 100% branch coverage. Repository-wide coverage budgets remain unchanged; changed modules must meet or exceed their existing configured thresholds. Add table-driven domain tests, application replay/race tests, adapter contract tests, structural YAML/workflow checks, security tests for untrusted content, and golden UX fixtures with semantic assertions. Use deterministic IDs, clocks, and fakes; no real waits or live services in automated tests. Manual UX evidence must show readable role routing, readiness, and full diff in CLI and web at narrow and normal widths. Controlled live acceptance covers a clean consumer, organization-profile reuse across selected repositories, and an existing source installation.
+New pure decisions require 100% branch coverage. Repository-wide coverage budgets remain unchanged; changed modules must meet or exceed their existing configured thresholds. Add table-driven domain tests, application replay/race tests, adapter contract tests, structural YAML/workflow checks, security tests for untrusted content, and golden UX fixtures with semantic assertions. Use deterministic IDs, clocks, and fakes; no real waits or live services in automated tests. Manual UX evidence must show readable role routing/readiness and complete changed-file summaries in CLI and web, plus the explicitly opened full local web diff at narrow and normal widths. Controlled live acceptance covers a clean consumer, organization-profile reuse across selected repositories, and an existing source installation.
 
 ## 15. Documentation and discoverability
 
@@ -356,7 +356,7 @@ Document backup, migration, manual YAML ownership, and rollback. Examples must m
 
 - [ ] Every normative requirement has an acceptance scenario and traceability entry.
 - [ ] Domain/application/adapter/presentation boundaries and structural workflow constraints pass.
-- [ ] At least 48 distinct cases pass in the stated allocation; new pure decisions have full branch coverage; existing budgets remain satisfied.
+- [ ] At least 56 distinct cases pass in the stated allocation; new pure decisions have full branch coverage; existing budgets remain satisfied.
 - [ ] Defaults, bounds, precedence, snapshots, stale-plan behavior, and migration agree across CLI and web.
 - [ ] Pending, action-required, blocked, partial, and complete content is reviewed for accessibility, localization, responsive use, and sanitization.
 - [ ] No Secret values are read/copied; no shared resources are overwritten; no access is broadened; observer and publication protections remain.
@@ -385,8 +385,10 @@ characters for a selected self-hosted route), and `validation` (`hosted` or
 Self-hosted selections require `self-hosted` and a Linux or macOS label because
 the generated workflows require Bash; Windows service Codex execution is outside
 this contract. The validation choice is an advanced exception, never a global
-replacement. Agent CLI provisioning uses the agent route. Credential health and
-ordinary automation use the validation route. Merge-group checks and consumer
+replacement. Agent CLI provisioning uses the agent route. Ordinary automation uses the validation route. Credential verification is a
+separate protected role: explicit managed-route replacement always uses
+`ubuntu-latest` for it, regardless of ordinary validation. Retain preserves
+existing reviewed routing as a visible exception. Merge-group checks and consumer
 approval observers keep their trusted hosted templates. Consumer publication
 and source npm/OIDC jobs keep their publication route.
 
@@ -440,8 +442,7 @@ conditions and branch filters. The parity inventory includes disabled optional
 assets, so missing health/provisioning workflows remain visible even when their
 features are off. Unknown generator metadata is classified as incompatible and
 retained or blocked before regeneration; setup does not claim it can migrate a
-future generator. Full before/after workflow content is available in review,
-with recognized credential formats masked in presentation. The CLI and web explicitly disclose that arbitrary hardcoded workflow values can remain visible; Secret API values are never read for the preview. This is not a universal data-loss-prevention guarantee. Existing backups and immutable installer receipts remain the recovery mechanism.
+future generator. CLI logs contain only bounded route and changed-file summaries; they never include workflow bodies or scalar credential values from those bodies. The CLI points operators to `--web` for full before/after contents in the paired local view before approval. That view masks recognized credential formats and explicitly discloses that arbitrary hardcoded workflow values can remain visible; Secret API values are never read for the preview. This is not a universal data-loss-prevention guarantee. Existing backups and immutable installer receipts remain the recovery mechanism.
 
 Primary provider references:
 [runner API](https://docs.github.com/en/rest/actions/self-hosted-runners),

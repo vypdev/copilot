@@ -50553,18 +50553,20 @@ function setupRunnerRole(file, job) {
         if (['validate', 'prepare-version-files', 'promote', 'resume-reconciliation', 'report-failure'].includes(job))
             return 'validation';
     }
-    const validationJobs = {
+    const helperJobs = {
         'copilot_branch_sync.yml': ['branch-sync'], 'copilot_close_inactive_issues.yml': ['copilot-inactive-issues'],
         'copilot_pull_request_review_state.yml': ['copilot-pull-request-review-state'],
         'copilot_deployment_orchestration.yml': ['resolve-operation', 'mutate'],
         'copilot_credential_health.yml': ['verify-pat', 'verify-openai', 'verify-anthropic', 'verify-google', 'verify-openrouter', 'verify-cursor', 'verify-opencode', 'verify-codex-api-key'],
     };
-    return validationJobs[file]?.includes(job) ? 'validation' : undefined;
+    return helperJobs[file]?.includes(job) ? file === 'copilot_credential_health.yml' ? 'credential-health' : 'validation' : undefined;
 }
 function selectedSetupRunsOn(configuration, role) {
     if (!configuration || configuration.mode === 'retain' || role === undefined
         || ['observer', 'publication', 'isolated'].includes(role))
         return undefined;
+    if (role === 'credential-health')
+        return 'ubuntu-latest';
     if (configuration.mode === 'hosted' || role === 'validation' && configuration.validation === 'hosted')
         return 'ubuntu-latest';
     return configuration.group ? { group: configuration.group, labels: [...configuration.labels] } : [...configuration.labels];

@@ -19,7 +19,7 @@ export const SETUP_RUNNER_REGISTRY = 'COPILOT_RUNNER_PROFILES';
 export const DEFAULT_SETUP_RUNNERS: SetupRunnerConfiguration = Object.freeze({
   mode: 'retain', profileId: '', group: '', labels: Object.freeze([]), validation: 'hosted',
 });
-export type SetupRunnerRole = 'agent' | 'validation' | 'observer' | 'publication' | 'isolated';
+export type SetupRunnerRole = 'agent' | 'validation' | 'credential-health' | 'observer' | 'publication' | 'isolated';
 export type SetupRunsOn = string | readonly string[] | { readonly group?: string; readonly labels?: string | readonly string[] };
 export interface SetupRunnerCandidate {
   readonly id: number;

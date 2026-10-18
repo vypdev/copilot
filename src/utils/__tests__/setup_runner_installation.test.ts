@@ -92,7 +92,7 @@ describe('installation parity and reviewed migration', () => {
     const config = configuration(); config.runners.validation = 'agent';
     const review = inspectSetupInstallation(root, config);
     expect(review.jobs.find(job => job.file === 'agent-cli-provisioning.yml')?.runsOn).toEqual({ group: 'vypdev', labels: config.runners.labels });
-    expect(review.jobs.find(job => job.file === 'copilot_credential_health.yml')?.runsOn).toEqual({ group: 'vypdev', labels: config.runners.labels });
+    expect(review.jobs.find(job => job.file === 'copilot_credential_health.yml')).toMatchObject({ role: 'credential-health', runsOn: 'ubuntu-latest' });
     expect(review.jobs.find(job => job.role === 'isolated')?.runsOn).toBe('ubuntu-latest');
   });
   test('preview and copy use identical routing and repeat idempotently', () => {
@@ -227,4 +227,14 @@ test.each([false, true])('local discovery intent=%s is excluded from installed r
   expect(snapshot).not.toContain('discover'); expect(compatibleSetupRunnerSnapshot(snapshot)).toBe(true);
   const altered = JSON.parse(snapshot); altered.runners.discover = discover;
   expect(compatibleSetupRunnerSnapshot(JSON.stringify(altered))).toBe(false);
+});
+
+test('ordinary self-hosted validation never reroutes credential-bearing health jobs', () => {
+  const config = configuration(); const runners = { ...config.runners, validation: 'agent' as const };
+  const template = readFileSync(join(packageRoot, 'setup/workflows/copilot_credential_health.yml'), 'utf8');
+  const existing = template.replace(/runs-on: ubuntu-latest/g, 'runs-on: [self-hosted, prior, Linux]');
+  const upgraded = renderSetupWorkflowUpgrade(template, existing, { file: 'copilot_credential_health.yml', runners });
+  expect(load(upgraded)).toEqual(load(template));
+  expect(Object.values(parsed(upgraded).jobs).length).toBeGreaterThan(1);
+  expect(Object.values(parsed(upgraded).jobs).every(job => job['runs-on'] === 'ubuntu-latest')).toBe(true);
 });

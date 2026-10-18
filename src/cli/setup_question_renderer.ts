@@ -23,6 +23,7 @@ export class ConsoleSetupQuestionRenderer implements SetupQuestionRenderer {
             ].join('\n')
           : [
               'First, choose the setup options that affect your temporary PAT permissions.',
+              'For full workflow contents, start with copilot setup --web. Terminal logs show routes and file actions.',
               'These answers carry into the later full wizard and are not asked there again',
               'unless you choose to review them here. No GitHub changes happen in this step.',
             ].join('\n'),

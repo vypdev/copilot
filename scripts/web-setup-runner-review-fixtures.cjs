@@ -66,7 +66,7 @@ const installationReview = {
   jobs: [
     { file: 'copilot_issue.yml', job: 'copilot-issues', role: 'agent', runsOn: { group: 'vypdev', labels: ['self-hosted', 'codex', 'Linux'] }, status: 'pending-capacity', retained: false },
     { file: 'agent-cli-provisioning.yml', job: 'verify-agent-clis', role: 'agent', runsOn: { group: 'vypdev', labels: ['self-hosted', 'codex', 'Linux'] }, status: 'access-unknown', retained: false },
-    { file: 'copilot_credential_health.yml', job: 'verify-pat', role: 'validation', runsOn: 'ubuntu-latest', status: 'hosted', retained: false },
+    { file: 'copilot_credential_health.yml', job: 'verify-pat', role: 'credential-health', runsOn: 'ubuntu-latest', status: 'hosted', retained: false },
     { file: 'copilot_pull_request_approval.yml', job: 'observe-approval', role: 'observer', runsOn: 'ubuntu-latest', status: 'hosted', retained: true },
     { file: 'release_workflow.yml', job: 'publish-npm', role: 'publication', runsOn: 'ubuntu-latest', status: 'hosted', retained: true },
   ],

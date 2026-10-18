@@ -52065,25 +52065,25 @@ const copy = {
         summary: 'Keep installed routing, choose GitHub-hosted jobs, or explicitly select an existing self-hosted profile.',
         where: 'Changes generated workflow runs-on values; runner access, Secrets and authentication are separate.',
         how: 'Retain keeps existing jobs. Hosted explicitly replaces managed agent/validation routes. A reusable profile comes from COPILOT_RUNNER_PROFILES; manual entry needs exact existing group and labels.',
-        why: 'Different job roles have different trust and runtime requirements.', effect: 'Observer and publication routes stay independent. Native source workflows remain visible exceptions. Nothing grants access or falls back silently.',
+        why: 'Different job roles have different trust and runtime requirements.', effect: 'Credential verification stays hosted; observer and publication routes stay independent. Native source workflows remain visible exceptions. Nothing grants access or falls back silently.',
         verify: 'Review effective YAML, repository access and runner authentication. Busy/offline means pending capacity; unknown access needs verification.', example: 'Group vypdev; labels self-hosted,codex,Linux; ordinary validation hosted.' },
     es: { labels: ['¿Dónde deben ejecutarse los jobs de Copilot?', 'Perfil de runners reutilizable', 'Grupo de runners existente (vacío usa etiquetas)', 'Etiquetas exactas del runner, separadas por comas', 'Runner para validaciones ordinarias'],
         summary: 'Conserva las rutas instaladas, elige runners de GitHub o selecciona expresamente un perfil self-hosted existente.',
         where: 'Cambia runs-on en los workflows generados; acceso, Secrets y autenticación se verifican por separado.',
         how: 'Conservar mantiene los jobs existentes. GitHub sustituye expresamente las rutas gestionadas de agente y validación. Un perfil reutilizable procede de COPILOT_RUNNER_PROFILES; la entrada manual necesita el grupo y las etiquetas exactos.',
-        why: 'Cada tipo de job tiene requisitos de confianza y ejecución distintos.', effect: 'Observador y publicación conservan rutas independientes. Los workflows nativos se muestran como excepciones. No se concede acceso ni se cambia de entorno automáticamente.',
+        why: 'Cada tipo de job tiene requisitos de confianza y ejecución distintos.', effect: 'La verificación de credenciales permanece en GitHub; observador y publicación conservan rutas independientes. Los workflows nativos se muestran como excepciones. No se concede acceso ni se cambia de entorno automáticamente.',
         verify: 'Revisa YAML, acceso del repositorio y autenticación del runner. Ocupado o desconectado indica capacidad pendiente; acceso desconocido requiere verificación.', example: 'Grupo vypdev; etiquetas self-hosted,codex,Linux; validación ordinaria en GitHub.' },
     fr: { labels: ['Où exécuter les jobs Copilot ?', 'Profil de runners réutilisable', 'Groupe existant (vide utilise les étiquettes)', 'Étiquettes exactes séparées par des virgules', 'Runner de validation ordinaire'],
         summary: 'Conservez les routes installées, choisissez GitHub ou sélectionnez explicitement un profil auto-hébergé existant.',
         where: 'Modifie runs-on dans les workflows générés ; accès, Secrets et authentification restent distincts.',
         how: 'Conserver maintient les jobs existants. GitHub remplace explicitement les routes gérées. Le profil partagé provient de COPILOT_RUNNER_PROFILES ; la saisie manuelle exige le groupe et les étiquettes exacts.',
-        why: 'Chaque rôle a des exigences de confiance et d’exécution distinctes.', effect: 'Observation et publication gardent leurs routes. Les workflows natifs restent des exceptions visibles. Aucun accès accordé ni repli automatique.',
+        why: 'Chaque rôle a des exigences de confiance et d’exécution distinctes.', effect: 'La vérification des identifiants reste sur GitHub ; observation et publication gardent leurs routes. Les workflows natifs restent des exceptions visibles. Aucun accès accordé ni repli automatique.',
         verify: 'Vérifiez le YAML, l’accès du dépôt et l’authentification. Occupé/hors ligne indique une capacité en attente ; l’accès inconnu doit être vérifié.', example: 'Groupe vypdev ; étiquettes self-hosted,codex,Linux ; validation sur GitHub.' },
     pt: { labels: ['Onde executar os jobs do Copilot?', 'Perfil reutilizável de runners', 'Grupo existente (vazio usa etiquetas)', 'Etiquetas exatas separadas por vírgulas', 'Runner de validação normal'],
         summary: 'Mantenha as rotas instaladas, escolha GitHub ou selecione explicitamente um perfil self-hosted existente.',
         where: 'Altera runs-on nos workflows gerados; acesso, Secrets e autenticação são independentes.',
         how: 'Manter conserva os jobs existentes. GitHub substitui explicitamente as rotas geridas. O perfil partilhado vem de COPILOT_RUNNER_PROFILES; a entrada manual exige grupo e etiquetas exatos.',
-        why: 'Cada função tem requisitos de confiança e execução diferentes.', effect: 'Observador e publicação mantêm rotas independentes. Workflows nativos são exceções visíveis. Não concede acesso nem muda automaticamente de ambiente.',
+        why: 'Cada função tem requisitos de confiança e execução diferentes.', effect: 'A verificação de credenciais permanece no GitHub; observador e publicação mantêm rotas independentes. Workflows nativos são exceções visíveis. Não concede acesso nem muda automaticamente de ambiente.',
         verify: 'Reveja YAML, acesso do repositório e autenticação. Ocupado/offline indica capacidade pendente; acesso desconhecido exige verificação.', example: 'Grupo vypdev; etiquetas self-hosted,codex,Linux; validação normal no GitHub.' },
 };
 const fields = ['mode', 'profileId', 'group', 'labels', 'validation'];
@@ -52277,18 +52277,20 @@ function setupRunnerRole(file, job) {
         if (['validate', 'prepare-version-files', 'promote', 'resume-reconciliation', 'report-failure'].includes(job))
             return 'validation';
     }
-    const validationJobs = {
+    const helperJobs = {
         'copilot_branch_sync.yml': ['branch-sync'], 'copilot_close_inactive_issues.yml': ['copilot-inactive-issues'],
         'copilot_pull_request_review_state.yml': ['copilot-pull-request-review-state'],
         'copilot_deployment_orchestration.yml': ['resolve-operation', 'mutate'],
         'copilot_credential_health.yml': ['verify-pat', 'verify-openai', 'verify-anthropic', 'verify-google', 'verify-openrouter', 'verify-cursor', 'verify-opencode', 'verify-codex-api-key'],
     };
-    return validationJobs[file]?.includes(job) ? 'validation' : undefined;
+    return helperJobs[file]?.includes(job) ? file === 'copilot_credential_health.yml' ? 'credential-health' : 'validation' : undefined;
 }
 function selectedSetupRunsOn(configuration, role) {
     if (!configuration || configuration.mode === 'retain' || role === undefined
         || ['observer', 'publication', 'isolated'].includes(role))
         return undefined;
+    if (role === 'credential-health')
+        return 'ubuntu-latest';
     if (configuration.mode === 'hosted' || role === 'validation' && configuration.validation === 'hosted')
         return 'ubuntu-latest';
     return configuration.group ? { group: configuration.group, labels: [...configuration.labels] } : [...configuration.labels];
@@ -75381,15 +75383,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.renderSetupInstallationReview = renderSetupInstallationReview;
 const setup_terminal_choice_policy_1 = __nccwpck_require__(64662);
 function renderSetupInstallationReview(review) {
-    const content = (value) => value.split('\n').map(setup_terminal_choice_policy_1.safeTerminalChoiceText).join('\n');
     return ['Runner routing and installation parity',
         'Access and capacity are observations, not runner authentication or runtime verification. Unknown access needs administrator verification; busy/offline keeps the route and waits for capacity.',
         ...review.jobs.map(job => `  ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(job.file)} / ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(job.job)}: ${job.role} · ${job.status}${job.retained ? ' · retained' : ''}\n    runs-on: ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(JSON.stringify(job.runsOn))}`),
         'Asset inventory (disabled optional capabilities remain visible):',
         ...review.assets.map(asset => `  ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(asset.path)}: ${asset.status}${asset.enabled ? '' : ' · disabled'}`),
         ...review.blockers.map(blocker => `  Blocked: ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(blocker)}`),
-        'Complete workflow and routing changes (recognized credential formats masked; other literal values may remain):',
-        ...review.changes.map(change => `  ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(change.path)}\n--- before ---\n${content(change.before ?? '(missing)')}\n--- after ---\n${content(change.after ?? '(removed)')}`),
+        'Workflow file changes (literal contents omitted from terminal logs; use --web for the full local diff):',
+        ...review.changes.map(change => `  ${change.before === null ? 'Create' : change.after === null ? 'Remove' : 'Update'} ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(change.path)}`),
     ].join('\n');
 }
 
@@ -75965,6 +75966,7 @@ class ConsoleSetupQuestionRenderer {
                 ].join('\n')
                 : [
                     'First, choose the setup options that affect your temporary PAT permissions.',
+                    'For full workflow contents, start with copilot setup --web. Terminal logs show routes and file actions.',
                     'These answers carry into the later full wizard and are not asked there again',
                     'unless you choose to review them here. No GitHub changes happen in this step.',
                 ].join('\n'), this.choiceReviewPass > 1 ? 'Review saved setup choices' : 'Setup PAT permission intent'));

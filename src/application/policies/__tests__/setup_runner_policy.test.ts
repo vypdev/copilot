@@ -107,7 +107,7 @@ describe('job roles and explicit replacement', () => {
     ['release_workflow.yml', 'publish', 'publication'], ['hotfix_workflow.yml', 'publish-npm', 'publication'],
     ['release_workflow.yml', 'prepare-version-files', 'validation'], ['hotfix_workflow.yml', 'validate', 'validation'],
     ['release_workflow.yml', 'custom-job', undefined], ['custom.yml', 'copilot-issues', undefined],
-    ['copilot_branch_sync.yml', 'branch-sync', 'validation'], ['copilot_credential_health.yml', 'verify-pat', 'validation'],
+    ['copilot_branch_sync.yml', 'branch-sync', 'validation'], ['copilot_credential_health.yml', 'verify-pat', 'credential-health'],
     ['copilot_issue.yml', 'custom-job', undefined],
   ])('keeps role identity local to a known workflow %s/%s', (file, job, role) => expect(setupRunnerRole(file, job)).toBe(role));
   test.each(['observer', 'publication', 'isolated', undefined] as const)('protects the %s route', role => expect(selectedSetupRunsOn(manual, role)).toBeUndefined());
@@ -145,4 +145,10 @@ describe('access and capacity never select a fallback', () => {
     expect(setupRunnerReadiness(['self-hosted', 'macOS'], { status: 'available', candidates: [], groups: [] })).toBe('access-unknown');
     expect(setupRunnerReadiness({ group: 'other' }, inventory)).toBe('access-unknown');
   });
+});
+
+
+test.each([manual, { ...manual, validation: 'agent' as const }, selected, selectSetupRunnerMode('hosted')])('credential verification remains hosted independently of ordinary validation %#', config => {
+  expect(selectedSetupRunsOn(config, 'credential-health')).toBe('ubuntu-latest');
+  expect(selectedSetupRunsOn(DEFAULT_SETUP_RUNNERS, 'credential-health')).toBeUndefined();
 });
