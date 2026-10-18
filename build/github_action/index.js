@@ -50470,6 +50470,8 @@ function parseSetupRunnerProfiles(value) {
 }
 /** A repository override shadows the organization registry even when it is invalid. */
 function setupRunnerRegistry(remote) {
+    // Unknown repository inventory cannot prove that a higher-priority override is absent.
+    // A readable organization registry alone must not authorize selecting or reusing its route.
     if (!remote || remote.repositoryVariablesAccess !== 'available')
         return { profiles: [], status: 'unavailable' };
     const repository = remote.repositoryVariables.filter(variable => variable.name.toUpperCase() === setup_runner_1.SETUP_RUNNER_REGISTRY);

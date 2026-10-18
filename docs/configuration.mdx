@@ -402,6 +402,10 @@ An organization administrator can define the non-secret Actions Variable
 {"schemaVersion":1,"profiles":[{"id":"vypdev-agent","group":"vypdev","labels":["self-hosted","codex","Linux"],"validation":"hosted"}]}
 ```
 
+Repository Variable inventory must be readable to establish whether an override
+exists. If it is unavailable, setup keeps the registry unverified even when the
+organization value is readable; restore access or choose manual routing.
+
 Setup only reads this registry. It neither updates its value nor shares it with
 additional repositories. A repository Variable of the same name takes precedence,
 including when that override is invalid. Each profile needs a unique ID of

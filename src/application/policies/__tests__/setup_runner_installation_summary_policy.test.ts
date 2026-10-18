@@ -1,10 +1,21 @@
 import { setupRunnerInstallationSummary } from '../setup_runner_installation_summary_policy';
 import { createDefaultSetupConfiguration } from '../setup_configuration_defaults';
-import { selectSetupRunnerMode } from '../setup_runner_policy';
+import { selectSetupRunnerMode, validSetupRunnerProfile } from '../setup_runner_policy';
 import type { SetupBatchTargetPlan } from '../../../domain/setup_batch';
 
 const plan = () => ({ configuration: createDefaultSetupConfiguration(), digest: 'a'.repeat(64) } as SetupBatchTargetPlan);
 describe('non-secret installation PR summary', () => {
+  test.each([1, 3, 20])('literal backtick runs of length %i stay inside one JSON fence', length => {
+    const profile = { id: 'fixture', group: `group${'`'.repeat(length)}`, labels: ['self-hosted', 'Linux', `label${'`'.repeat(length + 1)}`], validation: 'hosted' as const };
+    expect(validSetupRunnerProfile(profile)).toBe(true);
+    const target = plan(); target.configuration.runners = { mode: 'manual-self-hosted', profileId: '', group: profile.group, labels: profile.labels, validation: profile.validation };
+    const summary = setupRunnerInstallationSummary(target);
+    const block = summary.match(/\n(`{3,})json\n([\s\S]*?)\n\1\n/);
+    expect(block).not.toBeNull();
+    expect(block![1].length).toBeGreaterThan(length + 1);
+    expect(JSON.parse(block![2])).toEqual({ group: profile.group, labels: profile.labels });
+    expect(summary.slice(summary.indexOf(block![0]) + block![0].length)).toContain('**Observations:**');
+  });
   test.each([undefined, selectSetupRunnerMode('retain')])('legacy installation without a review keeps its existing PR body %#', runners => {
     const target = plan(); target.configuration.runners = runners; expect(setupRunnerInstallationSummary(target)).toBe('');
   });

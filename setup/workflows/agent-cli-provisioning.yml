@@ -47,7 +47,7 @@ jobs:
               cursor) expected_executable=agent ;;
               *) echo "Unsupported agent provider: $provider" >&2; exit 1 ;;
             esac
-            executable="${executables[$index]:-${AGENT_EXECUTABLE:-$expected_executable}}"
+            executable="${executables[$index]:-$expected_executable}"
             [[ "${executable##*/}" == "$expected_executable" ]] || { echo "Invalid $provider executable basename." >&2; exit 1; }
             if ! command -v "$executable" >/dev/null 2>&1; then
               [[ "$executable" == "$expected_executable" ]] || { echo "Configured executable is missing: $executable" >&2; exit 1; }
@@ -68,7 +68,7 @@ jobs:
                   ;;
               esac
             fi
-            actual_version="$($executable --version | head -n 1)"
+            actual_version="$("$executable" --version | head -n 1)"
             [[ -n "${actual_version// }" ]] || { echo "$provider returned empty version output" >&2; exit 1; }
             case "$provider" in
               codex) "$executable" exec --help >/dev/null ;;

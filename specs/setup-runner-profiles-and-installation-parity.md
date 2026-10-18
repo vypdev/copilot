@@ -385,7 +385,9 @@ characters for a selected self-hosted route), and `validation` (`hosted` or
 Self-hosted selections require `self-hosted` and a Linux or macOS label because
 the generated workflows require Bash; Windows service Codex execution is outside
 this contract. The validation choice is an advanced exception, never a global
-replacement. Agent CLI provisioning uses the agent route. Ordinary automation uses the validation route. Credential verification is a
+replacement. Agent CLI provisioning uses the agent route and checks each role's
+own executable override or provider-specific default; a generic executable never
+crosses into another role. Ordinary automation uses the validation route. Credential verification is a
 separate protected role: explicit managed-route replacement always uses
 `ubuntu-latest` for it, regardless of ordinary validation. Retain preserves
 existing reviewed routing as a visible exception. Merge-group checks and consumer
@@ -398,6 +400,9 @@ At most ten distinct profiles and 16,000 characters are accepted. Unknown schema
 versions and fields are rejected with a recovery action rather than executed.
 An existing repository Variable wins over the organization Variable; an invalid
 repository override cannot expose a shadowed organization profile as effective.
+Unavailable repository Variable inventory cannot prove that an override is
+absent, so a readable organization registry alone cannot authorize selection or
+freshness; restore repository metadata access or choose explicit manual routing.
 Setup reads this registry and snapshots a chosen profile; it never writes the
 registry or adds repository access to it. The effective selected snapshot is
 recorded in `.copilot/runner-profile.json`, with source scope and a digest for

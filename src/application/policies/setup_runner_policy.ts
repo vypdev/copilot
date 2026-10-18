@@ -40,6 +40,8 @@ export function setupRunnerRegistry(remote?: SetupRemoteConfiguration): {
   readonly source?: SetupRunnerConfiguration['source'];
   readonly scope?: 'repository' | 'organization';
 } {
+  // Unknown repository inventory cannot prove that a higher-priority override is absent.
+  // A readable organization registry alone must not authorize selecting or reusing its route.
   if (!remote || remote.repositoryVariablesAccess !== 'available') return { profiles: [], status: 'unavailable' };
   const repository = remote.repositoryVariables.filter(variable => variable.name.toUpperCase() === SETUP_RUNNER_REGISTRY);
   const organization = remote.organizationVariables.filter(variable => variable.name.toUpperCase() === SETUP_RUNNER_REGISTRY);

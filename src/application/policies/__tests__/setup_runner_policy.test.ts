@@ -66,6 +66,12 @@ describe('effective registry and snapshot provenance', () => {
     const facts = remote(); expect(setupRunnerRegistry(facts)).toEqual({ status: 'available', scope: 'organization', profiles: [profile], source: selected.source });
     expect(facts.organizationVariables).toEqual([variable]);
   });
+  test.each([{ repositoryVariables: [] }, { repositoryVariables: [variable] }])('unreadable repository overrides cannot authorize a readable organization profile (%#)', ({ repositoryVariables }) => {
+    const facts = { ...remote(), repositoryVariables, repositoryVariablesAccess: 'unavailable' as const };
+    expect(setupRunnerRegistry(facts)).toEqual({ status: 'unavailable', profiles: [] });
+    expect(setupRunnerProfileIsFresh(selected, facts)).toBe(false);
+    expect(setupRunnerRegistry({ ...facts, repositoryVariablesAccess: 'available', repositoryVariables: [] }).source?.scope).toBe('organization');
+  });
   test('repository overrides do not require organization inventory', () => {
     const facts = { ...remote(), organizationVariablesAccess: 'unavailable' as const, repositoryVariables: [variable] };
     expect(setupRunnerRegistry(facts).source?.scope).toBe('repository');
