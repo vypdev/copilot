@@ -22,6 +22,8 @@ The repository prepares Node 24, pnpm 10.12.4 and frozen dependencies for explic
 
 On Windows, the isolated verification environment preserves the fixed non-secret operating-system metadata `SystemRoot`, `WINDIR`, `OS`, `ComSpec` and `PATHEXT`. Tests must provide their own workflow identity; production credentials and live workflow identity are not passed to repository commands.
 
+The source workflow validator accepts the setup's literal `runs-on: {group: vypdev, labels: [self-hosted, codex, Linux]}` route. Object routes allow only `group` (optional, nonempty) and `labels` (a string or 1–10 unique strings), with literal values of at most 100 characters and no expressions or control characters. Required source role labels, Bash and pnpm isolation still apply. Group objects cannot replace hosted credential verification or the reviewed fork/merge-group quality routing. This validates configuration shape; it does not prove runner access or capacity.
+
 ## Reused credential evidence
 
 The reuse journey performs GET-only inspection of trusted installed health
