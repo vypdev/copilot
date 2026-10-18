@@ -104,6 +104,37 @@ const validWorkflow = {
 };
 
 describe('workflow contract validator', () => {
+  it.each(['.github/workflows', 'setup/workflows'].flatMap(directory =>
+    ['copilot_commit.yml', 'copilot_branch_sync.yml'].flatMap(name =>
+      ['remove', 'shadow'].map(mutation => [directory, name, mutation]))))(
+    'rejects %s/%s when permission-probe exclusion is %s', (directory, name, mutation) => {
+      const { file, workflow } = loadMutationWorkflow(directory, name);
+      if (mutation === 'remove') workflow.on.push.branches = workflow.on.push.branches
+        .filter((branch: string) => branch !== '!copilot-permission-test-*');
+      else workflow.on.push.branches.push('**');
+      expect(() => validateWorkflow(file, workflow)).toThrow(/permission-probe/);
+    },
+  );
+
+  it.each(['.github/workflows', 'setup/workflows'].flatMap(directory =>
+    ['copilot_commit.yml', 'copilot_branch_sync.yml'].map(name => [directory, name])))(
+    'excludes probe refs and preserves ordinary push admission in %s/%s', (directory, name) => {
+      const { file, workflow } = loadMutationWorkflow(directory, name);
+      expect(() => validateWorkflow(file, workflow)).not.toThrow();
+      const admitted = (ref: string) => (workflow.on.push.branches as string[]).reduce((accept, pattern) => {
+        const excluded = pattern.startsWith('!');
+        return path.posix.matchesGlob(ref, excluded ? pattern.slice(1) : pattern) ? !excluded : accept;
+      }, false);
+      expect(admitted(`copilot-permission-test-${'a'.repeat(32)}`)).toBe(false);
+      expect(admitted(`copilot-permission-test-${'0123456789abcdef'.repeat(2)}`)).toBe(false);
+      for (const ref of ['feature/42-change', 'bugfix/570-runner', 'release/3.5.7', 'hotfix/urgent',
+        'feature/copilot-permission-test-example', 'copilot-permission-testing']) expect(admitted(ref)).toBe(true);
+      for (const ref of ['master', 'develop', 'setup/copilot/reviewed-operation']) {
+        expect(admitted(ref)).toBe(name === 'copilot_branch_sync.yml');
+      }
+    },
+  );
+
   it.each(['.github/workflows', 'setup/workflows'])('excludes issue-less installer pushes from Commit in %s', directory => {
     const { file, workflow } = loadMutationWorkflow(directory, 'copilot_commit.yml');
     expect(() => validateWorkflow(file, workflow)).not.toThrow();
@@ -275,7 +306,7 @@ describe('workflow contract validator', () => {
   });
 
   it.each(['.github/workflows', 'setup/workflows'])(
-    'keeps the %s branch-sync observer all-branch, bot-push-safe, and agent-free',
+    'keeps the %s branch-sync observer ordinary-branch, bot-push-safe, and agent-free',
     (directory) => {
       const file = path.join(process.cwd(), directory, 'copilot_branch_sync.yml');
       const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;

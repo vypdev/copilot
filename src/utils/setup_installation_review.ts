@@ -7,7 +7,7 @@ import type { SetupInstallationReview } from '../domain/setup_runner';
 import { isSetupWorkflowEnabled } from '../domain/setup_workflow_catalog';
 import { effectiveIssueWorkflowFeatures } from '../application/policies/setup_issue_workflow_policy';
 import { setupRunnerRole, validateSetupRunners } from '../application/policies/setup_runner_policy';
-import { hasRootLocalSetupAction, renderSetupWorkflowUpgrade } from './setup_workflow_upgrade';
+import { hasRootLocalSetupAction, renderSetupWorkflowUpgrade, isSourceSetupPushWorkflow } from './setup_workflow_upgrade';
 import { renderApprovalObserverWorkflow } from '../domain/setup_approval_workflow';
 import { redactSensitiveText } from '../domain/security/sensitive_text';
 import { REPOSITORY_AGENT_GUIDE_PATH, REPOSITORY_AGENT_PROFILE_PATH, REPOSITORY_AGENT_MANIFEST_PATH,
@@ -78,9 +78,9 @@ export function inspectSetupInstallation(root: string, configuration: SetupConfi
     const enabled = isSetupWorkflowEnabled(file, features) && (file !== 'copilot_pull_request_approval.yml' || configuration.pullRequestApproval.mode !== 'off');
     const template = readFileSync(join(setup, 'workflows', file), 'utf8');
     const preserved = source && before !== undefined;
-    const after = !enabled ? before : preserved && file !== 'copilot_commit.yml' ? before
+    const after = !enabled ? before : preserved && !isSourceSetupPushWorkflow(file) ? before
       : file === 'copilot_pull_request_approval.yml' ? renderApprovalObserverWorkflow(template, configuration.pullRequestApproval)
-        : renderSetupWorkflowUpgrade(template, before, { file, runners: configuration.runners });
+        : renderSetupWorkflowUpgrade(template, before, { file, runners: configuration.runners, source });
     assets.push({ path, enabled, status: before === undefined ? 'missing' : preserved ? 'source-only'
       : before === after && (before === template || (configuration.runners?.mode ?? 'retain') !== 'retain') ? 'shared' : 'customized' });
     if (enabled && after !== undefined) {

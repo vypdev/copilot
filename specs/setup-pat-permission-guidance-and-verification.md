@@ -945,3 +945,59 @@ Evidence: `setup_organization_import_wizard.test.ts`,
 `setup_trusted_health_sdk_contract.integration.test.ts`, and
 `web_setup_batch_components.test.ts`. Owning test budget, migration, UX and
 operational acceptance are in the companion; existing quality gates remain.
+
+## Disposable probe push admission (2026-10-18, #569)
+
+Live #556 dogfooding found seven normal Commit/Branch Sync runs on disposable
+permission refs, including two occupying self-hosted runners. Copilot-owned
+source and distributed push workflows MUST exclude the reserved
+`copilot-permission-test-*` prefix before job admission. Current probes append
+32 random hexadecimal characters. This namespace is fixed, not configurable.
+The negative pattern follows every positive pattern, following
+[GitHub's ordered branch-filter contract](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#example-including-and-excluding-branches-and-tags).
+
+```text
+permission probe push -> owned push filter -> no Commit/Branch Sync job
+ordinary/bot push     -> existing admission -> existing job
+user-owned CI / PR    -> existing configuration -> may still run
+```
+
+Text equivalent: only the two Copilot-owned push workflows exclude probe refs.
+Branch Sync MUST retain ordinary branches, bot pushes and installer refs.
+Commit retains its main/develop and installer exclusions. User CI and PR
+workflows MUST remain untouched; this change does not claim complete event
+isolation, change PAT grants, cancel arbitrary runs, or alter resource cleanup.
+
+The renderer owns a narrow source-workflow upgrade: review, comparison and copy
+MUST use the same allowlist for Commit/Branch Sync, preserve native jobs and
+unrelated filters, move owned exclusions behind positive patterns, back up
+changed files and produce no changes on replay. Source identity comes from the
+inspected repository inventory, including for native jobs without a root-local
+Action step; it is not a user configuration override. Ambiguous source push filters
+retain the existing review block. No schema, journal, locale, UI state or
+configuration choice changes; the existing permission progress and cleanup
+states remain authoritative. The authentication and setup docs disclose that
+other workflows and audit history remain possible.
+
+Migration: existing installed workflow files MUST receive a reviewed update;
+upgrading only the CLI cannot suppress events before that update is merged.
+Previously queued runs are not retroactively cancelled. Operator cleanup must
+still verify exact owned run/ref/commit identities. Rollback restores reviewed
+workflow backups and can restore the previous event noise.
+
+The incremental floor is **20 distinct regression cases**: eight removal or
+re-inclusion mutations across both workflows/directories, four semantic ref
+admission cases covering random probe names and ordinary/installer branches,
+five source upgrade ordering/unrelated/incomplete-workflow cases, and three complete batch
+render/backup/replay/native-job cases. Existing source-upgrade fixtures also verify native
+field preservation and malformed-filter blocks. Repository coverage thresholds
+remain; every changed renderer decision requires full branch coverage.
+
+Acceptance and traceability: `validate_workflow_contract.test.ts` proves the
+owned source/template filters and ordinary-branch admission;
+`setup_workflow_upgrade.test.ts` proves ordering, preservation and idempotency;
+`setup_batch_local_adapters.test.ts` proves complete reviewed upgrades, backups,
+user-workflow preservation and replay. `validate:workflows`, documentation and
+specification validation, full tests, lint and synchronized bundles are required.
+Live no-run evidence requires a later authorized probe after deployment of the
+updated workflows; fixture evidence does not claim that deployment occurred.

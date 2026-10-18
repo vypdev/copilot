@@ -581,8 +581,8 @@ function assertLightweightBranchSyncWorkflow(file, workflow) {
   if (path.basename(file) !== 'copilot_branch_sync.yml') return;
   const relativeFile = relativeWorkflow(file);
   const branches = workflow.on?.push?.branches;
-  if (!Array.isArray(branches) || branches.length !== 1 || branches[0] !== '**') {
-    throw new Error(`${relativeFile} must observe pushes on every branch exactly once.`);
+  if (JSON.stringify(branches) !== JSON.stringify(['**', '!copilot-permission-test-*'])) {
+    throw new Error(`${relativeFile} must observe pushes on every ordinary branch exactly once and exclude temporary permission-probe branches.`);
   }
   const job = workflow.jobs?.['branch-sync'];
   if (!job || Object.keys(workflow.jobs ?? {}).length !== 1 || job.if !== undefined) {
@@ -1242,8 +1242,15 @@ function assertQueueWorkflow(file, workflow) {
   }
   const queueJob = workflow.jobs?.[manifest.jobId];
   if (!queueJob) throw new Error(`${relativeFile} must define queue job ${manifest.jobId}.`);
-  if (manifest.file === 'copilot_commit.yml' && !workflow.on?.push?.branches?.includes('!setup/copilot/**')) {
-    throw new Error(`${relativeFile} must exclude installer-owned setup/copilot branches from issue-centric push analysis.`);
+  if (manifest.file === 'copilot_commit.yml') {
+    const branches = workflow.on?.push?.branches;
+    if (!Array.isArray(branches) || !branches.includes('!setup/copilot/**')) {
+      throw new Error(`${relativeFile} must exclude installer-owned setup/copilot branches from issue-centric push analysis.`);
+    }
+    const index = branches.indexOf('!copilot-permission-test-*');
+    if (index < 0 || branches.slice(index + 1).some(branch => typeof branch !== 'string' || !branch.startsWith('!'))) {
+      throw new Error(`${relativeFile} must exclude temporary permission-probe branches after all positive push patterns.`);
+    }
   }
   if (manifest.file === 'copilot_issue.yml' && !workflow.on?.issues?.types?.includes('closed')) {
     throw new Error(`${relativeFile} must subscribe to native closed issue events.`);

@@ -41,7 +41,7 @@ The first three items describe current behavior from supplied issue and catalog 
 
 - Code/spec ownership: catalog capability `setup-and-doctor`; current owning specifications listed above; cataloged batch setup ports, policies, use cases, and CLI/web adapters.
 - Concrete evidence: issue #556 records previews #550 and `vypdev/platform#170` that replaced routing/workflows, corrected PRs #555 and `vypdev/platform#175`, and source validator findings from smoke run `39069446089`. SDD admission run `39080887942` stopped on the appendix size limit; the compact companion was published successfully by run `39081097654`.
-- Compatibility fixtures required: preserve Branch Sync all-branch coverage, merge-queue explicit Bash shell, fork/merge-group hosted isolation, trusted-default observer checkout, source Action references, release/npm jobs, and installer exclusions.
+- Compatibility fixtures required: preserve Branch Sync ordinary-branch coverage (including bot/installer pushes, excluding reserved permission-probe refs), merge-queue explicit Bash shell, fork/merge-group hosted isolation, trusted-default observer checkout, source Action references, release/npm jobs, and installer exclusions.
 - Unknowns: exact existing UI components and provider endpoints to reuse are implementation discovery; they do not alter the product contract.
 
 ### 2.4 Retrospective classification (as-built baselines only)

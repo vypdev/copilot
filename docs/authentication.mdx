@@ -244,6 +244,14 @@ number, retains the cleanup record and blocks further setup until deletion is
 confirmed. This test can leave notifications and audit history. Actions and Pull
 request tests may also leave GitHub history and notifications after cleanup; the
 PAT-entry guidance discloses these tests before they start.
+
+Copilot reserves `copilot-permission-test-*` for disposable permission branches
+(currently a 32-character random hexadecimal suffix). Current Commit and Branch
+Sync workflows exclude those refs before starting a job. Existing installations
+need their workflow update reviewed and merged before that protection applies;
+updating the CLI alone cannot change the workflows that run during the first
+permission check. User-owned CI and pull-request workflows can still run and
+leave notifications or audit history. Setup preserves their configuration.
 For a bot **Actions Write** check, the already verified **setup PAT** prepares
 and cleans the isolated branch and disabled-job workflow. Only the **bot PAT**
 dispatches and reads its exact run. The bot link therefore does not need
