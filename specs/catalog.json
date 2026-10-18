@@ -721,7 +721,8 @@
         "specs/setup-doctor-architecture-hardening.md",
         "specs/setup-pat-permission-guidance-and-verification.md",
         "specs/github-runtime-doctor-command.md",
-        "specs/organization-configuration-reuse-and-batch-setup.md"
+        "specs/organization-configuration-reuse-and-batch-setup.md",
+        "specs/setup-runner-profiles-and-installation-parity.md"
       ],
       "workflows": [
         "setup/workflows/agent-cli-provisioning.yml",
