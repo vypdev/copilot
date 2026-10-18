@@ -119,6 +119,9 @@ describe('standalone agent CLI verifier trust', () => {
             expect(result.status).toBe(0);
             expect(result.stdout).toContain('codex-local-fixture');
             expect(existsSync(marker)).toBe(true);
-        } finally { rmSync(directory, { recursive: true, force: true }); }
+        } finally {
+            // Windows can retain a short-lived image handle after the copied Node exits.
+            rmSync(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+        }
     }, 75_000);
 });
