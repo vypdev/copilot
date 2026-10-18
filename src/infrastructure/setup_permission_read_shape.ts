@@ -11,6 +11,6 @@ export function hasSetupPermissionReadShape(probe: SetupTokenPermissionProbe, pa
     if (['contents', 'issues', 'pull-requests', 'workflows', 'issue-types'].includes(probe)) {
         return collection(payload);
     }
-    const field = { actions: 'workflows', checks: 'check_runs', variables: 'variables', secrets: 'secrets' }[probe as string];
+    const field = { actions: 'workflows', checks: 'check_runs', variables: 'variables', secrets: 'secrets', 'runner-groups': 'runner_groups' }[probe as string];
     return field !== undefined && record(payload) && collection(payload[field]);
 }

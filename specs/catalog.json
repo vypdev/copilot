@@ -7,7 +7,7 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-13",
+      "lastVerified": "2026-10-17",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md",
@@ -147,7 +147,11 @@
         "src/infrastructure/github/ports/github_reply_request_client.ts",
         "src/application/policies/retired_progress_presentation_policy.ts",
         "src/application/usecases/actions/retire_progress_use_case.ts",
-        "src/application/usecases/actions/retire_closed_issue_cards_use_case.ts"
+        "src/application/usecases/actions/retire_closed_issue_cards_use_case.ts",
+        "src/application/policies/progress_diff_partition_policy.ts",
+        "src/application/policies/progress_partition_response_policy.ts",
+        "src/application/usecases/actions/summarize_progress_diff_workflow.ts",
+        "src/data/repository/agent_json_schema_validator.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -239,7 +243,11 @@
         "src/application/usecases/actions/__tests__/retire_progress_use_case.test.ts",
         "src/application/usecases/actions/__tests__/retire_closed_issue_cards_use_case.test.ts",
         "src/application/usecases/steps/common/__tests__/retired_progress_publication.integration.test.ts",
-        "src/application/usecases/actions/__tests__/progress_native_closure.test.ts"
+        "src/application/usecases/actions/__tests__/progress_native_closure.test.ts",
+        "src/application/policies/__tests__/progress_diff_partition_policy.test.ts",
+        "src/application/policies/__tests__/progress_partition_response_policy.test.ts",
+        "src/application/usecases/actions/__tests__/progress_multipart.integration.test.ts",
+        "src/data/repository/__tests__/agent_json_schema_validator.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -707,18 +715,26 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-17",
+      "lastVerified": "2026-10-18",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
         "specs/setup-pat-permission-guidance-and-verification.md",
-        "specs/github-runtime-doctor-command.md"
+        "specs/github-runtime-doctor-command.md",
+        "specs/organization-configuration-reuse-and-batch-setup.md",
+        "specs/setup-runner-profiles-and-installation-parity.md"
       ],
       "workflows": [
         "setup/workflows/agent-cli-provisioning.yml",
         "setup/workflows/copilot_credential_health.yml",
         ".github/workflows/copilot_issue_comment.yml",
-        ".github/workflows/copilot_pull_request_comment.yml"
+        ".github/workflows/copilot_pull_request_comment.yml",
+        ".github/workflows/agent-cli-provisioning.yml",
+        ".github/workflows/copilot_credential_health.yml",
+        ".github/workflows/copilot_commit.yml",
+        ".github/workflows/copilot_branch_sync.yml",
+        "setup/workflows/copilot_commit.yml",
+        "setup/workflows/copilot_branch_sync.yml"
       ],
       "entrypoints": [
         "src/cli/commands/setup.ts",
@@ -825,7 +841,53 @@
         "src/data/repository/github/runtime_doctor_repository.ts",
         "src/infrastructure/composition/github_runtime_doctor_composition_root.ts",
         "src/application/policies/agent_activity_policy.ts",
-        "src/application/policies/doctor_workflow_matrix_policy.ts"
+        "src/application/policies/doctor_workflow_matrix_policy.ts",
+        "src/application/contracts/setup_batch_view.ts",
+        "src/application/policies/issue_resource_input_policy.ts",
+        "src/application/policies/setup_batch_access_policy.ts",
+        "src/application/policies/setup_batch_policy.ts",
+        "src/application/policies/setup_batch_retry_policy.ts",
+        "src/application/policies/setup_batch_selection_policy.ts",
+        "src/application/policies/setup_batch_view_policy.ts",
+        "src/application/policies/setup_credential_binding_policy.ts",
+        "src/application/policies/setup_organization_import_policy.ts",
+        "src/application/policies/setup_organization_variable_bindings.ts",
+        "src/application/policies/setup_organization_variable_reuse_policy.ts",
+        "src/application/ports/setup_batch_ports.ts",
+        "src/application/usecases/setup/apply_setup_batch_use_case.ts",
+        "src/application/usecases/setup/configure_setup_batch_target_use_case.ts",
+        "src/application/usecases/setup/prepare_setup_batch_use_case.ts",
+        "src/application/usecases/setup/select_setup_batch_targets_use_case.ts",
+        "src/application/usecases/setup/setup_batch_session_use_case.ts",
+        "src/cli/setup_batch_adapter.ts",
+        "src/cli/setup_source_adapter.ts",
+        "src/domain/setup_batch.ts",
+        "src/domain/setup_credential_health.ts",
+        "src/domain/setup_organization_reuse.ts",
+        "src/infrastructure/composition/setup_batch_composition_root.ts",
+        "src/infrastructure/github/ports/github_setup_batch_protocol.ts",
+        "src/infrastructure/github/ports/github_trusted_credential_health_protocol.ts",
+        "src/infrastructure/setup_batch_github_apply_adapter.ts",
+        "src/infrastructure/setup_batch_github_read_adapter.ts",
+        "src/infrastructure/setup_batch_journal_adapter.ts",
+        "src/infrastructure/setup_batch_workspace_adapter.ts",
+        "src/infrastructure/setup_trusted_credential_health_adapter.ts",
+        "src/application/policies/setup_remote_facts_policy.ts",
+        "src/cli/setup_confirmation_adapter.ts",
+        "src/cli/web_setup_adapters.ts",
+        "scripts/validate-agent-documentation.cjs",
+        "src/utils/setup_workflow_upgrade.ts",
+        "src/domain/setup_runner.ts",
+        "src/application/policies/setup_runner_policy.ts",
+        "src/application/policies/setup_runner_question_policy.ts",
+        "src/application/policies/setup_runner_guidance_policy.ts",
+        "src/application/ports/setup_runner_ports.ts",
+        "src/infrastructure/setup_runner_discovery_adapter.ts",
+        "src/infrastructure/composition/setup_runner_composition_root.ts",
+        "src/utils/setup_installation_review.ts",
+        "src/cli/setup_installation_review_presenter.ts",
+        "src/application/policies/setup_runner_installation_summary_policy.ts",
+        "src/utils/setup_files.ts"
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
@@ -905,7 +967,47 @@
         "src/application/policies/__tests__/runtime_doctor_agent_activity.test.ts",
         "src/application/policies/__tests__/doctor_workflow_matrix_policy.test.ts",
         "src/application/policies/__tests__/setup_approval_operator_permissions.test.ts",
-        "src/application/usecases/setup/__tests__/audit_configured_setup_pat_use_case.test.ts"
+        "src/application/usecases/setup/__tests__/audit_configured_setup_pat_use_case.test.ts",
+        "src/application/policies/__tests__/setup_batch_permission_policy.test.ts",
+        "src/application/policies/__tests__/setup_batch_policy.test.ts",
+        "src/application/policies/__tests__/setup_batch_retry_policy.test.ts",
+        "src/application/policies/__tests__/setup_batch_selection_policy.test.ts",
+        "src/application/policies/__tests__/setup_organization_approval_draft.test.ts",
+        "src/application/policies/__tests__/setup_organization_import_policy.test.ts",
+        "src/application/policies/__tests__/setup_organization_import_safety.test.ts",
+        "src/application/policies/__tests__/setup_organization_variable_reuse_policy.test.ts",
+        "src/application/usecases/actions/__tests__/setup_organization_reuse_provisioning.test.ts",
+        "src/application/usecases/setup/__tests__/apply_setup_batch_use_case.test.ts",
+        "src/application/usecases/setup/__tests__/select_setup_batch_targets_use_case.test.ts",
+        "src/application/usecases/setup/__tests__/setup_batch_flow.test.ts",
+        "src/application/usecases/setup/__tests__/setup_organization_import_wizard.test.ts",
+        "src/application/usecases/setup/__tests__/setup_organization_secret_reuse.test.ts",
+        "src/cli/__tests__/setup_source_adapter.test.ts",
+        "src/cli/__tests__/web_setup_batch_components.test.ts",
+        "src/cli/__tests__/web_setup_batch_selection.test.ts",
+        "src/infrastructure/__tests__/setup_batch_github_apply_adapter.test.ts",
+        "src/infrastructure/__tests__/setup_batch_github_read_adapter.test.ts",
+        "src/infrastructure/__tests__/setup_batch_local_adapters.test.ts",
+        "src/infrastructure/__tests__/setup_reuse_empty_collections.integration.test.ts",
+        "src/infrastructure/__tests__/setup_trusted_credential_health_adapter.test.ts",
+        "src/infrastructure/__tests__/setup_trusted_health_sdk_contract.integration.test.ts",
+        "src/application/policies/__tests__/setup_batch_access_and_view.test.ts",
+        "src/cli/__tests__/setup_batch_adapter.test.ts",
+        "src/infrastructure/__tests__/setup_batch_composition.test.ts",
+        "src/infrastructure/__tests__/setup_batch_guidance_compatibility.test.ts",
+        "src/utils/__tests__/setup_workflow_upgrade.test.ts",
+        "src/cli/__tests__/setup_pat_intent_adapter.test.ts",
+        "src/application/usecases/__tests__/push_single_action_contexts.test.ts",
+        "src/application/policies/__tests__/setup_runner_policy.test.ts",
+        "src/application/policies/__tests__/setup_runner_question_policy.test.ts",
+        "src/infrastructure/__tests__/setup_runner_discovery_adapter.test.ts",
+        "src/utils/__tests__/setup_runner_installation.test.ts",
+        "src/cli/__tests__/web_setup_runner_components.test.ts",
+        "src/application/policies/__tests__/setup_runner_installation_summary_policy.test.ts",
+        "src/application/usecases/setup/__tests__/setup_runner_planning.test.ts",
+        "src/cli/__tests__/setup_runner_config_file.test.ts",
+        "src/infrastructure/__tests__/setup_runner_composition.test.ts",
+        "src/tooling/__tests__/setup_provisioning_workflow.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -920,7 +1022,8 @@
         "docs/single-actions/workflow-and-cli.mdx",
         "docs/security-operations/operations/verification.mdx",
         "docs/development/setup-pat-provider-audit-2026-10-06.md",
-        "docs/issues/comment-commands.mdx"
+        "docs/issues/comment-commands.mdx",
+        "docs/issues/branch-synchronization.mdx"
       ]
     },
     {
@@ -1079,7 +1182,14 @@
         "web/src/i18n/errors/es.ts",
         "web/src/i18n/errors/fr.ts",
         "web/src/i18n/errors/pt.ts",
-        "web/src/components/SetupSidebar.svelte"
+        "web/src/components/SetupSidebar.svelte",
+        "web/src/components/RepositorySelector.svelte",
+        "web/src/components/BatchSetupPanel.svelte",
+        "web/src/components/BatchSafetyBanner.svelte",
+        "web/src/components/InstallationReview.svelte",
+        "web/src/components/RunnerQuestionDetails.svelte",
+        "web/src/i18n/runnerCopy.ts",
+        "scripts/web-setup-runner-review-fixtures.cjs"
       ],
       "tests": [
         "src/__tests__/cli.test.ts",
@@ -1143,7 +1253,8 @@
         "src/application/usecases/setup/__tests__/manage_setup_use_case.test.ts",
         "src/infrastructure/__tests__/setup_management_workspace_adapter.test.ts",
         "src/cli/__tests__/setup_management_adapter.test.ts",
-        "src/cli/__tests__/web_setup_management_components.test.ts"
+        "src/cli/__tests__/web_setup_management_components.test.ts",
+        "src/cli/__tests__/web_setup_runner_components.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -1227,7 +1338,7 @@
       "status": "proposed",
       "scope": "Guide creation of the one-run operator PAT through GitHub's official form, verify final setup access, and report user-owned deletion accurately",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-07",
+      "lastVerified": "2026-10-18",
       "specs": [
         "specs/temporary-setup-operator-authorization.md"
       ],
@@ -1248,7 +1359,8 @@
         "src/application/usecases/setup/audit_configured_setup_pat_use_case.ts",
         "src/application/usecases/setup/setup_token_permissions_use_case.ts",
         "src/infrastructure/setup_token_permission_query_adapter.ts",
-        "src/utils/setup_files.ts"
+        "src/utils/setup_files.ts",
+        "src/application/policies/setup_runner_question_policy.ts"
       ],
       "tests": [
         "src/cli/__tests__/setup_presenters.test.ts",
@@ -1264,7 +1376,8 @@
         "src/application/usecases/setup/__tests__/audit_configured_setup_pat_use_case.test.ts",
         "src/application/usecases/setup/__tests__/setup_token_permissions_use_case.test.ts",
         "src/infrastructure/__tests__/setup_token_permission_query_adapter.test.ts",
-        "src/utils/__tests__/setup_files.test.ts"
+        "src/utils/__tests__/setup_files.test.ts",
+        "src/application/policies/__tests__/setup_runner_question_policy.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -1726,7 +1839,7 @@
       "status": "implemented",
       "scope": "Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-13",
+      "lastVerified": "2026-10-18",
       "specs": [
         "specs/branch-synchronization-and-conflict-recovery.md"
       ],

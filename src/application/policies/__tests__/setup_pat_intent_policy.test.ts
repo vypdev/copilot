@@ -209,3 +209,45 @@ describe('setup PAT permission intent', () => {
     ]);
   });
 });
+
+
+describe('runner-aware guided setup PAT links', () => {
+  const link = (discover: boolean | undefined, owner: 'Organization' | 'User', managed: boolean) => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.runners = { ...configuration.runners!, discover };
+    configuration.manageRepositorySecrets = managed;
+    configuration.manageRepositoryVariables = managed;
+    configuration.features.issues = false; configuration.features.release = false; configuration.features.hotfix = false;
+    configuration.pullRequestApproval = { ...configuration.pullRequestApproval, mode: 'off' };
+    const requirements = buildSetupPatIntentPermissionRequirements(configuration, owner);
+    return { configuration, requirements, url: new URL(buildSetupPatCreationUrl({ role: 'setup', owner: 'vypdev', repository: 'platform',
+      expiresIn: 1, requirements, includeConditionalSetupGrants: true })) };
+  };
+  test.each([false, undefined])('manual routing without discovery=%s requests no organization runners grant', discover => {
+    const { url, configuration } = link(discover, 'Organization', false);
+    expect(url.searchParams.has('organization_self_hosted_runners')).toBe(false);
+    expect(url.searchParams.has('administration')).toBe(false);
+    expect(setupPatIntentNeedsOwnerKind(configuration)).toBe(false);
+  });
+  test.each([false, true])('reviewed organization discovery prefills optional read grants with resource management=%s', managed => {
+    const { url, requirements, configuration } = link(true, 'Organization', managed);
+    expect(url.searchParams.get('organization_self_hosted_runners')).toBe('read');
+    expect(url.searchParams.get('administration')).toBe('read');
+    expect(requirements.find(item => item.permission === 'Self-hosted runners')).toMatchObject({
+      role: 'setup', scope: 'organization', level: 'read', applicability: 'conditional', probe: 'runner-groups' });
+    expect(setupPatIntentNeedsOwnerKind(configuration)).toBe(true);
+    expect(setupPatIntentOwnerConflict(configuration, 'User')).toBe(false);
+    expect(url.searchParams.has('organization_administration')).toBe(false);
+    expect(url.searchParams.has('repository')).toBe(false);
+  });
+  test('personal owners get repository discovery only and fixed config skips the preliminary question', () => {
+    const { url } = link(true, 'User', false);
+    expect(url.searchParams.has('organization_self_hosted_runners')).toBe(false);
+    expect(url.searchParams.get('administration')).toBe('read');
+    expect(fixedSetupPatIntentQuestionIds({ runners: { discover: true } }, false, false)).toContain('runners.discover');
+  });
+  test('an existing Administration requirement is not duplicated by optional discovery', () => {
+    const configuration = createDefaultSetupConfiguration(); configuration.runners = { ...configuration.runners!, discover: true };
+    expect(buildSetupPatIntentPermissionRequirements(configuration, 'Organization').filter(item => item.permission === 'Administration')).toHaveLength(1);
+  });
+});

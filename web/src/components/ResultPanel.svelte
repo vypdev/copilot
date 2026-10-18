@@ -10,6 +10,7 @@
   import { permissionName, permissionTerm } from '../i18n/permissionTerms';
   import { permissionEvidence } from '../i18n/permissionEvidence';
   export let management = false;
+  export let batch = false;
   export let outcome: NonNullable<WebSetupView['outcome']>;
   export let controller: boolean;
   export let onClose: () => Promise<void>;
@@ -25,11 +26,11 @@
     'rate-limit': ['reasonRateLimit', 'nextRateLimit'], unknown: ['reasonUnknown', 'nextUnknown'],
   };
   $: managementChanged = detail?.effects?.some(effect => effect.state === 'completed') === true;
-  $: heading = management ? managementCopy($setupLocale)[outcome === 'complete' && managementChanged ? 'finished' : outcome === 'partial' ? 'inspectAdjustment' : outcome === 'complete' ? 'inspectionFinished' : 'inspectionStopped'] : outcome === 'complete' ? tr('resultApplied', $setupLocale)
+  $: heading = batch ? tr('batchNextActions', $setupLocale) : management ? managementCopy($setupLocale)[outcome === 'complete' && managementChanged ? 'finished' : outcome === 'partial' ? 'inspectAdjustment' : outcome === 'complete' ? 'inspectionFinished' : 'inspectionStopped'] : outcome === 'complete' ? tr('resultApplied', $setupLocale)
     : outcome === 'dry-run' ? tr('resultNoChanges', $setupLocale)
     : outcome === 'cancelled' || outcome === 'blocked' ? tr('resultStopped', $setupLocale)
     : tr('resultPartial', $setupLocale);
-  $: explanation = management ? managementCopy($setupLocale)[outcome === 'complete' && managementChanged ? 'finishedBody' : outcome === 'partial' ? 'partial' : 'inspectionBody'] : outcome === 'complete'
+  $: explanation = batch ? tr('batchResultBody', $setupLocale) : management ? managementCopy($setupLocale)[outcome === 'complete' && managementChanged ? 'finishedBody' : outcome === 'partial' ? 'partial' : 'inspectionBody'] : outcome === 'complete'
     ? tr('resultCompleteBody', $setupLocale)
     : outcome === 'partial'
       ? tr('resultPartialBody', $setupLocale)
@@ -39,13 +40,12 @@
   $: pendingProbeCleanup = blockedPermissionReport?.checks.some(check => check.cleanupPending === true) === true;
   $: secretCollision = blockedPermissionReport?.checks.some(check => check.incident === 'secret-collision') === true;
   $: reasonKey = blockedPermissionReport?.role === 'workflow' ? 'reasonWorkflowPermissions' : reasons[detail?.reasonCode ?? 'unknown'][0];
-  $: showPatCorrection = outcome === 'blocked' && detail?.reasonCode === 'permissions'
-    && detail.mutationStarted === false && !pendingProbeCleanup && !secretCollision && setupPatCorrection;
+  $: showPatCorrection = (outcome === 'blocked' || batch && outcome === 'partial') && detail?.reasonCode === 'permissions'
+    && (batch || detail.mutationStarted === false) && !pendingProbeCleanup && !secretCollision && setupPatCorrection;
   $: unresolvedPermissions = blockedPermissionReport
     ? blockedPermissionReport.checks.filter(check => check.applicability === 'required'
       && check.status !== 'verified' && check.status !== 'available') : [];
 </script>
-
 <section class="card result-card" tabindex="-1" use:focusOnRevision={1}><span class="result-icon" aria-hidden="true">{outcome === 'complete' ? '✓' : '!'}</span><h2>{heading}</h2>
   {#if outcome === 'blocked' || outcome === 'cancelled' || outcome === 'partial'}
     <div class="result-facts">
@@ -75,9 +75,10 @@
     <SetupPatCorrectionPanel correction={setupPatCorrection} />
   {/if}
   <p>{secretCollision ? tr('permissionSecretCollision', $setupLocale) : pendingProbeCleanup ? tr('permissionProbeCleanupPending', $setupLocale) : explanation}</p>
-  {#if outcome === 'complete' && !management}<p>{tr('botRenewal', $setupLocale)}</p>{/if}
-  {#if !management}<p>{tr('doctorHelp', $setupLocale)}</p>{/if}
-  {#if outcome === 'complete' && !management}
+  {#if batch}<p>{tr('batchCleanup', $setupLocale)}</p>{/if}
+  {#if outcome === 'complete' && !management && !batch}<p>{tr('botRenewal', $setupLocale)}</p>{/if}
+  {#if !management && !batch}<p>{tr('doctorHelp', $setupLocale)}</p>{/if}
+  {#if outcome === 'complete' && !management && !batch}
     <section class="result-doctor" aria-live="polite">
       {#if doctor?.status === 'running'}<p>{tr('doctorRunning', $setupLocale)}</p>
       {:else if doctor?.status === 'complete'}<p>{tr(doctor.healthy ? 'doctorPassed' : 'doctorWarnings', $setupLocale)} {tr('doctorCounts', $setupLocale, { pass: String(doctor.pass ?? 0), warn: String(doctor.warn ?? 0), fail: String(doctor.fail ?? 0), skipped: String(doctor.skipped ?? 0) })} {tr('doctorSecretLimit', $setupLocale)}</p>
@@ -85,4 +86,4 @@
       {#if controller && doctor?.status !== 'running' && doctor?.status !== 'complete'}<ActionButton label={tr('doctorRun', $setupLocale)} variant="secondary" onClick={onDoctor} />{/if}
     </section>
   {/if}
-  <div class="result-links"><a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer">{tr('patSettings', $setupLocale)}</a><code>copilot doctor --read-only</code></div>{#if controller}<ActionButton label={tr('closeSession', $setupLocale)} onClick={onClose} />{/if}</section>
+  <div class="result-links"><a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer">{tr('patSettings', $setupLocale)}</a>{#if !batch}<code>copilot doctor --read-only</code>{/if}</div>{#if controller}<ActionButton label={tr('closeSession', $setupLocale)} onClick={onClose} />{/if}</section>

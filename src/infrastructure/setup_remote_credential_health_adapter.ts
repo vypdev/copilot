@@ -14,28 +14,13 @@ import type {
 import { SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE } from '../domain/setup_workflow_catalog';
 import { isSafeBranchTree } from '../domain/deployment_configuration';
 import { inspectCredentialHealthWorkflowAtRef } from '../data/repository/github/credential_health_workflow_visibility';
+import { SETUP_CREDENTIAL_HEALTH_BINDINGS } from '../domain/setup_credential_health';
 
 const WORKFLOW_ID = SETUP_CREDENTIAL_HEALTH_WORKFLOW_FILE;
-const INPUT_BY_SECRET: Readonly<Record<string, string>> = {
-  PAT: 'check_pat',
-  OPENAI_API_KEY: 'check_openai',
-  ANTHROPIC_API_KEY: 'check_anthropic',
-  GOOGLE_API_KEY: 'check_google',
-  OPENROUTER_API_KEY: 'check_openrouter',
-  CURSOR_API_KEY: 'check_cursor',
-  OPENCODE_API_KEY: 'check_opencode',
-  CODEX_API_KEY: 'check_codex_api_key',
-};
-const JOB_BY_SECRET: Readonly<Record<string, string>> = {
-  PAT: 'Verify PAT',
-  OPENAI_API_KEY: 'Verify OPENAI_API_KEY',
-  ANTHROPIC_API_KEY: 'Verify ANTHROPIC_API_KEY',
-  GOOGLE_API_KEY: 'Verify GOOGLE_API_KEY',
-  OPENROUTER_API_KEY: 'Verify OPENROUTER_API_KEY',
-  CURSOR_API_KEY: 'Verify CURSOR_API_KEY',
-  OPENCODE_API_KEY: 'Verify OPENCODE_API_KEY',
-  CODEX_API_KEY: 'Verify CODEX_API_KEY',
-};
+const INPUT_BY_SECRET: Readonly<Record<string, string>> = Object.fromEntries(
+  Object.entries(SETUP_CREDENTIAL_HEALTH_BINDINGS).map(([name, binding]) => [name, binding.input]));
+const JOB_BY_SECRET: Readonly<Record<string, string>> = Object.fromEntries(
+  Object.entries(SETUP_CREDENTIAL_HEALTH_BINDINGS).map(([name, binding]) => [name, binding.job]));
 
 export interface CredentialHealthQueryOptions {
   waitMs?: number;

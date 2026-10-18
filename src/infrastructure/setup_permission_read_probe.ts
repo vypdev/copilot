@@ -181,6 +181,7 @@ function probeUrl(
         if (requirement.probe === 'members') return `https://api.github.com/user/memberships/orgs/${encodedOwner}`;
         if (requirement.probe === 'issue-types') return `${organizationRoot}/issue-types?per_page=1`;
         if (requirement.probe === 'projects') return `${organizationRoot}/projectsV2?per_page=100`;
+        if (requirement.probe === 'runner-groups') return `${organizationRoot}/actions/runner-groups?per_page=1`;
         return undefined;
     }
     if (requirement.probe === 'metadata') return root;

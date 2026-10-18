@@ -113,3 +113,17 @@ describe('read-only PAT probe boundaries', () => {
         expect(check.writeProof).toBeUndefined();
     });
 });
+
+
+test.each([
+  { payload: { total_count: 0, runner_groups: [] }, code: 200, status: 'verified' },
+  { payload: { total_count: 1 }, code: 200, status: 'unverifiable' },
+  { payload: {}, code: 403, status: 'unverifiable' },
+])('organization runner inventory permission uses only GET and validates provider evidence: $status', async ({ payload, code, status }) => {
+  const fetcher = jest.fn(async () => new Response(JSON.stringify(payload), { status: code }));
+  const [check] = await new SetupTokenPermissionQueryAdapter({ fetcher }).inspect('vypdev', 'platform', 'fixture', [{ ...requirement,
+    scope: 'organization', permission: 'Self-hosted runners', level: 'read', probe: 'runner-groups' }]);
+  expect(check.status).toBe(status);
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(fetcher).toHaveBeenCalledWith('https://api.github.com/orgs/vypdev/actions/runner-groups?per_page=1', expect.objectContaining({ method: 'GET' }));
+});

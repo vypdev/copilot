@@ -312,7 +312,7 @@ describe('push and single-action capability binding', () => {
       prepare: jest.fn(), validatePreparedMerge: jest.fn(), assertRemoteHeadsUnchanged: jest.fn(),
       commitAndPush: jest.fn(), abort: jest.fn(),
     };
-    const variablePort = { upsert: jest.fn(), upsertScopedVariables: jest.fn() };
+    const variablePort = { createMissing: jest.fn(), upsert: jest.fn(), upsertScopedVariables: jest.fn() };
     const secretPort = { upsertSecrets: jest.fn(), upsertScopedSecrets: jest.fn() };
     const setupWorkspacePort = { prepare: jest.fn(), hasValidToken: jest.fn() };
     const labels = bindInitialLabels({ ensureInitialLabels: jest.fn() } as never, binding);
@@ -327,12 +327,14 @@ describe('push and single-action capability binding', () => {
     await workspace.assertRemoteHeadsUnchanged('develop', 'a'.repeat(40), 'feature/42', 'b'.repeat(40));
     await workspace.commitAndPush('feature/42', 'merge', { name: 'Copilot', email: 'bot@example.com' });
     await setupWorkspace.prepare({} as never);
+    await variables.createMissing!([{ name: 'NEW', value: 'value' }]);
     await variables.upsertScopedVariables!({} as never, [{ name: 'ENABLED', value: 'true' }]);
     await secrets.upsertScopedSecrets!({} as never, [{ name: 'PAT', value: 'value' }]);
 
     expect(workspacePort.assertRemoteHeadsUnchanged).toHaveBeenCalledWith(
       'develop', 'a'.repeat(40), 'feature/42', 'b'.repeat(40), 'secret-token',
     );
+    expect(variablePort.createMissing).toHaveBeenCalledWith('owner', 'repo', 'secret-token', [{ name: 'NEW', value: 'value' }]);
     expect(variablePort.upsertScopedVariables).toHaveBeenCalledWith(
       'owner', 'repo', 'secret-token', {}, [{ name: 'ENABLED', value: 'true' }],
     );

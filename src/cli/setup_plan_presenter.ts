@@ -4,6 +4,7 @@ import type { SetupPlan } from '../domain/setup';
 import { color, doctorIcon, formatTask, renderBox } from './setup_prompt_rendering';
 import { FIXED_APPROVAL_EXCLUSIONS } from '../domain/pull_request_approval_policy';
 import { workflowPatStorageCopy } from './setup_workflow_pat_storage_copy';
+import { renderSetupInstallationReview } from './setup_installation_review_presenter';
 
 export class ConsoleSetupPlanPresenter implements SetupPlanPresenterPort {
   present(plan: SetupPlan): void {
@@ -23,6 +24,7 @@ export function renderSetupPlan(plan: SetupPlan): string {
   const content = [
     color('Capabilities', 36), enabledFeatures || '  (none)', '',
     color('Agent routing', 36), agents, '',
+    ...(plan.installationReview ? [renderSetupInstallationReview(plan.installationReview), ''] : []),
     color('Pull-request approval', 36),
     `  Mode: ${approval.mode} (new setup; absent runtime policy stays off)`,
     `  Scope: ${approval.targetRoles.join(', ')} / ${approval.branchKinds.join(', ')}; linked issue ${approval.requireLinkedIssue ? 'required' : 'optional'}`,
@@ -40,7 +42,8 @@ export function renderSetupPlan(plan: SetupPlan): string {
     `  Production/development branches: ${plan.configuration.repository.mainBranch} / ${plan.configuration.repository.developmentBranch}`,
     `  Projects: ${plan.configuration.projects.ids || '(none)'}`,
     `  Files selected: ${plan.selectedFiles.length}`,
-    `  Variables to upsert: ${plan.configuration.manageRepositoryVariables ? plan.variables.length : 0}`,
+    `  Variables to write: ${plan.configuration.manageRepositoryVariables ? (plan.organizationReuse?.repositoryWrites.length ?? plan.variables.length) : 0}`,
+    ...(plan.organizationReuse ? [`  Retained organization Variables: ${plan.organizationReuse.organizationVariables.length}; repository overrides: ${plan.organizationReuse.repositoryVariables.length}. Shared values and existing Secret values remain unchanged.`] : []),
     `  Secret options to validate/provision: ${plan.configuration.manageRepositorySecrets ? plan.credentialRequirements.length : 0}`,
     `  Variable storage: ${storageLabel(plan.configuration.storage.variables)}`,
     `  Secret storage: ${storageLabel(plan.configuration.storage.secrets)}`,

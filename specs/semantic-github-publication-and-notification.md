@@ -1432,13 +1432,13 @@ implementation change so current and proposed documentation cannot be confused.
 
 Live PR #465 push run `38146036421` on `windows-intel-runner-1` returned 0% because the model reported that workspace commands were blocked. That statement does not establish the underlying sandbox cause. Progress now receives a trusted GitHub comparison pinned to complete base/head object IDs through a physically read-only repository-bound query. The agent is explicitly asked to assess only the supplied requirements and evidence, without commands or workspace inspection.
 
-All source patches must be present inside a 256,000-byte UTF-8 evidence budget. Generated `build/` files and the exact generated `specs/CATALOG.md` index retain their path/status/addition/deletion metadata only; these facts never certify a build or test. Missing source patches, invalid identities/paths/counts, duplicate paths, or the 300-file provider ceiling stop analysis before any model or progress mutation. GitHub documents that comparison files are confined to the first page and capped at 300: [compare-two-commits](https://docs.github.com/en/rest/commits/commits#compare-two-commits). A boundary-sized list is conservatively incomplete.
+All source patches must be present inside a 256,000-byte UTF-8 evidence budget per assessment request; the 2026-10-17 multipart amendment below defines complete larger comparisons. Generated `build/` files and the exact generated `specs/CATALOG.md` index retain their path/status/addition/deletion metadata only; these facts never certify a build or test. Missing source patches, invalid identities/paths/counts, duplicate paths, or the 300-file provider ceiling stop analysis before any model or progress mutation. GitHub documents that comparison files are confined to the first page and capped at 300: [compare-two-commits](https://docs.github.com/en/rest/commits/commits#compare-two-commits). A boundary-sized list is conservatively incomplete.
 
 The live source head and development base are checked again after analysis, before native progress mutations. The existing downstream head freshness gate remains. No permission, sandbox, process, prompt or schema limit is expanded, and no runtime flag is added.
 
 The repair owns **30 distinct cases**: 26 provider-bound immutable-comparison cases and four application outcomes (wrong base, wrong head, unavailable comparison, and a changed base during analysis). The existing head-race and prompt cases are retained, with explicit supplied-evidence and no-shell assertions. The conservative semantic ledger adds ten declarations rather than counting parameterized rows again. User documentation and catalog evidence change with implementation. Live acceptance must prove a supplied-source assessment and retained state on incomplete evidence; successful offline tests alone do not close that acceptance.
 
-Live human doctor push `38162035628`, head `25950008`, exposed a second comparison-boundary problem: 39 files contained 248,563 raw source-patch bytes, including 89,186 bytes of the generated specification index; JSON escaping exceeded the unchanged 256,000-byte budget. The exact generated `specs/CATALOG.md` path now carries metadata only, alongside build outputs. The editable `specs/catalog.json` still requires its full patch. Two distinct provider contracts cover the generated index and its source. Bounds/incomplete data now report `provider.unavailable`; only invalid or contradictory object identity uses `workflow.stale`, so the Job Summary does not falsely claim the branch advanced. Fresh live acceptance remains pending.
+Live human doctor push `38162035628`, head `25950008`, exposed a second comparison-boundary problem: 39 files contained 248,563 raw source-patch bytes, including 89,186 bytes of the generated specification index; JSON escaping exceeded the unchanged 256,000-byte budget. The exact generated `specs/CATALOG.md` path now carries metadata only, alongside build outputs. The editable `specs/catalog.json` still requires its full patch. Two distinct provider contracts cover the generated index and its source. At that historical repair, bounds/incomplete data reported `provider.unavailable`; the 2026-10-17 amendment corrects deterministic size failures. Invalid or contradictory object identity uses `workflow.stale`, so the Job Summary does not falsely claim the branch advanced. Fresh live acceptance remains pending.
 
 
 ### Read-only SDD comparison reply refresh (2026-10-12)
@@ -1727,3 +1727,192 @@ allocation becomes **76** (59 + 11 execution + 6 autofix). They are excluded
 from the SDD comparison's separate 254-case inventory. No permission,
 configuration, coverage threshold or platform changes. Documentation of the
 source-freshness boundary remains in the comment-command guide.
+
+
+## 22. Bounded multipart progress: dogfooding #547 (2026-10-17)
+
+- Status: Ready for implementation; native acceptance pending.
+- Owner: Copilot maintainers; capability: github-communication-experience.
+- Evidence: [#547](https://github.com/vypdev/copilot/issues/547), push
+  `39057684084` for [#546](https://github.com/vypdev/copilot/pull/546).
+- Scope: complete progress assessment of larger comparisons with truthful
+  terminal size failures. No unresolved design decision.
+
+### Problem, product journey and fixed limits
+
+Observed behavior: the complete source comparison exceeds 256,000 UTF-8 bytes.
+The adapter labels that deterministic local limit as a retryable provider outage.
+Changing only the error leaves legitimate larger work impossible to assess.
+The intended contract preserves the per-request bound and all source evidence.
+
+```text
+Pinned complete comparison -> one request, or 2–16 complete file partitions
+ -> validated facts for every assigned file -> one final assessment
+ -> recheck both heads and native open issue -> existing progress publication
+```
+
+Text equivalent: partition only after the complete provider comparison is
+validated; summarize every assigned file, assess all summaries together, and
+publish only after existing freshness and native issue-state fences succeed.
+A small comparison keeps its existing single-call behavior. No partition can
+independently publish a percentage or change a label/card.
+
+The adapter MUST validate every file before any model call. Every source patch
+MUST occur in exactly one partition, without truncation, dropping files or
+workspace fallback. Generated `build/` and exact `specs/CATALOG.md` paths retain
+metadata only and never prove build/test success. The conservative 300-file
+provider ceiling remains unchanged. Partitions contain complete files, so an
+individual file exceeding the unchanged 256,000-byte serialized evidence budget
+is terminal. At most 16 partitions and one final assessment are allowed. The
+manifest MUST fit 256,000 UTF-8 bytes. Model-derived facts have a separate maximum
+384,000-byte budget, further reduced by the exact final issue/prompt envelope
+inside the unchanged 524,288-byte runtime ceiling. Before any model request,
+progress analysis reserves every path and JSON framing and derives one prose-length limit
+(up to 600 Unicode code points per fact) using worst-case six-byte JSON escaping per code point.
+The provider schema and parser enforce this same limit. Facts are requested
+concisely, never truncated after receipt; every path remains in the final data.
+The aggregate contains compact partition IDs/counts rather than duplicating all
+paths inside an embedded manifest. All source-part prompts are also checked
+against the unchanged runtime ceiling before the first call. These fixed limits
+are intentionally not configurable; there are no new inputs, PAT scopes,
+variables, secrets, flags, saved state or migration. Larger single files and
+larger batches require smaller reviewed changes.
+
+### Architecture, trust and atomic completion
+
+The immutable query port distinguishes `single` and `partitioned` comparisons.
+A pure partition policy serializes the same admitted file facts and packs whole
+files deterministically by byte length. The repository adapter retains GitHub
+identity/path/status/count/patch validation and provides no workspace capability.
+A separate pure response policy validates exact partition identity, requested
+locale, bounded per-file facts and the exact complete assigned path set: missing,
+extra, duplicate, malformed or oversized facts fail closed. The application
+orchestrates sequential bounded agent calls, then a final assessment using only
+the compact partition identities/counts and complete validated per-file facts. Facts are untrusted analysis, never
+instructions or CI attestation. The final model must preserve uncertainty and
+must not average partition percentages. All parts complete before final progress
+assessment; any failed part prevents final assessment and publication.
+
+Existing closed-issue admission, final native-open/head/base fences and semantic
+publication ownership remain authoritative. Results are invocation-local; a
+retry rereads the pinned comparison, and cancellation leaves prior progress.
+There is no partial durable assessment or resume receipt. Typed semantic errors
+cross the existing Result/Job Summary path. `validation.evidence-too-large` is
+nonretryable and distinct from genuine transient provider failures. Identical
+oversized input MUST NOT recommend retry. Existing dependency and semantic
+publication guards plus type checking enforce adapter/application boundaries;
+new pure-policy budgets require 100% coverage in all four metrics.
+
+### User and operator experience
+
+| State | Visible meaning and next action | Retained state |
+|---|---|---|
+| Pending | Log: assessing complete comparison in 3 parts; no action needed | prior labels/card |
+| Part 2 of 3 | Only internal facts collected; no partial percentage | prior labels/card |
+| Complete | Existing progress card shows final assessment; inspect linked run | normal current projection |
+| Size blocked | Summary: progress could not be assessed within fixed evidence limits; reduce comparison before a new assessment | prior labels/card |
+| Failed part/provider | Existing sanitized failure and correlation; inspect run, retry only when appropriate | prior labels/card |
+| Stale/canceled | Existing stale/canceled outcome; inspect latest revision | prior labels/card |
+
+Representative terminal Job Summary content:
+
+```markdown
+Progress could not be assessed within the fixed evidence limits.
+Error code: validation.evidence-too-large
+Action: Reduce the comparison size or split the work into smaller reviewed
+changes before running a new assessment.
+Retained state: Existing progress labels and published assessments were preserved.
+Retryable: No
+```
+
+English and Spanish catalogs provide deterministic error text; other locales use
+the existing complete catalog translation/fallback contract. No new issue
+comment, notification, marker or wide table is introduced in product UI. Existing
+accessible headings, plain status text, sanitization and linked run navigation
+remain in force. No raw patches, credentials or model output enter diagnostic
+logs. A part's completion is not a public success, so there is no partial-success
+notification or cleanup beyond invocation-local memory.
+
+### Test budget, documentation, acceptance and rollout
+
+A minimum **30 new distinct cases** is required: 10 pure packing/boundary cases,
+10 exact response/completeness/locale/abuse cases, six application success,
+failed-middle, malformed and stale/closed cases, two provider error-mapping
+cases and two semantic error/presentation cases. Existing source completeness,
+head races and native closure tests remain. Parameterized rows count only once
+in the conservative communication ledger. All global and existing module gates
+remain unchanged. Deterministic fakes use no network or sleeps. Full Jest,
+coverage, type/lint/build, docs/workflow/specification and generated-bundle gates
+are required. Native acceptance must prove #546's complete larger comparison is
+assessed successfully, and the terminal error presents No with retained state;
+a model-only exit is insufficient evidence.
+
+`docs/issues/branch-management.mdx` explains the normal single/multipart flow,
+fixed limits, retained state and recovery. The operations error reference adds
+the terminal code. Catalog evidence includes both policies, orchestration and
+their tests; generated catalog and specification validation must pass together.
+No setup/credential documentation change is needed because scopes do not change.
+
+| Requirement | Executable acceptance | Documentation |
+|---|---|---|
+| Complete lossless bounded input | exact-byte/UTF-8 packing, 16/17 limits, full file set, oversized individual file | progress evidence |
+| No partial assessment | exact IDs/paths, missing/duplicate/extra/invalid facts, failed-middle and final-call counters | retained state |
+| Correct failure and freshness | nonretryable size, transient error preserved, native open/head/base races | error reference |
+| Existing UX and compatibility | unchanged single-call path, locale/schema and catalog checks, native run review | progress evidence |
+
+Implementation order: immutable contract and SDD; packing/response policies;
+application orchestration; provider and semantic mappings; docs/catalog/generated
+bundles; full automated gates and native acceptance. Rollout uses the repository's
+normal PR flow; no release or flag is implicitly authorized. Rollback restores
+single-call behavior without modifying existing cards. Definition of Done is all
+traceability rows, the 30-case floor, unchanged global/module budgets, 100% new
+pure policies, complete docs/catalog, green current-head native checks and a
+verified complete #546 assessment. No clipping, downgraded check or partial
+assessment may be used to achieve green status.
+
+
+### Large-file-list aggregation regression (2026-10-17)
+
+Native review #546 found that a complete 299-file comparison can fit all source
+partitions while its two long valid facts per path exceed one source
+part's 256,000-byte budget. The adaptive fact limit and separate aggregate budget above MUST admit this
+case within the existing runtime prompt ceiling, including worst-case escaping
+and long valid paths. An issue envelope leaving no space, or any over-budget
+source-part prompt, fails terminally before any model call or publication. Source parts, the 16-part ceiling, manifest limit,
+299-file completeness boundary, locale/exact-path validation and publication
+fences remain unchanged. Over-budget aggregates still report the terminal size
+error; no percentages are averaged and no evidence is silently shortened.
+
+Minimum **15 additional distinct cases**: 11 pure cases (the 299-file worst-case
+serialized boundary, five invalid/insufficient budgets, empty assignment, smaller
+schema/parser limit and three invalid aggregation budgets) and four application
+cases (299-file complete replay, oversized issue envelope, oversized source-part
+prompt and oversized single-part final prompt). The existing aggregate oversize
+case is updated rather than counted again. All paths and source-part bounds
+remain intact, and the final replay above 256,000 bytes stays inside 512 KiB.
+Existing pure 100% and orchestration coverage
+budgets, full validation and current-head native review remain required. User
+branch-management documentation states the separate model-facts budget.
+
+
+### Unicode fact-bound agreement (2026-10-17)
+
+JSON Schema `maxLength`, the shared local validator's `minLength`/`maxLength`,
+and the response parser MUST all count Unicode code points, including
+supplementary characters. This follows the [JSON Schema string-validation
+contract](https://json-schema.org/draft/2020-12/json-schema-validation#name-maxlength).
+JavaScript UTF-16 string length is
+not the schema boundary. Worst-case JSON escaping remains six bytes per code
+point, so the aggregate arithmetic and fixed runtime/source limits are unchanged.
+Minimum **three additional pure cases** cover the 600-code-point supplementary
+boundary, 601-code-point rejection and the smaller calculated limit. No locale
+or user configuration changes are introduced; all pure coverage budgets remain.
+
+An additional **six distinct cases** MUST cover the local validation boundary:
+four supplementary-character minimum/maximum accept/reject cases and two
+schema-validation-to-progress-parser compositions at the default 600 and an
+adaptive 20 code-point limit. The compositions accept the boundary and reject
+one extra code point at both stages. They supplement, rather than recount, the
+three parser-only cases. Existing response size/prompt byte ceilings and typed,
+sanitized length failures remain unchanged; catalog evidence and operator docs
+must identify the shared local validator.

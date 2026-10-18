@@ -16,6 +16,7 @@ export function buildSetupParams(
   credentials?: SetupCredentialCollection,
   approvedWorkflowFiles: readonly string[] = [],
   remoteConfiguration?: SetupRemoteConfiguration,
+  configurationSource?: 'organization' | 'customize',
 ): Record<string, unknown> {
   return {
     ...(configuration ? buildSetupActionInputs(configuration) : {}),
@@ -31,6 +32,7 @@ export function buildSetupParams(
     ...(configuration ? { setupConfiguration: configuration } : {}),
     ...(credentials ? { setupCredentials: credentials } : {}),
     ...(remoteConfiguration ? { setupRemoteConfiguration: remoteConfiguration } : {}),
+    ...(configurationSource ? { setupConfigurationSource: configurationSource } : {}),
     setupWorkflowUpdates: approvedWorkflowFiles,
   };
 }

@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { runInNewContext } from 'node:vm';
 import * as yaml from 'js-yaml';
 import { WORKFLOW_QUEUE_POLICY } from '../../application/policies/workflow_queue_policy';
+import { selectedSetupRunsOn } from '../../application/policies/setup_runner_policy';
 
 const CRLF_WHITESPACE = 'core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol';
 
@@ -104,6 +105,44 @@ const validWorkflow = {
 };
 
 describe('workflow contract validator', () => {
+  it.each(['.github/workflows', 'setup/workflows'].flatMap(directory =>
+    ['copilot_commit.yml', 'copilot_branch_sync.yml'].flatMap(name =>
+      ['remove', 'shadow'].map(mutation => [directory, name, mutation]))))(
+    'rejects %s/%s when permission-probe exclusion is %s', (directory, name, mutation) => {
+      const { file, workflow } = loadMutationWorkflow(directory, name);
+      if (mutation === 'remove') workflow.on.push.branches = workflow.on.push.branches
+        .filter((branch: string) => branch !== '!copilot-permission-test-*');
+      else workflow.on.push.branches.push('**');
+      expect(() => validateWorkflow(file, workflow)).toThrow(/permission-probe/);
+    },
+  );
+
+  it.each(['.github/workflows', 'setup/workflows'].flatMap(directory =>
+    ['copilot_commit.yml', 'copilot_branch_sync.yml'].map(name => [directory, name])))(
+    'excludes probe refs and preserves ordinary push admission in %s/%s', (directory, name) => {
+      const { file, workflow } = loadMutationWorkflow(directory, name);
+      expect(() => validateWorkflow(file, workflow)).not.toThrow();
+      const admitted = (ref: string) => (workflow.on.push.branches as string[]).reduce((accept, pattern) => {
+        const excluded = pattern.startsWith('!');
+        return path.posix.matchesGlob(ref, excluded ? pattern.slice(1) : pattern) ? !excluded : accept;
+      }, false);
+      expect(admitted(`copilot-permission-test-${'a'.repeat(32)}`)).toBe(false);
+      expect(admitted(`copilot-permission-test-${'0123456789abcdef'.repeat(2)}`)).toBe(false);
+      for (const ref of ['feature/42-change', 'bugfix/570-runner', 'release/3.5.7', 'hotfix/urgent',
+        'feature/copilot-permission-test-example', 'copilot-permission-testing']) expect(admitted(ref)).toBe(true);
+      for (const ref of ['master', 'develop', 'setup/copilot/reviewed-operation']) {
+        expect(admitted(ref)).toBe(name === 'copilot_branch_sync.yml');
+      }
+    },
+  );
+
+  it.each(['.github/workflows', 'setup/workflows'])('excludes issue-less installer pushes from Commit in %s', directory => {
+    const { file, workflow } = loadMutationWorkflow(directory, 'copilot_commit.yml');
+    expect(() => validateWorkflow(file, workflow)).not.toThrow();
+    workflow.on.push.branches = workflow.on.push.branches.filter((branch: string) => branch !== '!setup/copilot/**');
+    expect(() => validateWorkflow(file, workflow)).toThrow('exclude installer-owned setup/copilot branches');
+  });
+
   it('keeps branch and SDD configuration consistent across issue, PR, review and push callbacks', () => {
     for (const directory of ['.github/workflows', 'setup/workflows']) {
       for (const fileName of ['copilot_issue.yml', 'copilot_issue_comment.yml', 'copilot_commit.yml',
@@ -268,7 +307,7 @@ describe('workflow contract validator', () => {
   });
 
   it.each(['.github/workflows', 'setup/workflows'])(
-    'keeps the %s branch-sync observer all-branch, bot-push-safe, and agent-free',
+    'keeps the %s branch-sync observer ordinary-branch, bot-push-safe, and agent-free',
     (directory) => {
       const file = path.join(process.cwd(), directory, 'copilot_branch_sync.yml');
       const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
@@ -885,6 +924,83 @@ describe('workflow contract validator', () => {
     expect(() => assertRunner(queueFile, {
       jobs: { 'copilot-issues': { 'runs-on': ['self-hosted', 'codex', 'macOS'] } },
     })).toThrow('runs-on self-hosted, codex');
+  });
+
+  it('accepts the setup-generated grouped provisioning route through the complete source validator', () => {
+    const { file, workflow } = loadMutationWorkflow('.github/workflows', 'agent-cli-provisioning.yml');
+    workflow.jobs['verify-agent-clis']['runs-on'] = selectedSetupRunsOn({
+      mode: 'manual-self-hosted', profileId: '', group: 'vypdev',
+      labels: ['self-hosted', 'codex', 'Linux'], validation: 'hosted',
+    }, 'agent');
+    expect(workflow.jobs['verify-agent-clis']['runs-on']).toEqual({ group: 'vypdev', labels: ['self-hosted', 'codex', 'Linux'] });
+    expect(() => validateWorkflow(file, workflow)).not.toThrow();
+  });
+
+  it.each([
+    { group: 'vypdev', labels: ['self-hosted', 'codex'] },
+    { labels: ['self-hosted', 'codex', 'Linux'] },
+  ])('retains source queue contracts for literal object route %j', route => {
+    const { file, workflow } = loadMutationWorkflow('.github/workflows', 'copilot_issue.yml');
+    workflow.jobs['copilot-issues']['runs-on'] = route;
+    expect(() => validateWorkflow(file, workflow)).not.toThrow();
+  });
+
+  it.each([
+    ['unknown field', { group: 'vypdev', labels: ['self-hosted', 'codex'], extra: true }],
+    ['missing labels', { group: 'vypdev' }],
+    ['empty labels', { labels: [] }],
+    ['too many labels', { labels: ['self-hosted', ...Array.from({ length: 10 }, (_, i) => `label-${i}`)] }],
+    ['non-string label', { labels: ['self-hosted', 7] }],
+    ['null label', { labels: null }],
+    ['empty label', { labels: ['self-hosted', ''] }],
+    ['overlong label', { labels: ['self-hosted', 'x'.repeat(101)] }],
+    ['padded label', { labels: ['self-hosted', ' codex'] }],
+    ['control label', { labels: ['self-hosted', 'codex\nLinux'] }],
+    ['invisible label', { labels: ['self-hosted', 'codex\u200b'] }],
+    ['expression label', { labels: ['self-hosted', '${{ vars.RUNNER }}'] }],
+    ['duplicate label', { labels: ['self-hosted', 'codex', 'CODEX'] }],
+    ['null group', { group: null, labels: ['self-hosted', 'codex'] }],
+    ['empty group', { group: '', labels: ['self-hosted', 'codex'] }],
+    ['padded group', { group: ' vypdev', labels: ['self-hosted', 'codex'] }],
+    ['overlong group', { group: 'x'.repeat(101), labels: ['self-hosted', 'codex'] }],
+    ['expression group', { group: '${{ vars.RUNNER_GROUP }}', labels: ['self-hosted', 'codex'] }],
+    ['control group', { group: 'vypdev\n', labels: ['self-hosted', 'codex'] }],
+    ['hosted labels in a group', { group: 'vypdev', labels: 'ubuntu-latest' }],
+  ])('rejects %s in runner objects before routing', (_reason, route) => {
+    expect(() => assertRunner(queueFile, { jobs: { 'copilot-issues': { 'runs-on': route } } }))
+      .toThrow('runs-on object must contain only');
+  });
+
+  it.each([
+    { group: 'vypdev', labels: 'self-hosted' },
+    { group: 'vypdev', labels: ['self-hosted', 'codex', 'Windows'] },
+    { group: 'vypdev', labels: ['self-hosted', 'codex', 'macOS'] },
+  ])('still requires the exact source role labels in runner object %j', route => {
+    expect(() => assertRunner(queueFile, { jobs: { 'copilot-issues': { 'runs-on': route } } }))
+      .toThrow('runs-on self-hosted, codex');
+  });
+
+  it.each([
+    ['.github/workflows', 'copilot_credential_health.yml'],
+    ['setup/workflows', 'copilot_credential_health.yml'],
+    ['setup/workflows', 'copilot_issue.yml'],
+    ['.github/workflows', 'ci_check.yml'],
+    ['.github/workflows', 'repowise.yml'],
+  ])('prevents grouped routing from overriding the hosted/trust role in %s/%s', (directory, name) => {
+    const { file, workflow } = loadMutationWorkflow(directory, name);
+    Object.values(workflow.jobs)[0]['runs-on'] = { group: 'vypdev', labels: ['self-hosted', 'codex', 'Linux'] };
+    expect(() => assertRunner(file, workflow)).toThrow('must use runs-on');
+  });
+
+  it('enforces Bash and isolated pnpm on grouped source jobs', () => {
+    const { file, workflow } = loadMutationWorkflow('.github/workflows', 'copilot_issue.yml');
+    const job = workflow.jobs['copilot-issues'];
+    job['runs-on'] = { group: 'vypdev', labels: ['self-hosted', 'codex', 'Linux'] };
+    job.steps.push({ run: 'pnpm --version', shell: 'pwsh' });
+    expect(() => validateWorkflow(file, workflow)).toThrow('must select shell: bash');
+    job.steps.pop();
+    job.steps.push({ uses: 'pnpm/action-setup@v5', with: {} });
+    expect(() => validateWorkflow(file, workflow)).toThrow('must isolate pnpm/action-setup');
   });
 
   it('temporarily routes installed Codex jobs to Ubuntu while Apple runners are unstable', () => {

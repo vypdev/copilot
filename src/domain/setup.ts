@@ -14,6 +14,7 @@ import type {
 } from './deployment_configuration';
 import type { IssueWorkflowKind } from './issue_workflow_profile';
 import type { PullRequestApprovalPolicy } from './pull_request_approval_policy';
+import type { SetupRunnerConfiguration, SetupInstallationReview } from './setup_runner';
 
 export type SetupFeature =
     | 'issues'
@@ -105,6 +106,8 @@ export interface SetupProjectConfiguration {
 }
 
 export interface SetupConfiguration {
+    /** Absent legacy configuration retains installed routing. */
+    runners?: SetupRunnerConfiguration;
     features: SetupFeatures;
     agents: SetupAgentConfiguration;
     repository: SetupRepositoryConfiguration;
@@ -151,6 +154,7 @@ export interface SetupResourceTarget {
 
 /** Storage facts only; the previous or replacement PAT value is never included. */
 export interface SetupWorkflowPatStorageNotice {
+    readonly operation?: 'retain';
     readonly scope: SetupResourceScope;
     readonly destination: string;
     readonly replacesExisting: boolean;
@@ -185,6 +189,8 @@ export interface SetupCredentialCheck {
     message: string;
     account?: string;
     sourceScope?: SetupResourceScope;
+    /** Adapter-constructed link to exact trusted workflow evidence; never an arbitrary provider URL. */
+    verificationRunUrl?: string;
 }
 
 export interface SetupCredentialValue {
@@ -197,6 +203,8 @@ export type SetupCredentialDecision = 'keep' | 'replace' | 'skip';
 export interface SetupCredentialCollection {
     workflowPat?: SetupCredentialValue;
     apiKeys: SetupCredentialValue[];
+    /** Metadata-only bindings kept by an explicitly selected reuse journey. */
+    retainedSecrets?: readonly { readonly name: string; readonly scope: SetupResourceScope; readonly status: SetupCredentialStatus }[];
 }
 
 export type SetupOwnerType = 'User' | 'Organization' | 'Unknown';
@@ -210,8 +218,11 @@ export interface SetupRemoteConfiguration {
     repositoryId?: number;
     repositoryVisibility: SetupRepositoryVisibility;
     repositorySecrets: readonly string[];
+    /** Metadata-only rotation fingerprints; absent legacy snapshots do not establish freshness. */
+    repositorySecretRevisions?: readonly { readonly name: string; readonly updatedAt: string }[];
     repositorySecretsAccess: 'available' | 'unavailable' | 'unknown';
     organizationSecrets: readonly string[];
+    organizationSecretRevisions?: readonly { readonly name: string; readonly updatedAt: string }[];
     /** Organization namespace PAT metadata, including a Secret not yet shared with this repository. */
     organizationWorkflowPat?: 'present' | 'absent' | 'unavailable';
     repositoryVariables: readonly SetupVariable[];
@@ -253,6 +264,15 @@ export interface SetupVariable {
 }
 
 export interface SetupPlan {
+    installationReview?: SetupInstallationReview;
+    deliveryMode?: 'local' | 'pull-request';
+    organizationReuse?: {
+        readonly imported: number;
+        readonly needsReview: number;
+        readonly organizationVariables: readonly string[];
+        readonly repositoryVariables: readonly string[];
+        readonly repositoryWrites: readonly string[];
+    };
     workflowPatStorage?: SetupWorkflowPatStorageNotice;
     /** Informational only: advanced defaults not asked in basic presentation. */
     presentationDefaults?: readonly { group: string; count: number }[];

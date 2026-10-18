@@ -16,8 +16,18 @@ import {
     validateSetupConfiguration,
 } from '../setup_configuration_policy';
 import type { SetupConfigurationOverrides } from '../setup_configuration_policy';
+import { cloneSetupConfiguration } from '../setup_configuration_clone_policy';
 
 describe('setup configuration policy', () => {
+    it('clones legacy configurations without runner settings and restores independent safe defaults when merged', () => {
+        const legacy = createDefaultSetupConfiguration(); delete legacy.runners;
+        const cloned = cloneSetupConfiguration(legacy);
+        expect(cloned.runners).toBeUndefined(); expect(cloned).toEqual(legacy);
+        const merged = mergeSetupConfiguration(cloned);
+        expect(merged.runners).toEqual({ mode: 'retain', profileId: '', group: '', labels: [], validation: 'hosted' });
+        expect(legacy.runners).toBeUndefined();
+        expect(mergeSetupConfiguration(cloned).runners?.labels).not.toBe(merged.runners?.labels);
+    });
     it('builds a complete safe default plan', () => {
         const configuration = createDefaultSetupConfiguration();
         const plan = buildSetupPlan(configuration);

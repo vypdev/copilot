@@ -42,6 +42,81 @@ retrying; Copilot does not automatically restore an earlier value. The panel
 describes this checkout rather than certifying the default branch or runner.
 
 
+## Reuse organization settings or configure several repositories
+
+Run `copilot setup --web` from the current repository and confirm its owner and
+name. Choose **This repository** (the default) or **Several repositories**. The
+terminal equivalent for an explicit batch is `copilot setup --batch`.
+
+```mermaid
+flowchart LR
+  A[Confirm repository] --> B[Choose scope and configuration source]
+  B --> C[Select exact repositories]
+  C --> D[Review target settings and complete batch]
+  D --> E[Approve temporary permission checks and setup PRs]
+  E --> F[Human merge and verification]
+```
+
+Choose **Reuse compatible organization configuration** to import recognized,
+valid Variables and skip their questions. Repository overrides take precedence;
+explicit answers take precedence over both. Target branches, CI commands and
+approval producer identities still need their own review. Reuse creates only missing repository
+Variable names. If an existing repository value must change, make a separate
+reviewed update and prepare a fresh plan; batch setup will not overwrite it.
+Equivalent validated approval-policy JSON is retained despite formatting.
+Retained Secrets require complete revision metadata before Apply. If that
+metadata cannot be verified, setup stops and asks for a fresh inspection;
+existing values and completed effects are preserved. The preview shows
+retained shared settings and new repository overrides. Existing Secret values
+are never read, copied, displayed or replaced. A missing required binding blocks
+that repository; provision it separately and inspect again.
+
+In the terminal, enter repository IDs or type `confirm` to keep the displayed
+selection. A blank answer does not accept the selection.
+
+For several repositories, select 1–25 explicit repository identities in the same
+organization. Discovery is limited to the PAT's visible repositories, with
+search and exact-name lookup. If needed, reconnect with a temporary operator PAT
+restricted to the selected repositories. There is no implicit “all repositories”
+selection. Batch Customize changes settings while retaining existing Secret
+bindings; use current-repository Customize to provision new credential values.
+
+Each target gets its own workflows, forms, labels, issue types and guidance.
+The selected development branch must already exist and be readable; create or
+select the intended branch before applying a blocked target. Setup does not
+invent a development branch or its starting revision.
+Review the exact file changes, repository Variable names, additive shared-access
+grants, installation ref, base SHA and temporary permission checks. Approval can
+create/remove test resources and leave GitHub history or notifications. Pending
+cleanup blocks installation. Shared values, visibility and other memberships
+stay unchanged. Replaced setup assets have separate backups under
+`.copilot/setup-backups/`, retaining their relative paths even when their names
+and contents match. Apply runs sequentially and opens at most one setup PR per
+changed target in `setup/copilot/<operation-id>`. It never merges, tags,
+releases or deploys. A repository with matching files needs no new PR and remains
+pending verification after resource checks.
+
+A failed target retains its completed effects while other ready targets can
+continue. Stop prevents pending work; it does not remove successful grants or
+PRs. One explicit retry is available in the paired session after another review.
+If a permission audit ends without a confirmed cleanup report, setup saves that
+uncertainty, retains existing effects and stops pending work. The saved operation
+cannot resume writes. Inspect the GitHub history and local recovery journal,
+resolve any temporary resources, then start a fresh setup preview.
+For a closed session, use `copilot setup --web --resume-operation <operation-id>`
+with a fresh temporary PAT and the same configuration. Private local receipts
+contain identities, hashes and completed effects, never credentials, values or
+file contents. Resume rejects a changed base, target set or desired plan before
+permission probes. If the base changed (including after a merge), inspect the
+retained PR and start a fresh setup preview instead. A PR means **Waiting for
+merge**; credential metadata or PAT authentication does not prove runtime
+permissions. Delete the temporary operator PAT yourself after finishing.
+
+Project Status columns are selected and reviewed for the target Project. Nonempty organization column values are shown as review work and do not prefill or complete those questions.
+
+Batch write preflight requires complete revision metadata for existing repository
+Secrets; matching names alone cannot establish that a credential was not rotated.
+
 ## Recommended installation and initialization
 
 The setup questionnaire includes an optional [guarded PR approval](/pull-requests/guarded-approval) stage. It recommends guarded mode for new installations, but will not invent test or coverage evidence; `recommend` and `off` remain explicit choices. Existing installations do not begin approving merely by upgrading.
@@ -189,7 +264,10 @@ when the setup PAT has `Actions: read` and `Checks: read`. Open the linked run
 and verify the job and its mandatory coverage step before confirming the
 producer attestation. A green check is not evidence of a coverage threshold.
 If no reliable candidates can be read, enter the exact tuple manually; the
-assistant does not guess an App ID. The coverage check selector only offers
+assistant does not guess an App ID. Exact check and workflow names may contain
+commas, including `Backend (format, detekt, test, assemble)`; commas inside an
+explicit `name|App ID|workflow` tuple are preserved. Separate multiple tuples
+with semicolons. The coverage check selector only offers
 checks you selected as trusted producers. `check` mode trusts a CI job that
 fails below your coverage budget; `numeric` mode additionally needs the
 `copilot-diff-coverage-v1` reporter artifact and explicit verification.
@@ -289,8 +367,8 @@ another bot PAT** at the account mismatch to keep your answers and approved plan
 in this session. Setup asks for a fresh value and verifies it again. You can
 instead choose **Stop setup**. Delete the unused PAT yourself in GitHub.
 
-The bot PAT always needs a supplied, validated value, including when you
-preserve other Secrets. Review its destination and replacement warning in the
+**Customize configuration** requires a supplied, validated bot PAT, including when you
+preserve other Secrets. **Reuse compatible organization configuration** retains its existing binding and does not ask for its value; full capability verification remains pending. Review its destination and replacement warning in the
 plan and hidden input. An organization replacement may affect other repos.
 If a repository PAT would override the chosen organization PAT, open its Actions
 Secrets settings and remove it manually, then choose **I have deleted the
@@ -410,7 +488,9 @@ The complete command reference, including every supported option, is in [Workflo
     - **Deploy label**: The label that triggers the deploy flow is configured by the `deploy-label` input (default: `deploy`). The issue templates and your usage must use this same label when you want to run the release or hotfix workflow.
     - **Branch names in workflows**: The Commit workflow (push) often excludes the main and development branches from running (e.g. `!master`, `!develop`). If you change the default branch names (e.g. `main-branch: 'main'`, `development-branch: 'develop'`), update the `push.branches` filter in `.github/workflows/copilot_commit.yml` so it excludes those same names; otherwise the action may run on every push to main/develop or never run on feature branches.
 
-    **Runner selection:** The setup templates and documentation use `runs-on: ubuntu-latest` as the neutral default. Change every agent workflow, including `agent-cli-provisioning.yml`, to the same runner labels used by your infrastructure. This repository's Action workflows retain `runs-on: [self-hosted, codex]` for Mac and Ubuntu. Windows service registrations omit `codex`: **Codex no soportado en runners Windows ejecutados como servicio**. Retire explicit Windows Codex matrix entries; general Windows tests remain. These labels are an internal runner policy, not a requirement for consumers.
+    **Runner selection:** Keep installed routing, explicitly choose GitHub-hosted jobs, reuse an existing organization profile, or enter a known self-hosted group and labels. Review effective routes and access/capacity observations per repository. Agent jobs and CLI provisioning share the agent route; ordinary validation has a separate choice. Approval observers, merge-group checks and publication stay independent. A changed dynamic route that you retain requires separate review of its matrix/inputs. No environment fallback or runner access grant is implicit. See [runner profiles](/configuration#runner-profiles). Windows service registrations omit `codex`: **Codex no soportado en runners Windows ejecutados como servicio**.
+
+    **Copilot source repository:** A target containing a root-local `uses: ./` Action retains its existing native workflows and complete source guidance. Its Commit and Branch Sync workflows gain the temporary `copilot-permission-test-*` push exclusion; Commit also excludes installer branches. Branch Sync retains all ordinary branches, installer branches and bot pushes. The parity inventory distinguishes shared assets, missing optional assets, customizations, native extensions and incompatible generator metadata. Native CI, RepoWise, runner diagnostics, the platform smoke matrix and npm publication are intentional source extensions. Source now includes compatible manual CLI-provisioning and credential-health workflows; provisioning uses the Codex pool, while credential health keeps its independent hosted route. Future generator metadata is retained or blocks regeneration; setup does not silently migrate it.
 
     **Optional but keep coherence:**
     - **Labels**: If you change any label input (e.g. `feature-label`, `bugfix-label`, `deploy-label`), use the **same** label names in your issue templates (`labels:` in each `.yml`) and when labeling issues manually. Otherwise the action will not recognize the type or flow.
@@ -591,8 +671,8 @@ and roles:
 | `copilot_pull_request_review_state.yml` | Reconciles lifecycle labels from submitted, edited, or dismissed reviews in a fixed, isolated review-state check. |
 | `copilot_pull_request_approval.yml` | Optional trusted default-branch observer for evidence-gated native bot approvals; setup renders its exact CI producer names. |
 | `copilot_pull_request_merge_queue.yml` | Reports the existing `Copilot - Pull Request` required-check context for `merge_group` without adding a skipped merge job to normal PR runs. |
-| `copilot_commit.yml` | Runs the issue-centric push pipeline (all branches except main/develop by default): native issue state and size/progress. It also runs Bugbot when the branch has no open PR; otherwise the PR synchronization event owns review. |
-| `copilot_branch_sync.yml` | Lightweight push observer on all branches: detects parent/working drift and maintains a synchronization notice without loading Bugbot or an agent. |
+| `copilot_commit.yml` | Runs the issue-centric push pipeline (all branches except main/develop, the installer-owned `setup/copilot/` namespace and temporary `copilot-permission-test-*` refs by default): native issue state and size/progress. It also runs Bugbot when the branch has no open PR; otherwise the PR synchronization event owns review. |
+| `copilot_branch_sync.yml` | Lightweight push observer on all ordinary branches, excluding temporary `copilot-permission-test-*` refs: detects parent/working drift and maintains a synchronization notice without loading Bugbot or an agent. |
 | `copilot_issue_comment.yml` | Runs on explicitly addressed issue comments: e.g. Think action (answer questions). |
 | `copilot_pull_request_comment.yml` | Runs on explicitly addressed PR review comments, including translation checks. |
 | `release_workflow.yml` | **Manual** (`workflow_dispatch`) with internal `prepare` and `publish` modes: prepares a release from its frozen development cut, promotes it to production, then publishes only the accepted production commit and starts reconciliation. Filename must match `release-workflow`. |

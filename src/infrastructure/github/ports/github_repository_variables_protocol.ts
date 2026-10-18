@@ -4,6 +4,7 @@ export interface GithubRepositoryVariable {
 }
 
 export interface GithubOrganizationResource {
+    updated_at?: string;
     name: string;
     value?: string;
     visibility?: 'all' | 'private' | 'selected';

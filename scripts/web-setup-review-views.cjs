@@ -1,4 +1,5 @@
 /** Credential-free fixtures for long content, navigation and prerequisite diagnostics. */
+const { runnerReviewView } = require('./web-setup-runner-review-fixtures.cjs');
 const base = { revision: 1, promptRevision: 1, repository: 'fixture-owner/fixture-repo' };
 const decisions = {
   enabledCapabilities: ['issues', 'pullRequests', 'releases'], issueWorkflows: ['feature', 'bugfix', 'release'],
@@ -13,6 +14,7 @@ const decisions = {
 };
 
 function reviewView(state) {
+  if (state.startsWith('runner-')) return runnerReviewView(state, reviewView('plan'));
   if (state === 'bot-scope-conflict' || state === 'bot-scope-conflict-unavailable') return { ...base,
     journey: { repository: base.repository, position: 4, total: 6, current: 'Plan',
       complete: ['Repository', 'Setup choices', 'Setup PAT'], pending: ['Bot PAT & credentials', 'Apply'], mutationStarted: false, choiceReviewPass: 1 },

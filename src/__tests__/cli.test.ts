@@ -6,6 +6,7 @@
 import { execSync } from 'child_process';
 import { join } from 'node:path';
 import { program } from '../cli';
+import { logError } from '../utils/logger';
 import { runLocalAction } from '../actions/local_action';
 import { ACTIONS } from '../data/model/action_types';
 import { INPUT_KEYS } from '../application/contracts/input_keys';
@@ -18,6 +19,7 @@ import { acquireSetupSessionGuard } from '../cli/setup_session_guard';
 import { createSetupReviewState } from '../application/policies/setup_questionnaire_policy';
 import type { WebSetupPrompt } from '../application/contracts/web_setup_view';
 import { SetupDoctorWorkspaceQueryAdapter } from '../infrastructure/setup_workspace_adapter';
+import { SetupSessionCoordinator, type SetupSessionPorts } from '../application/usecases/setup/setup_session_coordinator';
 
 jest.mock('child_process', () => ({
   execSync: jest.fn(),
@@ -511,6 +513,8 @@ describe('CLI', () => {
       const answerWebPrompt = async (prompt: WebSetupPrompt): Promise<string> => {
         if (prompt.kind === 'management') return 'wizard';
         if (prompt.title === 'Confirm this repository') return 'Yes, this is my repository';
+        if (prompt.copyId === 'setup.scope') return 'This repository';
+        if (prompt.copyId === 'setup.source') return 'Customize configuration';
         if (prompt.title === 'Choose setup detail') return 'Basic guided setup';
         if (prompt.title === 'How will you provide your setup PAT?') return 'Manual PAT';
         if (prompt.title === 'Temporary setup PAT') return 'github_pat_web_setup_test_token';
@@ -560,6 +564,25 @@ describe('CLI', () => {
           owner: 'test-owner', repository: 'test-repo', setupToken: 'github_pat_web_setup_test_token', readOnly: true,
         }));
         expect(bridge.snapshot().doctor).toEqual({ status: 'complete', healthy: true, pass: 0, warn: 0, fail: 0, skipped: 0 });
+      });
+      it('keeps organization-reuse write audits behind the browser Apply confirmation', async () => {
+        const original = mockTokenPermissionInspect.getMockImplementation()!;
+        mockRemoteConfigurationInspect.mockResolvedValue({ ...defaultRemoteConfiguration, ownerType: 'Organization',
+          repositoryId: 42, defaultBranch: 'master', organizationAccess: 'available',
+          organizationSecretsAccess: 'available', organizationVariablesAccess: 'available' });
+        ask.mockImplementation(async (prompt: WebSetupPrompt) => prompt.copyId === 'setup.source'
+          ? 'Reuse organization configuration' : answerWebPrompt(prompt));
+        mockTokenPermissionInspect.mockImplementation(async request => {
+          if (request.requirements.some(requirement => requirement.level === 'write')) {
+            expect(ask.mock.calls.some(([prompt]) => prompt.title === 'Apply this setup now?')).toBe(true);
+          }
+          return original(request);
+        });
+        try {
+          await program.parseAsync(['node', 'cli', 'setup', '--web', '--pr-approval-mode', 'off', '--skip-secrets', '--skip-variables']);
+          expect(mockTokenPermissionInspect).toHaveBeenCalledTimes(2);
+          expect(runLocalAction).toHaveBeenCalledTimes(1); expect(process.exitCode).toBeUndefined();
+        } finally { mockTokenPermissionInspect.mockReset().mockImplementation(original); }
       });
 
       it('retains a management mutation receipt and stops before the full installer after an uncertain quick write', async () => {
@@ -968,6 +991,148 @@ describe('CLI', () => {
     const acceptedSetupPatReport = () => ({
       role: 'setup' as const, identityStatus: 'valid' as const, identityMessage: 'verified',
       account: 'operator', ready: true, confirmationRequired: false, checks: [],
+    });
+
+    it.each(['--non-interactive', '--dry-run', '--yes'])('rejects a batch review bypass flag before PAT auditing: %s', async flag => {
+      await program.parseAsync(['node', 'cli', 'setup', '--batch', flag, ...(flag === '--non-interactive' ? ['--yes'] : []), '--token', 'github_pat_fixture_operator_token']);
+      expect(process.exitCode).toBe(1); expect(mockTokenPermissionInspect).not.toHaveBeenCalled(); expect(runLocalAction).not.toHaveBeenCalled();
+      expect(logError).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('--batch requires interactive review') }));
+    });
+    it('rejects batch selection without a terminal or browser before any PAT audit', async () => {
+      const driver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const terminal = jest.spyOn(driver, 'createInteractiveTerminalDriver').mockReturnValue(undefined);
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--batch', '--token', 'github_pat_fixture_operator_token']);
+        expect(process.exitCode).toBe(1); expect(mockTokenPermissionInspect).not.toHaveBeenCalled(); expect(runLocalAction).not.toHaveBeenCalled();
+        expect(logError).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('--batch needs an interactive terminal') }));
+      } finally { terminal.mockRestore(); }
+    });
+    it.each([true, false])('does not accept replacement workflow Secret values in reuse/batch (batch=%s)', async batch => {
+      const driver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const source = require('../cli/setup_source_adapter') as typeof import('../cli/setup_source_adapter');
+      const terminal = jest.spyOn(driver, 'createInteractiveTerminalDriver').mockReturnValue(guidedTerminal());
+      const choice = jest.spyOn(source, 'chooseSetupConfigurationSource').mockResolvedValue('organization');
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--token', 'github_pat_fixture_operator_token', '--workflow-pat', 'github_pat_fixture_workflow_token', ...(batch ? ['--batch'] : [])]);
+        expect(process.exitCode).toBe(1); expect(mockTokenPermissionInspect).not.toHaveBeenCalled(); expect(runLocalAction).not.toHaveBeenCalled();
+        expect(logError).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining(batch ? 'retains existing Secret bindings' : 'cannot consume replacement Secret values') }));
+      } finally { terminal.mockRestore(); choice.mockRestore(); }
+    });
+    it.each([true, false])('audits required writes before ordinary terminal organization reuse (allowed=%s)', async allowed => {
+      const driver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const source = require('../cli/setup_source_adapter') as typeof import('../cli/setup_source_adapter');
+      const terminal = jest.spyOn(driver, 'createInteractiveTerminalDriver').mockReturnValue(guidedTerminal());
+      const choice = jest.spyOn(source, 'chooseSetupConfigurationSource').mockResolvedValue('organization');
+      const original = mockTokenPermissionInspect.getMockImplementation()!;
+      mockRemoteConfigurationInspect.mockResolvedValue({ ...defaultRemoteConfiguration, ownerType: 'Organization',
+        repositoryId: 42, defaultBranch: 'master', organizationAccess: 'available',
+        organizationSecretsAccess: 'available', organizationVariablesAccess: 'available' });
+      mockTokenPermissionInspect.mockImplementation(async request => ({ ...acceptedSetupPatReport(),
+        ready: allowed || request.requirements.every(requirement => requirement.level !== 'write'),
+        checks: request.requirements.map(requirement => ({ ...requirement,
+          status: !allowed && requirement.level === 'write' ? 'missing' as const : 'verified' as const, message: 'fixture capability' })),
+      }));
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--token', 'github_pat_fixture_operator_token',
+          '--yes', '--pr-approval-mode', 'off', '--skip-secrets', '--skip-variables']);
+        expect(mockTokenPermissionInspect.mock.calls[0][0].requirements.every(requirement => requirement.level === 'read')).toBe(true);
+        expect(mockTokenPermissionInspect.mock.calls.some(([request]) => request.requirements.some(requirement => requirement.level === 'write'))).toBe(true);
+        expect(runLocalAction).toHaveBeenCalledTimes(allowed ? 1 : 0);
+        expect(process.exitCode).toBe(allowed ? undefined : 1);
+      } finally { terminal.mockRestore(); choice.mockRestore(); mockTokenPermissionInspect.mockReset().mockImplementation(original); }
+    });
+
+    it.each(['complete', 'partial', 'cleanup', 'unproven', 'empty', 'fresh'] as const)('handles batch receipt outcome %s without inventing a fresh write', async state => {
+      const driver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const source = require('../cli/setup_source_adapter') as typeof import('../cli/setup_source_adapter');
+      const batch = require('../cli/setup_batch_adapter') as typeof import('../cli/setup_batch_adapter');
+      const terminal = jest.spyOn(driver, 'createInteractiveTerminalDriver').mockReturnValue(guidedTerminal());
+      const choice = jest.spyOn(source, 'chooseSetupConfigurationSource').mockResolvedValue('organization');
+      const operationId = 'a67c8e40-93be-43ed-a7ed-e07378c7e773';
+      const execute = jest.spyOn(batch, 'executeSetupBatch').mockImplementation(async input => {
+        input.present('plan');
+        if (state === 'fresh') input.possibleMutation();
+        return { outcome: state === 'partial' || state === 'cleanup' ? 'partial' : state === 'empty' ? 'blocked' : 'complete', operation: {
+          schemaVersion: 1, organization: 'test-owner', operationId, targets: [{ repositoryId: 42, repository: 'test-repo',
+            defaultBranch: 'master', baseSha: 'a'.repeat(40), planDigest: 'b'.repeat(64), status: 'waiting-for-merge',
+            effects: ['access', 'variables', 'labels', 'issue-types', 'branch', 'pull-request'], preparedCommit: 'c'.repeat(40), pullRequestNumber: 31,
+            ...(state === 'cleanup' ? { status: 'blocked', effects: [], preparedCommit: undefined, pullRequestNumber: undefined, cleanupPending: true } as const : {}),
+            ...(state === 'empty' ? { status: 'blocked', effects: [], preparedCommit: undefined, pullRequestNumber: undefined } as const : {}) }],
+        } };
+      });
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--token', 'github_pat_fixture_operator_token',
+          ...(state === 'unproven' ? ['--batch'] : ['--resume-operation', operationId])]);
+        expect(runLocalAction).not.toHaveBeenCalled();
+        expect(mockTokenPermissionInspect.mock.calls.every(([request]) => request.requirements.every(requirement => requirement.level === 'read'))).toBe(true);
+        expect(process.exitCode).toBe(state === 'complete' || state === 'fresh' ? undefined : 1);
+        const output = consoleLogSpy.mock.calls.flat().join('\n');
+        expect(output).toContain(state === 'complete' || state === 'fresh' ? 'Complete: setup applied successfully.'
+          : state === 'partial' || state === 'cleanup' ? 'Partial: changes may exist' : 'Blocked: setup cannot continue.');
+      } finally { terminal.mockRestore(); choice.mockRestore(); execute.mockRestore(); }
+    });
+    it.each([false, true])('accepts omitted optional Secret maps at the execution entrypoint and cancels before auditing: batch=%s', async batch => {
+      const driver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const source = require('../cli/setup_source_adapter') as typeof import('../cli/setup_source_adapter');
+      const prompt = require('../cli/setup_credential_prompt_adapter') as typeof import('../cli/setup_credential_prompt_adapter');
+      const { executeSetupCommand } = require('../cli/commands/setup_execution') as typeof import('../cli/commands/setup_execution');
+      const terminal = jest.spyOn(driver, 'createInteractiveTerminalDriver').mockReturnValue(guidedTerminal());
+      const choice = jest.spyOn(source, 'chooseSetupConfigurationSource').mockResolvedValue('organization');
+      const depth = jest.spyOn(prompt.SetupCredentialPromptAdapter.prototype, 'chooseSetupPresentationMode').mockRejectedValue(new prompt.SetupTerminalCancelledError());
+      try {
+        await executeSetupCommand({ batch, token: 'github_pat_fixture_operator_token' });
+        expect(process.exitCode).toBe(130); expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
+        expect(runLocalAction).not.toHaveBeenCalled();
+      } finally { terminal.mockRestore(); choice.mockRestore(); depth.mockRestore(); }
+    });
+    it('prepares batch-specific PAT intent without a token, then stops safely when credential entry is cancelled', async () => {
+      const driver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const source = require('../cli/setup_source_adapter') as typeof import('../cli/setup_source_adapter');
+      const pat = require('../cli/setup_pat_intent_adapter') as typeof import('../cli/setup_pat_intent_adapter');
+      const prompt = require('../cli/setup_credential_prompt_adapter') as typeof import('../cli/setup_credential_prompt_adapter');
+      const terminal = jest.spyOn(driver, 'createInteractiveTerminalDriver').mockReturnValue(guidedTerminal());
+      const choice = jest.spyOn(source, 'chooseSetupConfigurationSource').mockResolvedValue('organization');
+      const intent = jest.spyOn(pat, 'collectSetupPatIntent').mockResolvedValue({ requirements: [] });
+      const token = jest.spyOn(prompt.SetupCredentialPromptAdapter.prototype, 'requestSetupPat').mockResolvedValue(undefined);
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--batch']);
+        expect(intent).toHaveBeenCalledWith(expect.objectContaining({ deliveryMode: 'pull-request' }));
+        expect(process.exitCode).toBe(1); expect(runLocalAction).not.toHaveBeenCalled(); expect(mockTokenPermissionInspect).not.toHaveBeenCalled();
+      } finally { terminal.mockRestore(); choice.mockRestore(); intent.mockRestore(); token.mockRestore(); }
+    });
+    it('carries reviewed runner discovery intent into the authenticated batch configuration', async () => {
+      const driver = require('../cli/setup_terminal_driver') as typeof import('../cli/setup_terminal_driver');
+      const source = require('../cli/setup_source_adapter') as typeof import('../cli/setup_source_adapter');
+      const pat = require('../cli/setup_pat_intent_adapter') as typeof import('../cli/setup_pat_intent_adapter');
+      const prompt = require('../cli/setup_credential_prompt_adapter') as typeof import('../cli/setup_credential_prompt_adapter');
+      const batch = require('../cli/setup_batch_adapter') as typeof import('../cli/setup_batch_adapter');
+      const terminal = jest.spyOn(driver, 'createInteractiveTerminalDriver').mockReturnValue(guidedTerminal());
+      const choice = jest.spyOn(source, 'chooseSetupConfigurationSource').mockResolvedValue('organization');
+      const intent = jest.spyOn(pat, 'collectSetupPatIntent').mockResolvedValue({ requirements: [], runnerDiscovery: true });
+      const token = jest.spyOn(prompt.SetupCredentialPromptAdapter.prototype, 'requestSetupPat').mockResolvedValue('github_pat_fixture_operator_token');
+      const execute = jest.spyOn(batch, 'executeSetupBatch').mockResolvedValue({ outcome: 'blocked', operation: { schemaVersion: 1, organization: 'test-owner', operationId: 'a67c8e40-93be-43ed-a7ed-e07378c7e773', targets: [] } });
+      mockTokenPermissionInspect.mockResolvedValue(acceptedSetupPatReport());
+      try {
+        await program.parseAsync(['node', 'cli', 'setup', '--batch']);
+        expect(execute).toHaveBeenCalledWith(expect.objectContaining({ overrides: expect.objectContaining({ runners: { discover: true } }) }));
+        expect(runLocalAction).not.toHaveBeenCalled();
+      } finally { terminal.mockRestore(); choice.mockRestore(); intent.mockRestore(); token.mockRestore(); execute.mockRestore(); }
+    });
+    it('refuses batch discovery if a coordinator invokes it before authenticating a setup PAT', async () => {
+      const { executeSetupCommand } = require('../cli/commands/setup_execution') as typeof import('../cli/commands/setup_execution');
+      const sequence = jest.spyOn(SetupSessionCoordinator.prototype, 'execute').mockImplementation(async function (this: SetupSessionCoordinator) {
+        const ports = (this as unknown as { ports: SetupSessionPorts }).ports;
+        try {
+          await ports.batch!(jest.fn(), jest.fn());
+          throw new Error('Expected the entrypoint to reject missing authentication');
+        } catch (error) { return { outcome: 'blocked', mutationStarted: false, effects: [], error }; }
+      });
+      try {
+        await executeSetupCommand({ batch: true });
+        expect(logError).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('temporary setup PAT is required for repository discovery') }));
+        expect(mockTokenPermissionInspect).not.toHaveBeenCalled(); expect(runLocalAction).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+      } finally { sequence.mockRestore(); }
     });
 
     it('carries guided intent through the final audit and prepares the separate bot link', async () => {
@@ -1527,7 +1692,8 @@ describe('CLI', () => {
       });
       try {
         await program.parseAsync(['node', 'cli', 'setup']);
-        expect(terminal.readText).toHaveBeenCalledTimes(2);
+        expect(terminal.readText).toHaveBeenCalledTimes(3);
+        expect(terminal.readText).toHaveBeenCalledWith(expect.stringContaining('Reuse organization configuration'));
         expect(terminal.readText).toHaveBeenCalledWith(expect.stringContaining('How much configuration detail'));
         expect(terminal.readSecret).toHaveBeenCalledWith('Setup PAT');
         expect(consoleLogSpy.mock.calls.flat().join('\n')).not.toContain('Revoke temporary setup PAT');

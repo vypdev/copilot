@@ -2,16 +2,16 @@
 
 - Status: Implemented
 - Date: 2026-09-11
-- Last verified: 2026-10-13
+- Last verified: 2026-10-18
 - Owners: Copilot maintainers
-- Scope: all-branch drift observation and authorized parent-to-working-branch synchronization
+- Scope: ordinary-branch drift observation and authorized parent-to-working-branch synchronization
 - Related issues/PRs: [PR #387](https://github.com/vypdev/copilot/pull/387), managed issue lifecycle, semantic GitHub publication, and agent runtime SDDs
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none
 
 ## 1. Executive summary
 
-A lightweight all-branch observer finds open parent→working-branch relationships,
+A lightweight ordinary-branch observer finds open parent→working-branch relationships,
 compares them, and maintains one issue status card when a branch falls behind.
 The card itself is the only initial notification. When a previously aligned
 card becomes stale again, one short, source-fingerprinted action notification
@@ -21,7 +21,7 @@ merges need no agent; eligible conflicts may use the fixer inside a strict path,
 Git-state, verification, credential, and remote-head boundary.
 
 ```text
-push any branch -> resolve dependencies -> compare -> upsert/resolve one card
+push ordinary branch -> resolve dependencies -> compare -> upsert/resolve one card
                                              -> aligned-to-stale only: notify once
 authorized sync -> fetch heads -> prepare merge -> clean OR guarded fixer
                 -> verify -> recheck heads -> trusted commit/push -> observer resolves card
@@ -92,7 +92,7 @@ fixer's responsibility and all merge-state and remote-head guards still apply.
 |---|---|---|---|
 | Contributor | know branch is stale | parent/child push | issue notice |
 | Maintainer | align safely | comment command | result comment/commit |
-| Observer workflow | compare only | all-branch push | sticky notice |
+| Observer workflow | compare only | ordinary-branch push | sticky notice |
 | Fixer agent | resolve eligible conflicts | guarded merge workspace | conflict paths only |
 
 “Parent” is the branch whose commits the “working branch” must contain. A
@@ -116,7 +116,7 @@ means the comparison shows no parent commits missing from the working branch.
 
 ### 4.3 Fixed product/safety invariants
 
-1. Observer workflows MUST remain agent-free and all-branch.
+1. Observer workflows MUST remain agent-free and observe every ordinary branch, including bot pushes and installer branches. The reserved `copilot-permission-test-*` namespace MUST be excluded at push admission; see the setup permission-probe admission contract.
 2. Deletion pushes and invalid/same parent-child targets MUST not merge.
 3. Sensitive/workflow paths and >20 conflicts MUST not use automated fixing.
 4. Verification runs credential-free; only trusted fetch/push receives credentials.
@@ -333,7 +333,7 @@ that information. The phase is captured by trusted validation before abort.
 | Commands/dependency/eligibility | 24 | options, links, limits, sensitive paths |
 | State/idempotency/races | 59 | card/transition replay, concurrent duplicates, chains, remote heads, abort |
 | Use cases/workspace | 98 | clean/conflict/dry-run/verify/push; four existing real-Git conflict cases, two trusted-staging failures, two localized recovery routes, and five real catalog merges covering preserved evidence, invalid metadata, verification mutation and clean refresh/abort; fifteen closed/forged diagnostic cases with localized replies and no push; ten real-Git generated-bundle cases preserving vendor whitespace while rejecting source/unregistered-path whitespace, staged/unstaged markers, protected index changes and verification mutation |
-| Adapters/workflow contracts | 55 | pagination, git states, all-branch/no-agent, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks; five closed-phase security cases preserving the index and suppressing untrusted metadata, paths and parser/validator output |
+| Adapters/workflow contracts | 55 | pagination, git states, ordinary-branch/no-agent, probe exclusion, exact captured NUL records; thirteen canonical-index cases covering stale counts/markers, checkout line endings, missing/invalid/oversized inputs, unregistered/outside evidence and external symlinks; five closed-phase security cases preserving the index and suppressing untrusted metadata, paths and parser/validator output |
 | UX/localization/sanitization | 21 | cards, transition/pointers, arbitrary locale, long refs, translated controls, errors, and two complete closed recovery presentations and one complete validation-diagnostic presentation |
 | Integration/security/cutover | 29 | observe→sync→resolve→stale, credentials, exact current markers, removed-marker rejection, and two forged recovery-command rejections and one forged diagnostic-descriptor rejection |
 | **Total** | **286** | no double counting |
@@ -413,7 +413,7 @@ sticky card updates, transition notifications, chained branches, PR/issue render
 
 - Primary sources: catalogued branch-sync code, workflows, tests, and docs.
 - Related SDDs: managed issue lifecycle; comment automation; agent runtime.
-- Decision: observe cheaply on all branches; invoke fixer only for eligible conflicts.
+- Decision: observe cheaply on all ordinary branches, excluding permission-probe refs; invoke fixer only for eligible conflicts.
 - Rejected: full commit workflow everywhere, force push, agent-owned git.
 - Follow-up: indexed dependency storage/performance study is outside this baseline.
 

@@ -18,6 +18,7 @@ import { DEFAULT_DEPLOYMENT_CONFIGURATION } from '../../domain/deployment_config
 import { resolveLocaleProfile } from '../../domain/locale';
 import { ISSUE_WORKFLOW_KINDS, type IssueWorkflowKind } from '../../domain/issue_workflow_profile';
 import { DISABLED_PULL_REQUEST_APPROVAL_POLICY } from '../../domain/pull_request_approval_policy';
+import { DEFAULT_SETUP_RUNNERS } from '../../domain/setup_runner';
 
 export const SETUP_AGENT_TASKS: readonly AgentTask[] = [
     'planner',
@@ -88,6 +89,7 @@ export function createDefaultSetupConfiguration(): SetupConfiguration {
         Object.keys(SETUP_FEATURE_DESCRIPTIONS).map(feature => [feature, feature !== 'inactiveIssueClosure']),
     );
     return {
+        runners: { ...DEFAULT_SETUP_RUNNERS, labels: [] },
         features,
         agents,
         repository: {
@@ -155,6 +157,7 @@ export function createDefaultSetupConfiguration(): SetupConfiguration {
 }
 
 export type SetupConfigurationOverrides = {
+    runners?: Partial<NonNullable<SetupConfiguration['runners']>>;
     features?: Partial<SetupFeatures>;
     agents?: Partial<Record<AgentTask, Partial<SetupAgentRoleConfiguration>>>;
     repository?: Partial<SetupConfiguration['repository']>;
@@ -199,6 +202,8 @@ export function mergeSetupConfiguration(
     }
     return {
         ...base,
+        runners: { ...DEFAULT_SETUP_RUNNERS, ...base.runners, ...overrides.runners,
+            labels: [...(overrides.runners?.labels ?? base.runners?.labels ?? [])] },
         features,
         agents,
         repository: { ...base.repository, ...(overrides.repository ?? {}) },

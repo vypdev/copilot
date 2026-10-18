@@ -1,4 +1,5 @@
 <script lang="ts">
+  import RunnerQuestionDetails from './RunnerQuestionDetails.svelte';
   import type { WebSetupPrompt } from '../../../src/application/contracts/web_setup_view';
   import { initialQuestionAnswer, submittedQuestionAnswer, toggleSelection } from '../lib/questionAnswer';
   import ActionButton from './ActionButton.svelte';
@@ -6,7 +7,7 @@
   import { projectTransitionKey } from '../i18n/projectTransitions';
   import { setupLocale } from '../i18n/localeStore';
   import { safeHelpLink } from '../lib/helpLink';
-  import { questionOptionLabel } from '../i18n/questionOptions';
+  import { questionOptionLabel, suggestedQuestionAnswer } from '../i18n/questionOptions';
   import DiscoveryNotice from './DiscoveryNotice.svelte';
   import ProducerSelector from './ProducerSelector.svelte';
   import ProjectSelector from './ProjectSelector.svelte';
@@ -23,12 +24,7 @@
   let { value, selected } = initialQuestionAnswer(prompt);
   $: explanation = prompt.presentation?.[$setupLocale];
   $: helpUrl = safeHelpLink(explanation?.documentation?.url);
-  $: suggestedAnswer = typeof prompt.question.defaultValue === 'boolean'
-    ? tr(prompt.question.defaultValue ? 'yes' : 'no', $setupLocale)
-    : prompt.question.defaultValue === '' ? tr('none', $setupLocale)
-      : prompt.question.kind === 'choice' || prompt.question.kind === 'multi-select'
-        ? questionOptionLabel(prompt.question.id, String(prompt.question.defaultValue), $setupLocale)
-        : String(prompt.question.defaultValue);
+  $: suggestedAnswer = suggestedQuestionAnswer(prompt.question, $setupLocale);
 </script>
 <div class="question-heading"><h2>{explanation?.label ?? prompt.question.label.replace(' (Space toggles, Enter confirms)', '')}</h2>{#if prompt.phase === 'permission-intent'}<span class="phase-tag">{tr('permissionPreview', $setupLocale)}</span>{/if}</div>
 {#if prompt.progress}<p class="field-help" role="status">{tr('questionProgress', $setupLocale, { current: String(prompt.progress.groupPosition), total: String(prompt.progress.groupTotal), overall: String(prompt.progress.position), all: String(prompt.progress.total) })}</p>{/if}
@@ -81,6 +77,7 @@
 {/if}
 <p class="field-help">{tr('suggested', $setupLocale, { answer: suggestedAnswer })}</p>
 {#if prompt.question.suggestionSource}<p class="field-help" role="status">{tr(prompt.question.suggestionSource === 'github' ? 'sourceGithub' : prompt.question.suggestionSource === 'local' ? 'sourceLocal' : prompt.question.suggestionSource === 'configuration' ? 'sourceConfig' : 'sourceDefault', $setupLocale)}</p>{/if}
+<RunnerQuestionDetails question={prompt.question} />
 <QuestionGuidance {explanation} {helpUrl} />
 <div class="button-row">
   {#if prompt.canGoBack}<ActionButton label={tr('previousQuestion', $setupLocale)} variant="secondary" onClick={onBack} disabled={!controller || busy} />{/if}

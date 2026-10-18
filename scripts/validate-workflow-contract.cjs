@@ -207,6 +207,19 @@ function assertCopilotActionInputs(file, workflow) {
 }
 
 function runnerLabels(value) {
+  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    const literal = text => typeof text === 'string' && text.length > 0 && text.length <= 100
+      && text === text.trim() && !/[\p{Cc}\p{Cf}${}<>]/u.test(text);
+    const labels = Array.isArray(value.labels) ? value.labels : [value.labels];
+    if (Object.keys(value).some(key => !['group', 'labels'].includes(key))
+      || ('group' in value && !literal(value.group))
+      || labels.length < 1 || labels.length > 10 || !labels.every(literal)
+      || new Set(labels.map(label => label.toLowerCase())).size !== labels.length
+      || !labels.includes('self-hosted')) {
+      throw new Error('runs-on object must contain only an optional literal group and 1–10 unique literal self-hosted labels.');
+    }
+    return labels;
+  }
   return Array.isArray(value) ? value.map(String) : [String(value)];
 }
 
@@ -430,6 +443,7 @@ function assertRunner(file, workflow) {
     }
     let expected = ['self-hosted', 'codex'];
     if (relativeFile.startsWith('setup/workflows/')
+      || relativeFile === '.github/workflows/copilot_credential_health.yml'
       || (/^\.github\/workflows\/(?:release|hotfix)_workflow\.yml$/.test(relativeFile) && jobId === 'publish-npm')) {
       expected = ['ubuntu-latest'];
     } else if (relativeFile === '.github/workflows/copilot_pull_request_approval.yml') {
@@ -580,8 +594,8 @@ function assertLightweightBranchSyncWorkflow(file, workflow) {
   if (path.basename(file) !== 'copilot_branch_sync.yml') return;
   const relativeFile = relativeWorkflow(file);
   const branches = workflow.on?.push?.branches;
-  if (!Array.isArray(branches) || branches.length !== 1 || branches[0] !== '**') {
-    throw new Error(`${relativeFile} must observe pushes on every branch exactly once.`);
+  if (JSON.stringify(branches) !== JSON.stringify(['**', '!copilot-permission-test-*'])) {
+    throw new Error(`${relativeFile} must observe pushes on every ordinary branch exactly once and exclude temporary permission-probe branches.`);
   }
   const job = workflow.jobs?.['branch-sync'];
   if (!job || Object.keys(workflow.jobs ?? {}).length !== 1 || job.if !== undefined) {
@@ -1241,6 +1255,16 @@ function assertQueueWorkflow(file, workflow) {
   }
   const queueJob = workflow.jobs?.[manifest.jobId];
   if (!queueJob) throw new Error(`${relativeFile} must define queue job ${manifest.jobId}.`);
+  if (manifest.file === 'copilot_commit.yml') {
+    const branches = workflow.on?.push?.branches;
+    if (!Array.isArray(branches) || !branches.includes('!setup/copilot/**')) {
+      throw new Error(`${relativeFile} must exclude installer-owned setup/copilot branches from issue-centric push analysis.`);
+    }
+    const index = branches.indexOf('!copilot-permission-test-*');
+    if (index < 0 || branches.slice(index + 1).some(branch => typeof branch !== 'string' || !branch.startsWith('!'))) {
+      throw new Error(`${relativeFile} must exclude temporary permission-probe branches after all positive push patterns.`);
+    }
+  }
   if (manifest.file === 'copilot_issue.yml' && !workflow.on?.issues?.types?.includes('closed')) {
     throw new Error(`${relativeFile} must subscribe to native closed issue events.`);
   }

@@ -189,7 +189,7 @@ storage:
 
 Guided setup asks the permission-affecting Secret and Variable management and default-scope questions before the setup PAT is created. After token authentication, the remaining questionnaire inspects the repository and reports repository-scoped resources, organization resources available to that repository, visibility, and access errors. Remote-dependent inherited-resource overrides are asked then; they may require a corrected PAT. Each accepted answer creates a fresh configuration snapshot; defaults, overrides, prior answers, and the result do not share mutable nested references. Repository resources take precedence over organization resources. With `preserveExisting: true`, an effective organization resource is inherited instead of being shadowed by a new repository value; add a name under `storage.secrets.overrides` or `storage.variables.overrides` when a repository-specific value is intentional.
 
-Secret `PAT` is the preservation exception: setup always collects and audits
+In current-repository Customize, Secret `PAT` is the preservation exception: setup collects and audits
 the bot PAT and writes it at `storage.secrets.overrides.PAT` or, if absent,
 `storage.secrets.defaultScope`. Other Secrets and Variables keep their existing
 preservation behavior. An existing PAT in that destination gets an explicit
@@ -331,3 +331,128 @@ reporting the persistence error. Copilot does not treat a failed write as a
 successful run: the recommendation state is therefore not considered
 committed, so a later retry cannot silently rely on stale state. Runs that do
 not have an issue target simply skip this persistence step.
+
+## Organization configuration reuse
+
+Interactive setup offers one source choice: Reuse or Customize. Reuse imports
+only recognized typed settings; explicit choices override repository Variables,
+which override accessible organization Variables, then typed defaults. Unknown
+or invalid inventory is never treated as empty. Unknown settings are ignored.
+Remote commands and approval producer identities are never blindly imported or
+executed. Storage questions are skipped because reuse preserves bindings.
+
+Matching effective Variables cause no value write. A reviewed difference becomes
+a repository Variable, preserving its shared source. Existing repository
+Secrets retain precedence; reuse never moves or rewrites them. Mixed scopes
+remain visible. GitHub rejects empty Variable values: intentionally empty
+collections use the existing native parser's comma/semicolon empty-list format,
+including on older Actions. An inherited nonempty scalar needs an explicit
+valid target value; setup does not pretend it cleared that setting.
+
+Batch is interactive and PR-only: `--batch` cannot be combined with
+`--non-interactive`, `--yes`, `--dry-run`, `--workflow-pat` or `--secret`. Inspect
+and leave the preview to make no changes. Existing non-interactive config files
+retain their single-repository behavior. Target count (1–25), one organization,
+sequential Apply, immutable shared values and no automatic merge are fixed
+rules, not configurable templates.
+
+## Runner profiles
+
+The terminal review lists routes and changed files without logging workflow
+contents. Use `setup --web` for an explicit full local file review before approval.
+That local preview masks recognized credential formats; arbitrary hardcoded
+values can remain visible. Inspect it before sharing. Setup never reads GitHub
+Secret values to construct the preview.
+
+Before requesting a setup PAT, guided setup offers **Discover existing runners
+and groups?** (`runners.discover`, boolean, default `false`). Opting in prefills
+repository **Administration: read** and, for an organization owner,
+**Self-hosted runners: read** in the generated GitHub link. These are optional
+inventory grants: denied access remains unknown and exact manual routing still
+works. Personal owners request only the repository grant. The bot PAT receives
+neither discovery grant. GitHub still requires selecting the target repositories
+in its token form. The discovery choice is local setup intent and is not copied
+into `.copilot/runner-profile.json`.
+
+Setup asks where Copilot jobs should run in both the terminal and web wizard.
+**Keep installed routing** is the default. New jobs show their GitHub-hosted
+template route. Choose **GitHub-hosted** to replace managed agent/validation
+routes explicitly, or choose an existing self-hosted profile. Selection does
+not register a runner, grant repository access or authenticate an agent.
+
+```text
+Choose or retain a profile → review each job and repository → inspect changes → approve
+```
+
+Agent jobs and the CLI provisioning check use the agent route. Ordinary
+validation and lifecycle helpers use GitHub-hosted runners unless you explicitly
+choose the agent route for ordinary validation. Credential verification has a
+separate fixed role and remains hosted when managed routes are replaced. Approval observers,
+merge-group checks and publication keep independent routes. Copilot's native
+source workflows retain their own reviewed routes and appear as exceptions.
+Source detection requires Copilot-specific inputs on a root-local invocation;
+an unrelated `uses: ./` does not suppress consumer upgrades. The provisioning
+check verifies `codex exec --help`, `opencode run --help` or Cursor's supported
+help surface, including rejection when a configured headless command is broken.
+
+An organization administrator can define the non-secret Actions Variable
+`COPILOT_RUNNER_PROFILES` through GitHub settings:
+
+```json
+{"schemaVersion":1,"profiles":[{"id":"vypdev-agent","group":"vypdev","labels":["self-hosted","codex","Linux"],"validation":"hosted"}]}
+```
+
+Repository Variable inventory must be readable to establish whether an override
+exists. If it is unavailable, setup keeps the registry unverified even when the
+organization value is readable; restore access or choose manual routing.
+
+Setup only reads this registry. It neither updates its value nor shares it with
+additional repositories. A repository Variable of the same name takes precedence,
+including when that override is invalid. Each profile needs a unique ID of
+1–50 letters, digits, dots, underscores or hyphens; an empty group or literal
+group name of at most 100 characters; 1–10 unique literal labels of at most 100
+characters; and `validation: hosted` or `agent`. Include `self-hosted` and
+`Linux` or `macOS`. The Bash templates do not support selecting Windows service
+Codex runners. Expressions, control characters, unknown fields, unknown schema
+versions, more than ten profiles and registries over 16,000 characters are
+rejected. Keep every registry value non-secret.
+
+An exact manual profile works without organization inventory permission. The
+equivalent setup config file is:
+
+```yaml
+runners:
+  mode: manual-self-hosted
+  profileId: ''
+  group: vypdev
+  labels: [self-hosted, codex, Linux]
+  validation: hosted
+```
+
+Available modes are `retain`, `hosted`, `organization-profile` and
+`manual-self-hosted`. Interactive organization-profile selection resolves its
+ID and exact values from the effective registry. A manually supplied organization
+snapshot must match that registry; prefer the wizard for this mode. Choose a
+profile per target in a batch of 1–25 repositories and inspect repository
+exceptions in the final combined review. Explicit profile replacement wins over
+retained managed agent/ordinary-validation routing. Credential verification is
+hosted during replacement; observers, publication and native source extensions
+keep their independent routes. Otherwise installed routing wins over hosted defaults.
+
+Discovery uses existing read access to repository runners and organization
+groups filtered for the target repository. It reads at most ten eligible groups,
+1,000 runners in total and ten pages per collection. Unavailable, incomplete or
+malformed inventory never means that no runner exists. A workflow-restricted
+group remains unverified even if its repository is eligible. Busy/offline means
+pending capacity. These observations never trigger another execution environment
+or certify agent authentication. See [GitHub's runner group API](https://docs.github.com/en/rest/actions/self-hosted-runner-groups).
+
+Review shows effective `runs-on`, access/capacity observations, source exceptions,
+the asset inventory and every changed file. The terminal omits file bodies from
+logs; the local web view offers complete before/after contents with its explicit
+recognized-format masking notice. `.copilot/runner-profile.json` records the
+selected non-secret route and, for a shared profile, source scope and a registry
+digest; it does not copy unselected profiles or Secret values. A changed registry
+requires a new review before permission probes or installation writes. The
+existing private journal, backups and immutable installer PR receipts govern
+retry and recovery. A created PR still needs human merge and runtime verification.

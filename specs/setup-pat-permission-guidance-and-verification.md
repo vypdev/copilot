@@ -910,3 +910,94 @@ fixture success never counts as live validation.
   journal compatibility conservatively. Additional audit prerequisites and live
   provider/human gates remain explicit debt, rather than granting broad access
   or fabricating permission proof.
+
+
+## Organization reuse and batch setup amendment — 2026-10-17
+
+The [organization reuse and batch companion](./organization-configuration-reuse-and-batch-setup.md)
+amends this specification for an explicit interactive source/scope choice.
+Current-repository Customize retains its existing replacement/PAT re-entry
+contract. Organization reuse and batch keep existing effective Secret bindings,
+including PAT, without obtaining or rewriting their values. They read only
+trusted default-branch health evidence; missing evidence remains pending and
+authentication alone is never full capability proof. Single-repository saved
+configurations and current-checkout Apply stay compatible.
+
+Both presentations share typed import/preparation/Apply use cases. Reuse skips
+valid compatible questions and storage/replacement prompts. Batch selects 1–25
+explicit IDs in one organization, reviews each exact base/ref/files/access plan,
+then audits the required temporary Write probes before sequential installation.
+Shared values and visibility remain immutable; only approved additive target
+access is allowed. Installer refs use `setup/copilot/<operation-id>` and matching
+prepared-commit receipts; Action-managed issue branches retain their lifecycle.
+No automatic merge, tag, release or deploy is introduced.
+
+Private metadata-only journals support an explicit same-plan/base resume with
+fresh credentials and review via `--resume-operation`. Changed bases or desired
+plans are rejected before probes. Successful effects remain on stop/failure;
+one guarded retry is available per paired session. A matching-file target gets
+no PR and remains verification pending after label/type/resource checks. A setup
+PR means Waiting for merge, never Installed/Verified.
+
+Evidence: `setup_organization_import_wizard.test.ts`,
+`setup_organization_secret_reuse.test.ts`, `setup_batch_flow.test.ts`,
+`apply_setup_batch_use_case.test.ts`, `setup_batch_github_*_adapter.test.ts`,
+`setup_trusted_health_sdk_contract.integration.test.ts`, and
+`web_setup_batch_components.test.ts`. Owning test budget, migration, UX and
+operational acceptance are in the companion; existing quality gates remain.
+
+## Disposable probe push admission (2026-10-18, #569)
+
+Live #556 dogfooding found seven normal Commit/Branch Sync runs on disposable
+permission refs, including two occupying self-hosted runners. Copilot-owned
+source and distributed push workflows MUST exclude the reserved
+`copilot-permission-test-*` prefix before job admission. Current probes append
+32 random hexadecimal characters. This namespace is fixed, not configurable.
+The negative pattern follows every positive pattern, following
+[GitHub's ordered branch-filter contract](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#example-including-and-excluding-branches-and-tags).
+
+```text
+permission probe push -> owned push filter -> no Commit/Branch Sync job
+ordinary/bot push     -> existing admission -> existing job
+user-owned CI / PR    -> existing configuration -> may still run
+```
+
+Text equivalent: only the two Copilot-owned push workflows exclude probe refs.
+Branch Sync MUST retain ordinary branches, bot pushes and installer refs.
+Commit retains its main/develop and installer exclusions. User CI and PR
+workflows MUST remain untouched; this change does not claim complete event
+isolation, change PAT grants, cancel arbitrary runs, or alter resource cleanup.
+
+The renderer owns a narrow source-workflow upgrade: review, comparison and copy
+MUST use the same allowlist for Commit/Branch Sync, preserve native jobs and
+unrelated filters, move owned exclusions behind positive patterns, back up
+changed files and produce no changes on replay. Source identity comes from the
+inspected repository inventory, including for native jobs without a root-local
+Action step; it is not a user configuration override. Ambiguous source push filters
+retain the existing review block. No schema, journal, locale, UI state or
+configuration choice changes; the existing permission progress and cleanup
+states remain authoritative. The authentication and setup docs disclose that
+other workflows and audit history remain possible.
+
+Migration: existing installed workflow files MUST receive a reviewed update;
+upgrading only the CLI cannot suppress events before that update is merged.
+Previously queued runs are not retroactively cancelled. Operator cleanup must
+still verify exact owned run/ref/commit identities. Rollback restores reviewed
+workflow backups and can restore the previous event noise.
+
+The incremental floor is **20 distinct regression cases**: eight removal or
+re-inclusion mutations across both workflows/directories, four semantic ref
+admission cases covering random probe names and ordinary/installer branches,
+five source upgrade ordering/unrelated/incomplete-workflow cases, and three complete batch
+render/backup/replay/native-job cases. Existing source-upgrade fixtures also verify native
+field preservation and malformed-filter blocks. Repository coverage thresholds
+remain; every changed renderer decision requires full branch coverage.
+
+Acceptance and traceability: `validate_workflow_contract.test.ts` proves the
+owned source/template filters and ordinary-branch admission;
+`setup_workflow_upgrade.test.ts` proves ordering, preservation and idempotency;
+`setup_batch_local_adapters.test.ts` proves complete reviewed upgrades, backups,
+user-workflow preservation and replay. `validate:workflows`, documentation and
+specification validation, full tests, lint and synchronized bundles are required.
+Live no-run evidence requires a later authorized probe after deployment of the
+updated workflows; fixture evidence does not claim that deployment occurred.

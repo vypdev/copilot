@@ -118,7 +118,7 @@ export async function runInitialSetupWorkflow(
                 return [receipt()];
             }
             const inventoryErrors = [
-                ...validateSetupStorageAgainstRemote(setupConfiguration, remoteConfiguration),
+                ...validateSetupStorageAgainstRemote(setupConfiguration, remoteConfiguration, { retainWorkflowPat: request.setupConfigurationSource === 'organization' }),
                 ...validateSetupManagedResourceInventory(setupConfiguration, remoteConfiguration, {
                     secrets: buildSetupCredentialRequirements(setupConfiguration).map(requirement => requirement.name),
                     variables: buildSetupRepositoryVariables(setupConfiguration).map(variable => variable.name),

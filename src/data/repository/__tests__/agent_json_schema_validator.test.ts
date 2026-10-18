@@ -1,7 +1,32 @@
 import { assertAgentResponseSchema } from '../agent_json_schema_validator';
 import { AgentResponseLengthFailure } from '../../../domain/agent_response_length_failure';
+import { parseProgressPartitionFacts, progressPartitionResponseSchema } from '../../../application/policies/progress_partition_response_policy';
 
 describe('assertAgentResponseSchema', () => {
+    it('accepts 600 supplementary code points at schema maxLength', () => {
+        expect(() => assertAgentResponseSchema('🧪'.repeat(600), { type: 'string', maxLength: 600 })).not.toThrow();
+    });
+    it('rejects 601 supplementary code points with sanitized maximum metadata', () => {
+        expect(() => assertAgentResponseSchema('🧪'.repeat(601), { type: 'string', maxLength: 600 }))
+            .toThrow(expect.objectContaining({ path: '$', maximum: 600 }));
+    });
+    it('rejects fewer code points than minLength even when UTF-16 length exceeds it', () => {
+        expect(() => assertAgentResponseSchema('🧪'.repeat(599), { type: 'string', minLength: 600 })).toThrow('too short');
+    });
+    it('accepts the supplementary code-point boundary at schema minLength', () => {
+        expect(() => assertAgentResponseSchema('🧪'.repeat(600), { type: 'string', minLength: 600 })).not.toThrow();
+    });
+    it.each([600, 20])('validates and parses the same supplementary progress facts at the %s-code-point bound', limit => {
+        const partition = { id: 'progress-1-of-2', paths: ['src/🧪.ts'], evidence: 'complete source' };
+        const response = { outputLocale: 'en-US', partitionId: partition.id,
+            files: [{ path: partition.paths[0], implemented: '🧪'.repeat(limit), remaining: 'Unknown' }] };
+        const schema = progressPartitionResponseSchema(partition, limit);
+        expect(() => assertAgentResponseSchema(response, schema)).not.toThrow();
+        expect(parseProgressPartitionFacts(response, partition, 'en-US', limit)).toEqual(response.files);
+        response.files[0].implemented += '🧪';
+        expect(() => assertAgentResponseSchema(response, schema)).toThrow(AgentResponseLengthFailure);
+        expect(() => parseProgressPartitionFacts(response, partition, 'en-US', limit)).toThrow();
+    });
     it('reports only typed local path and maximum metadata for an oversized nested string', () => {
         try {
             assertAgentResponseSchema({ markdown: 'secret provider content' }, {

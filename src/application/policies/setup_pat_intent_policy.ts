@@ -9,6 +9,7 @@ export function fixedSetupPatIntentQuestionIds(
   skipSecrets: boolean,
 ): string[] {
   const fixed: string[] = [];
+  if (overrides.runners?.discover !== undefined) fixed.push('runners.discover');
   for (const feature of ['issues', 'pullRequests', 'release', 'hotfix'] as const) {
     if (overrides.features?.[feature] !== undefined) fixed.push(`features.${feature}`);
   }

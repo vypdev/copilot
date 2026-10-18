@@ -38,3 +38,13 @@ Comments beginning with `/copilot` use a deterministic product-command boundary.
 | `/copilot implement REQUEST` | Apply an explicit repository change. | Authorized workspace write |
 
 The product-command parser limits input size and argument count and rejects unknown commands. Agent output is untrusted and sanitized before publication.
+
+## Guided setup scope
+
+`copilot setup` configures the current repository. `copilot setup --web` offers
+that same default or explicit same-organization targets; `copilot setup --batch`
+opens the terminal selector for 1–25 repositories. Reuse keeps existing Secret
+values and compatible Variables. Batch creates reviewed setup PRs and never
+merges or publishes them. Resume a private matching receipt with
+`copilot setup --web --resume-operation <operation-id>`; credentials and review
+are always fresh. See [the setup journey](/how-to-use#reuse-organization-settings-or-configure-several-repositories).

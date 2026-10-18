@@ -1,3 +1,5 @@
+import { sameSetupRemoteFacts, hasCompleteSetupSecretRevisions } from '../../policies/setup_remote_facts_policy';
+import { setupRunnerProfileIsFresh } from '../../policies/setup_runner_policy';
 import type {
     SetupConfiguration,
     SetupCredentialCollection,
@@ -22,6 +24,7 @@ import type {
 } from '../../ports/setup_wizard_ports';
 import { logError } from '../../ports/logging_ports';
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
+import { planSetupOrganizationVariableReuse, buildSetupOrganizationReuseVariables } from '../../policies/setup_organization_variable_reuse_policy';
 
 export interface SetupResourceProvisioningDependencies {
     setupRepositoryVariablesPort?: BoundSetupRepositoryVariablesCommandPort;
@@ -30,6 +33,7 @@ export interface SetupResourceProvisioningDependencies {
 }
 
 export interface SetupRepositoryContext {
+    setupConfigurationSource?: 'organization' | 'customize';
     setupCredentials?: SetupCredentialCollection;
     setupRemoteConfiguration?: SetupRemoteConfiguration;
 }
@@ -57,9 +61,23 @@ export async function ensureRepositoryVariables(
         return { errors: [VARIABLE_PROVISIONING_UNAVAILABLE], writes: 0 };
     }
     try {
-        const desired = buildSetupRepositoryVariables(setupConfiguration);
-        const groups = groupSetupResources(desired, 'variable', setupConfiguration, remoteConfiguration);
-        const result = await upsertVariableGroups(context, dependencies.setupRepositoryVariablesPort, groups);
+        const desired = context.setupConfigurationSource === 'organization'
+            ? buildSetupOrganizationReuseVariables(setupConfiguration, remoteConfiguration!)
+            : buildSetupRepositoryVariables(setupConfiguration);
+        const groups = context.setupConfigurationSource === 'organization'
+            ? [{ target: { scope: 'repository' as const, organizationVisibility: 'selected' as const },
+                resources: planSetupOrganizationVariableReuse(desired, remoteConfiguration!).repositoryWrites.map(variable => ({ ...variable })) }]
+                .filter(group => group.resources.length > 0)
+            : groupSetupResources(desired, 'variable', setupConfiguration, remoteConfiguration);
+        let result: SetupVariablesWriteResult & { unclassifiedErrors: readonly string[] };
+        if (context.setupConfigurationSource === 'organization' && groups.length > 0) {
+            if (!dependencies.setupRepositoryVariablesPort.createMissing
+                || groups[0].resources.some(variable => remoteConfiguration!.repositoryVariables.some(existing => existing.name === variable.name))) {
+                return { errors: ['Reuse cannot replace an existing repository Variable or use an unguarded writer. Review a separate manual update, then prepare a new plan.'], writes: 0 };
+            }
+            const created = await dependencies.setupRepositoryVariablesPort.createMissing(groups[0].resources);
+            result = { ...created, unclassifiedErrors: created.unclassifiedErrors ?? created.errors };
+        } else result = await upsertVariableGroups(context, dependencies.setupRepositoryVariablesPort, groups);
         const writes = result.created + result.updated;
         if (result.errors.length > 0) {
             return result.failures
@@ -101,6 +119,9 @@ export async function ensureRepositorySecrets(
         ...(credentials.workflowPat ? [credentials.workflowPat] : []),
         ...credentials.apiKeys,
     ];
+    if (context.setupConfigurationSource === 'organization' && values.length > 0) {
+        return { errors: ['Organization reuse cannot replace Secret values. Choose Customize and review a separate credential provisioning plan.'], writes: 0 };
+    }
     if (values.length === 0) return { step: '✅ Existing Repository Secrets kept unchanged.', errors: [], writes: 0 };
     if (!dependencies.setupRepositorySecretsPort) {
         return { errors: [SECRET_PROVISIONING_UNAVAILABLE], writes: 0 };
@@ -134,6 +155,36 @@ export async function resolveRemoteConfiguration(
     setupConfiguration: SetupConfiguration | undefined,
     errors: string[],
 ): Promise<SetupRemoteConfiguration | undefined> {
+    let runnerRemote: SetupRemoteConfiguration | undefined;
+    if (setupConfiguration?.runners?.mode === 'organization-profile') {
+        try { runnerRemote = await dependencies.setupRemoteConfigurationReadPort?.inspect(); } catch { /* Unknown cannot establish profile freshness. */ }
+        if (!runnerRemote || !setupRunnerProfileIsFresh(setupConfiguration.runners, runnerRemote)) {
+            errors.push('The reviewed runner registry changed or is unavailable. No changes were made; inspect and approve a fresh profile snapshot.');
+            return undefined;
+        }
+    }
+    if (context.setupConfigurationSource === 'organization') {
+        if (!context.setupRemoteConfiguration || !dependencies.setupRemoteConfigurationReadPort) {
+            errors.push('Organization reuse requires a fresh inventory before Apply. No changes were made.');
+            return undefined;
+        }
+        try {
+            const fresh = runnerRemote ?? await dependencies.setupRemoteConfigurationReadPort.inspect();
+            if (!hasCompleteSetupSecretRevisions(fresh) || !hasCompleteSetupSecretRevisions(context.setupRemoteConfiguration)) {
+                errors.push('Retained Secret revision metadata could not be verified. Restore metadata access and prepare a fresh plan. No changes were made.');
+                return undefined;
+            }
+            if (!sameSetupRemoteFacts(fresh, context.setupRemoteConfiguration)) {
+                errors.push('Configuration or access changed after review. Inspect and approve a new plan before applying it.');
+                return undefined;
+            }
+            return fresh;
+        } catch {
+            errors.push('The approved organization configuration could not be revalidated. No changes were made.');
+            return undefined;
+        }
+    }
+    if (runnerRemote) return runnerRemote;
     if (context.setupRemoteConfiguration) return context.setupRemoteConfiguration;
     if (!dependencies.setupRemoteConfigurationReadPort || !setupConfiguration) return undefined;
     try {

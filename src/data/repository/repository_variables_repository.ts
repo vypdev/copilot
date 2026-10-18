@@ -67,6 +67,10 @@ export class RepositoryVariablesCommandRepository implements SetupRepositoryVari
         this.transport = new GithubActionsResourceCommands(githubClient);
     }
 
+    createMissing(owner: string, repository: string, token: string, variables: readonly SetupVariable[]): Promise<SetupVariablesWriteResult> {
+        return this.transport.createMissing(owner, repository, token, variables);
+    }
+
     upsert(
         owner: string,
         repository: string,

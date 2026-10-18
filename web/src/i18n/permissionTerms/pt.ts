@@ -1,5 +1,6 @@
 import type { PermissionName, PermissionTerm } from '../permissionTerms';
 export const namesPt: Readonly<Record<PermissionName, string>> = {
+  'Self-hosted runners': "Runners autoalojados",
   Metadata: 'Metadados', Contents: 'Conteúdo', Secrets: 'Segredos', Variables: 'Variáveis', Issues: 'Questões', Actions: 'Ações', Checks: 'Verificações', Administration: 'Administração', Workflows: 'Fluxos de trabalho', 'Issue Types': 'Tipos de questão', Projects: 'Projetos', 'Pull requests': 'Pedidos de alteração', Members: 'Membros',
 };
 export const termsPt: Readonly<Record<PermissionTerm, string>> = {

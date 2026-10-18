@@ -219,3 +219,16 @@ describe('PrepareSetupPatIntentUseCase', () => {
     expect(ports.chooseOwnerKind).not.toHaveBeenCalled();
   });
 });
+
+test('guided runner discovery is reviewed before PAT entry and kept as an answered intent', async () => {
+  const { ports, useCase } = harness();
+  const result = await useCase.execute({ ...request, overrides: { runners: { discover: true } } });
+  expect(result.kind).toBe('guided');
+  if (result.kind !== 'guided') throw new Error('Expected scoped guided PAT');
+  expect(new URL(result.url).searchParams.get('organization_self_hosted_runners')).toBe('read');
+  expect(result.permissionIntent.answeredQuestionIds).toContain('runners.discover');
+  expect(result.permissionIntent.draft.runners?.discover).toBe(true);
+  expect(ports.showPreview).toHaveBeenCalledWith(expect.objectContaining({ requirements: expect.arrayContaining([
+    expect.objectContaining({ permission: 'Self-hosted runners', level: 'read', applicability: 'conditional' }),
+  ]) }));
+});

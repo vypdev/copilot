@@ -9,6 +9,8 @@ export function cloneSetupConfiguration(configuration: SetupConfiguration): Setu
   ])) as SetupAgentConfiguration;
   return {
     ...configuration,
+    ...(configuration.runners ? { runners: { ...configuration.runners, labels: [...configuration.runners.labels],
+      ...(configuration.runners.source ? { source: { ...configuration.runners.source } } : {}) } } : {}),
     features: { ...configuration.features },
     agents,
     repository: {

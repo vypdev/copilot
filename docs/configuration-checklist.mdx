@@ -26,7 +26,7 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 - [ ] Before entering each PAT, the setup terminal table or local web permission panel matches the intended repository/organization target, access level, selected features, and storage scope.
 - [ ] After entry, every failed required read has been corrected; after plan approval, every required Write row has a completed temporary create/read/delete result and no pending cleanup.
 - [ ] A publicly readable endpoint has not been mistaken for PAT evidence. After valid identity, only the exact successful public-repository read may be operationally usable while still shown as `Unverifiable`; public organization Members, Issue Types and writes never gain that exception. Members read needs a verified, active self-membership response for the selected organization.
-- [ ] If the `PAT` Secret already exists, its value has been re-entered (or supplied again to unattended setup) and the full workflow-PAT permission report has completed; credential-health success alone is not treated as permission evidence.
+- [ ] In Customize, if the `PAT` Secret already exists, its value has been re-entered (or supplied again to unattended setup) and the full workflow-PAT permission report has completed; credential-health success alone is not treated as permission evidence.
 - [ ] The plan disclosed each selected temporary Write check. Actions and Pull request checks may leave run/PR history or notifications; cleanup of their temporary resources was confirmed.
 - [ ] Credentials are configured as secrets or as a local self-hosted credential store.
 - [ ] No session file or token is copied into GitHub Secrets.
@@ -45,6 +45,10 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 
 ## Setup and diagnosis
 
+- [ ] The runner review shows the intended group/labels for every target; access, capacity and agent authentication have been checked separately.
+- [ ] Agent, ordinary validation, trusted observers, merge-group checks and publication retain their intended routes; native source extensions are visible exceptions.
+- [ ] `COPILOT_RUNNER_PROFILES`, when used, contains only supported non-secret profiles. Repository overrides, registry freshness, optional inventory failures and exact manual fallback have been reviewed.
+- [ ] The parity inventory and complete changes have been inspected; unknown generator metadata is retained or repaired with its compatible generator. Backups and installation receipts remain available.
 - [ ] The selected issue workflows start with `in-progress`; `branched` is treated as an Action-verified result.
 - [ ] `issue-managed-branches` is enabled for release/hotfix and whenever `pre-branch-sdd` is enabled.
 - [ ] Before enabling `pre-branch-sdd`, the repository has a validated SDD catalog, standard, template, and a configured agent that can return structured responses.
@@ -82,3 +86,12 @@ If guarded PR approval is selected, confirm the exact test/coverage producer tup
 
 See [Release and hotfix orchestration](/issues/deployment-orchestration) for the
 exact values, defaults, decision paths, and recovery procedure.
+
+## Organization reuse and selected repositories
+
+- [ ] The confirmed current repository and organization are correct; batch targets are explicitly selected (1–25).
+- [ ] Repository overrides and imported organization settings match the intended behavior; CI and approval producers were reviewed per target.
+- [ ] Required existing Secret bindings are available or have reviewed additive grants; no replacement value is supplied to reuse.
+- [ ] The batch preview discloses each base SHA, installer ref, file diff, repository Variable names and temporary permission probes.
+- [ ] Pending probe cleanup is resolved; completed PRs/grants are retained on cancellation or partial failure.
+- [ ] Each setup PR is reviewed and merged by a human, followed by trusted runtime verification; metadata alone is not verification.

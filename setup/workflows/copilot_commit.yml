@@ -6,6 +6,8 @@ on:
       - '**'
       - '!master'
       - '!develop'
+      - '!setup/copilot/**'
+      - '!copilot-permission-test-*'
 
 jobs:
   copilot-commits:

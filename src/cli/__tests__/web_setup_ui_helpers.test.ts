@@ -92,8 +92,8 @@ describe('web setup presentation helpers', () => {
   test.each([
     ['Test, lint', 'CI'],
     ['Test', 'CI, checks'],
-  ])('rejects comma delimiters in manual producer %s / %s before submission', (name, workflow) => {
-    expect(manualProducerIdentity(name, 42, workflow)).toBeUndefined();
+  ])('preserves commas in exact manual producer %s / %s before submission', (name, workflow) => {
+    expect(manualProducerIdentity(name, 42, workflow)).toBe(`${name}|42|${workflow}`);
   });
 
   test.each([

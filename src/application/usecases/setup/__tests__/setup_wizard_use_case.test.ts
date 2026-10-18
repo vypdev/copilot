@@ -32,6 +32,15 @@ function dependencies(overrides: Record<string, unknown> = {}) {
 }
 
 describe('SetupWizardUseCase', () => {
+  it('does not repeat an explicit discovery answer when revising another plan group', async () => {
+    const collect = jest.fn(async (state, _context) => createSetupReviewState(state.draft));
+    const confirmation = { confirm: jest.fn().mockResolvedValueOnce({ kind: 'revise', group: 'repository' }).mockResolvedValueOnce({ kind: 'approved' }) };
+    const result = await new SetupWizardUseCase(dependencies({ collector: { collect }, confirmation })).execute({ mode: 'interactive',
+      overrides: { runners: { discover: false }, pullRequestApproval: { mode: 'off' } } });
+    expect(result.status).toBe('completed'); expect(collect).toHaveBeenCalledTimes(2);
+    expect(collect.mock.calls[1][1].skipQuestionIds).toContain('runners.discover');
+    if (result.status === 'completed') expect(result.configuration.runners?.discover).toBe(false);
+  });
   it('suggests an observed GitHub default branch without overriding an explicit configured branch', async () => {
     const collect = jest.fn(async (state: SetupQuestionnaireState, _context: SetupQuestionnaireContext) => createSetupReviewState(state.draft));
     const deps = dependencies({ collector: { collect }, remoteConfiguration: { inspect: jest.fn().mockResolvedValue({ ...remote, defaultBranch: 'main' }) } });

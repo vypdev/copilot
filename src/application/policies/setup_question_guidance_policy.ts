@@ -1,4 +1,5 @@
 import type { SetupQuestion } from '../../domain/setup_questionnaire';
+import { SETUP_RUNNER_QUESTION_IDS, setupRunnerGuidance } from './setup_runner_guidance_policy';
 import type { SetupQuestionExplanation, SetupQuestionPresentation } from '../contracts/web_setup_view';
 import { spanishQuestionLabel } from './setup_question_translations';
 import { setupQuestionDocumentation } from './setup_question_documentation_policy';
@@ -80,6 +81,7 @@ const section: Readonly<Record<SetupQuestion['stateId'], { en: Copy; es: Copy }>
 };
 
 export function setupQuestionPresentation(question: SetupQuestion): SetupQuestionPresentation {
+  if (SETUP_RUNNER_QUESTION_IDS.includes(question.id)) return setupRunnerGuidance(question);
   const copy = special[question.id] ?? section[question.stateId];
   const purpose = setupQuestionPurpose(question);
   const documentation = setupQuestionDocumentation(question);
