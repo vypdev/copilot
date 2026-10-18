@@ -85,8 +85,9 @@ export function inspectSetupInstallation(root: string, configuration: SetupConfi
       : before === after && (before === template || (configuration.runners?.mode ?? 'retain') !== 'retain') ? 'shared' : 'customized' });
     if (enabled && after !== undefined) {
       addJobs(file, after, preserved || configuration.runners?.mode === 'retain' || !configuration.runners);
+      // Enabled workflows render or retain a complete string; disabled assets never produce removals.
+      if (before !== after) changes.push({ path, before: before === undefined ? null : redactSensitiveText(before), after: redactSensitiveText(after) });
     }
-    if (enabled && before !== after) changes.push({ path, before: before === undefined ? null : redactSensitiveText(before), after: after === undefined ? null : redactSensitiveText(after) });
   }
   for (const file of installedFiles.filter(file => !sourceFiles.includes(file))) {
     assets.push({ path: `.github/workflows/${file}`, enabled: true, status: source ? 'source-only' : 'customized' });

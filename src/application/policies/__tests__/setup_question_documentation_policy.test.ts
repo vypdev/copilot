@@ -4,6 +4,11 @@ import type { SetupQuestion } from '../../../domain/setup_questionnaire';
 import { setupQuestionDocumentation } from '../setup_question_documentation_policy';
 
 describe('setup question documentation', () => {
+  test.each(['runners.discover', 'runners.mode', 'runners.profileId', 'runners.group', 'runners.labels', 'runners.validation'])('%s links to the runner profile guide', id => {
+    expect(setupQuestionDocumentation({ id, stateId: 'agent-runtime' })).toEqual({ title: 'Runner profiles',
+      url: 'https://docs.page/vypdev/copilot/configuration#runner-profiles' });
+    expect(existsSync(resolve(__dirname, '../../../../docs/configuration.mdx'))).toBe(true);
+  });
   test.each([
     ['features.issues', 'capabilities', '/issues/workflow-setup'],
     ['features.pullRequests', 'capabilities', '/pull-requests/workflow-setup'],

@@ -61,6 +61,8 @@ describe('installer-owned GitHub write boundaries', () => {
     expect(await f.writer.revalidate(plan, 'fixture', [])).toBe(true); expect(plan.grants).toEqual([]);
     jest.mocked(f.read.sharedMetadata).mockResolvedValue([{ ...resource, value: value + ' ' }]);
     expect(await f.writer.revalidate(plan, 'fixture', [])).toBe(false);
+    jest.mocked(f.read.sharedMetadata).mockResolvedValue([{ ...resource, value: undefined }]);
+    expect(await f.writer.revalidate(plan, 'fixture', [])).toBe(false);
     jest.mocked(f.read.sharedMetadata).mockResolvedValue([resource]);
     effective.mockResolvedValue({ ...f.plan.remote, organizationVariables: [] });
     expect(await f.writer.revalidate(plan, 'fixture', [])).toBe(false);

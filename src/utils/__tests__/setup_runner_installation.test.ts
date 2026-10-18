@@ -60,6 +60,45 @@ describe('installation parity and reviewed migration', () => {
   const write = (path: string, content: string) => { const absolute = join(root, path); mkdirSync(dirname(absolute), { recursive: true }); writeFileSync(absolute, content); };
   beforeEach(() => { root = mkdtempSync(join(tmpdir(), 'copilot-runner-parity-')); });
   afterEach(() => rmSync(root, { recursive: true, force: true }));
+  test('an incomplete template package still inventories native YAML files without inventing managed assets', () => {
+    const setup = join(root, 'empty-setup'); mkdirSync(setup);
+    write('.github/workflows/native.yaml', workflow('  native:\n    runs-on: ubuntu-latest\n'));
+    write('.github/workflows/README.md', 'not a workflow');
+    const review = inspectSetupInstallation(root, createDefaultSetupConfiguration(), setup);
+    expect(review.jobs).toMatchObject([{ file: 'native.yaml', job: 'native', retained: true }]);
+    expect(review.assets.filter(asset => asset.path.startsWith('.github/workflows/'))).toEqual([
+      { path: '.github/workflows/native.yaml', enabled: true, status: 'customized' },
+    ]);
+  });
+  test('template YAML extensions are supported and unrelated package files are excluded', () => {
+    const setup = join(root, 'yaml-setup'); mkdirSync(join(setup, 'workflows'), { recursive: true });
+    writeFileSync(join(setup, 'workflows/custom.yaml'), workflow('  custom:\n    runs-on: ubuntu-latest\n'));
+    writeFileSync(join(setup, 'workflows/README.md'), 'not a workflow');
+    const review = inspectSetupInstallation(root, createDefaultSetupConfiguration(), setup);
+    expect(review.changes.map(change => change.path)).toEqual(['.github/workflows/custom.yaml']);
+    expect(review.jobs).toHaveLength(1);
+  });
+  test('legacy configurations retain customized managed routing and a compatible existing snapshot', () => {
+    const setup = join(root, 'legacy-setup'); mkdirSync(join(setup, 'workflows'), { recursive: true });
+    writeFileSync(join(setup, 'workflows/copilot_issue.yml'), single('ubuntu-latest'));
+    write('.github/workflows/copilot_issue.yml', renderSetupWorkflowUpgrade(single('ubuntu-latest'), single('[self-hosted, legacy, Linux]'), { file: 'copilot_issue.yml' }));
+    const snapshot = renderSetupRunnerSnapshot(configuration())!; write(SETUP_RUNNER_SNAPSHOT, snapshot);
+    const legacy = createDefaultSetupConfiguration(); delete legacy.runners;
+    const review = inspectSetupInstallation(root, legacy, setup);
+    expect(review.assets.find(asset => asset.path === '.github/workflows/copilot_issue.yml')?.status).toBe('customized');
+    expect(review.assets.find(asset => asset.path === SETUP_RUNNER_SNAPSHOT)?.status).toBe('shared');
+    expect(review.jobs[0]).toMatchObject({ runsOn: ['self-hosted', 'legacy', 'Linux'], retained: true });
+    expect(review.changes).toEqual([]); expect(readFileSync(join(root, SETUP_RUNNER_SNAPSHOT), 'utf8')).toBe(snapshot);
+  });
+  test('an explicit hosted replacement reviews a compatible old self-hosted snapshot without changing it', () => {
+    const before = renderSetupRunnerSnapshot(configuration())!; write(SETUP_RUNNER_SNAPSHOT, before);
+    const config = { ...createDefaultSetupConfiguration(), runners: selectSetupRunnerMode('hosted') };
+    const review = inspectSetupInstallation(root, config);
+    expect(review.assets.find(asset => asset.path === SETUP_RUNNER_SNAPSHOT)?.status).toBe('customized');
+    expect(review.changes.find(change => change.path === SETUP_RUNNER_SNAPSHOT)).toEqual({ path: SETUP_RUNNER_SNAPSHOT,
+      before, after: renderSetupRunnerSnapshot(config) });
+    expect(review.blockers).toEqual([]); expect(readFileSync(join(root, SETUP_RUNNER_SNAPSHOT), 'utf8')).toBe(before);
+  });
   test('an unrelated root action does not suppress consumer workflow upgrades', () => {
     const config = configuration();
     write('.github/workflows/build.yml', 'jobs: {build: {runs-on: ubuntu-latest, steps: [{uses: "./"}]}}\n');

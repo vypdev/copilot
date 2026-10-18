@@ -74335,7 +74335,7 @@ async function executeSetupBatch(input) {
                 (0, logger_1.logInfo)('The runner choice is prefilled for this target. Review its group/labels and change it for a repository exception; installation still waits for the combined review.');
             const chosen = await new configure_setup_batch_target_use_case_1.ConfigureSetupBatchTargetUseCase({ wizard, credentials: (0, setup_credentials_composition_root_1.createSetupCredentialsUseCase)(input.credentialPrompt, input.permissionPresenter, { configurationSource: 'organization', allowPreApplyHealthWorkflow: false }) }).execute({
                 target, remote: projected, actualRemote: context.remote, shared: context.shared, token: privateToken,
-                configurationSource: input.configurationSource, overrides: { ...input.overrides, ...(runnerDefaults ? { runners: runnerDefaults } : {}) }, presentationMode: input.presentationMode,
+                configurationSource: input.configurationSource, overrides: { ...input.overrides, runners: runnerDefaults }, presentationMode: input.presentationMode,
                 skipVariables: input.skipVariables, skipSecrets: input.skipSecrets
             });
             if (chosen?.configuration.runners)
@@ -104414,9 +104414,10 @@ function inspectSetupInstallation(root, configuration, setup = (0, node_path_1.j
                 : before === after && (before === template || (configuration.runners?.mode ?? 'retain') !== 'retain') ? 'shared' : 'customized' });
         if (enabled && after !== undefined) {
             addJobs(file, after, preserved || configuration.runners?.mode === 'retain' || !configuration.runners);
+            // Enabled workflows render or retain a complete string; disabled assets never produce removals.
+            if (before !== after)
+                changes.push({ path, before: before === undefined ? null : (0, sensitive_text_1.redactSensitiveText)(before), after: (0, sensitive_text_1.redactSensitiveText)(after) });
         }
-        if (enabled && before !== after)
-            changes.push({ path, before: before === undefined ? null : (0, sensitive_text_1.redactSensitiveText)(before), after: after === undefined ? null : (0, sensitive_text_1.redactSensitiveText)(after) });
     }
     for (const file of installedFiles.filter(file => !sourceFiles.includes(file))) {
         assets.push({ path: `.github/workflows/${file}`, enabled: true, status: source ? 'source-only' : 'customized' });

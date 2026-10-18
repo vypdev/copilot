@@ -130,7 +130,7 @@ export async function executeSetupBatch(input: BatchInput) {
       const chosen = await new ConfigureSetupBatchTargetUseCase({ wizard, credentials: createSetupCredentialsUseCase(input.credentialPrompt,
         input.permissionPresenter, { configurationSource: 'organization', allowPreApplyHealthWorkflow: false }) }).execute({
         target, remote: projected, actualRemote: context.remote, shared: context.shared, token: privateToken,
-        configurationSource: input.configurationSource, overrides: { ...input.overrides, ...(runnerDefaults ? { runners: runnerDefaults } : {}) }, presentationMode: input.presentationMode,
+        configurationSource: input.configurationSource, overrides: { ...input.overrides, runners: runnerDefaults }, presentationMode: input.presentationMode,
         skipVariables: input.skipVariables, skipSecrets: input.skipSecrets });
       if (chosen?.configuration.runners) sharedRunnerDefaults = chosen.configuration.runners;
       return chosen;

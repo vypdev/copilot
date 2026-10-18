@@ -37,6 +37,16 @@ function fixture() {
 }
 
 describe('read-only per-target preparation', () => {
+  it('keeps batch routing unverified without any discovery request when discovery is disabled', async () => {
+    const f = fixture(); f.configuration.runners = { ...f.configuration.runners!, discover: false };
+    const review = { blockers: [], assets: [], changes: [], jobs: [{ file: 'copilot_issue.yml', job: 'copilot-issues', role: 'agent' as const,
+      runsOn: ['self-hosted', 'Linux'], retained: false, status: 'ready' as const }] };
+    const discover = jest.fn();
+    const plan = await new PrepareSetupBatchUseCase({ ...f.ports, renderer: { ...f.ports.renderer, review: async () => review }, runnerDiscovery: { discover } }).execute(f.request);
+    expect(discover).not.toHaveBeenCalled();
+    expect(plan.targets.every(target => target.installationReview?.jobs[0].status === 'access-unknown')).toBe(true);
+    expect(plan.targets.every(target => target.blocked.length === 0)).toBe(true);
+  });
   it.each(['available', 'unavailable', 'absent', 'blocked'] as const)('reviews runner routing and retains target isolation with %s discovery', async status => {
     const f = fixture(); const review = { blockers: status === 'blocked' ? ['Restore a compatible generator.'] : [], assets: [], changes: [],
       jobs: [{ file: 'copilot_issue.yml', job: 'copilot-issues', role: 'agent' as const, runsOn: ['self-hosted', 'Linux'], retained: false, status: 'access-unknown' as const }] };

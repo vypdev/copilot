@@ -43,4 +43,10 @@ describe('runner config files and terminal review', () => {
     expect(output).toContain('(labels only)'); expect(output).toContain('busy'); expect(output).toContain('offline'); expect(output).toContain('(organization)');
     expect(renderer.renderPrompt({ ...question, runnerProfiles: undefined, runnerInventory: undefined, runnerRegistryScope: undefined })).toContain('Inventory: unavailable');
   });
+  test('the prompt preserves fixed workflow constraints alongside its permission and runner guidance', () => {
+    const output = new ConsoleSetupQuestionRenderer().renderPrompt({ id: 'features.issues', stateId: 'capabilities',
+      label: 'Issues', kind: 'boolean', defaultValue: true, fixedWorkflowFeatures: { release: true } });
+    expect(output).toContain('Configuration explicitly enables release or hotfix');
+    expect(output).toContain('keep Issues enabled');
+  });
 });
