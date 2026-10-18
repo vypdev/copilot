@@ -88,3 +88,16 @@ test('terminal review strips controls from every repository-controlled metadata 
   expect(result).not.toContain(unsafe);
   expect(result).toContain('safe\ncontent'); expect(result).toContain('visible[2Jhidden');
 });
+
+test('serialized runner routes strip C1 controls that JSON.stringify preserves', () => {
+  const result = renderSetupInstallationReview({ ...review, jobs: [{ ...review.jobs[0], runsOn: ['self-hosted', 'Linux', '\u009b2J\u202e'] }] });
+  expect(result).not.toContain('\u009b'); expect(result).not.toContain('\u202e');
+  expect(result).toContain('self-hosted');
+});
+
+test.each(['en', 'es', 'fr', 'pt'] as const)('%s discloses the actual limit of workflow credential masking', async locale => {
+  const html = await markup('InstallationReview', { review }, locale);
+  expect(html).toContain(runnerText('redactionNotice', locale));
+  expect(runnerText('redactionNotice', locale)).not.toBe('redactionNotice');
+  expect(renderSetupInstallationReview(review)).toContain('other literal values may remain');
+});

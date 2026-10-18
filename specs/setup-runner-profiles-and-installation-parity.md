@@ -183,7 +183,7 @@ flowchart LR
 ### 8.2 Contracts, state, and trust boundaries
 
 - Pure decisions: schema validation, profile precedence, per-role route resolution, readiness classification, asset parity, version compatibility, diff safety, and retry target selection.
-- Application contracts: immutable target facts, profile snapshot, `RunnerRolePlan`, `AssetFinding`, `SetupPlan`, `ApplyReceipt`, and typed failure result. No secret material is present.
+- Application contracts: immutable target facts, profile snapshot, `RunnerRolePlan`, `AssetFinding`, `SetupPlan`, `ApplyReceipt`, and typed failure result. Operator credentials and GitHub Secret API values are absent. Local workflow previews retain their documented recognized-format masking boundary.
 - Semantic ports: read existing routing/assets; optionally enumerate eligible groups/labels; inspect repository access evidence; create reviewed PR; write/verify backup; read generator compatibility metadata.
 - Durable state/schema ownership: the plan owns target/configuration snapshots and rendered files; the private journal owns operation IDs, plan digests, target receipt transitions and exact prepared commits. Generator contracts and backups remain reviewed repository assets, bound by the commit and plan digest. The journal contains neither configuration values nor Secret values.
 - Concurrency/idempotency: bind Apply to plan hash and fresh target facts; deduplicate by operation/target; serialize conflicting writes per repository; partial retry excludes completed targets.
@@ -277,7 +277,7 @@ Errors follow `impact -> cause -> action -> retained state`. An already created 
 
 - User-facing state: per-target profile, role routes, readiness, parity classification, and next action.
 - PR summary: plan hash, generator version, asset inventory counts, route summary, backup reference, and verification instructions.
-- Logs: correlate operation and target IDs; record provider outcome categories, never secret values or raw sensitive content.
+- Operational logs: correlate operation and target IDs; record provider outcome categories without operator credentials or Secret API values. Interactive local workflow diffs follow the explicit recognized-format masking boundary, separate from telemetry and durable receipts.
 - Pending capacity and unknown access are not workflow failures. Unsupported routes and failed writes are failures with recovery actions.
 - Respect provider rate limits; bounded backoff only for idempotent reads/writes, with visible retry state. No notification storm: one status update per meaningful transition.
 
@@ -441,8 +441,7 @@ assets, so missing health/provisioning workflows remain visible even when their
 features are off. Unknown generator metadata is classified as incompatible and
 retained or blocked before regeneration; setup does not claim it can migrate a
 future generator. Full before/after workflow content is available in review,
-with credential-like literals redacted in presentation, and existing backup and
-immutable installer receipts remain the recovery mechanism.
+with recognized credential formats masked in presentation. The CLI and web explicitly disclose that arbitrary hardcoded workflow values can remain visible; Secret API values are never read for the preview. This is not a universal data-loss-prevention guarantee. Existing backups and immutable installer receipts remain the recovery mechanism.
 
 Primary provider references:
 [runner API](https://docs.github.com/en/rest/actions/self-hosted-runners),

@@ -358,6 +358,10 @@ rules, not configurable templates.
 
 ## Runner profiles
 
+Workflow previews mask recognized credential formats; this is not a guarantee
+that arbitrary hardcoded values are removed. Inspect the local file diff before
+sharing it. Setup never reads GitHub Secret values to construct this preview.
+
 Before requesting a setup PAT, guided setup offers **Discover existing runners
 and groups?** (`runners.discover`, boolean, default `false`). Opting in prefills
 repository **Administration: read** and, for an organization owner,

@@ -17,6 +17,7 @@
     <ul>{#each review.assets as asset}<li><bdi>{asset.path}</bdi>: {runnerText(asset.status, $setupLocale)}{#if !asset.enabled} · {runnerText('disabled', $setupLocale)}{/if}</li>{/each}</ul>
   </details>
   <details><summary>{runnerText('changes', $setupLocale)} ({review.changes.length})</summary>
+    <p>{runnerText('redactionNotice', $setupLocale)}</p>
     {#each review.changes as change}<details><summary><bdi>{change.path}</bdi></summary>
       <h4>{runnerText('before', $setupLocale)}</h4><pre>{change.before ?? runnerText('absent', $setupLocale)}</pre>
       <h4>{runnerText('after', $setupLocale)}</h4><pre>{change.after ?? runnerText('absent', $setupLocale)}</pre>

@@ -75384,11 +75384,11 @@ function renderSetupInstallationReview(review) {
     const content = (value) => value.split('\n').map(setup_terminal_choice_policy_1.safeTerminalChoiceText).join('\n');
     return ['Runner routing and installation parity',
         'Access and capacity are observations, not runner authentication or runtime verification. Unknown access needs administrator verification; busy/offline keeps the route and waits for capacity.',
-        ...review.jobs.map(job => `  ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(job.file)} / ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(job.job)}: ${job.role} · ${job.status}${job.retained ? ' · retained' : ''}\n    runs-on: ${JSON.stringify(job.runsOn)}`),
+        ...review.jobs.map(job => `  ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(job.file)} / ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(job.job)}: ${job.role} · ${job.status}${job.retained ? ' · retained' : ''}\n    runs-on: ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(JSON.stringify(job.runsOn))}`),
         'Asset inventory (disabled optional capabilities remain visible):',
         ...review.assets.map(asset => `  ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(asset.path)}: ${asset.status}${asset.enabled ? '' : ' · disabled'}`),
         ...review.blockers.map(blocker => `  Blocked: ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(blocker)}`),
-        'Complete workflow and routing changes (credential-like literals redacted):',
+        'Complete workflow and routing changes (recognized credential formats masked; other literal values may remain):',
         ...review.changes.map(change => `  ${(0, setup_terminal_choice_policy_1.safeTerminalChoiceText)(change.path)}\n--- before ---\n${content(change.before ?? '(missing)')}\n--- after ---\n${content(change.after ?? '(removed)')}`),
     ].join('\n');
 }
