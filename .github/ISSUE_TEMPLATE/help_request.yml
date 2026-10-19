@@ -1,7 +1,7 @@
 name: 🙋 Help Request
 description: Ask for help, guidance, or clarification about something in the project
 title: "<YOUR QUESTION OR TOPIC HERE>"
-labels: ["help", "question", "priority: medium"]
+labels: ["help","question","priority: medium"]
 body:
   - type: checkboxes
     attributes:
