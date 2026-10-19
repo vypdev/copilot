@@ -2,9 +2,10 @@ import { UpgradeCliUseCase } from '../upgrade_cli_use_case';
 
 describe('UpgradeCliUseCase', () => {
     it('delegates the upgrade to the semantic port', async () => {
-        const upgrade = jest.fn().mockResolvedValue(undefined);
+        const result = { version: '3.7.0', packageManager: 'npm' as const, executablePath: '/npm/bin/copilot' };
+        const upgrade = jest.fn().mockResolvedValue(result);
 
-        await new UpgradeCliUseCase({ upgrade }).execute();
+        await expect(new UpgradeCliUseCase({ upgrade }).execute()).resolves.toEqual(result);
 
         expect(upgrade).toHaveBeenCalledTimes(1);
     });

@@ -399,19 +399,33 @@ corepack pnpm remove --global copilot
 
 ### Update or reinstall the global CLI
 
-For a published release, update the global pnpm package:
+For a published release, update the active global npm or pnpm installation:
 
 ```bash
 copilot upgrade
 copilot --version
 ```
 
-`copilot upgrade` can be run from any directory; it updates the published pnpm
-installation and does not require a GitHub repository or `PERSONAL_ACCESS_TOKEN`.
+`copilot upgrade` can be run from any directory and does not require a GitHub
+repository or `PERSONAL_ACCESS_TOKEN`. It identifies the running package's npm
+prefix or pnpm global directory and updates that installation with its owning
+package manager. If both are installed, the active installation is updated;
+the other copy is left in place.
+
+Success is printed only after the installed package and a fresh
+`copilot --version` resolved through the current `PATH` both match the selected
+latest published version. An already-current version is verified in the same way.
+If verification fails, the command exits unsuccessfully and explains that the
+installation may already be updated. Check `command -v copilot` (or
+`Get-Command copilot` in PowerShell), inspect `PATH`, and refresh the shell's
+command cache or open a new terminal before retrying. Unsupported, linked, or
+unidentifiable installations are rejected before any install; upgrade a source
+checkout using the local-package procedure below.
+
 If the installed version does not include the `upgrade` command, bootstrap it once
-with `pnpm add --global @vypdev/copilot@latest`, then use `copilot upgrade` for
-future updates. Running `pnpm update --global @vypdev/copilot` directly is also
-supported.
+with `npm install --global @vypdev/copilot@latest` or
+`pnpm add --global @vypdev/copilot@latest`, using the manager that owns the active
+installation, then use `copilot upgrade` for future updates.
 
 Before running a normal CLI command, Copilot performs a lightweight, informational check for a newer published version. The check uses a local 24-hour cache, has a short timeout, never blocks or changes the command result, and stays silent when npm is unavailable. If an update is found, Copilot prints `A new version (x.y.z) is available. Run "copilot upgrade".` The `upgrade`, `--version`, and help flows do not trigger this check. To disable it, set `COPILOT_DISABLE_UPDATE_CHECK=1`.
 

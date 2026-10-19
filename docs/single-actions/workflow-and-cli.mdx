@@ -81,7 +81,7 @@ PACKAGE_TARBALL="$(npm pack --ignore-scripts --silent)"
 corepack pnpm add --global "./$PACKAGE_TARBALL" --force
 ```
 
-### Update the global pnpm installation
+### Update the active global installation
 
 Update to the latest published version with:
 
@@ -90,11 +90,23 @@ copilot upgrade
 copilot --version
 ```
 
-Run `copilot upgrade` from any directory. It updates the published pnpm
-installation and does not require a target repository or GitHub token. If the
-installed version does not include this command, run
-`pnpm add --global @vypdev/copilot@latest` once. You can also update it directly
-with `pnpm update --global @vypdev/copilot`.
+Run `copilot upgrade` from any directory without a target repository or GitHub
+token. It detects whether the running package belongs to npm or pnpm, preserves
+its installation directory, and installs the selected latest published version.
+With both managers installed, it updates the active copy and preserves the other.
+
+The command verifies the installed package and runs the effective
+`copilot --version` through the current `PATH` before announcing success.
+Verification failure exits with a failure status even if the installer completed;
+the package may already be updated. Inspect `command -v copilot` (PowerShell:
+`Get-Command copilot`) and `PATH`, refresh the shell command cache or open a new
+terminal, then retry. A running copy shadowed by another installation on `PATH`
+is rejected before installation. Unknown or source-linked packages require a
+manual reinstall with their original manager.
+
+If the installed version does not include this command, run
+`npm install --global @vypdev/copilot@latest` or
+`pnpm add --global @vypdev/copilot@latest` once with the active copy's manager.
 
 Normal Copilot CLI commands also perform a lightweight update check against npm. It is informational only: the result is cached locally for 24 hours, the network request has a short timeout, and failures are ignored so the command continues normally. When a newer release is found, the CLI prints `A new version (x.y.z) is available. Run "copilot upgrade".` The check is skipped for `copilot upgrade`, `--version`, and help. Set `COPILOT_DISABLE_UPDATE_CHECK=1` to opt out.
 

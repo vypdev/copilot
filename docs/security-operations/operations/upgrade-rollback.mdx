@@ -19,6 +19,13 @@ copilot upgrade
 copilot --version
 ```
 
+This updates the active npm or pnpm installation in its existing prefix/global
+directory. Success requires both the installed package and the command resolved
+through `PATH` to report the selected version. A failed verification does not
+roll back an installer that already completed: inspect the effective command,
+refresh the shell cache or open a new terminal, and retry. Other global copies
+and shell configuration are preserved.
+
 For a controlled rollout or rollback, install a specific package version explicitly:
 
 ```bash
