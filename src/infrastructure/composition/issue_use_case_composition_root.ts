@@ -82,7 +82,7 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
   const organizationMembers = createOrganizationMembersCompositionRoot();
   const branchLifecycle = new BranchLifecycleRepository(createBranchClient());
   const branchName = new BranchNameRepository();
-  const gitCli = new GitCliRepository();
+  const gitCli = new GitCliRepository(binding.token);
   const linkedBranch = new LinkedBranchRepository(
     createGraphqlTransportClient(),
   );
