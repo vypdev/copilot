@@ -7,7 +7,9 @@ export function sddPrerequisiteDocuments() {
 }
 
 export const MALFORMED_SDD_PREREQUISITES = ['title-only template', 'title-only standard', 'missing canonical heading',
-  'fenced template', 'missing standard section', 'fenced standard', 'empty template section', 'commented standard'] as const;
+  'fenced template', 'missing standard section', 'fenced standard', 'empty template section', 'commented standard',
+  'MUST only in title', 'MUST only in heading', 'MUST only in introduction', 'non-normative MUST prose', 'fenced normative guidance',
+  'normative guidance split across sections'] as const;
 
 export function malformedSddPrerequisites(scenario: typeof MALFORMED_SDD_PREREQUISITES[number]) {
   const documents = sddPrerequisiteDocuments();
@@ -19,6 +21,17 @@ export function malformedSddPrerequisites(scenario: typeof MALFORMED_SDD_PREREQU
   if (scenario === 'fenced standard') documents.standard = '# Standard\n~~~markdown\n' + documents.standard + '\n~~~';
   if (scenario === 'empty template section') documents.template = documents.template.replace(/(## 20\.[^\n]+)[^]*/u, '$1\n');
   if (scenario === 'commented standard') documents.standard = '# Standard\n<!--\n' + documents.standard + '\n-->';
+  if (scenario.startsWith('MUST only') || scenario === 'non-normative MUST prose' || scenario === 'fenced normative guidance'
+    || scenario === 'normative guidance split across sections') {
+    documents.standard = '# Standard\n\n' + Array.from({ length: 8 }, (_, index) => `## ${index + 1}. Guidance\n\nOrdinary section content.\n\n`).join('');
+  }
+  if (scenario === 'MUST only in title') documents.standard = documents.standard.replace('# Standard', '# MUST Standard');
+  if (scenario === 'MUST only in heading') documents.standard = documents.standard.replace('## 1. Guidance', '## 1. MUST guidance');
+  if (scenario === 'MUST only in introduction') documents.standard = documents.standard.replace('# Standard', '# Standard\n\nA MUST requires an acceptance scenario.');
+  if (scenario === 'non-normative MUST prose') documents.standard += 'The word MUST was discussed during a meeting.\n';
+  if (scenario === 'fenced normative guidance') documents.standard += '```markdown\nA MUST requires an acceptance scenario.\n```\n';
+  if (scenario === 'normative guidance split across sections') documents.standard = documents.standard.replace(
+    'Ordinary section content.\n\n## 2. Guidance\n\nOrdinary section content.', 'A MUST\n\n## 2. Guidance\n\nrequires an acceptance scenario.');
   return documents;
 }
 

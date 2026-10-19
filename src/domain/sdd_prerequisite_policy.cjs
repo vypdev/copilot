@@ -2,9 +2,18 @@
 function validateSddPrerequisiteDocuments(standard, template, requiredHeadings) {
   const visibleStandard = visibleMarkdown(standard);
   const visibleTemplate = visibleMarkdown(template);
-  return hasNumberedSections(visibleStandard, 8) && /\bMUST\b/u.test(visibleStandard)
+  return hasNumberedSections(visibleStandard, 8) && hasNormativeGuidance(visibleStandard)
     && hasNumberedSections(visibleTemplate, 20)
     && requiredHeadings.every(heading => visibleTemplate.split('\n').some(line => line.startsWith(heading)));
+}
+
+function hasNormativeGuidance(source) {
+  // Check the canonical rule in section prose, not titles, headings or token mentions.
+  return source.split(/^## [1-9]\d*\. [^\n]+$/gmu).slice(1).some(section => {
+    const prose = section.replace(/^#{1,6} [^\n]*$/gmu, '')
+      .replace(/[`*_]/gu, '').replace(/\s+/gu, ' ');
+    return /\bA MUST requires an acceptance scenario\./u.test(prose);
+  });
 }
 
 function hasNumberedSections(source, count) {

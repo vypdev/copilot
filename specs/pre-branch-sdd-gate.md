@@ -1009,18 +1009,18 @@ retry, localization and accessibility contracts apply; raw filesystem/provider
 exceptions are not surfaced. Retry after repairing the same catalog; publication
 and historical commits are retained.
 
-The amendment has a separate minimum **79 distinct cases**, without recounting
+The amendment has a separate minimum **91 distinct cases**, without recounting
 the gate's existing budget:
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Portable filesystem evidence | 10 | Kotlin, JS/TS monorepo, Python, spec/test suffixes, Java, .NET, Go, Rust, unknown extension |
 | Path and filesystem security | 21 | Twelve unsafe spellings, five missing/directory/duplicate/boundary cases, three external link routes and linked catalog/as-built read protection |
-| Immutable doctor portability | 20 | Same conventions pass with verified inventory and block missing tests; eight malformed prerequisite structures; explicit absence of each prerequisite |
-| Local prerequisite adapter | 15 | Shared doctor/reconcile success; missing, malformed, unsupported, absent evidence and template errors; eight malformed prerequisite structures and unavailable read failure |
+| Immutable doctor portability | 26 | Same conventions pass with verified inventory and block missing tests; eight malformed prerequisite structures; explicit absence of each prerequisite; five stray normative-token cases and cross-section fragments |
+| Local prerequisite adapter | 21 | Shared doctor/reconcile success; missing, malformed, unsupported, absent evidence and template errors; eight malformed prerequisite structures and unavailable read failure; five stray normative-token cases and cross-section fragments |
 | Local doctor presentation | 8 | Pass, blocked, unavailable, missing capability, thrown adapter, disabled opt-in, Spanish recovery and presenter labels |
 | Detached publication, sync and bounded prompts | 5 | Real update/companion first commits, invalid evidence blocks publication, sync regenerates; oversized owner evidence is withheld without changing ownership |
-| **Total** | **79** | Metadata fixtures do not execute consumer toolchains |
+| **Total** | **91** | Metadata fixtures do not execute consumer toolchains |
 
 Existing global thresholds remain mandatory. Fixtures use temporary files and
 local bare remotes without network, compilers, credentials or sleeps. The
@@ -1055,7 +1055,7 @@ not semantic completeness or framework execution. Existing adapted standards
 must retain the canonical section structure before enabling/retrying the gate.
 Sixteen additional cases (eight per adapter surface) cover title-only files,
 missing canonical headings/standard sections, fenced documents, empty template
-sections and commented-out structure; these are included once in the 79-case
+sections and commented-out structure; these are included once in the 91-case
 amendment budget above. The draft validator still enforces its independent
 Markdown and numeric budget contract. No new setting or publication permission
 is introduced.
@@ -1068,4 +1068,20 @@ inventing paths or changing ownership, and the latter returns unavailable.
 Missing catalog, standard and template are exercised independently so the
 explicit presence guard has no unreachable fallback branch. The unused fixture
 default is removed; coverage exclusions and repository thresholds are unchanged.
-These four cases are included in the 79-case amendment budget above.
+These four cases are included in the 91-case amendment budget above.
+
+
+PR #596 finding [4316738667](https://github.com/vypdev/copilot/pull/596#discussion_r4316738667)
+showed that a token search did not establish the declared normative guidance.
+The shared policy MUST recognize the canonical rule “A MUST requires an acceptance
+scenario.” inside numbered-section prose (inline emphasis/code formatting is
+allowed). Titles, section headings, introductory text, incidental mentions and
+fenced examples cannot satisfy this structural rule. This is the canonical
+acceptance-link requirement, not a semantic certification of every paragraph.
+Ten regression cases exercise those five invalid routes through both doctors;
+they are included in the amendment's 91-case floor. Canonical standards need no
+migration; adapted standards retain that rule in a numbered section.
+
+The canonical normative rule MUST occur inside one numbered section; concatenating
+fragments across section boundaries cannot establish it. Two additional adapter
+cases cover this boundary, included in the 91-case amendment floor.
