@@ -2160,7 +2160,7 @@
       "status": "as-built-baseline",
       "scope": "Expose bounded local commands and workflow-dispatched operations through the shared application core",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-16",
+      "lastVerified": "2026-10-19",
       "specs": [
         "specs/cli-and-single-action-execution.md"
       ],
@@ -2173,6 +2173,11 @@
       ],
       "code": [
         "src/cli/command_registry.ts",
+        "src/cli/commands/upgrade.ts",
+        "src/application/ports/cli_upgrade_ports.ts",
+        "src/application/usecases/upgrade_cli_use_case.ts",
+        "src/infrastructure/cli/active_cli_upgrade_adapter.ts",
+        "src/infrastructure/composition/cli_upgrade_composition_root.ts",
         "src/cli/commands/think.ts",
         "src/cli/commands/think_command_handler.ts",
         "src/data/model/action_types.ts",
@@ -2188,6 +2193,10 @@
       ],
       "tests": [
         "src/cli/__tests__/cli_program.test.ts",
+        "src/cli/commands/__tests__/upgrade.test.ts",
+        "src/application/usecases/__tests__/upgrade_cli_use_case.test.ts",
+        "src/infrastructure/cli/__tests__/active_cli_upgrade_adapter.test.ts",
+        "src/infrastructure/composition/__tests__/cli_upgrade_composition_root.test.ts",
         "src/cli/__tests__/cli_entrypoint_boundaries.test.ts",
         "src/__tests__/cli.test.ts",
         "src/cli/commands/__tests__/think_command_handler.test.ts",
@@ -2201,6 +2210,8 @@
       ],
       "documentation": [
         "docs/single-actions/available-actions.mdx",
+        "docs/how-to-use.mdx",
+        "docs/security-operations/operations/upgrade-rollback.mdx",
         "docs/single-actions/workflow-and-cli.mdx",
         "docs/single-actions/examples.mdx",
         "docs/single-actions/configuration.mdx",

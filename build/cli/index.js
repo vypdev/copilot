@@ -72385,7 +72385,7 @@ class UpgradeCliUseCase {
         this.cliUpgradePort = cliUpgradePort;
     }
     async execute() {
-        await this.cliUpgradePort.upgrade();
+        return this.cliUpgradePort.upgrade();
     }
 }
 exports.UpgradeCliUseCase = UpgradeCliUseCase;
@@ -74107,10 +74107,10 @@ exports.registerUpgradeCommand = registerUpgradeCommand;
 const cli_upgrade_composition_root_1 = __nccwpck_require__(74142);
 const application_error_1 = __nccwpck_require__(75999);
 async function runUpgradeCommand(runner = (0, cli_upgrade_composition_root_1.createUpgradeCliUseCase)()) {
-    console.log('⬆️ Updating the global @vypdev/copilot installation...');
+    console.log('⬆️ Updating the active @vypdev/copilot installation and verifying "copilot --version"...');
     try {
-        await runner.execute();
-        console.log('✅ Copilot was upgraded successfully. Run "copilot --version" to verify.');
+        const result = await runner.execute();
+        console.log(`✅ Copilot ${result.version} was upgraded successfully via ${result.packageManager}. "copilot --version" verified.`);
     }
     catch (error) {
         const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to upgrade Copilot.');
@@ -74121,7 +74121,7 @@ async function runUpgradeCommand(runner = (0, cli_upgrade_composition_root_1.cre
 function registerUpgradeCommand(program) {
     program
         .command('upgrade')
-        .description('Upgrade the global @vypdev/copilot installation to the latest published version')
+        .description('Upgrade the active npm or pnpm @vypdev/copilot installation and verify its effective version')
         .action(() => runUpgradeCommand());
 }
 
@@ -93719,6 +93719,203 @@ function invalid(reason, code) {
 
 /***/ }),
 
+/***/ 56489:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ActiveCliUpgradeAdapter = void 0;
+exports.isSameCliPath = isSameCliPath;
+exports.resolveCliExecutable = resolveCliExecutable;
+const exec_1 = __nccwpck_require__(18538);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const application_error_1 = __nccwpck_require__(75999);
+const copilot_package_1 = __nccwpck_require__(76182);
+const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[\da-zA-Z.-]+)?(?:\+[\da-zA-Z.-]+)?$/u;
+/** Compare canonical paths using the filesystem's platform rules, including .CMD casing. */
+function isSameCliPath(left, right, platform = process.platform) {
+    return (platform === 'win32' ? node_path_1.win32 : node_path_1.posix).relative(left, right) === '';
+}
+/** Retain the PATH spelling: pnpm wrappers and npm links are replaced in place. */
+function resolveCliExecutable(name, environment, platform = process.platform) {
+    const extensions = platform === 'win32'
+        ? (environment.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';')
+        : [''];
+    for (const directory of (environment.PATH || environment.Path || '').split(node_path_1.delimiter)) {
+        for (const extension of extensions) {
+            const candidate = (0, node_path_1.resolve)(directory || '.', `${name}${extension}`);
+            try {
+                (0, node_fs_1.accessSync)(candidate, node_fs_1.constants.X_OK);
+                if ((0, node_fs_1.statSync)(candidate).isFile())
+                    return candidate;
+            }
+            catch {
+                // Continue to the next PATH candidate.
+            }
+        }
+    }
+    throw new application_error_1.ApplicationError('configuration.invalid', `The ${name} command is unavailable on PATH. Restore the active installation's command and retry.`);
+}
+function readInstalledPackage(packagePath) {
+    const root = (0, node_fs_1.realpathSync)(packagePath);
+    const metadata = JSON.parse((0, node_fs_1.readFileSync)((0, node_path_1.join)(root, 'package.json'), 'utf8'));
+    const bin = metadata.bin?.copilot;
+    if (metadata.name !== copilot_package_1.COPILOT_PACKAGE_NAME || typeof metadata.version !== 'string'
+        || !VERSION_PATTERN.test(metadata.version) || typeof bin !== 'string' || (0, node_path_1.isAbsolute)(bin)) {
+        throw new Error('Invalid Copilot package identity or executable.');
+    }
+    const entrypoint = (0, node_fs_1.realpathSync)((0, node_path_1.resolve)(root, bin));
+    const relation = (0, node_path_1.relative)(root, entrypoint);
+    if (!relation || relation === '..' || relation.startsWith(`..${node_path_1.sep}`) || (0, node_path_1.isAbsolute)(relation)) {
+        throw new Error('Copilot executable escaped its package.');
+    }
+    if (!(0, node_fs_1.statSync)(entrypoint).isFile())
+        throw new Error('Copilot executable is not a file.');
+    return { root, version: metadata.version, entrypoint };
+}
+function readInvokedPackage(entrypoint, platform) {
+    const invoked = (0, node_fs_1.realpathSync)(entrypoint);
+    let directory = (0, node_path_1.dirname)(invoked);
+    while (directory !== (0, node_path_1.dirname)(directory)) {
+        try {
+            const installed = readInstalledPackage(directory);
+            if (isSameCliPath(installed.entrypoint, invoked, platform))
+                return installed;
+        }
+        catch {
+            // The published package root is above build/cli, not necessarily cwd.
+        }
+        directory = (0, node_path_1.dirname)(directory);
+    }
+    throw new application_error_1.ApplicationError('configuration.unsupported', 'The running Copilot package could not be identified. Reinstall it globally with npm or pnpm and retry.');
+}
+/** System adapter owns package-manager discovery, mutation and fresh process probes. */
+class ActiveCliUpgradeAdapter {
+    constructor(options = {}) {
+        this.environment = {};
+        for (const [name, value] of Object.entries(options.environment ?? process.env)) {
+            if (typeof value === 'string')
+                this.environment[name] = value;
+        }
+        this.platform = options.platform ?? process.platform;
+        this.entrypoint = options.entrypoint ?? process.argv[1];
+        this.run = options.run ?? (async (executable, args, inheritOutput = false) => {
+            // The toolkit handles Windows .cmd quoting as well as native executables.
+            const result = await (0, exec_1.getExecOutput)(`"${executable.replace(/"/gu, '\\"')}"`, args, {
+                env: this.environment,
+                silent: !inheritOutput,
+            });
+            return result.stdout.trim();
+        });
+    }
+    async upgrade() {
+        const invoked = readInvokedPackage(this.entrypoint, this.platform);
+        const installation = await this.resolveInstallation(invoked);
+        this.assertEffectiveCommand(installation, false);
+        let version;
+        try {
+            const response = JSON.parse(await this.run(installation.managerExecutable, ['view', `${copilot_package_1.COPILOT_PACKAGE_NAME}@latest`, 'version', '--json']));
+            if (typeof response !== 'string' || !VERSION_PATTERN.test(response))
+                throw new Error('Invalid version.');
+            version = response;
+        }
+        catch (cause) {
+            throw new application_error_1.ApplicationError('provider.unavailable', 'Unable to determine the latest Copilot version. No installation was changed; check the package registry connection and retry.', { cause });
+        }
+        try {
+            const verb = installation.packageManager === 'npm' ? 'install' : 'add';
+            await this.run(installation.managerExecutable, [verb, '--global', ...installation.locationArgs, `${copilot_package_1.COPILOT_PACKAGE_NAME}@${version}`], true);
+        }
+        catch (cause) {
+            throw new application_error_1.ApplicationError('provider.unavailable', `The ${installation.packageManager} upgrade did not complete. Check its output and the active installation's permissions before retrying.`, { cause });
+        }
+        try {
+            const installed = readInstalledPackage(installation.packagePath);
+            const effectiveCommand = this.assertEffectiveCommand(installation, true);
+            if (installation.packageManager === 'npm' && this.platform !== 'win32'
+                && !isSameCliPath((0, node_fs_1.realpathSync)(effectiveCommand), installed.entrypoint, this.platform))
+                throw new Error('The npm executable points outside its package.');
+            const effectiveVersion = (await this.run(effectiveCommand, ['--version'])).trim();
+            if (installed.version !== version || effectiveVersion !== version)
+                throw new Error('Version mismatch.');
+            return { version, packageManager: installation.packageManager, executablePath: effectiveCommand };
+        }
+        catch (cause) {
+            throw new application_error_1.ApplicationError('workflow.failed', 'The installer completed, but the effective Copilot version could not be verified. Check "copilot --version" and PATH, refresh your shell command cache or open a new terminal, then retry. The installation may already be updated.', { cause });
+        }
+    }
+    async resolveInstallation(invoked) {
+        // A pnpm store package is not an npm prefix, even on Windows.
+        const modules = (0, node_path_1.dirname)((0, node_path_1.dirname)(invoked.root));
+        const npmPrefix = this.platform === 'win32' ? (0, node_path_1.dirname)(modules) : (0, node_path_1.dirname)((0, node_path_1.dirname)(modules));
+        if ((0, node_path_1.basename)(modules) === 'node_modules' && !modules.includes(`${node_path_1.sep}.pnpm${node_path_1.sep}`)
+            && (this.platform === 'win32' || (0, node_path_1.basename)((0, node_path_1.dirname)(modules)) === 'lib')) {
+            try {
+                const managerExecutable = resolveCliExecutable('npm', this.environment, this.platform);
+                const root = (await this.run(managerExecutable, ['root', '--global', '--prefix', npmPrefix])).trim();
+                const packagePath = (0, node_path_1.join)(root, ...copilot_package_1.COPILOT_PACKAGE_NAME.split('/'));
+                const bin = this.platform === 'win32' ? npmPrefix : (0, node_path_1.join)(npmPrefix, 'bin');
+                if ((0, node_path_1.isAbsolute)(root) && isSameCliPath(readInstalledPackage(packagePath).root, invoked.root, this.platform)) {
+                    (0, node_fs_1.accessSync)((0, node_path_1.join)(bin, this.commandName()), node_fs_1.constants.X_OK);
+                    if (this.platform !== 'win32' && !isSameCliPath((0, node_fs_1.realpathSync)((0, node_path_1.join)(bin, this.commandName())), invoked.entrypoint, this.platform)) {
+                        throw new Error('The npm executable does not belong to the invoked package.');
+                    }
+                    return {
+                        packageManager: 'npm', managerExecutable, packagePath,
+                        commandPath: (0, node_path_1.join)(bin, this.commandName()), locationArgs: ['--prefix', npmPrefix],
+                    };
+                }
+            }
+            catch {
+                // Probe pnpm rather than installing into an unrelated npm prefix.
+            }
+        }
+        try {
+            const managerExecutable = resolveCliExecutable('pnpm', this.environment, this.platform);
+            const root = (await this.run(managerExecutable, ['root', '--global'])).trim();
+            const packagePath = (0, node_path_1.join)(root, ...copilot_package_1.COPILOT_PACKAGE_NAME.split('/'));
+            if ((0, node_path_1.isAbsolute)(root) && isSameCliPath(readInstalledPackage(packagePath).root, invoked.root, this.platform)) {
+                const relation = (0, node_path_1.relative)((0, node_fs_1.realpathSync)(root), invoked.root);
+                if (relation === '..' || relation.startsWith(`..${node_path_1.sep}`) || (0, node_path_1.isAbsolute)(relation)) {
+                    throw new Error('A linked source checkout is not an installed pnpm package.');
+                }
+                const bin = (await this.run(managerExecutable, ['bin', '--global'])).trim();
+                if (!(0, node_path_1.isAbsolute)(bin))
+                    throw new Error('Invalid global bin directory.');
+                // pnpm appends its layout version (e.g. 5) to --global-dir itself.
+                const globalDirectory = (0, node_path_1.dirname)((0, node_path_1.dirname)(root));
+                return {
+                    packageManager: 'pnpm', managerExecutable, packagePath,
+                    commandPath: (0, node_path_1.join)(bin, this.commandName()),
+                    locationArgs: ['--global-dir', globalDirectory, '--global-bin-dir', bin],
+                };
+            }
+        }
+        catch {
+            // Unknown/local/linked installations must not mutate another installation.
+        }
+        throw new application_error_1.ApplicationError('configuration.unsupported', 'The active Copilot installation could not be matched to npm or pnpm. Restore its original package manager or reinstall it globally, then retry. No installation was changed.');
+    }
+    commandName() {
+        return this.platform === 'win32' ? 'copilot.cmd' : 'copilot';
+    }
+    assertEffectiveCommand(installation, afterInstall) {
+        const effective = resolveCliExecutable('copilot', this.environment, this.platform);
+        if (!isSameCliPath((0, node_fs_1.realpathSync)(effective), (0, node_fs_1.realpathSync)(installation.commandPath), this.platform)) {
+            throw new application_error_1.ApplicationError('configuration.invalid', afterInstall
+                ? 'Another Copilot installation is taking priority on PATH.'
+                : 'The running Copilot installation differs from the command on PATH. Fix PATH or invoke its active command, then retry. No installation was changed.');
+        }
+        return effective;
+    }
+}
+exports.ActiveCliUpgradeAdapter = ActiveCliUpgradeAdapter;
+
+
+/***/ }),
+
 /***/ 76182:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -93842,58 +94039,6 @@ class NpmCliUpdateCheckAdapter {
     }
 }
 exports.NpmCliUpdateCheckAdapter = NpmCliUpdateCheckAdapter;
-
-
-/***/ }),
-
-/***/ 64975:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PnpmCliUpgradeAdapter = void 0;
-exports.resolvePnpmExecutable = resolvePnpmExecutable;
-const node_child_process_1 = __nccwpck_require__(17718);
-const copilot_package_1 = __nccwpck_require__(76182);
-function resolvePnpmExecutable(platform = process.platform) {
-    return platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
-}
-/** Executes the pnpm installation without invoking a shell or interpolating user input. */
-class PnpmCliUpgradeAdapter {
-    upgrade() {
-        const executable = resolvePnpmExecutable();
-        const args = ['add', '--global', `${copilot_package_1.COPILOT_PACKAGE_NAME}@latest`];
-        return new Promise((resolve, reject) => {
-            const child = (0, node_child_process_1.spawn)(executable, args, {
-                shell: false,
-                stdio: 'inherit',
-            });
-            let settled = false;
-            const fail = (error) => {
-                if (settled)
-                    return;
-                settled = true;
-                reject(error);
-            };
-            child.once('error', (error) => {
-                fail(Object.assign(new Error('Unable to start the pnpm upgrade process.'), { cause: error }));
-            });
-            child.once('close', (code, signal) => {
-                if (settled)
-                    return;
-                settled = true;
-                if (code === 0) {
-                    resolve();
-                    return;
-                }
-                const status = signal ? `signal ${signal}` : `exit code ${code ?? 'unknown'}`;
-                reject(new Error(`pnpm upgrade failed with ${status}.`));
-            });
-        });
-    }
-}
-exports.PnpmCliUpgradeAdapter = PnpmCliUpgradeAdapter;
 
 
 /***/ }),
@@ -94190,8 +94335,8 @@ function createCliUpdateCheckUseCase() {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createUpgradeCliUseCase = createUpgradeCliUseCase;
 const upgrade_cli_use_case_1 = __nccwpck_require__(45762);
-const pnpm_cli_upgrade_adapter_1 = __nccwpck_require__(64975);
-function createUpgradeCliUseCase(cliUpgradePort = new pnpm_cli_upgrade_adapter_1.PnpmCliUpgradeAdapter()) {
+const active_cli_upgrade_adapter_1 = __nccwpck_require__(56489);
+function createUpgradeCliUseCase(cliUpgradePort = new active_cli_upgrade_adapter_1.ActiveCliUpgradeAdapter()) {
     return new upgrade_cli_use_case_1.UpgradeCliUseCase(cliUpgradePort);
 }
 
