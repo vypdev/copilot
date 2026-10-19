@@ -5,6 +5,11 @@ import { load, JSON_SCHEMA } from 'js-yaml';
 import { parseIssueWorkflowProfile } from '../../domain/issue_workflow_profile';
 import { decideIssueStart } from '../../domain/issue_start_policy';
 import type { DoctorConfiguration, DoctorRepositoryRead, DoctorRepositoryPath } from '../ports/github_runtime_doctor_ports';
+import { SDD_REQUIRED_HEADINGS } from '../../domain/pre_branch_sdd';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { validateSddPrerequisiteDocuments } = require('../../domain/sdd_prerequisite_policy.cjs') as {
+    validateSddPrerequisiteDocuments(standard: string, template: string, headings: readonly string[]): boolean;
+};
 // CommonJS keeps this pure policy usable by the standalone Node catalog validator.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { matchesFieldBoundary } = require('../../domain/specification_catalog_path_policy.cjs') as {
@@ -57,9 +62,9 @@ export function doctorRepositoryPrerequisites(read: DoctorRepositoryRead): 'pass
         }
         const standardDocuments = new Set(['specs/README.md', 'specs/_template.md', 'specs/CATALOG.md']);
         if (read.trackedFiles.some(path => /^specs\/.+\.md$/u.test(path) && !standardDocuments.has(path) && !specs.has(path))) return 'blocked';
-        return paths.slice(1).every(path => {
-            const file = read.files[path]; return file.state === 'present' && /^#\s+\S/mu.test(file.text);
-        }) ? 'pass' : 'blocked';
+        const standard = read.files['specs/README.md'], template = read.files['specs/_template.md'];
+        return standard.state === 'present' && template.state === 'present'
+            && validateSddPrerequisiteDocuments(standard.text, template.text, SDD_REQUIRED_HEADINGS) ? 'pass' : 'blocked';
     } catch { return 'blocked'; }
 }
 

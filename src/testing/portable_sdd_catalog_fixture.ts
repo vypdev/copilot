@@ -1,5 +1,26 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+
+export function sddPrerequisiteDocuments() {
+  const specs = resolve(__dirname, '../../specs');
+  return { standard: readFileSync(join(specs, 'README.md'), 'utf8'), template: readFileSync(join(specs, '_template.md'), 'utf8') };
+}
+
+export const MALFORMED_SDD_PREREQUISITES = ['title-only template', 'title-only standard', 'missing canonical heading',
+  'fenced template', 'missing standard section', 'fenced standard', 'empty template section', 'commented standard'] as const;
+
+export function malformedSddPrerequisites(scenario: typeof MALFORMED_SDD_PREREQUISITES[number]) {
+  const documents = sddPrerequisiteDocuments();
+  if (scenario === 'title-only template') documents.template = '# Invalid\n';
+  if (scenario === 'title-only standard') documents.standard = '# Invalid\n';
+  if (scenario === 'missing canonical heading') documents.template = documents.template.replace('## 8. Clean Architecture design', '## 8. Other');
+  if (scenario === 'fenced template') documents.template = '# Template\n```markdown\n' + documents.template + '\n```';
+  if (scenario === 'missing standard section') documents.standard = documents.standard.replace('## 6.', '### 6.');
+  if (scenario === 'fenced standard') documents.standard = '# Standard\n~~~markdown\n' + documents.standard + '\n~~~';
+  if (scenario === 'empty template section') documents.template = documents.template.replace(/(## 20\.[^\n]+)[^]*/u, '$1\n');
+  if (scenario === 'commented standard') documents.standard = '# Standard\n<!--\n' + documents.standard + '\n-->';
+  return documents;
+}
 
 /** Metadata fixtures only: no compiler, runtime or framework is executed. */
 export const PORTABLE_SDD_LAYOUTS = [

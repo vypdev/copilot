@@ -1009,18 +1009,18 @@ retry, localization and accessibility contracts apply; raw filesystem/provider
 exceptions are not surfaced. Retry after repairing the same catalog; publication
 and historical commits are retained.
 
-The amendment has a separate minimum **59 distinct cases**, without recounting
+The amendment has a separate minimum **75 distinct cases**, without recounting
 the gate's existing budget:
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
 | Portable filesystem evidence | 10 | Kotlin, JS/TS monorepo, Python, spec/test suffixes, Java, .NET, Go, Rust, unknown extension |
 | Path and filesystem security | 21 | Twelve unsafe spellings, five missing/directory/duplicate/boundary cases, three external link routes and linked catalog/as-built read protection |
-| Immutable doctor portability | 10 | Same conventions pass with verified inventory and block missing tests |
-| Local prerequisite adapter | 6 | Shared doctor/reconcile success; missing, malformed, unsupported, absent evidence and template errors |
+| Immutable doctor portability | 18 | Same conventions pass with verified inventory and block missing tests; eight malformed prerequisite structures |
+| Local prerequisite adapter | 14 | Shared doctor/reconcile success; missing, malformed, unsupported, absent evidence and template errors; eight malformed prerequisite structures |
 | Local doctor presentation | 8 | Pass, blocked, unavailable, missing capability, thrown adapter, disabled opt-in, Spanish recovery and presenter labels |
 | Detached publication and sync | 4 | Real update/companion first commits, invalid evidence blocks publication, sync regenerates |
-| **Total** | **59** | Metadata fixtures do not execute consumer toolchains |
+| **Total** | **75** | Metadata fixtures do not execute consumer toolchains |
 
 Existing global thresholds remain mandatory. Fixtures use temporary files and
 local bare remotes without network, compilers, credentials or sleeps. The
@@ -1042,3 +1042,20 @@ catalog evidence, generated bundles, full quality/package gates and the support
 matrix/migration/recovery guidance in `docs/issues/pre-branch-sdds.mdx` and
 `docs/development/specifications.mdx`. Full consumer framework workflows remain
 explicitly untested; onboarding or metadata success cannot upgrade that claim.
+
+
+PR #596 finding [4316596064](https://github.com/vypdev/copilot/pull/596#discussion_r4316596064)
+showed that an H1 alone did not prove prerequisite structure. Both local and
+immutable-tree doctor MUST use the same pure document policy: a titled standard
+with all eight canonical numbered sections, nonempty section content and MUST
+guidance; a titled template with all twenty numbered sections, nonempty content
+and the exact heading prefixes exported by `SDD_REQUIRED_HEADINGS`. Fenced
+examples and HTML comments cannot satisfy these checks. This validates structure,
+not semantic completeness or framework execution. Existing adapted standards
+must retain the canonical section structure before enabling/retrying the gate.
+Sixteen additional cases (eight per adapter surface) cover title-only files,
+missing canonical headings/standard sections, fenced documents, empty template
+sections and commented-out structure; these are included once in the 75-case
+amendment budget above. The draft validator still enforces its independent
+Markdown and numeric budget contract. No new setting or publication permission
+is introduced.

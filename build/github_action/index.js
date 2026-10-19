@@ -44716,6 +44716,9 @@ const doctor_workflow_condition_policy_1 = __nccwpck_require__(61833);
 const js_yaml_1 = __nccwpck_require__(783);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const issue_start_policy_1 = __nccwpck_require__(90332);
+const pre_branch_sdd_1 = __nccwpck_require__(34730);
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { validateSddPrerequisiteDocuments } = __nccwpck_require__(95990);
 // CommonJS keeps this pure policy usable by the standalone Node catalog validator.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { matchesFieldBoundary } = __nccwpck_require__(66014);
@@ -44780,10 +44783,9 @@ function doctorRepositoryPrerequisites(read) {
         const standardDocuments = new Set(['specs/README.md', 'specs/_template.md', 'specs/CATALOG.md']);
         if (read.trackedFiles.some(path => /^specs\/.+\.md$/u.test(path) && !standardDocuments.has(path) && !specs.has(path)))
             return 'blocked';
-        return paths.slice(1).every(path => {
-            const file = read.files[path];
-            return file.state === 'present' && /^#\s+\S/mu.test(file.text);
-        }) ? 'pass' : 'blocked';
+        const standard = read.files['specs/README.md'], template = read.files['specs/_template.md'];
+        return standard.state === 'present' && template.state === 'present'
+            && validateSddPrerequisiteDocuments(standard.text, template.text, pre_branch_sdd_1.SDD_REQUIRED_HEADINGS) ? 'pass' : 'blocked';
     }
     catch {
         return 'blocked';
@@ -87793,6 +87795,9 @@ const cli_context_1 = __nccwpck_require__(21307);
 const repository_agent_guidance_1 = __nccwpck_require__(38445);
 const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
+const pre_branch_sdd_1 = __nccwpck_require__(34730);
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { validateSddPrerequisiteDocuments } = __nccwpck_require__(95990);
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const sddValidator = __nccwpck_require__(29617);
 class SetupWorkspaceMutationAdapter {
@@ -87821,7 +87826,7 @@ class SetupDoctorWorkspaceQueryAdapter {
             const paths = ['specs/catalog.json', 'specs/README.md', 'specs/_template.md'];
             if (paths.some(path => !sddValidator.isRegularRepositoryFile(root, path)))
                 return 'blocked';
-            if (paths.slice(1).some(path => !/^#\s+\S/mu.test((0, node_fs_1.readFileSync)((0, node_path_1.join)(root, path), 'utf8'))))
+            if (!validateSddPrerequisiteDocuments((0, node_fs_1.readFileSync)((0, node_path_1.join)(root, 'specs/README.md'), 'utf8'), (0, node_fs_1.readFileSync)((0, node_path_1.join)(root, 'specs/_template.md'), 'utf8'), pre_branch_sdd_1.SDD_REQUIRED_HEADINGS))
                 return 'blocked';
             return sddValidator.validateCatalog(root, sddValidator.readCatalog(root)).length === 0 ? 'pass' : 'blocked';
         }
@@ -91051,6 +91056,47 @@ module.exports = {
   readLedger,
   validateCommunicationTestBudget,
 };
+
+
+/***/ }),
+
+/***/ 95990:
+/***/ ((module) => {
+
+/** Structural prerequisite checks, shared by filesystem and immutable-tree doctor. */
+function validateSddPrerequisiteDocuments(standard, template, requiredHeadings) {
+  const visibleStandard = visibleMarkdown(standard);
+  const visibleTemplate = visibleMarkdown(template);
+  return hasNumberedSections(visibleStandard, 8) && /\bMUST\b/u.test(visibleStandard)
+    && hasNumberedSections(visibleTemplate, 20)
+    && requiredHeadings.every(heading => visibleTemplate.split('\n').some(line => line.startsWith(heading)));
+}
+
+function hasNumberedSections(source, count) {
+  if (!/^# \S/u.test(source)) return false;
+  const headings = [...source.matchAll(/^## ([1-9]\d*)\. [^\n]+$/gmu)];
+  return headings.length === count && headings.every((heading, index) => {
+    const end = headings[index + 1]?.index ?? source.length;
+    return Number(heading[1]) === index + 1
+      && /[\p{L}\p{N}]/u.test(source.slice(heading.index + heading[0].length, end));
+  });
+}
+
+function visibleMarkdown(value) {
+  if (typeof value !== 'string') return '';
+  let fence;
+  return value.replace(/<!--[^]*?(?:-->|$)/gu, '\n').replace(/\r\n/gu, '\n').split('\n').map(line => {
+    const boundary = /^ {0,3}(`{3,}|~{3,})/u.exec(line);
+    if (boundary) {
+      if (!fence) fence = boundary[1];
+      else if (boundary[1][0] === fence[0] && boundary[1].length >= fence.length) fence = undefined;
+      return '';
+    }
+    return fence ? '' : line;
+  }).join('\n');
+}
+
+module.exports = { validateSddPrerequisiteDocuments };
 
 
 /***/ }),

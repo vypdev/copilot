@@ -60,6 +60,12 @@ budgets and the SDD/catalog-only publication allowlist remain enforced.
 Before enabling the gate, prepare the three prerequisite files and run
 `copilot doctor` with the intended `pre-branch-sdd` configuration. The local
 `workspace.sdd-prerequisites` check uses Copilot's bundled catalog validator.
+Prerequisite structure is checked outside fenced examples and HTML comments:
+the standard needs the canonical eight numbered sections with content and
+normative MUST guidance; the template needs all twenty numbered sections with
+content and the exact canonical heading prefixes used by the draft validator.
+A title-only document, missing section or fenced copy cannot establish readiness.
+Keep the canonical structure when adapting these documents to your repository.
 A failure directs you to repair the catalog/standard/template; an unreadable
 inspection reports unverified, never ready. `/copilot doctor` also checks the
 catalog paths against the selected immutable Git tree's regular-file inventory.

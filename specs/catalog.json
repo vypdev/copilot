@@ -887,7 +887,9 @@
         "src/utils/setup_installation_review.ts",
         "src/cli/setup_installation_review_presenter.ts",
         "src/application/policies/setup_runner_installation_summary_policy.ts",
-        "src/utils/setup_files.ts"
+        "src/utils/setup_files.ts",
+        "src/domain/specification_catalog_path_policy.cjs",
+        "src/domain/sdd_prerequisite_policy.cjs"
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
@@ -1007,7 +1009,8 @@
         "src/application/usecases/setup/__tests__/setup_runner_planning.test.ts",
         "src/cli/__tests__/setup_runner_config_file.test.ts",
         "src/infrastructure/__tests__/setup_runner_composition.test.ts",
-        "src/tooling/__tests__/setup_provisioning_workflow.test.ts"
+        "src/tooling/__tests__/setup_provisioning_workflow.test.ts",
+        "src/infrastructure/__tests__/setup_sdd_prerequisites.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -1469,7 +1472,8 @@
         "src/application/policies/github_runtime_doctor_policy.ts",
         "src/infrastructure/setup_workspace_adapter.ts",
         "src/application/usecases/setup/doctor_use_case.ts",
-        "src/application/policies/setup_doctor_message_catalog.ts"
+        "src/application/policies/setup_doctor_message_catalog.ts",
+        "src/domain/sdd_prerequisite_policy.cjs"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",

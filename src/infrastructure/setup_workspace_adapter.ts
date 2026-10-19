@@ -9,6 +9,11 @@ import { isGitRepositoryRoot } from '../cli_context';
 import { inspectRepositoryAgentGuidance } from '../utils/repository_agent_guidance';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { SDD_REQUIRED_HEADINGS } from '../domain/pre_branch_sdd';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { validateSddPrerequisiteDocuments } = require('../domain/sdd_prerequisite_policy.cjs') as {
+    validateSddPrerequisiteDocuments(standard: string, template: string, headings: readonly string[]): boolean;
+};
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const sddValidator = require('./specification_catalog_validator.cjs') as {
     isRegularRepositoryFile(root: string, path: string): boolean;
@@ -42,7 +47,10 @@ export class SetupDoctorWorkspaceQueryAdapter implements SetupDoctorWorkspaceQue
         try {
             const paths = ['specs/catalog.json', 'specs/README.md', 'specs/_template.md'];
             if (paths.some(path => !sddValidator.isRegularRepositoryFile(root, path))) return 'blocked';
-            if (paths.slice(1).some(path => !/^#\s+\S/mu.test(readFileSync(join(root, path), 'utf8')))) return 'blocked';
+            if (!validateSddPrerequisiteDocuments(
+                readFileSync(join(root, 'specs/README.md'), 'utf8'),
+                readFileSync(join(root, 'specs/_template.md'), 'utf8'), SDD_REQUIRED_HEADINGS,
+            )) return 'blocked';
             return sddValidator.validateCatalog(root, sddValidator.readCatalog(root)).length === 0 ? 'pass' : 'blocked';
         } catch (error) {
             return error instanceof SyntaxError ? 'blocked' : 'unavailable';

@@ -3,7 +3,7 @@
 - Status: Implemented and locally validated on the Action-managed #461 branch; live command acceptance pending
 - Date: 2026-10-11
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-10-11 (572 full suites, 7,544 passing tests; live acceptance pending)
+- Last verified: 2026-10-19 (portable evidence and structural prerequisites, #595)
 - Owners: setup-and-doctor capability owner; implementation owners to be confirmed in review
 - Scope: Add deterministic `/copilot doctor` replies to issue and pull request conversations using bounded read-only evidence about runtime prerequisites.
 - Related issues/PRs: Issue #461
@@ -719,3 +719,18 @@ renderer, catalog and suite. Current-head full/native review/platform checks,
 source-correlated refresh, EN/ES browser inspection and original locale
 restoration are required for native acceptance. Existing historical receipts
 are not rewritten as proof of a new operation.
+
+
+### Portable catalog and prerequisite structure (2026-10-19, #595)
+
+The pre-branch gate's [portable evidence contract](./pre-branch-sdd-gate.md)
+owns the shared language-neutral path policy and prerequisite document checks.
+Runtime doctor MUST use those same pure policies against its immutable regular-file
+inventory. A title-only standard/template, missing canonical section, fenced or
+commented-out structure cannot pass. The standard retains eight numbered sections
+with content and normative MUST guidance; the template retains twenty with content
+and the writer's exact required heading prefixes. Successful metadata inspection
+continues to prove neither framework execution nor verified SDD publication.
+The eight additional runtime document cases are counted in the owning #595
+amendment budget, not again in this companion's historic inventory. Existing
+unavailable/blocked provenance, read-only boundaries and recovery remain unchanged.

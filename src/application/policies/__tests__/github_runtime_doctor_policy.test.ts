@@ -1,7 +1,7 @@
 import { doctorRepositoryFixture } from '../../usecases/__tests__/fixtures/runtime_doctor_fixture';
 import { doctorRepositoryPrerequisites, doctorWorkflowContracts, validDoctorConfiguration } from '../github_runtime_doctor_policy';
 import type { DoctorConfiguration, DoctorRepositoryRead } from '../../ports/github_runtime_doctor_ports';
-import { PORTABLE_SDD_LAYOUTS, portableSddCapability } from '../../../testing/portable_sdd_catalog_fixture';
+import { PORTABLE_SDD_LAYOUTS, portableSddCapability, MALFORMED_SDD_PREREQUISITES, malformedSddPrerequisites } from '../../../testing/portable_sdd_catalog_fixture';
 const config: DoctorConfiguration = { profile: { schemaVersion: 1, enabled: ['feature'] }, preBranchSdd: true,
     issueManagedBranches: true, dependencyBranch: 'develop' };
 function changed(path: keyof ReturnType<typeof doctorRepositoryFixture>['files'], text?: string) {
@@ -9,6 +9,13 @@ function changed(path: keyof ReturnType<typeof doctorRepositoryFixture>['files']
     return { ...snapshot, files: { ...snapshot.files, [path]: text === undefined ? { state: 'missing' as const } : { state: 'present' as const, text } } };
 }
 describe('runtime doctor pure prerequisite decisions', () => {
+    it.each(MALFORMED_SDD_PREREQUISITES)('blocks %s in the immutable doctor snapshot', scenario => {
+        const { standard, template } = malformedSddPrerequisites(scenario);
+        const snapshot = doctorRepositoryFixture();
+        expect(doctorRepositoryPrerequisites({ ...snapshot, files: { ...snapshot.files,
+            'specs/README.md': { state: 'present', text: standard }, 'specs/_template.md': { state: 'present', text: template },
+        } })).toBe('blocked');
+    });
     it.each(PORTABLE_SDD_LAYOUTS)('accepts %s from the immutable regular-file inventory without certifying its runtime', (_name, source, test, doc) => {
         const capability = { ...portableSddCapability(), entrypoints: [source], code: [source], tests: [test], documentation: [doc] };
         const snapshot = changed('specs/catalog.json', JSON.stringify({ version: 1, capabilities: [capability] }));
