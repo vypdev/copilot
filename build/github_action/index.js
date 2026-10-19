@@ -44742,10 +44742,9 @@ function doctorRepositoryPrerequisites(read) {
     const paths = ['specs/catalog.json', 'specs/_template.md', 'specs/README.md'];
     if (!completeFileSamples(read, paths) || !Array.isArray(read.trackedFiles) || read.trackedFiles.some(path => typeof path !== 'string'))
         return 'unavailable';
-    if (paths.some(path => read.files[path].state !== 'present'))
-        return 'blocked';
     const catalogFile = read.files['specs/catalog.json'];
-    if (catalogFile.state !== 'present')
+    const standard = read.files['specs/README.md'], template = read.files['specs/_template.md'];
+    if (catalogFile.state !== 'present' || standard.state !== 'present' || template.state !== 'present')
         return 'blocked';
     try {
         const catalog = object(JSON.parse(catalogFile.text));
@@ -44783,9 +44782,7 @@ function doctorRepositoryPrerequisites(read) {
         const standardDocuments = new Set(['specs/README.md', 'specs/_template.md', 'specs/CATALOG.md']);
         if (read.trackedFiles.some(path => /^specs\/.+\.md$/u.test(path) && !standardDocuments.has(path) && !specs.has(path)))
             return 'blocked';
-        const standard = read.files['specs/README.md'], template = read.files['specs/_template.md'];
-        return standard.state === 'present' && template.state === 'present'
-            && validateSddPrerequisiteDocuments(standard.text, template.text, pre_branch_sdd_1.SDD_REQUIRED_HEADINGS) ? 'pass' : 'blocked';
+        return validateSddPrerequisiteDocuments(standard.text, template.text, pre_branch_sdd_1.SDD_REQUIRED_HEADINGS) ? 'pass' : 'blocked';
     }
     catch {
         return 'blocked';

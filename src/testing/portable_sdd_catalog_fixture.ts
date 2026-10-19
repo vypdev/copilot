@@ -47,7 +47,7 @@ export function portableSddCapability() {
   };
 }
 
-export function writePortableSddEvidence(root: string, capability = portableSddCapability()): void {
+export function writePortableSddEvidence(root: string, capability: ReturnType<typeof portableSddCapability>): void {
   for (const file of new Set([...capability.entrypoints, ...capability.code, ...capability.tests, ...capability.documentation])) {
     mkdirSync(dirname(join(root, file)), { recursive: true });
     writeFileSync(join(root, file), '# Synthetic metadata evidence\n');

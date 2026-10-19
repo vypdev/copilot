@@ -1,4 +1,5 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SetupDoctorWorkspaceQueryAdapter, SetupReconcileWorkspaceAdapter } from '../setup_workspace_adapter';
@@ -24,6 +25,10 @@ describe('local SDD prerequisite inspection', () => {
   it('uses the bundled portable validator in doctor and reconcile without executing consumer code', () => {
     expect(new SetupDoctorWorkspaceQueryAdapter().inspectSddPrerequisites()).toBe('pass');
     expect(new SetupReconcileWorkspaceAdapter().inspectSddPrerequisites()).toBe('pass');
+  });
+  it('reports an unreadable prerequisite as unavailable instead of accepting or misclassifying it', () => {
+    jest.spyOn(fs, 'readFileSync').mockImplementationOnce(() => { throw Object.assign(new Error('private read failure'), { code: 'EIO' }); });
+    expect(new SetupDoctorWorkspaceQueryAdapter().inspectSddPrerequisites()).toBe('unavailable');
   });
   it.each(MALFORMED_SDD_PREREQUISITES)('blocks %s instead of treating a title as prerequisite proof', scenario => {
     const { standard, template } = malformedSddPrerequisites(scenario);

@@ -36,7 +36,9 @@ describe('runtime doctor pure prerequisite decisions', () => {
     });
     it('validates catalog, template and standard from one snapshot', () => expect(doctorRepositoryPrerequisites(doctorRepositoryFixture())).toBe('pass'));
     it('keeps unreadable prerequisites unavailable', () => expect(doctorRepositoryPrerequisites({ state: 'unavailable' })).toBe('unavailable'));
-    it('blocks a proven missing specification standard', () => expect(doctorRepositoryPrerequisites(changed('specs/README.md'))).toBe('blocked'));
+    it.each(['specs/README.md', 'specs/_template.md', 'specs/catalog.json'] as const)('blocks proven missing prerequisite %s', path => {
+        expect(doctorRepositoryPrerequisites(changed(path))).toBe('blocked');
+    });
     it('blocks malformed catalog JSON', () => expect(doctorRepositoryPrerequisites(changed('specs/catalog.json', '{'))).toBe('blocked'));
     it('blocks unsupported catalog versions', () => expect(doctorRepositoryPrerequisites(changed('specs/catalog.json', '{"version":2,"capabilities":[]}'))).toBe('blocked'));
     it('blocks duplicate capability identities', () => expect(doctorRepositoryPrerequisites(changed('specs/catalog.json', JSON.stringify({ version: 1,
