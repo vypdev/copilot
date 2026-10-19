@@ -150,11 +150,13 @@ describe('setup presenters and prompt-specific adapters', () => {
     expect(rendered).toContain('Acción: Sustituye el PAT de setup');
     expect(rendered).toContain('No se ha cambiado la configuración del repositorio.');
     expect(doctorCheckLabel('locale.repository', catalog)).toBe('Locale del repositorio');
+    expect(doctorCheckLabel('workspace.sdd-prerequisites', catalog)).toBe('Requisitos SDD');
   });
 
   it.each([
     ['configuration.valid', 'Configuration'],
     ['workspace.repository-root', 'Repository root'],
+    ['workspace.sdd-prerequisites', 'SDD prerequisites'],
     ['credentials.setup-pat', 'Setup PAT'],
     ['github.resource-scopes', 'GitHub Actions scopes'],
     ['github.secret-names', 'Repository Secrets'],

@@ -1,7 +1,9 @@
 import type { CommentAutomationContext } from '../../comment_automation_context';
 import { DOCTOR_REPOSITORY_PATHS, type DoctorRepositoryRead } from '../../../ports/github_runtime_doctor_ports';
+import { sddPrerequisiteDocuments } from '../../../../testing/portable_sdd_catalog_fixture';
 export const DOCTOR_HEAD = 'a'.repeat(40);
 export function doctorRepositoryFixture(): Extract<DoctorRepositoryRead, { state: 'available' }> {
+    const { standard, template } = sddPrerequisiteDocuments();
     const events = ['issues', 'issue_comment', 'pull_request'];
     return { state: 'available', repositoryId: 42, revision: DOCTOR_HEAD,
         trackedFiles: ['specs/safe.md', 'src/actions/github_action.ts', 'src/domain/locale.ts', 'src/domain/__tests__/locale.test.ts', 'README.md'],
@@ -10,7 +12,7 @@ export function doctorRepositoryFixture(): Extract<DoctorRepositoryRead, { state
                 : path.endsWith('.json') ? JSON.stringify({ version: 1, capabilities: [{ id: 'safe-owner', title: 'Safe owner', status: 'implemented', scope: 'Fixture', owner: 'maintainer', lastVerified: '2026-10-13',
                     specs: ['specs/safe.md'], workflows: [], entrypoints: ['src/actions/github_action.ts'], code: ['src/domain/locale.ts'],
                     tests: ['src/domain/__tests__/locale.test.ts'], documentation: ['README.md'] }] })
-                    : '# Repository specification standard\n' }])) as Extract<DoctorRepositoryRead, { state: 'available' }>['files'] };
+                    : path === 'specs/README.md' ? standard : template }])) as Extract<DoctorRepositoryRead, { state: 'available' }>['files'] };
 }
 export function doctorFixture() {
     const context = { trustedBotLogin: 'bot', status: { owner: 'o', repository: 'r', target: 'issue', issueNumber: 7 },

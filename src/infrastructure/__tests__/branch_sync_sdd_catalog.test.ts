@@ -7,6 +7,7 @@ import { canCreateFileSymlink } from '../../testing/file_symlink_capability';
 import { refreshBranchSyncSddCatalog, SDD_CATALOG_INDEX_PATH, SDD_CATALOG_PATH } from '../branch_sync_sdd_catalog';
 import { BranchSyncWorkspaceAdapter } from '../branch_sync_workspace_adapter';
 import * as logging from '../../application/ports/logging_ports';
+import { portableSddCapability, writePortableSddEvidence } from '../../testing/portable_sdd_catalog_fixture';
 
 const { renderCatalog } = require('../specification_catalog_validator.cjs') as { renderCatalog(catalog: unknown): string };
 
@@ -28,6 +29,16 @@ describe('branch synchronization generated SDD catalog', () => {
     let root: string;
     beforeEach(() => { root = mkdtempSync(join(tmpdir(), 'copilot-sync-catalog-')); });
     afterEach(() => { rmSync(root, { recursive: true, force: true }); });
+
+    it('regenerates a portable consumer catalog with the same bundled validation policy', () => {
+        fixture(root);
+        const capability = { ...portableSddCapability(), specs: ['specs/fixture.md'] };
+        writePortableSddEvidence(root, capability);
+        const catalog = { version: 1, capabilities: [capability] };
+        writeFileSync(join(root, SDD_CATALOG_PATH), JSON.stringify(catalog));
+        expect(refreshBranchSyncSddCatalog(root)).toBe(true);
+        expect(readFileSync(join(root, SDD_CATALOG_INDEX_PATH), 'utf8')).toBe(renderCatalog(catalog));
+    });
 
     it.each(['metadata-conflict-markers', 'metadata-json', 'metadata-shape', 'evidence-path-boundary', 'catalog-contract'] as const)(
         'reports only the closed %s phase, preserving the index and hiding untrusted values', phase => {

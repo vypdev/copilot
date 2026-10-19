@@ -63,13 +63,31 @@ function harness() {
 }
 
 describe('PreBranchSddGateUseCase', () => {
+  it('withholds oversized immutable owner evidence while preserving the owner and bounded drafting instructions', async () => {
+    const h = harness();
+    const large = { ...snapshot, capabilities: [{ ...snapshot.capabilities[0],
+      code: Array.from({ length: 1500 }, (_, index) => `packages/billing/src/Module${index}.kt`),
+    }] };
+    h.loadSnapshot.mockResolvedValue(large);
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Draft' });
+    const result = await h.useCase.begin(context());
+    expect(result.status).toBe('drafted');
+    const prompt = h.query.mock.calls[1][0].prompt;
+    expect(prompt).toContain('owner evidence exceeds the bounded prompt; do not invent paths');
+    expect(prompt).not.toContain('packages/billing/src/Module');
+    expect(prompt).toContain('"capabilityId":"payments"');
+    expect(prompt).toContain('Preserve the consumer repository layout and language conventions');
+  });
+
   it('supplies a canonical issue URL and the validated immutable owner evidence when drafting a companion', async () => {
     const h = harness();
     h.query.mockResolvedValueOnce({ ...plan, action: 'companion', path: 'specs/payment-status.md', newCapability: null })
       .mockResolvedValueOnce({ markdown: '# Draft companion' });
     await h.useCase.begin({ ...context(), issueUrl: 'https://github.com/vypdev/copilot/issues/42' });
     expect(h.query.mock.calls[0][0].prompt).toContain('Canonical issue URL: https://github.com/vypdev/copilot/issues/42');
+    expect(h.query.mock.calls[0][0].prompt).toContain('consumer repository layout and language conventions');
     const draft = h.query.mock.calls[1][0].prompt;
+    expect(draft).toContain('Preserve the consumer repository layout and language conventions');
     expect(draft).toContain(`Validated owning catalog at ${baseSha}`);
     expect(draft).toContain(JSON.stringify(snapshot.capabilities[0]));
     expect(draft).toContain('the new companion does not already own itself');

@@ -85,6 +85,7 @@ export class SetupDoctorUseCase {
       configurationCheck(configurationErrors, catalog),
       ...buildLocaleDoctorChecks(request.configuration, catalog),
       repositoryRootCheck(this.dependencies.workspace, catalog),
+      ...sddPrerequisiteChecks(request.configuration, this.dependencies.workspace, catalog),
       ...workflowChecks(request.configuration, configurationErrors, this.dependencies.workspace, catalog),
       ...agentGuidanceChecks(request.configuration, this.dependencies.workspace),
     ];
@@ -347,6 +348,22 @@ function workflowChecks(
       action: catalog.message('doctor.workflow.unverifiedAction'),
     })];
   }
+}
+
+function sddPrerequisiteChecks(
+  configuration: SetupConfiguration,
+  workspace: SetupDoctorWorkspaceQueryPort,
+  catalog: SetupDoctorMessageCatalog,
+): DoctorCheck[] {
+  if (!configuration.repository.preBranchSdd) return [];
+  let result: 'pass' | 'blocked' | 'unavailable' = 'unavailable';
+  try { result = workspace.inspectSddPrerequisites?.() ?? 'unavailable'; } catch { /* Remains unverified. */ }
+  return [doctorCheck({
+    id: 'workspace.sdd-prerequisites',
+    status: result === 'pass' ? 'pass' : result === 'blocked' ? 'fail' : 'warn',
+    summary: catalog.message(result === 'pass' ? 'doctor.sdd.valid' : result === 'blocked' ? 'doctor.sdd.invalid' : 'doctor.sdd.unverified'),
+    ...(result === 'pass' ? {} : { action: catalog.message('doctor.sdd.action', { catalog: 'specs/catalog.json', standard: 'specs/README.md', template: 'specs/_template.md' }) }),
+  })];
 }
 
 function agentGuidanceChecks(

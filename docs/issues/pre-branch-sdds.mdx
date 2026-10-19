@@ -24,6 +24,63 @@ regenerating a proposed appendix cannot repair that retained contract.
 
 The repository must already contain a valid `specs/catalog.json`, `specs/README.md`, and `specs/_template.md`. The catalog identifies the owning SDD. The Action can update that SDD, add a companion SDD to its capability, or create a new proposed capability when the catalog evidence and referenced paths are valid. Drafting receives the selected owner's verified source, test and documentation paths at the immutable base, the canonical issue link and retained authorized answers. A new companion identifies the existing owner; its own new path is proposed evidence. It does not generate PRDs or ADRs in this flow.
 
+## Repository layouts and support limits
+
+Catalog version 1 accepts source, entrypoint, test and documentation evidence
+at any normalized repository-relative location. Authors declare each file's
+role; Copilot does not infer it from a language extension or require `src/`,
+`.test.ts`, or a root README. For example:
+
+```json
+{
+  "entrypoints": ["backend/app/src/main/kotlin/example/Application.kt"],
+  "code": ["frontend/apps/console/src/components/Card.svelte"],
+  "tests": ["sdks/python/tests/test_client.py", "src/client.spec.ts", "src/client.test.js"],
+  "documentation": ["sdks/python/README.md"]
+}
+```
+
+These are evidence fields within a complete capability entry, not a complete
+catalog. Every referenced file must exist. Absolute paths, parent traversal,
+backslashes, Windows drive/stream paths, control characters, Git metadata,
+symlinks (including parent directories), and directories used as files are
+unsupported. Store ordinary files inside the repository and correct the catalog;
+do not add fake source wrappers or omit relevant tests. Specifications remain
+Markdown under `specs/`; workflow evidence remains YAML under
+`.github/workflows/` or `setup/workflows/`. Ownership, SDD structure, numeric test
+budgets and the SDD/catalog-only publication allowlist remain enforced.
+
+| Convention | Verified coverage | Execution support |
+|---|---|---|
+| Kotlin/Gradle, Astro/Svelte JS/TS monorepos, Python SDKs | Metadata paths, nested READMEs, `.spec.ts`, `.test.js` | Toolchains are not executed by catalog validation |
+| Java/Maven, .NET, Go, Rust | Representative source/test/documentation fixtures | Full consumer workflows remain untested |
+| Other languages and custom roots/extensions | Ordinary contained-file evidence uses the same policy | Unknown until independently verified |
+| Linux, macOS, Windows | Shared path policy; platform CI checks the Action | Consumer runtime/framework compatibility requires separate verification |
+
+Before enabling the gate, prepare the three prerequisite files and run
+`copilot doctor` with the intended `pre-branch-sdd` configuration. The local
+`workspace.sdd-prerequisites` check uses Copilot's bundled catalog validator.
+Prerequisite structure is checked outside fenced examples and HTML comments:
+the standard needs the canonical eight numbered sections with content and
+the canonical rule “A MUST requires an acceptance scenario.” in section prose,
+with optional inline emphasis/code formatting. A keyword in a title, heading,
+introduction or example is insufficient. The template needs all twenty numbered sections with
+content and the exact canonical heading prefixes used by the draft validator.
+A title-only document, missing section or fenced copy cannot establish readiness.
+Keep the canonical structure when adapting these documents to your repository.
+A failure directs you to repair the catalog/standard/template; an unreadable
+inspection reports unverified, never ready. `/copilot doctor` also checks the
+catalog paths against the selected immutable Git tree's regular-file inventory.
+Neither diagnostic certifies framework tooling or published SDD readiness.
+
+Upgrade the Action and local CLI together. Existing version-1 catalogs and the
+`pre-branch-sdd: false` default need no schema or configuration migration. The
+updated policy applies at the next validation, including in-flight drafts and
+branch synchronization; it does not rewrite historical SDD commits. Repositories
+using symlink evidence must register real contained files before retrying the
+same issue. A consumer-supplied validator cannot replace the Action's bundled
+validation policy.
+
 ## Issue flow
 
 1. Open an admitted issue with a feature type or `contract-change`, then add `in-progress`.
