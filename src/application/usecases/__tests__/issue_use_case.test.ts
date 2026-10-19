@@ -15,6 +15,7 @@ const mockLinkIssueProjectInvoke = jest.fn();
 const mockCheckPriorityInvoke = jest.fn();
 const mockResumeProjectInvoke = jest.fn();
 const mockPrepareBranchesInvoke = jest.fn();
+const mockReconcileBranchReadinessInvoke = jest.fn();
 const mockRemoveNotNeededInvoke = jest.fn();
 const mockDeployAddedInvoke = jest.fn();
 const mockRecommendStepsInvoke = jest.fn();
@@ -120,7 +121,7 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
 function createUseCase(
   actorAuthorizationPort?: ConstructorParameters<typeof IssueUseCase>[4],
   preBranchSddGate?: ConstructorParameters<typeof IssueUseCase>[5],
-  reconcileBranchReadiness?: jest.Mock,
+  reconcileBranchReadiness: jest.Mock = mockReconcileBranchReadinessInvoke,
 ): IssueUseCase {
   return new IssueUseCase(
     { taskId: "RecommendStepsUseCase", invoke: mockRecommendStepsInvoke },
@@ -150,6 +151,10 @@ describe("IssueUseCase", () => {
     mockCheckPriorityInvoke.mockResolvedValue([]);
     mockResumeProjectInvoke.mockResolvedValue([new Result({ id: "resume-project", success: true, executed: false })]);
     mockPrepareBranchesInvoke.mockResolvedValue({ results: [], configurationPatch: {} });
+    mockReconcileBranchReadinessInvoke.mockResolvedValue([new Result({
+      id: 'ReconcileBranchReadinessUseCase', success: true, executed: false,
+      payload: { branchName: 'feature/8-issue', branchSha: 'a'.repeat(40) },
+    })]);
     mockRemoveNotNeededInvoke.mockResolvedValue([]);
     mockDeployAddedInvoke.mockResolvedValue([]);
     mockRecommendStepsInvoke.mockResolvedValue({ results: [] });
@@ -421,6 +426,38 @@ describe("IssueUseCase", () => {
     await createUseCase(undefined, undefined, reconcile).invoke(param);
     expect(mockRemoveNotNeededInvoke).toHaveBeenCalledTimes(1);
     expect(mockDeployAddedInvoke).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['preparation failed', 'verification failed', 'verification pending', 'empty verification'])(
+    'withholds implementation guidance when branch %s', async kind => {
+      const failure = new Result({ id: 'PrepareBranchesUseCase', success: false, executed: true,
+        steps: ['Unable to prepare the issue branch.'] });
+      if (kind === 'preparation failed') mockPrepareBranchesInvoke.mockResolvedValue({ results: [failure], configurationPatch: {} });
+      const readiness = kind === 'verification failed'
+        ? [new Result({ id: 'ReconcileBranchReadinessUseCase', success: false, executed: true })]
+        : kind === 'empty verification' ? []
+          : [new Result({ id: 'ReconcileBranchReadinessUseCase', success: true, executed: false })];
+      mockReconcileBranchReadinessInvoke.mockResolvedValue(readiness);
+      const param = minimalExecution({ issue: { labeled: true, labelAdded: 'in-progress' } });
+
+      const results = await createUseCase().invoke(param);
+
+      expect(mockRecommendStepsInvoke).not.toHaveBeenCalled();
+      expect(mockRemoveNotNeededInvoke).not.toHaveBeenCalled();
+      expect(mockDeployAddedInvoke).not.toHaveBeenCalled();
+      expect(param.currentConfiguration.recommendationState).toBeUndefined();
+      if (kind === 'preparation failed') expect(results).toContain(failure);
+    },
+  );
+
+  it('keeps branchless implementation guidance available without branch evidence', async () => {
+    mockReconcileBranchReadinessInvoke.mockResolvedValue([]);
+    await createUseCase().invoke(minimalExecution({
+      issueStartDecision: { started: true, branchRequired: false, sddRequired: false, helpRequired: false },
+      issue: { labeled: true, labelAdded: 'in-progress', issueManagedBranches: false },
+    }));
+    expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
+    expect(mockRecommendStepsInvoke).toHaveBeenCalledTimes(1);
   });
 
   it("recommends steps for a newly opened non-release issue", async () => {

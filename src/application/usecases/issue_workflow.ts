@@ -186,7 +186,7 @@ export async function runIssueWorkflow(
     ports.actorAuthorizationPort
     && await ports.actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation(context.actor),
   );
-  const recommendation = context.started && !sddWaiting && (!context.sddRequired || branchReady) && agentAllowed
+  const recommendation = context.started && !sddWaiting && (!context.branchRequired || branchReady) && agentAllowed
     ? context.recommendation : undefined;
   if (recommendation) {
     const recommendationOutcome = recommendation === 'answer-help'

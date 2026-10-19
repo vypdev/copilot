@@ -56715,7 +56715,7 @@ async function runIssueWorkflow(context, taskId, ports) {
     }
     const agentAllowed = !context.membersOnly || Boolean(ports.actorAuthorizationPort
         && await ports.actorAuthorizationPort.isActorAllowedToUseMemberOnlyAutomation(context.actor));
-    const recommendation = context.started && !sddWaiting && (!context.sddRequired || branchReady) && agentAllowed
+    const recommendation = context.started && !sddWaiting && (!context.branchRequired || branchReady) && agentAllowed
         ? context.recommendation : undefined;
     if (recommendation) {
         const recommendationOutcome = recommendation === 'answer-help'
@@ -85343,7 +85343,7 @@ function createIssueUseCaseCompositionRoot(binding) {
     const organizationMembers = (0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)();
     const branchLifecycle = new branch_lifecycle_repository_1.BranchLifecycleRepository((0, github_branch_client_factory_1.createBranchClient)());
     const branchName = new branch_name_repository_1.BranchNameRepository();
-    const gitCli = new git_cli_repository_1.GitCliRepository();
+    const gitCli = new git_cli_repository_1.GitCliRepository(binding.token);
     const linkedBranch = new linked_branch_repository_1.LinkedBranchRepository((0, github_project_client_factory_1.createGraphqlTransportClient)());
     const branchPropagationDelay = new timer_branch_propagation_delay_adapter_1.TimerBranchPropagationDelayAdapter();
     const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();

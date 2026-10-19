@@ -88,6 +88,7 @@ const composeIssueUseCase = jest.fn(
 jest.mock("../issue_use_case_composition", () => ({ composeIssueUseCase }));
 
 import { createIssueUseCaseCompositionRoot } from "../issue_use_case_composition_root";
+import { GitCliRepository } from "../../../data/repository/git_cli_repository";
 
 describe("issue use case composition root", () => {
   beforeEach(() => jest.clearAllMocks());
@@ -118,5 +119,7 @@ describe("issue use case composition root", () => {
       removeNotNeededBranches: expect.objectContaining({ invoke: expect.any(Function) }),
     }));
     expect(createBranchClient).toHaveBeenCalledTimes(1);
+    expect(GitCliRepository).toHaveBeenCalledTimes(1);
+    expect(GitCliRepository).toHaveBeenCalledWith('token');
   });
 });
