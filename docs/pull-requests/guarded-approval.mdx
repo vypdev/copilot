@@ -109,6 +109,13 @@ Numeric mode consumes a single `copilot-diff-coverage-v1` workflow artifact cont
 
 No setting can make the bot approve its own PR, a fork, a draft, a deployment/release/hotfix PR, a changed file hidden from Bugbot by `AI_IGNORE_FILES`, or a change to protected workflow/policy files. Effective branch rules must be readable and dismiss stale approvals; `Copilot / Approval` must not be its own required check. The workflow PAT used at runtime is separate from the local setup PAT. The observer never checks out or runs PR-head code.
 
+Setup, doctor, and runtime inspect rulesets and classic branch protection
+independently. Every applicable review rule must explicitly enable stale-approval
+dismissal: rulesets use `parameters.dismiss_stale_reviews_on_push`, while classic
+protection uses `required_pull_request_reviews.dismiss_stale_reviews`. The classic
+field inside a ruleset is not evidence. A disabled, missing, malformed, or
+conflicting value blocks approval even if another review rule is valid.
+
 A malformed ruleset response is unavailable evidence. It cannot be treated as
 an empty ruleset or overridden by otherwise valid classic branch protection.
 

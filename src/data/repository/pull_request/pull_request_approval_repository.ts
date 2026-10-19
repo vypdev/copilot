@@ -305,10 +305,10 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
                 if (statusOf(error) !== 404) throw error;
             }
             const reviewRules = rules.filter(rule => rule.type === 'pull_request');
-            const classicReview = record(classic?.required_pull_request_reviews);
-            const allStale = reviewRules.every(rule => record(rule.parameters)?.dismiss_stale_reviews === true)
-                && (!classicReview || classicReview.dismiss_stale_reviews === true);
-            const hasStaleRule = reviewRules.length > 0 || classicReview !== undefined;
+            const classicReview = classic?.required_pull_request_reviews;
+            const allStale = reviewRules.every(rule => record(rule.parameters)?.dismiss_stale_reviews_on_push === true)
+                && (classicReview == null || record(classicReview)?.dismiss_stale_reviews === true);
+            const hasStaleRule = reviewRules.length > 0 || classicReview != null;
             const requiredChecks = new Set<string>();
             const classicChecks = record(classic?.required_status_checks);
             for (const item of array(classicChecks?.contexts)) if (typeof item === 'string') requiredChecks.add(item);
