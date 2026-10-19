@@ -22,5 +22,12 @@
       "role": "pointer",
       "sha256": "ccb359cdcb867faa922b2c4429ba0908b4054d7f1459f24e8b3b5e3e7edd7382"
     }
+  },
+  "installation": {
+    "schemaVersion": 1,
+    "operationId": "b0260a9e-59ee-40a1-b904-0a9214564a84",
+    "repositoryId": 891781467,
+    "baseSha": "33b128f9b86dc40e2b4e9d4d2c50f4e298c85204",
+    "planDigest": "aadaaa3121b76c022501bb48b0f9fccc1b38b33b5215f93d90a6509c10393cc4"
   }
 }

@@ -1,7 +1,7 @@
 name: ✨ Feature Request
 description: Propose an idea or improvement for copilot
 title: "<YOUR TITLE HERE>"
-labels: ["enhancement", "feature", "priority: low"]
+labels: ["enhancement","feature","priority: low"]
 body:
   - type: checkboxes
     attributes:
