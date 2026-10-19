@@ -4,6 +4,7 @@ import { PullRequestApprovalRepository } from '../pull_request_approval_reposito
 import type { ApprovalEvidence } from '../../../../domain/pull_request_approval';
 import { DEFAULT_PULL_REQUEST_APPROVAL_POLICY, serializePullRequestApprovalPolicy } from '../../../../domain/pull_request_approval_policy';
 import { approvalCoverageZip } from './fixtures/approval_coverage_zip_fixture';
+import { approvalStaleReviewCases } from '../../../../infrastructure/__tests__/fixtures/approval_stale_review_cases';
 
 jest.mock('@actions/github', () => ({ getOctokit: jest.fn() }));
 jest.mock('../../../../application/ports/logging_ports', () => ({ logInfo: jest.fn() }));
@@ -84,7 +85,7 @@ function evidenceOctokit(mergeParents = [base, head], attempt = 1, runConclusion
       git: { ...pat.rest.git, getCommit: jest.fn().mockResolvedValue({ data: { parents: mergeParents.map(sha => ({ sha })) } }) },
       repos: { getBranchProtection: jest.fn().mockRejectedValue({ status: 404 }) },
     },
-    request: jest.fn().mockResolvedValue({ data: [{ type: 'pull_request', parameters: { dismiss_stale_reviews: true } }] }),
+    request: jest.fn().mockResolvedValue({ data: [{ type: 'pull_request', parameters: { dismiss_stale_reviews_on_push: true } }] }),
     paginate: { iterator: jest.fn(async function* (method: unknown, params: { ref?: string; head_sha?: string }): AsyncGenerator<{ data: unknown }> {
       if (method === listFiles) yield { data: [{ filename: 'src/feature.ts' }] };
       else if (method === listReviews || method === pat.rest.issues.listComments) yield { data: [] };
@@ -334,9 +335,16 @@ describe('PullRequestApprovalRepository', () => {
     const pat = evidenceOctokit([base, head, 'd'.repeat(40)]); (github.getOctokit as jest.Mock).mockReturnValue(pat);
     expect(await new PullRequestApprovalRepository('pat', settings).loadEvidence(target)).toMatchObject({ mergeCommitVerified: false });
   });
+  it.each(approvalStaleReviewCases)('reads stale review dismissal: $name', async ({ rules, classic, readable = true, dismissesStaleReviews }) => {
+    const f = evidenceFixture();
+    f.pat.request.mockResolvedValue({ data: rules });
+    if (classic !== undefined) f.pat.rest.repos.getBranchProtection.mockResolvedValue({ data: classic });
+    expect(await f.repository.loadEvidence(target)).toMatchObject({ rulesReadable: readable, dismissesStaleReviews });
+  });
+
   it('retains classic and ruleset required checks without duplicate names', async () => {
     const f = evidenceFixture(); f.pat.request.mockResolvedValue({ data: [
-      { type: 'pull_request', parameters: { dismiss_stale_reviews: true } },
+      { type: 'pull_request', parameters: { dismiss_stale_reviews_on_push: true } },
       { type: 'required_status_checks', parameters: { required_status_checks: [{ context: 'CI Check' }, { context: 'Security' }] } },
     ] });
     f.pat.rest.repos.getBranchProtection.mockResolvedValue({ data: { required_pull_request_reviews: { dismiss_stale_reviews: true },
@@ -345,7 +353,7 @@ describe('PullRequestApprovalRepository', () => {
       requiredChecks: ['Legacy', 'CI Check', 'Security'] });
   });
   it('does not let a classic stale-review rule hide a disabled ruleset rule', async () => {
-    const f = evidenceFixture(); f.pat.request.mockResolvedValue({ data: [{ type: 'pull_request', parameters: { dismiss_stale_reviews: false } }] });
+    const f = evidenceFixture(); f.pat.request.mockResolvedValue({ data: [{ type: 'pull_request', parameters: { dismiss_stale_reviews_on_push: false } }] });
     f.pat.rest.repos.getBranchProtection.mockResolvedValue({ data: { required_pull_request_reviews: { dismiss_stale_reviews: true } } });
     expect(await f.repository.loadEvidence(target)).toMatchObject({ rulesReadable: true, dismissesStaleReviews: false });
   });

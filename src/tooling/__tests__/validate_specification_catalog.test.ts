@@ -71,22 +71,23 @@ describe('specification catalog validator', () => {
     },
   );
 
-  it('rejects a missing path and a path outside its declared evidence boundary', () => {
+  it('rejects a missing path and a specification outside its declared boundary', () => {
     const catalog = cloneCatalog();
-    catalog.capabilities[0].documentation = ['src/domain/deployment_operation.ts', 'docs/not-present.mdx'];
+    catalog.capabilities[0].specs.push('README.md');
+    catalog.capabilities[0].documentation = ['docs/not-present.mdx'];
     const errors = validator.validateCatalog(root, catalog);
-    expect(errors.some(error => error.includes('outside the documentation boundary'))).toBe(true);
+    expect(errors.some(error => error.includes('outside the specs boundary'))).toBe(true);
     expect(errors.some(error => error.includes('does not resolve to an existing file'))).toBe(true);
   });
 
-  it('catalogues shipped browser sources but rejects browser paths outside the source tree', () => {
+  it('catalogues browser build configuration as repository implementation evidence', () => {
     const catalog = cloneCatalog();
     const capability = catalog.capabilities.find(item => item.id === 'local-web-setup-assistant')!;
     expect(capability.entrypoints).toContain('web/src/main.ts');
     expect(capability.code).toContain('web/src/components/PromptCard.svelte');
     capability.code.push('web/vite.config.mts');
     const errors = validator.validateCatalog(root, catalog);
-    expect(errors.some(error => error.includes('outside the code boundary: web/vite.config.mts'))).toBe(true);
+    expect(errors).toEqual([]);
   });
 
   it('rejects an invalid status and verification date', () => {

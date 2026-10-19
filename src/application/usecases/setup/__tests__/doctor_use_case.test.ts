@@ -45,6 +45,46 @@ function dependencies(configuration: SetupConfiguration, overrides: Record<strin
 }
 
 describe('SetupDoctorUseCase', () => {
+  it.each(['pass', 'blocked', 'unavailable', 'absent', 'throws'] as const)('reports local SDD prerequisites as %s without claiming framework support', async state => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.repository.preBranchSdd = true;
+    configuration.repository.issueManagedBranches = true;
+    const deps = dependencies(configuration);
+    const workspace = { ...deps.workspace, ...(state === 'absent' ? {} : {
+      inspectSddPrerequisites: () => {
+        if (state === 'throws') throw new Error('private filesystem detail');
+        return state;
+      },
+    }) };
+    const { report } = await new SetupDoctorUseCase({ ...deps, workspace }).execute(request(configuration));
+    const check = report.checks.find(check => check.id === 'workspace.sdd-prerequisites');
+    expect(check?.status).toBe(state === 'pass' ? 'pass' : state === 'blocked' ? 'fail' : 'warn');
+    if (state === 'pass') expect(check?.summary).toContain('execution remain unverified');
+    else expect(check?.action).toContain('specs/catalog.json');
+    expect(JSON.stringify(check)).not.toContain('private filesystem detail');
+  });
+
+  it('keeps the disabled SDD gate opt-in and avoids inspecting its prerequisites', async () => {
+    const configuration = createDefaultSetupConfiguration();
+    const deps = dependencies(configuration);
+    const inspectSddPrerequisites = jest.fn(() => 'blocked' as const);
+    const { report } = await new SetupDoctorUseCase({ ...deps, workspace: { ...deps.workspace, inspectSddPrerequisites } }).execute(request(configuration));
+    expect(inspectSddPrerequisites).not.toHaveBeenCalled();
+    expect(report.checks.some(check => check.id === 'workspace.sdd-prerequisites')).toBe(false);
+  });
+
+  it('localizes SDD recovery paths in Spanish without exposing adapter diagnostics', async () => {
+    const configuration = createDefaultSetupConfiguration();
+    configuration.repository.preBranchSdd = true;
+    configuration.repository.issueManagedBranches = true;
+    configuration.repository.repositoryLocale = 'es-ES';
+    const deps = dependencies(configuration);
+    const { report } = await new SetupDoctorUseCase({ ...deps, workspace: { ...deps.workspace, inspectSddPrerequisites: () => 'blocked' } }).execute(request(configuration));
+    expect(report.checks.find(check => check.id === 'workspace.sdd-prerequisites')).toMatchObject({
+      status: 'fail', summary: expect.stringContaining('no está preparado'),
+      action: expect.stringContaining('specs/_template.md'),
+    });
+  });
   it('continues local diagnosis and skips every remote dependant after PAT failure', async () => {
     const configuration = createDefaultSetupConfiguration();
     const deps = dependencies(configuration, {

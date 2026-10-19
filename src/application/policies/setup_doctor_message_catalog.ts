@@ -24,6 +24,11 @@ import {
 } from './approval_doctor_message_catalog';
 
 const DOCTOR_ONLY_MESSAGE_IDS = Object.freeze([
+  'doctor.sdd.valid',
+  'doctor.sdd.invalid',
+  'doctor.sdd.unverified',
+  'doctor.sdd.action',
+  'doctor.label.sdd',
   'doctor.title',
   'doctor.title.partial',
   'doctor.summary',
@@ -132,6 +137,11 @@ export const SETUP_DOCTOR_MESSAGE_IDS: readonly SetupDoctorMessageId[] = Object.
 ]);
 
 const ENGLISH_DOCTOR_MESSAGES: Readonly<Record<DoctorOnlyMessageId, CatalogMessage>> = Object.freeze({
+  'doctor.sdd.valid': 'SDD catalog paths and prerequisites passed local validation. Language and framework execution remain unverified.',
+  'doctor.sdd.invalid': 'SDD prerequisites are invalid or unsupported. The pre-branch gate is not ready.',
+  'doctor.sdd.unverified': 'SDD prerequisites could not be inspected; readiness is unverified.',
+  'doctor.sdd.action': 'Repair {catalog}, {standard} and {template} before enabling pre-branch-sdd. Use normalized repository-relative regular files without symlinks; verify language and framework tooling separately.',
+  'doctor.label.sdd': 'SDD prerequisites',
   'doctor.title': 'Copilot Doctor',
   'doctor.title.partial': 'Copilot Doctor — partial diagnosis',
   'doctor.summary': 'Checks: {pass} pass, {warn} warn, {fail} fail, {skipped} skipped.',
@@ -230,6 +240,11 @@ const ENGLISH_DOCTOR_MESSAGES: Readonly<Record<DoctorOnlyMessageId, CatalogMessa
 });
 
 const SPANISH_DOCTOR_MESSAGES: Readonly<Record<DoctorOnlyMessageId, CatalogMessage>> = Object.freeze({
+  'doctor.sdd.valid': 'Las rutas del catálogo SDD y sus requisitos pasan la validación local. La ejecución de lenguajes y frameworks sigue sin verificar.',
+  'doctor.sdd.invalid': 'Los requisitos SDD no son válidos o no son compatibles. El gate previo a la rama no está preparado.',
+  'doctor.sdd.unverified': 'No se han podido inspeccionar los requisitos SDD; la preparación no está verificada.',
+  'doctor.sdd.action': 'Corrige {catalog}, {standard} y {template} antes de activar pre-branch-sdd. Usa archivos normales con rutas relativas normalizadas dentro del repositorio y sin enlaces simbólicos; verifica las herramientas del lenguaje y framework por separado.',
+  'doctor.label.sdd': 'Requisitos SDD',
   'doctor.title': 'Diagnóstico de Copilot',
   'doctor.title.partial': 'Diagnóstico de Copilot — diagnóstico parcial',
   'doctor.summary': 'Checks: {pass} correctos, {warn} avisos, {fail} fallos, {skipped} omitidos.',

@@ -44,6 +44,12 @@ The specification validator rejects missing or escaped paths, duplicate
 capability/spec ownership, invalid status/date metadata, unregistered top-level
 SDDs, and a stale generated `CATALOG.md`.
 
+Catalog evidence uses the consumer repository's own roots and language
+conventions. Source, entrypoints, tests and documentation can be any regular
+contained files; `specs/` and workflow publication boundaries stay fixed. Run
+`copilot doctor` before enabling the gate and verify compiler/framework tooling
+separately. See [layout support and migration](/issues/pre-branch-sdds#repository-layouts-and-support-limits).
+
 ## Issue-driven specification gate
 
 Repositories can opt into `pre-branch-sdd: true` for feature and

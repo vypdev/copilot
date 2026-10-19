@@ -41,6 +41,7 @@ export function doctorCheckLabel(
 ): string {
   if (id === 'configuration.valid') return catalog.message('doctor.label.configuration');
   if (id === 'workspace.repository-root') return catalog.message('doctor.label.repositoryRoot');
+  if (id === 'workspace.sdd-prerequisites') return catalog.message('doctor.label.sdd');
   if (id === 'credentials.setup-pat') return catalog.message('doctor.label.setupPat');
   if (id === 'github.resource-scopes') return catalog.message('doctor.label.githubScopes');
   if (id === 'github.secret-names') return catalog.message('doctor.label.repositorySecrets');

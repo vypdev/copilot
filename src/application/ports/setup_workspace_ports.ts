@@ -25,6 +25,7 @@ export interface BoundSetupWorkspacePort {
 /** Read-only local facts used by doctor; it exposes no workspace mutation. */
 export interface SetupDoctorWorkspaceQueryPort {
     isRepositoryRoot(): boolean;
+    inspectSddPrerequisites?(): 'pass' | 'blocked' | 'unavailable';
     compareWorkflows(features?: SetupFeatures, configuration?: Readonly<SetupConfiguration>): readonly SetupWorkflowComparison[];
     inspectAgentGuidance?(configuration: Readonly<SetupConfiguration>): readonly {
         id: string;

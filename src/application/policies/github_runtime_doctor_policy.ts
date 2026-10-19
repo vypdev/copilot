@@ -5,6 +5,16 @@ import { load, JSON_SCHEMA } from 'js-yaml';
 import { parseIssueWorkflowProfile } from '../../domain/issue_workflow_profile';
 import { decideIssueStart } from '../../domain/issue_start_policy';
 import type { DoctorConfiguration, DoctorRepositoryRead, DoctorRepositoryPath } from '../ports/github_runtime_doctor_ports';
+import { SDD_REQUIRED_HEADINGS } from '../../domain/pre_branch_sdd';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { validateSddPrerequisiteDocuments } = require('../../domain/sdd_prerequisite_policy.cjs') as {
+    validateSddPrerequisiteDocuments(standard: string, template: string, headings: readonly string[]): boolean;
+};
+// CommonJS keeps this pure policy usable by the standalone Node catalog validator.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { matchesFieldBoundary } = require('../../domain/specification_catalog_path_policy.cjs') as {
+    matchesFieldBoundary(field: string, value: unknown): boolean;
+};
 
 export function validDoctorConfiguration(value: DoctorConfiguration | undefined): value is DoctorConfiguration {
     if (!value || typeof value.preBranchSdd !== 'boolean' || typeof value.issueManagedBranches !== 'boolean'
@@ -20,9 +30,9 @@ export function doctorRepositoryPrerequisites(read: DoctorRepositoryRead): 'pass
     if (read.state !== 'available') return 'unavailable';
     const paths: readonly DoctorRepositoryPath[] = ['specs/catalog.json', 'specs/_template.md', 'specs/README.md'];
     if (!completeFileSamples(read, paths) || !Array.isArray(read.trackedFiles) || read.trackedFiles.some(path => typeof path !== 'string')) return 'unavailable';
-    if (paths.some(path => read.files[path].state !== 'present')) return 'blocked';
     const catalogFile = read.files['specs/catalog.json'];
-    if (catalogFile.state !== 'present') return 'blocked';
+    const standard = read.files['specs/README.md'], template = read.files['specs/_template.md'];
+    if (catalogFile.state !== 'present' || standard.state !== 'present' || template.state !== 'present') return 'blocked';
     try {
         const catalog = object(JSON.parse(catalogFile.text));
         if (catalog.version !== 1 || !Array.isArray(catalog.capabilities) || catalog.capabilities.length === 0) return 'blocked';
@@ -42,7 +52,7 @@ export function doctorRepositoryPrerequisites(read: DoctorRepositoryRead): 'pass
                 if (!Array.isArray(entries) || (field !== 'workflows' && entries.length === 0)
                     || new Set(entries).size !== entries.length) return 'blocked';
                 for (const path of entries) {
-                    if (!validCatalogPath(field, path) || !files.has(path)) return 'blocked';
+                    if (typeof path !== 'string' || !matchesFieldBoundary(field, path) || !files.has(path)) return 'blocked';
                     if (field === 'specs') {
                         if (specs.has(path)) return 'blocked';
                         specs.add(path);
@@ -52,9 +62,7 @@ export function doctorRepositoryPrerequisites(read: DoctorRepositoryRead): 'pass
         }
         const standardDocuments = new Set(['specs/README.md', 'specs/_template.md', 'specs/CATALOG.md']);
         if (read.trackedFiles.some(path => /^specs\/.+\.md$/u.test(path) && !standardDocuments.has(path) && !specs.has(path))) return 'blocked';
-        return paths.slice(1).every(path => {
-            const file = read.files[path]; return file.state === 'present' && /^#\s+\S/mu.test(file.text);
-        }) ? 'pass' : 'blocked';
+        return validateSddPrerequisiteDocuments(standard.text, template.text, SDD_REQUIRED_HEADINGS) ? 'pass' : 'blocked';
     } catch { return 'blocked'; }
 }
 
@@ -118,20 +126,6 @@ function validCatalogDate(value: string): boolean {
     const [year, month, day] = value.split('-').map(Number), date = new Date(Date.UTC(year, month - 1, day));
     return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
-function validCatalogPath(field: string, value: unknown): value is string {
-    if (typeof value !== 'string' || value !== value.trim() || value.includes('\\')
-        || value.split('/').some(part => part === '' || part === '.' || part === '..')) return false;
-    const boundaries: Record<string, RegExp> = {
-        specs: /^specs\/(?!README\.md$|_template\.md$|CATALOG\.md$).+\.md$/u,
-        workflows: /^(?:\.github|setup)\/workflows\/.+\.ya?ml$/u,
-        entrypoints: /^(?:src\/.+|web\/src\/main\.ts|action\.yml|package\.json)$/u,
-        code: /^(?:(?:src|scripts)\/|web\/src\/.+\.(?:ts|svelte|css)$)/u,
-        tests: /^src\/.*(?:__tests__\/.*\.test\.ts|\.test\.ts)$/u,
-        documentation: /^(?:docs\/.*\.(?:md|mdx)|README\.md|CONTRIBUTING\.md)$/u,
-    };
-    return boundaries[field].test(value);
-}
-
 /** Only a directly skipped prerequisite is proved; runtime success and override expressions stay unknown. */
 function doctorWorkflowDependencies(job: Record<string, unknown>, jobs: Record<string, unknown>, event: string, enabled: boolean | undefined): boolean | undefined {
     if (!Object.prototype.hasOwnProperty.call(job, 'needs')) return true;
