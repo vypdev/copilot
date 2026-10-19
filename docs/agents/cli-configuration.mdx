@@ -121,9 +121,13 @@ Never place tokens in `with`, command arguments, prompts, repository files, or l
 
 ## Provisioning
 
-The provisioning workflow checks each configured role with its own executable
-override, or that role provider's default command. `AGENT_EXECUTABLE` applies
-to the generic agent role; it does not replace a different role's CLI.
+The provisioning workflow checks each configured role's explicit executable
+first. Without a role override, a role using `AGENT_PROVIDER` inherits
+`AGENT_EXECUTABLE`, or uses its provider's default command when neither is set.
+A role using a different provider keeps its own executable override or provider
+default; provisioning never substitutes the generic executable for another
+provider's CLI. A missing explicit path fails rather than installing or checking
+a different command.
 
 The Action uses an available selected CLI without requiring an exact version. If the default command is absent, it installs that provider's official standalone CLI in a private job directory and verifies a non-empty version. An explicit executable is never installed or replaced. There is no provisioning-mode setting in the generated agent workflows. The Action does not copy local OAuth files into CI or install an unselected provider. See [Agent CLI provisioning](/security-operations/operations/cli-provisioning).
 
