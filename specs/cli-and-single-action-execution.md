@@ -161,6 +161,10 @@ command unconditionally updated pnpm and reported success while remaining old.
 `copilot upgrade` MUST identify its running package from the invoked executable,
 match its canonical package root to an npm global prefix or pnpm global root,
 and confirm that the effective command on `PATH` belongs to that installation.
+Canonical path identity MUST follow platform rules: Windows command-extension
+and directory casing (for example `copilot.CMD` versus `copilot.cmd`) identify
+the same path, while Unix paths retain their case distinction. Different npm
+and pnpm installation directories remain distinct on every platform.
 An unknown, source-linked, unavailable-manager, or shadowed installation MUST
 fail before any installation rather than create/update a different global copy.
 
@@ -341,8 +345,8 @@ default.
 | Package/workflow/setup contracts | 16 | exports, CLI, Action, internal ownership |
 | Text/JSON UX/sanitization | 14 | help, parity, ANSI, secrets, wrapping |
 | Integration/security/migration | 14 | installed smoke, forged IDs, compatibility |
-| Active-installation upgrade | 24 | 17 adapter/discovery/version cases, 5 CLI presentation cases, 2 use-case cases; includes real temporary npm/pnpm process fixtures |
-| **Total** | **134** | no double counting; upgrade cases reserved exclusively in their row |
+| Active-installation upgrade | 29 | 20 adapter/discovery/version/platform cases, 5 CLI presentation cases, 2 use-case cases, 2 composition cases; includes real temporary npm/pnpm process fixtures |
+| **Total** | **139** | no double counting; upgrade cases reserved exclusively in their row |
 
 Global thresholds remain; action/input/command policies SHOULD reach 100% branch
 coverage. Tests use fake GitHub/agents/processes and temporary worktrees, with no
@@ -391,6 +395,9 @@ Global coverage thresholds remain in force for the changed adapter and presenter
 15. Given an already-current package, upgrade succeeds only after the same fresh
     package/command verification. Failed probes, changed command identity, and
     package bins escaping their root cannot produce verified success.
+16. Given Windows `PATHEXT` selecting `.CMD` and a lowercase `.cmd` installation
+    path, npm-first and pnpm-first upgrades verify successfully. A different
+    installation path or a case-distinct Unix path cannot pass identity checks.
 
 ## 17. Requirements traceability
 
@@ -415,7 +422,7 @@ Global coverage thresholds remain in force for the changed adapter and presenter
 
 ## 19. Definition of Done
 
-- [ ] The 134-case budget (including 24 dedicated upgrade cases), coverage, architecture, package, and workflow gates pass.
+- [ ] The 139-case budget (including 29 dedicated upgrade cases), coverage, architecture, package, and workflow gates pass.
 - [ ] Command/action catalogs, dispatch, required fields, skips, partial state, and durable identity agree.
 - [ ] Text/JSON/Action conclusions and all five UI states are accessible and sanitized.
 - [ ] Installed package/CLI/API/Action smoke evidence passes on supported runtime.

@@ -97,6 +97,8 @@ With both managers installed, it updates the active copy and preserves the other
 
 The command verifies the installed package and runs the effective
 `copilot --version` through the current `PATH` before announcing success.
+Windows executable paths use Windows casing rules, so `.CMD` and `.cmd` refer
+to the same command; Unix command paths remain case-sensitive.
 Verification failure exits with a failure status even if the installer completed;
 the package may already be updated. Inspect `command -v copilot` (PowerShell:
 `Get-Command copilot`) and `PATH`, refresh the shell command cache or open a new

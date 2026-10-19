@@ -1,6 +1,6 @@
 import { getExecOutput } from '@actions/exec';
 import { accessSync, constants, readFileSync, realpathSync, statSync } from 'node:fs';
-import { basename, delimiter, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { basename, delimiter, dirname, isAbsolute, join, posix, relative, resolve, sep, win32 } from 'node:path';
 import { ApplicationError } from '../../application/errors/application_error';
 import type { CliUpgradePort, CliUpgradeResult } from '../../application/ports/cli_upgrade_ports';
 import { COPILOT_PACKAGE_NAME } from './copilot_package';
@@ -33,6 +33,11 @@ interface ActiveInstallation {
 }
 
 const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[\da-zA-Z.-]+)?(?:\+[\da-zA-Z.-]+)?$/u;
+
+/** Compare canonical paths using the filesystem's platform rules, including .CMD casing. */
+export function isSameCliPath(left: string, right: string, platform: NodeJS.Platform = process.platform): boolean {
+    return (platform === 'win32' ? win32 : posix).relative(left, right) === '';
+}
 
 /** Retain the PATH spelling: pnpm wrappers and npm links are replaced in place. */
 export function resolveCliExecutable(
@@ -76,13 +81,13 @@ function readInstalledPackage(packagePath: string): InstalledPackage {
     return { root, version: metadata.version, entrypoint };
 }
 
-function readInvokedPackage(entrypoint: string): InstalledPackage {
+function readInvokedPackage(entrypoint: string, platform: NodeJS.Platform): InstalledPackage {
     const invoked = realpathSync(entrypoint);
     let directory = dirname(invoked);
     while (directory !== dirname(directory)) {
         try {
             const installed = readInstalledPackage(directory);
-            if (installed.entrypoint === invoked) return installed;
+            if (isSameCliPath(installed.entrypoint, invoked, platform)) return installed;
         } catch {
             // The published package root is above build/cli, not necessarily cwd.
         }
@@ -116,7 +121,7 @@ export class ActiveCliUpgradeAdapter implements CliUpgradePort {
     }
 
     async upgrade(): Promise<CliUpgradeResult> {
-        const invoked = readInvokedPackage(this.entrypoint);
+        const invoked = readInvokedPackage(this.entrypoint, this.platform);
         const installation = await this.resolveInstallation(invoked);
         this.assertEffectiveCommand(installation, false);
 
@@ -142,7 +147,7 @@ export class ActiveCliUpgradeAdapter implements CliUpgradePort {
             const installed = readInstalledPackage(installation.packagePath);
             const effectiveCommand = this.assertEffectiveCommand(installation, true);
             if (installation.packageManager === 'npm' && this.platform !== 'win32'
-                && realpathSync(effectiveCommand) !== installed.entrypoint) throw new Error('The npm executable points outside its package.');
+                && !isSameCliPath(realpathSync(effectiveCommand), installed.entrypoint, this.platform)) throw new Error('The npm executable points outside its package.');
             const effectiveVersion = (await this.run(effectiveCommand, ['--version'])).trim();
             if (installed.version !== version || effectiveVersion !== version) throw new Error('Version mismatch.');
             return { version, packageManager: installation.packageManager, executablePath: effectiveCommand };
@@ -162,9 +167,9 @@ export class ActiveCliUpgradeAdapter implements CliUpgradePort {
                 const root = (await this.run(managerExecutable, ['root', '--global', '--prefix', npmPrefix])).trim();
                 const packagePath = join(root, ...COPILOT_PACKAGE_NAME.split('/'));
                 const bin = this.platform === 'win32' ? npmPrefix : join(npmPrefix, 'bin');
-                if (isAbsolute(root) && readInstalledPackage(packagePath).root === invoked.root) {
+                if (isAbsolute(root) && isSameCliPath(readInstalledPackage(packagePath).root, invoked.root, this.platform)) {
                     accessSync(join(bin, this.commandName()), constants.X_OK);
-                    if (this.platform !== 'win32' && realpathSync(join(bin, this.commandName())) !== invoked.entrypoint) {
+                    if (this.platform !== 'win32' && !isSameCliPath(realpathSync(join(bin, this.commandName())), invoked.entrypoint, this.platform)) {
                         throw new Error('The npm executable does not belong to the invoked package.');
                     }
                     return {
@@ -180,7 +185,7 @@ export class ActiveCliUpgradeAdapter implements CliUpgradePort {
             const managerExecutable = resolveCliExecutable('pnpm', this.environment, this.platform);
             const root = (await this.run(managerExecutable, ['root', '--global'])).trim();
             const packagePath = join(root, ...COPILOT_PACKAGE_NAME.split('/'));
-            if (isAbsolute(root) && readInstalledPackage(packagePath).root === invoked.root) {
+            if (isAbsolute(root) && isSameCliPath(readInstalledPackage(packagePath).root, invoked.root, this.platform)) {
                 const relation = relative(realpathSync(root), invoked.root);
                 if (relation === '..' || relation.startsWith(`..${sep}`) || isAbsolute(relation)) {
                     throw new Error('A linked source checkout is not an installed pnpm package.');
@@ -205,7 +210,7 @@ export class ActiveCliUpgradeAdapter implements CliUpgradePort {
 
     private assertEffectiveCommand(installation: ActiveInstallation, afterInstall: boolean): string {
         const effective = resolveCliExecutable('copilot', this.environment, this.platform);
-        if (realpathSync(effective) !== realpathSync(installation.commandPath)) {
+        if (!isSameCliPath(realpathSync(effective), realpathSync(installation.commandPath), this.platform)) {
             throw new ApplicationError('configuration.invalid', afterInstall
                 ? 'Another Copilot installation is taking priority on PATH.'
                 : 'The running Copilot installation differs from the command on PATH. Fix PATH or invoke its active command, then retry. No installation was changed.');

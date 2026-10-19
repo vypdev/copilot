@@ -93726,6 +93726,7 @@ function invalid(reason, code) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ActiveCliUpgradeAdapter = void 0;
+exports.isSameCliPath = isSameCliPath;
 exports.resolveCliExecutable = resolveCliExecutable;
 const exec_1 = __nccwpck_require__(18538);
 const node_fs_1 = __nccwpck_require__(87561);
@@ -93733,6 +93734,10 @@ const node_path_1 = __nccwpck_require__(49411);
 const application_error_1 = __nccwpck_require__(75999);
 const copilot_package_1 = __nccwpck_require__(76182);
 const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[\da-zA-Z.-]+)?(?:\+[\da-zA-Z.-]+)?$/u;
+/** Compare canonical paths using the filesystem's platform rules, including .CMD casing. */
+function isSameCliPath(left, right, platform = process.platform) {
+    return (platform === 'win32' ? node_path_1.win32 : node_path_1.posix).relative(left, right) === '';
+}
 /** Retain the PATH spelling: pnpm wrappers and npm links are replaced in place. */
 function resolveCliExecutable(name, environment, platform = process.platform) {
     const extensions = platform === 'win32'
@@ -93770,13 +93775,13 @@ function readInstalledPackage(packagePath) {
         throw new Error('Copilot executable is not a file.');
     return { root, version: metadata.version, entrypoint };
 }
-function readInvokedPackage(entrypoint) {
+function readInvokedPackage(entrypoint, platform) {
     const invoked = (0, node_fs_1.realpathSync)(entrypoint);
     let directory = (0, node_path_1.dirname)(invoked);
     while (directory !== (0, node_path_1.dirname)(directory)) {
         try {
             const installed = readInstalledPackage(directory);
-            if (installed.entrypoint === invoked)
+            if (isSameCliPath(installed.entrypoint, invoked, platform))
                 return installed;
         }
         catch {
@@ -93806,7 +93811,7 @@ class ActiveCliUpgradeAdapter {
         });
     }
     async upgrade() {
-        const invoked = readInvokedPackage(this.entrypoint);
+        const invoked = readInvokedPackage(this.entrypoint, this.platform);
         const installation = await this.resolveInstallation(invoked);
         this.assertEffectiveCommand(installation, false);
         let version;
@@ -93830,7 +93835,7 @@ class ActiveCliUpgradeAdapter {
             const installed = readInstalledPackage(installation.packagePath);
             const effectiveCommand = this.assertEffectiveCommand(installation, true);
             if (installation.packageManager === 'npm' && this.platform !== 'win32'
-                && (0, node_fs_1.realpathSync)(effectiveCommand) !== installed.entrypoint)
+                && !isSameCliPath((0, node_fs_1.realpathSync)(effectiveCommand), installed.entrypoint, this.platform))
                 throw new Error('The npm executable points outside its package.');
             const effectiveVersion = (await this.run(effectiveCommand, ['--version'])).trim();
             if (installed.version !== version || effectiveVersion !== version)
@@ -93852,9 +93857,9 @@ class ActiveCliUpgradeAdapter {
                 const root = (await this.run(managerExecutable, ['root', '--global', '--prefix', npmPrefix])).trim();
                 const packagePath = (0, node_path_1.join)(root, ...copilot_package_1.COPILOT_PACKAGE_NAME.split('/'));
                 const bin = this.platform === 'win32' ? npmPrefix : (0, node_path_1.join)(npmPrefix, 'bin');
-                if ((0, node_path_1.isAbsolute)(root) && readInstalledPackage(packagePath).root === invoked.root) {
+                if ((0, node_path_1.isAbsolute)(root) && isSameCliPath(readInstalledPackage(packagePath).root, invoked.root, this.platform)) {
                     (0, node_fs_1.accessSync)((0, node_path_1.join)(bin, this.commandName()), node_fs_1.constants.X_OK);
-                    if (this.platform !== 'win32' && (0, node_fs_1.realpathSync)((0, node_path_1.join)(bin, this.commandName())) !== invoked.entrypoint) {
+                    if (this.platform !== 'win32' && !isSameCliPath((0, node_fs_1.realpathSync)((0, node_path_1.join)(bin, this.commandName())), invoked.entrypoint, this.platform)) {
                         throw new Error('The npm executable does not belong to the invoked package.');
                     }
                     return {
@@ -93871,7 +93876,7 @@ class ActiveCliUpgradeAdapter {
             const managerExecutable = resolveCliExecutable('pnpm', this.environment, this.platform);
             const root = (await this.run(managerExecutable, ['root', '--global'])).trim();
             const packagePath = (0, node_path_1.join)(root, ...copilot_package_1.COPILOT_PACKAGE_NAME.split('/'));
-            if ((0, node_path_1.isAbsolute)(root) && readInstalledPackage(packagePath).root === invoked.root) {
+            if ((0, node_path_1.isAbsolute)(root) && isSameCliPath(readInstalledPackage(packagePath).root, invoked.root, this.platform)) {
                 const relation = (0, node_path_1.relative)((0, node_fs_1.realpathSync)(root), invoked.root);
                 if (relation === '..' || relation.startsWith(`..${node_path_1.sep}`) || (0, node_path_1.isAbsolute)(relation)) {
                     throw new Error('A linked source checkout is not an installed pnpm package.');
@@ -93896,7 +93901,7 @@ class ActiveCliUpgradeAdapter {
     }
     assertEffectiveCommand(installation, afterInstall) {
         const effective = resolveCliExecutable('copilot', this.environment, this.platform);
-        if ((0, node_fs_1.realpathSync)(effective) !== (0, node_fs_1.realpathSync)(installation.commandPath)) {
+        if (!isSameCliPath((0, node_fs_1.realpathSync)(effective), (0, node_fs_1.realpathSync)(installation.commandPath), this.platform)) {
             throw new application_error_1.ApplicationError('configuration.invalid', afterInstall
                 ? 'Another Copilot installation is taking priority on PATH.'
                 : 'The running Copilot installation differs from the command on PATH. Fix PATH or invoke its active command, then retry. No installation was changed.');

@@ -1,7 +1,7 @@
 import { accessSync, chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join } from 'node:path';
-import { ActiveCliUpgradeAdapter, resolveCliExecutable, type CliUpgradeProcess } from '../active_cli_upgrade_adapter';
+import { ActiveCliUpgradeAdapter, isSameCliPath, resolveCliExecutable, type CliUpgradeProcess } from '../active_cli_upgrade_adapter';
 import { COPILOT_PACKAGE_NAME } from '../copilot_package';
 
 const roots: string[] = [];
@@ -23,12 +23,14 @@ function writeExecutable(path: string, source: string): void {
     }
 }
 
-function fixture(first: 'npm' | 'pnpm' = 'npm') {
+function fixture(first: 'npm' | 'pnpm' = 'npm', platform: NodeJS.Platform = process.platform) {
+    const windowsLayout = platform === 'win32';
+    const commandName = (name: string) => windowsLayout ? `${name}.cmd` : name;
     const root = realpathSync(mkdtempSync(join(tmpdir(), 'copilot-upgrade-')));
     roots.push(root);
     const npmPrefix = join(root, 'npm prefix');
-    const npmBin = windows ? npmPrefix : join(npmPrefix, 'bin');
-    const npmModules = join(npmPrefix, ...(windows ? [] : ['lib']), 'node_modules');
+    const npmBin = windowsLayout ? npmPrefix : join(npmPrefix, 'bin');
+    const npmModules = join(npmPrefix, ...(windowsLayout ? [] : ['lib']), 'node_modules');
     const pnpmBin = join(root, 'pnpm home');
     const pnpmModules = join(pnpmBin, 'global', '5', 'node_modules');
     const npmPackage = join(npmModules, '@vypdev', 'copilot');
@@ -49,7 +51,7 @@ function fixture(first: 'npm' | 'pnpm' = 'npm') {
     for (const [bin, packagePath] of [[npmBin, npmPackage], [pnpmBin, pnpmPackage]]) {
         const command = join(bin, commandName('copilot'));
         mkdirSync(bin, { recursive: true });
-        if (bin === npmBin && !windows) {
+        if (bin === npmBin && !windowsLayout) {
             const entry = join(packagePath, 'build', 'cli', 'index.js');
             writeFileSync(entry, `#!${process.execPath}\n${readFileSync(entry, 'utf8')}`, { mode: 0o700 });
             chmodSync(entry, 0o700);
@@ -83,22 +85,38 @@ else if (args[0] === 'install' || args[0] === 'add') {
 `);
     }
     // Only fixture managers can execute: a detection regression cannot reach a real installer.
-    const environment = { ...process.env, PATH: [first === 'npm' ? npmBin : pnpmBin, first === 'npm' ? pnpmBin : npmBin].join(delimiter) };
+    const environment: NodeJS.ProcessEnv = { ...process.env, PATH: [first === 'npm' ? npmBin : pnpmBin, first === 'npm' ? pnpmBin : npmBin].join(delimiter) };
+    if (windowsLayout && !windows) environment.PATHEXT = '.cmd';
     const entrypoint = join(first === 'npm' ? npmPackage : pnpmPackage, 'build', 'cli', 'index.js');
     const readVersion = (packagePath: string) => JSON.parse(readFileSync(join(packagePath, 'package.json'), 'utf8')).version;
     const calls = () => readFileSync(log, 'utf8').trim().split('\n').map((line) => JSON.parse(line) as {manager:string;args:string[]});
-    return { root, environment, entrypoint, npmPackage, pnpmPackage, npmPrefix, npmBin, pnpmBin, pnpmModules, readVersion, calls };
+    return { root, platform, environment, entrypoint, npmPackage, pnpmPackage, npmPrefix, npmBin, pnpmBin, pnpmModules, readVersion, calls };
 }
 
 describe('active CLI upgrade', () => {
     it('updates and verifies npm when both npm and pnpm are installed and npm is first on PATH', async () => {
         const f = fixture();
         const result = await new ActiveCliUpgradeAdapter(f).upgrade();
-        expect(result).toEqual({ version: '3.8.0', packageManager: 'npm', executablePath: join(f.npmBin, commandName('copilot')) });
+        expect(result).toMatchObject({ version: '3.8.0', packageManager: 'npm' });
+        expect(isSameCliPath(realpathSync(result.executablePath), realpathSync(join(f.npmBin, commandName('copilot'))))).toBe(true);
         expect(f.readVersion(f.npmPackage)).toBe('3.8.0');
         expect(f.readVersion(f.pnpmPackage)).toBe('3.7.0');
         expect(f.calls()).toContainEqual({ manager: 'npm', args: ['install', '--global', '--prefix', f.npmPrefix, '@vypdev/copilot@3.8.0'] });
         expect(f.calls().some((call) => call.manager === 'pnpm')).toBe(false);
+    });
+
+    it.each(['npm', 'pnpm'] as const)('upgrades and verifies the Windows global %s layout with command shims', async (manager) => {
+        const f = fixture(manager, 'win32');
+        const result = await new ActiveCliUpgradeAdapter(f).upgrade();
+        expect(result).toMatchObject({ version: '3.8.0', packageManager: manager });
+        expect(f.readVersion(manager === 'npm' ? f.npmPackage : f.pnpmPackage)).toBe('3.8.0');
+        expect(f.readVersion(manager === 'npm' ? f.pnpmPackage : f.npmPackage)).toBe(manager === 'npm' ? '3.7.0' : '3.3.1');
+    });
+
+    it('treats Windows .CMD extension and directory casing as the same canonical command', () => {
+        expect(isSameCliPath('C:\\Users\\Runner\\npm\\copilot.CMD', 'c:\\users\\runner\\npm\\copilot.cmd', 'win32')).toBe(true);
+        expect(isSameCliPath('C:\\Users\\Runner\\npm\\copilot.CMD', 'C:\\Users\\Runner\\pnpm\\copilot.cmd', 'win32')).toBe(false);
+        expect(isSameCliPath('/npm/bin/copilot', '/npm/bin/COPILOT', 'linux')).toBe(false);
     });
 
     it('updates pnpm through its logical package link when pnpm takes priority over npm', async () => {
@@ -263,6 +281,28 @@ describe('active CLI upgrade', () => {
         const run = jest.fn();
         await expect(new ActiveCliUpgradeAdapter({ ...f, run }).upgrade()).rejects.toThrow('could not be identified');
         expect(run).not.toHaveBeenCalled();
+    });
+
+    it('rejects a package bin that resolves to a directory before starting an installer', async () => {
+        const f = fixture();
+        const file = join(f.npmPackage, 'package.json');
+        const metadata = JSON.parse(readFileSync(file, 'utf8'));
+        metadata.bin.copilot = 'build';
+        writeFileSync(file, JSON.stringify(metadata));
+        const run = jest.fn();
+        await expect(new ActiveCliUpgradeAdapter({ ...f, run }).upgrade()).rejects.toThrow('could not be identified');
+        expect(run).not.toHaveBeenCalled();
+    });
+
+    (windows ? it.skip : it)('refuses an npm bin linked to another installation before mutation', async () => {
+        const f = fixture();
+        const command = join(f.npmBin, 'copilot');
+        chmodSync(join(f.pnpmPackage, 'build', 'cli', 'index.js'), 0o700);
+        rmSync(command);
+        symlinkSync(join(f.pnpmPackage, 'build', 'cli', 'index.js'), command);
+        await expect(new ActiveCliUpgradeAdapter(f).upgrade()).rejects.toThrow('could not be matched to npm or pnpm');
+        expect(f.calls().some((call) => ['install', 'add', 'view'].includes(call.args[0]))).toBe(false);
+        expect(f.readVersion(f.npmPackage)).toBe('3.3.1');
     });
 
     it('reports an unavailable package manager without falling back to a different global install', async () => {

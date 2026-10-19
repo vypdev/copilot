@@ -2196,6 +2196,7 @@
         "src/cli/commands/__tests__/upgrade.test.ts",
         "src/application/usecases/__tests__/upgrade_cli_use_case.test.ts",
         "src/infrastructure/cli/__tests__/active_cli_upgrade_adapter.test.ts",
+        "src/infrastructure/composition/__tests__/cli_upgrade_composition_root.test.ts",
         "src/cli/__tests__/cli_entrypoint_boundaries.test.ts",
         "src/__tests__/cli.test.ts",
         "src/cli/commands/__tests__/think_command_handler.test.ts",
