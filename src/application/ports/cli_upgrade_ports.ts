@@ -1,4 +1,11 @@
-/** Semantic capability used to upgrade the locally installed Copilot CLI. */
+/** Evidence returned only after the active command has been verified. */
+export interface CliUpgradeResult {
+    readonly version: string;
+    readonly packageManager: 'npm' | 'pnpm';
+    readonly executablePath: string;
+}
+
+/** Upgrades the active installation and verifies the command resolved through PATH. */
 export interface CliUpgradePort {
-    upgrade(): Promise<void>;
+    upgrade(): Promise<CliUpgradeResult>;
 }

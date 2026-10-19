@@ -1,10 +1,10 @@
 # CLI and Single-Action Execution
 
 - Status: As-built baseline
-- Date: 2026-09-15
+- Date: 2026-10-19
 - Owners: Copilot maintainers
 - Scope: the published `copilot` CLI, local action adapter, and bounded GitHub Action single-action dispatch
-- Related issues/PRs: setup, execution lifecycle, Bugbot, and release orchestration SDDs
+- Related issues/PRs: setup, execution lifecycle, Bugbot, and release orchestration SDDs; [active-installation upgrade #600](https://github.com/vypdev/copilot/issues/600)
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none for the baseline
 
@@ -47,7 +47,9 @@ unmaintainable interfaces.
    failed `Result`, and agent-backed actions honor members-only authorization.
 7. Durable deployment continuation/publication/failure actions require operation
    identity and remain workflow-owned.
-8. CLI update checks are bounded/advisory; upgrade is an explicit command.
+8. CLI update checks are bounded/advisory. Explicit upgrade identifies the running
+   npm/pnpm installation, installs into its existing directory, and verifies both
+   package metadata and a fresh effective command before success.
 9. Think returns a semantic `direct-answer`: GitHub uses the shared correlated
    reply publisher, while local execution renders it under a repository-locale
    label and performs no GitHub comment mutation.
@@ -152,6 +154,51 @@ prerequisite.
 Repeated read-only commands are safe. Mutation replay follows the owned feature's
 idempotency contract and durable operation ID where applicable.
 
+### 6.4 Active-installation upgrade contract (#600)
+
+The intentional upgrade contract fixes the observed defect where an npm-owned
+command unconditionally updated pnpm and reported success while remaining old.
+`copilot upgrade` MUST identify its running package from the invoked executable,
+match its canonical package root to an npm global prefix or pnpm global root,
+and confirm that the effective command on `PATH` belongs to that installation.
+Canonical path identity MUST follow platform rules: Windows command-extension
+and directory casing (for example `copilot.CMD` versus `copilot.cmd`) identify
+the same path, while Unix paths retain their case distinction. Different npm
+and pnpm installation directories remain distinct on every platform.
+An unknown, source-linked, unavailable-manager, or shadowed installation MUST
+fail before any installation rather than create/update a different global copy.
+
+The selected manager MUST resolve the latest published version, install that
+exact version in the identified prefix/global and bin directories, then reread
+the logical package path without a module cache and execute the effective
+`copilot --version` in a fresh process. Success MUST require both versions to
+equal the selected version and the resolved command to retain its installation
+identity. This includes an already-current installation. npm and pnpm global
+copies MUST coexist without changing the other copy or the shell configuration.
+pnpm's `--global-dir` MUST receive the global base before pnpm appends its
+layout version, rather than the parent of `node_modules`. Its fixture MUST
+derive the installation destination from that argument and append the layout
+version itself so an incorrect directory cannot yield a false passing test.
+
+```mermaid
+flowchart LR
+  A[Identify invoked package and owner] --> B[Confirm active command on PATH]
+  B --> C[Resolve and pin latest version]
+  C --> D[Install into the same directory]
+  D --> E[Verify package and fresh command version]
+  E --> F[Announce verified success]
+  D --> G[Report installer failure]
+  E --> H[Report verification failure and possible completed update]
+```
+
+The sequence is identify, confirm, select, install, verify, then announce.
+Any failure prevents success output and produces a nonzero exit. A completed
+install is retained if verification fails; no hidden rollback or second-manager
+fallback is attempted. Retrying repeats discovery and verification safely.
+A fresh process observes `PATH`, not a parent shell's aliases, functions, or
+cached command lookup; recovery guidance includes refreshing the shell cache or
+opening a new terminal.
+
 ## 7. User-facing configuration
 
 | Surface | Recommended default | Bounds | Precedence/persistence |
@@ -165,9 +212,12 @@ idempotency contract and durable operation ID where applicable.
 | local Think issue | empty | positive safe integer when supplied | invocation only; description context, never publication target |
 | comment mode | inferred create/replace | create/replace/append | workflow run |
 | operation ID | empty | exact durable ID for internal continuation | stored operation + run |
+| upgrade manager/location | automatic from running package | npm global prefix or pnpm global root/bin; no override flag | invocation snapshot of argv/PATH and manager discovery; no persisted config |
 
 Command and action catalogs, required-field matrix, deployment ownership,
 repository resolution, token redaction, and one-handler dispatch are not configurable.
+Upgrade ownership matching, exact target-version pinning, effective-version
+verification, and preserving the other installation are also non-configurable.
 
 ## 8. Clean Architecture design
 
@@ -193,6 +243,13 @@ flowchart LR
 CLI entrypoint, composition, architecture, workflow, package, and specification
 catalog tests MUST enforce these boundaries and exported artifacts.
 
+`UpgradeCliUseCase` delegates to the semantic `CliUpgradePort`, which returns
+immutable verified version/manager/executable evidence. `ActiveCliUpgradeAdapter`
+owns filesystem identity, package-manager invocation, and fresh process probes;
+the command presenter announces success only after receiving that evidence.
+Application/port code MUST NOT import filesystem/process or package-manager
+adapters. Existing architecture tests and TypeScript checks enforce the boundary.
+
 ## 9. UI/UX and content contract
 
 ```markdown
@@ -202,6 +259,16 @@ Blocked: **No GitHub repository was found at this worktree origin.** No remote a
 Partial: **Package/release step succeeded, but follow-up publication failed.** Inspect retained IDs before retrying.
 Complete: **Command completed successfully.** Text/JSON contains the same semantic result.
 Think: **Answer:** Use `repository-locale` to select the default message language.
+```
+
+Upgrade content examples (versions are illustrative):
+
+```text
+Pending: Updating the active @vypdev/copilot installation and verifying "copilot --version"...
+Blocked: The running Copilot installation differs from the command on PATH. Fix PATH or invoke its active command, then retry. No installation was changed.
+Failed: The npm upgrade did not complete. Check its output and the active installation's permissions before retrying.
+Partial/action required: The installer completed, but the effective Copilot version could not be verified. Check "copilot --version" and PATH, refresh your shell command cache or open a new terminal, then retry. The installation may already be updated.
+Complete: Copilot 3.8.0 was upgraded successfully via npm. "copilot --version" verified.
 ```
 
 Help lists required flags, defaults, side effects, credential source, and examples.
@@ -226,6 +293,8 @@ icons are supplemental. Secret values and raw provider responses are never shown
 | feature failure | route-specific | Result payload | route-specific | follow message | feature-owned |
 | internal op mismatch | no continuation | durable operation unchanged | only exact retry | use workflow/control center | none |
 | output render | operation may be complete | semantic Result | yes | use alternate output/log | no hidden rollback |
+| upgrade discovery/registry | no install | existing copies and PATH | yes | restore original manager/PATH or registry access | none |
+| upgrade verification | install may have completed; command is unverified | updated package retained | yes | inspect version/PATH and refresh shell | no rollback or duplicate install |
 
 ## 11. Security, permissions, and privacy
 
@@ -235,6 +304,11 @@ overrides are audited. Local `do` authority is the user's workspace authority;
 GitHub single actions additionally use actor/token/operation guards. JSON/text
 rendering redacts secrets/control sequences. Internal deployment actions reject
 forged or stale operation IDs.
+Upgrade commands pass the fixed package identity, a validated registry version,
+and explicit installation locations as separate process arguments. Raw provider
+exceptions MUST NOT appear in the command's failure message. The current user's
+package-manager permissions apply; upgrade does not request elevated privileges
+or GitHub credentials. A package executable escaping its package root is rejected.
 
 ## 12. Observability and operational UX
 
@@ -275,12 +349,19 @@ default.
 | Package/workflow/setup contracts | 16 | exports, CLI, Action, internal ownership |
 | Text/JSON UX/sanitization | 14 | help, parity, ANSI, secrets, wrapping |
 | Integration/security/migration | 14 | installed smoke, forged IDs, compatibility |
-| **Total** | **110** | no double counting |
+| Active-installation upgrade | 29 | 20 adapter/discovery/version/platform cases, 5 CLI presentation cases, 2 use-case cases, 2 composition cases; includes real temporary npm/pnpm process fixtures |
+| **Total** | **139** | no double counting; upgrade cases reserved exclusively in their row |
 
 Global thresholds remain; action/input/command policies SHOULD reach 100% branch
 coverage. Tests use fake GitHub/agents/processes and temporary worktrees, with no
 live services. Package build/npm smoke is required. Manual evidence covers
 installed CLI help/text/JSON, narrow terminal, Action dispatch, and error recovery.
+The upgrade fixtures MUST restrict `PATH` to temporary managers, avoid network
+and real global installs, and cover npm-first and pnpm-first coexistence, pinned
+prefix/bin arguments, ineffective installer success, stale/failed version probes,
+changed command resolution, unsupported/linked packages, invalid version metadata,
+missing managers, idempotent current versions, and delayed/failed success output.
+Global coverage thresholds remain in force for the changed adapter and presenter.
 
 ## 15. Documentation and discoverability
 
@@ -290,6 +371,7 @@ installed CLI help/text/JSON, narrow terminal, Action dispatch, and error recove
 | Workflow author | available/config/examples | action catalog/required matrix |
 | Operator | troubleshooting/upgrade | exits, recovery, compatibility |
 | Contributor | this SDD/architecture | shared-core boundaries |
+| Upgrade user/operator | how-to-use, workflow & CLI, upgrade/rollback | active npm/pnpm ownership, verification, coexistence, partial success and shell/PATH recovery |
 
 ## 16. Acceptance scenarios
 
@@ -307,6 +389,22 @@ installed CLI help/text/JSON, narrow terminal, Action dispatch, and error recove
     loads only issue `#42` as optional context.
 11. A repository-aware local single action renders a localized semantic outcome
     and contains none of its internal step or reminder strings.
+12. Given npm 3.3.1 first on `PATH` and pnpm 3.7.0 also installed, upgrading
+    changes only npm's package in its original prefix and verifies the effective
+    command against the selected version before success; pnpm-first is symmetric.
+13. Given a zero installer exit but stale package metadata or effective command,
+    upgrade fails without success output and preserves any completed update.
+14. Given an unknown/linked package, unavailable manager, shadowed command, or
+    invalid registry version, no global install runs and recovery is actionable.
+15. Given an already-current package, upgrade succeeds only after the same fresh
+    package/command verification. Failed probes, changed command identity, and
+    package bins escaping their root cannot produce verified success.
+16. Given Windows `PATHEXT` selecting `.CMD` and a lowercase `.cmd` installation
+    path, npm-first and pnpm-first upgrades verify successfully. A different
+    installation path or a case-distinct Unix path cannot pass identity checks.
+17. Given pnpm root `<global-directory>/5/node_modules`, upgrading passes
+    `<global-directory>` to `--global-dir`; the fixture applies pnpm's own layout
+    suffix and verifies that no nested `5/5/node_modules` installation is created.
 
 ## 17. Requirements traceability
 
@@ -318,6 +416,8 @@ installed CLI help/text/JSON, narrow terminal, Action dispatch, and error recove
 | durable internal boundary | deployment use case | orchestration/workflow tests | deployment docs |
 | package/output contract | build/render/package scripts | smoke/output tests | install/build docs |
 | semantic Think output | Think workflow/shared publisher/local renderer | request, use-case, completion, CLI output tests | comment commands and workflow & CLI |
+| active upgrade ownership and pinned mutation | active upgrade adapter | coexistence, prefix/bin, unsupported and registry tests | how-to-use and workflow & CLI |
+| verified upgrade success and retained partial state | upgrade port/use case/presenter | package/command mismatch, failed probes, pending and failure output tests | workflow & CLI and upgrade/rollback |
 
 ## 18. Maintenance sequence
 
@@ -329,7 +429,7 @@ installed CLI help/text/JSON, narrow terminal, Action dispatch, and error recove
 
 ## 19. Definition of Done
 
-- [ ] The 110-case budget, coverage, architecture, package, and workflow gates pass.
+- [ ] The 139-case budget (including 29 dedicated upgrade cases), coverage, architecture, package, and workflow gates pass.
 - [ ] Command/action catalogs, dispatch, required fields, skips, partial state, and durable identity agree.
 - [ ] Text/JSON/Action conclusions and all five UI states are accessible and sanitized.
 - [ ] Installed package/CLI/API/Action smoke evidence passes on supported runtime.
@@ -343,3 +443,4 @@ installed CLI help/text/JSON, narrow terminal, Action dispatch, and error recove
 - Decision: two adapters over one application core; exact catalogs; internal stages workflow-owned.
 - Rejected: arbitrary string dispatch, duplicate business logic, legacy action aliases.
 - Follow-up: versioned uniform JSON output and shell completion are outside this baseline.
+- Upgrade provider contracts: [npm global layout](https://docs.npmjs.com/cli/v11/configuring-npm/folders/), [npm install](https://docs.npmjs.com/cli/v11/commands/npm-install/), [pnpm root](https://pnpm.io/cli/root), [pnpm add](https://pnpm.io/cli/add).
