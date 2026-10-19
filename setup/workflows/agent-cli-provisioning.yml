@@ -47,7 +47,11 @@ jobs:
               cursor) expected_executable=agent ;;
               *) echo "Unsupported agent provider: $provider" >&2; exit 1 ;;
             esac
-            executable="${executables[$index]:-$expected_executable}"
+            default_executable="$expected_executable"
+            if [[ "$provider" == "$AGENT_PROVIDER" ]]; then
+              default_executable="${AGENT_EXECUTABLE:-$expected_executable}"
+            fi
+            executable="${executables[$index]:-$default_executable}"
             [[ "${executable##*/}" == "$expected_executable" ]] || { echo "Invalid $provider executable basename." >&2; exit 1; }
             if ! command -v "$executable" >/dev/null 2>&1; then
               [[ "$executable" == "$expected_executable" ]] || { echo "Configured executable is missing: $executable" >&2; exit 1; }

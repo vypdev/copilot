@@ -386,8 +386,10 @@ Self-hosted selections require `self-hosted` and a Linux or macOS label because
 the generated workflows require Bash; Windows service Codex execution is outside
 this contract. The validation choice is an advanced exception, never a global
 replacement. Agent CLI provisioning uses the agent route and checks each role's
-own executable override or provider-specific default; a generic executable never
-crosses into another role. Ordinary automation uses the validation route. Credential verification is a
+own executable override first. A role using the generic provider inherits its
+generic executable when no role override is set; otherwise it uses that
+provider's default command. A different provider retains its own override or
+provider default, never another provider's generic executable. Ordinary automation uses the validation route. Credential verification is a
 separate protected role: explicit managed-route replacement always uses
 `ubuntu-latest` for it, regardless of ordinary validation. Retain preserves
 existing reviewed routing as a visible exception. Merge-group checks and consumer
@@ -453,6 +455,36 @@ Primary provider references:
 [runner API](https://docs.github.com/en/rest/actions/self-hosted-runners),
 [group API](https://docs.github.com/en/rest/actions/self-hosted-runner-groups), and
 [workflow routing](https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/use-in-a-workflow).
+
+### Same-provider executable verification correction (2026-10-19)
+
+Dogfooding [#583](https://github.com/vypdev/copilot/issues/583) reproduced a
+healthy explicit generic Codex executable followed by a failing PATH-default
+check for a same-provider role. The Action already inherits that explicit
+selection. Both provisioning assets MUST verify it instead of invoking or
+installing an unrelated default command. An explicit role path still wins;
+missing paths, invalid basenames and failing headless checks MUST fail closed.
+Existing mixed-provider fixtures remain required. No new option, permission,
+installer source, runner route, port or durable state is introduced.
+
+The additional risk-derived floor is **10 distinct behaviors**, exercised against
+both source and consumer assets (**20 executable fixture rows**): all five
+same-provider roles, explicit role precedence, missing explicit path, invalid
+explicit basename, failed selected headless contract, and absent generic/role
+executable defaults. Fixtures parse and execute the actual YAML scripts, compare
+inheritance with the Action configuration builder, record exact binary calls,
+and intercept unintended installers without network access. These rows are
+additional to the initial 56-case profile budget; existing coverage thresholds
+and workflow parity checks remain unchanged.
+
+Acceptance: a healthy explicit generic CLI with a broken PATH default passes for
+every same-provider role without invoking that default; explicit role overrides
+are checked exactly; invalid selected paths or headless contracts fail without
+fallback/install. The existing log messages and GitHub check states are retained,
+so no new UI or localization surface is needed. Update the provisioning section
+of `docs/agents/cli-configuration.mdx` with the same precedence. Re-run the normal
+provisioning check after upgrading through a reviewed PR; existing immutable
+installer receipts and branches MUST NOT be rewritten to apply this correction.
 
 
 The profile schema and guidance ownership manifest use distinct generator
