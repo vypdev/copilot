@@ -5,6 +5,11 @@ import { load, JSON_SCHEMA } from 'js-yaml';
 import { parseIssueWorkflowProfile } from '../../domain/issue_workflow_profile';
 import { decideIssueStart } from '../../domain/issue_start_policy';
 import type { DoctorConfiguration, DoctorRepositoryRead, DoctorRepositoryPath } from '../ports/github_runtime_doctor_ports';
+// CommonJS keeps this pure policy usable by the standalone Node catalog validator.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { matchesFieldBoundary } = require('../../domain/specification_catalog_path_policy.cjs') as {
+    matchesFieldBoundary(field: string, value: unknown): boolean;
+};
 
 export function validDoctorConfiguration(value: DoctorConfiguration | undefined): value is DoctorConfiguration {
     if (!value || typeof value.preBranchSdd !== 'boolean' || typeof value.issueManagedBranches !== 'boolean'
@@ -42,7 +47,7 @@ export function doctorRepositoryPrerequisites(read: DoctorRepositoryRead): 'pass
                 if (!Array.isArray(entries) || (field !== 'workflows' && entries.length === 0)
                     || new Set(entries).size !== entries.length) return 'blocked';
                 for (const path of entries) {
-                    if (!validCatalogPath(field, path) || !files.has(path)) return 'blocked';
+                    if (typeof path !== 'string' || !matchesFieldBoundary(field, path) || !files.has(path)) return 'blocked';
                     if (field === 'specs') {
                         if (specs.has(path)) return 'blocked';
                         specs.add(path);
@@ -118,20 +123,6 @@ function validCatalogDate(value: string): boolean {
     const [year, month, day] = value.split('-').map(Number), date = new Date(Date.UTC(year, month - 1, day));
     return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
-function validCatalogPath(field: string, value: unknown): value is string {
-    if (typeof value !== 'string' || value !== value.trim() || value.includes('\\')
-        || value.split('/').some(part => part === '' || part === '.' || part === '..')) return false;
-    const boundaries: Record<string, RegExp> = {
-        specs: /^specs\/(?!README\.md$|_template\.md$|CATALOG\.md$).+\.md$/u,
-        workflows: /^(?:\.github|setup)\/workflows\/.+\.ya?ml$/u,
-        entrypoints: /^(?:src\/.+|web\/src\/main\.ts|action\.yml|package\.json)$/u,
-        code: /^(?:(?:src|scripts)\/|web\/src\/.+\.(?:ts|svelte|css)$)/u,
-        tests: /^src\/.*(?:__tests__\/.*\.test\.ts|\.test\.ts)$/u,
-        documentation: /^(?:docs\/.*\.(?:md|mdx)|README\.md|CONTRIBUTING\.md)$/u,
-    };
-    return boundaries[field].test(value);
-}
-
 /** Only a directly skipped prerequisite is proved; runtime success and override expressions stay unknown. */
 function doctorWorkflowDependencies(job: Record<string, unknown>, jobs: Record<string, unknown>, event: string, enabled: boolean | undefined): boolean | undefined {
     if (!Object.prototype.hasOwnProperty.call(job, 'needs')) return true;

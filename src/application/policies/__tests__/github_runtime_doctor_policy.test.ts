@@ -1,6 +1,7 @@
 import { doctorRepositoryFixture } from '../../usecases/__tests__/fixtures/runtime_doctor_fixture';
 import { doctorRepositoryPrerequisites, doctorWorkflowContracts, validDoctorConfiguration } from '../github_runtime_doctor_policy';
 import type { DoctorConfiguration, DoctorRepositoryRead } from '../../ports/github_runtime_doctor_ports';
+import { PORTABLE_SDD_LAYOUTS, portableSddCapability } from '../../../testing/portable_sdd_catalog_fixture';
 const config: DoctorConfiguration = { profile: { schemaVersion: 1, enabled: ['feature'] }, preBranchSdd: true,
     issueManagedBranches: true, dependencyBranch: 'develop' };
 function changed(path: keyof ReturnType<typeof doctorRepositoryFixture>['files'], text?: string) {
@@ -8,6 +9,12 @@ function changed(path: keyof ReturnType<typeof doctorRepositoryFixture>['files']
     return { ...snapshot, files: { ...snapshot.files, [path]: text === undefined ? { state: 'missing' as const } : { state: 'present' as const, text } } };
 }
 describe('runtime doctor pure prerequisite decisions', () => {
+    it.each(PORTABLE_SDD_LAYOUTS)('accepts %s from the immutable regular-file inventory without certifying its runtime', (_name, source, test, doc) => {
+        const capability = { ...portableSddCapability(), entrypoints: [source], code: [source], tests: [test], documentation: [doc] };
+        const snapshot = changed('specs/catalog.json', JSON.stringify({ version: 1, capabilities: [capability] }));
+        expect(doctorRepositoryPrerequisites({ ...snapshot, trackedFiles: [...capability.specs, source, test, doc] })).toBe('pass');
+        expect(doctorRepositoryPrerequisites({ ...snapshot, trackedFiles: [...capability.specs, source, doc] })).toBe('blocked');
+    });
     it('validates admitted configuration through the existing profile and start policies', () => expect(validDoctorConfiguration(config)).toBe(true));
     it('does not turn a missing configuration into valid defaults', () => expect(validDoctorConfiguration(undefined)).toBe(false));
     it('rejects incompatible prebranch and managed-branch flags', () => expect(validDoctorConfiguration({ ...config, issueManagedBranches: false })).toBe(false));
@@ -107,7 +114,7 @@ describe('bounded canonical catalog structure', () => {
             if (scenario === 'missing evidence array') delete c.code;
             if (scenario === 'empty required evidence') c.documentation = [];
             if (scenario === 'duplicate evidence') c.documentation = ['README.md', 'README.md'];
-            if (scenario === 'wrong evidence boundary') c.documentation = ['src/domain/locale.ts'];
+            if (scenario === 'wrong evidence boundary') c.specs = ['src/domain/locale.ts'];
             if (scenario === 'unsafe normalized path') c.specs = ['specs/../safe.md'];
             if (scenario === 'missing non-spec file') c.documentation = ['docs/missing.mdx'];
         }))).toBe('blocked');

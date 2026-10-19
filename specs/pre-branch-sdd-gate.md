@@ -3,7 +3,7 @@
 - Status: Implemented — automated verification complete; live provider UX review pending
 - Date: 2026-09-17
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: 2026-10-17 (compact draft targets and provider output-limit diagnosis, #541)
+- Last verified: 2026-10-19 (portable catalog evidence and prerequisite diagnostics, #595)
 - Owners: Copilot maintainers
 - Scope: clarify, update, validate, and publish the owning SDD before eligible branch-based work
 - Related issues/PRs: none; local design work; companion SDD `issue-start-and-branch-readiness.md`
@@ -950,3 +950,95 @@ positive stale or foreign native link cannot be replaced by PR fallback.
 Repeated title/body/card/label/head reads fence the result before publication.
 The companion owns the additional query, presentation and native-ref test
 budget; existing gate tests remain counted here only once.
+
+
+### Portable consumer evidence (2026-10-19, #595)
+
+The former catalog validator and runtime doctor duplicated Copilot-specific
+`src/`, TypeScript test-suffix and root-documentation assumptions. The consumer
+audit in [#595](https://github.com/vypdev/copilot/issues/595) reproduced existing
+Kotlin, Svelte, Python and nested README evidence being rejected before any
+language tooling ran. This amendment supersedes those evidence-root restrictions.
+
+The version-1 catalog MUST accept author-declared entrypoint, code, test and
+documentation roles for normalized repository-relative regular files regardless
+of their roots or extensions. Semantic accuracy remains a review responsibility;
+path validation is not a compiler, test runner or framework certification.
+Specs MUST retain the `specs/*.md` boundary (including supported nested paths
+and reserved standard-file exclusions). Workflow evidence MUST retain YAML under
+`.github/workflows/` or `setup/workflows/`. Required arrays, existing-file checks,
+duplicate metadata/evidence and unique SDD ownership remain enforced. No new
+language whitelist, layout configuration or executable consumer validator exists.
+
+All evidence MUST reject absolute/drive/stream paths, traversal, empty or dot
+segments, backslashes, controls, Git metadata and symlinks in any path component.
+The filesystem adapter checks real containment and regular files before reading
+as-built content; the read-only GitHub doctor uses the immutable regular-file
+inventory. Missing/unsupported prerequisites block; incomplete reads remain
+unverified. Local doctor MUST inspect the same bundled validator when the gate
+is enabled and MUST distinguish metadata validity from framework execution.
+The default remains disabled. Existing version-1 catalogs migrate without fields
+or replacement paths; symlink evidence requires ordinary contained files.
+
+```mermaid
+flowchart LR
+    A[Consumer catalog roles] --> P[Shared pure path policy]
+    P --> L[Local doctor and validator]
+    P --> D[Immutable GitHub doctor]
+    L --> W[Detached draft validation]
+    W --> S[Unchanged SDD-only publication guard]
+```
+
+Text equivalent: consumer evidence uses a shared pure language-neutral policy;
+local filesystem and GitHub immutable-tree adapters verify existence differently.
+Draft and branch-sync validation use the bundled validator; the writer retains
+its exact SDD/catalog allowlist, first-commit, ownership, freshness and numeric
+budget checks. Analysis/draft prompts preserve consumer conventions and cannot
+invent wrappers or claim runtime support. The generated contributor profile has
+no language/layout policy and needs no schema change.
+
+Local doctor UI adds one check before remote credential work, in the existing
+complete English/Spanish catalogs. Representative states: **Pending:** prerequisite
+inspection is running; **Action required / Blocked:** repair
+`specs/catalog.json`, `specs/README.md` and `specs/_template.md` using ordinary
+contained files before enabling the gate; **Partial:** other checks completed,
+SDD prerequisites could not be inspected and remain unverified; **Complete:**
+catalog paths/prerequisites passed, language/framework execution remains
+unverified. No new issue card or notification is emitted. Existing error/privacy,
+retry, localization and accessibility contracts apply; raw filesystem/provider
+exceptions are not surfaced. Retry after repairing the same catalog; publication
+and historical commits are retained.
+
+The amendment has a separate minimum **59 distinct cases**, without recounting
+the gate's existing budget:
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---:|---|
+| Portable filesystem evidence | 10 | Kotlin, JS/TS monorepo, Python, spec/test suffixes, Java, .NET, Go, Rust, unknown extension |
+| Path and filesystem security | 21 | Twelve unsafe spellings, five missing/directory/duplicate/boundary cases, three external link routes and linked catalog/as-built read protection |
+| Immutable doctor portability | 10 | Same conventions pass with verified inventory and block missing tests |
+| Local prerequisite adapter | 6 | Shared doctor/reconcile success; missing, malformed, unsupported, absent evidence and template errors |
+| Local doctor presentation | 8 | Pass, blocked, unavailable, missing capability, thrown adapter, disabled opt-in, Spanish recovery and presenter labels |
+| Detached publication and sync | 4 | Real update/companion first commits, invalid evidence blocks publication, sync regenerates |
+| **Total** | **59** | Metadata fixtures do not execute consumer toolchains |
+
+Existing global thresholds remain mandatory. Fixtures use temporary files and
+local bare remotes without network, compilers, credentials or sleeps. The
+portable tests exercise the standalone validator, real scratch writer, local
+prerequisites, remote doctor and sync entrypoint. Existing security, ownership,
+SDD-format and publication regressions remain required. Desktop/narrow-terminal
+copy review checks that “passed” is scoped to metadata; no new visual interaction
+or screen-reader navigation is introduced.
+
+Acceptance/traceability: each supported convention validates through
+`portable_specification_catalog.test.ts` and `github_runtime_doctor_policy.test.ts`;
+unsafe and escaped files fail in the former; `setup_sdd_prerequisites.test.ts`
+and `doctor_use_case.test.ts` prove local opt-in and unverified diagnostics;
+`pre_branch_sdd_workspace_adapter.test.ts` proves portable update/companion
+publication changes only selected SDD/catalog files and missing evidence creates
+no branch; `branch_sync_sdd_catalog.test.ts` proves sync parity. Existing Copilot
+catalog tests MUST still pass. Implementation is complete only with current
+catalog evidence, generated bundles, full quality/package gates and the support
+matrix/migration/recovery guidance in `docs/issues/pre-branch-sdds.mdx` and
+`docs/development/specifications.mdx`. Full consumer framework workflows remain
+explicitly untested; onboarding or metadata success cannot upgrade that claim.

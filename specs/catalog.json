@@ -1394,7 +1394,7 @@
       "status": "implemented",
       "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-17",
+      "lastVerified": "2026-10-19",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
         "specs/pre-branch-sdd-gate.md",
@@ -1464,7 +1464,12 @@
         "src/application/usecases/steps/common/reply_publication_workflow.ts",
         "src/application/usecases/steps/common/publish_resume_workflow.ts",
         "scripts/coverage-budgets.json",
-        "src/architecture/github_publication_mutation_baseline.json"
+        "src/architecture/github_publication_mutation_baseline.json",
+        "src/domain/specification_catalog_path_policy.cjs",
+        "src/application/policies/github_runtime_doctor_policy.ts",
+        "src/infrastructure/setup_workspace_adapter.ts",
+        "src/application/usecases/setup/doctor_use_case.ts",
+        "src/application/policies/setup_doctor_message_catalog.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1501,7 +1506,13 @@
         "src/infrastructure/composition/__tests__/sdd_diff_composition_root.test.ts",
         "src/application/usecases/__tests__/sdd_diff_comment_interaction.test.ts",
         "src/application/usecases/steps/common/__tests__/sdd_diff_reply_publication.test.ts",
-        "src/application/usecases/__tests__/sdd_status_workflow_integration.test.ts"
+        "src/application/usecases/__tests__/sdd_status_workflow_integration.test.ts",
+        "src/tooling/__tests__/portable_specification_catalog.test.ts",
+        "src/application/policies/__tests__/github_runtime_doctor_policy.test.ts",
+        "src/infrastructure/__tests__/setup_sdd_prerequisites.test.ts",
+        "src/application/usecases/setup/__tests__/doctor_use_case.test.ts",
+        "src/infrastructure/__tests__/branch_sync_sdd_catalog.test.ts",
+        "src/cli/__tests__/setup_presenters.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

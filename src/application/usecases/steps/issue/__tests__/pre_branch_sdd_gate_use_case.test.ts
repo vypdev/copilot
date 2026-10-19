@@ -69,7 +69,9 @@ describe('PreBranchSddGateUseCase', () => {
       .mockResolvedValueOnce({ markdown: '# Draft companion' });
     await h.useCase.begin({ ...context(), issueUrl: 'https://github.com/vypdev/copilot/issues/42' });
     expect(h.query.mock.calls[0][0].prompt).toContain('Canonical issue URL: https://github.com/vypdev/copilot/issues/42');
+    expect(h.query.mock.calls[0][0].prompt).toContain('consumer repository layout and language conventions');
     const draft = h.query.mock.calls[1][0].prompt;
+    expect(draft).toContain('Preserve the consumer repository layout and language conventions');
     expect(draft).toContain(`Validated owning catalog at ${baseSha}`);
     expect(draft).toContain(JSON.stringify(snapshot.capabilities[0]));
     expect(draft).toContain('the new companion does not already own itself');

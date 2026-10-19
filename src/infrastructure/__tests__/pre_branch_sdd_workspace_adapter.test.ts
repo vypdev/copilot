@@ -5,6 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { PreBranchSddWorkspaceAdapter } from '../pre_branch_sdd_workspace_adapter';
 import type { SddPlan } from '../../domain/pre_branch_sdd';
 import { canCreateFileSymlink } from '../../testing/file_symlink_capability';
+import { portableSddCapability, writePortableSddEvidence } from '../../testing/portable_sdd_catalog_fixture';
 
 jest.setTimeout(30_000);
 const fileSymlinkIt = canCreateFileSymlink() ? it : it.skip;
@@ -67,6 +68,37 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
 
   beforeEach(() => { ({ temp, repo } = fixture()); });
   afterEach(() => fs.rmSync(temp, { recursive: true, force: true }));
+
+  it.each(['update', 'companion'] as const)('validates and publishes a portable %s through the unchanged SDD-only first-commit allowlist', async action => {
+    const capability = portableSddCapability();
+    writePortableSddEvidence(repo, capability);
+    fs.writeFileSync(path.join(repo, 'specs/catalog.json'), JSON.stringify({ version: 1, capabilities: [capability] }));
+    git(repo, 'add', '-A'); git(repo, 'commit', '-m', 'portable metadata'); git(repo, 'push', 'origin', 'develop');
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const selected = { ...plan, action, path: action === 'update' ? plan.path : 'specs/portable-companion.md' };
+    const prepared = await workspace.validateDraft(snapshot, selected, draft());
+    const expected = action === 'update' ? [plan.path] : ['specs/CATALOG.md', 'specs/catalog.json', selected.path];
+    expect(prepared.changedPaths).toEqual(expected);
+    git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
+    const sha = await workspace.publish('feature/42-change', prepared);
+    expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, sha, selected.path)).toBe(true);
+    expect(git(repo, 'diff-tree', '--no-commit-id', '--name-only', '-r', sha).split('\n').sort()).toEqual(expected);
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+  });
+
+  it('blocks a portable draft with missing test evidence before publication', async () => {
+    const capability = portableSddCapability();
+    writePortableSddEvidence(repo, capability);
+    fs.rmSync(path.join(repo, capability.tests[0]));
+    fs.writeFileSync(path.join(repo, 'specs/catalog.json'), JSON.stringify({ version: 1, capabilities: [capability] }));
+    git(repo, 'add', '-A'); git(repo, 'commit', '-m', 'missing portable test'); git(repo, 'push', 'origin', 'develop');
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    await expect(workspace.validateDraft(snapshot, plan, draft())).rejects.toThrow('SDD validation failed');
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+    expect(git(repo, 'ls-remote', '--heads', 'origin', 'feature/42-change')).toBe('');
+  });
 
   it('validates a table-only owner update with the real scratch-worktree and catalog boundary', async () => {
     const owner = draft().replace('At least 20 distinct cases cover success, replay, authorization, and failure.',

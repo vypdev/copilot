@@ -7,6 +7,14 @@ import type {
 } from '../application/ports/setup_workspace_ports';
 import { isGitRepositoryRoot } from '../cli_context';
 import { inspectRepositoryAgentGuidance } from '../utils/repository_agent_guidance';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const sddValidator = require('./specification_catalog_validator.cjs') as {
+    isRegularRepositoryFile(root: string, path: string): boolean;
+    readCatalog(root: string): unknown;
+    validateCatalog(root: string, catalog: unknown): string[];
+};
 
 export class SetupWorkspaceMutationAdapter implements SetupWorkspacePort {
     prepare(selection?: SetupWorkspaceSelection): SetupWorkspaceResult {
@@ -29,6 +37,18 @@ export class SetupWorkspaceMutationAdapter implements SetupWorkspacePort {
 }
 
 export class SetupDoctorWorkspaceQueryAdapter implements SetupDoctorWorkspaceQueryPort {
+    inspectSddPrerequisites(): 'pass' | 'blocked' | 'unavailable' {
+        const root = process.cwd();
+        try {
+            const paths = ['specs/catalog.json', 'specs/README.md', 'specs/_template.md'];
+            if (paths.some(path => !sddValidator.isRegularRepositoryFile(root, path))) return 'blocked';
+            if (paths.slice(1).some(path => !/^#\s+\S/mu.test(readFileSync(join(root, path), 'utf8')))) return 'blocked';
+            return sddValidator.validateCatalog(root, sddValidator.readCatalog(root)).length === 0 ? 'pass' : 'blocked';
+        } catch (error) {
+            return error instanceof SyntaxError ? 'blocked' : 'unavailable';
+        }
+    }
+
     isRepositoryRoot(): boolean {
         return isGitRepositoryRoot(process.cwd());
     }
@@ -57,6 +77,10 @@ export class SetupReconcileWorkspaceAdapter implements SetupWorkspacePort, Setup
 
     isRepositoryRoot(): boolean {
         return this.query.isRepositoryRoot();
+    }
+
+    inspectSddPrerequisites(): 'pass' | 'blocked' | 'unavailable' {
+        return this.query.inspectSddPrerequisites();
     }
 
     compareWorkflows(features?: Parameters<typeof compareSetupWorkflows>[1], configuration?: Parameters<typeof compareSetupWorkflows>[3]): ReturnType<typeof compareSetupWorkflows> {

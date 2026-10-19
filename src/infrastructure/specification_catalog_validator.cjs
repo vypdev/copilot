@@ -2,6 +2,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { isSafeRelativePath, matchesFieldBoundary } = require('../domain/specification_catalog_path_policy.cjs');
 
 const DEFAULT_ROOT = path.resolve(__dirname, '../..');
 const CATALOG_JSON = 'specs/catalog.json';
@@ -15,6 +16,9 @@ const STATUS_LABELS = {
 const PATH_FIELDS = ['specs', 'workflows', 'entrypoints', 'code', 'tests', 'documentation'];
 
 function readCatalog(root = DEFAULT_ROOT) {
+  if (!isRegularRepositoryFile(root, CATALOG_JSON)) {
+    throw new Error('specs/catalog.json must be an existing repository file without symlinks.');
+  }
   return JSON.parse(fs.readFileSync(path.join(root, CATALOG_JSON), 'utf8'));
 }
 
@@ -33,6 +37,10 @@ function validateCatalog(root, catalog) {
   const registeredSpecs = new Map();
   for (const [index, capability] of catalog.capabilities.entries()) {
     const prefix = `capabilities[${index}]`;
+    if (!capability || typeof capability !== 'object' || Array.isArray(capability)) {
+      errors.push(`${prefix} must be a JSON object.`);
+      continue;
+    }
     for (const field of ['id', 'title', 'status', 'scope', 'owner', 'lastVerified']) {
       if (typeof capability?.[field] !== 'string' || capability[field].trim() === '') {
         errors.push(`${prefix}.${field} must be a non-empty string.`);
@@ -70,9 +78,8 @@ function validateCatalog(root, catalog) {
         if (!matchesFieldBoundary(field, relativePath)) {
           errors.push(`${location} is outside the ${field} boundary: ${relativePath}.`);
         }
-        const absolutePath = path.resolve(root, relativePath);
-        if (!isInside(root, absolutePath) || !fs.existsSync(absolutePath) || !fs.statSync(absolutePath).isFile()) {
-          errors.push(`${location} does not resolve to an existing file: ${relativePath}.`);
+        if (!isRegularRepositoryFile(root, relativePath)) {
+          errors.push(`${location} does not resolve to an existing file inside the repository without symlinks: ${relativePath}.`);
         }
         if (field === 'specs') {
           const owners = registeredSpecs.get(relativePath) ?? [];
@@ -83,7 +90,7 @@ function validateCatalog(root, catalog) {
     }
     if (capability.status === 'as-built-baseline' && isSafeRelativePath(capability.specs?.[0])) {
       const primarySpec = path.join(root, capability.specs[0]);
-      if (fs.existsSync(primarySpec) && fs.statSync(primarySpec).isFile()) {
+      if (isRegularRepositoryFile(root, capability.specs[0])) {
         errors.push(...validateAsBuiltSpecification(
           fs.readFileSync(primarySpec, 'utf8'),
           capability.specs[0],
@@ -94,6 +101,10 @@ function validateCatalog(root, catalog) {
 
   for (const [spec, owners] of registeredSpecs) {
     if (owners.length > 1) errors.push(`${spec} is registered by multiple capabilities: ${owners.join(', ')}.`);
+  }
+  if (!isRegularRepositoryDirectory(root, 'specs')) {
+    errors.push('specs must be an existing repository directory without symlinks.');
+    return errors;
   }
   for (const spec of discoverSpecificationFiles(root)) {
     if (!registeredSpecs.has(spec)) errors.push(`${spec} is not registered in the specification catalog.`);
@@ -132,16 +143,6 @@ function validateAsBuiltSpecification(source, file) {
   return errors;
 }
 
-function isSafeRelativePath(value) {
-  return typeof value === 'string'
-    && value.length > 0
-    && value === value.trim()
-    && !path.isAbsolute(value)
-    && !value.includes('\\')
-    && value.split('/').every(segment => segment !== '' && segment !== '.' && segment !== '..')
-    && path.posix.normalize(value) === value;
-}
-
 function isIsoDate(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const [year, month, day] = value.split('-').map(Number);
@@ -156,15 +157,24 @@ function isInside(root, candidate) {
   return relative !== '' && !relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative);
 }
 
-function matchesFieldBoundary(field, relativePath) {
-  if (field === 'specs') return /^specs\/(?!README\.md$|_template\.md$|CATALOG\.md$).+\.md$/.test(relativePath);
-  if (field === 'workflows') return /^(?:\.github|setup)\/workflows\/.+\.ya?ml$/.test(relativePath);
-  if (field === 'entrypoints') return /^(?:src\/.+|web\/src\/main\.ts|action\.yml|package\.json)$/.test(relativePath);
-  if (field === 'code') return /^(?:(?:src|scripts)\/|web\/src\/.+\.(?:ts|svelte|css)$)/.test(relativePath);
-  if (field === 'tests') return /^src\/.*(?:__tests__\/.*\.test\.ts|\.test\.ts)$/.test(relativePath);
-  if (field === 'documentation') return /^(?:docs\/.*\.(?:md|mdx)|README\.md|CONTRIBUTING\.md)$/.test(relativePath);
-  return false;
+function isRegularRepositoryPath(root, relativePath, directory) {
+  if (!isSafeRelativePath(relativePath)) return false;
+  try {
+    const realRoot = fs.realpathSync(root);
+    let current = realRoot;
+    const segments = relativePath.split('/');
+    for (const [index, segment] of segments.entries()) {
+      current = path.join(current, segment);
+      const stat = fs.lstatSync(current);
+      const needsDirectory = directory || index < segments.length - 1;
+      if (stat.isSymbolicLink() || (needsDirectory ? !stat.isDirectory() : !stat.isFile())) return false;
+    }
+    return isInside(realRoot, fs.realpathSync(current));
+  } catch { return false; }
 }
+
+function isRegularRepositoryFile(root, relativePath) { return isRegularRepositoryPath(root, relativePath, false); }
+function isRegularRepositoryDirectory(root, relativePath) { return isRegularRepositoryPath(root, relativePath, true); }
 
 function discoverSpecificationFiles(root) {
   const excluded = new Set(['README.md', '_template.md', 'CATALOG.md']);
@@ -290,6 +300,7 @@ module.exports = {
   discoverSpecificationFiles,
   isIsoDate,
   isSafeRelativePath,
+  isRegularRepositoryFile,
   matchesFieldBoundary,
   main,
   readCatalog,
