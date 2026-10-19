@@ -1,4 +1,4 @@
-import { accessSync, chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { accessSync, chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join } from 'node:path';
 import { ActiveCliUpgradeAdapter, isSameCliPath, resolveCliExecutable, type CliUpgradeProcess } from '../active_cli_upgrade_adapter';
@@ -71,13 +71,21 @@ if (args[0] === 'root') console.log(${JSON.stringify(modules)});
 else if (args[0] === 'bin') console.log(${JSON.stringify(bin)});
 else if (args[0] === 'view') console.log(JSON.stringify('3.8.0'));
 else if (args[0] === 'install' || args[0] === 'add') {
+  let installedPackage = ${JSON.stringify(packagePath)};
   if (${JSON.stringify(manager)} === 'pnpm') {
-    const next = ${JSON.stringify(pnpmStore.replace('@3.7.0', '@3.8.0'))};
+    // pnpm appends its layout version to --global-dir, not just node_modules.
+    const paths = require('node:path');
+    const globalDirectory = args[args.indexOf('--global-dir') + 1];
+    const modules = paths.join(globalDirectory, '5', 'node_modules');
+    installedPackage = paths.join(modules, '@vypdev', 'copilot');
+    const next = paths.join(modules, '.pnpm', '@vypdev+copilot@3.8.0', 'node_modules', '@vypdev', 'copilot');
+    fs.mkdirSync(paths.dirname(next), {recursive:true});
     fs.cpSync(${JSON.stringify(pnpmStore)}, next, {recursive:true});
-    fs.rmSync(${JSON.stringify(pnpmPackage)}, {force:true});
-    fs.symlinkSync(next, ${JSON.stringify(pnpmPackage)}, ${JSON.stringify(windows ? 'junction' : 'dir')});
+    fs.mkdirSync(paths.dirname(installedPackage), {recursive:true});
+    fs.rmSync(installedPackage, {force:true});
+    fs.symlinkSync(next, installedPackage, ${JSON.stringify(windows ? 'junction' : 'dir')});
   }
-  const file = ${JSON.stringify(join(packagePath, 'package.json'))};
+  const file = require('node:path').join(installedPackage, 'package.json');
   const metadata = JSON.parse(fs.readFileSync(file, 'utf8'));
   metadata.version = args.at(-1).slice(args.at(-1).lastIndexOf('@') + 1);
   fs.writeFileSync(file, JSON.stringify(metadata));
@@ -129,7 +137,8 @@ describe('active CLI upgrade', () => {
         expect(f.readVersion(f.pnpmPackage)).toBe('3.8.0');
         expect(realpathSync(f.pnpmPackage)).not.toBe(originalPackage);
         expect(f.readVersion(originalPackage)).toBe('3.7.0');
-        expect(f.calls()).toContainEqual({ manager: 'pnpm', args: ['add', '--global', '--global-dir', dirname(f.pnpmModules), '--global-bin-dir', f.pnpmBin, '@vypdev/copilot@3.8.0'] });
+        expect(f.calls()).toContainEqual({ manager: 'pnpm', args: ['add', '--global', '--global-dir', dirname(dirname(f.pnpmModules)), '--global-bin-dir', f.pnpmBin, '@vypdev/copilot@3.8.0'] });
+        expect(existsSync(join(dirname(f.pnpmModules), '5', 'node_modules'))).toBe(false);
     });
 
     it('rejects an invoked installation shadowed by the other command before any mutation', async () => {

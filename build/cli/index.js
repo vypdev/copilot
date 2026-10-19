@@ -93884,10 +93884,12 @@ class ActiveCliUpgradeAdapter {
                 const bin = (await this.run(managerExecutable, ['bin', '--global'])).trim();
                 if (!(0, node_path_1.isAbsolute)(bin))
                     throw new Error('Invalid global bin directory.');
+                // pnpm appends its layout version (e.g. 5) to --global-dir itself.
+                const globalDirectory = (0, node_path_1.dirname)((0, node_path_1.dirname)(root));
                 return {
                     packageManager: 'pnpm', managerExecutable, packagePath,
                     commandPath: (0, node_path_1.join)(bin, this.commandName()),
-                    locationArgs: ['--global-dir', (0, node_path_1.dirname)(root), '--global-bin-dir', bin],
+                    locationArgs: ['--global-dir', globalDirectory, '--global-bin-dir', bin],
                 };
             }
         }

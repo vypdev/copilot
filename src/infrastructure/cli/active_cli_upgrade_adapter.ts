@@ -192,10 +192,12 @@ export class ActiveCliUpgradeAdapter implements CliUpgradePort {
                 }
                 const bin = (await this.run(managerExecutable, ['bin', '--global'])).trim();
                 if (!isAbsolute(bin)) throw new Error('Invalid global bin directory.');
+                // pnpm appends its layout version (e.g. 5) to --global-dir itself.
+                const globalDirectory = dirname(dirname(root));
                 return {
                     packageManager: 'pnpm', managerExecutable, packagePath,
                     commandPath: join(bin, this.commandName()),
-                    locationArgs: ['--global-dir', dirname(root), '--global-bin-dir', bin],
+                    locationArgs: ['--global-dir', globalDirectory, '--global-bin-dir', bin],
                 };
             }
         } catch {

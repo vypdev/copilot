@@ -175,6 +175,10 @@ the logical package path without a module cache and execute the effective
 equal the selected version and the resolved command to retain its installation
 identity. This includes an already-current installation. npm and pnpm global
 copies MUST coexist without changing the other copy or the shell configuration.
+pnpm's `--global-dir` MUST receive the global base before pnpm appends its
+layout version, rather than the parent of `node_modules`. Its fixture MUST
+derive the installation destination from that argument and append the layout
+version itself so an incorrect directory cannot yield a false passing test.
 
 ```mermaid
 flowchart LR
@@ -398,6 +402,9 @@ Global coverage thresholds remain in force for the changed adapter and presenter
 16. Given Windows `PATHEXT` selecting `.CMD` and a lowercase `.cmd` installation
     path, npm-first and pnpm-first upgrades verify successfully. A different
     installation path or a case-distinct Unix path cannot pass identity checks.
+17. Given pnpm root `<global-directory>/5/node_modules`, upgrading passes
+    `<global-directory>` to `--global-dir`; the fixture applies pnpm's own layout
+    suffix and verifies that no nested `5/5/node_modules` installation is created.
 
 ## 17. Requirements traceability
 
