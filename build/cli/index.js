@@ -86387,10 +86387,10 @@ class PullRequestApprovalRepository {
                     throw error;
             }
             const reviewRules = rules.filter(rule => rule.type === 'pull_request');
-            const classicReview = record(classic?.required_pull_request_reviews);
-            const allStale = reviewRules.every(rule => record(rule.parameters)?.dismiss_stale_reviews === true)
-                && (!classicReview || classicReview.dismiss_stale_reviews === true);
-            const hasStaleRule = reviewRules.length > 0 || classicReview !== undefined;
+            const classicReview = classic?.required_pull_request_reviews;
+            const allStale = reviewRules.every(rule => record(rule.parameters)?.dismiss_stale_reviews_on_push === true)
+                && (classicReview == null || record(classicReview)?.dismiss_stale_reviews === true);
+            const hasStaleRule = reviewRules.length > 0 || classicReview != null;
             const requiredChecks = new Set();
             const classicChecks = record(classic?.required_status_checks);
             for (const item of array(classicChecks?.contexts))
@@ -97643,7 +97643,11 @@ class GithubSetupApprovalReadinessAdapter {
                 const effective = await octokit.request('GET /repos/{owner}/{repo}/rules/branches/{branch}', {
                     owner, repo: repository, branch,
                 });
-                const items = Array.isArray(effective.data) ? effective.data : [];
+                if (!Array.isArray(effective.data) || effective.data.some((item) => !record(item)
+                    || typeof record(item)?.type !== 'string' || record(item)?.type === '')) {
+                    throw new Error('GitHub returned an invalid effective rules inventory.');
+                }
+                const items = effective.data;
                 let classic;
                 try {
                     const response = await octokit.rest.repos.getBranchProtection({ owner, repo: repository, branch });
@@ -97654,10 +97658,10 @@ class GithubSetupApprovalReadinessAdapter {
                         throw error;
                 }
                 const reviews = items.filter(item => item.type === 'pull_request');
-                const classicReview = record(classic?.required_pull_request_reviews);
-                const dismissesStaleReviews = (reviews.length > 0 || Boolean(classicReview))
-                    && reviews.every(item => record(item.parameters)?.dismiss_stale_reviews === true)
-                    && (!classicReview || classicReview.dismiss_stale_reviews === true);
+                const classicReview = classic?.required_pull_request_reviews;
+                const dismissesStaleReviews = (reviews.length > 0 || classicReview != null)
+                    && reviews.every(item => record(item.parameters)?.dismiss_stale_reviews_on_push === true)
+                    && (classicReview == null || record(classicReview)?.dismiss_stale_reviews === true);
                 const classicChecks = record(classic?.required_status_checks);
                 const required = [
                     ...array(classicChecks?.contexts),
