@@ -26,6 +26,26 @@ describe('GitCliRepository', () => {
     });
 
     describe('fetchRemoteBranches', () => {
+        it('authenticates each fetch with process-scoped configuration', async () => {
+            const environment = { ...process.env };
+            mockExec.mockResolvedValue(0);
+            await new GitCliRepository('synthetic-token').fetchRemoteBranches();
+
+            const authentication = {
+                GIT_CONFIG_COUNT: '1',
+                GIT_CONFIG_KEY_0: 'http.https://github.com/.extraheader',
+                GIT_CONFIG_VALUE_0: `AUTHORIZATION: basic ${Buffer.from('x-access-token:synthetic-token').toString('base64')}`,
+            };
+            expect(mockExec).toHaveBeenNthCalledWith(1, 'git', ['fetch', '--tags', '--force'], {
+                env: expect.objectContaining(authentication),
+            });
+            expect(mockExec).toHaveBeenNthCalledWith(2, 'git', ['fetch', '--all', '-v'], {
+                env: expect.objectContaining(authentication),
+            });
+            expect(mockExec).toHaveBeenCalledTimes(2);
+            expect(process.env).toEqual(environment);
+        });
+
         it('runs fetch --tags --force and fetch --all -v', async () => {
             mockExec.mockResolvedValue(0);
 

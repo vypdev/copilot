@@ -20,6 +20,10 @@ To work without Action-managed branches, set `issue-managed-branches: false`. Th
 
 For a regular branch-bearing issue, the visible sequence is `in-progress` → linked branch → `branched` → implementation. The Action checks the branch's exact GitHub issue link and remote SHA on every issue run. If the link or branch is missing, it removes an unsupported `branched` label. If verification fails, it reports the error and pauses branch-dependent work.
 
+Implementation recommendations also wait for verified branch readiness, including issues that do not require an SDD. A failed or pending verification cannot publish a new “Ready to start” plan. Branchless workflows can still provide guidance without branch evidence.
+
+In private repositories, keep `persist-credentials: false` on the checkout and pass the configured credential through the Action's `token` input. Issue branch preparation authenticates its Git fetches using configuration scoped to each Git process; it does not store credentials in the checkout configuration or remote URL. If preparation fails, inspect the reported error, correct token access if needed, and rerun the same issue workflow.
+
 With `pre-branch-sdd: true`, an eligible feature or behavior-changing issue enters `state:specifying` first. The Action clarifies the contract in issue comments, validates the SDD outside the new branch, creates the linked branch, and publishes the SDD as its first commit. Only after the remote commit is verified does it add `branched` and move to `state:working`.
 
 ## Naming and source branches
