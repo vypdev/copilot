@@ -1,7 +1,7 @@
 name: 📝 Documentation Update
 description: Propose changes or improvements to the documentation
 title: "<YOUR TITLE HERE>"
-labels: ["documentation", "docs", "priority: low"]
+labels: ["documentation","docs","priority: low"]
 body:
   - type: checkboxes
     attributes:
