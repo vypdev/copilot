@@ -1,3 +1,4 @@
+import { closedIssueReconciliationError } from '../../application/errors/closed_issue_reconciliation_error';
 import type { Execution } from '../../data/model/execution';
 import { Ai } from '../../data/model/ai';
 import { Result } from '../../data/model/result';
@@ -765,6 +766,21 @@ describe('finishGithubAction', () => {
         expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Error code: workflow.failed'));
     });
 
+
+    it('accepts freshly verified duplicate completion without a workflow failure', async () => {
+        await finishGithubAction(execution(), [new Result({ id: 'ReconcileClosedIssueMetadataUseCase', success: true,
+            executed: false, payload: { issueCompletion: { nativeClosed: true, reconciled: true, outcome: 'already-converged' } } })], {} as never, {} as never);
+        expect(core.setFailed).not.toHaveBeenCalled();
+    });
+    it('retains independent cleanup failure even when completion metadata already converged', async () => {
+        const error = closedIssueReconciliationError(new ApplicationError('workflow.stale', 'SECRET'), {
+            resultId: 'RetireProgressUseCase', phase: 'card-verification', state: 'closed', reason: 'completed', changed: 1, remaining: 1 });
+        await finishGithubAction(execution(), [new Result({ id: 'ReconcileClosedIssueMetadataUseCase', success: true, executed: false }),
+            new Result({ id: 'RetireProgressUseCase', success: false, executed: true, errors: [error] })], {} as never, {} as never);
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('RetireProgressUseCase, phase card-verification'));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Confirmed changes: 1'));
+        expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('SECRET'));
+    });
     it('fails every workflow that reports an application error', async () => {
         const failed = new Result({
             id: 'AgentBackedFeature',

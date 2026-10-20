@@ -1,3 +1,4 @@
+import { buildRetiredProgressComment } from '../../../policies/retired_progress_presentation_policy';
 import { replyRequestBodyDigest } from '../../../../domain/reply_request_digest';
 import type { ReplyRequestSnapshot } from '../../../ports/reply_request_read_ports';
 import { RetireProgressUseCase } from '../retire_progress_use_case';
@@ -43,7 +44,7 @@ describe('terminal progress retirement', () => {
     expect(result).toMatchObject({ success: true, payload: { retiredCards: 1 } });
     expect(f.stored[0].body).toContain('Issue closed'); expect(f.stored[0].body).toContain('does not certify');
     expect(parsePublicationMarker(f.stored[0].body)?.identity).toEqual(parsePublicationMarker(warning)?.identity);
-    expect(f.comments.listIssueComments).toHaveBeenCalledTimes(1); expect(f.freshness.matches).toHaveBeenCalledTimes(1);
+    expect(f.comments.listIssueComments).toHaveBeenCalledTimes(1); expect(f.freshness.matches).toHaveBeenCalledTimes(2);
   });
   it('is idempotent on replay without another update', async () => {
     const f = fixture(); await f.useCase.invoke(context); const [result] = await f.useCase.invoke(context);
@@ -113,7 +114,7 @@ describe('terminal progress retirement', () => {
     const [result] = await f.useCase.invoke(context);
     expect(result).toMatchObject({ success: true, payload: { retiredCards: 20 } });
     expect(f.comments.listIssueComments).toHaveBeenCalledTimes(1);
-    expect(f.freshness.matches).toHaveBeenCalledTimes(20);
+    expect(f.freshness.matches).toHaveBeenCalledTimes(40);
     const witness = f.freshness.matches.mock.calls[0][0];
     expect(witness).toMatchObject({ surface: 'issue-comment', commentId: 8, author: 'bot', target: { kind: 'issue', number: 42 },
       bodyDigest: replyRequestBodyDigest(warning) });
@@ -155,4 +156,63 @@ it('leaves an owned nonrenderable archive unchanged without claiming retirement'
   const [result] = await f.useCase.invoke(context);
   expect(result).toMatchObject({ success: true, executed: false, payload: { nativeClosed: true, retiredCards: 0 } });
   expect(f.comments.updateComment).not.toHaveBeenCalled(); expect(f.stored[0].body).toBe(original);
+});
+
+
+describe('verified concurrent card retirement (#622)', () => {
+  const finalBody = buildRetiredProgressComment(warning, 'en-US', 'completed')!;
+  it('adopts an already-retired owned card after its original witness was superseded', async () => {
+    const f = fixture(); f.comments.listIssueComments.mockResolvedValueOnce([{ ...f.stored[0] }]);
+    f.stored[0].body = finalBody;
+    const [result] = await f.useCase.invoke(context);
+    expect(result).toMatchObject({ success: true, executed: false, payload: { reconciled: true, outcome: 'already-converged', superseded: true } });
+    expect(f.comments.updateComment).not.toHaveBeenCalled();
+  });
+  it('recovers a failed write response only when exact final body and native closure are verified', async () => {
+    const f = fixture(); f.comments.updateComment.mockImplementation(async (_n, _id, body) => {
+      f.stored[0].body = body; throw new Error('SECRET transport outcome');
+    });
+    const [result] = await f.useCase.invoke(context);
+    expect(result).toMatchObject({ success: true, payload: { reconciled: true, superseded: true } });
+    expect(JSON.stringify(result)).not.toContain('SECRET'); expect(f.stored[0].body).toBe(finalBody);
+  });
+  it('does not certify an accepted write whose final card is still active', async () => {
+    const f = fixture(); f.comments.updateComment.mockResolvedValue(undefined);
+    const [result] = await f.useCase.invoke(context);
+    expect(result).toMatchObject({ success: false, executed: true, payload: { retiredCards: 1, reconciled: false },
+      errors: [{ recovery: { variables: { phase: 'card-verification', state: 'closed', changed: 1, remaining: 1 } } }] });
+  });
+  it.each(['reopened', 'not_planned'])('refuses a superseded card when native reason becomes %s', async reason => {
+    const f = fixture(); f.comments.listIssueComments.mockResolvedValueOnce([{ ...f.stored[0] }]);
+    f.stored[0].body = finalBody;
+    f.issues.readIssue.mockResolvedValueOnce({ number: 42, state: 'closed', reason: 'completed', labels: ['100%'] })
+      .mockResolvedValue({ number: 42, state: reason === 'reopened' ? 'open' : 'closed', reason, labels: [] });
+    const [result] = await f.useCase.invoke(context);
+    expect(result).toMatchObject({ success: false, payload: { reconciled: false } });
+    expect(f.comments.updateComment).not.toHaveBeenCalled();
+  });
+  it('retains successful card effects when the final native read is unavailable', async () => {
+    const f = fixture(); const read = f.issues.readIssue.getMockImplementation()!; let calls = 0;
+    f.issues.readIssue.mockImplementation(async () => { if (++calls === 3) throw new Error('SECRET native response'); return read(); });
+    const [result] = await f.useCase.invoke(context);
+    expect(result).toMatchObject({ success: false, executed: true, payload: { retiredCards: 1 },
+      errors: [{ recovery: { variables: { phase: 'native-fence', state: 'unavailable', changed: 1, remaining: 1 } } }] });
+    expect(f.stored[0].body).toBe(finalBody); expect(JSON.stringify(result)).not.toContain('SECRET');
+  });
+  it('rechecks native closure even when the inventory contains no owned card', async () => {
+    const f = fixture(); f.stored.length = 0;
+    f.issues.readIssue.mockResolvedValueOnce({ number: 42, state: 'closed', reason: 'completed', labels: [] })
+      .mockResolvedValue({ number: 42, state: 'open', reason: 'reopened', labels: [] });
+    expect((await f.useCase.invoke(context))[0]).toMatchObject({ success: false, payload: { nativeClosed: false } });
+    expect(f.comments.updateComment).not.toHaveBeenCalled();
+  });
+});
+
+
+it('bounds diagnostics for an oversized owned-card inventory without mutating it', async () => {
+  const f = fixture();
+  for (let id = 9; id < 3009; id++) f.stored.push({ id, body: warning, user: { login: 'bot' } });
+  const [result] = await f.useCase.invoke(context);
+  expect(result).toMatchObject({ success: false, errors: [{ recovery: { variables: { phase: 'card-inventory', remaining: 3000 } } }] });
+  expect(f.comments.updateComment).not.toHaveBeenCalled();
 });

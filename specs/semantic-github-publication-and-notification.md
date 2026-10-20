@@ -2002,3 +2002,12 @@ Native PR title precedence, conventional generation, live-metadata reads and
 the independent 36-case regression budget are specified in
 [pull request title compatibility](./pull-request-title-compatibility.md).
 No new comment/notification route or publication-budget allocation is added.
+
+### Concurrent closed-issue cleanup — #622
+
+[Concurrent completion](./managed-issue-and-branch-lifecycle.md#concurrent-completion-convergence--622-2026-10-20)
+keeps terminal card retirement silent and verifies the exact final owned body
+before adopting a superseded invocation. The localized Job Summary exposes
+verified/already-converged cleanup or bounded partial-failure recovery. Required
+errors remain fatal; no generic stale-error suppression or new conversation
+message is introduced. The lifecycle extension owns the additional test budget.

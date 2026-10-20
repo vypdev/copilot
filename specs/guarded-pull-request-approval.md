@@ -397,3 +397,91 @@ Native observer run `38176191371` reported the closed repository HTTP 403 diagno
 The same live PR still reported cached `base.sha=c47f612f3fceac6ae54908f62bdad9977da06a4d` while GitHub's native `refs/heads/develop` was `481d86a2df8f925d767165a75d3ec404fbee1a62`. Repeated PR reads therefore could not detect a base push. The adapter now reads and validates that native ref for evidence and again before assessment publication. Merge parentage and numeric attestations use that verified SHA; branch retargeting, denied reads and malformed identities withhold publication. Eighteen new SDK cases exercise these boundaries, raising the distinct budget from 171 to 189 without changing coverage thresholds or configuration.
 
 Full local verification passed 566 suites and 7,502 tests with 35 configured skips (7,537 total). The changed repository adapter reaches 100% lines/statements/functions and 91.94% branches, above its unchanged thresholds. A separate live branch-sync verification failure exposed branch-specific numeric literals in the communication-budget test; those four existing cases now assert the same fixed required minima, exact retained row sums and deliberate allocation mismatch without duplicating mutable branch totals. Their focused suite, typecheck, lint, specification and documentation validators pass; this fixture correction does not change runtime validation or add to this SDD's case count. Native revalidation of the new base-ref behavior remains required after publication.
+
+### Causal evidence diagnostics — #619 (2026-10-20)
+
+Observed evidence: [#619](https://github.com/vypdev/copilot/issues/619) reports
+released 3.9.1 observers failing before assessment after successful consumer CI.
+The endpoint failure remains unknown; the defect established by source is the
+loss of the cause in the evidence catch and the generic Action exception.
+
+The adapter MUST translate evidence failures into the closed operation/reason/
+permission vocabulary in `approval_evidence_diagnostic.ts`. The application
+MUST retain that semantic failure, its retryability and correlation ID through
+Action completion and JSON serialization. The Job Summary and final failure
+MUST identify the operation even when no assessment can be published. Missing
+facts MUST remain non-authorizing. Failed optional reads retain independent
+facts plus diagnostics; the observer blocks approval when any required read
+has failed, including its final evidence/policy reread.
+
+```text
+trusted observer -> adapter reads current evidence -> sanitized causal failure
+ -> blocked assessment/use-case result -> Job Summary -> same semantic Action error
+```
+
+Text equivalent: the adapter terminates provider exceptions; application and
+presentation consume fixed semantic facts, never raw provider messages. No
+provider DTO enters the application port. Existing architecture, raw-error and
+credential boundary tests enforce that dependency direction. The diagnostic
+adds no durable state or configurable input, no new comment, and no permission.
+Read bounds, producer selection, live base authority and native approval fences
+remain fixed. Existing configuration precedence and migration are unchanged.
+
+Representative operator output (technical operation identifiers are stable in
+both English and Spanish):
+
+```text
+PR #190: blocked (evidence-unavailable); assessment not-applicable.
+Impact: Approval evidence could not be verified: jobs (http-403).
+Error code: authorization.denied
+Action: Inspect actions-read access for the runtime credential and the named evidence response.
+Retained state: No approval is authorized by this failed read. Existing PRs, reviews and completed external effects were preserved.
+Retryable: No
+```
+
+Authorization/resource/schema failures require correction before another run;
+transport, 409, rate-limit and supported 5xx failures permit a bounded new
+observation after recovery. A 403 with native rate-limit headers is classified
+as rate-limited without rendering headers. Classic protection 404 remains a
+legitimate absence; it MUST NOT synthesize a read failure or safe stale-review
+rules. Coverage diagnostics identify the fixed artifact collection, download,
+ZIP/schema or provenance phase; source content, arbitrary artifact names,
+headers, URLs, policy values and provider text never appear in errors. Pending
+producers and complete observations retain the existing pending/completed UI.
+Partial native effects remain retained; this change never retries a review POST.
+
+Allocate **43 additional distinct cases**, separate from preceding budgets:
+20 classification/serialization/localization/forgery cases, 14 SDK inventory,
+rules, coverage and current-merge cases, seven application final-read/fail-closed/post-submit
+cases and two Action boundary cases. Existing raw-message assertions migrate to
+semantic operation/reason assertions. Repository coverage thresholds remain
+90% lines/statements, 88% functions and 82% branches; the new diagnostic mapping
+and adapter helper require 95% lines/statements and 90% branches/functions.
+Deterministic SDK fixtures replace network calls and waits. Review the rendered
+English/Spanish Job Summary text for readable recovery and intact machine IDs.
+
+Acceptance and traceability: each failing SDK fixture yields the named operation
+and closed reason; use-case fixtures prove no approval on initial or final read
+failure; Action fixtures retain the same error/correlation and expose no private
+text; serialization/forgery fixtures enforce bounded public records. Completed
+merge-ref CI with historical PR base metadata still uses the live branch ref.
+`docs/pull-requests/guarded-approval.mdx` documents this recovery table. Definition
+of Done includes these 43 cases, coverage, types/lint, architecture, docs,
+workflows/specification validators, generated catalog/bundles and Graphify.
+Rollout is additive with no schema migration; rollback restores generic
+errors but does not change native reviews. A fresh consumer run after promotion
+is required to establish its actual endpoint cause; fixtures do not prove that
+production diagnosis.
+
+Primary provider semantics: [GitHub REST troubleshooting](https://docs.github.com/en/rest/using-the-rest-api/troubleshooting-the-rest-api)
+and [classic branch protection](https://docs.github.com/en/rest/branches/branch-protection#get-branch-protection).
+
+
+Policy Variables reads, including the final pre-submit reread, use the same
+semantic adapter mapping; a permanent denial MUST retain operation `policy`
+and nonretryable authorization classification. Post-submit evidence failures
+MUST retain their causal diagnostic and any accepted review ID while keeping
+`publication-unknown`. A diagnostic alongside native review facts MUST NOT be
+promoted to a verified approval. This preserves read-first recovery and never
+retries the review POST blindly. The three additional application cases above
+cover these final-boundary risks independently of initial-read failures.

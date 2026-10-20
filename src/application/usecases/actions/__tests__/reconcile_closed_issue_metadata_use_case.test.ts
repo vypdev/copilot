@@ -1,3 +1,4 @@
+import { CloseIssueAfterMergingUseCase } from '../../steps/issue/close_issue_after_merging_use_case';
 import { ReconcileClosedIssueMetadataUseCase } from '../reconcile_closed_issue_metadata_use_case';
 import { DEFAULT_COPILOT_LIFECYCLE_LABELS } from '../../../../domain/copilot_lifecycle';
 import type { NativeIssueCompletionFacts } from '../../../../domain/issue_completion';
@@ -79,11 +80,11 @@ describe('guarded native-close metadata repair', () => {
         f.target.removeLabel.mockImplementation(async label => { await remove(label); f.labels.add('human-label'); });
         expect((await f.run())[0].success).toBe(true); expect(f.labels.has('human-label')).toBe(true);
     });
-    it('reports newly stale managed metadata at the final fence', async () => {
+    it('repairs a concurrently added managed label in the second bounded pass', async () => {
         const f = fixture(); const add = f.target.addLabel.getMockImplementation()!;
         f.target.addLabel.mockImplementation(async label => { await add(label); f.labels.add('state:planned'); });
-        expect((await f.run())[0]).toMatchObject({ success: false, executed: true });
-        expect(f.labels.has('100%')).toBe(true);
+        expect((await f.run())[0]).toMatchObject({ success: true, executed: true, payload: { issueCompletion: { superseded: true } } });
+        expect(f.labels.has('100%')).toBe(true); expect(f.labels.has('state:planned')).toBe(false);
     });
     it('refuses a managed/protected configuration conflict before mutation', async () => {
         const f = fixture(); f.context.completionLabels = { ...configuration, protectedLabels: ['in-progress'] };
@@ -94,5 +95,53 @@ describe('guarded native-close metadata repair', () => {
         f.target.removeLabel.mockImplementation(async label => { await remove(label); f.facts.state = 'open'; f.facts.reason = 'reopened'; });
         expect((await f.run())[0]).toMatchObject({ success: false, executed: true, payload: { issueCompletion: { labelsChanged: 1, nativeClosed: false } } });
         expect(f.target.removeLabel).toHaveBeenCalledTimes(1); expect(f.target.addLabel).not.toHaveBeenCalled();
+    });
+});
+
+
+describe('bounded concurrent completion convergence (#622)', () => {
+    it('adopts a removal completed between its fresh fence and the provider write', async () => {
+        const f = fixture(); const remove = f.target.removeLabel.getMockImplementation()!;
+        f.target.removeLabel.mockImplementationOnce(async label => { await remove(label); throw new Error('404 SECRET'); });
+        expect((await f.run())[0]).toMatchObject({ success: true, payload: { issueCompletion: { reconciled: true, superseded: true } } });
+        expect([...f.labels]).toContain('100%');
+    });
+    it('adopts an applied addition whose transport response was lost', async () => {
+        const f = fixture(); f.target.addLabel.mockImplementation(async label => { f.labels.add(label); throw new Error('SECRET'); });
+        expect((await f.run())[0]).toMatchObject({ success: true, payload: { issueCompletion: { superseded: true } } });
+    });
+    it('stops after two passes when managed metadata keeps changing', async () => {
+        const f = fixture(); const remove = f.target.removeLabel.getMockImplementation()!;
+        f.target.removeLabel.mockImplementation(async label => { await remove(label); f.labels.add('state:blocked'); });
+        const [result] = await f.run();
+        expect(result).toMatchObject({ success: false, errors: [{ code: 'provider.conflict', retryable: true,
+            recovery: { variables: { resultId: 'ReconcileClosedIssueMetadataUseCase', phase: 'metadata-verification', state: 'closed', reason: 'completed', remaining: 1 } } }] });
+        expect(f.target.removeLabel).toHaveBeenCalledTimes(4);
+    });
+    it('converges real concurrent closed-event and merged-PR delivery without suppressing errors globally', async () => {
+        const f = fixture();
+        f.target.removeLabel.mockImplementation(async label => { if (!f.labels.delete(label)) throw new Error('404 missing label'); });
+        const merged = new CloseIssueAfterMergingUseCase({ forIssue: () => ({ ...f.target, close: jest.fn(async () => false) }),
+            readPullRequest: async () => ({ number: 43, state: 'closed', merged: true }) });
+        const [closedResults, mergedResults] = await Promise.all([f.run(), merged.invoke({ issueNumber: 42, pullRequestNumber: 43,
+            completionLabels: configuration })]);
+        expect([...closedResults, ...mergedResults].every(result => result.success)).toBe(true);
+        expect([...f.labels]).toEqual(['help', 'branched', 'SDD', 'external', '100%']);
+    });
+    it.each(['reopened', 'not_planned'] as const)('stops after a failed write exposes reason %s', async reason => {
+        const f = fixture(); f.target.removeLabel.mockImplementation(async label => {
+            f.labels.delete(label); f.facts.reason = reason; if (reason === 'reopened') f.facts.state = 'open';
+            throw new Error('SECRET');
+        });
+        const [result] = await f.run();
+        expect(result).toMatchObject({ success: false, errors: [{ code: 'workflow.stale', recovery: { variables: { reason } } }] });
+        expect(f.target.removeLabel).toHaveBeenCalledTimes(1); expect(f.target.addLabel).not.toHaveBeenCalled();
+        expect(JSON.stringify(result)).not.toContain('SECRET');
+    });
+    it('identifies a no-write duplicate only after fresh metadata verification', async () => {
+        const f = fixture(); await f.run(); f.target.read.mockClear();
+        expect((await f.run())[0]).toMatchObject({ success: true, executed: false,
+            payload: { issueCompletion: { outcome: 'already-converged', nativeClosed: true, reason: 'completed' } } });
+        expect(f.target.read).toHaveBeenCalledTimes(2);
     });
 });

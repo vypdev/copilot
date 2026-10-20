@@ -20,7 +20,7 @@ import {
 const SIMPLE_MESSAGE_KEYS = Object.freeze([
   'heading', 'repository', 'property', 'value', 'status', 'event', 'target',
   'lifecycle', 'descriptionPolicy', 'results', 'findingStates', 'bugbotReview',
-  'inactivity', 'unavailable',
+  'inactivity', 'unavailable', 'issueCleanup',
   'sourceFreshness', 'staleSourceSuppressed',
   'duplicateCleanup', 'actionNotifications', 'actionNotificationCreated',
   'actionNotificationReused',
@@ -43,6 +43,7 @@ const TEMPLATE_MESSAGE_IDS = Object.freeze([
   'summary.duplicateCleanup.bounded',
   'summary.actionNotification.entry',
   'summary.inactivityCounts',
+  'summary.issueCleanupCounts',
 ] as const);
 
 const FINDING_STATE_KEYS = Object.freeze([
@@ -82,6 +83,7 @@ const ENGLISH_SIMPLE: Readonly<Record<SimpleMessageKey, string>> = Object.freeze
   descriptionPolicy: 'PR description policy',
   results: 'Results',
   inactivity: 'Issue inactivity',
+  issueCleanup: 'Issue cleanup',
   unavailable: 'unavailable',
   findingStates: 'Finding states',
   bugbotReview: 'Bugbot review',
@@ -132,6 +134,7 @@ const SPANISH_SIMPLE: Readonly<Record<SimpleMessageKey, string>> = Object.freeze
   descriptionPolicy: 'Política de descripción de PR',
   results: 'Resultados',
   inactivity: 'Inactividad de issues',
+  issueCleanup: 'Limpieza de la issue',
   unavailable: 'no disponible',
   findingStates: 'Estados de los hallazgos',
   bugbotReview: 'Revisión de Bugbot',
@@ -180,6 +183,7 @@ const ENGLISH_TEMPLATES: Readonly<Record<TemplateMessageId, CatalogMessage>> = O
   'summary.duplicateCleanup.bounded': 'Deletion was forbidden; retained compact pointers for {count} comments (first {reported} IDs: {ids})',
   'summary.actionNotification.entry': '{topic} on {target}: {effect} (fingerprint {fingerprint})',
   'summary.inactivityCounts': 'Scanned: {scanned} · Closed: {closed} · Skipped: {skipped}',
+  'summary.issueCleanupCounts': 'Reconciled: {reconciled} · Already converged: {converged}. Required cleanup was freshly verified.',
 });
 
 const SPANISH_TEMPLATES: Readonly<Record<TemplateMessageId, CatalogMessage>> = Object.freeze({
@@ -192,6 +196,7 @@ const SPANISH_TEMPLATES: Readonly<Record<TemplateMessageId, CatalogMessage>> = O
   'summary.duplicateCleanup.bounded': 'Se denegó el borrado; se conservaron enlaces compactos para {count} comentarios (primeros {reported} ID: {ids})',
   'summary.actionNotification.entry': '{topic} en {target}: {effect} (huella {fingerprint})',
   'summary.inactivityCounts': 'Examinadas: {scanned} · Cerradas: {closed} · Omitidas: {skipped}',
+  'summary.issueCleanupCounts': 'Reconciliadas: {reconciled} · Ya convergidas: {converged}. Se verificó de nuevo la limpieza necesaria.',
 });
 
 const ENGLISH_FINDING_STATES: Readonly<Record<ActionSummaryFindingState, string>> = Object.freeze({

@@ -1,7 +1,9 @@
+import { completionRepairProgress, reconcileIssueCompletionMetadata } from '../../actions/reconcile_issue_completion_metadata';
+import { closedIssueReconciliationError } from '../../../errors/closed_issue_reconciliation_error';
 import { Result } from '../../../../data/model/result';
 import type { BoundIssueCompletionPort } from '../../../ports/issue_completion_ports';
 import { planIssueCompletion } from '../../../../domain/issue_completion';
-import { ApplicationError, toApplicationError } from '../../../errors/application_error';
+import { ApplicationError } from '../../../errors/application_error';
 import type { CloseIssueAfterMergeContext } from '../../issue_workflow_context';
 import { parsePositiveSafeInteger } from '../../../../domain/positive_integer_policy';
 import type { ParamUseCase } from '../../base/param_usecase';
@@ -18,7 +20,7 @@ export class CloseIssueAfterMergingUseCase implements ParamUseCase<CloseIssueAft
             steps: ['No separate safe linked issue and pull request were found; issue closure was skipped.'] })];
         let closedThisRun = false;
         let nativeClosed = false;
-        let labelsChanged = 0;
+        const progress = completionRepairProgress();
         try {
             const pull = await this.issues.readPullRequest(pullNumber);
             if (pull.number !== pullNumber || pull.state !== 'closed' || pull.merged !== true) throw stale();
@@ -37,34 +39,19 @@ export class CloseIssueAfterMergingUseCase implements ParamUseCase<CloseIssueAft
             }
             nativeClosed = facts.state === 'closed';
             if (!nativeClosed || closedThisRun && facts.reason !== 'completed') throw stale();
-            const fence = async () => {
-                const freshFacts = await read();
-                const freshPlan = planIssueCompletion(freshFacts, param.completionLabels);
-                if (freshPlan.kind !== 'closed' || freshFacts.reason !== facts.reason) throw stale();
-                return freshPlan;
-            };
-            const plan = planIssueCompletion(facts, param.completionLabels);
-            if (plan.kind !== 'closed') throw stale();
-            for (const label of plan.remove) {
-                const fresh = await fence();
-                if (fresh.remove.includes(label)) { await target.removeLabel(label); labelsChanged++; }
-            }
-            for (const label of plan.add) {
-                const fresh = await fence();
-                if (fresh.add.includes(label)) { await target.addLabel(label); labelsChanged++; }
-            }
-            const final = await fence();
-            if (final.remove.length || final.add.length) throw stale();
-            return [new Result({ id: this.taskId, success: true, executed: closedThisRun || labelsChanged > 0,
+            const repaired = await reconcileIssueCompletionMetadata(target, number, param.completionLabels, progress, facts);
+            nativeClosed = progress.nativeClosed;
+            return [new Result({ id: this.taskId, success: true, executed: closedThisRun || progress.labelsChanged > 0,
                 steps: [`Issue #${number} is closed and its completion metadata was verified after PR #${pullNumber} merged.`],
-                payload: { issueCompletion: Object.freeze({ number, nativeClosed, closedThisRun, labelsChanged, reason: facts.reason, reconciled: true }) } })];
+                payload: { issueCompletion: Object.freeze({ number, nativeClosed, closedThisRun, labelsChanged: progress.labelsChanged, ...repaired, reconciled: true }) } })];
         } catch (error) {
-            const semanticError = toApplicationError(error, 'provider.unavailable', nativeClosed
-                ? 'The issue is closed, but completion metadata could not be fully verified. Retry the verified merged-PR operation.'
-                : 'Native issue completion could not be verified. Inspect the linked run before retrying.');
-            return [new Result({ id: this.taskId, success: false, executed: closedThisRun || labelsChanged > 0,
+            if (progress.phase !== 'identity') nativeClosed = progress.nativeClosed;
+            const semanticError = closedIssueReconciliationError(error, { resultId: this.taskId,
+                phase: progress.phase, state: progress.state, reason: progress.reason,
+                changed: progress.labelsChanged, remaining: progress.remaining });
+            return [new Result({ id: this.taskId, success: false, executed: closedThisRun || progress.labelsChanged > 0,
                 steps: [nativeClosed ? 'The native issue closure was retained; completion metadata remains unverified.' : 'Native issue completion remains unverified.'],
-                errors: [semanticError], payload: { issueCompletion: Object.freeze({ number, nativeClosed, closedThisRun, labelsChanged, reconciled: false }) } })];
+                errors: [semanticError], payload: { issueCompletion: Object.freeze({ number, nativeClosed, closedThisRun, labelsChanged: progress.labelsChanged, reconciled: false }) } })];
         }
     }
 

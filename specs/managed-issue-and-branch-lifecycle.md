@@ -759,3 +759,100 @@ without stale completion guidance and close it after the fixture. Full coverage,
 new module gates, build/bundles, lint/types, documentation/specifications/workflow
 validators, Graphify and current-head CI/review/platform jobs remain mandatory.
 No completed acceptance is claimed before native evidence is recorded.
+
+## Concurrent completion convergence — #622 (2026-10-20)
+
+Observed evidence: [#622](https://github.com/vypdev/copilot/issues/622) records
+successful PR completion and a closed/completed issue followed by a failed
+closed-event invocation with only `workflow.stale`. The exact production fence
+is unknown; concurrent selective label writes and owned-card retirement can
+reproduce equivalent failures deterministically. This extension preserves native
+state authority and makes a verified duplicate explicit.
+
+```text
+merged PR / closed event -> fresh identity, closure and reason
+ -> at most two selective metadata passes -> fresh final metadata verification
+ -> independent owned-card retirement -> exact final-body/native verification
+ -> verified / already-converged, or named partial failure
+```
+
+Text equivalent: merged-PR and closed-event cleanup share the same bounded
+metadata repair. They do not authorize one another through labels. Each write
+rechecks the native subject and original closure reason. A failed removal or
+addition response MAY be adopted only when a fresh same-closure plan proves
+that exact delta is satisfied. A newly observed managed delta receives one more
+bounded pass; continuing churn fails as `provider.conflict`, retaining effects.
+Reopening, identity movement, unavailable evidence or reason changes MUST stop
+repair and MUST NOT cause a native close/reopen request from reconciliation.
+
+The two existing card use cases retain separate results and one inventory of at
+most 20 supported bot-owned cards each. `verifyClosedIssueCardRetirement`
+checks the original witness before a write, then the exact intended final-body
+witness and native closure afterward. If another invocation already retired
+that same card, it adopts only the verified final witness and same closure.
+Unknown edits, changed ownership, missing/unsupported bodies, or unreadable
+witnesses never become success. An accepted write followed by failed readback
+retains its confirmed effect count and fails. An ambiguous write response MAY
+converge only after exact final-body and native verification. The final native
+fence also applies to an empty inventory. No new inventory, comment, deletion,
+model execution, branch operation or broad label replacement is authorized.
+
+Architecture: the shared metadata workflow receives only a per-issue read/add/
+remove capability. Native close remains in the existing verified merged-PR use
+case. The card helper receives exact immutable witnesses and narrow callbacks;
+it cannot discover or create targets. Closed diagnostic vocabulary lives in the
+domain; application errors retain safe result/phase/native facts and counters;
+the shared summary presents only verified semantic outcomes. Existing import,
+credential and physical capability tests remain executable constraints.
+`finishGithubAction` MUST continue to fail any independent required error; no
+global stale-error suppression is introduced.
+
+Representative Job Summary content:
+
+| State | Visible content and next action |
+| --- | --- |
+| Pending | Closed-event workflow is running; inspect the native run. |
+| Complete | `Issue cleanup: Reconciled: 3 · Already converged: 0. Required cleanup was freshly verified.` No action required. |
+| Duplicate/converged | `Issue cleanup: Reconciled: 0 · Already converged: 3.` Fresh metadata and supported cards were verified; no retry needed. |
+| Partial/failed | `Issue cleanup: unavailable`. Failure details identify `RetireProgressUseCase`, `card-verification`, native closed/completed, one confirmed change and one remaining change in the last verified plan. Resolve the named failure and retry only while still closed. |
+| Reopened/reason changed | Failure details identify the fresh native state/reason. Keep reopened work open; inspect current state before a new invocation. |
+
+English/Spanish summaries explain the same facts with stable machine identifiers;
+other locales use existing catalog fallback/localization. Routine convergence
+creates zero comments. Diagnostics exclude card bodies, label names, provider
+messages and credentials. Counters are safe integers bounded to 0–3000; absent
+native reads are explicitly unavailable and do not prove completion. The
+summary never claims all cleanup complete from a successful metadata result
+when another required cleanup result failed. Plain text/tables work on narrow
+screens without relying on color or Mermaid.
+
+Configuration: no new input, durable schema or permission is added. Two passes,
+20 owned cards, exact witnesses and native fences are fixed safety bounds.
+Existing lifecycle/protected-label configuration and precedence remain intact.
+Rollout is additive for in-flight work; a fresh duplicate read is required for
+adoption. Rollback restores the earlier false-failure risk but preserves native
+closures and completed effects. Cancellation retains confirmed effects and
+requires a fresh observation; it never broadens mutation authority.
+
+Allocate **37 additional distinct cases**: seven concurrent metadata/replay/
+reason cases (including real merged-PR plus closed-event overlap), sixteen
+card-race/readback cases across both capabilities, two Action completion cases,
+four semantic serialization/forgery cases and eight summary localization/
+invalid-evidence cases. Strengthen existing final-delta, witness-count and
+recovery-catalog fixtures without counting them again. Deterministic SDK/port
+fakes replace network and waits. Repository 90% lines/statements, 88% functions,
+82% branches remain required; new reconciliation helpers require 95% lines/
+statements and 90% branches/functions. Existing per-capability budgets remain.
+
+Traceability and acceptance: metadata overlap/failed-response fixtures prove
+selective convergence; reopening/reason fixtures prove no later mutation;
+card fixtures prove exact final-body adoption and retained partial effects;
+Action fixtures prove independent failures remain failures; public-record and
+summary fixtures reject forged facts and expose bounded recovery. User/operator
+recovery lives in `docs/issues/notifications-and-auto-close.mdx`; the branch-sync
+and notification SDDs reference this shared rule. Definition of Done includes
+all 37 cases, coverage, types/lint, architecture/capability contracts, docs,
+workflows/specifications/catalogs, generated bundles, Graphify and current-head
+CI/review. Review the English/Spanish summary examples for readable status and
+one next action. Production convergence is not claimed until a fresh promoted
+consumer sequence verifies its native issue and required cleanup.
