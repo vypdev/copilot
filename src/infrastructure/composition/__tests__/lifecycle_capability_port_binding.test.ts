@@ -118,7 +118,7 @@ describe('lifecycle capability repository bindings', () => {
     const updateBaseBranch = jest.fn().mockResolvedValue(undefined);
     const updateLinkDescription = jest.fn().mockResolvedValue(undefined);
     const link = bindPullRequestIssueLink({ isLinked, getDetails: getLinkDetails, updateBaseBranch, updateDescription: updateLinkDescription }, binding);
-    await link.isLinked(9);
+    await link.isLinked(9, 42);
     await link.getDetails(9);
     await link.updateBaseBranch(9, 'main');
     await link.updateDescription(9, 'linked');
@@ -132,7 +132,7 @@ describe('lifecycle capability repository bindings', () => {
     await description.getDetails(9);
     await expect(description.getDiff(9)).resolves.toEqual(snapshot);
 
-    expect(isLinked).toHaveBeenCalledWith('acme', 'demo', 9, 'secret');
+    expect(isLinked).toHaveBeenCalledWith('acme', 'demo', 9, 42, 'secret');
     expect(getLinkDetails).toHaveBeenCalledWith('acme', 'demo', 9, 'secret');
     expect(updateBaseBranch).toHaveBeenCalledWith('acme', 'demo', 9, 'main', 'secret');
     expect(updateLinkDescription).toHaveBeenCalledWith('acme', 'demo', 9, 'linked', 'secret');

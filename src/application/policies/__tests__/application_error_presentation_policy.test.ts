@@ -90,6 +90,17 @@ const RECOVERY_CASES: readonly Readonly<{
 ];
 
 describe('application error presentation policy', () => {
+    it.each(['en-US', 'es-ES'])('explains missing evidence as nonretryable with retained progress in %s', locale => {
+        const error = new ApplicationError('validation.evidence-unavailable', 'Omitted patch.', { correlationId: CORRELATION_ID });
+        const catalog = resolveStaticApplicationErrorCatalog(locale);
+        const text = renderApplicationErrorText(error, catalog.message);
+        expect(text).toContain('validation.evidence-unavailable');
+        expect(text).toContain(locale === 'es-ES' ? 'Reintentable: No' : 'Retryable: No');
+        expect(text).toContain(locale === 'es-ES' ? 'No se evaluó el progreso' : 'Progress was not assessed');
+        expect(text).toContain(locale === 'es-ES' ? 'Se conservaron las etiquetas' : 'Existing progress labels');
+        expect(text).not.toContain(locale === 'es-ES' ? 'temporalmente' : 'temporarily');
+    });
+
     it.each(Object.keys(APPLICATION_ERROR_METADATA) as ApplicationErrorCode[])(
         'renders the complete stable view for %s',
         (code) => {

@@ -5255,6 +5255,12 @@ exports.APPLICATION_ERROR_METADATA = {
         action: 'Correct the input and retry.',
         retainedState: UNCHANGED_STATE,
     },
+    'validation.evidence-unavailable': {
+        kind: 'validation', retryable: false,
+        impact: 'Progress was not assessed because GitHub omitted a required file patch.',
+        action: 'Inspect the exact base/head comparison manually or split the work into smaller reviewed changes with complete patches before a new assessment. Retrying the same commits cannot restore omitted evidence.',
+        retainedState: 'Existing progress labels and published assessments were preserved; no model assessment was made.',
+    },
     'validation.evidence-too-large': {
         kind: 'validation', retryable: false,
         impact: 'Progress could not be assessed within the fixed evidence limits.',

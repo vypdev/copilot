@@ -5,6 +5,7 @@
  */
 
 import { CheckProgressUseCase } from '../check_progress_use_case';
+import { ProgressDiffRepository } from '../../../../data/repository/progress_diff_repository';
 import { Ai } from '../../../../data/model/ai';
 import type { Execution } from '../../../../data/model/execution';
 import { projectProgressContext } from '../../push_single_action_contexts';
@@ -330,6 +331,19 @@ describe('CheckProgressUseCase', () => {
     expect(mockSetProgressLabel).not.toHaveBeenCalled(); expect(mockSetLabels).not.toHaveBeenCalled();
     expect(JSON.stringify(results[0])).not.toContain('private transport');
   });
+  it('retains progress and makes no model call when the authenticated provider omits a lockfile patch', async () => {
+    mockGetDescription.mockResolvedValue('Issue body');
+    const compareCommits = jest.fn(async () => ({ data: { files: [{ filename: 'frontend/pnpm-lock.yaml', status: 'modified', additions: 973, deletions: 1410 }] } }));
+    const repository = new ProgressDiffRepository({ getClient: () => ({ rest: { repos: { compareCommits } } }) } as never);
+    mockGetDiff.mockImplementation((base, head) => repository.getDiff('owner', 'repo', base, head, 'token'));
+    const results = await invoke(baseParam());
+    expect(results[0]).toMatchObject({ success: false, errors: [{ code: 'validation.evidence-unavailable', retryable: false }] });
+    expect(compareCommits).toHaveBeenCalledWith({ owner: 'owner', repo: 'repo', base: BASE_HEAD, head: SOURCE_HEAD, per_page: 1, page: 1 });
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockSetProgressLabel).not.toHaveBeenCalled();
+    expect(mockSetLabels).not.toHaveBeenCalled();
+  });
+
   it('withholds progress mutation when the base branch changes during analysis', async () => {
     mockGetDescription.mockResolvedValue('Issue body'); mockAskAgent.mockResolvedValue({ progress: 75, summary: 'Old base' });
     mockGetBranchHeadSha.mockResolvedValueOnce(SOURCE_HEAD).mockResolvedValueOnce(BASE_HEAD).mockResolvedValueOnce(SOURCE_HEAD).mockResolvedValueOnce(NEWER_HEAD);

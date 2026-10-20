@@ -668,3 +668,61 @@ propagation timing is not asserted as a guaranteed consistency SLA.
 Primary schema references: [Issue projectItems](https://docs.github.com/en/graphql/reference/issues),
 [PullRequest projectItems](https://docs.github.com/en/graphql/reference/pulls),
 and [ProjectV2Item](https://docs.github.com/en/graphql/reference/projects).
+
+
+## 22. Authenticated exact issue linkage (2026-10-20, #610)
+
+Observed defect: the HTML linkage query ignored the configured token and returned
+404 for private PRs. The intentional contract now uses authenticated GitHub
+GraphQL `closingIssuesReferences`, including manually linked issues, for the
+exact repository and PR. Only the intended issue in that same repository permits
+the already-linked no-op. No HTML request, public-repository workaround, or extra
+permission is allowed. The semantic link port carries the intended issue number;
+the credential-bound adapter owns provider DTOs and error mapping.
+
+```text
+bound PR + intended issue -> authenticated references -> exact match: no-op
+                                                   -> proven absence: existing link/restore flow
+                                                   -> incomplete/error: retain or compensate state
+```
+
+Text equivalent: inspect authenticated references first; preserve the existing
+link-and-compensate sequence only after proven absence. Missing PRs, denied or
+invalid credentials, rate limiting, and transport errors remain distinct.
+Unsupported clients and malformed/exhausted reference evidence are nonretryable.
+The fixed limit is two pages of 100 references, with validated cursor progression;
+no configuration, persistence migration, extra comment, or model call is added.
+The base/body compensation and owned-marker recovery rules remain mandatory.
+
+Representative failed-state content uses the shared semantic error view:
+“Unable to inspect issue linkage for pull request #12.” A missing resource shows
+`provider.not-found`, “Verify the target resource and retry the operation”, and
+`Retryable: No`. Temporary transport failure keeps `provider.unavailable` and
+retry guidance. Completed project/review work remains completed. Normal successful
+linkage adds no new publication. Existing locale, text-only, and noise rules apply.
+
+The regression budget is **at least 27 adapter cases** across authenticated
+public/private access (2), exact/absent/paginated references (3), HTTP and GraphQL
+error mapping (11), malformed/foreign/exhausted evidence (8), rate limiting (1),
+unsupported capability (1), and input identity (1). Existing use-case restoration
+and capability-binding suites remain required, including failure before edits
+and interrupted compensation. Deterministic mocks verify no HTML call, credential
+binding, and a maximum of two reads. Repository coverage and architecture gates
+remain unchanged. Documentation: `docs/pull-requests/configuration.mdx`.
+
+Acceptance: authenticated private PR inspection succeeds; a foreign link cannot
+skip the intended link; missing/incomplete evidence never proves absence; errors
+before edits retain the body/base; owned pending edits are compensated on failure.
+Validate with the lifecycle repository, linkage use-case and binding suites,
+typecheck, lint, specification and documentation checks. The existing adapter and
+composition architecture checks enforce dependency direction. Rollback restores
+prior lookup behavior without data cleanup; private linkage would regress.
+Live acceptance uses the managed correction PR, then the published patch in a
+private consumer. Local verification does not claim consumer deployment.
+
+Primary schema: [GitHub PullRequest closingIssuesReferences](https://docs.github.com/en/graphql/reference/pulls).
+
+Review follow-up: an HTTP 200 GraphQL `UNAUTHORIZED` error is a nonretryable
+`authorization.denied`, consistent with `FORBIDDEN` and the existing deployment
+GraphQL error policy. A dedicated regression first reproduces the incorrect
+retryable outage and then verifies terminal, sanitized credential guidance.

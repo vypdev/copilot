@@ -1916,3 +1916,81 @@ one extra code point at both stages. They supplement, rather than recount, the
 three parser-only cases. Existing response size/prompt byte ceilings and typed,
 sanitized length failures remain unchanged; catalog evidence and operator docs
 must identify the shared local validator.
+
+
+### Omitted progress patches are terminal evidence loss (2026-10-20, #611)
+
+Observed defect: GitHub returned 14 file records for an immutable dependency
+remediation comparison, but omitted the changed `frontend/pnpm-lock.yaml` patch.
+The adapter mislabeled this as a retryable provider outage. The intentional
+contract now reports **`validation.evidence-unavailable`, nonretryable**, before
+any model call or progress mutation. Transport failures remain distinct and
+retryable. The code is part of the shared error model and English/Spanish catalog;
+other locales retain complete-catalog resolution/fallback. It introduces no
+additional publication, permission, configuration, stored state or migration.
+
+```text
+exact-SHA authenticated comparison -> all required source patches present -> existing assessment
+                                  -> omitted required patch -> unassessed; retain progress
+                                  -> transport failure -> existing retryable provider failure
+```
+
+Text equivalent: validate the entire inventory before assessment; complete
+evidence permits analysis, omitted evidence stops without assessing progress,
+and actual transport failures retain their temporary-provider semantics.
+
+Every changed source path, including pnpm lockfiles, binary changes, empty-file
+changes and content-unproven renames, MUST provide a nonempty patch. Only paths
+explicitly marked unchanged with zero additions/deletions may carry empty source
+evidence. Existing `build/` and exact `specs/CATALOG.md` exceptions retain their
+explicit generated metadata label; metadata never proves reviewed contents,
+builds, tests, or completion. Lockfiles MUST NOT become a metadata exception.
+The patch release deliberately uses the issue's supported terminal-diagnostic
+route rather than adding a content retrieval fallback. Requests remain bound to
+the configured credential and exact base/head SHAs; no mutable ref, workspace
+read, ignored file, truncation, or increased limit is introduced.
+
+Representative Job Summary/CLI content:
+
+```text
+Impact: Progress was not assessed because GitHub omitted a required file patch.
+Error code: validation.evidence-unavailable
+Action: Inspect the exact base/head comparison manually or split the work into
+smaller reviewed changes with complete patches before a new assessment.
+Retrying the same commits cannot restore omitted evidence.
+Retained state: Existing progress labels and published assessments were preserved;
+no model assessment was made.
+Retryable: No
+```
+
+Pending/complete/stale/canceled states keep the existing content. If other steps
+succeed, their completed facts remain visible alongside this failed assessment;
+there is no partial percentage. Existing linked-run navigation, plain-language
+labels, sanitization and accessibility rules apply. The maintainer inspects the
+exact immutable comparison in GitHub and may split subsequent reviewed work to
+obtain complete patches. Manual review alone MUST NOT alter progress or mark
+Copilot completion. Repeating the same input is not an automated recovery path.
+
+The **12-case regression budget** is distributed as eight adapter cases (14-file
+pnpm incident, four zero-line/binary/empty/rename ambiguity cases, two explicit
+generated exceptions, one complete lockfile), one adapter-to-use-case case with
+no model/label calls, two localized terminal-diagnostic cases, and the updated
+closed error-model contract. Existing exact-SHA, token, 299/300-file, per-file,
+partition, invalid-input, and real transport-failure tests remain mandatory.
+Deterministic fakes use no network or sleeps. Global coverage, dependency and
+semantic publication guards remain unchanged; full tests/build/type/lint,
+specification/catalog and documentation checks are required.
+
+Traceability: the patch-presence rule belongs to `ProgressDiffRepository` and its
+repository tests; no-assessment/state retention belongs to the existing progress
+use case plus its adapter integration fixture; the terminal content belongs to
+the shared error model/catalog and presentation tests. Documentation changes
+land in `docs/agents/execution-contract.mdx` and the operational error reference.
+Acceptance MUST reproduce the omitted 14th patch, preserve existing progress,
+make zero model calls, report No for retry, and keep genuine outage semantics.
+A complete lockfile patch still assesses normally. Rollout is a patch upgrade
+with no state migration; rollback restores misleading retry guidance. Live
+consumer verification remains separate from deterministic local evidence.
+
+Primary source: [GitHub compare-two-commits](https://docs.github.com/en/rest/commits/commits#compare-two-commits)
+documents missing binary patches and the fixed first-page file inventory bound.

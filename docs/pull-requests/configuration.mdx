@@ -48,3 +48,21 @@ issue numbers must be positive safe integers, branch refs must be safe, and the
 provider target is derived from the configured repository rather than an event
 URL. The temporary marker format, default-branch observation delay, compensation
 order, and exact-body restoration cannot be weakened by workflow inputs.
+
+Linkage inspection uses the configured token with GitHub GraphQL
+`closingIssuesReferences`; it never requests a public HTML page. Private and
+public PRs follow the same path. The exact repository, PR and intended issue
+must match; a link to another issue or repository does not skip linkage. Reads
+are fixed at two pages of 100 references. Incomplete or malformed evidence stops
+the operation rather than claiming the PR is unlinked.
+
+If inspection fails before temporary edits, the current base and description
+remain unchanged. An interrupted owned operation still attempts compensation.
+`authorization.credential-invalid` and `authorization.denied` require checking
+the documented credential access (including GraphQL `UNAUTHORIZED` and
+`FORBIDDEN` responses); `provider.not-found` requires checking the PR
+identity and credential visibility. `configuration.unsupported` requires a
+supported installation; `provider.contract-invalid` requires integration review
+(including the fixed reference limit). Rate limits and transport outages retain
+their retryable diagnostics. Inspect the run's retained-state guidance before
+retrying an interrupted operation. No additional permission is introduced.

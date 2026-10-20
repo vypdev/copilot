@@ -38,13 +38,38 @@ describe('pinned bounded progress diff', () => {
     });
     it('requires a complete source patch for the editable specification catalog', async () => {
         const f = fixture(); Object.assign(f.file, { filename: 'specs/catalog.json', patch: undefined });
-        await expect(f.read()).rejects.toMatchObject({ code: 'provider.unavailable' });
+        await expect(f.read()).rejects.toMatchObject({ code: 'validation.evidence-unavailable' });
+    });
+    it('reports the 14-file omitted pnpm lockfile patch as terminal evidence loss at exact SHAs', async () => {
+        const f = fixture();
+        f.data.files = Array.from({ length: 13 }, (_, n) => ({ ...f.file, filename: `frontend/src/${n}.ts` }));
+        f.data.files.push({ ...f.file, filename: 'frontend/pnpm-lock.yaml', additions: 973, deletions: 1410, patch: undefined as never });
+        await expect(f.read()).rejects.toMatchObject({ code: 'validation.evidence-unavailable', retryable: false,
+            retainedState: expect.stringContaining('no model assessment'), action: expect.stringContaining('same commits') });
+        expect(f.getClient).toHaveBeenCalledWith('PRIVATE_TOKEN');
+        expect(f.compareCommits).toHaveBeenCalledTimes(1);
+        expect(f.compareCommits).toHaveBeenCalledWith({ owner: 'acme', repo: 'demo', base, head, per_page: 1, page: 1 });
+    });
+    it.each(['binary', 'added empty', 'removed empty', 'rename without content evidence'])('does not mistake %s for complete reviewed content', async scenario => {
+        const f = fixture();
+        Object.assign(f.file, { filename: scenario === 'binary' ? 'assets/image.png' : 'src/empty.ts',
+            status: scenario === 'added empty' ? 'added' : scenario === 'removed empty' ? 'removed' : scenario.startsWith('rename') ? 'renamed' : 'modified',
+            additions: 0, deletions: 0, patch: undefined });
+        await expect(f.read()).rejects.toMatchObject({ code: 'validation.evidence-unavailable', retryable: false });
+    });
+    it.each(['build/github_action/index.js', 'specs/CATALOG.md'])('retains the explicit generated metadata exception for %s', async filename => {
+        const f = fixture(); Object.assign(f.file, { filename, patch: undefined });
+        expect(JSON.parse((await f.read()).evidence).changes[0]).toMatchObject({ path: filename, evidence: 'generated-metadata-only' });
+    });
+    it('assesses a lockfile only when its complete patch is supplied', async () => {
+        const f = fixture(); f.file.filename = 'frontend/pnpm-lock.yaml';
+        expect(JSON.parse((await f.read()).evidence).changes[0]).toMatchObject({ path: f.file.filename, patch: f.file.patch });
     });
     it('accepts a proven empty same-object comparison', async () => {
         const f = fixture(); f.data.files = []; expect(JSON.parse((await f.read(base, base)).evidence).changes).toEqual([]);
     });
-    it('accepts metadata for a source path with no changed lines and no patch', async () => {
-        const f = fixture(); Object.assign(f.file, { additions: 0, deletions: 0, patch: undefined });
+    it('accepts metadata only for an explicitly unchanged source path', async () => {
+        const f = fixture(); Object.assign(f.file, { status: 'unchanged', additions: 0, deletions: 0, patch: undefined });
         expect(JSON.parse((await f.read()).evidence).changes[0].patch).toBe('');
     });
     it('admits a proven 299-file inventory while keeping the 300-file ceiling', async () => {
@@ -73,7 +98,7 @@ describe('pinned bounded progress diff', () => {
         if (scenario === 'empty path') f.file.filename = '';
         if (scenario === 'non-string path') f.file.filename = 42 as never;
         if (scenario === 'oversized filename') f.file.filename = 'x'.repeat(1025);
-        await expect(f.read(base, scenario === 'same-object nonempty diff' ? base : head)).rejects.toMatchObject({ code: scenario === 'same-object nonempty diff' ? 'workflow.stale' : scenario.startsWith('oversized') && scenario !== 'oversized filename' ? 'validation.evidence-too-large' : 'provider.unavailable' });
+        await expect(f.read(base, scenario === 'same-object nonempty diff' ? base : head)).rejects.toMatchObject({ code: scenario === 'same-object nonempty diff' ? 'workflow.stale' : scenario === 'missing source patch' ? 'validation.evidence-unavailable' : scenario.startsWith('oversized') && scenario !== 'oversized filename' ? 'validation.evidence-too-large' : 'provider.unavailable' });
     });
     it.each([undefined, -1, 0.5])('rejects unproven numeric file facts %s', async additions => {
         const f = fixture(); Object.assign(f.file, { additions }); await expect(f.read()).rejects.toMatchObject({ code: 'provider.unavailable' });
