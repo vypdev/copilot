@@ -45881,6 +45881,34 @@ function verifiedReadinessLink(snapshot, number) {
 
 /***/ }),
 
+/***/ 59756:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.hasConventionalPullRequestTitle = hasConventionalPullRequestTitle;
+exports.generatedPullRequestTitle = generatedPullRequestTitle;
+/** Recognizes the conventional header shape; the consumer's CI owns its allowed types and subject rules. */
+function hasConventionalPullRequestTitle(title) {
+    return !title.includes('\n') && !title.includes('\r')
+        && /^\p{L}[\p{L}\p{N}_-]*(?:\([^()\r\n]+\))?!?: +\S[^\r\n]*$/u.test(title);
+}
+function generatedPullRequestTitle(sourceTitle, sanitizedSubject, issueNumber, labels) {
+    if (hasConventionalPullRequestTitle(sourceTitle))
+        return sourceTitle;
+    const type = labels.isHotfix || labels.isBugfix || labels.isBug ? 'fix'
+        : labels.isFeature || labels.isEnhancement ? 'feat'
+            : labels.isDocs || labels.isDocumentation ? 'docs' : 'chore';
+    const prefix = `${type}: `;
+    const suffix = ` (#${issueNumber})`;
+    const subject = (sanitizedSubject || 'Update linked issue').slice(0, 256 - prefix.length - suffix.length).trimEnd();
+    return `${prefix}${subject}${suffix}`;
+}
+
+
+/***/ }),
+
 /***/ 39410:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -70105,6 +70133,7 @@ exports.titleUpdateFailure = titleUpdateFailure;
 const result_1 = __nccwpck_require__(73817);
 const application_error_1 = __nccwpck_require__(75999);
 const positive_integer_policy_1 = __nccwpck_require__(19879);
+const pull_request_title_policy_1 = __nccwpck_require__(59756);
 function projectUpdateTitleContext(source) {
     if (source.isIssue) {
         return Object.freeze({
@@ -70155,19 +70184,27 @@ async function runPullRequestTitleUpdate(param, taskId, issueRepository) {
     if (!linkedIssueNumber || linkedIssueNumber === param.pullRequestNumber) {
         return [skippedResult(taskId)];
     }
+    const currentTitle = await issueRepository.getTitle(param.pullRequestNumber);
+    if (currentTitle === undefined) {
+        return [new result_1.Result({ id: taskId, success: false, executed: true,
+                steps: ['The current pull request title could not be read. No title change was attempted.'],
+                errors: [new application_error_1.ApplicationError('provider.unavailable', 'Unable to read the current pull request title.')] })];
+    }
+    if ((0, pull_request_title_policy_1.hasConventionalPullRequestTitle)(currentTitle))
+        return [skippedResult(taskId)];
     const issueTitle = await issueRepository.getTitle(linkedIssueNumber);
     if (issueTitle === undefined) {
         return [new result_1.Result({ id: taskId, success: false, executed: true, steps: ['Tried to update title, but there was a problem.'] })];
     }
     const title = await issueRepository.updatePullRequestTitle({
-        pullRequestTitle: param.pullRequestTitle,
+        pullRequestTitle: currentTitle,
         issueTitle,
         issueNumber: linkedIssueNumber,
         pullRequestNumber: param.pullRequestNumber,
         labelFacts: param.labelFacts,
     });
     return title
-        ? [updatedResult(taskId, `The pull request's title was updated from \`${param.pullRequestTitle}\` to \`${title}\`.`)]
+        ? [updatedResult(taskId, `The pull request's title was updated from \`${currentTitle}\` to \`${title}\`.`)]
         : [skippedResult(taskId)];
 }
 function titleUpdateFailure(taskId, error) {
@@ -84772,6 +84809,7 @@ exports.IssueProgressTrackingRepository = IssueProgressTrackingRepository;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueTitleRepository = void 0;
 const issue_emoji_policy_1 = __nccwpck_require__(81201);
+const pull_request_title_policy_1 = __nccwpck_require__(59756);
 const issue_title_policy_1 = __nccwpck_require__(83179);
 const issue_title_update_1 = __nccwpck_require__(9229);
 class IssueTitleRepository {
@@ -84789,10 +84827,12 @@ class IssueTitleRepository {
                 return (0, issue_title_update_1.updateIssueTitle)(this.issueTitleClient, owner, repository, issueTitle, formattedTitle, issueNumber, token);
             });
         };
-        this.updateTitlePullRequestFormat = async (owner, repository, pullRequestTitle, issueTitle, issueNumber, pullRequestNumber, branchManagementEmoji, labels, token) => {
+        this.updateTitlePullRequestFormat = async (owner, repository, pullRequestTitle, issueTitle, issueNumber, pullRequestNumber, _branchManagementEmoji, labels, token) => {
             return (0, issue_title_update_1.withTitleUpdateLogging)(() => {
-                const emoji = (0, issue_emoji_policy_1.resolvePullRequestTitleEmoji)(labels, branchManagementEmoji);
-                const formattedTitle = `[#${issueNumber}] ${emoji} - ${(0, issue_title_policy_1.sanitizePullRequestTitle)((0, issue_title_policy_1.normalizePullRequestSourceTitle)(issueTitle, issueNumber))}`;
+                if ((0, pull_request_title_policy_1.hasConventionalPullRequestTitle)(pullRequestTitle))
+                    return Promise.resolve(undefined);
+                const sourceTitle = (0, issue_title_policy_1.normalizePullRequestSourceTitle)(issueTitle, issueNumber);
+                const formattedTitle = (0, pull_request_title_policy_1.generatedPullRequestTitle)(sourceTitle, (0, issue_title_policy_1.sanitizePullRequestTitle)(sourceTitle), issueNumber, labels);
                 return (0, issue_title_update_1.updateIssueTitle)(this.issueTitleClient, owner, repository, pullRequestTitle, formattedTitle, pullRequestNumber, token);
             });
         };

@@ -37,8 +37,15 @@ Copilot preserves the original review comment byte-for-byte. For an addressed re
 |-------|-------------|---------|
 | `commit-prefix-transforms` | Transforms for commit prefix from branch name (e.g. `replace-slash`) | "replace-slash" |
 | `token` | GitHub PAT (required for linking and project updates) | — |
+| `emoji-labeled-title` | Label-based issue titles and conventional linked PR title generation; an existing conventional PR title takes precedence | "true" |
 
 For size thresholds, priority labels, and branch naming (used when the action infers the issue from the branch), see [Configuration](/configuration).
+
+See [PR title precedence](/pull-requests/workflow-setup#pull-request-title-precedence)
+for generated prefixes, author corrections and migration from decorated titles.
+Setting `emoji-labeled-title: "false"` disables both issue and PR title automation
+when your repository uses another title convention. There is no separate title
+format input; the consumer's semantic-title check remains authoritative.
 
 ## Fixed linkage safety rules
 
