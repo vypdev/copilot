@@ -1,0 +1,135 @@
+---
+title: Set up with the web assistant
+description: Install Copilot with the local browser assistant, then verify a real GitHub workflow.
+---
+
+This is the recommended interactive installation path. The assistant runs on your computer and prepares the selected workflows and GitHub resources. You review the plan before permission checks or installation changes begin.
+
+The assistant keeps tutorial, first-workflow and troubleshooting links available throughout the session. They open in another tab and retain your answers. Each question also links to its own reference and has a **Why this matters** explanation. See [Use the documentation](/using-the-docs) for version selection and offline help.
+
+## Before you start
+
+| You need | Why |
+|---|---|
+| [Node.js 24 or newer](https://nodejs.org/en/download) and [pnpm](https://pnpm.io/installation) | Run the published CLI and local browser assistant; use the official installation guides if either command is missing |
+| A working checkout at its root, on an attached Git branch | Inspect and prepare files for the intended repository; bare repositories and detached HEAD are rejected |
+| The intended production and development branches | Setup asks for their names; the selected development branch must already exist |
+| Permission to configure the selected repository resources | Workflows, labels, Variables and Secrets need different grants; setup derives the exact list from your choices |
+| Access to the GitHub account chosen as the workflow bot | Its workflow PAT supplies the Action identity; a dedicated account is recommended |
+| A runner and runtime/model authentication for AI features | Your local CLI installation does not authenticate or provision the runtime on a remote runner |
+
+For a small first installation, choose Issues, Pull requests, Commits, comment commands and the Documentation issue kind. Leave Projects, releases and hotfixes for later unless you already have their prerequisites. You can use the [goal guides](/guides) to decide what to enable.
+
+## 1. Launch and pair
+
+```bash
+node --version
+pnpm add --global @vypdev/copilot
+copilot --version
+cd /path/to/your/repository
+copilot setup --web
+```
+
+Keep the launching terminal open. The CLI opens a short-lived page on `127.0.0.1`; if no browser opens, use the local URL printed in that terminal. Enter its 16-character pairing code, then choose **Connect to local setup**. Keep the code private. Refreshing the page requires pairing again.
+
+<Image src="/assets/setup-web-pairing.png" alt="Web setup pairing screen with a terminal-code field and the six-stage journey" />
+
+*Example screen from the repository's read-only fixture. No real credential or setup operation is shown.*
+
+**Expected result:** the page names the repository you intend to configure. Confirm its owner, name and branch. If another repository appears, stop and relaunch from the correct checkout.
+
+The page offers English, Spanish, French and Portuguese, plus System/Light/Dark themes. These display settings do not change the repository's configured message locale.
+
+## 2. Choose the installation and capabilities
+
+Choose **This repository** for your first installation. A new checkout offers **Start setup**; an existing installation offers inspection and maintenance choices. Use **Run the complete assistant** when you intend to configure the full installation. That path starts a new questionnaire with its defaults, so inspect existing settings before changing them.
+
+Choose **Basic guided setup** unless you need every advanced setting. Basic still asks for permission, branch, runner, Project, approval and storage decisions. **Customize every setting** exposes the advanced configuration. Use **Previous question** or the plan's **Change** controls to revise answers without losing the others.
+
+The six milestones are:
+
+```text
+Repository → Setup choices → Setup PAT → Plan → Bot PAT & credentials → Apply
+```
+
+They describe progress through the current run, not a fixed number of questions. Select the issue kinds and capabilities you actually want; **All** is initially selected for issue kinds. Keep Documentation enabled for the [first workflow](/first-workflow).
+
+Review these decisions before continuing:
+
+| Decision | Suggested starting point |
+|---|---|
+| Branches | Select the actual production and development branches; do not accept `master`/`develop` if your repository uses other names |
+| Runner | Choose a supported hosted route or a known self-hosted route with actual access and capacity |
+| Agent | Select a supported runtime, allowed model and authentication available on that runner |
+| Secrets and Variables | Repository scope is simplest for one repository; review shared impact when choosing organization scope |
+| Projects | Enable only if you need board updates and both operator and bot can access the selected Projects |
+| PR approval | New setup offers `recommend`, which assesses readiness without submitting `APPROVE`; use `off` to disable assessment |
+| Releases and hotfixes | Enable after reviewing the [deployment preflight](/guides/releases-and-hotfixes#before-launching-a-release) and your own deployment steps |
+
+`guarded` approval is an explicit choice with additional CI/coverage, identity and branch-rule requirements. It does not grant merge authority. See [Guarded PR approval](/pull-requests/guarded-approval).
+
+## 3. Provide the temporary setup PAT
+
+The assistant first asks the choices that affect permissions, then shows the setup PAT grants. Follow the guided GitHub link or use manual entry. On GitHub, confirm the operator account, select the intended repository, review the grants, create the token and paste it into the masked setup field.
+
+| Credential | Owner and purpose | Where it remains |
+|---|---|---|
+| Setup PAT | Operator; inspect and configure this installation | Local command/session only; it is not saved as the workflow Secret |
+| Workflow PAT | Bot account; run installed repository automation | Actions Secret `PAT` at the scope reviewed in the plan |
+| Agent credential, when needed | Selected model/provider account | Selected Secret or authenticated controlled runner, according to your configuration |
+
+GitHub handles sign-in, account switching, 2FA and token issuance in its own tabs. Copilot cannot create or revoke PATs. The exact grants depend on your choices; follow the displayed report and [Authentication](/authentication), rather than copying a blanket permission list.
+
+**Expected result:** the setup identity and required read access are verified. A failed required permission blocks progress with corrective guidance. The browser does not dispatch or temporarily install a credential-health workflow before **Apply setup**.
+
+## 4. Review the plan
+
+Inspect the capability and agent/model choices, branch roles, approval policy, Projects, storage scopes, complete file changes, Variables, Secret names and temporary permission tests. Expand inventories and use **Change** to correct a section.
+
+<Image src="/assets/setup-web-plan.png" alt="Example setup-plan decisions showing capabilities, runtime/model routes, branches, recommendation-only approval and trusted CI identity" />
+
+*Read-only fixture data illustrates the plan. Its model name, organization scope and repository are examples, not recommended configuration values.*
+
+Choose **Approve this plan** only after review. Approval authorizes the listed temporary create/read/delete permission checks; they may leave Actions, Issue or PR history or notifications. Reading or editing the plan starts no setup changes. A blocked check must be resolved before installation continues.
+
+## 5. Provide bot credentials and apply
+
+Use the bot PAT link under the **bot account named by the assistant**. A private GitHub browser window can help avoid creating it under the operator account. Confirm the account, selected repository and grants on GitHub, then paste the token into the separate masked bot field. If the account is wrong, choose **Enter another bot PAT**; the session retains your answers and reviewed plan.
+
+Supply any requested provider credentials, then review the separate **Apply setup** confirmation. Apply prepares local installation files and selected remote resources. The result distinguishes completed, skipped, not-started and needs-inspection items. Inspect partial results before retrying; an interrupted request may already have changed GitHub.
+
+**Expected result:** an itemized installation receipt. It describes what was prepared or changed; it does not establish that the installed Action has run successfully.
+
+## Install the generated files
+
+For the current-repository path, inspect the local changes with `git status` and `git diff`. Review the generated workflows, forms, PR template, guidance and installation manifest, then commit them and open a normal installation PR. Merge through your repository's usual review and protection rules.
+
+The workflows and Issue Forms must be available on the repository's **default branch** before testing its issue events. If development is a separate branch, bring the reviewed installation into that line through your normal protected process too: issue branches start from it, and checkout-time files must be present there. Do not infer that GitHub's default branch and Copilot's production/development roles are the same.
+
+The [batch installation path](/how-to-use#reuse-organization-settings-or-configure-several-repositories) opens setup PRs instead of treating local files as an installed result. Those PRs still need human review, merge and runtime verification.
+
+## Verify the installation
+
+1. After a successful Apply, **Verify installed setup (read-only)** checks metadata in the same session. Alternatively, from the checkout, run:
+
+   ```bash
+   copilot doctor --read-only
+   ```
+
+   Supply a valid setup PAT when prompted. Inspect failures and warnings; preserved Secret values remain unverified. This mode does not dispatch Actions.
+2. Complete [Your first issue-to-PR workflow](/first-workflow). Check issue admission, the linked branch, the PR results and the exact revision tested. This is the runtime proof for the capabilities exercised.
+3. Delete the temporary setup PAT yourself in GitHub when you no longer need it. Keep the bot PAT active and renew it before expiry. If you deleted the setup PAT earlier, create a valid one before another local diagnosis.
+
+Plain `copilot doctor` can dispatch the installed credential-health workflow when available. Choose it explicitly when you want that additional check; metadata verification and credential health are different evidence.
+
+## If you get stuck
+
+| Symptom | Next action |
+|---|---|
+| Browser does not open or pairing code is lost | Use the terminal's local URL; if its output is unavailable, stop and relaunch from a readable terminal |
+| No Issue Forms or workflows appear in GitHub | Check that the reviewed installation reached the default branch |
+| Wrong account or missing PAT grant | Follow the displayed corrected-token/account guidance and [Authentication](/authentication) |
+| Apply is partial or cleanup needs inspection | Inspect the named resources and terminal diagnostic before starting a fresh reviewed run |
+| Metadata checks pass but Actions fail | Check the run's Job Summary, runner availability, bot PAT and runtime authentication using [Troubleshooting](/security-operations/operations/troubleshooting) |
+
+For a no-change preview, use `copilot setup --web --dry-run`. The web assistant cannot be combined with unattended approval or secret-bearing CLI flags. For terminal setup, automation, updates and advanced integrations, use the [setup and maintenance reference](/how-to-use).

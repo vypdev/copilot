@@ -719,7 +719,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-19",
+      "lastVerified": "2026-10-20",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
@@ -893,7 +893,11 @@
         "src/application/policies/setup_runner_installation_summary_policy.ts",
         "src/utils/setup_files.ts",
         "src/domain/specification_catalog_path_policy.cjs",
-        "src/domain/sdd_prerequisite_policy.cjs"
+        "src/domain/sdd_prerequisite_policy.cjs",
+        "src/application/contracts/setup_documentation.ts",
+        "src/application/policies/setup_question_documentation_policy.ts",
+        "web/src/components/SetupHelp.svelte",
+        "web/src/components/CompletedSetupHelp.svelte"
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
@@ -1014,7 +1018,9 @@
         "src/cli/__tests__/setup_runner_config_file.test.ts",
         "src/infrastructure/__tests__/setup_runner_composition.test.ts",
         "src/tooling/__tests__/setup_provisioning_workflow.test.ts",
-        "src/infrastructure/__tests__/setup_sdd_prerequisites.test.ts"
+        "src/infrastructure/__tests__/setup_sdd_prerequisites.test.ts",
+        "src/cli/__tests__/setup_documentation_navigation.test.ts",
+        "src/application/policies/__tests__/setup_question_documentation_policy.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -1030,7 +1036,15 @@
         "docs/security-operations/operations/verification.mdx",
         "docs/development/setup-pat-provider-audit-2026-10-06.md",
         "docs/issues/comment-commands.mdx",
-        "docs/issues/branch-synchronization.mdx"
+        "docs/issues/branch-synchronization.mdx",
+        "docs/setup-web.mdx",
+        "docs/first-workflow.mdx",
+        "docs/using-the-docs.mdx",
+        "docs/guides/index.mdx",
+        "docs/guides/issues-and-branches.mdx",
+        "docs/guides/review-pull-requests.mdx",
+        "docs/guides/work-with-the-bot.mdx",
+        "docs/guides/releases-and-hotfixes.mdx"
       ]
     },
     {
@@ -1039,7 +1053,7 @@
       "status": "proposed",
       "scope": "Offer a packaged, loopback-only Svelte setup interface over the existing engine with four-language guidance, English CLI help, basic/custom first-run paths, editable question and plan review, source-labelled GitHub facts, assisted CI and Project evidence, role-separated PATs, and truthful itemized outcomes; inspect existing configuration and apply independent, scope-aware runtime adjustments with permission, drift and read-back verification",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-14",
+      "lastVerified": "2026-10-20",
       "specs": [
         "specs/local-web-setup-assistant.md",
         "specs/setup-configuration-management.md"
@@ -1196,7 +1210,11 @@
         "web/src/components/InstallationReview.svelte",
         "web/src/components/RunnerQuestionDetails.svelte",
         "web/src/i18n/runnerCopy.ts",
-        "scripts/web-setup-runner-review-fixtures.cjs"
+        "scripts/web-setup-runner-review-fixtures.cjs",
+        "src/application/contracts/setup_documentation.ts",
+        "src/cli/setup_journey_presenter.ts",
+        "web/src/components/SetupHelp.svelte",
+        "web/src/components/CompletedSetupHelp.svelte"
       ],
       "tests": [
         "src/__tests__/cli.test.ts",
@@ -1261,7 +1279,8 @@
         "src/infrastructure/__tests__/setup_management_workspace_adapter.test.ts",
         "src/cli/__tests__/setup_management_adapter.test.ts",
         "src/cli/__tests__/web_setup_management_components.test.ts",
-        "src/cli/__tests__/web_setup_runner_components.test.ts"
+        "src/cli/__tests__/web_setup_runner_components.test.ts",
+        "src/cli/__tests__/setup_documentation_navigation.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -1277,7 +1296,15 @@
         "docs/dependency-rules.md",
         "docs/security-operations/security/self-hosted-runners.mdx",
         "docs/security-operations/operations/troubleshooting.mdx",
-        "docs/security-operations/operations/provisioning.mdx"
+        "docs/security-operations/operations/provisioning.mdx",
+        "docs/setup-web.mdx",
+        "docs/first-workflow.mdx",
+        "docs/using-the-docs.mdx",
+        "docs/guides/index.mdx",
+        "docs/guides/issues-and-branches.mdx",
+        "docs/guides/review-pull-requests.mdx",
+        "docs/guides/work-with-the-bot.mdx",
+        "docs/guides/releases-and-hotfixes.mdx"
       ]
     },
     {

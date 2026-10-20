@@ -5,6 +5,8 @@ description: Detect potential problems, publish findings, and optionally apply t
 
 # Bugbot
 
+For the setup-to-resolution walkthrough, use [Review PRs and resolve findings](/guides/review-pull-requests). To request a general implementation, use [Work with the bot](/guides/work-with-the-bot). This section is the detailed Bugbot reference.
+
 Bugbot analyzes changes with the configured agent CLI and publishes structured findings to issues and pull requests. It can optionally apply fixes or user-requested changes when the workflow is restricted to trusted actors and the verification commands pass.
 
 <Warning>
@@ -24,11 +26,11 @@ See [Agent CLI configuration](/agents/cli-configuration) and [Configuration](/bu
 
 | What you do | What happens |
 | --- | --- |
-| **Push** to a branch linked to an issue | Bugbot analyzes the diff and posts findings on the issue and, when uniquely verified, one canonical PR. |
+| **Push** to a branch linked to an issue | Without an open PR, Bugbot analyzes the branch and posts findings on the issue. With a verified open PR, its synchronization event owns review; the paired push keeps issue progress current. |
 | **Open, reopen, or synchronize a PR** | Bugbot reviews the full PR when it opens/reopens and only the new commit range on synchronization, while rechecking every open finding and reconciling one current status card from verified GitHub state. |
 | **Comment** `/copilot review`, `/copilot findings`, or `/copilot recheck` | Bugbot performs a read-only review and reconciles historical review blocks, native threads, the status card, Check, and Job Summary without changing files. |
-| **Comment** “fix it” / “fix all” (with permission) | The selected agent applies the requested fixes; verification commands run before any commit or push. |
-| **Comment** “add a test for X” (with permission) | The selected agent applies the request; verification commands run before any commit or push. |
+| **Address the bot** with a fix request, or use `/copilot fix <finding-id>` (with permission) | The selected agent applies the requested fixes on the authoritative PR branch; configured verification runs before any commit or push. |
+| **Comment** `/copilot implement add a test for X` (with permission) | The selected agent applies the request on the verified working branch; configured verification runs before any commit or push. |
 | **Comment** `/copilot remember <rule>` (with permission) | Adds an auditable rule to `.copilot/BUGBOT.learned.md` and commits it. |
 
 ## Pages

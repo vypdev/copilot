@@ -38004,6 +38004,23 @@ exports.TITLE = 'Copilot';
 
 /***/ }),
 
+/***/ 2396:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SETUP_DOCUMENTATION = void 0;
+/** Public, source-controlled navigation. Never attach session, repository or credential data. */
+exports.SETUP_DOCUMENTATION = {
+    tutorial: 'https://docs.page/vypdev/copilot/setup-web',
+    firstWorkflow: 'https://docs.page/vypdev/copilot/first-workflow',
+    recovery: 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting',
+};
+
+
+/***/ }),
+
 /***/ 75999:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -50159,13 +50176,16 @@ function validateDiscoveredProjectStatuses(configuration, discovery) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.setupQuestionDocumentation = setupQuestionDocumentation;
 const docs = {
-    features: { title: 'Copilot features and workflow triggers', url: 'https://docs.page/vypdev/copilot/features' },
-    issueWorkflows: { title: 'Copilot issue workflow setup', url: 'https://docs.page/vypdev/copilot/issues/workflow-setup' },
+    features: { title: 'Choose a Copilot goal', url: 'https://docs.page/vypdev/copilot/guides' },
+    issueWorkflows: { title: 'Select issue kinds and forms', url: 'https://docs.page/vypdev/copilot/issues/configurable-workflows' },
+    issuesGuide: { title: 'Manage issues and branches', url: 'https://docs.page/vypdev/copilot/guides/issues-and-branches' },
+    reviewGuide: { title: 'Review PRs and resolve findings', url: 'https://docs.page/vypdev/copilot/guides/review-pull-requests' },
+    botGuide: { title: 'Work with the bot', url: 'https://docs.page/vypdev/copilot/guides/work-with-the-bot' },
+    releaseGuide: { title: 'Release and hotfix guide', url: 'https://docs.page/vypdev/copilot/guides/releases-and-hotfixes' },
     branchManagement: { title: 'Issue branch management', url: 'https://docs.page/vypdev/copilot/issues/branch-management' },
     preBranchSdd: { title: 'Pre-branch design documents', url: 'https://docs.page/vypdev/copilot/issues/pre-branch-sdds' },
     issueLifecycle: { title: 'Issue notifications and automatic closure', url: 'https://docs.page/vypdev/copilot/issues/notifications-and-auto-close' },
     assignments: { title: 'Assignees and GitHub Projects', url: 'https://docs.page/vypdev/copilot/issues/assignees-and-projects' },
-    pullRequestWorkflows: { title: 'Pull-request workflow setup', url: 'https://docs.page/vypdev/copilot/pull-requests/workflow-setup' },
     pullRequestDescription: { title: 'AI pull-request descriptions', url: 'https://docs.page/vypdev/copilot/pull-requests/ai-description' },
     repositoryGuidance: { title: 'Repository guidance for agents', url: 'https://docs.page/vypdev/copilot/agents/repository-collaboration' },
     runtime: { title: 'Agent runtime selection', url: 'https://docs.page/vypdev/copilot/agents/runtime-selection' },
@@ -50180,7 +50200,7 @@ const docs = {
     projects: { title: 'Assignees and GitHub Projects', url: 'https://docs.page/vypdev/copilot/issues/assignees-and-projects' },
     githubProjects: { title: 'GitHub: About Projects', url: 'https://docs.github.com/en/issues/planning-and-tracking-with-projects/learning-about-projects/about-projects' },
     githubStatus: { title: 'GitHub: About single-select fields', url: 'https://docs.github.com/en/issues/planning-and-tracking-with-projects/understanding-fields/about-single-select-fields' },
-    provisioning: { title: 'Copilot setup and provisioning', url: 'https://docs.page/vypdev/copilot/how-to-use' },
+    provisioning: { title: 'Set up with the web assistant', url: 'https://docs.page/vypdev/copilot/setup-web' },
     storage: { title: 'GitHub Actions Secrets and Variables', url: 'https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets' },
 };
 /** Links are selected from source-controlled constants, never derived from answers or remote text. */
@@ -50190,10 +50210,14 @@ function setupQuestionDocumentation(question) {
         return { title: 'Runner profiles', url: 'https://docs.page/vypdev/copilot/configuration#runner-profiles' };
     if (id === 'issueWorkflows.enabled')
         return docs.issueWorkflows;
-    if (id === 'features.issues')
-        return docs.issueWorkflows;
+    if (id === 'features.issues' || id === 'features.commits')
+        return docs.issuesGuide;
     if (id === 'features.pullRequests')
-        return docs.pullRequestWorkflows;
+        return docs.reviewGuide;
+    if (id === 'features.issueComments' || id === 'features.pullRequestComments')
+        return docs.botGuide;
+    if (id === 'features.release' || id === 'features.hotfix')
+        return docs.releaseGuide;
     if (id === 'repository.issueManagedBranches' || /^repository\.(feature|bugfix|hotfix|release|docs|chore)Tree$/u.test(id))
         return docs.branchManagement;
     if (id === 'repository.preBranchSdd')
@@ -73494,6 +73518,7 @@ exports.registerSetupCommand = registerSetupCommand;
 const product_identity_1 = __nccwpck_require__(18739);
 const setup_command_options_1 = __nccwpck_require__(99254);
 const setup_execution_1 = __nccwpck_require__(51293);
+const setup_documentation_1 = __nccwpck_require__(2396);
 function registerSetupCommand(program) {
     program
         .command('setup')
@@ -73527,6 +73552,7 @@ function registerSetupCommand(program) {
         .option('--update-workflows', 'Allow setup-managed workflows already in the repository to be updated', false)
         .option('--workflow-pat <token>', 'Workflow PAT for the bot account (prefer the hidden interactive prompt)')
         .option('--secret <name=value>', 'Secret value for non-interactive setup; repeat for each API key', setup_command_options_1.collectSecret, {})
+        .addHelpText('after', `\nGuides (open only when you choose):\n  Web setup tutorial: ${setup_documentation_1.SETUP_DOCUMENTATION.tutorial}\n  First issue-to-PR workflow: ${setup_documentation_1.SETUP_DOCUMENTATION.firstWorkflow}\n  Troubleshooting: ${setup_documentation_1.SETUP_DOCUMENTATION.recovery}\n\nDuring interactive setup, type ? for question help and :back to revisit an answer.\n`)
         .action(setup_execution_1.executeSetupCommand);
 }
 
@@ -75440,9 +75466,19 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ConsoleSetupJourneyPresenter = void 0;
 exports.renderSetupJourney = renderSetupJourney;
 const setup_prompt_rendering_1 = __nccwpck_require__(76673);
+const setup_documentation_1 = __nccwpck_require__(2396);
 class ConsoleSetupJourneyPresenter {
     present(view) {
         console.log(renderSetupJourney(view));
+        if (view.outcome === 'complete') {
+            console.log(`Next: install the reviewed files, then verify your first workflow: ${setup_documentation_1.SETUP_DOCUMENTATION.firstWorkflow}`);
+        }
+        else if (view.outcome === 'blocked' || view.outcome === 'partial') {
+            console.log(`Inspect the result before retrying. Troubleshooting: ${setup_documentation_1.SETUP_DOCUMENTATION.recovery}`);
+        }
+        else if (view.current === 'Repository' || view.outcome === 'dry-run') {
+            console.log(`Setup tutorial (opens only when you choose): ${setup_documentation_1.SETUP_DOCUMENTATION.tutorial}`);
+        }
     }
 }
 exports.ConsoleSetupJourneyPresenter = ConsoleSetupJourneyPresenter;

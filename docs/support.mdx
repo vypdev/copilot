@@ -1,103 +1,56 @@
 ---
 title: Support
-description: Getting help and contributing to Copilot
+description: Find the right guide, collect safe evidence, and report a Copilot problem.
 ---
 
-# Support
+## Start with the result you need
 
-Learn how to get help with Copilot and contribute to its development.
+- Installing: [web setup](/setup-web) and [first issue-to-PR workflow](/first-workflow).
+- Choosing or enabling a capability: [guides by goal](/guides).
+- Finding the correct version or interpreting checks: [use the documentation](/using-the-docs).
+- A blocked setup, command or Action: its receipt/reply and [Troubleshooting](/security-operations/operations/troubleshooting).
 
-## Getting Help
+## Ask a question or report a problem
 
-### Documentation
-- Review the [documentation](https://docs.page/vypdev/copilot)
-- Check the [configuration guide](/configuration) and [Features & Capabilities](/features)
+Search [existing issues](https://github.com/vypdev/copilot/issues) first. If the
+problem is with Copilot itself, use the appropriate installed form under
+[New issue](https://github.com/vypdev/copilot/issues/new/choose): Help for a
+question, Bug Report for a reproducible failure, or Documentation Update for
+missing or unclear instructions. Complete all required fields.
 
-### Issue Reporting
+Include:
 
-When reporting issues, follow these steps:
+| Evidence | What to provide |
+|---|---|
+| Versions | `copilot --version` and the Action ref in the affected workflow |
+| Environment | OS, Node version, runner route, and web or terminal mode |
+| Reproduction | Exact non-secret command or GitHub event, steps, expected result and actual result |
+| Revision | A safe issue/PR/run link and the exact relevant commit, if shareable |
+| Diagnosis | Stable error code, diagnostic reference and sanitized doctor/Job Summary output |
+| Partial work | Which files/resources completed, were retained or need inspection |
 
-<Steps>
-  <Step title="Search first">
-    Check [existing issues](https://github.com/vypdev/copilot/issues) to avoid duplicates.
-  </Step>
-  <Step title="Include in your report">
-    - Detailed description
-    - Steps to reproduce
-    - Expected vs actual behavior
-    - Relevant logs and configurations
-    - Environment details
-  </Step>
-</Steps>
+Never include PATs, API keys, authentication files, pairing codes or a captured
+credential field. Inspect logs and screenshots before sharing; private repository
+names and configuration can also require redaction. Preserve uncertain resources
+until you have inspected them rather than rerunning Apply blindly.
 
-### Community Support
-- Use GitHub Discussions for questions
-- Check Stack Overflow with tag `copilot`
-- Join our community channels
+For a repository-specific task, use that repository's installed Issue Form and
+bot commands. A branchless Help issue can answer questions; implementation needs
+an admitted branch-bearing issue and its Action-verified ref.
 
-## Contributing
+## Security reports
 
-### Code Contributions
+Do not publish sensitive vulnerabilities or credentials in an issue. Contact the
+maintainer privately at [efraespada@vyp.dev](mailto:efraespada@vyp.dev) with a
+redacted description before arranging any sensitive evidence exchange.
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+## Contribute or follow changes
 
-### Development Setup
+Use [CONTRIBUTING.md](https://github.com/vypdev/copilot/blob/master/CONTRIBUTING.md)
+for development prerequisites and checks, and [repository collaboration](/agents/repository-collaboration)
+for this project's Action-managed issue/branch flow. Submit documentation changes
+with the same route and verification expectations.
 
-```bash
-# Clone the repository
-git clone https://github.com/vypdev/copilot.git
-
-# Install dependencies
-pnpm install
-
-# Run tests
-pnpm test
-
-# Build the project
-pnpm run build
-```
-
-### Pull Request Guidelines
-
-- Follow the existing code style
-- Include tests for new features
-- Update documentation as needed
-- Keep changes focused and atomic
-- Add meaningful commit messages
-
-## Feature Requests
-
-When requesting new features:
-
-1. Check existing issues and requests
-2. Provide clear use cases
-3. Explain the expected behavior
-4. Describe the benefit to users
-5. Consider implementation details
-
-## Security Reports
-
-For security issues:
-
-1. **DO NOT** open public issues
-2. Email security concerns directly
-3. Include detailed information
-4. Await response before disclosure
-
-## Stay Updated
-
-- Watch the [GitHub repository](https://github.com/vypdev/copilot)
-- Follow release announcements
-- Join our mailing list
-- Check our blog for updates
-
-## Contact
-
-- GitHub Issues: [Report a bug](https://github.com/vypdev/copilot/issues)
-- Email: efraespada@vyp.dev
-
-We aim to respond to all inquiries within 48 hours during business days.
+Follow [GitHub Releases](https://github.com/vypdev/copilot/releases) for published
+changes. This page does not promise a response deadline or require an external
+community account to obtain support.

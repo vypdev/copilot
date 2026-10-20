@@ -1,10 +1,18 @@
 import type { SetupJourneyPresenterPort } from '../application/usecases/setup/setup_journey_use_case';
 import type { SetupJourneyView } from '../application/policies/setup_journey_policy';
 import { renderBox } from './setup_prompt_rendering';
+import { SETUP_DOCUMENTATION } from '../application/contracts/setup_documentation';
 
 export class ConsoleSetupJourneyPresenter implements SetupJourneyPresenterPort {
   present(view: SetupJourneyView): void {
     console.log(renderSetupJourney(view));
+    if (view.outcome === 'complete') {
+      console.log(`Next: install the reviewed files, then verify your first workflow: ${SETUP_DOCUMENTATION.firstWorkflow}`);
+    } else if (view.outcome === 'blocked' || view.outcome === 'partial') {
+      console.log(`Inspect the result before retrying. Troubleshooting: ${SETUP_DOCUMENTATION.recovery}`);
+    } else if (view.current === 'Repository' || view.outcome === 'dry-run') {
+      console.log(`Setup tutorial (opens only when you choose): ${SETUP_DOCUMENTATION.tutorial}`);
+    }
   }
 }
 

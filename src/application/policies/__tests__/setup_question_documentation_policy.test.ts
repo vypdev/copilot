@@ -10,9 +10,9 @@ describe('setup question documentation', () => {
     expect(existsSync(resolve(__dirname, '../../../../docs/configuration.mdx'))).toBe(true);
   });
   test.each([
-    ['features.issues', 'capabilities', '/issues/workflow-setup'],
-    ['features.pullRequests', 'capabilities', '/pull-requests/workflow-setup'],
-    ['issueWorkflows.enabled', 'capabilities', '/issues/workflow-setup'],
+    ['features.issues', 'capabilities', '/guides/issues-and-branches'],
+    ['features.pullRequests', 'capabilities', '/guides/review-pull-requests'],
+    ['issueWorkflows.enabled', 'capabilities', '/issues/configurable-workflows'],
     ['repositoryAgentGuidance.enabled', 'capabilities', '/agents/repository-collaboration'],
     ['agents.planner.provider', 'agent-runtime', '/agents/runtime-selection'],
     ['agents.findings.executable', 'agent-model-defaults', '/agents/cli-configuration'],
@@ -28,7 +28,7 @@ describe('setup question documentation', () => {
     ['ai.pullRequestDescriptionMode', 'bugbot', '/pull-requests/ai-description'],
     ['ai.provisioningMode', 'provisioning', '/agents/cli-configuration'],
     ['projects.enabled', 'projects', '/issues/assignees-and-projects'],
-    ['manageRepositorySecrets', 'provisioning', '/how-to-use'],
+    ['manageRepositorySecrets', 'provisioning', '/setup-web'],
   ])('%s has a related, locally documented destination', (id, stateId, path) => {
     const reference = setupQuestionDocumentation({ id, stateId: stateId as SetupQuestion['stateId'] });
     expect(reference.title.trim()).not.toBe('');

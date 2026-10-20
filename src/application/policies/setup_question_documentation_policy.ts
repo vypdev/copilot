@@ -6,13 +6,16 @@ export interface SetupQuestionDocumentation {
 }
 
 const docs = {
-  features: { title: 'Copilot features and workflow triggers', url: 'https://docs.page/vypdev/copilot/features' },
-  issueWorkflows: { title: 'Copilot issue workflow setup', url: 'https://docs.page/vypdev/copilot/issues/workflow-setup' },
+  features: { title: 'Choose a Copilot goal', url: 'https://docs.page/vypdev/copilot/guides' },
+  issueWorkflows: { title: 'Select issue kinds and forms', url: 'https://docs.page/vypdev/copilot/issues/configurable-workflows' },
+  issuesGuide: { title: 'Manage issues and branches', url: 'https://docs.page/vypdev/copilot/guides/issues-and-branches' },
+  reviewGuide: { title: 'Review PRs and resolve findings', url: 'https://docs.page/vypdev/copilot/guides/review-pull-requests' },
+  botGuide: { title: 'Work with the bot', url: 'https://docs.page/vypdev/copilot/guides/work-with-the-bot' },
+  releaseGuide: { title: 'Release and hotfix guide', url: 'https://docs.page/vypdev/copilot/guides/releases-and-hotfixes' },
   branchManagement: { title: 'Issue branch management', url: 'https://docs.page/vypdev/copilot/issues/branch-management' },
   preBranchSdd: { title: 'Pre-branch design documents', url: 'https://docs.page/vypdev/copilot/issues/pre-branch-sdds' },
   issueLifecycle: { title: 'Issue notifications and automatic closure', url: 'https://docs.page/vypdev/copilot/issues/notifications-and-auto-close' },
   assignments: { title: 'Assignees and GitHub Projects', url: 'https://docs.page/vypdev/copilot/issues/assignees-and-projects' },
-  pullRequestWorkflows: { title: 'Pull-request workflow setup', url: 'https://docs.page/vypdev/copilot/pull-requests/workflow-setup' },
   pullRequestDescription: { title: 'AI pull-request descriptions', url: 'https://docs.page/vypdev/copilot/pull-requests/ai-description' },
   repositoryGuidance: { title: 'Repository guidance for agents', url: 'https://docs.page/vypdev/copilot/agents/repository-collaboration' },
   runtime: { title: 'Agent runtime selection', url: 'https://docs.page/vypdev/copilot/agents/runtime-selection' },
@@ -27,7 +30,7 @@ const docs = {
   projects: { title: 'Assignees and GitHub Projects', url: 'https://docs.page/vypdev/copilot/issues/assignees-and-projects' },
   githubProjects: { title: 'GitHub: About Projects', url: 'https://docs.github.com/en/issues/planning-and-tracking-with-projects/learning-about-projects/about-projects' },
   githubStatus: { title: 'GitHub: About single-select fields', url: 'https://docs.github.com/en/issues/planning-and-tracking-with-projects/understanding-fields/about-single-select-fields' },
-  provisioning: { title: 'Copilot setup and provisioning', url: 'https://docs.page/vypdev/copilot/how-to-use' },
+  provisioning: { title: 'Set up with the web assistant', url: 'https://docs.page/vypdev/copilot/setup-web' },
   storage: { title: 'GitHub Actions Secrets and Variables', url: 'https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets' },
 } as const satisfies Record<string, SetupQuestionDocumentation>;
 
@@ -36,8 +39,10 @@ export function setupQuestionDocumentation(question: Pick<SetupQuestion, 'id' | 
   const id = question.id;
   if (id.startsWith('runners.')) return { title: 'Runner profiles', url: 'https://docs.page/vypdev/copilot/configuration#runner-profiles' };
   if (id === 'issueWorkflows.enabled') return docs.issueWorkflows;
-  if (id === 'features.issues') return docs.issueWorkflows;
-  if (id === 'features.pullRequests') return docs.pullRequestWorkflows;
+  if (id === 'features.issues' || id === 'features.commits') return docs.issuesGuide;
+  if (id === 'features.pullRequests') return docs.reviewGuide;
+  if (id === 'features.issueComments' || id === 'features.pullRequestComments') return docs.botGuide;
+  if (id === 'features.release' || id === 'features.hotfix') return docs.releaseGuide;
   if (id === 'repository.issueManagedBranches' || /^repository\.(feature|bugfix|hotfix|release|docs|chore)Tree$/u.test(id)) return docs.branchManagement;
   if (id === 'repository.preBranchSdd') return docs.preBranchSdd;
   if (id === 'repository.inactivityThresholdHours' || id === 'features.inactiveIssueClosure') return docs.issueLifecycle;

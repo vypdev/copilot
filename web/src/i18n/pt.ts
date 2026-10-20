@@ -1,6 +1,9 @@
 import type { SetupMessageKey } from './catalog';
 
 export const pt: Record<SetupMessageKey, string> = {
+  setupHelp: 'Ajuda de configuração', setupTutorial: 'Tutorial de configuração', firstWorkflowGuide: 'Primeiro fluxo de issue para PR', setupRecovery: 'Resolver problemas',
+  setupHelpHint: 'A documentação abre num novo separador. As suas respostas ficam aqui.',
+  setupNextWorkflow: 'Instale os ficheiros revistos e verifique a Action no GitHub. Uma inspeção de metadados não comprova o funcionamento em execução.',
   batchNextActions: "Próximos passos",
   batchStatusReady: "Pronto para revisão",
   batchStatusBlocked: "Requer uma ação",

@@ -4,6 +4,7 @@
   import SetupSidebar from './components/SetupSidebar.svelte';
   import SetupHeader from './components/SetupHeader.svelte';
   import SetupIntro from './components/SetupIntro.svelte';
+  import SetupHelp from './components/SetupHelp.svelte';
   import StatusBanner from './components/StatusBanner.svelte';
   import PromptCard from './components/PromptCard.svelte';
   import ContextPanel from './components/ContextPanel.svelte';
@@ -32,12 +33,10 @@
   async function cancel(): Promise<void> {
     if (window.confirm(tr($session.view?.batch?.phase === 'applying' ? 'batchStopConfirm' : 'cancelConfirm', $setupLocale))) await session.cancel();
   }
-
   async function submit(value: string): Promise<void> {
     const revision = $session.view?.promptRevision;
     if (revision !== undefined) await session.submit(revision, value);
   }
-
   async function retryDiscovery(): Promise<void> {
     const revision = $session.view?.promptRevision;
     if (revision !== undefined) await session.retryDiscovery(revision);
@@ -53,6 +52,7 @@
   <main class="main">
     <SetupHeader repository={$session.view?.repository} closed={$session.closed === true} />
     <div class="content">
+      <SetupHelp />
       {#if $setupLocale !== 'en'}
         <StatusBanner tone="warning" title={tr('translationPreviewTitle', $setupLocale)} message={tr('translationPreviewBody', $setupLocale)} />
       {/if}

@@ -1,6 +1,9 @@
 import type { en } from './en';
 
 export const es: Record<keyof typeof en, string> = {
+  setupHelp: 'Ayuda de configuración', setupTutorial: 'Tutorial de configuración', firstWorkflowGuide: 'Primer flujo de issue a PR', setupRecovery: 'Resolver problemas',
+  setupHelpHint: 'La documentación se abre en otra pestaña. Tus respuestas se conservan aquí.',
+  setupNextWorkflow: 'Instala los archivos revisados y comprueba la Action en GitHub. Una inspección de metadatos no demuestra que funcione en ejecución.',
   batchNextActions: "Siguientes pasos",
   batchStatusReady: "Listo para revisar",
   batchStatusBlocked: "Requiere una acción",
