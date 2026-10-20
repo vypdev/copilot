@@ -72,7 +72,7 @@ async function runVerification(
   logInfo(`Running ${verifyCommands.length} verify ${verifyCommands.length === 1 ? 'command' : 'commands'}...`);
   const verify = await runVerifyCommands(
     verifyCommands,
-    (program, args) => gitCommitPort.execute(program, args, { untrusted: true }),
+    (program, args) => gitCommitPort.execute(program, args, { untrusted: true, verifyRuntimePrerequisites: true }),
   );
   return verify.success
     ? undefined

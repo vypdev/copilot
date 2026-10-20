@@ -20,6 +20,13 @@ The assistant keeps tutorial, first-workflow and troubleshooting links available
 
 For a small first installation, choose Issues, Pull requests, Commits, comment commands and the Documentation issue kind. Leave Projects, releases and hotfixes for later unless you already have their prerequisites. You can use the [goal guides](/guides) to decide what to enable.
 
+If you enable file-changing commands or verification, the runner choice does not
+install your project's language tools. Prepare them before Copilot in each
+executing job and add a reviewed
+[runtime declaration](/security-operations/operations/verification#repository-verification-prerequisites).
+This applies equally to web and CLI installations; setup does not infer Java
+requirements from your repository.
+
 ## 1. Launch and pair
 
 ```bash

@@ -36,6 +36,12 @@ describe('prepareUntrustedCommandEnvironment', () => {
     it('keeps only runtime metadata and removes every credential/auth-store reference', () => {
         const runtime = prepareUntrustedCommandEnvironment({
             PATH: '/usr/bin',
+            JAVA_HOME: '/tools/jdk-17',
+            JAVA_TOOL_OPTIONS: '-Dpassword=secret',
+            JDK_JAVA_OPTIONS: '-Dpassword=secret',
+            GRADLE_USER_HOME: '/sensitive/gradle',
+            MAVEN_OPTS: '-Dpassword=secret',
+            NODE_OPTIONS: '--require /sensitive/loader.js',
             CI: 'true',
             GITHUB_WORKSPACE: '/workspace',
             OS: 'Windows_NT',
@@ -51,6 +57,7 @@ describe('prepareUntrustedCommandEnvironment', () => {
         try {
             expect(runtime.environment).toMatchObject({
                 PATH: '/usr/bin',
+                JAVA_HOME: '/tools/jdk-17',
                 CI: 'true',
                 GITHUB_WORKSPACE: '/workspace',
                 OS: 'Windows_NT',
@@ -60,6 +67,9 @@ describe('prepareUntrustedCommandEnvironment', () => {
             expect(JSON.stringify(runtime.environment)).not.toContain('secret');
             expect(runtime.environment).not.toHaveProperty('CODEX_HOME');
             expect(runtime.environment).not.toHaveProperty('OPENCODE_AUTH_FILE');
+            for (const key of ['JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', 'GRADLE_USER_HOME', 'MAVEN_OPTS', 'NODE_OPTIONS']) {
+                expect(runtime.environment).not.toHaveProperty(key);
+            }
         } finally {
             const home = runtime.environment.HOME;
             runtime.cleanup();

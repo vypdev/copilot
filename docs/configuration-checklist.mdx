@@ -4,6 +4,13 @@ description: Required checks before enabling Copilot automation.
 ---
 # Configuration checklist
 
+Before enabling repository verification or automated fixes, provision required
+project runtimes in **each** executing job and add the reviewed
+[runtime declaration](/security-operations/operations/verification#repository-verification-prerequisites).
+The web/CLI runner profile chooses placement; it does not install Java or other
+project tools. Existing installations without the declaration keep their prior
+verification behavior.
+
 This is the detailed operator checklist for the capabilities you select. For a first installation, follow [web setup](/setup-web) and [your first issue-to-PR workflow](/first-workflow); use the [goal guides](/guides) to identify which optional sections apply. Complete checks for enabled capabilities rather than enabling every feature to satisfy this list.
 
 ## Action contract

@@ -9,6 +9,7 @@ export interface PreparedUntrustedCommandEnvironment {
 
 const ALLOWED_VARIABLES = [
     'PATH',
+    'JAVA_HOME',
     'LANG',
     'LANGUAGE',
     'LC_ALL',

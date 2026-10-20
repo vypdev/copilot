@@ -194,6 +194,12 @@ Do not add the \`${profile.deployment.launcherLabel}\` label, dispatch a deploym
 
 Never expose credentials, tokens, private keys, or other secrets in issues, commits, pull requests, logs, or diagnostic comments.
 
+## Repository verification prerequisites
+
+The setup runner profile selects placement; it does not install the project's language runtimes. An operator must provision the project's required runtimes and dependencies in every job that runs file-changing or branch-sync verification, before the Copilot step. A separate application CI job does not prepare this job.
+
+Declare reviewed version prefixes in \`.copilot/verification-prerequisites.json\` (schemaVersion 1, runtimes such as java 17, node 24, pnpm 10). Copilot checks declared versions in the credential-free verification environment before each configured verification command; a missing or incompatible runtime blocks publication. Without this optional declaration, existing verification behavior remains and no language is inferred. Java provisioning may use \`actions/setup-java\`; \`JAVA_HOME\` and \`PATH\` survive isolation, while agent credentials and tool-option injection variables do not. Do not add an unreviewed bootstrap or weaken verification to work around a missing runtime. Read [verification prerequisites and same-job setup](https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-verification-prerequisites).
+
 For the full contributor flow, read [repository collaboration](https://github.com/vypdev/copilot/blob/master/docs/agents/repository-collaboration.mdx). For drift and recovery, read [guidance troubleshooting](https://github.com/vypdev/copilot/blob/master/docs/agents/repository-guidance-troubleshooting.mdx).
 `;
 }

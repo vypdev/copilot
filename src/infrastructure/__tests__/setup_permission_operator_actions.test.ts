@@ -154,6 +154,10 @@ describe('setup preparation of a bot Actions permission check', () => {
             expect(value.hasBranch()).toBe(true);
             expect(await readdir(folder)).toHaveLength(1);
             const startRecovery = value.calls.length;
+            // Only the overdue-run polling needs a virtual clock. Recovery and
+            // its next journal transaction use real fsync/rename and immediate
+            // HTTP fixtures; do not leave their scheduling under an idle fake clock.
+            jest.useRealTimers();
             value.completeNow();
             expect(await inspect(value)).toEqual([expect.objectContaining({ status: 'verified', writeProof: 'transaction' })]);
             const recovery = value.calls.slice(startRecovery);
@@ -163,7 +167,7 @@ describe('setup preparation of a bot Actions permission check', () => {
             expect(value.hasBranch()).toBe(false);
             expect(await readdir(folder)).toEqual([]);
         } finally { jest.useRealTimers(); }
-    });
+    }, 30_000); // Two durable journal transactions can exceed 5s on Windows under coverage.
     it('uses setup authority only for pending Actions recovery, preserving candidate authority for Projects', async () => {
         const journal = new SetupPermissionProbeJournal(folder);
         const action = await journal.begin({ owner: 'owner', repository: 'repo', scope: 'repository', probe: 'actions',

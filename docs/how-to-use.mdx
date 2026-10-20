@@ -473,6 +473,14 @@ You can tweak issue templates (text, dropdowns), workflow names, and branch name
 
 **Runner selection:** Keep installed routing, explicitly choose GitHub-hosted jobs, reuse an existing organization profile, or enter a known self-hosted group and labels. Review effective routes and access/capacity observations per repository. Agent jobs and CLI provisioning share the agent route; ordinary validation has a separate choice. Approval observers, merge-group checks and publication stay independent. A changed dynamic route that you retain requires separate review of its matrix/inputs. No environment fallback or runner access grant is implicit. See [runner profiles](/configuration#runner-profiles). Windows service registrations omit `codex`: **Codex no soportado en runners Windows ejecutados como servicio**.
 
+**Project verification tools:** Runner selection does not install Java or other
+project runtimes. For configured verification and file-changing commands,
+provision tools in each executing job before Copilot and commit the optional
+reviewed [runtime declaration](/security-operations/operations/verification#repository-verification-prerequisites)
+to get an actionable prerequisite check. A separate application CI job does not
+prepare the comment-command job. Without the declaration, existing verification
+still runs directly with its prior failure behavior.
+
 **Copilot source repository:** A target containing a root-local `uses: ./` Action retains its existing native workflows and complete source guidance. Its Commit and Branch Sync workflows gain the temporary `copilot-permission-test-*` push exclusion; Commit also excludes installer branches. Branch Sync retains all ordinary branches, installer branches and bot pushes. The parity inventory distinguishes shared assets, missing optional assets, customizations, native extensions and incompatible generator metadata. Native CI, RepoWise, runner diagnostics, the platform smoke matrix and npm publication are intentional source extensions. Source now includes compatible manual CLI-provisioning and credential-health workflows; provisioning uses the Codex pool, while credential health keeps its independent hosted route. Future generator metadata is retained or blocks regeneration; setup does not silently migrate it.
 
 **Optional but keep coherence:**

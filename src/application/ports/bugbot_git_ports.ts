@@ -4,6 +4,7 @@ export interface BugbotGitMutationPort {
     stdout?: (data: Buffer) => void;
     env?: Record<string, string>;
     untrusted?: boolean;
+    verifyRuntimePrerequisites?: boolean;
   }): Promise<number>;
   getAuthenticatedUserDetails(): Promise<{ name: string; email: string }>;
   configureAuthor(name: string, email: string): Promise<void>;
