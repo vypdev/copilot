@@ -38189,6 +38189,8 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runPullRequestApprovalAction = runPullRequestApprovalAction;
+const application_error_presentation_policy_1 = __nccwpck_require__(95067);
+const application_error_message_catalog_1 = __nccwpck_require__(64809);
 const core = __importStar(__nccwpck_require__(75855));
 const github = __importStar(__nccwpck_require__(78227));
 const observe_pull_request_approval_use_case_1 = __nccwpck_require__(36169);
@@ -38238,15 +38240,22 @@ async function runPullRequestApprovalAction(token) {
     });
     const useCase = new observe_pull_request_approval_use_case_1.ObservePullRequestApprovalUseCase(port);
     const failedPulls = [];
+    let firstFailure;
     for (const pullNumber of targetNumbers) {
         const target = { owner, repository: repo, repositoryId, pullNumber };
         const result = await useCase.execute(target);
+        if (result.failure) {
+            firstFailure ?? (firstFailure = result.failure);
+            const diagnostic = (0, application_error_presentation_policy_1.renderApplicationErrorText)(result.failure, (0, application_error_message_catalog_1.resolveStaticApplicationErrorCatalog)(locale).message);
+            core.info(diagnostic);
+            core.summary.addRaw(`<pre>${diagnostic.replace(/&/gu, '&amp;').replace(/</gu, '&lt;').replace(/>/gu, '&gt;')}</pre>\n`);
+        }
         const safeCode = result.decision.code.replace(/[^a-z0-9-]/gu, '').slice(0, 60);
         core.info(`PR #${pullNumber}: ${result.decision.status} (${safeCode}); assessment ${result.publication}.`);
         if (result.publication === 'failed' || [
             'invalid-policy', 'policy-unavailable', 'evidence-unavailable', 'target-mismatch',
             'pre-submit-unavailable', 'publication-unknown',
-        ].includes(result.decision.code))
+        ].includes(result.decision.code) || result.failure)
             failedPulls.push(pullNumber);
         if (result.evidence) {
             core.summary.addRaw((0, pull_request_approval_presentation_policy_1.renderApprovalRunSummary)({
@@ -38267,6 +38276,8 @@ async function runPullRequestApprovalAction(token) {
         }
     }
     await core.summary.write();
+    if (firstFailure)
+        throw firstFailure;
     if (failedPulls.length > 0) {
         throw new Error(`Approval observation needs attention for PR(s) ${failedPulls.join(', ')}; inspect the Job Summary and rerun after recovery.`);
     }
@@ -38813,6 +38824,36 @@ function runAtApplicationErrorBoundary(operation) {
     return getApplicationErrorCorrelationId() === undefined
         ? runWithApplicationErrorCorrelation(createApplicationErrorCorrelationId(), operation)
         : operation();
+}
+
+
+/***/ }),
+
+/***/ 50519:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.approvalEvidenceError = approvalEvidenceError;
+exports.approvalDiagnosticError = approvalDiagnosticError;
+const approval_evidence_diagnostic_1 = __nccwpck_require__(98205);
+const application_error_1 = __nccwpck_require__(75999);
+function approvalEvidenceError(operation, reason) {
+    return approvalDiagnosticError({ operation, reason, permission: approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_PERMISSIONS[operation] });
+}
+function approvalDiagnosticError(diagnostic) {
+    const reason = diagnostic.reason;
+    const code = reason === 'http-401' ? 'authorization.credential-invalid'
+        : reason === 'http-403' ? 'authorization.denied'
+            : reason === 'http-404' ? 'provider.not-found'
+                : reason === 'http-429' ? 'provider.rate-limited'
+                    : reason === 'http-409' ? 'provider.conflict'
+                        : reason === 'transport-unavailable' || /^http-50[0234]$/u.test(reason) ? 'provider.unavailable'
+                            : 'provider.contract-invalid';
+    return new application_error_1.ApplicationError(code, `Approval evidence read failed (${diagnostic.operation}, ${reason}).`, {
+        recovery: { id: 'approval-evidence-read-failed', variables: diagnostic },
+    });
 }
 
 
@@ -40592,6 +40633,11 @@ const SPANISH_CONTENT = Object.freeze({
     }),
 });
 const ENGLISH_RECOVERY_CONTENT = Object.freeze({
+    'approval-evidence-read-failed': Object.freeze({
+        impact: 'Approval evidence could not be verified: {operation} ({reason}).',
+        action: 'Inspect {permission} access for the runtime credential and the named evidence response. Correct authorization, missing-resource or schema errors before rerunning; retry transient failures only after provider recovery or rate-limit reset.',
+        retainedState: 'No approval is authorized by this failed read. Existing PRs, reviews and completed external effects were preserved.',
+    }),
     'workspace-changes-rejected': Object.freeze({
         impact: 'The changes were rejected during workspace verification.',
         action: 'Inspect the rejected paths in the workflow and correct the workspace before retrying.',
@@ -40659,6 +40705,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     }),
 });
 const SPANISH_RECOVERY_CONTENT = Object.freeze({
+    'approval-evidence-read-failed': Object.freeze({
+        impact: 'No se pudo verificar la evidencia de aprobación: {operation} ({reason}).',
+        action: 'Comprueba el acceso {permission} de la credencial de ejecución y la respuesta indicada. Corrige los errores de autorización, recurso o esquema antes de reejecutar; reintenta los fallos transitorios solo tras recuperarse el proveedor o restablecerse el límite.',
+        retainedState: 'Esta lectura fallida no autoriza ninguna aprobación. Se conservaron las PRs, revisiones y efectos externos completados.',
+    }),
     'workspace-changes-rejected': Object.freeze({
         impact: 'Los cambios se rechazaron durante la verificación del espacio de trabajo.',
         action: 'Revisa las rutas rechazadas en la ejecución y corrige el espacio de trabajo antes de reintentar.',
@@ -57197,6 +57248,8 @@ function buildCatalogResponseSchema(source, ids, targetLocale = 'en-US') {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ObservePullRequestApprovalUseCase = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+const approval_evidence_error_1 = __nccwpck_require__(50519);
 const pull_request_approval_1 = __nccwpck_require__(8024);
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 /** Read-first replay and exact-revision guard around the non-atomic GitHub review API. */
@@ -57232,8 +57285,9 @@ class ObservePullRequestApprovalUseCase {
         try {
             initial = await this.port.loadEvidence(target);
         }
-        catch {
+        catch (cause) {
             return {
+                failure: evidenceFailure(cause),
                 decision: { status: 'blocked', code: 'evidence-unavailable', detail: 'GitHub approval evidence could not be read; rerun this observer.' },
                 publication: 'not-applicable',
             };
@@ -57241,7 +57295,10 @@ class ObservePullRequestApprovalUseCase {
         if (initial.repositoryId !== target.repositoryId || initial.pullNumber !== target.pullNumber) {
             return { decision: { status: 'blocked', code: 'target-mismatch', detail: 'The resolved PR does not match the bound repository and number.' }, publication: 'not-applicable' };
         }
-        let decision = (0, pull_request_approval_1.decidePullRequestApproval)(policy, initial);
+        let failure = initial.diagnostics?.[0] ? (0, approval_evidence_error_1.approvalDiagnosticError)(initial.diagnostics[0]) : undefined;
+        let decision = failure
+            ? { status: 'blocked', code: 'evidence-unavailable', detail: 'Approval evidence is unavailable; inspect the causal diagnostic in the observer Job Summary.' }
+            : (0, pull_request_approval_1.decidePullRequestApproval)(policy, initial);
         let reviewId;
         if (decision.status === 'eligible') {
             let current;
@@ -57250,8 +57307,15 @@ class ObservePullRequestApprovalUseCase {
                 current = await this.port.loadEvidence(target);
                 currentPolicy = await this.port.readPolicy(target);
             }
-            catch {
+            catch (cause) {
+                failure = evidenceFailure(cause);
+                current = undefined;
                 decision = { status: 'blocked', code: 'pre-submit-unavailable', detail: 'Current approval evidence could not be reread before submission.' };
+            }
+            if (current?.diagnostics?.length) {
+                failure = (0, approval_evidence_error_1.approvalDiagnosticError)(current.diagnostics[0]);
+                current = undefined;
+                decision = { status: 'blocked', code: 'pre-submit-unavailable', detail: 'Current evidence is unavailable; inspect the observer diagnostic.' };
             }
             if (current && currentPolicy !== rawPolicy) {
                 decision = { status: 'pending', code: 'superseded', detail: 'The approval policy changed before submission; recheck the current head.' };
@@ -57294,11 +57358,11 @@ class ObservePullRequestApprovalUseCase {
         try {
             // The adapter guards the current head again before editing the single card.
             await this.port.publishAssessment(target, initial, decision, reviewId);
-            return { decision, headSha: initial.headSha, evidence: initial, mode: policy.mode,
+            return { decision, ...(failure ? { failure } : {}), headSha: initial.headSha, evidence: initial, mode: policy.mode,
                 ...(reviewId ? { reviewId } : {}), publication: 'published' };
         }
         catch {
-            return { decision, headSha: initial.headSha, evidence: initial, mode: policy.mode,
+            return { decision, ...(failure ? { failure } : {}), headSha: initial.headSha, evidence: initial, mode: policy.mode,
                 ...(reviewId ? { reviewId } : {}), publication: 'failed' };
         }
     }
@@ -57313,6 +57377,10 @@ function sameRevisionAndEvidence(left, right) {
 }
 function approvalReviewBody(headSha) {
     return `<!-- copilot:guarded-approval:v1 head="${headSha}" -->\nCopilot approved this revision (${headSha.slice(0, 7)}) after its configured CI and coverage gates passed and Bugbot reported no blocking findings. GitHub still applies branch rules. Configure a separate human-review requirement if needed; a bot approval may count toward a generic approval minimum.`;
+}
+function evidenceFailure(cause) {
+    return cause instanceof application_error_1.ApplicationError && cause.recovery?.id === 'approval-evidence-read-failed'
+        ? cause : (0, approval_evidence_error_1.approvalEvidenceError)('evidence', 'transport-unavailable');
 }
 
 
@@ -68492,6 +68560,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const approval_evidence_diagnostic_1 = __nccwpck_require__(98205);
 const branch_sync_validation_1 = __nccwpck_require__(90981);
 exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'pull-request-link-restored',
@@ -68507,6 +68576,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'sdd-draft-size-exceeded',
     'sdd-draft-format-invalid',
     'workspace-changes-rejected',
+    'approval-evidence-read-failed',
 ]);
 const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
 const UNCHANGED_STATE = 'No new state or external effect was created.';
@@ -68698,6 +68768,7 @@ class ApplicationError extends Error {
 exports.ApplicationError = ApplicationError;
 _ApplicationError_cause = new WeakMap();
 const RECOVERY_VARIABLE_KEYS = Object.freeze({
+    'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
     'pull-request-link-reference-retained': Object.freeze([]),
@@ -68749,6 +68820,12 @@ function normalizeApplicationErrorRecovery(recovery) {
     if (recovery.id === 'branch-sync-resolution-invalid'
         && !branch_sync_validation_1.BRANCH_SYNC_VALIDATION_CODES.some(code => code === variables.validationCode)) {
         throw new TypeError('Application error recovery synchronization validation code is invalid.');
+    }
+    if (recovery.id === 'approval-evidence-read-failed'
+        && (!Object.prototype.hasOwnProperty.call(approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_PERMISSIONS, variables.operation)
+            || !approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_REASONS.some(reason => reason === variables.reason)
+            || approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_PERMISSIONS[variables.operation] !== variables.permission)) {
+        throw new TypeError('Approval evidence diagnostic is invalid.');
     }
     return Object.freeze({
         id: recovery.id,
@@ -76677,6 +76754,41 @@ function parseApprovalCoverageZip(value) {
 
 /***/ }),
 
+/***/ 9958:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readApprovalEvidence = readApprovalEvidence;
+const application_error_1 = __nccwpck_require__(75999);
+const approval_evidence_error_1 = __nccwpck_require__(50519);
+const approval_evidence_diagnostic_1 = __nccwpck_require__(98205);
+/** Terminates provider exceptions; even unknown statuses never interpolate provider text. */
+async function readApprovalEvidence(operation, read) {
+    try {
+        return await read();
+    }
+    catch (cause) {
+        if (cause instanceof application_error_1.ApplicationError && cause.recovery?.id === 'approval-evidence-read-failed')
+            throw cause;
+        const error = cause && typeof cause === 'object' ? cause : undefined;
+        const response = error?.response;
+        const status = error?.status;
+        const rateLimited = status === 403 && (response?.headers?.['x-ratelimit-remaining'] === '0'
+            || typeof response?.headers?.['retry-after'] === 'string' && /^\d{1,8}$/u.test(response.headers['retry-after']));
+        const http = typeof status === 'number' ? `http-${status}` : undefined;
+        const reason = rateLimited ? 'http-429'
+            : approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_REASONS.some(value => value === http) ? http
+                : cause instanceof application_error_1.ApplicationError && cause.code === 'provider.contract-invalid' ? 'invalid-response'
+                    : status === undefined ? 'transport-unavailable' : 'invalid-response';
+        throw (0, approval_evidence_error_1.approvalEvidenceError)(operation, reason);
+    }
+}
+
+
+/***/ }),
+
 /***/ 55165:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -76709,21 +76821,22 @@ exports.BugbotPullRequestRepository = BugbotPullRequestRepository;
 /***/ }),
 
 /***/ 68742:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readCurrentBaseRevision = readCurrentBaseRevision;
+const application_error_1 = __nccwpck_require__(75999);
 /** PR base metadata can lag a parent push; read the exact native branch ref. */
 async function readCurrentBaseRevision(port, target, baseRef) {
     if (typeof baseRef !== 'string' || baseRef.length === 0 || baseRef.length > 1024
         || baseRef.includes('\u0000') || /[\r\n]/u.test(baseRef))
-        throw new Error('The PR base ref is invalid.');
+        throw new application_error_1.ApplicationError('provider.contract-invalid', 'The PR base ref is invalid.');
     const { data } = await port.getRef({ owner: target.owner, repo: target.repository, ref: `heads/${baseRef}` });
     if (data?.ref !== `refs/heads/${baseRef}` || data.object?.type !== 'commit' || typeof data.object.sha !== 'string'
         || !/^[a-f0-9]{40}$/u.test(data.object.sha))
-        throw new Error('The PR base ref cannot be verified.');
+        throw new application_error_1.ApplicationError('provider.contract-invalid', 'The PR base ref cannot be verified.');
     return data.object.sha;
 }
 
@@ -76771,6 +76884,9 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestApprovalRepository = void 0;
 exports.readEffectiveApprovalPolicy = readEffectiveApprovalPolicy;
+const approval_evidence_read_1 = __nccwpck_require__(9958);
+const approval_evidence_error_1 = __nccwpck_require__(50519);
+const application_error_1 = __nccwpck_require__(75999);
 const current_base_revision_query_1 = __nccwpck_require__(68742);
 const logging_ports_1 = __nccwpck_require__(6152);
 const github = __importStar(__nccwpck_require__(78227));
@@ -76803,34 +76919,58 @@ class PullRequestApprovalRepository {
         return readEffectiveApprovalPolicy(this.octokit, target);
     }
     async loadEvidence(target) {
-        const { data: pull } = await this.octokit.rest.pulls.get({
-            owner: target.owner, repo: target.repository, pull_number: target.pullNumber,
+        const diagnostics = [];
+        const { data: pull } = await (0, approval_evidence_read_1.readApprovalEvidence)('pull-request', async () => {
+            const response = await this.octokit.rest.pulls.get({ owner: target.owner, repo: target.repository, pull_number: target.pullNumber });
+            if (!response.data?.head || !response.data?.base || typeof response.data.head.sha !== 'string'
+                || typeof response.data.head.ref !== 'string' || !Number.isSafeInteger(response.data.number)) {
+                throw (0, approval_evidence_error_1.approvalEvidenceError)('pull-request', 'invalid-response');
+            }
+            return response;
         });
         const headSha = pull.head.sha;
         const baseSha = await this.readCurrentBaseSha(target, pull.base.ref);
-        const policy = (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(await this.readPolicy(target));
+        const policy = await (0, approval_evidence_read_1.readApprovalEvidence)('policy', async () => {
+            const raw = await this.readPolicy(target);
+            try {
+                return (0, pull_request_approval_policy_1.parsePullRequestApprovalPolicy)(raw);
+            }
+            catch {
+                throw (0, approval_evidence_error_1.approvalEvidenceError)('policy', 'invalid-response');
+            }
+        });
         let testedMergeSha;
         if (pull.mergeable === true && /^[a-f0-9]{40}$/iu.test(pull.merge_commit_sha ?? '')) {
             try {
-                const merge = await this.octokit.rest.git.getCommit({
-                    owner: target.owner, repo: target.repository, commit_sha: pull.merge_commit_sha,
+                const merge = await (0, approval_evidence_read_1.readApprovalEvidence)('merge-commit', async () => {
+                    const response = await this.octokit.rest.git.getCommit({ owner: target.owner, repo: target.repository, commit_sha: pull.merge_commit_sha });
+                    if (!Array.isArray(response.data?.parents))
+                        throw (0, approval_evidence_error_1.approvalEvidenceError)('merge-commit', 'invalid-response');
+                    return response;
                 });
                 if (merge.data.parents[0]?.sha === baseSha && merge.data.parents[1]?.sha === headSha
                     && merge.data.parents.length === 2)
                     testedMergeSha = pull.merge_commit_sha;
             }
-            catch { /* Missing or unreadable merge parentage is non-authorizing. */ }
+            catch (cause) {
+                collectDiagnostic(diagnostics, cause);
+            }
         }
         const [files, reviews, comments, headChecks, mergeChecks, headRuns, mergeRuns, rules, user] = await Promise.all([
-            this.allPages(this.octokit.rest.pulls.listFiles, { owner: target.owner, repo: target.repository, pull_number: target.pullNumber }),
-            this.allPages(this.octokit.rest.pulls.listReviews, { owner: target.owner, repo: target.repository, pull_number: target.pullNumber }),
-            this.allPages(this.octokit.rest.issues.listComments, { owner: target.owner, repo: target.repository, issue_number: target.pullNumber }),
-            this.allPages(this.octokit.rest.checks.listForRef, { owner: target.owner, repo: target.repository, ref: headSha, filter: 'all' }),
-            testedMergeSha ? this.allPages(this.octokit.rest.checks.listForRef, { owner: target.owner, repo: target.repository, ref: testedMergeSha, filter: 'all' }) : Promise.resolve([]),
-            this.allPages(this.octokit.rest.actions.listWorkflowRunsForRepo, { owner: target.owner, repo: target.repository, head_sha: headSha }),
-            testedMergeSha ? this.allPages(this.octokit.rest.actions.listWorkflowRunsForRepo, { owner: target.owner, repo: target.repository, head_sha: testedMergeSha }) : Promise.resolve([]),
-            this.effectiveRules(target.owner, target.repository, pull.base.ref),
-            this.octokit.rest.users.getAuthenticated(),
+            this.allPages('files', this.octokit.rest.pulls.listFiles, { owner: target.owner, repo: target.repository, pull_number: target.pullNumber }),
+            this.allPages('reviews', this.octokit.rest.pulls.listReviews, { owner: target.owner, repo: target.repository, pull_number: target.pullNumber }),
+            this.allPages('comments', this.octokit.rest.issues.listComments, { owner: target.owner, repo: target.repository, issue_number: target.pullNumber }),
+            this.allPages('head-checks', this.octokit.rest.checks.listForRef, { owner: target.owner, repo: target.repository, ref: headSha, filter: 'all' }),
+            testedMergeSha ? this.allPages('merge-checks', this.octokit.rest.checks.listForRef, { owner: target.owner, repo: target.repository, ref: testedMergeSha, filter: 'all' }) : Promise.resolve([]),
+            this.allPages('head-runs', this.octokit.rest.actions.listWorkflowRunsForRepo, { owner: target.owner, repo: target.repository, head_sha: headSha }),
+            testedMergeSha ? this.allPages('merge-runs', this.octokit.rest.actions.listWorkflowRunsForRepo, { owner: target.owner, repo: target.repository, head_sha: testedMergeSha }) : Promise.resolve([]),
+            this.effectiveRules(target.owner, target.repository, pull.base.ref, diagnostics),
+            (0, approval_evidence_read_1.readApprovalEvidence)('authenticated-user', async () => {
+                const response = await this.octokit.rest.users.getAuthenticated();
+                if (!Number.isSafeInteger(response.data?.id) || response.data.id < 1)
+                    throw (0, approval_evidence_error_1.approvalEvidenceError)('authenticated-user', 'invalid-response');
+                return response;
+            }),
         ]);
         const branch = Object.entries(this.settings.branchPrefixes)
             .find(([, prefix]) => pull.head.ref.startsWith(`${prefix}/`));
@@ -76851,7 +76991,7 @@ class PullRequestApprovalRepository {
         });
         const currentJobs = await Promise.all(latestRuns.map(async (run) => ({
             run,
-            jobs: await this.allPages(this.octokit.rest.actions.listJobsForWorkflowRunAttempt, {
+            jobs: await this.allPages('jobs', this.octokit.rest.actions.listJobsForWorkflowRunAttempt, {
                 owner: target.owner, repo: target.repository, run_id: run.id, attempt_number: run.run_attempt,
             }),
         })));
@@ -76882,9 +77022,10 @@ class PullRequestApprovalRepository {
             submittedAt: review.submitted_at ?? '',
         }));
         const numericCoverage = policy.coverage.mode === 'numeric'
-            ? await this.numericCoverage(target, policy.coverage.artifactWorkflowName, headSha, baseSha, testedMergeSha, workflowRuns)
+            ? await this.numericCoverage(target, policy.coverage.artifactWorkflowName, headSha, baseSha, testedMergeSha, workflowRuns, diagnostics)
             : undefined;
         return {
+            ...(diagnostics.length ? { diagnostics: Object.freeze(diagnostics) } : {}),
             repositoryId: pull.base.repo?.id ?? 0,
             pullNumber: pull.number,
             headSha,
@@ -76918,7 +77059,7 @@ class PullRequestApprovalRepository {
             ...(numericCoverage ? { numericCoverage } : {}),
         };
     }
-    async numericCoverage(target, workflowName, headSha, baseSha, testedMergeSha, workflowRuns) {
+    async numericCoverage(target, workflowName, headSha, baseSha, testedMergeSha, workflowRuns, diagnostics) {
         const candidates = workflowRuns.filter(run => run.name === workflowName
             && (run.head_sha === headSha || run.head_sha === testedMergeSha));
         const mergeCandidates = candidates.filter(run => run.head_sha === testedMergeSha);
@@ -76927,25 +77068,27 @@ class PullRequestApprovalRepository {
         if (!run || run.conclusion !== 'success' || run.status !== 'completed')
             return undefined;
         try {
-            const artifacts = await this.allPages(this.octokit.rest.actions.listWorkflowRunArtifacts, {
+            const artifacts = await this.allPages('coverage-artifacts', this.octokit.rest.actions.listWorkflowRunArtifacts, {
                 owner: target.owner, repo: target.repository, run_id: run.id,
             });
             const matches = artifacts.filter(artifact => artifact.name === 'copilot-diff-coverage-v1' && !artifact.expired);
             if (matches.length !== 1 || matches[0].size_in_bytes > 64 * 1024)
-                return undefined;
-            const response = await this.octokit.rest.actions.downloadArtifact({
+                throw (0, approval_evidence_error_1.approvalEvidenceError)('coverage-artifacts', 'artifact-unavailable');
+            const response = await (0, approval_evidence_read_1.readApprovalEvidence)('coverage-download', async () => this.octokit.rest.actions.downloadArtifact({
                 owner: target.owner, repo: target.repository, artifact_id: matches[0].id, archive_format: 'zip',
-            });
+            }));
             const data = response.data;
             const bytes = data instanceof ArrayBuffer ? new Uint8Array(data)
                 : data instanceof Uint8Array ? data
                     : typeof data === 'string' ? Buffer.from(data, 'binary') : undefined;
             const attestation = bytes ? (0, approval_coverage_artifact_1.parseApprovalCoverageZip)(bytes) : undefined;
-            if (!attestation || attestation.repositoryId !== target.repositoryId
+            if (!attestation)
+                throw (0, approval_evidence_error_1.approvalEvidenceError)('coverage-parse', 'artifact-invalid');
+            if (attestation.repositoryId !== target.repositoryId
                 || attestation.pullNumber !== target.pullNumber || attestation.headSha !== headSha
                 || attestation.baseSha !== baseSha || attestation.workflowRunId !== run.id
                 || attestation.workflowRunAttempt !== run.run_attempt)
-                return undefined;
+                throw (0, approval_evidence_error_1.approvalEvidenceError)('coverage-parse', 'artifact-mismatch');
             return {
                 coveredChangedLines: attestation.coveredChangedLines,
                 totalChangedLines: attestation.totalChangedLines,
@@ -76953,7 +77096,8 @@ class PullRequestApprovalRepository {
                 baseSha,
             };
         }
-        catch {
+        catch (cause) {
+            collectDiagnostic(diagnostics, cause);
             return undefined;
         }
     }
@@ -76979,7 +77123,7 @@ class PullRequestApprovalRepository {
             throw new Error('PR head or base changed before assessment publication.');
         }
         const user = await this.octokit.rest.users.getAuthenticated();
-        const comments = await this.allPages(this.octokit.rest.issues.listComments, {
+        const comments = await this.allPages('comments', this.octokit.rest.issues.listComments, {
             owner: target.owner, repo: target.repository, issue_number: target.pullNumber,
         });
         const card = [...comments].reverse().find(comment => comment.user?.id === user.data.id
@@ -77025,24 +77169,26 @@ class PullRequestApprovalRepository {
         }
     }
     async readCurrentBaseSha(target, baseRef) {
-        return (0, current_base_revision_query_1.readCurrentBaseRevision)(this.octokit.rest.git, target, baseRef);
+        return (0, approval_evidence_read_1.readApprovalEvidence)('base-ref', () => (0, current_base_revision_query_1.readCurrentBaseRevision)(this.octokit.rest.git, target, baseRef));
     }
-    async effectiveRules(owner, repo, branch) {
+    async effectiveRules(owner, repo, branch, diagnostics) {
         try {
-            const rulesResponse = await this.octokit.request('GET /repos/{owner}/{repo}/rules/branches/{branch}', { owner, repo, branch });
+            const rulesResponse = await (0, approval_evidence_read_1.readApprovalEvidence)('rules', async () => this.octokit.request('GET /repos/{owner}/{repo}/rules/branches/{branch}', { owner, repo, branch }));
             if (!Array.isArray(rulesResponse.data) || rulesResponse.data.some((rule) => !record(rule)
                 || typeof record(rule)?.type !== 'string' || record(rule)?.type === '')) {
-                throw new Error('GitHub returned an invalid effective rules inventory.');
+                throw (0, approval_evidence_error_1.approvalEvidenceError)('rules', 'invalid-response');
             }
             const rules = rulesResponse.data;
             let classic;
             try {
                 const response = await this.octokit.rest.repos.getBranchProtection({ owner, repo, branch });
+                if (!record(response.data))
+                    throw (0, approval_evidence_error_1.approvalEvidenceError)('classic-protection', 'invalid-response');
                 classic = response.data;
             }
             catch (error) {
                 if (statusOf(error) !== 404)
-                    throw error;
+                    await (0, approval_evidence_read_1.readApprovalEvidence)('classic-protection', async () => { throw error; });
             }
             const reviewRules = rules.filter(rule => rule.type === 'pull_request');
             const classicReview = classic?.required_pull_request_reviews;
@@ -77068,23 +77214,26 @@ class PullRequestApprovalRepository {
             }
             return { readable: true, dismissesStaleReviews: hasStaleRule && allStale, requiredChecks: [...requiredChecks] };
         }
-        catch {
+        catch (cause) {
+            collectDiagnostic(diagnostics, cause);
             return { readable: false, dismissesStaleReviews: false, requiredChecks: [] };
         }
     }
-    async allPages(method, params) {
-        const result = [];
-        for await (const response of this.octokit.paginate.iterator(method, { ...params, per_page: 100 })) {
-            const page = Array.isArray(response.data) ? response.data
-                : record(response.data)?.check_runs ?? record(response.data)?.workflow_runs
-                    ?? record(response.data)?.artifacts ?? record(response.data)?.jobs;
-            if (!Array.isArray(page))
-                throw new Error('GitHub pagination returned an invalid page.');
-            result.push(...page);
-            if (result.length > 3000)
-                throw new Error('Approval evidence pagination exceeded the safe bound.');
-        }
-        return result;
+    async allPages(operation, method, params) {
+        return (0, approval_evidence_read_1.readApprovalEvidence)(operation, async () => {
+            const result = [];
+            for await (const response of this.octokit.paginate.iterator(method, { ...params, per_page: 100 })) {
+                const page = Array.isArray(response.data) ? response.data
+                    : record(response.data)?.check_runs ?? record(response.data)?.workflow_runs
+                        ?? record(response.data)?.artifacts ?? record(response.data)?.jobs;
+                if (!Array.isArray(page))
+                    throw (0, approval_evidence_error_1.approvalEvidenceError)(operation, 'invalid-page');
+                result.push(...page);
+                if (result.length > 3000)
+                    throw (0, approval_evidence_error_1.approvalEvidenceError)(operation, 'page-limit');
+            }
+            return result;
+        });
     }
 }
 exports.PullRequestApprovalRepository = PullRequestApprovalRepository;
@@ -77143,6 +77292,14 @@ async function readEffectiveApprovalPolicy(octokit, target) {
             return undefined;
         reportPolicyReadFailure('organization-variable', error);
         throw error;
+    }
+}
+function collectDiagnostic(diagnostics, cause) {
+    if (cause instanceof application_error_1.ApplicationError && cause.recovery?.id === 'approval-evidence-read-failed') {
+        diagnostics.push(cause.recovery.variables);
+    }
+    else {
+        diagnostics.push((0, approval_evidence_error_1.approvalEvidenceError)('evidence', 'invalid-response').recovery.variables);
     }
 }
 
@@ -79383,6 +79540,44 @@ class AgentResponseLengthFailure extends Error {
     }
 }
 exports.AgentResponseLengthFailure = AgentResponseLengthFailure;
+
+
+/***/ }),
+
+/***/ 98205:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.APPROVAL_EVIDENCE_REASONS = exports.APPROVAL_EVIDENCE_PERMISSIONS = void 0;
+/** Closed vocabulary: no provider text, URLs, headers, policy values or credentials. */
+exports.APPROVAL_EVIDENCE_PERMISSIONS = Object.freeze({
+    'evidence': 'repository-read',
+    'pull-request': 'pull-requests-read',
+    'base-ref': 'contents-read',
+    'merge-commit': 'contents-read',
+    'policy': 'actions-variables-read',
+    'files': 'pull-requests-read',
+    'reviews': 'pull-requests-read',
+    'comments': 'issues-read',
+    'head-checks': 'checks-read',
+    'merge-checks': 'checks-read',
+    'head-runs': 'actions-read',
+    'merge-runs': 'actions-read',
+    'jobs': 'actions-read',
+    'rules': 'metadata-read',
+    'classic-protection': 'administration-read',
+    'authenticated-user': 'authenticated-user-read',
+    'coverage-artifacts': 'actions-read',
+    'coverage-download': 'actions-read',
+    'coverage-parse': 'actions-read',
+});
+exports.APPROVAL_EVIDENCE_REASONS = Object.freeze([
+    'http-400', 'http-401', 'http-403', 'http-404', 'http-409', 'http-422', 'http-429',
+    'http-500', 'http-502', 'http-503', 'http-504', 'transport-unavailable',
+    'invalid-response', 'invalid-page', 'page-limit', 'artifact-unavailable', 'artifact-invalid', 'artifact-mismatch',
+]);
 
 
 /***/ }),

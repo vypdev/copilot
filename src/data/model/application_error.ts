@@ -1,3 +1,4 @@
+import { APPROVAL_EVIDENCE_PERMISSIONS, APPROVAL_EVIDENCE_REASONS, type ApprovalEvidenceDiagnostic } from '../../domain/approval_evidence_diagnostic';
 import { BRANCH_SYNC_VALIDATION_CODES, type BranchSyncValidationCode } from '../../domain/branch_sync_validation';
 
 export type ApplicationErrorKind =
@@ -48,11 +49,13 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'sdd-draft-size-exceeded',
     'sdd-draft-format-invalid',
     'workspace-changes-rejected',
+    'approval-evidence-read-failed',
 ] as const);
 
 export type ApplicationErrorRecoveryId = typeof APPLICATION_ERROR_RECOVERY_IDS[number];
 
 interface ApplicationErrorRecoveryVariables {
+    readonly 'approval-evidence-read-failed': ApprovalEvidenceDiagnostic;
     readonly 'pull-request-link-restored': Readonly<Record<string, never>>;
     readonly 'pull-request-link-base-retained': Readonly<Record<string, never>>;
     readonly 'pull-request-link-reference-retained': Readonly<Record<string, never>>;
@@ -307,6 +310,7 @@ export class ApplicationError extends Error {
 }
 
 const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readonly string[]>> = Object.freeze({
+    'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
     'pull-request-link-reference-retained': Object.freeze([]),
@@ -360,6 +364,12 @@ function normalizeApplicationErrorRecovery(
     if (recovery.id === 'branch-sync-resolution-invalid'
         && !BRANCH_SYNC_VALIDATION_CODES.some(code => code === variables.validationCode)) {
         throw new TypeError('Application error recovery synchronization validation code is invalid.');
+    }
+    if (recovery.id === 'approval-evidence-read-failed'
+        && (!Object.prototype.hasOwnProperty.call(APPROVAL_EVIDENCE_PERMISSIONS, variables.operation)
+            || !APPROVAL_EVIDENCE_REASONS.some(reason => reason === variables.reason)
+            || APPROVAL_EVIDENCE_PERMISSIONS[variables.operation as keyof typeof APPROVAL_EVIDENCE_PERMISSIONS] !== variables.permission)) {
+        throw new TypeError('Approval evidence diagnostic is invalid.');
     }
     return Object.freeze({
         id: recovery.id,

@@ -1,3 +1,7 @@
+import { readApprovalEvidence } from './approval_evidence_read';
+import { approvalEvidenceError } from '../../../application/errors/approval_evidence_error';
+import type { ApprovalEvidenceDiagnostic, ApprovalEvidenceOperation } from '../../../domain/approval_evidence_diagnostic';
+import { ApplicationError } from '../../../application/errors/application_error';
 import { readCurrentBaseRevision } from './current_base_revision_query';
 import { logInfo } from '../../../application/ports/logging_ports';
 import * as github from '@actions/github';
@@ -65,32 +69,47 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
     }
 
     async loadEvidence(target: ApprovalObservationTarget): Promise<ApprovalEvidence> {
-        const { data: pull } = await this.octokit.rest.pulls.get({
-            owner: target.owner, repo: target.repository, pull_number: target.pullNumber,
+        const diagnostics: ApprovalEvidenceDiagnostic[] = [];
+        const { data: pull } = await readApprovalEvidence('pull-request', async () => {
+            const response = await this.octokit.rest.pulls.get({ owner: target.owner, repo: target.repository, pull_number: target.pullNumber });
+            if (!response.data?.head || !response.data?.base || typeof response.data.head.sha !== 'string'
+                || typeof response.data.head.ref !== 'string' || !Number.isSafeInteger(response.data.number)) {
+                throw approvalEvidenceError('pull-request', 'invalid-response');
+            }
+            return response;
         });
         const headSha = pull.head.sha;
         const baseSha = await this.readCurrentBaseSha(target, pull.base.ref);
-        const policy = parsePullRequestApprovalPolicy(await this.readPolicy(target));
+        const policy = await readApprovalEvidence('policy', async () => {
+            const raw = await this.readPolicy(target);
+            try { return parsePullRequestApprovalPolicy(raw); } catch { throw approvalEvidenceError('policy', 'invalid-response'); }
+        });
         let testedMergeSha: string | undefined;
         if (pull.mergeable === true && /^[a-f0-9]{40}$/iu.test(pull.merge_commit_sha ?? '')) {
             try {
-                const merge = await this.octokit.rest.git.getCommit({
-                    owner: target.owner, repo: target.repository, commit_sha: pull.merge_commit_sha!,
+                const merge = await readApprovalEvidence('merge-commit', async () => {
+                    const response = await this.octokit.rest.git.getCommit({ owner: target.owner, repo: target.repository, commit_sha: pull.merge_commit_sha! });
+                    if (!Array.isArray(response.data?.parents)) throw approvalEvidenceError('merge-commit', 'invalid-response');
+                    return response;
                 });
                 if (merge.data.parents[0]?.sha === baseSha && merge.data.parents[1]?.sha === headSha
                     && merge.data.parents.length === 2) testedMergeSha = pull.merge_commit_sha!;
-            } catch { /* Missing or unreadable merge parentage is non-authorizing. */ }
+            } catch (cause) { collectDiagnostic(diagnostics, cause); }
         }
         const [files, reviews, comments, headChecks, mergeChecks, headRuns, mergeRuns, rules, user] = await Promise.all([
-            this.allPages<ApprovalGithubFile>(this.octokit.rest.pulls.listFiles, { owner: target.owner, repo: target.repository, pull_number: target.pullNumber }),
-            this.allPages<ApprovalGithubReview>(this.octokit.rest.pulls.listReviews, { owner: target.owner, repo: target.repository, pull_number: target.pullNumber }),
-            this.allPages<ApprovalGithubComment>(this.octokit.rest.issues.listComments, { owner: target.owner, repo: target.repository, issue_number: target.pullNumber }),
-            this.allPages<ApprovalGithubCheck>(this.octokit.rest.checks.listForRef, { owner: target.owner, repo: target.repository, ref: headSha, filter: 'all' as const }),
-            testedMergeSha ? this.allPages<ApprovalGithubCheck>(this.octokit.rest.checks.listForRef, { owner: target.owner, repo: target.repository, ref: testedMergeSha, filter: 'all' as const }) : Promise.resolve([]),
-            this.allPages<ApprovalGithubRun>(this.octokit.rest.actions.listWorkflowRunsForRepo, { owner: target.owner, repo: target.repository, head_sha: headSha }),
-            testedMergeSha ? this.allPages<ApprovalGithubRun>(this.octokit.rest.actions.listWorkflowRunsForRepo, { owner: target.owner, repo: target.repository, head_sha: testedMergeSha }) : Promise.resolve([]),
-            this.effectiveRules(target.owner, target.repository, pull.base.ref),
-            this.octokit.rest.users.getAuthenticated(),
+            this.allPages<ApprovalGithubFile>('files', this.octokit.rest.pulls.listFiles, { owner: target.owner, repo: target.repository, pull_number: target.pullNumber }),
+            this.allPages<ApprovalGithubReview>('reviews', this.octokit.rest.pulls.listReviews, { owner: target.owner, repo: target.repository, pull_number: target.pullNumber }),
+            this.allPages<ApprovalGithubComment>('comments', this.octokit.rest.issues.listComments, { owner: target.owner, repo: target.repository, issue_number: target.pullNumber }),
+            this.allPages<ApprovalGithubCheck>('head-checks', this.octokit.rest.checks.listForRef, { owner: target.owner, repo: target.repository, ref: headSha, filter: 'all' as const }),
+            testedMergeSha ? this.allPages<ApprovalGithubCheck>('merge-checks', this.octokit.rest.checks.listForRef, { owner: target.owner, repo: target.repository, ref: testedMergeSha, filter: 'all' as const }) : Promise.resolve([]),
+            this.allPages<ApprovalGithubRun>('head-runs', this.octokit.rest.actions.listWorkflowRunsForRepo, { owner: target.owner, repo: target.repository, head_sha: headSha }),
+            testedMergeSha ? this.allPages<ApprovalGithubRun>('merge-runs', this.octokit.rest.actions.listWorkflowRunsForRepo, { owner: target.owner, repo: target.repository, head_sha: testedMergeSha }) : Promise.resolve([]),
+            this.effectiveRules(target.owner, target.repository, pull.base.ref, diagnostics),
+            readApprovalEvidence('authenticated-user', async () => {
+                const response = await this.octokit.rest.users.getAuthenticated();
+                if (!Number.isSafeInteger(response.data?.id) || response.data.id < 1) throw approvalEvidenceError('authenticated-user', 'invalid-response');
+                return response;
+            }),
         ]);
         const branch = Object.entries(this.settings.branchPrefixes)
             .find(([, prefix]) => pull.head.ref.startsWith(`${prefix}/`));
@@ -111,7 +130,7 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
         });
         const currentJobs = await Promise.all(latestRuns.map(async run => ({
             run,
-            jobs: await this.allPages<ApprovalGithubJob>(this.octokit.rest.actions.listJobsForWorkflowRunAttempt, {
+            jobs: await this.allPages<ApprovalGithubJob>('jobs', this.octokit.rest.actions.listJobsForWorkflowRunAttempt, {
                 owner: target.owner, repo: target.repository, run_id: run.id, attempt_number: run.run_attempt,
             }),
         })));
@@ -141,9 +160,10 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
             submittedAt: review.submitted_at ?? '',
         }));
         const numericCoverage = policy.coverage.mode === 'numeric'
-            ? await this.numericCoverage(target, policy.coverage.artifactWorkflowName, headSha, baseSha, testedMergeSha, workflowRuns)
+            ? await this.numericCoverage(target, policy.coverage.artifactWorkflowName, headSha, baseSha, testedMergeSha, workflowRuns, diagnostics)
             : undefined;
         return {
+            ...(diagnostics.length ? { diagnostics: Object.freeze(diagnostics) } : {}),
             repositoryId: pull.base.repo?.id ?? 0,
             pullNumber: pull.number,
             headSha,
@@ -185,6 +205,7 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
         baseSha: string,
         testedMergeSha: string | undefined,
         workflowRuns: ApprovalGithubRun[],
+        diagnostics: ApprovalEvidenceDiagnostic[],
     ): Promise<ApprovalEvidence['numericCoverage'] | undefined> {
         const candidates = workflowRuns.filter(run => run.name === workflowName
             && (run.head_sha === headSha || run.head_sha === testedMergeSha));
@@ -193,30 +214,31 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
         const run = [...authoritative].sort((left, right) => right.id - left.id || right.run_attempt - left.run_attempt)[0];
         if (!run || run.conclusion !== 'success' || run.status !== 'completed') return undefined;
         try {
-            const artifacts = await this.allPages<ApprovalGithubArtifact>(this.octokit.rest.actions.listWorkflowRunArtifacts, {
+            const artifacts = await this.allPages<ApprovalGithubArtifact>('coverage-artifacts', this.octokit.rest.actions.listWorkflowRunArtifacts, {
                 owner: target.owner, repo: target.repository, run_id: run.id,
             });
             const matches = artifacts.filter(artifact => artifact.name === 'copilot-diff-coverage-v1' && !artifact.expired);
-            if (matches.length !== 1 || matches[0].size_in_bytes > 64 * 1024) return undefined;
-            const response = await this.octokit.rest.actions.downloadArtifact({
+            if (matches.length !== 1 || matches[0].size_in_bytes > 64 * 1024) throw approvalEvidenceError('coverage-artifacts', 'artifact-unavailable');
+            const response = await readApprovalEvidence('coverage-download', async () => this.octokit.rest.actions.downloadArtifact({
                 owner: target.owner, repo: target.repository, artifact_id: matches[0].id, archive_format: 'zip',
-            });
+            }));
             const data = response.data;
             const bytes = data instanceof ArrayBuffer ? new Uint8Array(data)
                 : data instanceof Uint8Array ? data
                     : typeof data === 'string' ? Buffer.from(data, 'binary') : undefined;
             const attestation = bytes ? parseApprovalCoverageZip(bytes) : undefined;
-            if (!attestation || attestation.repositoryId !== target.repositoryId
+            if (!attestation) throw approvalEvidenceError('coverage-parse', 'artifact-invalid');
+            if (attestation.repositoryId !== target.repositoryId
                 || attestation.pullNumber !== target.pullNumber || attestation.headSha !== headSha
                 || attestation.baseSha !== baseSha || attestation.workflowRunId !== run.id
-                || attestation.workflowRunAttempt !== run.run_attempt) return undefined;
+                || attestation.workflowRunAttempt !== run.run_attempt) throw approvalEvidenceError('coverage-parse', 'artifact-mismatch');
             return {
                 coveredChangedLines: attestation.coveredChangedLines,
                 totalChangedLines: attestation.totalChangedLines,
                 headSha,
                 baseSha,
             };
-        } catch { return undefined; }
+        } catch (cause) { collectDiagnostic(diagnostics, cause); return undefined; }
     }
 
     async submitApproval(target: ApprovalObservationTarget, headSha: string, body: string): Promise<ApprovalPostedReview> {
@@ -242,7 +264,7 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
             throw new Error('PR head or base changed before assessment publication.');
         }
         const user = await this.octokit.rest.users.getAuthenticated();
-        const comments = await this.allPages<ApprovalGithubComment>(this.octokit.rest.issues.listComments, {
+        const comments = await this.allPages<ApprovalGithubComment>('comments', this.octokit.rest.issues.listComments, {
             owner: target.owner, repo: target.repository, issue_number: target.pullNumber,
         });
         const card = [...comments].reverse().find(comment => comment.user?.id === user.data.id
@@ -284,25 +306,26 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
     }
 
     private async readCurrentBaseSha(target: ApprovalObservationTarget, baseRef: string): Promise<string> {
-        return readCurrentBaseRevision(this.octokit.rest.git, target, baseRef);
+        return readApprovalEvidence('base-ref', () => readCurrentBaseRevision(this.octokit.rest.git, target, baseRef));
     }
 
-    private async effectiveRules(owner: string, repo: string, branch: string): Promise<{
+    private async effectiveRules(owner: string, repo: string, branch: string, diagnostics: ApprovalEvidenceDiagnostic[]): Promise<{
         readable: boolean; dismissesStaleReviews: boolean; requiredChecks: string[];
     }> {
         try {
-            const rulesResponse = await this.octokit.request('GET /repos/{owner}/{repo}/rules/branches/{branch}', { owner, repo, branch });
+            const rulesResponse = await readApprovalEvidence('rules', async () => this.octokit.request('GET /repos/{owner}/{repo}/rules/branches/{branch}', { owner, repo, branch }));
             if (!Array.isArray(rulesResponse.data) || rulesResponse.data.some((rule: unknown) => !record(rule)
                 || typeof record(rule)?.type !== 'string' || record(rule)?.type === '')) {
-                throw new Error('GitHub returned an invalid effective rules inventory.');
+                throw approvalEvidenceError('rules', 'invalid-response');
             }
             const rules = rulesResponse.data as Array<Record<string, unknown>>;
             let classic: Record<string, unknown> | undefined;
             try {
                 const response = await this.octokit.rest.repos.getBranchProtection({ owner, repo, branch });
+                if (!record(response.data)) throw approvalEvidenceError('classic-protection', 'invalid-response');
                 classic = response.data as unknown as Record<string, unknown>;
             } catch (error) {
-                if (statusOf(error) !== 404) throw error;
+                if (statusOf(error) !== 404) await readApprovalEvidence('classic-protection', async () => { throw error; });
             }
             const reviewRules = rules.filter(rule => rule.type === 'pull_request');
             const classicReview = classic?.required_pull_request_reviews;
@@ -323,22 +346,25 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
                 }
             }
             return { readable: true, dismissesStaleReviews: hasStaleRule && allStale, requiredChecks: [...requiredChecks] };
-        } catch {
+        } catch (cause) {
+            collectDiagnostic(diagnostics, cause);
             return { readable: false, dismissesStaleReviews: false, requiredChecks: [] };
         }
     }
 
-    private async allPages<T>(method: unknown, params: Record<string, unknown>): Promise<T[]> {
-        const result: T[] = [];
-        for await (const response of this.octokit.paginate.iterator(method as never, { ...params, per_page: 100 } as never)) {
-            const page = Array.isArray(response.data) ? response.data
-                : record(response.data)?.check_runs ?? record(response.data)?.workflow_runs
-                    ?? record(response.data)?.artifacts ?? record(response.data)?.jobs;
-            if (!Array.isArray(page)) throw new Error('GitHub pagination returned an invalid page.');
-            result.push(...page as T[]);
-            if (result.length > 3000) throw new Error('Approval evidence pagination exceeded the safe bound.');
-        }
-        return result;
+    private async allPages<T>(operation: ApprovalEvidenceOperation, method: unknown, params: Record<string, unknown>): Promise<T[]> {
+        return readApprovalEvidence(operation, async () => {
+            const result: T[] = [];
+            for await (const response of this.octokit.paginate.iterator(method as never, { ...params, per_page: 100 } as never)) {
+                const page = Array.isArray(response.data) ? response.data
+                    : record(response.data)?.check_runs ?? record(response.data)?.workflow_runs
+                        ?? record(response.data)?.artifacts ?? record(response.data)?.jobs;
+                if (!Array.isArray(page)) throw approvalEvidenceError(operation, 'invalid-page');
+                result.push(...page as T[]);
+                if (result.length > 3000) throw approvalEvidenceError(operation, 'page-limit');
+            }
+            return result;
+        });
     }
 }
 
@@ -397,5 +423,13 @@ export async function readEffectiveApprovalPolicy(octokit: ReturnType<typeof git
         if (statusOf(error) === 404) return undefined;
         reportPolicyReadFailure('organization-variable', error);
         throw error;
+    }
+}
+
+function collectDiagnostic(diagnostics: ApprovalEvidenceDiagnostic[], cause: unknown): void {
+    if (cause instanceof ApplicationError && cause.recovery?.id === 'approval-evidence-read-failed') {
+        diagnostics.push(cause.recovery.variables);
+    } else {
+        diagnostics.push(approvalEvidenceError('evidence', 'invalid-response').recovery!.variables as ApprovalEvidenceDiagnostic);
     }
 }

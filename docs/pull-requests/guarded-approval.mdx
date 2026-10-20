@@ -168,3 +168,33 @@ recovery path. This diagnostic does not change credentials, precedence, fallback
 or approval authority.
 
 The dedicated observer initializes runtime logging before reading policy, including manual rechecks. Safe policy-read diagnostics do not require the general agent pipeline or debug mode.
+
+## Evidence read failures
+
+If an observer reports `evidence-unavailable`, open its **Job Summary**. The
+causal diagnostic identifies a fixed operation, reason and relevant access
+category, even when there is no assessment card. For example,
+`jobs (http-403)` with `actions-read` means the workflow credential could not
+read the producer's jobs. Successful application CI or a credential-health
+check alone does not prove access to that endpoint.
+
+| Diagnostic | Next action |
+| --- | --- |
+| `http-401` / `http-403` | Check the runtime credential and the named endpoint access; correct the specific denial before rerunning. |
+| `http-404` | Verify resource identity and visibility under that same credential. A private resource can be hidden by authorization. |
+| `http-429`, supported 5xx or `transport-unavailable` | Wait for provider recovery or rate-limit reset, then make a bounded new observation. |
+| `invalid-response`, `invalid-page` or `page-limit` | Inspect the integration or bounded inventory; repeating the same invalid evidence does not authorize approval. |
+| `coverage-artifacts`, `coverage-download`, `coverage-parse` | Inspect the fixed `copilot-diff-coverage-v1` producer artifact, download access, ZIP/schema and current PR/run provenance. Ordinary JUnit or coverage XML does not replace this attestation. |
+
+The error code, retryability and correlation ID survive the Action error boundary.
+Operation and permission identifiers stay stable; explanatory recovery is
+available in English and Spanish. Diagnostics omit provider messages, response
+bodies, headers, credentials and policy values. No missing evidence is promoted
+to approval. A final evidence or policy read failure also stops submission.
+
+A missing classic protection record (404) is supported absence; it does not
+prove safe effective rules. Current merge-ref CI remains bound to the live base
+branch and head even when the PR's cached base SHA is historical. Existing PRs,
+reviews and completed effects remain retained. Correct the named problem before
+rerunning **Copilot - Pull Request Approval** with the PR number; do not broaden
+all token permissions or repeatedly retry an unchanged permanent failure.
