@@ -1,3 +1,4 @@
+import { CLOSED_ISSUE_RESULTS, CLOSED_ISSUE_PHASES, CLOSED_ISSUE_REASONS, type ClosedIssueReconciliationFacts } from '../../domain/closed_issue_reconciliation';
 import { BRANCH_SYNC_VALIDATION_CODES, type BranchSyncValidationCode } from '../../domain/branch_sync_validation';
 
 export type ApplicationErrorKind =
@@ -48,11 +49,13 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'sdd-draft-size-exceeded',
     'sdd-draft-format-invalid',
     'workspace-changes-rejected',
+    'closed-issue-reconciliation-failed',
 ] as const);
 
 export type ApplicationErrorRecoveryId = typeof APPLICATION_ERROR_RECOVERY_IDS[number];
 
 interface ApplicationErrorRecoveryVariables {
+    readonly 'closed-issue-reconciliation-failed': ClosedIssueReconciliationFacts;
     readonly 'pull-request-link-restored': Readonly<Record<string, never>>;
     readonly 'pull-request-link-base-retained': Readonly<Record<string, never>>;
     readonly 'pull-request-link-reference-retained': Readonly<Record<string, never>>;
@@ -307,6 +310,7 @@ export class ApplicationError extends Error {
 }
 
 const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readonly string[]>> = Object.freeze({
+    'closed-issue-reconciliation-failed': Object.freeze(['resultId', 'phase', 'state', 'reason', 'changed', 'remaining']),
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
     'pull-request-link-reference-retained': Object.freeze([]),
@@ -360,6 +364,14 @@ function normalizeApplicationErrorRecovery(
     if (recovery.id === 'branch-sync-resolution-invalid'
         && !BRANCH_SYNC_VALIDATION_CODES.some(code => code === variables.validationCode)) {
         throw new TypeError('Application error recovery synchronization validation code is invalid.');
+    }
+    if (recovery.id === 'closed-issue-reconciliation-failed'
+        && (!CLOSED_ISSUE_RESULTS.some(value => value === variables.resultId)
+            || !CLOSED_ISSUE_PHASES.some(value => value === variables.phase)
+            || !['open', 'closed', 'unavailable'].includes(variables.state as string)
+            || !CLOSED_ISSUE_REASONS.some(value => value === variables.reason)
+            || ![variables.changed, variables.remaining].every(value => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= 3000))) {
+        throw new TypeError('Closed issue reconciliation diagnostic is invalid.');
     }
     return Object.freeze({
         id: recovery.id,

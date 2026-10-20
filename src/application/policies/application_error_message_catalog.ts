@@ -206,6 +206,11 @@ const SPANISH_CONTENT: ErrorContent = Object.freeze({
 });
 
 const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  'closed-issue-reconciliation-failed': Object.freeze({
+    impact: 'Issue cleanup remains unverified: {resultId}, phase {phase}; native state {state}, reason {reason}.',
+    action: 'Inspect the closed-issue or merged-PR run and current native state. Retry cleanup only if the issue is still closed with the intended reason; leave reopened work open. Resolve the named failure before retrying.',
+    retainedState: 'Native state was preserved. Confirmed changes: {changed}; remaining required changes in the last verified plan: {remaining}. Unavailable reads do not establish completion.',
+  }),
   'workspace-changes-rejected': Object.freeze({
     impact: 'The changes were rejected during workspace verification.',
     action: 'Inspect the rejected paths in the workflow and correct the workspace before retrying.',
@@ -274,6 +279,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
 });
 
 const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  'closed-issue-reconciliation-failed': Object.freeze({
+    impact: 'La limpieza de la issue sigue sin verificarse: {resultId}, fase {phase}; estado nativo {state}, motivo {reason}.',
+    action: 'Revisa la ejecución de cierre o de la PR fusionada y el estado nativo actual. Reintenta la limpieza solo si la issue sigue cerrada con el motivo previsto; conserva abierto el trabajo reabierto. Resuelve el fallo indicado antes de reintentar.',
+    retainedState: 'Se conservó el estado nativo. Cambios confirmados: {changed}; cambios pendientes en el último plan verificado: {remaining}. Una lectura no disponible no demuestra que haya finalizado.',
+  }),
   'workspace-changes-rejected': Object.freeze({
     impact: 'Los cambios se rechazaron durante la verificación del espacio de trabajo.',
     action: 'Revisa las rutas rechazadas en la ejecución y corrige el espacio de trabajo antes de reintentar.',

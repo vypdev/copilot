@@ -20,6 +20,11 @@ const RECOVERY_CASES: readonly Readonly<{
     spanish: string;
 }>[] = [
     {
+        recovery: { id: 'closed-issue-reconciliation-failed', variables: { resultId: 'RetireProgressUseCase', phase: 'card-verification', state: 'closed', reason: 'completed', changed: 1, remaining: 1 } },
+        english: 'Native state was preserved. Confirmed changes: 1; remaining required changes in the last verified plan: 1. Unavailable reads do not establish completion.',
+        spanish: 'Se conservó el estado nativo. Cambios confirmados: 1; cambios pendientes en el último plan verificado: 1. Una lectura no disponible no demuestra que haya finalizado.',
+    },
+    {
         recovery: { id: 'branch-sync-resolution-invalid', variables: { validationCode: 'sdd-catalog-invalid', command: '/copilot sync-branch' } },
         english: 'No synchronization commit was pushed; remote branches were preserved.',
         spanish: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',

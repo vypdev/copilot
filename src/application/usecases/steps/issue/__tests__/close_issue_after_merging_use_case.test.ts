@@ -118,9 +118,9 @@ describe('CloseIssueAfterMergingUseCase', () => {
         f.read.mockImplementationOnce(original).mockImplementationOnce(async () => { f.labels.delete('in-progress'); return original(); });
         expect((await f.invoke())[0].success).toBe(true); expect(f.removeLabel).not.toHaveBeenCalledWith('in-progress');
     });
-    it('does not certify the final delta when new stale managed metadata appears', async () => {
+    it('repairs newly observed managed metadata before certifying the final delta', async () => {
         const f = fixture(); f.addLabel.mockImplementation(async label => { f.labels.add(label); f.labels.add('state:blocked'); });
-        expect((await f.invoke())[0]).toMatchObject({ success: false, payload: { issueCompletion: { reconciled: false } } });
+        expect((await f.invoke())[0]).toMatchObject({ success: true, payload: { issueCompletion: { reconciled: true, superseded: true } } });
     });
     it('recognizes a concurrent native closure after a false close return', async () => {
         const f = fixture(true); f.close.mockImplementation(async () => { f.setState('closed'); return false; });

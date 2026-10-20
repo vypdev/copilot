@@ -202,3 +202,26 @@ the closed workflow run and retry it after resolving the named evidence or
 permission problem. If someone reopens the issue during cleanup, repair stops
 without closing it again. `/copilot status` continues to report current native
 state independently of stale labels.
+
+## Concurrent completion and duplicate close events
+
+A merged-PR run and its bot-triggered closed-issue run can finish the same
+cleanup concurrently. Copilot verifies current native identity, closure reason,
+completion labels and the exact retired bodies of its supported owned cards.
+An already-completed delta is accepted only after those fresh checks. The
+**Issue cleanup** Job Summary row reports **Already converged** explicitly;
+this verified duplicate needs no retry and creates no extra comment.
+
+Metadata repair makes at most two selective passes. Card retirement keeps its
+single inventory of at most 20 supported cards and verifies each final owned
+body. Reopening or a closure-reason change stops further mutations; an old
+closed event never closes reopened work again.
+
+When cleanup remains incomplete or unreadable, the run still fails. Its summary
+names the failed result and phase, the bounded native state/reason, confirmed
+changes and remaining changes in the last verified plan. `unavailable` means
+completion was not established. Earlier successful effects remain retained;
+successful label repair does not conceal a failed card retirement. Inspect the
+named failure and current issue, resolve the access/evidence conflict, then
+retry the actual closed-issue or merged-PR operation only if cleanup is still
+required for that same closure. Keep reopened work open.
