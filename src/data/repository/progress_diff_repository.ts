@@ -23,7 +23,11 @@ export class ProgressDiffRepository {
                 || ![file.additions, file.deletions].every(value => Number.isSafeInteger(value) && value! >= 0)) throw unavailable();
             paths.add(path);
             const generated = path.startsWith('build/') || path === 'specs/CATALOG.md';
-            if (!generated && (file.additions! > 0 || file.deletions! > 0) && (typeof file.patch !== 'string' || !file.patch)) throw unavailable();
+            const unchanged = file.status === 'unchanged' && file.additions === 0 && file.deletions === 0;
+            if (!generated && !unchanged && (typeof file.patch !== 'string' || !file.patch)) {
+                throw new ApplicationError('validation.evidence-unavailable',
+                    'GitHub omitted a required file patch from the pinned comparison. Progress was not assessed and existing state was retained.');
+            }
             return { path, status: file.status, additions: file.additions!, deletions: file.deletions!,
                 ...(generated ? { evidence: 'generated-metadata-only' as const } : { patch: file.patch ?? '' }) };
         });

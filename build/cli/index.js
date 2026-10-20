@@ -39201,6 +39201,11 @@ const SPANISH_CONTENT = Object.freeze({
         action: 'Corrige la entrada y reinténtalo.',
         retainedState: UNCHANGED_STATE_ES,
     }),
+    'validation.evidence-unavailable': Object.freeze({
+        impact: 'No se evaluó el progreso porque GitHub omitió un patch necesario.',
+        action: 'Inspecciona manualmente la comparación entre los commits base y head exactos o divide el trabajo en cambios revisados más pequeños con patches completos antes de otra evaluación. Reintentar los mismos commits no recuperará la evidencia omitida.',
+        retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas; no se realizó ninguna evaluación del modelo.',
+    }),
     'validation.evidence-too-large': Object.freeze({
         impact: 'No se pudo evaluar el progreso dentro de los límites fijos de evidencia.',
         action: 'Reduce el tamaño de la comparación o divide el trabajo en cambios revisados más pequeños antes de iniciar otra evaluación.',
@@ -78106,6 +78111,12 @@ exports.APPLICATION_ERROR_METADATA = {
         action: 'Correct the input and retry.',
         retainedState: UNCHANGED_STATE,
     },
+    'validation.evidence-unavailable': {
+        kind: 'validation', retryable: false,
+        impact: 'Progress was not assessed because GitHub omitted a required file patch.',
+        action: 'Inspect the exact base/head comparison manually or split the work into smaller reviewed changes with complete patches before a new assessment. Retrying the same commits cannot restore omitted evidence.',
+        retainedState: 'Existing progress labels and published assessments were preserved; no model assessment was made.',
+    },
     'validation.evidence-too-large': {
         kind: 'validation', retryable: false,
         impact: 'Progress could not be assessed within the fixed evidence limits.',
@@ -85414,8 +85425,10 @@ class ProgressDiffRepository {
                 throw unavailable();
             paths.add(path);
             const generated = path.startsWith('build/') || path === 'specs/CATALOG.md';
-            if (!generated && (file.additions > 0 || file.deletions > 0) && (typeof file.patch !== 'string' || !file.patch))
-                throw unavailable();
+            const unchanged = file.status === 'unchanged' && file.additions === 0 && file.deletions === 0;
+            if (!generated && !unchanged && (typeof file.patch !== 'string' || !file.patch)) {
+                throw new application_error_1.ApplicationError('validation.evidence-unavailable', 'GitHub omitted a required file patch from the pinned comparison. Progress was not assessed and existing state was retained.');
+            }
             return { path, status: file.status, additions: file.additions, deletions: file.deletions,
                 ...(generated ? { evidence: 'generated-metadata-only' } : { patch: file.patch ?? '' }) };
         });
