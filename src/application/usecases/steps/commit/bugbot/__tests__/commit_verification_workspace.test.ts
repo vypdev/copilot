@@ -1,6 +1,7 @@
 import { runCommitAndPushWorkflow } from '../commit_and_push_workflow';
 import type { BugbotGitMutationPort } from '../../../../../ports/bugbot_git_ports';
 import type { BugbotCommitContext } from '../bugbot_review_operation_context';
+import { VerificationPrerequisiteError } from '../../../../../policies/verification_runtime_policy';
 
 function fixture(afterVerification: string[], deniedRead = 0) {
     let paths = ['src/fix.ts'], reads = 0;
@@ -24,6 +25,21 @@ function fixture(afterVerification: string[], deniedRead = 0) {
     return { port, run };
 }
 describe('workspace after trusted verification commands', () => {
+    it('requires isolated runtime preflight before committing an automated fix', async () => {
+        const f = fixture(['src/fix.ts']);
+        await f.run();
+        expect(f.port.execute).toHaveBeenCalledWith('pnpm', ['run', 'build'], { untrusted: true, verifyRuntimePrerequisites: true });
+    });
+    it('withholds the automated fix commit and push when a runtime is absent', async () => {
+        const f = fixture(['src/fix.ts']);
+        f.port.execute.mockImplementation(async program => {
+            if (program === 'pnpm') throw new VerificationPrerequisiteError('unavailable', { runtime: 'java', version: '17' });
+            return 0;
+        });
+        await expect(f.run()).resolves.toMatchObject({ success: false, committed: false });
+        expect(f.port.configureAuthor).not.toHaveBeenCalled();
+        expect(f.port.commit).not.toHaveBeenCalled(); expect(f.port.push).not.toHaveBeenCalled();
+    });
     it('stages the source and newly generated build artifact from the final safe inventory', async () => {
         const f = fixture(['src/fix.ts', 'build/github_action/index.js']);
         await expect(f.run()).resolves.toMatchObject({ success: true, committed: true });

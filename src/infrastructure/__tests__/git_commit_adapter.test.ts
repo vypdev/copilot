@@ -114,4 +114,43 @@ describe('GitCommitAdapter', () => {
             env: { OPENAI_API_KEY: 'must-not-pass' },
         })).rejects.toThrow('does not accept a caller-supplied environment');
     });
+
+    it('checks runtimes in the exact credential-free environment before verification, then removes its profile', async () => {
+        const order: string[] = [];
+        let environment: Record<string, string> = {};
+        const check = jest.fn((env: Record<string, string>) => {
+            order.push('preflight'); environment = env;
+            expect(fs.existsSync(env.HOME)).toBe(true);
+            expect(env).not.toHaveProperty('PAT');
+        });
+        const execute = jest.fn(async (_program, _args, options) => {
+            order.push('verification');
+            expect(options.env).toBe(environment);
+            expect(options).not.toHaveProperty('verifyRuntimePrerequisites');
+            return 0;
+        });
+        await new GitCommitAdapter(execute, check).execute('make', ['ci-local'], { untrusted: true, verifyRuntimePrerequisites: true });
+        expect(order).toEqual(['preflight', 'verification']);
+        expect(fs.existsSync(environment.HOME)).toBe(false);
+    });
+
+    it('does not run verification when preflight fails and still removes its profile', async () => {
+        let home = '';
+        const execute = jest.fn();
+        const adapter = new GitCommitAdapter(execute, env => { home = env.HOME; throw new Error('blocked'); });
+        await expect(adapter.execute('make', ['ci-local'], { untrusted: true, verifyRuntimePrerequisites: true })).rejects.toThrow('blocked');
+        expect(execute).not.toHaveBeenCalled();
+        expect(fs.existsSync(home)).toBe(false);
+    });
+
+    it('rejects preflight outside isolation and does not probe during ordinary trusted git or hook-isolated commits', async () => {
+        const execute = jest.fn().mockResolvedValue(0);
+        const check = jest.fn();
+        const adapter = new GitCommitAdapter(execute, check);
+        await expect(adapter.execute('git', ['status'], { verifyRuntimePrerequisites: true })).rejects.toThrow('credential-free');
+        expect(execute).not.toHaveBeenCalled();
+        await adapter.execute('git', ['status']);
+        await adapter.commit('fix: verified');
+        expect(check).not.toHaveBeenCalled();
+    });
 });

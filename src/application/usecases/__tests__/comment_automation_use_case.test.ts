@@ -1075,7 +1075,7 @@ describe("runCommentAutomation", () => {
     expect(git.execute).toHaveBeenCalledWith('git', ['checkout', branch]);
     expect(git.execute.mock.invocationCallOrder[checkoutIndex]).toBeLessThan(remember.invoke.mock.invocationCallOrder[0]);
     expect(git.execute.mock.calls.filter(([, args]) => args[0] === 'checkout')).toHaveLength(1);
-    expect(git.execute).toHaveBeenCalledWith('pnpm', ['run', 'typecheck'], { untrusted: true });
+    expect(git.execute).toHaveBeenCalledWith('pnpm', ['run', 'typecheck'], { untrusted: true, verifyRuntimePrerequisites: true });
     expect(git.stagePaths).toHaveBeenCalledWith(['.copilot/BUGBOT.learned.md']);
     expect(git.stageAll).not.toHaveBeenCalled();
     expect(git.push).toHaveBeenCalledWith(branch);
@@ -1196,7 +1196,7 @@ describe("runCommentAutomation", () => {
     const { git, run } = rememberFixture({ verificationFails: true });
     const results = await run();
     expect(results.at(-1)).toMatchObject({ id: 'DoUserRequestCommitAndPush', success: false });
-    expect(git.execute).toHaveBeenCalledWith('pnpm', ['run', 'typecheck'], { untrusted: true });
+    expect(git.execute).toHaveBeenCalledWith('pnpm', ['run', 'typecheck'], { untrusted: true, verifyRuntimePrerequisites: true });
     expect(git.stagePaths).not.toHaveBeenCalled();
     expect(git.commit).not.toHaveBeenCalled();
     expect(git.push).not.toHaveBeenCalled();

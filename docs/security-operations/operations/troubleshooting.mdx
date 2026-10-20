@@ -336,6 +336,23 @@ directory. The lock contains no PAT or other credential.
     number belongs to the configured repository.
   </Accordion>
 
+  <Accordion title="Branch sync or automated fixes cannot find Java or another runtime" icon="code">
+    A separate application's CI setup does not prepare the job handling the
+    Copilot command. Check that job's steps, including for `sync-branch --no-agent`.
+    Provision Java, Node, pnpm or other project tools there before Copilot and
+    commit a reviewed `.copilot/verification-prerequisites.json` to check their
+    versions. The declaration is optional: older installations without it still
+    run the configured verification directly and may report only its generic
+    command failure.
+
+    If a declared prerequisite fails, Copilot does not execute the repository
+    verification command or publish its change. Branch sync aborts its prepared
+    merge; remote branches stay unchanged. Correct the bootstrap or version
+    declaration, then retry the original operation. Do not remove verification
+    to force a push. Follow the
+    [same-job example and environment contract](/security-operations/operations/verification#repository-verification-prerequisites).
+  </Accordion>
+
   <Accordion title="Workflow timeouts or execution issues" icon="clock">
     **Symptoms:**
     - Workflows timing out

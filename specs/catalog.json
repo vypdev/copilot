@@ -738,7 +738,9 @@
         ".github/workflows/copilot_commit.yml",
         ".github/workflows/copilot_branch_sync.yml",
         "setup/workflows/copilot_commit.yml",
-        "setup/workflows/copilot_branch_sync.yml"
+        "setup/workflows/copilot_branch_sync.yml",
+        "setup/workflows/copilot_issue_comment.yml",
+        "setup/workflows/copilot_pull_request_comment.yml"
       ],
       "entrypoints": [
         "src/cli/commands/setup.ts",
@@ -897,7 +899,15 @@
         "src/application/contracts/setup_documentation.ts",
         "src/application/policies/setup_question_documentation_policy.ts",
         "web/src/components/SetupHelp.svelte",
-        "web/src/components/CompletedSetupHelp.svelte"
+        "web/src/components/CompletedSetupHelp.svelte",
+        "src/application/policies/verification_runtime_policy.ts",
+        "src/infrastructure/verification_runtime_manifest.ts",
+        "src/infrastructure/verification_runtime_preflight.ts",
+        "src/infrastructure/untrusted_command_environment.ts",
+        "src/application/ports/git_ports.ts",
+        "src/application/ports/bugbot_git_ports.ts",
+        "src/application/usecases/steps/commit/bugbot/commit_and_push_preflight.ts",
+        "src/application/usecases/steps/commit/bugbot/verify_command_runner.ts"
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
@@ -1020,7 +1030,14 @@
         "src/tooling/__tests__/setup_provisioning_workflow.test.ts",
         "src/infrastructure/__tests__/setup_sdd_prerequisites.test.ts",
         "src/cli/__tests__/setup_documentation_navigation.test.ts",
-        "src/application/policies/__tests__/setup_question_documentation_policy.test.ts"
+        "src/application/policies/__tests__/setup_question_documentation_policy.test.ts",
+        "src/application/policies/__tests__/verification_runtime_policy.test.ts",
+        "src/infrastructure/__tests__/verification_runtime_preflight.test.ts",
+        "src/infrastructure/__tests__/verification_runtime_branch_sync.test.ts",
+        "src/infrastructure/__tests__/untrusted_command_environment.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/verify_command_runner.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/commit_verification_workspace.test.ts",
+        "src/tooling/__tests__/verification_runtime_guidance.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -1044,7 +1061,8 @@
         "docs/guides/issues-and-branches.mdx",
         "docs/guides/review-pull-requests.mdx",
         "docs/guides/work-with-the-bot.mdx",
-        "docs/guides/releases-and-hotfixes.mdx"
+        "docs/guides/releases-and-hotfixes.mdx",
+        "docs/agents/repository-collaboration.mdx"
       ]
     },
     {
@@ -1885,15 +1903,18 @@
       "status": "implemented",
       "scope": "Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-18",
+      "lastVerified": "2026-10-20",
       "specs": [
-        "specs/branch-synchronization-and-conflict-recovery.md"
+        "specs/branch-synchronization-and-conflict-recovery.md",
+        "specs/repository-verification-runtime-prerequisites.md"
       ],
       "workflows": [
         ".github/workflows/copilot_branch_sync.yml",
         "setup/workflows/copilot_branch_sync.yml",
         ".github/workflows/copilot_issue.yml",
-        "setup/workflows/copilot_issue.yml"
+        "setup/workflows/copilot_issue.yml",
+        "setup/workflows/copilot_issue_comment.yml",
+        "setup/workflows/copilot_pull_request_comment.yml"
       ],
       "entrypoints": [
         "src/application/usecases/branch_sync/sync_branch_use_case.ts",
@@ -1932,7 +1953,15 @@
         "src/application/ports/reply_request_read_ports.ts",
         "src/domain/reply_request_digest.ts",
         "src/infrastructure/composition/reply_request_composition_root.ts",
-        "src/data/repository/reply_request_repository.ts"
+        "src/data/repository/reply_request_repository.ts",
+        "src/application/policies/verification_runtime_policy.ts",
+        "src/infrastructure/verification_runtime_manifest.ts",
+        "src/infrastructure/verification_runtime_preflight.ts",
+        "src/infrastructure/untrusted_command_environment.ts",
+        "src/application/ports/git_ports.ts",
+        "src/application/ports/bugbot_git_ports.ts",
+        "src/application/usecases/steps/commit/bugbot/commit_and_push_preflight.ts",
+        "src/application/usecases/steps/commit/bugbot/verify_command_runner.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -1959,13 +1988,23 @@
         "src/actions/__tests__/github_action.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/data/repository/__tests__/reply_request_repository.test.ts",
-        "src/infrastructure/composition/__tests__/reply_request_composition_root.test.ts"
+        "src/infrastructure/composition/__tests__/reply_request_composition_root.test.ts",
+        "src/application/policies/__tests__/verification_runtime_policy.test.ts",
+        "src/infrastructure/__tests__/verification_runtime_preflight.test.ts",
+        "src/infrastructure/__tests__/verification_runtime_branch_sync.test.ts",
+        "src/infrastructure/__tests__/untrusted_command_environment.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/verify_command_runner.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/commit_verification_workspace.test.ts",
+        "src/tooling/__tests__/verification_runtime_guidance.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",
         "docs/issues/comment-commands.mdx",
         "docs/issues/notifications-and-auto-close.mdx",
-        "docs/development/architecture.mdx"
+        "docs/development/architecture.mdx",
+        "docs/security-operations/operations/verification.mdx",
+        "docs/security-operations/operations/troubleshooting.mdx",
+        "docs/agents/repository-collaboration.mdx"
       ]
     },
     {

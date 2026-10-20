@@ -497,3 +497,13 @@ A selected registry's repository/organization scope is shown even when its value
 is invalid, without exposing that invalid value. Recognizable credential material
 is rejected from literal IDs, groups and labels before it can reach presentation
 or a snapshot.
+
+
+## Runtime prerequisites amendment — issue #620
+
+The [repository verification runtime contract](./repository-verification-runtime-prerequisites.md)
+specifies optional reviewed version requirements, operator-owned same-job bootstrap,
+isolated fixed version probes and safe blocked recovery. Runner selection does not
+install project language tools. Existing consumers without the declaration retain
+legacy verification. This companion owns its shared incremental numeric test budget;
+do not count it twice across the setup and synchronization capabilities.

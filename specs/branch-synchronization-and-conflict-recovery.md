@@ -699,3 +699,13 @@ Arbitrary bundle changes during verification MUST still fail. Existing real-Git
 verification-mutation cases retain their assertions and budget; this prompt
 correction adds no counted case. Acceptance requires a fresh native parent sync
 to pass the existing six commands and publish its verified head.
+
+
+## Runtime prerequisites amendment — issue #620
+
+The [repository verification runtime contract](./repository-verification-runtime-prerequisites.md)
+specifies optional reviewed version requirements, operator-owned same-job bootstrap,
+isolated fixed version probes and safe blocked recovery. Runner selection does not
+install project language tools. Existing consumers without the declaration retain
+legacy verification. This companion owns its shared incremental numeric test budget;
+do not count it twice across the setup and synchronization capabilities.

@@ -85,6 +85,13 @@ Do not add the normal `COPILOT_BOT_LOGIN` actor gate to this workflow. A synchro
 
 ## Align a branch
 
+Prepare the project runtimes in the job that handles the command before enabling
+verification. Kotlin/JVM checks need Java in that job even with `--no-agent`;
+another CI job's Java setup does not carry over. Add the reviewed
+[verification prerequisites](/security-operations/operations/verification#repository-verification-prerequisites)
+declaration for an actionable version check and a safe abort before a missing
+runtime can execute the configured repository command.
+
 An authorized maintainer can run this command in the related issue or PR:
 
 ```text

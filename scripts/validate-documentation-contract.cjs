@@ -117,9 +117,9 @@ function assertRoute(route, source) {
   if (!routes.has(normalized)) errors.push(`${source}: local documentation link targets an unregistered route ${normalized}`);
 }
 
-for (const file of ['src/application/contracts/setup_documentation.ts', 'src/application/policies/setup_question_documentation_policy.ts']) {
+for (const file of ['src/application/contracts/setup_documentation.ts', 'src/application/policies/setup_question_documentation_policy.ts', 'src/application/policies/verification_runtime_policy.ts', 'src/application/policies/repository_agent_guidance_policy.ts']) {
   const source = readText(path.join(root, file));
-  for (const match of source.matchAll(/https:\/\/docs\.page\/vypdev\/copilot(\/[^'"\s]+)/g)) {
+  for (const match of source.matchAll(/https:\/\/docs\.page\/vypdev\/copilot(\/[^'"\s)]+)/g)) {
     assertRoute(match[1], file);
     assertAnchor(match[1], file);
   }
