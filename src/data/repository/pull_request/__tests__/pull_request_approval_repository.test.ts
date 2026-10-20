@@ -163,7 +163,7 @@ describe('PullRequestApprovalRepository', () => {
     const pat = patOctokit();
     pat.rest.actions.getRepoVariable.mockRejectedValue({ status: 403 });
     (github.getOctokit as jest.Mock).mockReturnValue(pat);
-    await expect(new PullRequestApprovalRepository('pat', settings).readPolicy(target)).rejects.toEqual({ status: 403 });
+    await expect(new PullRequestApprovalRepository('pat', settings).readPolicy(target)).rejects.toMatchObject({ code: 'authorization.denied', retryable: false, recovery: { variables: { operation: 'policy', reason: 'http-403' } } });
     expect(logInfo).toHaveBeenCalledWith('Approval policy read failed (repository-variable, http-403).');
   });
 
@@ -173,7 +173,7 @@ describe('PullRequestApprovalRepository', () => {
     const failure = { status: 403, message: 'PRIVATE-CREDENTIAL', response: { data: 'PRIVATE-POLICY' } };
     pat.rest.actions.getOrgVariable.mockRejectedValue(failure);
     (github.getOctokit as jest.Mock).mockReturnValue(pat);
-    await expect(new PullRequestApprovalRepository('pat', settings).readPolicy(target)).rejects.toBe(failure);
+    await expect(new PullRequestApprovalRepository('pat', settings).readPolicy(target)).rejects.toMatchObject({ recovery: { variables: { operation: 'policy', reason: 'http-403' } } });
     expect(logInfo).toHaveBeenCalledWith('Approval policy read failed (organization-variable, http-403).');
     expect(JSON.stringify((logInfo as jest.Mock).mock.calls)).not.toContain('PRIVATE-');
   });
@@ -181,7 +181,7 @@ describe('PullRequestApprovalRepository', () => {
     const pat = patOctokit(); const failure = { status, message: 'PRIVATE-CREDENTIAL' };
     pat.rest.actions.getRepoVariable.mockRejectedValue(failure);
     (github.getOctokit as jest.Mock).mockReturnValue(pat);
-    await expect(new PullRequestApprovalRepository('pat', settings).readPolicy(target)).rejects.toBe(failure);
+    await expect(new PullRequestApprovalRepository('pat', settings).readPolicy(target)).rejects.toMatchObject({ code: 'provider.contract-invalid', retryable: false, recovery: { variables: { operation: 'policy', reason: 'invalid-response' } } });
     expect(logInfo).toHaveBeenCalledWith('Approval policy read failed (repository-variable, http-unavailable).');
     expect(JSON.stringify((logInfo as jest.Mock).mock.calls)).not.toContain('PRIVATE-');
     expect(pat.rest.actions.getOrgVariable).not.toHaveBeenCalled();
@@ -581,6 +581,9 @@ describe('read-only doctor policy source', () => {
     const client = patOctokit(); client.rest.actions.getRepoVariable.mockResolvedValue({ data: { value } } as never);
     jest.mocked(github.getOctokit).mockReturnValue(client as never);
     expect(await new PullRequestApprovalRepository('fixture-token', settings).readPolicyEvidence(target)).toEqual({ status: 'unavailable' });
+    await expect(new PullRequestApprovalRepository('fixture-token', settings).readPolicy(target)).rejects.toMatchObject({
+      code: 'provider.contract-invalid', retryable: false, recovery: { variables: { operation: 'policy', reason: 'invalid-response' } },
+    });
     expect(client.rest.actions.getOrgVariable).not.toHaveBeenCalled();
   });
 });

@@ -86429,7 +86429,7 @@ class PullRequestApprovalRepository {
         }
     }
     async readPolicy(target) {
-        return (await this.readEffectivePolicy(target))?.value;
+        return (0, approval_evidence_read_1.readApprovalEvidence)('policy', async () => (await this.readEffectivePolicy(target))?.value);
     }
     async readEffectivePolicy(target) {
         return readEffectiveApprovalPolicy(this.octokit, target);
@@ -86786,7 +86786,7 @@ function array(value) { return Array.isArray(value) ? value : []; }
 async function readEffectiveApprovalPolicy(octokit, target) {
     const admit = (source, value) => {
         if (typeof value !== 'string' || value.length > 65536)
-            throw new Error('Approval policy response is malformed or unbounded.');
+            throw new application_error_1.ApplicationError('provider.contract-invalid', 'Approval policy response is malformed or unbounded.');
         return { source, value };
     };
     try {

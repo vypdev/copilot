@@ -450,9 +450,9 @@ headers, URLs, policy values and provider text never appear in errors. Pending
 producers and complete observations retain the existing pending/completed UI.
 Partial native effects remain retained; this change never retries a review POST.
 
-Allocate **40 additional distinct cases**, separate from preceding budgets:
+Allocate **43 additional distinct cases**, separate from preceding budgets:
 20 classification/serialization/localization/forgery cases, 14 SDK inventory,
-rules, coverage and current-merge cases, four application final-read/fail-closed
+rules, coverage and current-merge cases, seven application final-read/fail-closed/post-submit
 cases and two Action boundary cases. Existing raw-message assertions migrate to
 semantic operation/reason assertions. Repository coverage thresholds remain
 90% lines/statements, 88% functions and 82% branches; the new diagnostic mapping
@@ -466,7 +466,7 @@ failure; Action fixtures retain the same error/correlation and expose no private
 text; serialization/forgery fixtures enforce bounded public records. Completed
 merge-ref CI with historical PR base metadata still uses the live branch ref.
 `docs/pull-requests/guarded-approval.mdx` documents this recovery table. Definition
-of Done includes these 40 cases, coverage, types/lint, architecture, docs,
+of Done includes these 43 cases, coverage, types/lint, architecture, docs,
 workflows/specification validators, generated catalog/bundles and Graphify.
 Rollout is additive with no schema migration; rollback restores generic
 errors but does not change native reviews. A fresh consumer run after promotion
@@ -475,3 +475,13 @@ production diagnosis.
 
 Primary provider semantics: [GitHub REST troubleshooting](https://docs.github.com/en/rest/using-the-rest-api/troubleshooting-the-rest-api)
 and [classic branch protection](https://docs.github.com/en/rest/branches/branch-protection#get-branch-protection).
+
+
+Policy Variables reads, including the final pre-submit reread, use the same
+semantic adapter mapping; a permanent denial MUST retain operation `policy`
+and nonretryable authorization classification. Post-submit evidence failures
+MUST retain their causal diagnostic and any accepted review ID while keeping
+`publication-unknown`. A diagnostic alongside native review facts MUST NOT be
+promoted to a verified approval. This preserves read-first recovery and never
+retries the review POST blindly. The three additional application cases above
+cover these final-boundary risks independently of initial-read failures.

@@ -61,7 +61,7 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
     }
 
     async readPolicy(target: ApprovalObservationTarget): Promise<string | undefined> {
-        return (await this.readEffectivePolicy(target))?.value;
+        return readApprovalEvidence('policy', async () => (await this.readEffectivePolicy(target))?.value);
     }
 
     private async readEffectivePolicy(target: Pick<ApprovalObservationTarget, 'owner' | 'repository'>) {
@@ -404,7 +404,7 @@ function array(value: unknown): unknown[] { return Array.isArray(value) ? value 
 export async function readEffectiveApprovalPolicy(octokit: ReturnType<typeof github.getOctokit>,
     target: Pick<ApprovalObservationTarget, 'owner' | 'repository'>): Promise<{ source: 'repository' | 'organization'; value: string } | undefined> {
     const admit = (source: 'repository' | 'organization', value: unknown) => {
-        if (typeof value !== 'string' || value.length > 65_536) throw new Error('Approval policy response is malformed or unbounded.');
+        if (typeof value !== 'string' || value.length > 65_536) throw new ApplicationError('provider.contract-invalid', 'Approval policy response is malformed or unbounded.');
         return { source, value };
     };
     try {

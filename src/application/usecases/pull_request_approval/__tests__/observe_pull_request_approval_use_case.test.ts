@@ -170,3 +170,29 @@ describe('approval read failure propagation (#619)', () => {
     expect(JSON.stringify(result)).not.toContain('SECRET');
   });
 });
+
+
+describe('final policy and post-submit evidence diagnostics', () => {
+  it('preserves a permanent policy reread denial after successful final evidence collection', async () => {
+    const failure = approvalEvidenceError('policy', 'http-403');
+    const gateway = port({ readPolicy: jest.fn().mockResolvedValueOnce(policy).mockRejectedValueOnce(failure) });
+    const result = await new ObservePullRequestApprovalUseCase(gateway).execute(target);
+    expect(result.failure).toBe(failure); expect(result.failure?.retryable).toBe(false);
+    expect(result.decision.code).toBe('pre-submit-unavailable'); expect(gateway.submitApproval).not.toHaveBeenCalled();
+  });
+  it('retains the post-submit read failure and accepted review identity without retrying the POST', async () => {
+    const failure = approvalEvidenceError('reviews', 'http-403');
+    const gateway = port({ loadEvidence: jest.fn().mockResolvedValueOnce(evidence()).mockResolvedValueOnce(evidence()).mockRejectedValueOnce(failure) });
+    const result = await new ObservePullRequestApprovalUseCase(gateway).execute(target);
+    expect(result).toMatchObject({ reviewId: 7, decision: { code: 'publication-unknown' }, failure: { retryable: false } });
+    expect(result.failure).toBe(failure); expect(gateway.submitApproval).toHaveBeenCalledTimes(1);
+  });
+  it('does not claim verified approval when post-submit native review facts coexist with an evidence diagnostic', async () => {
+    const diagnostics = [{ operation: 'rules', reason: 'http-503', permission: 'metadata-read' }] as const;
+    const gateway = port({ loadEvidence: jest.fn().mockResolvedValueOnce(evidence()).mockResolvedValueOnce(evidence())
+      .mockResolvedValueOnce({ ...evidence(), reviews: [approved], diagnostics }) });
+    const result = await new ObservePullRequestApprovalUseCase(gateway).execute(target);
+    expect(result).toMatchObject({ reviewId: 7, decision: { code: 'publication-unknown' }, failure: { retryable: true } });
+    expect(gateway.submitApproval).toHaveBeenCalledTimes(1);
+  });
+});

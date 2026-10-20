@@ -198,3 +198,10 @@ branch and head even when the PR's cached base SHA is historical. Existing PRs,
 reviews and completed effects remain retained. Correct the named problem before
 rerunning **Copilot - Pull Request Approval** with the PR number; do not broaden
 all token permissions or repeatedly retry an unchanged permanent failure.
+
+
+The same diagnostic applies when the policy is reread immediately before
+submission and when evidence is reread after a review POST. If GitHub might
+have accepted a review, `publication-unknown` retains its review identity and
+the exact failed evidence operation. Recheck after resolving that cause; the
+observer reads native review history before considering another POST.

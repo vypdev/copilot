@@ -28,7 +28,7 @@ describe('dedicated observer diagnostics through the actual SDK and runtime logg
     const cause = Object.assign(new Error('private-provider-message token-secret'), { status,
       response: { data: 'private-response' } });
     repoVariable.mockRejectedValue(org ? { status: 404 } : cause); orgVariable.mockRejectedValue(cause);
-    await expect(runPullRequestApprovalAction('runtime-pat')).rejects.toThrow('PR(s) 42');
+    await expect(runPullRequestApprovalAction('runtime-pat')).rejects.toMatchObject({ recovery: { variables: { operation: 'policy', reason: status === 403 ? 'http-403' : 'transport-unavailable' } } });
     const expected = `Approval policy read failed (${scope}, ${code}).`;
     expect(console.log).toHaveBeenCalledWith(expected);
     expect(getAccumulatedLogsAsText()).toContain(expected);
