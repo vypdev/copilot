@@ -1,3 +1,4 @@
+import { approvalEvidenceError } from '../../../errors/approval_evidence_error';
 import { ObservePullRequestApprovalUseCase } from '../observe_pull_request_approval_use_case';
 import type { ApprovalEvidence } from '../../../../domain/pull_request_approval';
 import type { PullRequestApprovalPort } from '../../../ports/pull_request_approval_ports';
@@ -136,5 +137,62 @@ describe('ObservePullRequestApprovalUseCase', () => {
     const result = await new ObservePullRequestApprovalUseCase(gateway).execute(target);
     expect(result.decision.code).toBe('target-mismatch');
     expect(gateway.publishAssessment).not.toHaveBeenCalled();
+  });
+});
+
+
+describe('approval read failure propagation (#619)', () => {
+  it('retains the exact semantic failure through the use case without an approval or assessment', async () => {
+    const failure = approvalEvidenceError('jobs', 'http-403');
+    const gateway = port({ loadEvidence: jest.fn().mockRejectedValue(failure) });
+    const result = await new ObservePullRequestApprovalUseCase(gateway).execute(target);
+    expect(result.failure).toBe(failure); expect(result.decision.code).toBe('evidence-unavailable');
+    expect(gateway.submitApproval).not.toHaveBeenCalled(); expect(gateway.publishAssessment).not.toHaveBeenCalled();
+  });
+  it('blocks even otherwise eligible evidence when an independent rule read failed', async () => {
+    const diagnostics = [{ operation: 'rules', reason: 'http-403', permission: 'metadata-read' }] as const;
+    const gateway = port({ loadEvidence: jest.fn().mockResolvedValue({ ...evidence(), diagnostics }) });
+    const result = await new ObservePullRequestApprovalUseCase(gateway).execute(target);
+    expect(result).toMatchObject({ decision: { code: 'evidence-unavailable' }, failure: { retryable: false } });
+    expect(gateway.submitApproval).not.toHaveBeenCalled();
+  });
+  it('blocks a new diagnostic discovered on the final evidence reread', async () => {
+    const diagnostics = [{ operation: 'merge-commit', reason: 'http-503', permission: 'contents-read' }] as const;
+    const gateway = port({ loadEvidence: jest.fn().mockResolvedValueOnce(evidence()).mockResolvedValueOnce({ ...evidence(), diagnostics }) });
+    const result = await new ObservePullRequestApprovalUseCase(gateway).execute(target);
+    expect(result).toMatchObject({ decision: { code: 'pre-submit-unavailable' }, failure: { retryable: true } });
+    expect(gateway.submitApproval).not.toHaveBeenCalled();
+  });
+  it('never approves after a successful evidence reread followed by a policy read failure', async () => {
+    const gateway = port({ readPolicy: jest.fn().mockResolvedValueOnce(policy).mockRejectedValueOnce(new Error('SECRET')) });
+    const result = await new ObservePullRequestApprovalUseCase(gateway).execute(target);
+    expect(result.decision.code).toBe('pre-submit-unavailable'); expect(gateway.submitApproval).not.toHaveBeenCalled();
+    expect(JSON.stringify(result)).not.toContain('SECRET');
+  });
+});
+
+
+describe('final policy and post-submit evidence diagnostics', () => {
+  it('preserves a permanent policy reread denial after successful final evidence collection', async () => {
+    const failure = approvalEvidenceError('policy', 'http-403');
+    const gateway = port({ readPolicy: jest.fn().mockResolvedValueOnce(policy).mockRejectedValueOnce(failure) });
+    const result = await new ObservePullRequestApprovalUseCase(gateway).execute(target);
+    expect(result.failure).toBe(failure); expect(result.failure?.retryable).toBe(false);
+    expect(result.decision.code).toBe('pre-submit-unavailable'); expect(gateway.submitApproval).not.toHaveBeenCalled();
+  });
+  it('retains the post-submit read failure and accepted review identity without retrying the POST', async () => {
+    const failure = approvalEvidenceError('reviews', 'http-403');
+    const gateway = port({ loadEvidence: jest.fn().mockResolvedValueOnce(evidence()).mockResolvedValueOnce(evidence()).mockRejectedValueOnce(failure) });
+    const result = await new ObservePullRequestApprovalUseCase(gateway).execute(target);
+    expect(result).toMatchObject({ reviewId: 7, decision: { code: 'publication-unknown' }, failure: { retryable: false } });
+    expect(result.failure).toBe(failure); expect(gateway.submitApproval).toHaveBeenCalledTimes(1);
+  });
+  it('does not claim verified approval when post-submit native review facts coexist with an evidence diagnostic', async () => {
+    const diagnostics = [{ operation: 'rules', reason: 'http-503', permission: 'metadata-read' }] as const;
+    const gateway = port({ loadEvidence: jest.fn().mockResolvedValueOnce(evidence()).mockResolvedValueOnce(evidence())
+      .mockResolvedValueOnce({ ...evidence(), reviews: [approved], diagnostics }) });
+    const result = await new ObservePullRequestApprovalUseCase(gateway).execute(target);
+    expect(result).toMatchObject({ reviewId: 7, decision: { code: 'publication-unknown' }, failure: { retryable: true } });
+    expect(gateway.submitApproval).toHaveBeenCalledTimes(1);
   });
 });

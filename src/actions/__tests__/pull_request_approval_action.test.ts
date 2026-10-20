@@ -1,3 +1,4 @@
+import { approvalEvidenceError } from '../../application/errors/approval_evidence_error';
 import * as github from '@actions/github';
 import * as core from '@actions/core';
 import { getGithubActionInput } from '../github_action_input';
@@ -136,4 +137,26 @@ describe('trusted PR approval Action route', () => {
     await runPullRequestApprovalAction('pat');
     expect(mockExecute).toHaveBeenCalledWith(expect.objectContaining({ pullNumber: 42 }));
   });
+});
+
+
+describe('causal Action evidence failures', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    context().payload = { repository: { id: 17 } }; context().eventName = 'workflow_dispatch';
+    (getGithubActionInput as jest.Mock).mockImplementation((name: string) => name === 'pr-approval-pr-number' ? '42' : '');
+    (ObservePullRequestApprovalUseCase as jest.Mock).mockImplementation(() => ({ execute: mockExecute }));
+    (core.summary.addRaw as jest.Mock).mockReturnValue(core.summary);
+    (github.getOctokit as jest.Mock).mockReturnValue({ rest: { repos: { getCollaboratorPermissionLevel: jest.fn().mockResolvedValue({ data: { permission: 'write' } }) } } });
+  });
+it.each(['http-403', 'http-503'] as const)('preserves %s operation, retryability and correlation through the Action boundary', async reason => {
+  const failure = approvalEvidenceError('jobs', reason);
+  mockExecute.mockResolvedValue({ failure, decision: { status: 'blocked', code: 'evidence-unavailable', detail: 'SECRET' }, publication: 'not-applicable' });
+  await expect(runPullRequestApprovalAction('pat')).rejects.toBe(failure);
+  const summary = (core.summary.addRaw as jest.Mock).mock.calls.map(call => call[0]).join('');
+  expect(summary).toContain(`jobs (${reason})`); expect(summary).toContain('actions-read');
+  expect(summary).toContain(failure.correlationId); expect(summary).not.toContain('SECRET');
+  expect(core.summary.write).toHaveBeenCalled();
+});
+
 });

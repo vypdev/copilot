@@ -1,8 +1,11 @@
+import { ApplicationError } from '../../errors/application_error';
+import { approvalDiagnosticError, approvalEvidenceError } from '../../errors/approval_evidence_error';
 import { decidePullRequestApproval, type ApprovalDecision, type ApprovalEvidence } from '../../../domain/pull_request_approval';
 import { parsePullRequestApprovalPolicy } from '../../../domain/pull_request_approval_policy';
 import type { ApprovalObservationTarget, PullRequestApprovalPort } from '../../ports/pull_request_approval_ports';
 
 export interface ApprovalObservationResult {
+    readonly failure?: ApplicationError;
     readonly decision: ApprovalDecision;
     readonly headSha?: string;
     readonly evidence?: ApprovalEvidence;
@@ -20,8 +23,9 @@ export class ObservePullRequestApprovalUseCase {
         let rawPolicy: string | undefined;
         try {
             rawPolicy = await this.port.readPolicy(target);
-        } catch {
+        } catch (cause) {
             return {
+                failure: evidenceFailure(cause, 'policy'),
                 decision: { status: 'blocked', code: 'policy-unavailable', detail: 'The installed PR approval policy could not be read from GitHub. Verify the runtime PAT can read Actions Variables, then rerun the observer. Existing PRs and reviews are unchanged.' },
                 publication: 'not-applicable',
             };
@@ -40,8 +44,9 @@ export class ObservePullRequestApprovalUseCase {
         let initial: ApprovalEvidence;
         try {
             initial = await this.port.loadEvidence(target);
-        } catch {
+        } catch (cause) {
             return {
+                failure: evidenceFailure(cause),
                 decision: { status: 'blocked', code: 'evidence-unavailable', detail: 'GitHub approval evidence could not be read; rerun this observer.' },
                 publication: 'not-applicable',
             };
@@ -49,16 +54,28 @@ export class ObservePullRequestApprovalUseCase {
         if (initial.repositoryId !== target.repositoryId || initial.pullNumber !== target.pullNumber) {
             return { decision: { status: 'blocked', code: 'target-mismatch', detail: 'The resolved PR does not match the bound repository and number.' }, publication: 'not-applicable' };
         }
-        let decision = decidePullRequestApproval(policy, initial);
+        let failure = initial.diagnostics?.[0] ? approvalDiagnosticError(initial.diagnostics[0]) : undefined;
+        let decision: ApprovalDecision = failure
+            ? { status: 'blocked', code: 'evidence-unavailable', detail: 'Approval evidence is unavailable; inspect the causal diagnostic in the observer Job Summary.' }
+            : decidePullRequestApproval(policy, initial);
         let reviewId: number | undefined;
         if (decision.status === 'eligible') {
             let current: ApprovalEvidence | undefined;
             let currentPolicy: string | undefined;
+            let readOperation: 'evidence' | 'policy' = 'evidence';
             try {
                 current = await this.port.loadEvidence(target);
+                readOperation = 'policy';
                 currentPolicy = await this.port.readPolicy(target);
-            } catch {
+            } catch (cause) {
+                failure = evidenceFailure(cause, readOperation);
+                current = undefined;
                 decision = { status: 'blocked', code: 'pre-submit-unavailable', detail: 'Current approval evidence could not be reread before submission.' };
+            }
+            if (current?.diagnostics?.length) {
+                failure = approvalDiagnosticError(current.diagnostics[0]);
+                current = undefined;
+                decision = { status: 'blocked', code: 'pre-submit-unavailable', detail: 'Current evidence is unavailable; inspect the observer diagnostic.' };
             }
             if (current && currentPolicy !== rawPolicy) {
                 decision = { status: 'pending', code: 'superseded', detail: 'The approval policy changed before submission; recheck the current head.' };
@@ -78,7 +95,10 @@ export class ObservePullRequestApprovalUseCase {
                         const botReviews = readback.reviews.filter(review => review.userId === current.botUserId)
                             .sort((left, right) => right.submittedAt.localeCompare(left.submittedAt) || right.id - left.id);
                         const observed = botReviews.find(review => review.state === 'APPROVED' && review.commitId === current.headSha);
-                        if (observed && observed.userId === current.botUserId
+                        if (readback.diagnostics?.length) {
+                            failure = approvalDiagnosticError(readback.diagnostics[0]);
+                            decision = { status: 'pending', code: 'publication-unknown', detail: 'GitHub may have accepted the review; its final evidence is unavailable. Inspect the observer diagnostic before rechecking.' };
+                        } else if (observed && observed.userId === current.botUserId
                             && observed.state === 'APPROVED' && observed.commitId === current.headSha
                             && !botReviews.some(review => review.state === 'DISMISSED' && review.commitId === current.headSha)
                             && readback.headSha === current.headSha && readback.baseSha === current.baseSha) {
@@ -87,7 +107,8 @@ export class ObservePullRequestApprovalUseCase {
                         } else {
                             decision = { status: 'pending', code: 'publication-unknown', detail: 'GitHub may have accepted the review; rerun to read it before any new submission.' };
                         }
-                    } catch {
+                    } catch (cause) {
+                        failure = evidenceFailure(cause);
                         decision = { status: 'pending', code: 'publication-unknown', detail: 'GitHub may have accepted the review; rerun to read it before any new submission.' };
                     }
                 }
@@ -96,10 +117,10 @@ export class ObservePullRequestApprovalUseCase {
         try {
             // The adapter guards the current head again before editing the single card.
             await this.port.publishAssessment(target, initial, decision, reviewId);
-            return { decision, headSha: initial.headSha, evidence: initial, mode: policy.mode,
+            return { decision, ...(failure ? { failure } : {}), headSha: initial.headSha, evidence: initial, mode: policy.mode,
                 ...(reviewId ? { reviewId } : {}), publication: 'published' };
         } catch {
-            return { decision, headSha: initial.headSha, evidence: initial, mode: policy.mode,
+            return { decision, ...(failure ? { failure } : {}), headSha: initial.headSha, evidence: initial, mode: policy.mode,
                 ...(reviewId ? { reviewId } : {}), publication: 'failed' };
         }
     }
@@ -115,4 +136,9 @@ function sameRevisionAndEvidence(left: ApprovalEvidence, right: ApprovalEvidence
 
 function approvalReviewBody(headSha: string): string {
     return `<!-- copilot:guarded-approval:v1 head="${headSha}" -->\nCopilot approved this revision (${headSha.slice(0, 7)}) after its configured CI and coverage gates passed and Bugbot reported no blocking findings. GitHub still applies branch rules. Configure a separate human-review requirement if needed; a bot approval may count toward a generic approval minimum.`;
+}
+
+function evidenceFailure(cause: unknown, operation: 'evidence' | 'policy' = 'evidence'): ApplicationError {
+    return cause instanceof ApplicationError && cause.recovery?.id === 'approval-evidence-read-failed'
+        ? cause : approvalEvidenceError(operation, 'transport-unavailable');
 }

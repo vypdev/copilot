@@ -1,4 +1,6 @@
 import { CLOSED_ISSUE_RESULTS, CLOSED_ISSUE_PHASES, CLOSED_ISSUE_REASONS, type ClosedIssueReconciliationFacts } from '../../domain/closed_issue_reconciliation';
+import { APPROVAL_EVIDENCE_PERMISSIONS, APPROVAL_EVIDENCE_REASONS, type ApprovalEvidenceDiagnostic } from '../../domain/approval_evidence_diagnostic';
+
 import { BRANCH_SYNC_VALIDATION_CODES, type BranchSyncValidationCode } from '../../domain/branch_sync_validation';
 
 export type ApplicationErrorKind =
@@ -50,12 +52,16 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'sdd-draft-format-invalid',
     'workspace-changes-rejected',
     'closed-issue-reconciliation-failed',
+    'approval-evidence-read-failed',
+
 ] as const);
 
 export type ApplicationErrorRecoveryId = typeof APPLICATION_ERROR_RECOVERY_IDS[number];
 
 interface ApplicationErrorRecoveryVariables {
     readonly 'closed-issue-reconciliation-failed': ClosedIssueReconciliationFacts;
+    readonly 'approval-evidence-read-failed': ApprovalEvidenceDiagnostic;
+
     readonly 'pull-request-link-restored': Readonly<Record<string, never>>;
     readonly 'pull-request-link-base-retained': Readonly<Record<string, never>>;
     readonly 'pull-request-link-reference-retained': Readonly<Record<string, never>>;
@@ -311,6 +317,8 @@ export class ApplicationError extends Error {
 
 const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readonly string[]>> = Object.freeze({
     'closed-issue-reconciliation-failed': Object.freeze(['resultId', 'phase', 'state', 'reason', 'changed', 'remaining']),
+    'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
+
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
     'pull-request-link-reference-retained': Object.freeze([]),
@@ -372,6 +380,12 @@ function normalizeApplicationErrorRecovery(
             || !CLOSED_ISSUE_REASONS.some(value => value === variables.reason)
             || ![variables.changed, variables.remaining].every(value => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= 3000))) {
         throw new TypeError('Closed issue reconciliation diagnostic is invalid.');
+    }
+    if (recovery.id === 'approval-evidence-read-failed'
+        && (!Object.prototype.hasOwnProperty.call(APPROVAL_EVIDENCE_PERMISSIONS, variables.operation)
+            || !APPROVAL_EVIDENCE_REASONS.some(reason => reason === variables.reason)
+            || APPROVAL_EVIDENCE_PERMISSIONS[variables.operation as keyof typeof APPROVAL_EVIDENCE_PERMISSIONS] !== variables.permission)) {
+        throw new TypeError('Approval evidence diagnostic is invalid.');
     }
     return Object.freeze({
         id: recovery.id,

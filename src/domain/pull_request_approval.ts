@@ -1,3 +1,4 @@
+import type { ApprovalEvidenceDiagnostic } from './approval_evidence_diagnostic';
 import type {
     PullRequestApprovalBranchKind,
     PullRequestApprovalPolicy,
@@ -36,6 +37,7 @@ export interface ApprovalBugbotFact {
 }
 
 export interface ApprovalEvidence {
+    readonly diagnostics?: readonly ApprovalEvidenceDiagnostic[];
     readonly repositoryId: number;
     readonly pullNumber: number;
     readonly headSha: string;
