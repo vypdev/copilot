@@ -175,7 +175,7 @@ export class PullRequestLifecycleRepository implements PullRequestHeadShaPort {
                 ? error.errors.map((entry: { type?: string }) => entry?.type) : [];
             const code = isGithubRateLimited(error) || types.includes('RATE_LIMITED') ? 'provider.rate-limited'
                 : status === 401 ? 'authorization.credential-invalid'
-                : status === 403 || types.includes('FORBIDDEN') ? 'authorization.denied'
+                : status === 403 || types.includes('FORBIDDEN') || types.includes('UNAUTHORIZED') ? 'authorization.denied'
                 : status === 404 || types.includes('NOT_FOUND') ? 'provider.not-found' : 'provider.unavailable';
             const semanticError = toApplicationError(error, code, `Unable to inspect issue linkage for pull request #${pullRequestNumber}.`);
             logError(semanticError);

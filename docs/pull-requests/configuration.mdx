@@ -59,7 +59,8 @@ the operation rather than claiming the PR is unlinked.
 If inspection fails before temporary edits, the current base and description
 remain unchanged. An interrupted owned operation still attempts compensation.
 `authorization.credential-invalid` and `authorization.denied` require checking
-the documented credential access; `provider.not-found` requires checking the PR
+the documented credential access (including GraphQL `UNAUTHORIZED` and
+`FORBIDDEN` responses); `provider.not-found` requires checking the PR
 identity and credential visibility. `configuration.unsupported` requires a
 supported installation; `provider.contract-invalid` requires integration review
 (including the fixed reference limit). Rate limits and transport outages retain

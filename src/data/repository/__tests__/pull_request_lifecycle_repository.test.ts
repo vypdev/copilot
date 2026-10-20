@@ -237,6 +237,15 @@ describe("PullRequestLifecycleRepository", () => {
             .isLinked('owner', 'repo', 12, 42, 'token')).rejects.toMatchObject({ code });
     });
 
+    it('treats GraphQL UNAUTHORIZED on HTTP 200 as a terminal access failure', async () => {
+        mockGraphql.mockRejectedValue({ status: 200, errors: [{ type: 'UNAUTHORIZED', message: 'PRIVATE_SECRET' }] });
+        await expect(new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter())
+            .isLinked('owner', 'repo', 12, 42, 'token')).rejects.toMatchObject({
+                code: 'authorization.denied', retryable: false,
+                message: 'Unable to inspect issue linkage for pull request #12.',
+            });
+    });
+
     it('distinguishes secondary rate limiting from denied permissions', async () => {
         mockGraphql.mockRejectedValue({ status: 403, response: { headers: { 'retry-after': '30' } } });
         await expect(new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter())

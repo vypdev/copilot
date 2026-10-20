@@ -86820,7 +86820,7 @@ class PullRequestLifecycleRepository {
                     ? error.errors.map((entry) => entry?.type) : [];
                 const code = (0, github_error_policy_1.isGithubRateLimited)(error) || types.includes('RATE_LIMITED') ? 'provider.rate-limited'
                     : status === 401 ? 'authorization.credential-invalid'
-                        : status === 403 || types.includes('FORBIDDEN') ? 'authorization.denied'
+                        : status === 403 || types.includes('FORBIDDEN') || types.includes('UNAUTHORIZED') ? 'authorization.denied'
                             : status === 404 || types.includes('NOT_FOUND') ? 'provider.not-found' : 'provider.unavailable';
                 const semanticError = (0, application_error_1.toApplicationError)(error, code, `Unable to inspect issue linkage for pull request #${pullRequestNumber}.`);
                 (0, logger_1.logError)(semanticError);

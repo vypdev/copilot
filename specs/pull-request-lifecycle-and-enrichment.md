@@ -701,9 +701,9 @@ Representative failed-state content uses the shared semantic error view:
 retry guidance. Completed project/review work remains completed. Normal successful
 linkage adds no new publication. Existing locale, text-only, and noise rules apply.
 
-The regression budget is **at least 26 adapter cases** across authenticated
+The regression budget is **at least 27 adapter cases** across authenticated
 public/private access (2), exact/absent/paginated references (3), HTTP and GraphQL
-error mapping (10), malformed/foreign/exhausted evidence (8), rate limiting (1),
+error mapping (11), malformed/foreign/exhausted evidence (8), rate limiting (1),
 unsupported capability (1), and input identity (1). Existing use-case restoration
 and capability-binding suites remain required, including failure before edits
 and interrupted compensation. Deterministic mocks verify no HTML call, credential
@@ -721,3 +721,8 @@ Live acceptance uses the managed correction PR, then the published patch in a
 private consumer. Local verification does not claim consumer deployment.
 
 Primary schema: [GitHub PullRequest closingIssuesReferences](https://docs.github.com/en/graphql/reference/pulls).
+
+Review follow-up: an HTTP 200 GraphQL `UNAUTHORIZED` error is a nonretryable
+`authorization.denied`, consistent with `FORBIDDEN` and the existing deployment
+GraphQL error policy. A dedicated regression first reproduces the incorrect
+retryable outage and then verifies terminal, sanitized credential guidance.
