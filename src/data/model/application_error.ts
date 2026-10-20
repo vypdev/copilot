@@ -25,6 +25,7 @@ export type ApplicationErrorCode =
     | 'locale.translation-failed'
     | 'validation.invalid-input'
     | 'validation.evidence-too-large'
+    | 'validation.evidence-unavailable'
     | 'workflow.invalid-event'
     | 'workflow.stale'
     | 'workflow.cancelled'
@@ -169,6 +170,12 @@ export const APPLICATION_ERROR_METADATA: Readonly<Record<ApplicationErrorCode, A
         impact: 'The operation did not accept the supplied input.',
         action: 'Correct the input and retry.',
         retainedState: UNCHANGED_STATE,
+    },
+    'validation.evidence-unavailable': {
+        kind: 'validation', retryable: false,
+        impact: 'Progress was not assessed because GitHub omitted a required file patch.',
+        action: 'Inspect the exact base/head comparison manually or split the work into smaller reviewed changes with complete patches before a new assessment. Retrying the same commits cannot restore omitted evidence.',
+        retainedState: 'Existing progress labels and published assessments were preserved; no model assessment was made.',
     },
     'validation.evidence-too-large': {
         kind: 'validation', retryable: false,

@@ -7,7 +7,7 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-17",
+      "lastVerified": "2026-10-20",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md",
@@ -151,7 +151,8 @@
         "src/application/policies/progress_diff_partition_policy.ts",
         "src/application/policies/progress_partition_response_policy.ts",
         "src/application/usecases/actions/summarize_progress_diff_workflow.ts",
-        "src/data/repository/agent_json_schema_validator.ts"
+        "src/data/repository/agent_json_schema_validator.ts",
+        "src/data/model/application_error.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -247,7 +248,8 @@
         "src/application/policies/__tests__/progress_diff_partition_policy.test.ts",
         "src/application/policies/__tests__/progress_partition_response_policy.test.ts",
         "src/application/usecases/actions/__tests__/progress_multipart.integration.test.ts",
-        "src/data/repository/__tests__/agent_json_schema_validator.test.ts"
+        "src/data/repository/__tests__/agent_json_schema_validator.test.ts",
+        "src/application/errors/__tests__/application_error.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -284,7 +286,9 @@
         "docs/security-operations/operations/verification.mdx",
         "docs/development/architecture.mdx",
         "docs/development/testing.mdx",
-        "docs/issues/branch-management.mdx"
+        "docs/issues/branch-management.mdx",
+        "docs/agents/execution-contract.mdx",
+        "docs/security-operations/operations/error-reference.mdx"
       ]
     },
     {

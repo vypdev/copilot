@@ -102,6 +102,20 @@ Progress assessments receive a complete comparison pinned to the repository's
 base and source commits. Generated `build/` outputs and the exact generated
 `specs/CATALOG.md` index contribute file facts only; the editable catalog JSON
 still contributes its full source patch. These generated facts never certify a
-build or test. Comparisons exceeding the existing 256,000-byte evidence budget
-remain unavailable and preserve progress state. That condition does not imply
-that the branch changed during the invocation.
+build or test. Complete comparisons are assessed in whole-file partitions of at
+most 256,000 UTF-8 bytes each, with at most 16 partitions and one final assessment.
+An individual oversized file or an exhausted partition budget is nonretryable
+`validation.evidence-too-large`; existing progress remains unchanged.
+
+If GitHub omits any required source patch, progress is **not assessed** and the
+result is nonretryable `validation.evidence-unavailable`. This includes pnpm
+lockfiles and binary or zero-line changed files whose contents cannot be proven.
+Lockfiles are not generated-metadata exceptions. Only explicitly unchanged paths
+with zero changed lines may carry empty source evidence. No workspace fallback,
+partial review, or automatic completion is claimed. Inspect the exact base/head
+comparison manually, or split the work into smaller reviewed changes that expose
+complete patches before requesting a fresh assessment. Manual inspection does
+not update Copilot's progress; rerunning the same commits cannot recover an
+omitted patch. A genuine provider outage remains retryable. These conditions do
+not imply that the branch changed during the invocation. See the
+[error reference](/security-operations/operations/error-reference).
