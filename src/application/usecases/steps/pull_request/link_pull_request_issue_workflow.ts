@@ -98,11 +98,11 @@ export async function runLinkPullRequestIssue(
     let alreadyLinked = false;
 
     if (!hasOwnedPendingOperation) {
-        alreadyLinked = await port.isLinked(param.pullRequestNumber);
+        alreadyLinked = await port.isLinked(param.pullRequestNumber, param.issueNumber);
         if (alreadyLinked) return [];
     } else {
         try {
-            alreadyLinked = await port.isLinked(param.pullRequestNumber);
+            alreadyLinked = await port.isLinked(param.pullRequestNumber, param.issueNumber);
         } catch (error) {
             primaryError = error;
         }

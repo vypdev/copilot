@@ -1947,7 +1947,7 @@
       "status": "implemented",
       "scope": "Enrich linked and unlinked pull requests with safe issue linkage, projects, metadata, reviewers, concise descriptions, and distinct workflow evidence",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-13",
+      "lastVerified": "2026-10-20",
       "specs": [
         "specs/pull-request-lifecycle-and-enrichment.md"
       ],
@@ -1995,7 +1995,9 @@
         "src/application/policies/copilot_evidence_policy.ts",
         "src/actions/github_action_completion.ts",
         "src/data/repository/project/project_board_item_query.ts",
-        "src/data/repository/project/project_board_field_update.ts"
+        "src/data/repository/project/project_board_field_update.ts",
+        "src/application/ports/pull_request_issue_link_ports.ts",
+        "src/infrastructure/github/ports/github_pull_request_provider_ports.ts"
       ],
       "tests": [
         "src/application/usecases/execution/__tests__/execution_issue_number_policy.test.ts",
