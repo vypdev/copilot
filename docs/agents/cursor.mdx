@@ -5,6 +5,9 @@ description: Configure and validate Cursor as a hardened agent runtime.
 
 # Cursor runtime
 
+> Source checkout only: this repository-maintainer script is not included in the installed CLI package. For a consumer installation, use `copilot doctor --read-only`, the installed CLI-provisioning workflow, and the [first workflow](/first-workflow) to inspect metadata and verify actual execution.
+
+
 Copilot supports Cursor at the command, provisioning, authentication, sandbox, timeout, cancellation, output-limit, and terminal-failure boundaries. Production readiness is deployment-specific: run a real authenticated smoke test for the selected account, model, and runner image before enabling it in a protected workflow.
 
 ## Runtime contract

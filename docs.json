@@ -1,6 +1,6 @@
 {
   "name": "Copilot",
-  "description": "A tool for managing Git workflow and board integration",
+  "description": "Automate issue-to-PR workflows, review, authorized changes and releases in GitHub",
   "tabs": [
     {
       "id": "root",
@@ -54,29 +54,66 @@
           "icon": "rocket"
         },
         {
-          "title": "Overview",
-          "href": "/overview",
-          "icon": "house"
-        },
-        {
           "title": "Quick start",
           "href": "/quick-start",
           "icon": "play"
         },
         {
-          "title": "First workflow",
+          "title": "Set up with the web assistant",
+          "href": "/setup-web",
+          "icon": "gear"
+        },
+        {
+          "title": "Your first issue-to-PR workflow",
           "href": "/first-workflow",
           "icon": "square-check"
-        },
+        }
+      ]
+    },
+    {
+      "group": "Guides by goal",
+      "tab": "root",
+      "pages": [
         {
-          "title": "Configuration checklist",
-          "href": "/configuration-checklist",
-          "icon": "square-check"
-        },
-        {
-          "title": "How To Use",
-          "href": "/how-to-use",
+          "title": "Choose a goal",
+          "href": "/guides",
           "icon": "list-check"
+        },
+        {
+          "title": "Manage issues and branches",
+          "href": "/guides/issues-and-branches",
+          "icon": "code-branch"
+        },
+        {
+          "title": "Review PRs and resolve findings",
+          "href": "/guides/review-pull-requests",
+          "icon": "code-pull-request"
+        },
+        {
+          "title": "Work with the bot",
+          "href": "/guides/work-with-the-bot",
+          "icon": "robot"
+        },
+        {
+          "title": "Releases and hotfixes",
+          "href": "/guides/releases-and-hotfixes",
+          "icon": "rocket"
+        }
+      ]
+    },
+    {
+      "group": "Reference",
+      "tab": "root",
+      "pages": [
+        {
+          "title": "Overview and responsibilities",
+          "href": "/overview",
+          "icon": "house"
+        },
+        {
+          "title": "Features & capabilities",
+          "href": "/features",
+          "icon": "list"
         },
         {
           "title": "Authentication",
@@ -89,9 +126,19 @@
           "icon": "gear"
         },
         {
-          "title": "Features & Capabilities",
-          "href": "/features",
-          "icon": "list"
+          "title": "Setup and maintenance",
+          "href": "/how-to-use",
+          "icon": "list-check"
+        },
+        {
+          "title": "Configuration checklist",
+          "href": "/configuration-checklist",
+          "icon": "square-check"
+        },
+        {
+          "title": "Use the documentation",
+          "href": "/using-the-docs",
+          "icon": "book"
         }
       ]
     },

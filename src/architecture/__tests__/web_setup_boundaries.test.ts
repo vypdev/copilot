@@ -84,15 +84,32 @@ describe('local web setup architecture', () => {
       { specifier: './type-import', typeOnly: true },
     ]);
   });
-  test('browser imports only redacted application contracts, as types, across the actual dependency graph', () => {
+  test('browser imports only redacted view types or inert documentation constants across the actual dependency graph', () => {
     const browser = join(root, 'web', 'src');
     const contract = join(root, 'src', 'application', 'contracts', 'web_setup_view');
+    const documentation = join(root, 'src', 'application', 'contracts', 'setup_documentation');
+    const registry = ts.createSourceFile(`${documentation}.ts`, readFileSync(`${documentation}.ts`, 'utf8'), ts.ScriptTarget.Latest, true);
+    expect(registry.statements).toHaveLength(1);
+    const statement = registry.statements[0];
+    expect(ts.isVariableStatement(statement)).toBe(true);
+    if (!ts.isVariableStatement(statement)) throw new Error('Documentation must be static constants');
+    expect(statement.declarationList.flags & ts.NodeFlags.Const).toBeTruthy();
+    expect(statement.declarationList.declarations).toHaveLength(1);
+    const initializer = statement.declarationList.declarations[0].initializer!;
+    expect(ts.isAsExpression(initializer) && ts.isObjectLiteralExpression(initializer.expression)).toBe(true);
+    if (!ts.isAsExpression(initializer) || !ts.isObjectLiteralExpression(initializer.expression)) throw new Error('Documentation must be literal URLs');
+    for (const property of initializer.expression.properties) {
+      expect(ts.isPropertyAssignment(property) && ts.isIdentifier(property.name) && ts.isStringLiteral(property.initializer)).toBe(true);
+    }
     for (const path of browserSources(browser)) {
       for (const imported of moduleImports(path)) {
         const target = imported.specifier.startsWith('.') ? resolve(dirname(path), imported.specifier) : '';
         if (target.startsWith(`${join(root, 'src')}${sep}`)) {
-          expect(imported.typeOnly).toBe(true);
-          expect(target).toBe(contract);
+          if (target === documentation) expect(imported.typeOnly).toBe(false);
+          else {
+            expect(imported.typeOnly).toBe(true);
+            expect(target).toBe(contract);
+          }
         }
         if (path.includes(`${sep}components${sep}`) || path.includes(`${sep}lib${sep}`)) {
           expect(target).not.toContain(`${sep}session${sep}`);

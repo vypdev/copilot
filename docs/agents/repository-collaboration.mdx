@@ -39,6 +39,12 @@ Use `--agent-guidance prompt` to insert or reconcile only the bounded root point
 
 ## Verification hooks in a worktree
 
+For Action-run repository checks, the operator must provision project runtimes
+in each command or automated-fix job before Copilot. Runner placement does not
+install them. A reviewed `.copilot/verification-prerequisites.json` adds bounded
+version checks; without it, no language is inferred. See
+[same-job runtime preparation and recovery](/security-operations/operations/verification#repository-verification-prerequisites).
+
 After installing dependencies, refresh the repository hooks with
 `node scripts/install-git-hooks.cjs` if needed. Linked worktrees store `.git`
 as a file; the installer resolves their native local and shared metadata and

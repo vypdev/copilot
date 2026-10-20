@@ -3,8 +3,9 @@ import type { GitCommitPort } from '../application/ports/git_ports';
 import { buildGitAuthenticationEnvironment } from './git_authentication_environment';
 import { prepareUntrustedCommandEnvironment } from './untrusted_command_environment';
 import { withoutGitHooks } from './git_hook_isolation';
+import { assertVerificationRuntimePrerequisites } from './verification_runtime_preflight';
 
-type GitCommandOptions = { stdout?: (data: Buffer) => void; env?: Record<string, string>; untrusted?: boolean };
+type GitCommandOptions = { stdout?: (data: Buffer) => void; env?: Record<string, string>; untrusted?: boolean; verifyRuntimePrerequisites?: boolean };
 type GitCommandExecutor = (program: string, args: string[], options?: GitCommandOptions) => Promise<number>;
 
 export class GitCommitAdapter implements GitCommitPort {
@@ -18,13 +19,16 @@ export class GitCommitAdapter implements GitCommitPort {
                 ...(options.env ? { env: options.env } : {}),
             })
             : exec.exec(program, args),
+        private readonly checkPrerequisites: (environment: Record<string, string>) => void = assertVerificationRuntimePrerequisites,
     ) {}
 
     async execute(program: string, args: string[], options?: GitCommandOptions): Promise<number> {
+        if (options?.verifyRuntimePrerequisites && !options.untrusted) throw new Error('Runtime preflight requires credential-free verification.');
         if (!options?.untrusted) return options ? this.executeCommand(program, args, options) : this.executeCommand(program, args);
         if (options.env) throw new Error('Untrusted command execution does not accept a caller-supplied environment.');
         const runtime = prepareUntrustedCommandEnvironment();
         try {
+            if (options.verifyRuntimePrerequisites) this.checkPrerequisites(runtime.environment);
             return await this.executeCommand(program, args, {
                 ...(options.stdout ? { stdout: options.stdout } : {}),
                 env: runtime.environment,

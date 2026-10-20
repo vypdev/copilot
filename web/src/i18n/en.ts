@@ -1,4 +1,8 @@
 export const en = {
+  setupHelp: 'Setup help', setupTutorial: 'Setup tutorial', firstWorkflowGuide: 'First issue-to-PR workflow', setupRecovery: 'Troubleshooting',
+  setupHelpHint: 'Documentation opens in a new tab. Your setup answers stay here.',
+  setupNextWorkflow: 'Install the reviewed files, then verify the Action in GitHub. A metadata check alone does not prove runtime success.',
+
   batchNextActions: "Next steps",
   batchStatusReady: "Ready for review",
   batchStatusBlocked: "Needs action",

@@ -9,6 +9,15 @@ import {
 } from '../repository_agent_guidance_policy';
 
 describe('repository agent guidance policy', () => {
+  it('explains operator-owned runtime preparation without silently installing Java', () => {
+    const guide = renderRepositoryAgentGuide(buildRepositoryAgentProfile(createDefaultSetupConfiguration()));
+    expect(guide).toContain('every job');
+    expect(guide).toContain('.copilot/verification-prerequisites.json');
+    expect(guide).toContain('no language is inferred');
+    expect(guide).toContain('JAVA_HOME');
+    expect(guide).toContain('#repository-verification-prerequisites');
+    expect(guide).not.toContain('run:');
+  });
   it('projects every default workflow and Action-owned collaboration boundary', () => {
     const configuration = createDefaultSetupConfiguration();
     const profile = buildRepositoryAgentProfile(configuration);

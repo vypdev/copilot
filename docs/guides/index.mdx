@@ -1,0 +1,26 @@
+---
+title: Choose a goal
+description: Enable, configure, use and verify the Copilot capabilities you need.
+---
+
+Use [web setup](/setup-web) to install Copilot and the [first workflow](/first-workflow) to verify the baseline. Then choose the outcome you need. Each guide connects setup choices to everyday use and observable results.
+
+| I want to… | Guide | Main setup choices |
+|---|---|---|
+| Turn issues into tracked branches and PRs | [Manage issues and branches](/guides/issues-and-branches) | Issues, Issue Forms and selected kinds; Commits for progress; Projects if needed |
+| Review PRs and fix reported problems | [Review PRs and resolve findings](/guides/review-pull-requests) | Pull requests, review/commit routes, agent runtime and comment capabilities for requests |
+| Ask for explanations, a plan or implementation | [Work with the bot](/guides/work-with-the-bot) | Issue/PR comments, allowed runtime/model and verification commands |
+| Publish a release or emergency fix | [Release and hotfix guide](/guides/releases-and-hotfixes) | Release/Hotfix kinds, publishing and continuation workflows, protected merge policy |
+
+For branch drift, use [Branch synchronization](/issues/branch-synchronization). For local analysis or a programmatic integration, use [Workflow & CLI](/single-actions/workflow-and-cli) or the [Bugbot API](/bugbot/programmatic-api).
+
+## Understand the configuration layers
+
+1. **Setup choices** select capabilities and generate coordinated files and GitHub resources.
+2. **Variables and Secrets** supply runtime settings and credentials at the reviewed repository/organization scope.
+3. **Workflow inputs and event subscriptions** determine when the Action runs and which settings it receives.
+4. **GitHub policy** still controls repository access, checks, review, merge and protected deployment.
+
+Use setup to change coordinated features. Existing-installation inspection and quick adjustments are documented in [Setup and maintenance](/how-to-use#inspect-configuration-and-make-a-small-adjustment). The complete [Configuration reference](/configuration) explains individual inputs and scope precedence.
+
+Enabling analysis, file-changing commands, native bot approval and release deployment are separate decisions. Start with the capabilities you can verify, then expand them deliberately.

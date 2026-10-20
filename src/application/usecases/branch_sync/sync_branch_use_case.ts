@@ -145,7 +145,7 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
     if (commands.length === MAX_VERIFY_COMMANDS) logInfo(`Branch sync verification is capped at ${MAX_VERIFY_COMMANDS} commands.`);
     const verification = await runVerifyCommands(
       commands,
-      (program, args) => this.git.execute(program, args, { untrusted: true }),
+      (program, args) => this.git.execute(program, args, { untrusted: true, verifyRuntimePrerequisites: true }),
     );
     if (!verification.success) {
       return {

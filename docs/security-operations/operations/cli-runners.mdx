@@ -5,6 +5,9 @@ description: Run and verify the provider-specific headless CLIs used by Bugbot.
 
 # Agent CLI runners
 
+> Source checkout only: this repository-maintainer script is not included in the installed CLI package. For a consumer installation, use `copilot doctor --read-only`, the installed CLI-provisioning workflow, and the [first workflow](/first-workflow) to inspect metadata and verify actual execution.
+
+
 Copilot uses one provider-specific, headless CLI per run. The provider adapter selects the documented prompt transport: Codex receives the prompt through standard input, while OpenCode and Cursor receive it as one positional argument. The response is read from standard output.
 
 | Runtime | Headless command | Credential reference |

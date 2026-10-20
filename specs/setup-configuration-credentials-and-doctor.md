@@ -729,3 +729,12 @@ Evidence: `setup_organization_import_wizard.test.ts`,
 `setup_trusted_health_sdk_contract.integration.test.ts`, and
 `web_setup_batch_components.test.ts`. Owning test budget, migration, UX and
 operational acceptance are in the companion; existing quality gates remain.
+
+## Documentation navigation companion — issue #617 (2026-10-20)
+
+The bounded web/CLI documentation-navigation contract and its shared 15-case
+incremental test budget are owned by the [web assistant amendment](./local-web-setup-assistant.md#documentation-navigation-amendment--issue-617-2026-10-20).
+It adds public tutorial, first-workflow and recovery links to command help and
+presentations, with no setup decision, credential, configuration, durable-state
+or permission changes. The 15 cases are shared evidence, not counted again
+here; existing quality gates and human UX limitations remain.

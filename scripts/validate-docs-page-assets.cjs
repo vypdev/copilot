@@ -33,6 +33,12 @@ visit(navigation, 'docs.json');
 for (const file of files) {
   const source = fs.readFileSync(file, 'utf8');
   const relative = path.relative(root, file);
+  for (const match of source.matchAll(/<Image\b[^>]*\bsrc=["'](\/[^"']+)["']/g)) {
+    const asset = path.resolve(docsRoot, `.${match[1]}`);
+    if (!asset.startsWith(`${docsRoot}${path.sep}`) || !fs.existsSync(asset) || !fs.statSync(asset).isFile()) {
+      errors.push(`${relative}: missing or invalid local image "${match[1]}"`);
+    }
+  }
   for (const match of source.matchAll(/^\s*<([A-Z][A-Za-z0-9]*)\b/gm)) {
     if (!allowedComponents.has(match[1])) errors.push(`${relative}: unsupported component <${match[1]}>`);
   }

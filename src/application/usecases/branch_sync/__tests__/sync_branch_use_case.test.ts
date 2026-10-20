@@ -5,6 +5,7 @@ import { projectBranchSyncContext } from '../../push_single_action_contexts';
 import { renderApplicationErrorMarkdown } from '../../../policies/application_error_presentation_policy';
 import { resolveStaticApplicationErrorCatalog } from '../../../policies/application_error_message_catalog';
 import { BRANCH_SYNC_VALIDATION_CODES } from '../../../../domain/branch_sync_validation';
+import { VerificationPrerequisiteError } from '../../../policies/verification_runtime_policy';
 
 const target = {
   issueNumber: 42,
@@ -113,7 +114,7 @@ describe("SyncBranchUseCase", () => {
     const results = await context.useCase.invoke({ context: execution(), options });
 
     expect(context.fixer.fix).not.toHaveBeenCalled();
-    expect(context.git.execute).toHaveBeenCalledWith("pnpm", ["test"], { untrusted: true });
+    expect(context.git.execute).toHaveBeenCalledWith("pnpm", ["test"], { untrusted: true, verifyRuntimePrerequisites: true });
     expect(context.workspace.assertRemoteHeadsUnchanged).toHaveBeenCalledWith(
       "develop", "parent", "feature/42", "child",
     );
@@ -205,6 +206,19 @@ describe("SyncBranchUseCase", () => {
     expect(context.workspace.abort).toHaveBeenCalledTimes(1);
     expect(results[0]).toMatchObject({ success: false });
     expect(JSON.stringify(results)).not.toContain("private verification detail");
+  });
+
+  it.each(['clean', 'conflicted'] as const)('aborts a %s merge on a prerequisite failure without reading author or publishing', async kind => {
+    const context = setup(kind === 'clean' ? { kind, parentSha: 'parent', childSha: 'child' }
+      : { kind, parentSha: 'parent', childSha: 'child', conflictPaths: ['src/a.ts'] });
+    context.git.execute.mockRejectedValue(new VerificationPrerequisiteError('version-mismatch', { runtime: 'java', version: '17' }, '21.0.1'));
+    const [result] = await context.useCase.invoke({ context: execution(), options });
+    expect(result.success).toBe(false);
+    expect(result.errors[0].message).toContain('Java 17 is required; observed 21.0.1');
+    expect(context.workspace.abort).toHaveBeenCalledTimes(1);
+    expect(context.authenticatedUser.getUserDetails).not.toHaveBeenCalled();
+    expect(context.workspace.assertRemoteHeadsUnchanged).not.toHaveBeenCalled();
+    expect(context.workspace.commitAndPush).not.toHaveBeenCalled();
   });
 
   it("caps an oversized verification configuration before execution", async () => {

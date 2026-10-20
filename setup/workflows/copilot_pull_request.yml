@@ -36,6 +36,10 @@ jobs:
             echo "::notice::The previous PR commit is unavailable; Bugbot will use the canonical pull-request diff."
           fi
 
+      # Before Copilot, provision project runtimes/dependencies in this same job when
+      # repository verification is configured. A separate CI job does not prepare it.
+      # Declare reviewed versions in .copilot/verification-prerequisites.json.
+      # https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-verification-prerequisites
       - uses: vypdev/copilot@v3
         with:
           repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}

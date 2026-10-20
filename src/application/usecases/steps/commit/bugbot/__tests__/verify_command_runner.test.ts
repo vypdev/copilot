@@ -1,4 +1,5 @@
 import { runVerifyCommands } from '../verify_command_runner';
+import { VerificationPrerequisiteError } from '../../../../../policies/verification_runtime_policy';
 
 describe('verify command runner', () => {
     it('executes parsed commands sequentially', async () => {
@@ -44,5 +45,17 @@ describe('verify command runner', () => {
             error: 'Invalid verify command (use no shell operators; quotes allowed).',
         });
         expect(JSON.stringify(result)).not.toContain('top-secret');
+    });
+
+    it('reports bounded prerequisite recovery and stops the remaining verification commands', async () => {
+        const execute = jest.fn().mockRejectedValue(new VerificationPrerequisiteError('unavailable', { runtime: 'java', version: '17' }, undefined, 'copilot-issues'));
+        const result = await runVerifyCommands(['make ci-local --token top-secret', 'pnpm test'], execute);
+        expect(result).toMatchObject({ success: false, failedCommand: 'make ci-local --token [REDACTED]' });
+        expect(result.error).toContain('Java 17 is unavailable');
+        expect(result.error).toContain('job copilot-issues');
+        expect(result.error).toContain('same job before Copilot');
+        expect(result.error).toContain('#repository-verification-prerequisites');
+        expect(JSON.stringify(result)).not.toContain('top-secret');
+        expect(execute).toHaveBeenCalledTimes(1);
     });
 });

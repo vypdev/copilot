@@ -9,6 +9,7 @@
   import { focusOnRevision } from '../lib/focusOnRevision';
   import { permissionName, permissionTerm } from '../i18n/permissionTerms';
   import { permissionEvidence } from '../i18n/permissionEvidence';
+  import CompletedSetupHelp from './CompletedSetupHelp.svelte';
   export let management = false;
   export let batch = false;
   export let outcome: NonNullable<WebSetupView['outcome']>;
@@ -68,15 +69,13 @@
       {/if}
     </section>
   {/if}
-  {#if detail?.effects?.length}
-    <ResourceProgress effects={detail.effects} />
-  {/if}
+  {#if detail?.effects?.length}<ResourceProgress effects={detail.effects} />{/if}
   {#if showPatCorrection && setupPatCorrection}
     <SetupPatCorrectionPanel correction={setupPatCorrection} />
   {/if}
   <p>{secretCollision ? tr('permissionSecretCollision', $setupLocale) : pendingProbeCleanup ? tr('permissionProbeCleanupPending', $setupLocale) : explanation}</p>
   {#if batch}<p>{tr('batchCleanup', $setupLocale)}</p>{/if}
-  {#if outcome === 'complete' && !management && !batch}<p>{tr('botRenewal', $setupLocale)}</p>{/if}
+  {#if outcome === 'complete' && !management && !batch}<CompletedSetupHelp />{/if}
   {#if !management && !batch}<p>{tr('doctorHelp', $setupLocale)}</p>{/if}
   {#if outcome === 'complete' && !management && !batch}
     <section class="result-doctor" aria-live="polite">

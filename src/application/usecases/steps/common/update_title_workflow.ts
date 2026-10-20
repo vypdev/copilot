@@ -3,8 +3,9 @@ import type {
     BoundIssueTitlePort,
     TitleLabelFacts,
 } from '../../../../application/ports/issue_title_ports';
-import { toApplicationError } from '../../../errors/application_error';
+import { ApplicationError, toApplicationError } from '../../../errors/application_error';
 import { parsePositiveSafeInteger } from '../../../../domain/positive_integer_policy';
+import { hasConventionalPullRequestTitle } from '../../../policies/pull_request_title_policy';
 
 export type UpdateTitleContext =
     | {
@@ -99,19 +100,26 @@ export async function runPullRequestTitleUpdate(
     if (!linkedIssueNumber || linkedIssueNumber === param.pullRequestNumber) {
         return [skippedResult(taskId)];
     }
+    const currentTitle = await issueRepository.getTitle(param.pullRequestNumber);
+    if (currentTitle === undefined) {
+        return [new Result({ id: taskId, success: false, executed: true,
+            steps: ['The current pull request title could not be read. No title change was attempted.'],
+            errors: [new ApplicationError('provider.unavailable', 'Unable to read the current pull request title.')] })];
+    }
+    if (hasConventionalPullRequestTitle(currentTitle)) return [skippedResult(taskId)];
     const issueTitle = await issueRepository.getTitle(linkedIssueNumber);
     if (issueTitle === undefined) {
         return [new Result({ id: taskId, success: false, executed: true, steps: ['Tried to update title, but there was a problem.'] })];
     }
     const title = await issueRepository.updatePullRequestTitle({
-        pullRequestTitle: param.pullRequestTitle,
+        pullRequestTitle: currentTitle,
         issueTitle,
         issueNumber: linkedIssueNumber,
         pullRequestNumber: param.pullRequestNumber,
         labelFacts: param.labelFacts,
     });
     return title
-        ? [updatedResult(taskId, `The pull request's title was updated from \`${param.pullRequestTitle}\` to \`${title}\`.`)]
+        ? [updatedResult(taskId, `The pull request's title was updated from \`${currentTitle}\` to \`${title}\`.`)]
         : [skippedResult(taskId)];
 }
 

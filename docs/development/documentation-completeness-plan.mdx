@@ -9,7 +9,9 @@ This plan defines the public documentation structure and the evidence required t
 
 ## Information architecture
 
-- Getting Started: overview, quick start, first workflow, checklist.
+- Getting Started: introduction, quick start, illustrated web setup, first issue-to-PR workflow.
+- Guides by goal: issues/branches, PR review/findings, bot requests, releases/hotfixes.
+- Reference: responsibilities, capabilities, authentication, configuration, maintenance, checklist, and documentation consumption/version selection.
 - Agent Execution: contract, runtime, model, allowlists, commands, failures.
 - Security: credentials, trust boundaries, forks, self-hosted runners, exposure, compliance.
 - Operations: provisioning, versions, verification, smoke tests, upgrades, rollback.
@@ -19,14 +21,26 @@ This plan defines the public documentation structure and the evidence required t
 
 ## Acceptance criteria
 
-Every public page MUST:
+Every public page MUST, for the concerns relevant to its scope:
 
-- describe the current CLI-only contract;
+- describe the current implemented capability and distinguish local CLI setup from the installed GitHub Action;
 - identify required, optional, forbidden, and terminal behavior;
 - avoid undocumented defaults and implicit fallbacks;
 - link to the applicable source of truth;
 - use MDX and appear in `docs.json` when it is a user-facing reference;
 - avoid secrets, authentication values, and unverifiable success claims.
+
+Setup help links in the CLI and browser MUST lead to registered pages and valid
+anchors. Public guide links never contain answers, session IDs or credentials;
+they open only by user choice. Local screenshots must exist. The link/asset
+validators enforce these properties where static inspection can establish them.
+
+The setup navigation amendment in `specs/local-web-setup-assistant.md` owns a
+15-case incremental automated budget for localized navigation, CLI help and
+entry/result routing. This does not change or satisfy the separate manual
+accessibility, language and native-platform acceptance ledger. Inspect the
+actual public Git-ref preview to verify titles, navigation and images; do not
+infer a readable renderer from source-level checks alone.
 
 The repository validators check navigation routes and heading fragments, local
 links, YAML snippets, Action version references, public Action input-name

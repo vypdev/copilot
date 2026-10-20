@@ -11,7 +11,8 @@
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md",
-        "specs/copilot-history.md"
+        "specs/copilot-history.md",
+        "specs/pull-request-title-compatibility.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -152,7 +153,10 @@
         "src/application/policies/progress_partition_response_policy.ts",
         "src/application/usecases/actions/summarize_progress_diff_workflow.ts",
         "src/data/repository/agent_json_schema_validator.ts",
-        "src/data/model/application_error.ts"
+        "src/data/model/application_error.ts",
+        "src/application/policies/pull_request_title_policy.ts",
+        "src/application/usecases/steps/common/update_title_workflow.ts",
+        "src/data/repository/issue/issue_title_repository.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -249,7 +253,11 @@
         "src/application/policies/__tests__/progress_partition_response_policy.test.ts",
         "src/application/usecases/actions/__tests__/progress_multipart.integration.test.ts",
         "src/data/repository/__tests__/agent_json_schema_validator.test.ts",
-        "src/application/errors/__tests__/application_error.test.ts"
+        "src/application/errors/__tests__/application_error.test.ts",
+        "src/application/policies/__tests__/pull_request_title_policy.test.ts",
+        "src/application/usecases/steps/common/__tests__/pull_request_title_compatibility.test.ts",
+        "src/application/usecases/steps/common/__tests__/update_title_use_case.test.ts",
+        "src/data/repository/issue/__tests__/issue_title_repository.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -719,7 +727,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-19",
+      "lastVerified": "2026-10-20",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
@@ -738,7 +746,9 @@
         ".github/workflows/copilot_commit.yml",
         ".github/workflows/copilot_branch_sync.yml",
         "setup/workflows/copilot_commit.yml",
-        "setup/workflows/copilot_branch_sync.yml"
+        "setup/workflows/copilot_branch_sync.yml",
+        "setup/workflows/copilot_issue_comment.yml",
+        "setup/workflows/copilot_pull_request_comment.yml"
       ],
       "entrypoints": [
         "src/cli/commands/setup.ts",
@@ -893,7 +903,19 @@
         "src/application/policies/setup_runner_installation_summary_policy.ts",
         "src/utils/setup_files.ts",
         "src/domain/specification_catalog_path_policy.cjs",
-        "src/domain/sdd_prerequisite_policy.cjs"
+        "src/domain/sdd_prerequisite_policy.cjs",
+        "src/application/contracts/setup_documentation.ts",
+        "src/application/policies/setup_question_documentation_policy.ts",
+        "web/src/components/SetupHelp.svelte",
+        "web/src/components/CompletedSetupHelp.svelte",
+        "src/application/policies/verification_runtime_policy.ts",
+        "src/infrastructure/verification_runtime_manifest.ts",
+        "src/infrastructure/verification_runtime_preflight.ts",
+        "src/infrastructure/untrusted_command_environment.ts",
+        "src/application/ports/git_ports.ts",
+        "src/application/ports/bugbot_git_ports.ts",
+        "src/application/usecases/steps/commit/bugbot/commit_and_push_preflight.ts",
+        "src/application/usecases/steps/commit/bugbot/verify_command_runner.ts"
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
@@ -1014,7 +1036,16 @@
         "src/cli/__tests__/setup_runner_config_file.test.ts",
         "src/infrastructure/__tests__/setup_runner_composition.test.ts",
         "src/tooling/__tests__/setup_provisioning_workflow.test.ts",
-        "src/infrastructure/__tests__/setup_sdd_prerequisites.test.ts"
+        "src/infrastructure/__tests__/setup_sdd_prerequisites.test.ts",
+        "src/cli/__tests__/setup_documentation_navigation.test.ts",
+        "src/application/policies/__tests__/setup_question_documentation_policy.test.ts",
+        "src/application/policies/__tests__/verification_runtime_policy.test.ts",
+        "src/infrastructure/__tests__/verification_runtime_preflight.test.ts",
+        "src/infrastructure/__tests__/verification_runtime_branch_sync.test.ts",
+        "src/infrastructure/__tests__/untrusted_command_environment.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/verify_command_runner.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/commit_verification_workspace.test.ts",
+        "src/tooling/__tests__/verification_runtime_guidance.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -1030,7 +1061,16 @@
         "docs/security-operations/operations/verification.mdx",
         "docs/development/setup-pat-provider-audit-2026-10-06.md",
         "docs/issues/comment-commands.mdx",
-        "docs/issues/branch-synchronization.mdx"
+        "docs/issues/branch-synchronization.mdx",
+        "docs/setup-web.mdx",
+        "docs/first-workflow.mdx",
+        "docs/using-the-docs.mdx",
+        "docs/guides/index.mdx",
+        "docs/guides/issues-and-branches.mdx",
+        "docs/guides/review-pull-requests.mdx",
+        "docs/guides/work-with-the-bot.mdx",
+        "docs/guides/releases-and-hotfixes.mdx",
+        "docs/agents/repository-collaboration.mdx"
       ]
     },
     {
@@ -1039,7 +1079,7 @@
       "status": "proposed",
       "scope": "Offer a packaged, loopback-only Svelte setup interface over the existing engine with four-language guidance, English CLI help, basic/custom first-run paths, editable question and plan review, source-labelled GitHub facts, assisted CI and Project evidence, role-separated PATs, and truthful itemized outcomes; inspect existing configuration and apply independent, scope-aware runtime adjustments with permission, drift and read-back verification",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-14",
+      "lastVerified": "2026-10-20",
       "specs": [
         "specs/local-web-setup-assistant.md",
         "specs/setup-configuration-management.md"
@@ -1196,7 +1236,11 @@
         "web/src/components/InstallationReview.svelte",
         "web/src/components/RunnerQuestionDetails.svelte",
         "web/src/i18n/runnerCopy.ts",
-        "scripts/web-setup-runner-review-fixtures.cjs"
+        "scripts/web-setup-runner-review-fixtures.cjs",
+        "src/application/contracts/setup_documentation.ts",
+        "src/cli/setup_journey_presenter.ts",
+        "web/src/components/SetupHelp.svelte",
+        "web/src/components/CompletedSetupHelp.svelte"
       ],
       "tests": [
         "src/__tests__/cli.test.ts",
@@ -1261,7 +1305,8 @@
         "src/infrastructure/__tests__/setup_management_workspace_adapter.test.ts",
         "src/cli/__tests__/setup_management_adapter.test.ts",
         "src/cli/__tests__/web_setup_management_components.test.ts",
-        "src/cli/__tests__/web_setup_runner_components.test.ts"
+        "src/cli/__tests__/web_setup_runner_components.test.ts",
+        "src/cli/__tests__/setup_documentation_navigation.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -1277,7 +1322,15 @@
         "docs/dependency-rules.md",
         "docs/security-operations/security/self-hosted-runners.mdx",
         "docs/security-operations/operations/troubleshooting.mdx",
-        "docs/security-operations/operations/provisioning.mdx"
+        "docs/security-operations/operations/provisioning.mdx",
+        "docs/setup-web.mdx",
+        "docs/first-workflow.mdx",
+        "docs/using-the-docs.mdx",
+        "docs/guides/index.mdx",
+        "docs/guides/issues-and-branches.mdx",
+        "docs/guides/review-pull-requests.mdx",
+        "docs/guides/work-with-the-bot.mdx",
+        "docs/guides/releases-and-hotfixes.mdx"
       ]
     },
     {
@@ -1858,15 +1911,18 @@
       "status": "implemented",
       "scope": "Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-18",
+      "lastVerified": "2026-10-20",
       "specs": [
-        "specs/branch-synchronization-and-conflict-recovery.md"
+        "specs/branch-synchronization-and-conflict-recovery.md",
+        "specs/repository-verification-runtime-prerequisites.md"
       ],
       "workflows": [
         ".github/workflows/copilot_branch_sync.yml",
         "setup/workflows/copilot_branch_sync.yml",
         ".github/workflows/copilot_issue.yml",
-        "setup/workflows/copilot_issue.yml"
+        "setup/workflows/copilot_issue.yml",
+        "setup/workflows/copilot_issue_comment.yml",
+        "setup/workflows/copilot_pull_request_comment.yml"
       ],
       "entrypoints": [
         "src/application/usecases/branch_sync/sync_branch_use_case.ts",
@@ -1905,7 +1961,15 @@
         "src/application/ports/reply_request_read_ports.ts",
         "src/domain/reply_request_digest.ts",
         "src/infrastructure/composition/reply_request_composition_root.ts",
-        "src/data/repository/reply_request_repository.ts"
+        "src/data/repository/reply_request_repository.ts",
+        "src/application/policies/verification_runtime_policy.ts",
+        "src/infrastructure/verification_runtime_manifest.ts",
+        "src/infrastructure/verification_runtime_preflight.ts",
+        "src/infrastructure/untrusted_command_environment.ts",
+        "src/application/ports/git_ports.ts",
+        "src/application/ports/bugbot_git_ports.ts",
+        "src/application/usecases/steps/commit/bugbot/commit_and_push_preflight.ts",
+        "src/application/usecases/steps/commit/bugbot/verify_command_runner.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -1932,13 +1996,23 @@
         "src/actions/__tests__/github_action.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/data/repository/__tests__/reply_request_repository.test.ts",
-        "src/infrastructure/composition/__tests__/reply_request_composition_root.test.ts"
+        "src/infrastructure/composition/__tests__/reply_request_composition_root.test.ts",
+        "src/application/policies/__tests__/verification_runtime_policy.test.ts",
+        "src/infrastructure/__tests__/verification_runtime_preflight.test.ts",
+        "src/infrastructure/__tests__/verification_runtime_branch_sync.test.ts",
+        "src/infrastructure/__tests__/untrusted_command_environment.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/verify_command_runner.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/commit_verification_workspace.test.ts",
+        "src/tooling/__tests__/verification_runtime_guidance.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",
         "docs/issues/comment-commands.mdx",
         "docs/issues/notifications-and-auto-close.mdx",
-        "docs/development/architecture.mdx"
+        "docs/development/architecture.mdx",
+        "docs/security-operations/operations/verification.mdx",
+        "docs/security-operations/operations/troubleshooting.mdx",
+        "docs/agents/repository-collaboration.mdx"
       ]
     },
     {

@@ -5,6 +5,8 @@ description: Detailed configuration options for Copilot
 
 # Configuration Options
 
+For a new installation, use [web setup](/setup-web). To configure a specific outcome, start with the [goal guides](/guides); they connect setup choices, runtime configuration and verification. This page is the input and scope reference.
+
 Copilot provides extensive configuration options to customize your workflow. Use the tabs below to jump to the category you need.
 
 To inspect existing settings or change one independent parameter, use the [web configuration panel](/how-to-use#inspect-configuration-and-make-a-small-adjustment). Each quick adjustment shows its source and scope, preserves unrelated values, and verifies the written value from GitHub.
@@ -115,7 +117,7 @@ PR bot approval uses the versioned `pullRequestApproval` setup object and `PR_AP
 
     ## Customization
 
-    - `emoji-labeled-title`: Enable emoji titles based on labels (default: "true")
+    - `emoji-labeled-title`: Enable label-based issue titles and conventional linked PR titles, preserving author Conventional Commits headers (default: "true"). See [PR title precedence](/pull-requests/workflow-setup#pull-request-title-precedence).
     - `commit-prefix-transforms`: Comma-separated list of transforms for commit prefix from branch name (e.g. "replace-slash", "kebab-case"). See README for full list.
     - `reopen-issue-on-push`: Reopen closed issues on new commits (default: "true")
     - `inactivity-threshold-hours`: Hours without activity before a waiting issue is closed by the scheduled cleanup (default: 168; valid range: 1–8760)

@@ -4,6 +4,8 @@ export interface GitCommitPort {
         env?: Record<string, string>;
         /** Execute repository-controlled code with a credential-free, temporary home directory. */
         untrusted?: boolean;
+        /** Check the reviewed repository runtime declaration before a verification command. */
+        verifyRuntimePrerequisites?: boolean;
     }): Promise<number>;
     configureAuthor(name: string, email: string): Promise<void>;
     fetch(branch: string, token?: string): Promise<void>;

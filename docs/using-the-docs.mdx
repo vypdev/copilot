@@ -1,0 +1,78 @@
+---
+title: Use the documentation
+description: Choose the right version, find contextual setup help, and understand what verification proves.
+---
+
+## Find the shortest path
+
+| You are… | Read |
+|---|---|
+| Evaluating what to enable | [Choose a goal](/guides) and [Overview](/overview) |
+| Installing for the first time | [Web setup](/setup-web), then [First workflow](/first-workflow) |
+| Answering a setup question | Its documentation link and expandable explanation; in the terminal, type `?` |
+| Updating an existing installation | [Setup and maintenance](/how-to-use#inspect-configuration-and-make-a-small-adjustment) |
+| Diagnosing a stopped run | Its reply/receipt and [Troubleshooting](/security-operations/operations/troubleshooting) |
+| Looking up one input | [Configuration](/configuration), then its feature-specific reference |
+
+## Match the documentation to your version
+
+Run `copilot --version` to identify the local CLI. Separately inspect the Action
+reference in your repository's workflows: the CLI package and the installed
+Action can have different versions. `vypdev/copilot@v3` follows the compatible
+major tag; it does not pin one patch release.
+
+The normal docs.page URL reads this repository's default branch. To inspect an
+exact published version or development revision, use a Git-ref preview:
+
+```text
+https://docs.page/vypdev/copilot~v3.9.1
+https://docs.page/vypdev/copilot~develop
+```
+
+`v3.9.1` is an example existing release tag; substitute the version you are using.
+You can append a page path, such as `/authentication`. A PR preview uses the PR
+number after `~`. Read the ref badge before following an unreleased example.
+New pages may be available on a PR or `develop` before they reach the default
+branch; a page absent from an older release is not evidence that it existed then.
+See [docs.page Git-ref previews](https://use.docs.page/authoring/publish#share-branch-previews).
+
+These instructions concern this project's `@vypdev/copilot` package and
+`vypdev/copilot` GitHub Action. Use their exact names when searching for help.
+
+## Get help without losing setup answers
+
+The web assistant keeps **Setup tutorial**, **First issue-to-PR workflow** and
+**Troubleshooting** links available alongside the setup. They open public
+documentation in a separate tab and do not submit a setup answer. Question-level
+links explain the setting in context; **Why this matters** expands its local
+explanation. Changing the displayed language does not change repository locale.
+
+In the terminal, `copilot setup --help` lists flags and the same guides without
+starting setup. During questions, type `?` for detailed local help. Use `:back`
+to revisit text/choice answers or `B` in a multi-selector. Links open only when
+you choose to follow them. No credentials or answers are attached to documentation URLs.
+
+If the documentation site is unavailable, `--help` and the question explanations
+remain local. You can also read `docs/` in the Git checkout of the matching
+release. Local documentation access does not remove the GitHub/network
+requirements of installation or agent-backed features.
+
+## Read verification results accurately
+
+| Evidence | What it proves | What it does not prove |
+|---|---|---|
+| Setup receipt | Reported resource/file effects, including uncertain or partial work | That the generated workflows were merged and ran successfully |
+| `copilot doctor --read-only` | Accessible files and GitHub configuration metadata | Secret values, write grants or a real model request |
+| Plain `copilot doctor` | Additional checks, including installed credential-health dispatch when available | Every capability, runner, model or external publisher |
+| First issue-to-PR workflow | The installed routes and exact revisions actually exercised | A release, another runtime or another Project you did not test |
+| Current Bugbot status | Review coverage and finding state for the stated revision | Independent CI/coverage evidence or authorization to merge |
+| Published artifact and completed reconciliation | The release facts you checked together | Success inferred from only a closed issue or created tag |
+
+A neutral check can still report actionable findings. A progress percentage is
+an assessment, not a test result. Binary screenshots can make the progress
+comparison incomplete because GitHub supplies no text patch; inspect them
+manually and retain actual CI/review evidence rather than inventing a percentage.
+
+For a support request, include the relevant version, exact revision, safe error
+code and diagnostic reference. Use the [support checklist](/support) and redact
+credentials, pairing codes and private configuration before sharing.

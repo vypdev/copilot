@@ -1,8 +1,11 @@
 ---
 title: Verification
-description: Read-only checks that prove the selected CLI is available and controlled.
+description: Verify agent availability and prepare the runtimes required by repository checks.
 ---
 # Verification
+
+> Source checkout only: this repository-maintainer script is not included in the installed CLI package. For a consumer installation, use `copilot doctor --read-only`, the installed CLI-provisioning workflow, and the [first workflow](/first-workflow) to inspect metadata and verify actual execution.
+
 
 Run the verifier from the repository root:
 
@@ -23,6 +26,96 @@ The repository prepares Node 24, pnpm 10.12.4 and frozen dependencies for explic
 On Windows, the isolated verification environment preserves the fixed non-secret operating-system metadata `SystemRoot`, `WINDIR`, `OS`, `ComSpec` and `PATHEXT`. Tests must provide their own workflow identity; production credentials and live workflow identity are not passed to repository commands.
 
 The source workflow validator accepts the setup's literal `runs-on: {group: vypdev, labels: [self-hosted, codex, Linux]}` route. Object routes allow only `group` (optional, nonempty) and `labels` (a string or 1–10 unique strings), with literal values of at most 100 characters and no expressions or control characters. Required source role labels, Bash and pnpm isolation still apply. Group objects cannot replace hosted credential verification or the reviewed fork/merge-group quality routing. This validates configuration shape; it does not prove runner access or capacity.
+
+## Repository verification prerequisites
+
+The setup's runner profile chooses **where** a job runs. It does not install a
+consumer project's language runtimes or dependencies. A passing application CI
+job does not prepare the separate `issue_comment`, PR-comment or automated-fix
+job. Each job that runs `bugbot-fix-verify-commands` must prepare its own tools
+before Copilot, including for `/copilot sync-branch --no-agent`.
+
+For a Kotlin/JVM project, commit a reviewed
+`.copilot/verification-prerequisites.json`:
+
+```json
+{
+  "schemaVersion": 1,
+  "runtimes": { "java": "17", "node": "24", "pnpm": "10" }
+}
+```
+
+Declare only the tools your checks require. A Node-only project can use
+`"runtimes": { "node": "24", "pnpm": "10" }`. The supported keys are
+`java`, `node`, `pnpm`, `python`, `go`, `dotnet`, `ruby` and `rust`; versions are
+numeric prefixes with one to three components, such as `17`, `3.12` or `10.12.4`.
+`17` accepts `17.0.13` and rejects `21.0.1`. Ranges, scripts, unknown keys and
+unknown schema versions are rejected. The file must be a regular file of at most
+16 KiB with no symbolic or hard links; its `.copilot` parent must not be a symlink.
+
+This declaration is **optional** for compatibility. If absent or its runtime map
+is empty, no runtime preflight runs and no language is inferred. Existing
+consumers must add the file to obtain the new prerequisite diagnostic. Setup
+does not guess or create project requirements. A declaration checks versions;
+it does not install tools or dependencies and does not replace the actual tests.
+
+Add reviewed bootstrap steps to the **same job**, after checkout and before the
+Copilot step. For example, this is the placement inside an existing issue-comment
+job, using the same workflow identity and permissions already configured:
+
+```yaml
+steps:
+  - uses: actions/checkout@v5
+    with:
+      persist-credentials: false
+      fetch-depth: 0
+  - uses: actions/setup-java@v5
+    with:
+      distribution: temurin
+      java-version: '17'
+  - uses: pnpm/action-setup@v5
+    with:
+      version: 10.12.4
+  - uses: actions/setup-node@v7
+    with:
+      node-version: '24'
+  - run: pnpm install --frozen-lockfile
+  # Keep the complete Copilot step and its reviewed configuration here.
+```
+
+This placement example is not a standalone workflow. Keep your existing event
+authorization, checkout guards, inputs and credential bindings. Review dependency
+installation as repository-controlled code; do not expose Action or agent secrets
+to it. Match your Gradle wrapper, caches and additional tools to your project.
+[actions/setup-java](https://github.com/actions/setup-java) supplies Java and
+`JAVA_HOME`; managed runners may provision an equivalent installation. Do not
+copy Java setup into projects that do not need Java.
+
+Copilot probes declared versions immediately before each configured verification
+command, inside that command's isolated environment. It uses fixed version
+arguments with a five-second and 8 KiB output limit per runtime; it does not run
+a manifest-provided command or installer. There are at most eight runtimes and
+the existing limit of twenty verification commands remains. A tool shim can have
+its own startup behavior: provision pnpm beforehand rather than relying on an
+implicit Corepack download during verification.
+
+`PATH` and `JAVA_HOME` survive isolation. When provided, an absolute `JAVA_HOME`
+selects its `bin/java` (`java.exe` on Windows), including installations not on
+`PATH`. Python uses `python3` on Linux/macOS and `python` on Windows; pnpm uses the
+installed Windows command shim via fixed `cmd.exe` arguments. The isolated
+`HOME`, temporary directories and Windows profile/cache paths remain private.
+`JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS`, `MAVEN_OPTS`, `GRADLE_USER_HOME`,
+`NODE_OPTIONS`, agent auth-store paths and credentials are not inherited. Avoid
+depending on authenticated caches or user-home build settings.
+
+If a declared runtime is missing, incompatible or cannot be verified, the
+configured repository command is not executed. The existing result reports,
+for example, **Java 17 is unavailable in job copilot-issues**, with a link here
+and an instruction to provision it in the same job. Raw version output is not
+published. A prepared branch-sync merge is aborted without a synchronization
+commit or push; automated fixes also withhold their commit and push. Correct the
+declaration or bootstrap, then retry the original operation. Dry runs and
+already-aligned branches do not execute verification or prove runtime readiness.
 
 ## Reused credential evidence
 

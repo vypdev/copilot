@@ -139,9 +139,16 @@ describe('setup_files', () => {
         const destination = match[1];
         if (destination.startsWith('https://')) {
           const url = new URL(destination);
-          expect(url.origin).toBe('https://github.com');
-          expect(url.pathname).toMatch(/^\/vypdev\/copilot\/blob\/master\/docs\/agents\//u);
-          expect(fs.existsSync(path.join(sourceRoot, url.pathname.replace('/vypdev/copilot/blob/master/', '')))).toBe(true);
+          if (url.origin === 'https://docs.page') {
+            expect(url.pathname).toBe('/vypdev/copilot/security-operations/operations/verification');
+            expect(url.hash).toBe('#repository-verification-prerequisites');
+            expect(fs.readFileSync(path.join(sourceRoot, 'docs/security-operations/operations/verification.mdx'), 'utf8'))
+              .toContain('## Repository verification prerequisites');
+          } else {
+            expect(url.origin).toBe('https://github.com');
+            expect(url.pathname).toMatch(/^\/vypdev\/copilot\/blob\/master\/docs\/agents\//u);
+            expect(fs.existsSync(path.join(sourceRoot, url.pathname.replace('/vypdev/copilot/blob/master/', '')))).toBe(true);
+          }
           documentationLinks.push(destination);
         } else {
           expect(fs.existsSync(path.resolve(path.dirname(file), destination))).toBe(true);
@@ -150,6 +157,7 @@ describe('setup_files', () => {
     }
 
     expect(documentationLinks).toEqual([
+      'https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-verification-prerequisites',
       'https://github.com/vypdev/copilot/blob/master/docs/agents/repository-collaboration.mdx',
       'https://github.com/vypdev/copilot/blob/master/docs/agents/repository-guidance-troubleshooting.mdx',
     ]);

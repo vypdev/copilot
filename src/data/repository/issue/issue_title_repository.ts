@@ -1,7 +1,8 @@
 import type { IssueTitlePort, TitleLabelFacts } from '../../../application/ports/issue_title_ports';
 import type { GithubClientPort } from '../../../infrastructure/github/ports/github_client_provider_port';
 import type { GithubIssueTitleClient } from '../../../infrastructure/github/ports/github_issue_provider_ports';
-import { resolveIssueTitleEmoji, resolvePullRequestTitleEmoji } from '../issue_emoji_policy';
+import { resolveIssueTitleEmoji } from '../issue_emoji_policy';
+import { generatedPullRequestTitle, hasConventionalPullRequestTitle } from '../../../application/policies/pull_request_title_policy';
 import { normalizePullRequestSourceTitle, sanitizeIssueTitle, sanitizePullRequestTitle } from '../issue_title_policy';
 import { updateIssueTitle, withTitleUpdateLogging } from './issue_title_update';
 
@@ -29,12 +30,13 @@ export class IssueTitleRepository implements IssueTitlePort {
 
     updateTitlePullRequestFormat = async (
         owner: string, repository: string, pullRequestTitle: string, issueTitle: string, issueNumber: number,
-        pullRequestNumber: number, branchManagementEmoji: string,
+        pullRequestNumber: number, _branchManagementEmoji: string,
         labels: TitleLabelFacts, token: string,
     ): Promise<string | undefined> => {
         return withTitleUpdateLogging(() => {
-            const emoji = resolvePullRequestTitleEmoji(labels, branchManagementEmoji);
-            const formattedTitle = `[#${issueNumber}] ${emoji} - ${sanitizePullRequestTitle(normalizePullRequestSourceTitle(issueTitle, issueNumber))}`;
+            if (hasConventionalPullRequestTitle(pullRequestTitle)) return Promise.resolve(undefined);
+            const sourceTitle = normalizePullRequestSourceTitle(issueTitle, issueNumber);
+            const formattedTitle = generatedPullRequestTitle(sourceTitle, sanitizePullRequestTitle(sourceTitle), issueNumber, labels);
             return updateIssueTitle(this.issueTitleClient, owner, repository, pullRequestTitle, formattedTitle, pullRequestNumber, token);
         });
     };

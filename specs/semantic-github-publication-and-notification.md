@@ -1994,3 +1994,11 @@ consumer verification remains separate from deterministic local evidence.
 
 Primary source: [GitHub compare-two-commits](https://docs.github.com/en/rest/commits/commits#compare-two-commits)
 documents missing binary patches and the fixed first-page file inventory bound.
+
+
+## Pull request title compatibility — issue #621 (2026-10-20)
+
+Native PR title precedence, conventional generation, live-metadata reads and
+the independent 36-case regression budget are specified in
+[pull request title compatibility](./pull-request-title-compatibility.md).
+No new comment/notification route or publication-budget allocation is added.

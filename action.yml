@@ -45,7 +45,7 @@ inputs:
     description: "Hours without issue activity before the scheduled inactivity action closes a waiting issue."
     default: "168"
   emoji-labeled-title:
-    description: "Enable titles with emojis based on issue labels."
+    description: "Enable label-based issue titles and conventional linked PR titles, preserving author Conventional Commits headers."
     default: "true"
   issue-managed-branches:
     description: "Let the Action create linked branches after an authorized in-progress start."
