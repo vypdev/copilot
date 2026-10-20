@@ -67599,13 +67599,13 @@ async function runLinkPullRequestIssue(param, taskId, port, delay) {
     let retainedIssueReference = false;
     let alreadyLinked = false;
     if (!hasOwnedPendingOperation) {
-        alreadyLinked = await port.isLinked(param.pullRequestNumber);
+        alreadyLinked = await port.isLinked(param.pullRequestNumber, param.issueNumber);
         if (alreadyLinked)
             return [];
     }
     else {
         try {
-            alreadyLinked = await port.isLinked(param.pullRequestNumber);
+            alreadyLinked = await port.isLinked(param.pullRequestNumber, param.issueNumber);
         }
         catch (error) {
             primaryError = error;
@@ -77193,6 +77193,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestLifecycleRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
 const application_error_1 = __nccwpck_require__(75999);
+const github_error_policy_1 = __nccwpck_require__(58791);
 class PullRequestLifecycleRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -77254,25 +77255,68 @@ class PullRequestLifecycleRepository {
                 throw semanticError;
             }
         };
-        this.isLinked = async (owner, repository, pullRequestNumber, _token) => {
-            const pullRequestUrl = `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/pull/${pullRequestNumber}`;
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), PullRequestLifecycleRepository.IS_LINKED_FETCH_TIMEOUT_MS);
+        /** Reads at most 200 closing references through the credential-bound API. */
+        this.isLinked = async (owner, repository, pullRequestNumber, issueNumber, token) => {
             try {
-                const res = await fetch(pullRequestUrl, { signal: controller.signal });
-                if (!res.ok) {
-                    throw new Error(`Pull-request linkage query returned HTTP ${res.status}.`);
+                if (![pullRequestNumber, issueNumber].every(number => Number.isSafeInteger(number) && number > 0)) {
+                    throw new application_error_1.ApplicationError('validation.invalid-input', 'Linkage requires positive PR and issue numbers.');
                 }
-                const htmlContent = await res.text();
-                return !htmlContent.includes('has_github_issues=false');
+                const client = this.githubClient.getClient(token);
+                if (!client.graphql)
+                    throw new application_error_1.ApplicationError('configuration.unsupported', 'Authenticated PR linkage queries are not supported by this installation.');
+                const expectedRepository = `${owner}/${repository}`.toLowerCase();
+                let cursor = null;
+                for (let page = 0; page < 2; page += 1) {
+                    const result = await client.graphql(`
+                    query PullRequestIssueLinkage($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
+                        repository(owner: $owner, name: $repo) {
+                            nameWithOwner
+                            pullRequest(number: $number) {
+                                number
+                                closingIssuesReferences(first: 100, after: $cursor) {
+                                    nodes { number repository { nameWithOwner } }
+                                    pageInfo { hasNextPage endCursor }
+                                }
+                            }
+                        }
+                    }`, { owner, repo: repository, number: pullRequestNumber, cursor });
+                    const resource = result?.repository;
+                    if (resource === null || resource?.pullRequest === null) {
+                        throw new application_error_1.ApplicationError('provider.not-found', 'The requested pull request is unavailable to the configured credential.');
+                    }
+                    const pr = resource?.pullRequest;
+                    const references = pr?.closingIssuesReferences;
+                    if (typeof resource?.nameWithOwner !== 'string' || resource.nameWithOwner.toLowerCase() !== expectedRepository || pr?.number !== pullRequestNumber
+                        || !Array.isArray(references?.nodes) || references.nodes.length > 100
+                        || typeof references.pageInfo?.hasNextPage !== 'boolean'
+                        || references.nodes.some(node => !node || !Number.isSafeInteger(node.number) || node.number <= 0
+                            || typeof node.repository?.nameWithOwner !== 'string' || !node.repository.nameWithOwner)) {
+                        throw new application_error_1.ApplicationError('provider.contract-invalid', 'GitHub did not return verifiable PR linkage evidence.');
+                    }
+                    if (references.nodes.some(node => node.number === issueNumber
+                        && node.repository.nameWithOwner.toLowerCase() === expectedRepository))
+                        return true;
+                    if (!references.pageInfo.hasNextPage)
+                        return false;
+                    const nextCursor = references.pageInfo.endCursor;
+                    if (typeof nextCursor !== 'string' || !nextCursor || nextCursor === cursor) {
+                        throw new application_error_1.ApplicationError('provider.contract-invalid', 'GitHub returned incomplete linkage pagination.');
+                    }
+                    cursor = nextCursor;
+                }
+                throw new application_error_1.ApplicationError('provider.contract-invalid', 'PR linkage exceeds the fixed 200-reference inspection bound.');
             }
             catch (error) {
-                const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to inspect issue linkage for pull request #${pullRequestNumber}.`);
+                const status = (0, github_error_policy_1.getGithubErrorStatus)(error);
+                const types = typeof error === 'object' && error !== null && 'errors' in error && Array.isArray(error.errors)
+                    ? error.errors.map((entry) => entry?.type) : [];
+                const code = (0, github_error_policy_1.isGithubRateLimited)(error) || types.includes('RATE_LIMITED') ? 'provider.rate-limited'
+                    : status === 401 ? 'authorization.credential-invalid'
+                        : status === 403 || types.includes('FORBIDDEN') || types.includes('UNAUTHORIZED') ? 'authorization.denied'
+                            : status === 404 || types.includes('NOT_FOUND') ? 'provider.not-found' : 'provider.unavailable';
+                const semanticError = (0, application_error_1.toApplicationError)(error, code, `Unable to inspect issue linkage for pull request #${pullRequestNumber}.`);
                 (0, logger_1.logError)(semanticError);
                 throw semanticError;
-            }
-            finally {
-                clearTimeout(timeoutId);
             }
         };
         this.updateBaseBranch = async (owner, repository, pullRequestNumber, branch, token) => {
@@ -77342,8 +77386,6 @@ class PullRequestLifecycleRepository {
     }
 }
 exports.PullRequestLifecycleRepository = PullRequestLifecycleRepository;
-/** Default timeout (ms) for isLinked fetch. */
-PullRequestLifecycleRepository.IS_LINKED_FETCH_TIMEOUT_MS = 10000;
 function toBugbotPullRequestIdentity(value) {
     const number = value.number;
     const state = value.state;
@@ -85470,7 +85512,7 @@ function bindBranchWorkflow(port, binding) {
 }
 function bindPullRequestIssueLink(port, binding) {
     return Object.freeze({
-        isLinked: (pullRequestNumber) => port.isLinked(binding.owner, binding.repository, pullRequestNumber, binding.token),
+        isLinked: (pullRequestNumber, issueNumber) => port.isLinked(binding.owner, binding.repository, pullRequestNumber, issueNumber, binding.token),
         getDetails: (pullRequestNumber) => port.getDetails(binding.owner, binding.repository, pullRequestNumber, binding.token),
         updateBaseBranch: (pullRequestNumber, baseBranch) => port.updateBaseBranch(binding.owner, binding.repository, pullRequestNumber, baseBranch, binding.token),
         updateDescription: (pullRequestNumber, description) => port.updateDescription(binding.owner, binding.repository, pullRequestNumber, description, binding.token),

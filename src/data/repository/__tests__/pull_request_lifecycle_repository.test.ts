@@ -4,9 +4,10 @@ import { OctokitPullRequestLifecycleClientAdapter } from "../../../infrastructur
 const mockList = jest.fn();
 const mockUpdate = jest.fn();
 const mockGet = jest.fn();
+const mockGraphql = jest.fn();
 
 jest.mock("@actions/github", () => ({
-    getOctokit: jest.fn(() => ({ rest: { pulls: { list: mockList, update: mockUpdate, get: mockGet } } })),
+    getOctokit: jest.fn(() => ({ graphql: mockGraphql, rest: { pulls: { list: mockList, update: mockUpdate, get: mockGet } } })),
 }));
 
 jest.mock("../../../utils/logger", () => ({
@@ -19,6 +20,7 @@ describe("PullRequestLifecycleRepository", () => {
         jest.clearAllMocks();
         mockUpdate.mockResolvedValue({});
         mockGet.mockReset();
+        mockGraphql.mockReset();
     });
 
     it("lists open pull requests by head branch", async () => {
@@ -183,37 +185,103 @@ describe("PullRequestLifecycleRepository", () => {
         expect(mockGet).toHaveBeenCalledWith({ owner: 'owner', repo: 'repo', pull_number: 12 });
     });
 
-    it("fails closed with a semantic error for non-success responses and network failures", async () => {
-        const fetchMock = jest.spyOn(global, "fetch")
-            .mockResolvedValueOnce(new Response("not linked", { status: 404 }))
-            .mockRejectedValueOnce(new Error("network unavailable"));
+    it.each(['private', 'public'])('authenticates %s PR linkage for the exact repository, PR and issue', async () => {
+        const fetchMock = jest.spyOn(global, 'fetch');
+        mockGraphql.mockResolvedValue(linkage([42]));
         const repository = new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter());
-
-        await expect(repository.isLinked('owner', 'repo', 12, 'token')).rejects.toMatchObject({
-            code: 'provider.unavailable',
-            message: 'Unable to inspect issue linkage for pull request #12.',
+        await expect(repository.isLinked('owner', 'repo', 12, 42, 'PRIVATE_TOKEN')).resolves.toBe(true);
+        expect(jest.requireMock('@actions/github').getOctokit).toHaveBeenCalledWith('PRIVATE_TOKEN');
+        expect(mockGraphql).toHaveBeenCalledWith(expect.stringContaining('closingIssuesReferences(first: 100'), {
+            owner: 'owner', repo: 'repo', number: 12, cursor: null,
         });
-        await expect(repository.isLinked('owner', 'repo', 12, 'token')).rejects.toMatchObject({
-            code: 'provider.unavailable',
-            message: 'Unable to inspect issue linkage for pull request #12.',
-        });
-        expect(fetchMock).toHaveBeenCalledWith(
-            'https://github.com/owner/repo/pull/12',
-            expect.objectContaining({ signal: expect.any(AbortSignal) }),
-        );
+        expect(fetchMock).not.toHaveBeenCalled();
         fetchMock.mockRestore();
     });
 
-    it("detects linked GitHub issue metadata from the HTML response", async () => {
-        const fetchMock = jest.spyOn(global, "fetch")
-            .mockResolvedValueOnce(new Response("has_github_issues=true", { status: 200 }))
-            .mockResolvedValueOnce(new Response("has_github_issues=false", { status: 200 }));
-        const repository = new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter());
-
-        await expect(repository.isLinked('owner', 'repo', 12, 'token')).resolves.toBe(true);
-        await expect(repository.isLinked('owner', 'repo', 12, 'token')).resolves.toBe(false);
-        fetchMock.mockRestore();
+    it('does not confuse another issue or a foreign repository with the intended issue', async () => {
+        const response = linkage([41, 42]);
+        response.repository.pullRequest.closingIssuesReferences.nodes[1].repository.nameWithOwner = 'foreign/repo';
+        mockGraphql.mockResolvedValue(response);
+        await expect(new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter())
+            .isLinked('owner', 'repo', 12, 42, 'token')).resolves.toBe(false);
     });
+
+    it('proves absence from an empty complete reference list', async () => {
+        mockGraphql.mockResolvedValue(linkage([]));
+        await expect(new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter())
+            .isLinked('owner', 'repo', 12, 42, 'token')).resolves.toBe(false);
+    });
+
+    it('follows one bounded cursor to find the intended issue', async () => {
+        mockGraphql.mockResolvedValueOnce(linkage([41], true, 'next')).mockResolvedValueOnce(linkage([42]));
+        await expect(new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter())
+            .isLinked('owner', 'repo', 12, 42, 'token')).resolves.toBe(true);
+        expect(mockGraphql).toHaveBeenNthCalledWith(2, expect.any(String), expect.objectContaining({ cursor: 'next' }));
+    });
+
+    it.each([
+        [401, 'authorization.credential-invalid'], [403, 'authorization.denied'],
+        [404, 'provider.not-found'], [429, 'provider.rate-limited'], [503, 'provider.unavailable'],
+        [undefined, 'provider.unavailable'],
+    ])('maps HTTP %s without exposing provider details', async (status, code) => {
+        mockGraphql.mockRejectedValue(Object.assign(new Error('PRIVATE_SECRET'), { status }));
+        await expect(new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter())
+            .isLinked('owner', 'repo', 12, 42, 'token')).rejects.toMatchObject({
+                code, message: 'Unable to inspect issue linkage for pull request #12.',
+            });
+    });
+
+    it.each([['FORBIDDEN', 'authorization.denied'], ['NOT_FOUND', 'provider.not-found'], ['RATE_LIMITED', 'provider.rate-limited'], ['INTERNAL', 'provider.unavailable']])('maps GraphQL %s errors from HTTP 200', async (type, code) => {
+        mockGraphql.mockRejectedValue({ status: 200, errors: [{ type, message: 'PRIVATE_SECRET' }] });
+        await expect(new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter())
+            .isLinked('owner', 'repo', 12, 42, 'token')).rejects.toMatchObject({ code });
+    });
+
+    it('treats GraphQL UNAUTHORIZED on HTTP 200 as a terminal access failure', async () => {
+        mockGraphql.mockRejectedValue({ status: 200, errors: [{ type: 'UNAUTHORIZED', message: 'PRIVATE_SECRET' }] });
+        await expect(new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter())
+            .isLinked('owner', 'repo', 12, 42, 'token')).rejects.toMatchObject({
+                code: 'authorization.denied', retryable: false,
+                message: 'Unable to inspect issue linkage for pull request #12.',
+            });
+    });
+
+    it('distinguishes secondary rate limiting from denied permissions', async () => {
+        mockGraphql.mockRejectedValue({ status: 403, response: { headers: { 'retry-after': '30' } } });
+        await expect(new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter())
+            .isLinked('owner', 'repo', 12, 42, 'token')).rejects.toMatchObject({ code: 'provider.rate-limited' });
+    });
+
+    it.each(['missing PR', 'wrong PR', 'wrong repository', 'missing references', 'invalid node', 'missing page facts', 'missing cursor', 'exhausted pages'])('fails closed on %s', async scenario => {
+        const response = linkage([41], scenario === 'missing cursor' || scenario === 'exhausted pages', 'next');
+        if (scenario === 'missing PR') Object.assign(response.repository, { pullRequest: null });
+        if (scenario === 'wrong PR') response.repository.pullRequest.number = 13;
+        if (scenario === 'wrong repository') response.repository.nameWithOwner = 'foreign/repo';
+        if (scenario === 'missing references') Object.assign(response.repository.pullRequest, { closingIssuesReferences: null });
+        if (scenario === 'invalid node') Object.assign(response.repository.pullRequest.closingIssuesReferences, { nodes: [null] });
+        if (scenario === 'missing page facts') Object.assign(response.repository.pullRequest.closingIssuesReferences, { pageInfo: {} });
+        if (scenario === 'missing cursor') Object.assign(response.repository.pullRequest.closingIssuesReferences.pageInfo, { endCursor: null });
+        mockGraphql.mockResolvedValue(response);
+        if (scenario === 'exhausted pages') mockGraphql.mockResolvedValueOnce(response).mockResolvedValueOnce(linkage([41], true, 'last'));
+        await expect(new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter())
+            .isLinked('owner', 'repo', 12, 42, 'token')).rejects.toMatchObject({
+                code: scenario === 'missing PR' ? 'provider.not-found' : 'provider.contract-invalid', retryable: false,
+            });
+        expect(mockGraphql.mock.calls.length).toBeLessThanOrEqual(2);
+    });
+
+    it('reports unsupported authenticated queries without falling back to HTML', async () => {
+        const repository = new PullRequestLifecycleRepository({ getClient: () => ({ rest: { pulls: { list: mockList, update: mockUpdate } } }) });
+        await expect(repository.isLinked('owner', 'repo', 12, 42, 'token'))
+            .rejects.toMatchObject({ code: 'configuration.unsupported', retryable: false });
+    });
+
+    it('rejects invalid identities before using credentials', async () => {
+        await expect(new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter())
+            .isLinked('owner', 'repo', 12, 0, 'token')).rejects.toMatchObject({ code: 'validation.invalid-input' });
+        expect(mockGraphql).not.toHaveBeenCalled();
+    });
+
 });
 
 function pullRequestIdentity(number: number) {
@@ -230,4 +298,13 @@ function pullRequestIdentity(number: number) {
             repo: { id: 7, name: 'repo', owner: { login: 'owner' } },
         },
     };
+}
+
+function linkage(numbers: number[], hasNextPage = false, endCursor: string | null = null) {
+    return { repository: { nameWithOwner: 'owner/repo', pullRequest: { number: 12,
+        closingIssuesReferences: {
+            nodes: numbers.map(number => ({ number, repository: { nameWithOwner: 'owner/repo' } })),
+            pageInfo: { hasNextPage, endCursor },
+        },
+    } } };
 }

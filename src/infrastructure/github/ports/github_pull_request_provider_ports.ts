@@ -27,7 +27,21 @@ export interface GithubPullRequestFile {
   patch?: string;
 }
 
+export interface GithubPullRequestLinkageResponse {
+  repository?: {
+    nameWithOwner?: string;
+    pullRequest?: {
+      number?: number;
+      closingIssuesReferences?: {
+        nodes: { number: number; repository: { nameWithOwner: string } }[];
+        pageInfo: { hasNextPage: boolean; endCursor?: string | null };
+      } | null;
+    } | null;
+  } | null;
+}
+
 export interface GithubPullRequestLifecycleClient {
+  graphql?<T>(query: string, variables: Record<string, unknown>): Promise<T>;
   rest: {
     pulls: {
       list(
