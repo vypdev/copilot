@@ -709,3 +709,13 @@ isolated fixed version probes and safe blocked recovery. Runner selection does n
 install project language tools. Existing consumers without the declaration retain
 legacy verification. This companion owns its shared incremental numeric test budget;
 do not count it twice across the setup and synchronization capabilities.
+
+### Concurrent terminal retirement — #622
+
+Terminal synchronization cards follow the [concurrent completion contract](./managed-issue-and-branch-lifecycle.md#concurrent-completion-convergence--622-2026-10-20):
+one inventory of at most 20 supported owned cards; exact final-body and fresh
+native closure/reason verification before adopting another invocation's result;
+retained effects and named failures for incomplete cleanup. Each card uses at
+most two targeted witness reads. This does not widen synchronization, branch,
+comment creation or deletion authority. Its eight new race/readback and bounded-diagnostic cases are
+counted only in the lifecycle extension's budget.

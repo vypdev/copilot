@@ -870,6 +870,23 @@
       "successMessage": "setup runner profiles/parity coverage: PASS (pure decisions 100%; each adapter/presenter 95% lines/statements, 90% branches/functions)"
     },
     {
+      "name": "Concurrent completion reconciliation",
+      "missingEntryLabel": "concurrent completion reconciliation",
+      "rules": [
+        {
+          "files": [
+            "src/application/errors/closed_issue_reconciliation_error.ts",
+            "src/application/usecases/actions/reconcile_issue_completion_metadata.ts",
+            "src/application/usecases/actions/verify_closed_issue_card_retirement.ts",
+            "src/application/policies/closed_issue_reconciliation_outcome_policy.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "concurrent completion reconciliation coverage: PASS (95% lines/statements, 90% branches/functions)"
+    },
+    {
       "name": "Approval evidence diagnostics",
       "missingEntryLabel": "approval evidence diagnostics",
       "rules": [

@@ -5152,6 +5152,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const closed_issue_reconciliation_1 = __nccwpck_require__(1565);
 const approval_evidence_diagnostic_1 = __nccwpck_require__(8205);
 const branch_sync_validation_1 = __nccwpck_require__(981);
 exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
@@ -5168,6 +5169,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'sdd-draft-size-exceeded',
     'sdd-draft-format-invalid',
     'workspace-changes-rejected',
+    'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
 ]);
 const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
@@ -5360,6 +5362,7 @@ class ApplicationError extends Error {
 exports.ApplicationError = ApplicationError;
 _ApplicationError_cause = new WeakMap();
 const RECOVERY_VARIABLE_KEYS = Object.freeze({
+    'closed-issue-reconciliation-failed': Object.freeze(['resultId', 'phase', 'state', 'reason', 'changed', 'remaining']),
     'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
@@ -5412,6 +5415,14 @@ function normalizeApplicationErrorRecovery(recovery) {
     if (recovery.id === 'branch-sync-resolution-invalid'
         && !branch_sync_validation_1.BRANCH_SYNC_VALIDATION_CODES.some(code => code === variables.validationCode)) {
         throw new TypeError('Application error recovery synchronization validation code is invalid.');
+    }
+    if (recovery.id === 'closed-issue-reconciliation-failed'
+        && (!closed_issue_reconciliation_1.CLOSED_ISSUE_RESULTS.some(value => value === variables.resultId)
+            || !closed_issue_reconciliation_1.CLOSED_ISSUE_PHASES.some(value => value === variables.phase)
+            || !['open', 'closed', 'unavailable'].includes(variables.state)
+            || !closed_issue_reconciliation_1.CLOSED_ISSUE_REASONS.some(value => value === variables.reason)
+            || ![variables.changed, variables.remaining].every(value => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= 3000))) {
+        throw new TypeError('Closed issue reconciliation diagnostic is invalid.');
     }
     if (recovery.id === 'approval-evidence-read-failed'
         && (!Object.prototype.hasOwnProperty.call(approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_PERMISSIONS, variables.operation)
@@ -5957,6 +5968,24 @@ function countBugbotFindingStates(states) {
 function countActionableBugbotFindings(counts) {
     return counts.open + counts.reopened + counts['verification-required'];
 }
+
+
+/***/ }),
+
+/***/ 1565:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CLOSED_ISSUE_REASONS = exports.CLOSED_ISSUE_PHASES = exports.CLOSED_ISSUE_RESULTS = void 0;
+exports.CLOSED_ISSUE_RESULTS = Object.freeze([
+    'ReconcileClosedIssueMetadataUseCase', 'CloseIssueAfterMergingUseCase', 'RetireBranchSyncUseCase', 'RetireProgressUseCase',
+]);
+exports.CLOSED_ISSUE_PHASES = Object.freeze([
+    'identity', 'read', 'native-fence', 'label-remove', 'label-add', 'metadata-verification',
+    'card-inventory', 'card-freshness', 'card-update', 'card-verification',
+]);
+exports.CLOSED_ISSUE_REASONS = Object.freeze(['completed', 'not_planned', 'duplicate', 'reopened', 'unknown', 'unavailable']);
 
 
 /***/ }),

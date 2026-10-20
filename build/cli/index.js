@@ -38121,6 +38121,25 @@ function approvalDiagnosticError(diagnostic) {
 
 /***/ }),
 
+/***/ 12183:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.closedIssueReconciliationError = closedIssueReconciliationError;
+const application_error_1 = __nccwpck_require__(75999);
+/** Public diagnostic is fixed native facts and counters, never label/card/provider text. */
+function closedIssueReconciliationError(cause, facts) {
+    return new application_error_1.ApplicationError(cause instanceof application_error_1.ApplicationError ? cause.code : 'provider.unavailable', 'Closed issue reconciliation remains unverified.', {
+        ...(cause instanceof application_error_1.ApplicationError ? { correlationId: cause.correlationId, retryable: cause.retryable } : {}),
+        recovery: { id: 'closed-issue-reconciliation-failed', variables: facts },
+    });
+}
+
+
+/***/ }),
+
 /***/ 72594:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -39295,6 +39314,11 @@ const SPANISH_CONTENT = Object.freeze({
     }),
 });
 const ENGLISH_RECOVERY_CONTENT = Object.freeze({
+    'closed-issue-reconciliation-failed': Object.freeze({
+        impact: 'Issue cleanup remains unverified: {resultId}, phase {phase}; native state {state}, reason {reason}.',
+        action: 'Inspect the closed-issue or merged-PR run and current native state. Retry cleanup only if the issue is still closed with the intended reason; leave reopened work open. Resolve the named failure before retrying.',
+        retainedState: 'Native state was preserved. Confirmed changes: {changed}; remaining required changes in the last verified plan: {remaining}. Unavailable reads do not establish completion.',
+    }),
     'approval-evidence-read-failed': Object.freeze({
         impact: 'Approval evidence could not be verified: {operation} ({reason}).',
         action: 'Inspect {permission} access for the runtime credential and the named evidence response. Correct authorization, missing-resource or schema errors before rerunning; retry transient failures only after provider recovery or rate-limit reset.',
@@ -39367,6 +39391,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     }),
 });
 const SPANISH_RECOVERY_CONTENT = Object.freeze({
+    'closed-issue-reconciliation-failed': Object.freeze({
+        impact: 'La limpieza de la issue sigue sin verificarse: {resultId}, fase {phase}; estado nativo {state}, motivo {reason}.',
+        action: 'Revisa la ejecución de cierre o de la PR fusionada y el estado nativo actual. Reintenta la limpieza solo si la issue sigue cerrada con el motivo previsto; conserva abierto el trabajo reabierto. Resuelve el fallo indicado antes de reintentar.',
+        retainedState: 'Se conservó el estado nativo. Cambios confirmados: {changed}; cambios pendientes en el último plan verificado: {remaining}. Una lectura no disponible no demuestra que haya finalizado.',
+    }),
     'approval-evidence-read-failed': Object.freeze({
         impact: 'No se pudo verificar la evidencia de aprobación: {operation} ({reason}).',
         action: 'Comprueba el acceso {permission} de la credencial de ejecución y la respuesta indicada. Corrige los errores de autorización, recurso o esquema antes de reejecutar; reintenta los fallos transitorios solo tras recuperarse el proveedor o restablecerse el límite.',
@@ -56436,8 +56465,9 @@ function failure(taskId, message, code) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ReconcileClosedIssueMetadataUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const issue_completion_1 = __nccwpck_require__(31147);
 const application_error_1 = __nccwpck_require__(75999);
+const closed_issue_reconciliation_error_1 = __nccwpck_require__(12183);
+const reconcile_issue_completion_metadata_1 = __nccwpck_require__(70614);
 /** Selective completion repair from fresh native facts; no native state authority. */
 class ReconcileClosedIssueMetadataUseCase {
     constructor(issues) {
@@ -56445,50 +56475,22 @@ class ReconcileClosedIssueMetadataUseCase {
         this.taskId = 'ReconcileClosedIssueMetadataUseCase';
     }
     async invoke(context) {
-        let labelsChanged = 0;
-        let nativeClosed = false;
+        const progress = (0, reconcile_issue_completion_metadata_1.completionRepairProgress)();
         try {
             if (!Number.isSafeInteger(context.issueNumber) || context.issueNumber < 1)
                 throw stale();
             const target = this.issues.forIssue(context.issueNumber);
-            const initial = await target.read();
-            nativeClosed = initial.number === context.issueNumber && initial.state === 'closed';
-            const initialPlan = (0, issue_completion_1.planIssueCompletion)(initial, context.completionLabels);
-            if (!nativeClosed || initialPlan.kind !== 'closed')
-                throw stale();
-            const fence = async () => {
-                const current = await target.read();
-                nativeClosed = current.number === context.issueNumber && current.state === 'closed';
-                const plan = (0, issue_completion_1.planIssueCompletion)(current, context.completionLabels);
-                if (!nativeClosed || plan.kind !== 'closed' || current.reason !== initial.reason)
-                    throw stale();
-                return plan;
-            };
-            for (const label of initialPlan.remove) {
-                if ((await fence()).remove.includes(label)) {
-                    await target.removeLabel(label);
-                    labelsChanged++;
-                }
-            }
-            for (const label of initialPlan.add) {
-                if ((await fence()).add.includes(label)) {
-                    await target.addLabel(label);
-                    labelsChanged++;
-                }
-            }
-            const final = await fence();
-            if (final.remove.length || final.add.length)
-                throw stale();
-            return [new result_1.Result({ id: this.taskId, success: true, executed: labelsChanged > 0,
+            const repaired = await (0, reconcile_issue_completion_metadata_1.reconcileIssueCompletionMetadata)(target, context.issueNumber, context.completionLabels, progress);
+            return [new result_1.Result({ id: this.taskId, success: true, executed: progress.labelsChanged > 0,
                     steps: ['The closed issue completion metadata was verified; historical and unrelated labels were retained.'],
-                    payload: { issueCompletion: { nativeClosed, labelsChanged, reconciled: true, reason: initial.reason } } })];
+                    payload: { issueCompletion: { nativeClosed: progress.nativeClosed, labelsChanged: progress.labelsChanged, reconciled: true, ...repaired } } })];
         }
         catch (cause) {
-            return [new result_1.Result({ id: this.taskId, success: false, executed: labelsChanged > 0,
-                    steps: [nativeClosed ? 'The issue remains closed; completion metadata could not be fully verified. Inspect and retry the closed-issue workflow.'
+            return [new result_1.Result({ id: this.taskId, success: false, executed: progress.labelsChanged > 0,
+                    steps: [progress.nativeClosed ? 'The issue remains closed; completion metadata could not be fully verified. Inspect and retry the closed-issue workflow.'
                             : 'Current native issue closure could not be verified; completion repair stopped without changing native state.'],
-                    errors: [(0, application_error_1.toApplicationError)(cause, 'provider.unavailable', 'Closed issue completion metadata remains unverified.')],
-                    payload: { issueCompletion: { nativeClosed, labelsChanged, reconciled: false } } })];
+                    errors: [(0, closed_issue_reconciliation_error_1.closedIssueReconciliationError)(cause, { resultId: this.taskId, phase: progress.phase, state: progress.state, reason: progress.reason, changed: progress.labelsChanged, remaining: progress.remaining })],
+                    payload: { issueCompletion: { nativeClosed: progress.nativeClosed, labelsChanged: progress.labelsChanged, reconciled: false } } })];
         }
     }
 }
@@ -56523,6 +56525,84 @@ exports.ReconcileClosedIssueUseCase = ReconcileClosedIssueUseCase;
 
 /***/ }),
 
+/***/ 70614:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.completionRepairProgress = void 0;
+exports.reconcileIssueCompletionMetadata = reconcileIssueCompletionMetadata;
+const application_error_1 = __nccwpck_require__(75999);
+const issue_completion_1 = __nccwpck_require__(31147);
+const closed_issue_reconciliation_1 = __nccwpck_require__(21565);
+const completionRepairProgress = () => ({ nativeClosed: false, labelsChanged: 0,
+    phase: 'identity', state: 'unavailable', reason: 'unavailable', remaining: 0 });
+exports.completionRepairProgress = completionRepairProgress;
+/** At most two bounded selective passes, with fresh native fences before every write. */
+async function reconcileIssueCompletionMetadata(target, number, configuration, progress, initial) {
+    let expectedReason;
+    let superseded = false;
+    const read = async (phase, snapshot) => {
+        progress.phase = phase;
+        progress.state = 'unavailable';
+        progress.reason = 'unavailable';
+        const facts = snapshot ?? await target.read();
+        progress.nativeClosed = facts?.number === number && facts.state === 'closed';
+        progress.state = facts?.number === number && ['open', 'closed'].includes(facts.state) ? facts.state : 'unavailable';
+        progress.reason = closed_issue_reconciliation_1.CLOSED_ISSUE_REASONS.some(reason => reason === facts?.reason) ? facts.reason : 'unavailable';
+        const plan = (0, issue_completion_1.planIssueCompletion)(facts, configuration);
+        if (!progress.nativeClosed || plan.kind !== 'closed' || expectedReason !== undefined && facts.reason !== expectedReason) {
+            throw new application_error_1.ApplicationError('workflow.stale', 'The native issue identity, state or closure reason changed.');
+        }
+        expectedReason = facts.reason;
+        progress.remaining = plan.remove.length + plan.add.length;
+        return plan;
+    };
+    let plan = await read('read', initial);
+    for (let pass = 0; pass < 2; pass++) {
+        for (const label of plan.remove) {
+            if (!(await read('label-remove')).remove.includes(label)) {
+                superseded = true;
+                continue;
+            }
+            try {
+                await target.removeLabel(label);
+                progress.labelsChanged++;
+            }
+            catch (cause) {
+                if ((await read('label-remove')).remove.includes(label))
+                    throw cause;
+                superseded = true;
+            }
+        }
+        for (const label of plan.add) {
+            if (!(await read('label-add')).add.includes(label)) {
+                superseded = true;
+                continue;
+            }
+            try {
+                await target.addLabel(label);
+                progress.labelsChanged++;
+            }
+            catch (cause) {
+                if ((await read('label-add')).add.includes(label))
+                    throw cause;
+                superseded = true;
+            }
+        }
+        plan = await read('metadata-verification');
+        if (!progress.remaining)
+            return { reason: plan.reason,
+                outcome: progress.labelsChanged ? 'reconciled' : 'already-converged', superseded };
+        superseded = true;
+    }
+    throw new application_error_1.ApplicationError('provider.conflict', 'Completion metadata remains incomplete after two bounded passes.');
+}
+
+
+/***/ }),
+
 /***/ 74111:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -56530,7 +56610,9 @@ exports.ReconcileClosedIssueUseCase = ReconcileClosedIssueUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RetireBranchSyncUseCase = void 0;
-const reply_request_digest_1 = __nccwpck_require__(47971);
+const verify_closed_issue_card_retirement_1 = __nccwpck_require__(78813);
+const closed_issue_reconciliation_error_1 = __nccwpck_require__(12183);
+const closed_issue_reconciliation_1 = __nccwpck_require__(21565);
 const result_1 = __nccwpck_require__(73817);
 const github_user_policy_1 = __nccwpck_require__(84403);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
@@ -56548,17 +56630,33 @@ class RetireBranchSyncUseCase {
     async invoke(context) {
         let retired = 0;
         let nativeClosed = false;
+        let phase = 'identity';
+        let state = 'unavailable';
+        let reason = 'unavailable';
+        let remaining = 0;
+        let superseded = false;
         try {
             if (!Number.isSafeInteger(context.issueNumber) || context.issueNumber < 1 || !context.trustedBotLogin) {
                 return [this.result(retired, nativeClosed)];
             }
-            const initial = await this.issues.readIssue(context.issueNumber);
-            if (initial.number !== context.issueNumber || !['open', 'closed'].includes(initial.state))
+            const read = async () => {
+                state = 'unavailable';
+                reason = 'unavailable';
+                const facts = await this.issues.readIssue(context.issueNumber);
+                nativeClosed = facts?.number === context.issueNumber && facts.state === 'closed';
+                state = facts?.number === context.issueNumber && ['open', 'closed'].includes(facts.state) ? facts.state : 'unavailable';
+                reason = closed_issue_reconciliation_1.CLOSED_ISSUE_REASONS.some(value => value === facts?.reason) ? facts.reason : 'unavailable';
+                return facts;
+            };
+            phase = 'read';
+            const initial = await read();
+            if (initial.number !== context.issueNumber || !['open', 'closed'].includes(initial.state) || initial.state === 'closed' && !['completed', 'not_planned', 'duplicate', 'unknown'].includes(initial.reason))
                 throw stale();
             if (initial.state !== 'closed')
                 return [this.result(retired, nativeClosed)];
             nativeClosed = true;
             const messages = (0, branch_sync_message_catalog_1.resolveStaticBranchSyncCatalog)(context.locale);
+            phase = 'card-inventory';
             const cards = (await this.comments.listIssueComments(context.issueNumber)).filter(comment => {
                 const marker = (0, publication_identity_policy_1.parsePublicationMarker)(comment.body);
                 return marker?.identity.topic === 'branch-sync' && marker.identity.target.kind === 'issue'
@@ -56567,38 +56665,40 @@ class RetireBranchSyncUseCase {
                     && Number.isSafeInteger(comment.id) && comment.id > 0
                     && Boolean(comment.user?.login && (0, github_user_policy_1.githubUsersMatch)(context.trustedBotLogin, comment.user.login));
             });
+            remaining = Math.min(cards.length, 3000);
             if (cards.length > 20)
                 throw stale();
+            const verifyClosed = async () => {
+                phase = 'native-fence';
+                const fresh = await read();
+                if (!nativeClosed || fresh.reason !== initial.reason)
+                    throw stale();
+            };
             for (const card of cards) {
                 const marker = (0, publication_identity_policy_1.parsePublicationMarker)(card.body);
                 const body = (0, branch_sync_notification_policy_1.buildRetiredBranchSyncComment)(marker.identity, messages);
-                if (card.body === body)
-                    continue;
-                const witness = Object.freeze({ surface: 'issue-comment', commentId: card.id,
-                    author: context.trustedBotLogin, target: Object.freeze({ kind: 'issue', number: context.issueNumber }),
-                    bodyDigest: (0, reply_request_digest_1.replyRequestBodyDigest)(card.body ?? '') });
-                if (!await this.cardFreshness.matches(witness))
-                    throw stale();
-                const fresh = await this.issues.readIssue(context.issueNumber);
-                nativeClosed = fresh.number === context.issueNumber && fresh.state === 'closed';
-                if (!nativeClosed || fresh.reason !== initial.reason)
-                    throw stale();
-                await this.comments.updateComment(context.issueNumber, card.id, body);
-                retired++;
+                const verified = await (0, verify_closed_issue_card_retirement_1.verifyClosedIssueCardRetirement)({ issueNumber: context.issueNumber,
+                    commentId: card.id, author: context.trustedBotLogin, originalBody: card.body ?? '', finalBody: body,
+                    freshness: this.cardFreshness, verifyClosed, onUpdated: () => { retired++; }, phase: value => { phase = value; },
+                    update: () => this.comments.updateComment(context.issueNumber, card.id, body) });
+                superseded || (superseded = verified.superseded);
+                remaining--;
             }
-            return [this.result(retired, nativeClosed)];
+            await verifyClosed();
+            return [this.result(retired, nativeClosed, superseded)];
         }
         catch (cause) {
             return [new result_1.Result({ id: this.taskId, success: false, executed: retired > 0,
                     steps: [nativeClosed ? 'Issue closure is retained; synchronization recommendation retirement could not be fully verified. Retry the closed-issue event or merged-PR operation.' : 'Native issue closure could not be verified; synchronization recommendations were left unchanged.'],
-                    errors: [(0, application_error_1.toApplicationError)(cause, 'provider.unavailable', 'Unable to retire synchronization recommendations safely.')],
+                    errors: [(0, closed_issue_reconciliation_error_1.closedIssueReconciliationError)(cause, { resultId: this.taskId, phase, state, reason, changed: retired, remaining })],
                     payload: { nativeClosed, retiredCards: retired, reconciled: false } })];
         }
     }
-    result(retired, nativeClosed) {
+    result(retired, nativeClosed, superseded = false) {
         return new result_1.Result({ id: this.taskId, success: true, executed: retired > 0,
             steps: [retired ? 'The closed issue’s synchronization recommendations were retired.' : 'No synchronization recommendation required retirement.'],
-            payload: { ...(nativeClosed ? { state: 'closed' } : {}), nativeClosed, retiredCards: retired, reconciled: true } });
+            payload: { ...(nativeClosed ? { state: 'closed' } : {}), nativeClosed, retiredCards: retired, reconciled: true, superseded,
+                outcome: nativeClosed ? retired ? 'reconciled' : 'already-converged' : 'not-applicable' } });
     }
 }
 exports.RetireBranchSyncUseCase = RetireBranchSyncUseCase;
@@ -56639,7 +56739,9 @@ exports.RetireClosedIssueCardsUseCase = RetireClosedIssueCardsUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RetireProgressUseCase = void 0;
-const reply_request_digest_1 = __nccwpck_require__(47971);
+const verify_closed_issue_card_retirement_1 = __nccwpck_require__(78813);
+const closed_issue_reconciliation_error_1 = __nccwpck_require__(12183);
+const closed_issue_reconciliation_1 = __nccwpck_require__(21565);
 const result_1 = __nccwpck_require__(73817);
 const github_user_policy_1 = __nccwpck_require__(84403);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
@@ -56656,16 +56758,32 @@ class RetireProgressUseCase {
     async invoke(context) {
         let retired = 0;
         let nativeClosed = false;
+        let phase = 'identity';
+        let state = 'unavailable';
+        let reason = 'unavailable';
+        let remaining = 0;
+        let superseded = false;
         try {
             if (!Number.isSafeInteger(context.issueNumber) || context.issueNumber < 1 || !context.trustedBotLogin) {
                 return [this.result(retired, nativeClosed)];
             }
-            const initial = await this.issues.readIssue(context.issueNumber);
+            const read = async () => {
+                state = 'unavailable';
+                reason = 'unavailable';
+                const facts = await this.issues.readIssue(context.issueNumber);
+                nativeClosed = facts?.number === context.issueNumber && facts.state === 'closed';
+                state = facts?.number === context.issueNumber && ['open', 'closed'].includes(facts.state) ? facts.state : 'unavailable';
+                reason = closed_issue_reconciliation_1.CLOSED_ISSUE_REASONS.some(value => value === facts?.reason) ? facts.reason : 'unavailable';
+                return facts;
+            };
+            phase = 'read';
+            const initial = await read();
             if (initial.number !== context.issueNumber || !['open', 'closed'].includes(initial.state) || initial.state === 'closed' && !['completed', 'not_planned', 'duplicate', 'unknown'].includes(initial.reason))
                 throw stale();
             if (initial.state !== 'closed')
                 return [this.result(retired, nativeClosed)];
             nativeClosed = true;
+            phase = 'card-inventory';
             const cards = (await this.comments.listIssueComments(context.issueNumber)).filter(comment => {
                 const marker = (0, publication_identity_policy_1.parsePublicationMarker)(comment.body);
                 return marker?.identity.topic === 'progress' && marker.identity.target.kind === 'issue'
@@ -56674,37 +56792,39 @@ class RetireProgressUseCase {
                     && Number.isSafeInteger(comment.id) && comment.id > 0
                     && Boolean(comment.user?.login && (0, github_user_policy_1.githubUsersMatch)(context.trustedBotLogin, comment.user.login));
             });
+            remaining = Math.min(cards.length, 3000);
             if (cards.length > 20)
                 throw stale();
-            for (const card of cards) {
-                const body = (0, retired_progress_presentation_policy_1.buildRetiredProgressComment)(card.body ?? '', context.locale, initial.reason);
-                if (card.body === body)
-                    continue;
-                const witness = Object.freeze({ surface: 'issue-comment', commentId: card.id,
-                    author: context.trustedBotLogin, target: Object.freeze({ kind: 'issue', number: context.issueNumber }),
-                    bodyDigest: (0, reply_request_digest_1.replyRequestBodyDigest)(card.body ?? '') });
-                if (!await this.cardFreshness.matches(witness))
-                    throw stale();
-                const fresh = await this.issues.readIssue(context.issueNumber);
-                nativeClosed = fresh.number === context.issueNumber && fresh.state === 'closed';
+            const verifyClosed = async () => {
+                phase = 'native-fence';
+                const fresh = await read();
                 if (!nativeClosed || fresh.reason !== initial.reason)
                     throw stale();
-                await this.comments.updateComment(context.issueNumber, card.id, body);
-                retired++;
+            };
+            for (const card of cards) {
+                const body = (0, retired_progress_presentation_policy_1.buildRetiredProgressComment)(card.body ?? '', context.locale, initial.reason);
+                const verified = await (0, verify_closed_issue_card_retirement_1.verifyClosedIssueCardRetirement)({ issueNumber: context.issueNumber,
+                    commentId: card.id, author: context.trustedBotLogin, originalBody: card.body ?? '', finalBody: body,
+                    freshness: this.cardFreshness, verifyClosed, onUpdated: () => { retired++; }, phase: value => { phase = value; },
+                    update: () => this.comments.updateComment(context.issueNumber, card.id, body) });
+                superseded || (superseded = verified.superseded);
+                remaining--;
             }
-            return [this.result(retired, nativeClosed)];
+            await verifyClosed();
+            return [this.result(retired, nativeClosed, superseded)];
         }
         catch (cause) {
             return [new result_1.Result({ id: this.taskId, success: false, executed: retired > 0,
                     steps: [nativeClosed ? 'Issue closure is retained; progress card retirement could not be fully verified. Retry the closed-issue event or merged-PR operation.' : 'Native issue closure could not be verified; progress cards were left unchanged.'],
-                    errors: [(0, application_error_1.toApplicationError)(cause, 'provider.unavailable', 'Unable to retire progress cards safely.')],
+                    errors: [(0, closed_issue_reconciliation_error_1.closedIssueReconciliationError)(cause, { resultId: this.taskId, phase, state, reason, changed: retired, remaining })],
                     payload: { nativeClosed, retiredCards: retired, reconciled: false } })];
         }
     }
-    result(retired, nativeClosed) {
+    result(retired, nativeClosed, superseded = false) {
         return new result_1.Result({ id: this.taskId, success: true, executed: retired > 0,
             steps: [retired ? 'The closed issue’s progress cards were retired.' : 'No progress card required retirement.'],
-            payload: { ...(nativeClosed ? { state: 'closed' } : {}), nativeClosed, retiredCards: retired, reconciled: true } });
+            payload: { ...(nativeClosed ? { state: 'closed' } : {}), nativeClosed, retiredCards: retired, reconciled: true, superseded,
+                outcome: nativeClosed ? retired ? 'reconciled' : 'already-converged' : 'not-applicable' } });
     }
 }
 exports.RetireProgressUseCase = RetireProgressUseCase;
@@ -57092,6 +57212,48 @@ class SynchronizeAgentActivityUseCase {
 exports.SynchronizeAgentActivityUseCase = SynchronizeAgentActivityUseCase;
 function sameLabels(left, right) {
     return left.length === right.length && left.every((label, index) => label === right[index]);
+}
+
+
+/***/ }),
+
+/***/ 78813:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.verifyClosedIssueCardRetirement = verifyClosedIssueCardRetirement;
+const reply_request_digest_1 = __nccwpck_require__(47971);
+const application_error_1 = __nccwpck_require__(75999);
+/** Adopt another invocation only after the exact final owned body and native closure are fresh. */
+async function verifyClosedIssueCardRetirement(input) {
+    const witness = (body) => Object.freeze({ surface: 'issue-comment',
+        commentId: input.commentId, author: input.author,
+        target: Object.freeze({ kind: 'issue', number: input.issueNumber }), bodyDigest: (0, reply_request_digest_1.replyRequestBodyDigest)(body) });
+    let updated = false;
+    let failedWrite;
+    if (input.originalBody !== input.finalBody) {
+        input.phase('card-freshness');
+        if (await input.freshness.matches(witness(input.originalBody))) {
+            await input.verifyClosed();
+            input.phase('card-update');
+            try {
+                await input.update();
+                updated = true;
+                input.onUpdated();
+            }
+            catch (cause) {
+                failedWrite = cause;
+            }
+        }
+    }
+    input.phase('card-verification');
+    if (!await input.freshness.matches(witness(input.finalBody))) {
+        throw failedWrite ?? new application_error_1.ApplicationError('workflow.stale', 'The required final owned card could not be verified.');
+    }
+    await input.verifyClosed();
+    return { updated, superseded: !updated && input.originalBody !== input.finalBody };
 }
 
 
@@ -70779,6 +70941,8 @@ exports.CheckPriorityIssueSizeUseCase = CheckPriorityIssueSizeUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CloseIssueAfterMergingUseCase = void 0;
+const reconcile_issue_completion_metadata_1 = __nccwpck_require__(70614);
+const closed_issue_reconciliation_error_1 = __nccwpck_require__(12183);
 const result_1 = __nccwpck_require__(73817);
 const issue_completion_1 = __nccwpck_require__(31147);
 const application_error_1 = __nccwpck_require__(75999);
@@ -70797,7 +70961,7 @@ class CloseIssueAfterMergingUseCase {
                     steps: ['No separate safe linked issue and pull request were found; issue closure was skipped.'] })];
         let closedThisRun = false;
         let nativeClosed = false;
-        let labelsChanged = 0;
+        const progress = (0, reconcile_issue_completion_metadata_1.completionRepairProgress)();
         try {
             const pull = await this.issues.readPullRequest(pullNumber);
             if (pull.number !== pullNumber || pull.state !== 'closed' || pull.merged !== true)
@@ -70821,44 +70985,21 @@ class CloseIssueAfterMergingUseCase {
             nativeClosed = facts.state === 'closed';
             if (!nativeClosed || closedThisRun && facts.reason !== 'completed')
                 throw stale();
-            const fence = async () => {
-                const freshFacts = await read();
-                const freshPlan = (0, issue_completion_1.planIssueCompletion)(freshFacts, param.completionLabels);
-                if (freshPlan.kind !== 'closed' || freshFacts.reason !== facts.reason)
-                    throw stale();
-                return freshPlan;
-            };
-            const plan = (0, issue_completion_1.planIssueCompletion)(facts, param.completionLabels);
-            if (plan.kind !== 'closed')
-                throw stale();
-            for (const label of plan.remove) {
-                const fresh = await fence();
-                if (fresh.remove.includes(label)) {
-                    await target.removeLabel(label);
-                    labelsChanged++;
-                }
-            }
-            for (const label of plan.add) {
-                const fresh = await fence();
-                if (fresh.add.includes(label)) {
-                    await target.addLabel(label);
-                    labelsChanged++;
-                }
-            }
-            const final = await fence();
-            if (final.remove.length || final.add.length)
-                throw stale();
-            return [new result_1.Result({ id: this.taskId, success: true, executed: closedThisRun || labelsChanged > 0,
+            const repaired = await (0, reconcile_issue_completion_metadata_1.reconcileIssueCompletionMetadata)(target, number, param.completionLabels, progress, facts);
+            nativeClosed = progress.nativeClosed;
+            return [new result_1.Result({ id: this.taskId, success: true, executed: closedThisRun || progress.labelsChanged > 0,
                     steps: [`Issue #${number} is closed and its completion metadata was verified after PR #${pullNumber} merged.`],
-                    payload: { issueCompletion: Object.freeze({ number, nativeClosed, closedThisRun, labelsChanged, reason: facts.reason, reconciled: true }) } })];
+                    payload: { issueCompletion: Object.freeze({ number, nativeClosed, closedThisRun, labelsChanged: progress.labelsChanged, ...repaired, reconciled: true }) } })];
         }
         catch (error) {
-            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', nativeClosed
-                ? 'The issue is closed, but completion metadata could not be fully verified. Retry the verified merged-PR operation.'
-                : 'Native issue completion could not be verified. Inspect the linked run before retrying.');
-            return [new result_1.Result({ id: this.taskId, success: false, executed: closedThisRun || labelsChanged > 0,
+            if (progress.phase !== 'identity')
+                nativeClosed = progress.nativeClosed;
+            const semanticError = (0, closed_issue_reconciliation_error_1.closedIssueReconciliationError)(error, { resultId: this.taskId,
+                phase: progress.phase, state: progress.state, reason: progress.reason,
+                changed: progress.labelsChanged, remaining: progress.remaining });
+            return [new result_1.Result({ id: this.taskId, success: false, executed: closedThisRun || progress.labelsChanged > 0,
                     steps: [nativeClosed ? 'The native issue closure was retained; completion metadata remains unverified.' : 'Native issue completion remains unverified.'],
-                    errors: [semanticError], payload: { issueCompletion: Object.freeze({ number, nativeClosed, closedThisRun, labelsChanged, reconciled: false }) } })];
+                    errors: [semanticError], payload: { issueCompletion: Object.freeze({ number, nativeClosed, closedThisRun, labelsChanged: progress.labelsChanged, reconciled: false }) } })];
         }
     }
 }
@@ -78213,6 +78354,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const closed_issue_reconciliation_1 = __nccwpck_require__(21565);
 const approval_evidence_diagnostic_1 = __nccwpck_require__(98205);
 const branch_sync_validation_1 = __nccwpck_require__(90981);
 exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
@@ -78229,6 +78371,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'sdd-draft-size-exceeded',
     'sdd-draft-format-invalid',
     'workspace-changes-rejected',
+    'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
 ]);
 const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
@@ -78421,6 +78564,7 @@ class ApplicationError extends Error {
 exports.ApplicationError = ApplicationError;
 _ApplicationError_cause = new WeakMap();
 const RECOVERY_VARIABLE_KEYS = Object.freeze({
+    'closed-issue-reconciliation-failed': Object.freeze(['resultId', 'phase', 'state', 'reason', 'changed', 'remaining']),
     'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
@@ -78473,6 +78617,14 @@ function normalizeApplicationErrorRecovery(recovery) {
     if (recovery.id === 'branch-sync-resolution-invalid'
         && !branch_sync_validation_1.BRANCH_SYNC_VALIDATION_CODES.some(code => code === variables.validationCode)) {
         throw new TypeError('Application error recovery synchronization validation code is invalid.');
+    }
+    if (recovery.id === 'closed-issue-reconciliation-failed'
+        && (!closed_issue_reconciliation_1.CLOSED_ISSUE_RESULTS.some(value => value === variables.resultId)
+            || !closed_issue_reconciliation_1.CLOSED_ISSUE_PHASES.some(value => value === variables.phase)
+            || !['open', 'closed', 'unavailable'].includes(variables.state)
+            || !closed_issue_reconciliation_1.CLOSED_ISSUE_REASONS.some(value => value === variables.reason)
+            || ![variables.changed, variables.remaining].every(value => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= 3000))) {
+        throw new TypeError('Closed issue reconciliation diagnostic is invalid.');
     }
     if (recovery.id === 'approval-evidence-read-failed'
         && (!Object.prototype.hasOwnProperty.call(approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_PERMISSIONS, variables.operation)
@@ -89722,6 +89874,25 @@ function compareCliVersions(left, right) {
 function isNewerCliVersion(installedVersion, publishedVersion) {
     return compareCliVersions(installedVersion, publishedVersion) === -1;
 }
+
+
+/***/ }),
+
+/***/ 21565:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CLOSED_ISSUE_REASONS = exports.CLOSED_ISSUE_PHASES = exports.CLOSED_ISSUE_RESULTS = void 0;
+exports.CLOSED_ISSUE_RESULTS = Object.freeze([
+    'ReconcileClosedIssueMetadataUseCase', 'CloseIssueAfterMergingUseCase', 'RetireBranchSyncUseCase', 'RetireProgressUseCase',
+]);
+exports.CLOSED_ISSUE_PHASES = Object.freeze([
+    'identity', 'read', 'native-fence', 'label-remove', 'label-add', 'metadata-verification',
+    'card-inventory', 'card-freshness', 'card-update', 'card-verification',
+]);
+exports.CLOSED_ISSUE_REASONS = Object.freeze(['completed', 'not_planned', 'duplicate', 'reopened', 'unknown', 'unavailable']);
 
 
 /***/ }),
