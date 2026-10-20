@@ -60,6 +60,7 @@ Follow the [web setup tutorial](https://docs.page/vypdev/copilot/setup-web) thro
 | A walkthrough of browser setup | [Set up with the web assistant](https://docs.page/vypdev/copilot/setup-web) |
 | Observable proof that the installation works | [First workflow](https://docs.page/vypdev/copilot/first-workflow) |
 | A guide for a specific outcome | [Choose a goal](https://docs.page/vypdev/copilot/guides) |
+| Version selection, contextual or offline help | [Use the documentation](https://docs.page/vypdev/copilot/using-the-docs) |
 | Token ownership, permissions, or account recovery | [Authentication](https://docs.page/vypdev/copilot/authentication) |
 | Existing-installation updates, batch setup, or manual integration | [Setup and maintenance reference](https://docs.page/vypdev/copilot/how-to-use) |
 | Every feature, input, and operational control | [Capabilities](https://docs.page/vypdev/copilot/features), [Configuration](https://docs.page/vypdev/copilot/configuration), [Security & Operations](https://docs.page/vypdev/copilot/security-operations) |

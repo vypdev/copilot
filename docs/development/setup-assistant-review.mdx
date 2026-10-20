@@ -7,6 +7,16 @@ and direct observation for each pass. Do not infer a visual,
 linguistic, assistive-technology, or operating-system pass from Jest, SSR HTML,
 or a screenshot alone.
 
+## Documentation-help inspection — issue #617
+
+Agent inspection on 2026-10-20 used the compiled `question` fixture in the Codex
+in-app browser on macOS at 1280×720. The three help links and new-tab explanation
+were visible before pairing and during a question. Selecting Documentation,
+then opening Troubleshooting, retained that checked answer in the fixture.
+The updated pairing screenshot contains no pairing code or credential. This is
+bounded agent evidence for the help change; it does not close any outstanding
+human screen-reader, translation, narrow-layout or native-platform ledger row.
+
 ## Safe fixture setup
 
 1. Build the package with `pnpm run build` in a disposable checkout. Do not

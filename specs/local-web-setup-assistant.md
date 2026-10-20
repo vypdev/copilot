@@ -2797,3 +2797,139 @@ Evidence: `setup_organization_import_wizard.test.ts`,
 `setup_trusted_health_sdk_contract.integration.test.ts`, and
 `web_setup_batch_components.test.ts`. Owning test budget, migration, UX and
 operational acceptance are in the companion; existing quality gates remain.
+
+## Documentation navigation amendment — issue #617 (2026-10-20)
+
+### Evidence, scope and product journey
+
+Observed behavior: question explanations already carry source-controlled URLs
+through `setup_question_documentation_policy.ts` to both presenters. CLI `?`
+expands local guidance and web questions expose a documentation link. Before
+this amendment, pairing/waiting/result screens lacked a persistent tutorial
+route; CLI command help lacked the onboarding journey. Some capability links
+led directly to manual workflow wiring before explaining the selected outcome.
+
+The intentional contract adds help navigation, not a second setup engine.
+Operators MUST retain their in-memory answers while reading help in a new tab.
+No link changes grants, answers, approval, readiness or installed state.
+Normal, preview, blocked, partial and complete operation facts remain governed
+by the existing session coordinator. Historic motivation for missing links is
+unknown. No deployment, PAT, network or runner behavior changes here.
+
+```text
+CLI --help / web pairing -> tutorial -> current question and local help
+                         -> reviewed Apply -> install files -> first workflow
+blocked or partial result -> inspect retained resources -> recovery reference
+```
+
+Text equivalent: an operator can discover the setup guide before entering a
+credential, consult setting-specific explanations during the same run, and
+reach runtime verification after a completed Apply or recovery after a stop.
+
+### Architecture, configuration and security
+
+`src/application/contracts/setup_documentation.ts` owns three immutable public
+URLs: setup tutorial, first workflow and troubleshooting. The browser
+architecture permits this exact inert registry in addition
+to its existing type-only view contract. Its architecture check rejects extra
+statements, imports, functions, computed values or non-literal destinations;
+the navigation test validates each URL and its registered local page. No other
+application runtime import is permitted by this exception. CLI entrypoint
+help, the journey presenter and browser presentation consume this contract;
+application use cases and provider adapters acquire no UI dependency. Question
+selection remains a pure application policy; feature choices link to goal
+guides and issue-kind selection to the installed-profile reference. Niche
+provider/concept questions retain their exact reference links.
+
+There are no new inputs, flags, remote calls, durable fields, permissions,
+feature flags or user-controlled URLs. The safe default is static HTTPS links
+with no query, identity, session, repository-answer or credential interpolation.
+The existing terminal alternative and all setup/default policies remain.
+Browser links MUST open only on explicit user interaction, in another tab with
+`noopener noreferrer`. CLI displays copyable links and never opens them itself.
+This applies to read-only/controller, pairing, pending, cancelled and closed
+views as well; documentation is public and grants no setup control.
+
+### Primary presentation and outcome meanings
+
+The browser presents a secondary, wrapping navigation landmark before setup
+content, localized in English, Spanish, French and Portuguese:
+
+```text
+Setup tutorial ↗   First issue-to-PR workflow ↗   Troubleshooting ↗
+Documentation opens in a new tab. Your setup answers stay here.
+```
+
+Existing primary action, status, receipt and error hierarchy stay ahead of
+technical evidence. This help is navigation, never a new Apply/Retry control.
+
+| State | Help and retained meaning |
+|---|---|
+| Pending / pairing | Global help is available before credentials; local terminal supplies the pairing code |
+| Action required | Question-specific explanation/URL plus the same global navigation; answers unchanged |
+| Blocked / failed | Existing cause and next action remain; CLI points to troubleshooting, with no success claim |
+| Partial | Inspect retained resources before retry; help cannot roll back or complete writes |
+| Complete | Install reviewed files and follow the first workflow; metadata inspection does not prove runtime success |
+| Dry run | Show tutorial/preview facts; do not claim the Action was installed or verified |
+
+The complete-result follow-up applies only to current-repository Apply, not a
+management inspection or batch PR receipt. Browser navigation remains keyboard
+reachable, uses descriptive localized text, wraps at narrow widths and works
+with both themes. Actual screen-reader/native platform/language acceptance
+still requires its existing recorded human evidence.
+
+### Failures, operations, migration and documentation
+
+An unavailable documentation site affects only optional external reading.
+Local `--help` and question explanations remain available; answers and
+completed effects are retained. Links must not retry setup, collect credentials
+or imply token cleanup. Public previews may lag the default branch; the
+consumption guide distinguishes default, tag, development and PR docs as well
+as CLI package versus installed Action versions.
+
+There is no state/schema migration; a new installed CLI gains the presentation
+when upgraded. Existing in-flight processes keep their loaded code. Rolling
+back the package removes only the extra links. No new telemetry, GitHub
+comments, persistent logs, rate-limit policy or cleanup action is introduced.
+
+Deliverables: README and setup/first-workflow/goal guides, `/using-the-docs`,
+support with real reporting routes and no invented response/community promises,
+and a clear distinction between installed-package diagnosis and source-only
+maintainer verification scripts.
+
+### Numeric verification budget and acceptance
+
+The **15-case incremental automated budget** is separate from the unchanged
+350-case historical setup ledger and cannot close its manual-review rows:
+
+| Area | Minimum cases | Risk covered |
+|---|---:|---|
+| Web navigation | 4 | Four locales, descriptive landmark, fixed destinations, safe new-tab attributes, no mutation button |
+| Result routing | 4 | Complete follow-up versus dry-run, partial and blocked non-success states |
+| CLI journey | 5 | Entry, completed Apply, partial, blocked and no-change preview guide selection |
+| CLI command help | 1 | Discover tutorials/verification before executing setup or collecting credentials |
+| Shared destination contract | 1 | Every clean public URL maps to an actual registered local page |
+| **Total** | **15** | No model, live PAT or GitHub mutation |
+
+Evidence is `src/cli/__tests__/setup_documentation_navigation.test.ts` and the
+updated question-documentation mapping tests. The documentation validator MUST
+check runtime help routes/anchors; the component/asset validator MUST reject
+missing local Image sources. Existing strict coverage, type, lint, build,
+package and workflow gates remain. Boundary and localization tests use the real
+Svelte SSR fixture, not mocked HTML. AST graph and compiled shipped bundles
+must be regenerated after source changes.
+
+Acceptance/traceability: an unpaired reader finds the tutorial (web navigation
+cases); a CLI operator reads guides before setup execution (help case); a
+completed Apply points to installation and runtime proof without claiming it
+already occurred (complete-result and journey cases); blocked/partial/preview
+states preserve their semantics (other result/journey rows); every shared link
+is public and locally resolvable (destination case and validators).
+
+Definition of Done: all fifteen cases and relevant existing tests pass; public
+MDX/links/images and source architecture checks pass; shipped bundles and the
+catalog evidence are current; a real browser fixture inspection records the
+help and retained question, and public Git-ref documentation renders correctly.
+That inspection is agent evidence, not a substitute for the outstanding human
+accessibility or cross-platform acceptance reviews. No open product decision
+blocks this bounded amendment. Related work: issues #617 and PR #618.

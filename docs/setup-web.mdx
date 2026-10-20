@@ -5,11 +5,13 @@ description: Install Copilot with the local browser assistant, then verify a rea
 
 This is the recommended interactive installation path. The assistant runs on your computer and prepares the selected workflows and GitHub resources. You review the plan before permission checks or installation changes begin.
 
+The assistant keeps tutorial, first-workflow and troubleshooting links available throughout the session. They open in another tab and retain your answers. Each question also links to its own reference and has a **Why this matters** explanation. See [Use the documentation](/using-the-docs) for version selection and offline help.
+
 ## Before you start
 
 | You need | Why |
 |---|---|
-| Node.js 24 or newer and `pnpm` | Run the published CLI and local browser assistant |
+| [Node.js 24 or newer](https://nodejs.org/en/download) and [pnpm](https://pnpm.io/installation) | Run the published CLI and local browser assistant; use the official installation guides if either command is missing |
 | A working checkout at its root, on an attached Git branch | Inspect and prepare files for the intended repository; bare repositories and detached HEAD are rejected |
 | The intended production and development branches | Setup asks for their names; the selected development branch must already exist |
 | Permission to configure the selected repository resources | Workflows, labels, Variables and Secrets need different grants; setup derives the exact list from your choices |

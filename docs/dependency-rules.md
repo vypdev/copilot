@@ -21,7 +21,9 @@ appropriate inner boundary.
 
 The local setup browser is an outer presentation adapter. Its Svelte files
 may import type-only redacted view contracts from `src/application/contracts`
-but cannot import provider adapters, mutation use cases, Node HTTP, or PAT
+and the exact static `setup_documentation` URL registry. The boundary test
+requires that registry to contain only literal constants, with no imports or
+executable expressions. Browser files cannot import provider adapters, mutation use cases, Node HTTP, or PAT
 permission tables. `src/cli/web_setup_server.ts` owns loopback transport and
 static assets; `src/cli/web_setup_adapters.ts` maps semantic browser decisions
 to the existing application ports. Domain/application policy modules must not

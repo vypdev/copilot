@@ -134,6 +134,11 @@
           "title": "Configuration checklist",
           "href": "/configuration-checklist",
           "icon": "square-check"
+        },
+        {
+          "title": "Use the documentation",
+          "href": "/using-the-docs",
+          "icon": "book"
         }
       ]
     },
