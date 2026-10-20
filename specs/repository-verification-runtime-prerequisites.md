@@ -238,12 +238,12 @@ verification safety but losing new diagnostics; no refs or data are migrated.
 | Area | Minimum distinct new cases | Risk inventory |
 |---|---:|---|
 | Pure schema/version/safe diagnostics | 36 | Eight tools, prefixes, invalid schemas/values, forged/raw data |
-| Runtime/file/process infrastructure | 29 | Real Node/missing Java, fixed argv, Windows mappings, process failures, links/size/schema, access denial and changed/growing files |
+| Runtime/file/process infrastructure | 30 | Real Node/missing Java, fixed argv, explicit POSIX/Windows path semantics, process failures, links/size/schema, access denial and changed/growing files |
 | Application state and reporting | 5 | Clean/conflict abort, fixer gate, redaction and stop, bot binding |
 | Git isolation adapter | 3 | Same environment/order, cleanup on failure, trusted-boundary rejection |
 | Real Git integration/migration | 3 | Missing/provisioned simulated JDK and non-JVM remote/ref behavior |
 | Generated guidance/workflow contract | 2 | Explicit opt-in and no universal Java installation |
-| **Total** | **78** | Shared across capabilities; counted once |
+| **Total** | **79** | Shared across capabilities; counted once |
 
 Existing environment credential-exclusion assertions expand without adding a
 count. Retain global coverage budgets, aim ≥95% pure policy branch coverage and

@@ -102175,7 +102175,7 @@ function checkRuntime(requirement, environment, run, platform, job) {
     let program = spec.program;
     let args = spec.args;
     if (requirement.runtime === 'java' && environment.JAVA_HOME) {
-        const paths = platform === 'win32' ? node_path_1.win32 : { isAbsolute: node_path_1.isAbsolute, join: node_path_1.join };
+        const paths = platform === 'win32' ? node_path_1.win32 : node_path_1.posix;
         if (!paths.isAbsolute(environment.JAVA_HOME) || hasControlCharacter(environment.JAVA_HOME)) {
             throw new verification_runtime_policy_1.VerificationPrerequisiteError('unavailable', requirement, undefined, job);
         }

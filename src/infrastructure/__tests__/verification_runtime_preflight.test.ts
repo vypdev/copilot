@@ -58,6 +58,17 @@ describe('repository verification runtime preflight', () => {
         assertVerificationRuntimePrerequisites({ JAVA_HOME: 'C:\\Tools\\JDK17' }, root, run, 'win32');
         expect(run.mock.calls[0][0]).toBe('C:\\Tools\\JDK17\\bin\\java.exe');
     });
+    test('selects POSIX path semantics explicitly, independent of the test host', () => {
+        declare({ java: '17' });
+        const run = fakeProbe();
+        for (const platform of ['linux', 'darwin'] as const) {
+            assertVerificationRuntimePrerequisites({ JAVA_HOME: '/tools/jdk-17' }, root, run, platform);
+            expect(() => assertVerificationRuntimePrerequisites({ JAVA_HOME: 'C:\\Tools\\JDK17' }, root, run, platform))
+                .toThrow(VerificationPrerequisiteError);
+        }
+        expect(run).toHaveBeenCalledTimes(2);
+        expect(run.mock.calls.every(([program]) => program === '/tools/jdk-17/bin/java')).toBe(true);
+    });
     test('uses fixed Windows cmd arguments for the installed pnpm command shim', () => {
         declare({ pnpm: '10' });
         const run = fakeProbe({ status: 0, output: '10.12.4' });

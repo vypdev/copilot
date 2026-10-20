@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { isAbsolute, join, win32 } from 'node:path';
+import { posix, win32 } from 'node:path';
 import { readVerificationRuntimeManifest } from './verification_runtime_manifest';
 import { VerificationPrerequisiteError, VERIFICATION_RUNTIME_SPECS, verificationRuntimeMatches,
     verificationRuntimeVersion, type VerificationRuntimeRequirement } from '../application/policies/verification_runtime_policy';
@@ -33,7 +33,7 @@ function checkRuntime(requirement: VerificationRuntimeRequirement, environment: 
     let program: string = spec.program;
     let args: readonly string[] = spec.args;
     if (requirement.runtime === 'java' && environment.JAVA_HOME) {
-        const paths = platform === 'win32' ? win32 : { isAbsolute, join };
+        const paths = platform === 'win32' ? win32 : posix;
         if (!paths.isAbsolute(environment.JAVA_HOME) || hasControlCharacter(environment.JAVA_HOME)) {
             throw new VerificationPrerequisiteError('unavailable', requirement, undefined, job);
         }
