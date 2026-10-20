@@ -1,3 +1,6 @@
+import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
+import { resolveStaticApplicationErrorCatalog } from '../application/policies/application_error_message_catalog';
+import type { ApplicationError } from '../application/errors/application_error';
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { ObservePullRequestApprovalUseCase } from '../application/usecases/pull_request_approval/observe_pull_request_approval_use_case';
@@ -46,15 +49,22 @@ export async function runPullRequestApprovalAction(token: string): Promise<void>
     });
     const useCase = new ObservePullRequestApprovalUseCase(port);
     const failedPulls: number[] = [];
+    let firstFailure: ApplicationError | undefined;
     for (const pullNumber of targetNumbers) {
         const target: ApprovalObservationTarget = { owner, repository: repo, repositoryId, pullNumber };
         const result = await useCase.execute(target);
+        if (result.failure) {
+            firstFailure ??= result.failure;
+            const diagnostic = renderApplicationErrorText(result.failure, resolveStaticApplicationErrorCatalog(locale).message);
+            core.info(diagnostic);
+            core.summary.addRaw(`<pre>${diagnostic.replace(/&/gu, '&amp;').replace(/</gu, '&lt;').replace(/>/gu, '&gt;')}</pre>\n`);
+        }
         const safeCode = result.decision.code.replace(/[^a-z0-9-]/gu, '').slice(0, 60);
         core.info(`PR #${pullNumber}: ${result.decision.status} (${safeCode}); assessment ${result.publication}.`);
         if (result.publication === 'failed' || [
             'invalid-policy', 'policy-unavailable', 'evidence-unavailable', 'target-mismatch',
             'pre-submit-unavailable', 'publication-unknown',
-        ].includes(result.decision.code)) failedPulls.push(pullNumber);
+        ].includes(result.decision.code) || result.failure) failedPulls.push(pullNumber);
         if (result.evidence) {
             core.summary.addRaw(renderApprovalRunSummary({
                 target, evidence: result.evidence, decision: result.decision,
@@ -72,6 +82,7 @@ export async function runPullRequestApprovalAction(token: string): Promise<void>
         }
     }
     await core.summary.write();
+    if (firstFailure) throw firstFailure;
     if (failedPulls.length > 0) {
         throw new Error(`Approval observation needs attention for PR(s) ${failedPulls.join(', ')}; inspect the Job Summary and rerun after recovery.`);
     }

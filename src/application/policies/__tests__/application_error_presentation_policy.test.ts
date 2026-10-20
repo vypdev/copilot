@@ -20,6 +20,11 @@ const RECOVERY_CASES: readonly Readonly<{
     spanish: string;
 }>[] = [
     {
+        recovery: { id: 'approval-evidence-read-failed', variables: { operation: 'jobs', reason: 'http-403', permission: 'actions-read' } },
+        english: 'No approval is authorized by this failed read. Existing PRs, reviews and completed external effects were preserved.',
+        spanish: 'Esta lectura fallida no autoriza ninguna aprobación. Se conservaron las PRs, revisiones y efectos externos completados.',
+    },
+    {
         recovery: { id: 'branch-sync-resolution-invalid', variables: { validationCode: 'sdd-catalog-invalid', command: '/copilot sync-branch' } },
         english: 'No synchronization commit was pushed; remote branches were preserved.',
         spanish: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',

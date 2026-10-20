@@ -868,6 +868,21 @@
         }
       ],
       "successMessage": "setup runner profiles/parity coverage: PASS (pure decisions 100%; each adapter/presenter 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Approval evidence diagnostics",
+      "missingEntryLabel": "approval evidence diagnostics",
+      "rules": [
+        {
+          "files": [
+            "src/application/errors/approval_evidence_error.ts",
+            "src/data/repository/pull_request/approval_evidence_read.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "approval evidence diagnostics coverage: PASS (95% lines/statements, 90% branches/functions)"
     }
   ]
 }

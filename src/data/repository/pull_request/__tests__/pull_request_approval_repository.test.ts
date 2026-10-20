@@ -163,7 +163,7 @@ describe('PullRequestApprovalRepository', () => {
     const pat = patOctokit();
     pat.rest.actions.getRepoVariable.mockRejectedValue({ status: 403 });
     (github.getOctokit as jest.Mock).mockReturnValue(pat);
-    await expect(new PullRequestApprovalRepository('pat', settings).readPolicy(target)).rejects.toEqual({ status: 403 });
+    await expect(new PullRequestApprovalRepository('pat', settings).readPolicy(target)).rejects.toMatchObject({ code: 'authorization.denied', retryable: false, recovery: { variables: { operation: 'policy', reason: 'http-403' } } });
     expect(logInfo).toHaveBeenCalledWith('Approval policy read failed (repository-variable, http-403).');
   });
 
@@ -173,7 +173,7 @@ describe('PullRequestApprovalRepository', () => {
     const failure = { status: 403, message: 'PRIVATE-CREDENTIAL', response: { data: 'PRIVATE-POLICY' } };
     pat.rest.actions.getOrgVariable.mockRejectedValue(failure);
     (github.getOctokit as jest.Mock).mockReturnValue(pat);
-    await expect(new PullRequestApprovalRepository('pat', settings).readPolicy(target)).rejects.toBe(failure);
+    await expect(new PullRequestApprovalRepository('pat', settings).readPolicy(target)).rejects.toMatchObject({ recovery: { variables: { operation: 'policy', reason: 'http-403' } } });
     expect(logInfo).toHaveBeenCalledWith('Approval policy read failed (organization-variable, http-403).');
     expect(JSON.stringify((logInfo as jest.Mock).mock.calls)).not.toContain('PRIVATE-');
   });
@@ -181,7 +181,7 @@ describe('PullRequestApprovalRepository', () => {
     const pat = patOctokit(); const failure = { status, message: 'PRIVATE-CREDENTIAL' };
     pat.rest.actions.getRepoVariable.mockRejectedValue(failure);
     (github.getOctokit as jest.Mock).mockReturnValue(pat);
-    await expect(new PullRequestApprovalRepository('pat', settings).readPolicy(target)).rejects.toBe(failure);
+    await expect(new PullRequestApprovalRepository('pat', settings).readPolicy(target)).rejects.toMatchObject({ code: 'provider.contract-invalid', retryable: false, recovery: { variables: { operation: 'policy', reason: 'invalid-response' } } });
     expect(logInfo).toHaveBeenCalledWith('Approval policy read failed (repository-variable, http-unavailable).');
     expect(JSON.stringify((logInfo as jest.Mock).mock.calls)).not.toContain('PRIVATE-');
     expect(pat.rest.actions.getOrgVariable).not.toHaveBeenCalled();
@@ -363,11 +363,11 @@ describe('PullRequestApprovalRepository', () => {
   });
   it('rejects an invalid pagination envelope rather than returning complete empty evidence', async () => {
     const f = evidenceFixture(); f.pages.set(f.pat.rest.pulls.listFiles, [{ unexpected: [] }]);
-    await expect(f.repository.loadEvidence(target)).rejects.toThrow('invalid page');
+    await expect(f.repository.loadEvidence(target)).rejects.toMatchObject({ code: 'provider.contract-invalid', recovery: { variables: { operation: 'files', reason: 'invalid-page' } } });
   });
   it('rejects inventory beyond the existing 3000-item bound', async () => {
     const f = evidenceFixture(); f.pages.set(f.pat.rest.pulls.listReviews, [Array.from({ length: 3001 }, (_, id) => ({ id, state: 'COMMENTED' }))]);
-    await expect(f.repository.loadEvidence(target)).rejects.toThrow('safe bound');
+    await expect(f.repository.loadEvidence(target)).rejects.toMatchObject({ code: 'provider.contract-invalid', recovery: { variables: { operation: 'reviews', reason: 'page-limit' } } });
   });
   it('marks native review history at the provider ceiling incomplete', async () => {
     const f = evidenceFixture(); f.pages.set(f.pat.rest.pulls.listReviews, [Array.from({ length: 3000 }, (_, id) => ({ id, state: 'COMMENTED' }))]);
@@ -523,7 +523,7 @@ describe('live native base ref instead of cached PR base metadata', () => {
   });
   it('fails closed on denied native ref access rather than falling back to cached base evidence', async () => {
     const f = evidenceFixture(); f.pat.rest.git.getRef.mockRejectedValue({ status: 403 });
-    await expect(f.repository.loadEvidence(target)).rejects.toMatchObject({ status: 403 });
+    await expect(f.repository.loadEvidence(target)).rejects.toMatchObject({ code: 'authorization.denied', recovery: { variables: { operation: 'base-ref', reason: 'http-403' } } });
     expect(f.pat.rest.pulls.createReview).not.toHaveBeenCalled();
   });
   it.each(['foreign ref', 'non-commit object', 'invalid SHA', 'non-string SHA', 'missing object', 'empty response'])('rejects native base evidence with %s', async scenario => {
@@ -535,14 +535,14 @@ describe('live native base ref instead of cached PR base metadata', () => {
     if (scenario === 'missing object') f.pat.rest.git.getRef.mockResolvedValue({ data: { ref: 'refs/heads/develop' } } as never);
     if (scenario === 'non-string SHA') f.pat.rest.git.getRef.mockResolvedValue({ data: { ref: 'refs/heads/develop', object: { type: 'commit', sha: [base] } } } as never);
     if (scenario === 'empty response') f.pat.rest.git.getRef.mockResolvedValue({ data: null } as never);
-    await expect(f.repository.loadEvidence(target)).rejects.toThrow('base ref');
+    await expect(f.repository.loadEvidence(target)).rejects.toMatchObject({ code: 'provider.contract-invalid', recovery: { variables: { operation: 'base-ref', reason: 'invalid-response' } } });
     expect(f.pat.rest.pulls.createReview).not.toHaveBeenCalled();
   });
   it.each([undefined, '', 17, 'a'.repeat(1_025), 'develop\n', 'develop\u0000'])('rejects unsafe PR base metadata before any native ref request (%p)', async ref => {
     const f = evidenceFixture();
     const pull = await f.pat.rest.pulls.get();
     f.pat.rest.pulls.get.mockResolvedValue({ data: { ...pull.data, base: { ...pull.data.base, ref } } } as never);
-    await expect(f.repository.loadEvidence(target)).rejects.toThrow('base ref');
+    await expect(f.repository.loadEvidence(target)).rejects.toMatchObject({ code: 'provider.contract-invalid', recovery: { variables: { operation: 'base-ref', reason: 'invalid-response' } } });
     expect(f.pat.rest.git.getRef).not.toHaveBeenCalled();
   });
 });
@@ -581,6 +581,65 @@ describe('read-only doctor policy source', () => {
     const client = patOctokit(); client.rest.actions.getRepoVariable.mockResolvedValue({ data: { value } } as never);
     jest.mocked(github.getOctokit).mockReturnValue(client as never);
     expect(await new PullRequestApprovalRepository('fixture-token', settings).readPolicyEvidence(target)).toEqual({ status: 'unavailable' });
+    await expect(new PullRequestApprovalRepository('fixture-token', settings).readPolicy(target)).rejects.toMatchObject({
+      code: 'provider.contract-invalid', retryable: false, recovery: { variables: { operation: 'policy', reason: 'invalid-response' } },
+    });
     expect(client.rest.actions.getOrgVariable).not.toHaveBeenCalled();
+  });
+});
+
+describe('causal evidence collection diagnostics (#619)', () => {
+  it.each([
+    ['files', 'pull-requests-read'], ['reviews', 'pull-requests-read'], ['comments', 'issues-read'],
+    ['head-checks', 'checks-read'], ['merge-checks', 'checks-read'],
+    ['head-runs', 'actions-read'], ['merge-runs', 'actions-read'], ['jobs', 'actions-read'],
+  ])('retains the failed %s operation without provider text', async (operation, permission) => {
+    const f = evidenceFixture(); const original = f.pat.paginate.iterator.getMockImplementation()!;
+    const methods: Record<string, unknown> = { files: f.pat.rest.pulls.listFiles, reviews: f.pat.rest.pulls.listReviews,
+      comments: f.pat.rest.issues.listComments, 'head-checks': f.pat.rest.checks.listForRef,
+      'merge-checks': f.pat.rest.checks.listForRef, 'head-runs': f.pat.rest.actions.listWorkflowRunsForRepo,
+      'merge-runs': f.pat.rest.actions.listWorkflowRunsForRepo, jobs: f.pat.rest.actions.listJobsForWorkflowRunAttempt };
+    f.pat.paginate.iterator.mockImplementation(async function* (method, params) {
+      const matchesRef = !operation.startsWith('head-') && !operation.startsWith('merge-')
+        || (params.ref ?? params.head_sha) === (operation.startsWith('head-') ? head : testedMerge);
+      if (method === methods[operation] && matchesRef) throw { status: 403, message: 'SECRET', response: { data: 'SECRET' } };
+      yield* original(method, params);
+    });
+    await expect(f.repository.loadEvidence(target)).rejects.toMatchObject({ code: 'authorization.denied', retryable: false,
+      recovery: { variables: { operation, permission, reason: 'http-403' } } });
+  });
+  it('reports malformed pages as schema failures, not transient transport', async () => {
+    const f = evidenceFixture(); f.pages.set(f.pat.rest.pulls.listFiles, [{ unexpected: 'SECRET' }]);
+    await expect(f.repository.loadEvidence(target)).rejects.toMatchObject({ code: 'provider.contract-invalid',
+      recovery: { variables: { operation: 'files', reason: 'invalid-page' } } });
+  });
+  it('records a rules denial while preserving independently read evidence', async () => {
+    const f = evidenceFixture(); f.pat.request.mockRejectedValue({ status: 403, message: 'SECRET' });
+    const evidence = await f.repository.loadEvidence(target);
+    expect(evidence).toMatchObject({ headSha: head, rulesReadable: false,
+      diagnostics: [{ operation: 'rules', reason: 'http-403', permission: 'metadata-read' }] });
+    expect(JSON.stringify(evidence)).not.toContain('SECRET');
+  });
+  it('treats a legitimate classic protection 404 as absence, without a failure', async () => {
+    const f = evidenceFixture();
+    expect((await f.repository.loadEvidence(target)).diagnostics).toBeUndefined();
+  });
+  it('identifies the coverage artifact download denial', async () => {
+    const f = numericFixture(); f.pat.rest.actions.downloadArtifact.mockRejectedValue({ status: 403, message: 'SECRET' });
+    expect(await f.repository.loadEvidence(target)).toMatchObject({ diagnostics: [
+      { operation: 'coverage-download', reason: 'http-403', permission: 'actions-read' },
+    ] });
+  });
+  it('identifies invalid coverage ZIP/schema separately from a download failure', async () => {
+    const f = numericFixture(); f.pat.rest.actions.downloadArtifact.mockResolvedValue({ data: Buffer.from('SECRET') });
+    expect(await f.repository.loadEvidence(target)).toMatchObject({ diagnostics: [
+      { operation: 'coverage-parse', reason: 'artifact-invalid', permission: 'actions-read' },
+    ] });
+  });
+  it('accepts completed merge-ref CI when cached PR base metadata is historical', async () => {
+    const f = evidenceFixture(); const pull = await f.pat.rest.pulls.get();
+    f.pat.rest.pulls.get.mockResolvedValue({ data: { ...pull.data, base: { ...pull.data.base, sha: 'd'.repeat(40) } } });
+    expect(await f.repository.loadEvidence(target)).toMatchObject({ baseSha: base, testedMergeSha: testedMerge,
+      mergeCommitVerified: true, checks: [expect.objectContaining({ runId: 50, conclusion: 'success' })] });
   });
 });

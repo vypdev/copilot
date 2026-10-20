@@ -206,6 +206,11 @@ const SPANISH_CONTENT: ErrorContent = Object.freeze({
 });
 
 const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  'approval-evidence-read-failed': Object.freeze({
+    impact: 'Approval evidence could not be verified: {operation} ({reason}).',
+    action: 'Inspect {permission} access for the runtime credential and the named evidence response. Correct authorization, missing-resource or schema errors before rerunning; retry transient failures only after provider recovery or rate-limit reset.',
+    retainedState: 'No approval is authorized by this failed read. Existing PRs, reviews and completed external effects were preserved.',
+  }),
   'workspace-changes-rejected': Object.freeze({
     impact: 'The changes were rejected during workspace verification.',
     action: 'Inspect the rejected paths in the workflow and correct the workspace before retrying.',
@@ -274,6 +279,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
 });
 
 const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  'approval-evidence-read-failed': Object.freeze({
+    impact: 'No se pudo verificar la evidencia de aprobación: {operation} ({reason}).',
+    action: 'Comprueba el acceso {permission} de la credencial de ejecución y la respuesta indicada. Corrige los errores de autorización, recurso o esquema antes de reejecutar; reintenta los fallos transitorios solo tras recuperarse el proveedor o restablecerse el límite.',
+    retainedState: 'Esta lectura fallida no autoriza ninguna aprobación. Se conservaron las PRs, revisiones y efectos externos completados.',
+  }),
   'workspace-changes-rejected': Object.freeze({
     impact: 'Los cambios se rechazaron durante la verificación del espacio de trabajo.',
     action: 'Revisa las rutas rechazadas en la ejecución y corrige el espacio de trabajo antes de reintentar.',
