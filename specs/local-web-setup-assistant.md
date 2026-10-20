@@ -2899,8 +2899,10 @@ maintainer verification scripts.
 
 ### Numeric verification budget and acceptance
 
-The **15-case incremental automated budget** is separate from the unchanged
-350-case historical setup ledger and cannot close its manual-review rows:
+The **15-case incremental automated budget** is separate from the 350-case
+historical setup budget and cannot close its manual-review rows. C028 tracks
+the strengthened static-contract boundary under its updated assertion name;
+its identity, status and the ledger's case count remain unchanged:
 
 | Area | Minimum cases | Risk covered |
 |---|---:|---|
