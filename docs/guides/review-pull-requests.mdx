@@ -1,0 +1,51 @@
+---
+title: Review PRs and resolve findings
+description: Enable Bugbot review, understand its status, and verify fixes on the current PR revision.
+---
+
+# Review PRs and resolve findings
+
+Use Bugbot to report potential problems near the changed code and maintain a current review status as a PR evolves. Review findings, required CI checks and native approvals are separate signals.
+
+## Enable and configure
+
+In [web setup](/setup-web), enable **Pull requests** and the agent runtime/model used for review. Enable **Commits** if you also want branch analysis before a PR exists. Enable the issue/PR comment capabilities for explicit review and fix commands. Install the generated files before testing.
+
+Review these settings in setup or the [Bugbot configuration reference](/bugbot/configuration):
+
+| Setting | Use |
+|---|---|
+| `bugbot-severity` | Minimum severity published; setup selects `info`, while the standalone Action default is `low` |
+| `bugbot-comment-limit` | Individual finding publication limit; overflow is summarized |
+| `bugbot-review-drafts` | Whether draft PRs receive review; default `false` |
+| `bugbot-fail-on-unresolved` | Whether actionable findings fail the check; default `false` |
+| `bugbot-fix-verify-commands` | Your build/test/lint commands that must pass before an automated fix is committed |
+
+Start PR approval assessment in `recommend` or choose `off`. Native `guarded` approval requires explicit CI/coverage producer attestations and branch-rule/identity prerequisites. A passing Bugbot review alone does not meet those requirements. See [Guarded PR approval](/pull-requests/guarded-approval).
+
+## Review and resolve a PR
+
+1. Open a same-repository PR from the verified issue branch to its recorded parent and link the issue. Use a non-draft PR for the default review path.
+2. Check the current **Bugbot status** comment, inline findings and **Copilot / Review** check for the current head. Review bodies from older runs are history.
+3. Push a fix yourself, or copy the exact reported finding ID and request a targeted fix from the PR conversation or finding thread:
+
+   ```text
+   /copilot fix <finding-id-from-the-review>
+   ```
+
+   Replace the placeholder with the actual ID. The author must have repository write authority; the Action verifies the authoritative branch and runs configured verification before commit/push.
+4. Request a fresh read-only review when needed:
+
+   ```text
+   /copilot recheck
+   ```
+
+5. If a finding is demonstrably incorrect, explain the evidence and use `/copilot dismiss` with its exact ID. Dismissal records a review decision; it is not a code fix.
+
+## Verify the result
+
+A successful fix commit does not resolve a finding by itself. A fresh review of the current revision must verify it and reconcile the thread/status. Check the pushed SHA, its required CI results, the current finding state and any incomplete-coverage guidance.
+
+With the default `bugbot-fail-on-unresolved: false`, actionable findings may produce a neutral check. `unknown` or failed/incomplete reconciliation remains a failure. A green or neutral check is therefore not a substitute for reading the current status card. Bounded partial/skipped outcomes are explained there and in the Job Summary; split an overlarge change or follow the stated recovery instead of repeating an identical review blindly.
+
+For failures, inspect [Detection](/bugbot/detection), [Finding publication](/bugbot/finding-publication), [Autofix](/bugbot/autofix), and [Troubleshooting](/security-operations/operations/troubleshooting). Keep write credentials away from untrusted fork checkouts; use the documented [trust boundaries](/security-operations/security/trust-boundaries).

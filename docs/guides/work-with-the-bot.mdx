@@ -1,0 +1,52 @@
+---
+title: Work with the bot
+description: Ask for explanations, plans, diagnosis or an authorized implementation from GitHub comments.
+---
+
+# Work with the bot
+
+Address Copilot from an issue or PR to ask about the code or request a concrete change. Read-only analysis and file-changing requests have different requirements and results.
+
+## Enable and configure
+
+Enable the issue and PR comment capabilities in [web setup](/setup-web). Select a supported runtime/model and ensure authentication works on the runner. For file changes, configure `bugbot-fix-verify-commands` with the project's actual validation commands and provide a verified branch-bearing issue or same-repository PR.
+
+The installed workflow PAT determines the bot identity. Explicit `/copilot` commands do not require a mention. For natural language, mention the exact configured bot account; `@vypbot` is this repository's account, not a universal bot login.
+
+## Start with a read-only request
+
+Post one command in the relevant issue or PR:
+
+```text
+/copilot explain how this request reaches the authentication check
+```
+
+Other examples:
+
+```text
+/copilot plan add validation for an empty configuration file
+/copilot diagnose why the current workflow cannot find its runtime
+/copilot test-plan cover invalid and expired credentials
+```
+
+**Expected result:** one correlated GitHub reply or updated plan, with no repository file edits. General unaddressed conversation stays inert. `/copilot help` lists commands; `/copilot status` reports lifecycle state; `/copilot doctor` checks runtime prerequisites using bounded read-only evidence. Their metadata-only routes do not need a model call.
+
+## Request an implementation
+
+First verify the issue has its Action-linked ready branch, or use the intended open PR in this repository. Review the plan and make the authorized request explicit:
+
+```text
+/copilot implement add the empty-file validation described in this issue and its regression tests
+```
+
+For organization and personal repositories, file-changing requests require the owner or a collaborator with `push`, `maintain` or `admin` permission. Organization membership alone is insufficient. `ai-members-only`, when enabled, is an additional gate.
+
+Copilot checks out the authoritative branch, applies the bounded request, runs the configured verification and commits/pushes only if validation succeeds. If there is no verified branch or verification fails, it stops before publishing a commit. A Help issue remains branchless; use an enabled branch-bearing Issue Form for implementation.
+
+**Expected result:** a reply stating whether changes were pushed or no commit was needed. Inspect the actual diff, verification evidence and acceptance criteria before treating the task as complete. The request does not authorize merging the PR or launching a release.
+
+## Follow up
+
+Use `/copilot fix <finding-id>` for an existing finding, `/copilot recheck` for a fresh read-only review, and `/copilot sync-branch --dry-run` to preview parent/working-branch synchronization. Replace finding placeholders with the exact published IDs.
+
+If a request is blocked, inspect the reply and Job Summary for authorization, branch, runtime, model or verification failures. Fix that prerequisite before retrying. The complete [command reference](/issues/comment-commands) lists effects and limits; [Do user request](/bugbot/do-user-request) describes implementation boundaries and [verification commands](/bugbot/verification-commands) explains validation.

@@ -1,128 +1,22 @@
 ---
-title: How To Use
-description: Quick setup with copilot setup, then customize labels, templates, and workflows.
+title: Setup and maintenance reference
+description: Terminal setup, installation maintenance, organization reuse and complete generated-resource inventories.
 ---
 
-## Inspect configuration and make a small adjustment
+# Setup and maintenance reference
 
-Run `copilot setup --web` from your checkout. After pairing and repository
-confirmation, the configuration panel explains whether Copilot is detected,
-not configured, or only partly inspectable. A new checkout offers **Start
-setup**. Existing workflows offer inspection, **Quick adjustments**, and
-**Run the complete assistant**.
-
-Choose **Read configuration from GitHub** to supply a temporary setup PAT.
-Opening or refreshing the panel reads only. The guided link requests read
-access for Variable values and Secret names; Secret presence does not prove
-that its token is valid. The panel distinguishes repository values,
-organization values and workflow fallbacks, including repository overrides.
-Expand the workflow details to inspect every detected non-secret input.
-
-For an independent setting such as the review comment limit, choose **Change**,
-enter a value, then review the old value, new value and scope. Organization
-changes show their shared impact before approval and retain existing visibility
-and repository access. Copilot tests Variables Write with a temporary Variable,
-removes it, checks for changes during your review, writes the single setting,
-and reads it back. It returns to the panel so you can make another adjustment.
-Quick adjustments never request a bot PAT or rewrite workflows and Secrets.
-Choose **Finish** when you are done. A read-only inspection ends successfully
-without suggesting that setup was cancelled or that anything was changed.
-
-Use the complete assistant for agents, Projects, capabilities, credentials,
-scope changes or workflows. This starts a fresh questionnaire with its usual
-defaults; it does not reconstruct your customized configuration. Inspect the
-panel first and review the final plan before applying it. `--skip-variables`
-keeps quick adjustments read-only; `--dry-run` uses the existing full preview
-assistant without the management write path.
-
-If access is limited, reconnect with a corrected setup PAT. Unknown expressions,
-environment overrides and unavailable inventories cannot authorize a quick
-change. If cleanup or read-back cannot be confirmed, inspect GitHub before
-retrying; Copilot does not automatically restore an earlier value. The panel
-describes this checkout rather than certifying the default branch or runner.
-
-
-## Reuse organization settings or configure several repositories
-
-Run `copilot setup --web` from the current repository and confirm its owner and
-name. Choose **This repository** (the default) or **Several repositories**. The
-terminal equivalent for an explicit batch is `copilot setup --batch`.
-
-```mermaid
-flowchart LR
-  A[Confirm repository] --> B[Choose scope and configuration source]
-  B --> C[Select exact repositories]
-  C --> D[Review target settings and complete batch]
-  D --> E[Approve temporary permission checks and setup PRs]
-  E --> F[Human merge and verification]
-```
-
-Choose **Reuse compatible organization configuration** to import recognized,
-valid Variables and skip their questions. Repository overrides take precedence;
-explicit answers take precedence over both. Target branches, CI commands and
-approval producer identities still need their own review. Reuse creates only missing repository
-Variable names. If an existing repository value must change, make a separate
-reviewed update and prepare a fresh plan; batch setup will not overwrite it.
-Equivalent validated approval-policy JSON is retained despite formatting.
-Retained Secrets require complete revision metadata before Apply. If that
-metadata cannot be verified, setup stops and asks for a fresh inspection;
-existing values and completed effects are preserved. The preview shows
-retained shared settings and new repository overrides. Existing Secret values
-are never read, copied, displayed or replaced. A missing required binding blocks
-that repository; provision it separately and inspect again.
-
-In the terminal, enter repository IDs or type `confirm` to keep the displayed
-selection. A blank answer does not accept the selection.
-
-For several repositories, select 1–25 explicit repository identities in the same
-organization. Discovery is limited to the PAT's visible repositories, with
-search and exact-name lookup. If needed, reconnect with a temporary operator PAT
-restricted to the selected repositories. There is no implicit “all repositories”
-selection. Batch Customize changes settings while retaining existing Secret
-bindings; use current-repository Customize to provision new credential values.
-
-Each target gets its own workflows, forms, labels, issue types and guidance.
-The selected development branch must already exist and be readable; create or
-select the intended branch before applying a blocked target. Setup does not
-invent a development branch or its starting revision.
-Review the exact file changes, repository Variable names, additive shared-access
-grants, installation ref, base SHA and temporary permission checks. Approval can
-create/remove test resources and leave GitHub history or notifications. Pending
-cleanup blocks installation. Shared values, visibility and other memberships
-stay unchanged. Replaced setup assets have separate backups under
-`.copilot/setup-backups/`, retaining their relative paths even when their names
-and contents match. Apply runs sequentially and opens at most one setup PR per
-changed target in `setup/copilot/<operation-id>`. It never merges, tags,
-releases or deploys. A repository with matching files needs no new PR and remains
-pending verification after resource checks.
-
-A failed target retains its completed effects while other ready targets can
-continue. Stop prevents pending work; it does not remove successful grants or
-PRs. One explicit retry is available in the paired session after another review.
-If a permission audit ends without a confirmed cleanup report, setup saves that
-uncertainty, retains existing effects and stops pending work. The saved operation
-cannot resume writes. Inspect the GitHub history and local recovery journal,
-resolve any temporary resources, then start a fresh setup preview.
-For a closed session, use `copilot setup --web --resume-operation <operation-id>`
-with a fresh temporary PAT and the same configuration. Private local receipts
-contain identities, hashes and completed effects, never credentials, values or
-file contents. Resume rejects a changed base, target set or desired plan before
-permission probes. If the base changed (including after a merge), inspect the
-retained PR and start a fresh setup preview instead. A PR means **Waiting for
-merge**; credential metadata or PAT authentication does not prove runtime
-permissions. Delete the temporary operator PAT yourself after finishing.
-
-Project Status columns are selected and reviewed for the target Project. Nonempty organization column values are shown as review work and do not prefill or complete those questions.
-
-Batch write preflight requires complete revision metadata for existing repository
-Secrets; matching names alone cannot establish that a credential was not rotated.
+For a new installation, use the illustrated [web setup tutorial](/setup-web),
+then verify [your first issue-to-PR workflow](/first-workflow). Use this page for
+terminal setup details, existing-installation management, upgrades, organization
+reuse, batch setup and manual integration. Choose a capability in the [goal guides](/guides).
 
 ## Recommended installation and initialization
 
-The setup questionnaire includes an optional [guarded PR approval](/pull-requests/guarded-approval) stage. It recommends guarded mode for new installations, but will not invent test or coverage evidence; `recommend` and `off` remain explicit choices. Existing installations do not begin approving merely by upgrading.
+The setup questionnaire includes an optional [guarded PR approval](/pull-requests/guarded-approval) stage. It offers `recommend` by default, which assesses readiness without submitting a native approval. Choose `guarded` explicitly only after its CI/coverage and branch-rule prerequisites are proven, or `off` to disable assessment. Existing installations do not begin approving merely by upgrading.
 
-The recommended path is to install the published package globally with `pnpm` and
-then initialize the target repository with `copilot setup`. The package is scoped
+Install the published package globally with `pnpm`, then initialize the target
+repository with `copilot setup --web` for the recommended browser path or
+`copilot setup` for the terminal assistant. The package is scoped
 as `@vypdev/copilot`, but it exposes the global `copilot` executable:
 
 ```bash
@@ -140,82 +34,16 @@ Run repository-dependent commands from the root of the repository where you want
 Copilot to operate, not from the package installation directory. Version and help
 commands can be run from any directory.
 
-For local development or when testing an unreleased checkout, install from the repository instead:
-
-```bash
-git clone https://github.com/vypdev/copilot.git
-cd copilot
-PACKAGE_TARBALL="$(npm pack --ignore-scripts --silent)"
-corepack pnpm add --global "./$PACKAGE_TARBALL" --force
-```
-
-If the checkout does not include the compiled `build/` folder, run `corepack pnpm install` and `corepack pnpm run build` before packing. The tarball can be removed after installation. Packing the checkout avoids silently retaining a different global package with the same version.
-
 Once installed, the `copilot` command is available globally. Repository-dependent commands such as `copilot setup`, `copilot doctor`, `copilot check-progress`, `copilot think`, and `copilot do` must be run **from the root of the target repository**. The `copilot upgrade`, `copilot --version`, and help flows can run from any directory. Commands that access GitHub accept `--token` or `PERSONAL_ACCESS_TOKEN` from the environment. `copilot setup` and `copilot doctor` securely prompt for the setup PAT when run interactively; no `.env` file is read or created. `copilot setup --dry-run` is the only setup mode that can run without a token. See [CLI commands](/single-actions/workflow-and-cli).
 
 The target must be a working checkout. A bare Git repository has no files for setup or doctor to inspect and is rejected.
 
-Prefer a visual walkthrough? Run `copilot setup --web` from the repository
-root on an attached Git branch. A detached HEAD is rejected before credentials
-are requested; check out a branch first. Running from a subdirectory is also
-rejected before the browser opens or a PAT is requested; change to the
-repository root printed in the error and rerun. The CLI starts a short-lived page on
-`127.0.0.1` and opens your browser;
-if opening fails, paste the printed local URL into a browser on this computer.
-Enter the 16-character pairing code shown in the terminal before setup state
-appears. The URL contains no secret; keep the pairing code private. Loopback
-by itself does not restrict access to your OS account, and anyone on this
-computer with the code could join the session. After a page refresh, enter
-the code again. Neither the code nor the session key is sent to GitHub.
-After five incorrect codes, pairing and takeover pause for 30 seconds; the
-session is not permanently locked. Wait and retry the code shown in the
-launching terminal. Terminal setup remains available.
-An input TTY is not required for `--web`, but you must be able to read the
-launcher's stdout (or a privately captured task log) to obtain the code. If
-that output was discarded, stop and relaunch from a readable terminal; there
-is no code-recovery link in the browser. Treat any captured output as private.
-The page shows the same six setup stages, keeps the review pass visibly part
-of the current run, presents permissions and the final plan, and asks for a
-separate final **Apply setup** approval. Use the System/Light/Dark control in
-the top bar to choose a readable palette; the choice lasts only in that tab.
-After a successful Apply, **Verify installed setup (read-only)** performs a
-separate metadata inspection in the same local session and shows only summary
-counts. It does not dispatch an Action or read Secret values; if you have
-already deleted the setup PAT in GitHub, run `copilot doctor --read-only`
-with a valid setup PAT instead. A failed or partial Apply does
-not offer this button: inspect the itemized result and use the CLI command
-after resolving the uncertain resources.
-While Apply runs, the page reports each resource as in progress and then as
-completed, skipped, or needing inspection. If the process stops mid-write,
-the operation may already have reached GitHub; inspect that resource before
-starting a new setup session. A new process always requires a fresh review
-and approval.
-The language selector starts in English and offers Spanish, French, and
-Portuguese. Switching language does not change the repository locale or reset
-your answers. Question headings, explanations, options, permission details,
-plan warnings, local errors, and credential status summaries are translated.
-A persistent review notice remains in non-English modes while rare dynamic
-GitHub/provider diagnostics and the end-to-end language review are completed.
-GitHub's own PAT form uses the language
-configured on GitHub, independently of this page.
-After confirming the checkout, choose **Basic guided setup** (recommended) or
-**Customize every setting**. Basic retains explicit permission, security,
-branch-role, Project, approval, and storage decisions; only selected advanced
-agent, branch-prefix, and Bugbot values stay at their defaults. Explicit
-non-default configuration is still asked. Each section shows question-level
-progress and has a Previous question control; the final plan summarizes key
-decisions and names sections whose advanced defaults were retained. Use its
-Change controls to reopen any section and recheck the plan and setup PAT
-permissions before approving. A return to a previous section is the same run,
-not a new setup attempt. No GitHub change starts by reviewing or editing.
-PAT values are submitted to the local process through masked fields and are
-not restored after refreshing the page. A new setup question starts with its
-own suggested answer; status updates do not erase an answer you are typing.
-A second tab is read-only until you explicitly re-enter the launcher's pairing
-code there to take control; this invalidates the first tab's control. The
-pairing code authorizes this takeover, so share it only with someone you trust
-to control the setup. The terminal remains the default with
-`copilot setup`.
+For interactive onboarding, follow [Set up with the web assistant](/setup-web).
+It covers pairing, capability choices, the two PAT roles, plan approval, Apply,
+installation of generated files and runtime verification. The terminal remains
+available with `copilot setup`.
+
+### Terminal and advanced setup behavior
 
 In the terminal wizard, each question shows a short explanation, the suggested
 answer, and a related documentation URL. Type `?` at a text, number, or
@@ -397,6 +225,19 @@ npm uninstall --global copilot
 corepack pnpm remove --global copilot
 ```
 
+### Installing an unreleased checkout
+
+For local development or when testing an unreleased checkout, install from the repository instead:
+
+```bash
+git clone https://github.com/vypdev/copilot.git
+cd copilot
+PACKAGE_TARBALL="$(npm pack --ignore-scripts --silent)"
+corepack pnpm add --global "./$PACKAGE_TARBALL" --force
+```
+
+If the checkout does not include the compiled `build/` folder, run `corepack pnpm install` and `corepack pnpm run build` before packing. The tarball can be removed after installation. Packing the checkout avoids silently retaining a different global package with the same version.
+
 ### Update or reinstall the global CLI
 
 For a published release, update the active global npm or pnpm installation:
@@ -453,69 +294,144 @@ The complete command reference, including every supported option, is in [Workflo
 
 ## Tutorial: Initialize a repository
 
-<Steps>
-  <Step title="1. Create a PAT">
-    Create the **workflow PAT** for the dedicated bot account. Follow the [Authentication](/authentication) guide to create a **fine-grained PAT** with the runtime permissions required by your workflows and store it as the `PAT` Secret in your repository or organization. During `copilot setup`, the operator will provide a separate **setup PAT** in a hidden prompt; that token is used locally to configure the repository and is never stored as `PAT`.
-  </Step>
+The canonical interactive walkthrough is [web setup](/setup-web). For the
+terminal alternative:
 
-  <Step title="2. Run copilot setup in your repository root">
-    Go to the **root of the repository** where you want Copilot (clone it if needed), then run:
+1. Install the CLI as above, change to the target repository root, and run
+   `copilot setup`.
+2. Choose capabilities and review the permission-affecting decisions. Create the
+   temporary operator setup PAT with the guided link, then review the final
+   plan. Use `:back` to revise a question or `:edit` to change a plan section.
+3. Approve the reviewed plan and its disclosed temporary permission tests, supply
+   the separate workflow bot PAT and required provider credentials, then confirm
+   Apply. Inspect the itemized receipt for partial or blocked work.
+4. Review, commit and merge the generated files through the normal protected
+   process. Install them on the default branch and the configured development
+   line where needed, as explained in [install the generated files](/setup-web#install-the-generated-files).
+5. Run `copilot doctor --read-only` with a valid setup PAT, resolve blockers,
+   and complete the [first workflow](/first-workflow). Metadata inspection does
+   not verify Secret values or establish runtime success.
 
-    ```bash
-    cd /path/to/your/repo
-    copilot setup
-    ```
-
-    In guided interactive setup, answer the short permission-intent questions and review the proposed grants before creating the setup PAT in GitHub. The wizard then securely asks for the token and continues with the remaining plan questions. For automation, pass it explicitly or through the environment:
-
-    ```bash
-    PERSONAL_ACCESS_TOKEN=your_setup_pat copilot setup --non-interactive --yes --skip-secrets
-    # or: copilot setup --token your_setup_pat
-    ```
-
-    The wizard shows a reviewable plan and asks for confirmation. During either questionnaire, use `:back` in the terminal or **Previous question** in the browser to correct an answer; the final plan also offers **Change section** (terminal: `:edit`) without discarding other answers. Revisions recompute dependent questions and PAT grants. The web plan lists agent/model routes, issue workflows, exact trusted check/App/workflow identities, coverage evidence, Project Status transitions, scopes, files, Variables, Secret names, and the temporary PAT write checks selected for this plan. Declining the plan starts no temporary write tests or setup changes. After approval in a normal setup run, each required Write permission is tested with a disposable resource before setup applies changes. Actions and Pull request tests may leave history or notifications after cleanup. `Ctrl-C` or end-of-input exits 130, while declining the final plan exits 0. Use `copilot setup --dry-run` to inspect the plan without changes, whether or not you supply a PAT.
-
-    In automation, `--non-interactive` creates no terminal. `--yes` approves only the final plan: it does not supply a missing PAT, credential, target, or organization prerequisite. Required Write permissions are tested after plan approval and block setup if their disposable checks fail. The former `--confirm-unverifiable-write-permissions` flag is rejected.
-
-    Repository agent guidance remains enabled by default in automation, but the root pointer uses the safe `create-if-missing` policy unless `--agent-guidance prompt` (or the equivalent config value) explicitly authorizes a bounded update to an existing `AGENTS.md`.
-
-    `copilot setup` will:
-    - Create `.github/`, `.github/workflows/`, and `.github/ISSUE_TEMPLATE/` if they do not exist.
-    - Copy only the selected files from the Copilot `setup/` folder into your repo (workflows, issue templates, pull request template). Existing files are **not** overwritten unless you approve an update.
-    - Detect existing setup workflows and ask before updating them. Use `--update-workflows` to approve updates non-interactively; existing workflow files are backed up under `.copilot/setup-backups/` before replacement.
-    - Verify GitHub access using the setup PAT. This operator token is used only for the setup operation and is never stored as a workflow Secret.
-    - Ask for the separate workflow PAT owned by the bot account. It is validated and stored remotely as the `PAT` Secret; it is not the setup PAT.
-    - Offer the credential fallbacks needed by the selected providers, validate supplied values with metadata-only requests, and store them as GitHub Secrets. Existing Secrets are never overwritten unless you explicitly replace them. Codex credentials are optional when the target runner already passes `codex login status`; setup and doctor report that state as an operational warning rather than a missing-secret failure. If a remote credential health workflow is already available, existing values are validated remotely before you choose to keep them.
-    - Create or update non-sensitive Repository Variables for the selected runtimes, model policy, branches, Projects, AI behavior (including `AI_IGNORE_FILES`), and Bugbot settings. Use `--skip-variables` to leave them unchanged.
-    - Create all required **labels** in the repository (type, action, priority, size, progress 0%–100%, and the lifecycle/activity/waiting labels).
-    - Create all required **issue types** in the organization (Task, Bug, Feature, Release, Hotfix, etc.), if your plan supports it.
-
-    After this step you have a working baseline: labels, selected templates/workflows, agent routing, operational Variables, and validated credentials are in place.
-  </Step>
-
-  <Step title="3. Adapt files to your repository">
-    You can tweak issue templates (text, dropdowns), workflow names, and branch names. The following points are **required** for the GitHub Action to behave correctly; the rest is optional.
-
-    **Required for the action to work:**
-    - **Token**: Every workflow that runs Copilot must pass the `token` input (your PAT). Typically you set `token: ${{ secrets.PAT }}` in each Copilot step. Without it, the action cannot create branches, update issues, or call the API.
-    - **Workflow file names for release/hotfix**: When an issue has the **deploy** label, Copilot *dispatches* a workflow by **filename**. The action inputs `release-workflow` (default: `release_workflow.yml`) and `hotfix-workflow` (default: `hotfix_workflow.yml`) must match the **exact filenames** in `.github/workflows/`. If you rename `release_workflow.yml` or `hotfix_workflow.yml`, you **must** pass the new names to the action in the workflows that invoke Copilot (e.g. in `copilot_issue.yml` add `release-workflow: 'your_release.yml'` and `hotfix-workflow: 'your_hotfix.yml'`).
-    - **Deploy label**: The label that triggers the deploy flow is configured by the `deploy-label` input (default: `deploy`). The issue templates and your usage must use this same label when you want to run the release or hotfix workflow.
-    - **Branch names in workflows**: The Commit workflow (push) often excludes the main and development branches from running (e.g. `!master`, `!develop`). If you change the default branch names (e.g. `main-branch: 'main'`, `development-branch: 'develop'`), update the `push.branches` filter in `.github/workflows/copilot_commit.yml` so it excludes those same names; otherwise the action may run on every push to main/develop or never run on feature branches.
-
-    **Runner selection:** Keep installed routing, explicitly choose GitHub-hosted jobs, reuse an existing organization profile, or enter a known self-hosted group and labels. Review effective routes and access/capacity observations per repository. Agent jobs and CLI provisioning share the agent route; ordinary validation has a separate choice. Approval observers, merge-group checks and publication stay independent. A changed dynamic route that you retain requires separate review of its matrix/inputs. No environment fallback or runner access grant is implicit. See [runner profiles](/configuration#runner-profiles). Windows service registrations omit `codex`: **Codex no soportado en runners Windows ejecutados como servicio**.
-
-    **Copilot source repository:** A target containing a root-local `uses: ./` Action retains its existing native workflows and complete source guidance. Its Commit and Branch Sync workflows gain the temporary `copilot-permission-test-*` push exclusion; Commit also excludes installer branches. Branch Sync retains all ordinary branches, installer branches and bot pushes. The parity inventory distinguishes shared assets, missing optional assets, customizations, native extensions and incompatible generator metadata. Native CI, RepoWise, runner diagnostics, the platform smoke matrix and npm publication are intentional source extensions. Source now includes compatible manual CLI-provisioning and credential-health workflows; provisioning uses the Codex pool, while credential health keeps its independent hosted route. Future generator metadata is retained or blocks regeneration; setup does not silently migrate it.
-
-    **Optional but keep coherence:**
-    - **Labels**: If you change any label input (e.g. `feature-label`, `bugfix-label`, `deploy-label`), use the **same** label names in your issue templates (`labels:` in each `.yml`) and when labeling issues manually. Otherwise the action will not recognize the type or flow.
-    - **Branch name prefixes**: The action uses inputs like `feature-tree`, `bugfix-tree`, `release-tree`, `hotfix-tree` (defaults: `feature`, `bugfix`, `release`, `hotfix`) to create branch names. If you change them, branch names will follow the new prefixes; keep templates and docs in sync.
-    - **Project Status options**: Default values are "Todo" and "In Progress". If you rename the options in the Project's **Status** single-select field, set the corresponding action inputs (`project-column-issue-created`, `project-column-issue-in-progress`, etc.) to the exact option names. These legacy input names say `column`, but ProjectV2 updates the Status field, not a visual board column.
-
-    **Bugbot autofix (issue/PR comments):** Workflows that run on `issue_comment` or `pull_request_review_comment` (so users can ask the bot to fix reported findings) must grant **`contents: write`** so the action can commit and push. On **issue_comment**, the action resolves the branch from an open PR that references the issue and checks out that branch before applying fixes and pushing. See [Bugbot autofix](/bugbot/autofix) and [Troubleshooting](/security-operations/operations/troubleshooting).
-  </Step>
-</Steps>
+For unattended flags and credential provisioning, use [Workflow & CLI](/single-actions/workflow-and-cli).
+The detailed workflow inventory below explains installation dependencies and
+customization boundaries; the generated plan remains the exact inventory for
+your selected features.
 
 ---
+
+## Inspect configuration and make a small adjustment
+
+Run `copilot setup --web` from your checkout. After pairing and repository
+confirmation, the configuration panel explains whether Copilot is detected,
+not configured, or only partly inspectable. A new checkout offers **Start
+setup**. Existing workflows offer inspection, **Quick adjustments**, and
+**Run the complete assistant**.
+
+Choose **Read configuration from GitHub** to supply a temporary setup PAT.
+Opening or refreshing the panel reads only. The guided link requests read
+access for Variable values and Secret names; Secret presence does not prove
+that its token is valid. The panel distinguishes repository values,
+organization values and workflow fallbacks, including repository overrides.
+Expand the workflow details to inspect every detected non-secret input.
+
+For an independent setting such as the review comment limit, choose **Change**,
+enter a value, then review the old value, new value and scope. Organization
+changes show their shared impact before approval and retain existing visibility
+and repository access. Copilot tests Variables Write with a temporary Variable,
+removes it, checks for changes during your review, writes the single setting,
+and reads it back. It returns to the panel so you can make another adjustment.
+Quick adjustments never request a bot PAT or rewrite workflows and Secrets.
+Choose **Finish** when you are done. A read-only inspection ends successfully
+without suggesting that setup was cancelled or that anything was changed.
+
+Use the complete assistant for agents, Projects, capabilities, credentials,
+scope changes or workflows. This starts a fresh questionnaire with its usual
+defaults; it does not reconstruct your customized configuration. Inspect the
+panel first and review the final plan before applying it. `--skip-variables`
+keeps quick adjustments read-only; `--dry-run` uses the existing full preview
+assistant without the management write path.
+
+If access is limited, reconnect with a corrected setup PAT. Unknown expressions,
+environment overrides and unavailable inventories cannot authorize a quick
+change. If cleanup or read-back cannot be confirmed, inspect GitHub before
+retrying; Copilot does not automatically restore an earlier value. The panel
+describes this checkout rather than certifying the default branch or runner.
+
+
+## Reuse organization settings or configure several repositories
+
+Run `copilot setup --web` from the current repository and confirm its owner and
+name. Choose **This repository** (the default) or **Several repositories**. The
+terminal equivalent for an explicit batch is `copilot setup --batch`.
+
+```mermaid
+flowchart LR
+  A[Confirm repository] --> B[Choose scope and configuration source]
+  B --> C[Select exact repositories]
+  C --> D[Review target settings and complete batch]
+  D --> E[Approve temporary permission checks and setup PRs]
+  E --> F[Human merge and verification]
+```
+
+Choose **Reuse compatible organization configuration** to import recognized,
+valid Variables and skip their questions. Repository overrides take precedence;
+explicit answers take precedence over both. Target branches, CI commands and
+approval producer identities still need their own review. Reuse creates only missing repository
+Variable names. If an existing repository value must change, make a separate
+reviewed update and prepare a fresh plan; batch setup will not overwrite it.
+Equivalent validated approval-policy JSON is retained despite formatting.
+Retained Secrets require complete revision metadata before Apply. If that
+metadata cannot be verified, setup stops and asks for a fresh inspection;
+existing values and completed effects are preserved. The preview shows
+retained shared settings and new repository overrides. Existing Secret values
+are never read, copied, displayed or replaced. A missing required binding blocks
+that repository; provision it separately and inspect again.
+
+In the terminal, enter repository IDs or type `confirm` to keep the displayed
+selection. A blank answer does not accept the selection.
+
+For several repositories, select 1–25 explicit repository identities in the same
+organization. Discovery is limited to the PAT's visible repositories, with
+search and exact-name lookup. If needed, reconnect with a temporary operator PAT
+restricted to the selected repositories. There is no implicit “all repositories”
+selection. Batch Customize changes settings while retaining existing Secret
+bindings; use current-repository Customize to provision new credential values.
+
+Each target gets its own workflows, forms, labels, issue types and guidance.
+The selected development branch must already exist and be readable; create or
+select the intended branch before applying a blocked target. Setup does not
+invent a development branch or its starting revision.
+Review the exact file changes, repository Variable names, additive shared-access
+grants, installation ref, base SHA and temporary permission checks. Approval can
+create/remove test resources and leave GitHub history or notifications. Pending
+cleanup blocks installation. Shared values, visibility and other memberships
+stay unchanged. Replaced setup assets have separate backups under
+`.copilot/setup-backups/`, retaining their relative paths even when their names
+and contents match. Apply runs sequentially and opens at most one setup PR per
+changed target in `setup/copilot/<operation-id>`. It never merges, tags,
+releases or deploys. A repository with matching files needs no new PR and remains
+pending verification after resource checks.
+
+A failed target retains its completed effects while other ready targets can
+continue. Stop prevents pending work; it does not remove successful grants or
+PRs. One explicit retry is available in the paired session after another review.
+If a permission audit ends without a confirmed cleanup report, setup saves that
+uncertainty, retains existing effects and stops pending work. The saved operation
+cannot resume writes. Inspect the GitHub history and local recovery journal,
+resolve any temporary resources, then start a fresh setup preview.
+For a closed session, use `copilot setup --web --resume-operation <operation-id>`
+with a fresh temporary PAT and the same configuration. Private local receipts
+contain identities, hashes and completed effects, never credentials, values or
+file contents. Resume rejects a changed base, target set or desired plan before
+permission probes. If the base changed (including after a merge), inspect the
+retained PR and start a fresh setup preview instead. A PR means **Waiting for
+merge**; credential metadata or PAT authentication does not prove runtime
+permissions. Delete the temporary operator PAT yourself after finishing.
+
+Project Status columns are selected and reviewed for the target Project. Nonempty organization column values are shown as review work and do not prefill or complete those questions.
+
+Batch write preflight requires complete revision metadata for existing repository
+Secrets; matching names alone cannot establish that a credential was not rotated.
 
 ## Manual workflow integration (advanced)
 
@@ -544,6 +460,27 @@ the repository metadata or install the complete set of Copilot workflows. Prefer
 for the action-level contract.
 
 ---
+
+## Review customizations after setup
+
+You can tweak issue templates (text, dropdowns), workflow names, and branch names. The following points are **required** for the GitHub Action to behave correctly; the rest is optional.
+
+**Required for the action to work:**
+- **Token**: Every workflow that runs Copilot must pass the `token` input (your PAT). Typically you set `token: ${{ secrets.PAT }}` in each Copilot step. Without it, the action cannot create branches, update issues, or call the API.
+- **Workflow file names for release/hotfix**: When an issue has the **deploy** label, Copilot *dispatches* a workflow by **filename**. The action inputs `release-workflow` (default: `release_workflow.yml`) and `hotfix-workflow` (default: `hotfix_workflow.yml`) must match the **exact filenames** in `.github/workflows/`. If you rename `release_workflow.yml` or `hotfix_workflow.yml`, you **must** pass the new names to the action in the workflows that invoke Copilot (e.g. in `copilot_issue.yml` add `release-workflow: 'your_release.yml'` and `hotfix-workflow: 'your_hotfix.yml'`).
+- **Deploy label**: The label that triggers the deploy flow is configured by the `deploy-label` input (default: `deploy`). The issue templates and your usage must use this same label when you want to run the release or hotfix workflow.
+- **Branch names in workflows**: The Commit workflow (push) often excludes the main and development branches from running (e.g. `!master`, `!develop`). If you change the default branch names (e.g. `main-branch: 'main'`, `development-branch: 'develop'`), update the `push.branches` filter in `.github/workflows/copilot_commit.yml` so it excludes those same names; otherwise the action may run on every push to main/develop or never run on feature branches.
+
+**Runner selection:** Keep installed routing, explicitly choose GitHub-hosted jobs, reuse an existing organization profile, or enter a known self-hosted group and labels. Review effective routes and access/capacity observations per repository. Agent jobs and CLI provisioning share the agent route; ordinary validation has a separate choice. Approval observers, merge-group checks and publication stay independent. A changed dynamic route that you retain requires separate review of its matrix/inputs. No environment fallback or runner access grant is implicit. See [runner profiles](/configuration#runner-profiles). Windows service registrations omit `codex`: **Codex no soportado en runners Windows ejecutados como servicio**.
+
+**Copilot source repository:** A target containing a root-local `uses: ./` Action retains its existing native workflows and complete source guidance. Its Commit and Branch Sync workflows gain the temporary `copilot-permission-test-*` push exclusion; Commit also excludes installer branches. Branch Sync retains all ordinary branches, installer branches and bot pushes. The parity inventory distinguishes shared assets, missing optional assets, customizations, native extensions and incompatible generator metadata. Native CI, RepoWise, runner diagnostics, the platform smoke matrix and npm publication are intentional source extensions. Source now includes compatible manual CLI-provisioning and credential-health workflows; provisioning uses the Codex pool, while credential health keeps its independent hosted route. Future generator metadata is retained or blocks regeneration; setup does not silently migrate it.
+
+**Optional but keep coherence:**
+- **Labels**: If you change any label input (e.g. `feature-label`, `bugfix-label`, `deploy-label`), use the **same** label names in your issue templates (`labels:` in each `.yml`) and when labeling issues manually. Otherwise the action will not recognize the type or flow.
+- **Branch name prefixes**: The action uses inputs like `feature-tree`, `bugfix-tree`, `release-tree`, `hotfix-tree` (defaults: `feature`, `bugfix`, `release`, `hotfix`) to create branch names. If you change them, branch names will follow the new prefixes; keep templates and docs in sync.
+- **Project Status options**: Default values are "Todo" and "In Progress". If you rename the options in the Project's **Status** single-select field, set the corresponding action inputs (`project-column-issue-created`, `project-column-issue-in-progress`, etc.) to the exact option names. These legacy input names say `column`, but ProjectV2 updates the Status field, not a visual board column.
+
+**Bugbot autofix (issue/PR comments):** Workflows that run on `issue_comment` or `pull_request_review_comment` (so users can ask the bot to fix reported findings) must grant **`contents: write`** so the action can commit and push. Autofix requires an authoritative PR/head identity; use the intended PR conversation or review thread. General implementation requests may use the issue's verified linked branch. Missing or conflicting branch evidence stops file changes before the agent runs. See [Bugbot autofix](/bugbot/autofix) and [Troubleshooting](/security-operations/operations/troubleshooting).
 
 ## What lives in `setup/` (and what gets created)
 

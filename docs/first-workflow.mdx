@@ -1,40 +1,105 @@
 ---
-title: First workflow
-description: Create and verify a complete Copilot workflow before enabling broader automation.
+title: Your first issue-to-PR workflow
+description: Verify a real installation using one documentation issue, its managed branch and a linked PR.
 ---
 
-# First workflow
+# Your first issue-to-PR workflow
 
-Use this page after [Quick start](/quick-start). It creates one controlled workflow, verifies the result, and only then expands the configuration.
+After [web setup](/setup-web), use this small documentation task to verify the installed issue, branch, push and PR routes. It uses your repository's real GitHub workflows. It does not require a release or an automatic code-changing request.
 
-<Warning>
-Start with the minimum permissions and a trusted branch. Do not expose write credentials to forked pull requests.
-</Warning>
+## Before you start
 
-<Steps>
-  <Step title="Create the workflow">
-    Add a workflow under `.github/workflows/` that checks out the repository and invokes the Copilot Action. Use an explicit Action ref for production.
-  </Step>
-  <Step title="Set permissions">
-    Grant only the permissions required by the selected capability. Detection can start with read-oriented permissions; comments and commits require explicit write permissions.
-  </Step>
-  <Step title="Configure the agent tuple">
-    Set `agent-provider`, `agent-model-provider`, and `agent-model` explicitly; set `agent-effort` when the selected model supports it. Configure the matching credential reference and model allowlists.
-  </Step>
-  <Step title="Run on a trusted branch">
-    Trigger the workflow on a branch controlled by the repository. Confirm the workflow starts, the selected CLI is provisioned, and the model policy passes.
-  </Step>
-  <Step title="Verify the result">
-    Check the expected comment, label, branch, or output. Review sanitized logs and confirm that no credential or sensitive workspace content was exposed.
-  </Step>
-</Steps>
+- The reviewed installation is on the default branch and on the configured development line where its checkout files are needed.
+- Issues, Pull requests, Commits, Issue Forms and the Documentation issue kind are enabled. Enable comment capabilities if you use the optional `/copilot` commands below.
+- The workflow bot has the required access. If review/progress is enabled, its runner, runtime/model and credentials are ready.
+- You can open issues and contribute a branch/PR; an authorized maintainer can start work and perform the final merge.
 
-## Minimal verification checklist
+Choose an existing README or documentation file for a one-sentence improvement. Use the following example only if it fits your project; all example issue numbers and branch names must be replaced by the actual GitHub results.
 
-- [ ] The workflow used the intended event.
-- [ ] The selected runtime and qualified model were explicit.
-- [ ] Provisioning and authentication preflight passed.
-- [ ] The expected GitHub side effect occurred once.
-- [ ] No fork or untrusted checkout received write credentials.
+## 1. Open the Documentation Update form
 
-For agent details, see [Agents](/agents). For operational controls, see [Security & Operations](/security-operations).
+Go to **Issues → New issue → Documentation Update**. Enter:
+
+| Field | Example |
+|---|---|
+| Title | Explain where developers can find the project's test command |
+| Describe the documentation update | Add the existing test command and where to run it to the README's Development section |
+| Why is this update needed? | A new contributor should be able to find and run the existing checks without asking the owner |
+
+Complete the existing-issue checkbox and other required fields. The installed form supplies `documentation` and `docs` by default. Do not remove its required headings or manually edit Copilot's persisted configuration.
+
+**Expected result:** an admitted Documentation issue, routing labels, and a bot welcome or plan response. Assignee and Project updates depend on your enabled configuration. Opening the issue alone does not create its working branch.
+
+## 2. Start and verify branch readiness
+
+An authorized maintainer adds `in-progress`. In **Actions**, open the related **Copilot - Issue** run and its **Job Summary**.
+
+**Expected result:** the issue has `branched` and an exact branch link under **Development**. Read its recorded parent branch too. The Action chooses the name and parent and applies `branched` only after verification. Do not add that label yourself or create a replacement remote branch.
+
+If readiness is missing, stop here and inspect the status card/Job Summary. Correct missing fields, permissions or reported prerequisites before retrying. If an SDD is required, answer its blocking questions. A Help issue never becomes a branch-bearing task.
+
+## 3. Make and verify the small change
+
+Copy the exact linked remote branch. From your checkout, substitute it for the placeholder:
+
+```bash
+git fetch origin
+git switch --track 'origin/<exact-branch-linked-by-the-Action>'
+```
+
+If that local tracking branch already exists, switch to it instead. Edit the selected documentation file, using your project's actual test command; do not add a guessed command. Inspect the diff and run:
+
+```bash
+git diff --check
+git diff
+```
+
+Run the test command you documented from its stated directory, plus any documentation checks required by your project. Record their actual results. Commit and push to the same tracked branch through your normal workflow. For a README change:
+
+```bash
+git add README.md
+git commit -m "docs: explain the existing test command"
+git push
+```
+
+**Expected result:** that exact branch contains your commit. If progress analysis is enabled, inspect its issue card/labels or the reason evidence is incomplete. Do not treat a percentage as proof that tests passed.
+
+## 4. Open and inspect the linked PR
+
+Open a non-draft PR from the managed branch to the recorded parent. Describe the change and checks you actually ran. Link the real issue number, for example `Closes #123` when your issue is #123.
+
+**Expected result:** the PR has the intended base/head and issue link. Inspect the Actions run for that revision, generated description if enabled, current Bugbot status/inline findings if enabled, and **Copilot / Review** when emitted. The default skips draft review. Project updates depend on your setup.
+
+If comments are enabled, `/copilot recheck` requests a fresh read-only review. To test a simple comment route separately, post `/copilot help` and verify one reference reply; this metadata-only command does not prove agent authentication. Use `/copilot explain the change in this PR` if you also want to exercise a configured read-only agent request.
+
+Resolve findings and failing checks. A neutral Bugbot check can still have actionable findings under the default policy; read the current status. Verify the latest pushed SHA rather than relying on an older green run.
+
+## 5. Complete and record the result
+
+An authorized maintainer merges through the repository's normal protected process. Verify the Action's resulting issue/project state and configured branch cleanup. If the issue remains open unexpectedly, inspect the completion run rather than manually rewriting its durable configuration.
+
+Record these observable results in the PR:
+
+| Result | What to verify |
+|---|---|
+| Issue admission | Enabled Documentation kind, required fields accepted |
+| Branch readiness | `branched`, exact linked ref, recorded parent |
+| Contribution | Expected documentation commit on that ref |
+| PR processing | Correct link/base/head and checks for the latest revision |
+| Review, if enabled | Current review status, findings addressed or explicit coverage/recovery guidance |
+| Completion | Merged PR and expected issue/project/cleanup outcome |
+
+This verifies only the routes exercised. Release publication, guarded approval, other runtimes and additional Projects need their own checks. Choose your [next goal](/guides) after this baseline works.
+
+## If a checkpoint fails
+
+| Symptom | Inspect |
+|---|---|
+| No form or issue workflow | Installation on the default branch and the enabled [workflow profile](/issues/configurable-workflows) |
+| No `branched` or linked ref | Copilot - Issue Job Summary, access, selected development branch and any required SDD |
+| Run stays queued | Availability and labels of the runner selected during setup |
+| Runtime/model/credential error | [Agent failure behavior](/agents/failure-policy) and [Authentication](/authentication) |
+| No review | Non-draft status, enabled PR/agent routes, actor gating and current Job Summary |
+| Parent moved | The drift card and authorized [branch synchronization](/issues/branch-synchronization) |
+
+Use [Troubleshooting](/security-operations/operations/troubleshooting) for the reported failure. Reuse the issue and its verified branch when recovering.

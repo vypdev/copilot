@@ -1,85 +1,43 @@
 ---
 title: Quick start
-description: Minimal verified setup for the Copilot Action.
+description: Install with the web assistant and verify one issue-to-PR workflow.
 ---
+
 # Quick start
 
-## Recommended setup
+Use this checklist if you already know your repository and runner choices. Follow [Set up with the web assistant](/setup-web) for the illustrated walkthrough.
 
-The supported onboarding path is the global CLI package followed by
-`copilot setup`. It initializes the repository and lets you select the workflows,
-templates, labels, issue types, Variables, Secrets, and agent settings together.
+## 1. Prepare
+
+You need Node.js 24 or newer, `pnpm`, a working checkout on an attached Git branch, and permission to install workflows and configure the selected GitHub resources. Choose the account that will own the workflow PAT; a dedicated bot account is recommended. AI features also need a usable runtime/model and authentication on the runner.
+
+## 2. Launch the local web assistant
 
 ```bash
 pnpm add --global @vypdev/copilot
 copilot --version
 cd /path/to/your/repository
-copilot setup
+copilot setup --web
 ```
 
-Use `copilot setup --dry-run` to review the plan without changing files or GitHub.
-The setup PAT used by the operator is separate from the workflow `PAT` Secret.
-After setup, review and commit the generated `.github/` files, then customize the
-selected workflows as needed. See [How to use](/how-to-use) for the full flow.
+Enter the pairing code from the terminal, confirm the repository, and choose **This repository** and **Basic guided setup**. `copilot setup` without `--web` remains the terminal alternative; `copilot setup --web --dry-run` previews without setup changes.
 
-New setup offers [PR approval assessment](/pull-requests/guarded-approval) in `recommend` mode by default: it explains readiness without submitting a native approval. Select and attest an exact CI/coverage producer, verify stale-approval dismissal and the runtime bot PAT, and commit the generated observer workflow to the default branch. Choose `guarded` explicitly only after those prerequisites are proven, or `off` to disable it. Existing repositories without the policy Variable remain off.
+## 3. Select and review
 
-<Warning>
-  If you enable release or hotfix automation, merge
-  `copilot_deployment_orchestration.yml` and every publishing workflow you
-  enable (`release_workflow.yml` and/or `hotfix_workflow.yml`) into the
-  repository's default branch before launching the first operation. GitHub
-  cannot dispatch or wake a continuation workflow that exists only on the
-  temporary release/hotfix branch. This project enables both publishers. For
-  its npm publication, also configure the exact `npm` Environment and npm
-  Trusted Publisher entries before testing the flow. See
-  [Release and hotfix orchestration](/issues/deployment-orchestration#operator-preflight).
-</Warning>
+For the [first workflow](/first-workflow), enable Issues, Pull requests, Commits, the Documentation issue kind and Issue Forms. Enable the comment capabilities if you want `/copilot` commands. You can leave Projects, releases and hotfixes disabled until you need them.
 
-## Manual workflow integration (advanced)
+Check your actual production/development branches and runners. The development branch must already exist. New setup offers PR approval assessment in `recommend` mode, which does not submit native approvals. Select `off` if you do not want assessment; choose `guarded` explicitly only after its [CI/coverage and branch-rule prerequisites](/pull-requests/guarded-approval) are proven.
 
-If the setup wizard cannot be used, the Action can be wired directly into a
-workflow. This only configures execution; it does not initialize repository
-metadata or install the complete Copilot workflow set.
+Follow the guided GitHub links for the temporary **setup PAT** and persistent **workflow PAT**. Confirm the correct GitHub account, target repository and grants for each role. Review files, Variables, Secret names and temporary permission checks in the plan before approving; then complete the separate **Apply setup** confirmation.
 
-```yaml
-name: Copilot
-on: push
-jobs:
-  copilot:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          persist-credentials: false
-      - uses: vypdev/copilot@v3
-        with:
-          token: ${{ secrets.COPILOT_TOKEN }}
-          agent-provider: codex
-          agent-model-provider: openai
-          agent-model: gpt-6-luna
-          agent-effort: medium
-        env:
-          # Omit when Codex is already authenticated on the controlled runner.
-          CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
-```
+## 4. Install and verify
 
-Configure labels, issue types, Variables, Secrets, templates, permissions, and
-additional workflows manually when following this path. The example points the
-Action at the `v3` major-version tag, which Copilot moves to the latest published
-compatible release.
+Review and commit the generated installation files, then merge them through your normal review process. Ensure event workflows and Issue Forms are available on the repository's default branch and that the configured development branch contains the files needed by issue branches. See the [installation steps](/setup-web#install-the-generated-files) before testing.
 
-## Verify before enabling writes
+Run `copilot doctor --read-only` with a valid setup PAT to inspect files and GitHub metadata. Resolve reported failures, then complete [Your first issue-to-PR workflow](/first-workflow). A passing metadata inspection alone does not verify the bot credentials or runtime.
 
-1. Run the workflow with read-only permissions.
-2. Confirm the selected agent CLI version and model allowlists.
-3. Run the provider smoke procedure.
-4. Grant write permissions only to the workflows that need commits or comments.
-5. If releases are enabled, complete the production, continuation, npm OIDC,
-   and merge-policy checks in the deployment preflight.
+<Info>
+  The installed release/hotfix templates are registry-neutral. Before launching either capability, install its publishing and continuation workflows on the default branch, add your own build/deployment steps, and complete the [release preflight](/guides/releases-and-hotfixes#before-launching-a-release).
+</Info>
 
-See [Configuration checklist](/configuration-checklist) and [Security](/security-operations/security/credentials).
+Next: [choose another goal](/guides), inspect the [configuration reference](/configuration), or use the [setup and maintenance reference](/how-to-use) for terminal automation and manual integration.

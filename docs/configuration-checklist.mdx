@@ -4,6 +4,8 @@ description: Required checks before enabling Copilot automation.
 ---
 # Configuration checklist
 
+This is the detailed operator checklist for the capabilities you select. For a first installation, follow [web setup](/setup-web) and [your first issue-to-PR workflow](/first-workflow); use the [goal guides](/guides) to identify which optional sections apply. Complete checks for enabled capabilities rather than enabling every feature to satisfy this list.
+
 ## Action contract
 
 If guarded PR approval is selected, confirm the exact test/coverage producer tuple, complete info-level Bugbot evidence, a separate workflow PAT bot, effective stale-dismissal rules, and installation of the observer on the default branch. `Copilot / Approval` must never be a required prerequisite of itself. See [guarded approval](/pull-requests/guarded-approval) and rerun `copilot doctor` after installing.

@@ -1,0 +1,47 @@
+---
+title: Manage issues and branches
+description: Configure issue-driven work, branch readiness, progress and optional Project tracking.
+---
+
+# Manage issues and branches
+
+Use this path to turn an issue into a tracked working branch and linked PR. Copilot owns the managed branch lifecycle; developers and collaborator agents contribute ordinary commits on its verified ref.
+
+## Enable and configure
+
+In [web setup](/setup-web), enable **Issues**, **Issue Forms** and the issue kinds you use. Keep issue-managed branches enabled. Enable **Pull requests** for PR lifecycle automation and **Commits** for push-time issue size/progress and branch-drift observation. Progress analysis additionally needs the configured agent.
+
+Select your real production/development branch names. Feature, bugfix, documentation and chore work start from the configured development line. Release/hotfix origins have their own [rules](/guides/releases-and-hotfixes). Keep generated form labels and workflow inputs consistent; the [installed workflow profile](/issues/configurable-workflows) records the allowed kinds.
+
+The workflow PAT needs the grants derived by setup. Plain branch/label/Project operations are GitHub metadata work; planning, Bugbot and pre-branch SDD generation also require an agent runtime and credentials.
+
+## Use it
+
+1. Open the appropriate installed Issue Form and complete its required fields.
+2. A maintainer adds `in-progress` to start admitted work.
+3. Wait for `branched` and the exact linked branch in **Development**. `branched` is an Action-verified result, not a label to add manually.
+4. Fetch/check out that ref, make your change, run project checks, commit and push to the same remote ref.
+5. Open a PR to the recorded parent, link the issue and resolve the required review/checks before an authorized merge.
+
+Use the worked [first workflow](/first-workflow) for a complete documentation example.
+
+When `pre-branch-sdd` is enabled, features and issues marked `contract-change` must answer the blocking specification questions before readiness. Help issues are branchless. See [Pre-branch SDDs](/issues/pre-branch-sdds).
+
+## Add Project tracking
+
+Enable Projects only when you want board synchronization. Setup first asks whether you need the integration; after authentication, it discovers accessible organization Projects or offers manual URL/number entry. Configure numeric Project numbers and the exact **Status field option names** for the transitions you want.
+
+The operator needs discovery access; the workflow bot needs access to update each selected Project. Multiple Projects must support the selected Status values. These are Status field values, not arbitrary visual board-column names. See [Project configuration](/issues/configuration) and [Authentication](/authentication).
+
+## Verify and recover
+
+| Check | Expected evidence |
+|---|---|
+| Issue admission | Correct enabled kind and no missing-field or conflicting-label blocker |
+| Branch readiness | `branched`, exact Development link and recorded parent |
+| Contribution | Your pushed revision appears on that linked ref |
+| Progress, when enabled | Current progress card/labels or an explicit incomplete-evidence diagnostic; no invented percentage |
+| Projects, when enabled | Correct linked item and configured Status after an issue/PR transition |
+| Completion | Merged linked PR and the Action's resulting issue/project state |
+
+For a missing branch, inspect the issue status card and Actions Job Summary. Do not create a replacement managed branch. When the parent advances, inspect the drift notice and use authorized `/copilot sync-branch` (or its `--dry-run` preview); see [Branch synchronization](/issues/branch-synchronization). For configuration mismatches, inspect [labels and branch types](/issues/labels-and-branch-types) and run `copilot doctor --read-only`.

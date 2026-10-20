@@ -3,122 +3,75 @@
 ![Build](https://github.com/vypdev/copilot/actions/workflows/ci_check.yml/badge.svg)
 ![License](https://img.shields.io/github/license/vypdev/copilot)
 
-
 # Copilot — GitHub with super powers
 
-**Copilot** is a GitHub Action for task management using Git-Flow: it links issues, branches, and pull requests to GitHub Projects, automates branch creation from labels, and keeps boards and progress in sync. Think of it as bringing Atlassian-style integration (boards, tasks, branches) to GitHub.
+**Copilot connects the work described in a GitHub issue to its branch, implementation, pull request, review, and release.** It combines a GitHub Action for repository automation with a local CLI and web setup assistant. Enable the capabilities your team needs, including optional AI analysis and code changes.
 
-Full documentation: **[docs.page/vypdev/copilot](https://docs.page/vypdev/copilot)**
+## What can I do with it?
 
-*Maintains state and configuration persisted in issue descriptions for seamless workflow automation.*
+| Your goal | What Copilot provides | Start here |
+|---|---|---|
+| Organize work from issues | Issue Forms, Action-managed branches, lifecycle labels, progress, and GitHub Projects updates | [Manage issues and branches](https://docs.page/vypdev/copilot/guides/issues-and-branches) |
+| Review pull requests | Bugbot findings near the code, a current review status, optional PR descriptions, and explicit requests to fix findings | [Review PRs and resolve findings](https://docs.page/vypdev/copilot/guides/review-pull-requests) |
+| Ask for help or implementation | Commands to explain code, diagnose problems, plan work, or apply an authorized change and run verification | [Work with the bot](https://docs.page/vypdev/copilot/guides/work-with-the-bot) |
+| Keep working branches current | Drift notices and an authorized synchronization command that verifies the merge before pushing | [Branch synchronization](https://docs.page/vypdev/copilot/issues/branch-synchronization) |
+| Ship releases and hotfixes | Frozen source revisions, protected promotion PRs, version tags, GitHub Releases, and reconciliation back to development | [Release and hotfix guide](https://docs.page/vypdev/copilot/guides/releases-and-hotfixes) |
 
----
+For example, a maintainer starts an admitted issue with `in-progress`. Copilot creates and verifies its branch. A developer or an authorized bot request contributes changes on that exact branch. A linked PR receives review findings and runs the repository's checks. After an authorized merge, a separately launched release can promote the accepted production commit and reconcile it into development.
 
-## Documentation index
+```mermaid
+flowchart LR
+  I[Issue and plan] --> B[Verified working branch]
+  B --> C[Developer or authorized bot changes]
+  C --> P[Linked PR and review]
+  P --> M[Protected merge]
+  M --> R[Explicit release or hotfix]
+  R --> D[Development reconciliation]
+```
 
-| Section | Description |
-|--------|-------------|
-| [How to use](https://docs.page/vypdev/copilot/how-to-use) | Step-by-step setup: PAT, `copilot setup`, workflows |
-| [Features & capabilities](https://docs.page/vypdev/copilot/features) | Workflow triggers, single actions, agent execution, and concurrency |
-| [Authentication](https://docs.page/vypdev/copilot/authentication) | PAT setup, permissions, token best practices |
-| [Configuration](https://docs.page/vypdev/copilot/configuration) | All inputs: branches, labels, projects, locale, agents, and more |
-| [Release orchestration](https://docs.page/vypdev/copilot/issues/deployment-orchestration) | Production-first release/hotfix flow, npm OIDC, reconciliation, and recovery |
-| [Agents](https://docs.page/vypdev/copilot/agents) | Runtime, model, CLI, policy, and failure behavior |
-| [Security & Operations](https://docs.page/vypdev/copilot/security-operations) | Credentials, trust boundaries, provisioning, verification, upgrades, and rollback |
-| [Development](https://docs.page/vypdev/copilot/development) | Architecture, testing, documentation, artifacts, and release process |
+AI capabilities require a configured agent runtime, an allowed model, and working authentication on the selected runner. Code-changing requests require repository write authority and run configured verification before commit/push. Release promotion follows the repository's merge policy. Installing Copilot does not grant permission to merge or deploy.
 
----
+## Start with the web assistant
 
-## Getting started
-
-The recommended onboarding path is to install the published package globally with
-`pnpm` and initialize the target repository with `copilot setup`:
+Use **Node.js 24 or newer**, `pnpm`, and a working checkout of the repository you want to configure:
 
 ```bash
 pnpm add --global @vypdev/copilot
 copilot --version
 cd /path/to/your/repository
-copilot setup
-# Optional local visual assistant, in the same repository:
 copilot setup --web
 ```
 
-`@vypdev/copilot` contains both the `copilot` CLI and the compiled GitHub Action.
-The global installation makes the CLI and the setup templates available; it does
-not install an Action into GitHub. `copilot setup` is the canonical initialization
-flow and will, according to the selected features:
+The CLI opens a local browser page. Pair it with the code printed in the terminal, confirm the target repository, and choose **Basic guided setup**. The assistant explains the required permissions, guides the two separate PAT roles, and shows the files and GitHub resources affected before you approve changes.
 
-- copy the selected workflows, Issue Forms, pull request template, and repository agent guidance into the repository;
-- create the labels and issue types used by the workflows;
-- configure non-sensitive Repository Variables; and
-- validate or provision the workflow PAT and provider credentials at the selected scope.
+- The temporary **setup PAT** belongs to the operator and is used locally to configure the installation.
+- The persistent **workflow PAT** belongs to the bot account and is stored as the Actions Secret `PAT`.
+- GitHub creates both tokens in its own tabs. The assistant never creates or revokes them.
 
-The wizard selects issue workflow kinds with a Space/Enter multi-select; `All`
-is the default. It also generates `.copilot/repository-profile.json`,
-`.copilot/AGENT_GUIDE.md`, and the Codex skill
-`.agents/skills/copilot-repository-workflow/SKILL.md` by default. The generated
-guidance makes clear that the Action owns remote branch lifecycle: agents work
-on the exact existing branch and push normal commits, but do not create, rename,
-delete, replace, or force-push managed branches.
+Follow the [web setup tutorial](https://docs.page/vypdev/copilot/setup-web) through installing the generated files and verifying the result. Then complete the [first issue-to-PR workflow](https://docs.page/vypdev/copilot/first-workflow). A local configuration check alone does not prove that an Action can run successfully.
 
-The setup PAT entered by the operator is separate from the workflow `PAT` Secret.
-Interactive setup can guide creation of both via GitHub's prefilled PAT form:
-picks the permission-affecting setup options first, then the operator creates a temporary setup token, and the bot account creates the
-persistent workflow token. GitHub handles account switching, 2FA, repository
-selection, and final creation; Copilot never creates or revokes either token.
-Use `copilot setup --dry-run` to inspect the plan before making local or remote
-changes. See the complete [How to use](https://docs.page/vypdev/copilot/how-to-use)
-guide and [Authentication](https://docs.page/vypdev/copilot/authentication).
+`copilot setup` without `--web` launches the terminal assistant. Use `copilot setup --web --dry-run` for a no-change preview. The npm package installs the CLI and templates; running setup and installing its generated files enables the Action in your repository.
 
-`--web` opens an ephemeral, loopback-only setup page with a six-stage progress
-rail, plan review, separate masked inputs for the two PAT roles, and a
-System/Light/Dark theme control. If the browser does not open, use the local
-URL printed in the terminal. The page does not create PATs: GitHub owns the
-form, account switch, 2FA, and token issuance. You must explicitly approve
-the plan and Apply; `--web` cannot be combined with unattended approval or
-secret-bearing command-line flags. The terminal wizard remains the default.
+## Choose your next step
 
-### Manual workflow integration (advanced)
+| You need… | Documentation |
+|---|---|
+| A short installation checklist | [Quick start](https://docs.page/vypdev/copilot/quick-start) |
+| A walkthrough of browser setup | [Set up with the web assistant](https://docs.page/vypdev/copilot/setup-web) |
+| Observable proof that the installation works | [First workflow](https://docs.page/vypdev/copilot/first-workflow) |
+| A guide for a specific outcome | [Choose a goal](https://docs.page/vypdev/copilot/guides) |
+| Token ownership, permissions, or account recovery | [Authentication](https://docs.page/vypdev/copilot/authentication) |
+| Existing-installation updates, batch setup, or manual integration | [Setup and maintenance reference](https://docs.page/vypdev/copilot/how-to-use) |
+| Every feature, input, and operational control | [Capabilities](https://docs.page/vypdev/copilot/features), [Configuration](https://docs.page/vypdev/copilot/configuration), [Security & Operations](https://docs.page/vypdev/copilot/security-operations) |
 
-You can integrate the Action manually when the CLI setup flow is not suitable:
-copy selected files from `setup/workflows/` into `.github/workflows/` and add
-steps such as:
+Setup installs the selected workflows, Issue Forms, labels, issue types, Variables, credentials, and repository agent guidance. Projects, agent routing, release/hotfix workflows, and other capabilities follow your selections. New setup offers PR approval assessment in `recommend` mode; native bot approval requires explicitly selecting `guarded` and meeting its prerequisites. See [guarded approval](https://docs.page/vypdev/copilot/pull-requests/guarded-approval).
 
-```yaml
-- uses: vypdev/copilot@v3
-  with:
-    token: ${{ secrets.PAT }}
-```
+Release templates are registry-neutral. Publishing your application or package requires your own build, validation, and deployment steps. This repository's npm publishing workflow is an example, not something setup installs into every consumer repository.
 
-This is a lower-level integration path, not an alternative name for
-`copilot setup`: it does not automatically create labels, issue types, Variables,
-Secrets, templates, or the complete set of workflows. Those resources must be
-configured and kept consistent manually. See [Workflow setup](https://docs.page/vypdev/copilot/issues/workflow-setup)
-for action-level examples.
+## Advanced integrations and contributing
 
----
+For a manually maintained workflow, use `vypdev/copilot@v3` and supply `token: ${{ secrets.PAT }}`. Follow the [manual integration instructions](https://docs.page/vypdev/copilot/how-to-use#manual-workflow-integration-advanced) to install the supporting resources and event workflows.
 
-## What it does
+The request-only `@vypdev/copilot/bugbot` API is documented in the [programmatic API guide](https://docs.page/vypdev/copilot/bugbot/programmatic-api). For local commands, see [Workflow & CLI](https://docs.page/vypdev/copilot/single-actions/workflow-and-cli).
 
-- **Issues** — Branch creation from labels (feature, bugfix, hotfix, release, docs, chore), project linking, assignees, lifecycle/size/progress labels; new issues receive a contextual `@vypbot` welcome; from comments you can ask for help, explain/diagnose/analyze code, plan work, fix findings, or request an authorized implementation.
-- **Pull requests** — Link PRs to issues, update project columns, assign reviewers; optional AI-generated PR description and automatic Bugbot review with stable finding threads; use `/copilot analyze` or `@vypbot analyze ...` for read-only review, or request an authorized change.
-- **Push (commits)** — Notify the issue, update size/progress, and optionally run Bugbot; a separate agent-free observer watches every branch and recommends synchronizing children when their parent moves.
-- **Projects** — Link issues and PRs to boards and move them to the right columns.
-- **Single actions** — On-demand maintenance and analysis, plus workflow-owned callbacks for durable release and hotfix operations.
-- **Branch synchronization** — Authorized issue/PR commands merge parent into working branch, call the fixer only for eligible conflicts, run verification, reject remote races, push, and report exactly what happened.
-- **Release and hotfix orchestration** — Cut from the correct immutable origin, promote through a protected production PR, publish only the accepted production commit, and reconcile it back through resumable managed PRs without keeping a runner polling checks.
-- **Evidence and safety** — Every run writes a bounded Job Summary; PR findings are reconciled from GitHub into one status card, historical review status blocks, and a `Copilot / Review` Check Run. Actionable findings are neutral by default and fail it only when `bugbot-fail-on-unresolved` is enabled, while unknown/incomplete state always fails closed. Agent sandboxes run without approval or network access, and all agent/comment content remains bounded, secret-redacted, and treated as untrusted data.
-- **Bugbot quality** — Hierarchical rules, semantic finding identity, safe GitHub suggestions, analysis-only dry runs, a multilingual regression corpus, real-agent benchmark runner, content-free telemetry/analytics, and the provider-neutral `@vypdev/copilot/bugbot` API.
-- **Concurrency** — Durable mutation workflows wait only for older active runs of that same workflow, with rate-limit-aware polling and a 90-minute deadline. Commit and Pull Request templates share a branch-scoped latest-revision group so a newer Bugbot review supersedes an older one; provider re-reads and head guards make interrupted finding transitions retryable. Event templates can also skip bot-authored jobs before runner allocation through `COPILOT_BOT_LOGIN`. See [Features → Workflow concurrency](https://docs.page/vypdev/copilot/features#workflow-concurrency-and-sequential-execution).
-
-AI features use the configured agent runtime and qualified model; see the [Agents](https://docs.page/vypdev/copilot/agents) and [Security & Operations](https://docs.page/vypdev/copilot/security-operations) documentation. You can run progress and Bugbot locally through the [Single actions → Workflow & CLI](https://docs.page/vypdev/copilot/single-actions/workflow-and-cli) path.
-
-The programmatic Bugbot API is request-only: `review(BugbotReviewRequest)` is
-the sole review entrypoint, and internal runtime aggregates are not exported.
-See the [Programmatic API](https://docs.page/vypdev/copilot/bugbot/programmatic-api).
-
----
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, conventions, and how to submit changes.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and contribution requirements.

@@ -1,82 +1,49 @@
 ---
 title: Copilot
-description: Streamline your GitHub workflow with automated branch management, issue tracking, and project integration. Enhance team collaboration and optimize your development process.
+description: Connect issues, branches, implementation, review, and releases in GitHub.
 ---
 
-export const Columns = ({ children }) => <div>{children}</div>
+# From a GitHub issue to a reviewed change and release
 
-> This is GitHub with super powers 🚀
+Copilot is a GitHub Action and local CLI that connects issues, branches, pull requests, Projects, and releases. Optional AI capabilities help plan work, explain code, review changes, and apply authorized fixes.
 
-**Copilot** is designed with task management in mind, closely mirroring the approach used by Atlassian with Bitbucket and Jira. It leverages GitHub's project boards and issues as the foundation for task management at every stage of development.
-
-The goal is to replicate the seamless integration of boards, tasks, and branches that Atlassian offers, enhancing your workflow and project management capabilities.
-
-This repository itself utilizes this GitHub Action for task management. You can explore the various issues and pull requests as examples of how it functions in practice.
-
-Experience seamless project management, automated branch handling, and enhanced team collaboration. Start optimizing your development process today and take your Git workflow to the next level! ✨
+Start by installing the capabilities you need, then verify one small documentation change from issue to PR.
 
 <CardGroup cols={3}>
-  <Card title="How to use" icon="list-check" href="/how-to-use">
-    Step-by-step setup for issues, pull requests, and push workflows.
+  <Card title="1. Set up in your browser" icon="gear" href="/setup-web">
+    Install the CLI, pair the local assistant, review permissions and apply the plan.
   </Card>
-  <Card title="Features & capabilities" icon="list" href="/features">
-    Complete reference: workflow triggers, single actions, and configured agent execution.
+  <Card title="2. Verify your first workflow" icon="square-check" href="/first-workflow">
+    Create a documentation issue, get its verified branch, and open a linked PR.
   </Card>
-  <Card title="Authentication" icon="key" href="/authentication">
-    PAT setup, permissions, and token best practices.
-  </Card>
-  <Card title="Configuration" icon="gear" href="/configuration">
-    All inputs: branches, labels, projects, locale, agents, and more.
-  </Card>
-  <Card title="Release orchestration" icon="rocket" href="/issues/deployment-orchestration">
-    Production-first release and hotfix promotion, publication, reconciliation, and recovery.
-  </Card>
-  <Card title="Single actions" icon="play" href="/single-actions">
-    Run supported on-demand actions and understand internal deployment continuations.
-  </Card>
-  <Card title="Bugbot" icon="bug" href="/bugbot">
-    How to use and how it works: detection, autofix, and do-user-request.
-  </Card>
-  <Card title="Troubleshooting" icon="wrench" href="/security-operations/operations/troubleshooting">
-    Common issues and solutions.
+  <Card title="3. Choose your next goal" icon="list-check" href="/guides">
+    Manage issues, review PRs, request implementation, or prepare a release.
   </Card>
 </CardGroup>
 
-## Motivation
+## What happens during everyday work?
 
-I've always felt that while GitHub is an outstanding platform for code management, its issue tracking and project boards — despite their powerful capabilities — are often underused or overlooked. Many teams and individual developers tend to focus primarily on version control and pull requests, missing out on the full potential of these features for organizing and streamlining their workflows.
+```mermaid
+flowchart LR
+  I[Issue] --> S[Plan and verified branch]
+  S --> W[Developer or authorized bot contribution]
+  W --> P[Pull request and review findings]
+  P --> M[Required checks and authorized merge]
+  M --> R[Separately authorized release]
+  R --> D[Publication and reconciliation]
+```
 
-This project was created with both large organizations and small teams in mind, as well as for individual developers who enjoy building their ideas as a hobby. Whether you're managing a complex project or just keeping track of your personal coding adventures, this GitHub Action aims to help you make the most of the tools GitHub already offers, enhancing productivity and bringing more structure to your development process.
+| Goal | What you do | What Copilot can do |
+|---|---|---|
+| Organize a task | Create an installed Issue Form and add `in-progress` | Verify admission, create its managed branch, and synchronize labels and Projects |
+| Understand or plan work | Address the bot with `/copilot explain` or `/copilot plan` | Return a code-aware answer or plan |
+| Implement a change | Contribute normally or send an authorized `/copilot implement` request | Apply the requested change on the verified branch and run configured verification before pushing |
+| Review a PR | Open or update a linked PR | Publish Bugbot findings and current review status; generate a description when enabled |
+| Fix a finding | Push your fix or request `/copilot fix` with its finding ID | Recheck the current revision and reconcile the finding state |
+| Release | Complete a Release or Hotfix form and explicitly launch deployment | Promote through protected PRs, publish the accepted revision, and reconcile development |
 
-For a complete list of what the action does (workflow triggers and single actions), see [Features & Capabilities](/features).
+Issue/branch/Project automation uses GitHub metadata. AI analysis and editing additionally require a runner, configured runtime/model and usable credentials. Choose these capabilities deliberately during setup. See [Overview](/overview) for responsibilities and [Features & capabilities](/features) for the complete reference.
 
-## Features
+## Already installed?
 
-### Issue Management
-- Automatic branch creation based on issue labels
-- Real-time issue status updates
-- Automated issue tracking and monitoring
-- Seamless integration with GitHub Projects
-- Issue assignment and label management
-- **Bugbot**: AI-reported potential problems as comments on the issue, updated when findings are resolved; you can ask to fix findings from a comment (Bugbot autofix)
-
-### Pull Request Features
-- Automatic PR linking to issues
-- Branch status tracking
-- PR review process automation
-- Commit monitoring and updates
-- **Bugbot**: Potential problems as PR review comments, with threads marked as resolved when fixed; you can ask to fix findings from a comment (Bugbot autofix)
-- Efficient PR lifecycle management
-
-### Project Integration
-- Automated project board updates
-- Task status synchronization
-- Column movement automation
-- Project progress tracking
-- Team workflow optimization
-
-### Performance
-- Fast execution
-- **Workflow coordination** — Durable mutations queue without discarding intermediate events. Commit and Pull Request use separate branch-scoped lanes, and an open PR makes its synchronization event the sole Bugbot owner for that head (see [Features → Workflow concurrency](/features#workflow-concurrency-and-sequential-execution)).
-- Efficient resource utilization
-- Reliable automation
+Use the [setup and maintenance reference](/how-to-use) for configuration inspection, quick adjustments, organization reuse, upgrades and manual integration. Use [Troubleshooting](/security-operations/operations/troubleshooting) when a result differs from the expected workflow.
