@@ -102115,19 +102115,19 @@ function readVerificationRuntimeManifest(root) {
             throw new Error('Unsafe manifest parent');
         let entry;
         try {
-            entry = (0, node_fs_1.lstatSync)(path);
+            entry = (0, node_fs_1.lstatSync)(path, { bigint: true });
         }
         catch (error) {
             if (error.code === 'ENOENT')
                 return [];
             throw error;
         }
-        if (!entry.isFile() || entry.isSymbolicLink() || entry.nlink !== 1 || entry.size > MAX_MANIFEST_BYTES)
+        if (!entry.isFile() || entry.isSymbolicLink() || entry.nlink !== 1n || entry.size > BigInt(MAX_MANIFEST_BYTES))
             throw new Error('Unsafe manifest');
         descriptor = (0, node_fs_1.openSync)(path, node_fs_1.constants.O_RDONLY | (node_fs_1.constants.O_NOFOLLOW ?? 0));
-        const opened = (0, node_fs_1.fstatSync)(descriptor);
-        if (!opened.isFile() || opened.nlink !== 1 || opened.dev !== entry.dev || opened.ino !== entry.ino
-            || opened.size > MAX_MANIFEST_BYTES)
+        const opened = (0, node_fs_1.fstatSync)(descriptor, { bigint: true });
+        if (!opened.isFile() || opened.nlink !== 1n || opened.dev !== entry.dev || opened.ino !== entry.ino
+            || opened.size > BigInt(MAX_MANIFEST_BYTES))
             throw new Error('Manifest changed');
         const bytes = Buffer.alloc(MAX_MANIFEST_BYTES + 1);
         const size = (0, node_fs_1.readSync)(descriptor, bytes, 0, bytes.length, 0);

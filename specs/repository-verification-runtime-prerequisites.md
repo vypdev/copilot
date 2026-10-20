@@ -204,7 +204,8 @@ JAVA_TOOL_OPTIONS, JDK_JAVA_OPTIONS, NODE_OPTIONS, MAVEN_OPTS, GRADLE_USER_HOME,
 credentials and auth-store references remain stripped. HOME/temp/profile paths stay
 private. Build tools must not depend on inherited user-home credentials/settings.
 Manifest reads reject symbolic/hard links, unsafe parents, oversized and changed
-file identities with bounded reads. This is not a sandbox against a concurrently
+file identities with bounded reads. Device/inode identities MUST use exact 64-bit
+comparisons (BigInt), including values beyond JavaScript number precision. This is not a sandbox against a concurrently
 hostile worktree/runner; existing trusted checkout and actor guards still apply.
 
 Probe argv comes from a closed registry: Java `-version`; Node/pnpm/Python/.NET/
@@ -238,12 +239,12 @@ verification safety but losing new diagnostics; no refs or data are migrated.
 | Area | Minimum distinct new cases | Risk inventory |
 |---|---:|---|
 | Pure schema/version/safe diagnostics | 36 | Eight tools, prefixes, invalid schemas/values, forged/raw data |
-| Runtime/file/process infrastructure | 30 | Real Node/missing Java, fixed argv, explicit POSIX/Windows path semantics, process failures, links/size/schema, access denial and changed/growing files |
+| Runtime/file/process infrastructure | 31 | Real Node/missing Java, fixed argv, explicit POSIX/Windows path semantics, process failures, links/size/schema, access denial and changed/growing files, exact 64-bit identity |
 | Application state and reporting | 5 | Clean/conflict abort, fixer gate, redaction and stop, bot binding |
 | Git isolation adapter | 3 | Same environment/order, cleanup on failure, trusted-boundary rejection |
 | Real Git integration/migration | 3 | Missing/provisioned simulated JDK and non-JVM remote/ref behavior |
 | Generated guidance/workflow contract | 2 | Explicit opt-in and no universal Java installation |
-| **Total** | **79** | Shared across capabilities; counted once |
+| **Total** | **80** | Shared across capabilities; counted once |
 
 Existing environment credential-exclusion assertions expand without adding a
 count. Retain global coverage budgets, aim ≥95% pure policy branch coverage and

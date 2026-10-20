@@ -119,11 +119,25 @@ describe('repository verification runtime preflight', () => {
     });
     test('rejects a manifest replaced between metadata inspection and opening', () => {
         declare({ java: '17' });
-        const changed = fs.lstatSync(join(root, '.copilot/verification-prerequisites.json'));
+        const changed = fs.lstatSync(join(root, '.copilot/verification-prerequisites.json'), { bigint: true });
         changed.ino++;
         const read = jest.spyOn(fs, 'fstatSync').mockReturnValueOnce(changed);
         try { expect(() => readVerificationRuntimeManifest(root)).toThrow(VerificationPrerequisiteError); }
         finally { read.mockRestore(); }
+    });
+    test('distinguishes adjacent 64-bit file identities beyond JavaScript numeric precision', () => {
+        declare({ java: '17' });
+        const path = join(root, '.copilot/verification-prerequisites.json');
+        const inspected = fs.lstatSync(path, { bigint: true });
+        const opened = fs.lstatSync(path, { bigint: true });
+        inspected.ino = 2n ** 54n;
+        opened.ino = inspected.ino + 1n;
+        expect(Number(inspected.ino)).toBe(Number(opened.ino));
+        const directory = fs.lstatSync(join(root, '.copilot'));
+        const metadata = jest.spyOn(fs, 'lstatSync').mockReturnValueOnce(directory).mockReturnValueOnce(inspected);
+        const descriptor = jest.spyOn(fs, 'fstatSync').mockReturnValueOnce(opened);
+        try { expect(() => readVerificationRuntimeManifest(root)).toThrow(VerificationPrerequisiteError); }
+        finally { metadata.mockRestore(); descriptor.mockRestore(); }
     });
     test('keeps the read bounded if the file grows after inspection', () => {
         declare({ java: '17' });
