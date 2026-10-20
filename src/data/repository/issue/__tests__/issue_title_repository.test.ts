@@ -62,10 +62,10 @@ describe('IssueTitleRepository', () => {
 
         await expect(repository.updateTitlePullRequestFormat(
             'owner', 'repo', 'old PR title', 'Fix 1.2.3!', 42, 99, '', labels, 'token',
-        )).resolves.toBe('[#42] 🐛 - Fix 123');
+        )).resolves.toBe('fix: Fix 123 (#42)');
 
         expect(update).toHaveBeenCalledWith({
-            owner: 'owner', repo: 'repo', issue_number: 99, title: '[#42] 🐛 - Fix 123',
+            owner: 'owner', repo: 'repo', issue_number: 99, title: 'fix: Fix 123 (#42)',
         });
     });
 
@@ -76,7 +76,7 @@ describe('IssueTitleRepository', () => {
         await expect(repository.updateTitlePullRequestFormat(
             'owner', 'repo', '[#347] 🤖 - 347  347 Develop', '[#347] 🤖 - 347  347 Develop',
             347, 99, '', labels, 'token',
-        )).resolves.toBe('[#347] 🐛 - Develop');
+        )).resolves.toBe('fix: Develop (#347)');
     });
 
     it('cleans a pull request title without updating when no characters change', async () => {
@@ -85,6 +85,24 @@ describe('IssueTitleRepository', () => {
         )).resolves.toBeUndefined();
 
         expect(update).not.toHaveBeenCalled();
+    });
+
+    it('preserves a conventional author title without creating a GitHub mutation client', async () => {
+        await expect(repository.updateTitlePullRequestFormat('owner', 'repo',
+            'chore: run backend OWASP audits only on manual dispatch', '🔧 - Move backend OWASP audits',
+            192, 194, '', createLabels(), 'token')).resolves.toBeUndefined();
+        expect(update).not.toHaveBeenCalled();
+        expect(client.getClient).not.toHaveBeenCalled();
+    });
+
+    it('does not rewrite a generated conventional title on subsequent processing', async () => {
+        const labels = createLabels();
+        const generated = await repository.updateTitlePullRequestFormat('owner', 'repo', 'Initial title',
+            '🔧 - Update verification', 192, 194, '', labels, 'token');
+        expect(generated).toBe('chore: Update verification (#192)');
+        await repository.updateTitlePullRequestFormat('owner', 'repo', generated!,
+            '🔧 - New issue wording', 192, 194, '', labels, 'token');
+        expect(update).toHaveBeenCalledTimes(1);
     });
 
     it('propagates GitHub errors so the use case can handle them', async () => {

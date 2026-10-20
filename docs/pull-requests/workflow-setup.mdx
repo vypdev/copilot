@@ -37,10 +37,42 @@ Do not subscribe the supplied PR workflow to `pull_request: edited`. Copilot
 updates the PR body itself, so that metadata event would create redundant runs.
 Human title/body edits do not trigger Copilot. Issue-derived title normalization
 still runs on open/reopen when a distinct issue exists; an unlinked PR keeps its
+title. Existing conventional PR headers take precedence over the issue's display
 title. Subsequent synchronize events affect the body only according to the
 configured AI description ownership mode.
 
 For **first-time setup**, at least **`opened`** and **`synchronize`** are useful so that new PRs get full treatment and updates when the branch changes.
+
+## Pull request title precedence
+
+With title automation enabled, Copilot reads the **current PR title** before
+deciding whether to update it. A conventional header such as
+`chore: run backend OWASP audits only on manual dispatch` stays byte-for-byte
+unchanged, even when the linked issue has a decorated title. Scopes, `!`, custom
+types, casing, Unicode and punctuation are retained. An older event payload
+does not override a contributor's correction already visible in GitHub.
+
+When the current title is not conventional and a distinct linked issue exists,
+Copilot derives a conventional title from that issue. Bugfix/hotfix kinds use
+`fix:`, features use `feat:`, documentation uses `docs:`, and other kinds use
+`chore:`. For example: `fix: Correct the cache key (#42)`. A conventional source
+issue title is retained directly. Native/body issue linkage remains in place;
+an issue-reference prefix or emoji is not inserted ahead of the release type.
+
+This follows the [Conventional Commits header shape](https://www.conventionalcommits.org/en/v1.0.0/).
+Your repository still decides its allowed types, scopes and subject rules through
+its own semantic-title check. For other conventions, disable title automation
+with `emoji-labeled-title: "false"` and manage titles yourself.
+
+Existing decorated PR titles are not rewritten in bulk on upgrade. The next
+normal title-processing event can generate the new format; editing the PR title
+yourself takes effect immediately. Once conventional, repeated processing is a
+no-op. If the current title or source issue cannot be read, no title change is
+attempted. Inspect the Job Summary and retry after correcting API visibility.
+
+The live read is a snapshot, not an atomic compare-and-swap guarantee against an
+edit made between that read and GitHub's update. Check the resulting title when
+editing concurrently with an active bot run.
 
 ## Minimal workflow
 
