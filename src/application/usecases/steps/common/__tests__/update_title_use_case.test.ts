@@ -155,7 +155,7 @@ describe('UpdateTitleUseCase', () => {
     const results = await invoke(param);
 
     expect(results[0].success).toBe(false);
-    expect(results[0].steps).toContain('Tried to update title, but there was a problem.');
+    expect(results[0].steps).toContain('The current pull request title could not be read. No title change was attempted.');
   });
 
   it('returns failure when getTitle throws', async () => {
@@ -230,7 +230,7 @@ describe('UpdateTitleUseCase', () => {
   });
 
   it('returns success with new title when isPullRequest and updateTitlePullRequestFormat returns title', async () => {
-    mockGetTitle.mockResolvedValue('Issue Title');
+    mockGetTitle.mockImplementation(async number => number === 5 ? 'Old PR title' : 'Issue Title');
     mockUpdateTitlePullRequestFormat.mockResolvedValue('feat: PR title');
     const param = baseParam({
       isPullRequest: true,
