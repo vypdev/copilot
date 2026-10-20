@@ -270,10 +270,11 @@ export function bindPullRequestIssueLink(
   binding: RepositoryCredentialBinding,
 ): BoundPullRequestIssueLinkPort {
   return Object.freeze({
-    isLinked: (pullRequestNumber) => port.isLinked(
+    isLinked: (pullRequestNumber, issueNumber) => port.isLinked(
       binding.owner,
       binding.repository,
       pullRequestNumber,
+      issueNumber,
       binding.token,
     ),
     getDetails: (pullRequestNumber) => port.getDetails(

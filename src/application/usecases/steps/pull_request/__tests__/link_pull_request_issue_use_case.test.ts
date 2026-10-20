@@ -44,7 +44,7 @@ describe('LinkPullRequestIssueUseCase', () => {
     const results = await useCase.invoke(context());
 
     expect(mockGetDetails).toHaveBeenCalledWith(10);
-    expect(mockIsLinked).toHaveBeenCalledWith(10);
+    expect(mockIsLinked).toHaveBeenCalledWith(10, 42);
     expect(mockUpdateDescription).toHaveBeenNthCalledWith(1, 10, expect.stringContaining('Resolves #42'));
     expect(mockUpdateBaseBranch).toHaveBeenNthCalledWith(1, 10, 'main');
     expect(mockWait).toHaveBeenCalledWith(20_000);
@@ -93,6 +93,17 @@ describe('LinkPullRequestIssueUseCase', () => {
     expect(mockUpdateBaseBranch).toHaveBeenCalledWith(10, 'develop');
     expect(mockUpdateDescription).toHaveBeenCalledWith(10, 'Original');
     expect(results.every((result) => result.success)).toBe(true);
+  });
+
+  it('retains the exact base and body when the initial authenticated inspection fails', async () => {
+    const error = new Error('linkage inspection denied');
+    mockIsLinked.mockRejectedValue(error);
+    const results = await useCase.invoke(context());
+    expect(results).toEqual([expect.objectContaining({ success: false, executed: true })]);
+    expect(results[0].errors[0]).toMatchObject({ code: 'provider.unavailable' });
+    expect(mockUpdateBaseBranch).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+    expect(mockWait).not.toHaveBeenCalled();
   });
 
   it('cleans an owned pending operation when linkage inspection fails', async () => {
@@ -279,7 +290,7 @@ describe('LinkPullRequestIssueUseCase', () => {
       baseBranch: 'develop',
     });
     await useCase.invoke(context());
-    expect(mockIsLinked).toHaveBeenCalledWith(10);
+    expect(mockIsLinked).toHaveBeenCalledWith(10, 42);
     expect(mockUpdateDescription.mock.calls[0][1]).toContain('pr=999');
   });
 
