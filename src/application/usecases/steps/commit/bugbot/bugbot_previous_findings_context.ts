@@ -27,6 +27,7 @@ export function buildPreviousFindingsContext(
 `;
   const suffix = `
 **Your task 2:** For each finding above, analyze the current code and decide:
+- Trace the original failure precondition through current callers, validation helpers and effective configuration, including modules outside the original anchor. A retained finding is not proof that its old explanation is still true. Reuse its exact id if reporting the same defect again; do not create a second report for it.
 - If the problem **still exists** (same code or same issue present): do **not** include it in \`resolved_findings\`.
 - If the problem **no longer applies** (e.g. that code was removed or refactored away): include \`{ "id": "<exact id>", "resolution": "obsolete" }\` in \`resolved_findings\`.
 - If the problem **has been fixed** (code was changed and the issue is resolved): include \`{ "id": "<exact id>", "resolution": "fixed" }\` in \`resolved_findings\`.

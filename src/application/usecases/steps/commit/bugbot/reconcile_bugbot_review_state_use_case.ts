@@ -3,7 +3,7 @@ import type {
   BugbotPresentationReport,
   BugbotReconciliationTarget,
 } from '../../../../contracts/bugbot_reconciliation';
-import type { BugbotFinding } from '../../../../../domain/bugbot/finding';
+import { retainExistingFindingIds, type BugbotFinding } from '../../../../../domain/bugbot/finding';
 import { buildBugbotReviewProjection } from '../../../../../domain/bugbot/review_projection';
 import {
   buildBugbotReconciliationPlan,
@@ -62,6 +62,14 @@ export async function reconcileBugbotReviewState(input: {
   }
 
   const snapshot = snapshotResult.snapshot;
+  const activeFindings = retainExistingFindingIds(
+    input.activeFindings,
+    input.loadedContext.existingByFindingId,
+  );
+  const expectedPublishedFindings = retainExistingFindingIds(
+    input.expectedPublishedFindings ?? input.activeFindings,
+    input.loadedContext.existingByFindingId,
+  );
   const diagnostics = [
     ...(input.mutationErrors ?? []).map((error) => error instanceof BugbotMutationError
       ? { code: 'finding-mutation-failed' as const, mutation: error.diagnostic }
@@ -74,7 +82,7 @@ export async function reconcileBugbotReviewState(input: {
   const providerProjection = projectBugbotProviderEvidence({
     snapshot,
     trustedAuthorLogin: input.target.trustedAuthorLogin,
-    activeFindings: input.activeFindings,
+    activeFindings,
     existingByFindingId: input.loadedContext.existingByFindingId,
   });
   const plan = buildBugbotReconciliationPlan({
@@ -86,9 +94,8 @@ export async function reconcileBugbotReviewState(input: {
         extractTitleFromBody(fullBody) || id,
       ]),
     ),
-    activeFindings: input.activeFindings,
-    expectedPublishedFindings:
-      input.expectedPublishedFindings ?? input.activeFindings,
+    activeFindings,
+    expectedPublishedFindings,
     diagnostics,
     coverage: input.loadedContext.coverage,
   });

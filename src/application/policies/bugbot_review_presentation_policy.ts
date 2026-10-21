@@ -235,9 +235,21 @@ function normalizeHistoricalSnapshot(
 function renderFindingRow(finding: BugbotProjectedFinding): string {
   const label = sanitizeAgentMarkdown(finding.title || finding.id, 500).replace(/[\r\n]+/gu, ' ');
   const state = stateLabel(finding.state);
+  const identity = finding.state === 'unknown'
+    ? ` — ${renderFindingId(finding.id)}`
+    : '';
   return finding.url
-    ? `- ${state} — [${label}](${finding.url})`
-    : `- ${state} — ${label}`;
+    ? `- ${state} — [${label}](${finding.url})${identity}`
+    : `- ${state} — ${label}${identity}`;
+}
+
+function renderFindingId(value: string): string {
+  const id = sanitizeAgentMarkdown(value, 200).replace(/[\r\n]+/gu, ' ');
+  // A delimiter longer than every embedded backtick run keeps links, images
+  // and HTML inert even when the marker permits arbitrary Markdown punctuation.
+  let delimiter = '`';
+  while (id.includes(delimiter)) delimiter += '`';
+  return `${delimiter} ${id} ${delimiter}`;
 }
 
 function stateLabel(state: BugbotFindingState): string {

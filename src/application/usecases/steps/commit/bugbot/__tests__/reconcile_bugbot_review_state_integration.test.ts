@@ -40,6 +40,8 @@ function context(existingResolved = false): BugbotContext {
               threadResolved: true,
               resolution: 'fixed',
               parentReviewIdentity: '77',
+              fingerprint: 'fp-11111111',
+              semanticFingerprint: 'sf-11111111',
             },
           },
         }
@@ -74,6 +76,8 @@ function finding(): BugbotFinding {
     description: 'Retry can publish twice.',
     file: 'src/a.ts',
     line: 1,
+    fingerprint: 'fp-11111111',
+    semanticFingerprint: 'sf-11111111',
   };
 }
 
@@ -442,6 +446,8 @@ describe('Bugbot review reconciliation integration', () => {
             commentIdentity: 'PRRC_missing',
             pullRequestNumber: 358,
             resolved: false,
+            fingerprint: 'fp-11111111',
+            semanticFingerprint: 'sf-11111111',
           },
         },
       },
@@ -565,7 +571,8 @@ describe('Bugbot review reconciliation integration', () => {
     const loadedContext: BugbotContext = {
       ...context(),
       existingByFindingId: {
-        'finding-1': { issue: { commentId: 10, resolved: false } },
+        'finding-1': { issue: { commentId: 10, resolved: false,
+          fingerprint: 'fp-11111111', semanticFingerprint: 'sf-11111111' } },
       },
     };
     const test = harness({
@@ -687,7 +694,8 @@ describe('Bugbot review reconciliation integration', () => {
       ...context(),
       existingByFindingId: {
         'finding-1': {
-          issue: { commentId: 10, resolved: true, resolution: 'fixed' },
+          issue: { commentId: 10, resolved: true, resolution: 'fixed',
+            fingerprint: 'fp-11111111', semanticFingerprint: 'sf-11111111' },
         },
       },
     };

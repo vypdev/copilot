@@ -3,6 +3,8 @@
  */
 import { fillTemplate } from './fill';
 
+export const BUGBOT_FINDING_GROUNDING_INSTRUCTION = 'Before returning a finding, try to disprove it against the exact reviewed source. Read effective repository configuration and inherited library/protocol defaults before inferring behavior from a missing command flag. Trace short-circuit guards, validation helpers and the actual caller/render path before claiming that an unsafe branch is reachable or that separate call sites coexist. Recompute arithmetic and check cited line numbers against the current file/diff. If your evidence refutes the alleged defect, withdraw the finding entirely; do not publish a contradictory or self-refuting report. These checks apply equally to low/info severity. Report a confirmed failure when those protections are absent; do not assume they exist.';
+
 const TEMPLATE = `You are analyzing the latest code changes for potential bugs and issues.
 
 Write every human-readable finding title, description, evidence, and suggestion in {{targetLocale}}. Preserve identifiers, code, symbols, paths, refs, commands, and URLs verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
@@ -37,6 +39,8 @@ For every finding:
 - use a stable semantic id, one finding per distinct root cause, and a practical suggested fix;
 - include the nearest stable \`symbol\` and a minimal exact \`codeSnippet\` when available so the finding can survive rebases, line movement, and file renames.
 - when a fix is a safe replacement of exactly the reported line range, include only the replacement text in \`suggestedCode\`; otherwise omit it.
+
+${BUGBOT_FINDING_GROUNDING_INSTRUCTION}
 
 Return every finding field required by the response schema. Use null for file, line, endLine, severity, confidence, category, evidence, suggestion, symbol, codeSnippet, or suggestedCode when that value does not safely apply. Only include files outside the ignore list.
 {{previousBlock}}

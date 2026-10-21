@@ -478,7 +478,10 @@
         "src/application/usecases/steps/commit/bugbot/synchronize_bugbot_review_presentation_use_case.ts",
         "src/application/policies/bugbot_status_count_marker_policy.ts",
         "src/application/errors/bugbot_mutation_error.ts",
-        "src/data/repository/pull_request/pull_request_review_error_metadata.ts"
+        "src/data/repository/pull_request/pull_request_review_error_metadata.ts",
+        "src/domain/bugbot/finding.ts",
+        "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts",
+        "src/application/usecases/steps/commit/bugbot/publish_findings_use_case.ts"
       ],
       "tests": [
         "src/domain/bugbot/__tests__/review_state.test.ts",
@@ -504,7 +507,11 @@
         "src/infrastructure/composition/__tests__/pull_request_use_case_composition_root.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/application/errors/__tests__/bugbot_mutation_error.test.ts",
-        "src/application/usecases/steps/commit/bugbot/__tests__/finding_mutation_recovery.test.ts"
+        "src/application/usecases/steps/commit/bugbot/__tests__/finding_mutation_recovery.test.ts",
+        "src/domain/bugbot/__tests__/finding.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/finding_identity_replay.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/analyze_bugbot_revision_use_case.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/publish_findings_use_case.test.ts"
       ],
       "documentation": [
         "docs/bugbot/detection.mdx",
@@ -1820,7 +1827,7 @@
       "status": "implemented",
       "scope": "Select one canonical PR, exhaustively analyze its bounded diff partitions, publish stable findings atomically, and apply authorized verified fixes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-13",
+      "lastVerified": "2026-10-21",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md",
@@ -1889,7 +1896,10 @@
         "src/infrastructure/filesystem/workspace_bugbot_rules_repository.ts",
         "src/application/usecases/steps/commit/git_branch_checkout.ts",
         "src/application/usecases/steps/commit/bugbot/commit_and_push_preflight.ts",
-        "src/application/usecases/steps/commit/bugbot/commit_and_push_workflow.ts"
+        "src/application/usecases/steps/commit/bugbot/commit_and_push_workflow.ts",
+        "quality/bugbot/corpus.v1.json",
+        "quality/bugbot/reference-predictions.v1.json",
+        "src/tooling/bugbot_benchmark_runner.ts"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
@@ -1930,7 +1940,10 @@
         "src/application/usecases/steps/commit/__tests__/git_branch_checkout.integration.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/workspace_changes.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/commit_verification_workspace.test.ts",
-        "src/application/usecases/__tests__/autofix_conversation_branch_authority.test.ts"
+        "src/application/usecases/__tests__/autofix_conversation_branch_authority.test.ts",
+        "src/tooling/__tests__/bugbot_benchmark.test.ts",
+        "src/tooling/__tests__/bugbot_benchmark_runner.test.ts",
+        "src/prompts/__tests__/bugbot.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",

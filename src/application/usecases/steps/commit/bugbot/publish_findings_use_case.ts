@@ -8,6 +8,7 @@ import type { BugbotFindingPublicationPorts } from "../../../../../application/p
 import type { BugbotContext } from "./types";
 import {
     findExistingFindingInfo,
+    retainExistingFindingIds,
     type BugbotFinding,
 } from "../../../../../domain/bugbot/finding";
 import { publishIssueFindingComment } from "./publish_issue_finding_comment";
@@ -46,7 +47,7 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
               })
             : undefined;
 
-    for (const finding of findings) {
+    for (const finding of retainExistingFindingIds(findings, existingByFindingId)) {
         if (operation.target.issueNumber > 0 && !reviewPublisher) {
             await publishIssueFindingComment(
                 ports.issueComments,

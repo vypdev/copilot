@@ -1,4 +1,5 @@
 import { DEFAULT_BUGBOT_REVIEW_CONFIGURATION } from '../../../../../../domain/bugbot/review_configuration';
+import { prepareBugbotFindings } from '../prepare_bugbot_findings';
 import { analyzeBugbotRevision } from '../analyze_bugbot_revision_use_case';
 import { BugbotReviewTelemetry } from '../bugbot_review_telemetry';
 import type { BugbotReviewOperationContext } from '../bugbot_review_operation_context';
@@ -89,6 +90,25 @@ function attestedResponse(prompt: string, ordinal: number, resolved: unknown[] =
 }
 
 describe('analyzeBugbotRevision partition execution', () => {
+  it('folds partition reports for one retained identity before applying the comment limit', async () => {
+    const partitions = [partition(1, 2), partition(2, 2)];
+    const reports = [1, 2].map((ordinal) => ({ id: `new-${ordinal}`, title: `Changed title ${ordinal}`,
+      description: 'Same retained defect', file: `src/${ordinal}.ts`, line: ordinal,
+      category: 'correctness', symbol: 'storedData', codeSnippet: 'return data.total > 0;' }));
+    const previous = prepareBugbotFindings({ findings: [reports[0]] }, [], 'low', 20)!.toPublish[0];
+    const loaded = context(partitions);
+    loaded.existingByFindingId = { retained: { pullRequest: { commentIdentity: 'PRRC_1', pullRequestNumber: 7,
+      resolved: false, semanticFingerprint: previous.semanticFingerprint } } };
+    const query = jest.fn(({ prompt }: { prompt: string }) => Promise.resolve({
+      ...attestedResponse(prompt, 1), findings: [...reports, { id: 'independent', title: 'Independent bug', description: 'Other defect' }],
+    }));
+    const execution = { ...operation(), analysis: { ...operation().analysis, commentLimit: 2 } };
+    const prepared = await analyzeBugbotRevision(execution, loaded, { agent: { query }, telemetry: new BugbotReviewTelemetry(execution) });
+    expect(prepared?.activeFindings?.map((finding) => finding.id)).toEqual(['retained', 'independent']);
+    expect(prepared?.toPublish).toHaveLength(2);
+    expect(prepared?.overflowCount).toBe(0);
+  });
+
   it('runs every partition with maximum concurrency two and aggregates once in plan order', async () => {
     const partitions = [partition(1, 3), partition(2, 3), partition(3, 3)];
     const pending: Array<() => void> = [];

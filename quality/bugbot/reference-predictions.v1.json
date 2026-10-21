@@ -30,6 +30,14 @@
     "csharp-path-traversal": [{ "id": "download-traversal", "title": "Request filename can escape the upload root", "file": "Controllers/DownloadController.cs", "line": 58, "severity": "high", "category": "security", "confidence": 0.97, "symbol": "Download", "codeSnippet": "Path.Combine(uploadRoot, request.FileName)" }],
     "csharp-contained-path": [],
     "kotlin-blocking-coroutine": [{ "id": "blocking-request-thread", "title": "Blocking file read runs on the request dispatcher", "file": "src/ReportController.kt", "line": 49, "severity": "medium", "category": "performance", "confidence": 0.88, "symbol": "report", "codeSnippet": "Files.readAllBytes(reportPath)" }],
-    "kotlin-io-dispatcher": []
+    "kotlin-io-dispatcher": [],
+    "py-coverage-config-branch": [],
+    "py-http10-reconnect": [],
+    "docs-correct-regression-total": [],
+    "py-short-circuit-unhashable": [],
+    "py-helper-retry-validation": [],
+    "ts-exclusive-render-branches": [],
+    "py-short-circuit-unsafe-order": [{"id": "unhashable-membership", "title": "Unhashable steps reach set membership before validation", "file": "src/checkpoint.py", "line": 2, "severity": "low", "category": "correctness", "symbol": "valid_steps", "codeSnippet": "step in writable_ids", "confidence": 0.98}],
+    "ts-composed-duplicate-ids": [{"id": "composed-duplicate-id", "title": "Composed actions render duplicate reason IDs", "file": "ui/views.ts", "line": 2, "severity": "low", "category": "correctness", "symbol": "overview", "codeSnippet": "${unavailableAction()}${unavailableAction()}", "confidence": 0.98}]
   }
 }

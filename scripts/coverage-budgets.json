@@ -952,6 +952,29 @@
         }
       ],
       "successMessage": "verification setup onboarding coverage: PASS (summary decisions 100%; safe file adapter 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Finding identity continuity",
+      "missingEntryLabel": "finding identity continuity",
+      "rules": [
+        {
+          "files": [
+            "src/domain/bugbot/finding.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts",
+            "src/application/usecases/steps/commit/bugbot/publish_findings_use_case.ts",
+            "src/application/usecases/steps/commit/bugbot/reconcile_bugbot_review_state_use_case.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "finding identity continuity coverage: PASS (pure matching 100%; changed path 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

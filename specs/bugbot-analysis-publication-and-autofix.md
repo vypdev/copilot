@@ -2,9 +2,9 @@
 
 - Status: As-built baseline
 - Date: 2026-09-11
-- Last updated: 2026-10-13
+- Last updated: 2026-10-21
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-10-13; canonical autofix branch correction tracked in #494
+- Last verified: 2026-10-21; identity continuity and grounding correction tracked in #655
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -587,3 +587,40 @@ finding status. The owning SDD/catalog, generated catalog, documentation,
 architecture contracts, bundles, full suite/coverage and current-head CI/review
 must pass before this correction is complete. Native acceptance remains pending
 until the retry actually publishes and its review establishes current state.
+
+### Source-grounded review evidence — #655 (2026-10-21)
+
+The reviewer and real-agent benchmark share the same source-grounding instruction.
+Before publication the model MUST try to disprove each alleged defect against
+effective repository settings, inherited protocol/library defaults, short-circuit
+guards, helper validation and actual caller/render paths. Arithmetic and current
+locations must agree with cited evidence. A finding whose evidence withdraws its
+own claim MUST be omitted, including low/info reports. This is a model instruction,
+not a deterministic guarantee or an English-prose rejection heuristic. Valid
+defects remain required when those protections are absent. The previous-finding
+prompt traces the original precondition through current modules and requests the
+exact retained ID when the same concern remains active.
+
+Allocate **eight added evaluation cases** only here: six negative cases from the
+reported configuration, HTTP/1.0, arithmetic, short-circuit, helper-validation and
+exclusive-render concerns, plus two positive controls for unsafe membership order
+and simultaneous duplicate IDs. Existing prompt tests enforce the shared review
+contract; benchmark tests classify each negative as a false positive and each
+missed positive as a false negative. The corpus now has 38 cases. Ground-truth
+arrays never enter the model prompt. Checked-in reference predictions test the
+scorer contract and MUST NOT be claimed as an observed real-model improvement.
+
+The companion reconciliation SDD owns the 18 lifecycle cases and durable-ID
+correction; no double counting. No confidence/severity gate, schema, permission,
+runtime access or configuration changes. Documentation: quality/observability,
+finding publication and failure scenarios. Acceptance: the reference evaluation
+passes all existing thresholds, unsupported reports fail the isolated precision
+gate, and missing positive controls fail recall. Full coverage, architecture,
+catalog/specification, documentation and generated-package gates remain required.
+
+Primary sources supporting the synthetic examples:
+[coverage.py configuration](https://coverage.readthedocs.io/en/latest/config.html)
+documents TOML settings and branch measurement;
+[Python BaseHTTPRequestHandler](https://docs.python.org/3/library/http.server.html#http.server.BaseHTTPRequestHandler.protocol_version)
+documents its default HTTP/1.0 response protocol. The issue supplies exact consumer
+source and runs; these fixtures do not claim to replay that external runtime.

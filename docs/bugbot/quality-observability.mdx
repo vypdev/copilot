@@ -5,7 +5,16 @@ description: Measure Bugbot accuracy, latency, outcomes, feedback, and regressio
 
 # Bugbot quality and observability
 
-Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 30 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
+Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 38 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
+
+The #655 cases cover branch coverage enabled through repository configuration,
+inherited HTTP/1.0 connection behavior, correct arithmetic, short-circuit guards,
+validation through helpers, and mutually exclusive render paths. Positive
+controls still require detection of an unsafe guard order and simultaneous
+duplicate IDs. The reviewer is instructed to check effective settings, defaults,
+call paths and counterevidence before reporting a defect. Passing the checked-in
+predictions proves the evaluator contract; measuring a model's improvement still
+requires running the real-agent benchmark and inspecting its predictions.
 
 ## Quality gates
 
