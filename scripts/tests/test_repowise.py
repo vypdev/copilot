@@ -149,18 +149,17 @@ class HistoryIntegration(unittest.TestCase):
                     return len(findings)
 
             async def scan(bounded):
-                instance = history_scan.HistorySecurityScanner(None, "fixture")
+                readers = []
+                cls = history.bounded_scanner_class(history_scan.HistorySecurityScanner, readers) if bounded else history_scan.HistorySecurityScanner
+                instance = cls(None, "fixture")
                 sink = Sink()
                 instance._scanner = sink
-                reader = history.BlobReader(root) if bounded else None
-                if bounded:
-                    instance._read_blobs_batch = lambda *_: reader
                 try:
                     with patch.object(history_scan, "_run_git", history.strict_git):
                         summary = await instance.scan_history(root)
                     return summary, sink.saved
                 finally:
-                    if reader: reader.close()
+                    for reader in readers: reader.close()
 
             expected = asyncio.run(scan(False))
             with optimized(): actual = asyncio.run(scan(True))
@@ -169,6 +168,48 @@ class HistoryIntegration(unittest.TestCase):
             self.assertEqual(2, actual[0].findings_inserted)
             deleted = next(f for f in actual[1] if f[0] == "deleted.ts")
             self.assertEqual(introduction, deleted[2]["commit_sha"])
+
+
+class BoundedPrefetch(unittest.TestCase):
+    def reader(self, count=5):
+        pool = Mock()
+        def submit(function, sha, path):
+            future = Mock()
+            future.result.return_value = ([], "", 3)
+            return future
+        pool.submit.side_effect = submit
+        with patch.object(history, "ProcessPoolExecutor", return_value=pool):
+            reader = history.PrefetchedBlobs(Path("."), [str(i) for i in range(count)], {str(i): "a.ts" for i in range(count)})
+        return reader, pool
+
+    def test_queue_has_fixed_width(self):
+        reader, pool = self.reader()
+        self.assertEqual(2, pool.submit.call_count)
+        for i in range(5):
+            reader.get(str(i))
+            self.assertLessEqual(len(reader.pending), 2)
+        self.assertEqual((5, 15), (reader.count, reader.bytes_read))
+        reader.close()
+        pool.shutdown.assert_called_once_with(wait=True, cancel_futures=True)
+
+    def test_traversal_order_mismatch_fails(self):
+        reader, _ = self.reader()
+        with self.assertRaises(RuntimeError): reader.get("other")
+
+    def test_worker_failure_propagates(self):
+        reader, _ = self.reader()
+        reader.pending[0][1].result.side_effect = RuntimeError("worker failed")
+        with self.assertRaisesRegex(RuntimeError, "worker failed"): reader.get("0")
+        self.assertEqual(0, reader.count)
+
+    def test_prefetched_results_preserve_delegate_persistence(self):
+        from unittest.mock import AsyncMock
+        reader = Mock(findings=[{"kind": "hardcoded_secret"}])
+        delegate = Mock(); delegate.persist = AsyncMock(return_value=1)
+        instance = history.PrefetchedScanner(reader, delegate)
+        self.assertEqual(reader.findings, asyncio.run(instance.scan_file("a.ts", "", [])))
+        self.assertEqual(1, asyncio.run(instance.persist("a.ts", reader.findings, commit_sha="abc")))
+        delegate.persist.assert_awaited_once_with("a.ts", reader.findings, commit_sha="abc")
 
 
 class ReportFailures(unittest.TestCase):

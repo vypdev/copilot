@@ -144,7 +144,7 @@ def main():
         "revision": sha, "refs": refs, "repowise_version": REPOWISE_VERSION,
         "security": "full reachable history (--all), RepoWise source extensions and secret patterns; upstream allowlists apply",
         "health": "all indexed origins, cached refactoring targets", "dead_code": "cached safe-only findings",
-        "index_commit_limit": 500, "history_commit_limit": None,
+        "index_commit_limit": 500, "history_commit_limit": None, "logical_cpus": os.cpu_count(),
     }, indent=2) + "\n")
     os.environ.update(OPENBLAS_NUM_THREADS="1", OMP_NUM_THREADS="1", REPOWISE_SKIP_EDITOR_SETUP="1", REPOWISE_NO_SAVE_KEY="1",
                       REPOWISE_HISTORY_METRICS=str(report_dir / "history-resources.json"))

@@ -8,11 +8,15 @@ Private interfaces are deliberate: upgrades require the compatibility fixtures.
 from __future__ import annotations
 
 import atexit
+from collections import deque
+from concurrent.futures import ProcessPoolExecutor
 from importlib.metadata import version
+import multiprocessing
 from pathlib import Path
 import subprocess
 
 REPOWISE_VERSION = "0.58.0"
+HISTORY_WORKERS = 2
 
 
 class BlobReader:
@@ -92,6 +96,97 @@ def configure_secret_scan():
     scanner._call_findings = lambda *args: []
 
 
+def initialize_worker(repo):
+    import resource
+    import sys
+    from multiprocessing.util import Finalize
+
+    # Two workers have a deliberately smaller cap than the coordinating CLI.
+    if sys.platform == "linux":
+        resource.setrlimit(resource.RLIMIT_AS, (1024 * 1024**2,) * 2)
+    configure_secret_scan()
+    global worker_reader
+    worker_reader = BlobReader(Path(repo))
+    Finalize(None, worker_reader.close, exitpriority=10)
+
+
+def scan_blob(sha, path):
+    from repowise.core.analysis.security.scanner import scan_source
+
+    before = worker_reader.bytes_read
+    content = worker_reader.get(sha)
+    findings = scan_source(path, content)
+    # Upstream only needs source again for findings' fingerprints/material.
+    # Negative results carry no large source string across the process pipe.
+    return findings, content if findings else "", worker_reader.bytes_read - before
+
+
+class PrefetchedBlobs:
+    """At most two tasks/results resident; consume in upstream history order."""
+
+    def __init__(self, repo, shas, paths):
+        self.pool = ProcessPoolExecutor(
+            max_workers=HISTORY_WORKERS, mp_context=multiprocessing.get_context("spawn"),
+            initializer=initialize_worker, initargs=(str(repo),),
+        )
+        self.remaining = iter(shas)
+        self.paths = paths
+        self.pending = deque()
+        self.findings = []
+        self.count = self.bytes_read = self.largest_blob = 0
+        for _ in range(HISTORY_WORKERS):
+            self.enqueue()
+
+    def enqueue(self):
+        sha = next(self.remaining, None)
+        if sha:
+            self.pending.append((sha, self.pool.submit(scan_blob, sha, self.paths[sha])))
+
+    def get(self, sha, default=""):
+        expected, future = self.pending.popleft()
+        if expected != sha:
+            raise RuntimeError("History traversal order changed; adapter compatibility failure")
+        self.findings, content, size = future.result()
+        self.count += 1
+        self.bytes_read += size
+        self.largest_blob = max(self.largest_blob, size)
+        self.enqueue()
+        if self.count % 1000 == 0:
+            import sys
+            print(f"History: {self.count} source blobs, {self.bytes_read} bytes scanned", file=sys.stderr, flush=True)
+        return content
+
+    def close(self):
+        self.pool.shutdown(wait=True, cancel_futures=True)
+
+
+class PrefetchedScanner:
+    def __init__(self, reader, delegate):
+        self.reader = reader
+        self.delegate = delegate
+
+    async def scan_file(self, path, content, symbols):
+        return self.reader.findings
+
+    async def persist(self, *args, **kwargs):
+        return await self.delegate.persist(*args, **kwargs)
+
+
+def bounded_scanner_class(original, readers):
+    class BoundedHistoryScanner(original):
+        def _unique_blobs(self, *args):
+            self.blob_paths = super()._unique_blobs(*args)
+            return self.blob_paths
+
+        def _read_blobs_batch(self, repo_path, blob_shas):
+            reader = PrefetchedBlobs(repo_path, blob_shas, self.blob_paths)
+            readers.append(reader)
+            self._scanner = PrefetchedScanner(reader, self._scanner)
+            return reader
+
+    return BoundedHistoryScanner
+
+
 def strict_git(repo_path, args, *, timeout=30.0):
     # Upstream's best-effort helper returns an empty string on Git failures,
     # which could otherwise turn a failed history enumeration into a clean scan.
@@ -128,18 +223,9 @@ def main():
     from repowise.cli.main import cli
 
     readers = []
-    original = history_scan.HistorySecurityScanner
-
-    class BoundedHistoryScanner(original):
-        def _read_blobs_batch(self, repo_path, blob_shas):
-            reader = BlobReader(repo_path)
-            readers.append(reader)
-            return reader
-
     fail_on_persistence_error()
     history_scan._run_git = strict_git
-    history_scan.HistorySecurityScanner = BoundedHistoryScanner
-    configure_secret_scan()
+    history_scan.HistorySecurityScanner = bounded_scanner_class(history_scan.HistorySecurityScanner, readers)
     try:
         cli(["security", "scan", "--history", "--path", ".", "--format", "json"])
     finally:
@@ -152,7 +238,9 @@ def main():
                 "bytes_read": sum(r.bytes_read for r in readers),
                 "largest_blob_bytes": max((r.largest_blob for r in readers), default=0),
                 "reader_cache_blobs": 0,
-                "max_blob_requests_in_flight": 1,
+                "max_blob_requests_in_flight": HISTORY_WORKERS,
+                "workers": HISTORY_WORKERS,
+                "worker_virtual_memory_mib": 1024,
             }) + "\n")
 
 

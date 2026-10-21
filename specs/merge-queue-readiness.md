@@ -252,11 +252,14 @@ spent 20m37s in the job: indexing took 8m6s, health ran twice, dead-code exceede
 JavaScript blobs alone total approximately 9.2 GB. Upstream
 [RepoWise 0.58.0](https://github.com/repowise-dev/repowise/releases/tag/v0.58.0)
 serves stored health/dead-code, but its history reader still materializes all
-blobs. Upgrading alone does not resolve the memory failure.
+blobs. Upgrading alone does not resolve the memory failure. A local single-worker
+streaming trial covered 22,975 source blobs / 9,515,793,415 bytes in 1232 seconds;
+this CPU measurement motivates the fixed two-worker queue rather than merely
+extending the history deadline. Native final-head metrics remain the release gate.
 
 ```text
 Manual selected ref -> one fresh standard index -> cached health MD/JSON + safe dead-code
-                    -> full-history secret scan, one blob request at a time
+                    -> full-history secret scan, two bounded analysis workers
                     -> validated reports + scope/timings -> artifact + summary
 ```
 
@@ -276,18 +279,23 @@ Fixed, non-configurable execution budgets:
 | Fresh standard index | 900s | 4096 MiB | No prose/editor/key/hook setup or worktree seeding; 500 commits for git analytics |
 | Each cached health format | 60s | 2048 MiB | All indexed origins, refactoring targets, no recomputation |
 | Cached safe-only dead-code | 60s | 2048 MiB | Requires successful dead-code phase and matching index SHA |
-| Full-history security | 1200s | 2048 MiB | All reachable refs/commits, supported source extensions, RepoWise secret kinds and upstream allowlists |
+| Full-history security | 1200s | 2048 MiB coordinator; 1024 MiB per worker | Two workers, all reachable refs/commits, supported source extensions, RepoWise secret kinds and upstream allowlists |
 | Complete job | 40 minutes | Phase limits above | Leaves two minutes beyond summed phase ceilings for setup/publication |
 
 The 500-commit analytics setting preserves the former index default and MUST NOT
 limit history security. Bundles remain included. The history adapter MUST retain
 upstream provenance, secret kinds, deduplication, line suppression, path allowlists
 and multiline PEM detection. It MUST fail on Git enumeration/read/persistence
-errors. One request/response is in flight and the reader retains no blob cache;
+errors. At most two tasks/results are in flight, with one request/response per worker.
+The reader retains no blob cache; results are consumed in upstream history order.
 memory scales with metadata plus current blob processing, not total historical
 content. Existing upstream metadata tables are still materialized. A single giant
 blob can exceed the process cap; that is incomplete, never silently skipped.
 
+The adapter uses two spawned processes with a fixed-width prefetch queue.
+Negative results do not copy source text back to the coordinator; positive results
+retain complete text for unchanged fingerprint/material handling. Worker failures
+propagate, and timeout kills the entire process group, including workers and Git.
 The adapter omits call/code-smell analysis that upstream history mode discards,
 and uses a conservative literal prefilter before the unchanged secret detectors.
 Fixtures MUST compare every supported secret kind, Unicode keyword matching,
@@ -319,10 +327,10 @@ No comments, locale settings or automatic retries are introduced. Native GitHub
 queued/running/canceled states and artifact links remain the navigation; textual
 statuses and plain tables work on narrow screens and in light/dark mode.
 
-Regression floor: **56 distinct cases**, comprising the retained **21** manual
-workflow admission/permission/isolation/wiring/report mutations and **35** Python
+Regression floor: **60 distinct cases**, comprising the retained **21** manual
+workflow admission/permission/isolation/wiring/report mutations and **39** Python
 cases: 14 detector/version compatibility, 5 blob/Git protocol/error cases,
-1 deleted-secret/other-ref/provenance integration and 15 resource/report/failure
+1 deleted-secret/other-ref/provenance integration 15 resource/report/failure cases and 4 bounded-prefetch/order/worker-failure/delegation
 cases. Cases use synthetic credentials, temporary repositories and mocked clocks/
 processes for timeouts; they do not need live services or real waits. The Python
 suite runs in the pinned Python 3.12 manual environment before analysis. Repository
