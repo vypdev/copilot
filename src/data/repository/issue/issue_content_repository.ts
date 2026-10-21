@@ -7,7 +7,7 @@ import type {
 } from "../../../infrastructure/github/ports/github_issue_provider_ports";
 import { requireArrayPage } from "../github/github_pagination_policy";
 import { toApplicationError } from '../../../application/errors/application_error';
-import { getGithubErrorStatus, isGithubPermissionDenied } from '../github/github_error_policy';
+import { getGithubErrorStatus, githubReadErrorCode, isGithubPermissionDenied } from '../github/github_error_policy';
 import type { IssueCommentRemovalOutcome } from '../../../application/ports/issue_lifecycle_ports';
 
 export interface IssueComment {
@@ -58,8 +58,9 @@ export class IssueContentRepository {
             });
             return issue.body ?? '';
         } catch (error) {
-            logError(toApplicationError(error, 'provider.unavailable', `Unable to read issue #${issueNumber} description.`));
-            throw error;
+            const semanticError = toApplicationError(error, githubReadErrorCode(error), 'Unable to read the issue or pull-request description.');
+            logError(semanticError);
+            throw semanticError;
         }
     };
 

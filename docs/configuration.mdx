@@ -326,6 +326,14 @@ When updating the configuration (for example, after a push or label change), Cop
 
 The hidden block is owned by Copilot. Do not add third-party or manually managed keys to it; they are outside the contract and will be removed on the next write.
 
+An invalid stored block fails with `configuration.invalid` and is not retryable
+without correction. Its diagnostic identifies the issue/PR, distinguishes a
+missing schema from an unsupported version or malformed state, and states the
+required version. An absent block remains distinct from invalid stored state.
+Follow [stored-configuration recovery](/security-operations/operations/troubleshooting#unsupported-stored-configuration)
+before editing or removing a block; never add a version number merely to bypass
+validation. No automatic migration or reset is performed.
+
 ### Persistence failures
 
 If GitHub cannot read or update the issue description, the run fails closed after

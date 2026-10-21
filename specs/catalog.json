@@ -515,7 +515,7 @@
       "status": "implemented",
       "scope": "Shared GitHub Action lifecycle from event admission through durable user-facing results",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-14",
+      "lastVerified": "2026-10-21",
       "specs": [
         "specs/execution-admission-queue-and-publication.md",
         "specs/execution-error-and-context-hardening.md",
@@ -580,7 +580,10 @@
         "src/application/usecases/steps/commit/check_changes_issue_size_workflow.ts",
         "src/application/usecases/steps/commit/update_change_size_labels.ts",
         "src/data/repository/project/project_board_item_query.ts",
-        "src/infrastructure/composition/change_size_project_membership_composition_root.ts"
+        "src/infrastructure/composition/change_size_project_membership_composition_root.ts",
+        "src/manager/description/configuration_handler.ts",
+        "src/data/repository/issue/issue_content_repository.ts",
+        "src/data/repository/github/github_error_policy.ts"
       ],
       "tests": [
         "src/tooling/__tests__/coverage_budget_validator.test.ts",
@@ -617,7 +620,10 @@
         "src/application/usecases/steps/commit/__tests__/check_changes_issue_size_use_case.test.ts",
         "src/application/usecases/steps/commit/__tests__/update_change_size_labels.test.ts",
         "src/data/repository/project/__tests__/project_board_visibility_recovery.test.ts",
-        "src/infrastructure/composition/__tests__/change_size_project_membership_composition_root.test.ts"
+        "src/infrastructure/composition/__tests__/change_size_project_membership_composition_root.test.ts",
+        "src/manager/description/__tests__/configuration_recovery.test.ts",
+        "src/manager/description/__tests__/configuration_handler.test.ts",
+        "src/data/repository/issue/__tests__/issue_content_repository.test.ts"
       ],
       "documentation": [
         "docs/overview.mdx",
@@ -627,7 +633,8 @@
         "docs/bugbot/quality-observability.mdx",
         "docs/bugbot/failure-scenarios.mdx",
         "docs/development/architecture.mdx",
-        "docs/issues/assignees-and-projects.mdx"
+        "docs/issues/assignees-and-projects.mdx",
+        "docs/configuration.mdx"
       ]
     },
     {

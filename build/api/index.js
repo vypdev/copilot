@@ -5171,6 +5171,9 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'workspace-changes-rejected',
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
+    'stored-configuration-schema-missing',
+    'stored-configuration-schema-unsupported',
+    'stored-configuration-invalid',
 ]);
 const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
 const UNCHANGED_STATE = 'No new state or external effect was created.';
@@ -5362,6 +5365,9 @@ class ApplicationError extends Error {
 exports.ApplicationError = ApplicationError;
 _ApplicationError_cause = new WeakMap();
 const RECOVERY_VARIABLE_KEYS = Object.freeze({
+    'stored-configuration-schema-missing': Object.freeze(['issueNumber', 'expectedVersion']),
+    'stored-configuration-schema-unsupported': Object.freeze(['issueNumber', 'expectedVersion', 'actualVersion']),
+    'stored-configuration-invalid': Object.freeze(['issueNumber', 'expectedVersion']),
     'closed-issue-reconciliation-failed': Object.freeze(['resultId', 'phase', 'state', 'reason', 'changed', 'remaining']),
     'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
     'pull-request-link-restored': Object.freeze([]),
@@ -5390,6 +5396,13 @@ function normalizeApplicationErrorRecovery(recovery) {
     if (actualKeys.length !== expectedKeys.length
         || actualKeys.some((key, index) => key !== expectedKeys[index])) {
         throw new TypeError(`Application error recovery variables are invalid for ${recovery.id}.`);
+    }
+    if (recovery.id.startsWith('stored-configuration-')
+        && (![variables.issueNumber, variables.expectedVersion].every(value => typeof value === 'number' && Number.isSafeInteger(value) && value > 0)
+            || (recovery.id === 'stored-configuration-schema-unsupported'
+                && !(typeof variables.actualVersion === 'number'
+                    && Number.isSafeInteger(variables.actualVersion) && variables.actualVersion >= 0)))) {
+        throw new TypeError('Stored configuration diagnostic is invalid.');
     }
     if (recovery.id === 'managed-branch-enrichment-failed'
         && (typeof variables.branchName !== 'string'

@@ -677,6 +677,49 @@ describe('runGitHubActionEntry', () => {
     jest.clearAllMocks();
   });
 
+  it.each([
+    ['en-US', '{"branchType":"feature"}', 'has no schema version', 'Retryable: No'],
+    ['es-MX', '{"schemaVersion":2}', 'versión de esquema almacenada 2', 'Reintentable: No'],
+    ['fr-FR', '{"schemaVersion":99}', 'stored schema version 99', 'Retryable: No'],
+  ])('preserves real stored-configuration diagnostics in the annotation and summary for %s', async (locale, json, causeText, retryText) => {
+    (core.getInput as jest.Mock).mockImplementation((key: string) => key === INPUT_KEYS.REPOSITORY_LOCALE ? locale : '');
+    const { ConfigurationHandler: RealHandler } = jest.requireActual<typeof import('../../manager/description/configuration_handler')>('../../manager/description/configuration_handler');
+    const updateDescription = jest.fn();
+    const reader = new RealHandler({
+      getDescription: jest.fn(async () => '<!-- copilot-configuration-start\n' + json + '\ncopilot-configuration-end -->'),
+      updateDescription,
+    });
+    const failure = await reader.get({ owner: 'o', repository: 'r', issueNumber: 144, token: 'fixture' }).catch(error => error);
+    await runGitHubActionEntry(async () => { throw failure; });
+    const annotation = (core.setFailed as jest.Mock).mock.calls[0][0] as string;
+    const markdown = (core.summary.addRaw as jest.Mock).mock.calls[0][0] as string;
+    for (const surface of [annotation, markdown]) {
+      expect(surface).toContain(causeText);
+      expect(surface).toContain('144');
+      expect(surface).toContain('configuration.invalid');
+      expect(surface).toContain(failure.correlationId);
+      expect(surface).toContain('#unsupported-stored-configuration');
+      expect(surface).not.toContain('workflow.failed');
+      expect(surface).not.toContain(json);
+    }
+    expect(annotation).toContain(retryText);
+    expect(core.summary.write).toHaveBeenCalledTimes(1);
+    expect(core.setFailed).toHaveBeenCalledTimes(1);
+    expect(updateDescription).not.toHaveBeenCalled();
+  });
+
+  it('keeps the configuration failure when summary publication fails', async () => {
+    (core.getInput as jest.Mock).mockReturnValue('');
+    (core.summary.write as jest.Mock).mockRejectedValueOnce(new Error('PRIVATE-SUMMARY-FAILURE'));
+    const failure = new ApplicationError('configuration.invalid', 'Safe detail.', {
+      recovery: { id: 'stored-configuration-schema-missing', variables: { issueNumber: 144, expectedVersion: 3 } },
+    });
+    await expect(runGitHubActionEntry(async () => { throw failure; })).resolves.toBeUndefined();
+    expect(core.setFailed).toHaveBeenCalledTimes(1);
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('configuration.invalid'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('PRIVATE-SUMMARY-FAILURE'));
+  });
+
   it('lets Node preserve an existing failure exit code after a resolved run', async () => {
     const previousExitCode = process.exitCode;
     process.exitCode = 1;

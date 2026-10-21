@@ -261,9 +261,12 @@ describe('ConfigurationHandler', () => {
       expect(result).toBeUndefined();
     });
 
-    it('get throws informative error on invalid JSON', async () => {
+    it('get rejects invalid JSON through the safe configuration error contract', async () => {
       mockGetDescription.mockResolvedValue(descriptionWithConfig('{ "broken": '));
-      await expect(handler.get(configurationQuery())).rejects.toThrow(/Unexpected end of JSON input|SyntaxError/);
+      await expect(handler.get(configurationQuery())).rejects.toMatchObject({
+        code: 'configuration.invalid', retryable: false,
+        recovery: { id: 'stored-configuration-invalid' },
+      });
     });
   });
 });

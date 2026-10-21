@@ -548,3 +548,38 @@ When current-repository organization reuse reports configuration/access changed
 after review, inspect the credential-health workflow too. Its installation or
 removal changes required bootstrap permissions. Prepare and approve a fresh plan
 instead of applying a previously audited permission set.
+
+## Unsupported stored configuration
+
+An issue or PR with an invalid stored Copilot block stops with
+`configuration.invalid` and **Retryable: No**. The annotation and Job Summary
+identify its number, the missing/unsupported/malformed state, the required
+schema version (currently `3`), and the same reference. Retrying unchanged state
+will fail again. The failed read does not change the body or stored state.
+
+| Stored content | Meaning | Next action |
+|---|---|---|
+| No Copilot block | No previous state to restore | An unlinked PR can follow its normal PR workflow. |
+| Missing schema, unsupported version, malformed JSON/value or incomplete delimiters | Stored state cannot be trusted | A maintainer must review it before retrying. |
+| Valid current-schema block | Supported state | Continue through normal validation; this is not a reset instruction. |
+
+Recovery is manual and depends on what the block owns:
+
+1. Preserve the original body using GitHub history or a copy before editing.
+2. If a maintainer verifies that the issue/PR is unmanaged and the block is
+   only an obsolete marker with no branch, release, hotfix or orchestration
+   state to retain, remove **only that block**, preserve the human description,
+   and rerun the failed workflow. An obsolete reproduction example can instead
+   show its JSON without live Copilot comment delimiters: the current reader
+   also recognizes those delimiters inside fenced issue/PR examples.
+3. If managed state may exist or ownership is unclear, stop. Ask a maintainer
+   to inspect linked branches and operations and restore verified supported
+   state through the supported workflow before rerunning. Do not discard
+   unknown state.
+
+Never repair this by merely adding `schemaVersion: 3`, changing a version number,
+automatically migrating/resetting state, or turning the failed check into a
+successful skip. A version field alone does not prove that the stored branch or
+operation facts are valid. Authorization and temporary GitHub read failures
+retain their own error categories; follow their permission/provider recovery
+instead of deleting configuration.

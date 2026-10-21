@@ -205,7 +205,27 @@ const SPANISH_CONTENT: ErrorContent = Object.freeze({
   }),
 });
 
+const STORED_CONFIGURATION_ACTION_EN = 'A maintainer must review {recoveryGuide}. Preserve a copy before removing only a verified obsolete unmanaged block. If managed branch, release, hotfix or orchestration state may exist, stop and restore verified supported state with a maintainer. Do not just add a schema version or delete managed state. Correct the configuration before rerunning; retrying unchanged state will fail again.';
+const STORED_CONFIGURATION_ACTION_ES = 'Un mantenedor debe revisar {recoveryGuide}. Conserva una copia antes de retirar solo un bloque obsoleto confirmado como no gestionado. Si puede existir estado gestionado de ramas, releases, hotfixes u orquestación, detente y restaura estado compatible verificado con un mantenedor. No añadas simplemente una versión de esquema ni borres estado gestionado. Corrige la configuración antes de reejecutar; el mismo estado volverá a fallar.';
+const STORED_CONFIGURATION_RETAINED_EN = 'The issue/PR description and stored configuration were not changed by this read.';
+const STORED_CONFIGURATION_RETAINED_ES = 'Esta lectura no modificó la descripción de la issue/PR ni su configuración almacenada.';
+
 const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  'stored-configuration-schema-missing': Object.freeze({
+    impact: 'Automation stopped for issue/PR #{issueNumber}: the stored configuration has no schema version; version {expectedVersion} is required.',
+    action: STORED_CONFIGURATION_ACTION_EN,
+    retainedState: STORED_CONFIGURATION_RETAINED_EN,
+  }),
+  'stored-configuration-schema-unsupported': Object.freeze({
+    impact: 'Automation stopped for issue/PR #{issueNumber}: stored schema version {actualVersion} is unsupported; version {expectedVersion} is required.',
+    action: STORED_CONFIGURATION_ACTION_EN,
+    retainedState: STORED_CONFIGURATION_RETAINED_EN,
+  }),
+  'stored-configuration-invalid': Object.freeze({
+    impact: 'Automation stopped for issue/PR #{issueNumber}: the stored configuration, markers or schema value are malformed; valid schema version {expectedVersion} is required.',
+    action: STORED_CONFIGURATION_ACTION_EN,
+    retainedState: STORED_CONFIGURATION_RETAINED_EN,
+  }),
   'closed-issue-reconciliation-failed': Object.freeze({
     impact: 'Issue cleanup remains unverified: {resultId}, phase {phase}; native state {state}, reason {reason}.',
     action: 'Inspect the closed-issue or merged-PR run and current native state. Retry cleanup only if the issue is still closed with the intended reason; leave reopened work open. Resolve the named failure before retrying.',
@@ -285,6 +305,21 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
 });
 
 const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  'stored-configuration-schema-missing': Object.freeze({
+    impact: 'La automatización se detuvo para la issue/PR #{issueNumber}: la configuración almacenada no tiene versión de esquema; se requiere la versión {expectedVersion}.',
+    action: STORED_CONFIGURATION_ACTION_ES,
+    retainedState: STORED_CONFIGURATION_RETAINED_ES,
+  }),
+  'stored-configuration-schema-unsupported': Object.freeze({
+    impact: 'La automatización se detuvo para la issue/PR #{issueNumber}: la versión de esquema almacenada {actualVersion} no es compatible; se requiere la versión {expectedVersion}.',
+    action: STORED_CONFIGURATION_ACTION_ES,
+    retainedState: STORED_CONFIGURATION_RETAINED_ES,
+  }),
+  'stored-configuration-invalid': Object.freeze({
+    impact: 'La automatización se detuvo para la issue/PR #{issueNumber}: la configuración almacenada, sus delimitadores o el valor del esquema no son válidos; se requiere un esquema válido de versión {expectedVersion}.',
+    action: STORED_CONFIGURATION_ACTION_ES,
+    retainedState: STORED_CONFIGURATION_RETAINED_ES,
+  }),
   'closed-issue-reconciliation-failed': Object.freeze({
     impact: 'La limpieza de la issue sigue sin verificarse: {resultId}, fase {phase}; estado nativo {state}, motivo {reason}.',
     action: 'Revisa la ejecución de cierre o de la PR fusionada y el estado nativo actual. Reintenta la limpieza solo si la issue sigue cerrada con el motivo previsto; conserva abierto el trabajo reabierto. Resuelve el fallo indicado antes de reintentar.',

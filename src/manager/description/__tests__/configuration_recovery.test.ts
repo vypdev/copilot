@@ -1,0 +1,147 @@
+import { ConfigurationHandler } from '../configuration_handler';
+import { ApplicationError } from '../../../application/errors/application_error';
+import { runWithApplicationErrorCorrelation } from '../../../application/errors/application_error_context';
+import { renderApplicationErrorText } from '../../../application/policies/application_error_presentation_policy';
+import { resolveStaticApplicationErrorCatalog } from '../../../application/policies/application_error_message_catalog';
+import { runSetupExecution } from '../../../application/usecases/execution/setup_execution_workflow';
+import type { SetupExecutionContext } from '../../../application/usecases/execution/setup_execution_contracts';
+
+jest.mock('../../../utils/logger', () => ({ logError: jest.fn() }));
+
+const REFERENCE = '6f173f89-96a3-4fc8-b90e-4f8f48e0e319';
+const query = { owner: 'fixture', repository: 'fixture', issueNumber: 144, token: 'fixture' };
+const block = (json: string) => 'Human PR body\n<!-- copilot-configuration-start\n' + json + '\ncopilot-configuration-end -->';
+
+function fixture(initialBody: string) {
+  let body = initialBody;
+  const getDescription = jest.fn(async () => body);
+  const updateDescription = jest.fn();
+  const handler = new ConfigurationHandler({ getDescription, updateDescription });
+  return { handler, getDescription, updateDescription, setBody: (next: string) => { body = next; } };
+}
+
+function unlinkedPrContext(): SetupExecutionContext {
+  return {
+    debug: false, local: false, tokenUser: 'fixture-user', issueNumber: -1,
+    eventName: 'pull_request', isSingleAction: false, isIssue: false, isPullRequest: true, isPush: false,
+    issue: { number: -1 }, pullRequest: { number: 144, head: 'codex/integrity-audit', base: 'develop' },
+    commit: { branch: '' },
+    singleAction: { issue: -1, currentAction: '', isIssue: false, isPullRequest: false, isPush: false },
+    branches: { featureTree: 'feature', bugfixTree: 'bugfix', hotfixTree: 'hotfix', releaseTree: 'release', docsTree: 'docs', choreTree: 'chore' },
+    labelNames: { feature: 'feature', enhancement: 'enhancement', bugfix: 'bugfix', bug: 'bug', hotfix: 'hotfix', release: 'release', docs: 'docs', documentation: 'documentation', chore: 'chore', maintenance: 'maintenance' },
+    currentPullRequestLabels: [], release: { active: false }, hotfix: { active: false },
+  };
+}
+
+describe('stored configuration diagnostics and recovery (#635)', () => {
+  it.each([
+    ['missing schema', '{"branchType":"feature"}', 'stored-configuration-schema-missing', undefined],
+    ['old schema', '{"schemaVersion":2,"branchType":"feature"}', 'stored-configuration-schema-unsupported', 2],
+    ['future schema', '{"schemaVersion":99,"branchType":"feature"}', 'stored-configuration-schema-unsupported', 99],
+    ['malformed JSON', '{"schemaVersion":', 'stored-configuration-invalid', undefined],
+  ])('rejects %s with safe nonretryable facts and no writes', async (_name, json, id, actualVersion) => {
+    const f = fixture(block(json as string));
+    const error = await runWithApplicationErrorCorrelation(REFERENCE, () => f.handler.get(query).catch(error => error));
+    expect(error).toBeInstanceOf(ApplicationError);
+    expect(error).toMatchObject({
+      code: 'configuration.invalid', retryable: false, correlationId: REFERENCE,
+      recovery: { id, variables: { issueNumber: 144, expectedVersion: 3, ...(actualVersion === undefined ? {} : { actualVersion }) } },
+    });
+    expect(f.getDescription).toHaveBeenCalledWith('fixture', 'fixture', 144, 'fixture');
+    expect(f.updateDescription).not.toHaveBeenCalled();
+  });
+
+  it('keeps an absent block distinct from an invalid stored block', async () => {
+    const f = fixture('Human PR body without stored state');
+    await expect(f.handler.get(query)).resolves.toBeUndefined();
+    expect(f.updateDescription).not.toHaveBeenCalled();
+  });
+
+  it('continues reading supported state without rewriting it', async () => {
+    const f = fixture(block('{"schemaVersion":3,"branchType":"feature","workingBranch":"feature/42-work"}'));
+    await expect(f.handler.get(query)).resolves.toMatchObject({ schemaVersion: 3, workingBranch: 'feature/42-work' });
+    expect(f.updateDescription).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'null', '[]', '{"schemaVersion":"3"}', '{"schemaVersion":-1}', '{"schemaVersion":1.5}',
+    '{"schemaVersion":1e99}', '{"schemaVersion":3,"recommendationState":{"invalid":true}}',
+  ])('rejects malformed payload %s without exposing its contents', async json => {
+    const f = fixture(block(json));
+    await expect(f.handler.get(query)).rejects.toMatchObject({
+      code: 'configuration.invalid', retryable: false, recovery: { id: 'stored-configuration-invalid' },
+    });
+    expect(f.updateDescription).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'Human body\n<!-- copilot-configuration-start\n{}',
+    'Human body\n{}\ncopilot-configuration-end -->',
+  ])('rejects incomplete markers as invalid state rather than an absent block', async body => {
+    const f = fixture(body);
+    await expect(f.handler.get(query)).rejects.toMatchObject({
+      code: 'configuration.invalid', recovery: { id: 'stored-configuration-invalid' },
+    });
+    expect(f.updateDescription).not.toHaveBeenCalled();
+  });
+
+  it.each(['authorization.denied', 'provider.unavailable'] as const)('preserves an originating %s read failure and its reference', async code => {
+    const f = fixture('unread');
+    const original = new ApplicationError(code, 'Safe provider failure.', { correlationId: REFERENCE });
+    f.getDescription.mockRejectedValue(original);
+    await expect(f.handler.get(query)).rejects.toBe(original);
+    expect(original.recovery).toBeUndefined();
+    expect(f.updateDescription).not.toHaveBeenCalled();
+  });
+
+  it.each(['en-US', 'es-MX'])('shows the cause and safe recovery in %s without leaking schema/body text', async locale => {
+    const secret = 'PRIVATE-BODY-::error::' + 'x'.repeat(10000);
+    const f = fixture(block(JSON.stringify({ schemaVersion: secret, token: secret })));
+    const error = await f.handler.get(query).catch(error => error);
+    const text = renderApplicationErrorText(error, resolveStaticApplicationErrorCatalog(locale).message);
+    expect(text).toContain('144');
+    expect(text).toContain(locale === 'en-US' ? 'version 3' : 'versión 3');
+    expect(text).toContain('configuration.invalid');
+    expect(text).toContain(locale === 'en-US' ? 'Retryable: No' : 'Reintentable: No');
+    expect(text).toContain('#unsupported-stored-configuration');
+    expect(text).toContain(locale === 'en-US' ? 'Do not just add a schema version or delete managed state' : 'No añadas simplemente una versión de esquema ni borres estado gestionado');
+    expect(text).toContain(locale === 'en-US' ? 'stop and restore verified supported state' : 'detente y restaura estado compatible verificado');
+    expect(text).not.toContain('PRIVATE-BODY');
+    expect(JSON.stringify(error)).not.toContain('PRIVATE-BODY');
+    expect(text.length).toBeLessThan(1800);
+  });
+
+  it('keeps an unchanged invalid PR failed on replay without writes or fabricated linkage', async () => {
+    const f = fixture(block('{"branchType":"feature"}'));
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await expect(f.handler.get(query)).rejects.toMatchObject({ code: 'configuration.invalid', retryable: false });
+    }
+    expect(f.getDescription).toHaveBeenCalledTimes(2);
+    expect(f.updateDescription).not.toHaveBeenCalled();
+  });
+
+  it('lets verified obsolete-marker removal recover the real unlinked setup route', async () => {
+    const f = fixture(block('{"branchType":"feature"}'));
+    const issuePort = {
+      isPullRequest: jest.fn(), isIssue: jest.fn(), getHeadBranch: jest.fn(), getLabels: jest.fn(async () => []),
+      getDescription: jest.fn(), getTitle: jest.fn(),
+    };
+    const dependencies = {
+      issueSetupPort: issuePort, organizationSetupPort: { getTokenUser: jest.fn() },
+      configurationPort: { get: (issueNumber: number) => f.handler.get({ ...query, issueNumber }) },
+      branchVersionResolver: { resolve: jest.fn() },
+    };
+    await expect(runSetupExecution(unlinkedPrContext(), dependencies)).rejects.toMatchObject({ code: 'configuration.invalid' });
+    f.setBody('Human PR body preserved after a maintainer verified and removed only the obsolete block.');
+    const result = await runSetupExecution(unlinkedPrContext(), dependencies);
+    expect(result).toMatchObject({
+      status: 'configured',
+      state: { previousConfiguration: undefined, configuration: { workingBranch: 'codex/integrity-audit', parentBranch: 'develop' } },
+    });
+    expect(result.issueResolution.issueNumber).toBeUndefined();
+    expect(issuePort.isIssue).not.toHaveBeenCalled();
+    expect(issuePort.getDescription).not.toHaveBeenCalled();
+    expect(dependencies.branchVersionResolver.resolve).not.toHaveBeenCalled();
+    expect(f.updateDescription).not.toHaveBeenCalled();
+  });
+});

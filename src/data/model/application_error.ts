@@ -53,12 +53,18 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'workspace-changes-rejected',
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
+    'stored-configuration-schema-missing',
+    'stored-configuration-schema-unsupported',
+    'stored-configuration-invalid',
 
 ] as const);
 
 export type ApplicationErrorRecoveryId = typeof APPLICATION_ERROR_RECOVERY_IDS[number];
 
 interface ApplicationErrorRecoveryVariables {
+    readonly 'stored-configuration-schema-missing': Readonly<{ issueNumber: number; expectedVersion: number }>;
+    readonly 'stored-configuration-schema-unsupported': Readonly<{ issueNumber: number; expectedVersion: number; actualVersion: number }>;
+    readonly 'stored-configuration-invalid': Readonly<{ issueNumber: number; expectedVersion: number }>;
     readonly 'closed-issue-reconciliation-failed': ClosedIssueReconciliationFacts;
     readonly 'approval-evidence-read-failed': ApprovalEvidenceDiagnostic;
 
@@ -316,6 +322,9 @@ export class ApplicationError extends Error {
 }
 
 const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readonly string[]>> = Object.freeze({
+    'stored-configuration-schema-missing': Object.freeze(['issueNumber', 'expectedVersion']),
+    'stored-configuration-schema-unsupported': Object.freeze(['issueNumber', 'expectedVersion', 'actualVersion']),
+    'stored-configuration-invalid': Object.freeze(['issueNumber', 'expectedVersion']),
     'closed-issue-reconciliation-failed': Object.freeze(['resultId', 'phase', 'state', 'reason', 'changed', 'remaining']),
     'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
 
@@ -347,6 +356,14 @@ function normalizeApplicationErrorRecovery(
     if (actualKeys.length !== expectedKeys.length
         || actualKeys.some((key, index) => key !== expectedKeys[index])) {
         throw new TypeError(`Application error recovery variables are invalid for ${recovery.id}.`);
+    }
+    if (recovery.id.startsWith('stored-configuration-')
+        && (![variables.issueNumber, variables.expectedVersion].every(value =>
+            typeof value === 'number' && Number.isSafeInteger(value) && value > 0)
+            || (recovery.id === 'stored-configuration-schema-unsupported'
+                && !(typeof variables.actualVersion === 'number'
+                    && Number.isSafeInteger(variables.actualVersion) && variables.actualVersion >= 0)))) {
+        throw new TypeError('Stored configuration diagnostic is invalid.');
     }
     if (recovery.id === 'managed-branch-enrichment-failed'
         && (typeof variables.branchName !== 'string'
