@@ -69,6 +69,12 @@ async function fixture(): Promise<void> {
         if (readFileSync(VERIFICATION_SETUP_PATH, 'utf8') !== candidateYaml) throw new Error('Candidate action was not restored');
         writeFileSync(join(process.cwd(), '.github/actions/copilot-native-fixture/dist/index.js'), 'throw new Error("Candidate runtime must never execute during continuation or post");');
         core.info('Native composite acceptance passed: candidate manifests, trusted snapshot, Python/pytest and Node/pnpm, two fresh profiles.');
+    } catch (error) {
+        // This controlled fixture contains no credentials. File names, rather than file contents,
+        // identify dependency installers that unexpectedly alter the publishable candidate.
+        core.info(`Native fixture candidate status: ${git('status', '--porcelain=v1').slice(0, 8_192)}`);
+        core.info(`Native fixture tracked changes: ${git('diff', '--no-ext-diff', '--no-textconv', '--numstat', 'HEAD', '--').slice(0, 8_192)}`);
+        throw error;
     } finally {
         rmSync(candidateAction, { recursive: true, force: true }); rmSync(marker, { force: true }); rmSync(testFile, { force: true }); rmSync(requirements, { force: true });
         rmSync(join(process.cwd(), '__pycache__'), { recursive: true, force: true });
