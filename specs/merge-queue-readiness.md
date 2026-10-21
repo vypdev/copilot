@@ -288,7 +288,7 @@ upstream provenance, secret kinds, deduplication, line suppression, path allowli
 and multiline PEM detection. It MUST fail on Git enumeration/read/persistence
 errors. At most two tasks/results are in flight, with one request/response per worker.
 The reader retains no blob cache; results are consumed in upstream history order.
-memory scales with metadata plus current blob processing, not total historical
+Memory scales with metadata plus current blob processing, not total historical
 content. Existing upstream metadata tables are still materialized. A single giant
 blob can exceed the process cap; that is incomplete, never silently skipped.
 
@@ -330,8 +330,8 @@ statuses and plain tables work on narrow screens and in light/dark mode.
 Regression floor: **60 distinct cases**, comprising the retained **21** manual
 workflow admission/permission/isolation/wiring/report mutations and **39** Python
 cases: 14 detector/version compatibility, 5 blob/Git protocol/error cases,
-1 deleted-secret/other-ref/provenance integration 15 resource/report/failure cases and 4 bounded-prefetch/order/worker-failure/delegation
-cases. Cases use synthetic credentials, temporary repositories and mocked clocks/
+1 deleted-secret/other-ref/provenance integration, 15 resource/report/failure cases,
+and 4 bounded-prefetch/order/worker-failure/delegation cases. Cases use synthetic credentials, temporary repositories and mocked clocks/
 processes for timeouts; they do not need live services or real waits. The Python
 suite runs in the pinned Python 3.12 manual environment before analysis. Repository
 Jest coverage thresholds remain in force; the standalone Python adapter uses
