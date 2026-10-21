@@ -1,17 +1,21 @@
+import { verificationExecutable } from './verification_executable';
+import { nativeVerificationRetainsProfile } from './native_verification_profiles';
 import * as exec from '@actions/exec';
 import type { GitCommitPort } from '../application/ports/git_ports';
 import { buildGitAuthenticationEnvironment } from './git_authentication_environment';
 import { prepareUntrustedCommandEnvironment } from './untrusted_command_environment';
 import { withoutGitHooks } from './git_hook_isolation';
 import { assertVerificationRuntimePrerequisites } from './verification_runtime_preflight';
+import { DISABLED_VERIFICATION_SETUP, type PreparedVerificationSetup } from '../application/ports/verification_setup_ports';
+import { prepareRepositoryVerification } from './verification_setup_runner';
 
-type GitCommandOptions = { stdout?: (data: Buffer) => void; env?: Record<string, string>; untrusted?: boolean; verifyRuntimePrerequisites?: boolean };
+type GitCommandOptions = { stdout?: (data: Buffer) => void; env?: Record<string, string>; untrusted?: boolean; verifyRuntimePrerequisites?: boolean; resolveFromEnvironment?: boolean };
 type GitCommandExecutor = (program: string, args: string[], options?: GitCommandOptions) => Promise<number>;
 
 export class GitCommitAdapter implements GitCommitPort {
     constructor(
         private readonly executeCommand: GitCommandExecutor = (program, args, options) => options
-            ? exec.exec(program, args, {
+            ? exec.exec(options.resolveFromEnvironment && options.env ? verificationExecutable(program, options.env) : program, args, {
                 // Captured Git reads can contain NUL-delimited records that
                 // hide subsequent lines in GitHub's Actions log viewer.
                 ...(options.stdout ? { silent: true } : {}),
@@ -20,6 +24,7 @@ export class GitCommitAdapter implements GitCommitPort {
             })
             : exec.exec(program, args),
         private readonly checkPrerequisites: (environment: Record<string, string>) => void = assertVerificationRuntimePrerequisites,
+        private readonly verificationSetup: PreparedVerificationSetup = DISABLED_VERIFICATION_SETUP,
     ) {}
 
     async execute(program: string, args: string[], options?: GitCommandOptions): Promise<number> {
@@ -28,13 +33,17 @@ export class GitCommitAdapter implements GitCommitPort {
         if (options.env) throw new Error('Untrusted command execution does not accept a caller-supplied environment.');
         const runtime = prepareUntrustedCommandEnvironment();
         try {
-            if (options.verifyRuntimePrerequisites) this.checkPrerequisites(runtime.environment);
+            if (options.verifyRuntimePrerequisites) {
+                await prepareRepositoryVerification(this.verificationSetup, runtime.environment);
+                this.checkPrerequisites(runtime.environment);
+            }
             return await this.executeCommand(program, args, {
                 ...(options.stdout ? { stdout: options.stdout } : {}),
                 env: runtime.environment,
+                ...(options.verifyRuntimePrerequisites && this.verificationSetup.kind === 'ready' ? { resolveFromEnvironment: true } : {}),
             });
         } finally {
-            runtime.cleanup();
+            if (!nativeVerificationRetainsProfile(runtime.environment.HOME)) runtime.cleanup();
         }
     }
 

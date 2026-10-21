@@ -9,6 +9,7 @@ import { ThinkUseCase } from "../../../application/usecases/steps/common/think_u
 import { RememberBugbotRuleUseCase } from "../../../application/usecases/steps/commit/bugbot/remember_bugbot_rule_use_case";
 import { CheckIssueCommentLanguageUseCase } from "../../../application/usecases/steps/issue_comment/check_issue_comment_language_use_case";
 import { GitCommitAdapter } from "../../git_commit_adapter";
+import { captureVerificationSetup } from '../../verification_setup_snapshot';
 import type { ProjectBoardCommandPort } from "../../../application/ports/project_board_command_ports";
 import type { Execution } from "../../../data/model/execution";
 import {
@@ -84,9 +85,22 @@ jest.mock(
   "../../../application/usecases/steps/issue_comment/check_issue_comment_language_use_case",
 );
 jest.mock("../../git_commit_adapter");
+jest.mock('../../verification_setup_snapshot', () => ({ captureVerificationSetup: jest.fn(() => ({ kind: 'disabled' })) }));
 
 describe("main run route composition root", () => {
   beforeEach(() => jest.clearAllMocks());
+
+  it.each(['issue-comment', 'pull-request-review-comment'] as const)('captures trusted setup before %s can invoke an agent', async route => {
+    const snapshot = { kind: 'blocked', reason: 'source-unavailable' } as const;
+    jest.mocked(captureVerificationSetup).mockReturnValueOnce(snapshot);
+    const execution = { owner: 'owner', repo: 'repo', tokens: { token: 'token' }, branches: { main: 'production' }, verificationSetup: true } as Execution;
+    const handlers = createMainRunRouteCompositionRoot({} as ProjectBoardCommandPort, 'local');
+    await handlers[route](execution);
+    expect(captureVerificationSetup).toHaveBeenCalledWith(true, 'production');
+    expect(GitCommitAdapter).toHaveBeenCalledWith(undefined, undefined, snapshot);
+    const useCase = route === 'issue-comment' ? jest.mocked(IssueCommentUseCase).mock.instances[0] : jest.mocked(PullRequestReviewCommentUseCase).mock.instances[0];
+    expect(jest.mocked(captureVerificationSetup).mock.invocationCallOrder[0]).toBeLessThan(jest.mocked(useCase.invoke).mock.invocationCallOrder[0]);
+  });
 
   it("shares route-scoped Bugbot, agent, and Git commit capabilities", () => {
     const useCase = createIssueCommentUseCaseCompositionRoot(binding);
@@ -199,6 +213,8 @@ describe("main run route composition root", () => {
       owner: 'owner',
       repo: 'repo',
       tokens: { token: 'token' },
+      branches: { main: 'master' },
+      verificationSetup: false,
     } as Execution;
     const handlers = createMainRunRouteCompositionRoot(
       {} as ProjectBoardCommandPort,

@@ -583,3 +583,29 @@ successful skip. A version field alone does not prove that the stored branch or
 operation facts are valid. Authorization and temporary GitHub read failures
 retain their own error categories; follow their permission/provider recovery
 instead of deleting configuration.
+
+## Repository setup blocks verification
+
+`Repository setup blocked verification` means preparation did not establish a safe
+command environment. Verification and commit/push are withheld; branch sync uses
+its existing merge abort. Inspect the native setup step and closed cause in the
+run, then repair the reviewed action on `main-branch`.
+
+| Cause | Recovery |
+| --- | --- |
+| `source-unavailable` | Make the trusted origin ref available in the full checkout. |
+| `helper-invalid` | Review the fixed native composite and regular auxiliary files; respect file/step bounds and avoid nested local `uses`. |
+| `native-workflow-required` | Update generated callbacks and use their normal directory-based Git checkout in GitHub Actions. The local CLI cannot execute composite actions. |
+| `workspace-changed` / `candidate-changed` | Keep setup dependency-only; do not change publishable source, index, branch or lockfiles. Retry from a fresh candidate. |
+| `process-failed` | Inspect the native action's logs and fix its reviewed dependency installation. |
+| `timeout` | Fit each native setup within five minutes; no limit override or automatic retry exists. |
+| `output-limit` | A Copilot worker log line/output exceeded its framing bound; native setup logs use normal Actions limits. |
+| `cancelled` | Retry the authorized operation after cancellation is resolved. |
+| `handoff-invalid` | Rerun through updated generated callbacks; never reuse a session from another run/job or request. |
+| `result-invalid` | Export only supported, existing PATH/JAVA_HOME directories under the candidate, private HOME or trusted tool cache. |
+
+The consumer file is `.github/actions/copilot-verification-setup/action.yml`.
+Candidate edits do not replace the trusted snapshot. Enabling without a reviewed
+action blocks verification; the disabled default preserves existing behavior.
+See [repository-owned setup](/security-operations/operations/verification#repository-owned-setup)
+for native Python/pnpm examples, profile lifetime, trust boundaries and migration.

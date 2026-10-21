@@ -37179,6 +37179,7 @@ function readLocalWorkflowConfiguration(additionalParams, actionInputs) {
         commitPrefixBuilder: read(input_keys_1.INPUT_KEYS.COMMIT_PREFIX_TRANSFORMS) || 'replace-slash',
         issueManagedBranches: (0, input_boolean_policy_1.parseIssueWorkflowBoolean)(read(input_keys_1.INPUT_KEYS.ISSUE_MANAGED_BRANCHES), input_keys_1.INPUT_KEYS.ISSUE_MANAGED_BRANCHES, true),
         preBranchSdd: (0, input_boolean_policy_1.parseIssueWorkflowBoolean)(read(input_keys_1.INPUT_KEYS.PRE_BRANCH_SDD), input_keys_1.INPUT_KEYS.PRE_BRANCH_SDD, false),
+        verificationSetup: (0, input_boolean_policy_1.parseIssueWorkflowBoolean)(read(input_keys_1.INPUT_KEYS.VERIFICATION_SETUP), input_keys_1.INPUT_KEYS.VERIFICATION_SETUP, false),
         reopenIssueOnPush: (0, input_boolean_policy_1.isEnabledInput)(read(input_keys_1.INPUT_KEYS.REOPEN_ISSUE_ON_PUSH)),
         issueDesiredAssigneesCount: (0, input_number_policy_1.parseIntegerInput)(read(input_keys_1.INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0),
         pullRequestDesiredAssigneesCount: (0, input_number_policy_1.parseIntegerInput)(read(input_keys_1.INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0),
@@ -37212,7 +37213,7 @@ const configuration_builders_1 = __nccwpck_require__(19094);
 const branches_builder_1 = __nccwpck_require__(30085);
 const size_threshold_builder_1 = __nccwpck_require__(39757);
 function buildLocalActionExecution(configuration, additionalParams) {
-    const { debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog, singleActionMessage, singleActionCommentId, singleActionCommentMode, singleActionOperationId, inactivityThresholdHours, commitPrefixBuilder, issueManagedBranches, preBranchSdd, reopenIssueOnPush, issueDesiredAssigneesCount, pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, titleEmoji, branchManagementEmoji, token, agentModel, aiPullRequestDescriptionMode, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, bugbotReviewConfiguration, agentTasks, bugLabel, bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel, deployLabel, deployedLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel, priorityHighLabel, priorityMediumLabel, priorityLowLabel, priorityNoneLabel, sizeXxlLabel, sizeXlLabel, sizeLLabel, sizeMLabel, sizeSLabel, sizeXsLabel, lifecycle, issueTypeTask, issueTypeTaskDescription, issueTypeTaskColor, issueTypeBug, issueTypeBugDescription, issueTypeBugColor, issueTypeFeature, issueTypeFeatureDescription, issueTypeFeatureColor, issueTypeDocumentation, issueTypeDocumentationDescription, issueTypeDocumentationColor, issueTypeMaintenance, issueTypeMaintenanceDescription, issueTypeMaintenanceColor, issueTypeHotfix, issueTypeHotfixDescription, issueTypeHotfixColor, issueTypeRelease, issueTypeReleaseDescription, issueTypeReleaseColor, issueTypeQuestion, issueTypeQuestionDescription, issueTypeQuestionColor, issueTypeHelp, issueTypeHelpDescription, issueTypeHelpColor, repositoryLocale, issueLocale, pullRequestLocale, sizeXxlThresholdLines, sizeXxlThresholdFiles, sizeXxlThresholdCommits, sizeXlThresholdLines, sizeXlThresholdFiles, sizeXlThresholdCommits, sizeLThresholdLines, sizeLThresholdFiles, sizeLThresholdCommits, sizeMThresholdLines, sizeMThresholdFiles, sizeMThresholdCommits, sizeSThresholdLines, sizeSThresholdFiles, sizeSThresholdCommits, sizeXsThresholdLines, sizeXsThresholdFiles, sizeXsThresholdCommits, mainBranch, developmentBranch, featureTree, bugfixTree, hotfixTree, releaseTree, docsTree, choreTree, releaseWorkflow, hotfixWorkflow, projects, projectColumnIssueCreated, projectColumnPullRequestCreated, projectColumnIssueInProgress, projectColumnPullRequestInProgress, welcomeTitle, welcomeMessages, deployment, } = configuration;
+    const { debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog, singleActionMessage, singleActionCommentId, singleActionCommentMode, singleActionOperationId, inactivityThresholdHours, commitPrefixBuilder, issueManagedBranches, preBranchSdd, verificationSetup, reopenIssueOnPush, issueDesiredAssigneesCount, pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, titleEmoji, branchManagementEmoji, token, agentModel, aiPullRequestDescriptionMode, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, bugbotReviewConfiguration, agentTasks, bugLabel, bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel, deployLabel, deployedLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel, priorityHighLabel, priorityMediumLabel, priorityLowLabel, priorityNoneLabel, sizeXxlLabel, sizeXlLabel, sizeLLabel, sizeMLabel, sizeSLabel, sizeXsLabel, lifecycle, issueTypeTask, issueTypeTaskDescription, issueTypeTaskColor, issueTypeBug, issueTypeBugDescription, issueTypeBugColor, issueTypeFeature, issueTypeFeatureDescription, issueTypeFeatureColor, issueTypeDocumentation, issueTypeDocumentationDescription, issueTypeDocumentationColor, issueTypeMaintenance, issueTypeMaintenanceDescription, issueTypeMaintenanceColor, issueTypeHotfix, issueTypeHotfixDescription, issueTypeHotfixColor, issueTypeRelease, issueTypeReleaseDescription, issueTypeReleaseColor, issueTypeQuestion, issueTypeQuestionDescription, issueTypeQuestionColor, issueTypeHelp, issueTypeHelpDescription, issueTypeHelpColor, repositoryLocale, issueLocale, pullRequestLocale, sizeXxlThresholdLines, sizeXxlThresholdFiles, sizeXxlThresholdCommits, sizeXlThresholdLines, sizeXlThresholdFiles, sizeXlThresholdCommits, sizeLThresholdLines, sizeLThresholdFiles, sizeLThresholdCommits, sizeMThresholdLines, sizeMThresholdFiles, sizeMThresholdCommits, sizeSThresholdLines, sizeSThresholdFiles, sizeSThresholdCommits, sizeXsThresholdLines, sizeXsThresholdFiles, sizeXsThresholdCommits, mainBranch, developmentBranch, featureTree, bugfixTree, hotfixTree, releaseTree, docsTree, choreTree, releaseWorkflow, hotfixWorkflow, projects, projectColumnIssueCreated, projectColumnPullRequestCreated, projectColumnIssueInProgress, projectColumnPullRequestInProgress, welcomeTitle, welcomeMessages, deployment, } = configuration;
     return (0, execution_builder_1.buildExecution)({
         debug,
         inactivityThresholdHours,
@@ -37220,6 +37221,7 @@ function buildLocalActionExecution(configuration, additionalParams) {
         commitPrefixBuilder,
         issue: (0, configuration_builders_1.buildIssue)(issueManagedBranches, reopenIssueOnPush, issueDesiredAssigneesCount, additionalParams),
         preBranchSdd,
+        verificationSetup,
         pullRequest: (0, configuration_builders_1.buildPullRequest)(pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, additionalParams),
         emoji: (0, configuration_builders_1.buildEmoji)(titleEmoji, branchManagementEmoji),
         tokens: (0, configuration_builders_1.buildTokens)(token),
@@ -37982,6 +37984,7 @@ exports.INPUT_KEYS = {
     // Issue
     ISSUE_MANAGED_BRANCHES: 'issue-managed-branches',
     PRE_BRANCH_SDD: 'pre-branch-sdd',
+    VERIFICATION_SETUP: 'verification-setup',
     REOPEN_ISSUE_ON_PUSH: 'reopen-issue-on-push',
     DESIRED_ASSIGNEES_COUNT: 'desired-assignees-count',
     // Pull Request
@@ -46299,6 +46302,8 @@ The setup runner profile selects placement; it does not install the project's la
 
 Declare reviewed version prefixes in \`.copilot/verification-prerequisites.json\` (schemaVersion 1, runtimes such as java 17, node 24, pnpm 10). Copilot checks declared versions in the credential-free verification environment before each configured verification command; a missing or incompatible runtime blocks publication. Without this optional declaration, existing verification behavior remains and no language is inferred. Java provisioning may use \`actions/setup-java\`; \`JAVA_HOME\` and \`PATH\` survive isolation, while agent credentials and tool-option injection variables do not. Do not add an unreviewed bootstrap or weaken verification to work around a missing runtime. Read [verification prerequisites and same-job setup](https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-verification-prerequisites).
 
+The optional repository-owned composite action prepares each candidate before verification. Review \`.github/actions/copilot-verification-setup/action.yml\` and its assets onto trusted main, update generated workflows, then enable \`VERIFICATION_SETUP=true\` (Action input \`verification-setup\`, disabled by default). GitHub Actions executes the trusted snapshot before each command with a fresh private HOME; candidate changes cannot replace it. Native post steps finish before profile cleanup. Setup failure blocks verification and commit/push. The local CLI cannot execute composite actions and fails closed when opted in. Read [repository-owned setup](https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-owned-setup).
+
 For the full contributor flow, read [repository collaboration](https://github.com/vypdev/copilot/blob/master/docs/agents/repository-collaboration.mdx). For drift and recovery, read [guidance troubleshooting](https://github.com/vypdev/copilot/blob/master/docs/agents/repository-guidance-troubleshooting.mdx).
 `;
 }
@@ -48016,6 +48021,7 @@ function createDefaultSetupConfiguration() {
             choreTree: 'chore',
             issueManagedBranches: true,
             preBranchSdd: false,
+            verificationSetup: false,
             reopenIssueOnPush: true,
             desiredAssigneesCount: 1,
             desiredReviewersCount: 1,
@@ -48283,6 +48289,7 @@ function buildSetupRepositoryVariables(configuration) {
     add('CHORE_TREE', repository.choreTree);
     add('ISSUE_MANAGED_BRANCHES', repository.issueManagedBranches);
     add('PRE_BRANCH_SDD', repository.preBranchSdd);
+    add('VERIFICATION_SETUP', repository.verificationSetup ?? false);
     add('REOPEN_ISSUE_ON_PUSH', repository.reopenIssueOnPush);
     add('DESIRED_ASSIGNEES_COUNT', repository.desiredAssigneesCount);
     add('DESIRED_REVIEWERS_COUNT', repository.desiredReviewersCount);
@@ -48345,6 +48352,7 @@ function buildSetupActionInputs(configuration) {
         'chore-tree': repository.choreTree,
         'issue-managed-branches': String(repository.issueManagedBranches),
         'pre-branch-sdd': String(repository.preBranchSdd),
+        'verification-setup': String(repository.verificationSetup ?? false),
         'reopen-issue-on-push': String(repository.reopenIssueOnPush),
         'desired-assignees-count': String(repository.desiredAssigneesCount),
         'desired-reviewers-count': String(repository.desiredReviewersCount),
@@ -48789,6 +48797,9 @@ function validateSetupConfiguration(configuration, options = {}) {
     if (typeof configuration.repository.issueManagedBranches !== 'boolean'
         || typeof configuration.repository.preBranchSdd !== 'boolean') {
         errors.push('issue-managed-branches and pre-branch-sdd must be boolean values.');
+    }
+    if (configuration.repository.verificationSetup !== undefined && typeof configuration.repository.verificationSetup !== 'boolean') {
+        errors.push('verification-setup must be a boolean value.');
     }
     if (configuration.repository.preBranchSdd && !configuration.repository.issueManagedBranches) {
         errors.push('pre-branch-sdd requires issue-managed-branches.');
@@ -50021,6 +50032,7 @@ const repositoryFields = [
     ['HOTFIX_TREE', 'hotfixTree'], ['RELEASE_TREE', 'releaseTree'],
     ['DOCS_TREE', 'docsTree'], ['CHORE_TREE', 'choreTree'],
     ['ISSUE_MANAGED_BRANCHES', 'issueManagedBranches'], ['PRE_BRANCH_SDD', 'preBranchSdd'],
+    ['VERIFICATION_SETUP', 'verificationSetup'],
     ['REOPEN_ISSUE_ON_PUSH', 'reopenIssueOnPush'], ['DESIRED_ASSIGNEES_COUNT', 'desiredAssigneesCount'],
     ['DESIRED_REVIEWERS_COUNT', 'desiredReviewersCount'], ['INACTIVITY_THRESHOLD_HOURS', 'inactivityThresholdHours'],
     ['REPOSITORY_LOCALE', 'repositoryLocale'], ['ISSUES_LOCALE', 'issueLocale'],
@@ -53418,6 +53430,58 @@ function verificationRuntimeMatches(required, observed) {
 
 /***/ }),
 
+/***/ 65326:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VerificationSetupError = exports.VERIFICATION_SETUP_HELP = exports.VERIFICATION_SETUP_LIMITS = exports.VERIFICATION_SETUP_PATH = exports.VERIFICATION_SETUP_DIRECTORY = void 0;
+exports.parseVerificationSetupResult = parseVerificationSetupResult;
+exports.VERIFICATION_SETUP_DIRECTORY = '.github/actions/copilot-verification-setup';
+exports.VERIFICATION_SETUP_PATH = `${exports.VERIFICATION_SETUP_DIRECTORY}/action.yml`;
+exports.VERIFICATION_SETUP_LIMITS = Object.freeze({ timeoutMs: 300000, resultBytes: 16384, scriptBytes: 65536, snapshotBytes: 262144, files: 32, requests: 20 });
+exports.VERIFICATION_SETUP_HELP = 'https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-owned-setup';
+/** Closed facts only. Provider/helper output and raw exception causes never cross this boundary. */
+class VerificationSetupError extends Error {
+    constructor(reason, sourceSha, exitCode) {
+        const sha = sourceSha && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(sourceSha) ? sourceSha : 'unavailable';
+        const exit = Number.isInteger(exitCode) && exitCode >= 0 && exitCode <= 255 ? ` Exit status: ${exitCode}.` : '';
+        const action = reason === 'native-workflow-required'
+            ? 'Update the generated Copilot workflows and run this operation in GitHub Actions; the local CLI cannot execute composite actions.'
+            : `Review ${exports.VERIFICATION_SETUP_PATH} on the trusted main branch and rerun.`;
+        super(`Repository setup blocked verification (${reason}). ${action} Trusted source SHA: ${sha}.${exit} Verification, commit and push are withheld. Help: ${exports.VERIFICATION_SETUP_HELP}`);
+        this.reason = reason;
+        this.exitCode = exitCode;
+        this.name = 'VerificationSetupError';
+    }
+}
+exports.VerificationSetupError = VerificationSetupError;
+function record(value) {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+function pathString(value) {
+    return typeof value === 'string' && value.length > 0 && value.length <= 2048
+        && ![...value].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127);
+}
+/** Filesystem containment is checked by the adapter, after this closed schema is parsed. */
+function parseVerificationSetupResult(value) {
+    if (!record(value) || value.schemaVersion !== 1 || Object.keys(value).some(key => !['schemaVersion', 'path', 'environment'].includes(key))) {
+        throw new VerificationSetupError('result-invalid');
+    }
+    const paths = value.path === undefined ? [] : value.path;
+    const environment = value.environment === undefined ? {} : value.environment;
+    if (!Array.isArray(paths) || paths.length > 8 || !paths.every(pathString) || new Set(paths).size !== paths.length
+        || !record(environment) || Object.keys(environment).some(key => key !== 'JAVA_HOME')
+        || ('JAVA_HOME' in environment && !pathString(environment.JAVA_HOME))) {
+        throw new VerificationSetupError('result-invalid');
+    }
+    return Object.freeze({ path: Object.freeze([...paths]), ...(environment.JAVA_HOME ? { javaHome: environment.JAVA_HOME } : {}) });
+}
+
+
+/***/ }),
+
 /***/ 43193:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -53626,6 +53690,18 @@ function bindSddEvidenceReadPorts(ports) {
         }),
     });
 }
+
+
+/***/ }),
+
+/***/ 26509:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DISABLED_VERIFICATION_SETUP = void 0;
+exports.DISABLED_VERIFICATION_SETUP = Object.freeze({ kind: 'disabled' });
 
 
 /***/ }),
@@ -68453,6 +68529,7 @@ exports.runVerifyCommands = runVerifyCommands;
 const logging_ports_1 = __nccwpck_require__(6152);
 const verify_command_policy_1 = __nccwpck_require__(96031);
 const verification_runtime_policy_1 = __nccwpck_require__(89347);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
 async function runVerifyCommands(commands, execute) {
     for (const command of commands) {
         const result = await executeVerifyCommand(command, execute);
@@ -68472,7 +68549,7 @@ async function executeVerifyCommand(command, execute) {
             : { success: false, failedCommand: formatCommandForDiagnostics(parsed) };
     }
     catch (error) {
-        if (error instanceof verification_runtime_policy_1.VerificationPrerequisiteError) {
+        if (error instanceof verification_runtime_policy_1.VerificationPrerequisiteError || error instanceof verification_setup_policy_1.VerificationSetupError) {
             return { success: false, failedCommand: formatCommandForDiagnostics(parsed),
                 error: `${error.message} Verification command: ${formatCommandForDiagnostics(parsed)}.` };
         }
@@ -75243,7 +75320,7 @@ const REPOSITORY_STRING_KEYS = new Set([
     'orchestrationPresentationMode',
     'orchestrationCommentMode',
 ]);
-const REPOSITORY_BOOLEAN_KEYS = new Set(['issueManagedBranches', 'preBranchSdd', 'reopenIssueOnPush', 'orchestrationDiagrams']);
+const REPOSITORY_BOOLEAN_KEYS = new Set(['issueManagedBranches', 'preBranchSdd', 'verificationSetup', 'reopenIssueOnPush', 'orchestrationDiagrams']);
 const REPOSITORY_NUMBER_KEYS = new Set(['desiredAssigneesCount', 'desiredReviewersCount', 'inactivityThresholdHours']);
 const REPOSITORY_STRUCTURED_KEYS = new Set(['mergeQueueCheckAttestations']);
 const AI_STRING_KEYS = new Set(['ignoreFiles', 'pullRequestDescriptionMode', 'bugbotSeverity', 'bugbotFixVerifyCommands', 'bugbotEffort', 'bugbotOrganizationRules', 'provisioningMode']);
@@ -79225,6 +79302,7 @@ class Execution {
         this.currentIssueWorkflowAdmission = components.issueWorkflowAdmission;
         this.currentConfiguration.issueWorkflowProfileDigest = components.issueWorkflowProfileDigest;
         this.preBranchSdd = components.preBranchSdd ?? false;
+        this.verificationSetup = components.verificationSetup ?? false;
     }
 }
 exports.Execution = Execution;
@@ -96279,12 +96357,14 @@ function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publica
     });
 }
 const copilot_history_port_factory_1 = __nccwpck_require__(12321);
-function createIssueCommentUseCaseCompositionRoot(binding) {
+const verification_setup_snapshot_1 = __nccwpck_require__(62148);
+const verification_setup_ports_1 = __nccwpck_require__(26509);
+function createIssueCommentUseCaseCompositionRoot(binding, setup = verification_setup_ports_1.DISABLED_VERIFICATION_SETUP) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     const findings = (0, agent_capability_composition_root_1.createFindingsQueryPort)();
     const language = (0, agent_capability_composition_root_1.createLanguageQueryPort)();
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
-    const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
+    const gitCommit = new git_commit_adapter_1.GitCommitAdapter(undefined, undefined, setup);
     const authenticatedUser = (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)();
     const bugbotGit = new bound_bugbot_git_mutation_adapter_1.BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
     const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding, new pull_request_changes_repository_1.PullRequestChangesRepository((0, github_pull_request_client_factory_1.createPullRequestChangesClient)())), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)((0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
@@ -96295,12 +96375,12 @@ function createIssueCommentUseCaseCompositionRoot(binding) {
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
     }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_evidence_composition_root_1.createSddEvidenceQueryPort)(binding, bugbot.scm.context), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_2.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
 }
-function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
+function createPullRequestReviewCommentUseCaseCompositionRoot(binding, setup = verification_setup_ports_1.DISABLED_VERIFICATION_SETUP) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     const findings = (0, agent_capability_composition_root_1.createFindingsQueryPort)();
     const language = (0, agent_capability_composition_root_1.createLanguageQueryPort)();
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
-    const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
+    const gitCommit = new git_commit_adapter_1.GitCommitAdapter(undefined, undefined, setup);
     const authenticatedUser = (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)();
     const bugbotGit = new bound_bugbot_git_mutation_adapter_1.BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
     const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding, new pull_request_changes_repository_1.PullRequestChangesRepository((0, github_pull_request_client_factory_1.createPullRequestChangesClient)())), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)((0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
@@ -96327,7 +96407,7 @@ function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, set
             return singleAction.invoke(execution);
         },
         "issue-comment": async (execution) => {
-            issueComment ?? (issueComment = createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution)));
+            issueComment ?? (issueComment = createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution), (0, verification_setup_snapshot_1.captureVerificationSetup)(execution.verificationSetup, execution.branches.main)));
             return issueComment.invoke(execution);
         },
         issue: async (execution) => {
@@ -96335,7 +96415,7 @@ function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, set
             return issue.invoke(execution);
         },
         "pull-request-review-comment": async (execution) => {
-            pullRequestReviewComment ?? (pullRequestReviewComment = createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution)));
+            pullRequestReviewComment ?? (pullRequestReviewComment = createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution), (0, verification_setup_snapshot_1.captureVerificationSetup)(execution.verificationSetup, execution.branches.main)));
             return pullRequestReviewComment.invoke(execution);
         },
         "pull-request": async (execution) => {
@@ -97443,23 +97523,28 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GitCommitAdapter = void 0;
+const verification_executable_1 = __nccwpck_require__(20878);
+const native_verification_profiles_1 = __nccwpck_require__(22290);
 const exec = __importStar(__nccwpck_require__(18538));
 const git_authentication_environment_1 = __nccwpck_require__(16535);
 const untrusted_command_environment_1 = __nccwpck_require__(2304);
 const git_hook_isolation_1 = __nccwpck_require__(39764);
 const verification_runtime_preflight_1 = __nccwpck_require__(23100);
+const verification_setup_ports_1 = __nccwpck_require__(26509);
+const verification_setup_runner_1 = __nccwpck_require__(11709);
 class GitCommitAdapter {
     constructor(executeCommand = (program, args, options) => options
-        ? exec.exec(program, args, {
+        ? exec.exec(options.resolveFromEnvironment && options.env ? (0, verification_executable_1.verificationExecutable)(program, options.env) : program, args, {
             // Captured Git reads can contain NUL-delimited records that
             // hide subsequent lines in GitHub's Actions log viewer.
             ...(options.stdout ? { silent: true } : {}),
             ...(options.stdout ? { listeners: { stdout: options.stdout } } : {}),
             ...(options.env ? { env: options.env } : {}),
         })
-        : exec.exec(program, args), checkPrerequisites = verification_runtime_preflight_1.assertVerificationRuntimePrerequisites) {
+        : exec.exec(program, args), checkPrerequisites = verification_runtime_preflight_1.assertVerificationRuntimePrerequisites, verificationSetup = verification_setup_ports_1.DISABLED_VERIFICATION_SETUP) {
         this.executeCommand = executeCommand;
         this.checkPrerequisites = checkPrerequisites;
+        this.verificationSetup = verificationSetup;
     }
     async execute(program, args, options) {
         if (options?.verifyRuntimePrerequisites && !options.untrusted)
@@ -97470,15 +97555,19 @@ class GitCommitAdapter {
             throw new Error('Untrusted command execution does not accept a caller-supplied environment.');
         const runtime = (0, untrusted_command_environment_1.prepareUntrustedCommandEnvironment)();
         try {
-            if (options.verifyRuntimePrerequisites)
+            if (options.verifyRuntimePrerequisites) {
+                await (0, verification_setup_runner_1.prepareRepositoryVerification)(this.verificationSetup, runtime.environment);
                 this.checkPrerequisites(runtime.environment);
+            }
             return await this.executeCommand(program, args, {
                 ...(options.stdout ? { stdout: options.stdout } : {}),
                 env: runtime.environment,
+                ...(options.verifyRuntimePrerequisites && this.verificationSetup.kind === 'ready' ? { resolveFromEnvironment: true } : {}),
             });
         }
         finally {
-            runtime.cleanup();
+            if (!(0, native_verification_profiles_1.nativeVerificationRetainsProfile)(runtime.environment.HOME))
+                runtime.cleanup();
         }
     }
     async configureAuthor(name, email) {
@@ -98464,6 +98553,233 @@ class LoggerWorkflowPollingObserverAdapter {
     }
 }
 exports.LoggerWorkflowPollingObserverAdapter = LoggerWorkflowPollingObserverAdapter;
+
+
+/***/ }),
+
+/***/ 18883:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.verificationCandidateIdentity = verificationCandidateIdentity;
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_crypto_1 = __nccwpck_require__(6005);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+/** Bind setup to the exact HEAD, branch, index, tracked edits and publishable untracked files. */
+function verificationCandidateIdentity(workspace, environment) {
+    const hash = (0, node_crypto_1.createHash)('sha256');
+    const git = (...args) => {
+        const result = (0, node_child_process_1.spawnSync)('git', ['--no-replace-objects', ...args], { cwd: workspace, env: environment, shell: false,
+            windowsHide: true, timeout: 10000, maxBuffer: 16 * 1024 * 1024 });
+        if (result.error || result.status !== 0)
+            throw new verification_setup_policy_1.VerificationSetupError('candidate-changed');
+        hash.update(result.stdout).update('\0');
+        return result.stdout;
+    };
+    git('rev-parse', '--verify', 'HEAD');
+    git('rev-parse', '--symbolic-full-name', 'HEAD');
+    git('ls-files', '--stage', '-z');
+    git('diff', '--no-ext-diff', '--no-textconv', '--binary', 'HEAD', '--');
+    const paths = git('ls-files', '--others', '--exclude-standard', '-z').toString('utf8').split('\0').filter(Boolean);
+    let total = 0;
+    if (paths.length > 256)
+        throw new verification_setup_policy_1.VerificationSetupError('candidate-changed');
+    for (const path of paths) {
+        const file = (0, node_path_1.join)(workspace, path);
+        const stat = (0, node_fs_1.lstatSync)(file);
+        total += stat.size;
+        if (total > 16 * 1024 * 1024)
+            throw new verification_setup_policy_1.VerificationSetupError('candidate-changed');
+        hash.update(path).update('\0');
+        if (stat.isSymbolicLink())
+            hash.update('120000\0').update((0, node_fs_1.readlinkSync)(file));
+        else if (stat.isFile())
+            hash.update(stat.mode & 0o100 ? '100755\0' : '100644\0').update((0, node_fs_1.readFileSync)(file));
+        else
+            throw new verification_setup_policy_1.VerificationSetupError('candidate-changed');
+        hash.update('\0');
+    }
+    return hash.digest('hex');
+}
+
+
+/***/ }),
+
+/***/ 22290:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.nativeVerificationProfilePaths = nativeVerificationProfilePaths;
+exports.registerNativeVerificationProfile = registerNativeVerificationProfile;
+exports.nativeVerificationRetainsProfile = nativeVerificationRetainsProfile;
+exports.removeNativeVerificationProfiles = removeNativeVerificationProfiles;
+const node_crypto_1 = __nccwpck_require__(6005);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+const native_verification_protocol_1 = __nccwpck_require__(88709);
+function nativeVerificationProfilePaths(root) {
+    const stored = (0, native_verification_protocol_1.readNativeRecord)(root, 'profiles.json', 65536);
+    const paths = stored === undefined ? [] : stored;
+    if (!Array.isArray(paths) || paths.length > 20 || new Set(paths).size !== paths.length || paths.some(path => typeof path !== 'string'
+        || (0, node_path_1.dirname)(path) !== (0, node_path_1.dirname)(root) || !/^copilot-verify-runtime-[A-Za-z0-9]+$/u.test((0, node_path_1.basename)(path)) || path === root))
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    return paths;
+}
+/** Native actions may have post steps. Preserve dependency-only profiles until those steps finish. */
+function registerNativeVerificationProfile(root, profile) {
+    const previous = nativeVerificationProfilePaths(root);
+    if (previous.length >= 20 || previous.includes(profile) || (0, node_path_1.dirname)(profile) !== (0, node_path_1.dirname)(root)
+        || profile === root || !/^copilot-verify-runtime-[A-Za-z0-9]+$/u.test((0, node_path_1.basename)(profile))
+        || (0, node_fs_1.realpathSync)(profile) !== profile || !(0, node_fs_1.lstatSync)(profile).isDirectory() || (0, node_fs_1.lstatSync)(profile).isSymbolicLink())
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    (0, node_fs_1.writeFileSync)((0, node_path_1.join)(profile, 'native-session-owner'), (0, node_crypto_1.createHash)('sha256').update(root).digest('hex'), { mode: 0o600, flag: 'wx' });
+    (0, native_verification_protocol_1.writeNativeRecord)(root, 'profiles.json', [...previous, profile]);
+}
+function nativeVerificationRetainsProfile(profile) {
+    const root = process.env.COPILOT_NATIVE_WORKER_SESSION;
+    return !!root && nativeVerificationProfilePaths(root).includes(profile);
+}
+function removeNativeVerificationProfiles(root) {
+    for (const path of nativeVerificationProfilePaths(root)) {
+        let stat;
+        try {
+            stat = (0, node_fs_1.lstatSync)(path);
+        }
+        catch (error) {
+            if (error.code === 'ENOENT')
+                continue;
+            throw error;
+        }
+        if (!stat.isDirectory() || stat.isSymbolicLink() || (0, node_fs_1.realpathSync)(path) !== path || (0, node_fs_1.readFileSync)((0, node_path_1.join)(path, 'native-session-owner'), 'utf8') !== (0, node_crypto_1.createHash)('sha256').update(root).digest('hex'))
+            throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+        (0, node_fs_1.rmSync)(path, { recursive: true, force: true });
+    }
+}
+
+
+/***/ }),
+
+/***/ 88709:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.nativePause = void 0;
+exports.writeNativeRecord = writeNativeRecord;
+exports.readNativeRecord = readNativeRecord;
+exports.nativeSession = nativeSession;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const node_crypto_1 = __nccwpck_require__(6005);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+function writeNativeRecord(root, name, value) {
+    const temporary = (0, node_path_1.join)(root, `${(0, node_crypto_1.randomUUID)()}.tmp`);
+    (0, node_fs_1.writeFileSync)(temporary, JSON.stringify(value), { mode: 0o600, flag: 'wx' });
+    (0, node_fs_1.renameSync)(temporary, (0, node_path_1.join)(root, name));
+}
+function readNativeRecord(root, name, limit = 16384) {
+    const file = (0, node_path_1.join)(root, name);
+    let descriptor;
+    try {
+        const before = (0, node_fs_1.lstatSync)(file, { bigint: true });
+        if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || before.size > BigInt(limit))
+            throw new Error();
+        descriptor = (0, node_fs_1.openSync)(file, node_fs_1.constants.O_RDONLY | (node_fs_1.constants.O_NOFOLLOW ?? 0));
+        const after = (0, node_fs_1.fstatSync)(descriptor, { bigint: true });
+        if (after.dev !== before.dev || after.ino !== before.ino || after.size !== before.size || after.mtimeNs !== before.mtimeNs)
+            throw new Error();
+        const data = (0, node_fs_1.readFileSync)(descriptor);
+        const final = (0, node_fs_1.fstatSync)(descriptor, { bigint: true });
+        if (data.length > limit || final.size !== after.size || final.mtimeNs !== after.mtimeNs)
+            throw new Error();
+        return JSON.parse(data.toString('utf8'));
+    }
+    catch (error) {
+        if (error.code === 'ENOENT')
+            return undefined;
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    }
+    finally {
+        if (descriptor !== undefined)
+            (0, node_fs_1.closeSync)(descriptor);
+    }
+}
+function nativeSession(root, environment = process.env) {
+    if (!/^copilot-verify-runtime-[A-Za-z0-9]+$/u.test((0, node_path_1.basename)(root)) || (0, node_fs_1.realpathSync)(root) !== root
+        || !(0, node_fs_1.lstatSync)(root).isDirectory() || (0, node_fs_1.lstatSync)(root).isSymbolicLink())
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    if (process.platform !== 'win32' && ((0, node_fs_1.lstatSync)(root).mode & 0o077) !== 0)
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    const session = readNativeRecord(root, 'session.json');
+    if (session?.schemaVersion !== 1 || session.workspace !== (0, node_fs_1.realpathSync)(process.cwd())
+        || session.run !== (environment.GITHUB_RUN_ID ?? '') || session.attempt !== (environment.GITHUB_RUN_ATTEMPT ?? '')
+        || session.job !== (environment.GITHUB_JOB ?? '') || !Number.isSafeInteger(session.pid) || session.pid <= 0)
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    return session;
+}
+const nativePause = (milliseconds) => new Promise(resolve => setTimeout(resolve, milliseconds));
+exports.nativePause = nativePause;
+
+
+/***/ }),
+
+/***/ 63587:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.NATIVE_VERIFICATION_ACTION = void 0;
+exports.stageNativeVerificationAction = stageNativeVerificationAction;
+exports.cleanupNativeVerificationAction = cleanupNativeVerificationAction;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+const native_verification_protocol_1 = __nccwpck_require__(88709);
+exports.NATIVE_VERIFICATION_ACTION = '.git/copilot-verification-setup';
+function targetPath(workspace) {
+    const metadata = (0, node_path_1.join)(workspace, '.git');
+    const stat = (0, node_fs_1.lstatSync)(metadata);
+    if (!stat.isDirectory() || stat.isSymbolicLink() || (0, node_fs_1.realpathSync)(metadata) !== metadata)
+        throw new verification_setup_policy_1.VerificationSetupError('native-workflow-required');
+    return (0, node_path_1.join)(workspace, exports.NATIVE_VERIFICATION_ACTION);
+}
+/** Native composite metadata must remain available until its deferred post steps have finished. */
+function stageNativeVerificationAction(setup, session) {
+    const target = targetPath(setup.workspace);
+    const record = (0, native_verification_protocol_1.readNativeRecord)(session, 'staging.json');
+    if (record && record.target !== target || !record && !!(0, node_fs_1.lstatSync)(target, { throwIfNoEntry: false }))
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    (0, native_verification_protocol_1.writeNativeRecord)(session, 'staging.json', { target });
+    (0, node_fs_1.rmSync)(target, { recursive: true, force: true });
+    (0, node_fs_1.mkdirSync)(target, { mode: 0o700 });
+    for (const file of setup.files) {
+        const destination = (0, node_path_1.join)(target, file.path);
+        const remainder = (0, node_path_1.relative)(target, destination);
+        if (!remainder || remainder.startsWith(`..${node_path_1.sep}`) || remainder === '..')
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        (0, node_fs_1.mkdirSync)((0, node_path_1.dirname)(destination), { recursive: true, mode: 0o700 });
+        (0, node_fs_1.writeFileSync)(destination, Buffer.from(file.base64, 'base64'), { mode: file.executable ? 0o700 : 0o600, flag: 'wx' });
+    }
+}
+function cleanupNativeVerificationAction(session, workspace) {
+    const record = (0, native_verification_protocol_1.readNativeRecord)(session, 'staging.json');
+    if (!record)
+        return;
+    const target = targetPath(workspace);
+    if (record.target !== target)
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    (0, node_fs_1.rmSync)(target, { recursive: true, force: true });
+    (0, node_fs_1.rmSync)((0, node_path_1.join)(session, 'staging.json'), { force: true });
+}
 
 
 /***/ }),
@@ -103021,7 +103337,7 @@ const ALLOWED_VARIABLES = [
  * credentials or paths to local agent authentication stores.
  */
 function prepareUntrustedCommandEnvironment(source = process.env, platform = process.platform) {
-    const runtimeHome = (0, agent_private_install_root_1.createPrivateVerificationRuntimeRoot)();
+    const runtimeHome = (0, node_fs_1.realpathSync)((0, agent_private_install_root_1.createPrivateVerificationRuntimeRoot)());
     const environment = { HOME: runtimeHome };
     for (const variable of ALLOWED_VARIABLES) {
         const value = source[variable];
@@ -103046,6 +103362,39 @@ function prepareUntrustedCommandEnvironment(source = process.env, platform = pro
         environment,
         cleanup: () => (0, node_fs_1.rmSync)(runtimeHome, { recursive: true, force: true }),
     };
+}
+
+
+/***/ }),
+
+/***/ 20878:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.verificationExecutable = verificationExecutable;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+/** @actions/exec resolves basenames against its own process PATH; native tools belong to the verifier PATH. */
+function verificationExecutable(program, environment, platform = process.platform) {
+    const explicit = (0, node_path_1.isAbsolute)(program) || /[\\/]/u.test(program);
+    const candidates = explicit ? [(0, node_path_1.resolve)(program)] : (environment.PATH ?? '').split(node_path_1.delimiter).filter(Boolean).map(directory => (0, node_path_1.resolve)((0, node_path_1.join)(directory, program)));
+    const windowsExtensions = (environment.PATHEXT || '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean);
+    const hasWindowsExtension = windowsExtensions.some(extension => program.toLowerCase().endsWith(extension.toLowerCase()));
+    const extensions = platform === 'win32' && !hasWindowsExtension ? windowsExtensions : [''];
+    for (const candidate of candidates)
+        for (const extension of extensions) {
+            const file = candidate + extension;
+            try {
+                if ((0, node_fs_1.statSync)(file).isFile()) {
+                    (0, node_fs_1.accessSync)(file, node_fs_1.constants.X_OK);
+                    return file;
+                }
+            }
+            catch { /* Try only the next executable in the isolated PATH. */ }
+        }
+    throw new Error('Verification executable is unavailable in the isolated PATH.');
 }
 
 
@@ -103172,6 +103521,264 @@ function checkRuntime(requirement, environment, run, platform, job) {
     if (!(0, verification_runtime_policy_1.verificationRuntimeMatches)(requirement.version, observed)) {
         throw new verification_runtime_policy_1.VerificationPrerequisiteError('version-mismatch', requirement, observed, job);
     }
+}
+
+
+/***/ }),
+
+/***/ 23358:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.applyVerificationSetupResult = applyVerificationSetupResult;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+function contained(root, path) {
+    const remainder = (0, node_path_1.relative)(root, path);
+    return remainder === '' || (remainder !== '..' && !remainder.startsWith(`..${node_path_1.sep}`) && !(0, node_path_1.isAbsolute)(remainder));
+}
+/** Accept only existing contained directories, checking both lexical paths and symlink targets. */
+function approvedDirectory(value, roots) {
+    if (!(0, node_path_1.isAbsolute)(value) || value.includes(node_path_1.delimiter) || value.split(/[\\/]/u).includes('..')
+        || !roots.some(root => contained(root, value)))
+        throw new verification_setup_policy_1.VerificationSetupError('result-invalid');
+    const actual = (0, node_fs_1.realpathSync)(value);
+    if (!roots.some(root => contained(root, actual)) || !(0, node_fs_1.lstatSync)(actual).isDirectory())
+        throw new verification_setup_policy_1.VerificationSetupError('result-invalid');
+    return actual;
+}
+function applyVerificationSetupResult(file, environment, roots) {
+    let descriptor;
+    try {
+        let before;
+        try {
+            before = (0, node_fs_1.lstatSync)(file, { bigint: true });
+        }
+        catch (error) {
+            if (error.code === 'ENOENT')
+                return;
+            throw error;
+        }
+        if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || before.size > BigInt(verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.resultBytes))
+            throw new Error();
+        descriptor = (0, node_fs_1.openSync)(file, node_fs_1.constants.O_RDONLY | (node_fs_1.constants.O_NOFOLLOW ?? 0));
+        const opened = (0, node_fs_1.fstatSync)(descriptor, { bigint: true });
+        if (!opened.isFile() || opened.nlink !== 1n || opened.dev !== before.dev || opened.ino !== before.ino
+            || opened.size !== before.size || opened.mtimeNs !== before.mtimeNs)
+            throw new Error();
+        const bytes = Buffer.alloc(verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.resultBytes + 1);
+        const size = (0, node_fs_1.readSync)(descriptor, bytes, 0, bytes.length, 0);
+        if (size > verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.resultBytes)
+            throw new Error();
+        const after = (0, node_fs_1.fstatSync)(descriptor, { bigint: true });
+        if (after.size !== opened.size || after.mtimeNs !== opened.mtimeNs)
+            throw new Error();
+        const result = (0, verification_setup_policy_1.parseVerificationSetupResult)(JSON.parse(bytes.subarray(0, size).toString('utf8')));
+        const paths = result.path.map(value => approvedDirectory(value, roots));
+        const javaHome = result.javaHome ? approvedDirectory(result.javaHome, roots) : undefined;
+        if (paths.length)
+            environment.PATH = [...paths, ...(environment.PATH ? [environment.PATH] : [])].join(node_path_1.delimiter);
+        if (javaHome)
+            environment.JAVA_HOME = javaHome;
+    }
+    catch {
+        throw new verification_setup_policy_1.VerificationSetupError('result-invalid');
+    }
+    finally {
+        if (descriptor !== undefined)
+            (0, node_fs_1.closeSync)(descriptor);
+    }
+}
+
+
+/***/ }),
+
+/***/ 11709:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.prepareRepositoryVerification = prepareRepositoryVerification;
+const verification_setup_snapshot_1 = __nccwpck_require__(62148);
+const native_verification_profiles_1 = __nccwpck_require__(22290);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const node_crypto_1 = __nccwpck_require__(6005);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+const verification_setup_result_1 = __nccwpck_require__(23358);
+const logging_ports_1 = __nccwpck_require__(6152);
+const native_verification_protocol_1 = __nccwpck_require__(88709);
+const native_verification_staging_1 = __nccwpck_require__(63587);
+const native_verification_candidate_1 = __nccwpck_require__(18883);
+/** The runner executes YAML. This adapter pauses the admitted call stack at its verification boundary. */
+async function prepareRepositoryVerification(setup, environment) {
+    if (setup.kind === 'disabled')
+        return;
+    if (setup.kind === 'blocked')
+        throw new verification_setup_policy_1.VerificationSetupError(setup.reason, setup.sourceSha);
+    const session = process.env.COPILOT_NATIVE_WORKER_SESSION;
+    if (!session)
+        throw new verification_setup_policy_1.VerificationSetupError('native-workflow-required', setup.sourceSha);
+    try {
+        (0, native_verification_protocol_1.nativeSession)(session);
+        const requests = (0, native_verification_protocol_1.readNativeRecord)(session, 'request-count.json')?.count ?? 0;
+        if (requests >= verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.requests)
+            throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+        (0, native_verification_protocol_1.writeNativeRecord)(session, 'request-count.json', { count: requests + 1 });
+        if ((0, node_fs_1.realpathSync)(process.cwd()) !== setup.workspace)
+            throw new verification_setup_policy_1.VerificationSetupError('workspace-changed');
+        (0, native_verification_profiles_1.registerNativeVerificationProfile)(session, environment.HOME);
+        const identity = (0, native_verification_candidate_1.verificationCandidateIdentity)(setup.workspace, environment);
+        (0, native_verification_staging_1.stageNativeVerificationAction)(setup, session);
+        const id = (0, node_crypto_1.randomUUID)();
+        (0, native_verification_protocol_1.writeNativeRecord)(session, 'request.json', { id, sourceSha: setup.sourceSha, digest: (0, verification_setup_snapshot_1.verificationSetupDigest)(setup), environment });
+        (0, logging_ports_1.logInfo)(`Preparing repository verification (${verification_setup_policy_1.VERIFICATION_SETUP_PATH}; trusted source SHA: ${setup.sourceSha}).`);
+        const deadline = Date.now() + verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.timeoutMs;
+        let response;
+        while (!(response = (0, native_verification_protocol_1.readNativeRecord)(session, `response-${id}.json`))) {
+            if ((0, native_verification_protocol_1.readNativeRecord)(session, 'cancel.json'))
+                throw new verification_setup_policy_1.VerificationSetupError('cancelled');
+            if (Date.now() >= deadline)
+                throw new verification_setup_policy_1.VerificationSetupError('timeout');
+            await (0, native_verification_protocol_1.nativePause)(100);
+        }
+        if (response.id !== id || response.success !== true)
+            throw new verification_setup_policy_1.VerificationSetupError('process-failed');
+        if ((0, native_verification_candidate_1.verificationCandidateIdentity)(setup.workspace, environment) !== identity)
+            throw new verification_setup_policy_1.VerificationSetupError('candidate-changed');
+        if (typeof response.path !== 'string' || response.path.length > 16384 || response.javaHome !== undefined && typeof response.javaHome !== 'string')
+            throw new verification_setup_policy_1.VerificationSetupError('result-invalid');
+        const original = new Set((environment.PATH ?? '').split(node_path_1.delimiter));
+        const previousProfiles = (0, native_verification_profiles_1.nativeVerificationProfilePaths)(session).filter(profile => profile !== environment.HOME);
+        const fromPreviousProfile = (path) => previousProfiles.some(profile => {
+            const part = (0, node_path_1.relative)(profile, path);
+            return part === '' || part !== '..' && !part.startsWith(`..${node_path_1.sep}`) && !(0, node_path_1.isAbsolute)(part);
+        });
+        const additions = [...new Set(response.path.split(node_path_1.delimiter).filter(path => path && !original.has(path) && !fromPreviousProfile(path)))];
+        const result = (0, node_path_1.join)(environment.HOME, 'native-setup-result.json');
+        (0, node_fs_1.writeFileSync)(result, JSON.stringify({ schemaVersion: 1, path: additions,
+            environment: response.javaHome && response.javaHome !== environment.JAVA_HOME ? { JAVA_HOME: response.javaHome } : {} }), { mode: 0o600, flag: 'wx' });
+        (0, verification_setup_result_1.applyVerificationSetupResult)(result, environment, [setup.workspace, environment.HOME, ...(setup.toolRoot ? [setup.toolRoot] : [])]);
+        (0, logging_ports_1.logInfo)('Repository setup completed; runtime preflight and verification may proceed.');
+    }
+    catch (error) {
+        throw new verification_setup_policy_1.VerificationSetupError(error instanceof verification_setup_policy_1.VerificationSetupError ? error.reason : 'handoff-invalid', setup.sourceSha);
+    }
+    finally {
+        (0, node_fs_1.rmSync)((0, node_path_1.join)(session, 'request.json'), { force: true });
+    }
+}
+
+
+/***/ }),
+
+/***/ 62148:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.verificationSetupDigest = verificationSetupDigest;
+exports.captureVerificationSetup = captureVerificationSetup;
+exports.captureVerificationSetupAtCommit = captureVerificationSetupAtCommit;
+const node_path_1 = __nccwpck_require__(49411);
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_crypto_1 = __nccwpck_require__(6005);
+const node_fs_1 = __nccwpck_require__(87561);
+const js_yaml_1 = __nccwpck_require__(783);
+const verification_setup_ports_1 = __nccwpck_require__(26509);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+const untrusted_command_environment_1 = __nccwpck_require__(2304);
+/** Only immutable Git objects are read. Errors remain deferred on non-verifying routes. */
+function verificationSetupDigest(setup) {
+    return (0, node_crypto_1.createHash)('sha256').update(JSON.stringify(setup.files)).digest('hex');
+}
+function captureVerificationSetup(enabled, mainBranch, root = process.cwd()) {
+    return capture(enabled, mainBranch, root);
+}
+/** Post steps use the already pinned commit from runner state, never a mutable branch ref. */
+function captureVerificationSetupAtCommit(commit, root = process.cwd(), gitExecutable) {
+    return capture(true, '', root, commit, gitExecutable);
+}
+function capture(enabled, mainBranch, root, pinned, gitExecutable) {
+    if (!enabled)
+        return verification_setup_ports_1.DISABLED_VERIFICATION_SETUP;
+    let sourceSha;
+    let runtime;
+    let snapshot;
+    try {
+        runtime = (0, untrusted_command_environment_1.prepareUntrustedCommandEnvironment)();
+        const environment = runtime.environment;
+        if (!pinned && (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,200}$/u.test(mainBranch) || mainBranch.includes('..')
+            || mainBranch.includes('//') || mainBranch.endsWith('/') || mainBranch.endsWith('.lock')))
+            throw new Error();
+        if (gitExecutable !== undefined && !(0, node_path_1.isAbsolute)(gitExecutable))
+            throw new Error();
+        const workspace = (0, node_fs_1.realpathSync)(root);
+        const git = (...args) => {
+            const result = (0, node_child_process_1.spawnSync)(gitExecutable ?? 'git', ['--no-replace-objects', ...args], { cwd: workspace, env: environment,
+                shell: false, windowsHide: true, timeout: 5000, maxBuffer: verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.snapshotBytes + 4096 });
+            if (result.error || result.status !== 0)
+                throw new Error();
+            return result.stdout;
+        };
+        const sha = pinned ?? git('rev-parse', '--verify', `refs/remotes/origin/${mainBranch}^{commit}`).toString('utf8').trim();
+        if (!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(sha))
+            throw new Error();
+        sourceSha = sha;
+        const entries = git('ls-tree', '-rz', sourceSha, '--', verification_setup_policy_1.VERIFICATION_SETUP_DIRECTORY).toString('utf8').split('\0').filter(Boolean);
+        if (!entries.length || entries.length > verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.files)
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        let total = 0;
+        const files = entries.map(entry => {
+            const match = /^(100644|100755) blob ([a-f0-9]{40}|[a-f0-9]{64})\t(.+)$/u.exec(entry);
+            if (!match || !match[3].startsWith(`${verification_setup_policy_1.VERIFICATION_SETUP_DIRECTORY}/`))
+                throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+            const path = match[3].slice(verification_setup_policy_1.VERIFICATION_SETUP_DIRECTORY.length + 1);
+            if (!/^[A-Za-z0-9_./-]{1,200}$/u.test(path) || path.split('/').some(part => !part || part === '.' || part === '..' || part.endsWith('.') || /^(?:con|prn|aux|nul|com[0-9]|lpt[0-9])(?:\.|$)/iu.test(part)))
+                throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+            const bytes = git('cat-file', 'blob', match[2]);
+            total += bytes.length;
+            const digest = (0, node_crypto_1.createHash)(match[2].length === 40 ? 'sha1' : 'sha256').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
+            if (bytes.length > verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.scriptBytes || total > verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.snapshotBytes || digest !== match[2])
+                throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+            return Object.freeze({ path, base64: bytes.toString('base64'), executable: match[1] === '100755' });
+        });
+        const manifest = files.find(file => file.path === 'action.yml');
+        if (!manifest)
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        const bytes = Buffer.from(manifest.base64, 'base64');
+        const text = bytes.toString('utf8');
+        if (!bytes.length || !bytes.equals(Buffer.from(text)) || text.includes('\0'))
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        let action;
+        try {
+            action = (0, js_yaml_1.load)(text);
+        }
+        catch {
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        }
+        if (action?.runs?.using !== 'composite' || !Array.isArray(action.runs.steps) || !action.runs.steps.length || action.runs.steps.length > 32)
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        if (action.runs.steps.some(step => !step || typeof step !== 'object' || 'uses' in step && typeof step.uses === 'string' && step.uses.startsWith('./')))
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        const toolRoot = environment.RUNNER_TOOL_CACHE ? (0, node_fs_1.realpathSync)(environment.RUNNER_TOOL_CACHE) : undefined;
+        snapshot = Object.freeze({ kind: 'ready', files: Object.freeze(files), sourceSha, workspace, ...(toolRoot ? { toolRoot } : {}) });
+    }
+    catch (error) {
+        snapshot = Object.freeze({ kind: 'blocked', reason: error instanceof verification_setup_policy_1.VerificationSetupError ? error.reason : 'source-unavailable', ...(sourceSha ? { sourceSha } : {}) });
+    }
+    try {
+        runtime?.cleanup();
+    }
+    catch {
+        snapshot = Object.freeze({ kind: 'blocked', reason: 'source-unavailable', ...(sourceSha ? { sourceSha } : {}) });
+    }
+    return snapshot;
 }
 
 

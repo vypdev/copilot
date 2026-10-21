@@ -1,3 +1,4 @@
+import { runNativeVerificationEntry } from '../infrastructure/native_verification_controller';
 import { createNativeStatusReadPort } from '../infrastructure/composition/issue_completion_composition_root';
 import * as core from '@actions/core';
 import * as github from '@actions/github';
@@ -255,5 +256,5 @@ function earlyGithubActionErrorMessage(): ApplicationErrorMessageReader {
 // Only auto-run when executed as the action entry (not when imported by tests)
 /* istanbul ignore next -- the bundled production entry is covered by the Action smoke path. */
 if (typeof process.env.JEST_WORKER_ID === 'undefined') {
-    void runGitHubActionEntry();
+    void runGitHubActionEntry(() => runNativeVerificationEntry(runGitHubActionEntry));
 }

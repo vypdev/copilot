@@ -140,6 +140,7 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     add('CHORE_TREE', repository.choreTree);
     add('ISSUE_MANAGED_BRANCHES', repository.issueManagedBranches);
     add('PRE_BRANCH_SDD', repository.preBranchSdd);
+    add('VERIFICATION_SETUP', repository.verificationSetup ?? false);
     add('REOPEN_ISSUE_ON_PUSH', repository.reopenIssueOnPush);
     add('DESIRED_ASSIGNEES_COUNT', repository.desiredAssigneesCount);
     add('DESIRED_REVIEWERS_COUNT', repository.desiredReviewersCount);
@@ -207,6 +208,7 @@ export function buildSetupActionInputs(configuration: SetupConfiguration): Recor
         'chore-tree': repository.choreTree,
         'issue-managed-branches': String(repository.issueManagedBranches),
         'pre-branch-sdd': String(repository.preBranchSdd),
+        'verification-setup': String(repository.verificationSetup ?? false),
         'reopen-issue-on-push': String(repository.reopenIssueOnPush),
         'desired-assignees-count': String(repository.desiredAssigneesCount),
         'desired-reviewers-count': String(repository.desiredReviewersCount),

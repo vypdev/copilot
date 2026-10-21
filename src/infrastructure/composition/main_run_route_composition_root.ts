@@ -201,13 +201,15 @@ function createDeploymentOrchestrationUseCase(
 }
 
 import { createCopilotHistoryReadPort } from './copilot_history_port_factory';
+import { captureVerificationSetup } from '../verification_setup_snapshot';
+import { DISABLED_VERIFICATION_SETUP, type PreparedVerificationSetup } from '../../application/ports/verification_setup_ports';
 
-export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBinding): IssueCommentUseCase {
+export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBinding, setup: PreparedVerificationSetup = DISABLED_VERIFICATION_SETUP): IssueCommentUseCase {
   const bugbot = createBugbotCompositionRoot(binding);
   const findings = createFindingsQueryPort();
   const language = createLanguageQueryPort();
   const fixer = createFixerQueryPort();
-  const gitCommit = new GitCommitAdapter();
+  const gitCommit = new GitCommitAdapter(undefined, undefined, setup);
   const authenticatedUser = createAuthenticatedUserCompositionRoot();
   const bugbotGit = new BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
   const pullRequestDescription = new UpdatePullRequestDescriptionUseCase(
@@ -265,12 +267,12 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
   );
 }
 
-export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: BugbotScmBinding): PullRequestReviewCommentUseCase {
+export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: BugbotScmBinding, setup: PreparedVerificationSetup = DISABLED_VERIFICATION_SETUP): PullRequestReviewCommentUseCase {
   const bugbot = createBugbotCompositionRoot(binding);
   const findings = createFindingsQueryPort();
   const language = createLanguageQueryPort();
   const fixer = createFixerQueryPort();
-  const gitCommit = new GitCommitAdapter();
+  const gitCommit = new GitCommitAdapter(undefined, undefined, setup);
   const authenticatedUser = createAuthenticatedUserCompositionRoot();
   const bugbotGit = new BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
   const pullRequestDescription = new UpdatePullRequestDescriptionUseCase(
@@ -362,7 +364,7 @@ export function createMainRunRouteCompositionRoot(
       return singleAction.invoke(execution);
     },
     "issue-comment": async (execution) => {
-      issueComment ??= createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution));
+      issueComment ??= createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution), captureVerificationSetup(execution.verificationSetup, execution.branches.main));
       return issueComment.invoke(execution);
     },
     issue: async (execution) => {
@@ -370,7 +372,7 @@ export function createMainRunRouteCompositionRoot(
       return issue.invoke(execution);
     },
     "pull-request-review-comment": async (execution) => {
-      pullRequestReviewComment ??= createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution));
+      pullRequestReviewComment ??= createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution), captureVerificationSetup(execution.verificationSetup, execution.branches.main));
       return pullRequestReviewComment.invoke(execution);
     },
     "pull-request": async (execution) => {
