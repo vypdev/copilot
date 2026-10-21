@@ -81007,6 +81007,63 @@ function isCopilotCommentRequest(commentBody, botLogin) {
 
 /***/ }),
 
+/***/ 33430:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.COPILOT_COMMENT_REMOTE_WORKFLOW = exports.COPILOT_COMMENT_SELF_WORKFLOW = exports.COPILOT_COMMENT_RUNTIME = void 0;
+exports.isCopilotCommentWorkflow = isCopilotCommentWorkflow;
+exports.isCopilotCommentRunner = isCopilotCommentRunner;
+exports.copilotCommentRunner = copilotCommentRunner;
+/** The comment coordinator is a versioned Copilot workflow, not an arbitrary reusable job. */
+exports.COPILOT_COMMENT_RUNTIME = 'copilot_comment_runtime.yml';
+exports.COPILOT_COMMENT_SELF_WORKFLOW = `$/.github/workflows/${exports.COPILOT_COMMENT_RUNTIME}`;
+exports.COPILOT_COMMENT_REMOTE_WORKFLOW = `vypdev/copilot/.github/workflows/${exports.COPILOT_COMMENT_RUNTIME}@v3`;
+function isCopilotCommentWorkflow(value) {
+    return typeof value === 'string' && (value === exports.COPILOT_COMMENT_SELF_WORKFLOW
+        || /^vypdev\/copilot\/\.github\/workflows\/copilot_comment_runtime\.yml@(?:v3(?:\.[0-9]+\.[0-9]+)?|[a-f0-9]{40})$/u.test(value));
+}
+const literal = (value) => typeof value === 'string' && value.length > 0 && value.length <= 100
+    && value === value.trim() && !/[\p{Cc}\p{Cf}${}<>]/u.test(value);
+const labels = (value) => literal(value) || Array.isArray(value) && value.length > 0 && value.length <= 10
+    && value.every(literal) && new Set(value.map(label => label.toLowerCase())).size === value.length;
+/** Runner routing is literal data; expressions need their original full workflow reviewed. */
+function isCopilotCommentRunner(value) {
+    if (labels(value))
+        return true;
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const route = value;
+    const keys = Object.keys(route);
+    return keys.length > 0 && (route.group !== undefined || route.labels !== undefined)
+        && keys.every(key => key === 'group' || key === 'labels')
+        && (route.group === undefined || literal(route.group))
+        && (route.labels === undefined || labels(route.labels));
+}
+function copilotCommentRunner(job) {
+    if (!job || !isCopilotCommentWorkflow(job.uses))
+        return job?.['runs-on'];
+    const inputs = job.with;
+    if (typeof inputs?.['runs-on'] !== 'string')
+        throw new Error('Comment workflow runner JSON is unavailable; review the workflow separately.');
+    try {
+        if (inputs['runs-on'].length > 16000)
+            throw new Error('Runner JSON exceeds its bound.');
+        const route = JSON.parse(inputs['runs-on']);
+        if (!isCopilotCommentRunner(route))
+            throw new Error('Unsupported execution route.');
+        return route;
+    }
+    catch {
+        throw new Error('Comment workflow runner JSON is invalid; review the workflow separately.');
+    }
+}
+
+
+/***/ }),
+
 /***/ 72418:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -92895,6 +92952,7 @@ const sensitive_text_1 = __nccwpck_require__(47122);
 const repository_agent_guidance_policy_1 = __nccwpck_require__(67402);
 const setup_verification_action_1 = __nccwpck_require__(33156);
 const setup_verification_action_2 = __nccwpck_require__(12471);
+const copilot_comment_workflow_1 = __nccwpck_require__(33430);
 exports.SETUP_RUNNER_SNAPSHOT = '.copilot/runner-profile.json';
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
     ? value : undefined;
@@ -92960,7 +93018,7 @@ function inspectSetupInstallation(root, configuration, setup = (0, node_path_1.j
         if (!parsedJobs)
             throw new Error('Workflow jobs are unavailable for review.');
         for (const [job, raw] of Object.entries(parsedJobs)) {
-            const runsOn = object(raw)?.['runs-on'];
+            const runsOn = (0, copilot_comment_workflow_1.copilotCommentRunner)(object(raw));
             if (runsOn === undefined)
                 continue; // reusable workflow calls have no runner
             jobs.push({ file, job, role: (0, setup_runner_policy_1.setupRunnerRole)(file, job) ?? 'validation',
@@ -93067,6 +93125,7 @@ const js_yaml_1 = __nccwpck_require__(783);
 const node_util_1 = __nccwpck_require__(47261);
 const setup_runner_policy_1 = __nccwpck_require__(91027);
 const action_types_1 = __nccwpck_require__(19625);
+const copilot_comment_workflow_1 = __nccwpck_require__(33430);
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
 const document = (value) => {
     try {
@@ -93088,6 +93147,8 @@ const runner = (value) => labels(value) || !!object(value)
     && (object(value).labels === undefined || labels(object(value).labels));
 const copilotCommands = new Set(Object.values(action_types_1.ACTIONS));
 const callsRootAction = (jobs) => !!jobs && Object.values(jobs).some(job => {
+    if (object(job)?.uses === copilot_comment_workflow_1.COPILOT_COMMENT_SELF_WORKFLOW)
+        return true;
     const steps = object(job)?.steps;
     return Array.isArray(steps) && steps.some(step => {
         const invocation = object(step);
@@ -93150,6 +93211,32 @@ function renderSetupWorkflowUpgrade(template, existing, selection) {
     const templateJobs = object(document(template)?.jobs);
     if (!previousJobs || !templateJobs)
         throw new Error('Workflow jobs cannot be inspected; review the workflow separately.');
+    if (Object.values(templateJobs).some(job => (0, copilot_comment_workflow_1.isCopilotCommentWorkflow)(object(job)?.uses))) {
+        const parsed = document(template);
+        const jobs = object(parsed.jobs);
+        let changed = false;
+        for (const [name, value] of Object.entries(jobs)) {
+            const job = object(value);
+            if (!(0, copilot_comment_workflow_1.isCopilotCommentWorkflow)(job.uses))
+                throw new Error('Mixed comment workflow jobs require separate workflow review before setup.');
+            const previousJob = object(previousJobs[name]);
+            if (Array.isArray(previousJob?.steps) && previousJob.steps.some(raw => {
+                const uses = object(raw)?.uses;
+                return typeof uses !== 'string' || !(uses.startsWith('actions/checkout@')
+                    || /^vypdev\/copilot@[^\s]+$/u.test(uses) || uses === './.git/copilot-verification-setup');
+            }))
+                throw new Error('Custom comment job steps require migration to the reviewed repository verification setup action before switching to the reusable workflow. Review the workflow separately.');
+            const retained = (0, setup_runner_policy_1.selectedSetupRunsOn)(selection?.runners, selection && (0, setup_runner_policy_1.setupRunnerRole)(selection.file, name))
+                ?? (0, copilot_comment_workflow_1.copilotCommentRunner)(previousJob) ?? (0, copilot_comment_workflow_1.copilotCommentRunner)(job);
+            if (!runner(retained))
+                throw new Error('Existing runner selection is invalid; review the workflow separately.');
+            if (JSON.stringify(retained).includes('${{') && existing !== template)
+                throw new Error('Dynamic runner selection requires separate workflow review before setup.');
+            changed || (changed = !(0, node_util_1.isDeepStrictEqual)(retained, (0, copilot_comment_workflow_1.copilotCommentRunner)(job)));
+            job.with = { ...object(job.with), 'runs-on': JSON.stringify(retained) };
+        }
+        return changed ? (0, js_yaml_1.dump)(parsed, { noRefs: true, lineWidth: -1 }) : template;
+    }
     const lines = template.split('\n');
     let job = '';
     let insideJobs = false;

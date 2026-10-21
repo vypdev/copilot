@@ -3,6 +3,8 @@
 const { readFileSync, readdirSync } = require('node:fs');
 const path = require('node:path');
 const yaml = require('js-yaml');
+const commentContract = require('./generate-native-verification-workflows.cjs');
+const { assertCommentWorkflowCaller, assertCommentWorkflowRuntime } = require('./validate-comment-workflows.cjs');
 
 const repositoryRoot = path.resolve(__dirname, '..');
 const workflowDirectories = [
@@ -113,6 +115,7 @@ const AGENT_ROLE_INPUTS = Object.freeze(Object.fromEntries(
   ]]),
 ));
 const WORKFLOW_AGENT_ROLES = Object.freeze({
+  'copilot_comment_runtime.yml': ['findings', 'fixer', 'planner', 'reviewer', 'tester'],
   'copilot_issue.yml': ['planner'],
   'copilot_pull_request.yml': ['planner', 'reviewer'],
   'copilot_pull_request_review_state.yml': ['planner', 'reviewer'],
@@ -145,6 +148,7 @@ function relativeWorkflow(file) {
 }
 
 function expectedCopilotAction(relativeFile) {
+  if (path.basename(relativeFile) === commentContract.RUNTIME) return commentContract.SELF_ACTION;
   if (relativeFile.startsWith('setup/workflows/')) return DISTRIBUTED_COPILOT_ACTION;
   const native = require('./generate-native-verification-workflows.cjs');
   return native.CALLBACKS.includes(path.basename(relativeFile)) ? native.SOURCE_ACTION : './';
@@ -152,7 +156,7 @@ function expectedCopilotAction(relativeFile) {
 
 function isCopilotAction(step) {
   return typeof step?.uses === 'string'
-    && (step.uses === './' || step.uses === './../.copilot-native-runtime' || /(?:^|\/)copilot@/.test(step.uses));
+    && (step.uses === '$/' || step.uses === './' || step.uses === './../.copilot-native-runtime' || /(?:^|\/)copilot@/.test(step.uses));
 }
 
 function shouldPersistCheckoutCredentials(relativeFile, jobId) {
@@ -183,7 +187,7 @@ function assertMajorActionReferences(file, workflow) {
         }
         continue;
       }
-      if (uses.startsWith('./') || uses.startsWith('docker://')) continue;
+      if (uses.startsWith('./') || uses.startsWith('$/') || uses.startsWith('docker://')) continue;
       if (!MAJOR_ACTION_REFERENCE.test(uses)) {
         throw new Error(`${relativeFile} job ${jobId} action ${uses} must use a major version tag such as owner/action@v1.`);
       }
@@ -340,6 +344,8 @@ function assertPlatformHistoryCheckout(relativeFile, job) {
 
 function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
+  if (path.basename(file) === commentContract.RUNTIME) return assertCommentWorkflowRuntime(file, workflow);
+  if (commentContract.CALLBACKS.includes(path.basename(file))) return assertCommentWorkflowCaller(file, workflow);
   if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
     const jobIds = Object.keys(workflow.jobs ?? {}).sort();
     if (JSON.stringify(jobIds) !== JSON.stringify(['setup-platform-smoke', 'setup-self-hosted-codex-smoke', 'upload-windows-coverage', 'windows-startup-probe'])) {
@@ -565,7 +571,7 @@ function assertAgentInstallationPrerequisites(file, workflow) {
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     const steps = job.steps ?? [];
     for (const step of steps) {
-      const repositoryVerificationStep = ['.github/workflows/copilot_issue_comment.yml', '.github/workflows/copilot_pull_request_comment.yml'].includes(relativeFile)
+      const repositoryVerificationStep = ['.github/workflows/copilot_issue_comment.yml', '.github/workflows/copilot_pull_request_comment.yml', '.github/workflows/copilot_comment_runtime.yml'].includes(relativeFile)
         && step.if === "env.COPILOT_PREPARE_VERIFICATION == 'true'"
         && ((step.name === 'Prepare repository Node' && step.uses === 'actions/setup-node@v7' && step.with?.['node-version'] === '24.x')
           || (step.name === 'Prepare repository pnpm' && step.uses === 'pnpm/action-setup@v5' && step.with?.version === '10.12.4')
@@ -596,7 +602,7 @@ function assertAgentWorkflowPermissions(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (!WORKFLOW_AGENT_ROLES[path.basename(file)]) return;
   const reviewEvidenceWorkflow = ['copilot_pull_request.yml', 'copilot_pull_request_review_state.yml',
-    'copilot_issue_comment.yml', 'copilot_pull_request_comment.yml'].includes(path.basename(file));
+    'copilot_issue_comment.yml', 'copilot_pull_request_comment.yml', 'copilot_comment_runtime.yml'].includes(path.basename(file));
   const expectedPermissions = reviewEvidenceWorkflow
     ? { checks: 'write', contents: 'read' }
     : { contents: 'read' };
@@ -608,6 +614,10 @@ function assertAgentWorkflowPermissions(file, workflow) {
       || permissionKeys.some((key, index) => key !== expectedKeys[index])
       || expectedKeys.some(key => permissions[key] !== expectedPermissions[key])) {
       throw new Error(`${relativeFile} job ${jobId} must grant GITHUB_TOKEN exactly ${expectedKeys.map(key => `${key}: ${expectedPermissions[key]}`).join(', ')}; mutations use the explicit PAT.`);
+    }
+    if (commentContract.CALLBACKS.includes(path.basename(file)) && job.uses) {
+      assertCommentWorkflowCaller(file, workflow);
+      continue;
     }
     if (reviewEvidenceWorkflow && !(job.steps ?? []).some(step =>
       isCopilotAction(step) && step?.env?.COPILOT_EVIDENCE_TOKEN === '${{ github.token }}')) {
@@ -1306,6 +1316,7 @@ function assertQueueWorkflow(file, workflow) {
   if (BOT_GATED_WORKFLOW_FILES.has(manifest.file) && queueJob.if !== expectedBotGate) {
     throw new Error(`${relativeFile} queue job ${manifest.jobId} must use the required bot actor${FORK_GATED_WORKFLOW_FILES.has(manifest.file) ? ' and same-repository PR' : ''} gate.`);
   }
+  if (commentContract.CALLBACKS.includes(manifest.file)) return assertCommentWorkflowCaller(file, workflow);
   if (typeof queueJob['timeout-minutes'] !== 'number'
     || queueJob['timeout-minutes'] < MIN_QUEUE_JOB_TIMEOUT_MINUTES) {
     throw new Error(`${relativeFile} queue job ${manifest.jobId} must have timeout-minutes >= ${MIN_QUEUE_JOB_TIMEOUT_MINUTES}.`);
@@ -1386,6 +1397,7 @@ function assertIssueWorkflowProfileInput(file, workflow) {
 
 function assertIssueBranchConfigurationInputs(file, workflow) {
   if (!WORKFLOW_AGENT_ROLES[path.basename(file)]) return;
+  if (commentContract.CALLBACKS.includes(path.basename(file))) return assertCommentWorkflowCaller(file, workflow);
   const relativeFile = relativeWorkflow(file);
   const distributed = relativeFile.startsWith('setup/workflows/');
   const branches = JSON.parse(readFileSync(path.join(repositoryRoot, '.copilot/repository-profile.json'), 'utf8')).branches;
@@ -1410,27 +1422,27 @@ function assertIssueBranchConfigurationInputs(file, workflow) {
 
 function assertNativeVerificationWorkflow(file, workflow) {
   const contract = require('./generate-native-verification-workflows.cjs');
-  if (!contract.CALLBACKS.includes(path.basename(file))) return;
-  const relativeFile = relativeWorkflow(file);
-  const action = expectedCopilotAction(relativeFile);
-  const jobs = Object.values(workflow.jobs ?? {}).filter(job => (job.steps ?? []).some(step => step.id === 'copilot'));
-  if (jobs.length !== 1) throw new Error(`${relativeFile} must have exactly one native verification operation.`);
-  const steps = jobs[0].steps;
-  const start = steps.findIndex(step => step.id === 'copilot');
-  const original = steps[start];
-  if (!relativeFile.startsWith('setup/workflows/')) {
-    const snapshot = steps[start - 1];
-    if (snapshot?.id !== 'prepare_native_runtime' || snapshot.run !== 'node scripts/prepare-native-source-action.cjs'
-      || original.env?.COPILOT_NATIVE_RUNTIME_CACHE !== '${{ steps.prepare_native_runtime.outputs.path }}') throw new Error(`${relativeFile} must snapshot its Action runtime before candidate changes.`);
-  }
-  if (original.uses !== action || original.env?.COPILOT_NATIVE_PHASE !== 'prepare') throw new Error(`${relativeFile} must prepare the admitted native operation.`);
-  const expected = contract.phaseSteps(action).map(step => ({ ...step, ...(step.with ? { with: original.with } : {}) }));
-  const actual = steps.slice(start + 1);
-  if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(`${relativeFile} must retain the exact bounded native setup/continuation contract, runtime-only environment, timeout and completion cleanup.`);
+  if (path.basename(file) === contract.RUNTIME) return assertCommentWorkflowRuntime(file, workflow);
+  if (contract.CALLBACKS.includes(path.basename(file))) return assertCommentWorkflowCaller(file, workflow);
+
 }
 
 function validateWorkflow(file, workflow) {
   if (!workflow || typeof workflow !== 'object') throw new Error('workflow document is empty.');
+  if (commentContract.CALLBACKS.includes(path.basename(file))) {
+    assertCommentWorkflowCaller(file, workflow);
+    assertDirectEventTriggers(file, workflow);
+    return;
+  }
+  if (path.basename(file) === commentContract.RUNTIME) {
+    assertCommentWorkflowRuntime(file, workflow);
+    assertCopilotActionInputs(file, workflow);
+    assertNoJobLevelSecrets(file, workflow);
+    assertAgentWorkflowPermissions(file, workflow);
+    assertAgentInputs(file, workflow);
+    assertRepositoryLocaleInputs(file, workflow);
+    return;
+  }
   assertNativeVerificationWorkflow(file, workflow);
   assertManualRepoWiseWorkflow(file, workflow);
   assertDirectEventTriggers(file, workflow);

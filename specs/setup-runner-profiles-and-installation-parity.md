@@ -507,3 +507,32 @@ isolated fixed version probes and safe blocked recovery. Runner selection does n
 install project language tools. Existing consumers without the declaration retain
 legacy verification. This companion owns its shared incremental numeric test budget;
 do not count it twice across the setup and synchronization capabilities.
+
+
+## Compact comment coordinator amendment — issue #662
+
+Comment callbacks now delegate their complete job to the Copilot-owned reusable
+workflow specified in [comment coordinator](./copilot-comment-workflow-coordinator.md).
+Their reviewed route is serialized in `with.runs-on` JSON instead of a native
+job `runs-on` key. The pure `copilot_comment_workflow` contract recognizes only
+the known versioned coordinator and the exact source self-repository reference;
+YAML and workspace adapters retain parsing, migration, preview and Apply.
+
+Setup MUST retain scalar/label/group routes from both old native jobs and new
+coordinator calls, apply explicit profile precedence, show the same per-role
+routing in review, and write exactly the reviewed YAML. Dynamic or malformed
+runner input MUST block rather than fall back. Source self-repository callbacks
+remain complete source-owned assets. Custom legacy bootstrap steps MUST require
+reviewed migration before switching job shapes; no steps may silently disappear.
+Known reusable installation inspection MUST preserve effective Variable/default
+and literal override semantics without reading Secret values or claiming an
+unverified local Action identity. Runner 2.336.0+ and GitHub platform support are
+additional coordinator prerequisites, not evidence of access or capacity.
+
+Verification maps these requirements to the new pure contract cases, comment
+upgrade cases, installation reader cases and preview/Apply parity fixture. Their
+shared incremental **40-case** budget is owned by the native-setup amendment and
+is not counted twice here. Existing role isolation, coverage gates, receipts,
+backup and recovery remain unchanged. Update verification, upgrade and runner
+operations docs, regenerate catalog evidence/bundles, and pass all validators
+before publication.

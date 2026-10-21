@@ -125,6 +125,26 @@ Each repository can prepare its dependencies in a native composite action, witho
 editing generated Copilot workflows. GitHub Actions executes the YAML's `uses` and
 `run` steps in the same job where Copilot verifies the candidate.
 
+The generated issue-comment and PR-review-comment workflows call
+`vypdev/copilot/.github/workflows/copilot_comment_runtime.yml@v3`. This reusable
+workflow keeps the complete job inside Copilot: checkout, the admitted operation,
+project setup, verification continuations and native cleanup. Consumer callbacks
+contain one call; they do not copy the twenty possible continuation slots.
+Your dependency action stays in your own repository.
+
+The coordinator reads the caller repository's existing Variables and receives
+only the named Secrets forwarded by the generated callback. Provider credentials
+remain scoped to the initial Copilot step. The project setup action receives the
+existing private runtime environment. Setup retains the selected runner in the
+call's `with.runs-on` JSON string, including self-hosted labels and runner groups.
+
+GitHub Actions runner **2.336.0 or newer** is required: the coordinator's `uses: $/`
+references load Copilot from the exact reusable-workflow commit, including a
+consumer's pinned SHA, outside the mutable project checkout. This is supported on
+GitHub.com; verify equivalent platform support before adopting it elsewhere.
+See [GitHub's self-repository reference announcement](https://github.blog/changelog/2026-07-30-reference-same-repository-actions-with-self-repository-syntax/).
+The existing five-minute setup limit and 120-minute job budget remain in force.
+
 ```mermaid
 flowchart LR
   A[Copilot prepares changes] --> B[Repository composite installs dependencies]
@@ -148,8 +168,8 @@ apply the existing publication guards. A separate CI job does not prepare this j
    your project's reviewed runtime and dependency setup; no language, version or
    install command is inferred, and setup does not execute the action.
 3. Update the generated comment workflows with `copilot setup --update-workflows`
-   and review the complete diff. They need the native setup and continuation
-   steps; an older callback cannot execute YAML. Review the action, auxiliary
+   and review the complete diff. They need the reusable coordinator call; an older
+   callback without native support cannot execute YAML. Review the action, auxiliary
    scripts and workflows onto the configured `main-branch` (`MAIN_BRANCH`, normally
    production). Candidate or model changes cannot replace the trusted action.
 4. Enable the same question in the terminal/web assistant, or set non-secret
@@ -181,6 +201,14 @@ For an existing installation, follow the [three-layer upgrade and rollback
 procedure](/security-operations/operations/upgrade-rollback#upgrade-an-existing-copilot-repository).
 This repository's `setup_platform_smoke.yml` is internal CI and is not installed
 in consumer projects.
+
+If your old comment job contains custom bootstrap steps, keep that reviewed
+workflow until you move those steps into the trusted project setup action and
+review its activation. A job that calls a reusable workflow cannot also declare
+its own steps. Setup blocks that migration rather than silently removing custom
+preparation; it also blocks malformed runner JSON or dependent runner expressions
+that require separate workflow review. Plain generated callbacks and previously
+upgraded callbacks retain their static runner selection automatically.
 
 Copilot captures the complete action directory from an immutable trusted Git SHA
 before candidate changes. The trusted origin ref must be available locally;

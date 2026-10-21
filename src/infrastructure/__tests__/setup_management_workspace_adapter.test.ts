@@ -2,6 +2,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SetupManagementWorkspaceAdapter } from '../setup_management_workspace_adapter';
+import { COPILOT_COMMENT_REMOTE_WORKFLOW, COPILOT_COMMENT_SELF_WORKFLOW } from '../../domain/copilot_comment_workflow';
 const roots: string[] = [];
 function fixture(source?: string) { const root = mkdtempSync(join(tmpdir(), 'copilot-management-')); roots.push(root); const directory = join(root, '.github', 'workflows'); mkdirSync(directory, { recursive: true }); if (source !== undefined) writeFileSync(join(directory, 'copilot.yml'), source); return { root, directory, adapter: new SetupManagementWorkspaceAdapter(root, () => 'revision-a') }; }
 const workflow = (inputs: string, extra = '') => `name: Copilot
@@ -76,4 +77,45 @@ test('multiple local workflows retain the same Action evidence and all input bin
  const f=fixture(source); writeFileSync(join(f.directory,'second.yml'),source);
  writeFileSync(join(f.root,'action.yml'), 'name: Copilot - GitHub with super powers\ninputs:\n  bugbot-comment-limit: {default: 20}\n');
  expect(f.adapter.inspect()).toMatchObject({ unreadable:false, localActionDigest:expect.any(String), workflows:[{file:'copilot.yml',action:'./'},{file:'second.yml',action:'./'}] });
+});
+
+describe('reusable comment installation inspection', () => {
+ const reusable = (uses = COPILOT_COMMENT_REMOTE_WORKFLOW, inputs = '') => `jobs:\n  comments:\n    uses: ${uses}\n    with:\n      runs-on: '"ubuntu-latest"'\n${inputs}\n    secrets:\n      PAT: \${{ secrets.PAT }}\n`;
+ test.each(['v3', 'v3.10.0', 'a'.repeat(40)])('reads effective Variable defaults from the known coordinator at %s without copying Secrets', ref => {
+  const f = fixture(reusable(COPILOT_COMMENT_REMOTE_WORKFLOW.replace('@v3', '@' + ref)));
+  const result = f.adapter.inspect();
+  expect(result.unreadable).toBe(false);
+  expect(result.workflows[0]).toMatchObject({ action: `vypdev/copilot@${ref}`, inputs: expect.arrayContaining([
+   { name: 'bugbot-comment-limit', variable: 'BUGBOT_COMMENT_LIMIT', fallback: '20' },
+   { name: 'verification-setup', variable: 'VERIFICATION_SETUP', fallback: 'false' },
+  ]) });
+  expect(JSON.stringify(result)).not.toContain('secrets.'); expect(result.workflows[0].inputs.some(input => input.name === 'token')).toBe(false);
+ });
+ test('retains explicit and empty caller overrides with their actual precedence', () => {
+  const f = fixture(reusable(COPILOT_COMMENT_REMOTE_WORKFLOW, "      pre-branch-sdd: 'true'\n      ai-ignore-files: ''"));
+  expect(f.adapter.inspect().workflows[0].inputs).toEqual(expect.arrayContaining([
+   { name: 'pre-branch-sdd', literal: 'true' }, { name: 'ai-ignore-files', variable: 'AI_IGNORE_FILES', fallback: 'build/*' },
+  ]));
+ });
+ test('unknown caller inputs block guessed effective configuration', () => {
+  expect(fixture(reusable(COPILOT_COMMENT_REMOTE_WORKFLOW, '      unknown-input: true')).adapter.inspect()).toMatchObject({ unreadable: true, workflows: [] });
+ });
+ test.each(['master', 'v4', ''])('an unsupported coordinator ref %s cannot disappear from installation evidence', ref => {
+  const f = fixture(reusable(COPILOT_COMMENT_REMOTE_WORKFLOW.replace('@v3', '@' + ref)));
+  writeFileSync(join(f.directory, 'other.yml'), workflow('bugbot-comment-limit: 20'));
+  expect(f.adapter.inspect()).toMatchObject({ unreadable: true, workflows: [{ file: 'other.yml', action: 'vypdev/copilot@v3' }] });
+ });
+ test('an unverified workspace-relative coordinator cannot be treated as absent', () => {
+  expect(fixture(reusable(COPILOT_COMMENT_SELF_WORKFLOW.replace('$/', './'))).adapter.inspect()).toMatchObject({ unreadable: true, workflows: [] });
+ });
+ test('a self-repository call without known Copilot metadata fails closed', () => {
+  expect(fixture(reusable(COPILOT_COMMENT_SELF_WORKFLOW)).adapter.inspect()).toMatchObject({ unreadable: true, workflows: [] });
+ });
+ test('a verified source coordinator binds the local Action metadata and explicit source policy', () => {
+  const f = fixture(reusable(COPILOT_COMMENT_SELF_WORKFLOW, "      pre-branch-sdd: 'true'"));
+  writeFileSync(join(f.root, 'action.yml'), 'name: Copilot - GitHub with super powers\ninputs:\n  bugbot-comment-limit: {default: 20}\n');
+  expect(f.adapter.inspect()).toMatchObject({ unreadable: false, localActionDigest: expect.any(String), workflows: [
+   { action: './', inputs: expect.arrayContaining([{ name: 'pre-branch-sdd', literal: 'true' }]) },
+  ] });
+ });
 });

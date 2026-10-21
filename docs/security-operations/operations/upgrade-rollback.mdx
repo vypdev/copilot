@@ -43,8 +43,8 @@ Copilot has three separate versioned layers:
 | Layer | What changes it | What still needs review |
 |---|---|---|
 | Installed CLI | `copilot upgrade` or an explicit npm/pnpm package version | The CLI prepares local files; it does not rewrite committed workflows merely by upgrading |
-| Remote Action reference | The Copilot `uses` references in committed workflows | `@v3` follows the published major tag; an exact version or commit SHA stays pinned until explicitly changed |
-| Generated workflow files | An approved `copilot setup --update-workflows` run | New jobs, inputs and native continuation steps must be committed, reviewed and merged |
+| Remote Copilot reference | Action and reusable-workflow `uses` references in committed workflows | `@v3` follows the published major tag; an exact version or commit SHA stays pinned until explicitly changed |
+| Generated workflow files | An approved `copilot setup --update-workflows` run | New jobs, inputs and coordinator calls must be committed, reviewed and merged |
 
 Moving a tag does not add steps to an old YAML file. Upgrading the CLI does not
 change the Action references in Git. A merge into `develop` is not a package or
@@ -72,6 +72,18 @@ copilot setup --web --dry-run
 
 **3. Regenerate and review workflows.**
 
+Before upgrading the comment callbacks, update self-hosted GitHub Actions runners
+to **2.336.0+**. The centralized coordinator uses GitHub.com's self-repository
+references to keep its internal Action on the exact selected workflow commit.
+Verify platform support before adopting this format on other GitHub deployments.
+Check that the repository/organization Actions policy permits the published
+`vypdev/copilot/.github/workflows/copilot_comment_runtime.yml` reusable workflow
+at your selected ref, as well as the existing Copilot Action.
+If the existing comment jobs have custom dependency/bootstrap steps, migrate them
+into the reviewed repository setup action before replacing those jobs; setup
+blocks silently dropping them. Keep the prior reviewed callbacks until this is
+ready. See [repository-owned setup](/security-operations/operations/verification#repository-owned-setup).
+
 Apply a reviewed workflow upgrade:
 
 ```bash
@@ -83,9 +95,14 @@ verification setup question disabled for this preparation pass. Review the
 displayed create/preserve result and changes before approval. The installer
 creates `.github/actions/copilot-verification-setup/action.yml` only if absent;
 existing action bytes and auxiliary files are preserved through upgrades.
-Generated workflows use `vypdev/copilot@v3`. If your repository pins versions
-or SHAs, review **every** Copilot `uses` reference, including native
-continuation/post steps, and apply the same chosen compatible published ref.
+Generated comment callbacks use
+`vypdev/copilot/.github/workflows/copilot_comment_runtime.yml@v3`; other generated
+callbacks continue using `vypdev/copilot@v3`. The coordinator owns setup,
+continuations and cleanup in one job, keeping consumer YAML compact. If your
+repository pins versions or SHAs, update the reusable-workflow and remaining
+Action references to the chosen compatible published release. You do not edit
+the internal `uses: $/` references: GitHub pins them to the called workflow commit.
+The reviewed runner route is retained in the comment call's `with.runs-on` JSON.
 Workflow backups are retained under `.copilot/setup-backups/`.
 
 **4. Customize and merge on trusted main.**
@@ -110,7 +127,8 @@ repository:
 Setup writes `VERIFICATION_SETUP` only when Variable management is enabled
 and follows the reviewed storage/reuse policy. With `--skip-variables`, update
 the effective Variable manually. Confirm that generated workflows pass the
-`verification-setup` input and that the trusted action has been customized.
+`VERIFICATION_SETUP` Variable through the coordinator (or the direct Action's
+`verification-setup` input), and that the trusted action has been customized.
 Choose **Customize** when changing an existing repository Variable; **Reuse**
 keeps existing values. If an organization value must differ for this project,
 select `VERIFICATION_SETUP` in the repository Variable overrides and review the

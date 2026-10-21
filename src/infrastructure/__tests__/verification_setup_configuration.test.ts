@@ -40,8 +40,17 @@ describe('verification setup installation contract', () => {
     it.each(['copilot_issue.yml', 'copilot_issue_comment.yml', 'copilot_pull_request.yml', 'copilot_pull_request_comment.yml', 'copilot_pull_request_review_state.yml', 'copilot_commit.yml'])(
         'keeps source and distributed %s opt-in explicit and disabled by default', name => {
             for (const directory of ['.github/workflows', 'setup/workflows']) {
-                const workflow = yaml.load(fs.readFileSync(path.resolve(__dirname, '../../..', directory, name), 'utf8')) as {jobs: Record<string, {steps: {uses?: string; with?: Record<string, unknown>}[]}>};
-                const actions = Object.values(workflow.jobs).flatMap(job => job.steps).filter(step => step.uses === './' || step.uses === './../.copilot-native-runtime' || step.uses?.startsWith('vypdev/copilot@'));
+                type Workflow = {jobs: Record<string, {uses?: string; with?: Record<string, unknown>; steps?: {uses?: string; with?: Record<string, unknown>}[]}>};
+                let workflow = yaml.load(fs.readFileSync(path.resolve(__dirname, '../../..', directory, name), 'utf8')) as Workflow;
+                if (name === 'copilot_issue_comment.yml' || name === 'copilot_pull_request_comment.yml') {
+                    const caller = Object.values(workflow.jobs)[0];
+                    expect(caller.uses).toBe(directory.startsWith('setup/')
+                        ? 'vypdev/copilot/.github/workflows/copilot_comment_runtime.yml@v3'
+                        : '$/.github/workflows/copilot_comment_runtime.yml');
+                    expect(caller.with?.['verification-setup']).toBeUndefined();
+                    workflow = yaml.load(fs.readFileSync(path.resolve(__dirname, '../../../.github/workflows/copilot_comment_runtime.yml'), 'utf8')) as Workflow;
+                }
+                const actions = Object.values(workflow.jobs).flatMap(job => job.steps ?? []).filter(step => step.uses === '$/' || step.uses === './' || step.uses?.startsWith('vypdev/copilot@'));
                 expect(actions.length).toBeGreaterThan(0);
                 for (const action of actions) expect(action.with?.['verification-setup']).toBe("${{ vars.VERIFICATION_SETUP || 'false' }}");
             }
