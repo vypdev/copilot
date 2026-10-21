@@ -82,6 +82,14 @@ describe('native verification boundary', () => {
         f.respond(); await expect(running).rejects.toMatchObject({ reason: 'candidate-changed' });
         expect(fs.existsSync(f.action)).toBe(false);
     });
+    (process.platform === 'win32' ? it.skip : it).each(['executable mode', 'file type'])('withholds verification when setup changes an untracked candidate %s without changing its bytes', async kind => {
+        const file = join(f.root, 'new-script');
+        fs.writeFileSync(file, 'same'); fs.chmodSync(file, 0o644);
+        const running = prepareRepositoryVerification(f.setup, f.runtime.environment);
+        if (kind === 'executable mode') fs.chmodSync(file, 0o755);
+        else { fs.rmSync(file); fs.symlinkSync('same', file); }
+        f.respond(); await expect(running).rejects.toMatchObject({ reason: 'candidate-changed' });
+    });
     it.each([{success: false}, {id: 'wrong'}, {path: 1}, {javaHome: 1}, {path: '/outside/invalid'}])('rejects failed or malformed native outcomes %j', async response => {
         const running = prepareRepositoryVerification(f.setup, f.runtime.environment); f.respond(() => response);
         await expect(running).rejects.toThrow('Verification, commit and push are withheld');

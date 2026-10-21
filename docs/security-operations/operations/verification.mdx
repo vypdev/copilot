@@ -259,7 +259,7 @@ pinned trusted SHA, never copied raw setup output.
 
 Setup must install dependencies without changing publishable code or lockfiles.
 Copilot compares HEAD, branch, index, tracked edits and publishable untracked file
-contents before allowing the verifier to continue. Executable lookup uses that verifier's
+contents, types and executable modes before allowing the verifier to continue. Executable lookup uses that verifier's
 validated PATH, so its private Python/pnpm takes precedence over the worker tools. Observations are bounded to
 16 MiB, 256 untracked files and 16 MiB aggregate untracked contents. Ignore dependency
 caches and keep source changes within these bounds. Failure, changed candidate,

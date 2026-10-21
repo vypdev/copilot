@@ -27,8 +27,8 @@ export function verificationCandidateIdentity(workspace: string, environment: Re
         total += stat.size;
         if (total > 16 * 1024 * 1024) throw new VerificationSetupError('candidate-changed');
         hash.update(path).update('\0');
-        if (stat.isSymbolicLink()) hash.update(readlinkSync(file));
-        else if (stat.isFile()) hash.update(readFileSync(file));
+        if (stat.isSymbolicLink()) hash.update('120000\0').update(readlinkSync(file));
+        else if (stat.isFile()) hash.update(stat.mode & 0o100 ? '100755\0' : '100644\0').update(readFileSync(file));
         else throw new VerificationSetupError('candidate-changed');
         hash.update('\0');
     }

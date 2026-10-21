@@ -88381,9 +88381,9 @@ function verificationCandidateIdentity(workspace, environment) {
             throw new verification_setup_policy_1.VerificationSetupError('candidate-changed');
         hash.update(path).update('\0');
         if (stat.isSymbolicLink())
-            hash.update((0, node_fs_1.readlinkSync)(file));
+            hash.update('120000\0').update((0, node_fs_1.readlinkSync)(file));
         else if (stat.isFile())
-            hash.update((0, node_fs_1.readFileSync)(file));
+            hash.update(stat.mode & 0o100 ? '100755\0' : '100644\0').update((0, node_fs_1.readFileSync)(file));
         else
             throw new verification_setup_policy_1.VerificationSetupError('candidate-changed');
         hash.update('\0');

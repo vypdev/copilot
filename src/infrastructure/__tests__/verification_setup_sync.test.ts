@@ -102,7 +102,7 @@ describe('repository setup during same-managed-branch synchronization', () => {
         expect(git('show', `${remoteHead()}:${VERIFICATION_SETUP_PATH}`)).toContain('candidate helper must never execute');
         expect(git('--git-dir', remote, 'for-each-ref', '--format=%(refname)', 'refs/heads').split('\n').sort())
             .toEqual(['refs/heads/develop', `refs/heads/${branch}`, 'refs/heads/main']);
-    });
+    }, process.platform === 'win32' ? 30_000 : 5_000);
     it('skips setup in dry runs even when the trusted helper is invalid', async () => {
         git('update-ref', 'refs/remotes/origin/main', childSha);
         const result = await synchronize(true, ['node verify.mjs'], true);
