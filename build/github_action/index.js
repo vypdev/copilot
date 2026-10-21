@@ -48020,6 +48020,40 @@ function calculateReviewersStillNeeded(desiredCount, currentCount, confirmedCoun
 
 /***/ }),
 
+/***/ 81053:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.sddAnalysisStatusMarker = sddAnalysisStatusMarker;
+exports.renderSddAnalysisStatus = renderSddAnalysisStatus;
+function sddAnalysisStatusMarker(issueNumber) {
+    return `<!-- copilot:sdd-analysis-status:v1 issue="${issueNumber}" -->`;
+}
+const reasons = {
+    'update-owner-mismatch': ['The update path does not belong to the selected catalog owner.', 'La ruta de actualización no pertenece al propietario seleccionado del catálogo.'],
+    'companion-owner-unknown': ['The companion owner is absent from the catalog.', 'El propietario del SDD complementario no existe en el catálogo.'],
+    'companion-path-registered': ['The companion path is already registered in the catalog.', 'La ruta del SDD complementario ya está registrada en el catálogo.'],
+    'new-owner-registered': ['The proposed new capability already exists in the catalog.', 'La capacidad propuesta como nueva ya existe en el catálogo.'],
+    'new-path-registered': ['The proposed new SDD path is already registered in the catalog.', 'La ruta propuesta como nueva ya está registrada en el catálogo.'],
+};
+/** Stateless diagnostic, deliberately separate from the validated readiness record. */
+function renderSddAnalysisStatus(issueNumber, locale, reason) {
+    const spanish = /^es(?:-|$)/i.test(locale ?? '');
+    const marker = sddAnalysisStatusMarker(issueNumber);
+    if (!reason)
+        return spanish
+            ? `## Estado del análisis del SDD\n\nEl análisis posterior ha validado la propiedad. La publicación y la preparación de la rama siguen pendientes de sus comprobaciones.\n\n${marker}`
+            : `## SDD analysis status\n\nA subsequent analysis validated ownership. Publication and branch readiness remain subject to their checks.\n\n${marker}`;
+    return spanish
+        ? `## Estado del SDD: análisis bloqueado\n\nNo se ha preparado ningún borrador ni publicación nueva. ${reasons[reason][1]}\n\n**Acción de mantenimiento:** Aclara en la misma issue el ID de capacidad del catálogo y la ruta: una actualización usa una ruta de ese propietario; un complemento usa un propietario existente y una ruta nueva; una capacidad nueva necesita ID y ruta sin registrar. Después vuelve a ejecutar el workflow original. Cada ejecución hace un solo análisis; no hay reparación ni reintento automático. Se conservan las respuestas, los SDD y las publicaciones anteriores.\n\n**Diagnóstico:** \`${reason}\`. La decisión rechazada no autoriza una rama ni la etiqueta de preparación.\n\n${marker}`
+        : `## SDD work status: analysis blocked\n\nNo draft or new publication was prepared. ${reasons[reason][0]}\n\n**Maintainer action:** Clarify the catalog capability ID and path in this same issue: an update uses a path owned by that capability; a companion uses an existing owner and a new path; a new capability needs an unregistered ID and path. Then rerun the original workflow. Each invocation performs one analysis; there is no automatic repair or retry. Existing answers, SDDs and publications are retained.\n\n**Diagnostic:** \`${reason}\`. The rejected decision authorizes no branch or readiness label.\n\n${marker}`;
+}
+
+
+/***/ }),
+
 /***/ 2230:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -58810,6 +58844,7 @@ const issue_start_policy_1 = __nccwpck_require__(90332);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const recommendation_policy_1 = __nccwpck_require__(39410);
 const logging_ports_1 = __nccwpck_require__(6152);
+const sdd_analysis_status_policy_1 = __nccwpck_require__(81053);
 const application_error_1 = __nccwpck_require__(75999);
 const pre_branch_sdd_draft_workflow_1 = __nccwpck_require__(93454);
 const ANALYSIS_SCHEMA = {
@@ -58932,11 +58967,21 @@ class PreBranchSddGateUseCase {
             });
             const analysisValue = asRecord(analysis);
             const owners = new Map(snapshot.capabilities.map(capability => [capability.id, capability.specs]));
-            const plan = (0, pre_branch_sdd_1.parseSddPlan)(analysisValue, owners);
+            let plan;
+            try {
+                plan = (0, pre_branch_sdd_1.parseSddPlan)(analysisValue, owners);
+            }
+            catch (error) {
+                if (!(error instanceof pre_branch_sdd_1.SddOwnershipFailure))
+                    throw error;
+                await this.writeAnalysisStatus(context, allComments, error.reason);
+                throw new application_error_1.ApplicationError('provider.contract-invalid', `${error.message} Clarify the catalog owner/path in the same issue and rerun the original workflow. No automatic retry was attempted.`);
+            }
             if (card?.record.branchName && (plan.action !== 'update'
                 || plan.path !== card.record.plan.path || plan.capabilityId !== card.record.plan.capabilityId)) {
                 throw new Error('An existing linked branch can only revise its owning SDD on the same path.');
             }
+            await this.writeAnalysisStatus(context, allComments);
             const round = publicationRetry ? card.record.round
                 : card?.record.phase === 'awaiting-answer' && card.record.issueDigest === digest && !staleAwaiting
                     ? card.record.round + (plan.questions.length > 0 ? 1 : 0) : 1;
@@ -59047,6 +59092,20 @@ class PreBranchSddGateUseCase {
             await this.comments.addComment(issueNumber, body);
         else
             await this.comments.updateComment(issueNumber, cardId, body);
+    }
+    async writeAnalysisStatus(context, comments, reason) {
+        const marker = (0, sdd_analysis_status_policy_1.sddAnalysisStatusMarker)(context.issueNumber);
+        const prior = comments.filter(comment => comment.user?.login?.toLowerCase() === context.tokenUser.toLowerCase()
+            && comment.body?.includes(marker)).sort((a, b) => b.id - a.id)[0];
+        if (!reason && !prior)
+            return;
+        const body = (0, sdd_analysis_status_policy_1.renderSddAnalysisStatus)(context.issueNumber, context.issueLocale, reason);
+        if (prior) {
+            if (prior.body !== body)
+                await this.comments.updateComment(context.issueNumber, prior.id, body);
+        }
+        else
+            await this.comments.addComment(context.issueNumber, body);
     }
     async assertFresh(context, expectedBaseSha, sourceBranch) {
         const [liveBody, liveTitle, snapshot] = await Promise.all([
@@ -82532,7 +82591,7 @@ function parsePositiveSafeInteger(value) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SDD_REQUIRED_HEADINGS = exports.SddOwnerFormatFailure = exports.SddDraftFormatFailure = exports.SDD_MAX_UPDATE_CHARACTERS = exports.SDD_MAX_DRAFT_CHARACTERS = exports.SDD_MIN_DRAFT_CHARACTERS = exports.SDD_GATE_MARKER = void 0;
+exports.SDD_REQUIRED_HEADINGS = exports.SddOwnerFormatFailure = exports.SddDraftFormatFailure = exports.SddOwnershipFailure = exports.SDD_MAX_UPDATE_CHARACTERS = exports.SDD_MAX_DRAFT_CHARACTERS = exports.SDD_MIN_DRAFT_CHARACTERS = exports.SDD_GATE_MARKER = void 0;
 exports.retainSddAnswers = retainSddAnswers;
 exports.normalizeSddIssueTitle = normalizeSddIssueTitle;
 exports.isSafeSddPath = isSafeSddPath;
@@ -82570,6 +82629,15 @@ function normalizeSddIssueTitle(title) {
 function isSafeSddPath(path) {
     return SDD_PATH.test(path) && !['specs/CATALOG.md', 'specs/_template.md'].includes(path);
 }
+/** Closed diagnostics contain no model-selected identifiers or provider text. */
+class SddOwnershipFailure extends Error {
+    constructor(reason) {
+        super(`SDD ownership analysis rejected (${reason}).`);
+        this.reason = reason;
+        this.name = 'SddOwnershipFailure';
+    }
+}
+exports.SddOwnershipFailure = SddOwnershipFailure;
 /** The agent may propose ownership but cannot invent a catalogued owner or arbitrary path. */
 function parseSddPlan(value, catalog) {
     if (!isRecord(value))
@@ -82587,14 +82655,16 @@ function parseSddPlan(value, catalog) {
     const ownerPaths = catalog.get(capabilityId);
     const registered = [...catalog.values()].some(paths => paths.includes(path));
     if (action === 'update' && (!ownerPaths?.includes(path) || !registered)) {
-        throw new Error('The requested SDD update is not owned by the selected catalog capability.');
+        throw new SddOwnershipFailure('update-owner-mismatch');
     }
-    if (action === 'companion' && (!ownerPaths || registered)) {
-        throw new Error('A companion SDD requires an existing owner and a new path.');
-    }
-    if (action === 'new' && (ownerPaths || registered)) {
-        throw new Error('A new SDD requires an unregistered capability and path.');
-    }
+    if (action === 'companion' && !ownerPaths)
+        throw new SddOwnershipFailure('companion-owner-unknown');
+    if (action === 'companion' && registered)
+        throw new SddOwnershipFailure('companion-path-registered');
+    if (action === 'new' && ownerPaths)
+        throw new SddOwnershipFailure('new-owner-registered');
+    if (action === 'new' && registered)
+        throw new SddOwnershipFailure('new-path-registered');
     if (!Array.isArray(value.questions) || value.questions.length > 8) {
         throw new Error('The SDD analysis must contain at most eight blocking questions.');
     }

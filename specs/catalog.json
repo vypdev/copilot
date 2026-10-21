@@ -1473,7 +1473,7 @@
       "status": "implemented",
       "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-19",
+      "lastVerified": "2026-10-21",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
         "specs/pre-branch-sdd-gate.md",
@@ -1549,7 +1549,8 @@
         "src/infrastructure/setup_workspace_adapter.ts",
         "src/application/usecases/setup/doctor_use_case.ts",
         "src/application/policies/setup_doctor_message_catalog.ts",
-        "src/domain/sdd_prerequisite_policy.cjs"
+        "src/domain/sdd_prerequisite_policy.cjs",
+        "src/application/policies/sdd_analysis_status_policy.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",

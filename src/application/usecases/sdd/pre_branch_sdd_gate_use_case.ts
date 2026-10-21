@@ -11,6 +11,7 @@ import type { BoundLinkedBranchReadinessPort } from '../../ports/linked_branch_r
 import { Result } from '../../../data/model/result';
 import { SDD_REQUIRED_LABEL } from '../../../domain/issue_start_policy';
 import {
+  SddOwnershipFailure,
   parseSddAnswer,
   parseSddPlan,
   readSddGateRecord,
@@ -24,7 +25,8 @@ import {
 } from '../../../domain/pre_branch_sdd';
 import { getVisibleIssueDescription } from '../../policies/recommendation_policy';
 import { logError } from '../../ports/logging_ports';
-import { toApplicationError } from '../../errors/application_error';
+import { renderSddAnalysisStatus, sddAnalysisStatusMarker } from '../../policies/sdd_analysis_status_policy';
+import { ApplicationError, toApplicationError } from '../../errors/application_error';
 import { draftSddMarkdown } from './pre_branch_sdd_draft_workflow';
 
 export interface PreBranchSddContext {
@@ -174,11 +176,19 @@ export class PreBranchSddGateUseCase {
       });
       const analysisValue = asRecord(analysis);
       const owners = new Map(snapshot.capabilities.map(capability => [capability.id, capability.specs]));
-      const plan = parseSddPlan(analysisValue, owners);
+      let plan: SddPlan;
+      try {
+        plan = parseSddPlan(analysisValue, owners);
+      } catch (error) {
+        if (!(error instanceof SddOwnershipFailure)) throw error;
+        await this.writeAnalysisStatus(context, allComments, error.reason);
+        throw new ApplicationError('provider.contract-invalid', `${error.message} Clarify the catalog owner/path in the same issue and rerun the original workflow. No automatic retry was attempted.`);
+      }
       if (card?.record.branchName && (plan.action !== 'update'
         || plan.path !== card.record.plan.path || plan.capabilityId !== card.record.plan.capabilityId)) {
         throw new Error('An existing linked branch can only revise its owning SDD on the same path.');
       }
+      await this.writeAnalysisStatus(context, allComments);
       const round = publicationRetry ? card.record.round
         : card?.record.phase === 'awaiting-answer' && card.record.issueDigest === digest && !staleAwaiting
           ? card.record.round + (plan.questions.length > 0 ? 1 : 0) : 1;
@@ -282,6 +292,17 @@ export class PreBranchSddGateUseCase {
     const body = renderSddGateRecord(record, locale, issueUrl);
     if (cardId === undefined) await this.comments.addComment(issueNumber, body);
     else await this.comments.updateComment(issueNumber, cardId, body);
+  }
+
+  private async writeAnalysisStatus(context: PreBranchSddContext, comments: readonly IssueCommentPublicationTarget[], reason?: SddOwnershipFailure['reason']): Promise<void> {
+    const marker = sddAnalysisStatusMarker(context.issueNumber);
+    const prior = comments.filter(comment => comment.user?.login?.toLowerCase() === context.tokenUser.toLowerCase()
+      && comment.body?.includes(marker)).sort((a, b) => b.id - a.id)[0];
+    if (!reason && !prior) return;
+    const body = renderSddAnalysisStatus(context.issueNumber, context.issueLocale, reason);
+    if (prior) {
+      if (prior.body !== body) await this.comments.updateComment(context.issueNumber, prior.id, body);
+    } else await this.comments.addComment(context.issueNumber, body);
   }
 
   private async assertFresh(context: PreBranchSddContext, expectedBaseSha: string, sourceBranch: string): Promise<void> {

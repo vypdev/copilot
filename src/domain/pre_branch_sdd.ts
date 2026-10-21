@@ -73,6 +73,17 @@ export function isSafeSddPath(path: string): boolean {
   return SDD_PATH.test(path) && !['specs/CATALOG.md', 'specs/_template.md'].includes(path);
 }
 
+export type SddOwnershipFailureReason = 'update-owner-mismatch' | 'companion-owner-unknown'
+  | 'companion-path-registered' | 'new-owner-registered' | 'new-path-registered';
+
+/** Closed diagnostics contain no model-selected identifiers or provider text. */
+export class SddOwnershipFailure extends Error {
+  constructor(readonly reason: SddOwnershipFailureReason) {
+    super(`SDD ownership analysis rejected (${reason}).`);
+    this.name = 'SddOwnershipFailure';
+  }
+}
+
 /** The agent may propose ownership but cannot invent a catalogued owner or arbitrary path. */
 export function parseSddPlan(value: unknown, catalog: ReadonlyMap<string, readonly string[]>): SddPlan {
   if (!isRecord(value)) throw new Error('The SDD analysis must be an object.');
@@ -89,14 +100,12 @@ export function parseSddPlan(value: unknown, catalog: ReadonlyMap<string, readon
   const ownerPaths = catalog.get(capabilityId);
   const registered = [...catalog.values()].some(paths => paths.includes(path));
   if (action === 'update' && (!ownerPaths?.includes(path) || !registered)) {
-    throw new Error('The requested SDD update is not owned by the selected catalog capability.');
+    throw new SddOwnershipFailure('update-owner-mismatch');
   }
-  if (action === 'companion' && (!ownerPaths || registered)) {
-    throw new Error('A companion SDD requires an existing owner and a new path.');
-  }
-  if (action === 'new' && (ownerPaths || registered)) {
-    throw new Error('A new SDD requires an unregistered capability and path.');
-  }
+  if (action === 'companion' && !ownerPaths) throw new SddOwnershipFailure('companion-owner-unknown');
+  if (action === 'companion' && registered) throw new SddOwnershipFailure('companion-path-registered');
+  if (action === 'new' && ownerPaths) throw new SddOwnershipFailure('new-owner-registered');
+  if (action === 'new' && registered) throw new SddOwnershipFailure('new-path-registered');
   if (!Array.isArray(value.questions) || value.questions.length > 8) {
     throw new Error('The SDD analysis must contain at most eight blocking questions.');
   }
