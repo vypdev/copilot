@@ -1075,3 +1075,26 @@ feature must prevent and violates the event-driven no-polling architecture.
   for merge-queue targets.
 - Automatic edits to rulesets or vendor CI.
 - A live destructive merge-queue test in a user repository.
+
+
+### Publication callback policy parity (2026-10-21, #643)
+
+Preparation, normal publication, reconciliation-only resume and managed-PR
+continuation MUST all pass the live `MERGE_QUEUE_CHECK_ATTESTATIONS` Repository
+Variable with an absent-value `[]` fallback. Consumer templates and source
+release/hotfix workflows share this contract. A normal callback starts
+reconciliation just as resume does; neither may substitute an empty literal or
+a snapshotted preparation value. Target selection, producer identity, failed
+policy handling and retained publication state remain unchanged. No new input,
+permission, UI state, automatic retry or deployment is introduced.
+
+Flow: prepared promotion -> confirmed publication -> live target policy ->
+reconciliation, or the existing blocked recovery state. Existing status cards
+and recovery guidance remain authoritative; install updated generated workflows
+to adopt the correction. The added numeric test budget is **24 distinct cases**:
+source/consumer × release/hotfix × preparation/publication/resume × missing/stale
+input. Existing continuation tests cover its fourth entrypoint. Structural
+workflow validation rejects either omission or a literal value; all canonical
+workflows must pass. Documentation: deployment orchestration's live-policy mapping.
+Acceptance: each entrypoint supplies the expression on the actual Action step;
+no publication/release is launched to test wiring.
