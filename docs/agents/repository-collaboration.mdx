@@ -15,6 +15,13 @@ Repository collaborator agents use the same public controls as human contributor
 - `.copilot/setup-manifest.json`: generator version, profile digest, artifact roles, and SHA-256 hashes.
 - an optional marker-bounded pointer in root `AGENTS.md`.
 
+Manifest hashes use LF-normalized content. For the `AGENTS.md` entry with
+`role: "pointer"`, the hash covers only the managed block, including both marker
+comments. It excludes repository-authored text outside the block and any newline
+after the end marker. A whole-file `shasum -a 256 AGENTS.md` can therefore differ
+from the manifest without indicating drift. See [pointer hash verification](/agents/repository-guidance-troubleshooting#agentsmd-pointer-hash-scope)
+for a check using the same scope as setup and doctor.
+
 The profile contains only enabled kinds, effective forms and labels, required fields, branch roles, relevant release/hotfix workflow names, PR linkage, and deployment boundaries. It contains no token, Secret, arbitrary action input, executable command, or provider response.
 
 The generated guide links to the shared documentation in `vypdev/copilot` through absolute HTTPS URLs. These links follow the source repository's `master` documentation, so destination repositories do not need a copied documentation tree. Links to installed artifacts, such as `repository-profile.json`, remain relative to the generated guide.
