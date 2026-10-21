@@ -1937,7 +1937,8 @@
       "lastVerified": "2026-10-20",
       "specs": [
         "specs/branch-synchronization-and-conflict-recovery.md",
-        "specs/repository-verification-runtime-prerequisites.md"
+        "specs/repository-verification-runtime-prerequisites.md",
+        "specs/repository-verification-setup-hooks.md"
       ],
       "workflows": [
         ".github/workflows/copilot_branch_sync.yml",
