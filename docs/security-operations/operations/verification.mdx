@@ -181,7 +181,7 @@ runs:
         tools = home / ('Scripts' if os.name == 'nt' else 'bin')
         python = tools / ('python.exe' if os.name == 'nt' else 'python')
         subprocess.check_call([str(python), '-m', 'pip', 'install',
-                               '--require-hashes', '-r', 'requirements-test.lock'])
+                               '--no-cache-dir', '--require-hashes', '-r', 'requirements-test.lock'])
         with open(os.environ['GITHUB_PATH'], 'a') as paths:
             print(tools, file=paths)
         PYTHON
@@ -193,6 +193,9 @@ runs:
 Keep pytest and all transitive dependencies pinned with hashes in the candidate's
 `requirements-test.lock`. The verifier can remain `python -m pytest`. Adapt runtime
 versions and dependency commands to your project; these examples do not infer them.
+The example disables pip's cache so platform-specific cache discovery cannot create
+publishable files in the candidate. To use a cache, set its path explicitly under
+the private HOME or an ignored dependency directory.
 
 For Node/pnpm:
 

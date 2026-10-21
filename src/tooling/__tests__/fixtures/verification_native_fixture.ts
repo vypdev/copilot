@@ -30,7 +30,7 @@ runs:
         venv.create(home, with_pip=True)
         tools = home / ('Scripts' if os.name == 'nt' else 'bin')
         python = tools / ('python.exe' if os.name == 'nt' else 'python')
-        subprocess.check_call([str(python), '-m', 'pip', 'install', '--disable-pip-version-check', '-r', 'requirements-native-fixture.txt'])
+        subprocess.check_call([str(python), '-m', 'pip', 'install', '--no-cache-dir', '--disable-pip-version-check', '-r', 'requirements-native-fixture.txt'])
         with open(os.environ['GITHUB_PATH'], 'a') as paths:
             print(tools, file=paths)
         PYTHON
