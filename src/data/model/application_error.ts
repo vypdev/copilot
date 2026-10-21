@@ -50,6 +50,11 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-resolution-invalid',
     'sdd-draft-size-exceeded',
     'sdd-draft-format-invalid',
+    'sdd-draft-case-identity-invalid',
+    'sdd-draft-case-budget-invalid',
+    'sdd-draft-requirement-mapping-invalid',
+    'sdd-draft-repository-path-invalid',
+
     'workspace-changes-rejected',
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
@@ -80,6 +85,11 @@ interface ApplicationErrorRecoveryVariables {
     readonly 'branch-sync-resolution-invalid': Readonly<{ validationCode: BranchSyncValidationCode; command: '/copilot sync-branch' }>;
     readonly 'sdd-draft-size-exceeded': Readonly<Record<string, never>>;
     readonly 'sdd-draft-format-invalid': Readonly<Record<string, never>>;
+    readonly 'sdd-draft-case-identity-invalid': Readonly<Record<string, never>>;
+    readonly 'sdd-draft-case-budget-invalid': Readonly<Record<string, never>>;
+    readonly 'sdd-draft-requirement-mapping-invalid': Readonly<Record<string, never>>;
+    readonly 'sdd-draft-repository-path-invalid': Readonly<Record<string, never>>;
+
     readonly 'workspace-changes-rejected': Readonly<Record<string, never>>;
 }
 
@@ -340,6 +350,11 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-draft-format-invalid': Object.freeze([]),
+    'sdd-draft-case-identity-invalid': Object.freeze([]),
+    'sdd-draft-case-budget-invalid': Object.freeze([]),
+    'sdd-draft-requirement-mapping-invalid': Object.freeze([]),
+    'sdd-draft-repository-path-invalid': Object.freeze([]),
+
     'workspace-changes-rejected': Object.freeze([]),
 });
 

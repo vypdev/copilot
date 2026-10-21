@@ -63,6 +63,45 @@ function harness() {
 }
 
 describe('PreBranchSddGateUseCase', () => {
+  it('supplies reserved identities from every immutable owner document when drafting a companion', async () => {
+    const h = harness();
+    h.loadSnapshot.mockResolvedValue({ ...snapshot, capabilities: [{ ...snapshot.capabilities[0], specs: ['specs/payments.md', 'specs/session.md'] }] });
+    h.readSdd.mockImplementation(async (_sha, path) => path === 'specs/payments.md' ? 'payments-C01 missing bearer' : 'payments-session-C01 valid session');
+    h.query.mockResolvedValueOnce({ ...plan, action: 'companion', path: 'specs/change.md', newCapability: null }).mockResolvedValueOnce({ markdown: '# Draft' });
+    expect((await h.useCase.begin(context())).status).toBe('drafted');
+    expect(h.readSdd.mock.calls).toEqual([[baseSha, 'specs/payments.md'], [baseSha, 'specs/session.md']]);
+    expect(h.query.mock.calls[1][0].prompt).toContain('["payments-C01","payments-session-C01"]');
+  });
+
+  it('blocks before drafting when a companion baseline cannot be read', async () => {
+    const h = harness();
+    h.readSdd.mockResolvedValue(undefined);
+    h.query.mockResolvedValueOnce({ ...plan, action: 'companion', path: 'specs/change.md', newCapability: null });
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.query).toHaveBeenCalledTimes(1);
+    expect(h.validateDraft).not.toHaveBeenCalled();
+  });
+
+  it('blocks oversized owner identity context without truncating or drafting', async () => {
+    const h = harness();
+    h.readSdd.mockResolvedValue(Array.from({ length: 2500 }, (_, index) => `payments-long-baseline-C${index}`).join('\n'));
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null });
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.query).toHaveBeenCalledTimes(1);
+    expect(h.validateDraft).not.toHaveBeenCalled();
+  });
+
+  it('keeps publication blocked after repeated case inconsistencies', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Contradictory draft' });
+    h.validateDraft.mockRejectedValue(new SddDraftFormatFailure('requirement-mapping', 'Mismatch'));
+    const result = await h.useCase.begin(context());
+    expect(result.status).toBe('blocked');
+    expect(h.validateDraft).toHaveBeenCalledTimes(2);
+    expect(h.publish).not.toHaveBeenCalled();
+    expect(h.labels()).not.toContain('branched');
+  });
+
   it('withholds oversized immutable owner evidence while preserving the owner and bounded drafting instructions', async () => {
     const h = harness();
     const large = { ...snapshot, capabilities: [{ ...snapshot.capabilities[0],

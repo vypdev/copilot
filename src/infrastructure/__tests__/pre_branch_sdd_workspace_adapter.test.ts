@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { sddConsistencyFixture } from '../../testing/sdd_consistency_fixture';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -38,7 +39,7 @@ function fixture() {
   fs.mkdirSync(path.join(repo, 'docs'));
   fs.writeFileSync(path.join(repo, 'specs/README.md'), '# Specification standard\n');
   fs.writeFileSync(path.join(repo, 'specs/_template.md'), '# Template\n');
-  fs.writeFileSync(path.join(repo, 'specs/payments.md'), draft().replace('# Payment behavior', '# Existing payment contract'));
+  fs.writeFileSync(path.join(repo, 'specs/payments.md'), legacyDraft().replace('# Payment behavior', '# Existing payment contract'));
   fs.writeFileSync(path.join(repo, 'specs/CATALOG.md'), '# Catalog\n');
   fs.writeFileSync(path.join(repo, 'src/index.ts'), 'export const value = 1;\n');
   fs.writeFileSync(path.join(repo, 'src/index.test.ts'), 'export const test = true;\n');
@@ -58,7 +59,9 @@ function fixture() {
   return { temp, remote, repo };
 }
 
-function draft(): string {
+function draft(): string { return sddConsistencyFixture(); }
+
+function legacyDraft(): string {
   return `# Payment behavior\n\n- Status: Draft\n- Date: 2026-09-17\n- Catalog capability ID: payments\n- Owners: Maintainers\n\n## 1. Executive summary\n${'The payment behavior has a verified product contract. '.repeat(20)}\n\n## 4. Goals\n${'The new behavior preserves authorization and traceability. '.repeat(12)}\n\n## 8. Clean Architecture\n${'The domain policy is separate from application orchestration and adapters. '.repeat(12)}\n\n## 14. Testing strategy\nAt least 20 distinct cases cover success, replay, authorization, and failure.\n\n## 16. Acceptance scenarios\n${'The issue owner can verify the resulting payment contract. '.repeat(12)}\n`;
 }
 
@@ -68,6 +71,27 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
 
   beforeEach(() => { ({ temp, repo } = fixture()); });
   afterEach(() => fs.rmSync(temp, { recursive: true, force: true }));
+
+  it.each([
+    ['case-identity', (s: string) => s.replace(/payments-change-C01/gu, 'payments-baseline-C01')],
+    ['case-budget', (s: string) => s.replace('| Policy | 2 |', '| Policy | 1 |').replace('| Adapter | 1 |', '| Adapter | 2 |')],
+    ['requirement-mapping', (s: string) => s.replace('| G-02 | payments-change-C03 |', '| G-02 | payments-change-C01 |')],
+    ['repository-path', (s: string) => s.replace('docs/payments.mdx', 'docs/current-checkout-only.md')],
+  ])('rejects %s in a companion without changing the baseline, publishing or retaining scratch worktrees', async (reason, mutate) => {
+    fs.appendFileSync(path.join(repo, plan.path), '\npayments-baseline-C01: Missing bearer returns 401.\n');
+    git(repo, 'add', plan.path);
+    git(repo, 'commit', '-m', 'stable owner cases');
+    git(repo, 'push', 'origin', 'develop');
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    fs.writeFileSync(path.join(repo, 'docs/current-checkout-only.md'), '# Uncommitted file cannot prove immutable existence.');
+    const before = fs.readFileSync(path.join(repo, plan.path), 'utf8');
+    await expect(workspace.validateDraft(snapshot, { ...plan, action: 'companion', path: 'specs/companion.md' }, mutate(draft())))
+      .rejects.toMatchObject({ reason });
+    expect(fs.readFileSync(path.join(repo, plan.path), 'utf8')).toBe(before);
+    expect(git(repo, 'ls-remote', '--heads', 'origin', 'feature/42-change')).toBe('');
+    expect(git(repo, 'worktree', 'list', '--porcelain').match(/^worktree /gm)).toHaveLength(1);
+  });
 
   it.each(['update', 'companion'] as const)('validates and publishes a portable %s through the unchanged SDD-only first-commit allowlist', async action => {
     const capability = portableSddCapability();
@@ -101,7 +125,7 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
   });
 
   it('validates a table-only owner update with the real scratch-worktree and catalog boundary', async () => {
-    const owner = draft().replace('At least 20 distinct cases cover success, replay, authorization, and failure.',
+    const owner = legacyDraft().replace('At least 20 distinct cases cover success, replay, authorization, and failure.',
       '| Area | Minimum cases | Risks |\n|---|---:|---|\n| Policy | 12 | Authority |\n| Adapter | 8 | Publication |\n| Total | 20 | Distinct |');
     fs.writeFileSync(path.join(repo, plan.path), owner);
     git(repo, 'add', plan.path);
@@ -109,7 +133,7 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     git(repo, 'push', 'origin', 'develop');
     const workspace = new PreBranchSddWorkspaceAdapter(repo);
     const snapshot = await workspace.loadSnapshot('develop');
-    const prepared = await workspace.validateDraft(snapshot, plan, owner.replace('# Payment behavior', '# Proposed extension'));
+    const prepared = await workspace.validateDraft(snapshot, plan, draft().replace('# Payment behavior', '# Proposed extension'));
     expect(prepared.markdown.startsWith(owner.trimEnd())).toBe(true);
     expect(prepared.markdown).toContain('### 14. Testing strategy');
     expect(git(repo, 'status', '--porcelain')).toBe('');
@@ -209,7 +233,7 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
 
     expect(published.startsWith(previous.trimEnd())).toBe(true);
     expect(published).toContain('20 distinct cases');
-    expect(published).toContain('4 distinct cases');
+    expect(published).toContain('| **Total** | **3** |');
     expect(published).toContain('## Read-only status');
   });
 

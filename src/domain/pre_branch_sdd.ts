@@ -229,12 +229,12 @@ export function parseSddAnswer(body: string, questionId: string): string | undef
 
 /** Only these content failures may trigger a bounded draft regeneration. */
 export class SddDraftFormatFailure extends Error {
-  constructor(readonly reason: 'required-heading' | 'test-budget', message: string) { super(message); }
+  constructor(readonly reason: 'required-heading' | 'test-budget' | 'case-identity' | 'case-budget' | 'requirement-mapping' | 'repository-path', message: string) { super(message); }
 }
 
 /** An immutable owner cannot be repaired by regenerating its proposed appendix. */
 export class SddOwnerFormatFailure extends Error {
-  constructor(readonly reason: 'required-heading' | 'test-budget') {
+  constructor(readonly reason: SddDraftFormatFailure['reason']) {
     super(`The existing owning SDD violates its ${reason} contract; review the owner before retrying.`);
   }
 }
@@ -318,19 +318,33 @@ export function composeSddUpdate(existing: string, change: string): string {
   }
   validateSddMarkdown(change);
   if (change.length > SDD_MAX_UPDATE_CHARACTERS) throw new Error('An SDD update appendix exceeds 18000 characters; use a proportional change or a companion SDD.');
+  const appendix = shiftSddHeadings(change, 1);
+  const merged = `${existing.trimEnd()}\n\n${appendix.trim()}\n`;
+  validateSddMarkdown(merged);
+  return merged;
+}
+
+/** Recovery validates the original candidate, not a second copy of its retained baseline. */
+export function recoverSddUpdate(existing: string, published: string): string | undefined {
+  const prefix = `${existing.trimEnd()}\n\n`;
+  if (!published.startsWith(prefix)) return undefined;
+  const change = shiftSddHeadings(published.slice(prefix.length), -1);
+  return composeSddUpdate(existing, change) === published ? change : undefined;
+}
+
+function shiftSddHeadings(source: string, direction: 1 | -1): string {
   let fence: string | undefined;
-  const appendix = change.split('\n').map(line => {
+  return source.split('\n').map(line => {
     const boundary = line.match(/^\s*(`{3,}|~{3,})/);
     if (boundary) {
       if (!fence) fence = boundary[1];
       else if (boundary[1][0] === fence[0] && boundary[1].length >= fence.length) fence = undefined;
       return line;
     }
-    return !fence && /^#{1,5} /.test(line) ? `#${line}` : line;
+    if (fence) return line;
+    return direction === 1 ? (/^#{1,5} /.test(line) ? `#${line}` : line)
+      : (/^#{2,6} /.test(line) ? line.slice(1) : line);
   }).join('\n');
-  const merged = `${existing.trimEnd()}\n\n${appendix.trim()}\n`;
-  validateSddMarkdown(merged);
-  return merged;
 }
 
 function serializeSddGateValue(value: SddGateRecord | readonly SddAnswer[]): string {
