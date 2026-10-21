@@ -1145,6 +1145,10 @@ function assertPhaseConditions(relativeFile, jobs, finalJob) {
   if (publishedActions.length !== 2) {
     throw new Error(`${relativeFile} must project publication through published_deployment_action.`);
   }
+  if ([...preparationActions, ...publishedActions].some(step =>
+    step.with?.['merge-queue-check-attestations'] !== "${{ vars.MERGE_QUEUE_CHECK_ATTESTATIONS || '[]' }}")) {
+    throw new Error(`${relativeFile} must pass live merge-queue attestations on every preparation and reconciliation entrypoint.`);
+  }
   const trustedContinuations = Object.values(jobs).flatMap(job => job.steps ?? [])
     .filter(step => isCopilotAction(step) && [
       'create_tag',

@@ -329,8 +329,10 @@ branch roles and orchestration choices are snapshotted; changing those Variables
 does not rewrite an in-flight deployment. Merge-queue attestations are the
 exception: they are live repository policy and are reread with effective target
 rules at every readiness decision. Both publishing workflows and the managed-PR
-continuation workflow pass `MERGE_QUEUE_CHECK_ATTESTATIONS`, so a multi-target
-operation does not fall back to stale or empty trust policy between events.
+continuation workflow pass `MERGE_QUEUE_CHECK_ATTESTATIONS` (with `[]` only as
+the absent-variable fallback). Normal publication callbacks and reconciliation-only
+resume both receive this live value in consumer and source workflows, so a
+multi-target operation does not fall back to stale or empty trust policy between events.
 
 A recommended non-interactive fragment is:
 

@@ -645,6 +645,21 @@ describe('workflow contract validator', () => {
     }
   });
 
+  it.each(mutationDirectories.flatMap(directory => mutationWorkflowNames.flatMap(fileName =>
+    ['prepare', 'publish', 'resume'].flatMap(phase => ['missing', 'stale'].map(value => [directory, fileName, phase, value])))))(
+    'rejects %s/%s %s with %s merge-queue attestations', (directory, fileName, phase, value) => {
+      expectMutationRejected(directory, fileName, workflow => {
+        const action = phase === 'prepare' ? 'prepare_deployment_action' : 'published_deployment_action';
+        const job = phase === 'resume' ? workflow.jobs['resume-reconciliation']
+          : Object.entries(workflow.jobs).find(([id, job]) => id !== 'resume-reconciliation'
+            && (job.steps ?? []).some((step: any) => step.with?.['single-action'] === action))![1];
+        const step = job.steps.find((step: any) => step.with?.['single-action'] === action);
+        if (value === 'missing') delete step.with['merge-queue-check-attestations'];
+        else step.with['merge-queue-check-attestations'] = '[]';
+      }, 'live merge-queue attestations');
+    },
+  );
+
   it.each(mutationWorkflowNames)('enforces the active compiled-files budget for %s', (fileName) => {
     expectMutationRejected('.github/workflows', fileName, (workflow) => {
       workflow.jobs['prepare-compiled-files']['timeout-minutes'] = PREPARE_COMPILED_TIMEOUT_MINUTES - 1;
