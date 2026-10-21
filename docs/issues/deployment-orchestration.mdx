@@ -146,14 +146,46 @@ provider mutation. Start a new deployment from valid current configuration.
 ## Serialization, durable revisions, and safe retries
 
 All release, hotfix, and managed-PR mutation routes for the same launcher issue
-share one repository-and-issue concurrency group. The workflows retain every
-waiting run and never cancel an in-progress deployment owner. A validation job
+share one repository-and-issue concurrency group with `queue: max` and
+`cancel-in-progress: false`. GitHub allows up to 100 pending jobs or workflow
+runs in that group; additional arrivals are canceled when the queue is full.
+The workflows never cancel an in-progress deployment owner. A validation job
 with `permissions: {}` rejects an invalid issue, mode, version, operation ID,
 title, or changelog before a job receives write permission. It uses the runtime
 bundled with `actions/github-script@v9` and its automatic token, without a PAT or
 configured secret. Leave `github-token` unspecified: an empty override prevents
 the Action from starting. No host-installed Node executable is required by this
 validation step.
+
+### Validating `queue: max`
+
+`queue: max` is valid at both workflow and job level. GitHub added larger
+concurrency queues on [May 7, 2026](https://github.blog/changelog/2026-05-07-github-actions-concurrency-groups-now-allow-larger-queues/).
+The [official concurrency documentation](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)
+defines `single` (the default) and `max`; `max` requires `cancel-in-progress` to
+be `false` or omitted. Combining it with `cancel-in-progress: true` is invalid.
+
+The generated release and hotfix workflows use:
+
+```yaml
+concurrency:
+  group: copilot-deployment-${{ github.repository_id }}-${{ inputs.issue }}
+  cancel-in-progress: false
+  queue: max
+```
+
+The deployment continuation uses the same queue settings on its mutation job,
+with the issue resolved by its read-only predecessor. A diagnostic such as
+`unexpected key "queue" for "concurrency" section` from `actionlint` 1.7.12 is a
+false positive against this supported syntax. Use a validator that supports
+`queue: max`. Keep the generated queue setting: removing it restores the default
+single pending slot, where a new pending run replaces the previous one.
+
+Queue order is not deployment authority. If the queue reaches capacity, use
+**Retry current deployment phase** from the launcher dashboard; the retry
+reloads durable state before continuing.
+
+### Durable revisions
 
 The launcher issue stores only deployment state version 1. The first snapshot is
 revision 1; every accepted state change increments it by exactly one and saves
