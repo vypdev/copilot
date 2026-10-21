@@ -83,6 +83,18 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(git(repo, 'ls-remote', '--heads', 'origin', 'feature/42-change')).toBe('');
   });
 
+  it.each(['update', 'companion'] as const)('rejects %s consistency tables still inside a code fence after an invalid closer', async action => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const selected = { ...plan, action, path: action === 'update' ? plan.path : 'specs/companion.md' };
+    const markdown = draft(selected.path, action).replace('## 14.', '```md\n```not-close\n## 14.');
+    const before = fs.readFileSync(path.join(repo, plan.path), 'utf8');
+    await expect(workspace.validateDraft(snapshot, selected, markdown)).rejects.toMatchObject({ reason: 'case-identity' });
+    expect(fs.readFileSync(path.join(repo, plan.path), 'utf8')).toBe(before);
+    expect(git(repo, 'ls-remote', '--heads', 'origin', 'feature/42-change')).toBe('');
+    expect(git(repo, 'worktree', 'list', '--porcelain').match(/^worktree /gm)).toHaveLength(1);
+  });
+
   it('rejects an unsafe owning SDD path before reading external owner evidence', async () => {
     const workspace = new PreBranchSddWorkspaceAdapter(repo);
     const snapshot = await workspace.loadSnapshot('develop');

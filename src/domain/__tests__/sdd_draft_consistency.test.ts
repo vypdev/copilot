@@ -46,6 +46,42 @@ describe('generated SDD consistency', () => {
   });
 
   it.each([
+    ['```', '```not-close'], ['```', '````not-close'], ['```', '``` \ttext'], ['```', '    ```'],
+    ['~~~', '~~~not-close'], ['~~~', '~~~~not-close'], ['~~~', '~~~ \ttext'], ['~~~', '    ~~~'],
+  ])('does not expose a fenced contract after the invalid closing line %j / %j', (marker, closing) => {
+    const markdown = `${marker}md\n${closing}\n${sddConsistencyFixture()}\n${marker}\nretained-C01`;
+    expect(() => validate(markdown)).toThrow(expect.objectContaining({ reason: 'requirement-mapping' }));
+    expect(reservedSddCaseIds([{ path: 'specs/examples.md', markdown }])).toEqual(['retained-C01']);
+  });
+
+  it.each(['```', '~~~'])('accepts a longer %s closing fence with trailing spaces and tabs', marker => {
+    const markdown = `${marker}md\nignored-C01\n   ${marker}${marker[0]} \t\n${sddConsistencyFixture()}`;
+    expect(() => validate(markdown)).not.toThrow();
+  });
+
+  it.each(['```', '~~~'])('does not erase an HTML comment that makes a %s closing fence invalid', marker => {
+    const markdown = `${marker}md\n${marker}<!-- not a closing fence -->\n${sddConsistencyFixture()}`;
+    expect(() => validate(markdown)).toThrow(expect.objectContaining({ reason: 'requirement-mapping' }));
+  });
+
+  it('keeps comment syntax literal inside a fence so it cannot hide the visible contract after the close', () => {
+    expect(() => validate('```md\n<!--\n```\n' + sddConsistencyFixture())).not.toThrow();
+  });
+
+  it('ignores a fence marker inside an HTML comment without hiding the visible contract after the comment', () => {
+    expect(() => validate('<!--\n```md\n-->\n' + sddConsistencyFixture())).not.toThrow();
+  });
+
+  it('keeps owner identities around multiple inline comments while excluding their hidden identities', () => {
+    const markdown = 'first-C01<!-- hidden-C01 -->middle-C01<!-- hidden-C02 -->final-C01';
+    expect(reservedSddCaseIds([{ path: 'specs/examples.md', markdown }])).toEqual(['final-C01', 'first-C01', 'middle-C01']);
+  });
+
+  it('does not let an unclosed HTML comment expose its contract', () => {
+    expect(() => validate(`<!--\n${sddConsistencyFixture()}`)).toThrow(expect.objectContaining({ reason: 'requirement-mapping' }));
+  });
+
+  it.each([
     ['primary collision', (s: string) => s.replace(/payments-change-C01/gu, 'payments-C01')],
     ['companion collision', (s: string) => s.replace(/payments-change-C01/gu, 'payments-session-C09')],
     ['duplicate definition', (s: string) => s.replace(/payments-change-C02/gu, 'payments-change-C01')],

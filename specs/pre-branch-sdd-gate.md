@@ -1227,16 +1227,16 @@ headings, mobile/screen-reader behavior and closed sanitized content. Rejected
 Markdown, case IDs, paths and diagnostic text MUST NOT enter repair instructions
 or public messages. There is no additional card, label, credential or setting.
 
-The amendment has a minimum **93 distinct cases**, separate from earlier floors:
+The amendment has a minimum **111 distinct cases**, separate from earlier floors:
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Pure consistency policy | 66 | Owner collisions and aliases, hidden/malformed inventories, offsetting budgets, reciprocal mappings, immutable/proposed paths, portable layouts and bounded ranges |
+| Pure consistency policy | 82 | Owner collisions and aliases, hidden/malformed inventories, invalid/valid fence and comment boundaries, offsetting budgets, reciprocal mappings, immutable/proposed paths, portable layouts and bounded ranges |
 | Application and bounded draft workflow | 9 | All-owner reads, missing/oversized context, blocked publication, four closed repairs and corrected-draft revalidation |
 | Publication replay boundaries | 5 | Minimum/maximum candidate lengths, normalized outer whitespace, retained prefix and exact recomposition |
-| Real Git workspace | 9 | Each reported contradiction blocks publication, ignores uncommitted evidence, preserves the owner and removes scratch worktrees |
+| Real Git workspace | 11 | Each reported contradiction and falsely closed code block blocks publication, ignores uncommitted evidence, preserves the owner and removes scratch worktrees |
 | Localized recovery | 4 | All four closed variants render English/Spanish retained state without runtime acceptance claims |
-| **Total** | **93** | Existing cases are not recounted |
+| **Total** | **111** | Existing cases are not recounted |
 
 Repository coverage thresholds remain mandatory; new pure policy targets at
 least 95% lines, with negative/boundary branch fixtures. Tests use deterministic
@@ -1271,6 +1271,21 @@ substitute for this row. No SDD path is implicitly pre-approved. Ten additional
 pure cases cover these declarations and malformed table/fence boundaries; five
 workspace cases cover omitted update/companion rows, unsafe owner evidence and
 recovery rejection for a replaced owner or changed revalidation bytes. They are
-included once in the 93-case amendment floor above. The existing closed path
+included once in the amendment floor above. The existing closed path
 recovery, shared retry ceiling and localized publication/acceptance distinction
 remain unchanged.
+
+PR #654 review finding 4340243954 requires a matching code fence to close only
+when it has at most three leading spaces and only spaces or tabs after its
+marker, following [CommonMark fenced-code rules](https://spec.commonmark.org/0.31.2/#fenced-code-blocks).
+An info string remains valid on an opening fence. Text after a possible closing
+marker, a shorter/different marker or four leading spaces cannot expose the
+enclosed contract. Comment syntax inside a fence is literal and MUST NOT be
+removed before deciding whether that original line closes the fence. Fence
+markers inside HTML comments cannot alter the surrounding visible contract.
+Sixteen pure regressions cover invalid backtick/tilde closers, owner reservations,
+valid longer closers with trailing whitespace and comment/fence precedence; two real
+Git regressions reject update/companion publication while preserving the owner
+and cleaning scratch worktrees. These eighteen cases raise the amendment floor
+from 93 to 111. No new setting, retry, diagnostic category or public status is
+introduced; docs/issues/pre-branch-sdds.mdx explains the visible-table boundary.

@@ -25,14 +25,27 @@ function fail(reason: SddConsistencyReason): never {
 /** Excludes examples and hidden records from the contract. */
 function visible(source: string): string {
   let fence: string | undefined;
-  return source.replace(/<!--[^]*?(?:-->|$)/gu, '\n').replace(/\r\n/gu, '\n').split('\n').map(line => {
+  let comment = false;
+  return source.replace(/\r\n/gu, '\n').split('\n').map(line => {
     const boundary = /^\s*(`{3,}|~{3,})/u.exec(line);
-    if (boundary) {
-      if (!fence) fence = boundary[1];
-      else if (boundary[1][0] === fence[0] && boundary[1].length >= fence.length) fence = undefined;
+    if (fence) {
+      // Comment syntax inside code is literal; only the original line can close it.
+      if (boundary && boundary[1][0] === fence[0] && boundary[1].length >= fence.length
+        && /^ {0,3}(?:`+|~+)[ \t]*$/u.test(line)) fence = undefined;
       return '';
     }
-    return fence ? '' : line;
+    if (!comment && boundary) { fence = boundary[1]; return ''; }
+    let result = '';
+    let offset = 0;
+    while (offset < line.length) {
+      const marker = comment ? '-->' : '<!--';
+      const next = line.indexOf(marker, offset);
+      if (next < 0) return result + (comment ? '' : line.slice(offset));
+      if (!comment) result += line.slice(offset, next) + ' ';
+      offset = next + marker.length;
+      comment = !comment;
+    }
+    return result;
   }).join('\n');
 }
 

@@ -31,6 +31,12 @@ these visible tables, with the English column names retained in localized prose:
 | 15 | `Path`, `Change` | `update` and `reference` files exist at the immutable base; `create` explicitly proposes an absent file |
 | 17 | `Requirement`, `Cases` | Every requirement names defined cases and the reverse links match |
 
+Tables inside a code fence cannot establish this inventory. A closing fence
+must use the same marker with at least the opening length, at most three leading
+spaces, and only spaces or tabs after it. A marker followed by text keeps the
+example fenced until a valid close or the end of the document. HTML comment
+syntax inside the code block is literal and cannot turn that line into a close.
+
 Use a separate case namespace for each proposed change, such as
 `identity-development-C01`. Copilot reserves identifiers across **every** SDD
 registered to the selected owner, including legacy shorthand inventories. A
