@@ -172,6 +172,16 @@ class HistoryIntegration(unittest.TestCase):
 
 
 class ReportFailures(unittest.TestCase):
+    def setUp(self):
+        # Failure fixtures must not publish fake warnings or a synthetic partial
+        # Job Summary when this suite runs inside the real manual workflow.
+        output = patch("sys.stdout", new_callable=io.StringIO)
+        output.start()
+        self.addCleanup(output.stop)
+        environment = patch.dict(reports.os.environ, {"GITHUB_STEP_SUMMARY": ""})
+        environment.start()
+        self.addCleanup(environment.stop)
+
     def test_swallowed_persistence_failure_becomes_fatal(self):
         from repowise.core.analysis.security.store import SecurityScanner, logger
         from unittest.mock import AsyncMock
