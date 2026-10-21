@@ -5,6 +5,11 @@ description: Install Copilot with the local browser assistant, then verify a rea
 
 This is the recommended interactive installation path. The assistant runs on your computer and prepares the selected workflows and GitHub resources. You review the plan before permission checks or installation changes begin.
 
+Comment callbacks call Copilot's reusable coordinator, keeping dependency setup,
+verification and cleanup in one job. Existing runner labels/groups remain visible
+in review. Check runner/platform prerequisites and migrate custom bootstrap before
+adopting this format; follow the [existing repository upgrade guide](/security-operations/operations/upgrade-rollback#upgrade-an-existing-copilot-repository).
+
 The assistant keeps tutorial, first-workflow and troubleshooting links available throughout the session. They open in another tab and retain your answers. Each question also links to its own reference and has a **Why this matters** explanation. See [Use the documentation](/using-the-docs) for version selection and offline help.
 
 ## Before you start

@@ -60,6 +60,16 @@ describe('installation parity and reviewed migration', () => {
   const write = (path: string, content: string) => { const absolute = join(root, path); mkdirSync(dirname(absolute), { recursive: true }); writeFileSync(absolute, content); };
   beforeEach(() => { root = mkdtempSync(join(tmpdir(), 'copilot-runner-parity-')); });
   afterEach(() => rmSync(root, { recursive: true, force: true }));
+  test('reviews and applies the same retained runner for compact reusable comment jobs', () => {
+    const legacy = single('[self-hosted, reviewed, Linux]').replace('run: echo fixture', 'uses: vypdev/copilot@v3');
+    write('.github/workflows/copilot_issue_comment.yml', legacy);
+    const config = { ...createDefaultSetupConfiguration(), runners: selectSetupRunnerMode('retain') };
+    const review = inspectSetupInstallation(root, config);
+    expect(review.jobs.find(job => job.file === 'copilot_issue_comment.yml')).toMatchObject({ role: 'agent', runsOn: ['self-hosted', 'reviewed', 'Linux'], retained: true });
+    const expected = review.changes.find(change => change.path === '.github/workflows/copilot_issue_comment.yml')!.after;
+    copySetupFiles(root, undefined, config.features, { setupConfiguration: config, updateExistingWorkflows: true, approvedWorkflowFiles: ['copilot_issue_comment.yml'] });
+    expect(readFileSync(join(root, '.github/workflows/copilot_issue_comment.yml'), 'utf8')).toBe(expected);
+  });
   test('an incomplete template package still inventories native YAML files without inventing managed assets', () => {
     const setup = join(root, 'empty-setup'); mkdirSync(setup);
     write('.github/workflows/native.yaml', workflow('  native:\n    runs-on: ubuntu-latest\n'));

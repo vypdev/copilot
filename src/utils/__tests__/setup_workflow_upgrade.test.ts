@@ -1,8 +1,51 @@
 import { dump, load } from 'js-yaml';
 import { hasRootLocalSetupAction, renderSetupWorkflowUpgrade } from '../setup_workflow_upgrade';
+import { copilotCommentRunner, COPILOT_COMMENT_REMOTE_WORKFLOW, COPILOT_COMMENT_SELF_WORKFLOW } from '../../domain/copilot_comment_workflow';
 
 const workflow = (runner: unknown, extra = '') => `name: Reviewed workflow\non: [pull_request]\njobs:\n  copilot:\n${dump({ 'runs-on': runner }).trimEnd().split('\n').map(line => `    ${line}`).join('\n')}\n${extra}    steps:\n      - run: echo reviewed\n`;
 const selected = (content: string) => (load(content) as { jobs: { copilot: { 'runs-on': unknown } } }).jobs.copilot['runs-on'];
+const comment = (route: unknown = 'ubuntu-latest') => dump({ on: { issue_comment: { types: ['created', 'edited'] } }, jobs: { copilot: {
+  uses: COPILOT_COMMENT_REMOTE_WORKFLOW, with: { 'runs-on': JSON.stringify(route) }, secrets: { PAT: '${{ secrets.PAT }}' },
+} } });
+
+describe('comment workflow coordination upgrade', () => {
+  it.each(['ubuntu-latest', ['self-hosted', 'codex', 'Linux'], { group: 'trusted', labels: ['self-hosted', 'Linux'] }])('migrates the reviewed native runner %j and stays idempotent', route => {
+    const previous = workflow(route).replace('run: echo reviewed', 'uses: vypdev/copilot@v3');
+    const result = renderSetupWorkflowUpgrade(comment(), previous);
+    const parsed = load(result) as any;
+    expect(copilotCommentRunner(parsed.jobs.copilot)).toEqual(route);
+    expect(parsed.jobs.copilot.steps).toBeUndefined();
+    expect(renderSetupWorkflowUpgrade(comment(), result)).toBe(result);
+  });
+  it('retains a previously upgraded group route', () => {
+    expect(copilotCommentRunner((load(renderSetupWorkflowUpgrade(comment(), comment({ group: 'trusted', labels: ['self-hosted', 'Linux'] }))) as any).jobs.copilot))
+      .toEqual({ group: 'trusted', labels: ['self-hosted', 'Linux'] });
+  });
+  it('uses an explicitly selected runner profile instead of the prior route', () => {
+    const template = comment().replace('  copilot:', '  copilot-issues:');
+    const result = renderSetupWorkflowUpgrade(template, undefined, { file: 'copilot_issue_comment.yml', runners: {
+      mode: 'manual-self-hosted', profileId: '', group: 'trusted', labels: ['self-hosted', 'Linux'], validation: 'hosted',
+    } });
+    expect(copilotCommentRunner((load(result) as any).jobs['copilot-issues'])).toEqual({ group: 'trusted', labels: ['self-hosted', 'Linux'] });
+  });
+  it('preserves source-only self-repository coordination exactly', () => {
+    const source = comment().replace(COPILOT_COMMENT_REMOTE_WORKFLOW, COPILOT_COMMENT_SELF_WORKFLOW);
+    expect(hasRootLocalSetupAction(source)).toBe(true);
+    expect(renderSetupWorkflowUpgrade(comment(), source)).toBe(source);
+  });
+  it.each(['actions/setup-node@v7', 'actions/setup-java@v5'])('blocks silently dropping custom bootstrap %s', uses => {
+    expect(() => renderSetupWorkflowUpgrade(comment(), workflow('ubuntu-latest').replace('run: echo reviewed', `uses: ${uses}`))).toThrow('migration');
+  });
+  it('blocks custom shell steps during migration', () => {
+    expect(() => renderSetupWorkflowUpgrade(comment(), workflow('ubuntu-latest'))).toThrow('migration');
+  });
+  it('blocks malformed reusable runner JSON', () => {
+    expect(() => renderSetupWorkflowUpgrade(comment(), comment().replace('"ubuntu-latest"', 'invalid'))).toThrow('review');
+  });
+  it('blocks dynamic native runners instead of transplanting their missing matrix', () => {
+    expect(() => renderSetupWorkflowUpgrade(comment(), workflow('${{ matrix.os }}').replace('run: echo reviewed', 'uses: vypdev/copilot@v3'))).toThrow('Dynamic');
+  });
+});
 
 describe('setup retains reviewed target workflow runners', () => {
   it('retains source Action jobs, permissions and release customizations instead of consumer templates', () => {

@@ -4,6 +4,10 @@ description: Required checks before enabling Copilot automation.
 ---
 # Configuration checklist
 
+For compact comment callbacks, verify runner 2.336.0+, platform support and the
+Actions policy for Copilot's reusable coordinator. Review the retained runner and
+any custom bootstrap migration using the [upgrade guide](/security-operations/operations/upgrade-rollback#upgrade-an-existing-copilot-repository).
+
 Before enabling repository verification or automated fixes, provision required
 project runtimes in **each** executing job and add the reviewed
 [runtime declaration](/security-operations/operations/verification#repository-verification-prerequisites).

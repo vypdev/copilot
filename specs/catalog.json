@@ -943,7 +943,9 @@
         "src/application/ports/bugbot_git_ports.ts",
         "src/application/usecases/steps/commit/bugbot/commit_and_push_preflight.ts",
         "src/application/usecases/steps/commit/bugbot/verify_command_runner.ts",
-        "src/cli/setup_config_file.ts"
+        "src/cli/setup_config_file.ts",
+        "src/domain/copilot_comment_workflow.ts",
+        "src/infrastructure/copilot_comment_inputs.json"
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
@@ -1074,7 +1076,8 @@
         "src/application/usecases/steps/commit/bugbot/__tests__/verify_command_runner.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/commit_verification_workspace.test.ts",
         "src/tooling/__tests__/verification_runtime_guidance.test.ts",
-        "src/infrastructure/__tests__/verification_setup_configuration.test.ts"
+        "src/infrastructure/__tests__/verification_setup_configuration.test.ts",
+        "src/domain/__tests__/copilot_comment_workflow.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -1978,7 +1981,10 @@
         ".github/workflows/copilot_issue.yml",
         "setup/workflows/copilot_issue.yml",
         "setup/workflows/copilot_issue_comment.yml",
-        "setup/workflows/copilot_pull_request_comment.yml"
+        "setup/workflows/copilot_pull_request_comment.yml",
+        ".github/workflows/copilot_comment_runtime.yml",
+        ".github/workflows/copilot_issue_comment.yml",
+        ".github/workflows/copilot_pull_request_comment.yml"
       ],
       "entrypoints": [
         "src/application/usecases/branch_sync/sync_branch_use_case.ts",
@@ -2042,7 +2048,10 @@
         "scripts/generate-native-verification-workflows.cjs",
         "src/infrastructure/verification_executable.ts",
         "src/infrastructure/native_verification_source_runtime.ts",
-        "scripts/prepare-native-source-action.cjs"
+        "scripts/prepare-native-source-action.cjs",
+        "src/domain/copilot_comment_workflow.ts",
+        "src/infrastructure/copilot_comment_inputs.json",
+        "scripts/validate-comment-workflows.cjs"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -2090,7 +2099,8 @@
         "src/infrastructure/__tests__/native_verification_profiles.test.ts",
         "src/infrastructure/__tests__/verification_executable.test.ts",
         "src/infrastructure/__tests__/native_verification_post.test.ts",
-        "src/infrastructure/__tests__/native_verification_source_runtime.test.ts"
+        "src/infrastructure/__tests__/native_verification_source_runtime.test.ts",
+        "src/domain/__tests__/copilot_comment_workflow.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",

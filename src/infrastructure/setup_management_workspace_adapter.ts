@@ -4,6 +4,8 @@ import { createHash } from 'node:crypto';
 import { load, JSON_SCHEMA } from 'js-yaml';
 import type { SetupInstallation, SetupInstalledWorkflow, SetupInstalledInput } from '../domain/setup_management';
 import { redactSensitiveText } from '../domain/security/sensitive_text';
+import { isCopilotCommentWorkflow, COPILOT_COMMENT_SELF_WORKFLOW } from '../domain/copilot_comment_workflow';
+import commentInputs from './copilot_comment_inputs.json';
 
 type Document = Record<string, unknown>;
 type WorkflowStep = { job: Document; step: Document };
@@ -86,12 +88,25 @@ export class SetupManagementWorkspaceAdapter {
   private inspectWorkflow(file: string, localAction: () => string | undefined): SetupInstalledWorkflow[] {
     const { source, document } = readDocument(join(this.root, '.github', 'workflows', file));
     const steps = workflowSteps(document);
+    const calls = Object.values(object(document.jobs)).map(object).filter(job => isCopilotCommentWorkflow(job.uses));
+    if (calls.some(job => job.uses === COPILOT_COMMENT_SELF_WORKFLOW) && !localAction()) throw new Error('Unverified source comment workflow.');
+    const reusable = calls.map(job => {
+      const overrides = object(job.with);
+      if (Object.keys(overrides).some(key => !['runs-on', 'issue-managed-branches', 'pre-branch-sdd', 'ai-ignore-files', 'prepare-source-verification'].includes(key))) throw new Error('Unknown comment workflow input.');
+      const bindings: Record<string, unknown> = { ...commentInputs };
+      for (const name of ['issue-managed-branches', 'pre-branch-sdd', 'ai-ignore-files']) {
+        if (overrides[name] !== undefined && overrides[name] !== '') bindings[name] = overrides[name];
+      }
+      return { file, action: job.uses === COPILOT_COMMENT_SELF_WORKFLOW ? './' : `vypdev/copilot@${String(job.uses).split('@').at(-1)}`,
+        digest: digest(source), environmentScoped: environmentScoped(document, job, {}),
+        inputs: Object.entries(bindings).flatMap(([name, value]) => installedInput(name, value)) };
+    });
     const knownLocalAction = steps.some(({ step }) => step.uses === './') ? Boolean(localAction()) : false;
-    return steps.flatMap(({ job, step }) => {
+    return [...reusable, ...steps.flatMap(({ job, step }) => {
       if (!this.isCopilotStep(step, knownLocalAction)) return [];
       const inputs = Object.entries(object(step.with)).flatMap(([name, value]) => installedInput(name, value));
       return [{ file, action: step.uses as string, digest: digest(source), environmentScoped: environmentScoped(document, job, step), inputs }];
-    });
+    })];
   }
 
   private isCopilotStep(step: Document, knownLocalAction: boolean): boolean {
