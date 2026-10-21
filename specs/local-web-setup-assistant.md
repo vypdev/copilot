@@ -2955,3 +2955,18 @@ help and retained question, and public Git-ref documentation renders correctly.
 That inspection is agent evidence, not a substitute for the outstanding human
 accessibility or cross-platform acceptance reviews. No open product decision
 blocks this bounded amendment. Related work: issues #617 and PR #618.
+
+### Hosted Windows verification budget (2026-10-21, PR #654)
+
+The synchronized pre-branch SDD fix reached the hosted Windows job's 20-minute
+limit without a failing assertion (run 39645186744). The preceding exact-base
+Windows job took 19 minutes 34 seconds (run 39644175943). The hosted Windows
+job MUST have a fixed 30-minute limit to complete native setup, isolated
+fixtures, package checks and full coverage; hosted Ubuntu/macOS retain 20.
+The existing complete suite, two-worker cap, subprocess deadlines, coverage and
+acceptance budgets, documentation gates and deferred cleanup remain mandatory.
+A canceled or timed-out run is missing evidence, never a pass. Acceptance is a
+successful fresh Windows run on the reviewed head, alongside the other platform
+jobs. Existing parsed workflow-contract checks cover this configuration change;
+no new application behavior or test count is introduced. Contributor guidance
+is in docs/development/testing.mdx; no consumer setting or migration is added.

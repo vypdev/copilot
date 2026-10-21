@@ -10,7 +10,8 @@ import type {
   SddCatalogSnapshot,
   SddPreparedDraft,
 } from '../application/ports/pre_branch_sdd_ports';
-import { composeSddUpdate, isSafeSddPath, validateSddMarkdown, type SddPlan } from '../domain/pre_branch_sdd';
+import { composeSddUpdate, recoverSddUpdate, isSafeSddPath, validateSddMarkdown, type SddPlan } from '../domain/pre_branch_sdd';
+import { validateSddDraftConsistency, type SddRepositoryInventory, type SddOwnerDocument } from '../domain/sdd_draft_consistency';
 import { buildGitAuthenticationEnvironment } from './git_authentication_environment';
 import { withoutGitHooks } from './git_hook_isolation';
 
@@ -94,6 +95,15 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
       if (fs.existsSync(target) !== (plan.action === 'update')) {
         throw new Error('The SDD owner changed since analysis; restart clarification.');
       }
+      const owners: SddOwnerDocument[] = [];
+      const inventory = await this.inventoryAt(snapshot.baseSha);
+      for (const file of snapshot.capabilities.find(capability => capability.id === plan.capabilityId)?.specs ?? []) {
+        if (!isSafeSddPath(file)) throw new Error('An owning SDD path is unsafe.');
+        if (!inventory.files.has(file)) throw new Error('An owning SDD is not a regular file at the immutable base.');
+        assertRegularSpecFile(path.join(root, file));
+        owners.push({ path: file, markdown: await this.git(['show', `${snapshot.baseSha}:${file}`]) });
+      }
+      validateSddDraftConsistency(markdown, owners, inventory, plan.path);
       if (plan.action === 'update') {
         assertRegularSpecFile(target);
         const owner = await this.git(['show', `${snapshot.baseSha}:${plan.path}`]);
@@ -219,7 +229,11 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
       const raw = await this.git(['show', `${first}:specs/catalog.json`]);
       newCapability = (JSON.parse(raw) as Catalog).capabilities.find(capability => capability.id === prepared.plan.capabilityId);
     }
-    const recovered = await this.validateDraft(snapshot, prepared.plan, content, newCapability);
+    const candidate = prepared.plan.action === 'update'
+      ? recoverSddUpdate(await this.git(['show', `${prepared.baseSha}:${prepared.plan.path}`]), content) : content;
+    if (!candidate) return undefined;
+    const recovered = await this.validateDraft(snapshot, prepared.plan, candidate, newCapability);
+    if (recovered.markdown !== content) return undefined;
     const committedPaths = (await this.git(['diff-tree', '--no-commit-id', '--name-only', '-r', first])).trim().split('\n').filter(Boolean).sort();
     if (committedPaths.join('\n') !== recovered.changedPaths.join('\n')) return undefined;
     if (recovered.catalogJson && await this.git(['show', `${first}:specs/catalog.json`]) !== recovered.catalogJson) return undefined;
@@ -249,6 +263,23 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
   private async changedPaths(root: string): Promise<string[]> {
     const output = await this.git(['status', '--porcelain', '--untracked-files=all'], root);
     return output.split('\n').filter(Boolean).map(line => line.slice(3)).sort();
+  }
+
+  private async inventoryAt(sha: string): Promise<SddRepositoryInventory> {
+    const files = new Set<string>();
+    const directories = new Set<string>();
+    const blocked = new Set<string>();
+    const tree = await this.git(['ls-tree', '-rz', '--full-tree', sha]);
+    for (const entry of tree.split('\0').filter(Boolean)) {
+      const tab = entry.indexOf('\t');
+      const file = entry.slice(tab + 1);
+      const mode = entry.slice(0, 6);
+      if (mode === '100644' || mode === '100755') files.add(file);
+      else blocked.add(file);
+      const parts = file.split('/');
+      for (let index = 1; index < parts.length; index++) directories.add(parts.slice(0, index).join('/'));
+    }
+    return { files, directories, blocked };
   }
 
   private async addDetachedWorktree(sha: string): Promise<string> {

@@ -19,6 +19,11 @@ const RECOVERY_CASES: readonly Readonly<{
     english: string;
     spanish: string;
 }>[] = [
+    ...(['sdd-draft-case-identity-invalid', 'sdd-draft-case-budget-invalid', 'sdd-draft-requirement-mapping-invalid', 'sdd-draft-repository-path-invalid'] as const).map(id => ({
+        recovery: { id, variables: {} },
+        english: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
+        spanish: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
+    })),
     ...(['stored-configuration-schema-missing', 'stored-configuration-schema-unsupported', 'stored-configuration-invalid'] as const).map(id => ({
         recovery: id === 'stored-configuration-schema-unsupported'
             ? { id, variables: { issueNumber: 144, expectedVersion: 3, actualVersion: 2 } }

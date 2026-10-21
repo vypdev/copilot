@@ -1562,7 +1562,8 @@
         "src/application/usecases/setup/doctor_use_case.ts",
         "src/application/policies/setup_doctor_message_catalog.ts",
         "src/domain/sdd_prerequisite_policy.cjs",
-        "src/application/policies/sdd_analysis_status_policy.ts"
+        "src/application/policies/sdd_analysis_status_policy.ts",
+        "src/domain/sdd_draft_consistency.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1605,7 +1606,8 @@
         "src/infrastructure/__tests__/setup_sdd_prerequisites.test.ts",
         "src/application/usecases/setup/__tests__/doctor_use_case.test.ts",
         "src/infrastructure/__tests__/branch_sync_sdd_catalog.test.ts",
-        "src/cli/__tests__/setup_presenters.test.ts"
+        "src/cli/__tests__/setup_presenters.test.ts",
+        "src/domain/__tests__/sdd_draft_consistency.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

@@ -39392,6 +39392,26 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect the rejected paths in the workflow and correct the workspace before retrying.',
         retainedState: 'The normal commit and push steps were skipped. Verify the current state before retrying.',
     }),
+    'sdd-draft-case-identity-invalid': Object.freeze({
+        impact: 'SDD publication stopped after one automatic repair: case IDs collide with an owning SDD or are ambiguous.',
+        action: 'Review the draft tables; use distinct fully qualified case IDs and preserve the baseline inventory. Retry the same issue workflow.',
+        retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
+    }),
+    'sdd-draft-case-budget-invalid': Object.freeze({
+        impact: 'SDD publication stopped after one automatic repair: per-area allocations disagree with the distinct case inventory.',
+        action: 'Review the draft tables; reconcile each area and the total with the enumerated cases. Retry the same issue workflow.',
+        retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
+    }),
+    'sdd-draft-requirement-mapping-invalid': Object.freeze({
+        impact: 'SDD publication stopped after one automatic repair: requirements and case mappings are incomplete or inconsistent.',
+        action: 'Review the draft tables; map every requirement to defined cases and match the reverse links. Retry the same issue workflow.',
+        retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
+    }),
+    'sdd-draft-repository-path-invalid': Object.freeze({
+        impact: 'SDD publication stopped after one automatic repair: cited repository paths cannot be verified at the immutable base.',
+        action: 'Review the draft tables; correct existing paths or explicitly declare intended new files. Retry the same issue workflow.',
+        retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
+    }),
     'sdd-draft-format-invalid': Object.freeze({
         impact: 'SDD preparation stopped because the draft still lacked required headings or a numeric test budget after one automatic repair.',
         action: 'Retry SDD preparation with the canonical specification template and the explicit acceptance requirements.',
@@ -39483,6 +39503,26 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'Los cambios se rechazaron durante la verificación del espacio de trabajo.',
         action: 'Revisa las rutas rechazadas en la ejecución y corrige el espacio de trabajo antes de reintentar.',
         retainedState: 'Se omitieron los pasos normales de commit y push. Comprueba el estado actual antes de reintentar.',
+    }),
+    'sdd-draft-case-identity-invalid': Object.freeze({
+        impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: los identificadores de casos coinciden con un SDD existente o son ambiguos.',
+        action: 'Revisa las tablas del borrador; usa identificadores completos y distintos y conserva el inventario original. Reintenta el workflow de la misma incidencia.',
+        retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
+    }),
+    'sdd-draft-case-budget-invalid': Object.freeze({
+        impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: las asignaciones por área no coinciden con el inventario de casos distintos.',
+        action: 'Revisa las tablas del borrador; reconcilia cada área y el total con los casos enumerados. Reintenta el workflow de la misma incidencia.',
+        retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
+    }),
+    'sdd-draft-requirement-mapping-invalid': Object.freeze({
+        impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: los requisitos y sus casos están incompletos o son inconsistentes.',
+        action: 'Revisa las tablas del borrador; vincula cada requisito a casos definidos y comprueba los enlaces inversos. Reintenta el workflow de la misma incidencia.',
+        retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
+    }),
+    'sdd-draft-repository-path-invalid': Object.freeze({
+        impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: no se pueden verificar las rutas citadas en la revisión base inmutable.',
+        action: 'Revisa las tablas del borrador; corrige las rutas existentes o declara explícitamente los archivos nuevos previstos. Reintenta el workflow de la misma incidencia.',
+        retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
     }),
     'sdd-draft-format-invalid': Object.freeze({
         impact: 'La preparación del SDD se detuvo porque seguían faltando secciones obligatorias o un presupuesto numérico de pruebas tras un intento automático de corrección.',
@@ -60857,6 +60897,7 @@ exports.draftSddMarkdown = draftSddMarkdown;
 const application_error_1 = __nccwpck_require__(75999);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const agent_response_length_failure_1 = __nccwpck_require__(28528);
+const sdd_draft_consistency_1 = __nccwpck_require__(27910);
 /** Size and typed format failures share one regeneration; the writer still validates every candidate. */
 async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
     const maximum = plan.action === 'update' ? pre_branch_sdd_1.SDD_MAX_UPDATE_CHARACTERS : pre_branch_sdd_1.SDD_MAX_DRAFT_CHARACTERS;
@@ -60868,13 +60909,13 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
     };
     let problem = 'size';
     let formatReason = 'required-heading';
-    const contractPrompt = `${prompt}\n\nDraft contract: keep the complete draft within ${maximum} characters; aim for ${target} characters. Preserve the same owner, decisions and requirements. Include these literal canonical heading prefixes as Markdown headings, with the shown capitalization:\n${pre_branch_sdd_1.SDD_REQUIRED_HEADINGS.join('\n')}\nUse the canonical numeric test-budget table in section 14: Area | Minimum distinct cases | Behaviors/risks covered. Every allocation and the Total must be a positive integer, and the Total must equal the sum of the allocations. A justified positive integer sentence of distinct tests or cases is also accepted. Return only the required JSON.`;
+    const contractPrompt = `${prompt}\n\nDraft contract: keep the complete draft within ${maximum} characters; aim for ${target} characters. Preserve the same owner, decisions and requirements. Include these literal canonical heading prefixes as Markdown headings, with the shown capitalization:\n${pre_branch_sdd_1.SDD_REQUIRED_HEADINGS.join('\n')}\nUse the canonical numeric test-budget table in section 14: Area | Minimum distinct cases | Behaviors/risks covered. Every allocation and the Total must be a positive integer, and the Total must equal the sum of the allocations. Return only the required JSON.`;
     for (let attempt = 0; attempt < 2; attempt++) {
         let value;
         try {
             value = await agent.query({
                 configuration, agentId: 'pre-branch-sdd-draft',
-                prompt: attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : `The previous response failed the required SDD ${formatReason} contract.`} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.`,
+                prompt: `${attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : `The previous response failed the required SDD ${formatReason} contract.`} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.`}\n\n${sdd_draft_consistency_1.SDD_CONSISTENCY_PROMPT}`,
                 options: { expectJson: true, schemaName: 'pre_branch_sdd_draft', schema },
             });
         }
@@ -60908,11 +60949,20 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
     }
     if (problem === 'format')
         throw new application_error_1.ApplicationError('validation.invalid-input', `The SDD draft still violates its ${formatReason} format contract after one bounded repair.`, {
-            recovery: { id: 'sdd-draft-format-invalid', variables: {} },
+            recovery: { id: consistencyRecovery(formatReason), variables: {} },
         });
     throw new application_error_1.ApplicationError('validation.invalid-input', 'The SDD draft exceeded its size limit after one bounded repair.', {
         recovery: { id: 'sdd-draft-size-exceeded', variables: {} },
     });
+}
+function consistencyRecovery(reason) {
+    switch (reason) {
+        case 'case-identity': return 'sdd-draft-case-identity-invalid';
+        case 'case-budget': return 'sdd-draft-case-budget-invalid';
+        case 'requirement-mapping': return 'sdd-draft-requirement-mapping-invalid';
+        case 'repository-path': return 'sdd-draft-repository-path-invalid';
+        default: return 'sdd-draft-format-invalid';
+    }
 }
 
 
@@ -60934,6 +60984,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const sdd_analysis_status_policy_1 = __nccwpck_require__(81053);
 const application_error_1 = __nccwpck_require__(75999);
 const pre_branch_sdd_draft_workflow_1 = __nccwpck_require__(93454);
+const sdd_draft_consistency_1 = __nccwpck_require__(27910);
 const ANALYSIS_SCHEMA = {
     type: 'object',
     properties: {
@@ -61088,9 +61139,19 @@ class PreBranchSddGateUseCase {
             const currentSdd = plan.action === 'update' ? await this.workspace.readSdd(snapshot.baseSha, plan.path) : undefined;
             if (plan.action === 'update' && !currentSdd)
                 throw new Error('The catalogued SDD owner is missing from the selected base.');
+            const ownerDocuments = [];
+            for (const path of snapshot.capabilities.find(capability => capability.id === plan.capabilityId)?.specs ?? []) {
+                const markdown = path === plan.path && currentSdd ? currentSdd : await this.workspace.readSdd(snapshot.baseSha, path);
+                if (!markdown)
+                    throw new Error('A catalogued owning SDD is unavailable at the selected immutable base.');
+                ownerDocuments.push({ path, markdown });
+            }
+            const reservedCases = JSON.stringify((0, sdd_draft_consistency_1.reservedSddCaseIds)(ownerDocuments));
+            if (reservedCases.length > 30000)
+                throw new Error('The owning SDD case inventory exceeds the bounded drafting context; maintainer review is required.');
             const newCapability = plan.action === 'new' ? parseNewCapability(analysisValue.newCapability, plan) : undefined;
             let prepared;
-            await (0, pre_branch_sdd_draft_workflow_1.draftSddMarkdown)(this.agent, context.agentConfiguration, plan, buildDraftPrompt(context, snapshot, plan, answers, currentSdd), async (markdown) => {
+            await (0, pre_branch_sdd_draft_workflow_1.draftSddMarkdown)(this.agent, context.agentConfiguration, plan, `${buildDraftPrompt(context, snapshot, plan, answers, currentSdd)}\n\nCase IDs reserved across every owning SDD at ${snapshot.baseSha}:\n${reservedCases}`, async (markdown) => {
                 prepared = await this.workspace.validateDraft(snapshot, plan, markdown, newCapability);
             });
             if (!prepared)
@@ -78674,6 +78735,10 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-resolution-invalid',
     'sdd-draft-size-exceeded',
     'sdd-draft-format-invalid',
+    'sdd-draft-case-identity-invalid',
+    'sdd-draft-case-budget-invalid',
+    'sdd-draft-requirement-mapping-invalid',
+    'sdd-draft-repository-path-invalid',
     'workspace-changes-rejected',
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
@@ -78888,6 +78953,10 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-draft-format-invalid': Object.freeze([]),
+    'sdd-draft-case-identity-invalid': Object.freeze([]),
+    'sdd-draft-case-budget-invalid': Object.freeze([]),
+    'sdd-draft-requirement-mapping-invalid': Object.freeze([]),
+    'sdd-draft-repository-path-invalid': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
 function normalizeApplicationErrorRecovery(recovery) {
@@ -92247,6 +92316,7 @@ exports.isSddAnswerComment = isSddAnswerComment;
 exports.parseSddAnswer = parseSddAnswer;
 exports.validateSddMarkdown = validateSddMarkdown;
 exports.composeSddUpdate = composeSddUpdate;
+exports.recoverSddUpdate = recoverSddUpdate;
 exports.SDD_GATE_MARKER = 'copilot:sdd-gate:v1';
 exports.SDD_MIN_DRAFT_CHARACTERS = 1800;
 exports.SDD_MAX_DRAFT_CHARACTERS = 70000;
@@ -92550,8 +92620,24 @@ function composeSddUpdate(existing, change) {
     validateSddMarkdown(change);
     if (change.length > exports.SDD_MAX_UPDATE_CHARACTERS)
         throw new Error('An SDD update appendix exceeds 18000 characters; use a proportional change or a companion SDD.');
+    const appendix = shiftSddHeadings(change, 1);
+    const merged = `${existing.trimEnd()}\n\n${appendix.trim()}\n`;
+    validateSddMarkdown(merged);
+    return merged;
+}
+/** Recovery validates the original candidate, not a second copy of its retained baseline. */
+function recoverSddUpdate(existing, published) {
+    const prefix = `${existing.trimEnd()}\n\n`;
+    if (!published.startsWith(prefix))
+        return undefined;
+    // Composition normalizes outer whitespace and adds a publication newline.
+    // Reconstruct an equivalent candidate inside the original size bounds.
+    const change = shiftSddHeadings(published.slice(prefix.length), -1).trim().padEnd(exports.SDD_MIN_DRAFT_CHARACTERS, '\n');
+    return composeSddUpdate(existing, change) === published ? change : undefined;
+}
+function shiftSddHeadings(source, direction) {
     let fence;
-    const appendix = change.split('\n').map(line => {
+    return source.split('\n').map(line => {
         const boundary = line.match(/^\s*(`{3,}|~{3,})/);
         if (boundary) {
             if (!fence)
@@ -92560,11 +92646,11 @@ function composeSddUpdate(existing, change) {
                 fence = undefined;
             return line;
         }
-        return !fence && /^#{1,5} /.test(line) ? `#${line}` : line;
+        if (fence)
+            return line;
+        return direction === 1 ? (/^#{1,5} /.test(line) ? `#${line}` : line)
+            : (/^#{2,6} /.test(line) ? line.slice(1) : line);
     }).join('\n');
-    const merged = `${existing.trimEnd()}\n\n${appendix.trim()}\n`;
-    validateSddMarkdown(merged);
-    return merged;
 }
 function serializeSddGateValue(value) {
     // Human answer text must never terminate its hidden state comment.
@@ -93158,6 +93244,252 @@ const node_crypto_1 = __nccwpck_require__(6005);
 /** Private complete request witness; public reply-marker identities stay unchanged. */
 function replyRequestBodyDigest(body) {
     return (0, node_crypto_1.createHash)('sha256').update(body, 'utf8').digest('hex');
+}
+
+
+/***/ }),
+
+/***/ 27910:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SDD_CONSISTENCY_PROMPT = void 0;
+exports.reservedSddCaseIds = reservedSddCaseIds;
+exports.validateSddDraftConsistency = validateSddDraftConsistency;
+const pre_branch_sdd_1 = __nccwpck_require__(34730);
+const CASE = /\b(?:[A-Za-z][A-Za-z0-9]*-)+C\d+\b/gu;
+const CASE_ID = /^(?:[A-Za-z][A-Za-z0-9]*-)+C\d+$/u;
+const REQUIREMENT_ID = /^[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+$/u;
+/** Generated candidates use visible tables; retained legacy owners are never reformatted. */
+exports.SDD_CONSISTENCY_PROMPT = `Consistency contract for the proposed draft/appendix (not the retained owner):
+In section 4 include one table: Requirement | Behavior. Give every goal a stable requirement ID.
+In section 14 include one budget table: Area | Minimum distinct cases | Behaviors/risks covered; positive integers and one Total.
+Also in section 14 include one inventory table: Case ID | Area | Requirements | Scenario.
+Each row is one distinct executable case with a fully qualified ID such as capability-change-C01, one exact budget area, comma-separated requirement IDs and an observable scenario. Never use shorthand C01, ranges or redefine an ID found in any owning SDD. Reference retained baseline cases in prose using their full IDs; count only the new inventory.
+In section 17 include one table: Requirement | Cases. List comma-separated full case IDs for every requirement. Its links must exactly match the case inventory in both directions, with no undefined or generic documentation checks.
+In section 15 include one table: Path | Change. Change is update, reference or create. Include the selected SDD path itself with update for an existing SDD or create for a new/companion SDD. Use existing immutable-base files for update/reference. Only explicitly proposed new files may use create; never mark a missing current document as an existing artifact. Cite repository files as full repository-relative paths in backticks, or relative Markdown file links. Put every planned new file in this table. These tables are publication consistency checks, not runtime/security acceptance.`;
+function fail(reason) {
+    // Closed diagnostics: rejected Markdown and repository text never become repair instructions.
+    throw new pre_branch_sdd_1.SddDraftFormatFailure(reason, `The SDD draft violates its ${reason} consistency contract.`);
+}
+/** Excludes examples and hidden records from the contract. */
+function visible(source) {
+    let fence;
+    let comment = false;
+    return source.replace(/\r\n/gu, '\n').split('\n').map(line => {
+        const boundary = /^\s*(`{3,}|~{3,})/u.exec(line);
+        if (fence) {
+            // Comment syntax inside code is literal; only the original line can close it.
+            if (boundary && boundary[1][0] === fence[0] && boundary[1].length >= fence.length
+                && /^ {0,3}(?:`+|~+)[ \t]*$/u.test(line))
+                fence = undefined;
+            return '';
+        }
+        if (!comment && boundary) {
+            fence = boundary[1];
+            return '';
+        }
+        let result = '';
+        let offset = 0;
+        while (offset < line.length) {
+            const marker = comment ? '-->' : '<!--';
+            const next = line.indexOf(marker, offset);
+            if (next < 0)
+                return result + (comment ? '' : line.slice(offset));
+            if (!comment)
+                result += line.slice(offset, next) + ' ';
+            offset = next + marker.length;
+            comment = !comment;
+        }
+        return result;
+    }).join('\n');
+}
+function clean(value) { return value.trim().replace(/^(?:\*\*|__|`)(.*?)(?:\*\*|__|`)$/u, '$1').trim(); }
+function table(source, section, headers, reason) {
+    const sections = [...source.matchAll(/^## (\d+)\. [^\n]*$/gmu)];
+    const matches = sections.filter(heading => Number(heading[1]) === section);
+    if (matches.length !== 1)
+        return fail(reason);
+    const start = matches[0];
+    const end = sections.find(heading => heading.index > start.index)?.index ?? source.length;
+    const lines = source.slice(start.index + start[0].length, end).split('\n');
+    const found = [];
+    for (let index = 0; index < lines.length; index++) {
+        if (!/^\s*\|/u.test(lines[index]))
+            continue;
+        const cells = (line) => line.trim().replace(/^\||\|$/gu, '').split('|').map(clean);
+        const header = cells(lines[index]);
+        if (!headers.every((value, position) => header[position] === value) || header.length !== headers.length)
+            continue;
+        const separator = cells(lines[++index] ?? '');
+        if (separator.length !== headers.length || !separator.every(cell => /^:?-{3,}:?$/u.test(cell)))
+            return fail(reason);
+        const rows = [];
+        while (++index < lines.length && /^\s*\|/u.test(lines[index])) {
+            const row = cells(lines[index]);
+            if (row.length !== headers.length || row.some(cell => !cell))
+                return fail(reason);
+            rows.push(row);
+        }
+        if (!rows.length)
+            return fail(reason);
+        found.push(rows);
+    }
+    return found.length === 1 ? found[0] : fail(reason);
+}
+function ids(value, pattern, reason) {
+    const values = value.split(/\s*,\s*/u);
+    if (!values.every(id => pattern.test(id)) || new Set(values).size !== values.length)
+        return fail(reason);
+    return values;
+}
+function reservedSddCaseIds(documents) {
+    const reserved = new Set();
+    for (const document of documents) {
+        const source = visible(document.markdown);
+        const qualified = source.match(CASE) ?? [];
+        const namespaces = new Set(qualified.map(id => id.slice(0, id.lastIndexOf('-C') + 2)));
+        for (const id of qualified)
+            reserved.add(id);
+        // Legacy inventories often qualify C01 and abbreviate the remaining rows.
+        // Reserve every plausible namespace instead of silently assigning an alias a new meaning.
+        for (const match of source.matchAll(/(?<![\w-])C(\d+)\b/gu)) {
+            for (const namespace of namespaces)
+                reserved.add(`${namespace}${match[1]}`);
+        }
+        for (const match of source.matchAll(/\bC(\d+)\s*[-–—]\s*C?(\d+)\b/gu)) {
+            const start = Number(match[1]);
+            const end = Number(match[2]);
+            if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || end < start || end - start > 1000) {
+                throw new Error('An owning SDD case range cannot be reconciled within the fixed bound; review the baseline before retrying.');
+            }
+            for (let number = start; number <= end; number++) {
+                for (const namespace of namespaces)
+                    reserved.add(`${namespace}${String(number).padStart(match[1].length, '0')}`);
+            }
+        }
+    }
+    return [...reserved].sort();
+}
+function validateSddDraftConsistency(markdown, owners, inventory, sddPath) {
+    const source = visible(markdown);
+    const requirements = table(source, 4, ['Requirement', 'Behavior'], 'requirement-mapping');
+    const requirementIds = requirements.map(row => row[0]);
+    if (new Set(requirementIds).size !== requirementIds.length || !requirementIds.every(id => REQUIREMENT_ID.test(id)))
+        fail('requirement-mapping');
+    const cases = table(source, 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity');
+    const caseIds = cases.map(row => row[0]);
+    const reserved = new Set(reservedSddCaseIds(owners));
+    if (new Set(caseIds).size !== caseIds.length || caseIds.some(id => !CASE_ID.test(id) || reserved.has(id))
+        || /(?<![\w-])C\d+\b/u.test(source))
+        fail('case-identity');
+    // References to existing owner cases are allowed, but cannot count as newly defined cases.
+    if ([...source.matchAll(CASE)].some(([id]) => !caseIds.includes(id) && !reserved.has(id)))
+        fail('case-identity');
+    const budget = table(source, 14, ['Area', 'Minimum distinct cases', 'Behaviors/risks covered'], 'case-budget');
+    const counts = new Map();
+    let total;
+    for (const [area, value] of budget) {
+        const count = /^[1-9]\d*$/u.test(value) ? Number(value) : NaN;
+        if (!Number.isSafeInteger(count) || counts.has(area) || total !== undefined)
+            fail('case-budget');
+        if (area === 'Total')
+            total = count;
+        else
+            counts.set(area, count);
+    }
+    if (!counts.size || total !== caseIds.length || [...counts.values()].reduce((sum, count) => sum + count, 0) !== total
+        || cases.some(row => !counts.has(row[1])))
+        fail('case-budget');
+    for (const [area, count] of counts)
+        if (cases.filter(row => row[1] === area).length !== count)
+            fail('case-budget');
+    const edges = new Map(requirementIds.map(id => [id, new Set()]));
+    for (const [id, , links] of cases) {
+        for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping')) {
+            const linked = edges.get(requirement);
+            if (!linked)
+                fail('requirement-mapping');
+            linked.add(id);
+        }
+    }
+    const traceability = table(source, 17, ['Requirement', 'Cases'], 'requirement-mapping');
+    const seen = new Set();
+    for (const [requirement, links] of traceability) {
+        const expected = edges.get(requirement);
+        const actual = ids(links, CASE_ID, 'requirement-mapping');
+        if (!expected || seen.has(requirement) || expected.size !== actual.length || actual.some(id => !expected.has(id)))
+            fail('requirement-mapping');
+        seen.add(requirement);
+    }
+    if (seen.size !== edges.size || [...edges.values()].some(links => links.size === 0))
+        fail('requirement-mapping');
+    validatePaths(source, inventory, sddPath);
+}
+function safePath(value) {
+    return value.length > 0 && !/[\\:*?"<>|\p{Cc}]/u.test(value)
+        && value.split('/').every(segment => segment && segment !== '.' && segment !== '..' && segment.toLowerCase() !== '.git');
+}
+function validatePaths(source, inventory, sddPath) {
+    const rows = table(source, 15, ['Path', 'Change'], 'repository-path');
+    const expectedChange = inventory.files.has(sddPath) ? 'update' : 'create';
+    if (!rows.some(([file, change]) => file === sddPath && change === expectedChange))
+        fail('repository-path');
+    const proposed = new Set();
+    const seen = new Set();
+    for (const [file, change] of rows) {
+        if (!safePath(file) || seen.has(file) || inventory.blocked.has(file))
+            fail('repository-path');
+        seen.add(file);
+        if (change === 'create') {
+            if (inventory.files.has(file) || inventory.directories.has(file))
+                fail('repository-path');
+            const segments = file.split('/');
+            if (segments.some((_, index) => inventory.files.has(segments.slice(0, index + 1).join('/')) || inventory.blocked.has(segments.slice(0, index + 1).join('/'))))
+                fail('repository-path');
+            proposed.add(file);
+        }
+        else if (!['update', 'reference'].includes(change) || !inventory.files.has(file))
+            fail('repository-path');
+    }
+    const check = (file) => {
+        if (!safePath(file) || (!inventory.files.has(file) && !inventory.directories.has(file) && !proposed.has(file)))
+            fail('repository-path');
+    };
+    // Relative Markdown file links resolve against the selected SDD, never the current checkout.
+    for (const match of source.matchAll(/\]\(([^\s)]+)\)/gu)) {
+        const href = match[1].split(/[?#]/u)[0];
+        if (!href || /^(?:[a-z][a-z0-9+.-]*:|\/)/iu.test(href))
+            continue;
+        let decoded;
+        try {
+            decoded = decodeURIComponent(href);
+        }
+        catch {
+            return fail('repository-path');
+        }
+        const parts = sddPath.split('/').slice(0, -1);
+        for (const part of decoded.split('/')) {
+            if (part === '..') {
+                if (!parts.length)
+                    fail('repository-path');
+                parts.pop();
+            }
+            else if (part !== '.')
+                parts.push(part);
+        }
+        check(parts.join('/'));
+    }
+    for (const match of source.matchAll(/`([^`\n]+)`/gu)) {
+        const value = match[1];
+        if (value.includes('/') && !/^(?:[a-z][a-z0-9+.-]*:|\/)/iu.test(value) && !/\s/u.test(value))
+            check(value.replace(/\/$/u, ''));
+    }
+    const prose = source.replace(/\]\([^\s)]+\)/gu, ']()').replace(/[a-z][a-z0-9+.-]*:\/\/[^\s)>]+/giu, '');
+    for (const match of prose.matchAll(/(?<![\w./:-])([A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+\.[A-Za-z0-9]+)(?![\w/-])/gu))
+        check(match[1]);
 }
 
 
@@ -98591,6 +98923,7 @@ const node_crypto_1 = __nccwpck_require__(6005);
 const node_child_process_1 = __nccwpck_require__(17718);
 const node_util_1 = __nccwpck_require__(47261);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
+const sdd_draft_consistency_1 = __nccwpck_require__(27910);
 const git_authentication_environment_1 = __nccwpck_require__(16535);
 const git_hook_isolation_1 = __nccwpck_require__(39764);
 const runFile = (0, node_util_1.promisify)(node_child_process_1.execFile);
@@ -98664,6 +98997,17 @@ class PreBranchSddWorkspaceAdapter {
             if (fs.existsSync(target) !== (plan.action === 'update')) {
                 throw new Error('The SDD owner changed since analysis; restart clarification.');
             }
+            const owners = [];
+            const inventory = await this.inventoryAt(snapshot.baseSha);
+            for (const file of snapshot.capabilities.find(capability => capability.id === plan.capabilityId)?.specs ?? []) {
+                if (!(0, pre_branch_sdd_1.isSafeSddPath)(file))
+                    throw new Error('An owning SDD path is unsafe.');
+                if (!inventory.files.has(file))
+                    throw new Error('An owning SDD is not a regular file at the immutable base.');
+                assertRegularSpecFile(path.join(root, file));
+                owners.push({ path: file, markdown: await this.git(['show', `${snapshot.baseSha}:${file}`]) });
+            }
+            (0, sdd_draft_consistency_1.validateSddDraftConsistency)(markdown, owners, inventory, plan.path);
             if (plan.action === 'update') {
                 assertRegularSpecFile(target);
                 const owner = await this.git(['show', `${snapshot.baseSha}:${plan.path}`]);
@@ -98802,7 +99146,13 @@ class PreBranchSddWorkspaceAdapter {
             const raw = await this.git(['show', `${first}:specs/catalog.json`]);
             newCapability = JSON.parse(raw).capabilities.find(capability => capability.id === prepared.plan.capabilityId);
         }
-        const recovered = await this.validateDraft(snapshot, prepared.plan, content, newCapability);
+        const candidate = prepared.plan.action === 'update'
+            ? (0, pre_branch_sdd_1.recoverSddUpdate)(await this.git(['show', `${prepared.baseSha}:${prepared.plan.path}`]), content) : content;
+        if (!candidate)
+            return undefined;
+        const recovered = await this.validateDraft(snapshot, prepared.plan, candidate, newCapability);
+        if (recovered.markdown !== content)
+            return undefined;
         const committedPaths = (await this.git(['diff-tree', '--no-commit-id', '--name-only', '-r', first])).trim().split('\n').filter(Boolean).sort();
         if (committedPaths.join('\n') !== recovered.changedPaths.join('\n'))
             return undefined;
@@ -98836,6 +99186,25 @@ class PreBranchSddWorkspaceAdapter {
     async changedPaths(root) {
         const output = await this.git(['status', '--porcelain', '--untracked-files=all'], root);
         return output.split('\n').filter(Boolean).map(line => line.slice(3)).sort();
+    }
+    async inventoryAt(sha) {
+        const files = new Set();
+        const directories = new Set();
+        const blocked = new Set();
+        const tree = await this.git(['ls-tree', '-rz', '--full-tree', sha]);
+        for (const entry of tree.split('\0').filter(Boolean)) {
+            const tab = entry.indexOf('\t');
+            const file = entry.slice(tab + 1);
+            const mode = entry.slice(0, 6);
+            if (mode === '100644' || mode === '100755')
+                files.add(file);
+            else
+                blocked.add(file);
+            const parts = file.split('/');
+            for (let index = 1; index < parts.length; index++)
+                directories.add(parts.slice(0, index).join('/'));
+        }
+        return { files, directories, blocked };
     }
     async addDetachedWorktree(sha) {
         const root = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-sdd-'));

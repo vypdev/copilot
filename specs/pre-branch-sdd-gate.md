@@ -1140,3 +1140,162 @@ not parsed as readiness. Documentation: ownership analysis recovery in the
 pre-branch SDD guide. Definition of Done also requires existing global quality,
 package and catalog gates, preserved safety checks and review of both locale
 messages; tests do not claim a live consumer recovery.
+
+### Generated draft consistency (2026-10-21, #653)
+
+Issue [#653](https://github.com/vypdev/copilot/issues/653) documented a published
+companion that reused a baseline case ID for the opposite authentication
+behavior, had offsetting area-allocation errors and one-sided requirement links,
+and cited a nonexistent documentation update path. Arithmetic and catalog
+validity alone did not establish a coherent generated contract. This amendment
+requires internal publication consistency; Draft/Proposed publication MUST
+remain separate from product, security, operator and runtime acceptance.
+
+Generated candidates MUST use these visible English-header tables in their
+canonical numbered sections; localized surrounding prose remains supported:
+
+| Section | Columns | Contract |
+|---|---|---|
+| 4 | Requirement / Behavior | Unique stable IDs for the draft's requirements |
+| 14 | Area / Minimum distinct cases / Behaviors/risks covered | Positive integer allocations and one final Total |
+| 14 | Case ID / Area / Requirements / Scenario | One distinct full case ID, exact area, comma-separated requirement IDs and observable scenario per row |
+| 15 | Path / Change | Immutable existing files for update/reference; explicitly absent proposed files for create |
+| 17 | Requirement / Cases | Comma-separated full case IDs; exact reciprocal links for every requirement |
+
+Missing, duplicate, malformed, empty, hidden or fenced inventories block. Every
+area's allocation MUST equal its distinct inventory count, and the total MUST
+match both. Cases and requirements MUST name only defined IDs and agree in both
+directions. Uncovered goals and generic documentation checks cannot establish
+acceptance. These structural checks cannot certify the completeness or meaning
+of every natural-language requirement; human review remains mandatory.
+
+Every catalogued SDD for the selected owner MUST be read at the immutable base.
+Its full case IDs are reserved, including namespaces inferred from legacy
+shorthand rows/ranges. A new case MUST NOT redefine a reserved ID, even when its
+scenario seems similar. Baseline references use full IDs and do not count as
+new cases. New cases use a separate namespace, such as identity-development-C01.
+Unavailable owners, more than 30,000 serialized reserved-ID characters, or a
+legacy range spanning over 1,000 increments block without truncation or repair
+of the immutable owner. These fixed bounds have no public setting. Retained
+owners keep their existing prose budgets and bytes; only new candidates need
+the tables. No catalog or durable-status schema migration is introduced.
+
+The workspace MUST resolve cited paths against the immutable Git tree, not
+uncommitted files or the post-write scratch tree. Repository-relative code
+spans, ordinary file citations and relative Markdown destinations are checked;
+external URLs and local anchors do not claim repository existence. Existing
+files can use any language/layout. Future files MUST be explicitly declared
+create, absent from the base and outside symlink/submodule or regular-file
+parents. Update/reference declarations require regular files. The selected new
+SDD is itself proposed. This flow writes only the selected SDD/catalog files.
+
+```text
+answered plan -> read all immutable owners -> reserve baseline case identities
+ -> draft visible inventories -> check cases, areas, mappings and paths
+ -> one shared repair, or specific non-ready recovery
+ -> unchanged freshness/link/first-commit proof -> draft publication
+ -> independent human and runtime acceptance
+```
+
+Text equivalent: owner evidence precedes drafting; deterministic validation
+accepts a candidate or spends the existing single repair. Repeated contradiction
+stops before publication. The existing branch/commit proof still follows.
+
+Architecture: the pure src/domain/sdd_draft_consistency.ts policy owns inventory,
+identity, budget, mapping and path decisions without filesystem, process,
+provider or presentation imports. Application code reads every owner through
+the existing port and supplies reserved IDs to both bounded drafting attempts.
+The workspace adapter supplies immutable regular-file/directory/blocked-path
+sets, validates before composing the retained owner or writing, and always
+removes scratch worktrees. Recovery extracts and revalidates the proposed
+appendix and verifies recomposed bytes, preserving the existing first commit.
+This avoids treating retained owner cases as new definitions during replay.
+Existing architecture, type, catalog and publication tests enforce the boundary.
+
+UX retains the existing localized error surface and notification budget.
+Pending: validation runs with answers retained. Action required/blocked: after
+the shared repair, a closed category identifies case identities, allocations,
+requirement mappings or paths. Representative content: "SDD publication stopped
+after one automatic repair: per-area allocations disagree with the distinct
+case inventory. Review the draft tables; reconcile each area and the total with
+the enumerated cases. Retry the same issue workflow." Retained state says
+answers and published SDDs remain and no draft was published. Partial push
+success keeps the exact branch/commit for ordinary replay. Complete means the
+consistent draft was published; runtime acceptance remains open. English and
+Spanish messages use the existing impact/action/retained-state order, textual
+headings, mobile/screen-reader behavior and closed sanitized content. Rejected
+Markdown, case IDs, paths and diagnostic text MUST NOT enter repair instructions
+or public messages. There is no additional card, label, credential or setting.
+
+The amendment has a minimum **120 distinct cases**, separate from earlier floors:
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---:|---|
+| Pure consistency policy | 89 | Owner collisions and aliases, hidden/malformed inventories, invalid/valid fence and comment boundaries, offsetting budgets, reciprocal mappings, immutable/proposed paths and relative URL components, portable layouts and bounded ranges |
+| Application and bounded draft workflow | 9 | All-owner reads, missing/oversized context, blocked publication, four closed repairs and corrected-draft revalidation |
+| Publication replay boundaries | 5 | Minimum/maximum candidate lengths, normalized outer whitespace, retained prefix and exact recomposition |
+| Real Git workspace | 13 | Each reported contradiction and falsely closed code block blocks publication; valid relative-link queries resolve immutable/proposed evidence; ignores uncommitted evidence, preserves the owner and removes scratch worktrees |
+| Localized recovery | 4 | All four closed variants render English/Spanish retained state without runtime acceptance claims |
+| **Total** | **120** | Existing cases are not recounted |
+
+Repository coverage thresholds remain mandatory; new pure policy targets at
+least 95% lines, with negative/boundary branch fixtures. Tests use deterministic
+text/agents and local bare remotes without providers or sleeps. Existing
+update/companion publication and post-push recovery fixtures remain required.
+Human content review checks the specific recovery action and the separation of
+publication/runtime status; no new interactive layout requires visual testing.
+
+Acceptance/traceability: sdd_draft_consistency.test.ts proves that a case changed
+to an owner ID, offsetting allocations, a one-sided link or a missing document
+fails its specific category. Workspace tests repeat the four failures against
+Git objects and prove no branch or scratch workspace remains. Gate tests prove
+every owner reaches reservation and exhausted validation never publishes.
+Draft workflow tests prove closed feedback, specific recovery and the shared
+two-attempt ceiling. Presentation tests prove both locales. Corrected tables
+and intentional new paths pass; existing owner bytes and verified replay remain
+preserved. Fixtures establish consistency, not live provider or runtime quality.
+
+Delivery sequence/Definition of Done: implement pure policy and tests; bind
+immutable inventory and owner context; preserve verified replay; add localized
+closed recovery; update docs/issues/pre-branch-sdds.mdx, catalog evidence and
+CATALOG; pass specification, documentation, architecture, type, lint, test,
+build and package gates. All new evidence files MUST exist. No runtime
+prerequisite, framework or acceptance check may be weakened. In-flight drafts
+use the contract at their next validation. Rollback selects the previous Action
+version without rewriting historical commits or branches.
+
+PR #654 review finding 4339327223 closes an inventory exemption: section 15 MUST
+include the selected SDD itself, with create when absent from the immutable base
+and update when it already exists. Reference, omission or a self-link cannot
+substitute for this row. No SDD path is implicitly pre-approved. Ten additional
+pure cases cover these declarations and malformed table/fence boundaries; five
+workspace cases cover omitted update/companion rows, unsafe owner evidence and
+recovery rejection for a replaced owner or changed revalidation bytes. They are
+included once in the amendment floor above. The existing closed path
+recovery, shared retry ceiling and localized publication/acceptance distinction
+remain unchanged.
+
+PR #654 review finding 4340243954 requires a matching code fence to close only
+when it has at most three leading spaces and only spaces or tabs after its
+marker, following [CommonMark fenced-code rules](https://spec.commonmark.org/0.31.2/#fenced-code-blocks).
+An info string remains valid on an opening fence. Text after a possible closing
+marker, a shorter/different marker or four leading spaces cannot expose the
+enclosed contract. Comment syntax inside a fence is literal and MUST NOT be
+removed before deciding whether that original line closes the fence. Fence
+markers inside HTML comments cannot alter the surrounding visible contract.
+Sixteen pure regressions cover invalid backtick/tilde closers, owner reservations,
+valid longer closers with trailing whitespace and comment/fence precedence; two real
+Git regressions reject update/companion publication while preserving the owner
+and cleaning scratch worktrees. These eighteen cases raise the amendment floor
+from 93 to 111. No new setting, retry, diagnostic category or public status is
+introduced; docs/issues/pre-branch-sdds.mdx explains the visible-table boundary.
+
+PR #654 review finding 4340463276 requires relative Markdown destinations to
+resolve their repository pathname independently of URL queries and fragments.
+The validator separates literal `?`/`#` delimiters before percent decoding the
+pathname, preserving encoded path characters for the existing safety/existence
+checks. Query-only or fragment-only destinations keep the current SDD; queries
+cannot make a missing, invalidly encoded or unsafe pathname valid. Seven pure
+and two real Git update/companion cases cover existing/proposed paths, combined
+query/fragment destinations and negative evidence. These nine cases raise the
+floor from 111 to 120; docs/issues/pre-branch-sdds.mdx documents the URL behavior.

@@ -28,6 +28,7 @@ import { logError } from '../../ports/logging_ports';
 import { renderSddAnalysisStatus, sddAnalysisStatusMarker } from '../../policies/sdd_analysis_status_policy';
 import { ApplicationError, toApplicationError } from '../../errors/application_error';
 import { draftSddMarkdown } from './pre_branch_sdd_draft_workflow';
+import { reservedSddCaseIds, type SddOwnerDocument } from '../../../domain/sdd_draft_consistency';
 
 export interface PreBranchSddContext {
   readonly issueNumber: number;
@@ -207,10 +208,18 @@ export class PreBranchSddGateUseCase {
 
       const currentSdd = plan.action === 'update' ? await this.workspace.readSdd(snapshot.baseSha, plan.path) : undefined;
       if (plan.action === 'update' && !currentSdd) throw new Error('The catalogued SDD owner is missing from the selected base.');
+      const ownerDocuments: SddOwnerDocument[] = [];
+      for (const path of snapshot.capabilities.find(capability => capability.id === plan.capabilityId)?.specs ?? []) {
+        const markdown = path === plan.path && currentSdd ? currentSdd : await this.workspace.readSdd(snapshot.baseSha, path);
+        if (!markdown) throw new Error('A catalogued owning SDD is unavailable at the selected immutable base.');
+        ownerDocuments.push({ path, markdown });
+      }
+      const reservedCases = JSON.stringify(reservedSddCaseIds(ownerDocuments));
+      if (reservedCases.length > 30000) throw new Error('The owning SDD case inventory exceeds the bounded drafting context; maintainer review is required.');
       const newCapability = plan.action === 'new' ? parseNewCapability(analysisValue.newCapability, plan) : undefined;
       let prepared: SddPreparedDraft | undefined;
       await draftSddMarkdown(this.agent, context.agentConfiguration, plan,
-        buildDraftPrompt(context, snapshot, plan, answers, currentSdd), async markdown => {
+        `${buildDraftPrompt(context, snapshot, plan, answers, currentSdd)}\n\nCase IDs reserved across every owning SDD at ${snapshot.baseSha}:\n${reservedCases}`, async markdown => {
           prepared = await this.workspace.validateDraft(snapshot, plan, markdown, newCapability);
         });
       if (!prepared) throw new Error('The SDD writer returned no validated draft.');
