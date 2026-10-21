@@ -6,6 +6,11 @@ import { SetupPermissionProbeHttp } from '../setup_permission_probe_http';
 import { SetupPermissionProbeJournal } from '../setup_permission_probe_journal';
 import type { SetupTokenPermissionRequirement } from '../../domain/setup_token_permissions';
 
+// These HTTP fixtures keep real journal writes, fsync, rename, and cleanup.
+// Even a rejected dispatch flushes six journal versions; hosted Windows
+// coverage can exceed Jest's 5s default. Share the bounded recovery budget.
+jest.setTimeout(30_000);
+
 const root = '/repos/owner/repo';
 const path = '.github/workflows/registered.yml';
 const sha = 'a'.repeat(40);
@@ -167,7 +172,7 @@ describe('setup preparation of a bot Actions permission check', () => {
             expect(value.hasBranch()).toBe(false);
             expect(await readdir(folder)).toEqual([]);
         } finally { jest.useRealTimers(); }
-    }, 30_000); // Two durable journal transactions can exceed 5s on Windows under coverage.
+    });
     it('uses setup authority only for pending Actions recovery, preserving candidate authority for Projects', async () => {
         const journal = new SetupPermissionProbeJournal(folder);
         const action = await journal.begin({ owner: 'owner', repository: 'repo', scope: 'repository', probe: 'actions',
