@@ -75,16 +75,85 @@ describe('create-once consumer verification action', () => {
   test('VSO-09 exclusive opening preserves the winner of the final create race', () => {
     const open = jest.spyOn(fs, 'openSync'); const real = open.getMockImplementation()!;
     open.mockImplementation(((path: fs.PathLike, flags: fs.OpenMode, mode?: fs.Mode) => {
-      if (String(path) === join(root, asset)) existing('race winner');
+      if (String(path) === 'action.yml') existing('race winner');
       return real(path, flags, mode);
     }) as typeof fs.openSync);
     expect(() => createSetupVerificationAction(root)).toThrow('changed after review');
     expect(fs.readFileSync(join(root, asset), 'utf8')).toBe('race winner');
   });
+  test.each([['actions', parents[1]], ['copilot-verification-setup', parents[2]]] as const)(
+    'VSO-09 rejects replacement of %s between metadata inspection and directory entry', (segment, parent) => {
+      const before = fs.realpathSync('.'); existing(); fs.unlinkSync(join(root, asset));
+      const external = join(root, 'external'); fs.mkdirSync(external);
+      const change = jest.spyOn(process, 'chdir'); const real = change.getMockImplementation()!; let attacked = false;
+      change.mockImplementation(path => {
+        if (path === segment && !attacked) {
+          attacked = true; fs.renameSync(join(root, parent), join(root, 'original'));
+          fs.symlinkSync(external, join(root, parent), process.platform === 'win32' ? 'junction' : 'dir');
+        }
+        real(path);
+      });
+      expect(() => createSetupVerificationAction(root)).toThrow('changed after review');
+      expect(attacked).toBe(true); expect(fs.readdirSync(external)).toEqual([]); expect(fs.realpathSync('.')).toBe(before);
+    },
+  );
+  test.each([{ kind: 'symlink', parent: parents[1] }, { kind: 'directory', parent: parents[1] }, { kind: 'symlink', parent: parents[2] }, { kind: 'directory', parent: parents[2] }])('VSO-09 a $kind replacement of $parent immediately before leaf open cannot redirect creation', ({ kind, parent }) => {
+    const before = fs.realpathSync('.'); existing(); fs.unlinkSync(join(root, asset));
+    const external = join(root, 'external'); const externalLeaf = parent === parents[1] ? join(external, 'copilot-verification-setup') : external; fs.mkdirSync(externalLeaf, { recursive: true });
+    const open = jest.spyOn(fs, 'openSync'); const real = open.getMockImplementation()!; let swapped = false; let redirectedCreation = false;
+    open.mockImplementation(((path: fs.PathLike, flags: fs.OpenMode, mode?: fs.Mode) => {
+      if (String(path) === 'action.yml') {
+        try { fs.renameSync(join(root, parent), join(root, 'original')); swapped = true; }
+        catch (error) {
+          // Windows pins cwd by denying its rename; POSIX keeps the original directory.
+          if (process.platform !== 'win32' || !['EACCES', 'EPERM', 'EBUSY'].includes((error as NodeJS.ErrnoException).code!)) throw error;
+        }
+        if (swapped) {
+          if (kind === 'symlink') fs.symlinkSync(external, join(root, parent), process.platform === 'win32' ? 'junction' : 'dir');
+          else fs.mkdirSync(join(root, parent));
+        }
+      }
+      const descriptor = real(path, flags, mode);
+      if (String(path) === 'action.yml') redirectedCreation = fs.existsSync(join(externalLeaf, 'action.yml'));
+      return descriptor;
+    }) as typeof fs.openSync);
+    let failure: unknown;
+    try { createSetupVerificationAction(root); } catch (error) { failure = error; }
+    expect(redirectedCreation).toBe(false); expect(fs.readdirSync(externalLeaf)).toEqual([]); expect(fs.realpathSync('.')).toBe(before);
+    if (swapped) {
+      expect(failure).toMatchObject({ message: expect.any(String) }); const originalLeaf = parent === parents[1] ? 'original/copilot-verification-setup/action.yml' : 'original/action.yml'; expect(fs.existsSync(join(root, originalLeaf))).toBe(false);
+      expect(fs.existsSync(join(external, 'action.yml'))).toBe(false);
+    } else { expect(process.platform).toBe('win32'); expect(failure).toBeUndefined(); expect(fs.existsSync(join(root, asset))).toBe(true); }
+  });
+  test('VSO-09 directory pinning errors restore the caller cwd and create no starter', () => {
+    const before = fs.realpathSync('.'); const change = jest.spyOn(process, 'chdir'); const real = change.getMockImplementation()!;
+    change.mockImplementation(path => { if (path === 'actions') throw new Error('fixture entry denied'); real(path); });
+    expect(() => createSetupVerificationAction(root)).toThrow('fixture entry denied');
+    expect(fs.realpathSync('.')).toBe(before); expect(fs.existsSync(join(root, asset))).toBe(false);
+  });
+  test('VSO-09 a failed root entry never attempts a nested write', () => {
+    const before = fs.realpathSync('.'); jest.spyOn(process, 'chdir').mockImplementation(() => { throw new Error('fixture root denied'); });
+    expect(() => createSetupVerificationAction(root)).toThrow('fixture root denied'); expect(fs.readdirSync(root)).toEqual([]); expect(fs.realpathSync('.')).toBe(before);
+  });
+  test.each(['missing', 'changed-identity'] as const)('VSO-09 a %s final route is rejected and cleaned even when the OS prevents rename', state => {
+    const before = fs.realpathSync('.'); const directory = join(fs.realpathSync(root), parents[2]); let wrote = false;
+    const write = jest.spyOn(fs, 'writeFileSync'); const realWrite = write.getMockImplementation()!;
+    write.mockImplementation(((file: fs.PathOrFileDescriptor, ...args: unknown[]) => {
+      const result = Reflect.apply(realWrite, fs, [file, ...args]); if (typeof file === 'number') wrote = true; return result;
+    }) as typeof fs.writeFileSync);
+    const stat = jest.spyOn(fs, 'lstatSync'); const realStat = stat.getMockImplementation()!;
+    stat.mockImplementation(((path: fs.PathLike, ...args: unknown[]) => {
+      if (wrote && String(path) === directory && state === 'missing') throw Object.assign(new Error('fixture route disappeared'), { code: 'ENOENT' });
+      const info = Reflect.apply(realStat, fs, [path, ...args]);
+      return wrote && String(path) === directory ? Object.assign(info, { ino: info.ino + 1n }) : info;
+    }) as typeof fs.lstatSync);
+    expect(() => createSetupVerificationAction(root)).toThrow('changed after review');
+    expect(wrote).toBe(true); expect(fs.existsSync(join(root, asset))).toBe(false); expect(fs.realpathSync('.')).toBe(before);
+  });
   test('VSO-08 rechecks a parent that changes while its directory is created', () => {
     const make = jest.spyOn(fs, 'mkdirSync'); const real = make.getMockImplementation()!;
     make.mockImplementation(((path: fs.PathLike) => {
-      if (String(path) === join(root, parents[1])) { fs.writeFileSync(path, 'collision'); throw Object.assign(new Error('exists'), { code: 'EEXIST' }); }
+      if (String(path) === 'actions') { fs.writeFileSync(path, 'collision'); throw Object.assign(new Error('exists'), { code: 'EEXIST' }); }
       return real(path);
     }) as typeof fs.mkdirSync);
     expect(() => createSetupVerificationAction(root)).toThrow('real parent directories');
@@ -99,7 +168,11 @@ describe('create-once consumer verification action', () => {
     expect(() => createSetupVerificationAction(root)).toThrow('fixture denied'); expect(fs.readdirSync(root)).toEqual([]);
   });
   test('VSO-08 propagates exclusive-open failures without producing a partial file', () => {
-    jest.spyOn(fs, 'openSync').mockImplementation(() => { throw Object.assign(new Error('fixture denied'), { code: 'EACCES' }); });
+    const open = jest.spyOn(fs, 'openSync'); const real = open.getMockImplementation()!;
+    open.mockImplementation(((path: fs.PathLike, flags: fs.OpenMode, mode?: fs.Mode) => {
+      if (String(path) === 'action.yml') throw Object.assign(new Error('fixture denied'), { code: 'EACCES' });
+      return real(path, flags, mode);
+    }) as typeof fs.openSync);
     expect(() => createSetupVerificationAction(root)).toThrow('fixture denied'); expect(fs.existsSync(join(root, asset))).toBe(false);
   });
   test('VSO-08 removes its own incomplete starter and closes the descriptor after a write failure', () => {
@@ -109,8 +182,25 @@ describe('create-once consumer verification action', () => {
   });
   test('VSO-08 closes the descriptor when file metadata cannot be established', () => {
     const failure = new Error('fixture metadata failure'); const close = jest.spyOn(fs, 'closeSync');
-    jest.spyOn(fs, 'fstatSync').mockImplementation(() => { throw failure; });
+    let leaf: number | undefined;
+    const open = jest.spyOn(fs, 'openSync'); const realOpen = open.getMockImplementation()!;
+    open.mockImplementation(((path: fs.PathLike, flags: fs.OpenMode, mode?: fs.Mode) => {
+      const descriptor = realOpen(path, flags, mode); if (String(path) === 'action.yml') leaf = descriptor; return descriptor;
+    }) as typeof fs.openSync);
+    const stat = jest.spyOn(fs, 'fstatSync'); const realStat = stat.getMockImplementation()!;
+    stat.mockImplementation(((descriptor: number, ...args: unknown[]) => {
+      if (descriptor === leaf) throw failure; return Reflect.apply(realStat, fs, [descriptor, ...args]);
+    }) as typeof fs.fstatSync);
     expect(() => createSetupVerificationAction(root)).toThrow(failure); expect(close).toHaveBeenCalled();
+  });
+  test('VSO-08 inaccessible directory handles fail before creating nested paths', () => {
+    const before = fs.realpathSync('.'); jest.spyOn(fs, 'openSync').mockImplementation(() => { throw new Error('fixture directory access denied'); });
+    expect(() => createSetupVerificationAction(root)).toThrow('fixture directory access denied'); expect(fs.realpathSync('.')).toBe(before); expect(fs.readdirSync(root)).toEqual([]);
+  });
+  test('VSO-08 a directory descriptor with unavailable identity fails closed', () => {
+    const stat = jest.spyOn(fs, 'fstatSync'); const real = stat.getMockImplementation()!;
+    stat.mockImplementation(((descriptor: number, ...args: unknown[]) => ({ ...Reflect.apply(real, fs, [descriptor, ...args]), ino: 0n, isDirectory: () => true })) as typeof fs.fstatSync);
+    expect(() => createSetupVerificationAction(root)).toThrow('changed after review'); expect(fs.readdirSync(root)).toEqual([]);
   });
   test('VSO-08 retains the original write error when partial-file cleanup is denied', () => {
     jest.spyOn(fs, 'writeFileSync').mockImplementation(() => { throw new Error('fixture full disk'); });

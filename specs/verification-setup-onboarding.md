@@ -382,9 +382,12 @@ Executable coverage is in `setup_verification_action.test.ts`,
 `setup_verification_onboarding_flow.test.ts`,
 `setup_verification_onboarding_components.test.ts`, and focused additions to the
 batch inventory/workspace, initial setup workflow and context projection suites.
-The new summary policy and file adapter have explicit coverage budgets. The complete local suite passed: 707 suites, 11,597 passed tests and 35 existing
-skips, including all 87 new VSO cases. Both modules report 100% in every coverage
-metric. All repository coverage budgets and setup acceptance validation pass. Package validation and an extracted npm
+The new summary policy and file adapter have explicit coverage budgets. The complete local suite after review correction passed: 707 suites, 11,607
+passed tests and 35 existing skips, including all 97 VSO cases present at that measurement. Two additional
+platform-neutral post-validation regressions pass in the focused suite, bringing
+the source total to 99 distinct VSO cases. The pure
+summary has 100% coverage; the safe adapter exceeds every enforced budget. All
+repository coverage budgets and setup acceptance validation pass. Package validation and an extracted npm
 smoke verify the starter and its CLI resolver. The credential-free
 `serve-web-setup-review.cjs runner-plan` fixture was reviewed at 1280 px and 375 px,
 including Spanish: the fixed path wraps and the create/disabled/trusted-main and
@@ -393,3 +396,34 @@ enabled/disabled and completion navigation in all four supported locales.
 
 No release or consumer installation was performed. Final PR checks and resolved
 finding evidence belong to the linked implementation PR.
+
+### Review correction: parent replacement at Apply
+
+[PR #657](https://github.com/vypdev/copilot/pull/657#discussion_r4340366893)
+identified a real race in path-based exclusive creation: a checked parent could
+be replaced before the leaf open. The corrected adapter walks fixed single-name
+components from a pinned repository directory. It keeps each directory descriptor
+open while matching `fstat` and `lstat` identities, enters that same directory,
+and confirms its identity with BigInt device/inode values before the next
+relative operation. The OS working directory pins the validated location, so a
+later parent replacement cannot redirect creation. The bounded section contains
+no awaits or user callbacks, restores the caller's physical cwd and closes handles
+in `finally`; setup's file application and isolated batch rendering are synchronous
+main-thread entrypoints. The selected checkout root remains the existing trusted
+setup anchor.
+
+The leaf uses exclusive creation, final route checks reject relocation, and
+failure cleanup addresses only the created inode in the pinned directory. New
+regressions cover replacement before directory entry, replacement of both a leaf
+parent and an ancestor just before opening the file, symlink and directory swaps,
+directory access/identity failure, and cwd restoration. They assert that creation
+never reaches the external target, including transient creation before cleanup.
+Windows may reject a pinned-directory rename; the test verifies that denial or
+that the original validated location is retained. Final three-platform CI remains
+a delivery gate.
+
+Primary API evidence: [Node filesystem APIs](https://nodejs.org/docs/latest-v24.x/api/fs.html),
+[Node process directory API](https://nodejs.org/docs/latest-v24.x/api/process.html#processchdirdirectory),
+[POSIX pathname resolution](https://pubs.opengroup.org/onlinepubs/009696699/basedefs/xbd_chap04.html),
+[Windows current-directory lifetime](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setcurrentdirectory),
+and [libuv's Windows directory-compatible opener](https://github.com/libuv/libuv/blob/v1.x/src/win/fs.c).
