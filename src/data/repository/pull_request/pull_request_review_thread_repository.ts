@@ -1,3 +1,4 @@
+import { toPullRequestReviewOperationError } from './pull_request_review_error_metadata';
 import { logDebugInfo } from '../../../utils/logger';
 import type {
     PullRequestReviewThreadCommandPort,
@@ -6,7 +7,6 @@ import type {
 } from '../../../application/ports/pull_request_review_comment_ports';
 import {
     PullRequestReviewOperationError,
-    toPullRequestReviewOperationError,
 } from '../../../application/ports/pull_request_review_errors';
 import type { GithubClientPort } from '../../../infrastructure/github/ports/github_client_provider_port';
 import type { GithubGraphqlTransportClient } from '../../../infrastructure/github/ports/github_graphql_transport_port';

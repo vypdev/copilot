@@ -1,3 +1,4 @@
+import { BugbotMutationError } from '../../../../errors/bugbot_mutation_error';
 import type {
   BugbotPresentationReport,
   BugbotReconciliationTarget,
@@ -62,10 +63,9 @@ export async function reconcileBugbotReviewState(input: {
 
   const snapshot = snapshotResult.snapshot;
   const diagnostics = [
-    ...(input.mutationErrors ?? []).map((error) => ({
-      code: 'operation-failed' as const,
-      operatorMessage: toSafeOperationMessage(error),
-    })),
+    ...(input.mutationErrors ?? []).map((error) => error instanceof BugbotMutationError
+      ? { code: 'finding-mutation-failed' as const, mutation: error.diagnostic }
+      : { code: 'operation-failed' as const, operatorMessage: toSafeOperationMessage(error) }),
     ...(!input.target.trustedAuthorLogin?.trim()
       ? [{ code: 'identity-unavailable' as const }]
       : []),

@@ -84,6 +84,7 @@ export const BUGBOT_MESSAGE_IDS = Object.freeze([
   'bugbot.overflow.body',
   'bugbot.common.more',
   'bugbot.diagnostic.operationFailed',
+  'bugbot.diagnostic.findingMutationFailed',
   'bugbot.diagnostic.identityUnavailable',
   'bugbot.diagnostic.pullRequestCommentsFailed',
   'bugbot.diagnostic.reviewThreadsFailed',
@@ -173,6 +174,7 @@ const ENGLISH_MESSAGES: Readonly<Record<BugbotMessageId, CatalogMessage>> = Obje
   'bugbot.overflow.heading': 'More findings (comment limit)',
   'bugbot.overflow.body': Object.freeze({ one: 'There is {count} more finding that was not published as an individual comment. Review locally or in the full diff to see the list.', other: 'There are {count} more findings that were not published as individual comments. Review locally or in the full diff to see the list.' }),
   'bugbot.common.more': Object.freeze({ one: 'and {count} more.', other: 'and {count} more.' }),
+  'bugbot.diagnostic.findingMutationFailed': 'Finding mutation failed: stage={stage}; operation={operation}; finding={findingId}; affected={affectedCount}; {providerStatus}; provider reference={providerReference}. Completed effects are retained. Correct access/contract errors before retrying; for transient failures restore provider availability, then recheck the same PR. Recheck reconciles existing reviews and threads.',
   'bugbot.diagnostic.operationFailed': 'Bugbot could not complete one or more finding mutations.',
   'bugbot.diagnostic.identityUnavailable': 'The authenticated Bugbot identity is unavailable.',
   'bugbot.diagnostic.pullRequestCommentsFailed': 'Unable to re-read pull request review comments.',
@@ -263,6 +265,7 @@ const SPANISH_MESSAGES: Readonly<Record<BugbotMessageId, CatalogMessage>> = Obje
   'bugbot.overflow.heading': 'Más hallazgos (límite de comentarios)',
   'bugbot.overflow.body': Object.freeze({ one: 'Hay {count} hallazgo más que no se publicó como comentario individual. Revísalo localmente o en el diff completo para consultar la lista.', many: 'Hay {count} hallazgos más que no se publicaron como comentarios individuales. Revísalos localmente o en el diff completo para consultar la lista.', other: 'Hay {count} hallazgos más que no se publicaron como comentarios individuales. Revísalos localmente o en el diff completo para consultar la lista.' }),
   'bugbot.common.more': Object.freeze({ one: 'y {count} más.', many: 'y {count} más.', other: 'y {count} más.' }),
+  'bugbot.diagnostic.findingMutationFailed': 'Falló una mutación: fase={stage}; operación={operation}; hallazgo={findingId}; afectados={affectedCount}; {providerStatus}; referencia del proveedor={providerReference}. Se conservan los efectos completados. Corrige acceso/contrato antes de reintentar; para fallos transitorios restaura el proveedor y revisa la misma PR. La revisión reconcilia comentarios e hilos existentes.',
   'bugbot.diagnostic.operationFailed': 'Bugbot no pudo completar una o más mutaciones de hallazgos.',
   'bugbot.diagnostic.identityUnavailable': 'La identidad autenticada de Bugbot no está disponible.',
   'bugbot.diagnostic.pullRequestCommentsFailed': 'No se pudieron volver a leer los comentarios del review del pull request.',
@@ -326,6 +329,7 @@ export function renderBugbotDiagnostic(
   catalog: BugbotMessageCatalog,
 ): string {
   switch (diagnostic.code) {
+    case 'finding-mutation-failed': return catalog.message('bugbot.diagnostic.findingMutationFailed', { ...diagnostic.mutation });
     case 'operation-failed': return catalog.message('bugbot.diagnostic.operationFailed');
     case 'identity-unavailable': return catalog.message('bugbot.diagnostic.identityUnavailable');
     case 'snapshot-pull-request-comments-failed': return catalog.message('bugbot.diagnostic.pullRequestCommentsFailed');

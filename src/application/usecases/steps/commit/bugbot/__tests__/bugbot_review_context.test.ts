@@ -640,3 +640,18 @@ describe('Bugbot review context', () => {
     })).toThrow(BugbotDiffPlanLimitError);
   });
 });
+
+
+it('identifies the exact retained general and inline records truncated by the prompt budget', () => {
+  const result = buildReviewConversationContext([{ id: 42, body: 'x'.repeat(4075), user: { login: 'human' } }],
+    new Map([[12, [{ id: 50, identity: 'PRRC_50', body: 'y'.repeat(4001), authorLogin: 'human' }]]]), 'bugbot');
+  expect(result.truncated).toBe(2);
+  expect(result.truncatedItemIds).toEqual(['issue:42', 'review:PRRC_50']);
+});
+
+it('does not expose a malformed provider identity as recovery metadata', () => {
+  const result = buildReviewConversationContext([], new Map([[12, [{ id: 50, identity: '@team<script>',
+    body: 'y'.repeat(4001), authorLogin: 'human' }]]]), 'bugbot');
+  expect(result.truncated).toBe(1);
+  expect(result.truncatedItemIds).toEqual([]);
+});

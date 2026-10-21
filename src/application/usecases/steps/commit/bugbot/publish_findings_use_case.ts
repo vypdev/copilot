@@ -3,6 +3,7 @@
  * Issue publication, PR review policy, and overflow reporting live in dedicated collaborators.
  */
 
+import { bugbotMutationError } from '../../../../errors/bugbot_mutation_error';
 import type { BugbotFindingPublicationPorts } from "../../../../../application/ports/bugbot_finding_publication_ports";
 import type { BugbotContext } from "./types";
 import {
@@ -57,7 +58,11 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
             );
         }
         if (reviewPublisher) {
-            await reviewPublisher.publish(finding, findExistingFindingInfo(existingByFindingId, finding));
+            try {
+                await reviewPublisher.publish(finding, findExistingFindingInfo(existingByFindingId, finding));
+            } catch (cause) {
+                throw bugbotMutationError(cause, 'publication', [finding.id], 'publish-comments');
+            }
         }
     }
 

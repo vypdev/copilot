@@ -8,6 +8,8 @@ export interface BugbotSourceCoverage {
     readonly itemsRetained: number;
     readonly omittedItems: number;
     readonly truncatedItems: number;
+    /** Exact bounded provider identities of retained conversation items truncated by the prompt. */
+    readonly truncatedItemIds?: readonly string[];
     readonly limitReached: boolean;
     /** True when a provider page cap hides an unknown number of older records. */
     readonly providerLimitReached?: boolean;

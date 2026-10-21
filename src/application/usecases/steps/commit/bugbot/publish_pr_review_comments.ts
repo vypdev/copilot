@@ -1,3 +1,4 @@
+import { bugbotMutationError } from '../../../../errors/bugbot_mutation_error';
 import type { BoundBugbotPullRequestWritePort } from "../../../../ports/bugbot_pull_request_write_ports";
 import type { PullRequestReviewCommentDraft } from "../../../../ports/pull_request_review_comment_ports";
 import type {
@@ -114,26 +115,31 @@ export class PullRequestReviewCommentPublisher {
   ): Promise<void> {
     if (this.findingsToCreate.length === 0 && overflowCount === 0) return;
     const { repository, operation, openPrNumber, prContext } = this.options;
-    await repository.createReviewWithComments(
-      openPrNumber,
-      prContext.prHeadSha,
-      buildReviewSummary(
-        this.findingsToCreate,
-        this.commentsToCreate.length,
-        this.unanchoredBodies,
-        overflowCount,
-        overflowTitles,
-        operation.analysis.reviewConfiguration.traceRules
-          ? this.options.ruleSources ?? []
-          : [],
-        operation.analysis.reviewConfiguration.traceRules
-          ? this.options.omittedRuleCount ?? 0
-          : 0,
+    try {
+      await repository.createReviewWithComments(
+        openPrNumber,
         prContext.prHeadSha,
-        this.catalog,
-      ),
-      this.commentsToCreate,
-    );
+        buildReviewSummary(
+          this.findingsToCreate,
+          this.commentsToCreate.length,
+          this.unanchoredBodies,
+          overflowCount,
+          overflowTitles,
+          operation.analysis.reviewConfiguration.traceRules
+            ? this.options.ruleSources ?? []
+            : [],
+          operation.analysis.reviewConfiguration.traceRules
+            ? this.options.omittedRuleCount ?? 0
+            : 0,
+          prContext.prHeadSha,
+          this.catalog,
+        ),
+        this.commentsToCreate,
+      );
+    } catch (cause) {
+      throw bugbotMutationError(cause, 'publication', this.findingsToCreate.map(finding => finding.id),
+        'publish-comments', this.findingsToCreate.length + overflowCount);
+    }
   }
 
   private get catalog(): BugbotMessageCatalog {

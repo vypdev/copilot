@@ -370,7 +370,7 @@ describe("markFindingsResolved", () => {
     });
 
     expect(errors.map((error) => error.message)).toEqual([
-      "Unable to mark a pull request finding as resolved.",
+      expect.stringContaining("finding=f1"),
     ]);
     expect(mockResolveThread).not.toHaveBeenCalled();
   });
@@ -439,7 +439,7 @@ describe("markFindingsResolved", () => {
     });
 
     expect(errors.map((error) => error.message)).toEqual([
-      "Unable to mark a pull request finding as resolved.",
+      expect.stringContaining("finding=f1"),
       "Unable to mark an issue finding as resolved.",
     ]);
     expect(JSON.stringify(errors)).not.toContain("secret-token");
