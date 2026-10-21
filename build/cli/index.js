@@ -90563,6 +90563,63 @@ function isCopilotCommentRequest(commentBody, botLogin) {
 
 /***/ }),
 
+/***/ 33430:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.COPILOT_COMMENT_REMOTE_WORKFLOW = exports.COPILOT_COMMENT_SELF_WORKFLOW = exports.COPILOT_COMMENT_RUNTIME = void 0;
+exports.isCopilotCommentWorkflow = isCopilotCommentWorkflow;
+exports.isCopilotCommentRunner = isCopilotCommentRunner;
+exports.copilotCommentRunner = copilotCommentRunner;
+/** The comment coordinator is a versioned Copilot workflow, not an arbitrary reusable job. */
+exports.COPILOT_COMMENT_RUNTIME = 'copilot_comment_runtime.yml';
+exports.COPILOT_COMMENT_SELF_WORKFLOW = `$/.github/workflows/${exports.COPILOT_COMMENT_RUNTIME}`;
+exports.COPILOT_COMMENT_REMOTE_WORKFLOW = `vypdev/copilot/.github/workflows/${exports.COPILOT_COMMENT_RUNTIME}@v3`;
+function isCopilotCommentWorkflow(value) {
+    return typeof value === 'string' && (value === exports.COPILOT_COMMENT_SELF_WORKFLOW
+        || /^vypdev\/copilot\/\.github\/workflows\/copilot_comment_runtime\.yml@(?:v3(?:\.[0-9]+\.[0-9]+)?|[a-f0-9]{40})$/u.test(value));
+}
+const literal = (value) => typeof value === 'string' && value.length > 0 && value.length <= 100
+    && value === value.trim() && !/[\p{Cc}\p{Cf}${}<>]/u.test(value);
+const labels = (value) => literal(value) || Array.isArray(value) && value.length > 0 && value.length <= 10
+    && value.every(literal) && new Set(value.map(label => label.toLowerCase())).size === value.length;
+/** Runner routing is literal data; expressions need their original full workflow reviewed. */
+function isCopilotCommentRunner(value) {
+    if (labels(value))
+        return true;
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const route = value;
+    const keys = Object.keys(route);
+    return keys.length > 0 && (route.group !== undefined || route.labels !== undefined)
+        && keys.every(key => key === 'group' || key === 'labels')
+        && (route.group === undefined || literal(route.group))
+        && (route.labels === undefined || labels(route.labels));
+}
+function copilotCommentRunner(job) {
+    if (!job || !isCopilotCommentWorkflow(job.uses))
+        return job?.['runs-on'];
+    const inputs = job.with;
+    if (typeof inputs?.['runs-on'] !== 'string')
+        throw new Error('Comment workflow runner JSON is unavailable; review the workflow separately.');
+    try {
+        if (inputs['runs-on'].length > 16000)
+            throw new Error('Runner JSON exceeds its bound.');
+        const route = JSON.parse(inputs['runs-on']);
+        if (!isCopilotCommentRunner(route))
+            throw new Error('Unsupported execution route.');
+        return route;
+    }
+    catch {
+        throw new Error('Comment workflow runner JSON is invalid; review the workflow separately.');
+    }
+}
+
+
+/***/ }),
+
 /***/ 72418:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -100423,10 +100480,13 @@ exports.SetupGithubIdentityQueryAdapter = SetupGithubIdentityQueryAdapter;
 /***/ }),
 
 /***/ 75545:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupManagementWorkspaceAdapter = void 0;
 const node_fs_1 = __nccwpck_require__(87561);
@@ -100434,6 +100494,8 @@ const node_path_1 = __nccwpck_require__(49411);
 const node_crypto_1 = __nccwpck_require__(6005);
 const js_yaml_1 = __nccwpck_require__(783);
 const sensitive_text_1 = __nccwpck_require__(47122);
+const copilot_comment_workflow_1 = __nccwpck_require__(33430);
+const copilot_comment_inputs_json_1 = __importDefault(__nccwpck_require__(78593));
 const object = (value) => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const digest = (source) => (0, node_crypto_1.createHash)('sha256').update(source).digest('hex');
 function readDocument(path) {
@@ -100524,13 +100586,34 @@ class SetupManagementWorkspaceAdapter {
     inspectWorkflow(file, localAction) {
         const { source, document } = readDocument((0, node_path_1.join)(this.root, '.github', 'workflows', file));
         const steps = workflowSteps(document);
-        const knownLocalAction = steps.some(({ step }) => step.uses === './') ? Boolean(localAction()) : false;
-        return steps.flatMap(({ job, step }) => {
-            if (!this.isCopilotStep(step, knownLocalAction))
-                return [];
-            const inputs = Object.entries(object(step.with)).flatMap(([name, value]) => installedInput(name, value));
-            return [{ file, action: step.uses, digest: digest(source), environmentScoped: environmentScoped(document, job, step), inputs }];
+        const jobs = Object.values(object(document.jobs)).map(object);
+        if (jobs.some(job => typeof job.uses === 'string'
+            && /^(?:vypdev\/copilot\/|[.$]\/)\.github\/workflows\/copilot_comment_runtime\.yml(?:@|$)/iu.test(job.uses)
+            && !(0, copilot_comment_workflow_1.isCopilotCommentWorkflow)(job.uses)))
+            throw new Error('Unsupported comment workflow reference.');
+        const calls = jobs.filter(job => (0, copilot_comment_workflow_1.isCopilotCommentWorkflow)(job.uses));
+        if (calls.some(job => job.uses === copilot_comment_workflow_1.COPILOT_COMMENT_SELF_WORKFLOW) && !localAction())
+            throw new Error('Unverified source comment workflow.');
+        const reusable = calls.map(job => {
+            const overrides = object(job.with);
+            if (Object.keys(overrides).some(key => !['runs-on', 'issue-managed-branches', 'pre-branch-sdd', 'ai-ignore-files', 'prepare-source-verification'].includes(key)))
+                throw new Error('Unknown comment workflow input.');
+            const bindings = { ...copilot_comment_inputs_json_1.default };
+            for (const name of ['issue-managed-branches', 'pre-branch-sdd', 'ai-ignore-files']) {
+                if (overrides[name] !== undefined && overrides[name] !== '')
+                    bindings[name] = overrides[name];
+            }
+            return { file, action: job.uses === copilot_comment_workflow_1.COPILOT_COMMENT_SELF_WORKFLOW ? './' : `vypdev/copilot@${String(job.uses).split('@').at(-1)}`,
+                digest: digest(source), environmentScoped: environmentScoped(document, job, {}),
+                inputs: Object.entries(bindings).flatMap(([name, value]) => installedInput(name, value)) };
         });
+        const knownLocalAction = steps.some(({ step }) => step.uses === './') ? Boolean(localAction()) : false;
+        return [...reusable, ...steps.flatMap(({ job, step }) => {
+                if (!this.isCopilotStep(step, knownLocalAction))
+                    return [];
+                const inputs = Object.entries(object(step.with)).flatMap(([name, value]) => installedInput(name, value));
+                return [{ file, action: step.uses, digest: digest(source), environmentScoped: environmentScoped(document, job, step), inputs }];
+            })];
     }
     isCopilotStep(step, knownLocalAction) {
         if (typeof step.uses !== 'string')
@@ -106909,6 +106992,7 @@ const sensitive_text_1 = __nccwpck_require__(47122);
 const repository_agent_guidance_policy_1 = __nccwpck_require__(67402);
 const setup_verification_action_1 = __nccwpck_require__(33156);
 const setup_verification_action_2 = __nccwpck_require__(12471);
+const copilot_comment_workflow_1 = __nccwpck_require__(33430);
 exports.SETUP_RUNNER_SNAPSHOT = '.copilot/runner-profile.json';
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
     ? value : undefined;
@@ -106974,7 +107058,7 @@ function inspectSetupInstallation(root, configuration, setup = (0, node_path_1.j
         if (!parsedJobs)
             throw new Error('Workflow jobs are unavailable for review.');
         for (const [job, raw] of Object.entries(parsedJobs)) {
-            const runsOn = object(raw)?.['runs-on'];
+            const runsOn = (0, copilot_comment_workflow_1.copilotCommentRunner)(object(raw));
             if (runsOn === undefined)
                 continue; // reusable workflow calls have no runner
             jobs.push({ file, job, role: (0, setup_runner_policy_1.setupRunnerRole)(file, job) ?? 'validation',
@@ -107081,6 +107165,7 @@ const js_yaml_1 = __nccwpck_require__(783);
 const node_util_1 = __nccwpck_require__(47261);
 const setup_runner_policy_1 = __nccwpck_require__(91027);
 const action_types_1 = __nccwpck_require__(19625);
+const copilot_comment_workflow_1 = __nccwpck_require__(33430);
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
 const document = (value) => {
     try {
@@ -107102,6 +107187,8 @@ const runner = (value) => labels(value) || !!object(value)
     && (object(value).labels === undefined || labels(object(value).labels));
 const copilotCommands = new Set(Object.values(action_types_1.ACTIONS));
 const callsRootAction = (jobs) => !!jobs && Object.values(jobs).some(job => {
+    if (object(job)?.uses === copilot_comment_workflow_1.COPILOT_COMMENT_SELF_WORKFLOW)
+        return true;
     const steps = object(job)?.steps;
     return Array.isArray(steps) && steps.some(step => {
         const invocation = object(step);
@@ -107164,6 +107251,32 @@ function renderSetupWorkflowUpgrade(template, existing, selection) {
     const templateJobs = object(document(template)?.jobs);
     if (!previousJobs || !templateJobs)
         throw new Error('Workflow jobs cannot be inspected; review the workflow separately.');
+    if (Object.values(templateJobs).some(job => (0, copilot_comment_workflow_1.isCopilotCommentWorkflow)(object(job)?.uses))) {
+        const parsed = document(template);
+        const jobs = object(parsed.jobs);
+        let changed = false;
+        for (const [name, value] of Object.entries(jobs)) {
+            const job = object(value);
+            if (!(0, copilot_comment_workflow_1.isCopilotCommentWorkflow)(job.uses))
+                throw new Error('Mixed comment workflow jobs require separate workflow review before setup.');
+            const previousJob = object(previousJobs[name]);
+            if (Array.isArray(previousJob?.steps) && previousJob.steps.some(raw => {
+                const uses = object(raw)?.uses;
+                return typeof uses !== 'string' || !(uses.startsWith('actions/checkout@')
+                    || /^vypdev\/copilot@[^\s]+$/u.test(uses) || uses === './.git/copilot-verification-setup');
+            }))
+                throw new Error('Custom comment job steps require migration to the reviewed repository verification setup action before switching to the reusable workflow. Review the workflow separately.');
+            const retained = (0, setup_runner_policy_1.selectedSetupRunsOn)(selection?.runners, selection && (0, setup_runner_policy_1.setupRunnerRole)(selection.file, name))
+                ?? (0, copilot_comment_workflow_1.copilotCommentRunner)(previousJob) ?? (0, copilot_comment_workflow_1.copilotCommentRunner)(job);
+            if (!runner(retained))
+                throw new Error('Existing runner selection is invalid; review the workflow separately.');
+            if (JSON.stringify(retained).includes('${{') && existing !== template)
+                throw new Error('Dynamic runner selection requires separate workflow review before setup.');
+            changed || (changed = !(0, node_util_1.isDeepStrictEqual)(retained, (0, copilot_comment_workflow_1.copilotCommentRunner)(job)));
+            job.with = { ...object(job.with), 'runs-on': JSON.stringify(retained) };
+        }
+        return changed ? (0, js_yaml_1.dump)(parsed, { noRefs: true, lineWidth: -1 }) : template;
+    }
     const lines = template.split('\n');
     let job = '';
     let insideJobs = false;
@@ -118993,6 +119106,14 @@ module.exports = JSON.parse('{"single":{"topLeft":"┌","top":"─","topRight":"
 
 "use strict";
 module.exports = JSON.parse('{"revision":"2026-10-02.standalone.1","providers":{"codex":{"executable":"codex","reviewedVersion":"codex-cli 0.156.1","legacyNpmPackage":"@openai/codex","installation":{"unixScript":"https://chatgpt.com/codex/install.sh","windowsScript":"https://chatgpt.com/codex/install.ps1"}},"opencode":{"executable":"opencode","reviewedVersion":"1.18.3","legacyNpmPackage":"opencode-ai","installation":{"unixScript":"https://opencode.ai/install","windowsReleaseApi":"https://api.github.com/repos/anomalyco/opencode/releases/latest"}},"cursor":{"executable":"agent","reviewedVersion":"2026.09.10-fd3934a","installation":{"unixScript":"https://cursor.com/install","windowsScript":"https://cursor.com/install?win32=true"}}}}');
+
+/***/ }),
+
+/***/ 78593:
+/***/ ((module) => {
+
+"use strict";
+module.exports = JSON.parse('{"repository-locale":"${{ vars.REPOSITORY_LOCALE || \'en-US\' }}","issues-locale":"${{ vars.ISSUES_LOCALE || \'\' }}","pull-requests-locale":"${{ vars.PULL_REQUESTS_LOCALE || \'\' }}","ai-ignore-files":"${{ vars.AI_IGNORE_FILES || \'build/*\' }}","debug":"${{ vars.DEBUG }}","main-branch":"${{ vars.MAIN_BRANCH || \'master\' }}","development-branch":"${{ vars.DEVELOPMENT_BRANCH || \'develop\' }}","feature-tree":"${{ vars.FEATURE_TREE || \'feature\' }}","bugfix-tree":"${{ vars.BUGFIX_TREE || \'bugfix\' }}","hotfix-tree":"${{ vars.HOTFIX_TREE || \'hotfix\' }}","release-tree":"${{ vars.RELEASE_TREE || \'release\' }}","docs-tree":"${{ vars.DOCS_TREE || \'docs\' }}","chore-tree":"${{ vars.CHORE_TREE || \'chore\' }}","issue-managed-branches":"${{ vars.ISSUE_MANAGED_BRANCHES || \'true\' }}","pre-branch-sdd":"${{ vars.PRE_BRANCH_SDD || \'false\' }}","verification-setup":"${{ vars.VERIFICATION_SETUP || \'false\' }}","issue-workflow-profile":"${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || \'\' }}","reopen-issue-on-push":"${{ vars.REOPEN_ISSUE_ON_PUSH || \'true\' }}","desired-assignees-count":"${{ vars.DESIRED_ASSIGNEES_COUNT || \'1\' }}","desired-reviewers-count":"${{ vars.DESIRED_REVIEWERS_COUNT || \'1\' }}","commit-prefix-transforms":"${{ vars.COMMIT_PREFIX_TRANSFORMS || \'replace-slash\' }}","ai-pull-request-description-mode":"${{ vars.AI_PULL_REQUEST_DESCRIPTION_MODE || \'replace\' }}","ai-members-only":"${{ vars.AI_MEMBERS_ONLY || \'false\' }}","ai-include-reasoning":"${{ vars.AI_INCLUDE_REASONING || \'false\' }}","bugbot-severity":"${{ vars.BUGBOT_SEVERITY || \'low\' }}","bugbot-comment-limit":"${{ vars.BUGBOT_COMMENT_LIMIT || \'20\' }}","bugbot-fix-verify-commands":"${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}","bugbot-dry-run":"${{ vars.BUGBOT_DRY_RUN || \'false\' }}","bugbot-effort":"${{ vars.BUGBOT_EFFORT || \'smart\' }}","bugbot-review-drafts":"${{ vars.BUGBOT_REVIEW_DRAFTS || \'false\' }}","bugbot-trace-rules":"${{ vars.BUGBOT_TRACE_RULES || \'false\' }}","bugbot-suggested-changes":"${{ vars.BUGBOT_SUGGESTED_CHANGES || \'true\' }}","bugbot-telemetry":"${{ vars.BUGBOT_TELEMETRY || \'true\' }}","bugbot-fail-on-unresolved":"${{ vars.BUGBOT_FAIL_ON_UNRESOLVED || \'false\' }}","bugbot-organization-rules":"${{ vars.BUGBOT_ORGANIZATION_RULES }}","project-column-issue-created":"${{ vars.PROJECT_COLUMN_ISSUE_CREATED || \'Todo\' }}","project-column-pull-request-created":"${{ vars.PROJECT_COLUMN_PULL_REQUEST_CREATED || \'In Progress\' }}","project-column-issue-in-progress":"${{ vars.PROJECT_COLUMN_ISSUE_IN_PROGRESS || \'In Progress\' }}","project-column-pull-request-in-progress":"${{ vars.PROJECT_COLUMN_PULL_REQUEST_IN_PROGRESS || \'In Progress\' }}","agent-provider":"${{ vars.AGENT_PROVIDER || \'codex\' }}","agent-model-provider":"${{ vars.AGENT_MODEL_PROVIDER || \'openai\' }}","agent-model":"${{ vars.AGENT_MODEL || \'gpt-6-luna\' }}","agent-effort":"${{ vars.AGENT_EFFORT }}","agent-executable":"${{ vars.AGENT_EXECUTABLE }}","findings-provider":"${{ vars.FINDINGS_PROVIDER }}","findings-model-provider":"${{ vars.FINDINGS_MODEL_PROVIDER }}","findings-model":"${{ vars.FINDINGS_MODEL }}","findings-effort":"${{ vars.FINDINGS_EFFORT }}","findings-executable":"${{ vars.FINDINGS_EXECUTABLE }}","fixer-provider":"${{ vars.FIXER_PROVIDER }}","fixer-model-provider":"${{ vars.FIXER_MODEL_PROVIDER }}","fixer-model":"${{ vars.FIXER_MODEL }}","fixer-effort":"${{ vars.FIXER_EFFORT }}","fixer-executable":"${{ vars.FIXER_EXECUTABLE }}","planner-provider":"${{ vars.PLANNER_PROVIDER }}","planner-model-provider":"${{ vars.PLANNER_MODEL_PROVIDER }}","planner-model":"${{ vars.PLANNER_MODEL }}","planner-effort":"${{ vars.PLANNER_EFFORT }}","planner-executable":"${{ vars.PLANNER_EXECUTABLE }}","reviewer-provider":"${{ vars.REVIEWER_PROVIDER }}","reviewer-model-provider":"${{ vars.REVIEWER_MODEL_PROVIDER }}","reviewer-model":"${{ vars.REVIEWER_MODEL }}","reviewer-effort":"${{ vars.REVIEWER_EFFORT }}","reviewer-executable":"${{ vars.REVIEWER_EXECUTABLE }}","tester-provider":"${{ vars.TESTER_PROVIDER }}","tester-model-provider":"${{ vars.TESTER_MODEL_PROVIDER }}","tester-model":"${{ vars.TESTER_MODEL }}","tester-effort":"${{ vars.TESTER_EFFORT }}","tester-executable":"${{ vars.TESTER_EXECUTABLE }}","project-ids":"${{ vars.PROJECT_IDS }}"}');
 
 /***/ })
 

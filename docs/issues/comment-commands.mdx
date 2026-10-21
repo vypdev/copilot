@@ -5,6 +5,12 @@ description: Use @vypbot from issues and pull requests for help, analysis, plann
 
 # Comment commands
 
+Generated comment workflows call one Copilot-owned coordinator. The command,
+project dependency setup, verification and cleanup still run in the same job;
+inspect the comment run's nested `Copilot` job for preparation/continuation logs.
+Command permissions and result cards retain their existing behavior. See
+[repository setup and verification](/security-operations/operations/verification#repository-owned-setup).
+
 Branchless help requests stay on the read-only answer route even when natural
 language classification suggests a repository task. File changes require an
 authoritative branch from a supported surface, such as a PR review comment;

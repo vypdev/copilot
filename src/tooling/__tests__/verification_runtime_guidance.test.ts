@@ -8,10 +8,12 @@ describe('shipped verification runtime guidance', () => {
             const content = readFileSync(path.resolve('setup/workflows', `${name}.yml`), 'utf8');
             expect(content).toContain('.copilot/verification-prerequisites.json');
             expect(content).toContain('#repository-verification-prerequisites');
-            const workflow = yaml.load(content) as { jobs: Record<string, { steps: Array<{ uses?: string }> }> };
-            const actions = Object.values(workflow.jobs).flatMap(job => job.steps.map(step => step.uses));
+            const workflow = yaml.load(content) as { jobs: Record<string, { uses?: string; steps?: Array<{ uses?: string }> }> };
+            const actions = Object.values(workflow.jobs).flatMap(job => [job.uses, ...(job.steps ?? []).map(step => step.uses)]);
             expect(actions).not.toContain('actions/setup-java@v5');
-            expect(actions).toContain('vypdev/copilot@v3');
+            expect(actions).toContain(name.endsWith('_comment')
+                ? 'vypdev/copilot/.github/workflows/copilot_comment_runtime.yml@v3'
+                : 'vypdev/copilot@v3');
         }
     });
 });

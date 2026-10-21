@@ -4,6 +4,16 @@ description: Clean Architecture boundaries for agent execution and workflow auto
 ---
 # Architecture
 
+Issue/review comment callbacks are compact entrypoints into the Copilot-owned
+`copilot_comment_runtime.yml` reusable workflow. One job owns the existing native
+worker, project composite setup, continuations and reverse post cleanup. Internal
+`uses: $/` references bind all runtime phases to the called workflow commit. The
+pure known-workflow/runner contract lives in `copilot_comment_workflow.ts`; existing
+setup adapters retain YAML/filesystem inspection, preview/Apply and migration.
+Safe Variable/default bindings are shared by the workflow generator and maintenance
+reader. See the [coordinator SDD](https://github.com/vypdev/copilot/blob/develop/specs/copilot-comment-workflow-coordinator.md)
+and [operational contract](/security-operations/operations/verification#repository-owned-setup).
+
 Verification setup onboarding uses the shared repository questionnaire and the
 existing `repository.verificationSetup` boolean. The package supplies a native
 composite starter under `setup/actions/`; the filesystem adapter inspects only

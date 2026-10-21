@@ -14,6 +14,7 @@ import { REPOSITORY_AGENT_GUIDE_PATH, REPOSITORY_AGENT_PROFILE_PATH, REPOSITORY_
   REPOSITORY_AGENT_SKILL_PATH } from '../application/policies/repository_agent_guidance_policy';
 import { SETUP_VERIFICATION_ACTION_PATH, type SetupVerificationActionReview } from '../domain/setup_verification_action';
 import { inspectSetupVerificationActionPath, readSetupVerificationActionStarter } from '../infrastructure/setup_verification_action';
+import { copilotCommentRunner } from '../domain/copilot_comment_workflow';
 
 export const SETUP_RUNNER_SNAPSHOT = '.copilot/runner-profile.json';
 const object = (value: unknown): Record<string, unknown> | undefined => value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -68,7 +69,7 @@ export function inspectSetupInstallation(root: string, configuration: SetupConfi
     const parsedJobs = object(object(documents[0])?.jobs);
     if (!parsedJobs) throw new Error('Workflow jobs are unavailable for review.');
     for (const [job, raw] of Object.entries(parsedJobs)) {
-      const runsOn = object(raw)?.['runs-on'];
+      const runsOn = copilotCommentRunner(object(raw));
       if (runsOn === undefined) continue; // reusable workflow calls have no runner
       jobs.push({ file, job, role: setupRunnerRole(file, job) ?? 'validation',
         runsOn: runsOn as SetupInstallationReview['jobs'][number]['runsOn'], status: 'access-unknown', retained });

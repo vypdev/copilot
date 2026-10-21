@@ -5,6 +5,13 @@ description: Detailed configuration options for Copilot
 
 # Configuration Options
 
+The generated comment callbacks delegate their whole job to
+`vypdev/copilot/.github/workflows/copilot_comment_runtime.yml@v3`. The coordinator
+reads this repository's existing Variables and explicitly forwarded Secrets;
+project setup remains isolated from provider/PAT inputs. Setup stores the reviewed
+runner route as JSON in the call's `with.runs-on`, including label arrays and group
+objects. See [verification and coordinator configuration](/security-operations/operations/verification#repository-owned-setup).
+
 For a new installation, use [web setup](/setup-web). To configure a specific outcome, start with the [goal guides](/guides); they connect setup choices, runtime configuration and verification. This page is the input and scope reference.
 
 Copilot provides extensive configuration options to customize your workflow. Use the tabs below to jump to the category you need.

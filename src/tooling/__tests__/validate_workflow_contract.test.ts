@@ -154,21 +154,19 @@ describe('workflow contract validator', () => {
   });
 
   it.each(['issue-managed-branches', 'pre-branch-sdd', 'verification-setup'])(
-    'rejects a PR comment callback that omits or disables the installed %s policy', input => {
-      const { file, workflow } = loadMutationWorkflow('.github/workflows', 'copilot_pull_request_comment.yml');
-      const action = workflow.jobs['copilot-pull-requests'].steps.find((step: { id?: string }) => step.id === 'copilot');
+    'rejects a comment coordinator that omits or disables the installed %s policy', input => {
+      const { file, workflow } = loadMutationWorkflow('.github/workflows', 'copilot_comment_runtime.yml');
+      const action = workflow.jobs.copilot.steps.find((step: { id?: string }) => step.id === 'copilot');
       delete action.with[input];
-      expect(() => assertIssueBranchConfigurationInputs(file, workflow)).toThrow('must pass consistent');
+      expect(() => validateWorkflow(file, workflow)).toThrow('native comment runtime');
       action.with[input] = false;
-      expect(() => assertIssueBranchConfigurationInputs(file, workflow)).toThrow('must pass consistent');
+      expect(() => validateWorkflow(file, workflow)).toThrow('native comment runtime');
     },
   );
 
   it('rejects a distributed callback that enables the SDD gate instead of inheriting its configured default', () => {
     const { file, workflow } = loadMutationWorkflow('setup/workflows', 'copilot_pull_request_comment.yml');
-    const action = workflow.jobs['copilot-pull-requests'].steps.find(
-      (step: { uses?: string }) => step.uses?.startsWith('vypdev/copilot@'),
-    );
+    const action = workflow.jobs['copilot-pull-requests'];
     action.with['pre-branch-sdd'] = "${{ vars.PRE_BRANCH_SDD || 'true' }}";
     expect(() => assertIssueBranchConfigurationInputs(file, workflow)).toThrow('must pass consistent');
   });
@@ -193,7 +191,8 @@ describe('workflow contract validator', () => {
         'copilot_issue_comment.yml', 'copilot_pull_request.yml',
         'copilot_pull_request_comment.yml', 'copilot_pull_request_review_state.yml',
       ]) {
-        const workflow = yaml.load(readFileSync(path.join(process.cwd(), directory, fileName), 'utf8')) as MutationWorkflow;
+        const coordinator = ['copilot_issue_comment.yml', 'copilot_pull_request_comment.yml'].includes(fileName);
+        const workflow = yaml.load(readFileSync(path.join(process.cwd(), coordinator ? '.github/workflows' : directory, coordinator ? 'copilot_comment_runtime.yml' : fileName), 'utf8')) as MutationWorkflow;
         const steps = Object.values(workflow.jobs).flatMap(job => job.steps ?? []);
         const modelInputs = steps.filter(step => step.with?.['agent-model']);
         expect(modelInputs).not.toHaveLength(0);
@@ -1634,7 +1633,7 @@ describe('workflow contract validator', () => {
 
     const file = path.join(process.cwd(), 'setup/workflows/copilot_issue_comment.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
-    workflow.jobs['copilot-issues'].steps.splice(1, 0, { uses: 'actions/setup-node@v7' });
+    workflow.jobs['copilot-issues'].steps = [{ uses: 'actions/setup-node@v7' }];
     expect(() => assertAgentInstallationPrerequisites(file, workflow)).toThrow('standalone official agent installation');
   });
 
@@ -1685,11 +1684,13 @@ describe('workflow contract validator', () => {
         job.permissions = { contents: 'read' };
         expect(() => assertAgentWorkflowPermissions(file, workflow)).toThrow('must grant GITHUB_TOKEN exactly');
         job.permissions = { checks: 'write', contents: 'read' };
-        const action = job.steps.find((step: any) => step.env?.COPILOT_EVIDENCE_TOKEN);
+        const central = loadMutationWorkflow('.github/workflows', 'copilot_comment_runtime.yml');
+        const runtime = central.workflow.jobs.copilot;
+        const action = runtime.steps.find((step: any) => step.env?.COPILOT_EVIDENCE_TOKEN);
         delete action.env.COPILOT_EVIDENCE_TOKEN;
-        expect(() => assertAgentWorkflowPermissions(file, workflow)).toThrow('must scope COPILOT_EVIDENCE_TOKEN');
-        job.steps.push({ run: 'true', env: { COPILOT_EVIDENCE_TOKEN: '${{ github.token }}' } });
-        expect(() => assertAgentWorkflowPermissions(file, workflow)).toThrow('must scope COPILOT_EVIDENCE_TOKEN');
+        expect(() => assertAgentWorkflowPermissions(central.file, central.workflow)).toThrow('must scope COPILOT_EVIDENCE_TOKEN');
+        runtime.steps.push({ run: 'true', env: { COPILOT_EVIDENCE_TOKEN: '${{ github.token }}' } });
+        expect(() => assertAgentWorkflowPermissions(central.file, central.workflow)).toThrow('must scope COPILOT_EVIDENCE_TOKEN');
       }
     },
   );

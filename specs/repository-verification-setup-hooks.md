@@ -1,14 +1,14 @@
 # Repository-owned native verification setup
 
 - Status: Ready for implementation
-- Date: 2026-10-21
+- Date: 2026-10-22
 - Catalog capability ID: branch-synchronization
-- Last verified: 2026-10-21
+- Last verified: 2026-10-22
 - Owners: Copilot maintainers
 - Scope: Prepare authorized repository verification through a trusted native composite action, without editing generated workflows.
 - Related issues/PRs: [#647](https://github.com/vypdev/copilot/issues/647), [#652](https://github.com/vypdev/copilot/pull/652)
 - Required review gates: product UX, architecture, testing, documentation, security/operations
-- Open decisions blocking readiness: none; the maintainer selected a same-job composite action on 2026-10-21.
+- Open decisions blocking readiness: none; the maintainer selected a same-job composite dependency action on 2026-10-21 and centralized reusable-workflow coordination on 2026-10-22.
 
 ## 1. Executive summary
 
@@ -19,7 +19,7 @@ Authorized operation -> prepare candidate -> native composite setup
  -> credential-free runtime preflight -> verification -> publication guards -> push
 ```
 
-This replaces the unreleased Node ESM prototype in PR #652. There is no custom YAML interpreter and no reusable-workflow candidate transport.
+This replaces the unreleased Node ESM prototype in PR #652. There is no custom YAML interpreter or cross-job candidate transport. A Copilot-owned reusable workflow encapsulates the complete same-job coordination; the dependency action remains consumer-owned and composite.
 
 ## 2. Problem, current behavior, and evidence
 
@@ -159,13 +159,13 @@ The 20-command limit, five-minute native setup timeout, snapshot/result/path bou
 
 ### 8.2 Contracts, state, and trust boundaries
 
-The session contains bounded non-secret metadata and private operational logs. Worker stdout/stderr redact configured secrets and dynamic masking commands before bytes reach disk; PAT/model credentials are never serialized as log content. Credentials remain in the admitted worker's memory/environment as in the existing Action; child verifier environments remain allowlisted. Session provenance, request UUIDs and one-use responses prevent accidental replay across jobs/candidates. Root Action post-job cleanup owns cancellation and private directory removal. Source callbacks MUST copy their Action manifest, bundled runtime and setup assets outside the mutable candidate before execution; their continuations and post steps use that snapshot. Remote installed Actions already have an independent runner cache. Post hooks run only for the native callback phases, preserving ordinary direct Action behavior. Dependency-only profiles remain private until nested native post steps finish, then the original Action post step removes them; no later verifier reuses them. No artifacts or remote checkpoints are created.
+The session contains bounded non-secret metadata and private operational logs. Worker stdout/stderr redact configured secrets and dynamic masking commands before bytes reach disk; PAT/model credentials are never serialized as log content. Credentials remain in the admitted worker's memory/environment as in the existing Action; child verifier environments remain allowlisted. Session provenance, request UUIDs and one-use responses prevent accidental replay across jobs/candidates. Root Action post-job cleanup owns cancellation and private directory removal. The reusable coordinator MUST use GitHub self-repository `$/` references for its initial Action and every continuation/post registration. GitHub resolves these to the called workflow repository and exact commit in its independent Action cache, including when the caller pins a full SHA; candidate files cannot replace this runtime. No second independently moving Action version is permitted. The standalone native acceptance fixture retains its explicitly owned source snapshot. Post hooks run only for the native callback phases, preserving ordinary direct Action behavior. Dependency-only profiles remain private until nested native post steps finish, then the original Action post step removes them; no later verifier reuses them. No artifacts or remote checkpoints are created.
 
 The workflow's fixed native phases support at most 20 setup boundaries per operation. Worker log forwarding preserves complete runner-command lines, with a 1-MiB single-line memory bound; this is distinct from native setup logs. Worker outputs are bounded to 256 KiB.
 
 ### 8.3 Executable architecture constraints
 
-Existing architecture/dependency tests remain mandatory. The workflow validator MUST compare all native setup/continue/finish steps with the canonical generator, including conditions, timeout, runtime-only env and consistent Action reference/inputs. Source and distributed callbacks MUST agree. All six existing configuration callbacks retain explicit opt-in forwarding.
+Existing architecture/dependency tests remain mandatory. The workflow validator MUST compare the central reusable workflow and compact source/distributed callers with the canonical generator, including events, bot/fork admission, explicit secret bindings, permissions, runner routing, conditions, timeout, runtime-only env and same-commit Action references/inputs. All six existing configuration callbacks retain explicit opt-in forwarding.
 
 ## 9. UI/UX and content contract
 
@@ -206,7 +206,7 @@ Native setup steps have `timeout-minutes: 5`; the worker also rejects readiness 
 
 ## 11. Security, permissions, and privacy
 
-Native setup receives only runtime metadata from the private verifier environment, never Copilot's PAT/model inputs or evidence token. Generated workflows MUST keep provider secrets scoped to the initial Copilot Action step, not the job or consumer action. Checkout credentials remain unpersisted. Native actions can use runner facilities required for normal Actions execution; they are reviewed executable maintainer code.
+Native setup receives only runtime metadata from the private verifier environment, never Copilot's PAT/model inputs or evidence token. Callers MUST explicitly forward the existing named Secrets to the reusable workflow; unrestricted `secrets: inherit` is not generated. The coordinator MUST keep provider secrets scoped to the initial Copilot Action step, not the job or consumer action. Checkout credentials remain unpersisted. Native actions can use runner facilities required for normal Actions execution; they are reviewed executable maintainer code.
 
 This preserves the trusted-runner boundary and makes no OS-sandbox claim: same-user processes and service-level credentials remain an operator trust concern. PATH/JAVA_HOME are validated after setup; arbitrary `GITHUB_ENV` keys do not enter the verifier. Native external action versions and dependency caches are maintained by the repository owner. Nested local `uses` is excluded because its deferred post scripts could otherwise refer to candidate assets outside the trusted staging tree.
 
@@ -229,7 +229,7 @@ Existing installations remain disabled by default. The unreleased `.copilot/veri
 
 ## 14. Testing strategy and numeric budget
 
-Minimum **150 distinct automated cases**, allocated without double counting:
+Minimum **190 distinct automated cases**, allocated without double counting:
 
 | Area | Minimum | Risk |
 |---|---:|---|
@@ -237,10 +237,10 @@ Minimum **150 distinct automated cases**, allocated without double counting:
 | Trusted snapshot/assets | 22 | Pinning, hashes, file modes, malformed/native metadata |
 | Native protocol/controller | 36 | Lifecycle, output framing, replay, timeout, cancellation |
 | Candidate/runner orchestration | 24 | Ordering, fresh profiles, candidate identity, failure gates |
-| Workflows/setup contracts | 18 | Native step structure, env, limits, source/distribution, preservation |
+| Workflows/setup contracts | 58 | Native step structure, env, limits, source/distribution, preservation |
 | Real Git/composition integration | 8 | Exact managed ref, merge manifests, abort/push guards |
 | Runtime result filesystem security | 12 | Bounds, links, containment, races, owned staging |
-| **Total** | **150** | Native rewrite adds at least 70 cases beyond retained applicable baseline |
+| **Total** | **190** | Native rewrite adds at least 70 cases beyond retained applicable baseline |
 
 Repository-wide thresholds remain in force. New pure policy targets 100% branches; changed setup adapters target aggregate 95% lines/statements and 90% branches/functions. Deterministic unit fakes cover runner responses without interpreting YAML. Separate native CI acceptance MUST execute real composite `uses`/`run` steps with Python/pytest and Node/pnpm on hosted Linux, Windows and macOS, asserting candidate changes, trusted-source selection, fresh profiles candidate preservation, source-runtime immutability even after candidate bundle changes, and final post cleanup. Controlled local Git acceptance covers the exact same managed branch and no release. Native CI evidence is additional to the distinct Jest budget.
 
@@ -295,3 +295,15 @@ Repository-wide thresholds remain in force. New pure policy targets 100% branche
 ## 20. References and decisions
 
 The maintainer selected the composite approach in the task on 2026-10-21. [Issue decision record](https://github.com/vypdev/copilot/issues/647#issuecomment-6318551564). Related contracts: `branch-synchronization`, repository verification prerequisites and the shared automated commit pipeline in the specification catalog. A reusable workflow and a Node ESM helper were rejected for this delivery; no second execution mode is retained.
+
+
+### 20.1 Central comment coordinator — issue #662
+
+The [coordinator companion](./copilot-comment-workflow-coordinator.md) owns the
+incremental 40-case encapsulation contract. Source and installed callbacks call
+one Copilot-owned workflow; the whole operation remains in one job. The consumer
+dependency action remains composite. The companion defines compact callers,
+same-commit self references, named Secret isolation, unchanged timeout/cleanup
+behavior, safe runner migration, effective configuration inspection, platform
+prerequisites, docs and rollout. This document retains the verifier and trusted
+setup execution contract; no cross-job candidate transport is introduced.

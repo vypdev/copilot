@@ -14,6 +14,12 @@ A self-hosted runner that can access agent credentials MUST be dedicated or isol
 - audit runner labels and permissions;
 - keep local session files outside repository workspaces.
 
+The compact Copilot comment callbacks require GitHub Actions runner **2.336.0+**
+and platform support for self-repository references. Their reusable coordinator
+keeps the Action on the called workflow's exact commit. Setup retains self-hosted
+labels and groups in the call's `with.runs-on` JSON; it does not change group
+access or prove capacity. See [comment workflow upgrades](/security-operations/operations/upgrade-rollback#upgrade-an-existing-copilot-repository).
+
 A shared persistent runner is not equivalent to an ephemeral trusted runner.
 
 The self-hosted platform smoke uses the local pnpm store without exporting a

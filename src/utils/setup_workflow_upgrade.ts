@@ -3,6 +3,7 @@ import { isDeepStrictEqual } from 'node:util';
 import type { SetupRunnerConfiguration } from '../domain/setup_runner';
 import { selectedSetupRunsOn, setupRunnerRole, validateSetupRunners } from '../application/policies/setup_runner_policy';
 import { ACTIONS } from '../data/model/action_types';
+import { copilotCommentRunner, COPILOT_COMMENT_SELF_WORKFLOW, isCopilotCommentWorkflow } from '../domain/copilot_comment_workflow';
 
 const object = (value: unknown): Record<string, unknown> | undefined =>
   value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
@@ -23,6 +24,7 @@ const runner = (value: unknown): boolean => labels(value) || !!object(value)
   && (object(value)!.labels === undefined || labels(object(value)!.labels));
 const copilotCommands = new Set<string>(Object.values(ACTIONS));
 const callsRootAction = (jobs: Record<string, unknown> | undefined): boolean => !!jobs && Object.values(jobs).some(job => {
+  if (object(job)?.uses === COPILOT_COMMENT_SELF_WORKFLOW) return true;
   const steps = object(job)?.steps;
   return Array.isArray(steps) && steps.some(step => {
     const invocation = object(step); const inputs = object(invocation?.with);
@@ -82,6 +84,28 @@ export function renderSetupWorkflowUpgrade(template: string, existing?: string,
   }
   const templateJobs = object(document(template)?.jobs);
   if (!previousJobs || !templateJobs) throw new Error('Workflow jobs cannot be inspected; review the workflow separately.');
+  if (Object.values(templateJobs).some(job => isCopilotCommentWorkflow(object(job)?.uses))) {
+    const parsed = document(template)!;
+    const jobs = object(parsed.jobs)!;
+    let changed = false;
+    for (const [name, value] of Object.entries(jobs)) {
+      const job = object(value)!;
+      if (!isCopilotCommentWorkflow(job.uses)) throw new Error('Mixed comment workflow jobs require separate workflow review before setup.');
+      const previousJob = object(previousJobs[name]);
+      if (Array.isArray(previousJob?.steps) && previousJob.steps.some(raw => {
+        const uses = object(raw)?.uses;
+        return typeof uses !== 'string' || !(uses.startsWith('actions/checkout@')
+          || /^vypdev\/copilot@[^\s]+$/u.test(uses) || uses === './.git/copilot-verification-setup');
+      })) throw new Error('Custom comment job steps require migration to the reviewed repository verification setup action before switching to the reusable workflow. Review the workflow separately.');
+      const retained = selectedSetupRunsOn(selection?.runners, selection && setupRunnerRole(selection.file, name))
+        ?? copilotCommentRunner(previousJob) ?? copilotCommentRunner(job);
+      if (!runner(retained)) throw new Error('Existing runner selection is invalid; review the workflow separately.');
+      if (JSON.stringify(retained).includes('${{') && existing !== template) throw new Error('Dynamic runner selection requires separate workflow review before setup.');
+      changed ||= !isDeepStrictEqual(retained, copilotCommentRunner(job));
+      job.with = { ...object(job.with), 'runs-on': JSON.stringify(retained) };
+    }
+    return changed ? dump(parsed, { noRefs: true, lineWidth: -1 }) : template;
+  }
   const lines = template.split('\n');
   let job = '';
   let insideJobs = false;
