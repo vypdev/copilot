@@ -47,7 +47,9 @@ another. Generic documentation checks cannot replace defined acceptance cases.
 
 Cite repository files with full repository-relative paths in backticks or
 relative Markdown file links. Existing paths are checked against the selected
-Git commit, including files outside the catalog evidence arrays. A file present
+Git commit, including files outside the catalog evidence arrays. Relative links
+may include a URL query and fragment; publication checks their file pathname.
+A file present
 only in the current checkout does not count. Declare intended new files in the
 section 15 table with `create`; ordinary documentation updates must identify
 the real existing document. Symlinks, submodules and paths below them cannot

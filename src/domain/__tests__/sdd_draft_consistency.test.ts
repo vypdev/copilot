@@ -158,6 +158,18 @@ describe('generated SDD consistency', () => {
     expect(() => validate(markdown)).not.toThrow();
   });
 
+  it.each([
+    '../docs/payments.mdx?view=compact', '../docs/payments.mdx?view=compact#intro', './change.md?draft=1', '?view=compact',
+  ])('resolves the repository pathname of relative destination %s without its query or fragment', href => {
+    expect(() => validate(sddConsistencyFixture() + `\n[Guide](${href})`)).not.toThrow();
+  });
+
+  it.each([
+    '../docs/missing.mdx?view=compact', '../docs/%broken.mdx?view=compact', '../docs/payments.mdx%3Fview=compact',
+  ])('does not let a query or encoded query delimiter hide invalid repository evidence in %s', href => {
+    expect(() => validate(sddConsistencyFixture() + `\n[Guide](${href})`)).toThrow(expect.objectContaining({ reason: 'repository-path' }));
+  });
+
   it('reserves cases from every owner without treating hidden or fenced examples as definitions', () => {
     expect(reservedSddCaseIds([...owners, { path: 'specs/examples.md', markdown: '<!-- hidden-C01 -->\n```md\nexample-C01\n```' }]))
       .toEqual(['payments-C01', 'payments-session-C09']);

@@ -95,6 +95,17 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(git(repo, 'worktree', 'list', '--porcelain').match(/^worktree /gm)).toHaveLength(1);
   });
 
+  it.each(['update', 'companion'] as const)('validates %s links with queries against immutable files and explicitly proposed SDDs', async action => {
+    const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const selected = { ...plan, action, path: action === 'update' ? plan.path : 'specs/companion.md' };
+    const markdown = draft(selected.path, action) + `\n[Guide](../docs/payments.mdx?view=compact#intro) and [SDD](./${path.basename(selected.path)}?draft=1)`;
+    const prepared = await workspace.validateDraft(snapshot, selected, markdown);
+    expect(prepared.markdown).toContain('[Guide](../docs/payments.mdx?view=compact#intro)');
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+    expect(git(repo, 'worktree', 'list', '--porcelain').match(/^worktree /gm)).toHaveLength(1);
+  });
+
   it('rejects an unsafe owning SDD path before reading external owner evidence', async () => {
     const workspace = new PreBranchSddWorkspaceAdapter(repo);
     const snapshot = await workspace.loadSnapshot('develop');

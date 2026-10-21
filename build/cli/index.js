@@ -93402,7 +93402,7 @@ function validatePaths(source, inventory, sddPath) {
     };
     // Relative Markdown file links resolve against the selected SDD, never the current checkout.
     for (const match of source.matchAll(/\]\(([^\s)]+)\)/gu)) {
-        const href = match[1].split('#')[0];
+        const href = match[1].split(/[?#]/u)[0];
         if (!href || /^(?:[a-z][a-z0-9+.-]*:|\/)/iu.test(href))
             continue;
         let decoded;

@@ -1227,16 +1227,16 @@ headings, mobile/screen-reader behavior and closed sanitized content. Rejected
 Markdown, case IDs, paths and diagnostic text MUST NOT enter repair instructions
 or public messages. There is no additional card, label, credential or setting.
 
-The amendment has a minimum **111 distinct cases**, separate from earlier floors:
+The amendment has a minimum **120 distinct cases**, separate from earlier floors:
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Pure consistency policy | 82 | Owner collisions and aliases, hidden/malformed inventories, invalid/valid fence and comment boundaries, offsetting budgets, reciprocal mappings, immutable/proposed paths, portable layouts and bounded ranges |
+| Pure consistency policy | 89 | Owner collisions and aliases, hidden/malformed inventories, invalid/valid fence and comment boundaries, offsetting budgets, reciprocal mappings, immutable/proposed paths and relative URL components, portable layouts and bounded ranges |
 | Application and bounded draft workflow | 9 | All-owner reads, missing/oversized context, blocked publication, four closed repairs and corrected-draft revalidation |
 | Publication replay boundaries | 5 | Minimum/maximum candidate lengths, normalized outer whitespace, retained prefix and exact recomposition |
-| Real Git workspace | 11 | Each reported contradiction and falsely closed code block blocks publication, ignores uncommitted evidence, preserves the owner and removes scratch worktrees |
+| Real Git workspace | 13 | Each reported contradiction and falsely closed code block blocks publication; valid relative-link queries resolve immutable/proposed evidence; ignores uncommitted evidence, preserves the owner and removes scratch worktrees |
 | Localized recovery | 4 | All four closed variants render English/Spanish retained state without runtime acceptance claims |
-| **Total** | **111** | Existing cases are not recounted |
+| **Total** | **120** | Existing cases are not recounted |
 
 Repository coverage thresholds remain mandatory; new pure policy targets at
 least 95% lines, with negative/boundary branch fixtures. Tests use deterministic
@@ -1289,3 +1289,13 @@ Git regressions reject update/companion publication while preserving the owner
 and cleaning scratch worktrees. These eighteen cases raise the amendment floor
 from 93 to 111. No new setting, retry, diagnostic category or public status is
 introduced; docs/issues/pre-branch-sdds.mdx explains the visible-table boundary.
+
+PR #654 review finding 4340463276 requires relative Markdown destinations to
+resolve their repository pathname independently of URL queries and fragments.
+The validator separates literal `?`/`#` delimiters before percent decoding the
+pathname, preserving encoded path characters for the existing safety/existence
+checks. Query-only or fragment-only destinations keep the current SDD; queries
+cannot make a missing, invalidly encoded or unsafe pathname valid. Seven pure
+and two real Git update/companion cases cover existing/proposed paths, combined
+query/fragment destinations and negative evidence. These nine cases raise the
+floor from 111 to 120; docs/issues/pre-branch-sdds.mdx documents the URL behavior.
