@@ -23,7 +23,7 @@ import { activeAgentTasks, isUnaddressedCommentEvent } from '../application/poli
 import { createActorAuthorizationRepository } from '../infrastructure/composition/actor_authorization_composition_root';
 import { runAtApplicationErrorBoundary } from '../application/errors/application_error_context';
 import { toApplicationError } from '../application/errors/application_error';
-import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
+import { renderApplicationErrorMarkdown, renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
 import { bindIssueCommentPublication } from '../infrastructure/composition/push_single_action_capability_port_binding';
 import { bindPublicationSourceQuery } from '../infrastructure/composition/shared_capability_port_binding';
 import { GithubPublicationSourceRepository } from '../data/repository/github_publication_source_repository';
@@ -230,7 +230,15 @@ export async function runGitHubActionEntry(
         } catch (cause: unknown) {
             const semanticError = toApplicationError(cause, 'workflow.failed', 'GitHub Action execution failed.');
             logError(semanticError);
-            core.setFailed(renderApplicationErrorText(semanticError, earlyGithubActionErrorMessage()));
+            const message = earlyGithubActionErrorMessage();
+            core.setFailed(renderApplicationErrorText(semanticError, message));
+            if (semanticError.recovery?.id.startsWith('stored-configuration-')) {
+                try {
+                    await createGithubActionSummaryCompositionRoot().publish(renderApplicationErrorMarkdown(semanticError, message));
+                } catch (summaryCause) {
+                    logError(toApplicationError(summaryCause, 'provider.unavailable', 'Unable to publish the configuration failure summary.'));
+                }
+            }
         }
     });
 }

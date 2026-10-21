@@ -39313,7 +39313,26 @@ const SPANISH_CONTENT = Object.freeze({
         retainedState: PRESERVED_STATE_ES,
     }),
 });
+const STORED_CONFIGURATION_ACTION_EN = 'A maintainer must review {recoveryGuide}. Preserve a copy before removing only a verified obsolete unmanaged block. If managed branch, release, hotfix or orchestration state may exist, stop and restore verified supported state with a maintainer. Do not just add a schema version or delete managed state. Correct the configuration before rerunning; retrying unchanged state will fail again.';
+const STORED_CONFIGURATION_ACTION_ES = 'Un mantenedor debe revisar {recoveryGuide}. Conserva una copia antes de retirar solo un bloque obsoleto confirmado como no gestionado. Si puede existir estado gestionado de ramas, releases, hotfixes u orquestación, detente y restaura estado compatible verificado con un mantenedor. No añadas simplemente una versión de esquema ni borres estado gestionado. Corrige la configuración antes de reejecutar; el mismo estado volverá a fallar.';
+const STORED_CONFIGURATION_RETAINED_EN = 'The issue/PR description and stored configuration were not changed by this read.';
+const STORED_CONFIGURATION_RETAINED_ES = 'Esta lectura no modificó la descripción de la issue/PR ni su configuración almacenada.';
 const ENGLISH_RECOVERY_CONTENT = Object.freeze({
+    'stored-configuration-schema-missing': Object.freeze({
+        impact: 'Automation stopped for issue/PR #{issueNumber}: the stored configuration has no schema version; version {expectedVersion} is required.',
+        action: STORED_CONFIGURATION_ACTION_EN,
+        retainedState: STORED_CONFIGURATION_RETAINED_EN,
+    }),
+    'stored-configuration-schema-unsupported': Object.freeze({
+        impact: 'Automation stopped for issue/PR #{issueNumber}: stored schema version {actualVersion} is unsupported; version {expectedVersion} is required.',
+        action: STORED_CONFIGURATION_ACTION_EN,
+        retainedState: STORED_CONFIGURATION_RETAINED_EN,
+    }),
+    'stored-configuration-invalid': Object.freeze({
+        impact: 'Automation stopped for issue/PR #{issueNumber}: the stored configuration, markers or schema value are malformed; valid schema version {expectedVersion} is required.',
+        action: STORED_CONFIGURATION_ACTION_EN,
+        retainedState: STORED_CONFIGURATION_RETAINED_EN,
+    }),
     'closed-issue-reconciliation-failed': Object.freeze({
         impact: 'Issue cleanup remains unverified: {resultId}, phase {phase}; native state {state}, reason {reason}.',
         action: 'Inspect the closed-issue or merged-PR run and current native state. Retry cleanup only if the issue is still closed with the intended reason; leave reopened work open. Resolve the named failure before retrying.',
@@ -39391,6 +39410,21 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     }),
 });
 const SPANISH_RECOVERY_CONTENT = Object.freeze({
+    'stored-configuration-schema-missing': Object.freeze({
+        impact: 'La automatización se detuvo para la issue/PR #{issueNumber}: la configuración almacenada no tiene versión de esquema; se requiere la versión {expectedVersion}.',
+        action: STORED_CONFIGURATION_ACTION_ES,
+        retainedState: STORED_CONFIGURATION_RETAINED_ES,
+    }),
+    'stored-configuration-schema-unsupported': Object.freeze({
+        impact: 'La automatización se detuvo para la issue/PR #{issueNumber}: la versión de esquema almacenada {actualVersion} no es compatible; se requiere la versión {expectedVersion}.',
+        action: STORED_CONFIGURATION_ACTION_ES,
+        retainedState: STORED_CONFIGURATION_RETAINED_ES,
+    }),
+    'stored-configuration-invalid': Object.freeze({
+        impact: 'La automatización se detuvo para la issue/PR #{issueNumber}: la configuración almacenada, sus delimitadores o el valor del esquema no son válidos; se requiere un esquema válido de versión {expectedVersion}.',
+        action: STORED_CONFIGURATION_ACTION_ES,
+        retainedState: STORED_CONFIGURATION_RETAINED_ES,
+    }),
     'closed-issue-reconciliation-failed': Object.freeze({
         impact: 'La limpieza de la issue sigue sin verificarse: {resultId}, fase {phase}; estado nativo {state}, motivo {reason}.',
         action: 'Revisa la ejecución de cierre o de la PR fusionada y el estado nativo actual. Reintenta la limpieza solo si la issue sigue cerrada con el motivo previsto; conserva abierto el trabajo reabierto. Resuelve el fallo indicado antes de reintentar.',
@@ -39520,12 +39554,16 @@ exports.buildApplicationErrorPresentation = buildApplicationErrorPresentation;
 exports.renderApplicationErrorText = renderApplicationErrorText;
 exports.renderApplicationErrorMarkdown = renderApplicationErrorMarkdown;
 const application_error_message_catalog_1 = __nccwpck_require__(64809);
+// This trusted destination is inserted after localization, never supplied by a body or translation.
+const STORED_CONFIGURATION_RECOVERY_URL = 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#unsupported-stored-configuration';
 /** Shared semantic view model for terminal, GitHub, and API presentation. */
 function buildApplicationErrorPresentation(error, message = application_error_message_catalog_1.readEnglishApplicationErrorMessage) {
     const descriptor = error.recovery
         ? `error.recovery.${error.recovery.id}`
         : `error.${error.code}`;
-    const variables = error.recovery?.variables;
+    const variables = error.recovery?.id.startsWith('stored-configuration-')
+        ? { ...error.recovery.variables, recoveryGuide: STORED_CONFIGURATION_RECOVERY_URL }
+        : error.recovery?.variables;
     return {
         impact: message(`${descriptor}.impact`, variables),
         code: error.code,
@@ -78373,6 +78411,9 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'workspace-changes-rejected',
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
+    'stored-configuration-schema-missing',
+    'stored-configuration-schema-unsupported',
+    'stored-configuration-invalid',
 ]);
 const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
 const UNCHANGED_STATE = 'No new state or external effect was created.';
@@ -78564,6 +78605,9 @@ class ApplicationError extends Error {
 exports.ApplicationError = ApplicationError;
 _ApplicationError_cause = new WeakMap();
 const RECOVERY_VARIABLE_KEYS = Object.freeze({
+    'stored-configuration-schema-missing': Object.freeze(['issueNumber', 'expectedVersion']),
+    'stored-configuration-schema-unsupported': Object.freeze(['issueNumber', 'expectedVersion', 'actualVersion']),
+    'stored-configuration-invalid': Object.freeze(['issueNumber', 'expectedVersion']),
     'closed-issue-reconciliation-failed': Object.freeze(['resultId', 'phase', 'state', 'reason', 'changed', 'remaining']),
     'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
     'pull-request-link-restored': Object.freeze([]),
@@ -78592,6 +78636,13 @@ function normalizeApplicationErrorRecovery(recovery) {
     if (actualKeys.length !== expectedKeys.length
         || actualKeys.some((key, index) => key !== expectedKeys[index])) {
         throw new TypeError(`Application error recovery variables are invalid for ${recovery.id}.`);
+    }
+    if (recovery.id.startsWith('stored-configuration-')
+        && (![variables.issueNumber, variables.expectedVersion].every(value => typeof value === 'number' && Number.isSafeInteger(value) && value > 0)
+            || (recovery.id === 'stored-configuration-schema-unsupported'
+                && !(typeof variables.actualVersion === 'number'
+                    && Number.isSafeInteger(variables.actualVersion) && variables.actualVersion >= 0)))) {
+        throw new TypeError('Stored configuration diagnostic is invalid.');
     }
     if (recovery.id === 'managed-branch-enrichment-failed'
         && (typeof variables.branchName !== 'string'
@@ -83899,6 +83950,7 @@ function combineOrganizationAccess(secrets, variables) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.isGithubAlreadyExists = exports.isGithubPermissionDenied = exports.isGithubRateLimited = exports.isGithubNotFound = exports.getGithubErrorStatus = void 0;
+exports.githubReadErrorCode = githubReadErrorCode;
 const getGithubErrorStatus = (error) => {
     if (typeof error !== "object" || error === null)
         return undefined;
@@ -83908,6 +83960,23 @@ const getGithubErrorStatus = (error) => {
 exports.getGithubErrorStatus = getGithubErrorStatus;
 const isGithubNotFound = (error) => (0, exports.getGithubErrorStatus)(error) === 404;
 exports.isGithubNotFound = isGithubNotFound;
+/** Maps failed metadata reads without copying untrusted provider text. */
+function githubReadErrorCode(error) {
+    const status = (0, exports.getGithubErrorStatus)(error);
+    if (status === 401)
+        return 'authorization.credential-invalid';
+    if ((0, exports.isGithubRateLimited)(error))
+        return 'provider.rate-limited';
+    if (status === 403)
+        return 'authorization.denied';
+    if (status === 404)
+        return 'provider.not-found';
+    if (status === 409 || status === 412)
+        return 'provider.conflict';
+    if (status === 400 || status === 422)
+        return 'provider.contract-invalid';
+    return 'provider.unavailable';
+}
 const isGithubRateLimited = (error) => {
     const status = (0, exports.getGithubErrorStatus)(error);
     if (status === 429)
@@ -84618,8 +84687,9 @@ class IssueContentRepository {
                 return issue.body ?? '';
             }
             catch (error) {
-                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to read issue #${issueNumber} description.`));
-                throw error;
+                const semanticError = (0, application_error_1.toApplicationError)(error, (0, github_error_policy_1.githubReadErrorCode)(error), 'Unable to read the issue or pull-request description.');
+                (0, logger_1.logError)(semanticError);
+                throw semanticError;
             }
         };
         this.getIssueDescription = async (owner, repository, issueNumber, token) => {
@@ -102753,18 +102823,44 @@ class ConfigurationHandler extends issue_content_interface_1.IssueContentInterfa
             return this.internalUpdate(query, (0, configuration_payload_policy_1.buildConfigurationPayload)(context, storedRaw));
         };
         this.get = async (query) => {
+            let description;
             try {
-                const description = await this.issueDescriptionPort.getDescription(query.owner, query.repository, query.issueNumber, query.token);
+                description = await this.issueDescriptionPort.getDescription(query.owner, query.repository, query.issueNumber, query.token);
+            }
+            catch (cause) {
+                const semanticError = (0, application_error_1.toApplicationError)(cause, 'provider.unavailable', 'Unable to read issue configuration.');
+                (0, logger_1.logError)(semanticError);
+                throw semanticError;
+            }
+            const variables = { issueNumber: query.issueNumber, expectedVersion: config_1.CONFIG_SCHEMA_VERSION };
+            let recovery = { id: 'stored-configuration-invalid', variables };
+            try {
                 const config = this.getContent(description);
                 if (config === undefined) {
+                    if (description?.includes('<!-- copilot-configuration-start')
+                        || description?.includes('copilot-configuration-end -->')) {
+                        throw new Error('Stored configuration markers are inconsistent.');
+                    }
                     return undefined;
                 }
-                const branchConfig = (0, config_1.requireCurrentConfigurationPayload)(JSON.parse(config));
+                const parsed = JSON.parse(config);
+                if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                    const version = parsed.schemaVersion;
+                    if (version === undefined) {
+                        recovery = { id: 'stored-configuration-schema-missing', variables };
+                    }
+                    else if (typeof version === 'number' && Number.isSafeInteger(version)
+                        && version >= 0 && version !== config_1.CONFIG_SCHEMA_VERSION) {
+                        recovery = { id: 'stored-configuration-schema-unsupported', variables: { ...variables, actualVersion: version } };
+                    }
+                }
+                const branchConfig = (0, config_1.requireCurrentConfigurationPayload)(parsed);
                 return new config_1.Config(branchConfig);
             }
-            catch (error) {
-                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'configuration.invalid', 'Unable to read issue configuration.'));
-                throw error;
+            catch (cause) {
+                const semanticError = (0, application_error_1.toApplicationError)(cause, 'configuration.invalid', 'Stored issue/PR configuration is invalid.', { recovery });
+                (0, logger_1.logError)(semanticError);
+                throw semanticError;
             }
         };
     }

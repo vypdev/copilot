@@ -53,7 +53,34 @@ describe('IssueContentRepository', () => {
     it('preserves issue access failures instead of presenting them as an empty description', async () => {
         mockGet.mockRejectedValue(new Error('Not Found'));
 
-        await expect(repository.getDescription('owner', 'repo', 7, 'token')).rejects.toThrow('Not Found');
+        await expect(repository.getDescription('owner', 'repo', 7, 'token')).rejects.toMatchObject({
+            code: 'provider.unavailable', retryable: true,
+        });
+    });
+
+    it.each([
+        [401, 'authorization.credential-invalid', false],
+        [403, 'authorization.denied', false],
+        [404, 'provider.not-found', false],
+        [409, 'provider.conflict', true],
+        [412, 'provider.conflict', true],
+        [400, 'provider.contract-invalid', false],
+        [422, 'provider.contract-invalid', false],
+        [429, 'provider.rate-limited', true],
+        [503, 'provider.unavailable', true],
+    ])('maps description-read HTTP %s to %s without exposing provider text', async (status, code, retryable) => {
+        mockGet.mockRejectedValue({ status, message: 'PRIVATE-PROVIDER-BODY' });
+        const error = await repository.getDescription('owner', 'repo', 7, 'token').catch(error => error);
+        expect(error).toMatchObject({ code, retryable });
+        expect(JSON.stringify(error)).not.toContain('PRIVATE-PROVIDER-BODY');
+        expect(mockUpdate).not.toHaveBeenCalled();
+    });
+
+    it('preserves rate-limit semantics for a 403 description read', async () => {
+        mockGet.mockRejectedValue({ status: 403, response: { headers: { 'x-ratelimit-remaining': '0' } } });
+        await expect(repository.getDescription('owner', 'repo', 7, 'token')).rejects.toMatchObject({
+            code: 'provider.rate-limited', retryable: true,
+        });
     });
 
     it('publishes exactly the semantic body without a visible branding footer', async () => {

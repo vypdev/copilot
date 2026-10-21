@@ -1,3 +1,5 @@
+import type { ApplicationErrorCode } from '../../model/application_error';
+
 export interface GithubErrorShape {
     status?: number;
     message?: string;
@@ -11,6 +13,18 @@ export const getGithubErrorStatus = (error: unknown): number | undefined => {
 };
 
 export const isGithubNotFound = (error: unknown): boolean => getGithubErrorStatus(error) === 404;
+
+/** Maps failed metadata reads without copying untrusted provider text. */
+export function githubReadErrorCode(error: unknown): ApplicationErrorCode {
+    const status = getGithubErrorStatus(error);
+    if (status === 401) return 'authorization.credential-invalid';
+    if (isGithubRateLimited(error)) return 'provider.rate-limited';
+    if (status === 403) return 'authorization.denied';
+    if (status === 404) return 'provider.not-found';
+    if (status === 409 || status === 412) return 'provider.conflict';
+    if (status === 400 || status === 422) return 'provider.contract-invalid';
+    return 'provider.unavailable';
+}
 
 export const isGithubRateLimited = (error: unknown): boolean => {
     const status = getGithubErrorStatus(error);
