@@ -1424,10 +1424,12 @@ describe('workflow contract validator', () => {
     const steps = workflow.jobs['code-health'].steps;
     const reports = steps.find((step: { name?: string }) => step.name === 'Generate RepoWise reports');
     const upload = steps.find((step: { name?: string }) => step.name === 'Upload RepoWise reports');
-    expect(reports.run).toContain('health --no-workspace --refactoring-targets --format md');
-    expect(reports.run).toContain('health --no-workspace --refactoring-targets --format json');
-    expect(reports.run).toContain('ulimit -v 2097152; timeout --kill-after=10s 90s');
-    expect(reports.run).toContain('incomplete (exit %s)');
+    expect(reports.run).toContain('"$python_bin" scripts/repowise_reports.py --report-dir "$report_dir"');
+    expect(reports.run).toContain('"$python_bin" -m unittest discover');
+    const adapter = readFileSync(path.join(process.cwd(), 'scripts', 'repowise_reports.py'), 'utf8');
+    expect(adapter).toContain('resource.RLIMIT_AS');
+    expect(adapter).toContain('os.killpg(process.pid, signal.SIGKILL)');
+    expect(adapter).toContain('write_summary(report_dir, sha, results)');
     expect(upload.if).toBe('${{ always() }}');
   });
 
@@ -1476,22 +1478,21 @@ describe('workflow contract validator', () => {
     expect(() => assertRunner(file, workflow)).toThrow('must use runs-on self-hosted, codex, Linux');
   });
 
-  it.each(['full-history', 'scan-budget', 'incomplete-status', 'revision-file', 'summary', 'upload', 'retention', 'health-md', 'health-json'])(
+  it.each(['pin', 'script', 'compatibility', 'cleanup', 'upload', 'retention'])(
     'rejects loss of RepoWise manual report evidence: %s', boundary => {
       const { file, workflow } = loadMutationWorkflow('.github/workflows', 'repowise.yml');
       expect(() => validateWorkflow(file, workflow)).not.toThrow();
       const job = workflow.jobs['code-health'];
       const reports = job.steps.find((step: { name?: string }) => step.name === 'Generate RepoWise reports');
+      const install = job.steps.find((step: { name?: string }) => step.name === 'Install RepoWise');
       const upload = job.steps.find((step: { name?: string }) => step.name === 'Upload RepoWise reports');
-      if (boundary === 'full-history') reports.run = reports.run.replace('--history --path .', '--history --since HEAD --path .');
-      else if (boundary === 'scan-budget') reports.run = reports.run.replace('ulimit -v 2097152;', '');
-      else if (boundary === 'incomplete-status') reports.run = reports.run.replace('incomplete (exit %s)', 'complete');
-      else if (boundary === 'revision-file') reports.run = reports.run.replace('> "$report_dir/revision.txt"', '> /dev/null');
-      else if (boundary === 'summary') reports.run = reports.run.replace('>> "$GITHUB_STEP_SUMMARY"', '> /dev/null');
+      if (boundary === 'pin') install.run = install.run.replace('repowise==0.58.0', 'repowise');
+      else if (boundary === 'script') reports.run = reports.run.replace('scripts/repowise_reports.py', 'other.py');
+      else if (boundary === 'compatibility') reports.run = reports.run.replace('-m unittest discover', '-m other');
+      else if (boundary === 'cleanup') reports.run = reports.run.replace('trap cleanup EXIT', '');
       else if (boundary === 'upload') delete upload.if;
-      else if (boundary === 'retention') upload.with['retention-days'] = 1;
-      else reports.run = reports.run.replace(`health --no-workspace --refactoring-targets --format ${boundary === 'health-md' ? 'md' : 'json'}`, 'status');
-      expect(() => validateWorkflow(file, workflow)).toThrow('bounded manual history scans, health reports, revision evidence');
+      else upload.with['retention-days'] = 1;
+      expect(() => validateWorkflow(file, workflow)).toThrow('pinned bounded reports, compatibility tests');
     },
   );
 

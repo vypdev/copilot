@@ -388,7 +388,7 @@
       "id": "merge-queue-readiness",
       "title": "Merge queue readiness and effective target rules",
       "status": "implemented",
-      "scope": "Fail-closed validation of required checks and merge-group workflow support; optional manual-only RepoWise analysis with independent CI and verified required-check migration",
+      "scope": "Fail-closed validation of required checks and merge-group workflow support; optional manual-only RepoWise analysis with independent CI and verified required-check migration; cached RepoWise exports and bounded full-history secret processing with truthful completeness and resource evidence",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-10-21",
       "specs": [
@@ -414,7 +414,9 @@
         "src/application/usecases/setup/merge_queue_readiness_use_case.ts",
         "src/data/repository/deployment/github_target_merge_capabilities_inspector.ts",
         "src/infrastructure/github/octokit_checks_adapters.ts",
-        "scripts/validate-workflow-contract.cjs"
+        "scripts/validate-workflow-contract.cjs",
+        "scripts/repowise_history.py",
+        "scripts/repowise_reports.py"
       ],
       "tests": [
         "src/domain/__tests__/merge_queue_readiness.test.ts",
@@ -422,11 +424,14 @@
         "src/application/policies/__tests__/setup_doctor_message_catalog.test.ts",
         "src/application/usecases/setup/__tests__/merge_queue_readiness_use_case.test.ts",
         "src/data/repository/deployment/__tests__/github_deployment_adapters.test.ts",
-        "src/tooling/__tests__/validate_workflow_contract.test.ts"
+        "src/tooling/__tests__/validate_workflow_contract.test.ts",
+        "scripts/tests/test_repowise.py"
       ],
       "documentation": [
         "docs/issues/deployment-orchestration.mdx",
-        "docs/security-operations/operations/verification.mdx"
+        "docs/security-operations/operations/verification.mdx",
+        "docs/development/testing.mdx",
+        "docs/security-operations/security/self-hosted-runners.mdx"
       ]
     },
     {

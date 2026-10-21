@@ -1,0 +1,160 @@
+"""Bounded full-history adapter for the explicitly pinned RepoWise version.
+
+Keep RepoWise's traversal, provenance, allowlists, deduplication and detectors.
+Replace only its eager blob dictionary and work discarded by secrets-only mode.
+Private interfaces are deliberate: upgrades require the compatibility fixtures.
+"""
+
+from __future__ import annotations
+
+import atexit
+from importlib.metadata import version
+from pathlib import Path
+import subprocess
+
+REPOWISE_VERSION = "0.58.0"
+
+
+class BlobReader:
+    """One request/response at a time; never retain previous blob contents."""
+
+    def __init__(self, repo: Path):
+        self.process = subprocess.Popen(
+            ["git", "-C", str(repo), "cat-file", "--batch"],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        )
+        self.count = 0
+        self.bytes_read = 0
+        self.largest_blob = 0
+        atexit.register(self.close)
+
+    def get(self, sha: str, default: str = "") -> str:
+        # Object names come from Git, never accept a batch protocol injection.
+        if len(sha) not in (40, 64) or any(c not in "0123456789abcdef" for c in sha):
+            raise ValueError("Invalid blob object name")
+        self.process.stdin.write((sha + "\n").encode("ascii"))
+        self.process.stdin.flush()
+        header = self.process.stdout.readline(256).split()
+        if len(header) != 3 or header[0].decode("ascii") != sha or header[1] != b"blob":
+            raise RuntimeError("Missing or malformed Git blob response")
+        size = int(header[2])
+        if size < 0:
+            raise RuntimeError("Negative Git blob size")
+        content = self.process.stdout.read(size)
+        if len(content) != size or self.process.stdout.read(1) != b"\n":
+            raise RuntimeError("Truncated Git blob response")
+        self.count += 1
+        self.bytes_read += size
+        self.largest_blob = max(self.largest_blob, size)
+        if self.count % 1000 == 0:
+            import sys
+            print(f"History: {self.count} source blobs, {self.bytes_read} bytes read", file=sys.stderr, flush=True)
+        return content.decode("utf-8", errors="replace")
+
+    def close(self):
+        if self.process.poll() is None:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait()
+        for stream in (self.process.stdin, self.process.stdout):
+            if stream:
+                stream.close()
+
+
+class SecretPrefilter:
+    # Necessary literals in every line-oriented SECRET_KINDS regex in 0.58.0.
+    # False positives are allowed; authoritative matching stays in RepoWise.
+    # PEM is a separate spanning pass and deliberately never gated here.
+    literals = (
+        "password", "apikey", "api_key", "secret", "token", "accesskey", "access_key",
+        "akia", "asia", "gho_", "ghp_", "ghr_", "ghs_", "ghu_", "github_pat_",
+        "xox", "aiza", "sk_", "rk_", "glpat-", "gldt-", "glrt-", "glptt-",
+        "gloas-", "glimt-", "glcbt-", "gr1348941", "azdo", "://",
+    )
+
+    def search(self, text):
+        # Python IGNORECASE also accepts dotless i, long s and dotted I.
+        lowered = text.lower().replace("ı", "i").replace("ſ", "s").replace("\u0307", "")
+        return any(literal in lowered for literal in self.literals)
+
+
+def configure_secret_scan():
+    from repowise.core.analysis.security import scanner
+    from repowise.core.analysis.security.patterns import SECRET_KINDS
+
+    scanner._PATTERNS = [p for p in scanner._PATTERNS if p[1] in SECRET_KINDS]
+    scanner._SPANNING_PATTERNS = [p for p in scanner._SPANNING_PATTERNS if p[1] in SECRET_KINDS]
+    scanner._ANY_PATTERN = SecretPrefilter()
+    # History's secrets_only=True discards all call findings; don't compute them.
+    scanner._call_findings = lambda *args: []
+
+
+def strict_git(repo_path, args, *, timeout=30.0):
+    # Upstream's best-effort helper returns an empty string on Git failures,
+    # which could otherwise turn a failed history enumeration into a clean scan.
+    return subprocess.run(
+        ["git", "-C", str(repo_path), *args], check=True, timeout=timeout,
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+    ).stdout
+
+
+def fail_on_persistence_error():
+    import logging
+
+    class PersistenceFailure(logging.Handler):
+        def emit(self, record):
+            if record.getMessage().startswith("security_finding_persist_failed"):
+                raise RuntimeError("History finding persistence failed")
+
+    logger = logging.getLogger("repowise.core.analysis.security_scan")
+    # Override the CLI's ancestor ERROR level: upstream logs swallowed writes
+    # at WARNING. This handler raises before a diagnostic can pollute JSON.
+    logger.setLevel(logging.WARNING)
+    handler = PersistenceFailure()
+    logger.addHandler(handler)
+    return handler
+
+
+def main():
+    import json
+    import os
+
+    if version("repowise") != REPOWISE_VERSION:
+        raise RuntimeError("Unsupported RepoWise version; rerun compatibility fixtures before upgrading")
+    from repowise.core.analysis import history_scan
+    from repowise.cli.main import cli
+
+    readers = []
+    original = history_scan.HistorySecurityScanner
+
+    class BoundedHistoryScanner(original):
+        def _read_blobs_batch(self, repo_path, blob_shas):
+            reader = BlobReader(repo_path)
+            readers.append(reader)
+            return reader
+
+    fail_on_persistence_error()
+    history_scan._run_git = strict_git
+    history_scan.HistorySecurityScanner = BoundedHistoryScanner
+    configure_secret_scan()
+    try:
+        cli(["security", "scan", "--history", "--path", ".", "--format", "json"])
+    finally:
+        for reader in readers:
+            reader.close()
+        metrics = os.environ.get("REPOWISE_HISTORY_METRICS")
+        if metrics:
+            Path(metrics).write_text(json.dumps({
+                "blobs_read": sum(r.count for r in readers),
+                "bytes_read": sum(r.bytes_read for r in readers),
+                "largest_blob_bytes": max((r.largest_blob for r in readers), default=0),
+                "reader_cache_blobs": 0,
+                "max_blob_requests_in_flight": 1,
+            }) + "\n")
+
+
+if __name__ == "__main__":
+    main()

@@ -147,3 +147,6 @@ opencode.json
 
 # Repository-local scratch output, including sandboxed Jest transform caches
 .tmp/
+
+# Python analysis tooling
+__pycache__/

@@ -2451,9 +2451,10 @@ now run only under `workflow_dispatch` on Ubuntu `codex` with the native selecte
 repository ref; it MUST NOT run on PR, push or merge-group events or be required
 for them. The retained CI routing cases still prove the fork/merge-group trust
 boundary. The [manual-only migration contract](./merge-queue-readiness.md#manual-only-repowise-migration-2026-10-21-issue-639)
-defines the 24-case regression floor, live required-check evidence, immutable
-revision reporting, unchanged scan budgets and cleanup, operator journey,
-failure/retry behavior and final-revision manual acceptance. This is a workflow
+and its [bounded-analysis follow-up](./merge-queue-readiness.md#bounded-manual-repowise-analysis-2026-10-21-issue-644)
+define the 54-case regression floor, live required-check evidence, immutable
+revision reporting, measured phase budgets and cleanup, operator journey,
+failure/retry behavior and complete final-revision manual acceptance. This is a workflow
 scheduling change with no setup-session, PAT, web UX or new configuration change.
 
 The first [RepoWise run on `e197cb0c`](https://github.com/vypdev/copilot/actions/runs/37289899480)

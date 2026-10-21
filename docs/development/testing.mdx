@@ -111,17 +111,33 @@ reviewed repository branch, and launch it. The CLI equivalent for development is
 `gh workflow run repowise.yml --ref develop`. The workflow already exists on the
 default branch, as required for [manual dispatch](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow).
 
-Open the run's Job Summary for the analyzed commit and scan status. Download
-the `repowise-code-health` artifact for the index log, Markdown/JSON health
-reports, `revision.txt` and `advisory-status.txt`; artifacts are retained for
-14 days. History security scans cover the complete reachable history of that
-revision. Dead-code and security scans each have a 90-second, 2 GiB limit
-inside the 30-minute job budget. An incomplete scan produces a warning and an
-incomplete status while preserving completed health reports. A failed health
-step fails the run; available files are still uploaded. Inspect the failure
-before retrying. A newer manual run for the same ref cancels the older one;
-cancellation or runner loss can prevent artifact publication. No manual run
-blocks the automatic CI path.
+Open the run's Job Summary for the analyzed commit, phase status, elapsed time
+and peak RSS. Download `repowise-code-health` (14 days) for health Markdown/JSON,
+safe-only dead-code JSON, the security JSON aggregate, index/phase logs,
+`revision.txt`, `scope.json`, `timings.json` and `history-resources.json`.
+
+The pinned RepoWise 0.58.0 builds one fresh standard index and exports its stored
+health/dead-code results. Index git analytics retain a 500-commit limit; security
+separately covers **all reachable history**, including removed secrets and generated
+bundles, using RepoWise's supported source extensions, secret patterns and
+allowlists. Historical blob contents are read one at a time. The adapter avoids
+computing code-smell findings discarded by history mode. This remains an advisory
+signal scanner; an aggregate with no findings is not proof that no secrets exist.
+
+Indexing has a 900-second/4 GiB virtual-memory cap. Each health export and dead-code
+has a 60-second/2 GiB cap; security has a 1200-second/2 GiB cap, inside the
+40-minute job. Limits apply per process; reported peak RSS is the largest process,
+not aggregate simultaneous memory. These budgets accommodate the roughly 9 GB of
+historical JavaScript without retaining all of it in memory.
+
+An interrupted scan, Git error, stale/failed index or invalid report marks analysis
+incomplete and fails this optional run. Completed reports and diagnostics still
+upload; invalid JSON is removed. Inspect the named phase log, fix the cause, then
+rerun. A newer manual run for the same ref cancels the older one; cancellation or
+runner loss can prevent publication. No manual run blocks automatic CI. Upgrading
+the pin requires the Python compatibility fixtures, which run before every manual
+analysis. They compare secret detection with upstream and verify deleted secrets,
+other refs, bounded reads and failures.
 
 Manual RepoWise runs use self-hosted Ubuntu `codex` runners. `CI Check` uses
 that pool for repository-owned PRs and pushes; fork PRs and all merge groups

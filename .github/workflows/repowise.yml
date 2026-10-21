@@ -18,7 +18,7 @@ jobs:
   code-health:
     name: RepoWise code health
     runs-on: [self-hosted, codex, Linux]
-    timeout-minutes: 30
+    timeout-minutes: 40
     env:
       REPOWISE_VENV_NAME: repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-code-health
       REPOWISE_REPORT_NAME: repowise-report-${{ github.run_id }}-${{ github.run_attempt }}-code-health
@@ -52,54 +52,22 @@ jobs:
           "$RUNNER_TEMP/$REPOWISE_VENV_NAME/bin/python" -m pip install \
             --disable-pip-version-check \
             --no-cache-dir \
-            'repowise==0.45.0'
+            'repowise==0.58.0'
       - name: Generate RepoWise reports
         env:
           REPOWISE_SKIP_EDITOR_SETUP: '1'
         run: |
           set -euo pipefail
           report_dir="$RUNNER_TEMP/$REPOWISE_REPORT_NAME"
-          repowise_bin="$RUNNER_TEMP/$REPOWISE_VENV_NAME/bin/repowise"
-          mkdir -p "$report_dir"
-          analyzed_sha="$(git rev-parse HEAD)"
-          printf '%s\n' "$analyzed_sha" > "$report_dir/revision.txt"
+          python_bin="$RUNNER_TEMP/$REPOWISE_VENV_NAME/bin/python"
           cleanup() {
             rm -rf .repowise .mcp.json
             rm -f .vscode/mcp.json .vscode/extensions.json
             rmdir .vscode 2>/dev/null || true
           }
           trap cleanup EXIT
-          "$repowise_bin" init \
-            --no-prose --no-claude-md --no-codex --no-editor-setup \
-            --no-onboarding --no-distill-hook --no-workspace . > "$report_dir/index.log"
-          "$repowise_bin" health --no-workspace --refactoring-targets --format md . | tee "$report_dir/health.md"
-          "$repowise_bin" health --no-workspace --refactoring-targets --format json . > "$report_dir/health.json"
-          advisory_scan() {
-            local name="$1"
-            shift
-            if (ulimit -v 2097152; timeout --kill-after=10s 90s "$@") > "$report_dir/$name.json"; then
-              printf '%s: complete\n' "$name" >> "$report_dir/advisory-status.txt"
-            else
-              local status="$?"
-              rm -f "$report_dir/$name.json"
-              printf '%s: incomplete (exit %s)\n' "$name" "$status" >> "$report_dir/advisory-status.txt"
-              echo "::warning::RepoWise $name advisory scan incomplete (exit $status); completed health reports remain available."
-            fi
-          }
-          advisory_scan dead-code "$repowise_bin" dead-code --safe-only --no-workspace --format json .
-          echo 'security scope: full reachable history (manual dispatch)' >> "$report_dir/advisory-status.txt"
-          advisory_scan security "$repowise_bin" security scan --history --path . --format json
-          {
-            echo '## RepoWise code health'
-            echo
-            echo 'Advisory reports are retained as workflow artifacts for this commit.'
-            echo
-            printf 'Analyzed revision: `%s`\n\n' "$analyzed_sha"
-            sed -n '1,100p' "$report_dir/health.md"
-            echo
-            echo '### Advisory scan status'
-            cat "$report_dir/advisory-status.txt"
-          } >> "$GITHUB_STEP_SUMMARY"
+          "$python_bin" -m unittest discover -s scripts/tests -p 'test_repowise*.py' -v
+          "$python_bin" scripts/repowise_reports.py --report-dir "$report_dir"
       - name: Upload RepoWise reports
         if: ${{ always() }}
         uses: actions/upload-artifact@v6
