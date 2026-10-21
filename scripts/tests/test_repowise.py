@@ -207,6 +207,8 @@ class ReportFailures(unittest.TestCase):
             def start(command, **kwargs):
                 kwargs["stdout"].write("[]")
                 kwargs["stdout"].flush()
+                kwargs["stderr"].write("Read from the index")
+                kwargs["stderr"].flush()
                 (root / "dead-code.resources.txt").write_text("1.2 2048\n")
                 process = Mock(); process.wait.return_value = 0
                 return process
@@ -215,6 +217,21 @@ class ReportFailures(unittest.TestCase):
             self.assertEqual("complete", result["status"])
             self.assertEqual(2048, result["peak_rss_kib"])
             self.assertTrue(p.exists())
+
+    def test_dead_code_live_fallback_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); p = root / "dead-code.json"
+            p.write_text('[]'); (root / "dead-code.stderr.log").write_text("Computing live")
+            with self.assertRaisesRegex(ValueError, "reuse the index"):
+                reports.validate_json(p, "dead-code")
+
+    def test_stale_health_revision_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            p = Path(directory) / "health.json"
+            p.write_text('{"targets":[],"refactoring_plans":[],"source":"index","analyzed_commit":"old"}')
+            with patch.object(reports.subprocess, "check_output", return_value="current"):
+                with self.assertRaisesRegex(ValueError, "revision"):
+                    reports.validate_json(p, "health-json")
 
     def test_command_failure_is_incomplete(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -40,6 +40,8 @@ def validate_json(path, kind):
     if kind == "dead-code":
         if not isinstance(value, list) or not all(isinstance(f, dict) and "kind" in f for f in value):
             raise ValueError("Invalid dead-code report")
+        if "Read from the index" not in (path.parent / "dead-code.stderr.log").read_text():
+            raise ValueError("Dead-code did not reuse the index")
         return value
     if not isinstance(value, dict):
         raise ValueError("Expected a JSON object")
@@ -49,6 +51,10 @@ def validate_json(path, kind):
         raise ValueError("Incomplete report schema")
     if kind == "health-json" and value.get("source") != "index":
         raise ValueError("Health report did not reuse the index")
+    if kind == "health-json":
+        head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+        if value.get("analyzed_commit") != head:
+            raise ValueError("Stored health revision does not match HEAD")
     if kind == "security" and (value["commits_scanned"] <= 0 or value["files_scanned"] <= 0):
         raise ValueError("History scan did not cover any commits or source blobs")
     if kind == "security":

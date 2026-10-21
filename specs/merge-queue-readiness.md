@@ -319,10 +319,10 @@ No comments, locale settings or automatic retries are introduced. Native GitHub
 queued/running/canceled states and artifact links remain the navigation; textual
 statuses and plain tables work on narrow screens and in light/dark mode.
 
-Regression floor: **54 distinct cases**, comprising the retained **21** manual
-workflow admission/permission/isolation/wiring/report mutations and **33** Python
+Regression floor: **56 distinct cases**, comprising the retained **21** manual
+workflow admission/permission/isolation/wiring/report mutations and **35** Python
 cases: 14 detector/version compatibility, 5 blob/Git protocol/error cases,
-1 deleted-secret/other-ref/provenance integration and 13 resource/report/failure
+1 deleted-secret/other-ref/provenance integration and 15 resource/report/failure
 cases. Cases use synthetic credentials, temporary repositories and mocked clocks/
 processes for timeouts; they do not need live services or real waits. The Python
 suite runs in the pinned Python 3.12 manual environment before analysis. Repository
