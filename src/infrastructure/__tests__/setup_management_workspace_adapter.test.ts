@@ -100,6 +100,14 @@ describe('reusable comment installation inspection', () => {
  test('unknown caller inputs block guessed effective configuration', () => {
   expect(fixture(reusable(COPILOT_COMMENT_REMOTE_WORKFLOW, '      unknown-input: true')).adapter.inspect()).toMatchObject({ unreadable: true, workflows: [] });
  });
+ test.each(['master', 'v4', ''])('an unsupported coordinator ref %s cannot disappear from installation evidence', ref => {
+  const f = fixture(reusable(COPILOT_COMMENT_REMOTE_WORKFLOW.replace('@v3', '@' + ref)));
+  writeFileSync(join(f.directory, 'other.yml'), workflow('bugbot-comment-limit: 20'));
+  expect(f.adapter.inspect()).toMatchObject({ unreadable: true, workflows: [{ file: 'other.yml', action: 'vypdev/copilot@v3' }] });
+ });
+ test('an unverified workspace-relative coordinator cannot be treated as absent', () => {
+  expect(fixture(reusable(COPILOT_COMMENT_SELF_WORKFLOW.replace('$/', './'))).adapter.inspect()).toMatchObject({ unreadable: true, workflows: [] });
+ });
  test('a self-repository call without known Copilot metadata fails closed', () => {
   expect(fixture(reusable(COPILOT_COMMENT_SELF_WORKFLOW)).adapter.inspect()).toMatchObject({ unreadable: true, workflows: [] });
  });

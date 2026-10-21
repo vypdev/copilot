@@ -100584,7 +100584,12 @@ class SetupManagementWorkspaceAdapter {
     inspectWorkflow(file, localAction) {
         const { source, document } = readDocument((0, node_path_1.join)(this.root, '.github', 'workflows', file));
         const steps = workflowSteps(document);
-        const calls = Object.values(object(document.jobs)).map(object).filter(job => (0, copilot_comment_workflow_1.isCopilotCommentWorkflow)(job.uses));
+        const jobs = Object.values(object(document.jobs)).map(object);
+        if (jobs.some(job => typeof job.uses === 'string'
+            && /^(?:vypdev\/copilot\/|[.$]\/)\.github\/workflows\/copilot_comment_runtime\.yml(?:@|$)/iu.test(job.uses)
+            && !(0, copilot_comment_workflow_1.isCopilotCommentWorkflow)(job.uses)))
+            throw new Error('Unsupported comment workflow reference.');
+        const calls = jobs.filter(job => (0, copilot_comment_workflow_1.isCopilotCommentWorkflow)(job.uses));
         if (calls.some(job => job.uses === copilot_comment_workflow_1.COPILOT_COMMENT_SELF_WORKFLOW) && !localAction())
             throw new Error('Unverified source comment workflow.');
         const reusable = calls.map(job => {
