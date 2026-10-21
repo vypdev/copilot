@@ -335,3 +335,11 @@ describe("PullRequestReviewCommentCommandRepository", () => {
     }
   });
 });
+
+
+it('retains only safe provider status and request reference after a mutation failure', async () => {
+  const { repository } = createRepository({ createReview: jest.fn().mockRejectedValue({ status: 403,
+    response: { headers: { 'x-github-request-id': 'AB12:34CD', authorization: 'PRIVATE' }, data: 'PRIVATE' } }) });
+  await expect(repository.createReviewWithComments('o', 'r', 7, 'sha', 'body', [], 'token'))
+    .rejects.toMatchObject({ operation: 'publish-comments', providerStatus: 403, providerReference: 'AB12:34CD' });
+});

@@ -1,3 +1,4 @@
+import { toPullRequestReviewOperationError } from '../../../../../../data/repository/pull_request/pull_request_review_error_metadata';
 /**
  * Unit tests for publishFindings: issue comments (add/update), PR review comments (when file in prFiles), overflow.
  */
@@ -711,4 +712,24 @@ describe("publishFindings", () => {
             ]),
         );
     });
+    it('reports exact batch publication operation and safe provider metadata', async () => {
+        mockCreateReviewWithComments.mockRejectedValue(toPullRequestReviewOperationError({ status: 403,
+            response: { headers: { 'x-github-request-id': 'AB12:34CD' }, data: 'PRIVATE' } }, 'publish-comments'));
+        await expect(publishFindings({ operation: baseOperation,
+            context: baseContext({ prContext: { prHeadSha: 'sha1',
+                prFiles: [{ filename: 'src/foo.ts', status: 'modified' }], pathToFirstDiffLine: { 'src/foo.ts': 5 } } }),
+            findings: [finding({ file: 'src/foo.ts' }), finding({ id: 'f2', file: 'src/foo.ts' })],
+        })).rejects.toMatchObject({ code: 'authorization.denied', diagnostic: { stage: 'publication', operation: 'publish-comments',
+            findingId: 'f1', affectedCount: 2, providerStatus: 'http-403', providerReference: 'AB12:34CD' } });
+    });
+
+    it('identifies an existing finding when updating its native comment fails', async () => {
+        mockUpdatePullRequestReviewComment.mockRejectedValue(toPullRequestReviewOperationError({ status: 503 }, 'update-comment'));
+        await expect(publishFindings({ operation: baseOperation,
+            context: baseContext({ existingByFindingId: { f1: { pullRequest: { commentIdentity: 'PRRC_1', pullRequestNumber: 50, resolved: false, fingerprint: 'fp-11111111' } } },
+                prContext: { prHeadSha: 'sha1', prFiles: [{ filename: 'src/foo.ts', status: 'modified' }], pathToFirstDiffLine: { 'src/foo.ts': 5 } } }),
+            findings: [finding()],
+        })).rejects.toMatchObject({ diagnostic: { stage: 'publication', operation: 'update-comment', findingId: 'f1', providerStatus: 'http-503' } });
+    });
+
 });

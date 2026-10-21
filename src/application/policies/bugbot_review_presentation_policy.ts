@@ -101,6 +101,9 @@ export function renderBugbotStatusCard(
     const facts = [catalog.message('bugbot.coverage.retained', { count: source.itemsRetained })];
     if (source.omittedItems > 0) facts.push(catalog.message('bugbot.coverage.omitted', { count: source.omittedItems }));
     if (source.truncatedItems > 0) facts.push(catalog.message('bugbot.coverage.truncated', { count: source.truncatedItems }));
+    const truncatedIds = source.truncatedItemIds?.slice(0, 50)
+      .filter(id => /^(?:issue:[0-9]+|review:[A-Za-z0-9_=-]+)$/.test(id) && id.length <= 160);
+    if (truncatedIds?.length) facts.push(`truncated-source-ids=${truncatedIds.join(', ')}`);
     if (source.providerLimitReached) facts.push(catalog.message('bugbot.coverage.providerLimit'));
     return `- ${source.source}: ${source.status}; ${facts.join(', ')}`;
   });

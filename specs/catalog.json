@@ -440,7 +440,7 @@
       "status": "implemented",
       "scope": "Reconcile review snapshots, findings, threads, comments, and check conclusions",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-21",
       "specs": [
         "specs/bugbot-review-state-reconciliation.md"
       ],
@@ -476,7 +476,9 @@
         "src/application/usecases/steps/commit/bugbot/prepare_bugbot_findings_policy.ts",
         "src/application/usecases/steps/commit/bugbot/publish_pr_review_comments.ts",
         "src/application/usecases/steps/commit/bugbot/synchronize_bugbot_review_presentation_use_case.ts",
-        "src/application/policies/bugbot_status_count_marker_policy.ts"
+        "src/application/policies/bugbot_status_count_marker_policy.ts",
+        "src/application/errors/bugbot_mutation_error.ts",
+        "src/data/repository/pull_request/pull_request_review_error_metadata.ts"
       ],
       "tests": [
         "src/domain/bugbot/__tests__/review_state.test.ts",
@@ -500,7 +502,9 @@
         "src/application/usecases/actions/__tests__/synchronize_lifecycle_state_use_case.test.ts",
         "src/application/usecases/steps/commit/__tests__/detect_potential_problems_use_case.test.ts",
         "src/infrastructure/composition/__tests__/pull_request_use_case_composition_root.test.ts",
-        "src/tooling/__tests__/validate_workflow_contract.test.ts"
+        "src/tooling/__tests__/validate_workflow_contract.test.ts",
+        "src/application/errors/__tests__/bugbot_mutation_error.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/finding_mutation_recovery.test.ts"
       ],
       "documentation": [
         "docs/bugbot/detection.mdx",

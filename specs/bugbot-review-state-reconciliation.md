@@ -1601,3 +1601,72 @@ from one trusted bot-owned complete current-head card; it grants no approval
 or mutation authority. Marker/reader tests (24 cases) belong exclusively to
 the comment automation SDD budget. User documentation explains recheck recovery
 when evidence is absent or stale.
+
+
+### Actionable finding mutation failures (2026-10-21, #646)
+
+Observed: a native review and inline comment could persist before resolution
+failed; the adapter and application discarded the failed operation/HTTP facts,
+leaving only `provider.unavailable`. The exact consumer API cause remains unknown.
+This amendment MUST preserve incomplete evidence and completed effects while
+retaining closed stage (`publication`/`resolution`), adapter operation, first
+finding ID, affected batch count, optional HTTP status and safe provider request
+reference. Batch diagnosis names its first finding and count, without falsely
+claiming which individual item failed inside an atomic provider request.
+
+Only integer HTTP 400–599 and a 1–64-character alphanumeric/colon/hyphen request
+reference are retained. Raw error prose, response bodies, URLs, request headers,
+credentials and rejected provider content MUST NOT cross this diagnostic boundary.
+Finding IDs use a bounded 200-character identifier alphabet; unavailable or unsafe
+IDs are represented explicitly. Existing locally computed fingerprints remain
+reconciliation authority; diagnostic IDs grant no mutation permission.
+
+```text
+Publish native review -> attempt durable reconciliation -> failure retains effects
+-> safe diagnostic plus independent coverage -> correct cause -> normal recheck
+-> fresh provider read -> reuse native finding and retained dismissal
+```
+
+Text equivalent: partial success is retained and diagnosed; a recheck discovers
+existing provider state before continuing, without duplicate review/thread creation
+or reversal of a durable human dismissal. There is no new automatic retry or
+rollback and no change to freshness, ownership, evidence or mutation ordering.
+
+The semantic error class MUST preserve authorization, not-found, conflict,
+rate-limit, client-contract and transient-provider categories. Recovery details
+in the owned status card remain localized with existing English/Spanish catalogs.
+Example: “Finding mutation failed: stage=resolution; operation=resolve-thread;
+finding=backend/Dockerfile:20:healthcheck-requires-curl; affected=1; http-503;
+provider reference=AB12:34CD. Completed effects are retained.” Correct access and
+contract failures before retrying; restore availability for transient failures,
+then recheck the same PR. Existing pending, attention and successful cards remain.
+No new comment stream, permission, configuration input or durable marker schema.
+Absent metadata remains unavailable; no inference of a specific provider cause.
+
+Conversation truncation MUST remain independently partial. Coverage can attach
+up to 50 bounded provider identities for retained truncated sources (`issue:<id>`
+or `review:<node-id>`), never comment text or arbitrary links. The aggregate shows
+these identities under Incomplete coverage, separately from Recovery details.
+A failed mutation cannot turn partial coverage into complete, and a coverage
+limitation cannot conceal the semantic mutation failure. Existing projection
+precedence (partial coverage may yield a partial projection with failed Result)
+is retained. Old coverage without identities remains compatible and unverified.
+
+Adapters own safe provider metadata; application errors own the credential-free
+mutation diagnostic; publication/resolution use cases bind finding identity;
+reconciliation and catalog presentation consume typed facts. Domain coverage
+adds optional source identities only. Typecheck, architecture, localization and
+fault-injection regressions enforce these boundaries; SDKs remain outside policy.
+
+The additional budget is **19 distinct cases**: eleven HTTP/classification/privacy
+and error-preservation cases, two publication-stage identity/batch cases, one real
+publication-to-failed-resolution-to-retry integration, two locale/projection and
+independent-coverage cases, two exact-source/privacy cases and one adapter case.
+Existing global coverage/quality thresholds and all prior state/replay tests
+remain required. Acceptance proves a persisted native review survives a subsequent
+503, one recheck produces no duplicate native review/thread, dismissal bytes are
+retained, and diagnostics distinguish that error from truncated conversation.
+Documentation: Bugbot failure scenarios. Upgrade the Action and recheck the same
+PR after recovery; rollback only loses richer diagnostics. Definition of Done:
+all package, documentation, catalog and existing architecture gates pass; no live
+consumer recovery is claimed by deterministic fixtures.

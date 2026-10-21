@@ -1,5 +1,4 @@
 import type { BugbotFindingResolutionPorts } from '../../../../../application/ports/bugbot_finding_resolution_ports';
-import { PullRequestReviewOperationError } from '../../../../../application/ports/pull_request_review_errors';
 import { logError } from '../../../../ports/logging_ports';
 import type { BugbotContext } from './types';
 import type {
@@ -9,6 +8,7 @@ import type {
 import { resolveIssueFinding } from './resolve_issue_finding';
 import { resolvePullRequestFinding } from './resolve_pull_request_finding';
 import { isHumanResolver } from '../../../../../domain/bugbot/review_state';
+import { bugbotMutationError } from '../../../../errors/bugbot_mutation_error';
 import { ApplicationError } from '../../../../errors/application_error';
 import type { BugbotContextSelectionContext } from './bugbot_review_operation_context';
 import type { BugbotMessageCatalog } from '../../../../policies/bugbot_message_catalog';
@@ -56,8 +56,8 @@ async function repairExistingPullRequestFinding(
                 destination.pullRequestNumber,
                 destination.commentIdentity,
             );
-        } catch {
-            addResolutionError(errors, 'pull request');
+        } catch (cause) {
+            addResolutionError(errors, 'pull request', findingId, cause);
         }
     }
 }
@@ -89,7 +89,7 @@ async function resolveIssueIfNeeded(
     if (destination == null || destination.resolved) return;
     const comment = param.context.issueComments.find(item => item.id === destination.commentId);
     if (comment?.body == null) {
-        addResolutionError(errors, 'issue');
+        addResolutionError(errors, 'issue', findingId);
         return;
     }
     try {
@@ -99,8 +99,8 @@ async function resolveIssueIfNeeded(
             issueNumber: param.operation.target.issueNumber,
             resolution: param.resolvedFindingResolutions?.get(findingId),
         }, param.catalog);
-    } catch {
-        addResolutionError(errors, 'issue');
+    } catch (cause) {
+        addResolutionError(errors, 'issue', findingId, cause);
     }
 }
 
@@ -119,22 +119,15 @@ async function tryResolvePullRequestFinding(
             pullRequestNumber: destination.pullRequestNumber,
             resolution,
         }, catalog);
-    } catch {
-        addResolutionError(errors, 'pull request');
+    } catch (cause) {
+        addResolutionError(errors, 'pull request', findingId, cause);
     }
 }
 
-function addResolutionError(errors: ApplicationError[], destination: 'issue' | 'pull request'): void {
-    const cause = destination === 'pull request'
-        ? new PullRequestReviewOperationError('mark-resolved')
-        : new Error('Unable to mark an issue finding as resolved.');
-    const semanticError = new ApplicationError(
-        'provider.unavailable',
-        destination === 'pull request'
-            ? 'Unable to mark a pull request finding as resolved.'
-            : 'Unable to mark an issue finding as resolved.',
-        { cause },
-    );
+function addResolutionError(errors: ApplicationError[], destination: 'issue' | 'pull request', findingId: string, cause?: unknown): void {
+    const semanticError = destination === 'pull request'
+        ? bugbotMutationError(cause, 'resolution', [findingId], 'mark-resolved')
+        : new ApplicationError('provider.unavailable', 'Unable to mark an issue finding as resolved.');
     logError(semanticError);
     errors.push(semanticError);
 }

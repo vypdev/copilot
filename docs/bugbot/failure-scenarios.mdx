@@ -51,6 +51,13 @@ description: Diagnose terminal failures across detection, publication, autofix, 
   <Accordion title="Historical review cards need repair" icon="layer-group">
     Bugbot updates historical review blocks in sequential batches of 20, up to 100 per run. If more remain, or a batch fails, the status card and Check report the exact unattempted count and the Action uses `workflow.presentation-pending` for a budget remainder. This does not mean the provider is unavailable or that the diff was only partly analyzed. Re-run `/copilot recheck` after inspecting any separate write failure; successful updates are kept and already-current blocks are skipped. The canonical status card remains the aggregate view throughout.
   </Accordion>
+  <Accordion title="A native review exists but finding reconciliation failed" icon="triangle-exclamation">
+    Successful publication can precede a later failed marker/thread mutation. The recovery details identify the publication or resolution stage, exact operation, affected finding (plus batch count), HTTP status and provider request reference when available. Missing provider metadata is explicitly unavailable. Existing reviews, comments and durable dismissal intent are retained; a zero completed-publication count on a failed run does not prove that no native review exists.
+
+    Correct permanent credential/access or contract failures before retrying. For a transient outage or rate limit, restore provider availability first, then run `/copilot recheck` on the same PR. The normal fresh provider read reconciles existing comments and threads rather than recreating completed effects. Do not delete a review or install an application dependency merely to clear an unrelated finding-publication failure.
+
+    **Incomplete coverage** remains separate. `human-conversation` lists retained, omitted and truncated counts plus `truncated-source-ids` for exact retained records, such as `issue:6311517518` (a general issue/PR comment ID) or `review:PRRC_50` (an inline comment node ID). Inspect that source from the linked PR/issue, preserve its substantive decisions and reduce only redundant text before rechecking. Source IDs contain no comment text. A mutation retry never upgrades incomplete conversation evidence to complete.
+  </Accordion>
 </AccordionGroup>
 
 See [Verification commands](/bugbot/verification-commands) and [Security & Operations](/security-operations).

@@ -4,6 +4,7 @@ import type { BugbotContext } from "./types";
 import type { PreparedBugbotFindings } from "./prepare_bugbot_findings";
 import { markFindingsResolved } from "./mark_findings_resolved_use_case";
 import { publishFindings } from "./publish_findings_use_case";
+import { BugbotMutationError } from "../../../../errors/bugbot_mutation_error";
 import { PullRequestReviewOperationError } from "../../../../../application/ports/pull_request_review_errors";
 import type { BugbotReviewOperationContext } from './bugbot_review_operation_context';
 import type { BugbotMessageCatalog } from '../../../../policies/bugbot_message_catalog';
@@ -31,7 +32,7 @@ export async function applyDetectedFindings(
     });
   } catch (error) {
     const publicationError =
-      error instanceof PullRequestReviewOperationError
+      error instanceof BugbotMutationError || error instanceof PullRequestReviewOperationError
         ? error
         : new Error("Unable to publish findings.");
     return [publicationError];

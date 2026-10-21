@@ -159,6 +159,7 @@ export async function loadBugbotContext(
       itemsFetched: conversationContext.retained + conversationContext.omitted,
       omittedItems: conversationContext.omitted,
       truncatedItems: conversationContext.truncated,
+      ...(conversationContext.truncatedItemIds ? { truncatedItemIds: conversationContext.truncatedItemIds } : {}),
       limitReached: conversationContext.omitted > 0 || conversationContext.truncated > 0,
     },
     {

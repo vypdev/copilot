@@ -3,6 +3,7 @@
  * Issue publication, PR review policy, and overflow reporting live in dedicated collaborators.
  */
 
+import { bugbotMutationError } from '../../../../errors/bugbot_mutation_error';
 import type { BugbotFindingPublicationPorts } from "../../../../../application/ports/bugbot_finding_publication_ports";
 import type { BugbotContext } from "./types";
 import {
@@ -46,22 +47,30 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
             : undefined;
 
     for (const finding of findings) {
-        if (operation.target.issueNumber > 0 && !reviewPublisher) {
-            await publishIssueFindingComment(
-                ports.issueComments,
-                operation.target.issueNumber,
-                finding,
-                findExistingFindingInfo(existingByFindingId, finding),
-                commitSha,
-                catalog,
-            );
-        }
-        if (reviewPublisher) {
-            await reviewPublisher.publish(finding, findExistingFindingInfo(existingByFindingId, finding));
+        try {
+            if (operation.target.issueNumber > 0 && !reviewPublisher) {
+                await publishIssueFindingComment(
+                    ports.issueComments,
+                    operation.target.issueNumber,
+                    finding,
+                    findExistingFindingInfo(existingByFindingId, finding),
+                    commitSha,
+                    catalog,
+                );
+            }
+            if (reviewPublisher) {
+                await reviewPublisher.publish(finding, findExistingFindingInfo(existingByFindingId, finding));
+            }
+        } catch (cause) {
+            throw bugbotMutationError(cause, 'publication', [finding.id], 'publish-comments');
         }
     }
 
-    await reviewPublisher?.flush(overflowCount, overflowTitles);
+    try {
+      await reviewPublisher?.flush(overflowCount, overflowTitles);
+    } catch (cause) {
+      throw bugbotMutationError(cause, 'publication', findings.map(finding => finding.id), 'publish-comments');
+    }
     if (operation.target.issueNumber > 0 && !reviewPublisher) {
         await publishOverflowComment(
             ports.issueComments,

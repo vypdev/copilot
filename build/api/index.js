@@ -70,6 +70,43 @@ function runAtApplicationErrorBoundary(operation) {
 
 /***/ }),
 
+/***/ 2937:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BugbotMutationError = void 0;
+exports.bugbotMutationError = bugbotMutationError;
+const application_error_1 = __nccwpck_require__(5999);
+const pull_request_review_errors_1 = __nccwpck_require__(6445);
+class BugbotMutationError extends application_error_1.ApplicationError {
+    constructor(diagnostic) {
+        super(diagnostic.errorCode, `Bugbot ${diagnostic.stage} failed: operation=${diagnostic.operation}; finding=${diagnostic.findingId}; affected=${diagnostic.affectedCount}; ${diagnostic.providerStatus}; provider-reference=${diagnostic.providerReference}. Completed effects are retained; correct the named cause and recheck the same target.`);
+        this.diagnostic = diagnostic;
+    }
+}
+exports.BugbotMutationError = BugbotMutationError;
+function bugbotMutationError(cause, stage, findingIds, fallback) {
+    if (cause instanceof BugbotMutationError)
+        return cause;
+    const provider = cause instanceof pull_request_review_errors_1.PullRequestReviewOperationError ? cause : undefined;
+    const status = provider?.providerStatus;
+    const errorCode = status === 401 ? 'authorization.credential-invalid' : status === 403 ? 'authorization.denied'
+        : status === 404 ? 'provider.not-found' : status === 409 ? 'provider.conflict'
+            : status === 429 ? 'provider.rate-limited' : status && status < 500 ? 'provider.contract-invalid' : 'provider.unavailable';
+    const first = findingIds[0];
+    return new BugbotMutationError(Object.freeze({
+        stage, operation: provider?.operation ?? fallback,
+        findingId: typeof first === 'string' && /^[A-Za-z0-9_./:-]{1,200}$/.test(first) ? first : 'unavailable',
+        affectedCount: Math.min(findingIds.length, 10000),
+        providerStatus: status ? `http-${status}` : 'http-unavailable',
+        providerReference: provider?.providerReference ?? 'unavailable', errorCode,
+    }));
+}
+
+
+/***/ }),
+
 /***/ 601:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -796,6 +833,7 @@ exports.BUGBOT_MESSAGE_IDS = Object.freeze([
     'bugbot.overflow.body',
     'bugbot.common.more',
     'bugbot.diagnostic.operationFailed',
+    'bugbot.diagnostic.findingMutationFailed',
     'bugbot.diagnostic.identityUnavailable',
     'bugbot.diagnostic.pullRequestCommentsFailed',
     'bugbot.diagnostic.reviewThreadsFailed',
@@ -881,6 +919,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'bugbot.overflow.heading': 'More findings (comment limit)',
     'bugbot.overflow.body': Object.freeze({ one: 'There is {count} more finding that was not published as an individual comment. Review locally or in the full diff to see the list.', other: 'There are {count} more findings that were not published as individual comments. Review locally or in the full diff to see the list.' }),
     'bugbot.common.more': Object.freeze({ one: 'and {count} more.', other: 'and {count} more.' }),
+    'bugbot.diagnostic.findingMutationFailed': 'Finding mutation failed: stage={stage}; operation={operation}; finding={findingId}; affected={affectedCount}; {providerStatus}; provider reference={providerReference}. Completed effects are retained. Correct access/contract errors before retrying; for transient failures restore provider availability, then recheck the same PR. Recheck reconciles existing reviews and threads.',
     'bugbot.diagnostic.operationFailed': 'Bugbot could not complete one or more finding mutations.',
     'bugbot.diagnostic.identityUnavailable': 'The authenticated Bugbot identity is unavailable.',
     'bugbot.diagnostic.pullRequestCommentsFailed': 'Unable to re-read pull request review comments.',
@@ -970,6 +1009,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'bugbot.overflow.heading': 'Más hallazgos (límite de comentarios)',
     'bugbot.overflow.body': Object.freeze({ one: 'Hay {count} hallazgo más que no se publicó como comentario individual. Revísalo localmente o en el diff completo para consultar la lista.', many: 'Hay {count} hallazgos más que no se publicaron como comentarios individuales. Revísalos localmente o en el diff completo para consultar la lista.', other: 'Hay {count} hallazgos más que no se publicaron como comentarios individuales. Revísalos localmente o en el diff completo para consultar la lista.' }),
     'bugbot.common.more': Object.freeze({ one: 'y {count} más.', many: 'y {count} más.', other: 'y {count} más.' }),
+    'bugbot.diagnostic.findingMutationFailed': 'Falló una mutación: fase={stage}; operación={operation}; hallazgo={findingId}; afectados={affectedCount}; {providerStatus}; referencia del proveedor={providerReference}. Se conservan los efectos completados. Corrige acceso/contrato antes de reintentar; para fallos transitorios restaura el proveedor y revisa la misma PR. La revisión reconcilia comentarios e hilos existentes.',
     'bugbot.diagnostic.operationFailed': 'Bugbot no pudo completar una o más mutaciones de hallazgos.',
     'bugbot.diagnostic.identityUnavailable': 'La identidad autenticada de Bugbot no está disponible.',
     'bugbot.diagnostic.pullRequestCommentsFailed': 'No se pudieron volver a leer los comentarios del review del pull request.',
@@ -1009,6 +1049,7 @@ async function resolveBugbotCatalog(locale, configuration, resolver) {
 }
 function renderBugbotDiagnostic(diagnostic, catalog) {
     switch (diagnostic.code) {
+        case 'finding-mutation-failed': return catalog.message('bugbot.diagnostic.findingMutationFailed', { ...diagnostic.mutation });
         case 'operation-failed': return catalog.message('bugbot.diagnostic.operationFailed');
         case 'identity-unavailable': return catalog.message('bugbot.diagnostic.identityUnavailable');
         case 'snapshot-pull-request-comments-failed': return catalog.message('bugbot.diagnostic.pullRequestCommentsFailed');
@@ -1558,6 +1599,10 @@ function renderBugbotStatusCard(projection, catalogOrLocale, links) {
             facts.push(catalog.message('bugbot.coverage.omitted', { count: source.omittedItems }));
         if (source.truncatedItems > 0)
             facts.push(catalog.message('bugbot.coverage.truncated', { count: source.truncatedItems }));
+        const truncatedIds = source.truncatedItemIds?.slice(0, 50)
+            .filter(id => /^(?:issue:[0-9]+|review:[A-Za-z0-9_=-]+)$/.test(id) && id.length <= 160);
+        if (truncatedIds?.length)
+            facts.push(`truncated-source-ids=${truncatedIds.join(', ')}`);
         if (source.providerLimitReached)
             facts.push(catalog.message('bugbot.coverage.providerLimit'));
         return `- ${source.source}: ${source.status}; ${facts.join(', ')}`;
@@ -2136,6 +2181,13 @@ class PullRequestReviewOperationError extends Error {
         super(buildMessage(operation, context));
         this.name = "PullRequestReviewOperationError";
         this.operation = operation;
+        const status = context?.providerStatus;
+        if (typeof status === 'number' && Number.isInteger(status) && status >= 400 && status <= 599) {
+            this.providerStatus = status;
+        }
+        if (typeof context?.providerReference === 'string' && /^[A-Za-z0-9:-]{1,64}$/.test(context.providerReference)) {
+            this.providerReference = context.providerReference;
+        }
     }
 }
 exports.PullRequestReviewOperationError = PullRequestReviewOperationError;
@@ -2254,6 +2306,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.applyDetectedFindings = applyDetectedFindings;
 const mark_findings_resolved_use_case_1 = __nccwpck_require__(6963);
 const publish_findings_use_case_1 = __nccwpck_require__(8442);
+const bugbot_mutation_error_1 = __nccwpck_require__(2937);
 const pull_request_review_errors_1 = __nccwpck_require__(6445);
 async function applyDetectedFindings(operation, context, prepared, publicationPorts, resolutionPorts, catalog) {
     try {
@@ -2269,7 +2322,7 @@ async function applyDetectedFindings(operation, context, prepared, publicationPo
         });
     }
     catch (error) {
-        const publicationError = error instanceof pull_request_review_errors_1.PullRequestReviewOperationError
+        const publicationError = error instanceof bugbot_mutation_error_1.BugbotMutationError || error instanceof pull_request_review_errors_1.PullRequestReviewOperationError
             ? error
             : new Error("Unable to publish findings.");
         return [publicationError];
@@ -2658,6 +2711,10 @@ function buildReviewConversationContext(issueComments, commentsByPullRequest, bo
         omitted,
         truncated: chronological.filter((entry) => entry.truncated).length,
         retained: chronological.length,
+        ...(chronological.some(entry => entry.truncated) ? {
+            truncatedItemIds: chronological.filter(entry => entry.truncated)
+                .map(entry => entry.providerId).filter(id => /^(?:issue:[0-9]+|review:[A-Za-z0-9_=-]+)$/.test(id) && id.length <= 160),
+        } : {}),
     };
 }
 function appendConversationEntry(entries, author, kind, body, createdAt, providerId) {
@@ -3339,6 +3396,7 @@ async function loadBugbotContext(request, ports, resolvedPreflight) {
             itemsFetched: conversationContext.retained + conversationContext.omitted,
             omittedItems: conversationContext.omitted,
             truncatedItems: conversationContext.truncated,
+            ...(conversationContext.truncatedItemIds ? { truncatedItemIds: conversationContext.truncatedItemIds } : {}),
             limitReached: conversationContext.omitted > 0 || conversationContext.truncated > 0,
         },
         {
@@ -3537,11 +3595,11 @@ Object.defineProperty(exports, "markFindingsResolved", ({ enumerable: true, get:
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.markFindingsResolved = markFindingsResolved;
-const pull_request_review_errors_1 = __nccwpck_require__(6445);
 const logging_ports_1 = __nccwpck_require__(6152);
 const resolve_issue_finding_1 = __nccwpck_require__(5300);
 const resolve_pull_request_finding_1 = __nccwpck_require__(4567);
 const review_state_1 = __nccwpck_require__(9200);
+const bugbot_mutation_error_1 = __nccwpck_require__(2937);
 const application_error_1 = __nccwpck_require__(5999);
 async function markFindingsResolved(param) {
     const errors = [];
@@ -3569,8 +3627,8 @@ async function repairExistingPullRequestFinding(ports, operation, findingId, des
         try {
             await ports.pullRequestComments.unresolvePullRequestReviewThread(destination.pullRequestNumber, destination.commentIdentity);
         }
-        catch {
-            addResolutionError(errors, 'pull request');
+        catch (cause) {
+            addResolutionError(errors, 'pull request', findingId, cause);
         }
     }
 }
@@ -3584,7 +3642,7 @@ async function resolveIssueIfNeeded(param, findingId, destination, errors) {
         return;
     const comment = param.context.issueComments.find(item => item.id === destination.commentId);
     if (comment?.body == null) {
-        addResolutionError(errors, 'issue');
+        addResolutionError(errors, 'issue', findingId);
         return;
     }
     try {
@@ -3595,8 +3653,8 @@ async function resolveIssueIfNeeded(param, findingId, destination, errors) {
             resolution: param.resolvedFindingResolutions?.get(findingId),
         }, param.catalog);
     }
-    catch {
-        addResolutionError(errors, 'issue');
+    catch (cause) {
+        addResolutionError(errors, 'issue', findingId, cause);
     }
 }
 async function tryResolvePullRequestFinding(ports, findingId, destination, errors, resolution, catalog) {
@@ -3608,17 +3666,14 @@ async function tryResolvePullRequestFinding(ports, findingId, destination, error
             resolution,
         }, catalog);
     }
-    catch {
-        addResolutionError(errors, 'pull request');
+    catch (cause) {
+        addResolutionError(errors, 'pull request', findingId, cause);
     }
 }
-function addResolutionError(errors, destination) {
-    const cause = destination === 'pull request'
-        ? new pull_request_review_errors_1.PullRequestReviewOperationError('mark-resolved')
-        : new Error('Unable to mark an issue finding as resolved.');
-    const semanticError = new application_error_1.ApplicationError('provider.unavailable', destination === 'pull request'
-        ? 'Unable to mark a pull request finding as resolved.'
-        : 'Unable to mark an issue finding as resolved.', { cause });
+function addResolutionError(errors, destination, findingId, cause) {
+    const semanticError = destination === 'pull request'
+        ? (0, bugbot_mutation_error_1.bugbotMutationError)(cause, 'resolution', [findingId], 'mark-resolved')
+        : new application_error_1.ApplicationError('provider.unavailable', 'Unable to mark an issue finding as resolved.');
     (0, logging_ports_1.logError)(semanticError);
     errors.push(semanticError);
 }
@@ -3867,6 +3922,7 @@ function isRecord(value) {
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publishFindings = publishFindings;
+const bugbot_mutation_error_1 = __nccwpck_require__(2937);
 const finding_1 = __nccwpck_require__(1011);
 const publish_issue_finding_comment_1 = __nccwpck_require__(4950);
 const publish_pr_review_comments_1 = __nccwpck_require__(352);
@@ -3886,14 +3942,24 @@ async function publishFindings(param) {
         })
         : undefined;
     for (const finding of findings) {
-        if (operation.target.issueNumber > 0 && !reviewPublisher) {
-            await (0, publish_issue_finding_comment_1.publishIssueFindingComment)(ports.issueComments, operation.target.issueNumber, finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding), commitSha, catalog);
+        try {
+            if (operation.target.issueNumber > 0 && !reviewPublisher) {
+                await (0, publish_issue_finding_comment_1.publishIssueFindingComment)(ports.issueComments, operation.target.issueNumber, finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding), commitSha, catalog);
+            }
+            if (reviewPublisher) {
+                await reviewPublisher.publish(finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding));
+            }
         }
-        if (reviewPublisher) {
-            await reviewPublisher.publish(finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding));
+        catch (cause) {
+            throw (0, bugbot_mutation_error_1.bugbotMutationError)(cause, 'publication', [finding.id], 'publish-comments');
         }
     }
-    await reviewPublisher?.flush(overflowCount, overflowTitles);
+    try {
+        await reviewPublisher?.flush(overflowCount, overflowTitles);
+    }
+    catch (cause) {
+        throw (0, bugbot_mutation_error_1.bugbotMutationError)(cause, 'publication', findings.map(finding => finding.id), 'publish-comments');
+    }
     if (operation.target.issueNumber > 0 && !reviewPublisher) {
         await (0, publish_overflow_comment_1.publishOverflowComment)(ports.issueComments, operation.target.issueNumber, overflowCount, overflowTitles, commitSha, catalog);
     }
@@ -4188,6 +4254,7 @@ async function queryBugbotPartitionFindings(repository, configuration, prompt, t
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.reconcileBugbotReviewState = reconcileBugbotReviewState;
+const bugbot_mutation_error_1 = __nccwpck_require__(2937);
 const review_projection_1 = __nccwpck_require__(859);
 const bugbot_reconciliation_policy_1 = __nccwpck_require__(8128);
 const bugbot_provider_projection_policy_1 = __nccwpck_require__(5821);
@@ -4219,10 +4286,9 @@ async function reconcileBugbotReviewState(input) {
     }
     const snapshot = snapshotResult.snapshot;
     const diagnostics = [
-        ...(input.mutationErrors ?? []).map((error) => ({
-            code: 'operation-failed',
-            operatorMessage: toSafeOperationMessage(error),
-        })),
+        ...(input.mutationErrors ?? []).map((error) => error instanceof bugbot_mutation_error_1.BugbotMutationError
+            ? { code: 'finding-mutation-failed', mutation: error.diagnostic }
+            : { code: 'operation-failed', operatorMessage: toSafeOperationMessage(error) }),
         ...(!input.target.trustedAuthorLogin?.trim()
             ? [{ code: 'identity-unavailable' }]
             : []),
@@ -4697,14 +4763,16 @@ function toPresentationFailure(diagnostic) {
     const message = (0, bugbot_message_catalog_1.bugbotDiagnosticOperatorMessage)(diagnostic);
     return {
         diagnostic,
-        error: diagnostic.code === 'review-updates-pending'
-            ? new application_error_1.ApplicationError('workflow.presentation-pending', message, {
-                recovery: {
-                    id: 'bugbot-review-blocks-pending',
-                    variables: { pendingCount: diagnostic.count },
-                },
-            })
-            : new Error(message),
+        error: diagnostic.code === 'finding-mutation-failed'
+            ? new application_error_1.ApplicationError(diagnostic.mutation.errorCode, message)
+            : diagnostic.code === 'review-updates-pending'
+                ? new application_error_1.ApplicationError('workflow.presentation-pending', message, {
+                    recovery: {
+                        id: 'bugbot-review-blocks-pending',
+                        variables: { pendingCount: diagnostic.count },
+                    },
+                })
+                : new Error(message),
     };
 }
 function report(projection, reviewUpdates, pendingReviewUpdates, statusCardOperation, errors) {
