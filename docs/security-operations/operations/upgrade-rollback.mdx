@@ -36,6 +36,101 @@ copilot --version
 
 Use `@latest` only when the latest published release is intentionally selected. Keep explicit versions for reproducible rollback procedures.
 
+## Upgrade an existing Copilot repository
+
+Copilot has three separate versioned layers:
+
+| Layer | What changes it | What still needs review |
+|---|---|---|
+| Installed CLI | `copilot upgrade` or an explicit npm/pnpm package version | The CLI prepares local files; it does not rewrite committed workflows merely by upgrading |
+| Remote Action reference | The Copilot `uses` references in committed workflows | `@v3` follows the published major tag; an exact version or commit SHA stays pinned until explicitly changed |
+| Generated workflow files | An approved `copilot setup --update-workflows` run | New jobs, inputs and native continuation steps must be committed, reviewed and merged |
+
+Moving a tag does not add steps to an old YAML file. Upgrading the CLI does not
+change the Action references in Git. A merge into `develop` is not a package or
+Action release: first select a [published release](https://github.com/vypdev/copilot/releases)
+that contains the required setup and native verification support.
+
+For verification setup adoption:
+
+**1. Record the existing installation.**
+
+Start with a clean branch, record the currently reviewed workflow references,
+and keep `VERIFICATION_SETUP=false` during preparation. Inspect the effective
+repository/organization value; a repository Variable overrides an inherited
+organization value.
+
+**2. Upgrade the CLI and preview.**
+
+Upgrade the CLI and confirm `copilot --version`. Preview the installation:
+
+```bash
+copilot upgrade
+copilot --version
+copilot setup --web --dry-run
+```
+
+**3. Regenerate and review workflows.**
+
+Apply a reviewed workflow upgrade:
+
+```bash
+copilot setup --web --update-workflows
+```
+
+The shared assistant also works in the terminal without `--web`. Keep the
+verification setup question disabled for this preparation pass. Review the
+displayed create/preserve result and changes before approval. The installer
+creates `.github/actions/copilot-verification-setup/action.yml` only if absent;
+existing action bytes and auxiliary files are preserved through upgrades.
+Generated workflows use `vypdev/copilot@v3`. If your repository pins versions
+or SHAs, review **every** Copilot `uses` reference, including native
+continuation/post steps, and apply the same chosen compatible published ref.
+Workflow backups are retained under `.copilot/setup-backups/`.
+
+**4. Customize and merge on trusted main.**
+
+Replace the starter's failing placeholder with reviewed project-specific
+dependency preparation. Commit the action, its auxiliary files and the updated
+workflows. Review and merge them onto the configured trusted `MAIN_BRANCH`;
+the installer PR's default target may differ from this trusted branch. Follow
+the repository's branch/promotion process until both contain the reviewed
+changes. Creating or merging an installer PR alone does not verify the runtime.
+
+**5. Activate verification setup.**
+
+Re-run the assistant and enable **Prepare dependencies with the repository
+verification setup action?**, or use:
+
+```yaml
+repository:
+  verificationSetup: true
+```
+
+Setup writes `VERIFICATION_SETUP` only when Variable management is enabled
+and follows the reviewed storage/reuse policy. With `--skip-variables`, update
+the effective Variable manually. Confirm that generated workflows pass the
+`verification-setup` input and that the trusted action has been customized.
+Choose **Customize** when changing an existing repository Variable; **Reuse**
+keeps existing values. If an organization value must differ for this project,
+select `VERIFICATION_SETUP` in the repository Variable overrides and review the
+scope before Apply.
+
+**6. Verify actual execution.**
+
+Run `copilot doctor --read-only`, then an authorized write/sync operation that
+actually executes the configured verification commands. Inspect the native
+action and verifier results; a doctor pass, dry run or already-aligned sync
+does not prove dependency preparation.
+
+To roll back adoption, first set the effective `VERIFICATION_SETUP=false` (or
+answer No with Variable management enabled). This stops the optional hook and
+retains the existing verification commands. Restore the previous reviewed
+workflow files and Action refs together if necessary, and install the prior CLI
+version explicitly. Consumer action files are retained; restore any owner changes
+through Git review instead of asking setup to overwrite or delete them. Inspect
+partial setup receipts and GitHub resources before retrying a failed upgrade.
+
 ## Rollback
 
 1. Restore the last known-good version variable.

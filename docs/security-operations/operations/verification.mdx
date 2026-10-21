@@ -135,15 +135,52 @@ flowchart LR
 Text equivalent: prepare the candidate, install its dependencies, verify it, then
 apply the existing publication guards. A separate CI job does not prepare this job.
 
-1. Review `.github/actions/copilot-verification-setup/action.yml` and its auxiliary
-   scripts onto your configured `main-branch` (normally production). Candidate or
-   model changes cannot activate a different setup implementation.
-2. Update the generated comment workflows with `copilot setup`. They contain the
-   native setup and continuation steps; an older callback cannot execute YAML.
-3. Enable Repository Variable `VERIFICATION_SETUP=true`, or plan it with setup
-   configuration `repository: { verificationSetup: true }`. The corresponding
-   boolean Action input is `verification-setup`; its default is `false`.
-4. Retry the authorized modification or `/copilot sync-branch --no-agent`.
+1. Run `copilot setup` or `copilot setup --web` with a published CLI version that
+   includes this onboarding support. The plan shows **Create the starter only if
+   missing** or **Preserve the existing project action** at
+   `.github/actions/copilot-verification-setup/action.yml`, plus the activation
+   state and configured trusted main branch. Setup creates this file even when
+   activation is disabled. It never overwrites an existing regular action,
+   changes its auxiliary files or retires it when you disable the option.
+2. Leave **Prepare dependencies with the repository verification setup action?**
+   disabled while preparing the action. The generated native composite contains
+   a failing placeholder with customization instructions. Replace that step with
+   your project's reviewed runtime and dependency setup; no language, version or
+   install command is inferred, and setup does not execute the action.
+3. Update the generated comment workflows with `copilot setup --update-workflows`
+   and review the complete diff. They need the native setup and continuation
+   steps; an older callback cannot execute YAML. Review the action, auxiliary
+   scripts and workflows onto the configured `main-branch` (`MAIN_BRANCH`, normally
+   production). Candidate or model changes cannot replace the trusted action.
+4. Enable the same question in the terminal/web assistant, or set non-secret
+   configuration `repository: { verificationSetup: true }`. With Variable
+   management enabled, setup plans `VERIFICATION_SETUP=true` using the selected
+   storage/reuse policy. Existing configured values are shown; the default is
+   `false`. If Variable management is skipped, set the effective GitHub Actions
+   Variable yourself. The corresponding boolean Action input is
+   `verification-setup`.
+   Choose **Customize** to change an existing repository Variable; **Reuse**
+   retains existing effective values. To override an inherited organization value
+   just for this repository, select `VERIFICATION_SETUP` under repository Variable
+   overrides and review its scope.
+5. Retry an authorized modification or `/copilot sync-branch --no-agent` that
+   actually needs configured verification. Inspect the native setup and verifier
+   results. A dry run, no-op sync, read-only doctor result, generated file or
+   installer PR does not establish runtime readiness.
+
+The starter deliberately fails until customized. Enabling the flag before the
+reviewed action is available on trusted main blocks verification and publication;
+it does not bypass the placeholder. Batch setup uses the same create/preserve
+rule and includes a missing starter in its installation PR. An existing action
+stays outside generator ownership and out of the update diff. Unsafe parent
+links, non-regular action paths and collisions block setup; inspect the path and
+review a fresh plan. If a file appears after review, setup preserves it and stops
+the stale creation. Dry-run, cancellation and declined approval create no starter.
+
+For an existing installation, follow the [three-layer upgrade and rollback
+procedure](/security-operations/operations/upgrade-rollback#upgrade-an-existing-copilot-repository).
+This repository's `setup_platform_smoke.yml` is internal CI and is not installed
+in consumer projects.
 
 Copilot captures the complete action directory from an immutable trusted Git SHA
 before candidate changes. The trusted origin ref must be available locally;

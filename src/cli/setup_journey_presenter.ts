@@ -7,6 +7,7 @@ export class ConsoleSetupJourneyPresenter implements SetupJourneyPresenterPort {
   present(view: SetupJourneyView): void {
     console.log(renderSetupJourney(view));
     if (view.outcome === 'complete') {
+      console.log(`Verification setup: inspect .github/actions/copilot-verification-setup/action.yml. Setup creates it only if missing and preserves existing actions. Customize and review on MAIN_BRANCH before enabling VERIFICATION_SETUP, then run a real verification: ${SETUP_DOCUMENTATION.verification}`);
       console.log(`Next: install the reviewed files, then verify your first workflow: ${SETUP_DOCUMENTATION.firstWorkflow}`);
     } else if (view.outcome === 'blocked' || view.outcome === 'partial') {
       console.log(`Inspect the result before retrying. Troubleshooting: ${SETUP_DOCUMENTATION.recovery}`);

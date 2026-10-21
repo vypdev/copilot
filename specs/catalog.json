@@ -1103,7 +1103,8 @@
       "lastVerified": "2026-10-21",
       "specs": [
         "specs/local-web-setup-assistant.md",
-        "specs/setup-configuration-management.md"
+        "specs/setup-configuration-management.md",
+        "specs/verification-setup-onboarding.md"
       ],
       "workflows": [
         ".github/workflows/ci_check.yml",
@@ -1261,7 +1262,10 @@
         "src/application/contracts/setup_documentation.ts",
         "src/cli/setup_journey_presenter.ts",
         "web/src/components/SetupHelp.svelte",
-        "web/src/components/CompletedSetupHelp.svelte"
+        "web/src/components/CompletedSetupHelp.svelte",
+        "src/domain/setup_verification_action.ts",
+        "src/infrastructure/setup_verification_action.ts",
+        "src/application/policies/setup_verification_action_summary_policy.ts"
       ],
       "tests": [
         "src/__tests__/cli.test.ts",
@@ -1327,7 +1331,11 @@
         "src/cli/__tests__/setup_management_adapter.test.ts",
         "src/cli/__tests__/web_setup_management_components.test.ts",
         "src/cli/__tests__/web_setup_runner_components.test.ts",
-        "src/cli/__tests__/setup_documentation_navigation.test.ts"
+        "src/cli/__tests__/setup_documentation_navigation.test.ts",
+        "src/infrastructure/__tests__/setup_verification_action.test.ts",
+        "src/application/policies/__tests__/setup_verification_onboarding_policy.test.ts",
+        "src/cli/__tests__/setup_verification_onboarding_components.test.ts",
+        "src/application/usecases/setup/__tests__/setup_verification_onboarding_flow.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -1351,7 +1359,9 @@
         "docs/guides/issues-and-branches.mdx",
         "docs/guides/review-pull-requests.mdx",
         "docs/guides/work-with-the-bot.mdx",
-        "docs/guides/releases-and-hotfixes.mdx"
+        "docs/guides/releases-and-hotfixes.mdx",
+        "docs/security-operations/operations/verification.mdx",
+        "docs/security-operations/operations/upgrade-rollback.mdx"
       ]
     },
     {

@@ -57,7 +57,7 @@ describe('setup_files', () => {
     fs.mkdirSync(path.join(setupDir, 'workflows'), { recursive: true });
     fs.mkdirSync(path.join(tmpDir, '.github', 'workflows'), { recursive: true });
     fs.writeFileSync(path.join(setupDir, 'workflows', 'ci.yml'), 'name: test');
-    expect(copySetupFiles(tmpDir, setupDir)).toEqual({ copied: 1, skipped: 0 });
+    expect(copySetupFiles(tmpDir, setupDir)).toEqual({ copied: 2, skipped: 0 });
     expect(fs.existsSync(path.join(tmpDir, '.env'))).toBe(false);
   });
 
@@ -67,7 +67,7 @@ describe('setup_files', () => {
     fs.mkdirSync(path.join(tmpDir, '.github', 'workflows'), { recursive: true });
     fs.writeFileSync(path.join(setupDir, 'workflows', 'ci.yml'), 'new');
     fs.writeFileSync(path.join(tmpDir, '.github', 'workflows', 'ci.yml'), 'old');
-    expect(copySetupFiles(tmpDir, setupDir)).toEqual({ copied: 0, skipped: 1 });
+    expect(copySetupFiles(tmpDir, setupDir)).toEqual({ copied: 1, skipped: 1 });
     expect(compareSetupWorkflows(tmpDir, undefined, setupDir)).toEqual([
       { file: 'ci.yml', destination: '.github/workflows/ci.yml', status: 'changed' },
     ]);
@@ -616,7 +616,7 @@ describe('setup_files', () => {
       updateExistingWorkflows: true,
       approvedWorkflowFiles: ['ci.yml'],
     });
-    expect(result).toEqual({ copied: 1, skipped: 0 });
+    expect(result).toEqual({ copied: 2, skipped: 0 });
     expect(fs.readFileSync(path.join(tmpDir, '.github', 'workflows', 'ci.yml'), 'utf8')).toBe('new');
     const backups = fs.readdirSync(path.join(tmpDir, '.copilot', 'setup-backups'));
     expect(backups).toHaveLength(1);

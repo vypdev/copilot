@@ -43,6 +43,7 @@ export interface SetupRunnerJobReview {
   readonly retained: boolean;
 }
 export interface SetupInstallationReview {
+  readonly verificationSetup?: import('./setup_verification_action').SetupVerificationActionReview;
   readonly blockers: readonly string[];
   readonly assets: readonly { readonly path: string; readonly status: 'shared' | 'source-only' | 'missing' | 'customized' | 'incompatible'; readonly enabled: boolean }[];
   readonly jobs: readonly SetupRunnerJobReview[];

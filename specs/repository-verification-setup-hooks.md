@@ -210,6 +210,15 @@ Logs name the fixed action and pinned source SHA, preparation success, and the e
 
 ## 13. Compatibility, migration, rollout, and rollback
 
+Installer onboarding is specified by the existing setup capability's companion
+[`verification-setup-onboarding.md`](./verification-setup-onboarding.md): seed the
+fixed action only if missing, preserve existing consumer bytes and auxiliaries,
+show the shared terminal/web activation question (default false), and document
+CLI/Action-ref/workflow upgrades. Seeding a file does not transfer generator
+ownership or alter this native execution/trusted-main contract. The generated
+placeholder fails until the owner customizes it and reviews it onto trusted main.
+
+
 Existing installations remain disabled by default. The unreleased `.copilot/verification-setup.mjs` prototype is removed rather than maintained as a second execution mode. Consumers opting in MUST update generated callbacks before activation and review the composite directory onto trusted main. Setup/install/update MUST preserve that directory and all its assets. Rollback disables the Variable and restores ordinary same-job provisioning; no remote migration, release or tag is required.
 
 ## 14. Testing strategy and numeric budget

@@ -1,8 +1,11 @@
 import type { SetupInstallationReview } from '../domain/setup_runner';
 import { safeTerminalChoiceText } from '../application/policies/setup_terminal_choice_policy';
+import { setupVerificationActionSummary } from '../application/policies/setup_verification_action_summary_policy';
 
 export function renderSetupInstallationReview(review: SetupInstallationReview): string {
-  return ['Runner routing and installation parity',
+  return [...setupVerificationActionSummary(review.verificationSetup),
+    ...(review.verificationSetup ? [`Trusted main branch: ${safeTerminalChoiceText(review.verificationSetup.mainBranch)}`] : []),
+    'Runner routing and installation parity',
     'Access and capacity are observations, not runner authentication or runtime verification. Unknown access needs administrator verification; busy/offline keeps the route and waits for capacity.',
     ...review.jobs.map(job => `  ${safeTerminalChoiceText(job.file)} / ${safeTerminalChoiceText(job.job)}: ${job.role} · ${job.status}${job.retained ? ' · retained' : ''}\n    runs-on: ${safeTerminalChoiceText(JSON.stringify(job.runsOn))}`),
     'Asset inventory (disabled optional capabilities remain visible):',

@@ -931,6 +931,27 @@
         }
       ],
       "successMessage": "verification setup coverage: PASS (95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Verification setup onboarding",
+      "missingEntryLabel": "verification setup onboarding",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/setup_verification_action_summary_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/infrastructure/setup_verification_action.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "verification setup onboarding coverage: PASS (summary decisions 100%; safe file adapter 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

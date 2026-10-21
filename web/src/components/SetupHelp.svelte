@@ -2,6 +2,7 @@
   import { SETUP_DOCUMENTATION } from '../../../src/application/contracts/setup_documentation';
   import { tr } from '../i18n/catalog';
   import { setupLocale } from '../i18n/localeStore';
+  import { verificationSetupText } from '../i18n/verificationSetupCopy';
 </script>
 
 <nav class="setup-help" aria-label={tr('setupHelp', $setupLocale)}>
@@ -9,6 +10,7 @@
     <a href={SETUP_DOCUMENTATION.tutorial} target="_blank" rel="noopener noreferrer">{tr('setupTutorial', $setupLocale)} ↗</a>
     <a href={SETUP_DOCUMENTATION.firstWorkflow} target="_blank" rel="noopener noreferrer">{tr('firstWorkflowGuide', $setupLocale)} ↗</a>
     <a href={SETUP_DOCUMENTATION.recovery} target="_blank" rel="noopener noreferrer">{tr('setupRecovery', $setupLocale)} ↗</a>
+    <a href={SETUP_DOCUMENTATION.verification} target="_blank" rel="noopener noreferrer">{verificationSetupText('guide', $setupLocale)} ↗</a>
   </div>
   <p>{tr('setupHelpHint', $setupLocale)}</p>
 </nav>

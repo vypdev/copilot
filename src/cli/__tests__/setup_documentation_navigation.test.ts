@@ -25,7 +25,7 @@ describe('setup documentation navigation', () => {
     expect(html).toContain(title);
     expect(html).toContain(hint);
     for (const url of Object.values(SETUP_DOCUMENTATION)) expect(html).toContain(`href="${url}"`);
-    expect(html.match(/target="_blank" rel="noopener noreferrer"/gu)).toHaveLength(3);
+    expect(html.match(/target="_blank" rel="noopener noreferrer"/gu)).toHaveLength(4);
     expect(html).not.toContain('<button');
   });
 

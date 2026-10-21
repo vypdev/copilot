@@ -5,6 +5,7 @@ type Purpose = Readonly<{ en: string; es: string }>;
 
 /** Field-specific meaning for choices whose label alone is easy to misinterpret. */
 export const setupQuestionPurposes: Readonly<Record<string, Purpose>> = {
+  'repository.verificationSetup': { en: 'Enable the repository-owned dependency setup before verification. The starter must be customized and reviewed on MAIN_BRANCH first.', es: 'Activa la preparación de dependencias del repositorio antes de verificar. Primero personaliza y revisa la plantilla en MAIN_BRANCH.' },
   'issueWorkflows.enabled': { en: 'Choose the issue workflows Copilot may run; each type has different branch, label and automation effects.', es: 'Elige los flujos de issues que podrá ejecutar Copilot; cada tipo tiene efectos distintos sobre ramas, etiquetas y automatización.' },
   'repositoryAgentGuidance.enabled': { en: 'Generate repository instructions that tell AI agents how to work safely in this project.', es: 'Genera instrucciones para que los agentes de IA trabajen con seguridad en este proyecto.' },
   'repositoryAgentGuidance.agentsPointer': { en: 'Choose whether the root AGENTS.md points to generated instructions, is created if missing, or stays untouched.', es: 'Elige si el AGENTS.md raíz apunta a las instrucciones generadas, se crea si falta o permanece intacto.' },

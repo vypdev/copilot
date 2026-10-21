@@ -47,6 +47,13 @@ installation questionnaire. Terminal behavior and full-wizard guards remain.
 
 ## 1. Executive summary
 
+The additive verification starter, shared activation question, create/preserve
+review and upgrade behavior are defined in the catalogued companion
+[`verification-setup-onboarding.md`](./verification-setup-onboarding.md). It uses
+the existing boolean and setup approval pipeline; consumer action assets remain
+outside generator overwrite/retirement ownership.
+
+
 The default `copilot setup` remains the terminal wizard. `copilot setup --web`
 starts a short-lived web assistant on this machine and opens the default
 browser. It presents repository identity, setup choices, the temporary setup

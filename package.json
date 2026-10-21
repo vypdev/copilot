@@ -40,6 +40,7 @@
     "build/api/index.js",
     "build/api/src/",
     "setup/ISSUE_TEMPLATE/",
+    "setup/actions/",
     "setup/workflows/",
     "setup/source-workflows/",
     "setup/pull_request_template.md",

@@ -63,7 +63,7 @@ PR bot approval uses the versioned `pullRequestApproval` setup object and `PR_AP
     ## Branch Management
 
     - `issue-managed-branches`: Create and verify a linked branch after `in-progress` (default: "true")
-    - `verification-setup`: Run the trusted main-branch composite action before each configured verification command in generated GitHub Actions callbacks (default: "false"). See [repository-owned setup](/security-operations/operations/verification#repository-owned-setup).
+    - `verification-setup`: Run the trusted main-branch composite action before each configured verification command in generated GitHub Actions callbacks (default: "false"). Setup's terminal/web question maps `repository.verificationSetup` to `VERIFICATION_SETUP` using the existing storage/reuse precedence. Setup creates `.github/actions/copilot-verification-setup/action.yml` only if missing and preserves an existing action and its assets. Customize the failing starter and review it onto `MAIN_BRANCH` before enabling; generation and activation do not prove readiness. See [repository-owned setup](/security-operations/operations/verification#repository-owned-setup) and [upgrade/rollback](/security-operations/operations/upgrade-rollback#upgrade-an-existing-copilot-repository).
     - `pre-branch-sdd`: Require a validated SDD before implementation for eligible issues (default: "false")
     - `branch-management-emoji`: Emoji for branched issues (default: "🧑‍💻")
 

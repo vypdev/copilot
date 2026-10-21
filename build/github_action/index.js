@@ -47844,7 +47844,7 @@ The setup runner profile selects placement; it does not install the project's la
 
 Declare reviewed version prefixes in \`.copilot/verification-prerequisites.json\` (schemaVersion 1, runtimes such as java 17, node 24, pnpm 10). Copilot checks declared versions in the credential-free verification environment before each configured verification command; a missing or incompatible runtime blocks publication. Without this optional declaration, existing verification behavior remains and no language is inferred. Java provisioning may use \`actions/setup-java\`; \`JAVA_HOME\` and \`PATH\` survive isolation, while agent credentials and tool-option injection variables do not. Do not add an unreviewed bootstrap or weaken verification to work around a missing runtime. Read [verification prerequisites and same-job setup](https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-verification-prerequisites).
 
-The optional repository-owned composite action prepares each candidate before verification. Review \`.github/actions/copilot-verification-setup/action.yml\` and its assets onto trusted main, update generated workflows, then enable \`VERIFICATION_SETUP=true\` (Action input \`verification-setup\`, disabled by default). GitHub Actions executes the trusted snapshot before each command with a fresh private HOME; candidate changes cannot replace it. Native post steps finish before profile cleanup. Setup failure blocks verification and commit/push. The local CLI cannot execute composite actions and fails closed when opted in. Read [repository-owned setup](https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-owned-setup).
+The optional repository-owned composite action prepares each candidate before verification. Setup creates .github/actions/copilot-verification-setup/action.yml only if missing and preserves an existing consumer action and its assets. The shared terminal/web assistant offers explicit activation, disabled by default. Customize the generated failing placeholder before enabling; setup generation and installer PRs do not prove runtime readiness. Review \`.github/actions/copilot-verification-setup/action.yml\` and its assets onto trusted main, update generated workflows, then enable \`VERIFICATION_SETUP=true\` (Action input \`verification-setup\`, disabled by default). GitHub Actions executes the trusted snapshot before each command with a fresh private HOME; candidate changes cannot replace it. Native post steps finish before profile cleanup. Setup failure blocks verification and commit/push. The local CLI cannot execute composite actions and fails closed when opted in. Read [repository-owned setup](https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-owned-setup).
 
 For the full contributor flow, read [repository collaboration](https://github.com/vypdev/copilot/blob/master/docs/agents/repository-collaboration.mdx). For drift and recovery, read [guidance troubleshooting](https://github.com/vypdev/copilot/blob/master/docs/agents/repository-guidance-troubleshooting.mdx).
 `;
@@ -49050,6 +49050,7 @@ exports.isSetupBatchInstallationReceipt = isSetupBatchInstallationReceipt;
 exports.parseSetupBatchOperation = parseSetupBatchOperation;
 exports.validSetupBatchAssetPath = validSetupBatchAssetPath;
 const setup_batch_1 = __nccwpck_require__(88308);
+const setup_verification_action_1 = __nccwpck_require__(33156);
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u;
 const sha = /^[a-f0-9]{40}$/u;
 const digest = /^[a-f0-9]{64}$/u;
@@ -49155,6 +49156,7 @@ function validSetupBatchAssetPath(path) {
     if (path.length > 240 || path.split('/').some(part => !part || part === '.' || part === '..') || /[^A-Za-z0-9_./-]/u.test(path))
         return false;
     return path === 'AGENTS.md' || path === '.agents/skills/copilot-repository-workflow/SKILL.md'
+        || path === setup_verification_action_1.SETUP_VERIFICATION_ACTION_PATH
         || /^\.github\/(?:workflows|ISSUE_TEMPLATE)\/[A-Za-z0-9_.-]+\.(?:yml|yaml)$/u.test(path)
         || path === '.github/pull_request_template.md' || /^\.copilot\/(?:repository-profile|setup-manifest|runner-profile)\.json$/u.test(path)
         || path === '.copilot/AGENT_GUIDE.md' || path.startsWith('.copilot/setup-backups/');
@@ -49418,6 +49420,7 @@ Object.defineProperty(exports, "buildSetupCredentialRequirements", ({ enumerable
 const locale_1 = __nccwpck_require__(15386);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
+const setup_verification_action_1 = __nccwpck_require__(33156);
 const repository_agent_guidance_policy_1 = __nccwpck_require__(67402);
 function buildSetupPlan(configuration, mergeQueueReadiness = [], approvalReadiness = []) {
     const workflowFiles = (0, setup_workflow_catalog_1.enabledSetupWorkflowFiles)((0, setup_issue_workflow_policy_1.effectiveIssueWorkflowFeatures)(configuration))
@@ -49429,6 +49432,7 @@ function buildSetupPlan(configuration, mergeQueueReadiness = [], approvalReadine
             .filter(file => configuration.features.release !== false || file !== 'release.yml')
             .filter(file => configuration.features.hotfix !== false || file !== 'hotfix.yml');
     const selectedFiles = [
+        setup_verification_action_1.SETUP_VERIFICATION_ACTION_PATH,
         ...(configuration.runners && configuration.runners.mode !== 'retain' ? ['.copilot/runner-profile.json'] : []),
         ...workflowFiles.map(file => `workflows/${file}`),
         ...issueTemplateFiles.map(file => `ISSUE_TEMPLATE/${file}`),
@@ -53360,6 +53364,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
         }
         (0, logging_ports_1.logInfo)('📋 Ensuring .github and copying setup files...');
         const workspaceSelection = {
+            ...(request.verificationActionState ? { verificationActionState: request.verificationActionState } : {}),
             features: setupConfiguration?.features,
             setupConfiguration,
             ...(request.workflowUpdates.length > 0 ? {
@@ -53371,6 +53376,8 @@ async function runInitialSetupWorkflow(request, dependencies) {
         const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
         mark('files', filesResult.copied > 0 ? 'completed' : 'skipped');
         steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
+        if (request.verificationActionState)
+            steps.push(`✅ Verification setup action ${request.verificationActionState === 'create' ? 'created' : 'preserved'}; VERIFICATION_SETUP=${setupConfiguration?.repository.verificationSetup ?? false}. Customize and review on MAIN_BRANCH, then run a real verification.`);
         if (setupConfiguration?.manageRepositorySecrets && secretValues > 0)
             mark('secrets', 'in-progress');
         const secrets = await (0, setup_resource_provisioning_1.ensureRepositorySecrets)(request, dependencies, setupConfiguration, remoteConfiguration);
@@ -58383,6 +58390,8 @@ function projectInitialSetupContext(source) {
         ...(credentials ? { setupCredentials: deepFreezeCopy(credentials) } : {}),
         ...(remote ? { setupRemoteConfiguration: deepFreezeCopy(remote) } : {}),
         workflowUpdates: Object.freeze(asStringArray(source.inputs?.setupWorkflowUpdates)),
+        ...(source.inputs?.setupVerificationActionState === 'create' || source.inputs?.setupVerificationActionState === 'preserve'
+            ? { verificationActionState: source.inputs.setupVerificationActionState } : {}),
     });
 }
 function projectIssueCommentActionContext(source) {
@@ -84113,6 +84122,20 @@ exports.DEFAULT_SETUP_RUNNERS = Object.freeze({
 
 /***/ }),
 
+/***/ 33156:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SETUP_VERIFICATION_ACTION_PARENTS = exports.SETUP_VERIFICATION_ACTION_PATH = void 0;
+/** Fixed consumer-owned asset: setup may create it, never regenerate or retire it. */
+exports.SETUP_VERIFICATION_ACTION_PATH = '.github/actions/copilot-verification-setup/action.yml';
+exports.SETUP_VERIFICATION_ACTION_PARENTS = ['.github', '.github/actions', '.github/actions/copilot-verification-setup'];
+
+
+/***/ }),
+
 /***/ 24596:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -89765,6 +89788,190 @@ function writeSpecFile(target, content, exists) {
 
 /***/ }),
 
+/***/ 12471:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.inspectSetupVerificationActionPath = inspectSetupVerificationActionPath;
+exports.readSetupVerificationActionStarter = readSetupVerificationActionStarter;
+exports.createSetupVerificationAction = createSetupVerificationAction;
+const fs = __importStar(__nccwpck_require__(87561));
+const node_path_1 = __nccwpck_require__(49411);
+const setup_verification_action_1 = __nccwpck_require__(33156);
+const unsafe = () => new Error(`${setup_verification_action_1.SETUP_VERIFICATION_ACTION_PATH}: setup requires real parent directories and a regular action file. Inspect the path and remove unsafe links or collisions, then review setup again. Existing contents were preserved.`);
+const stale = () => new Error(`${setup_verification_action_1.SETUP_VERIFICATION_ACTION_PATH}: the path changed after review. No existing action was replaced. Review a fresh setup plan.`);
+const sameDirectory = (left, right) => left.ino > 0n
+    && left.dev === right.dev && left.ino === right.ino;
+const directoryFlags = fs.constants.O_RDONLY | (fs.constants.O_DIRECTORY ?? 0)
+    | (fs.constants.O_NOFOLLOW ?? 0) | (fs.constants.O_NONBLOCK ?? 0);
+function entry(path) {
+    try {
+        return fs.lstatSync(path, { bigint: true });
+    }
+    catch (error) {
+        if (error.code === 'ENOENT')
+            return undefined;
+        throw error;
+    }
+}
+/** Inspect metadata only: consumer action contents and auxiliary files are never read. */
+function inspectSetupVerificationActionPath(root) {
+    for (const parent of setup_verification_action_1.SETUP_VERIFICATION_ACTION_PARENTS) {
+        const info = entry((0, node_path_1.join)(root, parent));
+        if (!info)
+            return 'create';
+        if (!info.isDirectory() || info.isSymbolicLink())
+            throw unsafe();
+    }
+    const info = entry((0, node_path_1.join)(root, setup_verification_action_1.SETUP_VERIFICATION_ACTION_PATH));
+    if (!info)
+        return 'create';
+    if (!info.isFile() || info.isSymbolicLink())
+        throw unsafe();
+    return 'preserve';
+}
+/** Resolve the package-controlled starter, independently of workflow test overrides. */
+function readSetupVerificationActionStarter() {
+    return fs.readFileSync((0, node_path_1.join)(__dirname, '..', '..', 'setup/actions/copilot-verification-setup/action.yml'), 'utf8');
+}
+/** Exclusive creation cannot truncate a file that wins the Apply race. */
+function createSetupVerificationAction(root, expected) {
+    const state = inspectSetupVerificationActionPath(root);
+    if (expected && expected !== state)
+        throw stale();
+    if (state === 'preserve')
+        return { copied: 0, skipped: 1 };
+    const content = readSetupVerificationActionStarter();
+    const absoluteRoot = fs.realpathSync(root);
+    const previousDirectory = fs.realpathSync('.');
+    // Node has no portable openat. Pin each validated directory as the OS cwd,
+    // then use only single-component relative operations. On POSIX this retains
+    // the directory even if renamed; Windows locks the current directory.
+    // This critical section is synchronous: never await or invoke user callbacks
+    // here. The installer owns this main-thread section and always restores cwd.
+    try {
+        enterPinnedDirectory(absoluteRoot);
+        for (const segment of ['.github', 'actions', 'copilot-verification-setup']) {
+            try {
+                fs.mkdirSync(segment);
+            }
+            catch (error) {
+                if (error.code !== 'EEXIST')
+                    throw error;
+            }
+            enterPinnedDirectory(segment);
+        }
+        // Detect a relocated route before creation as well as after writing. A
+        // replacement after this check cannot redirect the cwd-relative open.
+        inspectSetupVerificationActionPath(absoluteRoot);
+        writeStarterInPinnedDirectory(absoluteRoot, content);
+    }
+    finally {
+        process.chdir(previousDirectory);
+    }
+    return { copied: 1, skipped: 0 };
+}
+function enterPinnedDirectory(path) {
+    let descriptor;
+    try {
+        descriptor = fs.openSync(path, directoryFlags);
+    }
+    catch (error) {
+        if (['ELOOP', 'ENOTDIR'].includes(error.code))
+            throw unsafe();
+        throw error;
+    }
+    try {
+        // Keep the directory handle open until cwd is pinned, preventing inode reuse.
+        const bound = fs.fstatSync(descriptor, { bigint: true });
+        const observed = fs.lstatSync(path, { bigint: true });
+        if (!bound.isDirectory() || !observed.isDirectory() || observed.isSymbolicLink())
+            throw unsafe();
+        if (!sameDirectory(bound, observed))
+            throw stale();
+        process.chdir(path);
+        if (!sameDirectory(bound, fs.lstatSync('.', { bigint: true })))
+            throw stale();
+    }
+    finally {
+        fs.closeSync(descriptor);
+    }
+}
+function writeStarterInPinnedDirectory(root, content) {
+    const destination = 'action.yml';
+    let descriptor;
+    try {
+        descriptor = fs.openSync(destination, 'wx', 0o644);
+    }
+    catch (error) {
+        if (error.code === 'EEXIST')
+            throw stale();
+        throw error;
+    }
+    let created;
+    try {
+        try {
+            created = fs.fstatSync(descriptor, { bigint: true });
+            fs.writeFileSync(descriptor, content, 'utf8');
+            if (inspectSetupVerificationActionPath(root) !== 'preserve')
+                throw stale();
+            if (!sameDirectory(fs.lstatSync('.', { bigint: true }), fs.lstatSync((0, node_path_1.join)(root, setup_verification_action_1.SETUP_VERIFICATION_ACTION_PARENTS[2]), { bigint: true })))
+                throw stale();
+        }
+        finally {
+            fs.closeSync(descriptor);
+        }
+    }
+    catch (error) {
+        // Remove only our incomplete file, never a concurrent replacement.
+        try {
+            const current = entry(destination);
+            if (created && current?.dev === created.dev && current.ino === created.ino)
+                fs.unlinkSync(destination);
+        }
+        catch { /* Preserve the original failure; an incomplete asset needs inspection. */ }
+        throw error;
+    }
+}
+
+
+/***/ }),
+
 /***/ 5729:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -89792,6 +89999,7 @@ class SetupWorkspaceMutationAdapter {
             updateExistingWorkflows: selection?.updateExistingWorkflows,
             approvedWorkflowFiles: selection?.approvedWorkflowFiles,
             setupConfiguration: selection?.setupConfiguration,
+            verificationActionState: selection.verificationActionState,
         });
     }
     hasValidToken(tokenOverride) {
@@ -92313,11 +92521,13 @@ const setup_approval_workflow_1 = __nccwpck_require__(9512);
 const setup_workflow_upgrade_1 = __nccwpck_require__(85493);
 const setup_installation_review_1 = __nccwpck_require__(23799);
 const repository_agent_guidance_policy_1 = __nccwpck_require__(67402);
+const setup_verification_action_1 = __nccwpck_require__(12471);
 /**
  * Ensure .github, .github/workflows and .github/ISSUE_TEMPLATE exist; create them if missing.
  * @param cwd - Directory (repo root)
  */
 function ensureGitHubDirs(cwd) {
+    (0, setup_verification_action_1.inspectSetupVerificationActionPath)(cwd);
     const githubDir = path.join(cwd, '.github');
     const workflowsDir = path.join(cwd, '.github', 'workflows');
     const issueTemplateDir = path.join(cwd, '.github', 'ISSUE_TEMPLATE');
@@ -92350,6 +92560,7 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
     const installationReview = options.setupConfiguration && (0, setup_installation_review_1.inspectSetupInstallation)(cwd, options.setupConfiguration, setupDir);
     if (installationReview?.blockers.length)
         throw new Error(installationReview.blockers.join(' '));
+    const verificationAction = (0, setup_verification_action_1.createSetupVerificationAction)(cwd, options.verificationActionState);
     const preserveSourceGuidance = installationReview?.assets.some(asset => asset.path === repository_agent_guidance_policy_1.REPOSITORY_AGENT_GUIDE_PATH && asset.status === 'source-only');
     const sourceInstallation = installationReview?.assets.some(asset => asset.path.startsWith('.github/workflows/') && asset.status === 'source-only');
     const snapshotContent = options.setupConfiguration && (0, setup_installation_review_1.renderSetupRunnerSnapshot)(options.setupConfiguration);
@@ -92404,7 +92615,7 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
             snapshot.copied++;
         }
     }
-    return [retired, workflows, approvalWorkflow, issueTemplates, pullRequestTemplate, guidance, snapshot].reduce((total, current) => ({
+    return [verificationAction, retired, workflows, approvalWorkflow, issueTemplates, pullRequestTemplate, guidance, snapshot].reduce((total, current) => ({
         copied: total.copied + current.copied,
         skipped: total.skipped + current.skipped,
     }), { copied: 0, skipped: 0 });
@@ -92618,6 +92829,8 @@ const setup_workflow_upgrade_1 = __nccwpck_require__(85493);
 const setup_approval_workflow_1 = __nccwpck_require__(9512);
 const sensitive_text_1 = __nccwpck_require__(47122);
 const repository_agent_guidance_policy_1 = __nccwpck_require__(67402);
+const setup_verification_action_1 = __nccwpck_require__(33156);
+const setup_verification_action_2 = __nccwpck_require__(12471);
 exports.SETUP_RUNNER_SNAPSHOT = '.copilot/runner-profile.json';
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
     ? value : undefined;
@@ -92659,6 +92872,22 @@ function inspectSetupInstallation(root, configuration, setup = (0, node_path_1.j
     const jobs = [];
     const changes = [];
     const blockers = [];
+    let action;
+    try {
+        action = (0, setup_verification_action_2.inspectSetupVerificationActionPath)(root);
+    }
+    catch (error) {
+        action = 'blocked';
+        blockers.push(error instanceof Error ? error.message : 'Verification setup path could not be inspected.');
+    }
+    const verificationSetup = { action, enabled: configuration.repository.verificationSetup ?? false,
+        mainBranch: configuration.repository.mainBranch };
+    assets.push({ path: setup_verification_action_1.SETUP_VERIFICATION_ACTION_PATH, enabled: verificationSetup.enabled,
+        status: action === 'create' ? 'missing' : action === 'preserve' ? 'customized' : 'incompatible' });
+    if (action === 'blocked')
+        return { assets, jobs, changes, blockers, verificationSetup };
+    if (action === 'create')
+        changes.push({ path: setup_verification_action_1.SETUP_VERIFICATION_ACTION_PATH, before: null, after: (0, setup_verification_action_2.readSetupVerificationActionStarter)() });
     const addJobs = (file, content, retained) => {
         const documents = (0, js_yaml_1.loadAll)(content);
         if (documents.length !== 1)
@@ -92755,7 +92984,7 @@ function inspectSetupInstallation(root, configuration, setup = (0, node_path_1.j
             before: before === undefined ? null : (0, sensitive_text_1.redactSensitiveText)(before), after: (0, sensitive_text_1.redactSensitiveText)(after) });
     if (after !== undefined && before !== undefined && !compatibleSetupRunnerSnapshot(before))
         blockers.push('Runner snapshot is incompatible. Retain it or restore a supported version before replacing routing.');
-    return { assets, jobs, changes, blockers };
+    return { assets, jobs, changes, blockers, verificationSetup };
 }
 
 
