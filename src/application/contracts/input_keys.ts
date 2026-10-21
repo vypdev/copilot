@@ -219,6 +219,7 @@ export const INPUT_KEYS = {
     // Issue
     ISSUE_MANAGED_BRANCHES: 'issue-managed-branches',
     PRE_BRANCH_SDD: 'pre-branch-sdd',
+    VERIFICATION_SETUP: 'verification-setup',
     REOPEN_ISSUE_ON_PUSH: 'reopen-issue-on-push',
     DESIRED_ASSIGNEES_COUNT: 'desired-assignees-count',
 

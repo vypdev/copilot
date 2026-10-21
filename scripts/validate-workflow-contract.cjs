@@ -144,9 +144,15 @@ function relativeWorkflow(file) {
   return path.relative(repositoryRoot, file).replaceAll(path.sep, '/');
 }
 
+function expectedCopilotAction(relativeFile) {
+  if (relativeFile.startsWith('setup/workflows/')) return DISTRIBUTED_COPILOT_ACTION;
+  const native = require('./generate-native-verification-workflows.cjs');
+  return native.CALLBACKS.includes(path.basename(relativeFile)) ? native.SOURCE_ACTION : './';
+}
+
 function isCopilotAction(step) {
   return typeof step?.uses === 'string'
-    && (step.uses === './' || /(?:^|\/)copilot@/.test(step.uses));
+    && (step.uses === './' || step.uses === './../.copilot-native-runtime' || /(?:^|\/)copilot@/.test(step.uses));
 }
 
 function shouldPersistCheckoutCredentials(relativeFile, jobId) {
@@ -165,7 +171,7 @@ function assertMajorActionReferences(file, workflow) {
       .filter(value => typeof value === 'string');
     for (const uses of actionUses) {
       if (isCopilotAction({ uses })) {
-        const expected = relativeFile.startsWith('setup/workflows/') ? DISTRIBUTED_COPILOT_ACTION : './';
+        const expected = expectedCopilotAction(relativeFile);
         if (uses !== expected) {
           throw new Error(`${relativeFile} job ${jobId} must invoke Copilot with ${expected}.`);
         }
@@ -1369,7 +1375,7 @@ function assertSequentialMutationWorkflow(file, workflow) {
 function assertIssueWorkflowProfileInput(file, workflow) {
   if (!ISSUE_WORKFLOW_PROFILE_FILES.has(path.basename(file))) return;
   const relativeFile = relativeWorkflow(file);
-  const expectedAction = relativeFile.startsWith('setup/workflows/') ? DISTRIBUTED_COPILOT_ACTION : './';
+  const expectedAction = expectedCopilotAction(relativeFile);
   const actionSteps = Object.values(workflow.jobs ?? {}).flatMap(job => job?.steps ?? [])
     .filter(step => step?.uses === expectedAction);
   if (actionSteps.length === 0 || actionSteps.some(step =>
@@ -1387,21 +1393,45 @@ function assertIssueBranchConfigurationInputs(file, workflow) {
     ? {
       'issue-managed-branches': "${{ vars.ISSUE_MANAGED_BRANCHES || 'true' }}",
       'pre-branch-sdd': "${{ vars.PRE_BRANCH_SDD || 'false' }}",
+      'verification-setup': "${{ vars.VERIFICATION_SETUP || 'false' }}",
     }
     : {
       'issue-managed-branches': branches.issueManagedBranches,
       'pre-branch-sdd': branches.preBranchSdd,
+      'verification-setup': "${{ vars.VERIFICATION_SETUP || 'false' }}",
     };
   const actionSteps = Object.values(workflow.jobs ?? {}).flatMap(job => job?.steps ?? [])
     .filter(isCopilotAction);
   if (actionSteps.length === 0 || actionSteps.some(step =>
     Object.entries(expected).some(([input, value]) => step.with?.[input] !== value))) {
-    throw new Error(`${relativeFile} must pass consistent issue-managed-branches and pre-branch-sdd inputs to every Copilot callback.`);
+    throw new Error(`${relativeFile} must pass consistent issue-managed-branches, pre-branch-sdd and verification-setup inputs to every Copilot callback.`);
   }
+}
+
+function assertNativeVerificationWorkflow(file, workflow) {
+  const contract = require('./generate-native-verification-workflows.cjs');
+  if (!contract.CALLBACKS.includes(path.basename(file))) return;
+  const relativeFile = relativeWorkflow(file);
+  const action = expectedCopilotAction(relativeFile);
+  const jobs = Object.values(workflow.jobs ?? {}).filter(job => (job.steps ?? []).some(step => step.id === 'copilot'));
+  if (jobs.length !== 1) throw new Error(`${relativeFile} must have exactly one native verification operation.`);
+  const steps = jobs[0].steps;
+  const start = steps.findIndex(step => step.id === 'copilot');
+  const original = steps[start];
+  if (!relativeFile.startsWith('setup/workflows/')) {
+    const snapshot = steps[start - 1];
+    if (snapshot?.id !== 'prepare_native_runtime' || snapshot.run !== 'node scripts/prepare-native-source-action.cjs'
+      || original.env?.COPILOT_NATIVE_RUNTIME_CACHE !== '${{ steps.prepare_native_runtime.outputs.path }}') throw new Error(`${relativeFile} must snapshot its Action runtime before candidate changes.`);
+  }
+  if (original.uses !== action || original.env?.COPILOT_NATIVE_PHASE !== 'prepare') throw new Error(`${relativeFile} must prepare the admitted native operation.`);
+  const expected = contract.phaseSteps(action).map(step => ({ ...step, ...(step.with ? { with: original.with } : {}) }));
+  const actual = steps.slice(start + 1);
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(`${relativeFile} must retain the exact bounded native setup/continuation contract, runtime-only environment, timeout and completion cleanup.`);
 }
 
 function validateWorkflow(file, workflow) {
   if (!workflow || typeof workflow !== 'object') throw new Error('workflow document is empty.');
+  assertNativeVerificationWorkflow(file, workflow);
   assertManualRepoWiseWorkflow(file, workflow);
   assertDirectEventTriggers(file, workflow);
   assertApprovalObserverWorkflow(file, workflow);
@@ -1447,6 +1477,7 @@ function main() {
 if (require.main === module) main();
 
 module.exports = {
+  assertNativeVerificationWorkflow,
   QUEUE_WAIT_MINUTES,
   MIN_QUEUE_JOB_TIMEOUT_MINUTES,
   DEPLOYMENT_VALIDATION_TIMEOUT_MINUTES,

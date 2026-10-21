@@ -141,9 +141,9 @@ describe('setup_files', () => {
           const url = new URL(destination);
           if (url.origin === 'https://docs.page') {
             expect(url.pathname).toBe('/vypdev/copilot/security-operations/operations/verification');
-            expect(url.hash).toBe('#repository-verification-prerequisites');
+            expect(['#repository-verification-prerequisites', '#repository-owned-setup']).toContain(url.hash);
             expect(fs.readFileSync(path.join(sourceRoot, 'docs/security-operations/operations/verification.mdx'), 'utf8'))
-              .toContain('## Repository verification prerequisites');
+              .toContain(url.hash === '#repository-owned-setup' ? '## Repository-owned setup' : '## Repository verification prerequisites');
           } else {
             expect(url.origin).toBe('https://github.com');
             expect(url.pathname).toMatch(/^\/vypdev\/copilot\/blob\/master\/docs\/agents\//u);
@@ -158,6 +158,7 @@ describe('setup_files', () => {
 
     expect(documentationLinks).toEqual([
       'https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-verification-prerequisites',
+      'https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-owned-setup',
       'https://github.com/vypdev/copilot/blob/master/docs/agents/repository-collaboration.mdx',
       'https://github.com/vypdev/copilot/blob/master/docs/agents/repository-guidance-troubleshooting.mdx',
     ]);

@@ -42,6 +42,9 @@ export function validateSetupConfiguration(configuration: SetupConfiguration, op
         || typeof configuration.repository.preBranchSdd !== 'boolean') {
         errors.push('issue-managed-branches and pre-branch-sdd must be boolean values.');
     }
+    if (configuration.repository.verificationSetup !== undefined && typeof configuration.repository.verificationSetup !== 'boolean') {
+        errors.push('verification-setup must be a boolean value.');
+    }
     if (configuration.repository.preBranchSdd && !configuration.repository.issueManagedBranches) {
         errors.push('pre-branch-sdd requires issue-managed-branches.');
     }

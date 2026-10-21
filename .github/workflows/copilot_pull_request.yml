@@ -48,6 +48,7 @@ jobs:
           issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           issue-managed-branches: true
           pre-branch-sdd: true
+          verification-setup: ${{ vars.VERIFICATION_SETUP || 'false' }}
           ai-ignore-files: build/*,specs/CATALOG.md
           bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}
           bugbot-comment-limit: ${{ vars.BUGBOT_COMMENT_LIMIT || '20' }}

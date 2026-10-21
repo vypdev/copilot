@@ -32,8 +32,10 @@ The source workflow validator accepts the setup's literal `runs-on: {group: vypd
 The setup's runner profile chooses **where** a job runs. It does not install a
 consumer project's language runtimes or dependencies. A passing application CI
 job does not prepare the separate `issue_comment`, PR-comment or automated-fix
-job. Each job that runs `bugbot-fix-verify-commands` must prepare its own tools
-before Copilot, including for `/copilot sync-branch --no-agent`.
+job. Each job that runs `bugbot-fix-verify-commands` must prepare its own tools,
+including for `/copilot sync-branch --no-agent`. Use the [repository-owned setup
+action](#repository-owned-setup) to prepare the candidate without editing generated
+workflows, or retain your reviewed same-job bootstrap.
 
 For a Kotlin/JVM project, commit a reviewed
 `.copilot/verification-prerequisites.json`:
@@ -116,6 +118,173 @@ published. A prepared branch-sync merge is aborted without a synchronization
 commit or push; automated fixes also withhold their commit and push. Correct the
 declaration or bootstrap, then retry the original operation. Dry runs and
 already-aligned branches do not execute verification or prove runtime readiness.
+
+## Repository-owned setup
+
+Each repository can prepare its dependencies in a native composite action, without
+editing generated Copilot workflows. GitHub Actions executes the YAML's `uses` and
+`run` steps in the same job where Copilot verifies the candidate.
+
+```mermaid
+flowchart LR
+  A[Copilot prepares changes] --> B[Repository composite installs dependencies]
+  B --> C[Runtime preflight and verification]
+  C --> D[Existing publication guards]
+```
+
+Text equivalent: prepare the candidate, install its dependencies, verify it, then
+apply the existing publication guards. A separate CI job does not prepare this job.
+
+1. Review `.github/actions/copilot-verification-setup/action.yml` and its auxiliary
+   scripts onto your configured `main-branch` (normally production). Candidate or
+   model changes cannot activate a different setup implementation.
+2. Update the generated comment workflows with `copilot setup`. They contain the
+   native setup and continuation steps; an older callback cannot execute YAML.
+3. Enable Repository Variable `VERIFICATION_SETUP=true`, or plan it with setup
+   configuration `repository: { verificationSetup: true }`. The corresponding
+   boolean Action input is `verification-setup`; its default is `false`.
+4. Retry the authorized modification or `/copilot sync-branch --no-agent`.
+
+Copilot captures the complete action directory from an immutable trusted Git SHA
+before candidate changes. The trusted origin ref must be available locally;
+generated comment workflows use a full checkout. The runner executes that snapshot
+**after merge/fix changes and before each configured verifier**, reading the actual
+candidate manifests. The admitted operation continues once; the agent is not rerun.
+Copilot stages the reviewed snapshot in reserved local Git metadata at
+`.git/copilot-verification-setup`; the consumer's candidate files stay unchanged.
+The normal directory-based `.git` checkout from generated workflows is required.
+Staging remains available for native post steps. Trusted Copilot post steps reload
+the pinned Git objects and verify their original content digest before those
+phases with the initially pinned Git executable, so later candidate edits cannot
+supply post code. Source workflows also snapshot Copilot itself outside the
+mutable workspace; normal remote Action installations already use a separate
+runner cache.
+
+For Python, the consumer file can contain:
+
+```yaml
+name: Prepare project verification
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v6
+      id: python
+      with:
+        update-environment: false
+        python-version: '3.12'
+    - name: Install the candidate's test dependencies
+      run: |
+        "$PYTHON_EXECUTABLE" - <<'PYTHON'
+        import os, pathlib, subprocess, venv
+        home = pathlib.Path(os.environ['HOME']) / 'venv'
+        venv.create(home, with_pip=True)
+        tools = home / ('Scripts' if os.name == 'nt' else 'bin')
+        python = tools / ('python.exe' if os.name == 'nt' else 'python')
+        subprocess.check_call([str(python), '-m', 'pip', 'install',
+                               '--no-cache-dir', '--require-hashes', '-r', 'requirements-test.lock'])
+        with open(os.environ['GITHUB_PATH'], 'a') as paths:
+            print(tools, file=paths)
+        PYTHON
+      shell: bash
+      env:
+        PYTHON_EXECUTABLE: ${{ steps.python.outputs.python-path }}
+```
+
+Keep pytest and all transitive dependencies pinned with hashes in the candidate's
+`requirements-test.lock`. The verifier can remain `python -m pytest`. Adapt runtime
+versions and dependency commands to your project; these examples do not infer them.
+The example disables pip's cache so platform-specific cache discovery cannot create
+publishable files in the candidate. To use a cache, set its path explicitly under
+the private HOME or an ignored dependency directory.
+
+For Node/pnpm:
+
+```yaml
+name: Prepare project verification
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v7
+      with:
+        node-version: '24.x'
+        package-manager-cache: false
+    - uses: pnpm/action-setup@v5
+      with:
+        version: 10.12.4
+        dest: ${{ env.HOME }}/pnpm
+        standalone: false
+    - run: pnpm install --frozen-lockfile --ignore-scripts
+      shell: bash
+```
+
+The action may include reviewed auxiliary scripts, referenced through
+`${{ github.action_path }}`. Use native external `uses` actions and `run` steps;
+nested local `uses: ./...` actions are rejected because their deferred post steps
+could otherwise load candidate code outside trusted staging. Review external action versions as
+part of the executable setup. The composite inherits the job's operating system;
+its metadata cannot declare jobs, runners or a matrix.
+
+Each command gets a **fresh private HOME**. These dependency-only profiles stay
+private until native post-job actions finish, then Copilot's final post cleanup
+removes them. They are never reused by another command. Keep dependencies that
+must survive native post steps under the private HOME, an ignored candidate directory
+or the trusted runner tool cache, rather than inside the reserved action staging folder.
+
+Native setup exports tools through normal Actions mechanisms such as `GITHUB_PATH`
+and `JAVA_HOME`; no custom JSON helper protocol is required. Copilot accepts up to
+eight new unique absolute PATH directories, each at most 2,048 characters, and
+JAVA_HOME. They must exist inside the candidate workspace, its private HOME or the
+captured `RUNNER_TOOL_CACHE`; unsafe links, traversal and escaping paths are rejected.
+The internal closed runtime result is bounded to 16 KiB. Other `GITHUB_ENV` values
+are not forwarded to verification. Use complete executable paths or supported
+runtime directories when a tool needs additional environment configuration.
+
+Copilot's PAT, provider/model inputs, agent auth stores and evidence token are not
+passed to the consumer action or verifier. The native runner and external actions
+retain normal GitHub Actions facilities and the job's scoped `GITHUB_TOKEN` context.
+This is the existing trusted-runner boundary, not an OS sandbox against malicious
+maintainer code or service-level credentials. Review setup as executable code and
+avoid printing secrets. Agent credential profiles close before verification.
+
+A native setup step has a fixed **five-minute timeout**; the worker also rejects
+readiness after 300 seconds. There are at most twenty setup boundaries per operation,
+one for each configured command. No automatic setup retry or limit override exists.
+The action directory is bounded to 32 regular files, 64 KiB each and 256 KiB total;
+its metadata must be `action.yml`, with `runs.using: composite` and 1–32 steps.
+Use portable ASCII asset paths (letters, digits, `_`, `.`, `-` and `/`), at most
+200 characters; parent/empty segments and Windows reserved filenames are rejected.
+Native setup logs are visible in the run; there is no 64-KiB helper-output ceiling.
+Copilot's own error/result comments contain only a closed cause, fixed path and
+pinned trusted SHA, never copied raw setup output.
+
+Setup must install dependencies without changing publishable code or lockfiles.
+Copilot compares HEAD, branch, index, tracked edits and publishable untracked file
+contents, types and executable modes before allowing the verifier to continue. Executable lookup uses that verifier's
+validated PATH, so its private Python/pnpm takes precedence over the worker tools. Observations are bounded to
+16 MiB, 256 untracked files and 16 MiB aggregate untracked contents. Ignore dependency
+caches and keep source changes within these bounds. Failure, changed candidate,
+invalid runtime output, timeout or cancellation withholds verification and push;
+branch synchronization follows its existing abort/recovery.
+
+Read-only questions/status, dry runs, already-aligned branches and empty command
+lists execute no setup. Snapshot failures remain deferred until verification.
+Setup/install/update preserves this consumer-owned directory and all its assets.
+
+If a runner crash leaves an unknown reserved staging directory, preparation fails
+closed rather than overwriting it. Confirm the prior job has stopped, inspect its
+run, and remove only that stale `.git/copilot-verification-setup` directory before
+retrying. Normal completion/cancellation uses the Action post cleanup.
+
+Native composite execution is available in the generated **GitHub Actions**
+callbacks. The local CLI cannot execute `uses` steps: opted-in local verification
+fails with `native-workflow-required`. Run the authorized operation in Actions,
+or keep the opt-in disabled and provision your local dependencies normally.
+Direct custom callers must implement the documented generated native callback
+structure; setting the flag on an old single Action step is insufficient.
+
+To roll back, set `VERIFICATION_SETUP=false` and provision dependencies before
+Copilot in the same job. The unreleased `.copilot/verification-setup.mjs` prototype
+is superseded; it is not executed or installed by this contract.
 
 ## Reused credential evidence
 

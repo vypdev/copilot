@@ -1,0 +1,6 @@
+name: Verify native setup cleanup
+runs:
+  using: node24
+  main: main.cjs
+  post: post.cjs
+  post-if: always()

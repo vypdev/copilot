@@ -86,6 +86,7 @@ export async function buildGithubActionExecution(
             eventInputs,
         ),
         preBranchSdd: parseIssueWorkflowBoolean(getInput(INPUT_KEYS.PRE_BRANCH_SDD), INPUT_KEYS.PRE_BRANCH_SDD, false),
+        verificationSetup: parseIssueWorkflowBoolean(getInput(INPUT_KEYS.VERIFICATION_SETUP), INPUT_KEYS.VERIFICATION_SETUP, false),
         pullRequest: buildPullRequest(
             parseIntegerInput(getInput(INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0),
             parseIntegerInput(getInput(INPUT_KEYS.PULL_REQUEST_DESIRED_REVIEWERS_COUNT), 0),

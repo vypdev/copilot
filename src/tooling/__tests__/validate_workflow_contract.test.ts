@@ -153,10 +153,10 @@ describe('workflow contract validator', () => {
     }
   });
 
-  it.each(['issue-managed-branches', 'pre-branch-sdd'])(
+  it.each(['issue-managed-branches', 'pre-branch-sdd', 'verification-setup'])(
     'rejects a PR comment callback that omits or disables the installed %s policy', input => {
       const { file, workflow } = loadMutationWorkflow('.github/workflows', 'copilot_pull_request_comment.yml');
-      const action = workflow.jobs['copilot-pull-requests'].steps.find((step: { uses?: string }) => step.uses === './');
+      const action = workflow.jobs['copilot-pull-requests'].steps.find((step: { id?: string }) => step.id === 'copilot');
       delete action.with[input];
       expect(() => assertIssueBranchConfigurationInputs(file, workflow)).toThrow('must pass consistent');
       action.with[input] = false;

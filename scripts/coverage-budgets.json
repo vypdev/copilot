@@ -900,6 +900,37 @@
         }
       ],
       "successMessage": "approval evidence diagnostics coverage: PASS (95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Verification setup",
+      "missingEntryLabel": "verification setup",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/verification_setup_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        },
+        {
+          "files": [
+            "src/infrastructure/verification_setup_snapshot.ts",
+            "src/infrastructure/verification_setup_result.ts",
+            "src/infrastructure/verification_setup_runner.ts",
+            "src/infrastructure/native_verification_protocol.ts",
+            "src/infrastructure/native_verification_candidate.ts",
+            "src/infrastructure/native_verification_staging.ts",
+            "src/infrastructure/native_verification_controller.ts",
+            "src/infrastructure/native_verification_profiles.ts",
+            "src/infrastructure/native_verification_redaction.ts",
+            "src/infrastructure/verification_executable.ts",
+            "src/infrastructure/native_verification_source_runtime.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "verification setup coverage: PASS (95% lines/statements, 90% branches/functions)"
     }
   ]
 }
