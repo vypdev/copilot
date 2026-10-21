@@ -8,6 +8,7 @@ import {
   renderSddGateRecord,
   validateSddMarkdown,
   composeSddUpdate,
+  recoverSddUpdate,
   normalizeSddIssueTitle,
   retainSddAnswers,
   SddOwnerFormatFailure,
@@ -37,6 +38,31 @@ describe('pre-branch SDD policy', () => {
   it('rejects an oversized change appendix without dropping any existing requirement', () => {
     expect(() => composeSddUpdate(validDocument('Owner'), validDocument('Change', 'x'.repeat(18_000))))
       .toThrow('appendix exceeds 18000');
+  });
+
+  it.each([1800, 18000])('recovers a valid %i-character appendix without counting the publication newline', size => {
+    const owner = validDocument('Owner');
+    const content = '# Change\n## 1. Executive summary\n## 4. Goals\n## 8. Clean Architecture\n## 14. Testing strategy\n3 distinct cases\n## 16. Acceptance\n';
+    const published = composeSddUpdate(owner, content.padEnd(size, 'x'));
+    const recovered = recoverSddUpdate(owner, published)!;
+    expect(recovered).toHaveLength(size);
+    expect(composeSddUpdate(owner, recovered)).toBe(published);
+  });
+
+  it('recovers minimum-length candidates whose outer whitespace was normalized during composition', () => {
+    const owner = validDocument('Owner');
+    const content = '# Change\n## 1. Executive summary\n## 4. Goals\n## 8. Clean Architecture\n## 14. Testing strategy\n3 distinct cases\n## 16. Acceptance\n';
+    const published = composeSddUpdate(owner, content.padEnd(1800, ' '));
+    expect(composeSddUpdate(owner, recoverSddUpdate(owner, published)!)).toBe(published);
+  });
+
+  it('rejects recovery when the published bytes do not preserve the owning prefix', () => {
+    expect(recoverSddUpdate(validDocument('Owner'), validDocument('Replaced owner'))).toBeUndefined();
+  });
+
+  it('rejects recovery when normalization cannot reproduce the published bytes exactly', () => {
+    const owner = validDocument('Owner');
+    expect(recoverSddUpdate(owner, `${composeSddUpdate(owner, validDocument('Change'))}\n`)).toBeUndefined();
   });
 
   it('rejects a combined owner beyond the fixed document limit instead of truncating it', () => {

@@ -82987,7 +82987,9 @@ function recoverSddUpdate(existing, published) {
     const prefix = `${existing.trimEnd()}\n\n`;
     if (!published.startsWith(prefix))
         return undefined;
-    const change = shiftSddHeadings(published.slice(prefix.length), -1);
+    // Composition normalizes outer whitespace and adds a publication newline.
+    // Reconstruct an equivalent candidate inside the original size bounds.
+    const change = shiftSddHeadings(published.slice(prefix.length), -1).trim().padEnd(exports.SDD_MIN_DRAFT_CHARACTERS, '\n');
     return composeSddUpdate(existing, change) === published ? change : undefined;
 }
 function shiftSddHeadings(source, direction) {
