@@ -53,59 +53,71 @@ that contains the required setup and native verification support.
 
 For verification setup adoption:
 
-1. Start with a clean branch, record the currently reviewed workflow references,
-   and keep `VERIFICATION_SETUP=false` during preparation. Inspect the effective
-   repository/organization value; a repository Variable overrides an inherited
-   organization value.
-2. Upgrade the CLI and confirm `copilot --version`. Preview the installation:
+**1. Record the existing installation.**
 
-   ```bash
-   copilot upgrade
-   copilot --version
-   copilot setup --web --dry-run
-   ```
+Start with a clean branch, record the currently reviewed workflow references,
+and keep `VERIFICATION_SETUP=false` during preparation. Inspect the effective
+repository/organization value; a repository Variable overrides an inherited
+organization value.
+**2. Upgrade the CLI and preview.**
 
-3. Apply a reviewed workflow upgrade:
+Upgrade the CLI and confirm `copilot --version`. Preview the installation:
 
-   ```bash
-   copilot setup --web --update-workflows
-   ```
+```bash
+copilot upgrade
+copilot --version
+copilot setup --web --dry-run
+```
 
-   The shared assistant also works in the terminal without `--web`. Keep the
-   verification setup question disabled for this preparation pass. Review the
-   displayed create/preserve result and changes before approval. The installer
-   creates `.github/actions/copilot-verification-setup/action.yml` only if absent;
-   existing action bytes and auxiliary files are preserved through upgrades.
-   Generated workflows use `vypdev/copilot@v3`. If your repository pins versions
-   or SHAs, review **every** Copilot `uses` reference, including native
-   continuation/post steps, and apply the same chosen compatible published ref.
-   Workflow backups are retained under `.copilot/setup-backups/`.
-4. Replace the starter's failing placeholder with reviewed project-specific
-   dependency preparation. Commit the action, its auxiliary files and the updated
-   workflows. Review and merge them onto the configured trusted `MAIN_BRANCH`;
-   the installer PR's default target may differ from this trusted branch. Follow
-   the repository's branch/promotion process until both contain the reviewed
-   changes. Creating or merging an installer PR alone does not verify the runtime.
-5. Re-run the assistant and enable **Prepare dependencies with the repository
-   verification setup action?**, or use:
+**3. Regenerate and review workflows.**
 
-   ```yaml
-   repository:
-     verificationSetup: true
-   ```
+Apply a reviewed workflow upgrade:
 
-   Setup writes `VERIFICATION_SETUP` only when Variable management is enabled
-   and follows the reviewed storage/reuse policy. With `--skip-variables`, update
-   the effective Variable manually. Confirm that generated workflows pass the
-   `verification-setup` input and that the trusted action has been customized.
-   Choose **Customize** when changing an existing repository Variable; **Reuse**
-   keeps existing values. If an organization value must differ for this project,
-   select `VERIFICATION_SETUP` in the repository Variable overrides and review the
-   scope before Apply.
-6. Run `copilot doctor --read-only`, then an authorized write/sync operation that
-   actually executes the configured verification commands. Inspect the native
-   action and verifier results; a doctor pass, dry run or already-aligned sync
-   does not prove dependency preparation.
+```bash
+copilot setup --web --update-workflows
+```
+
+The shared assistant also works in the terminal without `--web`. Keep the
+verification setup question disabled for this preparation pass. Review the
+displayed create/preserve result and changes before approval. The installer
+creates `.github/actions/copilot-verification-setup/action.yml` only if absent;
+existing action bytes and auxiliary files are preserved through upgrades.
+Generated workflows use `vypdev/copilot@v3`. If your repository pins versions
+or SHAs, review **every** Copilot `uses` reference, including native
+continuation/post steps, and apply the same chosen compatible published ref.
+Workflow backups are retained under `.copilot/setup-backups/`.
+**4. Customize and merge on trusted main.**
+
+Replace the starter's failing placeholder with reviewed project-specific
+dependency preparation. Commit the action, its auxiliary files and the updated
+workflows. Review and merge them onto the configured trusted `MAIN_BRANCH`;
+the installer PR's default target may differ from this trusted branch. Follow
+the repository's branch/promotion process until both contain the reviewed
+changes. Creating or merging an installer PR alone does not verify the runtime.
+**5. Activate verification setup.**
+
+Re-run the assistant and enable **Prepare dependencies with the repository
+verification setup action?**, or use:
+
+```yaml
+repository:
+  verificationSetup: true
+```
+
+Setup writes `VERIFICATION_SETUP` only when Variable management is enabled
+and follows the reviewed storage/reuse policy. With `--skip-variables`, update
+the effective Variable manually. Confirm that generated workflows pass the
+`verification-setup` input and that the trusted action has been customized.
+Choose **Customize** when changing an existing repository Variable; **Reuse**
+keeps existing values. If an organization value must differ for this project,
+select `VERIFICATION_SETUP` in the repository Variable overrides and review the
+scope before Apply.
+**6. Verify actual execution.**
+
+Run `copilot doctor --read-only`, then an authorized write/sync operation that
+actually executes the configured verification commands. Inspect the native
+action and verifier results; a doctor pass, dry run or already-aligned sync
+does not prove dependency preparation.
 
 To roll back adoption, first set the effective `VERIFICATION_SETUP=false` (or
 answer No with Variable management enabled). This stops the optional hook and
