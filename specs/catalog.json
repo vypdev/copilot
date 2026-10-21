@@ -1103,7 +1103,8 @@
       "lastVerified": "2026-10-21",
       "specs": [
         "specs/local-web-setup-assistant.md",
-        "specs/setup-configuration-management.md"
+        "specs/setup-configuration-management.md",
+        "specs/verification-setup-onboarding.md"
       ],
       "workflows": [
         ".github/workflows/ci_check.yml",
