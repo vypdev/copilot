@@ -59,6 +59,7 @@ Start with a clean branch, record the currently reviewed workflow references,
 and keep `VERIFICATION_SETUP=false` during preparation. Inspect the effective
 repository/organization value; a repository Variable overrides an inherited
 organization value.
+
 **2. Upgrade the CLI and preview.**
 
 Upgrade the CLI and confirm `copilot --version`. Preview the installation:
@@ -86,6 +87,7 @@ Generated workflows use `vypdev/copilot@v3`. If your repository pins versions
 or SHAs, review **every** Copilot `uses` reference, including native
 continuation/post steps, and apply the same chosen compatible published ref.
 Workflow backups are retained under `.copilot/setup-backups/`.
+
 **4. Customize and merge on trusted main.**
 
 Replace the starter's failing placeholder with reviewed project-specific
@@ -94,6 +96,7 @@ workflows. Review and merge them onto the configured trusted `MAIN_BRANCH`;
 the installer PR's default target may differ from this trusted branch. Follow
 the repository's branch/promotion process until both contain the reviewed
 changes. Creating or merging an installer PR alone does not verify the runtime.
+
 **5. Activate verification setup.**
 
 Re-run the assistant and enable **Prepare dependencies with the repository
@@ -112,6 +115,7 @@ Choose **Customize** when changing an existing repository Variable; **Reuse**
 keeps existing values. If an organization value must differ for this project,
 select `VERIFICATION_SETUP` in the repository Variable overrides and review the
 scope before Apply.
+
 **6. Verify actual execution.**
 
 Run `copilot doctor --read-only`, then an authorized write/sync operation that
