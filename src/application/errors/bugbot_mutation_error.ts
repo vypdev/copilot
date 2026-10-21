@@ -23,7 +23,9 @@ export function bugbotMutationError(cause: unknown, stage: BugbotMutationDiagnos
   const status = provider?.providerStatus;
   const errorCode = status === 401 ? 'authorization.credential-invalid' : status === 403 ? 'authorization.denied'
     : status === 404 ? 'provider.not-found' : status === 409 ? 'provider.conflict'
-      : status === 429 ? 'provider.rate-limited' : status && status < 500 ? 'provider.contract-invalid' : 'provider.unavailable';
+      : status === 429 ? 'provider.rate-limited'
+        : status === 408 || status === 425 ? 'provider.unavailable'
+          : status && status < 500 ? 'provider.contract-invalid' : 'provider.unavailable';
   const first = findingIds[0];
   return new BugbotMutationError(Object.freeze({
     stage, operation: provider?.operation ?? fallback,

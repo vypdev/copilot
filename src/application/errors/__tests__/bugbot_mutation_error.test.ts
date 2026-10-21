@@ -4,6 +4,7 @@ import { PullRequestReviewOperationError, toPullRequestReviewOperationError } fr
 it.each([
   [401, 'authorization.credential-invalid'], [403, 'authorization.denied'], [404, 'provider.not-found'],
   [409, 'provider.conflict'], [422, 'provider.contract-invalid'], [429, 'provider.rate-limited'],
+  [408, 'provider.unavailable'], [425, 'provider.unavailable'],
   [503, 'provider.unavailable'],
 ])('preserves safe HTTP %s metadata and classifies recovery as %s', (status, code) => {
   const cause = new PullRequestReviewOperationError('resolve-thread', { providerStatus: status, providerReference: 'AB12:34CD' });
@@ -11,6 +12,7 @@ it.each([
   expect(error).toMatchObject({ code, diagnostic: { stage: 'resolution', operation: 'resolve-thread',
     providerStatus: `http-${status}`, providerReference: 'AB12:34CD' } });
   expect(JSON.stringify(error)).not.toMatch(/private-/);
+  if (status === 408 || status === 425) expect(error.retryable).toBe(true);
 });
 
 it('drops malformed provider status/reference and unsafe finding markup', () => {
