@@ -22,9 +22,8 @@ package-manager caching. This keeps a successful full validation from timing out
 in the post-job archive step; hosted fixture caching is retained. See the
 [setup-node cache inputs](https://github.com/actions/setup-node#usage).
 
-This repository runs `CI Check` and `RepoWise code health` on self-hosted
-Ubuntu `codex` runners for its own PRs and pushes. Fork PRs and all merge
-groups keep the same quality checks on disposable GitHub-hosted Ubuntu
+This repository runs `CI Check` on self-hosted Ubuntu `codex` runners for its
+own PRs and pushes. Fork PRs and all merge groups run CI on disposable GitHub-hosted Ubuntu
 runners. A merge group can contain fork code without exposing its origin to
 the runner selector; never route it to a persistent service runner. The trusted-default-branch
 PR approval observer also runs on a self-hosted Ubuntu `codex` runner. The
@@ -48,7 +47,12 @@ self-hosted runners. RepoWise obtains a complete Python 3.12 distribution via
 `actions/setup-python`, creates its virtual environment and reports in
 run-specific temporary directories, and removes them after artifact upload.
 Its runner needs a writable Actions tool cache; the workflow does not install
-Ubuntu system packages.
+Ubuntu system packages. RepoWise runs only through manual dispatch on
+`[self-hosted, codex, Linux]`, using the reviewed repository ref selected by the
+maintainer. It is optional and must not be required by branch protections or
+rulesets. It no longer consumes this pool on every PR or push. See
+[testing and manual analysis](/development/testing) for launch instructions,
+revision evidence, scan limits, artifacts, and retry behavior.
 
 The `[self-hosted, codex]` pool routes agent jobs to macOS and Ubuntu. Windows
 services MUST omit `codex` on registration; recreate existing registrations to

@@ -2415,8 +2415,9 @@ called secure. That external policy review remains an open security gate.
 
 The 2026-10-05 runner-cost decision supersedes only the blanket hosted-runner
 requirement for the repository's `CI Check` and `RepoWise code health` jobs.
-Both MUST use an Ubuntu self-hosted `codex` runner for repository-owned PRs,
-pushes, and manual runs. A fork PR or any merge-group event MUST instead use
+As amended by issue #639 on 2026-10-21, `CI Check` MUST use an Ubuntu
+self-hosted `codex` runner for repository-owned PRs, pushes, and manual runs.
+A fork PR or any merge-group event MUST instead use
 disposable `ubuntu-latest`: a merge group can contain fork code but its event
 does not expose the original PR trust classification to the runner selector.
 The quality checks still run without executing that code on a persistent
@@ -2444,6 +2445,16 @@ The operator documentation MUST state the fork exception and OIDC publishing
 exception. A fresh run on each selected runner type is required before calling
 the routing operationally verified; static workflow checks alone do not prove
 runner availability or the outcome of remote jobs.
+
+Issue #639 supersedes RepoWise's automatic routing cases above. RepoWise MUST
+now run only under `workflow_dispatch` on Ubuntu `codex` with the native selected
+repository ref; it MUST NOT run on PR, push or merge-group events or be required
+for them. The retained CI routing cases still prove the fork/merge-group trust
+boundary. The [manual-only migration contract](./merge-queue-readiness.md#manual-only-repowise-migration-2026-10-21-issue-639)
+defines the 24-case regression floor, live required-check evidence, immutable
+revision reporting, unchanged scan budgets and cleanup, operator journey,
+failure/retry behavior and final-revision manual acceptance. This is a workflow
+scheduling change with no setup-session, PAT, web UX or new configuration change.
 
 The first [RepoWise run on `e197cb0c`](https://github.com/vypdev/copilot/actions/runs/37289899480)
 failed workflow validation before any job started. Its job-level `env` used
@@ -2613,8 +2624,9 @@ pass; the prior manual result does not substitute for it.
       recovery, and PAT cleanup/renewal guidance are linked and validated.
 - [ ] Build, lint, typecheck, coverage, architecture, workflow, package,
       documentation, catalog generation, and `validate:specifications` pass.
-- [ ] Repository-owned CI and RepoWise run on self-hosted Ubuntu, fork PRs on
-      hosted Ubuntu, and the approval observer on self-hosted `codex`.
+- [ ] Repository-owned CI and manual-only RepoWise run on self-hosted Ubuntu;
+      CI for fork PRs/merge groups runs on hosted Ubuntu, and the approval
+      observer runs on self-hosted `codex`.
       The self-hosted macOS, Ubuntu and Windows fixture matrix is manual only.
       npm publication remains hosted for Trusted Publishing. All six platform
       jobs pass their full fixture, package, coverage and validator contracts;

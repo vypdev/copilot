@@ -1,32 +1,27 @@
 name: RepoWise Code Health
 
 on:
-  push:
-    branches: [master]
-  pull_request:
-    types: [opened, synchronize, reopened]
-  merge_group:
-    types: [checks_requested]
   workflow_dispatch:
 
 concurrency:
-  group: repowise-${{ github.event.pull_request.number || github.ref }}
+  group: repowise-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   code-health:
     name: RepoWise code health
-    # A merge group can contain fork code without exposing the originating PR here.
-    runs-on: ${{ fromJSON((github.event_name == 'merge_group' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository)) && '["ubuntu-latest"]' || '["self-hosted","codex","Linux"]') }}
+    runs-on: [self-hosted, codex, Linux]
     timeout-minutes: 30
     env:
       REPOWISE_VENV_NAME: repowise-venv-${{ github.run_id }}-${{ github.run_attempt }}-code-health
       REPOWISE_REPORT_NAME: repowise-report-${{ github.run_id }}-${{ github.run_attempt }}-code-health
-      REPOWISE_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || '' }}
-      REPOWISE_EVENT_NAME: ${{ github.event_name }}
     steps:
       - name: Verify Ubuntu runner
         shell: bash
@@ -66,6 +61,8 @@ jobs:
           report_dir="$RUNNER_TEMP/$REPOWISE_REPORT_NAME"
           repowise_bin="$RUNNER_TEMP/$REPOWISE_VENV_NAME/bin/repowise"
           mkdir -p "$report_dir"
+          analyzed_sha="$(git rev-parse HEAD)"
+          printf '%s\n' "$analyzed_sha" > "$report_dir/revision.txt"
           cleanup() {
             rm -rf .repowise .mcp.json
             rm -f .vscode/mcp.json .vscode/extensions.json
@@ -90,23 +87,14 @@ jobs:
             fi
           }
           advisory_scan dead-code "$repowise_bin" dead-code --safe-only --no-workspace --format json .
-          if [ "$REPOWISE_EVENT_NAME" = workflow_dispatch ]; then
-            echo 'security scope: full reachable history (manual dispatch)' >> "$report_dir/advisory-status.txt"
-            advisory_scan security "$repowise_bin" security scan --history --path . --format json
-          elif [[ "$REPOWISE_BASE_SHA" =~ ^[0-9a-f]{40}$ ]] \
-            && git cat-file -e "$REPOWISE_BASE_SHA^{commit}" \
-            && git merge-base --is-ancestor "$REPOWISE_BASE_SHA" HEAD; then
-            printf 'security scope: %s..%s\n' "$REPOWISE_BASE_SHA" "$(git rev-parse HEAD)" >> "$report_dir/advisory-status.txt"
-            advisory_scan security "$repowise_bin" security scan --history --since "$REPOWISE_BASE_SHA" --to HEAD --path . --format json
-          else
-            echo 'security: incomplete (event base unavailable or not an ancestor)' >> "$report_dir/advisory-status.txt"
-            echo '::warning::RepoWise security advisory scope could not be verified; no full-history fallback was attempted.'
-          fi
+          echo 'security scope: full reachable history (manual dispatch)' >> "$report_dir/advisory-status.txt"
+          advisory_scan security "$repowise_bin" security scan --history --path . --format json
           {
             echo '## RepoWise code health'
             echo
             echo 'Advisory reports are retained as workflow artifacts for this commit.'
             echo
+            printf 'Analyzed revision: `%s`\n\n' "$analyzed_sha"
             sed -n '1,100p' "$report_dir/health.md"
             echo
             echo '### Advisory scan status'

@@ -494,7 +494,6 @@ describe('workflow contract validator', () => {
 
   it.each([
     '.github/workflows/ci_check.yml',
-    '.github/workflows/repowise.yml',
     '.github/workflows/copilot_pull_request_merge_queue.yml',
     'setup/workflows/copilot_pull_request_merge_queue.yml',
   ])('requires merge-group checks in %s', (relativeFile) => {
@@ -985,7 +984,6 @@ describe('workflow contract validator', () => {
     ['setup/workflows', 'copilot_credential_health.yml'],
     ['setup/workflows', 'copilot_issue.yml'],
     ['.github/workflows', 'ci_check.yml'],
-    ['.github/workflows', 'repowise.yml'],
   ])('prevents grouped routing from overriding the hosted/trust role in %s/%s', (directory, name) => {
     const { file, workflow } = loadMutationWorkflow(directory, name);
     Object.values(workflow.jobs)[0]['runs-on'] = { group: 'vypdev', labels: ['self-hosted', 'codex', 'Linux'] };
@@ -1270,9 +1268,6 @@ describe('workflow contract validator', () => {
     ['ci_check.yml', 'ci-check', 'pull_request', 'vypdev/copilot', '["self-hosted","codex","Linux"]'],
     ['ci_check.yml', 'ci-check', 'pull_request', 'outside/fork', '["ubuntu-latest"]'],
     ['ci_check.yml', 'ci-check', 'merge_group', 'vypdev/copilot', '["ubuntu-latest"]'],
-    ['repowise.yml', 'code-health', 'pull_request', 'vypdev/copilot', '["self-hosted","codex","Linux"]'],
-    ['repowise.yml', 'code-health', 'pull_request', 'outside/fork', '["ubuntu-latest"]'],
-    ['repowise.yml', 'code-health', 'merge_group', 'vypdev/copilot', '["ubuntu-latest"]'],
   ])('routes %s %s code from %s to %s', (fileName, jobId, eventName, headRepository, expectedRunner) => {
     const file = path.join(process.cwd(), '.github', 'workflows', fileName);
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
@@ -1423,7 +1418,7 @@ describe('workflow contract validator', () => {
     }
   });
 
-  it('bounds RepoWise advisory scans and preserves required health artifacts', () => {
+  it('bounds RepoWise advisory scans and preserves manual health artifacts', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'repowise.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     const steps = workflow.jobs['code-health'].steps;
@@ -1436,18 +1431,67 @@ describe('workflow contract validator', () => {
     expect(upload.if).toBe('${{ always() }}');
   });
 
-  it.each(['event-base', 'ancestry', 'range', 'manual-only'] as const)(
-    'rejects loss of the RepoWise history scope boundary: %s', (boundary) => {
-      const file = path.join(process.cwd(), '.github', 'workflows', 'repowise.yml');
-      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+  it('accepts RepoWise manual dispatch with native branch selection and isolated concurrency', () => {
+    const { file, workflow } = loadMutationWorkflow('.github/workflows', 'repowise.yml');
+    expect(workflow.on).toEqual({ workflow_dispatch: null });
+    expect(workflow.concurrency).toEqual({ group: 'repowise-${{ github.ref }}', 'cancel-in-progress': true });
+    expect(() => validateWorkflow(file, workflow)).not.toThrow();
+  });
+
+  it.each(['push', 'pull_request', 'merge_group', 'workflow_call', 'schedule'])(
+    'rejects the RepoWise automatic or reusable trigger %s', event => {
+      const { file, workflow } = loadMutationWorkflow('.github/workflows', 'repowise.yml');
+      workflow.on[event] = event === 'schedule' ? [{ cron: '0 0 * * *' }] : {};
+      expect(() => validateWorkflow(file, workflow)).toThrow('must run only through workflow_dispatch');
+    },
+  );
+
+  it('rejects removal of RepoWise manual dispatch', () => {
+    const { file, workflow } = loadMutationWorkflow('.github/workflows', 'repowise.yml');
+    delete workflow.on.workflow_dispatch;
+    expect(() => validateWorkflow(file, workflow)).toThrow('must run only through workflow_dispatch');
+  });
+
+  it.each(['timeout', 'permissions', 'job-permissions', 'history', 'selected-ref', 'concurrency', 'cancellation'])(
+    'preserves the RepoWise manual execution boundary: %s', boundary => {
+      const { file, workflow } = loadMutationWorkflow('.github/workflows', 'repowise.yml');
+      const job = workflow.jobs['code-health'];
+      const checkout = job.steps.find((step: { uses?: string }) => step.uses === 'actions/checkout@v5');
+      if (boundary === 'timeout') job['timeout-minutes'] = 60;
+      else if (boundary === 'permissions') workflow.permissions.contents = 'write';
+      else if (boundary === 'job-permissions') job.permissions = { contents: 'write' };
+      else if (boundary === 'history') checkout.with['fetch-depth'] = 1;
+      else if (boundary === 'selected-ref') checkout.with.ref = 'master';
+      else if (boundary === 'concurrency') workflow.concurrency.group = 'ci-${{ github.ref }}';
+      else workflow.concurrency['cancel-in-progress'] = false;
+      expect(() => validateWorkflow(file, workflow)).toThrow('manual job budget, read-only permissions, selected revision and per-ref concurrency');
+    },
+  );
+
+  it('keeps RepoWise manual runs on Ubuntu codex runners', () => {
+    const { file, workflow } = loadMutationWorkflow('.github/workflows', 'repowise.yml');
+    expect(workflow.jobs['code-health']['runs-on']).toEqual(['self-hosted', 'codex', 'Linux']);
+    expect(() => validateWorkflow(file, workflow)).not.toThrow();
+    workflow.jobs['code-health']['runs-on'] = ['ubuntu-latest'];
+    expect(() => assertRunner(file, workflow)).toThrow('must use runs-on self-hosted, codex, Linux');
+  });
+
+  it.each(['full-history', 'scan-budget', 'incomplete-status', 'revision-file', 'summary', 'upload', 'retention', 'health-md', 'health-json'])(
+    'rejects loss of RepoWise manual report evidence: %s', boundary => {
+      const { file, workflow } = loadMutationWorkflow('.github/workflows', 'repowise.yml');
       expect(() => validateWorkflow(file, workflow)).not.toThrow();
       const job = workflow.jobs['code-health'];
       const reports = job.steps.find((step: { name?: string }) => step.name === 'Generate RepoWise reports');
-      if (boundary === 'event-base') job.env.REPOWISE_BASE_SHA = '${{ github.sha }}';
-      else if (boundary === 'ancestry') reports.run = reports.run.replace('git merge-base --is-ancestor "$REPOWISE_BASE_SHA" HEAD', 'true');
-      else if (boundary === 'range') reports.run = reports.run.replace('--since "$REPOWISE_BASE_SHA" --to HEAD', '');
-      else reports.run = reports.run.replace('[ "$REPOWISE_EVENT_NAME" = workflow_dispatch ]', 'true');
-      expect(() => validateWorkflow(file, workflow)).toThrow('event-scoped security history');
+      const upload = job.steps.find((step: { name?: string }) => step.name === 'Upload RepoWise reports');
+      if (boundary === 'full-history') reports.run = reports.run.replace('--history --path .', '--history --since HEAD --path .');
+      else if (boundary === 'scan-budget') reports.run = reports.run.replace('ulimit -v 2097152;', '');
+      else if (boundary === 'incomplete-status') reports.run = reports.run.replace('incomplete (exit %s)', 'complete');
+      else if (boundary === 'revision-file') reports.run = reports.run.replace('> "$report_dir/revision.txt"', '> /dev/null');
+      else if (boundary === 'summary') reports.run = reports.run.replace('>> "$GITHUB_STEP_SUMMARY"', '> /dev/null');
+      else if (boundary === 'upload') delete upload.if;
+      else if (boundary === 'retention') upload.with['retention-days'] = 1;
+      else reports.run = reports.run.replace(`health --no-workspace --refactoring-targets --format ${boundary === 'health-md' ? 'md' : 'json'}`, 'status');
+      expect(() => validateWorkflow(file, workflow)).toThrow('bounded manual history scans, health reports, revision evidence');
     },
   );
 

@@ -221,7 +221,7 @@ jobs:
           project-ids: '2,3'
 ```
 
-Durable mutation workflows deliberately do not use a GitHub Actions `concurrency` block: native cancellation retains only one pending run and can discard intermediate issue, comment, or release mutations. The Commit and Pull Request templates are the deliberate exception for their own replaceable branch revisions, but they use distinct groups and cannot cancel one another. Native concurrency also remains appropriate for replaceable read-only workflows such as CI and RepoWise.
+Durable mutation workflows deliberately do not use a GitHub Actions `concurrency` block: native cancellation retains only one pending run and can discard intermediate issue, comment, or release mutations. The Commit and Pull Request templates are the deliberate exception for their own replaceable branch revisions, but they use distinct groups and cannot cancel one another. Native concurrency also remains appropriate for replaceable read-only workflows such as CI and the optional, manually dispatched RepoWise analysis.
 
 ---
 
