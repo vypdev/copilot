@@ -259,15 +259,38 @@ function assertRepoWiseTemporaryCleanup(relativeFile, job) {
     throw new Error(`${relativeFile} must select complete Python, isolate RepoWise files, and remove them after artifact upload.`);
   }
   const reports = (job.steps ?? []).find(step => step?.name === 'Generate RepoWise reports');
-  if (job.env?.REPOWISE_BASE_SHA !== "${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || '' }}"
-    || job.env?.REPOWISE_EVENT_NAME !== '${{ github.event_name }}'
-    || !reports?.run?.includes('[[ "$REPOWISE_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]')
-    || !reports.run.includes('git cat-file -e "$REPOWISE_BASE_SHA^{commit}"')
-    || !reports.run.includes('git merge-base --is-ancestor "$REPOWISE_BASE_SHA" HEAD')
-    || !reports.run.includes('--since "$REPOWISE_BASE_SHA" --to HEAD')
-    || !reports.run.includes('[ "$REPOWISE_EVENT_NAME" = workflow_dispatch ]')
-    || !reports.run.includes('security: incomplete (event base unavailable or not an ancestor)')) {
-    throw new Error(`${relativeFile} must verify and report event-scoped security history; only manual dispatch may scan full history.`);
+  if (!reports?.run?.includes('advisory_scan security "$repowise_bin" security scan --history --path . --format json')
+    || !reports.run.includes('security scope: full reachable history (manual dispatch)')
+    || !reports.run.includes('ulimit -v 2097152; timeout --kill-after=10s 90s')
+    || !reports.run.includes('incomplete (exit %s)')
+    || !reports.run.includes('health --no-workspace --refactoring-targets --format md')
+    || !reports.run.includes('health --no-workspace --refactoring-targets --format json')
+    || !reports.run.includes('analyzed_sha="$(git rev-parse HEAD)"')
+    || !reports.run.includes('printf \'%s\\n\' "$analyzed_sha" > "$report_dir/revision.txt"')
+    || !reports.run.includes('printf \'Analyzed revision: `%s`\\n\\n\' "$analyzed_sha"')
+    || !reports.run.includes('>> "$GITHUB_STEP_SUMMARY"')
+    || upload.if !== '${{ always() }}'
+    || upload.with?.['retention-days'] !== 14) {
+    throw new Error(`${relativeFile} must preserve bounded manual history scans, health reports, revision evidence, summary and unconditional artifacts.`);
+  }
+}
+
+function assertManualRepoWiseWorkflow(file, workflow) {
+  const relativeFile = relativeWorkflow(file);
+  if (relativeFile !== '.github/workflows/repowise.yml') return;
+  if (Object.keys(workflow.on ?? {}).join(',') !== 'workflow_dispatch') {
+    throw new Error(`${relativeFile} must run only through workflow_dispatch.`);
+  }
+  const job = workflow.jobs?.['code-health'];
+  const checkout = (job?.steps ?? []).find(step => step?.uses === CHECKOUT_ACTION);
+  if (job?.['timeout-minutes'] !== 30
+    || JSON.stringify(workflow.permissions) !== JSON.stringify({ contents: 'read' })
+    || job.permissions !== undefined
+    || checkout?.with?.['fetch-depth'] !== 0
+    || checkout.with?.ref !== undefined
+    || workflow.concurrency?.group !== 'repowise-${{ github.ref }}'
+    || workflow.concurrency?.['cancel-in-progress'] !== true) {
+    throw new Error(`${relativeFile} must retain its manual job budget, read-only permissions, selected revision and per-ref concurrency.`);
   }
 }
 
@@ -451,8 +474,9 @@ function assertRunner(file, workflow) {
     } else if (relativeFile === '.github/workflows/copilot_runner_diagnostics.yml') {
       if (jobId !== 'linux') throw new Error(`${relativeFile} contains an unsupported Codex diagnostic job.`);
       expected = ['self-hosted', 'codex', 'Linux'];
-    } else if (relativeFile === '.github/workflows/ci_check.yml'
-      || relativeFile === '.github/workflows/repowise.yml') {
+    } else if (relativeFile === '.github/workflows/repowise.yml') {
+      expected = ['self-hosted', 'codex', 'Linux'];
+    } else if (relativeFile === '.github/workflows/ci_check.yml') {
       expected = [QUALITY_RUNNER_BY_TRUST];
     }
     const labels = runnerLabels(job['runs-on']);
@@ -1233,7 +1257,6 @@ function assertMergeQueueWorkflowSupport(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   const required = new Set([
     '.github/workflows/ci_check.yml',
-    '.github/workflows/repowise.yml',
     '.github/workflows/copilot_pull_request_merge_queue.yml',
     'setup/workflows/copilot_pull_request_merge_queue.yml',
   ]);
@@ -1379,6 +1402,7 @@ function assertIssueBranchConfigurationInputs(file, workflow) {
 
 function validateWorkflow(file, workflow) {
   if (!workflow || typeof workflow !== 'object') throw new Error('workflow document is empty.');
+  assertManualRepoWiseWorkflow(file, workflow);
   assertDirectEventTriggers(file, workflow);
   assertApprovalObserverWorkflow(file, workflow);
   assertPullRequestMergeQueueWorkflow(file, workflow);
