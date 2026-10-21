@@ -12,12 +12,12 @@ debt or convert unknown historic intent into a design decision.
 |---|---|---|---|---|
 | `github-communication-experience` | Implemented | English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces | [Semantic GitHub communication and repository localization](./semantic-github-publication-and-notification.md) + 3 companion | 277 paths · 2026-10-20 |
 | `release-orchestration` | Implemented | Release and hotfix promotion, publication, bounded merge readiness recovery, and receipt-verified reconciliation without republication | [Configurable production-first release orchestration](./configurable-release-orchestration.md) + 2 companion | 59 paths · 2026-10-16 |
-| `merge-queue-readiness` | Implemented | Fail-closed validation of required checks and merge-group workflow support | [Merge queue readiness and effective target rules](./merge-queue-readiness.md) | 24 paths · 2026-10-15 |
+| `merge-queue-readiness` | Implemented | Fail-closed validation of required checks and merge-group workflow support; optional manual-only RepoWise analysis with independent CI and verified required-check migration | [Merge queue readiness and effective target rules](./merge-queue-readiness.md) | 24 paths · 2026-10-21 |
 | `bugbot-review-state-reconciliation` | Implemented | Reconcile review snapshots, findings, threads, comments, and check conclusions | [Bugbot review-state reconciliation](./bugbot-review-state-reconciliation.md) | 59 paths · 2026-10-11 |
 | `execution-lifecycle` | Implemented | Shared GitHub Action lifecycle from event admission through durable user-facing results | [Execution admission, queueing, routing, and result publication](./execution-admission-queue-and-publication.md) + 3 companion | 97 paths · 2026-10-14 |
 | `architecture-quality-hardening` | Implemented | Close verified concurrency, error-contract, context-coupling, fan-out, setup/doctor, and provider-policy risks in dependency order | [Architecture quality and scalability hardening](./architecture-quality-and-scalability-hardening.md) + 1 companion | 72 paths · 2026-10-13 |
 | `setup-and-doctor` | Implemented | Plan, validate, provision, and audit a repository installation without exposing credentials | [Setup, configuration, credentials, and doctor](./setup-configuration-credentials-and-doctor.md) + 5 companion | 326 paths · 2026-10-20 |
-| `local-web-setup-assistant` | Proposed | Offer a packaged, loopback-only Svelte setup interface over the existing engine with four-language guidance, English CLI help, basic/custom first-run paths, editable question and plan review, source-labelled GitHub facts, assisted CI and Project evidence, role-separated PATs, and truthful itemized outcomes; inspect existing configuration and apply independent, scope-aware runtime adjustments with permission, drift and read-back verification | [Local web setup assistant](./local-web-setup-assistant.md) + 1 companion | 238 paths · 2026-10-20 |
+| `local-web-setup-assistant` | Proposed | Offer a packaged, loopback-only Svelte setup interface over the existing engine with four-language guidance, English CLI help, basic/custom first-run paths, editable question and plan review, source-labelled GitHub facts, assisted CI and Project evidence, role-separated PATs, and truthful itemized outcomes; inspect existing configuration and apply independent, scope-aware runtime adjustments with permission, drift and read-back verification | [Local web setup assistant](./local-web-setup-assistant.md) + 1 companion | 238 paths · 2026-10-21 |
 | `guided-bot-pat-onboarding` | Proposed | Guide creation of the persistent workflow PAT, verify bot identity and grants, recover explicitly from wrong-account input within the session, and install the approved Actions Secret | [Guided bot PAT onboarding](./guided-bot-pat-onboarding.md) | 39 paths · 2026-10-07 |
 | `temporary-setup-operator-authorization` | Proposed | Guide creation of the one-run operator PAT through GitHub's official form, verify final setup access, and report user-owned deletion accurately | [Assisted setup PAT creation](./temporary-setup-operator-authorization.md) | 36 paths · 2026-10-18 |
 | `issue-start-and-sdd-readiness` | Implemented | Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons | [Uniform issue start and pre-branch SDD readiness](./issue-start-and-branch-readiness.md) + 3 companion | 116 paths · 2026-10-19 |
@@ -59,7 +59,7 @@ debt or convert unknown historic intent into a design decision.
 ### `merge-queue-readiness` — Merge queue readiness and effective target rules
 
 - Owner: Copilot maintainers
-- Last verified: 2026-10-15
+- Last verified: 2026-10-21
 - Specifications: [`specs/merge-queue-readiness.md`](./merge-queue-readiness.md)
 - Workflows: [`.github/workflows/ci_check.yml`](../.github/workflows/ci_check.yml) · [`.github/workflows/repowise.yml`](../.github/workflows/repowise.yml) · [`.github/workflows/copilot_pull_request_merge_queue.yml`](../.github/workflows/copilot_pull_request_merge_queue.yml) · [`setup/workflows/copilot_pull_request_merge_queue.yml`](../setup/workflows/copilot_pull_request_merge_queue.yml) · [`.github/workflows/copilot_deployment_orchestration.yml`](../.github/workflows/copilot_deployment_orchestration.yml)
 - Entrypoints: [`src/application/usecases/setup/merge_queue_readiness_use_case.ts`](../src/application/usecases/setup/merge_queue_readiness_use_case.ts)
@@ -114,7 +114,7 @@ debt or convert unknown historic intent into a design decision.
 ### `local-web-setup-assistant` — Local web setup assistant
 
 - Owner: Copilot maintainers
-- Last verified: 2026-10-20
+- Last verified: 2026-10-21
 - Specifications: [`specs/local-web-setup-assistant.md`](./local-web-setup-assistant.md) · [`specs/setup-configuration-management.md`](./setup-configuration-management.md)
 - Workflows: [`.github/workflows/ci_check.yml`](../.github/workflows/ci_check.yml) · [`.github/workflows/repowise.yml`](../.github/workflows/repowise.yml) · [`.github/workflows/setup_platform_smoke.yml`](../.github/workflows/setup_platform_smoke.yml) · [`.github/workflows/copilot_pull_request_approval.yml`](../.github/workflows/copilot_pull_request_approval.yml)
 - Entrypoints: [`src/cli/commands/setup.ts`](../src/cli/commands/setup.ts) · [`package.json`](../package.json) · [`web/src/main.ts`](../web/src/main.ts)

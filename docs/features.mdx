@@ -221,7 +221,7 @@ jobs:
           project-ids: '2,3'
 ```
 
-Issue and comment mutation workflows use the application-level queue above to preserve intermediate events. Release, hotfix, and managed-PR deployment mutations use native `concurrency` with `queue: max` and `cancel-in-progress: false`; this is valid GitHub Actions syntax. See [deployment concurrency validation](/issues/deployment-orchestration#validating-queue-max) before changing generated workflows in response to a linter error. Commit and Pull Request use separate native groups with cancellation for their own replaceable branch revisions. Native concurrency also remains appropriate for replaceable read-only workflows such as CI and RepoWise.
+Issue and comment mutation workflows use the application-level queue above to preserve intermediate events. Release, hotfix, and managed-PR deployment mutations use native `concurrency` with `queue: max` and `cancel-in-progress: false`, which preserves pending deployment runs and is valid GitHub Actions syntax. Without `queue: max`, native concurrency retains only one pending run and can discard intermediate mutations. See [deployment concurrency validation](/issues/deployment-orchestration#validating-queue-max) before changing generated workflows in response to a linter error. Commit and Pull Request use separate native groups with cancellation for their own replaceable branch revisions, so they cannot cancel one another. Native concurrency also remains appropriate for replaceable read-only workflows such as CI and the optional, manually dispatched RepoWise analysis.
 
 ---
 
