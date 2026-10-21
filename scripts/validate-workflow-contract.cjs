@@ -259,19 +259,15 @@ function assertRepoWiseTemporaryCleanup(relativeFile, job) {
     throw new Error(`${relativeFile} must select complete Python, isolate RepoWise files, and remove them after artifact upload.`);
   }
   const reports = (job.steps ?? []).find(step => step?.name === 'Generate RepoWise reports');
-  if (!reports?.run?.includes('advisory_scan security "$repowise_bin" security scan --history --path . --format json')
-    || !reports.run.includes('security scope: full reachable history (manual dispatch)')
-    || !reports.run.includes('ulimit -v 2097152; timeout --kill-after=10s 90s')
-    || !reports.run.includes('incomplete (exit %s)')
-    || !reports.run.includes('health --no-workspace --refactoring-targets --format md')
-    || !reports.run.includes('health --no-workspace --refactoring-targets --format json')
-    || !reports.run.includes('analyzed_sha="$(git rev-parse HEAD)"')
-    || !reports.run.includes('printf \'%s\\n\' "$analyzed_sha" > "$report_dir/revision.txt"')
-    || !reports.run.includes('printf \'Analyzed revision: `%s`\\n\\n\' "$analyzed_sha"')
-    || !reports.run.includes('>> "$GITHUB_STEP_SUMMARY"')
+  const install = (job.steps ?? []).find(step => step?.name === 'Install RepoWise');
+  if (!install?.run?.includes("'repowise==0.58.0'")
+    || !reports?.run?.includes('"$python_bin" scripts/repowise_reports.py --report-dir "$report_dir"')
+    || !reports.run.includes('"$python_bin" -m unittest discover -s scripts/tests -p \'test_repowise*.py\' -v')
+    || !reports.run.includes('trap cleanup EXIT')
+    || reports.run.replace('rmdir .vscode 2>/dev/null || true', '').includes('|| true')
     || upload.if !== '${{ always() }}'
     || upload.with?.['retention-days'] !== 14) {
-    throw new Error(`${relativeFile} must preserve bounded manual history scans, health reports, revision evidence, summary and unconditional artifacts.`);
+    throw new Error(`${relativeFile} must preserve pinned bounded reports, compatibility tests, cleanup and unconditional artifacts.`);
   }
 }
 
@@ -283,7 +279,7 @@ function assertManualRepoWiseWorkflow(file, workflow) {
   }
   const job = workflow.jobs?.['code-health'];
   const checkout = (job?.steps ?? []).find(step => step?.uses === CHECKOUT_ACTION);
-  if (job?.['timeout-minutes'] !== 30
+  if (job?.['timeout-minutes'] !== 40
     || JSON.stringify(workflow.permissions) !== JSON.stringify({ contents: 'read' })
     || job.permissions !== undefined
     || checkout?.with?.['fetch-depth'] !== 0

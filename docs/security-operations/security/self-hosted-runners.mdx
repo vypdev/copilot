@@ -46,7 +46,10 @@ Publishing currently requires a hosted runner. Their other jobs continue on
 self-hosted runners. RepoWise obtains a complete Python 3.12 distribution via
 `actions/setup-python`, creates its virtual environment and reports in
 run-specific temporary directories, and removes them after artifact upload.
-Its runner needs a writable Actions tool cache; the workflow does not install
+Its runner needs a writable Actions tool cache and GNU `/usr/bin/time` for phase
+RSS evidence. The isolated Python suite verifies the pinned history adapter before
+analysis; phase time/virtual-memory caps and a 40-minute job bound the run.
+The workflow does not install
 Ubuntu system packages. RepoWise runs only through manual dispatch on
 `[self-hosted, codex, Linux]`, using the reviewed repository ref selected by the
 maintainer. It is optional and must not be required by branch protections or
