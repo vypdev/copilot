@@ -20,9 +20,9 @@
     },
     {
       "file": "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts",
-      "addComment": 1,
-      "updateComment": 1,
-      "reason": "Creates or updates one bot-owned SDD clarification and publication status card after issue and branch verification."
+      "addComment": 2,
+      "updateComment": 2,
+      "reason": "Creates or updates the verified bot-owned SDD clarification/publication card, plus one separate issue-bound ownership-analysis diagnostic; rejected plans never create a readiness record, and unchanged diagnostics emit no write."
     },
     {
       "file": "src/application/usecases/steps/commit/bugbot/publish_issue_finding_comment.ts",

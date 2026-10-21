@@ -118,6 +118,22 @@ Opening a PR replaces GitHub's direct issue-to-branch connection with its issue-
 
 Automatic updates retain the owning SDD from its original Git commit, including when Windows converts checkout line endings.
 
+### Ownership analysis recovery
+
+If the analysis proposes an unknown companion owner or a path already registered
+in the catalog, Copilot blocks before drafting and publishes an editable **SDD
+work status: analysis blocked** card. The card identifies a closed failure
+category without exposing the model's proposed values or raw response.
+
+Clarify the existing capability ID and intended SDD path in the same issue, then
+rerun the original workflow. Updates use a path registered to that owner;
+companions use an existing owner and a new path; new capabilities use a new ID
+and path. Each invocation makes one analysis attempt with no automatic repair.
+Existing answers, SDDs, branches and commits remain intact. A later valid analysis
+updates the diagnostic; normal publication checks still determine readiness.
+The diagnostic is separate from the validated question/publication record and
+cannot authorize a branch or `branched` label.
+
 ### Draft validation recovery
 
 Drafting aims for a complete compact document: about 6,000 characters for an
