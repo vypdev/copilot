@@ -47,22 +47,22 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
             : undefined;
 
     for (const finding of findings) {
-        try {
-            if (operation.target.issueNumber > 0 && !reviewPublisher) {
-                await publishIssueFindingComment(
-                    ports.issueComments,
-                    operation.target.issueNumber,
-                    finding,
-                    findExistingFindingInfo(existingByFindingId, finding),
-                    commitSha,
-                    catalog,
-                );
-            }
-            if (reviewPublisher) {
+        if (operation.target.issueNumber > 0 && !reviewPublisher) {
+            await publishIssueFindingComment(
+                ports.issueComments,
+                operation.target.issueNumber,
+                finding,
+                findExistingFindingInfo(existingByFindingId, finding),
+                commitSha,
+                catalog,
+            );
+        }
+        if (reviewPublisher) {
+            try {
                 await reviewPublisher.publish(finding, findExistingFindingInfo(existingByFindingId, finding));
+            } catch (cause) {
+                throw bugbotMutationError(cause, 'publication', [finding.id], 'publish-comments');
             }
-        } catch (cause) {
-            throw bugbotMutationError(cause, 'publication', [finding.id], 'publish-comments');
         }
     }
 

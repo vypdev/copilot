@@ -67394,16 +67394,16 @@ async function publishFindings(param) {
         })
         : undefined;
     for (const finding of findings) {
-        try {
-            if (operation.target.issueNumber > 0 && !reviewPublisher) {
-                await (0, publish_issue_finding_comment_1.publishIssueFindingComment)(ports.issueComments, operation.target.issueNumber, finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding), commitSha, catalog);
-            }
-            if (reviewPublisher) {
+        if (operation.target.issueNumber > 0 && !reviewPublisher) {
+            await (0, publish_issue_finding_comment_1.publishIssueFindingComment)(ports.issueComments, operation.target.issueNumber, finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding), commitSha, catalog);
+        }
+        if (reviewPublisher) {
+            try {
                 await reviewPublisher.publish(finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding));
             }
-        }
-        catch (cause) {
-            throw (0, bugbot_mutation_error_1.bugbotMutationError)(cause, 'publication', [finding.id], 'publish-comments');
+            catch (cause) {
+                throw (0, bugbot_mutation_error_1.bugbotMutationError)(cause, 'publication', [finding.id], 'publish-comments');
+            }
         }
     }
     await reviewPublisher?.flush(overflowCount, overflowTitles);

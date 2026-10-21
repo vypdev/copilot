@@ -751,4 +751,12 @@ describe("publishFindings", () => {
         })).rejects.toMatchObject({ diagnostic: { findingId: 'unavailable', affectedCount: 7 } });
     });
 
+    it('keeps issue-comment failures outside the PR mutation diagnostic path', async () => {
+        const cause = new Error('issue adapter failure');
+        mockAddComment.mockRejectedValue(cause);
+        await expect(publishFindings({ operation: baseOperation, context: baseContext(), findings: [finding()] }))
+            .rejects.toBe(cause);
+        expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+    });
+
 });

@@ -1658,8 +1658,8 @@ reconciliation and catalog presentation consume typed facts. Domain coverage
 adds optional source identities only. Typecheck, architecture, localization and
 fault-injection regressions enforce these boundaries; SDKs remain outside policy.
 
-The additional budget is **25 distinct cases**: thirteen HTTP/classification/privacy
-and error-preservation cases, four publication-stage identity/batch cases, one real
+The additional budget is **26 distinct cases**: thirteen HTTP/classification/privacy
+and error-preservation cases, five publication-stage identity/batch cases, one real
 publication-to-failed-resolution-to-retry integration, two locale/projection and
 independent-coverage cases, two exact-source/privacy cases and three adapter cases.
 Existing global coverage/quality thresholds and all prior state/replay tests
@@ -1688,3 +1688,9 @@ describes retry of an outstanding request after 408;
 requires a retry after 425 to avoid early data. Copilot adds no automatic replay: a
 normal recheck obtains fresh provider state before continuing, preserving completed
 effects and dismissal intent. Other client statuses retain their explicit mapping.
+
+
+PR #651 issue-route correction: only PR review publication enters the new typed
+review-mutation diagnostic. Issue-comment publication retains its existing
+application normalization path and MUST NOT be relabeled as `publish-comments`
+or a PR recheck target. A distinct issue-path regression enforces this boundary.
