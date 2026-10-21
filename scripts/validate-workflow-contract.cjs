@@ -1387,16 +1387,18 @@ function assertIssueBranchConfigurationInputs(file, workflow) {
     ? {
       'issue-managed-branches': "${{ vars.ISSUE_MANAGED_BRANCHES || 'true' }}",
       'pre-branch-sdd': "${{ vars.PRE_BRANCH_SDD || 'false' }}",
+      'verification-setup': "${{ vars.VERIFICATION_SETUP || 'false' }}",
     }
     : {
       'issue-managed-branches': branches.issueManagedBranches,
       'pre-branch-sdd': branches.preBranchSdd,
+      'verification-setup': "${{ vars.VERIFICATION_SETUP || 'false' }}",
     };
   const actionSteps = Object.values(workflow.jobs ?? {}).flatMap(job => job?.steps ?? [])
     .filter(isCopilotAction);
   if (actionSteps.length === 0 || actionSteps.some(step =>
     Object.entries(expected).some(([input, value]) => step.with?.[input] !== value))) {
-    throw new Error(`${relativeFile} must pass consistent issue-managed-branches and pre-branch-sdd inputs to every Copilot callback.`);
+    throw new Error(`${relativeFile} must pass consistent issue-managed-branches, pre-branch-sdd and verification-setup inputs to every Copilot callback.`);
   }
 }
 

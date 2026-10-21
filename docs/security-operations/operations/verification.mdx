@@ -32,8 +32,10 @@ The source workflow validator accepts the setup's literal `runs-on: {group: vypd
 The setup's runner profile chooses **where** a job runs. It does not install a
 consumer project's language runtimes or dependencies. A passing application CI
 job does not prepare the separate `issue_comment`, PR-comment or automated-fix
-job. Each job that runs `bugbot-fix-verify-commands` must prepare its own tools
-before Copilot, including for `/copilot sync-branch --no-agent`.
+job. Each job that runs `bugbot-fix-verify-commands` must prepare its own tools,
+including for `/copilot sync-branch --no-agent`. Use the [repository-owned setup
+helper](#repository-owned-setup) to prepare the candidate without editing generated
+workflows, or retain your reviewed same-job bootstrap.
 
 For a Kotlin/JVM project, commit a reviewed
 `.copilot/verification-prerequisites.json`:
@@ -116,6 +118,122 @@ published. A prepared branch-sync merge is aborted without a synchronization
 commit or push; automated fixes also withhold their commit and push. Correct the
 declaration or bootstrap, then retry the original operation. Dry runs and
 already-aligned branches do not execute verification or prove runtime readiness.
+
+## Repository-owned setup
+
+To prepare project dependencies without editing generated workflows:
+
+1. Review a standalone `.copilot/verification-setup.mjs` onto your configured
+   `main-branch` (normally production). Candidate-branch helpers cannot activate
+   themselves. Keep runtime versions and dependency lockfiles under review.
+2. Set Repository Variable `VERIFICATION_SETUP` to `true`. Generated source and
+   consumer event workflows forward it as the boolean `verification-setup` Action
+   input. For setup config files, use `repository: { verificationSetup: true }`.
+   The default is `false`; paths, commands, arguments and limits are fixed.
+3. Retry the authorized modification or `/copilot sync-branch --no-agent`.
+   Copilot runs the trusted snapshot on the actual candidate after merge/fix
+   changes, immediately before **each** configured command and its runtime probes.
+
+Setup captures immutable regular-file bytes and the source commit SHA before an
+agent can modify the workspace. The configured `origin/<main-branch>` ref must be
+available locally; generated comment workflows use a full checkout. The snapshot
+runs with the Action's Node executable, `shell: false`, no user arguments and cwd
+at the candidate root. It is copied into a private directory, so relative module
+imports do not load siblings from your repository. Use Node built-ins and explicit
+subprocess argument arrays. The standalone helper is limited to 64 KiB.
+
+The helper receives a fresh private HOME and the existing allowlisted verification
+environment, with these additional non-secret protocol fields:
+
+| Variable | Value |
+| --- | --- |
+| `COPILOT_VERIFICATION_SETUP_PROTOCOL` | `1` |
+| `COPILOT_VERIFICATION_SETUP_SOURCE_SHA` | Pinned trusted source commit |
+| `COPILOT_VERIFICATION_SETUP_RESULT` | Optional private JSON output-file path |
+
+No PAT, model/cloud credentials, Git write credentials, agent auth-store variables
+or prior agent credential profile are supplied. Agent profiles are removed before
+verification begins. This retains the trusted-runner boundary; it is not an OS
+sandbox against malicious maintainer code. Review installers as executable code.
+Do not rely on authenticated caches, ambient user-home settings or a separate CI job.
+
+A helper may finish without a result, leaving the environment unchanged. To add
+prepared tools, write this closed result format to the private result path:
+
+```json
+{"schemaVersion":1,"path":["/absolute/approved/tools/bin"],"environment":{"JAVA_HOME":"/absolute/approved/jdk"}}
+```
+
+`path` and `environment` are optional. Only up to eight unique absolute PATH
+directories (2,048 characters each) and `JAVA_HOME` are supported. Every directory
+must already exist inside the canonical candidate workspace, private HOME or
+captured trusted `RUNNER_TOOL_CACHE`. Escaping symlinks, traversal, control
+characters, PATH delimiter injection, null values and unknown fields are rejected.
+The result must be a regular, nonlinked JSON file of at most 16 KiB. No arbitrary
+environment variables are accepted. stdout/stderr never set policy and are never
+published raw. Protocol metadata is not passed to the verification command.
+
+For Python on a Linux/macOS runner with the declared Python version installed,
+this helper creates a fresh private virtual environment and installs the candidate's
+reviewed requirements lockfile, including pytest. The lockfile must pin all
+transitive dependencies and hashes. The command can remain `python3 -m pytest`:
+
+```javascript
+import { execFileSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const venv = join(process.env.HOME, 'venv');
+execFileSync('python3', ['-m', 'venv', venv], { stdio: 'inherit' });
+const bin = join(venv, 'bin');
+execFileSync(join(bin, 'python3'), [
+  '-m', 'pip', 'install', '--require-hashes', '-r', 'requirements-test.lock',
+], { stdio: 'inherit' });
+writeFileSync(process.env.COPILOT_VERIFICATION_SETUP_RESULT,
+  JSON.stringify({ schemaVersion: 1, path: [bin] }));
+```
+
+For Node/pnpm on a Linux/macOS runner, explicitly provision the pinned pnpm version
+instead of relying on an implicit Corepack download. This alternative requires
+`npm` on the reviewed runner and uses the candidate's `pnpm-lock.yaml`:
+
+```javascript
+import { execFileSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const tools = join(process.env.HOME, 'tools');
+execFileSync('npm', ['install', '--prefix', tools, '--ignore-scripts',
+  '--no-audit', '--no-fund', 'pnpm@10.12.4'], { stdio: 'inherit' });
+execFileSync(process.execPath, [join(tools, 'node_modules/pnpm/bin/pnpm.cjs'),
+  'install', '--frozen-lockfile', '--ignore-scripts'], { stdio: 'inherit' });
+writeFileSync(process.env.COPILOT_VERIFICATION_SETUP_RESULT,
+  JSON.stringify({ schemaVersion: 1, path: [join(tools, 'node_modules/.bin')] }));
+```
+
+These are alternative project helpers, not universal installers. Adapt your
+platform's executable names and reviewed runtime versions. Windows Python uses
+`Scripts` and `python.exe`; invoke package-manager scripts through Node rather
+than passing `.cmd` names to shell-free Node subprocesses. Keep generated caches
+ignored, never modify tracked source/lockfiles during verification, and validate
+lockfiles before reusing any workspace cache. Private tools are recreated for each
+command; there is no readiness cache across commands or candidates.
+
+Each invocation has a fixed **300-second timeout**, **64 KiB combined stdout/stderr
+ceiling**, and **16 KiB result ceiling**. There are no overrides or automatic
+retries. Setup failure, timeout, cancellation or invalid output stops preflight and
+verification, withholds commit/push and follows existing sync abort behavior. The
+existing maximum of twenty verification commands remains. Diagnostics contain
+only a closed cause, fixed helper path, pinned SHA and safe exit status; success
+logs the path and source SHA. Existing operation comments and run navigation carry
+the result without per-command comments.
+
+Read-only questions/status, dry runs, already-aligned branches and empty command
+lists never execute the helper. Acquisition failures are deferred until actual
+verification. With the input disabled, existing prerequisites and behavior remain.
+Updating Copilot preserves this consumer-owned file. To roll back the opt-in, set
+`VERIFICATION_SETUP` to `false`; keep the same verification commands and provision
+their dependencies through your reviewed runner/bootstrap.
 
 ## Reused credential evidence
 

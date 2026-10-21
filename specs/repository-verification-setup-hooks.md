@@ -1,9 +1,9 @@
 # Repository-Owned Verification Setup Hooks
 
-- Status: Draft
+- Status: Implementation candidate
 - Date: 2026-10-21
 - Catalog capability ID: branch-synchronization
-- Last verified: not applicable (prospective specification)
+- Last verified: 2026-10-21
 - Owners: Copilot maintainers
 - Scope: Define an optional repository-owned preparation helper for authorized operations that run repository verification, including branch synchronization and automated fixes.
 - Related issues/PRs: [Issue #647](https://github.com/vypdev/copilot/issues/647); [verification runtime prerequisites](https://github.com/vypdev/copilot/blob/master/docs/security-operations/operations/verification.mdx#repository-verification-prerequisites)
@@ -12,7 +12,7 @@
 
 ## 1. Executive summary
 
-Consumers may add a reviewed helper at `.github/copilot/verification-setup` on their trusted main/production branch. Copilot captures an immutable snapshot and invokes it in the credential-free environment immediately before each configured verification command, using the candidate tree being checked. The helper prepares only that repository’s required runtimes and dependencies. Without an enabled helper, existing prerequisite checks and verification behavior remain in force. Any enabled-helper validation, execution, timeout, or result failure blocks verification and commit/push.
+Consumers may enable `verification-setup: true` and add a reviewed helper at `.copilot/verification-setup.mjs` on their trusted main/production branch. Copilot captures an immutable snapshot and invokes it in the credential-free environment immediately before each configured verification command, using the candidate tree being checked. The helper prepares only that repository’s required runtimes and dependencies. Without an enabled helper, existing prerequisite checks and verification behavior remain in force. Any enabled-helper validation, execution, timeout, or result failure blocks verification and commit/push.
 
 ```text
 authorized operation -> candidate tree ready -> trusted helper snapshot prepares isolated verifier -> preflight and verification -> existing commit/push policy
@@ -135,12 +135,19 @@ Duplicate events follow existing route idempotency. A new candidate or command i
 
 | Input | Type | Recommended default | Allowed values/range | Scope/persistence |
 |---|---|---|---|---|
-| `.github/copilot/verification-setup` | Optional repository file | Absent/disabled | Regular executable helper in the trusted branch snapshot; fixed path and invocation contract | Repository-owned; snapshot SHA/bytes per admitted operation |
+| `verification-setup` / `VERIFICATION_SETUP` / `repository.verificationSetup` | Boolean | `false` | Only true/false; no arbitrary helper paths or commands | Action input / Repository Variable / setup config |
+| `.copilot/verification-setup.mjs` | Optional repository file | Absent/disabled | Standalone regular Node ESM file of at most 64 KiB in the trusted branch snapshot; Node argv contains only its private snapshot path | Repository-owned; snapshot SHA/bytes per admitted operation |
 | Helper timeout | Fixed duration | 300 seconds | Not configurable | Per invocation |
 | Captured output ceiling | Fixed limit | 64 KiB | Not configurable | Per invocation |
 | Result file ceiling | Fixed limit | 16 KiB | Not configurable | Per invocation |
 
-The helper contract is a bounded process invocation with candidate cwd and a narrow documented input/output interface. It MAY install tools and dependencies needed by that candidate, using declared runtime versions and lockfiles. It MUST NOT require shell interpolation. Node execution uses argument arrays. Provision pnpm explicitly; implicit Corepack downloads are not a supported prerequisite. Helper-owned workspace caches must validate lockfiles. Private-profile tools may be recreated for each command.
+The helper is standalone Node ESM, invoked with the trusted Action Node executable, `shell: false` and no user arguments. Its cwd is the exact candidate workspace. The private invocation environment adds only `COPILOT_VERIFICATION_SETUP_PROTOCOL=1`, `COPILOT_VERIFICATION_SETUP_SOURCE_SHA` and `COPILOT_VERIFICATION_SETUP_RESULT` (a private output file path). These metadata variables are not forwarded to verification commands. Relative module imports resolve in the private snapshot directory; use Node built-ins and explicit candidate-cwd subprocesses instead of sibling imports.
+
+The result file is optional. When present it is one regular, nonlinked UTF-8 JSON file, at most 16 KiB, with numeric `schemaVersion: 1`, optional `path` (at most eight unique absolute directories of at most 2,048 characters each) and optional `environment` containing only `JAVA_HOME`. Null values, unknown keys, non-directories, traversal, control characters, path delimiter injection and escaping symlinks are rejected. Approved roots are the canonical candidate workspace, private HOME and captured trusted `RUNNER_TOOL_CACHE`. PATH additions precede the existing PATH; JAVA_HOME is the only environment override. No result means no overlay. There is no stdout policy channel.
+
+Trusted acquisition uses local Git reads of `refs/remotes/origin/<main-branch>` at admission, regular Git blob mode and verified object digest/UTF-8 bytes. A full checkout must have the configured main ref available; no credentialed fetch occurs during acquisition. Acquisition failures are retained as closed facts and raised only if verification runs. Result reads are bounded and compare exact BigInt filesystem identities. Each setup invocation has a fresh profile; success logs only the fixed path and pinned SHA. Existing localized operation shells own presentation; the technical diagnostic is the same English static fallback used by runtime prerequisites.
+
+The helper MAY install tools and dependencies needed by that candidate, using declared runtime versions and lockfiles. It MUST NOT require shell interpolation. Node execution uses argument arrays. Provision pnpm explicitly; implicit Corepack downloads are not a supported prerequisite. Helper-owned workspace caches must validate lockfiles. Private-profile tools may be recreated for each command.
 
 Only approved output paths are accepted: existing directories contained in the workspace, private profile, or trusted tool root. Reject unknown environment fields, unsafe links, and paths. Invalid cross-field/output combinations fail closed. Helper stdout/stderr is never emitted raw; diagnostics expose bounded stage, cause, pinned path/SHA and exit/status facts only.
 
@@ -153,7 +160,7 @@ Recommended setup: use the repository’s declared Python version and lockfile t
 | Layer/boundary | Owns | Must not own/import |
 |---|---|---|
 | Domain/pure policy | Whether verification is requested; fixed limits and eligibility rules | GitHub SDK, process APIs |
-| Application | Snapshot lifecycle and per-command setup/verify ordering | Concrete process/provider DTOs |
+| Application | Immutable snapshot contract and existing verification intent/order via the Git port | Concrete process/provider DTOs |
 | Adapters/data | Trusted branch file retrieval and immutable bytes/SHA mapping | Authorization or product policy |
 | Infrastructure/composition | Isolated environment creation, process execution, cleanup and route wiring | Decisions about whether a route is authorized |
 | Entrypoints | Convert issue/PR/comment/review/commit/sync events to use-case input | Duplicated verification orchestration |
@@ -198,13 +205,13 @@ Blocked before irreversible effects:
 
 > **Current status:** Repository setup failed before verification.
 >
-> **Action required:** Review `.github/copilot/verification-setup` on the trusted branch and rerun the operation.
+> **Action required:** Review `.copilot/verification-setup.mjs` on the trusted branch and rerun the operation.
 
 ## Progress
 
 - [x] Candidate workspace prepared
-- [ ] Project verification not run
-- [ ] Commit and push withheld
+- [x] Project verification not run
+- [x] Commit and push withheld
 
 ## What happens next
 
@@ -261,7 +268,7 @@ Errors follow impact -> cause -> action -> retained state. No automatic retry is
 
 - Existing in-flight operations retain their captured policy and do not acquire a helper mid-operation.
 - No schema migration is required. Existing repositories without a helper retain compatible behavior and prerequisite checks.
-- The helper is opt-in at its fixed path; invalid enabled configuration fails closed. Generated workflow updates must preserve the consumer-owned helper.
+- The helper requires the explicit boolean opt-in and its fixed path; invalid enabled configuration fails closed. Generated workflow updates must preserve the consumer-owned helper.
 - Roll out through setup CLI/template wiring and documentation, then verify controlled local same-managed-branch synchronization. Do not launch a release as part of this work.
 - Rollback removes hook invocation while preserving existing verification policy. Never undo a completed external commit/push as part of rollback; this design blocks those effects on failure.
 
@@ -321,7 +328,7 @@ Document credential boundaries, update preservation, migration/rollback, and the
 
 1. Define helper interface, fixed path, snapshot/result contracts and architecture checks.
 2. Implement pure eligibility, limit and output-validation policies with focused tests.
-3. Add application snapshot lifecycle and per-command setup/verification orchestration.
+3. Add composition snapshot lifecycle and the existing semantic verification port.
 4. Add trusted-file and isolated-process adapters with credential cleanup and bounded execution.
 5. Wire sync and shared commit-verification boundaries across source and distributed templates and setup CLI planning.
 6. Add sanitized status, fixtures, documentation, troubleshooting, and update-preservation behavior.
@@ -329,17 +336,17 @@ Document credential boundaries, update preservation, migration/rollback, and the
 
 ## 19. Definition of Done
 
-- [ ] Every normative requirement maps to acceptance and traceability.
-- [ ] Helper path, invocation, limits, trusted SHA and output contract are implemented and validated.
-- [ ] All actual verification routes use the shared hook; read-only/no-op/dry-run paths do not.
-- [ ] Snapshot, candidate freshness, credentials, unsafe paths, timeout, output bounds and fail-closed commit gate pass.
-- [ ] Numeric test budget of at least 36 distinct cases and coverage requirements pass.
-- [ ] UI states, sanitized diagnostics, navigation, accessibility and localization are reviewed.
-- [ ] User, setup-owner, operator and contributor documentation is discoverable and examples match fixtures.
-- [ ] Setup/update preserves consumer helper contents; generated workflow contract checks pass.
-- [ ] Controlled same-managed-branch sync acceptance passes without manual workflow edits; no release is launched.
-- [ ] `specs/catalog.json` evidence and `specs/CATALOG.md` are current and `pnpm run validate:specifications` passes.
-- [ ] No readiness-blocking decision remains unresolved.
+- [x] Every normative requirement maps to acceptance and traceability.
+- [x] Helper path, invocation, limits, trusted SHA and output contract are implemented and validated.
+- [x] All actual verification routes use the shared hook; read-only/no-op/dry-run paths do not.
+- [x] Snapshot, candidate freshness, credentials, unsafe paths, timeout, output bounds and fail-closed commit gate pass.
+- [x] Numeric test budget of at least 36 distinct cases and coverage requirements pass.
+- [x] UI states, sanitized diagnostics, navigation, accessibility and localization are reviewed.
+- [x] User, setup-owner, operator and contributor documentation is discoverable and examples match fixtures.
+- [x] Setup/update preserves consumer helper contents; generated workflow contract checks pass.
+- [x] Controlled same-managed-branch sync acceptance passes without manual workflow edits; no release is launched.
+- [x] `specs/catalog.json` evidence and `specs/CATALOG.md` are current and `pnpm run validate:specifications` passes.
+- [x] No readiness-blocking decision remains unresolved.
 
 ## 20. References and decisions
 
@@ -347,3 +354,25 @@ Document credential boundaries, update preservation, migration/rollback, and the
 - Related specs/ADRs/issues/PRs: owning specifications are `specs/branch-synchronization-and-conflict-recovery.md` and `specs/repository-verification-runtime-prerequisites.md`; this companion is `specs/repository-verification-setup-hooks.md` and does not replace either owner.
 - Decisions and rejected alternatives: fixed optional repository helper and shared managed invocation boundary; rejected editing generated workflows per consumer, global dependency installation, separate preparation jobs, weakening verification, automatic retries, and contributor-created helper activation.
 - Follow-up work explicitly outside this spec: implementation admission, Action-managed branch, PR review, release, and any release operation.
+## Implementation evidence — issue #647
+
+The two executable verification boundaries are `SyncBranchUseCase.verifyPreparedMerge` and the shared automated commit preflight. General issue/PR comments, natural-language modification, `/copilot implement`, Bugbot autofix, remember-branch changes and review-comment fixes reach those boundaries through the two comment composition roots. Issue lifecycle, PR review, commit analysis and review-state events do not currently run repository verification themselves. The lightweight push sync observer only reads status. All six source/distributed event workflows carry the disabled-default input, so forwarding does not silently activate setup. Existing actor, native-head, workspace and fork admission precedes any verification request; the snapshot itself is read-only and can be captured before admission without executing it.
+
+New files: pure `verification_setup_policy`, semantic `verification_setup_ports`, infrastructure snapshot/process/result/runner adapters. `GitCommitAdapter` runs setup, existing prerequisites and the command in one fresh environment whenever the existing `untrusted + verifyRuntimePrerequisites` intent is present. Trusted commits and Git reads never invoke setup. Agent runtime cleanup still completes before agent results return to verification. Setup never owns or rewrites the helper.
+
+Executable evidence is in `verification_setup_policy.test.ts`, `verification_setup_snapshot.test.ts`, `verification_setup_runner.test.ts`, `verification_setup_configuration.test.ts`, `verification_setup_sync.test.ts`, composition tests and the structural workflow validator. The real local Git fixture first fails unprepared, aborts without changing its remote managed ref, then prepares the merged lockfile twice and pushes the verified merge to exactly that same ref. Its candidate helper deliberately throws; only the captured main helper runs. Other rows cover dry run, aligned state, empty commands, setup failure, byte provenance, credential exclusion, limits, cancellation, paths, update preservation and legacy configuration. No public consumer run or release is claimed.
+
+### Controlled local acceptance (2026-10-21)
+
+Both cases ran through the real `SyncBranchUseCase`, Git adapter, workspace adapter and trusted snapshot against temporary local bare remotes and `feature/42-controlled-managed`. Neither case changed generated workflows or used an agent/network during setup. The first attempt, without setup, failed verification, aborted and retained the remote head. The second attempt prepared the temporary merge, passed the configured command and pushed only the same managed ref with a clean tracked workspace.
+
+| Fixture | Actual toolchain/command | Dependency preparation | Unprepared | Prepared |
+|---|---|---|---|---|
+| Python | Python 3.14.6; `python3 -m pytest -q -p no:cacheprovider` | Fresh private venv; offline wheelhouse, all five requirements version/hash locked, pytest 8.4.2 | Blocked, no push | `merged-cleanly`, one verification |
+| Node/pnpm | Node 24.20.0; explicitly provisioned pnpm 10.12.4; `pnpm test` | Offline frozen install and candidate-manifest preparation | Blocked, no push | `merged-cleanly`, one verification |
+
+The Python wheelhouse was downloaded before the credential-free test from public packages: pytest 8.4.2, pluggy 1.7.0, iniconfig 2.3.1, packaging 26.3 and pygments 2.21.0. Every retained wheel was SHA-256 hashed into the fixture lockfile and installed with `--no-index --require-hashes`. No global dependencies, real consumer branches, public remote refs, tags or releases were modified. This is local controlled acceptance, not a claim that the consumer incident run has been retried.
+
+### Incremental executable inventory
+
+The implementation adds 102 distinct rows in five focused files (27 pure policy, 21 snapshot, 34 runner/result, 14 configuration/workflow, six real-Git sync), two composition admission-order rows and one structural workflow mutation row: **105 new automated cases**, exceeding the 36-case risk minimum above. Existing generated-link assertions are updated without counting them again. The two real Python/pnpm controlled acceptance runs are separate manual evidence, not additional automated budget claims. The new executable coverage budget retains 95% lines/statements and 90% branches/functions for the pure policy and aggregate adapters; the pure policy reached 100% of all metrics in focused coverage.

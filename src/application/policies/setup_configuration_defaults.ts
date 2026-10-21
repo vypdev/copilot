@@ -103,6 +103,7 @@ export function createDefaultSetupConfiguration(): SetupConfiguration {
             choreTree: 'chore',
             issueManagedBranches: true,
             preBranchSdd: false,
+            verificationSetup: false,
             reopenIssueOnPush: true,
             desiredAssigneesCount: 1,
             desiredReviewersCount: 1,

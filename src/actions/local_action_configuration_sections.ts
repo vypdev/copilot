@@ -185,6 +185,7 @@ export function readLocalWorkflowConfiguration(
         commitPrefixBuilder: read(INPUT_KEYS.COMMIT_PREFIX_TRANSFORMS) || 'replace-slash',
         issueManagedBranches: parseIssueWorkflowBoolean(read(INPUT_KEYS.ISSUE_MANAGED_BRANCHES), INPUT_KEYS.ISSUE_MANAGED_BRANCHES, true),
         preBranchSdd: parseIssueWorkflowBoolean(read(INPUT_KEYS.PRE_BRANCH_SDD), INPUT_KEYS.PRE_BRANCH_SDD, false),
+        verificationSetup: parseIssueWorkflowBoolean(read(INPUT_KEYS.VERIFICATION_SETUP), INPUT_KEYS.VERIFICATION_SETUP, false),
         reopenIssueOnPush: isEnabledInput(read(INPUT_KEYS.REOPEN_ISSUE_ON_PUSH)),
         issueDesiredAssigneesCount: parseIntegerInput(read(INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0),
         pullRequestDesiredAssigneesCount: parseIntegerInput(read(INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0),

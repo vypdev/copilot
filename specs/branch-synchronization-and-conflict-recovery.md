@@ -719,3 +719,7 @@ retained effects and named failures for incomplete cleanup. Each card uses at
 most two targeted witness reads. This does not widen synchronization, branch,
 comment creation or deletion authority. Its eight new race/readback and bounded-diagnostic cases are
 counted only in the lifecycle extension's budget.
+
+## Repository setup amendment — issue #647
+
+The [repository-owned setup contract](./repository-verification-setup-hooks.md) prepares the actual temporary merge immediately before each verification command when explicitly enabled. Composition captures immutable helper bytes from trusted main before workspace mutation; candidate edits never replace them. Setup and runtime preflight share the command's private environment. Setup failure follows existing abort behavior and withholds commit/push. Read-only status, dry run, aligned branches and empty command lists never execute the helper. The companion owns its incremental budget and local same-managed-ref acceptance; no release is included.

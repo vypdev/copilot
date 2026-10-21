@@ -37179,6 +37179,7 @@ function readLocalWorkflowConfiguration(additionalParams, actionInputs) {
         commitPrefixBuilder: read(input_keys_1.INPUT_KEYS.COMMIT_PREFIX_TRANSFORMS) || 'replace-slash',
         issueManagedBranches: (0, input_boolean_policy_1.parseIssueWorkflowBoolean)(read(input_keys_1.INPUT_KEYS.ISSUE_MANAGED_BRANCHES), input_keys_1.INPUT_KEYS.ISSUE_MANAGED_BRANCHES, true),
         preBranchSdd: (0, input_boolean_policy_1.parseIssueWorkflowBoolean)(read(input_keys_1.INPUT_KEYS.PRE_BRANCH_SDD), input_keys_1.INPUT_KEYS.PRE_BRANCH_SDD, false),
+        verificationSetup: (0, input_boolean_policy_1.parseIssueWorkflowBoolean)(read(input_keys_1.INPUT_KEYS.VERIFICATION_SETUP), input_keys_1.INPUT_KEYS.VERIFICATION_SETUP, false),
         reopenIssueOnPush: (0, input_boolean_policy_1.isEnabledInput)(read(input_keys_1.INPUT_KEYS.REOPEN_ISSUE_ON_PUSH)),
         issueDesiredAssigneesCount: (0, input_number_policy_1.parseIntegerInput)(read(input_keys_1.INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0),
         pullRequestDesiredAssigneesCount: (0, input_number_policy_1.parseIntegerInput)(read(input_keys_1.INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0),
@@ -37212,7 +37213,7 @@ const configuration_builders_1 = __nccwpck_require__(19094);
 const branches_builder_1 = __nccwpck_require__(30085);
 const size_threshold_builder_1 = __nccwpck_require__(39757);
 function buildLocalActionExecution(configuration, additionalParams) {
-    const { debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog, singleActionMessage, singleActionCommentId, singleActionCommentMode, singleActionOperationId, inactivityThresholdHours, commitPrefixBuilder, issueManagedBranches, preBranchSdd, reopenIssueOnPush, issueDesiredAssigneesCount, pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, titleEmoji, branchManagementEmoji, token, agentModel, aiPullRequestDescriptionMode, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, bugbotReviewConfiguration, agentTasks, bugLabel, bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel, deployLabel, deployedLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel, priorityHighLabel, priorityMediumLabel, priorityLowLabel, priorityNoneLabel, sizeXxlLabel, sizeXlLabel, sizeLLabel, sizeMLabel, sizeSLabel, sizeXsLabel, lifecycle, issueTypeTask, issueTypeTaskDescription, issueTypeTaskColor, issueTypeBug, issueTypeBugDescription, issueTypeBugColor, issueTypeFeature, issueTypeFeatureDescription, issueTypeFeatureColor, issueTypeDocumentation, issueTypeDocumentationDescription, issueTypeDocumentationColor, issueTypeMaintenance, issueTypeMaintenanceDescription, issueTypeMaintenanceColor, issueTypeHotfix, issueTypeHotfixDescription, issueTypeHotfixColor, issueTypeRelease, issueTypeReleaseDescription, issueTypeReleaseColor, issueTypeQuestion, issueTypeQuestionDescription, issueTypeQuestionColor, issueTypeHelp, issueTypeHelpDescription, issueTypeHelpColor, repositoryLocale, issueLocale, pullRequestLocale, sizeXxlThresholdLines, sizeXxlThresholdFiles, sizeXxlThresholdCommits, sizeXlThresholdLines, sizeXlThresholdFiles, sizeXlThresholdCommits, sizeLThresholdLines, sizeLThresholdFiles, sizeLThresholdCommits, sizeMThresholdLines, sizeMThresholdFiles, sizeMThresholdCommits, sizeSThresholdLines, sizeSThresholdFiles, sizeSThresholdCommits, sizeXsThresholdLines, sizeXsThresholdFiles, sizeXsThresholdCommits, mainBranch, developmentBranch, featureTree, bugfixTree, hotfixTree, releaseTree, docsTree, choreTree, releaseWorkflow, hotfixWorkflow, projects, projectColumnIssueCreated, projectColumnPullRequestCreated, projectColumnIssueInProgress, projectColumnPullRequestInProgress, welcomeTitle, welcomeMessages, deployment, } = configuration;
+    const { debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog, singleActionMessage, singleActionCommentId, singleActionCommentMode, singleActionOperationId, inactivityThresholdHours, commitPrefixBuilder, issueManagedBranches, preBranchSdd, verificationSetup, reopenIssueOnPush, issueDesiredAssigneesCount, pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, titleEmoji, branchManagementEmoji, token, agentModel, aiPullRequestDescriptionMode, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, bugbotReviewConfiguration, agentTasks, bugLabel, bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel, deployLabel, deployedLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel, priorityHighLabel, priorityMediumLabel, priorityLowLabel, priorityNoneLabel, sizeXxlLabel, sizeXlLabel, sizeLLabel, sizeMLabel, sizeSLabel, sizeXsLabel, lifecycle, issueTypeTask, issueTypeTaskDescription, issueTypeTaskColor, issueTypeBug, issueTypeBugDescription, issueTypeBugColor, issueTypeFeature, issueTypeFeatureDescription, issueTypeFeatureColor, issueTypeDocumentation, issueTypeDocumentationDescription, issueTypeDocumentationColor, issueTypeMaintenance, issueTypeMaintenanceDescription, issueTypeMaintenanceColor, issueTypeHotfix, issueTypeHotfixDescription, issueTypeHotfixColor, issueTypeRelease, issueTypeReleaseDescription, issueTypeReleaseColor, issueTypeQuestion, issueTypeQuestionDescription, issueTypeQuestionColor, issueTypeHelp, issueTypeHelpDescription, issueTypeHelpColor, repositoryLocale, issueLocale, pullRequestLocale, sizeXxlThresholdLines, sizeXxlThresholdFiles, sizeXxlThresholdCommits, sizeXlThresholdLines, sizeXlThresholdFiles, sizeXlThresholdCommits, sizeLThresholdLines, sizeLThresholdFiles, sizeLThresholdCommits, sizeMThresholdLines, sizeMThresholdFiles, sizeMThresholdCommits, sizeSThresholdLines, sizeSThresholdFiles, sizeSThresholdCommits, sizeXsThresholdLines, sizeXsThresholdFiles, sizeXsThresholdCommits, mainBranch, developmentBranch, featureTree, bugfixTree, hotfixTree, releaseTree, docsTree, choreTree, releaseWorkflow, hotfixWorkflow, projects, projectColumnIssueCreated, projectColumnPullRequestCreated, projectColumnIssueInProgress, projectColumnPullRequestInProgress, welcomeTitle, welcomeMessages, deployment, } = configuration;
     return (0, execution_builder_1.buildExecution)({
         debug,
         inactivityThresholdHours,
@@ -37220,6 +37221,7 @@ function buildLocalActionExecution(configuration, additionalParams) {
         commitPrefixBuilder,
         issue: (0, configuration_builders_1.buildIssue)(issueManagedBranches, reopenIssueOnPush, issueDesiredAssigneesCount, additionalParams),
         preBranchSdd,
+        verificationSetup,
         pullRequest: (0, configuration_builders_1.buildPullRequest)(pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, additionalParams),
         emoji: (0, configuration_builders_1.buildEmoji)(titleEmoji, branchManagementEmoji),
         tokens: (0, configuration_builders_1.buildTokens)(token),
@@ -37982,6 +37984,7 @@ exports.INPUT_KEYS = {
     // Issue
     ISSUE_MANAGED_BRANCHES: 'issue-managed-branches',
     PRE_BRANCH_SDD: 'pre-branch-sdd',
+    VERIFICATION_SETUP: 'verification-setup',
     REOPEN_ISSUE_ON_PUSH: 'reopen-issue-on-push',
     DESIRED_ASSIGNEES_COUNT: 'desired-assignees-count',
     // Pull Request
@@ -46211,6 +46214,8 @@ The setup runner profile selects placement; it does not install the project's la
 
 Declare reviewed version prefixes in \`.copilot/verification-prerequisites.json\` (schemaVersion 1, runtimes such as java 17, node 24, pnpm 10). Copilot checks declared versions in the credential-free verification environment before each configured verification command; a missing or incompatible runtime blocks publication. Without this optional declaration, existing verification behavior remains and no language is inferred. Java provisioning may use \`actions/setup-java\`; \`JAVA_HOME\` and \`PATH\` survive isolation, while agent credentials and tool-option injection variables do not. Do not add an unreviewed bootstrap or weaken verification to work around a missing runtime. Read [verification prerequisites and same-job setup](https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-verification-prerequisites).
 
+The optional repository-owned setup helper prepares each candidate before verification without editing generated workflows. Review \`.copilot/verification-setup.mjs\` onto trusted main before enabling \`VERIFICATION_SETUP=true\` (Action input \`verification-setup\`, disabled by default). Copilot executes captured trusted bytes before each command in a fresh credential-free profile; candidate changes cannot replace them. Setup failure blocks verification and commit/push. Read [repository-owned setup](https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-owned-setup).
+
 For the full contributor flow, read [repository collaboration](https://github.com/vypdev/copilot/blob/master/docs/agents/repository-collaboration.mdx). For drift and recovery, read [guidance troubleshooting](https://github.com/vypdev/copilot/blob/master/docs/agents/repository-guidance-troubleshooting.mdx).
 `;
 }
@@ -47928,6 +47933,7 @@ function createDefaultSetupConfiguration() {
             choreTree: 'chore',
             issueManagedBranches: true,
             preBranchSdd: false,
+            verificationSetup: false,
             reopenIssueOnPush: true,
             desiredAssigneesCount: 1,
             desiredReviewersCount: 1,
@@ -48195,6 +48201,7 @@ function buildSetupRepositoryVariables(configuration) {
     add('CHORE_TREE', repository.choreTree);
     add('ISSUE_MANAGED_BRANCHES', repository.issueManagedBranches);
     add('PRE_BRANCH_SDD', repository.preBranchSdd);
+    add('VERIFICATION_SETUP', repository.verificationSetup ?? false);
     add('REOPEN_ISSUE_ON_PUSH', repository.reopenIssueOnPush);
     add('DESIRED_ASSIGNEES_COUNT', repository.desiredAssigneesCount);
     add('DESIRED_REVIEWERS_COUNT', repository.desiredReviewersCount);
@@ -48257,6 +48264,7 @@ function buildSetupActionInputs(configuration) {
         'chore-tree': repository.choreTree,
         'issue-managed-branches': String(repository.issueManagedBranches),
         'pre-branch-sdd': String(repository.preBranchSdd),
+        'verification-setup': String(repository.verificationSetup ?? false),
         'reopen-issue-on-push': String(repository.reopenIssueOnPush),
         'desired-assignees-count': String(repository.desiredAssigneesCount),
         'desired-reviewers-count': String(repository.desiredReviewersCount),
@@ -48701,6 +48709,9 @@ function validateSetupConfiguration(configuration, options = {}) {
     if (typeof configuration.repository.issueManagedBranches !== 'boolean'
         || typeof configuration.repository.preBranchSdd !== 'boolean') {
         errors.push('issue-managed-branches and pre-branch-sdd must be boolean values.');
+    }
+    if (configuration.repository.verificationSetup !== undefined && typeof configuration.repository.verificationSetup !== 'boolean') {
+        errors.push('verification-setup must be a boolean value.');
     }
     if (configuration.repository.preBranchSdd && !configuration.repository.issueManagedBranches) {
         errors.push('pre-branch-sdd requires issue-managed-branches.');
@@ -49933,6 +49944,7 @@ const repositoryFields = [
     ['HOTFIX_TREE', 'hotfixTree'], ['RELEASE_TREE', 'releaseTree'],
     ['DOCS_TREE', 'docsTree'], ['CHORE_TREE', 'choreTree'],
     ['ISSUE_MANAGED_BRANCHES', 'issueManagedBranches'], ['PRE_BRANCH_SDD', 'preBranchSdd'],
+    ['VERIFICATION_SETUP', 'verificationSetup'],
     ['REOPEN_ISSUE_ON_PUSH', 'reopenIssueOnPush'], ['DESIRED_ASSIGNEES_COUNT', 'desiredAssigneesCount'],
     ['DESIRED_REVIEWERS_COUNT', 'desiredReviewersCount'], ['INACTIVITY_THRESHOLD_HOURS', 'inactivityThresholdHours'],
     ['REPOSITORY_LOCALE', 'repositoryLocale'], ['ISSUES_LOCALE', 'issueLocale'],
@@ -53330,6 +53342,54 @@ function verificationRuntimeMatches(required, observed) {
 
 /***/ }),
 
+/***/ 65326:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VerificationSetupError = exports.VERIFICATION_SETUP_HELP = exports.VERIFICATION_SETUP_LIMITS = exports.VERIFICATION_SETUP_PATH = void 0;
+exports.parseVerificationSetupResult = parseVerificationSetupResult;
+exports.VERIFICATION_SETUP_PATH = '.copilot/verification-setup.mjs';
+exports.VERIFICATION_SETUP_LIMITS = Object.freeze({ timeoutMs: 300000, outputBytes: 65536, resultBytes: 16384, scriptBytes: 65536 });
+exports.VERIFICATION_SETUP_HELP = 'https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-owned-setup';
+/** Closed facts only. Provider/helper output and raw exception causes never cross this boundary. */
+class VerificationSetupError extends Error {
+    constructor(reason, sourceSha, exitCode) {
+        const sha = sourceSha && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(sourceSha) ? sourceSha : 'unavailable';
+        const exit = Number.isInteger(exitCode) && exitCode >= 0 && exitCode <= 255 ? ` Exit status: ${exitCode}.` : '';
+        super(`Repository setup blocked verification (${reason}). Review ${exports.VERIFICATION_SETUP_PATH} on the trusted main branch and rerun. Trusted source SHA: ${sha}.${exit} Verification, commit and push are withheld. Help: ${exports.VERIFICATION_SETUP_HELP}`);
+        this.reason = reason;
+        this.exitCode = exitCode;
+        this.name = 'VerificationSetupError';
+    }
+}
+exports.VerificationSetupError = VerificationSetupError;
+function record(value) {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+function pathString(value) {
+    return typeof value === 'string' && value.length > 0 && value.length <= 2048
+        && ![...value].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127);
+}
+/** Filesystem containment is checked by the adapter, after this closed schema is parsed. */
+function parseVerificationSetupResult(value) {
+    if (!record(value) || value.schemaVersion !== 1 || Object.keys(value).some(key => !['schemaVersion', 'path', 'environment'].includes(key))) {
+        throw new VerificationSetupError('result-invalid');
+    }
+    const paths = value.path === undefined ? [] : value.path;
+    const environment = value.environment === undefined ? {} : value.environment;
+    if (!Array.isArray(paths) || paths.length > 8 || !paths.every(pathString) || new Set(paths).size !== paths.length
+        || !record(environment) || Object.keys(environment).some(key => key !== 'JAVA_HOME')
+        || ('JAVA_HOME' in environment && !pathString(environment.JAVA_HOME))) {
+        throw new VerificationSetupError('result-invalid');
+    }
+    return Object.freeze({ path: Object.freeze([...paths]), ...(environment.JAVA_HOME ? { javaHome: environment.JAVA_HOME } : {}) });
+}
+
+
+/***/ }),
+
 /***/ 43193:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -53531,6 +53591,18 @@ function bindSddEvidenceReadPorts(ports) {
         }),
     });
 }
+
+
+/***/ }),
+
+/***/ 26509:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DISABLED_VERIFICATION_SETUP = void 0;
+exports.DISABLED_VERIFICATION_SETUP = Object.freeze({ kind: 'disabled' });
 
 
 /***/ }),
@@ -68320,6 +68392,7 @@ exports.runVerifyCommands = runVerifyCommands;
 const logging_ports_1 = __nccwpck_require__(6152);
 const verify_command_policy_1 = __nccwpck_require__(96031);
 const verification_runtime_policy_1 = __nccwpck_require__(89347);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
 async function runVerifyCommands(commands, execute) {
     for (const command of commands) {
         const result = await executeVerifyCommand(command, execute);
@@ -68339,7 +68412,7 @@ async function executeVerifyCommand(command, execute) {
             : { success: false, failedCommand: formatCommandForDiagnostics(parsed) };
     }
     catch (error) {
-        if (error instanceof verification_runtime_policy_1.VerificationPrerequisiteError) {
+        if (error instanceof verification_runtime_policy_1.VerificationPrerequisiteError || error instanceof verification_setup_policy_1.VerificationSetupError) {
             return { success: false, failedCommand: formatCommandForDiagnostics(parsed),
                 error: `${error.message} Verification command: ${formatCommandForDiagnostics(parsed)}.` };
         }
@@ -75110,7 +75183,7 @@ const REPOSITORY_STRING_KEYS = new Set([
     'orchestrationPresentationMode',
     'orchestrationCommentMode',
 ]);
-const REPOSITORY_BOOLEAN_KEYS = new Set(['issueManagedBranches', 'preBranchSdd', 'reopenIssueOnPush', 'orchestrationDiagrams']);
+const REPOSITORY_BOOLEAN_KEYS = new Set(['issueManagedBranches', 'preBranchSdd', 'verificationSetup', 'reopenIssueOnPush', 'orchestrationDiagrams']);
 const REPOSITORY_NUMBER_KEYS = new Set(['desiredAssigneesCount', 'desiredReviewersCount', 'inactivityThresholdHours']);
 const REPOSITORY_STRUCTURED_KEYS = new Set(['mergeQueueCheckAttestations']);
 const AI_STRING_KEYS = new Set(['ignoreFiles', 'pullRequestDescriptionMode', 'bugbotSeverity', 'bugbotFixVerifyCommands', 'bugbotEffort', 'bugbotOrganizationRules', 'provisioningMode']);
@@ -79084,6 +79157,7 @@ class Execution {
         this.currentIssueWorkflowAdmission = components.issueWorkflowAdmission;
         this.currentConfiguration.issueWorkflowProfileDigest = components.issueWorkflowProfileDigest;
         this.preBranchSdd = components.preBranchSdd ?? false;
+        this.verificationSetup = components.verificationSetup ?? false;
     }
 }
 exports.Execution = Execution;
@@ -95869,12 +95943,14 @@ function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publica
     });
 }
 const copilot_history_port_factory_1 = __nccwpck_require__(12321);
-function createIssueCommentUseCaseCompositionRoot(binding) {
+const verification_setup_snapshot_1 = __nccwpck_require__(62148);
+const verification_setup_ports_1 = __nccwpck_require__(26509);
+function createIssueCommentUseCaseCompositionRoot(binding, setup = verification_setup_ports_1.DISABLED_VERIFICATION_SETUP) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     const findings = (0, agent_capability_composition_root_1.createFindingsQueryPort)();
     const language = (0, agent_capability_composition_root_1.createLanguageQueryPort)();
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
-    const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
+    const gitCommit = new git_commit_adapter_1.GitCommitAdapter(undefined, undefined, setup);
     const authenticatedUser = (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)();
     const bugbotGit = new bound_bugbot_git_mutation_adapter_1.BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
     const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding, new pull_request_changes_repository_1.PullRequestChangesRepository((0, github_pull_request_client_factory_1.createPullRequestChangesClient)())), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)((0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
@@ -95885,12 +95961,12 @@ function createIssueCommentUseCaseCompositionRoot(binding) {
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
     }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_evidence_composition_root_1.createSddEvidenceQueryPort)(binding, bugbot.scm.context), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_2.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
 }
-function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
+function createPullRequestReviewCommentUseCaseCompositionRoot(binding, setup = verification_setup_ports_1.DISABLED_VERIFICATION_SETUP) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     const findings = (0, agent_capability_composition_root_1.createFindingsQueryPort)();
     const language = (0, agent_capability_composition_root_1.createLanguageQueryPort)();
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
-    const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
+    const gitCommit = new git_commit_adapter_1.GitCommitAdapter(undefined, undefined, setup);
     const authenticatedUser = (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)();
     const bugbotGit = new bound_bugbot_git_mutation_adapter_1.BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
     const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding, new pull_request_changes_repository_1.PullRequestChangesRepository((0, github_pull_request_client_factory_1.createPullRequestChangesClient)())), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)((0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
@@ -95917,7 +95993,7 @@ function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, set
             return singleAction.invoke(execution);
         },
         "issue-comment": async (execution) => {
-            issueComment ?? (issueComment = createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution)));
+            issueComment ?? (issueComment = createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution), (0, verification_setup_snapshot_1.captureVerificationSetup)(execution.verificationSetup, execution.branches.main)));
             return issueComment.invoke(execution);
         },
         issue: async (execution) => {
@@ -95925,7 +96001,7 @@ function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, set
             return issue.invoke(execution);
         },
         "pull-request-review-comment": async (execution) => {
-            pullRequestReviewComment ?? (pullRequestReviewComment = createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution)));
+            pullRequestReviewComment ?? (pullRequestReviewComment = createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution), (0, verification_setup_snapshot_1.captureVerificationSetup)(execution.verificationSetup, execution.branches.main)));
             return pullRequestReviewComment.invoke(execution);
         },
         "pull-request": async (execution) => {
@@ -97038,6 +97114,8 @@ const git_authentication_environment_1 = __nccwpck_require__(16535);
 const untrusted_command_environment_1 = __nccwpck_require__(2304);
 const git_hook_isolation_1 = __nccwpck_require__(39764);
 const verification_runtime_preflight_1 = __nccwpck_require__(23100);
+const verification_setup_ports_1 = __nccwpck_require__(26509);
+const verification_setup_runner_1 = __nccwpck_require__(11709);
 class GitCommitAdapter {
     constructor(executeCommand = (program, args, options) => options
         ? exec.exec(program, args, {
@@ -97047,9 +97125,10 @@ class GitCommitAdapter {
             ...(options.stdout ? { listeners: { stdout: options.stdout } } : {}),
             ...(options.env ? { env: options.env } : {}),
         })
-        : exec.exec(program, args), checkPrerequisites = verification_runtime_preflight_1.assertVerificationRuntimePrerequisites) {
+        : exec.exec(program, args), checkPrerequisites = verification_runtime_preflight_1.assertVerificationRuntimePrerequisites, verificationSetup = verification_setup_ports_1.DISABLED_VERIFICATION_SETUP) {
         this.executeCommand = executeCommand;
         this.checkPrerequisites = checkPrerequisites;
+        this.verificationSetup = verificationSetup;
     }
     async execute(program, args, options) {
         if (options?.verifyRuntimePrerequisites && !options.untrusted)
@@ -97060,8 +97139,10 @@ class GitCommitAdapter {
             throw new Error('Untrusted command execution does not accept a caller-supplied environment.');
         const runtime = (0, untrusted_command_environment_1.prepareUntrustedCommandEnvironment)();
         try {
-            if (options.verifyRuntimePrerequisites)
+            if (options.verifyRuntimePrerequisites) {
+                await (0, verification_setup_runner_1.prepareRepositoryVerification)(this.verificationSetup, runtime.environment);
                 this.checkPrerequisites(runtime.environment);
+            }
             return await this.executeCommand(program, args, {
                 ...(options.stdout ? { stdout: options.stdout } : {}),
                 env: runtime.environment,
@@ -102574,7 +102655,7 @@ const ALLOWED_VARIABLES = [
  * credentials or paths to local agent authentication stores.
  */
 function prepareUntrustedCommandEnvironment(source = process.env, platform = process.platform) {
-    const runtimeHome = (0, agent_private_install_root_1.createPrivateVerificationRuntimeRoot)();
+    const runtimeHome = (0, node_fs_1.realpathSync)((0, agent_private_install_root_1.createPrivateVerificationRuntimeRoot)());
     const environment = { HOME: runtimeHome };
     for (const variable of ALLOWED_VARIABLES) {
         const value = source[variable];
@@ -102725,6 +102806,245 @@ function checkRuntime(requirement, environment, run, platform, job) {
     if (!(0, verification_runtime_policy_1.verificationRuntimeMatches)(requirement.version, observed)) {
         throw new verification_runtime_policy_1.VerificationPrerequisiteError('version-mismatch', requirement, observed, job);
     }
+}
+
+
+/***/ }),
+
+/***/ 43966:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.runVerificationSetupProcess = runVerificationSetupProcess;
+const node_child_process_1 = __nccwpck_require__(17718);
+const agent_trusted_system_tools_1 = __nccwpck_require__(76049);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+/** All output is counted and discarded. Fixed production limits; short injected limits are for deterministic tests. */
+function runVerificationSetupProcess(node, script, cwd, env, sourceSha, limits = verification_setup_policy_1.VERIFICATION_SETUP_LIMITS) {
+    return new Promise((resolve, reject) => {
+        const child = (0, node_child_process_1.spawn)(node, [script], { cwd, env, shell: false, windowsHide: true, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'] });
+        let failure;
+        let outputBytes = 0;
+        const terminate = () => {
+            if (!child.pid)
+                return;
+            try {
+                if (process.platform === 'win32')
+                    (0, node_child_process_1.spawnSync)((0, agent_trusted_system_tools_1.trustedWindowsSystemTool)('taskkill.exe'), ['/PID', String(child.pid), '/T', '/F'], { env, windowsHide: true, timeout: 5000, stdio: 'ignore', shell: false });
+                else
+                    process.kill(-child.pid, 'SIGKILL');
+            }
+            catch {
+                child.kill('SIGKILL');
+            }
+        };
+        const timer = setTimeout(() => { failure ?? (failure = 'timeout'); terminate(); }, limits.timeoutMs);
+        const cancel = () => { failure ?? (failure = 'cancelled'); terminate(); };
+        process.once('SIGINT', cancel);
+        process.once('SIGTERM', cancel);
+        const capture = (data) => {
+            outputBytes += data.length;
+            if (outputBytes > limits.outputBytes) {
+                failure ?? (failure = 'output-limit');
+                terminate();
+            }
+        };
+        child.stdout.on('data', capture);
+        child.stderr.on('data', capture);
+        child.on('error', () => { failure ?? (failure = 'process-failed'); });
+        child.on('close', code => {
+            clearTimeout(timer);
+            process.removeListener('SIGINT', cancel);
+            process.removeListener('SIGTERM', cancel);
+            terminate();
+            if (failure || code !== 0)
+                reject(new verification_setup_policy_1.VerificationSetupError(failure ?? 'process-failed', sourceSha, code ?? undefined));
+            else
+                resolve();
+        });
+    });
+}
+
+
+/***/ }),
+
+/***/ 23358:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.applyVerificationSetupResult = applyVerificationSetupResult;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+function contained(root, path) {
+    const remainder = (0, node_path_1.relative)(root, path);
+    return remainder === '' || (remainder !== '..' && !remainder.startsWith(`..${node_path_1.sep}`) && !(0, node_path_1.isAbsolute)(remainder));
+}
+/** Accept only existing contained directories, checking both lexical paths and symlink targets. */
+function approvedDirectory(value, roots) {
+    if (!(0, node_path_1.isAbsolute)(value) || value.includes(node_path_1.delimiter) || value.split(/[\\/]/u).includes('..')
+        || !roots.some(root => contained(root, value)))
+        throw new verification_setup_policy_1.VerificationSetupError('result-invalid');
+    const actual = (0, node_fs_1.realpathSync)(value);
+    if (!roots.some(root => contained(root, actual)) || !(0, node_fs_1.lstatSync)(actual).isDirectory())
+        throw new verification_setup_policy_1.VerificationSetupError('result-invalid');
+    return actual;
+}
+function applyVerificationSetupResult(file, environment, roots) {
+    let descriptor;
+    try {
+        let before;
+        try {
+            before = (0, node_fs_1.lstatSync)(file, { bigint: true });
+        }
+        catch (error) {
+            if (error.code === 'ENOENT')
+                return;
+            throw error;
+        }
+        if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || before.size > BigInt(verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.resultBytes))
+            throw new Error();
+        descriptor = (0, node_fs_1.openSync)(file, node_fs_1.constants.O_RDONLY | (node_fs_1.constants.O_NOFOLLOW ?? 0));
+        const opened = (0, node_fs_1.fstatSync)(descriptor, { bigint: true });
+        if (!opened.isFile() || opened.nlink !== 1n || opened.dev !== before.dev || opened.ino !== before.ino
+            || opened.size !== before.size || opened.mtimeNs !== before.mtimeNs)
+            throw new Error();
+        const bytes = Buffer.alloc(verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.resultBytes + 1);
+        const size = (0, node_fs_1.readSync)(descriptor, bytes, 0, bytes.length, 0);
+        if (size > verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.resultBytes)
+            throw new Error();
+        const after = (0, node_fs_1.fstatSync)(descriptor, { bigint: true });
+        if (after.size !== opened.size || after.mtimeNs !== opened.mtimeNs)
+            throw new Error();
+        const result = (0, verification_setup_policy_1.parseVerificationSetupResult)(JSON.parse(bytes.subarray(0, size).toString('utf8')));
+        const paths = result.path.map(value => approvedDirectory(value, roots));
+        const javaHome = result.javaHome ? approvedDirectory(result.javaHome, roots) : undefined;
+        if (paths.length)
+            environment.PATH = [...paths, ...(environment.PATH ? [environment.PATH] : [])].join(node_path_1.delimiter);
+        if (javaHome)
+            environment.JAVA_HOME = javaHome;
+    }
+    catch {
+        throw new verification_setup_policy_1.VerificationSetupError('result-invalid');
+    }
+    finally {
+        if (descriptor !== undefined)
+            (0, node_fs_1.closeSync)(descriptor);
+    }
+}
+
+
+/***/ }),
+
+/***/ 11709:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.prepareRepositoryVerification = prepareRepositoryVerification;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+const verification_setup_result_1 = __nccwpck_require__(23358);
+const verification_setup_process_1 = __nccwpck_require__(43966);
+const logging_ports_1 = __nccwpck_require__(6152);
+const verification_setup_policy_2 = __nccwpck_require__(65326);
+/** Called once per verification command, on its fresh private profile, before runtime probes. */
+async function prepareRepositoryVerification(setup, environment) {
+    if (setup.kind === 'disabled')
+        return;
+    if (setup.kind === 'blocked')
+        throw new verification_setup_policy_1.VerificationSetupError(setup.reason, setup.sourceSha);
+    try {
+        if ((0, node_fs_1.realpathSync)(process.cwd()) !== setup.workspace)
+            throw new verification_setup_policy_1.VerificationSetupError('workspace-changed', setup.sourceSha);
+        const profile = (0, node_fs_1.realpathSync)(environment.HOME);
+        const script = (0, node_path_1.join)(profile, 'verification-setup.mjs');
+        const result = (0, node_path_1.join)(profile, 'verification-setup-result.json');
+        (0, node_fs_1.writeFileSync)(script, setup.script, { mode: 0o600, flag: 'wx' });
+        await (0, verification_setup_process_1.runVerificationSetupProcess)(setup.node, script, setup.workspace, {
+            ...environment,
+            COPILOT_VERIFICATION_SETUP_PROTOCOL: '1',
+            COPILOT_VERIFICATION_SETUP_RESULT: result,
+            COPILOT_VERIFICATION_SETUP_SOURCE_SHA: setup.sourceSha,
+        }, setup.sourceSha);
+        (0, verification_setup_result_1.applyVerificationSetupResult)(result, environment, [setup.workspace, profile, ...(setup.toolRoot ? [setup.toolRoot] : [])]);
+        (0, logging_ports_1.logInfo)(`Repository setup prepared (${verification_setup_policy_2.VERIFICATION_SETUP_PATH}; trusted source SHA: ${setup.sourceSha}).`);
+    }
+    catch (error) {
+        throw new verification_setup_policy_1.VerificationSetupError(error instanceof verification_setup_policy_1.VerificationSetupError ? error.reason : 'process-failed', setup.sourceSha, error instanceof verification_setup_policy_1.VerificationSetupError ? error.exitCode : undefined);
+    }
+}
+
+
+/***/ }),
+
+/***/ 62148:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.captureVerificationSetup = captureVerificationSetup;
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_crypto_1 = __nccwpck_require__(6005);
+const node_fs_1 = __nccwpck_require__(87561);
+const verification_setup_ports_1 = __nccwpck_require__(26509);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+const untrusted_command_environment_1 = __nccwpck_require__(2304);
+/** No network, agent, worktree-file reads, or credentials. Acquisition errors are deferred until verification. */
+function captureVerificationSetup(enabled, mainBranch, root = process.cwd()) {
+    if (!enabled)
+        return verification_setup_ports_1.DISABLED_VERIFICATION_SETUP;
+    let sourceSha;
+    let runtime;
+    let snapshot;
+    try {
+        runtime = (0, untrusted_command_environment_1.prepareUntrustedCommandEnvironment)();
+        const environment = runtime.environment;
+        if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,200}$/u.test(mainBranch) || mainBranch.includes('..')
+            || mainBranch.includes('//') || mainBranch.endsWith('/') || mainBranch.endsWith('.lock'))
+            throw new Error();
+        const workspace = (0, node_fs_1.realpathSync)(root);
+        const git = (...args) => {
+            const result = (0, node_child_process_1.spawnSync)('git', ['--no-replace-objects', ...args], { cwd: workspace, env: environment,
+                shell: false, windowsHide: true, timeout: 5000, maxBuffer: verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.scriptBytes + 4096 });
+            if (result.error || result.status !== 0)
+                throw new Error();
+            return result.stdout;
+        };
+        const candidateSha = git('rev-parse', '--verify', `refs/remotes/origin/${mainBranch}^{commit}`).toString('utf8').trim();
+        if (!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(candidateSha))
+            throw new Error();
+        sourceSha = candidateSha;
+        const entry = git('ls-tree', '-z', sourceSha, '--', verification_setup_policy_1.VERIFICATION_SETUP_PATH).toString('utf8');
+        const match = /^(100644|100755) blob ([a-f0-9]{40}|[a-f0-9]{64})\t\.copilot\/verification-setup\.mjs\0$/u.exec(entry);
+        if (!match)
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        const bytes = git('cat-file', 'blob', match[2]);
+        const digest = (0, node_crypto_1.createHash)(match[2].length === 40 ? 'sha1' : 'sha256').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
+        const script = bytes.toString('utf8');
+        if (!bytes.length || bytes.length > verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.scriptBytes || digest !== match[2]
+            || !Buffer.from(script).equals(bytes) || script.includes('\0'))
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        const toolRoot = environment.RUNNER_TOOL_CACHE ? (0, node_fs_1.realpathSync)(environment.RUNNER_TOOL_CACHE) : undefined;
+        snapshot = Object.freeze({ kind: 'ready', script, sourceSha, workspace, node: process.execPath, ...(toolRoot ? { toolRoot } : {}) });
+    }
+    catch (error) {
+        snapshot = Object.freeze({ kind: 'blocked', reason: error instanceof verification_setup_policy_1.VerificationSetupError ? error.reason : 'source-unavailable', ...(sourceSha ? { sourceSha } : {}) });
+    }
+    try {
+        runtime?.cleanup();
+    }
+    catch {
+        snapshot = Object.freeze({ kind: 'blocked', reason: 'source-unavailable', ...(sourceSha ? { sourceSha } : {}) });
+    }
+    return snapshot;
 }
 
 

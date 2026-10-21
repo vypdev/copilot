@@ -930,7 +930,8 @@
         "src/application/ports/git_ports.ts",
         "src/application/ports/bugbot_git_ports.ts",
         "src/application/usecases/steps/commit/bugbot/commit_and_push_preflight.ts",
-        "src/application/usecases/steps/commit/bugbot/verify_command_runner.ts"
+        "src/application/usecases/steps/commit/bugbot/verify_command_runner.ts",
+        "src/cli/setup_config_file.ts"
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
@@ -1060,7 +1061,8 @@
         "src/infrastructure/__tests__/untrusted_command_environment.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/verify_command_runner.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/commit_verification_workspace.test.ts",
-        "src/tooling/__tests__/verification_runtime_guidance.test.ts"
+        "src/tooling/__tests__/verification_runtime_guidance.test.ts",
+        "src/infrastructure/__tests__/verification_setup_configuration.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -1934,7 +1936,7 @@
       "status": "implemented",
       "scope": "Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-20",
+      "lastVerified": "2026-10-21",
       "specs": [
         "specs/branch-synchronization-and-conflict-recovery.md",
         "specs/repository-verification-runtime-prerequisites.md",
@@ -1995,7 +1997,13 @@
         "src/application/usecases/steps/commit/bugbot/commit_and_push_preflight.ts",
         "src/application/usecases/steps/commit/bugbot/verify_command_runner.ts",
         "src/domain/closed_issue_reconciliation.ts",
-        "src/application/errors/closed_issue_reconciliation_error.ts"
+        "src/application/errors/closed_issue_reconciliation_error.ts",
+        "src/application/policies/verification_setup_policy.ts",
+        "src/application/ports/verification_setup_ports.ts",
+        "src/infrastructure/verification_setup_snapshot.ts",
+        "src/infrastructure/verification_setup_result.ts",
+        "src/infrastructure/verification_setup_process.ts",
+        "src/infrastructure/verification_setup_runner.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -2029,7 +2037,12 @@
         "src/infrastructure/__tests__/untrusted_command_environment.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/verify_command_runner.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/commit_verification_workspace.test.ts",
-        "src/tooling/__tests__/verification_runtime_guidance.test.ts"
+        "src/tooling/__tests__/verification_runtime_guidance.test.ts",
+        "src/application/policies/__tests__/verification_setup_policy.test.ts",
+        "src/infrastructure/__tests__/verification_setup_snapshot.test.ts",
+        "src/infrastructure/__tests__/verification_setup_runner.test.ts",
+        "src/infrastructure/__tests__/verification_setup_configuration.test.ts",
+        "src/infrastructure/__tests__/verification_setup_sync.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",

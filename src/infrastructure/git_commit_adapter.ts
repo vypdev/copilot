@@ -4,6 +4,8 @@ import { buildGitAuthenticationEnvironment } from './git_authentication_environm
 import { prepareUntrustedCommandEnvironment } from './untrusted_command_environment';
 import { withoutGitHooks } from './git_hook_isolation';
 import { assertVerificationRuntimePrerequisites } from './verification_runtime_preflight';
+import { DISABLED_VERIFICATION_SETUP, type PreparedVerificationSetup } from '../application/ports/verification_setup_ports';
+import { prepareRepositoryVerification } from './verification_setup_runner';
 
 type GitCommandOptions = { stdout?: (data: Buffer) => void; env?: Record<string, string>; untrusted?: boolean; verifyRuntimePrerequisites?: boolean };
 type GitCommandExecutor = (program: string, args: string[], options?: GitCommandOptions) => Promise<number>;
@@ -20,6 +22,7 @@ export class GitCommitAdapter implements GitCommitPort {
             })
             : exec.exec(program, args),
         private readonly checkPrerequisites: (environment: Record<string, string>) => void = assertVerificationRuntimePrerequisites,
+        private readonly verificationSetup: PreparedVerificationSetup = DISABLED_VERIFICATION_SETUP,
     ) {}
 
     async execute(program: string, args: string[], options?: GitCommandOptions): Promise<number> {
@@ -28,7 +31,10 @@ export class GitCommitAdapter implements GitCommitPort {
         if (options.env) throw new Error('Untrusted command execution does not accept a caller-supplied environment.');
         const runtime = prepareUntrustedCommandEnvironment();
         try {
-            if (options.verifyRuntimePrerequisites) this.checkPrerequisites(runtime.environment);
+            if (options.verifyRuntimePrerequisites) {
+                await prepareRepositoryVerification(this.verificationSetup, runtime.environment);
+                this.checkPrerequisites(runtime.environment);
+            }
             return await this.executeCommand(program, args, {
                 ...(options.stdout ? { stdout: options.stdout } : {}),
                 env: runtime.environment,

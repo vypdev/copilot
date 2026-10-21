@@ -53,6 +53,9 @@ inputs:
   pre-branch-sdd:
     description: "Require a validated SDD first commit for started feature and contract-change issues. Requires issue-managed-branches."
     default: "false"
+  verification-setup:
+    description: "Run the trusted main-branch .copilot/verification-setup.mjs before each repository verification command. Disabled by default."
+    default: "false"
   issue-workflow-profile:
     description: "JSON profile of enabled issue workflows."
     default: ""

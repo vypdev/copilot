@@ -55,6 +55,8 @@ export interface SetupRepositoryConfiguration {
     choreTree: string;
     issueManagedBranches: boolean;
     preBranchSdd: boolean;
+    /** Advanced opt-in; absent legacy configuration remains disabled. */
+    verificationSetup?: boolean;
     reopenIssueOnPush: boolean;
     desiredAssigneesCount: number;
     desiredReviewersCount: number;

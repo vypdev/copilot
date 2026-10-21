@@ -1,6 +1,7 @@
 import { logError } from '../../../../ports/logging_ports';
 import { parseVerifyCommand, type ParsedVerifyCommand } from './verify_command_policy';
 import { VerificationPrerequisiteError } from '../../../../policies/verification_runtime_policy';
+import { VerificationSetupError } from '../../../../policies/verification_setup_policy';
 
 export interface VerifyCommandResult {
     success: boolean;
@@ -33,7 +34,7 @@ async function executeVerifyCommand(
             ? { success: true }
             : { success: false, failedCommand: formatCommandForDiagnostics(parsed) };
    } catch (error) {
-        if (error instanceof VerificationPrerequisiteError) {
+        if (error instanceof VerificationPrerequisiteError || error instanceof VerificationSetupError) {
             return { success: false, failedCommand: formatCommandForDiagnostics(parsed),
                 error: `${error.message} Verification command: ${formatCommandForDiagnostics(parsed)}.` };
         }

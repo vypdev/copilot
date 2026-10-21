@@ -12,7 +12,7 @@
     },
     ".copilot/AGENT_GUIDE.md": {
       "role": "guide",
-      "sha256": "07ef187d584f4da868a6cebe6b6d7c7654b057af703e0d10ede11f768ba64674"
+      "sha256": "26fad3d7f671c3f839a7b62195c0caae5119631d2e0ef848143998c3cc2b7433"
     },
     ".copilot/repository-profile.json": {
       "role": "profile",

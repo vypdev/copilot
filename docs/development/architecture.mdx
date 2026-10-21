@@ -633,3 +633,21 @@ The trusted credential health adapter is GET-only and pins packaged workflow
 content, default SHA, run identity, freshness and unchanged Secret metadata.
 It never inherits the legacy bootstrap or dispatch adapter. Architecture/cycle,
 SDK contract, replay, drift and presentation tests enforce these boundaries.
+
+## Repository verification setup
+
+The optional [repository-owned helper](/security-operations/operations/verification#repository-owned-setup)
+is captured once at comment-route composition from the configured trusted main
+commit. The immutable semantic contract contains only regular-file bytes, source
+SHA and trusted execution roots. Acquisition failures are deferred; actor, fork,
+native-head and workspace guards still decide whether verification is reached.
+
+Both branch synchronization and shared automated commit preflight request the same
+`untrusted + verifyRuntimePrerequisites` Git-port intent. Its adapter creates a fresh
+private environment, runs the snapshot, validates the bounded closed result, probes
+runtime prerequisites, executes the command and cleans up. The pure policy owns
+schema/limits/sanitized diagnostics; infrastructure owns Git, filesystem, process
+timeouts and cancellation. Agent credential profile cleanup precedes this phase.
+No entrypoint duplicates the process runner, and no command/candidate reuses setup
+readiness. Structural workflow/configuration tests keep all six source/distributed
+event workflows consistent; local real-Git tests enforce the same-ref push gate.
