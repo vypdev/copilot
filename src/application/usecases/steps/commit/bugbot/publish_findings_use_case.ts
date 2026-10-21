@@ -66,11 +66,7 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
         }
     }
 
-    try {
-      await reviewPublisher?.flush(overflowCount, overflowTitles);
-    } catch (cause) {
-      throw bugbotMutationError(cause, 'publication', findings.map(finding => finding.id), 'publish-comments');
-    }
+    await reviewPublisher?.flush(overflowCount, overflowTitles);
     if (operation.target.issueNumber > 0 && !reviewPublisher) {
         await publishOverflowComment(
             ports.issueComments,

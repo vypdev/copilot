@@ -343,3 +343,13 @@ it('retains only safe provider status and request reference after a mutation fai
   await expect(repository.createReviewWithComments('o', 'r', 7, 'sha', 'body', [], 'token'))
     .rejects.toMatchObject({ operation: 'publish-comments', providerStatus: 403, providerReference: 'AB12:34CD' });
 });
+
+it.each([undefined, 'PRIVATE_PROVIDER_RESPONSE'])('sanitizes a non-object provider rejection (%s)', async cause => {
+  const { repository } = createRepository({ createReview: jest.fn().mockRejectedValue(cause) });
+  const failure = await repository.createReviewWithComments('o', 'r', 7, 'sha', 'body', [], 'token')
+    .catch(error => error);
+  expect(failure).toBeInstanceOf(PullRequestReviewOperationError);
+  expect(failure.operation).toBe('publish-comments');
+  expect(failure.providerStatus).toBeUndefined();
+  expect(JSON.stringify(failure)).not.toContain('PRIVATE_PROVIDER_RESPONSE');
+});

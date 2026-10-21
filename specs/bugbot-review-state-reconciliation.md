@@ -1658,10 +1658,10 @@ reconciliation and catalog presentation consume typed facts. Domain coverage
 adds optional source identities only. Typecheck, architecture, localization and
 fault-injection regressions enforce these boundaries; SDKs remain outside policy.
 
-The additional budget is **19 distinct cases**: eleven HTTP/classification/privacy
-and error-preservation cases, two publication-stage identity/batch cases, one real
+The additional budget is **23 distinct cases**: eleven HTTP/classification/privacy
+and error-preservation cases, four publication-stage identity/batch cases, one real
 publication-to-failed-resolution-to-retry integration, two locale/projection and
-independent-coverage cases, two exact-source/privacy cases and one adapter case.
+independent-coverage cases, two exact-source/privacy cases and three adapter cases.
 Existing global coverage/quality thresholds and all prior state/replay tests
 remain required. Acceptance proves a persisted native review survives a subsequent
 503, one recheck produces no duplicate native review/thread, dismissal bytes are
@@ -1670,3 +1670,10 @@ Documentation: Bugbot failure scenarios. Upgrade the Action and recheck the same
 PR after recovery; rollback only loses richer diagnostics. Definition of Done:
 all package, documentation, catalog and existing architecture gates pass; no live
 consumer recovery is claimed by deterministic fixtures.
+
+
+PR #651 review correction: batch mutation diagnostics MUST derive identity and
+count from the publisher's actually queued new findings, excluding individually
+updated or suppressed findings. Overflow summaries add their represented overflow
+count; an overflow-only batch reports that count and an unavailable finding ID,
+never a fabricated durable identity. The mixed/overflow cases above enforce this.

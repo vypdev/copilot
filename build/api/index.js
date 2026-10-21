@@ -86,7 +86,7 @@ class BugbotMutationError extends application_error_1.ApplicationError {
     }
 }
 exports.BugbotMutationError = BugbotMutationError;
-function bugbotMutationError(cause, stage, findingIds, fallback) {
+function bugbotMutationError(cause, stage, findingIds, fallback, affectedCount = findingIds.length) {
     if (cause instanceof BugbotMutationError)
         return cause;
     const provider = cause instanceof pull_request_review_errors_1.PullRequestReviewOperationError ? cause : undefined;
@@ -98,7 +98,7 @@ function bugbotMutationError(cause, stage, findingIds, fallback) {
     return new BugbotMutationError(Object.freeze({
         stage, operation: provider?.operation ?? fallback,
         findingId: typeof first === 'string' && /^[A-Za-z0-9_./:-]{1,200}$/.test(first) ? first : 'unavailable',
-        affectedCount: Math.min(findingIds.length, 10000),
+        affectedCount: Math.min(affectedCount, 10000),
         providerStatus: status ? `http-${status}` : 'http-unavailable',
         providerReference: provider?.providerReference ?? 'unavailable', errorCode,
     }));
@@ -3954,12 +3954,7 @@ async function publishFindings(param) {
             throw (0, bugbot_mutation_error_1.bugbotMutationError)(cause, 'publication', [finding.id], 'publish-comments');
         }
     }
-    try {
-        await reviewPublisher?.flush(overflowCount, overflowTitles);
-    }
-    catch (cause) {
-        throw (0, bugbot_mutation_error_1.bugbotMutationError)(cause, 'publication', findings.map(finding => finding.id), 'publish-comments');
-    }
+    await reviewPublisher?.flush(overflowCount, overflowTitles);
     if (operation.target.issueNumber > 0 && !reviewPublisher) {
         await (0, publish_overflow_comment_1.publishOverflowComment)(ports.issueComments, operation.target.issueNumber, overflowCount, overflowTitles, commitSha, catalog);
     }
@@ -4025,6 +4020,7 @@ ${catalog.message('bugbot.overflow.body', { count: `**${overflowCount}**` }, ove
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentPublisher = void 0;
+const bugbot_mutation_error_1 = __nccwpck_require__(2937);
 const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
 const path_validation_1 = __nccwpck_require__(124);
 const logging_ports_1 = __nccwpck_require__(6152);
@@ -4096,11 +4092,16 @@ class PullRequestReviewCommentPublisher {
         if (this.findingsToCreate.length === 0 && overflowCount === 0)
             return;
         const { repository, operation, openPrNumber, prContext } = this.options;
-        await repository.createReviewWithComments(openPrNumber, prContext.prHeadSha, buildReviewSummary(this.findingsToCreate, this.commentsToCreate.length, this.unanchoredBodies, overflowCount, overflowTitles, operation.analysis.reviewConfiguration.traceRules
-            ? this.options.ruleSources ?? []
-            : [], operation.analysis.reviewConfiguration.traceRules
-            ? this.options.omittedRuleCount ?? 0
-            : 0, prContext.prHeadSha, this.catalog), this.commentsToCreate);
+        try {
+            await repository.createReviewWithComments(openPrNumber, prContext.prHeadSha, buildReviewSummary(this.findingsToCreate, this.commentsToCreate.length, this.unanchoredBodies, overflowCount, overflowTitles, operation.analysis.reviewConfiguration.traceRules
+                ? this.options.ruleSources ?? []
+                : [], operation.analysis.reviewConfiguration.traceRules
+                ? this.options.omittedRuleCount ?? 0
+                : 0, prContext.prHeadSha, this.catalog), this.commentsToCreate);
+        }
+        catch (cause) {
+            throw (0, bugbot_mutation_error_1.bugbotMutationError)(cause, 'publication', this.findingsToCreate.map(finding => finding.id), 'publish-comments', this.findingsToCreate.length + overflowCount);
+        }
     }
     get catalog() {
         return this.options.catalog ?? (0, bugbot_message_catalog_1.resolveStaticBugbotCatalog)(this.options.operation.locale.pullRequest);

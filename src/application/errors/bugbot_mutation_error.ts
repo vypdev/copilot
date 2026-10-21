@@ -17,7 +17,7 @@ export class BugbotMutationError extends ApplicationError {
   }
 }
 
-export function bugbotMutationError(cause: unknown, stage: BugbotMutationDiagnostic['stage'], findingIds: readonly string[], fallback: PullRequestReviewOperation): BugbotMutationError {
+export function bugbotMutationError(cause: unknown, stage: BugbotMutationDiagnostic['stage'], findingIds: readonly string[], fallback: PullRequestReviewOperation, affectedCount = findingIds.length): BugbotMutationError {
   if (cause instanceof BugbotMutationError) return cause;
   const provider = cause instanceof PullRequestReviewOperationError ? cause : undefined;
   const status = provider?.providerStatus;
@@ -28,7 +28,7 @@ export function bugbotMutationError(cause: unknown, stage: BugbotMutationDiagnos
   return new BugbotMutationError(Object.freeze({
     stage, operation: provider?.operation ?? fallback,
     findingId: typeof first === 'string' && /^[A-Za-z0-9_./:-]{1,200}$/.test(first) ? first : 'unavailable',
-    affectedCount: Math.min(findingIds.length, 10_000),
+    affectedCount: Math.min(affectedCount, 10_000),
     providerStatus: status ? `http-${status}` : 'http-unavailable',
     providerReference: provider?.providerReference ?? 'unavailable', errorCode,
   }));

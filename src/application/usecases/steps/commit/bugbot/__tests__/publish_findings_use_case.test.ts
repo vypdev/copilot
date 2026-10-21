@@ -732,4 +732,23 @@ describe("publishFindings", () => {
         })).rejects.toMatchObject({ diagnostic: { stage: 'publication', operation: 'update-comment', findingId: 'f1', providerStatus: 'http-503' } });
     });
 
+    it('excludes already-updated findings from a failed review creation batch', async () => {
+        mockCreateReviewWithComments.mockRejectedValue(toPullRequestReviewOperationError({ status: 503 }, 'publish-comments'));
+        await expect(publishFindings({ operation: baseOperation,
+            context: baseContext({ existingByFindingId: { f1: { pullRequest: { commentIdentity: 'PRRC_1', pullRequestNumber: 50,
+                resolved: false, fingerprint: 'fp-11111111' } } },
+                prContext: { prHeadSha: 'sha1', prFiles: [{ filename: 'src/foo.ts', status: 'modified' }], pathToFirstDiffLine: { 'src/foo.ts': 5 } } }),
+            findings: [finding(), finding({ id: 'f2', fingerprint: 'fp-22222222', semanticFingerprint: 'sf-22222222' })],
+        })).rejects.toMatchObject({ diagnostic: { findingId: 'f2', affectedCount: 1 } });
+        expect(mockUpdatePullRequestReviewComment).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports the overflow count without inventing a finding ID for an overflow-only review', async () => {
+        mockCreateReviewWithComments.mockRejectedValue(toPullRequestReviewOperationError({ status: 503 }, 'publish-comments'));
+        await expect(publishFindings({ operation: baseOperation,
+            context: baseContext({ prContext: { prHeadSha: 'sha1', prFiles: [], pathToFirstDiffLine: {} } }),
+            findings: [], overflowCount: 7, overflowTitles: ['Overflow'],
+        })).rejects.toMatchObject({ diagnostic: { findingId: 'unavailable', affectedCount: 7 } });
+    });
+
 });
