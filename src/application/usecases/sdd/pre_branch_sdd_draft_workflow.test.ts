@@ -7,6 +7,29 @@ const configuration = { provider: 'codex', model: 'model' } as never;
 const plan = { action: 'update', path: 'specs/payments.md', capabilityId: 'payments', reason: 'A bounded contract change.', questions: [] } as const;
 
 describe('draftSddMarkdown', () => {
+  it.each(['case-identity', 'case-budget', 'requirement-mapping', 'repository-path'] as const)(
+    'repairs %s once with closed feedback and returns a specific non-ready recovery on repeated failure', async reason => {
+      const query = jest.fn().mockResolvedValue({ markdown: 'Untrusted invalid document' });
+      const validate = jest.fn().mockRejectedValue(new SddDraftFormatFailure(reason, 'untrusted diagnostic @actor /command'));
+      await expect(draftSddMarkdown({ query }, configuration, plan, 'Resolved requirements', validate)).rejects.toMatchObject({
+        recovery: { id: `sdd-draft-${reason}-invalid`, variables: {} },
+      });
+      expect(query).toHaveBeenCalledTimes(2);
+      expect(validate).toHaveBeenCalledTimes(2);
+      expect(query.mock.calls[1][0].prompt).toContain(`SDD ${reason} contract`);
+      expect(query.mock.calls[1][0].prompt).toContain('Case ID | Area | Requirements | Scenario');
+      expect(query.mock.calls[1][0].prompt).not.toMatch(/Untrusted invalid document|untrusted diagnostic|@actor/);
+    },
+  );
+
+  it('revalidates a corrected semantic draft without spending a third generation', async () => {
+    const query = jest.fn().mockResolvedValueOnce({ markdown: 'Invalid cases' }).mockResolvedValueOnce({ markdown: 'Corrected cases' });
+    const validate = jest.fn().mockRejectedValueOnce(new SddDraftFormatFailure('case-budget', 'Rejected')).mockResolvedValueOnce(undefined);
+    await expect(draftSddMarkdown({ query }, configuration, plan, 'Resolved requirements', validate)).resolves.toBe('Corrected cases');
+    expect(validate.mock.calls.map(call => call[0])).toEqual(['Invalid cases', 'Corrected cases']);
+    expect(query).toHaveBeenCalledTimes(2);
+  });
+
   it('accepts a real findings response with only the canonical numeric table without regeneration', async () => {
     const markdown = `${'Explicit product scope and architecture. '.repeat(55)}\n## 1. Executive summary\n## 4. Goals\n## 8. Clean Architecture\n## 14. Testing strategy\n| Area | Minimum distinct cases | Risks |\n|---|---:|---|\n| Policy | 4 | Authority |\n| Total | 4 | Distinct |\n## 16. Acceptance\n`;
     const execute = jest.fn().mockResolvedValue(JSON.stringify({ markdown }));
