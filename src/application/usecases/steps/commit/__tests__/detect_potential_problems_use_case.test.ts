@@ -971,7 +971,9 @@ describe("DetectPotentialProblemsUseCase", () => {
       .flatMap((result) => result.errors)
       .map((error) => error.message)
       .join("\n");
-    expect(visibleErrors).toContain("Bugbot finding presentation failed.");
+    expect(visibleErrors).toContain("stage=resolution");
+    expect(visibleErrors).toContain("finding=pr-finding");
+    expect(visibleErrors).toContain("operation=mark-resolved");
     expect(visibleErrors).not.toContain("secret-token");
     expect(JSON.stringify(logError.mock.calls)).not.toContain("secret-token");
   });

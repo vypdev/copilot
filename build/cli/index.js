@@ -38121,6 +38121,46 @@ function approvalDiagnosticError(diagnostic) {
 
 /***/ }),
 
+/***/ 82937:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BugbotMutationError = void 0;
+exports.bugbotMutationError = bugbotMutationError;
+const application_error_1 = __nccwpck_require__(75999);
+const pull_request_review_errors_1 = __nccwpck_require__(46445);
+class BugbotMutationError extends application_error_1.ApplicationError {
+    constructor(diagnostic) {
+        super(diagnostic.errorCode, `Bugbot ${diagnostic.stage} failed: operation=${diagnostic.operation}; finding=${diagnostic.findingId}; affected=${diagnostic.affectedCount}; ${diagnostic.providerStatus}; provider-reference=${diagnostic.providerReference}. Completed effects are retained; correct the named cause and recheck the same target.`);
+        this.diagnostic = diagnostic;
+    }
+}
+exports.BugbotMutationError = BugbotMutationError;
+function bugbotMutationError(cause, stage, findingIds, fallback, affectedCount = findingIds.length) {
+    if (cause instanceof BugbotMutationError)
+        return cause;
+    const provider = cause instanceof pull_request_review_errors_1.PullRequestReviewOperationError ? cause : undefined;
+    const status = provider?.providerStatus;
+    const errorCode = status === 401 ? 'authorization.credential-invalid' : status === 403 ? 'authorization.denied'
+        : status === 404 ? 'provider.not-found' : status === 409 ? 'provider.conflict'
+            : status === 429 ? 'provider.rate-limited'
+                : status === 408 || status === 425 ? 'provider.unavailable'
+                    : status && status < 500 ? 'provider.contract-invalid' : 'provider.unavailable';
+    const first = findingIds[0];
+    return new BugbotMutationError(Object.freeze({
+        stage, operation: provider?.operation ?? fallback,
+        findingId: typeof first === 'string' && /^[A-Za-z0-9_./:-]{1,200}$/.test(first) ? first : 'unavailable',
+        affectedCount: Math.min(affectedCount, 10000),
+        providerStatus: status ? `http-${status}` : 'http-unavailable',
+        providerReference: provider?.providerReference ?? 'unavailable', errorCode,
+    }));
+}
+
+
+/***/ }),
+
 /***/ 12183:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -40679,6 +40719,7 @@ exports.BUGBOT_MESSAGE_IDS = Object.freeze([
     'bugbot.overflow.body',
     'bugbot.common.more',
     'bugbot.diagnostic.operationFailed',
+    'bugbot.diagnostic.findingMutationFailed',
     'bugbot.diagnostic.identityUnavailable',
     'bugbot.diagnostic.pullRequestCommentsFailed',
     'bugbot.diagnostic.reviewThreadsFailed',
@@ -40764,6 +40805,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'bugbot.overflow.heading': 'More findings (comment limit)',
     'bugbot.overflow.body': Object.freeze({ one: 'There is {count} more finding that was not published as an individual comment. Review locally or in the full diff to see the list.', other: 'There are {count} more findings that were not published as individual comments. Review locally or in the full diff to see the list.' }),
     'bugbot.common.more': Object.freeze({ one: 'and {count} more.', other: 'and {count} more.' }),
+    'bugbot.diagnostic.findingMutationFailed': 'Finding mutation failed: stage={stage}; operation={operation}; finding={findingId}; affected={affectedCount}; {providerStatus}; provider reference={providerReference}. Completed effects are retained. Correct access/contract errors before retrying; for transient failures restore provider availability, then recheck the same PR. Recheck reconciles existing reviews and threads.',
     'bugbot.diagnostic.operationFailed': 'Bugbot could not complete one or more finding mutations.',
     'bugbot.diagnostic.identityUnavailable': 'The authenticated Bugbot identity is unavailable.',
     'bugbot.diagnostic.pullRequestCommentsFailed': 'Unable to re-read pull request review comments.',
@@ -40853,6 +40895,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'bugbot.overflow.heading': 'Más hallazgos (límite de comentarios)',
     'bugbot.overflow.body': Object.freeze({ one: 'Hay {count} hallazgo más que no se publicó como comentario individual. Revísalo localmente o en el diff completo para consultar la lista.', many: 'Hay {count} hallazgos más que no se publicaron como comentarios individuales. Revísalos localmente o en el diff completo para consultar la lista.', other: 'Hay {count} hallazgos más que no se publicaron como comentarios individuales. Revísalos localmente o en el diff completo para consultar la lista.' }),
     'bugbot.common.more': Object.freeze({ one: 'y {count} más.', many: 'y {count} más.', other: 'y {count} más.' }),
+    'bugbot.diagnostic.findingMutationFailed': 'Falló una mutación: fase={stage}; operación={operation}; hallazgo={findingId}; afectados={affectedCount}; {providerStatus}; referencia del proveedor={providerReference}. Se conservan los efectos completados. Corrige acceso/contrato antes de reintentar; para fallos transitorios restaura el proveedor y revisa la misma PR. La revisión reconcilia comentarios e hilos existentes.',
     'bugbot.diagnostic.operationFailed': 'Bugbot no pudo completar una o más mutaciones de hallazgos.',
     'bugbot.diagnostic.identityUnavailable': 'La identidad autenticada de Bugbot no está disponible.',
     'bugbot.diagnostic.pullRequestCommentsFailed': 'No se pudieron volver a leer los comentarios del review del pull request.',
@@ -40892,6 +40935,7 @@ async function resolveBugbotCatalog(locale, configuration, resolver) {
 }
 function renderBugbotDiagnostic(diagnostic, catalog) {
     switch (diagnostic.code) {
+        case 'finding-mutation-failed': return catalog.message('bugbot.diagnostic.findingMutationFailed', { ...diagnostic.mutation });
         case 'operation-failed': return catalog.message('bugbot.diagnostic.operationFailed');
         case 'identity-unavailable': return catalog.message('bugbot.diagnostic.identityUnavailable');
         case 'snapshot-pull-request-comments-failed': return catalog.message('bugbot.diagnostic.pullRequestCommentsFailed');
@@ -41519,6 +41563,10 @@ function renderBugbotStatusCard(projection, catalogOrLocale, links) {
             facts.push(catalog.message('bugbot.coverage.omitted', { count: source.omittedItems }));
         if (source.truncatedItems > 0)
             facts.push(catalog.message('bugbot.coverage.truncated', { count: source.truncatedItems }));
+        const truncatedIds = source.truncatedItemIds?.slice(0, 50)
+            .filter(id => /^(?:issue:[0-9]+|review:[A-Za-z0-9_=-]+)$/.test(id) && id.length <= 160);
+        if (truncatedIds?.length)
+            facts.push(`truncated-source-ids=${truncatedIds.join(', ')}`);
         if (source.providerLimitReached)
             facts.push(catalog.message('bugbot.coverage.providerLimit'));
         return `- ${source.source}: ${source.status}; ${facts.join(', ')}`;
@@ -53493,6 +53541,13 @@ class PullRequestReviewOperationError extends Error {
         super(buildMessage(operation, context));
         this.name = "PullRequestReviewOperationError";
         this.operation = operation;
+        const status = context?.providerStatus;
+        if (typeof status === 'number' && Number.isInteger(status) && status >= 400 && status <= 599) {
+            this.providerStatus = status;
+        }
+        if (typeof context?.providerReference === 'string' && /^[A-Za-z0-9:-]{1,64}$/.test(context.providerReference)) {
+            this.providerReference = context.providerReference;
+        }
     }
 }
 exports.PullRequestReviewOperationError = PullRequestReviewOperationError;
@@ -64605,6 +64660,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.applyDetectedFindings = applyDetectedFindings;
 const mark_findings_resolved_use_case_1 = __nccwpck_require__(96963);
 const publish_findings_use_case_1 = __nccwpck_require__(88442);
+const bugbot_mutation_error_1 = __nccwpck_require__(82937);
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
 async function applyDetectedFindings(operation, context, prepared, publicationPorts, resolutionPorts, catalog) {
     try {
@@ -64620,7 +64676,7 @@ async function applyDetectedFindings(operation, context, prepared, publicationPo
         });
     }
     catch (error) {
-        const publicationError = error instanceof pull_request_review_errors_1.PullRequestReviewOperationError
+        const publicationError = error instanceof bugbot_mutation_error_1.BugbotMutationError || error instanceof pull_request_review_errors_1.PullRequestReviewOperationError
             ? error
             : new Error("Unable to publish findings.");
         return [publicationError];
@@ -65290,6 +65346,10 @@ function buildReviewConversationContext(issueComments, commentsByPullRequest, bo
         omitted,
         truncated: chronological.filter((entry) => entry.truncated).length,
         retained: chronological.length,
+        ...(chronological.some(entry => entry.truncated) ? {
+            truncatedItemIds: chronological.filter(entry => entry.truncated)
+                .map(entry => entry.providerId).filter(id => /^(?:issue:[0-9]+|review:[A-Za-z0-9_=-]+)$/.test(id) && id.length <= 160),
+        } : {}),
     };
 }
 function appendConversationEntry(entries, author, kind, body, createdAt, providerId) {
@@ -66781,6 +66841,7 @@ async function loadBugbotContext(request, ports, resolvedPreflight) {
             itemsFetched: conversationContext.retained + conversationContext.omitted,
             omittedItems: conversationContext.omitted,
             truncatedItems: conversationContext.truncated,
+            ...(conversationContext.truncatedItemIds ? { truncatedItemIds: conversationContext.truncatedItemIds } : {}),
             limitReached: conversationContext.omitted > 0 || conversationContext.truncated > 0,
         },
         {
@@ -66982,11 +67043,11 @@ Object.defineProperty(exports, "markFindingsResolved", ({ enumerable: true, get:
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.markFindingsResolved = markFindingsResolved;
-const pull_request_review_errors_1 = __nccwpck_require__(46445);
 const logging_ports_1 = __nccwpck_require__(6152);
 const resolve_issue_finding_1 = __nccwpck_require__(35300);
 const resolve_pull_request_finding_1 = __nccwpck_require__(64567);
 const review_state_1 = __nccwpck_require__(79200);
+const bugbot_mutation_error_1 = __nccwpck_require__(82937);
 const application_error_1 = __nccwpck_require__(75999);
 async function markFindingsResolved(param) {
     const errors = [];
@@ -67014,8 +67075,8 @@ async function repairExistingPullRequestFinding(ports, operation, findingId, des
         try {
             await ports.pullRequestComments.unresolvePullRequestReviewThread(destination.pullRequestNumber, destination.commentIdentity);
         }
-        catch {
-            addResolutionError(errors, 'pull request');
+        catch (cause) {
+            addResolutionError(errors, 'pull request', findingId, cause);
         }
     }
 }
@@ -67029,7 +67090,7 @@ async function resolveIssueIfNeeded(param, findingId, destination, errors) {
         return;
     const comment = param.context.issueComments.find(item => item.id === destination.commentId);
     if (comment?.body == null) {
-        addResolutionError(errors, 'issue');
+        addResolutionError(errors, 'issue', findingId);
         return;
     }
     try {
@@ -67040,8 +67101,8 @@ async function resolveIssueIfNeeded(param, findingId, destination, errors) {
             resolution: param.resolvedFindingResolutions?.get(findingId),
         }, param.catalog);
     }
-    catch {
-        addResolutionError(errors, 'issue');
+    catch (cause) {
+        addResolutionError(errors, 'issue', findingId, cause);
     }
 }
 async function tryResolvePullRequestFinding(ports, findingId, destination, errors, resolution, catalog) {
@@ -67053,17 +67114,14 @@ async function tryResolvePullRequestFinding(ports, findingId, destination, error
             resolution,
         }, catalog);
     }
-    catch {
-        addResolutionError(errors, 'pull request');
+    catch (cause) {
+        addResolutionError(errors, 'pull request', findingId, cause);
     }
 }
-function addResolutionError(errors, destination) {
-    const cause = destination === 'pull request'
-        ? new pull_request_review_errors_1.PullRequestReviewOperationError('mark-resolved')
-        : new Error('Unable to mark an issue finding as resolved.');
-    const semanticError = new application_error_1.ApplicationError('provider.unavailable', destination === 'pull request'
-        ? 'Unable to mark a pull request finding as resolved.'
-        : 'Unable to mark an issue finding as resolved.', { cause });
+function addResolutionError(errors, destination, findingId, cause) {
+    const semanticError = destination === 'pull request'
+        ? (0, bugbot_mutation_error_1.bugbotMutationError)(cause, 'resolution', [findingId], 'mark-resolved')
+        : new application_error_1.ApplicationError('provider.unavailable', 'Unable to mark an issue finding as resolved.');
     (0, logging_ports_1.logError)(semanticError);
     errors.push(semanticError);
 }
@@ -67316,6 +67374,7 @@ function isRecord(value) {
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publishFindings = publishFindings;
+const bugbot_mutation_error_1 = __nccwpck_require__(82937);
 const finding_1 = __nccwpck_require__(31011);
 const publish_issue_finding_comment_1 = __nccwpck_require__(84950);
 const publish_pr_review_comments_1 = __nccwpck_require__(50352);
@@ -67339,7 +67398,12 @@ async function publishFindings(param) {
             await (0, publish_issue_finding_comment_1.publishIssueFindingComment)(ports.issueComments, operation.target.issueNumber, finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding), commitSha, catalog);
         }
         if (reviewPublisher) {
-            await reviewPublisher.publish(finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding));
+            try {
+                await reviewPublisher.publish(finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding));
+            }
+            catch (cause) {
+                throw (0, bugbot_mutation_error_1.bugbotMutationError)(cause, 'publication', [finding.id], 'publish-comments');
+            }
         }
     }
     await reviewPublisher?.flush(overflowCount, overflowTitles);
@@ -67411,6 +67475,7 @@ ${catalog.message('bugbot.overflow.body', { count: `**${overflowCount}**` }, ove
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentPublisher = void 0;
+const bugbot_mutation_error_1 = __nccwpck_require__(82937);
 const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
 const path_validation_1 = __nccwpck_require__(70124);
 const logging_ports_1 = __nccwpck_require__(6152);
@@ -67482,11 +67547,16 @@ class PullRequestReviewCommentPublisher {
         if (this.findingsToCreate.length === 0 && overflowCount === 0)
             return;
         const { repository, operation, openPrNumber, prContext } = this.options;
-        await repository.createReviewWithComments(openPrNumber, prContext.prHeadSha, buildReviewSummary(this.findingsToCreate, this.commentsToCreate.length, this.unanchoredBodies, overflowCount, overflowTitles, operation.analysis.reviewConfiguration.traceRules
-            ? this.options.ruleSources ?? []
-            : [], operation.analysis.reviewConfiguration.traceRules
-            ? this.options.omittedRuleCount ?? 0
-            : 0, prContext.prHeadSha, this.catalog), this.commentsToCreate);
+        try {
+            await repository.createReviewWithComments(openPrNumber, prContext.prHeadSha, buildReviewSummary(this.findingsToCreate, this.commentsToCreate.length, this.unanchoredBodies, overflowCount, overflowTitles, operation.analysis.reviewConfiguration.traceRules
+                ? this.options.ruleSources ?? []
+                : [], operation.analysis.reviewConfiguration.traceRules
+                ? this.options.omittedRuleCount ?? 0
+                : 0, prContext.prHeadSha, this.catalog), this.commentsToCreate);
+        }
+        catch (cause) {
+            throw (0, bugbot_mutation_error_1.bugbotMutationError)(cause, 'publication', this.findingsToCreate.map(finding => finding.id), 'publish-comments', this.findingsToCreate.length + overflowCount);
+        }
     }
     get catalog() {
         return this.options.catalog ?? (0, bugbot_message_catalog_1.resolveStaticBugbotCatalog)(this.options.operation.locale.pullRequest);
@@ -67642,6 +67712,7 @@ async function queryBugbotPartitionFindings(repository, configuration, prompt, t
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.reconcileBugbotReviewState = reconcileBugbotReviewState;
+const bugbot_mutation_error_1 = __nccwpck_require__(82937);
 const review_projection_1 = __nccwpck_require__(80859);
 const bugbot_reconciliation_policy_1 = __nccwpck_require__(78128);
 const bugbot_provider_projection_policy_1 = __nccwpck_require__(85821);
@@ -67673,10 +67744,9 @@ async function reconcileBugbotReviewState(input) {
     }
     const snapshot = snapshotResult.snapshot;
     const diagnostics = [
-        ...(input.mutationErrors ?? []).map((error) => ({
-            code: 'operation-failed',
-            operatorMessage: toSafeOperationMessage(error),
-        })),
+        ...(input.mutationErrors ?? []).map((error) => error instanceof bugbot_mutation_error_1.BugbotMutationError
+            ? { code: 'finding-mutation-failed', mutation: error.diagnostic }
+            : { code: 'operation-failed', operatorMessage: toSafeOperationMessage(error) }),
         ...(!input.target.trustedAuthorLogin?.trim()
             ? [{ code: 'identity-unavailable' }]
             : []),
@@ -68200,14 +68270,16 @@ function toPresentationFailure(diagnostic) {
     const message = (0, bugbot_message_catalog_1.bugbotDiagnosticOperatorMessage)(diagnostic);
     return {
         diagnostic,
-        error: diagnostic.code === 'review-updates-pending'
-            ? new application_error_1.ApplicationError('workflow.presentation-pending', message, {
-                recovery: {
-                    id: 'bugbot-review-blocks-pending',
-                    variables: { pendingCount: diagnostic.count },
-                },
-            })
-            : new Error(message),
+        error: diagnostic.code === 'finding-mutation-failed'
+            ? new application_error_1.ApplicationError(diagnostic.mutation.errorCode, message)
+            : diagnostic.code === 'review-updates-pending'
+                ? new application_error_1.ApplicationError('workflow.presentation-pending', message, {
+                    recovery: {
+                        id: 'bugbot-review-blocks-pending',
+                        variables: { pendingCount: diagnostic.count },
+                    },
+                })
+                : new Error(message),
     };
 }
 function report(projection, reviewUpdates, pendingReviewUpdates, statusCardOperation, errors) {
@@ -87110,8 +87182,8 @@ function collectDiagnostic(diagnostics, cause) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestChangesRepository = void 0;
+const pull_request_review_error_metadata_1 = __nccwpck_require__(54354);
 const logger_1 = __nccwpck_require__(91151);
-const pull_request_review_errors_1 = __nccwpck_require__(46445);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
 const application_error_1 = __nccwpck_require__(75999);
 class PullRequestChangesRepository {
@@ -87124,7 +87196,7 @@ class PullRequestChangesRepository {
             }
             catch (error) {
                 (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to read the pull request review diff.'));
-                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'list-files');
+                throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, 'list-files');
             }
         };
         this.getBoundedBugbotReviewDiffSnapshot = async (owner, repository, pullNumber, token) => {
@@ -87166,7 +87238,7 @@ class PullRequestChangesRepository {
             }
             catch (error) {
                 (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to read the pull request review diff.'));
-                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'list-files');
+                throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, 'list-files');
             }
         };
         /** Head commit SHA of the PR (for creating review). */
@@ -87185,7 +87257,7 @@ class PullRequestChangesRepository {
             }
             catch (error) {
                 (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to read the pull request head SHA.'));
-                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "get-head-sha");
+                throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, "get-head-sha");
             }
         };
     }
@@ -87528,6 +87600,7 @@ function toBugbotPullRequestIdentity(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentCommandRepository = void 0;
+const pull_request_review_error_metadata_1 = __nccwpck_require__(54354);
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
 class PullRequestReviewCommentCommandRepository {
@@ -87596,7 +87669,7 @@ class PullRequestReviewCommentCommandRepository {
             const context = comments.length > 0
                 ? { failedCount: comments.length, totalCount: comments.length }
                 : undefined;
-            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "publish-comments", context);
+            throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, "publish-comments", context);
         }
     }
     async updatePullRequestReview(owner, repository, pullRequestNumber, reviewIdentity, body, token) {
@@ -87617,7 +87690,7 @@ class PullRequestReviewCommentCommandRepository {
                 throw new pull_request_review_errors_1.PullRequestReviewOperationError('update-review');
         }
         catch (error) {
-            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'update-review');
+            throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, 'update-review');
         }
     }
     async updatePullRequestReviewComment(_owner, _repository, commentIdentity, body, token) {
@@ -87636,7 +87709,7 @@ class PullRequestReviewCommentCommandRepository {
             }
         }
         catch (error) {
-            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "update-comment");
+            throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, "update-comment");
         }
     }
 }
@@ -87652,7 +87725,7 @@ exports.PullRequestReviewCommentCommandRepository = PullRequestReviewCommentComm
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentQueryRepository = void 0;
-const pull_request_review_errors_1 = __nccwpck_require__(46445);
+const pull_request_review_error_metadata_1 = __nccwpck_require__(54354);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
 function toReviewComment(comment) {
     if (typeof comment.node_id !== "string" || comment.node_id.length === 0) {
@@ -87708,7 +87781,7 @@ class PullRequestReviewCommentQueryRepository {
             return comments;
         }
         catch (error) {
-            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "list-comments");
+            throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, "list-comments");
         }
     }
     async listBugbotPullRequestReviewCommentsBounded(owner, repository, pullRequestNumber, token) {
@@ -87751,7 +87824,7 @@ class PullRequestReviewCommentQueryRepository {
             };
         }
         catch (error) {
-            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "list-comments");
+            throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, "list-comments");
         }
     }
     async listPullRequestReviews(owner, repository, pullRequestNumber, token) {
@@ -87765,7 +87838,7 @@ class PullRequestReviewCommentQueryRepository {
             return reviews;
         }
         catch (error) {
-            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'list-reviews');
+            throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, 'list-reviews');
         }
     }
     async getPullRequestReviewCommentBody(owner, repository, _pullRequestNumber, commentId, token) {
@@ -87779,11 +87852,35 @@ class PullRequestReviewCommentQueryRepository {
             return data.body ?? null;
         }
         catch (error) {
-            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "get-comment");
+            throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, "get-comment");
         }
     }
 }
 exports.PullRequestReviewCommentQueryRepository = PullRequestReviewCommentQueryRepository;
+
+
+/***/ }),
+
+/***/ 54354:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.toPullRequestReviewOperationError = toPullRequestReviewOperationError;
+const pull_request_review_errors_1 = __nccwpck_require__(46445);
+/** Only safe HTTP metadata crosses the provider boundary; provider prose never does. */
+function toPullRequestReviewOperationError(error, operation, context) {
+    if (!error || typeof error !== 'object')
+        return (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, operation, context);
+    const record = error;
+    return (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, operation, {
+        ...context,
+        ...(typeof record.status === 'number' ? { providerStatus: record.status } : {}),
+        ...(typeof record.response?.headers?.['x-github-request-id'] === 'string'
+            ? { providerReference: record.response.headers['x-github-request-id'] } : {}),
+    });
+}
 
 
 /***/ }),
@@ -87896,6 +87993,7 @@ function nextConnectionCursor(pageInfo, seenCursors) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewThreadRepository = void 0;
+const pull_request_review_error_metadata_1 = __nccwpck_require__(54354);
 const logger_1 = __nccwpck_require__(91151);
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
 const pull_request_review_thread_locator_1 = __nccwpck_require__(2307);
@@ -87943,7 +88041,7 @@ class PullRequestReviewThreadRepository {
                 return states;
             }
             catch (error) {
-                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'list-threads');
+                throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, 'list-threads');
             }
         };
         this.listBugbotPullRequestReviewThreadStatesBounded = async (owner, repository, pullNumber, token) => {
@@ -88012,7 +88110,7 @@ class PullRequestReviewThreadRepository {
                 };
             }
             catch (error) {
-                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'list-threads');
+                throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, 'list-threads');
             }
         };
         this.resolvePullRequestReviewThread = async (owner, repository, pullNumber, commentIdentity, token) => {
@@ -88036,7 +88134,7 @@ class PullRequestReviewThreadRepository {
                 (0, logger_1.logDebugInfo)('Resolved pull request review thread.');
             }
             catch (error) {
-                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'resolve-thread');
+                throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, 'resolve-thread');
             }
         };
         this.unresolvePullRequestReviewThread = async (owner, repository, pullNumber, commentIdentity, token) => {
@@ -88060,7 +88158,7 @@ class PullRequestReviewThreadRepository {
                 (0, logger_1.logDebugInfo)('Reopened pull request review thread.');
             }
             catch (error) {
-                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'unresolve-thread');
+                throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, 'unresolve-thread');
             }
         };
     }
@@ -88077,7 +88175,7 @@ exports.PullRequestReviewThreadRepository = PullRequestReviewThreadRepository;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewerRepository = void 0;
-const pull_request_review_errors_1 = __nccwpck_require__(46445);
+const pull_request_review_error_metadata_1 = __nccwpck_require__(54354);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
 const COMPLETED_REVIEW_STATES = new Set([
     "APPROVED",
@@ -88110,7 +88208,7 @@ class PullRequestReviewerRepository {
             return [...reviewers.values()];
         }
         catch (error) {
-            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "list-reviewers");
+            throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, "list-reviewers");
         }
     }
     async addReviewersToPullRequest(owner, repository, pullRequestNumber, reviewers, token) {
@@ -88135,7 +88233,7 @@ class PullRequestReviewerRepository {
             return [...confirmed.values()];
         }
         catch (error) {
-            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "request-reviewers");
+            throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, "request-reviewers");
         }
     }
     async listRequestedReviewers(client, parameters) {

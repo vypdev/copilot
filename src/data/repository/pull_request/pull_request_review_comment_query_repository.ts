@@ -1,10 +1,10 @@
+import { toPullRequestReviewOperationError } from './pull_request_review_error_metadata';
 import type {
   PullRequestReviewComment,
   PullRequestReviewCommentQueryPort,
   PullRequestReviewSummary,
   PullRequestReviewSummaryQueryPort,
 } from "../../../application/ports/pull_request_review_comment_ports";
-import { toPullRequestReviewOperationError } from "../../../application/ports/pull_request_review_errors";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type {
   GithubPullRequestReviewCommentQueryClient,

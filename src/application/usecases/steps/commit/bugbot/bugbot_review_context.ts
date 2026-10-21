@@ -20,6 +20,7 @@ export interface BuiltBugbotPromptContext {
   readonly omitted: number;
   readonly truncated: number;
   readonly retained: number;
+  readonly truncatedItemIds?: readonly string[];
 }
 
 export function buildReviewDiffContext(
@@ -95,6 +96,10 @@ export function buildReviewConversationContext(
     omitted,
     truncated: chronological.filter((entry) => entry.truncated).length,
     retained: chronological.length,
+    ...(chronological.some(entry => entry.truncated) ? {
+      truncatedItemIds: chronological.filter(entry => entry.truncated)
+        .map(entry => entry.providerId).filter(id => /^(?:issue:[0-9]+|review:[A-Za-z0-9_=-]+)$/.test(id) && id.length <= 160),
+    } : {}),
   };
 }
 

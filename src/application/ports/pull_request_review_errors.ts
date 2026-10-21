@@ -15,7 +15,9 @@ export type PullRequestReviewOperation =
   | "unresolve-thread"
   | "mark-resolved";
 
-interface PullRequestReviewErrorContext {
+export interface PullRequestReviewErrorContext {
+  readonly providerStatus?: number;
+  readonly providerReference?: string;
   failedCount?: number;
   totalCount?: number;
 }
@@ -55,6 +57,8 @@ function buildMessage(
 
 export class PullRequestReviewOperationError extends Error {
   readonly operation: PullRequestReviewOperation;
+  readonly providerStatus?: number;
+  readonly providerReference?: string;
 
   constructor(
     operation: PullRequestReviewOperation,
@@ -63,6 +67,13 @@ export class PullRequestReviewOperationError extends Error {
     super(buildMessage(operation, context));
     this.name = "PullRequestReviewOperationError";
     this.operation = operation;
+    const status = context?.providerStatus;
+    if (typeof status === 'number' && Number.isInteger(status) && status >= 400 && status <= 599) {
+      this.providerStatus = status;
+    }
+    if (typeof context?.providerReference === 'string' && /^[A-Za-z0-9:-]{1,64}$/.test(context.providerReference)) {
+      this.providerReference = context.providerReference;
+    }
   }
 }
 

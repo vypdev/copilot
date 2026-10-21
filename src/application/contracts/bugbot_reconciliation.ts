@@ -1,3 +1,4 @@
+import type { BugbotMutationDiagnostic } from '../errors/bugbot_mutation_error';
 import type { BugbotIssueComment } from '../ports/bugbot_issue_read_ports';
 import type { BugbotReviewNavigation } from '../ports/bugbot_review_navigation_ports';
 import type {
@@ -60,6 +61,7 @@ export type BugbotReconciliationSnapshotResult =
     };
 
 export type BugbotPresentationDiagnostic =
+  | { readonly code: 'finding-mutation-failed'; readonly mutation: BugbotMutationDiagnostic }
   | { readonly code: 'operation-failed'; readonly operatorMessage: string }
   | { readonly code: 'identity-unavailable' }
   | { readonly code: 'snapshot-pull-request-comments-failed' }
