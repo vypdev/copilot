@@ -598,6 +598,7 @@
         "src/data/repository/project/project_board_item_query.ts",
         "src/infrastructure/composition/change_size_project_membership_composition_root.ts",
         "src/manager/description/configuration_handler.ts",
+        "src/manager/description/configuration_markers.ts",
         "src/data/repository/issue/issue_content_repository.ts",
         "src/data/repository/github/github_error_policy.ts"
       ],

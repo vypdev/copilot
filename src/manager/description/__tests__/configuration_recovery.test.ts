@@ -5,6 +5,7 @@ import { renderApplicationErrorText } from '../../../application/policies/applic
 import { resolveStaticApplicationErrorCatalog } from '../../../application/policies/application_error_message_catalog';
 import { runSetupExecution } from '../../../application/usecases/execution/setup_execution_workflow';
 import type { SetupExecutionContext } from '../../../application/usecases/execution/setup_execution_contracts';
+import type { ConfigurationPersistenceContext } from '../../../application/ports/configuration_store_ports';
 
 jest.mock('../../../utils/logger', () => ({ logError: jest.fn() }));
 
@@ -55,6 +56,109 @@ describe('stored configuration diagnostics and recovery (#635)', () => {
     const f = fixture('Human PR body without stored state');
     await expect(f.handler.get(query)).resolves.toBeUndefined();
     expect(f.updateDescription).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'The opening token is `<!-- copilot-configuration-start`.',
+    'The closing token is `copilot-configuration-end -->`.',
+    'Explain <!-- copilot-configuration-start in this issue.',
+    'Explain copilot-configuration-end --> in this issue.',
+    '> <!-- copilot-configuration-start\n> copilot-configuration-end -->',
+    '    <!-- copilot-configuration-start\n    copilot-configuration-end -->',
+  ])('does not treat an ordinary marker mention as stored state: %s', async body => {
+    const f = fixture(body);
+    await expect(f.handler.get(query)).resolves.toBeUndefined();
+    expect(f.updateDescription).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['```md', '```'], ['~~~md', '~~~'], ['````md', '`````'],
+  ])('ignores a closed %s configuration example', async (open, close) => {
+    const f = fixture(`${open}\n<!-- copilot-configuration-start\nonly a marker example\n${close}`);
+    await expect(f.handler.get(query)).resolves.toBeUndefined();
+  });
+
+  it('preserves complete legacy fenced state instead of silently treating it as absent', async () => {
+    const f = fixture('```md\n' + block('{"schemaVersion":3,"branchType":"bugfix"}') + '\n```');
+    await expect(f.handler.get(query)).resolves.toMatchObject({ branchType: 'bugfix' });
+  });
+
+  it('does not choose between a complete fenced record and a second actual record', async () => {
+    const f = fixture('```md\n' + block('{"schemaVersion":3,"branchType":"bugfix"}') + '\n```\n'
+      + block('{"schemaVersion":3,"branchType":"feature"}'));
+    await expect(f.handler.get(query)).rejects.toMatchObject({ code: 'configuration.invalid' });
+    expect(f.updateDescription).not.toHaveBeenCalled();
+  });
+
+  it('reads the actual stored block after quoted marker examples', async () => {
+    const f = fixture('```md\n<!-- copilot-configuration-start\nonly a marker example\n```\n'
+      + block('{"schemaVersion":3,"branchType":"feature"}'));
+    await expect(f.handler.get(query)).resolves.toMatchObject({ branchType: 'feature' });
+  });
+
+  it('keeps backticks in stored JSON literal instead of interpreting them as prose', async () => {
+    const f = fixture(block('{"schemaVersion":3,"parentBranch":"branch-`literal`"}'));
+    await expect(f.handler.get(query)).resolves.toMatchObject({ parentBranch: 'branch-`literal`' });
+  });
+
+  it('still rejects a genuinely incomplete block after a closed example', async () => {
+    const f = fixture('```md\n<!-- copilot-configuration-start\n```\n<!-- copilot-configuration-start\n{}');
+    await expect(f.handler.get(query)).rejects.toMatchObject({ code: 'configuration.invalid' });
+    expect(f.updateDescription).not.toHaveBeenCalled();
+  });
+
+  it('rejects duplicate actual blocks without selecting or rewriting one', async () => {
+    const f = fixture(block('{"schemaVersion":3}') + '\n' + block('{"schemaVersion":3}'));
+    await expect(f.handler.get(query)).rejects.toMatchObject({ code: 'configuration.invalid' });
+    expect(f.updateDescription).not.toHaveBeenCalled();
+  });
+
+  it('persists first state after marker mentions and examples without changing the human body', async () => {
+    const body = 'Mention `<!-- copilot-configuration-start`.\n```md\n<!-- copilot-configuration-start\n```';
+    const f = fixture(body);
+    await f.handler.update(query, { currentConfiguration: { branchType: 'feature', parentBranch: 'develop' } } as ConfigurationPersistenceContext);
+    const updated = f.updateDescription.mock.calls[0][3] as string;
+    expect(updated.startsWith(body + '\n\n')).toBe(true);
+    f.setBody(updated);
+    await expect(f.handler.get(query)).resolves.toMatchObject({ branchType: 'feature', parentBranch: 'develop' });
+  });
+
+  it('updates the real state while preserving earlier fenced marker mentions', async () => {
+    const example = '```md\n<!-- copilot-configuration-start\nonly a marker example\n```\n';
+    const f = fixture(example + block('{"schemaVersion":3,"branchType":"feature"}'));
+    const updated = f.handler.updateContent(await f.getDescription(), '{"schemaVersion":3,"branchType":"release"}')!;
+    expect(updated.startsWith(example)).toBe(true);
+    f.setBody(updated);
+    await expect(f.handler.get(query)).resolves.toMatchObject({ branchType: 'release' });
+  });
+
+  it('keeps first state outside a dangling code example without rewriting its existing text', async () => {
+    const body = 'Human body\n```txt\nexample';
+    const f = fixture(body);
+    const updated = f.handler.updateContent(body, '{"schemaVersion":3,"branchType":"feature"}')!;
+    expect(updated.startsWith(body + '\n\n```\n\n')).toBe(true);
+    f.setBody(updated);
+    await expect(f.handler.get(query)).resolves.toMatchObject({ branchType: 'feature' });
+  });
+
+  it('does not silently discard legacy state hidden behind an unclosed code fence', async () => {
+    const body = '```md\n' + block('{"schemaVersion":3,"branchType":"feature"}');
+    const f = fixture(body);
+    await expect(f.handler.get(query)).rejects.toMatchObject({ code: 'configuration.invalid' });
+    expect(f.handler.updateContent(body, '{}')).toBeUndefined();
+    expect(f.updateDescription).not.toHaveBeenCalled();
+  });
+
+  it('reads CRLF state and preserves human text when updating it', async () => {
+    const body = block('{"schemaVersion":3,"branchType":"feature"}').replace(/\n/gu, '\r\n');
+    const f = fixture(body);
+    await expect(f.handler.get(query)).resolves.toMatchObject({ branchType: 'feature' });
+    expect(f.handler.updateContent(body, '{"schemaVersion":3}')!.startsWith('Human PR body\r\n')).toBe(true);
+  });
+
+  it('preserves a real single-line hidden record beginning at the start of a line', async () => {
+    const f = fixture('<!-- copilot-configuration-start {"schemaVersion":3,"branchType":"feature"} copilot-configuration-end -->');
+    await expect(f.handler.get(query)).resolves.toMatchObject({ branchType: 'feature' });
   });
 
   it('continues reading supported state without rewriting it', async () => {

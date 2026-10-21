@@ -83950,6 +83950,8 @@ function validatePaths(source, inventory, sddPath) {
         if (change === 'create') {
             if (inventory.files.has(file) || inventory.directories.has(file))
                 fail('repository-path');
+            if ([...proposed].some(other => file.startsWith(`${other}/`) || other.startsWith(`${file}/`)))
+                fail('repository-path');
             const segments = file.split('/');
             if (segments.some((_, index) => inventory.files.has(segments.slice(0, index + 1).join('/')) || inventory.blocked.has(segments.slice(0, index + 1).join('/'))))
                 fail('repository-path');
@@ -90876,9 +90878,22 @@ const logger_1 = __nccwpck_require__(91151);
 const issue_content_interface_1 = __nccwpck_require__(60608);
 const configuration_payload_policy_1 = __nccwpck_require__(58043);
 const application_error_1 = __nccwpck_require__(75999);
+const configuration_markers_1 = __nccwpck_require__(4586);
 class ConfigurationHandler extends issue_content_interface_1.IssueContentInterface {
     constructor() {
         super(...arguments);
+        this.getContent = (description) => {
+            const block = (0, configuration_markers_1.readConfigurationBlock)(description);
+            return block.kind === 'present' ? block.content : undefined;
+        };
+        this.updateContent = (description, content) => {
+            if (description === undefined || content === undefined)
+                return undefined;
+            const updated = (0, configuration_markers_1.writeConfigurationBlock)(description, content);
+            if (updated === undefined)
+                (0, logger_1.logError)('The content has a problem with open-close tags: stored configuration.');
+            return updated;
+        };
         this.update = async (query, context) => {
             const storedRaw = await this.internalGetter(query);
             return this.internalUpdate(query, (0, configuration_payload_policy_1.buildConfigurationPayload)(context, storedRaw));
@@ -90898,8 +90913,7 @@ class ConfigurationHandler extends issue_content_interface_1.IssueContentInterfa
             try {
                 const config = this.getContent(description);
                 if (config === undefined) {
-                    if (description?.includes('<!-- copilot-configuration-start')
-                        || description?.includes('copilot-configuration-end -->')) {
+                    if ((0, configuration_markers_1.readConfigurationBlock)(description).kind === 'invalid') {
                         throw new Error('Stored configuration markers are inconsistent.');
                     }
                     return undefined;
@@ -90933,6 +90947,96 @@ class ConfigurationHandler extends issue_content_interface_1.IssueContentInterfa
     }
 }
 exports.ConfigurationHandler = ConfigurationHandler;
+
+
+/***/ }),
+
+/***/ 4586:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CONFIGURATION_END = exports.CONFIGURATION_START = void 0;
+exports.readConfigurationBlock = readConfigurationBlock;
+exports.writeConfigurationBlock = writeConfigurationBlock;
+exports.CONFIGURATION_START = '<!-- copilot-configuration-start';
+exports.CONFIGURATION_END = 'copilot-configuration-end -->';
+/** Owned delimiters begin a line; ordinary mentions are not state. Complete legacy fenced records remain readable. */
+function readConfigurationBlock(description) {
+    if (description === undefined)
+        return { kind: 'absent' };
+    let fence;
+    let fencedMarker = false;
+    let fencedStart;
+    let nestedFencedStart = false;
+    let start;
+    let contentStart = 0;
+    let block;
+    let offset = 0;
+    for (const line of description.match(/[^\n]*(?:\n|$)/gu) ?? []) {
+        const text = line.replace(/\r?\n$/u, '');
+        const starts = /^ {0,3}<!-- copilot-configuration-start(?:[ \t]|$)/u.test(text);
+        const ends = /^ {0,3}copilot-configuration-end -->[ \t]*$/u.test(text);
+        const boundary = /^ {0,3}(`{3,}|~{3,})(.*)$/u.exec(text);
+        if (fence) {
+            fencedMarker || (fencedMarker = starts || ends);
+            if (starts) {
+                if (fencedStart !== undefined)
+                    nestedFencedStart = true;
+                else
+                    fencedStart = offset + text.indexOf(exports.CONFIGURATION_START);
+            }
+            const end = text.indexOf(exports.CONFIGURATION_END);
+            if (fencedStart !== undefined && end >= 0 && !text.slice(end + exports.CONFIGURATION_END.length).trim()) {
+                if (block || nestedFencedStart)
+                    return { kind: 'invalid' };
+                block = { kind: 'present', start: fencedStart, end: offset + end + exports.CONFIGURATION_END.length,
+                    content: description.slice(fencedStart + exports.CONFIGURATION_START.length, offset + end) };
+                fencedStart = undefined;
+            }
+            if (boundary && boundary[1][0] === fence[0] && boundary[1].length >= fence.length && !boundary[2].trim()) {
+                fence = undefined;
+                fencedMarker = false;
+                fencedStart = undefined;
+                nestedFencedStart = false;
+            }
+        }
+        else if (start !== undefined || starts) {
+            if (starts) {
+                if (start !== undefined || block)
+                    return { kind: 'invalid' };
+                start = offset + text.indexOf(exports.CONFIGURATION_START);
+                contentStart = start + exports.CONFIGURATION_START.length;
+            }
+            const end = text.indexOf(exports.CONFIGURATION_END);
+            if (end >= 0 && !text.slice(end + exports.CONFIGURATION_END.length).trim()) {
+                block = { kind: 'present', start: start, end: offset + end + exports.CONFIGURATION_END.length,
+                    content: description.slice(contentStart, offset + end) };
+                start = undefined;
+            }
+        }
+        else if (ends)
+            return { kind: 'invalid' };
+        else if (boundary && (boundary[1][0] !== '`' || !boundary[2].includes('`')))
+            fence = boundary[1];
+        offset += line.length;
+    }
+    // A legacy block behind an unclosed fence is ambiguous: never silently discard its state.
+    if (start !== undefined || fence && fencedMarker)
+        return { kind: 'invalid' };
+    return block ?? { kind: 'absent', ...(fence ? { closingFence: fence } : {}) };
+}
+function writeConfigurationBlock(description, content) {
+    const block = readConfigurationBlock(description);
+    if (block.kind === 'invalid')
+        return undefined;
+    const replacement = `${exports.CONFIGURATION_START}\n${content}\n${exports.CONFIGURATION_END}`;
+    if (block.kind === 'present')
+        return description.slice(0, block.start) + replacement + description.slice(block.end);
+    // Closing an otherwise empty dangling example preserves its rendered text and keeps new state outside it.
+    return `${description}\n\n${block.closingFence ? `${block.closingFence}\n\n` : ''}${replacement}`;
+}
 
 
 /***/ }),

@@ -1227,16 +1227,16 @@ headings, mobile/screen-reader behavior and closed sanitized content. Rejected
 Markdown, case IDs, paths and diagnostic text MUST NOT enter repair instructions
 or public messages. There is no additional card, label, credential or setting.
 
-The amendment has a minimum **120 distinct cases**, separate from earlier floors:
+The amendment has a minimum **126 distinct cases**, separate from earlier floors:
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Pure consistency policy | 89 | Owner collisions and aliases, hidden/malformed inventories, invalid/valid fence and comment boundaries, offsetting budgets, reciprocal mappings, immutable/proposed paths and relative URL components, portable layouts and bounded ranges |
+| Pure consistency policy | 95 | Owner collisions and aliases, hidden/malformed inventories, invalid/valid fence and comment boundaries, offsetting budgets, reciprocal mappings, immutable/proposed paths and relative URL components, mutually incompatible proposed paths, portable layouts and bounded ranges |
 | Application and bounded draft workflow | 9 | All-owner reads, missing/oversized context, blocked publication, four closed repairs and corrected-draft revalidation |
 | Publication replay boundaries | 5 | Minimum/maximum candidate lengths, normalized outer whitespace, retained prefix and exact recomposition |
 | Real Git workspace | 13 | Each reported contradiction and falsely closed code block blocks publication; valid relative-link queries resolve immutable/proposed evidence; ignores uncommitted evidence, preserves the owner and removes scratch worktrees |
 | Localized recovery | 4 | All four closed variants render English/Spanish retained state without runtime acceptance claims |
-| **Total** | **120** | Existing cases are not recounted |
+| **Total** | **126** | Existing cases are not recounted |
 
 Repository coverage thresholds remain mandatory; new pure policy targets at
 least 95% lines, with negative/boundary branch fixtures. Tests use deterministic
@@ -1299,3 +1299,12 @@ cannot make a missing, invalidly encoded or unsafe pathname valid. Seven pure
 and two real Git update/companion cases cover existing/proposed paths, combined
 query/fragment destinations and negative evidence. These nine cases raise the
 floor from 111 to 120; docs/issues/pre-branch-sdds.mdx documents the URL behavior.
+
+Release PR #660 finding 4342237483 requires all proposed files to be compatible
+with one another as well as the immutable tree. A proposed regular file MUST
+NOT also be an ancestor of another proposed file, independent of table order
+or nesting depth. Six additional pure cases reject both orders at direct and
+deeper depths and accept siblings and distinct pathname prefixes. They raise
+the pure floor to 95 and the amendment total to 126. Existing closed path
+diagnostics, one-repair budget, immutable evidence and no-publication behavior
+remain unchanged; the pre-branch SDD guide documents this boundary.

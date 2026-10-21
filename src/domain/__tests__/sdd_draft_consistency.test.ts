@@ -159,6 +159,24 @@ describe('generated SDD consistency', () => {
   });
 
   it.each([
+    ['docs/new.md', 'docs/new.md/child.md'],
+    ['docs/new.md/child.md', 'docs/new.md'],
+    ['docs/new.md', 'docs/new.md/nested/child.md'],
+    ['docs/new.md/nested/child.md', 'docs/new.md'],
+  ])('rejects incompatible proposed files %s and %s in either declaration order', (first, second) => {
+    const markdown = sddConsistencyFixture().replace('| docs/payments.mdx | update |', `| ${first} | create |\n| ${second} | create |`);
+    expect(() => validate(markdown)).toThrow(expect.objectContaining({ reason: 'repository-path' }));
+  });
+
+  it.each([
+    ['docs/new/first.md', 'docs/new/second.md'],
+    ['docs/new.md', 'docs/new.mdx/child.md'],
+  ])('accepts compatible proposed files %s and %s', (first, second) => {
+    const markdown = sddConsistencyFixture().replace('| docs/payments.mdx | update |', `| ${first} | create |\n| ${second} | create |`);
+    expect(() => validate(markdown)).not.toThrow();
+  });
+
+  it.each([
     '../docs/payments.mdx?view=compact', '../docs/payments.mdx?view=compact#intro', './change.md?draft=1', '?view=compact',
   ])('resolves the repository pathname of relative destination %s without its query or fragment', href => {
     expect(() => validate(sddConsistencyFixture() + `\n[Guide](${href})`)).not.toThrow();
