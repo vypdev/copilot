@@ -1,10 +1,3 @@
-/**
- * Provider-neutral Bugbot finding and durable identity contracts.
- *
- * These types are shared by analysis, reconciliation, and publication. Keeping
- * them in the domain prevents policies from depending on a particular use-case
- * folder and gives every adapter one stable semantic vocabulary.
- */
 export interface BugbotFinding {
     id: string;
     title: string;

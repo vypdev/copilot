@@ -5,6 +5,7 @@
  * them in the domain prevents policies from depending on a particular use-case
  * folder and gives every adapter one stable semantic vocabulary.
  */
+import { buildFindingFingerprint } from './finding_identity';
 
 export interface BugbotFinding {
   id: string;
@@ -117,11 +118,28 @@ export function retainExistingFindingIds(
   existingByFindingId: ExistingByFindingId,
 ): BugbotFinding[] {
   const retained = new Set<string>();
+  const durableIds = new Set(Object.keys(existingByFindingId));
+  // Reserve the whole input up front so a generated ID cannot take another
+  // report's ID, including one that occurs later in the response.
+  const reservedIds = new Set([...durableIds, ...findings.map((finding) => finding.id)]);
+  const emittedIds = new Set<string>();
   return findings.flatMap((finding) => {
     const match = findExistingFindingMatch(existingByFindingId, finding);
-    if (!match) return [finding];
+    if (!match) {
+      let id = finding.id;
+      if (durableIds.has(id) || emittedIds.has(id)) {
+        const base = `candidate-${buildFindingFingerprint(finding)}`;
+        id = base;
+        let suffix = 0;
+        while (reservedIds.has(id)) id = `${base}-${++suffix}`;
+        reservedIds.add(id);
+      }
+      emittedIds.add(id);
+      return [id === finding.id ? finding : { ...finding, id }];
+    }
     if (retained.has(match.id)) return [];
     retained.add(match.id);
+    emittedIds.add(match.id);
     return [finding.id === match.id ? finding : { ...finding, id: match.id }];
   });
 }

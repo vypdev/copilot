@@ -42988,11 +42988,20 @@ function renderFindingRow(finding) {
     const label = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.title || finding.id, 500).replace(/[\r\n]+/gu, ' ');
     const state = stateLabel(finding.state);
     const identity = finding.state === 'unknown'
-        ? ` — ${(0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.id, 200).replace(/[\r\n]+/gu, ' ')}`
+        ? ` — ${renderFindingId(finding.id)}`
         : '';
     return finding.url
         ? `- ${state} — [${label}](${finding.url})${identity}`
         : `- ${state} — ${label}${identity}`;
+}
+function renderFindingId(value) {
+    const id = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(value, 200).replace(/[\r\n]+/gu, ' ');
+    // A delimiter longer than every embedded backtick run keeps links, images
+    // and HTML inert even when the marker permits arbitrary Markdown punctuation.
+    let delimiter = '`';
+    while (id.includes(delimiter))
+        delimiter += '`';
+    return `${delimiter} ${id} ${delimiter}`;
 }
 function stateLabel(state) {
     return `[ ] ${state}`;
@@ -80375,10 +80384,15 @@ function matchesConstrainedHead(target, candidate) {
 /***/ }),
 
 /***/ 31011:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isExistingFindingFullyResolved = isExistingFindingFullyResolved;
+exports.findExistingFindingInfo = findExistingFindingInfo;
+exports.findExistingFindingMatch = findExistingFindingMatch;
+exports.retainExistingFindingIds = retainExistingFindingIds;
 /**
  * Provider-neutral Bugbot finding and durable identity contracts.
  *
@@ -80386,11 +80400,7 @@ function matchesConstrainedHead(target, candidate) {
  * them in the domain prevents policies from depending on a particular use-case
  * folder and gives every adapter one stable semantic vocabulary.
  */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isExistingFindingFullyResolved = isExistingFindingFullyResolved;
-exports.findExistingFindingInfo = findExistingFindingInfo;
-exports.findExistingFindingMatch = findExistingFindingMatch;
-exports.retainExistingFindingIds = retainExistingFindingIds;
+const finding_identity_1 = __nccwpck_require__(91853);
 function isExistingFindingFullyResolved(finding) {
     const destinations = [finding.issue, finding.pullRequest].filter((destination) => destination != null);
     return (destinations.length > 0 &&
@@ -80425,13 +80435,30 @@ function findExistingFindingMatch(existingByFindingId, finding) {
  */
 function retainExistingFindingIds(findings, existingByFindingId) {
     const retained = new Set();
+    const durableIds = new Set(Object.keys(existingByFindingId));
+    // Reserve the whole input up front so a generated ID cannot take another
+    // report's ID, including one that occurs later in the response.
+    const reservedIds = new Set([...durableIds, ...findings.map((finding) => finding.id)]);
+    const emittedIds = new Set();
     return findings.flatMap((finding) => {
         const match = findExistingFindingMatch(existingByFindingId, finding);
-        if (!match)
-            return [finding];
+        if (!match) {
+            let id = finding.id;
+            if (durableIds.has(id) || emittedIds.has(id)) {
+                const base = `candidate-${(0, finding_identity_1.buildFindingFingerprint)(finding)}`;
+                id = base;
+                let suffix = 0;
+                while (reservedIds.has(id))
+                    id = `${base}-${++suffix}`;
+                reservedIds.add(id);
+            }
+            emittedIds.add(id);
+            return [id === finding.id ? finding : { ...finding, id }];
+        }
         if (retained.has(match.id))
             return [];
         retained.add(match.id);
+        emittedIds.add(match.id);
         return [finding.id === match.id ? finding : { ...finding, id: match.id }];
     });
 }

@@ -4,6 +4,7 @@ import {
     retainExistingFindingIds,
     isExistingFindingFullyResolved,
 } from '../finding';
+import { buildFindingFingerprint } from '../finding_identity';
 
 describe('finding identity reconciliation', () => {
     const retained = { pullRequest: { commentIdentity: 'PRRC_old', pullRequestNumber: 2,
@@ -41,6 +42,34 @@ describe('finding identity reconciliation', () => {
     it('retains a compatible direct ID even when another record has similar semantics', () => {
         const direct = { ...report, id: 'old' };
         expect(retainExistingFindingIds([direct], { old: retained, second: retained })[0]).toBe(direct);
+    });
+
+    it.each([false, true])('keeps an incompatible report from taking a retained ID in either order (%s)', (reverse) => {
+        const incompatible = { id: 'old', title: 'Other defect', description: 'An unrelated failure',
+            file: 'other.ts', fingerprint: 'fp-33333333', semanticFingerprint: 'sf-33333333' };
+        const reports = reverse ? [incompatible, report] : [report, incompatible];
+        const result = retainExistingFindingIds(reports, { old: retained });
+        expect(new Set(result.map((finding) => finding.id)).size).toBe(2);
+        expect(result.find((finding) => finding.title === report.title)?.id).toBe('old');
+        expect(result.find((finding) => finding.title === incompatible.title)?.id).toBe(`candidate-${buildFindingFingerprint(incompatible)}`);
+        expect(retainExistingFindingIds(result, { old: retained })).toEqual(result);
+    });
+
+    it('preserves different unmatched reports sharing one model ID without colliding with later input IDs', () => {
+        const first = { ...report, semanticFingerprint: undefined };
+        const second = { ...first, title: 'Other defect' };
+        const reserved = { ...first, id: `candidate-${buildFindingFingerprint(second)}`, title: 'Third defect' };
+        const result = retainExistingFindingIds([first, second, reserved], {});
+        expect(result.map((finding) => finding.id)).toEqual([first.id, `${reserved.id}-1`, reserved.id]);
+        expect(result.map((finding) => finding.title)).toEqual([first.title, second.title, reserved.title]);
+    });
+
+    it('reserves generated suffixes and existing durable IDs before allocating a collision ID', () => {
+        const incompatible = { ...report, id: 'old', semanticFingerprint: undefined };
+        const base = `candidate-${buildFindingFingerprint(incompatible)}`;
+        const result = retainExistingFindingIds([incompatible], { old: retained, [base]: {}, [`${base}-1`]: {} });
+        expect(result[0].id).toBe(`${base}-2`);
+        expect(result[0].id.length).toBeLessThanOrEqual(200);
     });
 
     it('requires a compatible local identity before trusting an exact model id', () => {

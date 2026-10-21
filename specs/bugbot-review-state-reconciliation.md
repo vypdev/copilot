@@ -1779,3 +1779,19 @@ limits. Definition of Done: these cases, coverage budgets, full suite,
 architecture, specification/catalog, documentation, generated bundle/package
 gates and current-head PR CI/review pass. Synthetic fixtures do not establish a
 specific historical consumer API cause or live model-quality improvement.
+
+PR #658 review corrections: preserving a matched key MUST NOT let an incompatible
+model report reuse that key and overwrite its evidence in downstream maps. Reserve
+all durable and input IDs before allocation. Incompatible reports that collide
+with a durable or already-emitted ID receive a short locally computed fingerprint
+ID with a deterministic unused suffix; matched records retain their durable key.
+Reapplying normalization and a fresh provider recheck MUST preserve both reports
+and reuse both native threads. Reserve generated IDs against later input IDs too.
+
+Unknown IDs MUST render as literal code text, with a delimiter longer than any
+embedded backtick run. Links, images and HTML in an ID cannot create navigation
+or markup. GitHub's GFM renderer verified the malicious link/image/backtick/HTML
+fixture as one inert code span. Add **six distinct cases** to this SDD's budget:
+four domain collision/order/replay/reservation cases, one publication-to-projection
+two-thread replay and one Markdown-injection case. Existing coverage thresholds
+and all publication, identity and recovery rules remain required.

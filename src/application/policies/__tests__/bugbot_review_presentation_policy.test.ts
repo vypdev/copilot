@@ -77,7 +77,7 @@ describe('Bugbot review presentation', () => {
       pullRequestNumber: 358, analyzedHeadSha: head, coverage: completeCoverage,
       findings: [{ id: 'src/model.ts:73:operations-empty', title: 'Dashboard state', state: 'unknown' }],
     }), locale, links);
-    expect(body).toContain('Dashboard state — src/model.ts:73:operations-empty');
+    expect(body).toContain('Dashboard state — ` src/model.ts:73:operations-empty `');
     expect(body).toContain('/copilot recheck');
   });
 
@@ -88,6 +88,15 @@ describe('Bugbot review presentation', () => {
     }), 'en-US', links);
     expect(body).not.toContain('<!-- unsafe -->');
     expect(body).toContain('@\u200bteam');
+  });
+
+  it('renders Markdown links, images, HTML and backticks in unknown IDs as inert code text', () => {
+    const body = renderBugbotStatusCard(buildBugbotReviewProjection({
+      pullRequestNumber: 358, analyzedHeadSha: head, coverage: completeCoverage,
+      findings: [{ id: '![review](https://example.com) `x` </code><a href="evil">',
+        title: 'Dashboard state', state: 'unknown' }],
+    }), 'en-US', links);
+    expect(body).toContain(' — `` ![review](https://example.com) `x` </code><a href="evil"> ``');
   });
 
   it('renders Spanish product copy while keeping machine markers neutral', () => {

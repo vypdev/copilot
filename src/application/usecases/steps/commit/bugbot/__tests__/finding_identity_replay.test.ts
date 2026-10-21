@@ -1,7 +1,7 @@
 import { buildCommentBody, parseMarker } from '../../../../../policies/bugbot_finding_marker_policy';
 import { toPullRequestReviewOperationError } from '../../../../../../data/repository/pull_request/pull_request_review_error_metadata';
 import { DEFAULT_BUGBOT_REVIEW_CONFIGURATION } from '../../../../../../domain/bugbot/review_configuration';
-import type { PullRequestReviewComment, PullRequestReviewSummary } from '../../../../../ports/pull_request_review_comment_ports';
+import type { PullRequestReviewComment, PullRequestReviewCommentDraft, PullRequestReviewSummary } from '../../../../../ports/pull_request_review_comment_ports';
 import { analyzeBugbotRevision } from '../analyze_bugbot_revision_use_case';
 import { applyDetectedFindings } from '../apply_detected_findings';
 import { parseBugbotFindingComments } from '../bugbot_finding_context';
@@ -38,8 +38,18 @@ function harness(resolved = false) {
   const reviews: PullRequestReviewSummary[] = [{ identity: '77', authorLogin: 'bugbot', commitId: head,
     body: '## 🤖 Bugbot review snapshot\n\nOriginal report.' }];
   const status: Array<{ id: number; body: string; user: { login: string } }> = [];
-  const createReviewWithComments = jest.fn();
-  const updatePullRequestReviewComment = jest.fn(async (_identity: string, body: string) => { comments[0].body = body; });
+  const createReviewWithComments = jest.fn(async (_pr: number, _head: string, body: string, drafts: PullRequestReviewCommentDraft[]) => {
+    reviews.push({ identity: '88', authorLogin: 'bugbot', commitId: head, body });
+    for (const draft of drafts) {
+      const id = comments.length + 1;
+      comments.push({ id, identity: `PRRC_${id}`, authorLogin: 'bugbot', parentReviewIdentity: '88',
+        body: draft.body, url: `https://github.com/org/repo/pull/1#discussion_r${id}` });
+    }
+    return { identity: '88' };
+  });
+  const updatePullRequestReviewComment = jest.fn(async (identity: string, body: string) => {
+    comments.find((comment) => comment.identity === identity)!.body = body;
+  });
   const unresolvePullRequestReviewThread = jest.fn(async () => { thread.resolved = false; });
   const resolvePullRequestReviewThread = jest.fn(async () => { thread.resolved = true; });
   const publication = { issueComments: { addComment: jest.fn(), updateComment: jest.fn() },
@@ -47,9 +57,11 @@ function harness(resolved = false) {
   const resolution = { issueComments: { updateComment: jest.fn() }, pullRequestComments: {
     listPullRequestReviewComments: async () => comments, updatePullRequestReviewComment,
     unresolvePullRequestReviewThread, resolvePullRequestReviewThread } };
+  const threads = () => Object.fromEntries(comments.map((comment) => [comment.identity,
+    comment.identity === 'PRRC_1' ? thread : { resolved: false }]));
   const load = (): BugbotContext => ({
     existingByFindingId: parseBugbotFindingComments([], new Map([[1, comments]]), 'bugbot',
-      new Map([[1, { PRRC_1: thread }]])).existingByFindingId,
+      new Map([[1, threads()]])).existingByFindingId,
     issueComments: [], selectionReason: 'event', coverage: { status: 'complete', sources: [] },
     eligibleResolutionIds: new Set([oldId]), previousFindingsBlock: '',
     unresolvedFindingsWithBody: [{ id: oldId, fullBody: comments[0].body! }],
@@ -67,7 +79,7 @@ function harness(resolved = false) {
       snapshotPorts: {
         getPullRequestHeadSha: async () => head,
         listPullRequestReviewComments: async () => comments,
-        listPullRequestReviewThreadStates: async () => ({ PRRC_1: thread }),
+        listPullRequestReviewThreadStates: async () => threads(),
         listPullRequestReviews: async () => reviews,
         listIssueComments: async () => status,
         navigationForPullRequest: () => ({ pullRequestUrl: 'https://github.com/org/repo/pull/1',
@@ -78,7 +90,7 @@ function harness(resolved = false) {
           addComment: async (_pr, body) => { status.push({ id: 2, body, user: { login: 'bugbot' } }); },
           updateComment: async (_pr, _id, body) => { status[0].body = body; },
         },
-        updatePullRequestReview: async (_pr, _id, body) => { reviews[0].body = body; },
+        updatePullRequestReview: async (_pr, id, body) => { reviews.find((review) => review.identity === id)!.body = body; },
       },
     });
   return { comments, thread, publication, resolution, load, reconcile, status };
@@ -119,6 +131,30 @@ it('keeps the durable marker when publication is called directly with a replacem
   expect(test.publication.pullRequestComments.updatePullRequestReviewComment).toHaveBeenCalledTimes(1);
   expect(parseMarker(test.comments[0].body)[0].findingId).toBe(oldId);
   expect(test.publication.pullRequestComments.createReviewWithComments).not.toHaveBeenCalled();
+});
+
+it('publishes and projects an incompatible colliding ID as a separate finding and reuses both threads on recheck', async () => {
+  const test = harness();
+  const unrelated = { ...current, id: oldId, title: 'Unrelated lease defect', file: 'src/copy.ts',
+    symbol: 'schedule', codeSnippet: 'retry(now)' };
+  const findings = [current, unrelated];
+  const run = async () => {
+    const loaded = test.load();
+    await publishFindings({ operation, context: loaded,
+      findings: prepareBugbotFindings({ findings }, [], 'low', 20)!.toPublish, ports: test.publication });
+    return test.reconcile(loaded, findings);
+  };
+  const first = await run();
+  expect(first.projection.findings).toHaveLength(2);
+  expect(new Set(first.projection.findings.map((finding) => finding.id)).size).toBe(2);
+  expect(first.projection.counts.open).toBe(2);
+  expect(first.projection.counts.unknown).toBe(0);
+  expect(first.projection.findings.map((finding) => finding.title)).toEqual(expect.arrayContaining([current.title, unrelated.title]));
+  const second = await run();
+  expect(second.projection.findings).toEqual(first.projection.findings);
+  expect(second.projection.digest).toBe(first.projection.digest);
+  expect(test.comments).toHaveLength(2);
+  expect(test.publication.pullRequestComments.createReviewWithComments).toHaveBeenCalledTimes(1);
 });
 
 it('preserves a human dismissal when the same finding is reported under a new ID', async () => {
