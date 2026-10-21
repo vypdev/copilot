@@ -15,7 +15,7 @@ In section 14 include one budget table: Area | Minimum distinct cases | Behavior
 Also in section 14 include one inventory table: Case ID | Area | Requirements | Scenario.
 Each row is one distinct executable case with a fully qualified ID such as capability-change-C01, one exact budget area, comma-separated requirement IDs and an observable scenario. Never use shorthand C01, ranges or redefine an ID found in any owning SDD. Reference retained baseline cases in prose using their full IDs; count only the new inventory.
 In section 17 include one table: Requirement | Cases. List comma-separated full case IDs for every requirement. Its links must exactly match the case inventory in both directions, with no undefined or generic documentation checks.
-In section 15 include one table: Path | Change. Change is update, reference or create. Use existing immutable-base files for update/reference. Only explicitly proposed new files may use create; never mark a missing current document as an existing artifact. Cite repository files as full repository-relative paths in backticks, or relative Markdown file links. Put every planned new file in this table. These tables are publication consistency checks, not runtime/security acceptance.`;
+In section 15 include one table: Path | Change. Change is update, reference or create. Include the selected SDD path itself with update for an existing SDD or create for a new/companion SDD. Use existing immutable-base files for update/reference. Only explicitly proposed new files may use create; never mark a missing current document as an existing artifact. Cite repository files as full repository-relative paths in backticks, or relative Markdown file links. Put every planned new file in this table. These tables are publication consistency checks, not runtime/security acceptance.`;
 
 function fail(reason: SddConsistencyReason): never {
   // Closed diagnostics: rejected Markdown and repository text never become repair instructions.
@@ -113,7 +113,7 @@ export function validateSddDraftConsistency(
   if (new Set(caseIds).size !== caseIds.length || caseIds.some(id => !CASE_ID.test(id) || reserved.has(id))
     || /(?<![\w-])C\d+\b/u.test(source)) fail('case-identity');
   // References to existing owner cases are allowed, but cannot count as newly defined cases.
-  if ((source.match(CASE) ?? []).some(id => !caseIds.includes(id) && !reserved.has(id))) fail('case-identity');
+  if ([...source.matchAll(CASE)].some(([id]) => !caseIds.includes(id) && !reserved.has(id))) fail('case-identity');
 
   const budget = table(source, 14, ['Area', 'Minimum distinct cases', 'Behaviors/risks covered'], 'case-budget');
   const counts = new Map<string, number>();
@@ -155,7 +155,9 @@ function safePath(value: string): boolean {
 
 function validatePaths(source: string, inventory: SddRepositoryInventory, sddPath: string): void {
   const rows = table(source, 15, ['Path', 'Change'], 'repository-path');
-  const proposed = new Set<string>([sddPath]);
+  const expectedChange = inventory.files.has(sddPath) ? 'update' : 'create';
+  if (!rows.some(([file, change]) => file === sddPath && change === expectedChange)) fail('repository-path');
+  const proposed = new Set<string>();
   const seen = new Set<string>();
   for (const [file, change] of rows) {
     if (!safePath(file) || seen.has(file) || inventory.blocked.has(file)) fail('repository-path');

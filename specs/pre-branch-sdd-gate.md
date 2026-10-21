@@ -1227,16 +1227,16 @@ headings, mobile/screen-reader behavior and closed sanitized content. Rejected
 Markdown, case IDs, paths and diagnostic text MUST NOT enter repair instructions
 or public messages. There is no additional card, label, credential or setting.
 
-The amendment has a minimum **78 distinct cases**, separate from earlier floors:
+The amendment has a minimum **93 distinct cases**, separate from earlier floors:
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Pure consistency policy | 56 | Owner collisions and aliases, hidden/malformed inventories, offsetting budgets, reciprocal mappings, immutable/proposed paths, portable layouts and bounded ranges |
+| Pure consistency policy | 66 | Owner collisions and aliases, hidden/malformed inventories, offsetting budgets, reciprocal mappings, immutable/proposed paths, portable layouts and bounded ranges |
 | Application and bounded draft workflow | 9 | All-owner reads, missing/oversized context, blocked publication, four closed repairs and corrected-draft revalidation |
 | Publication replay boundaries | 5 | Minimum/maximum candidate lengths, normalized outer whitespace, retained prefix and exact recomposition |
-| Real Git workspace | 4 | Each reported contradiction blocks publication, ignores uncommitted evidence, preserves the owner and removes scratch worktrees |
+| Real Git workspace | 9 | Each reported contradiction blocks publication, ignores uncommitted evidence, preserves the owner and removes scratch worktrees |
 | Localized recovery | 4 | All four closed variants render English/Spanish retained state without runtime acceptance claims |
-| **Total** | **78** | Existing cases are not recounted |
+| **Total** | **93** | Existing cases are not recounted |
 
 Repository coverage thresholds remain mandatory; new pure policy targets at
 least 95% lines, with negative/boundary branch fixtures. Tests use deterministic
@@ -1263,3 +1263,14 @@ build and package gates. All new evidence files MUST exist. No runtime
 prerequisite, framework or acceptance check may be weakened. In-flight drafts
 use the contract at their next validation. Rollback selects the previous Action
 version without rewriting historical commits or branches.
+
+PR #654 review finding 4339327223 closes an inventory exemption: section 15 MUST
+include the selected SDD itself, with create when absent from the immutable base
+and update when it already exists. Reference, omission or a self-link cannot
+substitute for this row. No SDD path is implicitly pre-approved. Ten additional
+pure cases cover these declarations and malformed table/fence boundaries; five
+workspace cases cover omitted update/companion rows, unsafe owner evidence and
+recovery rejection for a replaced owner or changed revalidation bytes. They are
+included once in the 93-case amendment floor above. The existing closed path
+recovery, shared retry ceiling and localized publication/acceptance distinction
+remain unchanged.

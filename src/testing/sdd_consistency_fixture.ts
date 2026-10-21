@@ -1,5 +1,5 @@
 /** Visible canonical tables shared by pure consistency and real Git publication fixtures. */
-export function sddConsistencyFixture(prefix = 'payments-change'): string {
+export function sddConsistencyFixture(prefix = 'payments-change', sddPath = 'specs/change.md', change: 'create' | 'update' = 'create'): string {
   return `# Payment behavior
 
 - Status: Draft
@@ -34,6 +34,7 @@ The domain owns pure decisions; the workspace adapter reads immutable Git object
 | Path | Change |
 |---|---|
 | docs/payments.mdx | update |
+| ${sddPath} | ${change} |
 
 ## 16. Acceptance scenarios
 The three cases above are observable product outcomes; runtime and security review remain separate acceptance gates.

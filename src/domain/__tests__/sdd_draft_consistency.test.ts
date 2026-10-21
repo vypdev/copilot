@@ -14,6 +14,37 @@ describe('generated SDD consistency', () => {
     expect(() => validate(sddConsistencyFixture())).not.toThrow();
   });
 
+  it.each(['omitted', 'reference', 'update'] as const)('rejects a new SDD declared as %s even when a self-link resolves to its path', change => {
+    const row = '| specs/change.md | create |';
+    const markdown = sddConsistencyFixture().replace(row, change === 'omitted' ? '' : `| specs/change.md | ${change} |`) + '\n[Draft](./change.md)';
+    expect(() => validate(markdown)).toThrow(expect.objectContaining({ reason: 'repository-path' }));
+  });
+
+  it('accepts a declared update to an immutable existing SDD', () => {
+    const existing = { ...inventory, files: new Set([...inventory.files, 'specs/change.md']) };
+    expect(() => validateSddDraftConsistency(sddConsistencyFixture('payments-change', 'specs/change.md', 'update'), owners, existing, 'specs/change.md')).not.toThrow();
+  });
+
+  it.each(['omitted', 'reference', 'create'] as const)('rejects an existing SDD declared as %s', change => {
+    const existing = { ...inventory, files: new Set([...inventory.files, 'specs/change.md']) };
+    const markdown = sddConsistencyFixture().replace('| specs/change.md | create |', change === 'omitted' ? '' : `| specs/change.md | ${change} |`);
+    expect(() => validateSddDraftConsistency(markdown, owners, existing, 'specs/change.md')).toThrow(expect.objectContaining({ reason: 'repository-path' }));
+  });
+
+  it('rejects a canonical table truncated before its separator', () => {
+    const markdown = `${sddConsistencyFixture().split('| Requirement | Cases |')[0]}| Requirement | Cases |`;
+    expect(() => validate(markdown)).toThrow(expect.objectContaining({ reason: 'requirement-mapping' }));
+  });
+
+  it('rejects an empty canonical traceability table', () => {
+    const markdown = sddConsistencyFixture().split('| Requirement | Cases |')[0] + '| Requirement | Cases |\n|---|---|\n';
+    expect(() => validate(markdown)).toThrow(expect.objectContaining({ reason: 'requirement-mapping' }));
+  });
+
+  it('keeps shorter and mismatched fence markers inside the excluded example', () => {
+    expect(reservedSddCaseIds([{ path: 'specs/examples.md', markdown: '````md\n```\n~~~\nignored-C01\n````\nretained-C01' }])).toEqual(['retained-C01']);
+  });
+
   it.each([
     ['primary collision', (s: string) => s.replace(/payments-change-C01/gu, 'payments-C01')],
     ['companion collision', (s: string) => s.replace(/payments-change-C01/gu, 'payments-session-C09')],
@@ -87,7 +118,7 @@ describe('generated SDD consistency', () => {
 
   it('allows intentional new files, relative file links, language-neutral paths, directories and external links', () => {
     const markdown = sddConsistencyFixture().replace('| docs/payments.mdx | update |', '| docs/new_guide.md | create |\n| backend/app.kt | reference |')
-      + '\nSee `docs/new_guide.md`, `docs/my_guide.mdx`, `backend/`, [existing](../docs/payments.mdx#intro), [same](#scope), [proposed](../docs/new_guide.md), [provider](https://example.test/path/file.md) and the retained payments-C01.';
+      + '\nSee `docs/new_guide.md`, `docs/my_guide.mdx`, `backend/`, `plain-text`, `/api/session`, `node command /path`, [self](./change.md), [existing](../docs/payments.mdx#intro), [same](#scope), [proposed](../docs/new_guide.md), [provider](https://example.test/path/file.md) and the retained payments-C01.';
     expect(() => validate(markdown)).not.toThrow();
   });
 
