@@ -11,6 +11,7 @@ import {
   normalizeSddIssueTitle,
   retainSddAnswers,
   SddOwnerFormatFailure,
+  SddOwnershipFailure,
   type SddGateRecord,
 } from '../pre_branch_sdd';
 
@@ -246,4 +247,16 @@ describe('retained SDD answer provenance', () => {
     expect(rendered.match(/-->/g)).toHaveLength(1);
     expect(readSddGateRecord(rendered, 42)?.answers).toEqual([malicious]);
   });
+});
+
+
+it.each([
+  ['update-owner-mismatch', { action: 'update', path: 'specs/other.md' }],
+  ['companion-owner-unknown', { action: 'companion', capabilityId: 'unknown' }],
+  ['companion-path-registered', { action: 'companion' }],
+  ['new-owner-registered', { action: 'new' }],
+  ['new-path-registered', { action: 'new', capabilityId: 'unknown' }],
+])('classifies ownership rejection %s without retaining proposed values', (reason, change) => {
+  try { parseSddPlan({ ...plan, ...(change as object) }, catalog); throw new Error('expected rejection'); }
+  catch (error) { expect(error).toBeInstanceOf(SddOwnershipFailure); expect(error).toMatchObject({ reason }); }
 });

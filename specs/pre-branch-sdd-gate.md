@@ -1085,3 +1085,58 @@ migration; adapted standards retain that rule in a numbered section.
 The canonical normative rule MUST occur inside one numbered section; concatenating
 fragments across section boundaries cannot establish it. Two additional adapter
 cases cover this boundary, included in the 91-case amendment floor.
+
+
+### Safe rejected ownership and bounded recovery (2026-10-21, #636)
+
+Observed defect: semantic ownership validation could reject a successful model
+response before any issue card, leaving only generic workflow failure. The gate
+MUST preserve validation and classify update-owner mismatch, unknown companion
+owner, registered companion path, registered new owner and registered new path
+with closed typed reasons. When both companion constraints fail, unknown owner
+has deterministic precedence. Generated owner/path values and response text MUST
+NOT enter this diagnostic. The immutable snapshot and catalog remain authoritative.
+
+The recovery policy is **one analysis per invocation, zero automatic repairs**.
+A maintainer clarifies the catalog ID/path in the same issue and reruns the
+original workflow, which performs fresh analysis and unchanged freshness checks.
+This amendment selects the maintainer-recovery option; invalid proposals never
+become invented clarification plans or stored validated owners. Existing answers,
+SDDs and published branches/commits are retained. A provider outage or malformed
+shape remains its existing failure, not an ownership retry.
+
+```text
+Analysis -> semantic rejection -> owned diagnostic -> maintainer clarification
+-> normal rerun -> fresh valid analysis -> unchanged draft/publication checks
+```
+
+Text equivalent: a rejected decision blocks; a human clarifies the same issue;
+a fresh invocation may progress only after normal semantic and publication checks.
+
+UI: **SDD work status: analysis blocked** explains that no new draft/publication
+was prepared, gives the specific closed cause, then asks the maintainer to clarify
+and rerun. English/Spanish copy uses the issue locale. An owned, issue-bound
+`copilot:sdd-analysis-status:v1` diagnostic is reused and unchanged retries emit
+no mutation. It has no readiness marker, no questions, proposed values, commands,
+external URLs or new configuration. A later validated owner updates it to
+“Publication and branch readiness remain subject to their checks.” Existing
+pending/question, partial-publication and completed cards retain their contracts.
+A foreign marker is never overwritten. Failed comment publication remains blocked.
+
+Domain owns typed semantic failures; the application presentation policy owns
+closed localized content; the use case uses its existing bound comment port.
+No SDK, filesystem, process or provider DTO crosses into either pure module.
+Typecheck, architecture tests and fault-injected use-case tests enforce the
+boundary. No credential or permission expansion, migration or new state schema.
+Upgrade the Action, clarify the same issue and rerun; rollback loses this
+additional diagnosis but cannot authorize invalid ownership.
+
+The additional budget is **21 distinct cases**: five typed domain classifications;
+ten use-case reason/locale boundaries; six retry, recovery, identity, provider and
+comment-failure cases. Existing valid update/companion/new tests remain required.
+Acceptance checks that invalid analysis makes no draft validation or publication
+call, does not add `branched`, leaks no proposed identifiers or response, and is
+not parsed as readiness. Documentation: ownership analysis recovery in the
+pre-branch SDD guide. Definition of Done also requires existing global quality,
+package and catalog gates, preserved safety checks and review of both locale
+messages; tests do not claim a live consumer recovery.
