@@ -193,10 +193,10 @@ already exists on the default branch. CLI example:
 `gh workflow run repowise.yml --ref develop`.
 
 The workflow owns event admission, Ubuntu `codex` runner selection, read-only
-contents permission and a 30-minute job budget. Checkout MUST retain the selected
-revision and full history without credentials. Each advisory subprocess retains
-its 90-second and 2 GiB limits; manual security scanning covers full reachable
-history. Per-ref `repowise-` concurrency cancels an older manual run for the same
+contents permission and originally a 30-minute job budget. Checkout MUST retain the selected
+revision and full history without credentials. The original advisory subprocesses used
+90-second and 2 GiB limits; issue #644 supersedes these budgets below. Manual
+security scanning covers full reachable history. Per-ref `repowise-` concurrency cancels an older manual run for the same
 ref without sharing CI's group. Python environments and reports remain isolated
 by run/attempt, with unconditional upload followed by cleanup. No domain, use
 case, port, provider DTO or composition change is needed: the repository workflow
@@ -238,6 +238,119 @@ Run workflow regressions, workflow/documentation/specification validators, and
 Graphify update. Completion requires a real manual run on the final revision and
 review of its summary/artifact; a queued run or static test is insufficient.
 Catalog evidence and the runner appendix in the setup-assistant SDD MUST agree.
+
+### Bounded manual RepoWise analysis (2026-10-21, issue #644)
+
+Status: implemented contract; native final-revision evidence is required before
+completion. Owner: Copilot maintainers. No open design decisions. This section
+supersedes the original budgets, incomplete-status handling and regression count
+above; admission, permissions, checkout, isolation and retention stay in force.
+
+The [previous manual run](https://github.com/vypdev/copilot/actions/runs/39573977241)
+spent 20m37s in the job: indexing took 8m6s, health ran twice, dead-code exceeded
+90 seconds and full-history security raised `MemoryError` under 2 GiB. Historical
+JavaScript blobs alone total approximately 9.2 GB. Upstream
+[RepoWise 0.58.0](https://github.com/repowise-dev/repowise/releases/tag/v0.58.0)
+serves stored health/dead-code, but its history reader still materializes all
+blobs. Upgrading alone does not resolve the memory failure. A local single-worker
+streaming trial covered 22,975 source blobs / 9,515,793,415 bytes in 1232 seconds;
+this CPU measurement motivates the fixed two-worker queue rather than merely
+extending the history deadline. Native final-head metrics remain the release gate.
+
+```text
+Manual selected ref -> one fresh standard index -> cached health MD/JSON + safe dead-code
+                    -> full-history secret scan, two bounded analysis workers
+                    -> validated reports + scope/timings -> artifact + summary
+```
+
+Text equivalent: index once, export stored results, scan full history with bounded
+blob residency, validate completeness, and publish evidence. No application
+runtime, setup session, domain model, provider port or public configuration changes
+are needed. The workflow owns execution and cleanup; `repowise_reports.py` owns
+phase sequencing, resource limits, validation and summary presentation;
+`repowise_history.py` adapts pinned RepoWise/Git interfaces. Neither imports the
+TypeScript application. YAML mutation tests enforce wiring; Python fixtures enforce
+the private-package adapter and output semantics.
+
+Fixed, non-configurable execution budgets:
+
+| Phase | Wall limit | Virtual memory per process | Behavior |
+|---|---:|---:|---|
+| Fresh standard index | 900s | 4096 MiB | No prose/editor/key/hook setup or worktree seeding; 500 commits for git analytics |
+| Each cached health format | 60s | 2048 MiB | All indexed origins, refactoring targets, no recomputation |
+| Cached safe-only dead-code | 60s | 2048 MiB | Requires successful dead-code phase and matching index SHA |
+| Full-history security | 1200s | 2048 MiB coordinator; 1024 MiB per worker | Two workers, all reachable refs/commits, supported source extensions, RepoWise secret kinds and upstream allowlists |
+| Complete job | 40 minutes | Phase limits above | Leaves two minutes beyond summed phase ceilings for setup/publication |
+
+The 500-commit analytics setting preserves the former index default and MUST NOT
+limit history security. Bundles remain included. The history adapter MUST retain
+upstream provenance, secret kinds, deduplication, line suppression, path allowlists
+and multiline PEM detection. It MUST fail on Git enumeration/read/persistence
+errors. At most two tasks/results are in flight, with one request/response per worker.
+The reader retains no blob cache; results are consumed in upstream history order.
+Memory scales with metadata plus current blob processing, not total historical
+content. Existing upstream metadata tables are still materialized. A single giant
+blob can exceed the process cap; that is incomplete, never silently skipped.
+
+The adapter uses two spawned processes with a fixed-width prefetch queue.
+Negative results do not copy source text back to the coordinator; positive results
+retain complete text for unchanged fingerprint/material handling. Worker failures
+propagate, and timeout kills the entire process group, including workers and Git.
+The adapter omits call/code-smell analysis that upstream history mode discards,
+and uses a conservative literal prefilter before the unchanged secret detectors.
+Fixtures MUST compare every supported secret kind, Unicode keyword matching,
+multiline PEM and removed/other-ref secrets against upstream behavior. The
+version is pinned exactly; any upgrade requires compatibility fixtures before
+publication. No remote cache or stale index is accepted. JSON health identifies
+`source: index`; index events MUST confirm ready status plus completed health and
+dead-code analysis at HEAD. Security MUST match the reachable commit count and
+requested/read source-blob count. Malformed JSON is removed instead of published
+as a complete report.
+
+The artifact MUST contain `revision.txt`, `scope.json` (SHA, ref snapshot, tool
+version and explicit scopes), `timings.json`, `history-resources.json`, per-phase
+logs/resource records, `summary.md`, advisory status and all completed reports.
+RSS is GNU time's largest-process peak, not a sum of simultaneous processes;
+virtual-memory limits apply to each process. Security output is RepoWise's JSON
+aggregate, not a guarantee that no secrets exist. The local database is removed
+and findings/secret material are not added to the artifact.
+
+The English summary shows status first by phase, SHA, seconds and peak RSS with
+artifact/retry instructions. Example rows: `dead-code | complete | 2.1 | 96.0` and
+`security | incomplete | 1200 | —`. Completed analysis says "Analysis complete.
+Findings are advisory"; partial analysis says "Analysis incomplete. Inspect phase
+logs in the artifact, fix the cause, then rerun." Incomplete scans now fail this
+optional job while preserving completed reports. Index failure blocks cached
+exports but still attempts the independent history scan. Timeout kills the process
+group. Cancellation/runner loss can still prevent publication; retry manually.
+No comments, locale settings or automatic retries are introduced. Native GitHub
+queued/running/canceled states and artifact links remain the navigation; textual
+statuses and plain tables work on narrow screens and in light/dark mode.
+
+Regression floor: **60 distinct cases**, comprising the retained **21** manual
+workflow admission/permission/isolation/wiring/report mutations and **39** Python
+cases: 14 detector/version compatibility, 5 blob/Git protocol/error cases,
+1 deleted-secret/other-ref/provenance integration, 15 resource/report/failure cases,
+and 4 bounded-prefetch/order/worker-failure/delegation cases. Cases use synthetic credentials, temporary repositories and mocked clocks/
+processes for timeouts; they do not need live services or real waits. The Python
+suite runs in the pinned Python 3.12 manual environment before analysis. Repository
+Jest coverage thresholds remain in force; the standalone Python adapter uses
+behavioral compatibility/failure evidence rather than a new percentage threshold.
+
+| Requirement | Acceptance/evidence | Documentation |
+|---|---|---|
+| Cached results belong to completed current index | Progress/state/JSON guards, fixtures and final-head artifact | Testing guide |
+| Full history completes without bulk contents | All-kind differential fixtures, deleted/other-ref provenance, native counts/RSS/bytes/timing | Testing + runner guides |
+| Failures remain truthful and bounded | Protocol, malformed data, exit, timeout/group kill, partial summary fixtures | Retry instructions |
+| Optional workflow remains isolated | Parsed YAML regressions, CI and manual final-head run | Manual dispatch guide |
+
+Roll out only through the linked PR. Rollback restores the former pin/workflow
+but also restores known incomplete scans; it must not restore automatic triggers
+or required checks. Definition of Done: the numeric test budget passes; workflow,
+documentation and specification validators pass; catalog evidence and Graphify
+are current; native final-head analysis produces **complete dead-code and security**
+with measured time/memory and inspected summary/artifact; CI passes independently.
+A queued run, green partial job, or merely relaxed limits is insufficient.
 
 ### Other merge-queue evidence from the original implementation
 - Copilot's own required PR context is produced for merge groups by the
