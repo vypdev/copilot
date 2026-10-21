@@ -13,7 +13,7 @@ describe('native verification workflow contract', () => {
     });
     it('has exactly twenty native setup slots and one completion, with five-minute native timeouts', () => {
         const steps = phaseSteps('./'); expect(MAX_REQUESTS).toBe(20); expect(steps).toHaveLength(41);
-        expect(steps.filter(step => step.uses === './.github/actions/copilot-verification-setup').every(step => step['timeout-minutes'] === 5)).toBe(true);
+        expect(steps.filter(step => step.uses === './.git/copilot-verification-setup').every(step => step['timeout-minutes'] === 5)).toBe(true);
     });
     it.each(['timeout', 'env', 'condition', 'reference', 'request', 'outcome', 'finish', 'extra', 'remove', 'prepare'])('rejects a weakened %s contract', kind => {
         const file = path.join(process.cwd(), 'setup/workflows/copilot_issue_comment.yml'); const workflow = load(fs.readFileSync(file, 'utf8')) as any;

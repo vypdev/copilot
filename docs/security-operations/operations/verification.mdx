@@ -150,8 +150,15 @@ before candidate changes. The trusted origin ref must be available locally;
 generated comment workflows use a full checkout. The runner executes that snapshot
 **after merge/fix changes and before each configured verifier**, reading the actual
 candidate manifests. The admitted operation continues once; the agent is not rerun.
-Copilot temporarily overlays the action directory with the reviewed snapshot and
-restores the candidate's original files before verification or publication.
+Copilot stages the reviewed snapshot in reserved local Git metadata at
+`.git/copilot-verification-setup`; the consumer's candidate files stay unchanged.
+The normal directory-based `.git` checkout from generated workflows is required.
+Staging remains available for native post steps. Trusted Copilot post steps reload
+the pinned Git objects and verify their original content digest before those
+phases with the initially pinned Git executable, so later candidate edits cannot
+supply post code. Source workflows also snapshot Copilot itself outside the
+mutable workspace; normal remote Action installations already use a separate
+runner cache.
 
 For Python, the consumer file can contain:
 
@@ -161,11 +168,13 @@ runs:
   using: composite
   steps:
     - uses: actions/setup-python@v6
+      id: python
       with:
+        update-environment: false
         python-version: '3.12'
     - name: Install the candidate's test dependencies
       run: |
-        python - <<'PYTHON'
+        "$PYTHON_EXECUTABLE" - <<'PYTHON'
         import os, pathlib, subprocess, venv
         home = pathlib.Path(os.environ['HOME']) / 'venv'
         venv.create(home, with_pip=True)
@@ -177,6 +186,8 @@ runs:
             print(tools, file=paths)
         PYTHON
       shell: bash
+      env:
+        PYTHON_EXECUTABLE: ${{ steps.python.outputs.python-path }}
 ```
 
 Keep pytest and all transitive dependencies pinned with hashes in the candidate's
@@ -206,15 +217,15 @@ runs:
 The action may include reviewed auxiliary scripts, referenced through
 `${{ github.action_path }}`. Use native external `uses` actions and `run` steps;
 nested local `uses: ./...` actions are rejected because their deferred post steps
-could otherwise load restored candidate code. Review external action versions as
+could otherwise load candidate code outside trusted staging. Review external action versions as
 part of the executable setup. The composite inherits the job's operating system;
 its metadata cannot declare jobs, runners or a matrix.
 
 Each command gets a **fresh private HOME**. These dependency-only profiles stay
 private until native post-job actions finish, then Copilot's final post cleanup
 removes them. They are never reused by another command. Keep dependencies that
-must survive restoration under the private HOME, an ignored candidate directory
-or the trusted runner tool cache, rather than inside the temporary action folder.
+must survive native post steps under the private HOME, an ignored candidate directory
+or the trusted runner tool cache, rather than inside the reserved action staging folder.
 
 Native setup exports tools through normal Actions mechanisms such as `GITHUB_PATH`
 and `JAVA_HOME`; no custom JSON helper protocol is required. Copilot accepts up to
@@ -245,7 +256,8 @@ pinned trusted SHA, never copied raw setup output.
 
 Setup must install dependencies without changing publishable code or lockfiles.
 Copilot compares HEAD, branch, index, tracked edits and publishable untracked file
-contents before allowing the verifier to continue. Observations are bounded to
+contents before allowing the verifier to continue. Executable lookup uses that verifier's
+validated PATH, so its private Python/pnpm takes precedence over the worker tools. Observations are bounded to
 16 MiB, 256 untracked files and 16 MiB aggregate untracked contents. Ignore dependency
 caches and keep source changes within these bounds. Failure, changed candidate,
 invalid runtime output, timeout or cancellation withholds verification and push;
@@ -254,6 +266,11 @@ branch synchronization follows its existing abort/recovery.
 Read-only questions/status, dry runs, already-aligned branches and empty command
 lists execute no setup. Snapshot failures remain deferred until verification.
 Setup/install/update preserves this consumer-owned directory and all its assets.
+
+If a runner crash leaves an unknown reserved staging directory, preparation fails
+closed rather than overwriting it. Confirm the prior job has stopped, inspect its
+run, and remove only that stale `.git/copilot-verification-setup` directory before
+retrying. Normal completion/cancellation uses the Action post cleanup.
 
 Native composite execution is available in the generated **GitHub Actions**
 callbacks. The local CLI cannot execute `uses` steps: opted-in local verification

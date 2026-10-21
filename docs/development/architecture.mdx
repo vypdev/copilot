@@ -644,17 +644,24 @@ actor, fork, native-head and workspace gates decide whether verification is reac
 Branch synchronization and shared automated commit preflight request the same
 `untrusted + verifyRuntimePrerequisites` port intent. The Git adapter creates a
 fresh private HOME. Its infrastructure pauses the admitted same-job worker exactly
-before preflight, stages the trusted action and lets GitHub Actions execute the
-native YAML. Continuation matches the operation/request/run/job, restores candidate
-action files, validates candidate identity and bounded runtime directories, then
-runs the existing probes and verifier. The agent and publication are not replayed.
+before preflight, stages the trusted action in local Git metadata and lets GitHub Actions execute the
+native YAML. Continuation matches the operation/request/run/job, validates the unchanged candidate identity and bounded runtime directories, then
+resolves executables against the private runtime PATH and runs the existing probes
+and verifier. Staging survives native post steps; trusted Copilot post phases
+use the initially pinned absolute Git executable to reload pinned Git objects and verify their original digest before native post
+execution, then the initial Action post step cleans staging and profiles. The agent and publication are not replayed.
 
-Pure policy owns limits, schemas and sanitized errors. Snapshot, overlay, protocol,
+Pure policy owns limits, schemas and sanitized errors. Snapshot, staging, protocol,
 profile and controller adapters own Git/filesystem/process details; application
 use cases retain mutation policy. Native action post steps can use dependency-only
 profiles until the original Action's final post cleanup removes them. They are
 never reused by later commands. Native step failure/cancellation blocks publication
 and triggers existing recovery. A final cleanup guard stops a leftover worker.
+
+Source callbacks first copy the Action manifest and runtime outside the mutable
+workspace, so rebuilding a candidate cannot replace continuation or post code.
+Remote installed Actions already use the runner action cache. Only native callback
+phases register active Copilot post behavior.
 
 The workflow generator emits twenty conditional setup/continuation slots and a
 completion step in each actual mutation callback. Structural validation compares

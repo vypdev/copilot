@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import * as core from '@actions/core';
 import * as protocol from '../native_verification_protocol';
 import { awaitNativeBoundary, cleanupNativeVerification, continueNativeVerification, drainNativeWorkerLog, runNativeVerificationEntry } from '../native_verification_controller';
-import { stageNativeVerificationAction } from '../native_verification_overlay';
+import { stageNativeVerificationAction } from '../native_verification_staging';
 import { nativeVerificationFixture } from './native_verification_fixture';
 
 jest.mock('@actions/core', () => ({ setOutput: jest.fn(), saveState: jest.fn(), getState: jest.fn(() => ''), getInput: jest.fn(() => 'true'), setFailed: jest.fn(), setSecret: jest.fn() }));
@@ -15,7 +15,7 @@ describe('native Actions phase controller', () => {
     const roots: string[] = [];
     const done = (exitCode = 0) => protocol.writeNativeRecord(f.session, 'done.json', { exitCode });
     const request = (edit: Record<string, unknown> = {}) => protocol.writeNativeRecord(f.session, 'request.json', {
-        id: f.id, sourceSha: 'a'.repeat(40), environment: f.runtime.environment, ...edit,
+        id: f.id, sourceSha: 'a'.repeat(40), digest: 'b'.repeat(64), environment: f.runtime.environment, ...edit,
     });
     beforeEach(() => { before = { ...process.env }; f = nativeVerificationFixture(); jest.clearAllMocks(); jest.mocked(core.getState).mockReturnValue(''); jest.mocked(core.getInput).mockReturnValue('true'); });
     afterEach(async () => {
@@ -139,7 +139,7 @@ describe('native Actions phase controller', () => {
         await runNativeVerificationEntry(jest.fn()); expect(core.setFailed).toHaveBeenCalled();
     });
     it('uses the post phase only for cleanup', async () => {
-        jest.mocked(core.getState).mockImplementation(key => key === 'copilot-native-post' ? 'true' : f.session); done(); const run = jest.fn();
+        jest.mocked(core.getState).mockImplementation(key => key === 'copilot-native-post' || key === 'native-verification-owner' ? 'true' : key === 'native-verification-ticket' ? f.session : ''); done(); const run = jest.fn();
         await runNativeVerificationEntry(run); expect(run).not.toHaveBeenCalled(); expect(fs.existsSync(f.session)).toBe(false);
     });
     it('allows post phases without an active verification session', async () => {

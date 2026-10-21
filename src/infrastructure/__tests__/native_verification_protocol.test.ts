@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import { join } from 'node:path';
 import { nativeSession, readNativeRecord, writeNativeRecord } from '../native_verification_protocol';
 import { verificationCandidateIdentity } from '../native_verification_candidate';
-import { stageNativeVerificationAction, restoreNativeVerificationAction } from '../native_verification_overlay';
+import { stageNativeVerificationAction, cleanupNativeVerificationAction } from '../native_verification_staging';
 import { nativeVerificationFixture } from './native_verification_fixture';
 
 describe('native session provenance and filesystem contracts', () => {
@@ -41,20 +41,26 @@ describe('native session provenance and filesystem contracts', () => {
     });
     it('restores originals on explicit cancellation and makes cleanup idempotent', () => {
         fs.mkdirSync(f.action, { recursive: true }); fs.writeFileSync(join(f.action, 'action.yml'), 'original');
-        stageNativeVerificationAction(f.setup as never, f.session); restoreNativeVerificationAction(f.session, f.root); restoreNativeVerificationAction(f.session, f.root);
+        stageNativeVerificationAction(f.setup as never, f.session); cleanupNativeVerificationAction(f.session, f.root); cleanupNativeVerificationAction(f.session, f.root);
         expect(fs.readFileSync(join(f.action, 'action.yml'), 'utf8')).toBe('original');
     });
-    it('rejects unsafe action ancestors', () => {
-        fs.writeFileSync(join(f.root, '.github'), 'file');
-        expect(() => stageNativeVerificationAction(f.setup as never, f.session)).toThrow('helper-invalid');
+    it('rejects a nonstandard Git metadata checkout', () => {
+        fs.renameSync(join(f.root, '.git'), join(f.root, '.git-original')); fs.writeFileSync(join(f.root, '.git'), 'gitdir: elsewhere');
+        expect(() => stageNativeVerificationAction(f.setup as never, f.session)).toThrow('native-workflow-required');
     });
-    it('rejects a non-directory action without overwriting it', () => {
-        fs.mkdirSync(join(f.root, '.github/actions'), { recursive: true }); fs.writeFileSync(f.action, 'original');
-        expect(() => stageNativeVerificationAction(f.setup as never, f.session)).toThrow('helper-invalid'); expect(fs.readFileSync(f.action, 'utf8')).toBe('original');
+    it('never overwrites a preexisting unowned staging directory', () => {
+        fs.mkdirSync(f.staged); fs.writeFileSync(join(f.staged, 'action.yml'), 'unrelated');
+        expect(() => stageNativeVerificationAction(f.setup as never, f.session)).toThrow('handoff-invalid');
+        expect(fs.readFileSync(join(f.staged, 'action.yml'), 'utf8')).toBe('unrelated');
     });
-    it('rejects malformed overlay recovery records without deleting candidate content', () => {
-        writeNativeRecord(f.session, 'overlay.json', { target: '/other', backup: '/other', created: [] });
-        expect(() => restoreNativeVerificationAction(f.session, f.root)).toThrow('handoff-invalid');
+    it('preserves an unowned broken staging link', () => {
+        fs.symlinkSync(join(f.root, 'missing'), f.staged, process.platform === 'win32' ? 'junction' : 'dir');
+        expect(() => stageNativeVerificationAction(f.setup as never, f.session)).toThrow('handoff-invalid');
+        expect(fs.lstatSync(f.staged).isSymbolicLink()).toBe(true);
+    });
+    it('rejects malformed staging records without deleting unrelated content', () => {
+        writeNativeRecord(f.session, 'staging.json', { target: '/other' });
+        expect(() => cleanupNativeVerificationAction(f.session, f.root)).toThrow('handoff-invalid');
     });
     it('binds tracked contents, branch and staged content, not filesystem timestamps', () => {
         const before = verificationCandidateIdentity(f.root, f.runtime.environment);

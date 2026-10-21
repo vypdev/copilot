@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { lstatSync, realpathSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { VerificationSetupError } from '../application/policies/verification_setup_policy';
@@ -17,7 +18,7 @@ export function registerNativeVerificationProfile(root: string, profile: string)
     if (previous.length >= 20 || previous.includes(profile) || dirname(profile) !== dirname(root)
         || profile === root || !/^copilot-verify-runtime-[A-Za-z0-9]+$/u.test(basename(profile))
         || realpathSync(profile) !== profile || !lstatSync(profile).isDirectory() || lstatSync(profile).isSymbolicLink()) throw new VerificationSetupError('handoff-invalid');
-    writeFileSync(join(profile, 'native-session-owner'), root, { mode: 0o600, flag: 'wx' });
+    writeFileSync(join(profile, 'native-session-owner'), createHash('sha256').update(root).digest('hex'), { mode: 0o600, flag: 'wx' });
     writeNativeRecord(root, 'profiles.json', [...previous, profile]);
 }
 
@@ -30,7 +31,7 @@ export function removeNativeVerificationProfiles(root: string): void {
     for (const path of nativeVerificationProfilePaths(root)) {
         let stat;
         try { stat = lstatSync(path); } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue; throw error; }
-        if (!stat.isDirectory() || stat.isSymbolicLink() || realpathSync(path) !== path || readFileSync(join(path, 'native-session-owner'), 'utf8') !== root) throw new VerificationSetupError('handoff-invalid');
+        if (!stat.isDirectory() || stat.isSymbolicLink() || realpathSync(path) !== path || readFileSync(join(path, 'native-session-owner'), 'utf8') !== createHash('sha256').update(root).digest('hex')) throw new VerificationSetupError('handoff-invalid');
         rmSync(path, { recursive: true, force: true });
     }
 }

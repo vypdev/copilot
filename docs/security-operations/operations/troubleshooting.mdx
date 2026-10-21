@@ -595,7 +595,7 @@ run, then repair the reviewed action on `main-branch`.
 | --- | --- |
 | `source-unavailable` | Make the trusted origin ref available in the full checkout. |
 | `helper-invalid` | Review the fixed native composite and regular auxiliary files; respect file/step bounds and avoid nested local `uses`. |
-| `native-workflow-required` | Update generated callbacks and run in GitHub Actions. The local CLI cannot execute composite actions. |
+| `native-workflow-required` | Update generated callbacks and use their normal directory-based Git checkout in GitHub Actions. The local CLI cannot execute composite actions. |
 | `workspace-changed` / `candidate-changed` | Keep setup dependency-only; do not change publishable source, index, branch or lockfiles. Retry from a fresh candidate. |
 | `process-failed` | Inspect the native action's logs and fix its reviewed dependency installation. |
 | `timeout` | Fit each native setup within five minutes; no limit override or automatic retry exists. |

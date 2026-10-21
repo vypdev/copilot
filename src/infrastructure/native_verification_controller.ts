@@ -1,3 +1,5 @@
+import { cleanupNativeSourceRuntime } from './native_verification_source_runtime';
+import { verificationExecutable } from './verification_executable';
 import { nativeWorkerSecrets, redactNativeWorkerLogs } from './native_verification_redaction';
 import { removeNativeVerificationProfiles } from './native_verification_profiles';
 import * as core from '@actions/core';
@@ -9,7 +11,8 @@ import { trustedWindowsSystemTool } from './agents/agent_trusted_system_tools';
 import { getGithubActionInput } from './github_action_input';
 import { VerificationSetupError, VERIFICATION_SETUP_LIMITS } from '../application/policies/verification_setup_policy';
 import { nativePause, nativeSession, readNativeRecord, writeNativeRecord, type NativeVerificationRequest, type NativeVerificationResponse } from './native_verification_protocol';
-import { restoreNativeVerificationAction } from './native_verification_overlay';
+import { cleanupNativeVerificationAction, stageNativeVerificationAction } from './native_verification_staging';
+import { captureVerificationSetupAtCommit, verificationSetupDigest } from './verification_setup_snapshot';
 
 function emitWorkerOutput(root: string): void {
     const file = join(root, 'worker-output');
@@ -70,8 +73,12 @@ export async function awaitNativeBoundary(root: string, timeoutMs = 7_200_000): 
         const request = readNativeRecord<NativeVerificationRequest>(root, 'request.json', 32_768);
         if (request) {
             if (!/^[a-f0-9-]{36}$/u.test(request.id) || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(request.sourceSha)
-                || !request.environment || typeof request.environment.HOME !== 'string') throw new VerificationSetupError('handoff-invalid');
+                || !/^[a-f0-9]{64}$/u.test(request.digest) || !request.environment || typeof request.environment.HOME !== 'string') throw new VerificationSetupError('handoff-invalid');
             core.setOutput('verification-request', request.id);
+            core.setOutput('verification-source', request.sourceSha);
+            core.setOutput('verification-digest', request.digest);
+            core.saveState('native-verification-digest', request.digest);
+            core.saveState('native-verification-source', request.sourceSha);
             for (const key of ['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'PATH', 'JAVA_HOME', 'TMP', 'TEMP', 'TMPDIR']) {
                 const value = request.environment[key] ?? '';
                 if (typeof value !== 'string' || /[\r\n\0]/u.test(value)) throw new VerificationSetupError('handoff-invalid');
@@ -113,13 +120,16 @@ export async function cleanupNativeVerification(root: string, waitMs = 10_000, d
             } catch { /* Worker may have exited while cancellation completed. */ }
         }
     }
-    restoreNativeVerificationAction(root, session.workspace);
+    if (!deferProfileCleanup) cleanupNativeVerificationAction(root, session.workspace);
     drainNativeWorkerLog(root, true);
     if (!deferProfileCleanup) { removeNativeVerificationProfiles(root); rmSync(root, { recursive: true, force: true }); }
 }
 
 async function startNativeVerification(): Promise<void> {
     for (const secret of nativeWorkerSecrets(process.env)) core.setSecret(secret);
+    const git = verificationExecutable('git', { PATH: process.env.PATH ?? '', PATHEXT: process.env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM' });
+    core.saveState('native-verification-git', git);
+    core.setOutput('verification-git', git);
     const root = realpathSync(createPrivateVerificationRuntimeRoot());
     for (const name of ['worker-output', 'worker-env', 'worker-path', 'worker-log', 'worker-summary']) writeFileSync(join(root, name), '', { flag: 'wx', mode: 0o600 });
     const log = openSync(join(root, 'worker-log'), 'a');
@@ -132,6 +142,7 @@ async function startNativeVerification(): Promise<void> {
         writeNativeRecord(root, 'session.json', { schemaVersion: 1, workspace: realpathSync(process.cwd()), run: process.env.GITHUB_RUN_ID ?? '',
             attempt: process.env.GITHUB_RUN_ATTEMPT ?? '', job: process.env.GITHUB_JOB ?? '', pid: worker.pid });
         core.saveState('native-verification-ticket', root);
+        core.saveState('native-verification-owner', 'true');
         core.setOutput('verification-ticket', root);
         await awaitNativeBoundary(root);
     } catch (error) {
@@ -146,10 +157,25 @@ export async function runNativeVerificationEntry(run: () => Promise<void>): Prom
     const post = core.getState('copilot-native-post');
     if (post === 'true') {
         const root = core.getState('native-verification-ticket');
-        if (root) await cleanupNativeVerification(root);
+        if (root && core.getState('native-verification-owner') === 'true') await cleanupNativeVerification(root);
+        else if (root && existsSync(root) && core.getState('native-verification-source')) {
+            const session = nativeSession(root);
+            try {
+                const snapshot = captureVerificationSetupAtCommit(core.getState('native-verification-source'), session.workspace, core.getState('native-verification-git'));
+                if (snapshot.kind !== 'ready' || verificationSetupDigest(snapshot) !== core.getState('native-verification-digest')) throw new VerificationSetupError('helper-invalid');
+                stageNativeVerificationAction(snapshot, root);
+            } catch {
+                // A later native post must fail to load rather than execute candidate-modified metadata.
+                cleanupNativeVerificationAction(root, session.workspace);
+                throw new VerificationSetupError('helper-invalid');
+            }
+        }
+        const sourceRuntime = core.getState('native-source-runtime');
+        if (sourceRuntime) cleanupNativeSourceRuntime(sourceRuntime, realpathSync(process.cwd()));
         return;
     }
     core.saveState('copilot-native-post', 'true');
+    if (process.env.COPILOT_NATIVE_PHASE === 'prepare' && process.env.COPILOT_NATIVE_RUNTIME_CACHE) core.saveState('native-source-runtime', process.env.COPILOT_NATIVE_RUNTIME_CACHE);
     const worker = process.env.COPILOT_NATIVE_WORKER_SESSION;
     if (worker) {
         const deadline = Date.now() + 30_000;
@@ -169,6 +195,11 @@ export async function runNativeVerificationEntry(run: () => Promise<void>): Prom
     if (phase === 'prepare') { await startNativeVerification(); return; }
     const root = process.env.COPILOT_NATIVE_TICKET;
     if (!root) throw new VerificationSetupError('handoff-invalid');
+    nativeSession(root);
+    core.saveState('native-verification-ticket', root);
+    core.saveState('native-verification-source', process.env.COPILOT_NATIVE_SOURCE ?? '');
+    core.saveState('native-verification-digest', process.env.COPILOT_NATIVE_DIGEST ?? '');
+    core.saveState('native-verification-git', process.env.COPILOT_NATIVE_GIT ?? '');
     if (phase === 'continue') {
         await continueNativeVerification(root, process.env.COPILOT_NATIVE_REQUEST ?? '', process.env.COPILOT_NATIVE_OUTCOME ?? '');
         return;

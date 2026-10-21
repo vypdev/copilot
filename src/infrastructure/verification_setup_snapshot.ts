@@ -1,3 +1,4 @@
+import { isAbsolute } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { realpathSync } from 'node:fs';
@@ -8,7 +9,20 @@ import { VERIFICATION_SETUP_DIRECTORY, VERIFICATION_SETUP_LIMITS, VerificationSe
 import { prepareUntrustedCommandEnvironment } from './untrusted_command_environment';
 
 /** Only immutable Git objects are read. Errors remain deferred on non-verifying routes. */
+export function verificationSetupDigest(setup: Extract<PreparedVerificationSetup, {kind: 'ready'}>): string {
+    return createHash('sha256').update(JSON.stringify(setup.files)).digest('hex');
+}
+
 export function captureVerificationSetup(enabled: boolean, mainBranch: string, root = process.cwd()): PreparedVerificationSetup {
+    return capture(enabled, mainBranch, root);
+}
+
+/** Post steps use the already pinned commit from runner state, never a mutable branch ref. */
+export function captureVerificationSetupAtCommit(commit: string, root = process.cwd(), gitExecutable?: string): PreparedVerificationSetup {
+    return capture(true, '', root, commit, gitExecutable);
+}
+
+function capture(enabled: boolean, mainBranch: string, root: string, pinned?: string, gitExecutable?: string): PreparedVerificationSetup {
     if (!enabled) return DISABLED_VERIFICATION_SETUP;
     let sourceSha: string | undefined;
     let runtime: ReturnType<typeof prepareUntrustedCommandEnvironment> | undefined;
@@ -16,16 +30,17 @@ export function captureVerificationSetup(enabled: boolean, mainBranch: string, r
     try {
         runtime = prepareUntrustedCommandEnvironment();
         const environment = runtime.environment;
-        if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,200}$/u.test(mainBranch) || mainBranch.includes('..')
-            || mainBranch.includes('//') || mainBranch.endsWith('/') || mainBranch.endsWith('.lock')) throw new Error();
+        if (!pinned && (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,200}$/u.test(mainBranch) || mainBranch.includes('..')
+            || mainBranch.includes('//') || mainBranch.endsWith('/') || mainBranch.endsWith('.lock'))) throw new Error();
+        if (gitExecutable !== undefined && !isAbsolute(gitExecutable)) throw new Error();
         const workspace = realpathSync(root);
         const git = (...args: string[]): Buffer => {
-            const result = spawnSync('git', ['--no-replace-objects', ...args], { cwd: workspace, env: environment,
+            const result = spawnSync(gitExecutable ?? 'git', ['--no-replace-objects', ...args], { cwd: workspace, env: environment,
                 shell: false, windowsHide: true, timeout: 5_000, maxBuffer: VERIFICATION_SETUP_LIMITS.snapshotBytes + 4096 });
             if (result.error || result.status !== 0) throw new Error();
             return result.stdout;
         };
-        const sha = git('rev-parse', '--verify', `refs/remotes/origin/${mainBranch}^{commit}`).toString('utf8').trim();
+        const sha = pinned ?? git('rev-parse', '--verify', `refs/remotes/origin/${mainBranch}^{commit}`).toString('utf8').trim();
         if (!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(sha)) throw new Error();
         sourceSha = sha;
         const entries = git('ls-tree', '-rz', sourceSha, '--', VERIFICATION_SETUP_DIRECTORY).toString('utf8').split('\0').filter(Boolean);

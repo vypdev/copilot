@@ -32,7 +32,7 @@ export function nativeVerificationFixture() {
         if (!request) throw new Error('No pending native setup');
         writeNativeRecord(session, `response-${request.id}.json`, { id: request.id, success: true, path: request.environment.PATH ?? '', ...edit?.(request) });
     };
-    return { root, runtime, session, git, setup, respond, action: join(root, VERIFICATION_SETUP_DIRECTORY),
+    return { root, runtime, session, git, setup, respond, action: join(root, VERIFICATION_SETUP_DIRECTORY), staged: join(root, '.git/copilot-verification-setup'),
         id: randomUUID(), cleanup: () => {
             cwd.mockRestore();
             if (previous === undefined) delete process.env.COPILOT_NATIVE_WORKER_SESSION; else process.env.COPILOT_NATIVE_WORKER_SESSION = previous;

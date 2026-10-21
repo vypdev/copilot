@@ -1,3 +1,4 @@
+import { verificationSetupDigest } from './verification_setup_snapshot';
 import { registerNativeVerificationProfile, nativeVerificationProfilePaths } from './native_verification_profiles';
 import { realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { delimiter, join, relative, isAbsolute, sep } from 'node:path';
@@ -7,7 +8,7 @@ import { VerificationSetupError, VERIFICATION_SETUP_LIMITS, VERIFICATION_SETUP_P
 import { applyVerificationSetupResult } from './verification_setup_result';
 import { logInfo } from '../application/ports/logging_ports';
 import { nativePause, nativeSession, readNativeRecord, writeNativeRecord, type NativeVerificationResponse } from './native_verification_protocol';
-import { stageNativeVerificationAction, restoreNativeVerificationAction } from './native_verification_overlay';
+import { stageNativeVerificationAction } from './native_verification_staging';
 import { verificationCandidateIdentity } from './native_verification_candidate';
 
 
@@ -27,7 +28,7 @@ export async function prepareRepositoryVerification(setup: PreparedVerificationS
         const identity = verificationCandidateIdentity(setup.workspace, environment);
         stageNativeVerificationAction(setup, session);
         const id = randomUUID();
-        writeNativeRecord(session, 'request.json', { id, sourceSha: setup.sourceSha, environment });
+        writeNativeRecord(session, 'request.json', { id, sourceSha: setup.sourceSha, digest: verificationSetupDigest(setup), environment });
         logInfo(`Preparing repository verification (${VERIFICATION_SETUP_PATH}; trusted source SHA: ${setup.sourceSha}).`);
         const deadline = Date.now() + VERIFICATION_SETUP_LIMITS.timeoutMs;
         let response: NativeVerificationResponse | undefined;
@@ -36,7 +37,6 @@ export async function prepareRepositoryVerification(setup: PreparedVerificationS
             if (Date.now() >= deadline) throw new VerificationSetupError('timeout');
             await nativePause(100);
         }
-        restoreNativeVerificationAction(session, setup.workspace);
         if (response.id !== id || response.success !== true) throw new VerificationSetupError('process-failed');
         if (verificationCandidateIdentity(setup.workspace, environment) !== identity) throw new VerificationSetupError('candidate-changed');
         if (typeof response.path !== 'string' || response.path.length > 16_384 || response.javaHome !== undefined && typeof response.javaHome !== 'string') throw new VerificationSetupError('result-invalid');
@@ -55,7 +55,6 @@ export async function prepareRepositoryVerification(setup: PreparedVerificationS
     } catch (error) {
         throw new VerificationSetupError(error instanceof VerificationSetupError ? error.reason : 'handoff-invalid', setup.sourceSha);
     } finally {
-        restoreNativeVerificationAction(session, setup.workspace);
         rmSync(join(session, 'request.json'), { force: true });
     }
 }

@@ -3,7 +3,8 @@ const path = require('node:path');
 const yaml = require('js-yaml');
 
 const MAX_REQUESTS = 20;
-const ACTION = './.github/actions/copilot-verification-setup';
+const ACTION = './.git/copilot-verification-setup';
+const { SOURCE_ACTION } = require('./prepare-native-source-action.cjs');
 const MARKER = '      # copilot:native-verification:start';
 const CALLBACKS = ['copilot_issue_comment.yml', 'copilot_pull_request_comment.yml'];
 
@@ -20,14 +21,14 @@ function phaseSteps(action, inputAlias = 'copilot-inputs', id = 'copilot') {
       env: Object.fromEntries(['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'PATH', 'JAVA_HOME', 'TMP', 'TEMP', 'TMPDIR'].map(key => [key, output(key.toLowerCase())])) });
     steps.push({ name: `Continue repository verification ${count}`, id: continuation,
       if: `\${{ always() && ${pending} }}`, uses: action, with: { alias: inputAlias },
-      env: { COPILOT_NATIVE_PHASE: 'continue', COPILOT_NATIVE_TICKET: `\${{ steps.${id}.outputs.verification-ticket }}`,
+      env: { COPILOT_NATIVE_PHASE: 'continue', COPILOT_NATIVE_SOURCE: `\${{ steps.${id}.outputs.verification-source }}`, COPILOT_NATIVE_DIGEST: `\${{ steps.${id}.outputs.verification-digest }}`, COPILOT_NATIVE_GIT: `\${{ steps.${id}.outputs.verification-git }}`, COPILOT_NATIVE_TICKET: `\${{ steps.${id}.outputs.verification-ticket }}`,
         COPILOT_NATIVE_REQUEST: `\${{ steps.${previous}.outputs.verification-request }}`,
         COPILOT_NATIVE_OUTCOME: `\${{ steps.${setup}.outcome }}` } });
     previous = continuation;
   }
   steps.push({ name: 'Complete repository verification', id: 'verification_complete',
     if: `\${{ always() && steps.${id}.outputs.verification-ticket != '' }}`, uses: action, with: { alias: inputAlias },
-    env: { COPILOT_NATIVE_PHASE: 'finish', COPILOT_NATIVE_TICKET: `\${{ steps.${id}.outputs.verification-ticket }}` } });
+    env: { COPILOT_NATIVE_PHASE: 'finish', COPILOT_NATIVE_SOURCE: `\${{ steps.${id}.outputs.verification-source }}`, COPILOT_NATIVE_DIGEST: `\${{ steps.${id}.outputs.verification-digest }}`, COPILOT_NATIVE_GIT: `\${{ steps.${id}.outputs.verification-git }}`, COPILOT_NATIVE_TICKET: `\${{ steps.${id}.outputs.verification-ticket }}` } });
   return steps;
 }
 
@@ -39,7 +40,11 @@ function renderSteps(action, alias = 'copilot-inputs', id = 'copilot') {
 
 function generate(file) {
   let text = fs.readFileSync(file, 'utf8').split(MARKER)[0].trimEnd() + '\n';
-  const action = file.startsWith('setup/') ? 'vypdev/copilot@v3' : './';
+  const action = file.startsWith('setup/') ? 'vypdev/copilot@v3' : SOURCE_ACTION;
+  if (!file.startsWith('setup/')) {
+    text = text.replace('      - uses: ./\n', `      - name: Snapshot the Copilot runtime before candidate changes\n        id: prepare_native_runtime\n        run: node scripts/prepare-native-source-action.cjs\n        shell: bash\n\n      - uses: ${SOURCE_ACTION}\n`);
+    if (!text.includes('          COPILOT_NATIVE_RUNTIME_CACHE:')) text = text.replace('          COPILOT_NATIVE_PHASE: prepare\n', '          COPILOT_NATIVE_PHASE: prepare\n          COPILOT_NATIVE_RUNTIME_CACHE: ${{ steps.prepare_native_runtime.outputs.path }}\n');
+  }
   const start = `      - uses: ${action}\n`;
   text = text.replace(/(?:        id: copilot\n)+/g, '');
   if (text.includes(start)) text = text.replace(start, `      - uses: ${action}\n        id: copilot\n`);
@@ -55,4 +60,4 @@ function generate(file) {
 }
 
 if (require.main === module) for (const directory of ['.github/workflows', 'setup/workflows']) for (const file of CALLBACKS) generate(path.join(directory, file));
-module.exports = { MAX_REQUESTS, ACTION, CALLBACKS, phaseSteps, renderSteps };
+module.exports = { MAX_REQUESTS, ACTION, SOURCE_ACTION, CALLBACKS, phaseSteps, renderSteps };

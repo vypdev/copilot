@@ -7,4 +7,4 @@ runs:
   using: node24
   main: dist/index.js
   post: dist/index.js
-  post-if: always()
+  post-if: always() && env.COPILOT_NATIVE_PHASE != ''

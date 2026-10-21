@@ -92,11 +92,11 @@ sequenceDiagram
     R->>Y: Execute pinned YAML and assets
     Y-->>R: Native success or failure, runtime paths
     R->>C: Continue the existing operation once
-    C->>C: Restore candidate action, validate candidate and runtime paths
+    C->>C: Validate unchanged candidate and runtime paths
     C->>C: Preflight, verify, apply publication guards
 ```
 
-Text equivalent: Copilot prepares the candidate, pauses, the runner executes trusted setup, and the same operation resumes only after restoring and validating the candidate. No agent is rerun.
+Text equivalent: Copilot prepares the candidate, pauses, the runner executes trusted setup, and the same operation resumes only after validating the unchanged candidate. No agent is rerun.
 
 ## 6. Functional behavior and state model
 
@@ -105,10 +105,10 @@ Text equivalent: Copilot prepares the candidate, pauses, the runner executes tru
 1. Composition MUST capture immutable trusted Git objects before candidate mutation. The action directory is limited to 32 regular files, 64 KiB per file and 256 KiB total. Its root metadata MUST be `action.yml`, valid composite YAML with 1–32 steps. Asset paths MUST use portable ASCII letters/digits/underscore/dot/dash/slash, at most 200 characters, without empty/parent segments or Windows reserved names. Symlinks, submodules, unsafe paths and nested local `uses` actions are rejected. Native external actions and reviewed auxiliary scripts are supported.
 2. At the existing verifier boundary, a private same-job worker MUST retain the admitted call stack. Generated workflows do not rerun the full operation to continue it.
 3. The worker MUST bind HEAD, symbolic branch, index, tracked changes and publishable untracked contents. Git observations are bounded to 16 MiB, 256 untracked files and 16 MiB aggregate untracked contents; oversized candidates fail closed. Ignored dependency caches are excluded.
-4. The candidate's action directory MUST be backed up privately and temporarily overlaid with the trusted snapshot. The native step runs from the candidate workspace with the verifier's fresh HOME. After setup, the candidate directory MUST be restored byte for byte before verification/publication.
+4. The trusted snapshot MUST be staged at the reserved local metadata path `.git/copilot-verification-setup`, outside publishable candidate files. Native execution requires the normal directory-based `.git` checkout produced by generated `actions/checkout` steps. The candidate's consumer action directory MUST never be rewritten. Staging MUST persist until native post steps finish. Runner state MUST retain the initial source SHA and digest of all captured file paths, bytes and modes. Before each composite post phase, a trusted Copilot post step MUST use its initially pinned absolute Git executable to restore that exact snapshot from Git objects at the pinned SHA and verify the saved digest, never a moved branch or candidate file. An unknown preexisting staging directory MUST fail closed without being overwritten.
 5. The continuation MUST match the session, current request, run, attempt, job and workspace. Duplicate/stale responses fail closed. The candidate identity MUST still match.
 6. Only new existing PATH directories within the workspace, private HOME or trusted tool cache, and an approved JAVA_HOME, MAY reach the verifier. The existing closed 16-KiB result validation and eight-directory ceiling remain in force.
-7. Runtime preflight and the configured command MUST execute in that same fresh environment. Subsequent commands repeat setup with a new HOME and the current manifests.
+7. Runtime preflight and the configured command MUST execute in that same fresh environment. Basename resolution MUST use its validated PATH, preserving virtual-environment invocation paths rather than the worker PATH or canonical binary target. Subsequent commands repeat setup with a new HOME and the current manifests.
 
 ### 6.2 Alternative paths
 
@@ -147,13 +147,13 @@ The 20-command limit, five-minute native setup timeout, snapshot/result/path bou
 | Pure policy/application ports | Closed limits/errors, immutable prepared snapshot | Runner APIs or process implementation |
 | Existing application use cases | Admission, candidate preparation, verification and publication decisions | Native YAML interpretation or duplicate phase orchestration |
 | Git adapter/setup runner | Pause precisely before probes/command, validate resume | New mutation authorization |
-| Infrastructure snapshot/overlay/protocol/controller | Trusted objects, temporary native action, same-job process lifecycle | Provider business policy or model execution replay |
+| Infrastructure snapshot/staging/protocol/controller | Trusted objects, persistent native staging, same-job process lifecycle | Provider business policy or model execution replay |
 | Entrypoint/generated workflows | Dispatch native phases and native `uses` | Reimplement verifier/publication rules |
 | Presentation | Existing localized result/error surfaces | Executable helper output as policy |
 
 ### 8.2 Contracts, state, and trust boundaries
 
-The session contains bounded non-secret metadata and private operational logs. Worker stdout/stderr redact configured secrets and dynamic masking commands before bytes reach disk; PAT/model credentials are never serialized as log content. Credentials remain in the admitted worker's memory/environment as in the existing Action; child verifier environments remain allowlisted. Session provenance, request UUIDs and one-use responses prevent accidental replay across jobs/candidates. Root Action post-job cleanup owns cancellation and private directory removal. Dependency-only profiles remain private until nested native post steps finish, then the original Action post step removes them; no later verifier reuses them. No artifacts or remote checkpoints are created.
+The session contains bounded non-secret metadata and private operational logs. Worker stdout/stderr redact configured secrets and dynamic masking commands before bytes reach disk; PAT/model credentials are never serialized as log content. Credentials remain in the admitted worker's memory/environment as in the existing Action; child verifier environments remain allowlisted. Session provenance, request UUIDs and one-use responses prevent accidental replay across jobs/candidates. Root Action post-job cleanup owns cancellation and private directory removal. Source callbacks MUST copy their Action manifest, bundled runtime and setup assets outside the mutable candidate before execution; their continuations and post steps use that snapshot. Remote installed Actions already have an independent runner cache. Post hooks run only for the native callback phases, preserving ordinary direct Action behavior. Dependency-only profiles remain private until nested native post steps finish, then the original Action post step removes them; no later verifier reuses them. No artifacts or remote checkpoints are created.
 
 The workflow's fixed native phases support at most 20 setup boundaries per operation. Worker log forwarding preserves complete runner-command lines, with a 1-MiB single-line memory bound; this is distinct from native setup logs. Worker outputs are bounded to 256 KiB.
 
@@ -190,19 +190,19 @@ Existing localized result cards and plain-text error fallback remain in force. N
 | Failure | Impact and action | Cleanup/retry |
 |---|---|---|
 | Missing/invalid trusted action | No verifier/push; review trusted directory | No automatic retry |
-| Native failure or timeout | No verifier/push; inspect native step logs and repair | Worker abort/finally restores action and existing sync recovery |
+| Native failure or timeout | No verifier/push; inspect native step logs and repair | Worker abort/finally preserves candidate files and uses existing sync recovery |
 | Stale/cross-job/replayed response | No continuation; rerun fresh operation | Private session canceled |
-| Candidate changed during setup | No verifier/push; make setup dependency-only | Original action restored; existing recovery |
+| Candidate changed during setup | No verifier/push; make setup dependency-only | Candidate action unchanged; existing recovery |
 | Invalid runtime output | No verifier/push; install under approved roots | Fresh HOME disposed |
-| Job canceled/worker exits | No new publication; inspect retained operation result | Post action signals cancellation, waits up to 10 seconds, terminates remaining worker and restores overlay |
+| Job canceled/worker exits | No new publication; inspect retained operation result | Post action signals cancellation, waits up to 10 seconds, terminates remaining worker and cleans owned staging after native posts |
 
-Native setup steps have `timeout-minutes: 5`; the worker also rejects readiness after 300 seconds. The enclosing existing job timeout remains authoritative. A force-killed worker cannot promise application finally blocks ran: the Action restores its own overlay, and normal runner checkout cleanup/operator recovery owns remaining job-local candidate state. Already-completed remote effects MUST retain their existing truthful result semantics.
+Native setup steps have `timeout-minutes: 5`; the worker also rejects readiness after 300 seconds. The enclosing existing job timeout remains authoritative. A force-killed worker cannot promise application finally blocks ran: the Action cleans its own staging, and normal runner checkout cleanup/operator recovery owns remaining job-local candidate state. Already-completed remote effects MUST retain their existing truthful result semantics.
 
 ## 11. Security, permissions, and privacy
 
 Native setup receives only runtime metadata from the private verifier environment, never Copilot's PAT/model inputs or evidence token. Generated workflows MUST keep provider secrets scoped to the initial Copilot Action step, not the job or consumer action. Checkout credentials remain unpersisted. Native actions can use runner facilities required for normal Actions execution; they are reviewed executable maintainer code.
 
-This preserves the trusted-runner boundary and makes no OS-sandbox claim: same-user processes and service-level credentials remain an operator trust concern. PATH/JAVA_HOME are validated after setup; arbitrary `GITHUB_ENV` keys do not enter the verifier. Native external action versions and dependency caches are maintained by the repository owner. Nested local `uses` is excluded because its deferred post scripts could otherwise refer to restored candidate assets.
+This preserves the trusted-runner boundary and makes no OS-sandbox claim: same-user processes and service-level credentials remain an operator trust concern. PATH/JAVA_HOME are validated after setup; arbitrary `GITHUB_ENV` keys do not enter the verifier. Native external action versions and dependency caches are maintained by the repository owner. Nested local `uses` is excluded because its deferred post scripts could otherwise refer to candidate assets outside the trusted staging tree.
 
 ## 12. Observability and operational UX
 
@@ -224,10 +224,10 @@ Minimum **150 distinct automated cases**, allocated without double counting:
 | Candidate/runner orchestration | 24 | Ordering, fresh profiles, candidate identity, failure gates |
 | Workflows/setup contracts | 18 | Native step structure, env, limits, source/distribution, preservation |
 | Real Git/composition integration | 8 | Exact managed ref, merge manifests, abort/push guards |
-| Runtime result filesystem security | 12 | Bounds, links, containment, races, atomic overlays |
+| Runtime result filesystem security | 12 | Bounds, links, containment, races, owned staging |
 | **Total** | **150** | Native rewrite adds at least 70 cases beyond retained applicable baseline |
 
-Repository-wide thresholds remain in force. New pure policy targets 100% branches; changed setup adapters target aggregate 95% lines/statements and 90% branches/functions. Deterministic unit fakes cover runner responses without interpreting YAML. Separate native CI acceptance MUST execute real composite `uses`/`run` steps with Python/pytest and Node/pnpm on hosted Linux, Windows and macOS, asserting candidate changes, trusted-source selection, fresh profiles and restoration. Controlled local Git acceptance covers the exact same managed branch and no release. Native CI evidence is additional to the distinct Jest budget.
+Repository-wide thresholds remain in force. New pure policy targets 100% branches; changed setup adapters target aggregate 95% lines/statements and 90% branches/functions. Deterministic unit fakes cover runner responses without interpreting YAML. Separate native CI acceptance MUST execute real composite `uses`/`run` steps with Python/pytest and Node/pnpm on hosted Linux, Windows and macOS, asserting candidate changes, trusted-source selection, fresh profiles candidate preservation, source-runtime immutability even after candidate bundle changes, and final post cleanup. Controlled local Git acceptance covers the exact same managed branch and no release. Native CI evidence is additional to the distinct Jest budget.
 
 ## 15. Documentation and discoverability
 
@@ -241,9 +241,9 @@ Repository-wide thresholds remain in force. New pure policy targets 100% branche
 
 1. Disabled repositories run existing verification unchanged.
 2. Enabled authorized sync prepares dependencies from the temporary merged manifests, verifies and pushes only its existing managed branch.
-3. A candidate/model change to the action does not execute; trusted YAML/assets run, then original candidate bytes return.
+3. A candidate/model change to the action does not execute; trusted YAML/assets run, the original candidate bytes remain unchanged.
 4. Setup success precedes runtime probes; every command gets a fresh HOME. Read-only, dry-run, no-op and empty-command paths execute no setup.
-5. Failed/canceled/timed-out setup, changed candidate, malformed output or replayed/cross-job continuation blocks verification and publication and restores the overlay.
+5. Failed/canceled/timed-out setup, changed candidate, malformed output or replayed/cross-job continuation blocks verification and publication and cleans owned staging.
 6. Native Python/pytest and Node/pnpm acceptance passes on all three hosted platforms. No PAT/model credentials are forwarded to the consumer action or verifier.
 7. Updating Copilot twice preserves the consumer directory. Old/missing native callback support and CLI opt-in fail with actionable help.
 8. Existing post-verification remote-head/workspace guards and truthful partial-success reporting remain authoritative.
@@ -253,7 +253,7 @@ Repository-wide thresholds remain in force. New pure policy targets 100% branche
 | Requirements | Implementation/evidence | Documentation |
 |---|---|---|
 | §§4–7 source/defaults/routes | Policy, snapshot, config/composition and sync tests | Verification/setup reference |
-| §6 native handoff/candidate | Runner, protocol, overlay, controller tests | Architecture/recovery |
+| §6 native handoff/candidate | Runner, protocol, staging, controller tests | Architecture/recovery |
 | §§8–11 workflows/security/cleanup | Structural mutation tests, result filesystem tests, platform fixture | Native steps and trust boundary |
 | §§12–16 compatibility/acceptance | Setup preservation, real Git integration, hosted native acceptance | Migration/operator guide |
 

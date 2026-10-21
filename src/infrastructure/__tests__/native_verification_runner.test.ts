@@ -32,15 +32,16 @@ describe('native verification boundary', () => {
     it('stages only pinned YAML and assets, then restores the candidate byte for byte', async () => {
         fs.mkdirSync(f.action, { recursive: true }); fs.writeFileSync(join(f.action, 'action.yml'), 'candidate');
         const running = prepareRepositoryVerification(f.setup, f.runtime.environment);
-        expect(fs.readFileSync(join(f.action, 'action.yml'), 'utf8')).toBe(COMPOSITE);
-        expect(fs.readFileSync(join(f.action, 'scripts/prepare.sh'), 'utf8')).toBe('echo reviewed');
+        expect(fs.readFileSync(join(f.staged, 'action.yml'), 'utf8')).toBe(COMPOSITE);
+        expect(fs.readFileSync(join(f.action, 'action.yml'), 'utf8')).toBe('candidate');
+        expect(fs.readFileSync(join(f.staged, 'scripts/prepare.sh'), 'utf8')).toBe('echo reviewed');
         f.respond(); await running;
         expect(fs.readFileSync(join(f.action, 'action.yml'), 'utf8')).toBe('candidate');
         expect(fs.existsSync(join(f.action, 'scripts'))).toBe(false);
     });
-    it('removes a temporary action absent from the candidate', async () => {
+    it('retains native metadata outside the publishable candidate for deferred post steps', async () => {
         const running = prepareRepositoryVerification(f.setup, f.runtime.environment); f.respond(); await running;
-        expect(fs.existsSync(f.action)).toBe(false); expect(f.git('status', '--porcelain')).toBe('');
+        expect(fs.existsSync(f.action)).toBe(false); expect(fs.existsSync(f.staged)).toBe(true); expect(f.git('status', '--porcelain')).toBe('');
     });
     it('prepares each changed candidate with a fresh HOME before preflight and verification', async () => {
         const homes: string[] = []; const order: string[] = [];

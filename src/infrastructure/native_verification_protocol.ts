@@ -14,6 +14,7 @@ export interface NativeVerificationSession {
 export interface NativeVerificationRequest {
     readonly id: string;
     readonly sourceSha: string;
+    readonly digest: string;
     readonly environment: Record<string, string>;
 }
 export interface NativeVerificationResponse {

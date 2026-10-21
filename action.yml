@@ -562,7 +562,7 @@ runs:
   using: "node24"
   main: "build/github_action/index.js"
   post: "build/github_action/index.js"
-  post-if: "always()"
+  post-if: "always() && env.COPILOT_NATIVE_PHASE != ''"
 branding:
   icon: "cpu"
   color: "blue"

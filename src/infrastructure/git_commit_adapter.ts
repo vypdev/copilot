@@ -1,3 +1,4 @@
+import { verificationExecutable } from './verification_executable';
 import { nativeVerificationRetainsProfile } from './native_verification_profiles';
 import * as exec from '@actions/exec';
 import type { GitCommitPort } from '../application/ports/git_ports';
@@ -8,13 +9,13 @@ import { assertVerificationRuntimePrerequisites } from './verification_runtime_p
 import { DISABLED_VERIFICATION_SETUP, type PreparedVerificationSetup } from '../application/ports/verification_setup_ports';
 import { prepareRepositoryVerification } from './verification_setup_runner';
 
-type GitCommandOptions = { stdout?: (data: Buffer) => void; env?: Record<string, string>; untrusted?: boolean; verifyRuntimePrerequisites?: boolean };
+type GitCommandOptions = { stdout?: (data: Buffer) => void; env?: Record<string, string>; untrusted?: boolean; verifyRuntimePrerequisites?: boolean; resolveFromEnvironment?: boolean };
 type GitCommandExecutor = (program: string, args: string[], options?: GitCommandOptions) => Promise<number>;
 
 export class GitCommitAdapter implements GitCommitPort {
     constructor(
         private readonly executeCommand: GitCommandExecutor = (program, args, options) => options
-            ? exec.exec(program, args, {
+            ? exec.exec(options.resolveFromEnvironment && options.env ? verificationExecutable(program, options.env) : program, args, {
                 // Captured Git reads can contain NUL-delimited records that
                 // hide subsequent lines in GitHub's Actions log viewer.
                 ...(options.stdout ? { silent: true } : {}),
@@ -39,6 +40,7 @@ export class GitCommitAdapter implements GitCommitPort {
             return await this.executeCommand(program, args, {
                 ...(options.stdout ? { stdout: options.stdout } : {}),
                 env: runtime.environment,
+                ...(options.verifyRuntimePrerequisites && this.verificationSetup.kind === 'ready' ? { resolveFromEnvironment: true } : {}),
             });
         } finally {
             if (!nativeVerificationRetainsProfile(runtime.environment.HOME)) runtime.cleanup();

@@ -13,7 +13,9 @@ runs:
   using: composite
   steps:
     - uses: actions/setup-python@v6
+      id: python
       with:
+        update-environment: false
         python-version: '3.12'
     - uses: pnpm/action-setup@v5
       with:
@@ -22,7 +24,7 @@ runs:
         standalone: false
     - name: Install candidate test dependencies privately
       run: |
-        python - <<'PYTHON'
+        "$PYTHON_EXECUTABLE" - <<'PYTHON'
         import os, pathlib, subprocess, venv
         home = pathlib.Path(os.environ['HOME']) / 'venv'
         venv.create(home, with_pip=True)
@@ -33,6 +35,8 @@ runs:
             print(tools, file=paths)
         PYTHON
       shell: bash
+      env:
+        PYTHON_EXECUTABLE: \${{ steps.python.outputs.python-path }}
     - run: python -c "from pathlib import Path; assert Path('.copilot-native-candidate').read_text() == 'after-agent'"
       shell: bash
 `;
@@ -63,6 +67,7 @@ async function fixture(): Promise<void> {
         await adapter.execute('python', ['-m', 'pytest', '-q', testFile, '-p', 'no:cacheprovider'], { untrusted: true, verifyRuntimePrerequisites: true });
         await adapter.execute('pnpm', ['--version'], { untrusted: true, verifyRuntimePrerequisites: true });
         if (readFileSync(VERIFICATION_SETUP_PATH, 'utf8') !== candidateYaml) throw new Error('Candidate action was not restored');
+        writeFileSync(join(process.cwd(), '.github/actions/copilot-native-fixture/dist/index.js'), 'throw new Error("Candidate runtime must never execute during continuation or post");');
         core.info('Native composite acceptance passed: candidate manifests, trusted snapshot, Python/pytest and Node/pnpm, two fresh profiles.');
     } finally {
         rmSync(candidateAction, { recursive: true, force: true }); rmSync(marker, { force: true }); rmSync(testFile, { force: true }); rmSync(requirements, { force: true });

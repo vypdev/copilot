@@ -63,19 +63,25 @@ jobs:
         if: runner.os == 'Windows'
         run: node scripts/verify-windows-job-npm.cjs
       - run: pnpm install --frozen-lockfile
+      - name: Register native post cleanup acceptance
+        uses: ./.github/actions/copilot-native-cleanup-check
       - name: Build native verification acceptance fixture
         run: pnpm exec ncc build src/tooling/__tests__/fixtures/verification_native_fixture.ts -o .github/actions/copilot-native-fixture/dist
+      - name: Snapshot native fixture runtime
+        id: prepare_native_fixture_runtime
+        run: node scripts/prepare-native-source-action.cjs --fixture
       - name: Prepare native verification acceptance
         id: copilot_native_fixture
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: &native-fixture-inputs
           verification-setup: 'true'
         env:
           COPILOT_NATIVE_PHASE: prepare
+          COPILOT_NATIVE_RUNTIME_CACHE: ${{ steps.prepare_native_fixture_runtime.outputs.path }}
       - name: Prepare repository verification 1
         id: verification_setup_1
         if: ${{ !cancelled() && steps.copilot_native_fixture.outcome == 'success' && steps.copilot_native_fixture.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.copilot_native_fixture.outputs.verification-home }}
@@ -90,17 +96,20 @@ jobs:
       - name: Continue repository verification 1
         id: verification_continue_1
         if: ${{ always() && steps.copilot_native_fixture.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.copilot_native_fixture.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_1.outcome }}
       - name: Prepare repository verification 2
         id: verification_setup_2
         if: ${{ !cancelled() && steps.verification_continue_1.outcome == 'success' && steps.verification_continue_1.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_1.outputs.verification-home }}
@@ -115,17 +124,20 @@ jobs:
       - name: Continue repository verification 2
         id: verification_continue_2
         if: ${{ always() && steps.verification_continue_1.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_1.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_2.outcome }}
       - name: Prepare repository verification 3
         id: verification_setup_3
         if: ${{ !cancelled() && steps.verification_continue_2.outcome == 'success' && steps.verification_continue_2.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_2.outputs.verification-home }}
@@ -140,17 +152,20 @@ jobs:
       - name: Continue repository verification 3
         id: verification_continue_3
         if: ${{ always() && steps.verification_continue_2.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_2.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_3.outcome }}
       - name: Prepare repository verification 4
         id: verification_setup_4
         if: ${{ !cancelled() && steps.verification_continue_3.outcome == 'success' && steps.verification_continue_3.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_3.outputs.verification-home }}
@@ -165,17 +180,20 @@ jobs:
       - name: Continue repository verification 4
         id: verification_continue_4
         if: ${{ always() && steps.verification_continue_3.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_3.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_4.outcome }}
       - name: Prepare repository verification 5
         id: verification_setup_5
         if: ${{ !cancelled() && steps.verification_continue_4.outcome == 'success' && steps.verification_continue_4.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_4.outputs.verification-home }}
@@ -190,17 +208,20 @@ jobs:
       - name: Continue repository verification 5
         id: verification_continue_5
         if: ${{ always() && steps.verification_continue_4.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_4.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_5.outcome }}
       - name: Prepare repository verification 6
         id: verification_setup_6
         if: ${{ !cancelled() && steps.verification_continue_5.outcome == 'success' && steps.verification_continue_5.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_5.outputs.verification-home }}
@@ -215,17 +236,20 @@ jobs:
       - name: Continue repository verification 6
         id: verification_continue_6
         if: ${{ always() && steps.verification_continue_5.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_5.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_6.outcome }}
       - name: Prepare repository verification 7
         id: verification_setup_7
         if: ${{ !cancelled() && steps.verification_continue_6.outcome == 'success' && steps.verification_continue_6.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_6.outputs.verification-home }}
@@ -240,17 +264,20 @@ jobs:
       - name: Continue repository verification 7
         id: verification_continue_7
         if: ${{ always() && steps.verification_continue_6.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_6.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_7.outcome }}
       - name: Prepare repository verification 8
         id: verification_setup_8
         if: ${{ !cancelled() && steps.verification_continue_7.outcome == 'success' && steps.verification_continue_7.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_7.outputs.verification-home }}
@@ -265,17 +292,20 @@ jobs:
       - name: Continue repository verification 8
         id: verification_continue_8
         if: ${{ always() && steps.verification_continue_7.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_7.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_8.outcome }}
       - name: Prepare repository verification 9
         id: verification_setup_9
         if: ${{ !cancelled() && steps.verification_continue_8.outcome == 'success' && steps.verification_continue_8.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_8.outputs.verification-home }}
@@ -290,17 +320,20 @@ jobs:
       - name: Continue repository verification 9
         id: verification_continue_9
         if: ${{ always() && steps.verification_continue_8.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_8.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_9.outcome }}
       - name: Prepare repository verification 10
         id: verification_setup_10
         if: ${{ !cancelled() && steps.verification_continue_9.outcome == 'success' && steps.verification_continue_9.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_9.outputs.verification-home }}
@@ -315,17 +348,20 @@ jobs:
       - name: Continue repository verification 10
         id: verification_continue_10
         if: ${{ always() && steps.verification_continue_9.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_9.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_10.outcome }}
       - name: Prepare repository verification 11
         id: verification_setup_11
         if: ${{ !cancelled() && steps.verification_continue_10.outcome == 'success' && steps.verification_continue_10.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_10.outputs.verification-home }}
@@ -340,17 +376,20 @@ jobs:
       - name: Continue repository verification 11
         id: verification_continue_11
         if: ${{ always() && steps.verification_continue_10.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_10.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_11.outcome }}
       - name: Prepare repository verification 12
         id: verification_setup_12
         if: ${{ !cancelled() && steps.verification_continue_11.outcome == 'success' && steps.verification_continue_11.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_11.outputs.verification-home }}
@@ -365,17 +404,20 @@ jobs:
       - name: Continue repository verification 12
         id: verification_continue_12
         if: ${{ always() && steps.verification_continue_11.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_11.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_12.outcome }}
       - name: Prepare repository verification 13
         id: verification_setup_13
         if: ${{ !cancelled() && steps.verification_continue_12.outcome == 'success' && steps.verification_continue_12.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_12.outputs.verification-home }}
@@ -390,17 +432,20 @@ jobs:
       - name: Continue repository verification 13
         id: verification_continue_13
         if: ${{ always() && steps.verification_continue_12.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_12.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_13.outcome }}
       - name: Prepare repository verification 14
         id: verification_setup_14
         if: ${{ !cancelled() && steps.verification_continue_13.outcome == 'success' && steps.verification_continue_13.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_13.outputs.verification-home }}
@@ -415,17 +460,20 @@ jobs:
       - name: Continue repository verification 14
         id: verification_continue_14
         if: ${{ always() && steps.verification_continue_13.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_13.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_14.outcome }}
       - name: Prepare repository verification 15
         id: verification_setup_15
         if: ${{ !cancelled() && steps.verification_continue_14.outcome == 'success' && steps.verification_continue_14.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_14.outputs.verification-home }}
@@ -440,17 +488,20 @@ jobs:
       - name: Continue repository verification 15
         id: verification_continue_15
         if: ${{ always() && steps.verification_continue_14.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_14.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_15.outcome }}
       - name: Prepare repository verification 16
         id: verification_setup_16
         if: ${{ !cancelled() && steps.verification_continue_15.outcome == 'success' && steps.verification_continue_15.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_15.outputs.verification-home }}
@@ -465,17 +516,20 @@ jobs:
       - name: Continue repository verification 16
         id: verification_continue_16
         if: ${{ always() && steps.verification_continue_15.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_15.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_16.outcome }}
       - name: Prepare repository verification 17
         id: verification_setup_17
         if: ${{ !cancelled() && steps.verification_continue_16.outcome == 'success' && steps.verification_continue_16.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_16.outputs.verification-home }}
@@ -490,17 +544,20 @@ jobs:
       - name: Continue repository verification 17
         id: verification_continue_17
         if: ${{ always() && steps.verification_continue_16.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_16.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_17.outcome }}
       - name: Prepare repository verification 18
         id: verification_setup_18
         if: ${{ !cancelled() && steps.verification_continue_17.outcome == 'success' && steps.verification_continue_17.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_17.outputs.verification-home }}
@@ -515,17 +572,20 @@ jobs:
       - name: Continue repository verification 18
         id: verification_continue_18
         if: ${{ always() && steps.verification_continue_17.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_17.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_18.outcome }}
       - name: Prepare repository verification 19
         id: verification_setup_19
         if: ${{ !cancelled() && steps.verification_continue_18.outcome == 'success' && steps.verification_continue_18.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_18.outputs.verification-home }}
@@ -540,17 +600,20 @@ jobs:
       - name: Continue repository verification 19
         id: verification_continue_19
         if: ${{ always() && steps.verification_continue_18.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_18.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_19.outcome }}
       - name: Prepare repository verification 20
         id: verification_setup_20
         if: ${{ !cancelled() && steps.verification_continue_19.outcome == 'success' && steps.verification_continue_19.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_19.outputs.verification-home }}
@@ -565,20 +628,26 @@ jobs:
       - name: Continue repository verification 20
         id: verification_continue_20
         if: ${{ always() && steps.verification_continue_19.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_19.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_20.outcome }}
       - name: Complete repository verification
         id: verification_complete
         if: ${{ always() && steps.copilot_native_fixture.outputs.verification-ticket != '' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: finish
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
       - run: pnpm run build
       # Checked-in ncc bundles are generated on Unix; Windows output differs.
@@ -674,19 +743,25 @@ jobs:
         run: |
           git ls-files --eol -- .copilot/repository-profile.json .copilot/AGENT_GUIDE.md .agents/skills/copilot-repository-workflow/SKILL.md
           pnpm run validate:agent-docs
+      - name: Register native post cleanup acceptance
+        uses: ./.github/actions/copilot-native-cleanup-check
       - name: Build native verification acceptance fixture
         run: pnpm exec ncc build src/tooling/__tests__/fixtures/verification_native_fixture.ts -o .github/actions/copilot-native-fixture/dist
+      - name: Snapshot native fixture runtime
+        id: prepare_native_fixture_runtime
+        run: node scripts/prepare-native-source-action.cjs --fixture
       - name: Prepare native verification acceptance
         id: copilot_native_fixture
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: &native-fixture-inputs
           verification-setup: 'true'
         env:
           COPILOT_NATIVE_PHASE: prepare
+          COPILOT_NATIVE_RUNTIME_CACHE: ${{ steps.prepare_native_fixture_runtime.outputs.path }}
       - name: Prepare repository verification 1
         id: verification_setup_1
         if: ${{ !cancelled() && steps.copilot_native_fixture.outcome == 'success' && steps.copilot_native_fixture.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.copilot_native_fixture.outputs.verification-home }}
@@ -701,17 +776,20 @@ jobs:
       - name: Continue repository verification 1
         id: verification_continue_1
         if: ${{ always() && steps.copilot_native_fixture.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.copilot_native_fixture.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_1.outcome }}
       - name: Prepare repository verification 2
         id: verification_setup_2
         if: ${{ !cancelled() && steps.verification_continue_1.outcome == 'success' && steps.verification_continue_1.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_1.outputs.verification-home }}
@@ -726,17 +804,20 @@ jobs:
       - name: Continue repository verification 2
         id: verification_continue_2
         if: ${{ always() && steps.verification_continue_1.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_1.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_2.outcome }}
       - name: Prepare repository verification 3
         id: verification_setup_3
         if: ${{ !cancelled() && steps.verification_continue_2.outcome == 'success' && steps.verification_continue_2.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_2.outputs.verification-home }}
@@ -751,17 +832,20 @@ jobs:
       - name: Continue repository verification 3
         id: verification_continue_3
         if: ${{ always() && steps.verification_continue_2.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_2.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_3.outcome }}
       - name: Prepare repository verification 4
         id: verification_setup_4
         if: ${{ !cancelled() && steps.verification_continue_3.outcome == 'success' && steps.verification_continue_3.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_3.outputs.verification-home }}
@@ -776,17 +860,20 @@ jobs:
       - name: Continue repository verification 4
         id: verification_continue_4
         if: ${{ always() && steps.verification_continue_3.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_3.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_4.outcome }}
       - name: Prepare repository verification 5
         id: verification_setup_5
         if: ${{ !cancelled() && steps.verification_continue_4.outcome == 'success' && steps.verification_continue_4.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_4.outputs.verification-home }}
@@ -801,17 +888,20 @@ jobs:
       - name: Continue repository verification 5
         id: verification_continue_5
         if: ${{ always() && steps.verification_continue_4.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_4.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_5.outcome }}
       - name: Prepare repository verification 6
         id: verification_setup_6
         if: ${{ !cancelled() && steps.verification_continue_5.outcome == 'success' && steps.verification_continue_5.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_5.outputs.verification-home }}
@@ -826,17 +916,20 @@ jobs:
       - name: Continue repository verification 6
         id: verification_continue_6
         if: ${{ always() && steps.verification_continue_5.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_5.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_6.outcome }}
       - name: Prepare repository verification 7
         id: verification_setup_7
         if: ${{ !cancelled() && steps.verification_continue_6.outcome == 'success' && steps.verification_continue_6.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_6.outputs.verification-home }}
@@ -851,17 +944,20 @@ jobs:
       - name: Continue repository verification 7
         id: verification_continue_7
         if: ${{ always() && steps.verification_continue_6.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_6.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_7.outcome }}
       - name: Prepare repository verification 8
         id: verification_setup_8
         if: ${{ !cancelled() && steps.verification_continue_7.outcome == 'success' && steps.verification_continue_7.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_7.outputs.verification-home }}
@@ -876,17 +972,20 @@ jobs:
       - name: Continue repository verification 8
         id: verification_continue_8
         if: ${{ always() && steps.verification_continue_7.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_7.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_8.outcome }}
       - name: Prepare repository verification 9
         id: verification_setup_9
         if: ${{ !cancelled() && steps.verification_continue_8.outcome == 'success' && steps.verification_continue_8.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_8.outputs.verification-home }}
@@ -901,17 +1000,20 @@ jobs:
       - name: Continue repository verification 9
         id: verification_continue_9
         if: ${{ always() && steps.verification_continue_8.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_8.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_9.outcome }}
       - name: Prepare repository verification 10
         id: verification_setup_10
         if: ${{ !cancelled() && steps.verification_continue_9.outcome == 'success' && steps.verification_continue_9.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_9.outputs.verification-home }}
@@ -926,17 +1028,20 @@ jobs:
       - name: Continue repository verification 10
         id: verification_continue_10
         if: ${{ always() && steps.verification_continue_9.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_9.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_10.outcome }}
       - name: Prepare repository verification 11
         id: verification_setup_11
         if: ${{ !cancelled() && steps.verification_continue_10.outcome == 'success' && steps.verification_continue_10.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_10.outputs.verification-home }}
@@ -951,17 +1056,20 @@ jobs:
       - name: Continue repository verification 11
         id: verification_continue_11
         if: ${{ always() && steps.verification_continue_10.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_10.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_11.outcome }}
       - name: Prepare repository verification 12
         id: verification_setup_12
         if: ${{ !cancelled() && steps.verification_continue_11.outcome == 'success' && steps.verification_continue_11.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_11.outputs.verification-home }}
@@ -976,17 +1084,20 @@ jobs:
       - name: Continue repository verification 12
         id: verification_continue_12
         if: ${{ always() && steps.verification_continue_11.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_11.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_12.outcome }}
       - name: Prepare repository verification 13
         id: verification_setup_13
         if: ${{ !cancelled() && steps.verification_continue_12.outcome == 'success' && steps.verification_continue_12.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_12.outputs.verification-home }}
@@ -1001,17 +1112,20 @@ jobs:
       - name: Continue repository verification 13
         id: verification_continue_13
         if: ${{ always() && steps.verification_continue_12.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_12.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_13.outcome }}
       - name: Prepare repository verification 14
         id: verification_setup_14
         if: ${{ !cancelled() && steps.verification_continue_13.outcome == 'success' && steps.verification_continue_13.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_13.outputs.verification-home }}
@@ -1026,17 +1140,20 @@ jobs:
       - name: Continue repository verification 14
         id: verification_continue_14
         if: ${{ always() && steps.verification_continue_13.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_13.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_14.outcome }}
       - name: Prepare repository verification 15
         id: verification_setup_15
         if: ${{ !cancelled() && steps.verification_continue_14.outcome == 'success' && steps.verification_continue_14.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_14.outputs.verification-home }}
@@ -1051,17 +1168,20 @@ jobs:
       - name: Continue repository verification 15
         id: verification_continue_15
         if: ${{ always() && steps.verification_continue_14.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_14.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_15.outcome }}
       - name: Prepare repository verification 16
         id: verification_setup_16
         if: ${{ !cancelled() && steps.verification_continue_15.outcome == 'success' && steps.verification_continue_15.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_15.outputs.verification-home }}
@@ -1076,17 +1196,20 @@ jobs:
       - name: Continue repository verification 16
         id: verification_continue_16
         if: ${{ always() && steps.verification_continue_15.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_15.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_16.outcome }}
       - name: Prepare repository verification 17
         id: verification_setup_17
         if: ${{ !cancelled() && steps.verification_continue_16.outcome == 'success' && steps.verification_continue_16.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_16.outputs.verification-home }}
@@ -1101,17 +1224,20 @@ jobs:
       - name: Continue repository verification 17
         id: verification_continue_17
         if: ${{ always() && steps.verification_continue_16.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_16.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_17.outcome }}
       - name: Prepare repository verification 18
         id: verification_setup_18
         if: ${{ !cancelled() && steps.verification_continue_17.outcome == 'success' && steps.verification_continue_17.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_17.outputs.verification-home }}
@@ -1126,17 +1252,20 @@ jobs:
       - name: Continue repository verification 18
         id: verification_continue_18
         if: ${{ always() && steps.verification_continue_17.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_17.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_18.outcome }}
       - name: Prepare repository verification 19
         id: verification_setup_19
         if: ${{ !cancelled() && steps.verification_continue_18.outcome == 'success' && steps.verification_continue_18.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_18.outputs.verification-home }}
@@ -1151,17 +1280,20 @@ jobs:
       - name: Continue repository verification 19
         id: verification_continue_19
         if: ${{ always() && steps.verification_continue_18.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_18.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_19.outcome }}
       - name: Prepare repository verification 20
         id: verification_setup_20
         if: ${{ !cancelled() && steps.verification_continue_19.outcome == 'success' && steps.verification_continue_19.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-verification-setup
+        uses: ./.git/copilot-verification-setup
         timeout-minutes: 5
         env:
           HOME: ${{ steps.verification_continue_19.outputs.verification-home }}
@@ -1176,20 +1308,26 @@ jobs:
       - name: Continue repository verification 20
         id: verification_continue_20
         if: ${{ always() && steps.verification_continue_19.outputs.verification-setup-pending == 'true' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: continue
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
           COPILOT_NATIVE_REQUEST: ${{ steps.verification_continue_19.outputs.verification-request }}
           COPILOT_NATIVE_OUTCOME: ${{ steps.verification_setup_20.outcome }}
       - name: Complete repository verification
         id: verification_complete
         if: ${{ always() && steps.copilot_native_fixture.outputs.verification-ticket != '' }}
-        uses: ./.github/actions/copilot-native-fixture
+        uses: ./../.copilot-native-fixture-runtime
         with: *native-fixture-inputs
         env:
           COPILOT_NATIVE_PHASE: finish
+          COPILOT_NATIVE_SOURCE: ${{ steps.copilot_native_fixture.outputs.verification-source }}
+          COPILOT_NATIVE_DIGEST: ${{ steps.copilot_native_fixture.outputs.verification-digest }}
+          COPILOT_NATIVE_GIT: ${{ steps.copilot_native_fixture.outputs.verification-git }}
           COPILOT_NATIVE_TICKET: ${{ steps.copilot_native_fixture.outputs.verification-ticket }}
       - run: pnpm run build
       - run: pnpm run validate:build

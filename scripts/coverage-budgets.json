@@ -919,10 +919,12 @@
             "src/infrastructure/verification_setup_runner.ts",
             "src/infrastructure/native_verification_protocol.ts",
             "src/infrastructure/native_verification_candidate.ts",
-            "src/infrastructure/native_verification_overlay.ts",
+            "src/infrastructure/native_verification_staging.ts",
             "src/infrastructure/native_verification_controller.ts",
             "src/infrastructure/native_verification_profiles.ts",
-            "src/infrastructure/native_verification_redaction.ts"
+            "src/infrastructure/native_verification_redaction.ts",
+            "src/infrastructure/verification_executable.ts",
+            "src/infrastructure/native_verification_source_runtime.ts"
           ],
           "mode": "aggregate",
           "thresholdProfile": "default"

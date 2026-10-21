@@ -2009,11 +2009,14 @@
         "src/infrastructure/verification_setup_runner.ts",
         "src/infrastructure/native_verification_protocol.ts",
         "src/infrastructure/native_verification_candidate.ts",
-        "src/infrastructure/native_verification_overlay.ts",
+        "src/infrastructure/native_verification_staging.ts",
         "src/infrastructure/native_verification_controller.ts",
         "src/infrastructure/native_verification_profiles.ts",
         "src/infrastructure/native_verification_redaction.ts",
-        "scripts/generate-native-verification-workflows.cjs"
+        "scripts/generate-native-verification-workflows.cjs",
+        "src/infrastructure/verification_executable.ts",
+        "src/infrastructure/native_verification_source_runtime.ts",
+        "scripts/prepare-native-source-action.cjs"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -2058,7 +2061,10 @@
         "src/infrastructure/__tests__/native_verification_controller.test.ts",
         "src/infrastructure/__tests__/native_verification_redaction.test.ts",
         "src/infrastructure/__tests__/native_verification_workflow.test.ts",
-        "src/infrastructure/__tests__/native_verification_profiles.test.ts"
+        "src/infrastructure/__tests__/native_verification_profiles.test.ts",
+        "src/infrastructure/__tests__/verification_executable.test.ts",
+        "src/infrastructure/__tests__/native_verification_post.test.ts",
+        "src/infrastructure/__tests__/native_verification_source_runtime.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",

@@ -41,7 +41,7 @@ describe('verification setup installation contract', () => {
         'keeps source and distributed %s opt-in explicit and disabled by default', name => {
             for (const directory of ['.github/workflows', 'setup/workflows']) {
                 const workflow = yaml.load(fs.readFileSync(path.resolve(__dirname, '../../..', directory, name), 'utf8')) as {jobs: Record<string, {steps: {uses?: string; with?: Record<string, unknown>}[]}>};
-                const actions = Object.values(workflow.jobs).flatMap(job => job.steps).filter(step => step.uses === './' || step.uses?.startsWith('vypdev/copilot@'));
+                const actions = Object.values(workflow.jobs).flatMap(job => job.steps).filter(step => step.uses === './' || step.uses === './../.copilot-native-runtime' || step.uses?.startsWith('vypdev/copilot@'));
                 expect(actions.length).toBeGreaterThan(0);
                 for (const action of actions) expect(action.with?.['verification-setup']).toBe("${{ vars.VERIFICATION_SETUP || 'false' }}");
             }
