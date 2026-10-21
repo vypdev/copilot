@@ -192,6 +192,23 @@ or model-only `READY` response cannot certify real tool execution. See
 [tool smoke evidence](/security-operations/operations/smoke-tests).
 
 
+## Permission journal integration budget
+
+`setup_permission_operator_actions.test.ts` uses a real temporary directory and
+journal, including file writes, `fsync`, atomic replacement, recovery and cleanup.
+Its tests and hooks have a bounded 30-second Jest budget. A rejected dispatch
+alone flushes six journal versions, so the generic five-second unit-test deadline
+can expire during slow filesystem operations under hosted Windows coverage.
+
+For issue #577, adding 900 ms to each real journal flush reproduced the original
+five-second timeout. With the 30-second integration budget, all eight cases
+completed, including the two-transaction recovery case. This demonstrates the
+budget mismatch; historical CI logs do not identify the underlying host storage
+or scheduling delay. Keep real persistence and every authority/cleanup assertion.
+Fake timers cover Actions polling; recovery switches back to real timers before
+starting its next journal transaction. Other suites retain their existing budgets.
+Hosted Windows full coverage remains the platform verification gate.
+
 ## Semantic component rendering
 
 The component suites use a real Vite/Svelte SSR renderer isolated from Jest.
