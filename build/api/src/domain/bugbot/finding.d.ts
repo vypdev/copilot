@@ -59,3 +59,14 @@ export interface ExistingFindingInfo {
 export type ExistingByFindingId = Record<string, ExistingFindingInfo>;
 export declare function isExistingFindingFullyResolved(finding: ExistingFindingInfo): boolean;
 export declare function findExistingFindingInfo(existingByFindingId: ExistingByFindingId, finding: Pick<BugbotFinding, 'id' | 'fingerprint' | 'semanticFingerprint'>): ExistingFindingInfo | undefined;
+/** A match carries its durable key so updating a comment cannot re-key it. */
+export declare function findExistingFindingMatch(existingByFindingId: ExistingByFindingId, finding: Pick<BugbotFinding, 'id' | 'fingerprint' | 'semanticFingerprint'>): {
+    id: string;
+    info: ExistingFindingInfo;
+} | undefined;
+/**
+ * Preserve trusted IDs across title/location changes, before limits, publication
+ * and final projection. Multiple reports of one uniquely matched durable finding
+ * share one record; unmatched or ambiguous reports remain independent evidence.
+ */
+export declare function retainExistingFindingIds(findings: readonly BugbotFinding[], existingByFindingId: ExistingByFindingId): BugbotFinding[];

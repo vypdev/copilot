@@ -72,6 +72,24 @@ describe('Bugbot review presentation', () => {
     expect(body).toContain('/copilot recheck');
   });
 
+  it.each(['en-US', 'es-ES'])('identifies an unlinked unknown finding for recovery in %s', (locale) => {
+    const body = renderBugbotStatusCard(buildBugbotReviewProjection({
+      pullRequestNumber: 358, analyzedHeadSha: head, coverage: completeCoverage,
+      findings: [{ id: 'src/model.ts:73:operations-empty', title: 'Dashboard state', state: 'unknown' }],
+    }), locale, links);
+    expect(body).toContain('Dashboard state — src/model.ts:73:operations-empty');
+    expect(body).toContain('/copilot recheck');
+  });
+
+  it('sanitizes unknown finding IDs without creating mentions or markup', () => {
+    const body = renderBugbotStatusCard(buildBugbotReviewProjection({
+      pullRequestNumber: 358, analyzedHeadSha: head, coverage: completeCoverage,
+      findings: [{ id: '@team\n<!-- unsafe -->', title: 'Dashboard state', state: 'unknown' }],
+    }), 'en-US', links);
+    expect(body).not.toContain('<!-- unsafe -->');
+    expect(body).toContain('@\u200bteam');
+  });
+
   it('renders Spanish product copy while keeping machine markers neutral', () => {
     const body = renderBugbotStatusCard(projection(['fixed']), 'es-ES', links);
     expect(body).toContain('## Bugbot: revisión completada');

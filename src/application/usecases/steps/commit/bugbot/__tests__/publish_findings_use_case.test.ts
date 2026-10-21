@@ -112,6 +112,29 @@ describe("publishFindings", () => {
         mockUpdatePullRequestReview.mockReset().mockResolvedValue(undefined);
     });
 
+    it('keeps the trusted issue finding ID when its location fingerprint matches a new model ID', async () => {
+        await publishFindings({ operation: baseOperation,
+            context: baseContext({ existingByFindingId: { original: { issue: {
+                commentId: 100, resolved: false, fingerprint: 'fp-11111111',
+            } } } }), findings: [finding({ id: 'replacement' })] });
+        expect(mockUpdateComment).toHaveBeenCalledWith(42, 100,
+            expect.stringContaining('finding_id:"original"'), undefined);
+        expect(mockAddComment).not.toHaveBeenCalled();
+    });
+
+    it('falls back to a file comment for an impossible current-line anchor without sending that line', async () => {
+        await publishFindings({ operation: baseOperation,
+            context: baseContext({ prContext: { prHeadSha: 'sha1',
+                prFiles: [{ filename: 'src/spotify.py', status: 'modified' }], pathToFirstDiffLine: { 'src/spotify.py': 72 },
+                pathToDiffLocations: { 'src/spotify.py': [{ line: 72, side: 'RIGHT' }] } } }),
+            findings: [finding({ file: 'src/spotify.py', line: 669, endLine: 670, suggestedCode: 'unsafe suggestion' })] });
+        const draft = mockCreateReviewWithComments.mock.calls[0][3][0];
+        expect(draft).toMatchObject({ path: 'src/spotify.py', subjectType: 'file' });
+        expect(draft).not.toHaveProperty('line');
+        expect(draft).not.toHaveProperty('startLine');
+        expect(draft.body).not.toContain('```suggestion');
+    });
+
     it("adds issue comment for new finding", async () => {
         await publishFindings({
             operation: baseOperation,

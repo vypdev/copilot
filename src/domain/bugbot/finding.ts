@@ -81,22 +81,55 @@ export function findExistingFindingInfo(
   existingByFindingId: ExistingByFindingId,
   finding: Pick<BugbotFinding, 'id' | 'fingerprint' | 'semanticFingerprint'>,
 ): ExistingFindingInfo | undefined {
+  return findExistingFindingMatch(existingByFindingId, finding)?.info;
+}
+
+/** A match carries its durable key so updating a comment cannot re-key it. */
+export function findExistingFindingMatch(
+  existingByFindingId: ExistingByFindingId,
+  finding: Pick<BugbotFinding, 'id' | 'fingerprint' | 'semanticFingerprint'>,
+): { id: string; info: ExistingFindingInfo } | undefined {
   const direct = existingByFindingId[finding.id];
-  if (direct && identitiesAreCompatible(direct, finding)) return direct;
-  const candidates = Object.values(existingByFindingId);
+  if (direct && identitiesAreCompatible(direct, finding)) return { id: finding.id, info: direct };
+  const candidates = Object.entries(existingByFindingId);
   if (finding.fingerprint) {
-    const locationMatch = candidates.find((candidate) =>
+    const locationMatches = candidates.filter(([, candidate]) =>
       candidate.issue?.fingerprint === finding.fingerprint
       || candidate.pullRequest?.fingerprint === finding.fingerprint,
     );
-    if (locationMatch) return locationMatch;
+    if (locationMatches.length > 0) return uniqueFindingMatch(locationMatches);
   }
   if (!finding.semanticFingerprint) return undefined;
-  const semanticMatches = candidates.filter((candidate) =>
+  const semanticMatches = candidates.filter(([, candidate]) =>
     candidate.issue?.semanticFingerprint === finding.semanticFingerprint
     || candidate.pullRequest?.semanticFingerprint === finding.semanticFingerprint,
   );
-  return semanticMatches.length === 1 ? semanticMatches[0] : undefined;
+  return uniqueFindingMatch(semanticMatches);
+}
+
+/**
+ * Preserve trusted IDs across title/location changes, before limits, publication
+ * and final projection. Multiple reports of one uniquely matched durable finding
+ * share one record; unmatched or ambiguous reports remain independent evidence.
+ */
+export function retainExistingFindingIds(
+  findings: readonly BugbotFinding[],
+  existingByFindingId: ExistingByFindingId,
+): BugbotFinding[] {
+  const retained = new Set<string>();
+  return findings.flatMap((finding) => {
+    const match = findExistingFindingMatch(existingByFindingId, finding);
+    if (!match) return [finding];
+    if (retained.has(match.id)) return [];
+    retained.add(match.id);
+    return [finding.id === match.id ? finding : { ...finding, id: match.id }];
+  });
+}
+
+function uniqueFindingMatch(
+  matches: Array<[string, ExistingFindingInfo]>,
+): { id: string; info: ExistingFindingInfo } | undefined {
+  return matches.length === 1 ? { id: matches[0][0], info: matches[0][1] } : undefined;
 }
 
 function identitiesAreCompatible(

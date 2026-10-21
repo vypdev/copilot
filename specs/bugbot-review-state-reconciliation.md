@@ -1694,3 +1694,88 @@ PR #651 issue-route correction: only PR review publication enters the new typed
 review-mutation diagnostic. Issue-comment publication retains its existing
 application normalization path and MUST NOT be relabeled as `publish-comments`
 or a PR recheck target. A distinct issue-path regression enforces this boundary.
+
+### Finding identity continuity — #655 (2026-10-21)
+
+Observed implementation defect: fingerprint matching selected a trusted existing
+comment, but publication replaced its marker ID with the current model ID. The
+final read then saw the new ID and retained the previous unresolved ID as an
+unlinked unknown. [Issue #655](https://github.com/vypdev/copilot/issues/655)
+provides the consumer evidence; the exact historical API outage remains unknown.
+The #646 amendment above already owns mutation-stage/provider diagnostics.
+
+The matched durable key MUST be preserved while updating the same comment's
+current title, file, location, evidence and locally computed fingerprints. Pure
+domain matching returns both key and destination. A compatible direct ID wins;
+otherwise location matching MUST be unique, followed by unique semantic matching
+only when no location match exists. Ambiguous location evidence MUST NOT fall
+through to a weaker semantic match. No fuzzy title comparison or model-supplied
+identity authority is introduced.
+
+```text
+Current model report -> unique trusted fingerprint match -> retain original ID
+ -> fold reports of that retained identity -> apply comment limit -> update thread
+ -> re-read original ID -> one linked current finding -> idempotent recheck
+```
+
+Text equivalent: retain the trusted finding key throughout analysis, publication
+and final projection. The original marker and native comment/review identity
+trace the old finding to its refreshed current content. Several current reports
+matching that one retained key MUST occupy one comment slot. Unmatched reports
+and ambiguous matches remain independent evidence; no historical thread is
+deleted, automatically dismissed, or arbitrarily selected to make counts clean.
+Direct publication and reconciliation callers use the same pure policy.
+
+Unknown rows MUST expose a bounded sanitized exact finding ID even without a
+native link. Example partial card content:
+
+```markdown
+## Bugbot: review incomplete
+Run `/copilot recheck` after correcting the reported provider failure.
+- [ ] unknown — Dashboard state — ui/src/model.ts:73:operations-empty
+```
+
+The existing pending, action-required, failure, complete and locale contracts
+remain; no new status surface or notification is added. A true final-provider
+omission still produces unknown and the original bounded diagnostic. Failed
+marker or thread writes retain their completed effects and canonical finding ID
+in the typed mutation diagnostic; one fresh provider read and normal recheck
+converges without duplicate publication. Human dismissal retains precedence.
+
+State boundary: attempted but unpublished candidates are transient analysis
+evidence, not durable native findings. Their unknown rows diagnose that attempt.
+A later stochastic scan may supersede them; disappearance is neither explicit
+verification nor a fix/dismissal. Operators MUST retain the failed run's IDs and
+inspect those concerns. This correction does not add a second finding database
+inside the derived status card or promise durable recovery of unpublished bodies.
+
+Architecture/configuration/security: domain policy remains pure; application
+analysis, publication and final reconciliation share it; adapters and semantic
+ports remain unchanged. Matching uses only trusted parsed existing markers and
+locally computed fingerprints. No new permission, setting, marker version,
+background retry or migration is required. Upgrade and recheck the current PR;
+rollback retains visible history but reintroduces the re-keying risk. Existing
+head, ownership, publication-before-resolution and conservative-count rules
+remain non-configurable.
+
+Allocate **18 added deterministic lifecycle cases** only here: six domain
+matching/ambiguity/immutability cases; six publication-to-projection/retry,
+direct-call, failure, omission and human-dismissal replays; one partition
+fold-before-limit case; two issue-ID/impossible-anchor publication cases; and
+three localized/unsafe unknown-ID rendering cases. The eight quality-corpus
+cases and strengthened prompt contracts are owned only by the analysis SDD.
+Existing global thresholds remain; `finding.ts` requires 100% coverage and the
+changed analysis/publication/reconciliation path requires 95% lines/statements
+and 90% branches/functions. Deterministic fakes use no live model or waits.
+
+Acceptance/traceability: `finding.test.ts` proves unique durable-key matching and
+ambiguity refusal; `finding_identity_replay.test.ts` proves changed model
+ID/title/location yields one original linked record, zero orphan unknown, no
+new native review, equal replay digest, safe failure diagnostics and dismissal
+retention. Analyzer/publication tests prove comment-budget and issue/anchor
+behavior; presentation tests prove bounded actionable IDs in English/Spanish.
+Publication, failure and quality documentation describe recovery and evidence
+limits. Definition of Done: these cases, coverage budgets, full suite,
+architecture, specification/catalog, documentation, generated bundle/package
+gates and current-head PR CI/review pass. Synthetic fixtures do not establish a
+specific historical consumer API cause or live model-quality improvement.

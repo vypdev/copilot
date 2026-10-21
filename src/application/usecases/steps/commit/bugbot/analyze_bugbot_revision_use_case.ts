@@ -3,7 +3,7 @@ import { reconcileResolvedFindingIds } from '../../../../policies/bugbot_reconci
 import { logInfo } from '../../../../ports/logging_ports';
 import { applyCommentLimit } from './limit_comments';
 import type { BugbotContext } from './types';
-import { findExistingFindingInfo } from '../../../../../domain/bugbot/finding';
+import { findExistingFindingInfo, retainExistingFindingIds } from '../../../../../domain/bugbot/finding';
 import { buildBugbotPrompt } from './build_bugbot_prompt';
 import { prepareBugbotFindings } from './prepare_bugbot_findings';
 import type { PreparedBugbotFindings } from './prepare_bugbot_findings';
@@ -134,7 +134,10 @@ function suppressDismissedFindings(
     context: BugbotContext,
     prepared: PreparedBugbotFindings,
 ): PreparedBugbotFindings {
-    const activeFindings = (prepared.activeFindings ?? prepared.toPublish).filter((finding) => {
+    const activeFindings = retainExistingFindingIds(
+        prepared.activeFindings ?? prepared.toPublish,
+        context.existingByFindingId,
+    ).filter((finding) => {
         const existing = findExistingFindingInfo(context.existingByFindingId, finding);
         return existing?.issue?.resolution !== 'dismissed' && existing?.pullRequest?.resolution !== 'dismissed';
     });

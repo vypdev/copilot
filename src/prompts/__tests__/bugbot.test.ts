@@ -27,6 +27,11 @@ describe('getBugbotPrompt', () => {
         expect(prompt).toContain('Context coverage');
         expect(prompt).toContain('findings');
         expect(prompt).toContain('resolved_findings');
+        expect(prompt).toContain('Read effective repository configuration and inherited library/protocol defaults');
+        expect(prompt).toContain('Trace short-circuit guards, validation helpers and the actual caller/render path');
+        expect(prompt).toContain('Recompute arithmetic and check cited line numbers');
+        expect(prompt).toContain('withdraw the finding entirely');
+        expect(prompt).toContain('Report a confirmed failure when those protections are absent');
         expect(prompt).toContain('outputLocale` exactly as `de-DE');
         expect(prompt).not.toContain('{{');
     });

@@ -235,9 +235,12 @@ function normalizeHistoricalSnapshot(
 function renderFindingRow(finding: BugbotProjectedFinding): string {
   const label = sanitizeAgentMarkdown(finding.title || finding.id, 500).replace(/[\r\n]+/gu, ' ');
   const state = stateLabel(finding.state);
+  const identity = finding.state === 'unknown'
+    ? ` — ${sanitizeAgentMarkdown(finding.id, 200).replace(/[\r\n]+/gu, ' ')}`
+    : '';
   return finding.url
-    ? `- ${state} — [${label}](${finding.url})`
-    : `- ${state} — ${label}`;
+    ? `- ${state} — [${label}](${finding.url})${identity}`
+    : `- ${state} — ${label}${identity}`;
 }
 
 function stateLabel(state: BugbotFindingState): string {

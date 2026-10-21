@@ -41700,9 +41700,12 @@ function normalizeHistoricalSnapshot(originalBody, analyzedHeadSha, catalog) {
 function renderFindingRow(finding) {
     const label = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.title || finding.id, 500).replace(/[\r\n]+/gu, ' ');
     const state = stateLabel(finding.state);
+    const identity = finding.state === 'unknown'
+        ? ` — ${(0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.id, 200).replace(/[\r\n]+/gu, ' ')}`
+        : '';
     return finding.url
-        ? `- ${state} — [${label}](${finding.url})`
-        : `- ${state} — ${label}`;
+        ? `- ${state} — [${label}](${finding.url})${identity}`
+        : `- ${state} — ${label}${identity}`;
 }
 function stateLabel(state) {
     return `[ ] ${state}`;
@@ -64827,7 +64830,7 @@ function partitionFailureCategory(error) {
     return error instanceof Error ? error.name : 'unknown';
 }
 function suppressDismissedFindings(execution, context, prepared) {
-    const activeFindings = (prepared.activeFindings ?? prepared.toPublish).filter((finding) => {
+    const activeFindings = (0, finding_1.retainExistingFindingIds)(prepared.activeFindings ?? prepared.toPublish, context.existingByFindingId).filter((finding) => {
         const existing = (0, finding_1.findExistingFindingInfo)(context.existingByFindingId, finding);
         return existing?.issue?.resolution !== 'dismissed' && existing?.pullRequest?.resolution !== 'dismissed';
     });
@@ -65414,6 +65417,7 @@ function buildPreviousFindingsContext(previousFindings) {
 `;
     const suffix = `
 **Your task 2:** For each finding above, analyze the current code and decide:
+- Trace the original failure precondition through current callers, validation helpers and effective configuration, including modules outside the original anchor. A retained finding is not proof that its old explanation is still true. Reuse its exact id if reporting the same defect again; do not create a second report for it.
 - If the problem **still exists** (same code or same issue present): do **not** include it in \`resolved_findings\`.
 - If the problem **no longer applies** (e.g. that code was removed or refactored away): include \`{ "id": "<exact id>", "resolution": "obsolete" }\` in \`resolved_findings\`.
 - If the problem **has been fixed** (code was changed and the issue is resolved): include \`{ "id": "<exact id>", "resolution": "fixed" }\` in \`resolved_findings\`.
@@ -67580,7 +67584,7 @@ async function publishFindings(param) {
             catalog,
         })
         : undefined;
-    for (const finding of findings) {
+    for (const finding of (0, finding_1.retainExistingFindingIds)(findings, existingByFindingId)) {
         if (operation.target.issueNumber > 0 && !reviewPublisher) {
             await (0, publish_issue_finding_comment_1.publishIssueFindingComment)(ports.issueComments, operation.target.issueNumber, finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding), commitSha, catalog);
         }
@@ -67900,6 +67904,7 @@ async function queryBugbotPartitionFindings(repository, configuration, prompt, t
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.reconcileBugbotReviewState = reconcileBugbotReviewState;
 const bugbot_mutation_error_1 = __nccwpck_require__(82937);
+const finding_1 = __nccwpck_require__(31011);
 const review_projection_1 = __nccwpck_require__(80859);
 const bugbot_reconciliation_policy_1 = __nccwpck_require__(78128);
 const bugbot_provider_projection_policy_1 = __nccwpck_require__(85821);
@@ -67930,6 +67935,8 @@ async function reconcileBugbotReviewState(input) {
         };
     }
     const snapshot = snapshotResult.snapshot;
+    const activeFindings = (0, finding_1.retainExistingFindingIds)(input.activeFindings, input.loadedContext.existingByFindingId);
+    const expectedPublishedFindings = (0, finding_1.retainExistingFindingIds)(input.expectedPublishedFindings ?? input.activeFindings, input.loadedContext.existingByFindingId);
     const diagnostics = [
         ...(input.mutationErrors ?? []).map((error) => error instanceof bugbot_mutation_error_1.BugbotMutationError
             ? { code: 'finding-mutation-failed', mutation: error.diagnostic }
@@ -67942,7 +67949,7 @@ async function reconcileBugbotReviewState(input) {
     const providerProjection = (0, bugbot_provider_projection_policy_1.projectBugbotProviderEvidence)({
         snapshot,
         trustedAuthorLogin: input.target.trustedAuthorLogin,
-        activeFindings: input.activeFindings,
+        activeFindings,
         existingByFindingId: input.loadedContext.existingByFindingId,
     });
     const plan = (0, bugbot_reconciliation_policy_1.buildBugbotReconciliationPlan)({
@@ -67952,8 +67959,8 @@ async function reconcileBugbotReviewState(input) {
             id,
             (0, bugbot_finding_marker_policy_1.extractTitleFromBody)(fullBody) || id,
         ])),
-        activeFindings: input.activeFindings,
-        expectedPublishedFindings: input.expectedPublishedFindings ?? input.activeFindings,
+        activeFindings,
+        expectedPublishedFindings,
         diagnostics,
         coverage: input.loadedContext.coverage,
     });
@@ -89870,6 +89877,8 @@ function matchesConstrainedHead(target, candidate) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.isExistingFindingFullyResolved = isExistingFindingFullyResolved;
 exports.findExistingFindingInfo = findExistingFindingInfo;
+exports.findExistingFindingMatch = findExistingFindingMatch;
+exports.retainExistingFindingIds = retainExistingFindingIds;
 function isExistingFindingFullyResolved(finding) {
     const destinations = [finding.issue, finding.pullRequest].filter((destination) => destination != null);
     return (destinations.length > 0 &&
@@ -89877,21 +89886,45 @@ function isExistingFindingFullyResolved(finding) {
         finding.pullRequest?.verificationRequired !== true);
 }
 function findExistingFindingInfo(existingByFindingId, finding) {
+    return findExistingFindingMatch(existingByFindingId, finding)?.info;
+}
+/** A match carries its durable key so updating a comment cannot re-key it. */
+function findExistingFindingMatch(existingByFindingId, finding) {
     const direct = existingByFindingId[finding.id];
     if (direct && identitiesAreCompatible(direct, finding))
-        return direct;
-    const candidates = Object.values(existingByFindingId);
+        return { id: finding.id, info: direct };
+    const candidates = Object.entries(existingByFindingId);
     if (finding.fingerprint) {
-        const locationMatch = candidates.find((candidate) => candidate.issue?.fingerprint === finding.fingerprint
+        const locationMatches = candidates.filter(([, candidate]) => candidate.issue?.fingerprint === finding.fingerprint
             || candidate.pullRequest?.fingerprint === finding.fingerprint);
-        if (locationMatch)
-            return locationMatch;
+        if (locationMatches.length > 0)
+            return uniqueFindingMatch(locationMatches);
     }
     if (!finding.semanticFingerprint)
         return undefined;
-    const semanticMatches = candidates.filter((candidate) => candidate.issue?.semanticFingerprint === finding.semanticFingerprint
+    const semanticMatches = candidates.filter(([, candidate]) => candidate.issue?.semanticFingerprint === finding.semanticFingerprint
         || candidate.pullRequest?.semanticFingerprint === finding.semanticFingerprint);
-    return semanticMatches.length === 1 ? semanticMatches[0] : undefined;
+    return uniqueFindingMatch(semanticMatches);
+}
+/**
+ * Preserve trusted IDs across title/location changes, before limits, publication
+ * and final projection. Multiple reports of one uniquely matched durable finding
+ * share one record; unmatched or ambiguous reports remain independent evidence.
+ */
+function retainExistingFindingIds(findings, existingByFindingId) {
+    const retained = new Set();
+    return findings.flatMap((finding) => {
+        const match = findExistingFindingMatch(existingByFindingId, finding);
+        if (!match)
+            return [finding];
+        if (retained.has(match.id))
+            return [];
+        retained.add(match.id);
+        return [finding.id === match.id ? finding : { ...finding, id: match.id }];
+    });
+}
+function uniqueFindingMatch(matches) {
+    return matches.length === 1 ? { id: matches[0][0], info: matches[0][1] } : undefined;
 }
 function identitiesAreCompatible(existing, finding) {
     const existingFingerprints = [
@@ -104416,11 +104449,13 @@ function getBranchSyncConflictsPrompt(params) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BUGBOT_FINDING_GROUNDING_INSTRUCTION = void 0;
 exports.getBugbotPrompt = getBugbotPrompt;
 /**
  * Prompt for Bugbot detection (detect potential problems on push).
  */
 const fill_1 = __nccwpck_require__(2559);
+exports.BUGBOT_FINDING_GROUNDING_INSTRUCTION = 'Before returning a finding, try to disprove it against the exact reviewed source. Read effective repository configuration and inherited library/protocol defaults before inferring behavior from a missing command flag. Trace short-circuit guards, validation helpers and the actual caller/render path before claiming that an unsafe branch is reachable or that separate call sites coexist. Recompute arithmetic and check cited line numbers against the current file/diff. If your evidence refutes the alleged defect, withdraw the finding entirely; do not publish a contradictory or self-refuting report. These checks apply equally to low/info severity. Report a confirmed failure when those protections are absent; do not assume they exist.';
 const TEMPLATE = `You are analyzing the latest code changes for potential bugs and issues.
 
 Write every human-readable finding title, description, evidence, and suggestion in {{targetLocale}}. Preserve identifiers, code, symbols, paths, refs, commands, and URLs verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
@@ -104455,6 +104490,8 @@ For every finding:
 - use a stable semantic id, one finding per distinct root cause, and a practical suggested fix;
 - include the nearest stable \`symbol\` and a minimal exact \`codeSnippet\` when available so the finding can survive rebases, line movement, and file renames.
 - when a fix is a safe replacement of exactly the reported line range, include only the replacement text in \`suggestedCode\`; otherwise omit it.
+
+${exports.BUGBOT_FINDING_GROUNDING_INSTRUCTION}
 
 Return every finding field required by the response schema. Use null for file, line, endLine, severity, confidence, category, evidence, suggestion, symbol, codeSnippet, or suggestedCode when that value does not safely apply. Only include files outside the ignore list.
 {{previousBlock}}
@@ -105359,6 +105396,7 @@ exports.buildBugbotBenchmarkPrompt = buildBugbotBenchmarkPrompt;
 const schema_1 = __nccwpck_require__(16808);
 const untrusted_content_1 = __nccwpck_require__(67057);
 const prepare_bugbot_findings_policy_1 = __nccwpck_require__(3496);
+const bugbot_1 = __nccwpck_require__(56998);
 const MAX_BENCHMARK_CASES = 200;
 /** Executes the real configured findings agent against every case, sequentially. */
 async function runBugbotBenchmarkAgent(corpus, agent, configuration) {
@@ -105385,6 +105423,8 @@ function buildBugbotBenchmarkPrompt(testCase) {
 
 You are running a controlled Bugbot quality benchmark.
 Review only the supplied synthetic diff. Report actionable defects caused by added or changed code; do not report style, pre-existing issues, or speculative concerns. Return an empty findings array when the change is safe.
+
+${bugbot_1.BUGBOT_FINDING_GROUNDING_INSTRUCTION}
 
 Language: ${testCase.language}
 Repository-relative file: ${testCase.file}
