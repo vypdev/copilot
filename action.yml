@@ -54,7 +54,7 @@ inputs:
     description: "Require a validated SDD first commit for started feature and contract-change issues. Requires issue-managed-branches."
     default: "false"
   verification-setup:
-    description: "Run the trusted main-branch .copilot/verification-setup.mjs before each repository verification command. Disabled by default."
+    description: "Run the trusted repository composite action before repository verification in generated workflows. Disabled by default."
     default: "false"
   issue-workflow-profile:
     description: "JSON profile of enabled issue workflows."
@@ -561,6 +561,8 @@ outputs:
 runs:
   using: "node24"
   main: "build/github_action/index.js"
+  post: "build/github_action/index.js"
+  post-if: "always()"
 branding:
   icon: "cpu"
   color: "blue"

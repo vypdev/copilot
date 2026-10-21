@@ -36897,6 +36897,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runGitHubAction = runGitHubAction;
 exports.runGitHubActionEntry = runGitHubActionEntry;
+const native_verification_controller_1 = __nccwpck_require__(71046);
 const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const core = __importStar(__nccwpck_require__(75855));
 const github = __importStar(__nccwpck_require__(78227));
@@ -37106,7 +37107,7 @@ function earlyGithubActionErrorMessage() {
 // Only auto-run when executed as the action entry (not when imported by tests)
 /* istanbul ignore next -- the bundled production entry is covered by the Action smoke path. */
 if (typeof process.env.JEST_WORKER_ID === 'undefined') {
-    void runGitHubActionEntry();
+    void runGitHubActionEntry(() => (0, native_verification_controller_1.runNativeVerificationEntry)(runGitHubActionEntry));
 }
 
 
@@ -47803,7 +47804,7 @@ The setup runner profile selects placement; it does not install the project's la
 
 Declare reviewed version prefixes in \`.copilot/verification-prerequisites.json\` (schemaVersion 1, runtimes such as java 17, node 24, pnpm 10). Copilot checks declared versions in the credential-free verification environment before each configured verification command; a missing or incompatible runtime blocks publication. Without this optional declaration, existing verification behavior remains and no language is inferred. Java provisioning may use \`actions/setup-java\`; \`JAVA_HOME\` and \`PATH\` survive isolation, while agent credentials and tool-option injection variables do not. Do not add an unreviewed bootstrap or weaken verification to work around a missing runtime. Read [verification prerequisites and same-job setup](https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-verification-prerequisites).
 
-The optional repository-owned setup helper prepares each candidate before verification without editing generated workflows. Review \`.copilot/verification-setup.mjs\` onto trusted main before enabling \`VERIFICATION_SETUP=true\` (Action input \`verification-setup\`, disabled by default). Copilot executes captured trusted bytes before each command in a fresh credential-free profile; candidate changes cannot replace them. Setup failure blocks verification and commit/push. Read [repository-owned setup](https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-owned-setup).
+The optional repository-owned composite action prepares each candidate before verification. Review \`.github/actions/copilot-verification-setup/action.yml\` and its assets onto trusted main, update generated workflows, then enable \`VERIFICATION_SETUP=true\` (Action input \`verification-setup\`, disabled by default). GitHub Actions executes the trusted snapshot before each command with a fresh private HOME; candidate changes cannot replace it. Native post steps finish before profile cleanup. Setup failure blocks verification and commit/push. The local CLI cannot execute composite actions and fails closed when opted in. Read [repository-owned setup](https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-owned-setup).
 
 For the full contributor flow, read [repository collaboration](https://github.com/vypdev/copilot/blob/master/docs/agents/repository-collaboration.mdx). For drift and recovery, read [guidance troubleshooting](https://github.com/vypdev/copilot/blob/master/docs/agents/repository-guidance-troubleshooting.mdx).
 `;
@@ -51141,17 +51142,21 @@ function verificationRuntimeMatches(required, observed) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.VerificationSetupError = exports.VERIFICATION_SETUP_HELP = exports.VERIFICATION_SETUP_LIMITS = exports.VERIFICATION_SETUP_PATH = void 0;
+exports.VerificationSetupError = exports.VERIFICATION_SETUP_HELP = exports.VERIFICATION_SETUP_LIMITS = exports.VERIFICATION_SETUP_PATH = exports.VERIFICATION_SETUP_DIRECTORY = void 0;
 exports.parseVerificationSetupResult = parseVerificationSetupResult;
-exports.VERIFICATION_SETUP_PATH = '.copilot/verification-setup.mjs';
-exports.VERIFICATION_SETUP_LIMITS = Object.freeze({ timeoutMs: 300000, outputBytes: 65536, resultBytes: 16384, scriptBytes: 65536 });
+exports.VERIFICATION_SETUP_DIRECTORY = '.github/actions/copilot-verification-setup';
+exports.VERIFICATION_SETUP_PATH = `${exports.VERIFICATION_SETUP_DIRECTORY}/action.yml`;
+exports.VERIFICATION_SETUP_LIMITS = Object.freeze({ timeoutMs: 300000, resultBytes: 16384, scriptBytes: 65536, snapshotBytes: 262144, files: 32, requests: 20 });
 exports.VERIFICATION_SETUP_HELP = 'https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-owned-setup';
 /** Closed facts only. Provider/helper output and raw exception causes never cross this boundary. */
 class VerificationSetupError extends Error {
     constructor(reason, sourceSha, exitCode) {
         const sha = sourceSha && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(sourceSha) ? sourceSha : 'unavailable';
         const exit = Number.isInteger(exitCode) && exitCode >= 0 && exitCode <= 255 ? ` Exit status: ${exitCode}.` : '';
-        super(`Repository setup blocked verification (${reason}). Review ${exports.VERIFICATION_SETUP_PATH} on the trusted main branch and rerun. Trusted source SHA: ${sha}.${exit} Verification, commit and push are withheld. Help: ${exports.VERIFICATION_SETUP_HELP}`);
+        const action = reason === 'native-workflow-required'
+            ? 'Update the generated Copilot workflows and run this operation in GitHub Actions; the local CLI cannot execute composite actions.'
+            : `Review ${exports.VERIFICATION_SETUP_PATH} on the trusted main branch and rerun.`;
+        super(`Repository setup blocked verification (${reason}). ${action} Trusted source SHA: ${sha}.${exit} Verification, commit and push are withheld. Help: ${exports.VERIFICATION_SETUP_HELP}`);
         this.reason = reason;
         this.exitCode = exitCode;
         this.name = 'VerificationSetupError';
@@ -87595,6 +87600,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GitCommitAdapter = void 0;
+const native_verification_profiles_1 = __nccwpck_require__(22290);
 const exec = __importStar(__nccwpck_require__(18538));
 const git_authentication_environment_1 = __nccwpck_require__(16535);
 const untrusted_command_environment_1 = __nccwpck_require__(2304);
@@ -87635,7 +87641,8 @@ class GitCommitAdapter {
             });
         }
         finally {
-            runtime.cleanup();
+            if (!(0, native_verification_profiles_1.nativeVerificationRetainsProfile)(runtime.environment.HOME))
+                runtime.cleanup();
         }
     }
     async configureAuthor(name, email) {
@@ -88329,6 +88336,613 @@ class LoggerWorkflowPollingObserverAdapter {
     }
 }
 exports.LoggerWorkflowPollingObserverAdapter = LoggerWorkflowPollingObserverAdapter;
+
+
+/***/ }),
+
+/***/ 18883:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.verificationCandidateIdentity = verificationCandidateIdentity;
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_crypto_1 = __nccwpck_require__(6005);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+/** Bind setup to the exact HEAD, branch, index, tracked edits and publishable untracked files. */
+function verificationCandidateIdentity(workspace, environment) {
+    const hash = (0, node_crypto_1.createHash)('sha256');
+    const git = (...args) => {
+        const result = (0, node_child_process_1.spawnSync)('git', ['--no-replace-objects', ...args], { cwd: workspace, env: environment, shell: false,
+            windowsHide: true, timeout: 10000, maxBuffer: 16 * 1024 * 1024 });
+        if (result.error || result.status !== 0)
+            throw new verification_setup_policy_1.VerificationSetupError('candidate-changed');
+        hash.update(result.stdout).update('\0');
+        return result.stdout;
+    };
+    git('rev-parse', '--verify', 'HEAD');
+    git('rev-parse', '--symbolic-full-name', 'HEAD');
+    git('ls-files', '--stage', '-z');
+    git('diff', '--no-ext-diff', '--no-textconv', '--binary', 'HEAD', '--');
+    const paths = git('ls-files', '--others', '--exclude-standard', '-z').toString('utf8').split('\0').filter(Boolean);
+    let total = 0;
+    if (paths.length > 256)
+        throw new verification_setup_policy_1.VerificationSetupError('candidate-changed');
+    for (const path of paths) {
+        const file = (0, node_path_1.join)(workspace, path);
+        const stat = (0, node_fs_1.lstatSync)(file);
+        total += stat.size;
+        if (total > 16 * 1024 * 1024)
+            throw new verification_setup_policy_1.VerificationSetupError('candidate-changed');
+        hash.update(path).update('\0');
+        if (stat.isSymbolicLink())
+            hash.update((0, node_fs_1.readlinkSync)(file));
+        else if (stat.isFile())
+            hash.update((0, node_fs_1.readFileSync)(file));
+        else
+            throw new verification_setup_policy_1.VerificationSetupError('candidate-changed');
+        hash.update('\0');
+    }
+    return hash.digest('hex');
+}
+
+
+/***/ }),
+
+/***/ 71046:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.drainNativeWorkerLog = drainNativeWorkerLog;
+exports.awaitNativeBoundary = awaitNativeBoundary;
+exports.continueNativeVerification = continueNativeVerification;
+exports.cleanupNativeVerification = cleanupNativeVerification;
+exports.runNativeVerificationEntry = runNativeVerificationEntry;
+const native_verification_redaction_1 = __nccwpck_require__(27632);
+const native_verification_profiles_1 = __nccwpck_require__(22290);
+const core = __importStar(__nccwpck_require__(75855));
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const agent_private_install_root_1 = __nccwpck_require__(44640);
+const agent_trusted_system_tools_1 = __nccwpck_require__(76049);
+const github_action_input_1 = __nccwpck_require__(57581);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+const native_verification_protocol_1 = __nccwpck_require__(88709);
+const native_verification_overlay_1 = __nccwpck_require__(64378);
+function emitWorkerOutput(root) {
+    const file = (0, node_path_1.join)(root, 'worker-output');
+    if (process.env.GITHUB_OUTPUT && (0, node_fs_1.existsSync)(file))
+        (0, node_fs_1.appendFileSync)(process.env.GITHUB_OUTPUT, requireRead(file));
+    const summary = (0, node_path_1.join)(root, 'worker-summary');
+    if (process.env.GITHUB_STEP_SUMMARY && (0, node_fs_1.existsSync)(summary) && !(0, native_verification_protocol_1.readNativeRecord)(root, 'summary-emitted.json')) {
+        (0, node_fs_1.appendFileSync)(process.env.GITHUB_STEP_SUMMARY, requireRead(summary, 1048576));
+        (0, native_verification_protocol_1.writeNativeRecord)(root, 'summary-emitted.json', { emitted: true });
+    }
+}
+function requireRead(file, limit = 262144) {
+    const fd = (0, node_fs_1.openSync)(file, 'r');
+    try {
+        const size = (0, node_fs_1.statSync)(file).size;
+        if (size > limit)
+            throw new verification_setup_policy_1.VerificationSetupError('output-limit');
+        const data = Buffer.alloc(size);
+        (0, node_fs_1.readSync)(fd, data, 0, data.length, 0);
+        return data;
+    }
+    finally {
+        (0, node_fs_1.closeSync)(fd);
+    }
+}
+/** Drain complete lines so runner masking and workflow commands keep their native framing. */
+function drainNativeWorkerLog(root, flush = false) {
+    const file = (0, node_path_1.join)(root, 'worker-log');
+    if (!(0, node_fs_1.existsSync)(file))
+        return;
+    const cursor = (0, native_verification_protocol_1.readNativeRecord)(root, 'log-cursor.json')?.offset ?? 0;
+    const fd = (0, node_fs_1.openSync)(file, 'r');
+    let offset = cursor;
+    try {
+        const buffer = Buffer.alloc(65536);
+        let pending = Buffer.alloc(0);
+        let size;
+        while ((size = (0, node_fs_1.readSync)(fd, buffer, 0, buffer.length, offset + pending.length))) {
+            pending = Buffer.concat([pending, buffer.subarray(0, size)]);
+            const lastLine = pending.lastIndexOf(10);
+            if (lastLine >= 0) {
+                const complete = pending.subarray(0, lastLine + 1);
+                process.stdout.write(complete);
+                offset += complete.length;
+                pending = pending.subarray(lastLine + 1);
+            }
+            // Existing action logs may contain long lines; retain framing without unbounded buffering.
+            if (pending.length > 1048576)
+                throw new verification_setup_policy_1.VerificationSetupError('output-limit');
+        }
+        if (flush && pending.length) {
+            process.stdout.write(pending);
+            offset += pending.length;
+        }
+        (0, native_verification_protocol_1.writeNativeRecord)(root, 'log-cursor.json', { offset });
+    }
+    finally {
+        (0, node_fs_1.closeSync)(fd);
+    }
+}
+async function awaitNativeBoundary(root, timeoutMs = 7200000) {
+    const deadline = Date.now() + timeoutMs;
+    while (true) {
+        drainNativeWorkerLog(root);
+        const done = (0, native_verification_protocol_1.readNativeRecord)(root, 'done.json');
+        if (done) {
+            drainNativeWorkerLog(root, true);
+            emitWorkerOutput(root);
+            core.setOutput('verification-setup-pending', 'false');
+            if (done.exitCode !== 0)
+                core.setFailed('Copilot execution failed; inspect the preceding operation result.');
+            return;
+        }
+        const request = (0, native_verification_protocol_1.readNativeRecord)(root, 'request.json', 32768);
+        if (request) {
+            if (!/^[a-f0-9-]{36}$/u.test(request.id) || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(request.sourceSha)
+                || !request.environment || typeof request.environment.HOME !== 'string')
+                throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+            core.setOutput('verification-request', request.id);
+            for (const key of ['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'PATH', 'JAVA_HOME', 'TMP', 'TEMP', 'TMPDIR']) {
+                const value = request.environment[key] ?? '';
+                if (typeof value !== 'string' || /[\r\n\0]/u.test(value))
+                    throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+                core.setOutput(`verification-${key.toLowerCase()}`, value);
+            }
+            core.setOutput('verification-setup-pending', 'true');
+            return;
+        }
+        if (Date.now() >= deadline)
+            throw new verification_setup_policy_1.VerificationSetupError('timeout');
+        const session = (0, native_verification_protocol_1.nativeSession)(root);
+        try {
+            process.kill(session.pid, 0);
+        }
+        catch {
+            throw new verification_setup_policy_1.VerificationSetupError('process-failed');
+        }
+        await (0, native_verification_protocol_1.nativePause)(100);
+    }
+}
+async function continueNativeVerification(root, id, outcome, environment = process.env) {
+    (0, native_verification_protocol_1.nativeSession)(root);
+    const request = (0, native_verification_protocol_1.readNativeRecord)(root, 'request.json', 32768);
+    if (!request || request.id !== id || !/^[a-f0-9-]{36}$/u.test(id)
+        || (0, node_fs_1.existsSync)((0, node_path_1.join)(root, `response-${id}.json`)))
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    const response = { id, success: outcome === 'success', path: environment.PATH ?? '',
+        ...(environment.JAVA_HOME ? { javaHome: environment.JAVA_HOME } : {}) };
+    (0, node_fs_1.rmSync)((0, node_path_1.join)(root, 'request.json'));
+    (0, native_verification_protocol_1.writeNativeRecord)(root, `response-${id}.json`, response);
+    await awaitNativeBoundary(root);
+}
+async function cleanupNativeVerification(root, waitMs = 10000, deferProfileCleanup = false) {
+    if (!(0, node_fs_1.existsSync)(root))
+        return;
+    const session = (0, native_verification_protocol_1.nativeSession)(root);
+    if (!(0, native_verification_protocol_1.readNativeRecord)(root, 'done.json')) {
+        (0, native_verification_protocol_1.writeNativeRecord)(root, 'cancel.json', { cancelled: true });
+        const deadline = Date.now() + waitMs;
+        while (!(0, native_verification_protocol_1.readNativeRecord)(root, 'done.json') && Date.now() < deadline)
+            await (0, native_verification_protocol_1.nativePause)(100);
+        if (!(0, native_verification_protocol_1.readNativeRecord)(root, 'done.json')) {
+            try {
+                if (process.platform === 'win32')
+                    (0, node_child_process_1.spawnSync)((0, agent_trusted_system_tools_1.trustedWindowsSystemTool)('taskkill.exe'), ['/PID', String(session.pid), '/T', '/F'], { windowsHide: true, shell: false, timeout: 5000, stdio: 'ignore' });
+                else
+                    process.kill(-session.pid, 'SIGKILL');
+            }
+            catch { /* Worker may have exited while cancellation completed. */ }
+        }
+    }
+    (0, native_verification_overlay_1.restoreNativeVerificationAction)(root, session.workspace);
+    drainNativeWorkerLog(root, true);
+    if (!deferProfileCleanup) {
+        (0, native_verification_profiles_1.removeNativeVerificationProfiles)(root);
+        (0, node_fs_1.rmSync)(root, { recursive: true, force: true });
+    }
+}
+async function startNativeVerification() {
+    for (const secret of (0, native_verification_redaction_1.nativeWorkerSecrets)(process.env))
+        core.setSecret(secret);
+    const root = (0, node_fs_1.realpathSync)((0, agent_private_install_root_1.createPrivateVerificationRuntimeRoot)());
+    for (const name of ['worker-output', 'worker-env', 'worker-path', 'worker-log', 'worker-summary'])
+        (0, node_fs_1.writeFileSync)((0, node_path_1.join)(root, name), '', { flag: 'wx', mode: 0o600 });
+    const log = (0, node_fs_1.openSync)((0, node_path_1.join)(root, 'worker-log'), 'a');
+    try {
+        const worker = (0, node_child_process_1.spawn)(process.execPath, [process.argv[1]], { cwd: process.cwd(), detached: true, windowsHide: true,
+            stdio: ['ignore', log, log], env: { ...process.env, COPILOT_NATIVE_PHASE: '', COPILOT_NATIVE_WORKER_SESSION: root,
+                GITHUB_STEP_SUMMARY: (0, node_path_1.join)(root, 'worker-summary'), GITHUB_OUTPUT: (0, node_path_1.join)(root, 'worker-output'), GITHUB_ENV: (0, node_path_1.join)(root, 'worker-env'), GITHUB_PATH: (0, node_path_1.join)(root, 'worker-path') } });
+        await new Promise((resolve, reject) => { worker.once('spawn', resolve); worker.once('error', reject); });
+        worker.unref();
+        (0, native_verification_protocol_1.writeNativeRecord)(root, 'session.json', { schemaVersion: 1, workspace: (0, node_fs_1.realpathSync)(process.cwd()), run: process.env.GITHUB_RUN_ID ?? '',
+            attempt: process.env.GITHUB_RUN_ATTEMPT ?? '', job: process.env.GITHUB_JOB ?? '', pid: worker.pid });
+        core.saveState('native-verification-ticket', root);
+        core.setOutput('verification-ticket', root);
+        await awaitNativeBoundary(root);
+    }
+    catch (error) {
+        if ((0, node_fs_1.existsSync)((0, node_path_1.join)(root, 'session.json')))
+            await cleanupNativeVerification(root);
+        else
+            (0, node_fs_1.rmSync)(root, { recursive: true, force: true });
+        throw error;
+    }
+    finally {
+        (0, node_fs_1.closeSync)(log);
+    }
+}
+/** Native phases are runner-only control messages; no credentials or agent operations are replayed. */
+async function runNativeVerificationEntry(run) {
+    const post = core.getState('copilot-native-post');
+    if (post === 'true') {
+        const root = core.getState('native-verification-ticket');
+        if (root)
+            await cleanupNativeVerification(root);
+        return;
+    }
+    core.saveState('copilot-native-post', 'true');
+    const worker = process.env.COPILOT_NATIVE_WORKER_SESSION;
+    if (worker) {
+        const deadline = Date.now() + 30000;
+        while (!(0, native_verification_protocol_1.readNativeRecord)(worker, 'session.json')) {
+            if (Date.now() >= deadline)
+                throw new verification_setup_policy_1.VerificationSetupError('timeout');
+            await (0, native_verification_protocol_1.nativePause)(10);
+        }
+        if ((0, native_verification_protocol_1.nativeSession)(worker).pid !== process.pid)
+            throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+        const restoreLog = (0, native_verification_redaction_1.redactNativeWorkerLogs)();
+        try {
+            await run();
+        }
+        finally {
+            restoreLog();
+            (0, native_verification_protocol_1.writeNativeRecord)(worker, 'done.json', { exitCode: Number(process.exitCode ?? 0) });
+        }
+        return;
+    }
+    const phase = process.env.COPILOT_NATIVE_PHASE;
+    if (!phase || phase === 'prepare' && (0, github_action_input_1.getGithubActionInput)('verification-setup') !== 'true') {
+        await run();
+        return;
+    }
+    if (process.env.GITHUB_ACTIONS !== 'true')
+        throw new verification_setup_policy_1.VerificationSetupError('native-workflow-required');
+    if (phase === 'prepare') {
+        await startNativeVerification();
+        return;
+    }
+    const root = process.env.COPILOT_NATIVE_TICKET;
+    if (!root)
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    if (phase === 'continue') {
+        await continueNativeVerification(root, process.env.COPILOT_NATIVE_REQUEST ?? '', process.env.COPILOT_NATIVE_OUTCOME ?? '');
+        return;
+    }
+    if (phase === 'finish') {
+        (0, native_verification_protocol_1.nativeSession)(root);
+        const done = (0, native_verification_protocol_1.readNativeRecord)(root, 'done.json');
+        if (done) {
+            emitWorkerOutput(root);
+            if (done.exitCode !== 0)
+                core.setFailed('Copilot execution failed.');
+        }
+        else
+            core.setFailed(`Repository setup did not complete within ${verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.requests} native verification boundaries. Pending verification and subsequent publication are blocked; inspect earlier operation results for completed effects.`);
+        await cleanupNativeVerification(root, 10000, true);
+        return;
+    }
+    throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+}
+
+
+/***/ }),
+
+/***/ 64378:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.stageNativeVerificationAction = stageNativeVerificationAction;
+exports.restoreNativeVerificationAction = restoreNativeVerificationAction;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+const native_verification_protocol_1 = __nccwpck_require__(88709);
+/** A temporary reviewed action overlays the candidate path only while the operation is paused. */
+function stageNativeVerificationAction(setup, session) {
+    const target = (0, node_path_1.join)(setup.workspace, verification_setup_policy_1.VERIFICATION_SETUP_DIRECTORY);
+    const backup = (0, node_path_1.join)(session, 'candidate-action');
+    const created = [];
+    let parent = setup.workspace;
+    for (const part of verification_setup_policy_1.VERIFICATION_SETUP_DIRECTORY.split('/').slice(0, -1)) {
+        parent = (0, node_path_1.join)(parent, part);
+        if ((0, node_fs_1.existsSync)(parent)) {
+            if ((0, node_fs_1.lstatSync)(parent).isSymbolicLink() || !(0, node_fs_1.lstatSync)(parent).isDirectory() || (0, node_fs_1.realpathSync)(parent) !== parent)
+                throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        }
+        else {
+            (0, node_fs_1.mkdirSync)(parent, { mode: 0o700 });
+            created.push(parent);
+        }
+    }
+    const targetStat = (0, node_fs_1.lstatSync)(target, { throwIfNoEntry: false });
+    const existed = !!targetStat;
+    if (targetStat && (targetStat.isSymbolicLink() || !targetStat.isDirectory()))
+        throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+    const record = { target, backup, existed, created };
+    (0, native_verification_protocol_1.writeNativeRecord)(session, 'overlay.json', record);
+    if (existed)
+        (0, node_fs_1.renameSync)(target, backup);
+    (0, node_fs_1.mkdirSync)(target, { mode: 0o700 });
+    for (const file of setup.files) {
+        const destination = (0, node_path_1.join)(target, file.path);
+        const remainder = (0, node_path_1.relative)(target, destination);
+        if (!remainder || remainder.startsWith(`..${node_path_1.sep}`) || remainder === '..')
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        (0, node_fs_1.mkdirSync)((0, node_path_1.dirname)(destination), { recursive: true, mode: 0o700 });
+        (0, node_fs_1.writeFileSync)(destination, Buffer.from(file.base64, 'base64'), { mode: file.executable ? 0o700 : 0o600, flag: 'wx' });
+    }
+}
+function restoreNativeVerificationAction(session, workspace) {
+    const record = (0, native_verification_protocol_1.readNativeRecord)(session, 'overlay.json');
+    if (!record)
+        return;
+    if (record.target !== (0, node_path_1.join)(workspace, verification_setup_policy_1.VERIFICATION_SETUP_DIRECTORY) || record.backup !== (0, node_path_1.join)(session, 'candidate-action')
+        || !Array.isArray(record.created) || record.created.some(path => ![(0, node_path_1.join)(workspace, '.github'), (0, node_path_1.join)(workspace, '.github/actions')].includes(path)))
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    for (const parent of [(0, node_path_1.join)(workspace, '.github'), (0, node_path_1.join)(workspace, '.github/actions')]) {
+        if (!(0, node_fs_1.existsSync)(parent) || (0, node_fs_1.lstatSync)(parent).isSymbolicLink() || !(0, node_fs_1.lstatSync)(parent).isDirectory() || (0, node_fs_1.realpathSync)(parent) !== parent)
+            throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    }
+    // A backup is the authoritative original. A second cleanup must never remove it.
+    if (record.existed && !(0, node_fs_1.existsSync)(record.backup))
+        return;
+    (0, node_fs_1.rmSync)(record.target, { recursive: true, force: true });
+    if (record.existed)
+        (0, node_fs_1.renameSync)(record.backup, record.target);
+    for (const directory of [...record.created].reverse()) {
+        try {
+            (0, node_fs_1.rmdirSync)(directory);
+        }
+        catch { /* Other candidate content remains. */ }
+    }
+    (0, node_fs_1.rmSync)((0, node_path_1.join)(session, 'overlay.json'), { force: true });
+}
+
+
+/***/ }),
+
+/***/ 22290:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.nativeVerificationProfilePaths = nativeVerificationProfilePaths;
+exports.registerNativeVerificationProfile = registerNativeVerificationProfile;
+exports.nativeVerificationRetainsProfile = nativeVerificationRetainsProfile;
+exports.removeNativeVerificationProfiles = removeNativeVerificationProfiles;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+const native_verification_protocol_1 = __nccwpck_require__(88709);
+function nativeVerificationProfilePaths(root) {
+    const stored = (0, native_verification_protocol_1.readNativeRecord)(root, 'profiles.json', 65536);
+    const paths = stored === undefined ? [] : stored;
+    if (!Array.isArray(paths) || paths.length > 20 || new Set(paths).size !== paths.length || paths.some(path => typeof path !== 'string'
+        || (0, node_path_1.dirname)(path) !== (0, node_path_1.dirname)(root) || !/^copilot-verify-runtime-[A-Za-z0-9]+$/u.test((0, node_path_1.basename)(path)) || path === root))
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    return paths;
+}
+/** Native actions may have post steps. Preserve dependency-only profiles until those steps finish. */
+function registerNativeVerificationProfile(root, profile) {
+    const previous = nativeVerificationProfilePaths(root);
+    if (previous.length >= 20 || previous.includes(profile) || (0, node_path_1.dirname)(profile) !== (0, node_path_1.dirname)(root)
+        || profile === root || !/^copilot-verify-runtime-[A-Za-z0-9]+$/u.test((0, node_path_1.basename)(profile))
+        || (0, node_fs_1.realpathSync)(profile) !== profile || !(0, node_fs_1.lstatSync)(profile).isDirectory() || (0, node_fs_1.lstatSync)(profile).isSymbolicLink())
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    (0, node_fs_1.writeFileSync)((0, node_path_1.join)(profile, 'native-session-owner'), root, { mode: 0o600, flag: 'wx' });
+    (0, native_verification_protocol_1.writeNativeRecord)(root, 'profiles.json', [...previous, profile]);
+}
+function nativeVerificationRetainsProfile(profile) {
+    const root = process.env.COPILOT_NATIVE_WORKER_SESSION;
+    return !!root && nativeVerificationProfilePaths(root).includes(profile);
+}
+function removeNativeVerificationProfiles(root) {
+    for (const path of nativeVerificationProfilePaths(root)) {
+        let stat;
+        try {
+            stat = (0, node_fs_1.lstatSync)(path);
+        }
+        catch (error) {
+            if (error.code === 'ENOENT')
+                continue;
+            throw error;
+        }
+        if (!stat.isDirectory() || stat.isSymbolicLink() || (0, node_fs_1.realpathSync)(path) !== path || (0, node_fs_1.readFileSync)((0, node_path_1.join)(path, 'native-session-owner'), 'utf8') !== root)
+            throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+        (0, node_fs_1.rmSync)(path, { recursive: true, force: true });
+    }
+}
+
+
+/***/ }),
+
+/***/ 88709:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.nativePause = void 0;
+exports.writeNativeRecord = writeNativeRecord;
+exports.readNativeRecord = readNativeRecord;
+exports.nativeSession = nativeSession;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const node_crypto_1 = __nccwpck_require__(6005);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+function writeNativeRecord(root, name, value) {
+    const temporary = (0, node_path_1.join)(root, `${(0, node_crypto_1.randomUUID)()}.tmp`);
+    (0, node_fs_1.writeFileSync)(temporary, JSON.stringify(value), { mode: 0o600, flag: 'wx' });
+    (0, node_fs_1.renameSync)(temporary, (0, node_path_1.join)(root, name));
+}
+function readNativeRecord(root, name, limit = 16384) {
+    const file = (0, node_path_1.join)(root, name);
+    let descriptor;
+    try {
+        const before = (0, node_fs_1.lstatSync)(file, { bigint: true });
+        if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || before.size > BigInt(limit))
+            throw new Error();
+        descriptor = (0, node_fs_1.openSync)(file, node_fs_1.constants.O_RDONLY | (node_fs_1.constants.O_NOFOLLOW ?? 0));
+        const after = (0, node_fs_1.fstatSync)(descriptor, { bigint: true });
+        if (after.dev !== before.dev || after.ino !== before.ino || after.size !== before.size || after.mtimeNs !== before.mtimeNs)
+            throw new Error();
+        const data = (0, node_fs_1.readFileSync)(descriptor);
+        const final = (0, node_fs_1.fstatSync)(descriptor, { bigint: true });
+        if (data.length > limit || final.size !== after.size || final.mtimeNs !== after.mtimeNs)
+            throw new Error();
+        return JSON.parse(data.toString('utf8'));
+    }
+    catch (error) {
+        if (error.code === 'ENOENT')
+            return undefined;
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    }
+    finally {
+        if (descriptor !== undefined)
+            (0, node_fs_1.closeSync)(descriptor);
+    }
+}
+function nativeSession(root, environment = process.env) {
+    if (!/^copilot-verify-runtime-[A-Za-z0-9]+$/u.test((0, node_path_1.basename)(root)) || (0, node_fs_1.realpathSync)(root) !== root
+        || !(0, node_fs_1.lstatSync)(root).isDirectory() || (0, node_fs_1.lstatSync)(root).isSymbolicLink())
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    if (process.platform !== 'win32' && ((0, node_fs_1.lstatSync)(root).mode & 0o077) !== 0)
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    const session = readNativeRecord(root, 'session.json');
+    if (session?.schemaVersion !== 1 || session.workspace !== (0, node_fs_1.realpathSync)(process.cwd())
+        || session.run !== (environment.GITHUB_RUN_ID ?? '') || session.attempt !== (environment.GITHUB_RUN_ATTEMPT ?? '')
+        || session.job !== (environment.GITHUB_JOB ?? '') || !Number.isSafeInteger(session.pid) || session.pid <= 0)
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    return session;
+}
+const nativePause = (milliseconds) => new Promise(resolve => setTimeout(resolve, milliseconds));
+exports.nativePause = nativePause;
+
+
+/***/ }),
+
+/***/ 27632:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.nativeWorkerSecrets = nativeWorkerSecrets;
+exports.redactNativeWorkerLogs = redactNativeWorkerLogs;
+const node_string_decoder_1 = __nccwpck_require__(76915);
+const SECRET_KEY = /(?:TOKEN|SECRET|API_KEY|PASSWORD|AUTH_JSON)/iu;
+function nativeWorkerSecrets(environment) {
+    const values = Object.entries(environment).filter(([key, value]) => SECRET_KEY.test(key) && value).map(([, value]) => value);
+    if (environment.INPUT_VARS_JSON) {
+        try {
+            const inputs = JSON.parse(environment.INPUT_VARS_JSON);
+            for (const [key, value] of Object.entries(inputs))
+                if (SECRET_KEY.test(key) && typeof value === 'string')
+                    values.push(value);
+        }
+        catch { /* The existing input parser reports invalid configuration without raw values. */ }
+    }
+    return [...new Set(values.flatMap(value => [value, ...value.split(/[\r\n]/u)]).filter(value => value.length >= 3))].sort((a, b) => b.length - a.length);
+}
+/** Secrets are removed before bytes reach a private log file, not merely masked in the runner UI. */
+function redactNativeWorkerLogs(environment = process.env) {
+    const secrets = nativeWorkerSecrets(environment);
+    const restores = [];
+    for (const stream of [process.stdout, process.stderr]) {
+        const original = stream.write;
+        const decoder = new node_string_decoder_1.StringDecoder('utf8');
+        let pending = '';
+        const emit = (line) => {
+            const command = /^::add-mask::(.*?)(?:\r?\n)?$/u.exec(line);
+            if (command) {
+                const value = command[1].replace(/%0D/gu, '\r').replace(/%0A/gu, '\n').replace(/%25/gu, '%');
+                secrets.push(...value.split(/[\r\n]/u).filter(part => part.length >= 3));
+                return;
+            }
+            for (const secret of secrets)
+                line = line.split(secret).join('[REDACTED]');
+            original.call(stream, line);
+        };
+        stream.write = ((chunk, encoding, callback) => {
+            pending += typeof chunk === 'string' ? chunk : decoder.write(Buffer.from(chunk));
+            let end;
+            while ((end = pending.indexOf('\n')) >= 0) {
+                const line = pending.slice(0, end + 1);
+                pending = pending.slice(end + 1);
+                emit(line);
+            }
+            if (pending.length > 1048576)
+                throw new Error('Copilot worker log line exceeded its fixed limit.');
+            if (typeof encoding === 'function')
+                encoding();
+            else
+                callback?.();
+            return true;
+        });
+        restores.push(() => { pending += decoder.end(); if (pending)
+            emit(pending); stream.write = original; });
+    }
+    return () => { for (const restore of restores)
+        restore(); };
+}
 
 
 /***/ }),
@@ -89131,65 +89745,6 @@ function checkRuntime(requirement, environment, run, platform, job) {
 
 /***/ }),
 
-/***/ 43966:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.runVerificationSetupProcess = runVerificationSetupProcess;
-const node_child_process_1 = __nccwpck_require__(17718);
-const agent_trusted_system_tools_1 = __nccwpck_require__(76049);
-const verification_setup_policy_1 = __nccwpck_require__(65326);
-/** All output is counted and discarded. Fixed production limits; short injected limits are for deterministic tests. */
-function runVerificationSetupProcess(node, script, cwd, env, sourceSha, limits = verification_setup_policy_1.VERIFICATION_SETUP_LIMITS) {
-    return new Promise((resolve, reject) => {
-        const child = (0, node_child_process_1.spawn)(node, [script], { cwd, env, shell: false, windowsHide: true, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'] });
-        let failure;
-        let outputBytes = 0;
-        const terminate = () => {
-            if (!child.pid)
-                return;
-            try {
-                if (process.platform === 'win32')
-                    (0, node_child_process_1.spawnSync)((0, agent_trusted_system_tools_1.trustedWindowsSystemTool)('taskkill.exe'), ['/PID', String(child.pid), '/T', '/F'], { env, windowsHide: true, timeout: 5000, stdio: 'ignore', shell: false });
-                else
-                    process.kill(-child.pid, 'SIGKILL');
-            }
-            catch {
-                child.kill('SIGKILL');
-            }
-        };
-        const timer = setTimeout(() => { failure ?? (failure = 'timeout'); terminate(); }, limits.timeoutMs);
-        const cancel = () => { failure ?? (failure = 'cancelled'); terminate(); };
-        process.once('SIGINT', cancel);
-        process.once('SIGTERM', cancel);
-        const capture = (data) => {
-            outputBytes += data.length;
-            if (outputBytes > limits.outputBytes) {
-                failure ?? (failure = 'output-limit');
-                terminate();
-            }
-        };
-        child.stdout.on('data', capture);
-        child.stderr.on('data', capture);
-        child.on('error', () => { failure ?? (failure = 'process-failed'); });
-        child.on('close', code => {
-            clearTimeout(timer);
-            process.removeListener('SIGINT', cancel);
-            process.removeListener('SIGTERM', cancel);
-            terminate();
-            if (failure || code !== 0)
-                reject(new verification_setup_policy_1.VerificationSetupError(failure ?? 'process-failed', sourceSha, code ?? undefined));
-            else
-                resolve();
-        });
-    });
-}
-
-
-/***/ }),
-
 /***/ 23358:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -89267,37 +89822,74 @@ function applyVerificationSetupResult(file, environment, roots) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareRepositoryVerification = prepareRepositoryVerification;
+const native_verification_profiles_1 = __nccwpck_require__(22290);
 const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
+const node_crypto_1 = __nccwpck_require__(6005);
 const verification_setup_policy_1 = __nccwpck_require__(65326);
 const verification_setup_result_1 = __nccwpck_require__(23358);
-const verification_setup_process_1 = __nccwpck_require__(43966);
 const logging_ports_1 = __nccwpck_require__(6152);
-const verification_setup_policy_2 = __nccwpck_require__(65326);
-/** Called once per verification command, on its fresh private profile, before runtime probes. */
+const native_verification_protocol_1 = __nccwpck_require__(88709);
+const native_verification_overlay_1 = __nccwpck_require__(64378);
+const native_verification_candidate_1 = __nccwpck_require__(18883);
+/** The runner executes YAML. This adapter pauses the admitted call stack at its verification boundary. */
 async function prepareRepositoryVerification(setup, environment) {
     if (setup.kind === 'disabled')
         return;
     if (setup.kind === 'blocked')
         throw new verification_setup_policy_1.VerificationSetupError(setup.reason, setup.sourceSha);
+    const session = process.env.COPILOT_NATIVE_WORKER_SESSION;
+    if (!session)
+        throw new verification_setup_policy_1.VerificationSetupError('native-workflow-required', setup.sourceSha);
     try {
+        (0, native_verification_protocol_1.nativeSession)(session);
+        const requests = (0, native_verification_protocol_1.readNativeRecord)(session, 'request-count.json')?.count ?? 0;
+        if (requests >= verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.requests)
+            throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+        (0, native_verification_protocol_1.writeNativeRecord)(session, 'request-count.json', { count: requests + 1 });
         if ((0, node_fs_1.realpathSync)(process.cwd()) !== setup.workspace)
-            throw new verification_setup_policy_1.VerificationSetupError('workspace-changed', setup.sourceSha);
-        const profile = (0, node_fs_1.realpathSync)(environment.HOME);
-        const script = (0, node_path_1.join)(profile, 'verification-setup.mjs');
-        const result = (0, node_path_1.join)(profile, 'verification-setup-result.json');
-        (0, node_fs_1.writeFileSync)(script, setup.script, { mode: 0o600, flag: 'wx' });
-        await (0, verification_setup_process_1.runVerificationSetupProcess)(setup.node, script, setup.workspace, {
-            ...environment,
-            COPILOT_VERIFICATION_SETUP_PROTOCOL: '1',
-            COPILOT_VERIFICATION_SETUP_RESULT: result,
-            COPILOT_VERIFICATION_SETUP_SOURCE_SHA: setup.sourceSha,
-        }, setup.sourceSha);
-        (0, verification_setup_result_1.applyVerificationSetupResult)(result, environment, [setup.workspace, profile, ...(setup.toolRoot ? [setup.toolRoot] : [])]);
-        (0, logging_ports_1.logInfo)(`Repository setup prepared (${verification_setup_policy_2.VERIFICATION_SETUP_PATH}; trusted source SHA: ${setup.sourceSha}).`);
+            throw new verification_setup_policy_1.VerificationSetupError('workspace-changed');
+        (0, native_verification_profiles_1.registerNativeVerificationProfile)(session, environment.HOME);
+        const identity = (0, native_verification_candidate_1.verificationCandidateIdentity)(setup.workspace, environment);
+        (0, native_verification_overlay_1.stageNativeVerificationAction)(setup, session);
+        const id = (0, node_crypto_1.randomUUID)();
+        (0, native_verification_protocol_1.writeNativeRecord)(session, 'request.json', { id, sourceSha: setup.sourceSha, environment });
+        (0, logging_ports_1.logInfo)(`Preparing repository verification (${verification_setup_policy_1.VERIFICATION_SETUP_PATH}; trusted source SHA: ${setup.sourceSha}).`);
+        const deadline = Date.now() + verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.timeoutMs;
+        let response;
+        while (!(response = (0, native_verification_protocol_1.readNativeRecord)(session, `response-${id}.json`))) {
+            if ((0, native_verification_protocol_1.readNativeRecord)(session, 'cancel.json'))
+                throw new verification_setup_policy_1.VerificationSetupError('cancelled');
+            if (Date.now() >= deadline)
+                throw new verification_setup_policy_1.VerificationSetupError('timeout');
+            await (0, native_verification_protocol_1.nativePause)(100);
+        }
+        (0, native_verification_overlay_1.restoreNativeVerificationAction)(session, setup.workspace);
+        if (response.id !== id || response.success !== true)
+            throw new verification_setup_policy_1.VerificationSetupError('process-failed');
+        if ((0, native_verification_candidate_1.verificationCandidateIdentity)(setup.workspace, environment) !== identity)
+            throw new verification_setup_policy_1.VerificationSetupError('candidate-changed');
+        if (typeof response.path !== 'string' || response.path.length > 16384 || response.javaHome !== undefined && typeof response.javaHome !== 'string')
+            throw new verification_setup_policy_1.VerificationSetupError('result-invalid');
+        const original = new Set((environment.PATH ?? '').split(node_path_1.delimiter));
+        const previousProfiles = (0, native_verification_profiles_1.nativeVerificationProfilePaths)(session).filter(profile => profile !== environment.HOME);
+        const fromPreviousProfile = (path) => previousProfiles.some(profile => {
+            const part = (0, node_path_1.relative)(profile, path);
+            return part === '' || part !== '..' && !part.startsWith(`..${node_path_1.sep}`) && !(0, node_path_1.isAbsolute)(part);
+        });
+        const additions = [...new Set(response.path.split(node_path_1.delimiter).filter(path => path && !original.has(path) && !fromPreviousProfile(path)))];
+        const result = (0, node_path_1.join)(environment.HOME, 'native-setup-result.json');
+        (0, node_fs_1.writeFileSync)(result, JSON.stringify({ schemaVersion: 1, path: additions,
+            environment: response.javaHome && response.javaHome !== environment.JAVA_HOME ? { JAVA_HOME: response.javaHome } : {} }), { mode: 0o600, flag: 'wx' });
+        (0, verification_setup_result_1.applyVerificationSetupResult)(result, environment, [setup.workspace, environment.HOME, ...(setup.toolRoot ? [setup.toolRoot] : [])]);
+        (0, logging_ports_1.logInfo)('Repository setup completed; runtime preflight and verification may proceed.');
     }
     catch (error) {
-        throw new verification_setup_policy_1.VerificationSetupError(error instanceof verification_setup_policy_1.VerificationSetupError ? error.reason : 'process-failed', setup.sourceSha, error instanceof verification_setup_policy_1.VerificationSetupError ? error.exitCode : undefined);
+        throw new verification_setup_policy_1.VerificationSetupError(error instanceof verification_setup_policy_1.VerificationSetupError ? error.reason : 'handoff-invalid', setup.sourceSha);
+    }
+    finally {
+        (0, native_verification_overlay_1.restoreNativeVerificationAction)(session, setup.workspace);
+        (0, node_fs_1.rmSync)((0, node_path_1.join)(session, 'request.json'), { force: true });
     }
 }
 
@@ -89314,10 +89906,11 @@ exports.captureVerificationSetup = captureVerificationSetup;
 const node_child_process_1 = __nccwpck_require__(17718);
 const node_crypto_1 = __nccwpck_require__(6005);
 const node_fs_1 = __nccwpck_require__(87561);
+const js_yaml_1 = __nccwpck_require__(783);
 const verification_setup_ports_1 = __nccwpck_require__(26509);
 const verification_setup_policy_1 = __nccwpck_require__(65326);
 const untrusted_command_environment_1 = __nccwpck_require__(2304);
-/** No network, agent, worktree-file reads, or credentials. Acquisition errors are deferred until verification. */
+/** Only immutable Git objects are read. Errors remain deferred on non-verifying routes. */
 function captureVerificationSetup(enabled, mainBranch, root = process.cwd()) {
     if (!enabled)
         return verification_setup_ports_1.DISABLED_VERIFICATION_SETUP;
@@ -89333,27 +89926,53 @@ function captureVerificationSetup(enabled, mainBranch, root = process.cwd()) {
         const workspace = (0, node_fs_1.realpathSync)(root);
         const git = (...args) => {
             const result = (0, node_child_process_1.spawnSync)('git', ['--no-replace-objects', ...args], { cwd: workspace, env: environment,
-                shell: false, windowsHide: true, timeout: 5000, maxBuffer: verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.scriptBytes + 4096 });
+                shell: false, windowsHide: true, timeout: 5000, maxBuffer: verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.snapshotBytes + 4096 });
             if (result.error || result.status !== 0)
                 throw new Error();
             return result.stdout;
         };
-        const candidateSha = git('rev-parse', '--verify', `refs/remotes/origin/${mainBranch}^{commit}`).toString('utf8').trim();
-        if (!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(candidateSha))
+        const sha = git('rev-parse', '--verify', `refs/remotes/origin/${mainBranch}^{commit}`).toString('utf8').trim();
+        if (!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(sha))
             throw new Error();
-        sourceSha = candidateSha;
-        const entry = git('ls-tree', '-z', sourceSha, '--', verification_setup_policy_1.VERIFICATION_SETUP_PATH).toString('utf8');
-        const match = /^(100644|100755) blob ([a-f0-9]{40}|[a-f0-9]{64})\t\.copilot\/verification-setup\.mjs\0$/u.exec(entry);
-        if (!match)
+        sourceSha = sha;
+        const entries = git('ls-tree', '-rz', sourceSha, '--', verification_setup_policy_1.VERIFICATION_SETUP_DIRECTORY).toString('utf8').split('\0').filter(Boolean);
+        if (!entries.length || entries.length > verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.files)
             throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
-        const bytes = git('cat-file', 'blob', match[2]);
-        const digest = (0, node_crypto_1.createHash)(match[2].length === 40 ? 'sha1' : 'sha256').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
-        const script = bytes.toString('utf8');
-        if (!bytes.length || bytes.length > verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.scriptBytes || digest !== match[2]
-            || !Buffer.from(script).equals(bytes) || script.includes('\0'))
+        let total = 0;
+        const files = entries.map(entry => {
+            const match = /^(100644|100755) blob ([a-f0-9]{40}|[a-f0-9]{64})\t(.+)$/u.exec(entry);
+            if (!match || !match[3].startsWith(`${verification_setup_policy_1.VERIFICATION_SETUP_DIRECTORY}/`))
+                throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+            const path = match[3].slice(verification_setup_policy_1.VERIFICATION_SETUP_DIRECTORY.length + 1);
+            if (!/^[A-Za-z0-9_./-]{1,200}$/u.test(path) || path.split('/').some(part => !part || part === '.' || part === '..' || part.endsWith('.') || /^(?:con|prn|aux|nul|com[0-9]|lpt[0-9])(?:\.|$)/iu.test(part)))
+                throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+            const bytes = git('cat-file', 'blob', match[2]);
+            total += bytes.length;
+            const digest = (0, node_crypto_1.createHash)(match[2].length === 40 ? 'sha1' : 'sha256').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
+            if (bytes.length > verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.scriptBytes || total > verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.snapshotBytes || digest !== match[2])
+                throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+            return Object.freeze({ path, base64: bytes.toString('base64'), executable: match[1] === '100755' });
+        });
+        const manifest = files.find(file => file.path === 'action.yml');
+        if (!manifest)
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        const bytes = Buffer.from(manifest.base64, 'base64');
+        const text = bytes.toString('utf8');
+        if (!bytes.length || !bytes.equals(Buffer.from(text)) || text.includes('\0'))
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        let action;
+        try {
+            action = (0, js_yaml_1.load)(text);
+        }
+        catch {
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        }
+        if (action?.runs?.using !== 'composite' || !Array.isArray(action.runs.steps) || !action.runs.steps.length || action.runs.steps.length > 32)
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        if (action.runs.steps.some(step => !step || typeof step !== 'object' || 'uses' in step && typeof step.uses === 'string' && step.uses.startsWith('./')))
             throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
         const toolRoot = environment.RUNNER_TOOL_CACHE ? (0, node_fs_1.realpathSync)(environment.RUNNER_TOOL_CACHE) : undefined;
-        snapshot = Object.freeze({ kind: 'ready', script, sourceSha, workspace, node: process.execPath, ...(toolRoot ? { toolRoot } : {}) });
+        snapshot = Object.freeze({ kind: 'ready', files: Object.freeze(files), sourceSha, workspace, ...(toolRoot ? { toolRoot } : {}) });
     }
     catch (error) {
         snapshot = Object.freeze({ kind: 'blocked', reason: error instanceof verification_setup_policy_1.VerificationSetupError ? error.reason : 'source-unavailable', ...(sourceSha ? { sourceSha } : {}) });
@@ -92146,6 +92765,14 @@ module.exports = require("node:querystring");
 
 "use strict";
 module.exports = require("node:stream");
+
+/***/ }),
+
+/***/ 76915:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:string_decoder");
 
 /***/ }),
 

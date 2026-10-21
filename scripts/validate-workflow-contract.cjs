@@ -1402,8 +1402,25 @@ function assertIssueBranchConfigurationInputs(file, workflow) {
   }
 }
 
+function assertNativeVerificationWorkflow(file, workflow) {
+  const contract = require('./generate-native-verification-workflows.cjs');
+  if (!contract.CALLBACKS.includes(path.basename(file))) return;
+  const relativeFile = relativeWorkflow(file);
+  const action = relativeFile.startsWith('setup/workflows/') ? DISTRIBUTED_COPILOT_ACTION : './';
+  const jobs = Object.values(workflow.jobs ?? {}).filter(job => (job.steps ?? []).some(step => step.id === 'copilot'));
+  if (jobs.length !== 1) throw new Error(`${relativeFile} must have exactly one native verification operation.`);
+  const steps = jobs[0].steps;
+  const start = steps.findIndex(step => step.id === 'copilot');
+  const original = steps[start];
+  if (original.uses !== action || original.env?.COPILOT_NATIVE_PHASE !== 'prepare') throw new Error(`${relativeFile} must prepare the admitted native operation.`);
+  const expected = contract.phaseSteps(action).map(step => ({ ...step, ...(step.with ? { with: original.with } : {}) }));
+  const actual = steps.slice(start + 1);
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(`${relativeFile} must retain the exact bounded native setup/continuation contract, runtime-only environment, timeout and completion cleanup.`);
+}
+
 function validateWorkflow(file, workflow) {
   if (!workflow || typeof workflow !== 'object') throw new Error('workflow document is empty.');
+  assertNativeVerificationWorkflow(file, workflow);
   assertManualRepoWiseWorkflow(file, workflow);
   assertDirectEventTriggers(file, workflow);
   assertApprovalObserverWorkflow(file, workflow);
@@ -1449,6 +1466,7 @@ function main() {
 if (require.main === module) main();
 
 module.exports = {
+  assertNativeVerificationWorkflow,
   QUEUE_WAIT_MINUTES,
   MIN_QUEUE_JOB_TIMEOUT_MINUTES,
   DEPLOYMENT_VALIDATION_TIMEOUT_MINUTES,

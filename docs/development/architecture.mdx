@@ -636,18 +636,30 @@ SDK contract, replay, drift and presentation tests enforce these boundaries.
 
 ## Repository verification setup
 
-The optional [repository-owned helper](/security-operations/operations/verification#repository-owned-setup)
-is captured once at comment-route composition from the configured trusted main
-commit. The immutable semantic contract contains only regular-file bytes, source
-SHA and trusted execution roots. Acquisition failures are deferred; actor, fork,
-native-head and workspace guards still decide whether verification is reached.
+The optional [repository-owned composite action](/security-operations/operations/verification#repository-owned-setup)
+is captured with all reviewed auxiliary files at comment-route composition from
+an immutable trusted main commit. Acquisition errors remain deferred. Existing
+actor, fork, native-head and workspace gates decide whether verification is reached.
 
-Both branch synchronization and shared automated commit preflight request the same
-`untrusted + verifyRuntimePrerequisites` Git-port intent. Its adapter creates a fresh
-private environment, runs the snapshot, validates the bounded closed result, probes
-runtime prerequisites, executes the command and cleans up. The pure policy owns
-schema/limits/sanitized diagnostics; infrastructure owns Git, filesystem, process
-timeouts and cancellation. Agent credential profile cleanup precedes this phase.
-No entrypoint duplicates the process runner, and no command/candidate reuses setup
-readiness. Structural workflow/configuration tests keep all six source/distributed
-event workflows consistent; local real-Git tests enforce the same-ref push gate.
+Branch synchronization and shared automated commit preflight request the same
+`untrusted + verifyRuntimePrerequisites` port intent. The Git adapter creates a
+fresh private HOME. Its infrastructure pauses the admitted same-job worker exactly
+before preflight, stages the trusted action and lets GitHub Actions execute the
+native YAML. Continuation matches the operation/request/run/job, restores candidate
+action files, validates candidate identity and bounded runtime directories, then
+runs the existing probes and verifier. The agent and publication are not replayed.
+
+Pure policy owns limits, schemas and sanitized errors. Snapshot, overlay, protocol,
+profile and controller adapters own Git/filesystem/process details; application
+use cases retain mutation policy. Native action post steps can use dependency-only
+profiles until the original Action's final post cleanup removes them. They are
+never reused by later commands. Native step failure/cancellation blocks publication
+and triggers existing recovery. A final cleanup guard stops a leftover worker.
+
+The workflow generator emits twenty conditional setup/continuation slots and a
+completion step in each actual mutation callback. Structural validation compares
+the complete native contract, including timeout and runtime-only setup environment.
+All six configuration callbacks forward the opt-in, while only issue/review-comment
+mutation compositions execute it. Push analysis does not become a verifier.
+Native platform acceptance runs real `uses`/`run` on Linux, Windows and macOS;
+local real-Git integration covers exact managed-ref push and abort behavior.

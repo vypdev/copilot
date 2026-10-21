@@ -2,8 +2,8 @@ import { parseVerificationSetupResult, VerificationSetupError, VERIFICATION_SETU
 
 describe('repository verification setup policy', () => {
     it('fixes the helper and limits without caller overrides', () => {
-        expect(VERIFICATION_SETUP_PATH).toBe('.copilot/verification-setup.mjs');
-        expect(VERIFICATION_SETUP_LIMITS).toEqual({ timeoutMs: 300_000, outputBytes: 65_536, resultBytes: 16_384, scriptBytes: 65_536 });
+        expect(VERIFICATION_SETUP_PATH).toBe('.github/actions/copilot-verification-setup/action.yml');
+        expect(VERIFICATION_SETUP_LIMITS).toEqual({ timeoutMs: 300_000, resultBytes: 16_384, scriptBytes: 65_536, snapshotBytes: 262_144, files: 32, requests: 20 });
         expect(Object.isFrozen(VERIFICATION_SETUP_LIMITS)).toBe(true);
     });
     it.each([

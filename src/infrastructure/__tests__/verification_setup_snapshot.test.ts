@@ -10,7 +10,7 @@ describe('trusted repository setup snapshot', () => {
     let root: string;
     const git = (...args: string[]) => cp.execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
     const commit = (script: string | Buffer): string => {
-        mkdirSync(join(root, '.copilot'), { recursive: true });
+        mkdirSync(join(root, '.github/actions/copilot-verification-setup'), { recursive: true });
         writeFileSync(join(root, VERIFICATION_SETUP_PATH), script);
         git('add', '.'); git('commit', '-m', 'fixture');
         const sha = git('rev-parse', 'HEAD');
@@ -27,10 +27,10 @@ describe('trusted repository setup snapshot', () => {
         expect(captureVerificationSetup(false, 'invalid', '/missing')).toEqual({ kind: 'disabled' });
     });
     it('pins trusted bytes and SHA before candidate changes or remote-ref mutation', () => {
-        const sha = commit('console.log("trusted");');
+        const sha = commit('runs:\n  using: composite\n  steps:\n    - run: echo trusted\n      shell: bash\n');
         const snapshot = captureVerificationSetup(true, 'main', root);
         commit('throw new Error("candidate");');
-        expect(snapshot).toMatchObject({ kind: 'ready', sourceSha: sha, script: 'console.log("trusted");', workspace: root, node: process.execPath });
+        expect(snapshot).toMatchObject({ kind: 'ready', sourceSha: sha, files: [expect.objectContaining({ path: 'action.yml' })], workspace: root });
         expect(Object.isFrozen(snapshot)).toBe(true);
     });
     it('defers acquisition failure on query/no-op routes', () => {
@@ -46,7 +46,7 @@ describe('trusted repository setup snapshot', () => {
         expect(captureVerificationSetup(true, 'main', root)).toEqual({ kind: 'blocked', reason: 'source-unavailable' });
     });
     it('captures the canonical trusted tool root independently of later environment changes', () => {
-        commit('export {};'); const previous = process.env.RUNNER_TOOL_CACHE;
+        commit('runs:\n  using: composite\n  steps:\n    - run: echo ready\n      shell: bash\n'); const previous = process.env.RUNNER_TOOL_CACHE;
         try {
             process.env.RUNNER_TOOL_CACHE = root;
             expect(captureVerificationSetup(true, 'main', root)).toMatchObject({ kind: 'ready', toolRoot: root });
@@ -55,7 +55,7 @@ describe('trusted repository setup snapshot', () => {
     it('verifies SHA-256 Git object stores without truncating their identity', () => {
         rmSync(join(root, '.git'), { recursive: true }); git('init', '--object-format=sha256');
         git('config', 'user.name', 'Test'); git('config', 'user.email', 'test@example.test');
-        const sha = commit('export {};'); expect(sha).toHaveLength(64);
+        const sha = commit('runs:\n  using: composite\n  steps:\n    - run: echo ready\n      shell: bash\n'); expect(sha).toHaveLength(64);
         expect(captureVerificationSetup(true, 'main', root)).toMatchObject({ kind: 'ready', sourceSha: sha });
     });
     it('rejects enabled missing helpers at the captured trusted SHA', () => {
@@ -77,7 +77,7 @@ describe('trusted repository setup snapshot', () => {
         expect(captureVerificationSetup(true, 'main', root)).toMatchObject({ reason: 'helper-invalid' });
     });
     it('never forwards runner credentials or inherited auth profiles to Git reads', () => {
-        commit('export {};');
+        commit('runs:\n  using: composite\n  steps:\n    - run: echo ready\n      shell: bash\n');
         const original = cp.spawnSync;
         const reads = jest.spyOn(cp, 'spawnSync').mockImplementation(((program: string, args: string[], options: cp.SpawnSyncOptions) => {
             expect(options.env).not.toHaveProperty('PAT');
@@ -90,11 +90,36 @@ describe('trusted repository setup snapshot', () => {
         expect(reads).toHaveBeenCalledTimes(3);
     });
     it('detects corrupted blob responses instead of executing mismatched bytes', () => {
-        commit('export {};'); const original = cp.spawnSync;
+        commit('runs:\n  using: composite\n  steps:\n    - run: echo ready\n      shell: bash\n'); const original = cp.spawnSync;
         jest.spyOn(cp, 'spawnSync').mockImplementation(((program: string, args: string[], options: cp.SpawnSyncOptions) => {
             const value = original(program, args, options);
             return args.includes('cat-file') ? { ...value, stdout: Buffer.from('different') } : value;
         }) as typeof cp.spawnSync);
         expect(captureVerificationSetup(true, 'main', root)).toMatchObject({ reason: 'helper-invalid' });
+    });
+});
+
+// These metadata failures are independent native contract cases, not shell execution tests.
+describe('native composite metadata validation', () => {
+    let root: string;
+    const git = (...args: string[]) => cp.execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+    beforeEach(() => {
+        root = realpathSync(mkdtempSync(join(tmpdir(), 'copilot-native-metadata-'))); git('init'); git('config', 'user.name', 'Test'); git('config', 'user.email', 'test@example.test');
+        mkdirSync(join(root, '.github/actions/copilot-verification-setup'), { recursive: true });
+    });
+    afterEach(() => rmSync(root, { recursive: true, force: true }));
+    it.each([
+        'runs: {using: node24, main: index.js}', 'runs: {using: composite, steps: []}', 'runs: [',
+        'runs: {using: composite, steps: [null]}', 'runs: {using: composite, steps: [{uses: "./candidate-action"}]}',
+        'runs:\n  using: composite\n  steps:\n' + Array(33).fill('    - run: echo x\n      shell: bash\n').join(''),
+    ])('rejects invalid native metadata %#', metadata => {
+        writeFileSync(join(root, VERIFICATION_SETUP_PATH), metadata); git('add', '.'); git('commit', '-m', 'fixture'); git('update-ref', 'refs/remotes/origin/main', git('rev-parse', 'HEAD'));
+        expect(captureVerificationSetup(true, 'main', root)).toMatchObject({ kind: 'blocked', reason: 'helper-invalid' });
+    });
+    it('captures reviewed auxiliary script bytes independently of candidate edits', () => {
+        writeFileSync(join(root, VERIFICATION_SETUP_PATH), 'runs: {using: composite, steps: [{run: "echo ready", shell: bash}]}');
+        writeFileSync(join(root, '.github/actions/copilot-verification-setup/prepare.sh'), 'reviewed'); git('add', '.'); git('commit', '-m', 'fixture'); git('update-ref', 'refs/remotes/origin/main', git('rev-parse', 'HEAD'));
+        const snapshot = captureVerificationSetup(true, 'main', root); writeFileSync(join(root, '.github/actions/copilot-verification-setup/prepare.sh'), 'candidate');
+        expect(snapshot).toMatchObject({kind: 'ready', files: expect.arrayContaining([expect.objectContaining({path: 'prepare.sh', base64: Buffer.from('reviewed').toString('base64')})])});
     });
 });

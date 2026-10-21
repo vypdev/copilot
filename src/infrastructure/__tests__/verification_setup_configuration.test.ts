@@ -48,7 +48,7 @@ describe('verification setup installation contract', () => {
         },
     );
     it('preserves the consumer helper through install and repeated workflow updates', () => {
-        const helper = path.join(root, '.copilot/verification-setup.mjs'); fs.mkdirSync(path.dirname(helper), { recursive: true });
+        const helper = path.join(root, '.github/actions/copilot-verification-setup/action.yml'); fs.mkdirSync(path.dirname(helper), { recursive: true });
         const bytes = 'export const repositoryOwned = true;\n'; fs.writeFileSync(helper, bytes);
         const config = createDefaultSetupConfiguration(); config.repository.verificationSetup = true;
         const source = path.resolve(__dirname, '../../../setup');
@@ -59,6 +59,6 @@ describe('verification setup installation contract', () => {
             expect(fs.readFileSync(helper, 'utf8')).toBe(bytes);
         }
         const manifest = fs.readFileSync(path.join(root, '.copilot/setup-manifest.json'), 'utf8');
-        expect(manifest).not.toContain('verification-setup.mjs');
+        expect(manifest).not.toContain('copilot-verification-setup/action.yml');
     });
 });

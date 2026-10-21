@@ -1,378 +1,282 @@
-# Repository-Owned Verification Setup Hooks
+# Repository-owned native verification setup
 
-- Status: Implementation candidate
+- Status: Ready for implementation
 - Date: 2026-10-21
 - Catalog capability ID: branch-synchronization
 - Last verified: 2026-10-21
 - Owners: Copilot maintainers
-- Scope: Define an optional repository-owned preparation helper for authorized operations that run repository verification, including branch synchronization and automated fixes.
-- Related issues/PRs: [Issue #647](https://github.com/vypdev/copilot/issues/647); [verification runtime prerequisites](https://github.com/vypdev/copilot/blob/master/docs/security-operations/operations/verification.mdx#repository-verification-prerequisites)
+- Scope: Prepare authorized repository verification through a trusted native composite action, without editing generated workflows.
+- Related issues/PRs: [#647](https://github.com/vypdev/copilot/issues/647), [#652](https://github.com/vypdev/copilot/pull/652)
 - Required review gates: product UX, architecture, testing, documentation, security/operations
-- Open decisions blocking readiness: None; this companion records the resolved contract for implementation review.
+- Open decisions blocking readiness: none; the maintainer selected a same-job composite action on 2026-10-21.
 
 ## 1. Executive summary
 
-Consumers may enable `verification-setup: true` and add a reviewed helper at `.copilot/verification-setup.mjs` on their trusted main/production branch. Copilot captures an immutable snapshot and invokes it in the credential-free environment immediately before each configured verification command, using the candidate tree being checked. The helper prepares only that repository’s required runtimes and dependencies. Without an enabled helper, existing prerequisite checks and verification behavior remain in force. Any enabled-helper validation, execution, timeout, or result failure blocks verification and commit/push.
+A repository MAY opt into a consumer-owned `.github/actions/copilot-verification-setup/action.yml` using `runs.using: composite`. GitHub Actions MUST execute its native `uses`/`run` steps after Copilot prepares the candidate and before runtime preflight and each verification command. Copilot MUST retain its existing authorization, verification and publication gates.
 
 ```text
-authorized operation -> candidate tree ready -> trusted helper snapshot prepares isolated verifier -> preflight and verification -> existing commit/push policy
+Authorized operation -> prepare candidate -> native composite setup
+ -> credential-free runtime preflight -> verification -> publication guards -> push
 ```
 
-The safety rule is that candidate changes cannot replace the trusted helper, and setup success is never reused for a different command or candidate tree.
+This replaces the unreleased Node ESM prototype in PR #652. There is no custom YAML interpreter and no reusable-workflow candidate transport.
 
 ## 2. Problem, current behavior, and evidence
 
 ### 2.1 Problem
 
-Repository maintainers need project-specific runtimes and dependencies in the same job and isolated environment that executes Copilot verification. Generated workflows belong to Copilot; editing them for each repository creates update drift. A separate successful CI job or preparation job cannot provision the verifier’s environment. Synchronization may produce a temporary merge, and an agent may change manifests, so setup must match the actual candidate checked.
+Consumer projects need different runtimes and dependencies. Editing generated Copilot workflows to install them creates maintenance drift. A separate application CI job does not provision the job doing a temporary branch merge or automated fix.
 
 ### 2.2 Current behavior
 
-1. Copilot’s verification contract runs configured repository commands subject to existing authorization and prerequisite checks.
-2. There is no specified repository-owned helper contract wired through all verification routes.
-3. In the reported `vypdev/homeassistant-gateway` run, `python3 -m pytest` failed because `/usr/bin/python3` lacked `pytest`; the temporary merge was aborted without push. This establishes that run’s missing dependency, not a general runner or repository-access failure.
+The existing `GitCommitAdapter` prepares a fresh credential-free environment for every verification command. Runtime prerequisites are probed before the command. `SyncBranchUseCase` validates the resulting merge and rereads remote heads before publication; the shared commit preflight validates safe workspace paths. These gates remain authoritative.
 
 ### 2.3 Evidence
 
-- Code/workflow/documentation references: the catalog lists `.github/workflows/copilot_branch_sync.yml`, setup workflow templates for issue, issue-comment, pull-request-comment and branch-sync, and verification policy/preflight and shared commit verification code. These paths are current evidence, not a promise about future execution support.
-- Incident: [consumer issue #19](https://github.com/vypdev/homeassistant-gateway/issues/19), [command comment](https://github.com/vypdev/homeassistant-gateway/issues/19#issuecomment-6311691282), [failed run](https://github.com/vypdev/homeassistant-gateway/actions/runs/39570398824), [job](https://github.com/vypdev/homeassistant-gateway/actions/runs/39570398824/job/119122814347).
-- External primary sources: none required for this contract.
-- Unknowns: implementation-specific workflow syntax and helper result representation must be settled consistently with repository conventions; the fixed observable limits below are resolved.
+- Central boundaries: `SyncBranchUseCase.verifyPreparedMerge`, shared `runCommitAndPushPreflight`, `GitCommitAdapter.execute`.
+- Only issue-comment and review-comment composition roots construct the mutation adapter. Issue/PR/push/review-state analysis callbacks may forward configuration but do not thereby execute verification. `CommitUseCase` analyzes push metadata and is not a mutation verifier.
+- [Composite action metadata](https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax) defines native steps; [GitHub's tutorial](https://docs.github.com/en/actions/tutorials/create-actions/create-a-composite-action) documents local actions.
+- Consumer incident: [homeassistant-gateway #19](https://github.com/vypdev/homeassistant-gateway/issues/19).
 
-### 2.4 Retrospective classification (as-built baselines only)
+### 2.4 Retrospective classification
 
-Not applicable: this is a prospective specification and reconstructs no implemented baseline.
+Not applicable: this is a prospective change. The earlier Node implementation is superseded, not a supported compatibility surface.
 
 ## 3. Actors, surfaces, and terminology
 
-| Actor | Goal | Entry point | Visible surfaces |
-|---|---|---|---|
-| Consumer maintainer | Prepare project tools without editing generated workflows | Trusted branch helper file | Repository, verification logs, documentation |
-| Issue/PR/commit actor | Request authorized implementation or autofix | Existing issue, comment, review, or commit route | Issue/PR comments and run result |
-| Operator | Understand blocked verification and recovery | Workflow execution | Job summary and bounded logs |
-| Copilot | Run setup and verification safely | Sync or shared commit-verification boundary | Check/run status |
+| Actor | Goal | Surface |
+|---|---|---|
+| Repository maintainer | Review dependencies once and enable preparation | Consumer action, setup configuration, Repository Variable |
+| Authorized contributor | Synchronize or request file changes | Existing issue/PR commands and result comments |
+| Operator | Locate setup failure and recover | Named native Actions steps, existing result card, run logs |
 
-“Trusted helper snapshot” means immutable regular-file bytes and SHA captured from the configured trusted main/production branch at composition/admission. “Candidate tree” means the exact workspace revision, including temporary synchronization merge or agent edits, whose manifests verification will check. “Preparation” means one helper invocation immediately before a single configured verification command and its runtime preflight.
+The **trusted source** is the configured main/production remote branch captured at an immutable Git commit. The **candidate** is the actual workspace after merge/fixer changes. A **native boundary** pauses an already admitted operation; it does not authorize or replay one.
 
-## 4. Goals
+## 4. Goals, non-goals, and fixed invariants
 
 ### 4.1 Goals
 
-1. Provide one documented optional repository-owned setup hook, invoked consistently for every authorized route that actually runs verification.
-2. Prepare dependencies for the exact candidate tree in the same isolated execution environment as preflight and verification.
-3. Preserve generated workflow ownership, verification policy, authorization and fail-closed commit/push behavior.
+1. Let each repository declare native setup actions and shell steps.
+2. Prepare the candidate's current dependencies before every configured verifier.
+3. Preserve consumer YAML and auxiliary assets during setup/update.
+4. Provide inspectable native steps and actionable failures.
 
 ### 4.2 Non-goals
 
-1. Globally provisioning consumer dependencies on shared runners or editing generated event workflows per consumer.
-2. Weakening verification, removing project checks, automatic setup retries, or claiming a universal OS sandbox for maintainer code.
-3. Releasing Copilot as part of this feature.
+Reusable workflows, job matrices owned by the consumer hook, YAML emulation, local Actions emulation, arbitrary helper paths and release/deployment changes are out of scope.
 
 ### 4.3 Fixed product/safety invariants
 
-1. The helper is optional; absence preserves compatible existing behavior and prerequisite diagnostics.
-2. An enabled but missing or invalid helper fails closed when verification is requested.
-3. Only the trusted snapshot executes; candidate/model edits cannot replace it.
-4. Setup failure, timeout, invalid output, or failed verification prevents commit/push. Sync uses existing abort/recovery behavior.
-5. No setup runs for read-only queries, dry runs, aligned/no-op branches, or empty verification command lists.
-6. No PAT, model/cloud credential, persisted Git write credential, agent auth-store variable/path, or agent credential profile is available to the helper.
+- Setup MUST NOT grant modification authority or run for forks rejected by existing admission.
+- Read-only, dry-run, aligned/no-op and empty-verifier operations MUST NOT execute setup.
+- Candidate edits MUST NOT replace the captured action or its auxiliary files.
+- Failure, timeout, malformed handoff, changed candidate or invalid runtime paths MUST withhold the command and publication.
+- Each verification command MUST use a fresh private HOME; only validated runtime directories and JAVA_HOME return to its environment.
 
 ## 5. Current versus proposed product journey
 
-| Stage | Current | Proposed | User/operator effect |
-|---|---|---|---|
-| Configure | No stable managed hook contract | Add or update helper on trusted branch | Consumer owns setup implementation; Copilot owns generated workflows |
-| Admit operation | Existing route authorization | Capture helper bytes/SHA before workspace mutation | Provenance is inspectable and candidate cannot substitute code |
-| Prepare candidate | Project tools may be absent | Invoke snapshot after merge/fix changes, per command | Dependencies match current manifests |
-| Verify | Existing preflight and command policy | Same policy, after setup and preflight | Existing checks remain authoritative |
-| Failure | Existing verification failure behavior | Sanitized setup stage/cause; no commit/push | Clear recovery without exposing helper output |
+| Stage | Existing | Proposed |
+|---|---|---|
+| Adoption | Edit generated workflow or provision runner | Review consumer composite onto trusted main, update generated workflows, enable opt-in |
+| Candidate preparation | Agent/temporary merge | Unchanged |
+| Dependencies | Preinstalled in same job | Native consumer composite, in that same job and candidate workspace |
+| Verification/publication | Credential-free checks and existing guards | Same checks and guards after successful setup |
 
 ```mermaid
-flowchart LR
-    A[Authorized route] --> B[Capture trusted helper SHA]
-    B --> C[Merge or agent candidate changes]
-    C --> D[Clean isolated environment]
-    D --> E[Run helper for this candidate and command]
-    E --> F[Runtime preflight and verification]
-    F --> G[Existing commit/push gate]
-    E -->|failure or timeout| H[Block commit/push; existing recovery]
+sequenceDiagram
+    participant C as Admitted Copilot operation
+    participant R as GitHub Actions runner
+    participant Y as Trusted consumer composite
+    C->>C: Prepare candidate and close agent profiles
+    C->>R: Pause at verification boundary
+    R->>Y: Execute pinned YAML and assets
+    Y-->>R: Native success or failure, runtime paths
+    R->>C: Continue the existing operation once
+    C->>C: Restore candidate action, validate candidate and runtime paths
+    C->>C: Preflight, verify, apply publication guards
 ```
 
-Text equivalent: authorized route captures trusted helper, prepares the changed candidate in isolation, verifies it, then applies the existing commit/push gate; setup failure blocks that gate.
+Text equivalent: Copilot prepares the candidate, pauses, the runner executes trusted setup, and the same operation resumes only after restoring and validating the candidate. No agent is rerun.
 
 ## 6. Functional behavior and state model
 
 ### 6.1 Happy path
 
-1. Admission preserves current actor-modification authorization, same-repository/native-head/workspace checks and fork rejection.
-2. Before any agent workspace mutation, composition captures the regular-file helper from the configured trusted main/production branch SHA and retains its bytes/SHA privately.
-3. Only when a route reaches actual verification does Copilot execute the snapshot from the candidate cwd after merge/fix changes.
-4. Each configured command gets a fresh helper invocation, then runtime preflight and that command in the same isolated environment. Setup readiness is not reused.
-5. On success, existing verification and commit/push rules continue unchanged.
+1. Composition MUST capture immutable trusted Git objects before candidate mutation. The action directory is limited to 32 regular files, 64 KiB per file and 256 KiB total. Its root metadata MUST be `action.yml`, valid composite YAML with 1–32 steps. Asset paths MUST use portable ASCII letters/digits/underscore/dot/dash/slash, at most 200 characters, without empty/parent segments or Windows reserved names. Symlinks, submodules, unsafe paths and nested local `uses` actions are rejected. Native external actions and reviewed auxiliary scripts are supported.
+2. At the existing verifier boundary, a private same-job worker MUST retain the admitted call stack. Generated workflows do not rerun the full operation to continue it.
+3. The worker MUST bind HEAD, symbolic branch, index, tracked changes and publishable untracked contents. Git observations are bounded to 16 MiB, 256 untracked files and 16 MiB aggregate untracked contents; oversized candidates fail closed. Ignored dependency caches are excluded.
+4. The candidate's action directory MUST be backed up privately and temporarily overlaid with the trusted snapshot. The native step runs from the candidate workspace with the verifier's fresh HOME. After setup, the candidate directory MUST be restored byte for byte before verification/publication.
+5. The continuation MUST match the session, current request, run, attempt, job and workspace. Duplicate/stale responses fail closed. The candidate identity MUST still match.
+6. Only new existing PATH directories within the workspace, private HOME or trusted tool cache, and an approved JAVA_HOME, MAY reach the verifier. The existing closed 16-KiB result validation and eight-directory ceiling remain in force.
+7. Runtime preflight and the configured command MUST execute in that same fresh environment. Subsequent commands repeat setup with a new HOME and the current manifests.
 
 ### 6.2 Alternative paths
 
-- No helper present and hook disabled: retain existing prerequisites and compatible behavior.
-- Enabled helper absent, malformed, unsafe, or wrong type: fail closed when verification is requested.
-- Snapshot acquisition failure on a route that never verifies: defer the error; read-only acquisition does not cause setup execution.
-- Setup command failure or timeout: stop before verifier and commit/push; synchronization aborts through existing recovery.
-- Empty command list, no-op/aligned branch, dry run or read-only request: do not invoke setup.
+Disabled setup preserves existing behavior. Enabled setup without native workflow support, including local CLI verification, MUST fail closed with an explanation to update workflows and run in GitHub Actions. Snapshot errors are deferred on routes that do not verify. No automatic setup retry or shared readiness cache is permitted.
 
 ### 6.3 State machine
 
-| State | Entered when | User-visible meaning | Allowed next states | Recovery/owner |
-|---|---|---|---|---|
-| Not requested | Route does not verify | No project preparation needed | Complete | Existing route owner |
-| Snapshot captured | Trusted regular file pinned | Helper provenance fixed | Preparing, failed on later validation | Composition boundary |
-| Preparing | Verification command is about to run | Project tools are being prepared | Ready, blocked | Setup runner |
-| Ready | Setup and output validation succeed | This candidate/command may be checked | Verifying | Verification orchestration |
-| Blocked | Setup/preflight/verification fails | No commit/push will occur | Recovered by existing operation flow | Operator/operation owner |
-| Complete | Existing operation finishes | Existing result is final | Terminal | Existing route owner |
-
-Duplicate events follow existing route idempotency. A new candidate or command is a new preparation; stale readiness cannot be reused. Cancellation terminates setup and prevents downstream verification/commit. Partial synchronization remains governed by existing merge recovery.
+| State | Meaning | Next/recovery |
+|---|---|---|
+| Disabled/skipped | No preparation requested | Existing operation |
+| Prepared candidate | Authorized workspace ready | Pending native setup |
+| Pending setup | Native runner owns current setup request | Ready, failed, canceled, timed out |
+| Ready | Native success and candidate/runtime validation passed | Preflight and command |
+| Blocked | No safe successful continuation | Existing abort/result publication; operator repairs and reruns |
+| Complete | Existing operation and its result publication completed | Private session cleanup |
 
 ## 7. User-facing configuration
 
-| Input | Type | Recommended default | Allowed values/range | Scope/persistence |
-|---|---|---|---|---|
-| `verification-setup` / `VERIFICATION_SETUP` / `repository.verificationSetup` | Boolean | `false` | Only true/false; no arbitrary helper paths or commands | Action input / Repository Variable / setup config |
-| `.copilot/verification-setup.mjs` | Optional repository file | Absent/disabled | Standalone regular Node ESM file of at most 64 KiB in the trusted branch snapshot; Node argv contains only its private snapshot path | Repository-owned; snapshot SHA/bytes per admitted operation |
-| Helper timeout | Fixed duration | 300 seconds | Not configurable | Per invocation |
-| Captured output ceiling | Fixed limit | 64 KiB | Not configurable | Per invocation |
-| Result file ceiling | Fixed limit | 16 KiB | Not configurable | Per invocation |
+| Surface | Name/type | Default/range | Scope |
+|---|---|---|---|
+| Action | `verification-setup`, boolean | `false`; only true/false | Invocation |
+| Repository Variable | `VERIFICATION_SETUP` | `false`; true/false | Generated workflow |
+| Setup config | `repository.verificationSetup`, optional boolean | absent means false | Installation plan |
+| Consumer file | Fixed composite directory above | No path override | Repository-owned, never installer-owned |
 
-The helper is standalone Node ESM, invoked with the trusted Action Node executable, `shell: false` and no user arguments. Its cwd is the exact candidate workspace. The private invocation environment adds only `COPILOT_VERIFICATION_SETUP_PROTOCOL=1`, `COPILOT_VERIFICATION_SETUP_SOURCE_SHA` and `COPILOT_VERIFICATION_SETUP_RESULT` (a private output file path). These metadata variables are not forwarded to verification commands. Relative module imports resolve in the private snapshot directory; use Node built-ins and explicit candidate-cwd subprocesses instead of sibling imports.
+The setup configuration plans the Variable; generated workflows forward its value. An explicit direct Action input applies to that invocation. Invalid values MUST fail validation. Runtimes are not inferred. Recommended adoption: review the action onto trusted main, update generated workflows with `copilot setup`, then enable the Variable. Alternative: remain disabled and provision dependencies before Copilot in the same job.
 
-The result file is optional. When present it is one regular, nonlinked UTF-8 JSON file, at most 16 KiB, with numeric `schemaVersion: 1`, optional `path` (at most eight unique absolute directories of at most 2,048 characters each) and optional `environment` containing only `JAVA_HOME`. Null values, unknown keys, non-directories, traversal, control characters, path delimiter injection and escaping symlinks are rejected. Approved roots are the canonical candidate workspace, private HOME and captured trusted `RUNNER_TOOL_CACHE`. PATH additions precede the existing PATH; JAVA_HOME is the only environment override. No result means no overlay. There is no stdout policy channel.
+The 20-command limit, five-minute native setup timeout, snapshot/result/path bounds, source trust and publication checks are intentionally non-configurable. The former Node helper protocol and 64-KiB suppressed-output ceiling are retired; native step logs use GitHub Actions semantics.
 
-Trusted acquisition uses local Git reads of `refs/remotes/origin/<main-branch>` at admission, regular Git blob mode and verified object digest/UTF-8 bytes. A full checkout must have the configured main ref available; no credentialed fetch occurs during acquisition. Acquisition failures are retained as closed facts and raised only if verification runs. Result reads are bounded and compare exact BigInt filesystem identities. Each setup invocation has a fresh profile; success logs only the fixed path and pinned SHA. Existing localized operation shells own presentation; the technical diagnostic is the same English static fallback used by runtime prerequisites.
-
-The helper MAY install tools and dependencies needed by that candidate, using declared runtime versions and lockfiles. It MUST NOT require shell interpolation. Node execution uses argument arrays. Provision pnpm explicitly; implicit Corepack downloads are not a supported prerequisite. Helper-owned workspace caches must validate lockfiles. Private-profile tools may be recreated for each command.
-
-Only approved output paths are accepted: existing directories contained in the workspace, private profile, or trusted tool root. Reject unknown environment fields, unsafe links, and paths. Invalid cross-field/output combinations fail closed. Helper stdout/stderr is never emitted raw; diagnostics expose bounded stage, cause, pinned path/SHA and exit/status facts only.
-
-Recommended setup: use the repository’s declared Python version and lockfile to install test dependencies, and the declared Node/pnpm versions and lockfile for frontend gates. A meaningful alternative is a JVM toolchain and its project lock/dependency declaration. No arbitrary ref, URL, secret, timeout, or environment override is configurable. Updating Copilot preserves consumer helper contents; first adoption requires review onto the trusted source branch before activation.
-
-## 8. Clean Architecture
+## 8. Clean Architecture design
 
 ### 8.1 Responsibilities and dependency direction
 
-| Layer/boundary | Owns | Must not own/import |
+| Boundary | Responsibility | Forbidden responsibility |
 |---|---|---|
-| Domain/pure policy | Whether verification is requested; fixed limits and eligibility rules | GitHub SDK, process APIs |
-| Application | Immutable snapshot contract and existing verification intent/order via the Git port | Concrete process/provider DTOs |
-| Adapters/data | Trusted branch file retrieval and immutable bytes/SHA mapping | Authorization or product policy |
-| Infrastructure/composition | Isolated environment creation, process execution, cleanup and route wiring | Decisions about whether a route is authorized |
-| Entrypoints | Convert issue/PR/comment/review/commit/sync events to use-case input | Duplicated verification orchestration |
-| Presentation | Sanitized status and diagnostic model | Mutations, secret handling, retry policy |
-
-```mermaid
-flowchart LR
-    E[Workflow and CLI entrypoints] --> A[Application verification orchestration]
-    A --> D[Pure eligibility and limits policy]
-    A --> P[Snapshot and isolated process ports]
-    I[Git and process adapters] --> P
-    A --> V[Sanitized result model]
-    V --> R[Job summary and existing status renderer]
-```
+| Pure policy/application ports | Closed limits/errors, immutable prepared snapshot | Runner APIs or process implementation |
+| Existing application use cases | Admission, candidate preparation, verification and publication decisions | Native YAML interpretation or duplicate phase orchestration |
+| Git adapter/setup runner | Pause precisely before probes/command, validate resume | New mutation authorization |
+| Infrastructure snapshot/overlay/protocol/controller | Trusted objects, temporary native action, same-job process lifecycle | Provider business policy or model execution replay |
+| Entrypoint/generated workflows | Dispatch native phases and native `uses` | Reimplement verifier/publication rules |
+| Presentation | Existing localized result/error surfaces | Executable helper output as policy |
 
 ### 8.2 Contracts, state, and trust boundaries
 
-- Pure decisions: operation requires verification, helper enabled/valid, and fixed limits; no-op/read-only exclusions.
-- Application contracts: immutable trusted snapshot metadata, candidate identity, command identity, bounded setup result, and verification outcome.
-- Semantic ports: read trusted regular file at pinned ref; execute bounded helper in isolated environment; clean environment; report sanitized outcome.
-- Durable state/schema ownership: no new durable user state required; snapshot bytes/SHA remain private to the operation and are not sourced again from candidate files.
-- Concurrency/idempotency strategy: per-operation snapshot, per-candidate/per-command invocation; no shared readiness cache and no retry.
-- Trusted and untrusted inputs: trusted source branch snapshot is executable; event payloads, candidate tree, helper output and model edits are untrusted. Existing authorization and fork checks remain mandatory.
-- Provider error mapping: distinguish acquisition, validation, setup exit, timeout, result validation, preflight and verification; expose bounded sanitized cause only.
+The session contains bounded non-secret metadata and private operational logs. Worker stdout/stderr redact configured secrets and dynamic masking commands before bytes reach disk; PAT/model credentials are never serialized as log content. Credentials remain in the admitted worker's memory/environment as in the existing Action; child verifier environments remain allowlisted. Session provenance, request UUIDs and one-use responses prevent accidental replay across jobs/candidates. Root Action post-job cleanup owns cancellation and private directory removal. Dependency-only profiles remain private until nested native post steps finish, then the original Action post step removes them; no later verifier reuses them. No artifacts or remote checkpoints are created.
+
+The workflow's fixed native phases support at most 20 setup boundaries per operation. Worker log forwarding preserves complete runner-command lines, with a 1-MiB single-line memory bound; this is distinct from native setup logs. Worker outputs are bounded to 256 KiB.
 
 ### 8.3 Executable architecture constraints
 
-Add contract checks proving source and distributed workflow templates route all verification paths through the shared preparation boundary, setup variable planning is consistent, and entrypoints do not duplicate process orchestration. Tests must structurally parse workflows/contracts rather than grep prose. Enforce application-to-semantic-port dependency direction and prevent domain imports of provider/process packages using the repository’s architecture checks.
+Existing architecture/dependency tests remain mandatory. The workflow validator MUST compare all native setup/continue/finish steps with the canonical generator, including conditions, timeout, runtime-only env and consistent Action reference/inputs. Source and distributed callbacks MUST agree. All six existing configuration callbacks retain explicit opt-in forwarding.
 
 ## 9. UI/UX and content contract
 
 ### 9.1 Information hierarchy
 
-Show current verification status, completed setup/verification facts, next transition, whether action is required, commit/push impact, and links before technical details. Setup output and secrets never appear in user-facing content.
+Existing issue/PR result cards remain the primary operation status. Named Actions steps expose preparation and continuation; no new comment stream or labels are introduced. Users see impact, cause, action and retained state before technical details.
 
-### 9.2 Representative primary view
+### 9.2 Representative primary views
 
-Blocked before irreversible effects:
-
-```markdown
-# Verification could not continue
-
-> **Current status:** Repository setup failed before verification.
->
-> **Action required:** Review `.copilot/verification-setup.mjs` on the trusted branch and rerun the operation.
-
-## Progress
-
-- [x] Candidate workspace prepared
-- [x] Project verification not run
-- [x] Commit and push withheld
-
-## What happens next
-
-Correct the setup helper or its declared dependencies, then retry the authorized operation.
-
-<details>
-<summary>Technical details</summary>
-
-Setup stage: dependency preparation. Trusted helper SHA: `<short-sha>`. Exit status: `<status>`.
-
-</details>
-```
+| State | Representative content |
+|---|---|
+| Pending | Actions: “Prepare repository verification 1”. Operation remains in progress; no user action. |
+| Action required | “Repository setup blocked verification (native-workflow-required). Update the generated Copilot workflows and run this operation in GitHub Actions; the local CLI cannot execute composite actions.” |
+| Failed | “Repository setup blocked verification (process-failed). Review the trusted action and rerun. Verification, commit and push are withheld.” |
+| Partially complete | Candidate prepared; setup failed; no remote publication. Existing sync abort restores the local merge. |
+| Complete | “Repository setup completed; runtime preflight and verification may proceed.” Existing operation then reports its actual publication result. |
 
 ### 9.3 Issue, PR, and comment behavior
 
-Use existing operation titles, durable markers, update behavior and notification budget. Setup is a step within verification, not a new issue/comment lifecycle. Existing issue/PR/comment/review/commit and sync surfaces link to their run. No new labels or checks are required; existing checks remain supplemental state. A blocked result must never imply a commit/push occurred.
+No additional comments: the existing bounded result publication owns success/failure and links to the run. Native raw setup logs MUST NOT be copied into issue/PR content. Diagnostics identify the fixed path, closed cause and pinned source SHA.
 
-### 9.4 Accessibility, localization, and responsive behavior
+### 9.4 Accessibility and localization
 
-Use the existing supported locale source and fallback; keep helper path and stage names stable while surrounding prose follows existing localization. The textual flow above is the diagram equivalent. Use concise headings, descriptive links, narrow-screen readable tables, theme-independent status text, and sanitize untrusted helper content, Markdown, mentions, commands, markers and URLs. Do not render raw helper output.
+Existing localized result cards and plain-text error fallback remain in force. Native diagnostic step names are English operational labels. Text accompanies every diagram; no color-only states or new responsive layout is introduced. Helper stdout is never interpreted as commands to Copilot or Markdown publication content.
 
 ## 10. Failure, recovery, and cleanup
 
-| Failure/partial state | User impact | Retained facts | Automatic retry | Required action | Cleanup |
-|---|---|---|---|---|---|
-| Enabled helper missing/invalid | Verification blocked | Trusted SHA/path and validation stage | No | Fix helper on trusted branch; rerun | Remove private snapshot after operation |
-| Snapshot acquisition failure | If verification requested, operation blocks | Acquisition stage and route identity | No | Inspect trusted branch access/configuration | Discard partial snapshot |
-| Helper exits nonzero | No verifier or commit/push | Exit status and pinned SHA | No | Fix helper/dependency declaration | Clean private profile and temporary outputs |
-| Timeout at 300 seconds | No verifier or commit/push | Timeout stage and pinned SHA | No | Reduce setup work or correct lock/install behavior | Terminate process; clean outputs |
-| Invalid/oversized output or unsafe path | No verifier or commit/push | Validation cause, bounded status | No | Correct helper contract | Remove rejected result and private state |
-| Verification fails after setup | Existing verification failure | Setup succeeded for exact candidate/command | No new retry | Fix candidate/project checks | Existing operation cleanup; sync recovery |
-| Temporary merge cannot verify | Sync does not push | Merge/recovery facts | Existing behavior only | Follow sync recovery guidance | Existing merge abort/cleanup |
+| Failure | Impact and action | Cleanup/retry |
+|---|---|---|
+| Missing/invalid trusted action | No verifier/push; review trusted directory | No automatic retry |
+| Native failure or timeout | No verifier/push; inspect native step logs and repair | Worker abort/finally restores action and existing sync recovery |
+| Stale/cross-job/replayed response | No continuation; rerun fresh operation | Private session canceled |
+| Candidate changed during setup | No verifier/push; make setup dependency-only | Original action restored; existing recovery |
+| Invalid runtime output | No verifier/push; install under approved roots | Fresh HOME disposed |
+| Job canceled/worker exits | No new publication; inspect retained operation result | Post action signals cancellation, waits up to 10 seconds, terminates remaining worker and restores overlay |
 
-Errors follow impact -> cause -> action -> retained state. No automatic retry is added. Setup process cleanup and credential-profile cleanup occur on success, failure, timeout and cancellation.
+Native setup steps have `timeout-minutes: 5`; the worker also rejects readiness after 300 seconds. The enclosing existing job timeout remains authoritative. A force-killed worker cannot promise application finally blocks ran: the Action restores its own overlay, and normal runner checkout cleanup/operator recovery owns remaining job-local candidate state. Already-completed remote effects MUST retain their existing truthful result semantics.
 
 ## 11. Security, permissions, and privacy
 
-1. Preserve actor modification authorization, same-repository/native-head/workspace checks and fork rejection on every admitted route.
-2. Capture immutable regular-file bytes and SHA from the configured trusted main/production branch before workspace mutation. Candidate/model changes cannot replace it. New helper adoption requires review on that trusted source branch.
-3. Before setup, clean agent runtime credential profiles and use a fresh private HOME plus the existing allowlisted verification environment. Exclude PAT, model/cloud credentials, persisted Git write credentials, agent auth-store variables and paths.
-4. Reject unknown environment fields, unsafe links and output paths outside existing approved workspace/private-profile/trusted-tool-root directories. Bound time and output as specified. Do not claim a universal OS sandbox against malicious maintainer code; retain the trusted-runner boundary.
-5. Never log raw helper output, secrets, or credential-bearing environment. Diagnostics identify stage/cause, fixed path, pinned SHA and bounded exit/status only.
+Native setup receives only runtime metadata from the private verifier environment, never Copilot's PAT/model inputs or evidence token. Generated workflows MUST keep provider secrets scoped to the initial Copilot Action step, not the job or consumer action. Checkout credentials remain unpersisted. Native actions can use runner facilities required for normal Actions execution; they are reviewed executable maintainer code.
+
+This preserves the trusted-runner boundary and makes no OS-sandbox claim: same-user processes and service-level credentials remain an operator trust concern. PATH/JAVA_HOME are validated after setup; arbitrary `GITHUB_ENV` keys do not enter the verifier. Native external action versions and dependency caches are maintained by the repository owner. Nested local `uses` is excluded because its deferred post scripts could otherwise refer to restored candidate assets.
 
 ## 12. Observability and operational UX
 
-- User-facing state: whether setup was skipped, prepared, or blocked; whether verification and commit/push ran.
-- Job Summary/operator evidence: operation correlation, route, candidate identity, helper pinned SHA, stage and bounded outcome; no raw output.
-- Logs, metrics, and correlation: structured stage timing and result, correlated with existing run/operation identifiers; do not record environment values.
-- Pending external dependency versus workflow failure: setup timeout/exit is a workflow verification failure; trusted source acquisition is reported separately.
-- Rate-limit/retry behavior: no setup retry; existing provider retry policies remain unchanged.
-- Noise/comment budget: update existing operation status; do not add per-command comments.
+Logs name the fixed action and pinned source SHA, preparation success, and the existing verification result. Native Actions logs expose setup commands normally; maintainers MUST avoid printing secrets. No new secret-bearing artifacts, telemetry fields or result comments are added. The operation worker drains ordinary Action logs in order so masking commands retain their framing.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
-- Existing in-flight operations retain their captured policy and do not acquire a helper mid-operation.
-- No schema migration is required. Existing repositories without a helper retain compatible behavior and prerequisite checks.
-- The helper requires the explicit boolean opt-in and its fixed path; invalid enabled configuration fails closed. Generated workflow updates must preserve the consumer-owned helper.
-- Roll out through setup CLI/template wiring and documentation, then verify controlled local same-managed-branch synchronization. Do not launch a release as part of this work.
-- Rollback removes hook invocation while preserving existing verification policy. Never undo a completed external commit/push as part of rollback; this design blocks those effects on failure.
+Existing installations remain disabled by default. The unreleased `.copilot/verification-setup.mjs` prototype is removed rather than maintained as a second execution mode. Consumers opting in MUST update generated callbacks before activation and review the composite directory onto trusted main. Setup/install/update MUST preserve that directory and all its assets. Rollback disables the Variable and restores ordinary same-job provisioning; no remote migration, release or tag is required.
 
 ## 14. Testing strategy and numeric budget
 
-Minimum distinct cases, risk-derived from trust, freshness, route coverage, and irreversible commit/push gating:
+Minimum **150 distinct automated cases**, allocated without double counting:
 
-| Area | Minimum distinct cases | Behaviors/risks covered |
+| Area | Minimum | Risk |
 |---|---:|---|
-| Domain/configuration/pure planning | 6 | Enabled/absent/invalid helper; verify eligibility; no-op exclusions; fixed limits |
-| State/application/idempotency/races | 6 | Snapshot timing; candidate changes; per-command refresh; cancellation; duplicate route; no readiness reuse |
-| Adapters/provider contracts | 4 | Regular-file snapshot/SHA; acquisition failure; process arguments; bounded result mapping |
-| Workflows/setup | 8 | Issue, PR, general/review comments, commit, autofix and sync boundaries; source/template parity; update idempotency |
-| UI/UX/localization/sanitization | 4 | Blocked and success states; links/action; localization fallback; output sanitization |
-| Integration/security/migration | 8 | Python pytest prepared/unprepared; Node/pnpm; changed manifests; credential isolation; unsafe path; timeout/failure; no-helper compatibility; controlled sync |
-| **Total** | **36** | Distinct cases; no double counting |
+| Policy/configuration | 30 | Defaults, invalid values, closed runtime schema |
+| Trusted snapshot/assets | 22 | Pinning, hashes, file modes, malformed/native metadata |
+| Native protocol/controller | 36 | Lifecycle, output framing, replay, timeout, cancellation |
+| Candidate/runner orchestration | 24 | Ordering, fresh profiles, candidate identity, failure gates |
+| Workflows/setup contracts | 18 | Native step structure, env, limits, source/distribution, preservation |
+| Real Git/composition integration | 8 | Exact managed ref, merge manifests, abort/push guards |
+| Runtime result filesystem security | 12 | Bounds, links, containment, races, atomic overlays |
+| **Total** | **150** | Native rewrite adds at least 70 cases beyond retained applicable baseline |
 
-Keep repository-wide coverage thresholds in force and meet them in changed modules. New pure eligibility/limits policy requires at least 90% branch coverage. Use table-driven distinct behavior rows, deterministic clocks/IDs/process fakes, no real waits or live services, structural workflow contract checks, and semantic UI assertions alongside golden fixtures. Manual UX evidence must show readable blocked/success results on a narrow view and inspectable run navigation. Controlled acceptance must demonstrate the original branch-sync verification with the same managed branch and no manual generated-workflow edits; no release.
+Repository-wide thresholds remain in force. New pure policy targets 100% branches; changed setup adapters target aggregate 95% lines/statements and 90% branches/functions. Deterministic unit fakes cover runner responses without interpreting YAML. Separate native CI acceptance MUST execute real composite `uses`/`run` steps with Python/pytest and Node/pnpm on hosted Linux, Windows and macOS, asserting candidate changes, trusted-source selection, fresh profiles and restoration. Controlled local Git acceptance covers the exact same managed branch and no release. Native CI evidence is additional to the distinct Jest budget.
 
 ## 15. Documentation and discoverability
 
-| Audience | Artifact/page | Required content | Validation/navigation |
-|---|---|---|---|
-| User | `docs/security-operations/operations/verification.mdx` | Normal journey, optional helper, Python/Node examples, defaults and no-helper behavior | Link and example contract check |
-| Setup owner | Verification guide section | Fixed path/interface, trusted branch, runtimes/lockfiles, pnpm provisioning, approved outputs | Fixture-backed contract test |
-| Operator | `docs/security-operations/operations/troubleshooting.mdx` | Failure stages, sanitized diagnostics, recovery, timeout and cleanup | Navigation/link validation |
-| Contributor | `docs/development/architecture.mdx` and companion SDD | Ports, snapshot trust, route boundary and workflow checks | Architecture/workflow contract checks |
+| Audience | Deliverable | Validation |
+|---|---|---|
+| User/operator | Verification page: normal flow, Python/Node YAML, native logs, limits, failures and CLI constraint | Documentation links and workflow fixtures |
+| Setup owner | Setup configuration reference and same-job adoption order | Setup parser/planning and update-preservation tests |
+| Contributor | Generated agent guide, source contract, SDD/catalog evidence | Guidance/specification validation |
 
-Document credential boundaries, update preservation, migration/rollback, and the fact that a separate CI job does not provision the verifier. Keep examples synchronized with helper contract fixtures.
+## 16. Acceptance scenarios
 
-## 16. Acceptance
-
-1. Given an authorized verification operation and a valid trusted helper, when a candidate is ready, then the pinned helper runs in the isolated verifier environment before preflight and the configured command.
-2. Given a temporary sync merge or changed manifests, when each verification command starts, then setup refreshes against that exact candidate and does not reuse prior readiness.
-3. Given no helper and the hook is disabled, when verification runs, then existing prerequisite behavior remains compatible; given an enabled missing/invalid helper, verification fails closed.
-4. Given setup exits unsuccessfully, exceeds 300 seconds, or emits invalid/oversized output, when the operation reaches verification, then verification and commit/push are withheld and the diagnostic is sanitized and actionable.
-5. Given setup or verification failure during synchronization, when recovery runs, then the temporary merge follows existing abort/recovery behavior and no push occurs.
-6. Given a fork or untrusted event, when admission is evaluated, then helper execution is rejected and no credentials or agent auth-store state is exposed.
-7. Given a read-only query, dry run, aligned/no-op branch, or empty command list, when the route completes, then setup is not invoked.
-8. Given a consumer updates Copilot templates, when setup CLI/templates are refreshed, then the consumer helper contents remain intact and all verification routes reach the shared boundary.
-9. Given the `homeassistant-gateway` Python command, when the trusted helper installs declared locked test dependencies, then pytest preflight and configured verification can run; without preparation the missing dependency blocks commit/push.
-10. Given controlled same-managed-branch synchronization, when the candidate is merged and verified, then the run succeeds without manual edits to generated Copilot workflows. No release is part of acceptance.
+1. Disabled repositories run existing verification unchanged.
+2. Enabled authorized sync prepares dependencies from the temporary merged manifests, verifies and pushes only its existing managed branch.
+3. A candidate/model change to the action does not execute; trusted YAML/assets run, then original candidate bytes return.
+4. Setup success precedes runtime probes; every command gets a fresh HOME. Read-only, dry-run, no-op and empty-command paths execute no setup.
+5. Failed/canceled/timed-out setup, changed candidate, malformed output or replayed/cross-job continuation blocks verification and publication and restores the overlay.
+6. Native Python/pytest and Node/pnpm acceptance passes on all three hosted platforms. No PAT/model credentials are forwarded to the consumer action or verifier.
+7. Updating Copilot twice preserves the consumer directory. Old/missing native callback support and CLI opt-in fail with actionable help.
+8. Existing post-verification remote-head/workspace guards and truthful partial-success reporting remain authoritative.
 
 ## 17. Requirements traceability
 
-| Requirement | Policy/use case/adapter/presentation | Test or evidence | Documentation |
-|---|---|---|---|
-| Optional hook and no-op exclusions | Eligibility policy and shared verification orchestration | Pure planning and route tests | Verification guide |
-| Trusted immutable snapshot | Composition and snapshot port | SHA/source mutation and fork tests | Setup/security guidance |
-| Per-candidate preparation | Verification orchestration | Changed-manifest and sync merge cases | Helper contract |
-| Credential/output isolation | Isolated process adapter | Credential, path and sanitization tests | Security and troubleshooting |
-| Fixed failure limits and commit gate | Application result policy | Timeout/failure/no-push cases | Troubleshooting |
-| All routes and template preservation | Workflow/setup variable planning | Structural route parity/idempotency checks | Contributor guide |
-| Understandable status | Sanitized presentation model | Semantic UI/localization fixtures and manual UX evidence | Operator guide |
+| Requirements | Implementation/evidence | Documentation |
+|---|---|---|
+| §§4–7 source/defaults/routes | Policy, snapshot, config/composition and sync tests | Verification/setup reference |
+| §6 native handoff/candidate | Runner, protocol, overlay, controller tests | Architecture/recovery |
+| §§8–11 workflows/security/cleanup | Structural mutation tests, result filesystem tests, platform fixture | Native steps and trust boundary |
+| §§12–16 compatibility/acceptance | Setup preservation, real Git integration, hosted native acceptance | Migration/operator guide |
 
 ## 18. Implementation sequence
 
-1. Define helper interface, fixed path, snapshot/result contracts and architecture checks.
-2. Implement pure eligibility, limit and output-validation policies with focused tests.
-3. Add composition snapshot lifecycle and the existing semantic verification port.
-4. Add trusted-file and isolated-process adapters with credential cleanup and bounded execution.
-5. Wire sync and shared commit-verification boundaries across source and distributed templates and setup CLI planning.
-6. Add sanitized status, fixtures, documentation, troubleshooting, and update-preservation behavior.
-7. Complete route/security/integration coverage and controlled local synchronization acceptance; validate specs/catalog artifacts. No release.
+1. Resolve native contract and update specification/issue/PR.
+2. Capture composite assets, implement bounded same-job native handoff and cleanup.
+3. Generate native callbacks and enforce their structure.
+4. Replace prototype tests; add native platform acceptance and real Git integration.
+5. Update docs/guidance/catalog/bundles and validate all repository gates.
+6. Resolve findings, wait for every required check on the final head, then merge to develop as explicitly authorized.
 
 ## 19. Definition of Done
 
-- [x] Every normative requirement maps to acceptance and traceability.
-- [x] Helper path, invocation, limits, trusted SHA and output contract are implemented and validated.
-- [x] All actual verification routes use the shared hook; read-only/no-op/dry-run paths do not.
-- [x] Snapshot, candidate freshness, credentials, unsafe paths, timeout, output bounds and fail-closed commit gate pass.
-- [x] Numeric test budget of at least 36 distinct cases and coverage requirements pass.
-- [x] UI states, sanitized diagnostics, navigation, accessibility and localization are reviewed.
-- [x] User, setup-owner, operator and contributor documentation is discoverable and examples match fixtures.
-- [x] Setup/update preserves consumer helper contents; generated workflow contract checks pass.
-- [x] Controlled same-managed-branch sync acceptance passes without manual workflow edits; no release is launched.
-- [x] `specs/catalog.json` evidence and `specs/CATALOG.md` are current and `pnpm run validate:specifications` passes.
-- [x] No readiness-blocking decision remains unresolved.
+- [x] Normative acceptance and traceability are covered.
+- [ ] Native runner executes the composite at the actual candidate verification boundary.
+- [x] Architecture, numeric budget, coverage and workflow mutation checks pass.
+- [x] Defaults, limits, CLI behavior, failures, replay and cancellation match documentation.
+- [x] User/setup/operator/contributor docs, native UI labels and safe diagnostics are reviewed.
+- [x] Generated guidance/catalog/bundles and required validations pass.
+- [ ] All three hosted native acceptance jobs pass; controlled Git sync preserves the same managed ref.
+- [ ] Final-head checks pass and no unresolved review findings remain before merge.
 
 ## 20. References and decisions
 
-- Primary sources: [Issue #647](https://github.com/vypdev/copilot/issues/647); [repository verification prerequisites](https://github.com/vypdev/copilot/blob/master/docs/security-operations/operations/verification.mdx#repository-verification-prerequisites); [consumer issue #19](https://github.com/vypdev/homeassistant-gateway/issues/19); [failed run](https://github.com/vypdev/homeassistant-gateway/actions/runs/39570398824).
-- Related specs/ADRs/issues/PRs: owning specifications are `specs/branch-synchronization-and-conflict-recovery.md` and `specs/repository-verification-runtime-prerequisites.md`; this companion is `specs/repository-verification-setup-hooks.md` and does not replace either owner.
-- Decisions and rejected alternatives: fixed optional repository helper and shared managed invocation boundary; rejected editing generated workflows per consumer, global dependency installation, separate preparation jobs, weakening verification, automatic retries, and contributor-created helper activation.
-- Follow-up work explicitly outside this spec: implementation admission, Action-managed branch, PR review, release, and any release operation.
-## Implementation evidence — issue #647
-
-The two executable verification boundaries are `SyncBranchUseCase.verifyPreparedMerge` and the shared automated commit preflight. General issue/PR comments, natural-language modification, `/copilot implement`, Bugbot autofix, remember-branch changes and review-comment fixes reach those boundaries through the two comment composition roots. Issue lifecycle, PR review, commit analysis and review-state events do not currently run repository verification themselves. The lightweight push sync observer only reads status. All six source/distributed event workflows carry the disabled-default input, so forwarding does not silently activate setup. Existing actor, native-head, workspace and fork admission precedes any verification request; the snapshot itself is read-only and can be captured before admission without executing it.
-
-New files: pure `verification_setup_policy`, semantic `verification_setup_ports`, infrastructure snapshot/process/result/runner adapters. `GitCommitAdapter` runs setup, existing prerequisites and the command in one fresh environment whenever the existing `untrusted + verifyRuntimePrerequisites` intent is present. Trusted commits and Git reads never invoke setup. Agent runtime cleanup still completes before agent results return to verification. Setup never owns or rewrites the helper.
-
-Executable evidence is in `verification_setup_policy.test.ts`, `verification_setup_snapshot.test.ts`, `verification_setup_runner.test.ts`, `verification_setup_configuration.test.ts`, `verification_setup_sync.test.ts`, composition tests and the structural workflow validator. The real local Git fixture first fails unprepared, aborts without changing its remote managed ref, then prepares the merged lockfile twice and pushes the verified merge to exactly that same ref. Its candidate helper deliberately throws; only the captured main helper runs. Other rows cover dry run, aligned state, empty commands, setup failure, byte provenance, credential exclusion, limits, cancellation, paths, update preservation and legacy configuration. No public consumer run or release is claimed.
-
-### Controlled local acceptance (2026-10-21)
-
-Both cases ran through the real `SyncBranchUseCase`, Git adapter, workspace adapter and trusted snapshot against temporary local bare remotes and `feature/42-controlled-managed`. Neither case changed generated workflows or used an agent/network during setup. The first attempt, without setup, failed verification, aborted and retained the remote head. The second attempt prepared the temporary merge, passed the configured command and pushed only the same managed ref with a clean tracked workspace.
-
-| Fixture | Actual toolchain/command | Dependency preparation | Unprepared | Prepared |
-|---|---|---|---|---|
-| Python | Python 3.14.6; `python3 -m pytest -q -p no:cacheprovider` | Fresh private venv; offline wheelhouse, all five requirements version/hash locked, pytest 8.4.2 | Blocked, no push | `merged-cleanly`, one verification |
-| Node/pnpm | Node 24.20.0; explicitly provisioned pnpm 10.12.4; `pnpm test` | Offline frozen install and candidate-manifest preparation | Blocked, no push | `merged-cleanly`, one verification |
-
-The Python wheelhouse was downloaded before the credential-free test from public packages: pytest 8.4.2, pluggy 1.7.0, iniconfig 2.3.1, packaging 26.3 and pygments 2.21.0. Every retained wheel was SHA-256 hashed into the fixture lockfile and installed with `--no-index --require-hashes`. No global dependencies, real consumer branches, public remote refs, tags or releases were modified. This is local controlled acceptance, not a claim that the consumer incident run has been retried.
-
-### Incremental executable inventory
-
-The implementation adds 102 distinct rows in five focused files (27 pure policy, 21 snapshot, 34 runner/result, 14 configuration/workflow, six real-Git sync), two composition admission-order rows and one structural workflow mutation row: **105 new automated cases**, exceeding the 36-case risk minimum above. Existing generated-link assertions are updated without counting them again. The two real Python/pnpm controlled acceptance runs are separate manual evidence, not additional automated budget claims. The new executable coverage budget retains 95% lines/statements and 90% branches/functions for the pure policy and aggregate adapters; the pure policy reached 100% of all metrics in focused coverage.
+The maintainer selected the composite approach in the task on 2026-10-21. [Issue decision record](https://github.com/vypdev/copilot/issues/647#issuecomment-6318551564). Related contracts: `branch-synchronization`, repository verification prerequisites and the shared automated commit pipeline in the specification catalog. A reusable workflow and a Node ESM helper were rejected for this delivery; no second execution mode is retained.

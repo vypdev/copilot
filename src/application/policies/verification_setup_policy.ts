@@ -1,15 +1,19 @@
-export const VERIFICATION_SETUP_PATH = '.copilot/verification-setup.mjs';
-export const VERIFICATION_SETUP_LIMITS = Object.freeze({ timeoutMs: 300_000, outputBytes: 65_536, resultBytes: 16_384, scriptBytes: 65_536 });
+export const VERIFICATION_SETUP_DIRECTORY = '.github/actions/copilot-verification-setup';
+export const VERIFICATION_SETUP_PATH = `${VERIFICATION_SETUP_DIRECTORY}/action.yml`;
+export const VERIFICATION_SETUP_LIMITS = Object.freeze({ timeoutMs: 300_000, resultBytes: 16_384, scriptBytes: 65_536, snapshotBytes: 262_144, files: 32, requests: 20 });
 export const VERIFICATION_SETUP_HELP = 'https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-owned-setup';
 
-export type VerificationSetupFailure = 'source-unavailable' | 'helper-invalid' | 'workspace-changed' | 'process-failed' | 'timeout' | 'cancelled' | 'output-limit' | 'result-invalid';
+export type VerificationSetupFailure = 'source-unavailable' | 'helper-invalid' | 'workspace-changed' | 'process-failed' | 'timeout' | 'cancelled' | 'output-limit' | 'result-invalid' | 'native-workflow-required' | 'candidate-changed' | 'handoff-invalid';
 
 /** Closed facts only. Provider/helper output and raw exception causes never cross this boundary. */
 export class VerificationSetupError extends Error {
     constructor(readonly reason: VerificationSetupFailure, sourceSha?: string, readonly exitCode?: number) {
         const sha = sourceSha && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(sourceSha) ? sourceSha : 'unavailable';
         const exit = Number.isInteger(exitCode) && exitCode! >= 0 && exitCode! <= 255 ? ` Exit status: ${exitCode}.` : '';
-        super(`Repository setup blocked verification (${reason}). Review ${VERIFICATION_SETUP_PATH} on the trusted main branch and rerun. Trusted source SHA: ${sha}.${exit} Verification, commit and push are withheld. Help: ${VERIFICATION_SETUP_HELP}`);
+        const action = reason === 'native-workflow-required'
+            ? 'Update the generated Copilot workflows and run this operation in GitHub Actions; the local CLI cannot execute composite actions.'
+            : `Review ${VERIFICATION_SETUP_PATH} on the trusted main branch and rerun.`;
+        super(`Repository setup blocked verification (${reason}). ${action} Trusted source SHA: ${sha}.${exit} Verification, commit and push are withheld. Help: ${VERIFICATION_SETUP_HELP}`);
         this.name = 'VerificationSetupError';
     }
 }

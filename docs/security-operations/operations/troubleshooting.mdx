@@ -586,24 +586,26 @@ instead of deleting configuration.
 
 ## Repository setup blocks verification
 
-A `Repository setup blocked verification` detail means the helper did not authorize
-this command environment. Verification and commit/push are withheld; branch sync
-uses its existing merge abort. Inspect the closed cause and pinned trusted SHA in
-the current run, then correct `.copilot/verification-setup.mjs` on `main-branch`:
+`Repository setup blocked verification` means preparation did not establish a safe
+command environment. Verification and commit/push are withheld; branch sync uses
+its existing merge abort. Inspect the native setup step and closed cause in the
+run, then repair the reviewed action on `main-branch`.
 
 | Cause | Recovery |
 | --- | --- |
-| `source-unavailable` | Make the configured trusted origin ref available in the full checkout. |
-| `helper-invalid` | Review a regular standalone Node ESM helper, at most 64 KiB, onto trusted main. |
-| `workspace-changed` | Retry from the expected candidate checkout. |
-| `process-failed` | Correct the helper or its locked dependency installation; inspect only private operator diagnostics. |
-| `timeout` / `output-limit` | Fit setup within 300 seconds and 64 KiB combined output; no limit override or automatic retry exists. |
+| `source-unavailable` | Make the trusted origin ref available in the full checkout. |
+| `helper-invalid` | Review the fixed native composite and regular auxiliary files; respect file/step bounds and avoid nested local `uses`. |
+| `native-workflow-required` | Update generated callbacks and run in GitHub Actions. The local CLI cannot execute composite actions. |
+| `workspace-changed` / `candidate-changed` | Keep setup dependency-only; do not change publishable source, index, branch or lockfiles. Retry from a fresh candidate. |
+| `process-failed` | Inspect the native action's logs and fix its reviewed dependency installation. |
+| `timeout` | Fit each native setup within five minutes; no limit override or automatic retry exists. |
+| `output-limit` | A Copilot worker log line/output exceeded its framing bound; native setup logs use normal Actions limits. |
 | `cancelled` | Retry the authorized operation after cancellation is resolved. |
-| `result-invalid` | Use protocol v1, at most 16 KiB, only approved existing PATH directories and JAVA_HOME. |
+| `handoff-invalid` | Rerun through updated generated callbacks; never reuse a session from another run/job or request. |
+| `result-invalid` | Export only supported, existing PATH/JAVA_HOME directories under the candidate, private HOME or trusted tool cache. |
 
-The raw helper output is intentionally withheld. A helper committed only on the
-candidate branch does not replace the captured main version. A missing helper with
-`VERIFICATION_SETUP=true` blocks checks; the disabled default preserves legacy
-behavior. See [repository-owned setup](/security-operations/operations/verification#repository-owned-setup)
-for Python/pnpm examples, credential boundaries and update preservation. A separate
-passing CI job does not prepare this command environment.
+The consumer file is `.github/actions/copilot-verification-setup/action.yml`.
+Candidate edits do not replace the trusted snapshot. Enabling without a reviewed
+action blocks verification; the disabled default preserves existing behavior.
+See [repository-owned setup](/security-operations/operations/verification#repository-owned-setup)
+for native Python/pnpm examples, profile lifetime, trust boundaries and migration.

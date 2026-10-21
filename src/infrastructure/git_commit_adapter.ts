@@ -1,3 +1,4 @@
+import { nativeVerificationRetainsProfile } from './native_verification_profiles';
 import * as exec from '@actions/exec';
 import type { GitCommitPort } from '../application/ports/git_ports';
 import { buildGitAuthenticationEnvironment } from './git_authentication_environment';
@@ -40,7 +41,7 @@ export class GitCommitAdapter implements GitCommitPort {
                 env: runtime.environment,
             });
         } finally {
-            runtime.cleanup();
+            if (!nativeVerificationRetainsProfile(runtime.environment.HOME)) runtime.cleanup();
         }
     }
 

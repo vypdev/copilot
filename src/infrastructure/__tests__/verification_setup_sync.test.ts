@@ -1,3 +1,4 @@
+import { removeNativeVerificationProfiles } from '../native_verification_profiles';
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -7,13 +8,13 @@ import { GitCommitAdapter } from '../git_commit_adapter';
 import { BranchSyncWorkspaceAdapter } from '../branch_sync_workspace_adapter';
 import { SyncBranchUseCase } from '../../application/usecases/branch_sync/sync_branch_use_case';
 import { projectBranchSyncContext } from '../../application/usecases/push_single_action_contexts';
+import { prepareUntrustedCommandEnvironment } from '../untrusted_command_environment';
+import { readNativeRecord, writeNativeRecord, type NativeVerificationRequest } from '../native_verification_protocol';
+import { VERIFICATION_SETUP_PATH } from '../../application/policies/verification_setup_policy';
 import type { Execution } from '../../data/model/execution';
 
 const branch = 'feature/42-managed-fixture';
-const helper = `import fs from 'node:fs'; import path from 'node:path';
-    const bin=path.join(process.env.HOME,'tools'); fs.mkdirSync(bin);
-    fs.writeFileSync(path.join(bin,'prepared'),fs.readFileSync('dependencies.lock'));
-    fs.writeFileSync(process.env.COPILOT_VERIFICATION_SETUP_RESULT,JSON.stringify({schemaVersion:1,path:[bin]}));`;
+const helper = 'runs:\n  using: composite\n  steps:\n    - run: echo reviewed\n      shell: bash\n';
 const verifier = `import fs from 'node:fs'; import path from 'node:path'; import assert from 'node:assert/strict';
     assert.equal(fs.readFileSync(path.join(process.env.HOME,'tools','prepared'),'utf8'),fs.readFileSync('dependencies.lock','utf8'));`;
 
@@ -29,13 +30,13 @@ describe('repository setup during same-managed-branch synchronization', () => {
         const emptyHooks = path.join(directory, 'empty-hooks'); fs.mkdirSync(emptyHooks);
         git('config', 'core.hooksPath', emptyHooks); git('--git-dir', remote, 'config', 'core.hooksPath', emptyHooks);
         git('config', 'user.name', 'Test'); git('config', 'user.email', 'test@example.test');
-        fs.mkdirSync(path.join(root, '.copilot'));
-        fs.writeFileSync(path.join(root, '.copilot/verification-setup.mjs'), helper);
+        fs.mkdirSync(path.dirname(path.join(root, VERIFICATION_SETUP_PATH)), { recursive: true });
+        fs.writeFileSync(path.join(root, VERIFICATION_SETUP_PATH), helper);
         fs.writeFileSync(path.join(root, 'verify.mjs'), verifier);
         fs.writeFileSync(path.join(root, 'dependencies.lock'), 'version-one');
         git('add', '.'); git('commit', '-m', 'trusted main'); git('remote', 'add', 'origin', remote); git('push', 'origin', 'main');
         git('checkout', '-b', 'develop'); git('push', 'origin', 'develop'); git('checkout', '-b', branch);
-        fs.writeFileSync(path.join(root, '.copilot/verification-setup.mjs'), 'throw new Error("candidate helper must never execute");');
+        fs.writeFileSync(path.join(root, VERIFICATION_SETUP_PATH), 'throw new Error("candidate helper must never execute");');
         git('add', '.'); git('commit', '-m', 'candidate helper change'); git('push', 'origin', branch); childSha = git('rev-parse', 'HEAD');
         git('checkout', 'develop'); fs.writeFileSync(path.join(root, 'dependencies.lock'), 'version-two');
         git('add', '.'); git('commit', '-m', 'parent dependency update'); git('push', 'origin', 'develop'); git('checkout', branch);
@@ -63,7 +64,28 @@ describe('repository setup during same-managed-branch synchronization', () => {
             pullRequest: { number: -1 }, issueNumber: 42,
             ai: { getAgentConfiguration: () => ({ provider: 'codex', model: '' }), getBugbotFixVerifyCommands: () => commands },
         } as unknown as Execution);
-        const [result] = await useCase.invoke({ context, options: { dryRun, useAgent: false } });
+        const runtime = prepareUntrustedCommandEnvironment();
+        const session = runtime.environment.HOME;
+        const previous = process.env.COPILOT_NATIVE_WORKER_SESSION;
+        process.env.COPILOT_NATIVE_WORKER_SESSION = session;
+        writeNativeRecord(session, 'session.json', { schemaVersion: 1, workspace: root, run: process.env.GITHUB_RUN_ID ?? '',
+            attempt: process.env.GITHUB_RUN_ATTEMPT ?? '', job: process.env.GITHUB_JOB ?? '', pid: process.pid });
+        const answered = new Set<string>();
+        // Test double for native Actions; it reads merged manifests, never parses or executes YAML.
+        const driver = setInterval(() => {
+            const request = readNativeRecord<NativeVerificationRequest>(session, 'request.json', 32_768);
+            if (!request || answered.has(request.id)) return;
+            answered.add(request.id);
+            const tools = path.join(request.environment.HOME, 'tools'); fs.mkdirSync(tools);
+            fs.writeFileSync(path.join(tools, 'prepared'), fs.readFileSync(path.join(root, 'dependencies.lock')));
+            writeNativeRecord(session, `response-${request.id}.json`, { id: request.id, success: true, path: request.environment.PATH });
+        }, 5);
+        let result;
+        try { [result] = await useCase.invoke({ context, options: { dryRun, useAgent: false } }); }
+        finally {
+            clearInterval(driver); removeNativeVerificationProfiles(session); runtime.cleanup();
+            if (previous === undefined) delete process.env.COPILOT_NATIVE_WORKER_SESSION; else process.env.COPILOT_NATIVE_WORKER_SESSION = previous;
+        }
         expect(fixer.fix).not.toHaveBeenCalled();
         return result;
     }
@@ -77,7 +99,7 @@ describe('repository setup during same-managed-branch synchronization', () => {
         expect(result).toMatchObject({ success: true, payload: { outcome: 'merged-cleanly', verificationCount: 2 } });
         expect(remoteHead()).toBe(git('rev-parse', 'HEAD')); expect(remoteHead()).not.toBe(childSha);
         expect(git('show', `${remoteHead()}:dependencies.lock`)).toBe('version-two');
-        expect(git('show', `${remoteHead()}:.copilot/verification-setup.mjs`)).toContain('candidate helper must never execute');
+        expect(git('show', `${remoteHead()}:${VERIFICATION_SETUP_PATH}`)).toContain('candidate helper must never execute');
         expect(git('--git-dir', remote, 'for-each-ref', '--format=%(refname)', 'refs/heads').split('\n').sort())
             .toEqual(['refs/heads/develop', `refs/heads/${branch}`, 'refs/heads/main']);
     });
