@@ -685,3 +685,13 @@ it('reports a later valid ownership analysis in Spanish without a readiness reco
   expect(h.comments[0].body).toContain('ha validado la propiedad');
   expect(readSddGateRecord(h.comments[0].body, 42)).toBeUndefined();
 });
+
+it('keeps malformed analysis outside ownership recovery and publishes no draft or diagnostic', async () => {
+  const h = harness();
+  h.query.mockResolvedValue({ ...plan, reason: 'short' });
+  expect((await h.useCase.begin(context())).status).toBe('blocked');
+  expect(h.query).toHaveBeenCalledTimes(1);
+  expect(h.addComment).not.toHaveBeenCalled();
+  expect(h.validateDraft).not.toHaveBeenCalled();
+  expect(h.publish).not.toHaveBeenCalled();
+});

@@ -1131,9 +1131,9 @@ boundary. No credential or permission expansion, migration or new state schema.
 Upgrade the Action, clarify the same issue and rerun; rollback loses this
 additional diagnosis but cannot authorize invalid ownership.
 
-The additional budget is **21 distinct cases**: five typed domain classifications;
-ten use-case reason/locale boundaries; six retry, recovery, identity, provider and
-comment-failure cases. Existing valid update/companion/new tests remain required.
+The additional budget is **22 distinct cases**: five typed domain classifications;
+ten use-case reason/locale boundaries; seven retry, recovery, identity, provider,
+malformed-analysis and comment-failure cases. Existing valid update/companion/new tests remain required.
 Acceptance checks that invalid analysis makes no draft validation or publication
 call, does not add `branched`, leaks no proposed identifiers or response, and is
 not parsed as readiness. Documentation: ownership analysis recovery in the
