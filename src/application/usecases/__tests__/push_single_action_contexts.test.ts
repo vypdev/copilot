@@ -487,3 +487,8 @@ describe('push and single-action context projection', () => {
     expect(withoutOperation.currentConfiguration.deploymentOrchestration).toBeUndefined();
   });
 });
+
+test.each(['create', 'preserve', 'invalid', undefined])('VSO-09 projects only the reviewed action state %s', state => {
+  const value = source(); value.inputs!.setupVerificationActionState = state;
+  expect(projectInitialSetupContext(value).verificationActionState).toBe(state === 'create' || state === 'preserve' ? state : undefined);
+});

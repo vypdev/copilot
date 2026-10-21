@@ -45,6 +45,7 @@ export function setupQuestionDocumentation(question: Pick<SetupQuestion, 'id' | 
   if (id === 'features.release' || id === 'features.hotfix') return docs.releaseGuide;
   if (id === 'repository.issueManagedBranches' || /^repository\.(feature|bugfix|hotfix|release|docs|chore)Tree$/u.test(id)) return docs.branchManagement;
   if (id === 'repository.preBranchSdd') return docs.preBranchSdd;
+  if (id === 'repository.verificationSetup') return { title: 'Repository-owned verification setup', url: 'https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-owned-setup' };
   if (id === 'repository.inactivityThresholdHours' || id === 'features.inactiveIssueClosure') return docs.issueLifecycle;
   if (id === 'repository.desiredAssigneesCount' || id === 'repository.desiredReviewersCount') return docs.assignments;
   if (id === 'ai.pullRequestDescriptionMode') return docs.pullRequestDescription;

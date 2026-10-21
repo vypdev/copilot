@@ -37,6 +37,6 @@ export function registerSetupCommand(program: Command): void {
     .option('--update-workflows', 'Allow setup-managed workflows already in the repository to be updated', false)
     .option('--workflow-pat <token>', 'Workflow PAT for the bot account (prefer the hidden interactive prompt)')
     .option('--secret <name=value>', 'Secret value for non-interactive setup; repeat for each API key', collectSecret, {})
-    .addHelpText('after', `\nGuides (open only when you choose):\n  Web setup tutorial: ${SETUP_DOCUMENTATION.tutorial}\n  First issue-to-PR workflow: ${SETUP_DOCUMENTATION.firstWorkflow}\n  Troubleshooting: ${SETUP_DOCUMENTATION.recovery}\n\nDuring interactive setup, type ? for question help and :back to revisit an answer.\n`)
+    .addHelpText('after', `\nGuides (open only when you choose):\n  Web setup tutorial: ${SETUP_DOCUMENTATION.tutorial}\n  First issue-to-PR workflow: ${SETUP_DOCUMENTATION.firstWorkflow}\n  Troubleshooting: ${SETUP_DOCUMENTATION.recovery}\n  Verification setup: ${SETUP_DOCUMENTATION.verification}\n\nDuring interactive setup, type ? for question help and :back to revisit an answer.\n`)
     .action(executeSetupCommand);
 }

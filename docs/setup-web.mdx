@@ -53,6 +53,18 @@ Choose **This repository** for your first installation. A new checkout offers **
 
 Choose **Basic guided setup** unless you need every advanced setting. Basic still asks for permission, branch, runner, Project, approval and storage decisions. **Customize every setting** exposes the advanced configuration. Use **Previous question** or the plan's **Change** controls to revise answers without losing the others.
 
+Both modes ask **Prepare dependencies with the repository verification setup
+action?** The default is disabled; configured and reused values remain visible.
+The plan shows whether `.github/actions/copilot-verification-setup/action.yml`
+will be created or preserved, the activation state and the configured trusted main
+branch. Apply creates a failing starter only when missing and preserves existing
+project actions and auxiliary files. Customize and review the action on
+`MAIN_BRANCH` before enabling `VERIFICATION_SETUP`, then exercise a real verifier.
+No dependency installation runs during setup. Follow the [upgrade and rollback
+guide](/security-operations/operations/upgrade-rollback#upgrade-an-existing-copilot-repository)
+for an existing installation; creating an installer PR does not establish runtime
+readiness.
+
 The six milestones are:
 
 ```text

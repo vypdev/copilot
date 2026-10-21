@@ -12,6 +12,13 @@
 
 ## 1. Executive summary
 
+The additive verification starter, shared activation question, create/preserve
+review and upgrade behavior are defined in the catalogued companion
+[`verification-setup-onboarding.md`](./verification-setup-onboarding.md). It uses
+the existing boolean and setup approval pipeline; consumer action assets remain
+outside generator overwrite/retirement ownership.
+
+
 Opening web setup MUST begin with a configuration panel after repository confirmation and browser pairing. A new repository explains that Copilot is not configured and offers **Start setup**. An existing repository offers **Read configuration from GitHub**, **Quick adjustments**, and **Run the complete assistant**. Reading the panel MUST NOT mutate anything or request a bot PAT.
 
 ```text

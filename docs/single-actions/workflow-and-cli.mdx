@@ -217,6 +217,16 @@ copilot setup
 
 Run it from the target repository root. Existing setup files are not overwritten unless you approve the update prompt or pass `--update-workflows`. The interactive flow installs the selected workflows/templates, asks for agent routing and operational settings, inspects the repository's effective Actions resources, and asks separately where Secrets and Variables should live. Organization scope requires an organization-owned repository and the corresponding organization permissions on the setup PAT. Existing repository resources take precedence over organization resources; setup preserves an inherited organization resource unless you explicitly request a repository override.
 
+Setup also creates `.github/actions/copilot-verification-setup/action.yml` only
+if missing. This project-owned action and its auxiliaries are preserved even
+with `--update-workflows`; they are never retired on deselection. The shared
+terminal/web repository question controls the existing boolean
+`repository.verificationSetup` / `VERIFICATION_SETUP`, disabled by default.
+Customize the generated failing placeholder and review it on configured
+`MAIN_BRANCH` before activation. Preview/cancel/decline creates no starter;
+setup does not infer or install dependencies. See the [ordered upgrade
+procedure](/security-operations/operations/upgrade-rollback#upgrade-an-existing-copilot-repository).
+
 The questionnaire is forward-only and immutable. Its stable stages are capabilities, issue workflow multi-select, agent runtime, model defaults, optional role overrides, repository, deployment, Bugbot, optional Projects, provisioning, storage, review, and confirmation. The issue workflow selector uses the usual `Space` to toggle and `Enter` to confirm; `All` is selected by default. `Ctrl-C` or end-of-input closes the prompt once, exits 130, and writes nothing. Declining the final plan exits 0 and also writes nothing; rerun setup or edit the config file to change earlier answers.
 
 The wizard covers these features: `issues`, `pullRequests`, `commits`, `issueComments`, `pullRequestComments`, `release`, `hotfix`, `agentProvisioning`, `credentialHealth`, `inactiveIssueClosure`, `issueTemplates`, and `pullRequestTemplate`. It also asks whether to generate repository agent guidance; this is enabled by default. The agent tasks are `planner`, `findings`, `reviewer`, `fixer`, and `tester`; each can use any of the three supported runtimes independently. Model provider, model, effort, branch strategy, locales, AI ignore patterns, project columns, Bugbot policy, and initial-tag creation are also configurable. Cursor is available as an experimental runtime and is called out in the review plan with its extra credential/checksum requirements.

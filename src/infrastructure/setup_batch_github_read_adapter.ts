@@ -8,6 +8,7 @@ import { SETUP_ORGANIZATION_VARIABLE_BINDINGS } from '../application/policies/se
 import { SETUP_CREDENTIAL_HEALTH_BINDINGS } from '../domain/setup_credential_health';
 import { setupBatchRateLimitDelay } from '../application/policies/setup_batch_retry_policy';
 import { SETUP_RUNNER_REGISTRY } from '../domain/setup_runner';
+import { SETUP_VERIFICATION_ACTION_PATH, SETUP_VERIFICATION_ACTION_PARENTS } from '../domain/setup_verification_action';
 
 const managedVariables = new Set([...SETUP_ORGANIZATION_VARIABLE_BINDINGS.flatMap(binding => [binding.variable, binding.fallbackVariable]),
   'PR_APPROVAL_POLICY', 'COPILOT_ISSUE_WORKFLOW_PROFILE', 'AGENT_ALLOWED_PROVIDERS', 'AGENT_ALLOWED_MODEL_PROVIDERS', SETUP_RUNNER_REGISTRY]);
@@ -141,6 +142,15 @@ export class SetupBatchGithubReadAdapter implements SetupBatchDiscoveryPort, Set
     const response = batchObject(await this.transport.call(token, 'GET /repos/{owner}/{repo}/git/trees/{tree_sha}',
       { owner: target.owner, repo: target.name, tree_sha: target.baseSha, recursive: '1' }));
     if (!response || response.truncated !== false || !Array.isArray(response.tree) || response.tree.length > 100_000) throw new SetupBatchProviderError('malformed');
+    for (const raw of response.tree) {
+      const item = batchObject(raw);
+      if (typeof item?.path !== 'string') continue;
+      const candidatePath = item.path;
+      const fixed = [...SETUP_VERIFICATION_ACTION_PARENTS, SETUP_VERIFICATION_ACTION_PATH].find(path => path.toLowerCase() === candidatePath.toLowerCase());
+      if (fixed && (item.path !== fixed || (fixed === SETUP_VERIFICATION_ACTION_PATH
+        ? item.type !== 'blob' || !['100644', '100755'].includes(String(item.mode))
+        : item.type !== 'tree' || item.mode !== '040000'))) throw new SetupBatchProviderError('malformed');
+    }
     const entries = response.tree.map(batchObject).filter(entry => entry?.type !== 'tree' && typeof entry?.path === 'string' && validSetupBatchAssetPath(entry.path));
     if (entries.length > 300) throw new SetupBatchProviderError('malformed');
     const files: SetupBatchFile[] = []; let bytes = 0;

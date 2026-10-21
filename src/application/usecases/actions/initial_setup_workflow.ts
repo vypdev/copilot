@@ -132,6 +132,7 @@ export async function runInitialSetupWorkflow(
 
         logInfo('📋 Ensuring .github and copying setup files...');
         const workspaceSelection = {
+            ...(request.verificationActionState ? { verificationActionState: request.verificationActionState } : {}),
             features: setupConfiguration?.features,
             setupConfiguration,
             ...(request.workflowUpdates.length > 0 ? {
@@ -143,6 +144,7 @@ export async function runInitialSetupWorkflow(
         const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
         mark('files', filesResult.copied > 0 ? 'completed' : 'skipped');
         steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
+        if (request.verificationActionState) steps.push(`✅ Verification setup action ${request.verificationActionState === 'create' ? 'created' : 'preserved'}; VERIFICATION_SETUP=${setupConfiguration?.repository.verificationSetup ?? false}. Customize and review on MAIN_BRANCH, then run a real verification.`);
 
         if (setupConfiguration?.manageRepositorySecrets && secretValues > 0) mark('secrets', 'in-progress');
         const secrets = await ensureRepositorySecrets(request, dependencies, setupConfiguration, remoteConfiguration);

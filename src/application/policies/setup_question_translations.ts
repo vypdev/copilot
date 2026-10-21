@@ -1,6 +1,7 @@
 import type { SetupQuestion } from '../../domain/setup_questionnaire';
 
 export const spanishQuestionLabels: Readonly<Record<string, string>> = {
+  'repository.verificationSetup': '¿Preparar dependencias con la acción de verificación del repositorio?',
   'features.issues': 'Automatizar issues: ramas, etiquetas, proyectos y ciclo de vida',
   'features.pullRequests': 'Automatizar pull requests: revisión, descripción y ciclo de vida',
   'features.commits': 'Automatizar commits: progreso, tamaño y análisis de Bugbot',

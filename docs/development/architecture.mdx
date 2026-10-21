@@ -4,6 +4,18 @@ description: Clean Architecture boundaries for agent execution and workflow auto
 ---
 # Architecture
 
+Verification setup onboarding uses the shared repository questionnaire and the
+existing `repository.verificationSetup` boolean. The package supplies a native
+composite starter under `setup/actions/`; the filesystem adapter inspects only
+the fixed consumer path and creates it exclusively when absent. Existing action
+contents and auxiliaries are outside generator overwrite and retirement ownership.
+Installation review records create/preserve/blocked, activation and trusted main
+as semantic facts shared by terminal, web and batch PR presentation. Batch Git
+inventory permits the exact entrypoint and rejects unsafe parent/file modes or
+case collisions before rendering. See [the onboarding
+SDD](https://github.com/vypdev/copilot/blob/develop/specs/verification-setup-onboarding.md)
+and the [verification guide](/security-operations/operations/verification#repository-owned-setup).
+
 ### Setup runner profiles and installation parity
 
 `setup_runner_policy` owns pure registry validation, precedence, fixed job roles,

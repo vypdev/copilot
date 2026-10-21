@@ -6,6 +6,7 @@ export interface SetupWorkspaceResult {
 }
 
 export interface SetupWorkspaceSelection {
+    verificationActionState?: import('../../domain/setup_verification_action').SetupVerificationActionState;
     features?: SetupFeatures;
     updateExistingWorkflows?: boolean;
     approvedWorkflowFiles?: readonly string[];

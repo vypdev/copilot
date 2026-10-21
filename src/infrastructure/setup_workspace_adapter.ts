@@ -30,6 +30,7 @@ export class SetupWorkspaceMutationAdapter implements SetupWorkspacePort {
             updateExistingWorkflows: selection?.updateExistingWorkflows,
             approvedWorkflowFiles: selection?.approvedWorkflowFiles,
             setupConfiguration: selection?.setupConfiguration,
+            verificationActionState: selection.verificationActionState,
         });
     }
 

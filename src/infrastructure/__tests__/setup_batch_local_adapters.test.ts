@@ -12,6 +12,20 @@ const id = 'a67c8e40-93be-43ed-a7ed-e07378c7e773';
 const operation: SetupBatchOperation = { schemaVersion: 1, operationId: id, organization: 'acme', targets: [{ repositoryId: 7,
   repository: 'repo', defaultBranch: 'master', baseSha: 'a'.repeat(40), planDigest: 'b'.repeat(64), status: 'ready', effects: [] }] };
 describe('isolated setup rendering and private durable receipts', () => {
+  it('VSO-10 creates the same disabled starter in the batch review and installation diff', async () => {
+    const adapter = new SetupBatchWorkspaceAdapter(); const config = createDefaultSetupConfiguration();
+    const review = await adapter.review(config, []); const rendered = await adapter.render(config, []);
+    expect(review.verificationSetup).toMatchObject({ action: 'create', enabled: false });
+    const path = '.github/actions/copilot-verification-setup/action.yml';
+    expect(rendered.find(file => file.path === path)?.content).toBe(review.changes.find(change => change.path === path)?.after);
+  });
+  it('VSO-13 batch upgrades omit an existing consumer action from the diff and manifest ownership', async () => {
+    const adapter = new SetupBatchWorkspaceAdapter(); const config = createDefaultSetupConfiguration(); config.repository.verificationSetup = true;
+    const path = '.github/actions/copilot-verification-setup/action.yml';
+    const files = [{ path, content: 'custom\r\n' }]; const review = await adapter.review(config, files); const rendered = await adapter.render(config, files);
+    expect(review.verificationSetup).toMatchObject({ action: 'preserve', enabled: true }); expect(rendered.some(file => file.path === path)).toBe(false);
+    expect(rendered.find(file => file.path === '.copilot/setup-manifest.json')?.content).not.toContain(path);
+  });
   let root: string;
   beforeEach(() => { root = mkdtempSync(join(tmpdir(), 'copilot-batch-test-')); });
   afterEach(() => { rmSync(root, { recursive: true, force: true }); });

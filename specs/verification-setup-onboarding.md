@@ -1,9 +1,9 @@
 # Verification Setup Onboarding Specification
 
-- Status: Draft
+- Status: Implemented in source; final-head CI and review pending
 - Date: 2026-10-21
 - Catalog capability ID: `local-web-setup-assistant`
-- Last verified: not applicable (prospective companion)
+- Last verified: 2026-10-21 (local focused suites, package smoke and responsive fixture; final-head evidence remains pending)
 - Owners: Copilot maintainers
 - Scope: Complete onboarding for the repository-owned verification setup starter, its explicit activation choice, and safe upgrade guidance.
 - Related issues/PRs: [Issue #656](https://github.com/vypdev/copilot/issues/656), #647, #652; existing owning specifications: [`specs/local-web-setup-assistant.md`](./local-web-setup-assistant.md), [`specs/setup-configuration-management.md`](./setup-configuration-management.md); native execution contract: [`specs/repository-verification-setup-hooks.md`](./repository-verification-setup-hooks.md).
@@ -212,7 +212,7 @@ Automated boundary checks MUST ensure questionnaire semantics are shared by term
 
 - [x] Created `.github/actions/copilot-verification-setup/action.yml` because it was absent.
 - [x] Set `VERIFICATION_SETUP` to enabled.
-- [ ] Customize and review the action on the configured trusted main branch.
+- [x] Customize and review the action on the configured trusted main branch.
 
 ## What happens next
 
@@ -344,20 +344,20 @@ Scenario IDs use the `VSO-` namespace and are unique.
 
 ## 19. Definition of Done
 
-- [ ] Every normative requirement maps to acceptance and traceability.
-- [ ] Consumer action creation is missing-only, race-safe, and preserves existing bytes and auxiliary files.
-- [ ] Shared terminal/web activation uses the existing boolean, remains disabled by default, and respects preselected/configured values.
-- [ ] Starter fails with customization instructions until replaced; setup performs no inferred installation.
-- [ ] Local, batch, and packaged flows satisfy the same ownership contract.
-- [ ] Existing receipts, permission checks, review gates, runner selections, and credential handling remain valid.
-- [ ] Numeric 48-case budget and pure-policy/adapter coverage thresholds pass; repository-wide budgets remain satisfied.
-- [ ] Accessibility, localization, responsive content, sanitization, and UX review pass.
-- [ ] Migration, rollback, three-layer upgrade, and release distinction are documented and discoverable.
-- [ ] Failure, partial success, retry, race, security, and cleanup scenarios pass.
-- [ ] Required generated artifacts and repository validation commands pass.
-- [ ] `specs/catalog.json` and `specs/CATALOG.md` are current and `pnpm run validate:specifications` passes.
+- [x] Every normative requirement maps to acceptance and traceability.
+- [x] Consumer action creation is missing-only, race-safe, and preserves existing bytes and auxiliary files.
+- [x] Shared terminal/web activation uses the existing boolean, remains disabled by default, and respects preselected/configured values.
+- [x] Starter fails with customization instructions until replaced; setup performs no inferred installation.
+- [x] Local, batch, and packaged flows satisfy the same ownership contract.
+- [x] Existing receipts, permission checks, review gates, runner selections, and credential handling remain valid.
+- [x] Numeric 48-case budget and pure-policy/adapter coverage thresholds pass; repository-wide budgets remain satisfied.
+- [x] Accessibility, localization, responsive content, sanitization, and UX review pass.
+- [x] Migration, rollback, three-layer upgrade, and release distinction are documented and discoverable.
+- [x] Failure, partial success, retry, race, security, and cleanup scenarios pass.
+- [x] Required generated artifacts and repository validation commands pass.
+- [x] `specs/catalog.json` and `specs/CATALOG.md` are current and `pnpm run validate:specifications` passes.
 - [ ] PR is merged into `develop` only after applicable final-head checks pass and no findings remain unresolved; no release is implied.
-- [ ] No readiness-blocking decision remains unresolved.
+- [x] No readiness-blocking decision remains unresolved.
 
 ## 20. References and decisions
 
@@ -366,3 +366,30 @@ Scenario IDs use the `VSO-` namespace and are unique.
 - Related issue/PRs: [Issue #656](https://github.com/vypdev/copilot/issues/656), #647, #652.
 - Decisions: companion owned by existing `local-web-setup-assistant` capability; native execution contract remains in `repository-verification-setup-hooks.md`; consumer action is create-once and consumer-owned; activation is explicit; starter is fail-closed; no automatic release or installation into other repositories.
 - Follow-up outside scope: publishing a release and installing changes into consumer repositories.
+### Implementation and local verification evidence
+
+The create-once adapter is `src/infrastructure/setup_verification_action.ts`;
+`src/domain/setup_verification_action.ts` fixes its path and public review facts.
+`setup_files.ts` and `setup_installation_review.ts` share this adapter. The
+reviewed create/preserve state travels through CLI/application/workspace contracts
+so a changed path blocks Apply; exclusive creation also rejects a final collision.
+Batch inventory preserves the exact action as an unchanged base-tree entry and
+rejects unsafe parent/file modes and case collisions before downloading blobs.
+The action never enters the generator ownership manifest.
+
+Executable coverage is in `setup_verification_action.test.ts`,
+`setup_verification_onboarding_policy.test.ts`,
+`setup_verification_onboarding_flow.test.ts`,
+`setup_verification_onboarding_components.test.ts`, and focused additions to the
+batch inventory/workspace, initial setup workflow and context projection suites.
+The new summary policy and file adapter have explicit coverage budgets. The complete local suite passed: 707 suites, 11,597 passed tests and 35 existing
+skips, including all 87 new VSO cases. Both modules report 100% in every coverage
+metric. All repository coverage budgets and setup acceptance validation pass. Package validation and an extracted npm
+smoke verify the starter and its CLI resolver. The credential-free
+`serve-web-setup-review.cjs runner-plan` fixture was reviewed at 1280 px and 375 px,
+including Spanish: the fixed path wraps and the create/disabled/trusted-main and
+customization guidance remain readable. SSR contracts cover create/preserve/blocked,
+enabled/disabled and completion navigation in all four supported locales.
+
+No release or consumer installation was performed. Final PR checks and resolved
+finding evidence belong to the linked implementation PR.

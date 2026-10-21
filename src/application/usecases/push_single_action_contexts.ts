@@ -124,6 +124,7 @@ export interface AgentActivityOutcome {
 }
 
 export interface InitialSetupContext {
+  readonly verificationActionState?: import('../../domain/setup_verification_action').SetupVerificationActionState;
   readonly setupConfigurationSource?: 'organization' | 'customize';
   readonly labels: InitialLabelConfiguration;
   readonly issueTypes: InitialIssueTypeConfiguration;
@@ -157,6 +158,7 @@ export interface PushSingleActionContextSource {
     readonly setupCredentials?: unknown;
     readonly setupRemoteConfiguration?: unknown;
     readonly setupWorkflowUpdates?: unknown;
+    readonly setupVerificationActionState?: unknown;
   };
   readonly commit: { readonly branch: string };
   readonly currentConfiguration: {
@@ -388,6 +390,8 @@ export function projectInitialSetupContext(source: PushSingleActionContextSource
     ...(credentials ? { setupCredentials: deepFreezeCopy(credentials) } : {}),
     ...(remote ? { setupRemoteConfiguration: deepFreezeCopy(remote) } : {}),
     workflowUpdates: Object.freeze(asStringArray(source.inputs?.setupWorkflowUpdates)),
+    ...(source.inputs?.setupVerificationActionState === 'create' || source.inputs?.setupVerificationActionState === 'preserve'
+      ? { verificationActionState: source.inputs.setupVerificationActionState } : {}),
   });
 }
 

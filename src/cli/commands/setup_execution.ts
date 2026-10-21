@@ -100,6 +100,7 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
       let guardedFiles: ReturnType<typeof setupPlanGuardPaths> | undefined;
       let webApplySnapshot: ReturnType<typeof captureSetupApplySnapshot> | undefined;
       let approvedWorkflowFiles: string[] = [];
+      let verificationActionState: import('../../domain/setup_verification_action').SetupVerificationActionState | undefined;
       let credentialsCollection: SetupCredentialCollection | undefined;
       try {
         if (options.confirmUnverifiableWritePermissions) {
@@ -333,6 +334,8 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
           return 'blocked';
         }
         configuration = result.configuration;
+        const reviewedAction = result.plan.installationReview?.verificationSetup?.action;
+        verificationActionState = reviewedAction === 'create' || reviewedAction === 'preserve' ? reviewedAction : undefined;
         remoteConfiguration = result.remoteConfiguration;
         guardedFiles = webBridge ? setupPlanGuardPaths(result.plan) : undefined;
         webApplySnapshot = guardedFiles ? captureSetupApplySnapshot(checkoutRoot, guardedFiles) : undefined;
@@ -381,6 +384,7 @@ export async function executeSetupCommand(options: SetupExecutionOptions): Promi
           approvedWorkflowFiles,
           remoteConfiguration,
           configurationSource,
+          verificationActionState,
         );
         setupMutationStarted = true;
         setupApplyStarted = true;

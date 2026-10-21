@@ -384,6 +384,7 @@ function repositoryQuestions(): QuestionDefinition[] {
     ['choreTree', 'Chore branch prefix', 'text'],
     ['issueManagedBranches', 'Let the Action create linked branches after in-progress?', 'boolean'],
     ['preBranchSdd', 'Require an SDD before feature and contract-change branches?', 'boolean'],
+    ['verificationSetup', 'Prepare dependencies with the repository verification setup action?', 'boolean'],
     ['reopenIssueOnPush', 'Reopen closed issues when a related branch receives a push?', 'boolean'],
     ['desiredAssigneesCount', 'Desired issue assignees (0 disables automatic assignment)', 'number'],
     ['desiredReviewersCount', 'Desired pull-request reviewers (0 disables automatic assignment)', 'number'],
@@ -573,6 +574,7 @@ function readPath(
   path: string,
   allowedNames?: readonly string[],
 ): string | number | boolean {
+  if (path === 'repository.verificationSetup') return configuration.repository.verificationSetup ?? false;
   const value = path.split('.').reduce<unknown>((current, key) =>
     (current as Record<string, unknown>)[key], configuration);
   if (path.endsWith('.overrides')) {

@@ -16,12 +16,15 @@ import { renderApprovalObserverWorkflow } from '../domain/setup_approval_workflo
 import { renderSetupWorkflowUpgrade, isSourceSetupPushWorkflow } from './setup_workflow_upgrade';
 import { inspectSetupInstallation, renderSetupRunnerSnapshot, SETUP_RUNNER_SNAPSHOT } from './setup_installation_review';
 import { REPOSITORY_AGENT_GUIDE_PATH } from '../application/policies/repository_agent_guidance_policy';
+import { createSetupVerificationAction, inspectSetupVerificationActionPath } from '../infrastructure/setup_verification_action';
+import type { SetupVerificationActionState } from '../domain/setup_verification_action';
 
 /**
  * Ensure .github, .github/workflows and .github/ISSUE_TEMPLATE exist; create them if missing.
  * @param cwd - Directory (repo root)
  */
 export function ensureGitHubDirs(cwd: string): void {
+  inspectSetupVerificationActionPath(cwd);
   const githubDir = path.join(cwd, '.github');
   const workflowsDir = path.join(cwd, '.github', 'workflows');
   const issueTemplateDir = path.join(cwd, '.github', 'ISSUE_TEMPLATE');
@@ -57,12 +60,14 @@ export function copySetupFiles(
     approvedWorkflowFiles?: readonly string[];
     setupConfiguration?: Readonly<SetupConfiguration>;
     preserveExistingAgentGuidance?: boolean;
+    verificationActionState?: SetupVerificationActionState;
   } = {},
 ): { copied: number; skipped: number } {
   const setupDir = setupDirOverride ?? path.join(__dirname, '..', '..', 'setup');
   if (!fs.existsSync(setupDir)) return { copied: 0, skipped: 0 };
   const installationReview = options.setupConfiguration && inspectSetupInstallation(cwd, options.setupConfiguration, setupDir);
   if (installationReview?.blockers.length) throw new Error(installationReview.blockers.join(' '));
+  const verificationAction = createSetupVerificationAction(cwd, options.verificationActionState);
   const preserveSourceGuidance = installationReview?.assets.some(asset => asset.path === REPOSITORY_AGENT_GUIDE_PATH && asset.status === 'source-only');
   const sourceInstallation = installationReview?.assets.some(asset => asset.path.startsWith('.github/workflows/') && asset.status === 'source-only');
   const snapshotContent = options.setupConfiguration && renderSetupRunnerSnapshot(options.setupConfiguration);
@@ -133,7 +138,7 @@ export function copySetupFiles(
       atomicWriteSetupAsset(snapshotPath, snapshotContent); snapshot.copied++;
     }
   }
-  return [retired, workflows, approvalWorkflow, issueTemplates, pullRequestTemplate, guidance, snapshot].reduce((total, current) => ({
+  return [verificationAction, retired, workflows, approvalWorkflow, issueTemplates, pullRequestTemplate, guidance, snapshot].reduce((total, current) => ({
     copied: total.copied + current.copied,
     skipped: total.skipped + current.skipped,
   }), { copied: 0, skipped: 0 });

@@ -15,6 +15,7 @@ import { buildSetupCredentialRequirements } from './setup_credential_requirement
 import { resolveLocaleProfile } from '../../domain/locale';
 import { ISSUE_WORKFLOW_CATALOG, ISSUE_WORKFLOW_KINDS, issueWorkflowFormFiles, serializeIssueWorkflowProfile } from '../../domain/issue_workflow_profile';
 import { effectiveIssueWorkflowFeatures, effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
+import { SETUP_VERIFICATION_ACTION_PATH } from '../../domain/setup_verification_action';
 import {
     REPOSITORY_AGENT_GUIDE_PATH,
     REPOSITORY_AGENT_MANIFEST_PATH,
@@ -39,6 +40,7 @@ export function buildSetupPlan(
             .filter(file => configuration.features.release !== false || file !== 'release.yml')
             .filter(file => configuration.features.hotfix !== false || file !== 'hotfix.yml');
     const selectedFiles = [
+        SETUP_VERIFICATION_ACTION_PATH,
         ...(configuration.runners && configuration.runners.mode !== 'retain' ? ['.copilot/runner-profile.json'] : []),
         ...workflowFiles.map(file => `workflows/${file}`),
         ...issueTemplateFiles.map(file => `ISSUE_TEMPLATE/${file}`),

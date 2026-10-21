@@ -2,16 +2,16 @@
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 5999:
+/***/ 1889:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_RECOVERY_IDS = exports.APPLICATION_ERROR_METADATA = void 0;
 exports.toApplicationError = toApplicationError;
-const application_error_1 = __nccwpck_require__(7790);
-const application_error_context_1 = __nccwpck_require__(4034);
-var application_error_2 = __nccwpck_require__(7790);
+const application_error_1 = __nccwpck_require__(2525);
+const application_error_context_1 = __nccwpck_require__(8040);
+var application_error_2 = __nccwpck_require__(2525);
 Object.defineProperty(exports, "APPLICATION_ERROR_METADATA", ({ enumerable: true, get: function () { return application_error_2.APPLICATION_ERROR_METADATA; } }));
 Object.defineProperty(exports, "APPLICATION_ERROR_RECOVERY_IDS", ({ enumerable: true, get: function () { return application_error_2.APPLICATION_ERROR_RECOVERY_IDS; } }));
 /** Creates a semantic error and owns correlation identity outside the pure model. */
@@ -35,7 +35,7 @@ function toApplicationError(error, code, message, options = {}) {
 
 /***/ }),
 
-/***/ 4034:
+/***/ 8040:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -46,7 +46,7 @@ exports.runWithApplicationErrorCorrelation = runWithApplicationErrorCorrelation;
 exports.runAtApplicationErrorBoundary = runAtApplicationErrorBoundary;
 const node_async_hooks_1 = __nccwpck_require__(2761);
 const node_crypto_1 = __nccwpck_require__(6005);
-const application_error_1 = __nccwpck_require__(7790);
+const application_error_1 = __nccwpck_require__(2525);
 const applicationErrorCorrelation = new node_async_hooks_1.AsyncLocalStorage();
 function getApplicationErrorCorrelationId() {
     return applicationErrorCorrelation.getStore();
@@ -70,15 +70,15 @@ function runAtApplicationErrorBoundary(operation) {
 
 /***/ }),
 
-/***/ 2937:
+/***/ 7020:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BugbotMutationError = void 0;
 exports.bugbotMutationError = bugbotMutationError;
-const application_error_1 = __nccwpck_require__(5999);
-const pull_request_review_errors_1 = __nccwpck_require__(6445);
+const application_error_1 = __nccwpck_require__(1889);
+const pull_request_review_errors_1 = __nccwpck_require__(2151);
 class BugbotMutationError extends application_error_1.ApplicationError {
     constructor(diagnostic) {
         super(diagnostic.errorCode, `Bugbot ${diagnostic.stage} failed: operation=${diagnostic.operation}; finding=${diagnostic.findingId}; affected=${diagnostic.affectedCount}; ${diagnostic.providerStatus}; provider-reference=${diagnostic.providerReference}. Completed effects are retained; correct the named cause and recheck the same target.`);
@@ -109,7 +109,7 @@ function bugbotMutationError(cause, stage, findingIds, fallback, affectedCount =
 
 /***/ }),
 
-/***/ 601:
+/***/ 8114:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -118,7 +118,7 @@ exports.AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY = exports.PRODUCT_FACING_AGENT_TASKS
 exports.productFacingAgentQueryOptions = productFacingAgentQueryOptions;
 exports.validateAgentOutputLocale = validateAgentOutputLocale;
 exports.agentOutputLocaleFailureMessage = agentOutputLocaleFailureMessage;
-const locale_1 = __nccwpck_require__(5386);
+const locale_1 = __nccwpck_require__(2028);
 exports.PRODUCT_FACING_AGENT_TASKS = [
     'think',
     'answer-issue-help',
@@ -196,7 +196,7 @@ function agentOutputLocaleFailureMessage(validation) {
 
 /***/ }),
 
-/***/ 5712:
+/***/ 4816:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -227,7 +227,7 @@ function resolveThinkAgentTask(commandName, destinationType) {
 
 /***/ }),
 
-/***/ 5596:
+/***/ 3783:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -268,7 +268,7 @@ async function runWithConcurrencyLimit(tasks, limit) {
 
 /***/ }),
 
-/***/ 1389:
+/***/ 7194:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -284,7 +284,7 @@ exports.BUGBOT_MIN_SEVERITY = 'low';
 
 /***/ }),
 
-/***/ 1601:
+/***/ 4008:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -293,9 +293,9 @@ exports.BugbotDiffPlanLimitError = exports.MAX_REVIEW_DIFF_NORMALIZED_INPUT_LENG
 exports.buildReviewDiffPlan = buildReviewDiffPlan;
 exports.splitReviewDiffPatch = splitReviewDiffPatch;
 const node_crypto_1 = __nccwpck_require__(6005);
-const untrusted_content_1 = __nccwpck_require__(7057);
-const git_object_id_1 = __nccwpck_require__(8623);
-const file_ignore_policy_1 = __nccwpck_require__(542);
+const untrusted_content_1 = __nccwpck_require__(127);
+const git_object_id_1 = __nccwpck_require__(5534);
+const file_ignore_policy_1 = __nccwpck_require__(8774);
 exports.MAX_REVIEW_DIFF_PARTITION_LENGTH = 64000;
 exports.MAX_REVIEW_DIFF_FRAGMENT_LENGTH = 12000;
 exports.MAX_REVIEW_DIFF_PARTITIONS = 64;
@@ -504,7 +504,7 @@ function stableDiffPartitionDigest(value) {
 
 /***/ }),
 
-/***/ 2771:
+/***/ 2322:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -525,7 +525,7 @@ function selectPullRequestOwnerForPushReview(context) {
 
 /***/ }),
 
-/***/ 8024:
+/***/ 8304:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -546,10 +546,10 @@ exports.replaceMarkerInBody = replaceMarkerInBody;
 exports.extractTitleFromBody = extractTitleFromBody;
 exports.buildCommentBody = buildCommentBody;
 exports.buildResolvedFindingNote = buildResolvedFindingNote;
-const bugbot_constants_1 = __nccwpck_require__(1389);
-const application_error_1 = __nccwpck_require__(5999);
-const github_comment_publication_policy_1 = __nccwpck_require__(2712);
-const bugbot_message_catalog_1 = __nccwpck_require__(7406);
+const bugbot_constants_1 = __nccwpck_require__(7194);
+const application_error_1 = __nccwpck_require__(1889);
+const github_comment_publication_policy_1 = __nccwpck_require__(7104);
+const bugbot_message_catalog_1 = __nccwpck_require__(1164);
 /** Maximum lossless finding identity accepted by the marker contract. */
 exports.MAX_FINDING_ID_LENGTH = 200;
 /** Safe character set for finding IDs in regex (alphanumeric, path/segment chars). */
@@ -699,13 +699,13 @@ function buildResolvedFindingNote(resolution, catalog = (0, bugbot_message_catal
 
 /***/ }),
 
-/***/ 3822:
+/***/ 264:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectBugbotFindingStatuses = projectBugbotFindingStatuses;
-const review_state_1 = __nccwpck_require__(9200);
+const review_state_1 = __nccwpck_require__(7220);
 /** Projects durable comment markers and the current analysis into a stable finding state. */
 function projectBugbotFindingStatuses(existingByFindingId, activeFindings, resolvedFindingIds = new Set(), resolvedFindingResolutions = new Map()) {
     const ids = new Set([
@@ -751,7 +751,7 @@ function countStatuses(statuses) {
 
 /***/ }),
 
-/***/ 7406:
+/***/ 1164:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -761,8 +761,8 @@ exports.resolveStaticBugbotCatalog = resolveStaticBugbotCatalog;
 exports.resolveBugbotCatalog = resolveBugbotCatalog;
 exports.renderBugbotDiagnostic = renderBugbotDiagnostic;
 exports.bugbotDiagnosticOperatorMessage = bugbotDiagnosticOperatorMessage;
-const message_catalog_1 = __nccwpck_require__(7097);
-const resolved_message_catalog_policy_1 = __nccwpck_require__(5069);
+const message_catalog_1 = __nccwpck_require__(9292);
+const resolved_message_catalog_policy_1 = __nccwpck_require__(1992);
 exports.BUGBOT_MESSAGE_IDS = Object.freeze([
     'bugbot.status.heading.partial',
     'bugbot.status.heading.verification',
@@ -1084,7 +1084,7 @@ function bugbotDiagnosticOperatorMessage(diagnostic) {
 
 /***/ }),
 
-/***/ 7555:
+/***/ 4151:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -1114,16 +1114,16 @@ function formatBugbotPartitionCompletion(input) {
 
 /***/ }),
 
-/***/ 5821:
+/***/ 3245:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectBugbotProviderEvidence = projectBugbotProviderEvidence;
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
-const bugbot_constants_1 = __nccwpck_require__(1389);
-const github_user_policy_1 = __nccwpck_require__(4403);
-const review_state_1 = __nccwpck_require__(9200);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8304);
+const bugbot_constants_1 = __nccwpck_require__(7194);
+const github_user_policy_1 = __nccwpck_require__(4900);
+const review_state_1 = __nccwpck_require__(7220);
 /**
  * Converts a provider snapshot into semantic finding evidence. Issue and PR
  * destinations are projected independently and then folded conservatively, so
@@ -1311,7 +1311,7 @@ function containsBugbotFindingMarkerSyntax(body) {
 
 /***/ }),
 
-/***/ 8128:
+/***/ 5390:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -1435,7 +1435,7 @@ function hasMissingNonCleanDurableDestination(findingId, finding, observed) {
 
 /***/ }),
 
-/***/ 9189:
+/***/ 3031:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -1458,15 +1458,15 @@ function filterEligibleBugbotResolutionIds(claimedIds, eligibleIds, existingByFi
 
 /***/ }),
 
-/***/ 3288:
+/***/ 1686:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.selectOwnedBugbotReviews = selectOwnedBugbotReviews;
 exports.isTrustedBugbotAuthor = isTrustedBugbotAuthor;
-const github_user_policy_1 = __nccwpck_require__(4403);
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
+const github_user_policy_1 = __nccwpck_require__(4900);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8304);
 /** Associates trusted review summaries with every child finding they own. */
 function selectOwnedBugbotReviews(input) {
     const findingById = new Map(input.findings.map((finding) => [finding.id, finding]));
@@ -1514,7 +1514,7 @@ function addFinding(findingsByReview, reviewIdentity, findingId) {
 
 /***/ }),
 
-/***/ 3799:
+/***/ 4649:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -1527,11 +1527,11 @@ exports.isBugbotStatusComment = isBugbotStatusComment;
 exports.renderBugbotStatusCard = renderBugbotStatusCard;
 exports.renderBugbotReviewSnapshot = renderBugbotReviewSnapshot;
 exports.buildNewBugbotReviewSnapshotHeader = buildNewBugbotReviewSnapshotHeader;
-const review_state_1 = __nccwpck_require__(9200);
-const github_comment_publication_policy_1 = __nccwpck_require__(2712);
-const publication_identity_policy_1 = __nccwpck_require__(5403);
-const bugbot_status_count_marker_policy_1 = __nccwpck_require__(8654);
-const bugbot_message_catalog_1 = __nccwpck_require__(7406);
+const review_state_1 = __nccwpck_require__(7220);
+const github_comment_publication_policy_1 = __nccwpck_require__(7104);
+const publication_identity_policy_1 = __nccwpck_require__(7167);
+const bugbot_status_count_marker_policy_1 = __nccwpck_require__(7427);
+const bugbot_message_catalog_1 = __nccwpck_require__(1164);
 exports.BUGBOT_STATUS_MARKER_PREFIX = 'copilot-bugbot-status';
 exports.BUGBOT_REVIEW_MARKER_PREFIX = 'copilot-bugbot-review';
 exports.BUGBOT_REVIEW_STATUS_START = '<!-- copilot-bugbot-review-status:start';
@@ -1711,7 +1711,7 @@ function presentationCatalog(value) {
 
 /***/ }),
 
-/***/ 8654:
+/***/ 7427:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -1719,7 +1719,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BUGBOT_STATUS_COUNTS_PREFIX = void 0;
 exports.buildBugbotStatusCountMarker = buildBugbotStatusCountMarker;
 exports.readBugbotStatusCounts = readBugbotStatusCounts;
-const review_state_1 = __nccwpck_require__(9200);
+const review_state_1 = __nccwpck_require__(7220);
 exports.BUGBOT_STATUS_COUNTS_PREFIX = 'copilot-bugbot-state-counts';
 /** Read-only status evidence; this marker never authorizes approval or mutation. */
 function buildBugbotStatusCountMarker(projection) {
@@ -1748,7 +1748,7 @@ function readBugbotStatusCounts(body, number, head) {
 
 /***/ }),
 
-/***/ 542:
+/***/ 8774:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -1809,7 +1809,7 @@ function fileMatchesIgnorePatterns(filePath, ignorePatterns) {
 
 /***/ }),
 
-/***/ 2712:
+/***/ 7104:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -1817,8 +1817,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.sanitizeAgentMarkdown = sanitizeAgentMarkdown;
 exports.sanitizePublishedError = sanitizePublishedError;
 exports.escapeHtml = escapeHtml;
-const untrusted_content_1 = __nccwpck_require__(7057);
-const secret_redaction_1 = __nccwpck_require__(254);
+const untrusted_content_1 = __nccwpck_require__(127);
+const secret_redaction_1 = __nccwpck_require__(1978);
 /**
  * Model output is untrusted too. Keep useful Markdown, but neutralize the
  * GitHub automation surfaces that could create side effects when published.
@@ -1861,7 +1861,7 @@ function neutralizeGithubControls(value) {
 
 /***/ }),
 
-/***/ 5403:
+/***/ 7167:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -1877,7 +1877,7 @@ exports.buildPublicationTransitionMarker = buildPublicationTransitionMarker;
 exports.parsePublicationTransitionMarker = parsePublicationTransitionMarker;
 exports.buildDuplicateMarker = buildDuplicateMarker;
 const node_crypto_1 = __nccwpck_require__(6005);
-const github_publication_1 = __nccwpck_require__(5793);
+const github_publication_1 = __nccwpck_require__(6812);
 exports.PUBLICATION_SCHEMA = '1';
 exports.PUBLICATION_MARKER_PREFIX = 'copilot:publication';
 exports.PUBLICATION_DUPLICATE_MARKER_PREFIX = 'copilot:publication-duplicate';
@@ -2008,7 +2008,7 @@ function stableSerialize(value) {
 
 /***/ }),
 
-/***/ 5069:
+/***/ 1992:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -2016,8 +2016,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.toResolvedMessageCatalogView = toResolvedMessageCatalogView;
 exports.resolveStaticMessageCatalogView = resolveStaticMessageCatalogView;
 exports.resolveMessageCatalogView = resolveMessageCatalogView;
-const message_catalog_1 = __nccwpck_require__(7097);
-const locale_1 = __nccwpck_require__(5386);
+const message_catalog_1 = __nccwpck_require__(9292);
+const locale_1 = __nccwpck_require__(2028);
 function toResolvedMessageCatalogView(resolved) {
     return Object.freeze({
         locale: resolved.resolvedLocale,
@@ -2083,7 +2083,7 @@ async function resolveMessageCatalogView(locale, ids, sourceCatalog, bundledCata
 
 /***/ }),
 
-/***/ 6152:
+/***/ 7793:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -2145,7 +2145,7 @@ function setGlobalLoggerDebug(debug, isRemote = false) {
 
 /***/ }),
 
-/***/ 6445:
+/***/ 2151:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -2202,23 +2202,23 @@ function toPullRequestReviewOperationError(error, operation, context) {
 
 /***/ }),
 
-/***/ 4658:
+/***/ 7062:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.analyzeBugbotRevision = analyzeBugbotRevision;
-const bugbot_reconciliation_policy_1 = __nccwpck_require__(8128);
-const logging_ports_1 = __nccwpck_require__(6152);
-const limit_comments_1 = __nccwpck_require__(1643);
-const finding_1 = __nccwpck_require__(1011);
-const build_bugbot_prompt_1 = __nccwpck_require__(2483);
-const prepare_bugbot_findings_1 = __nccwpck_require__(5016);
-const query_bugbot_findings_1 = __nccwpck_require__(3059);
-const bugbot_resolution_eligibility_policy_1 = __nccwpck_require__(9189);
-const bounded_concurrency_policy_1 = __nccwpck_require__(5596);
-const bugbot_partition_aggregation_1 = __nccwpck_require__(4575);
-const application_error_1 = __nccwpck_require__(5999);
+const bugbot_reconciliation_policy_1 = __nccwpck_require__(5390);
+const logging_ports_1 = __nccwpck_require__(7793);
+const limit_comments_1 = __nccwpck_require__(7233);
+const finding_1 = __nccwpck_require__(1592);
+const build_bugbot_prompt_1 = __nccwpck_require__(3670);
+const prepare_bugbot_findings_1 = __nccwpck_require__(3131);
+const query_bugbot_findings_1 = __nccwpck_require__(9678);
+const bugbot_resolution_eligibility_policy_1 = __nccwpck_require__(3031);
+const bounded_concurrency_policy_1 = __nccwpck_require__(3783);
+const bugbot_partition_aggregation_1 = __nccwpck_require__(6831);
+const application_error_1 = __nccwpck_require__(1889);
 /** Pure analysis phase: query, validate, normalize, deduplicate and reconcile; never mutates the SCM. */
 async function analyzeBugbotRevision(execution, context, dependencies) {
     dependencies.telemetry.observeContext(context);
@@ -2300,16 +2300,16 @@ function suppressDismissedFindings(execution, context, prepared) {
 
 /***/ }),
 
-/***/ 793:
+/***/ 798:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.applyDetectedFindings = applyDetectedFindings;
-const mark_findings_resolved_use_case_1 = __nccwpck_require__(6963);
-const publish_findings_use_case_1 = __nccwpck_require__(8442);
-const bugbot_mutation_error_1 = __nccwpck_require__(2937);
-const pull_request_review_errors_1 = __nccwpck_require__(6445);
+const mark_findings_resolved_use_case_1 = __nccwpck_require__(7458);
+const publish_findings_use_case_1 = __nccwpck_require__(7714);
+const bugbot_mutation_error_1 = __nccwpck_require__(7020);
+const pull_request_review_errors_1 = __nccwpck_require__(2151);
 async function applyDetectedFindings(operation, context, prepared, publicationPorts, resolutionPorts, catalog) {
     try {
         await (0, publish_findings_use_case_1.publishFindings)({
@@ -2343,13 +2343,13 @@ async function applyDetectedFindings(operation, context, prepared, publicationPo
 
 /***/ }),
 
-/***/ 8299:
+/***/ 9868:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectBugbotContextRequest = projectBugbotContextRequest;
-const positive_integer_policy_1 = __nccwpck_require__(9879);
+const positive_integer_policy_1 = __nccwpck_require__(889);
 function projectBugbotContextRequest(context, options) {
     const issueNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(options?.issueNumberOverride ?? context.target.issueNumber);
     const pullRequestNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(options?.pullRequestNumberOverride
@@ -2383,18 +2383,18 @@ function projectBugbotContextRequest(context, options) {
 
 /***/ }),
 
-/***/ 2946:
+/***/ 7015:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.parseBugbotFindingComments = parseBugbotFindingComments;
 exports.collectPreviousBugbotFindings = collectPreviousBugbotFindings;
-const build_bugbot_fix_prompt_1 = __nccwpck_require__(9819);
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
-const finding_1 = __nccwpck_require__(1011);
-const github_user_policy_1 = __nccwpck_require__(4403);
-const review_state_1 = __nccwpck_require__(9200);
+const build_bugbot_fix_prompt_1 = __nccwpck_require__(732);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8304);
+const finding_1 = __nccwpck_require__(1592);
+const github_user_policy_1 = __nccwpck_require__(4900);
+const review_state_1 = __nccwpck_require__(7220);
 function parseBugbotFindingComments(issueComments, pullRequestCommentsByNumber, trustedAuthorLogin, reviewThreadStatesByPullRequest = new Map()) {
     const existingByFindingId = parseIssueFindingMarkers(issueComments, trustedAuthorLogin);
     const pullRequestFindings = parsePullRequestFindingMarkers(pullRequestCommentsByNumber, trustedAuthorLogin, reviewThreadStatesByPullRequest);
@@ -2515,14 +2515,14 @@ function collectPreviousBugbotFindings(issueComments, existingByFindingId, prFin
 
 /***/ }),
 
-/***/ 4575:
+/***/ 6831:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MAX_AGGREGATE_PARTITION_FINDINGS = void 0;
 exports.aggregateBugbotPartitionResponses = aggregateBugbotPartitionResponses;
-const application_error_1 = __nccwpck_require__(5999);
+const application_error_1 = __nccwpck_require__(1889);
 const MAX_PARTITION_FINDINGS_PER_RESPONSE = 200;
 exports.MAX_AGGREGATE_PARTITION_FINDINGS = 2000;
 const MAX_OWNER_RESOLUTIONS = 500;
@@ -2575,15 +2575,15 @@ function invalidAggregate(message) {
 
 /***/ }),
 
-/***/ 3346:
+/***/ 7537:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MAX_PREVIOUS_FINDINGS_BLOCK_LENGTH = exports.MAX_PREVIOUS_FINDINGS = void 0;
 exports.buildPreviousFindingsContext = buildPreviousFindingsContext;
-const untrusted_content_1 = __nccwpck_require__(7057);
-const build_bugbot_fix_prompt_1 = __nccwpck_require__(9819);
+const untrusted_content_1 = __nccwpck_require__(127);
+const build_bugbot_fix_prompt_1 = __nccwpck_require__(732);
 exports.MAX_PREVIOUS_FINDINGS = 100;
 exports.MAX_PREVIOUS_FINDINGS_BLOCK_LENGTH = 48000;
 function buildPreviousFindingsContext(previousFindings) {
@@ -2644,7 +2644,7 @@ function timestamp(value) {
 
 /***/ }),
 
-/***/ 536:
+/***/ 1970:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -2653,9 +2653,9 @@ exports.buildReviewDiffBlock = buildReviewDiffBlock;
 exports.buildReviewDiffContext = buildReviewDiffContext;
 exports.buildReviewConversationBlock = buildReviewConversationBlock;
 exports.buildReviewConversationContext = buildReviewConversationContext;
-const github_user_policy_1 = __nccwpck_require__(4403);
-const untrusted_content_1 = __nccwpck_require__(7057);
-const bugbot_diff_partition_policy_1 = __nccwpck_require__(1601);
+const github_user_policy_1 = __nccwpck_require__(4900);
+const untrusted_content_1 = __nccwpck_require__(127);
+const bugbot_diff_partition_policy_1 = __nccwpck_require__(4008);
 const MAX_CONVERSATION_LENGTH = 24000;
 const MAX_CONVERSATION_ITEMS = 50;
 const MAX_CONVERSATION_ITEM_LENGTH = 4000;
@@ -2742,7 +2742,7 @@ function isBot(author, botLogin) {
 
 /***/ }),
 
-/***/ 4307:
+/***/ 1415:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -2764,14 +2764,14 @@ async function hasNewerBugbotRevision(context, ports) {
 
 /***/ }),
 
-/***/ 5011:
+/***/ 1706:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MAX_BUGBOT_RULES_LENGTH = exports.MAX_BUGBOT_RULE_LENGTH = void 0;
 exports.buildBugbotReviewRuleSet = buildBugbotReviewRuleSet;
-const untrusted_content_1 = __nccwpck_require__(7057);
+const untrusted_content_1 = __nccwpck_require__(127);
 exports.MAX_BUGBOT_RULE_LENGTH = 30000;
 exports.MAX_BUGBOT_RULES_LENGTH = 100000;
 function buildBugbotReviewRuleSet(organizationRules, repositoryRules) {
@@ -2824,13 +2824,13 @@ function deduplicateRules(rules) {
 
 /***/ }),
 
-/***/ 6790:
+/***/ 2658:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BugbotReviewTelemetry = void 0;
-const bugbot_finding_status_policy_1 = __nccwpck_require__(3822);
+const bugbot_finding_status_policy_1 = __nccwpck_require__(264);
 const systemClock = {
     now: () => Date.now(),
     isoNow: () => new Date().toISOString(),
@@ -3032,7 +3032,7 @@ function sanitizeMetricName(value) {
 
 /***/ }),
 
-/***/ 9819:
+/***/ 732:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -3040,10 +3040,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MAX_FINDING_BODY_LENGTH = void 0;
 exports.truncateFindingBody = truncateFindingBody;
 exports.buildBugbotFixPrompt = buildBugbotFixPrompt;
-const prompts_1 = __nccwpck_require__(9518);
-const project_context_instruction_1 = __nccwpck_require__(3907);
-const sanitize_user_comment_for_prompt_1 = __nccwpck_require__(9828);
-const untrusted_content_1 = __nccwpck_require__(7057);
+const prompts_1 = __nccwpck_require__(966);
+const project_context_instruction_1 = __nccwpck_require__(5527);
+const sanitize_user_comment_for_prompt_1 = __nccwpck_require__(2668);
+const untrusted_content_1 = __nccwpck_require__(127);
 /** Maximum characters for a single finding's full comment body to avoid prompt bloat and token limits. */
 exports.MAX_FINDING_BODY_LENGTH = 12000;
 const TRUNCATION_SUFFIX = "\n\n[... truncated for length ...]";
@@ -3100,7 +3100,7 @@ function buildBugbotFixPrompt(param, context, targetFindingIds, userComment, ver
 
 /***/ }),
 
-/***/ 2483:
+/***/ 3670:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -3113,10 +3113,10 @@ function buildBugbotFixPrompt(param, context, targetFindingIds, userComment, ver
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildBugbotPrompt = buildBugbotPrompt;
-const prompts_1 = __nccwpck_require__(9518);
-const project_context_instruction_1 = __nccwpck_require__(3907);
-const review_configuration_1 = __nccwpck_require__(3994);
-const file_ignore_policy_1 = __nccwpck_require__(542);
+const prompts_1 = __nccwpck_require__(966);
+const project_context_instruction_1 = __nccwpck_require__(5527);
+const review_configuration_1 = __nccwpck_require__(8595);
+const file_ignore_policy_1 = __nccwpck_require__(8774);
 const MAX_IGNORE_BLOCK_LENGTH = 2000;
 const GIT_OBJECT_ID = /^[0-9a-f]{7,64}$/i;
 function buildBugbotPrompt(param, context, assignment) {
@@ -3238,7 +3238,7 @@ function normalizedObjectId(value) {
 
 /***/ }),
 
-/***/ 2908:
+/***/ 7491:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -3270,13 +3270,13 @@ function deduplicateFindings(findings) {
 
 /***/ }),
 
-/***/ 1643:
+/***/ 7233:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.applyCommentLimit = applyCommentLimit;
-const bugbot_constants_1 = __nccwpck_require__(1389);
+const bugbot_constants_1 = __nccwpck_require__(7194);
 /**
  * Applies the max-comments limit: returns the first N findings to publish individually,
  * and overflow count + titles for a single "revisar en local" summary comment.
@@ -3297,23 +3297,23 @@ function applyCommentLimit(findings, maxComments = bugbot_constants_1.BUGBOT_MAX
 
 /***/ }),
 
-/***/ 4050:
+/***/ 1187:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.preflightBugbotContext = preflightBugbotContext;
 exports.loadBugbotContext = loadBugbotContext;
-const application_error_1 = __nccwpck_require__(5999);
-const bounded_concurrency_policy_1 = __nccwpck_require__(5596);
-const context_1 = __nccwpck_require__(4712);
-const logging_ports_1 = __nccwpck_require__(6152);
-const bugbot_finding_context_1 = __nccwpck_require__(2946);
-const bugbot_previous_findings_context_1 = __nccwpck_require__(3346);
-const bugbot_diff_partition_policy_1 = __nccwpck_require__(1601);
-const bugbot_review_context_1 = __nccwpck_require__(536);
-const file_ignore_policy_1 = __nccwpck_require__(542);
-const bugbot_review_rules_1 = __nccwpck_require__(5011);
+const application_error_1 = __nccwpck_require__(1889);
+const bounded_concurrency_policy_1 = __nccwpck_require__(3783);
+const context_1 = __nccwpck_require__(8442);
+const logging_ports_1 = __nccwpck_require__(7793);
+const bugbot_finding_context_1 = __nccwpck_require__(7015);
+const bugbot_previous_findings_context_1 = __nccwpck_require__(7537);
+const bugbot_diff_partition_policy_1 = __nccwpck_require__(4008);
+const bugbot_review_context_1 = __nccwpck_require__(1970);
+const file_ignore_policy_1 = __nccwpck_require__(8774);
+const bugbot_review_rules_1 = __nccwpck_require__(1706);
 /** Resolves and validates the provider-owned PR identity without loading review context. */
 async function preflightBugbotContext(request, ports) {
     const selection = await selectCanonicalPullRequest(request, ports);
@@ -3482,13 +3482,13 @@ function toPrContext(identity, snapshot) {
 
 /***/ }),
 
-/***/ 4861:
+/***/ 6490:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.loadBugbotReconciliationSnapshot = loadBugbotReconciliationSnapshot;
-const pull_request_review_errors_1 = __nccwpck_require__(6445);
+const pull_request_review_errors_1 = __nccwpck_require__(2151);
 /**
  * Acquires one coherent final snapshot around two head guards. Surface reads
  * run concurrently, while the second guard rejects data collected across a
@@ -3579,30 +3579,30 @@ function stateOf(result) {
 
 /***/ }),
 
-/***/ 6963:
+/***/ 7458:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.markFindingsResolved = void 0;
-var mark_findings_resolved_workflow_1 = __nccwpck_require__(5916);
+var mark_findings_resolved_workflow_1 = __nccwpck_require__(2320);
 Object.defineProperty(exports, "markFindingsResolved", ({ enumerable: true, get: function () { return mark_findings_resolved_workflow_1.markFindingsResolved; } }));
 
 
 /***/ }),
 
-/***/ 5916:
+/***/ 2320:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.markFindingsResolved = markFindingsResolved;
-const logging_ports_1 = __nccwpck_require__(6152);
-const resolve_issue_finding_1 = __nccwpck_require__(5300);
-const resolve_pull_request_finding_1 = __nccwpck_require__(4567);
-const review_state_1 = __nccwpck_require__(9200);
-const bugbot_mutation_error_1 = __nccwpck_require__(2937);
-const application_error_1 = __nccwpck_require__(5999);
+const logging_ports_1 = __nccwpck_require__(7793);
+const resolve_issue_finding_1 = __nccwpck_require__(8269);
+const resolve_pull_request_finding_1 = __nccwpck_require__(6024);
+const review_state_1 = __nccwpck_require__(7220);
+const bugbot_mutation_error_1 = __nccwpck_require__(7020);
+const application_error_1 = __nccwpck_require__(1889);
 async function markFindingsResolved(param) {
     const errors = [];
     for (const [findingId, existing] of Object.entries(param.context.existingByFindingId)) {
@@ -3683,7 +3683,7 @@ function addResolutionError(errors, destination, findingId, cause) {
 
 /***/ }),
 
-/***/ 124:
+/***/ 2146:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -3745,13 +3745,13 @@ function resolveFindingPathForPr(findingFile, prFiles) {
 
 /***/ }),
 
-/***/ 5016:
+/***/ 3131:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareBugbotFindings = prepareBugbotFindings;
-const prepare_bugbot_findings_policy_1 = __nccwpck_require__(3496);
+const prepare_bugbot_findings_policy_1 = __nccwpck_require__(7286);
 function prepareBugbotFindings(response, ignorePatterns, minSeverityValue, maxComments, maxAgentFindings) {
     const normalized = (0, prepare_bugbot_findings_policy_1.normalizeBugbotResponse)(response, maxAgentFindings);
     return normalized === undefined
@@ -3766,7 +3766,7 @@ function prepareBugbotFindings(response, ignorePatterns, minSeverityValue, maxCo
 
 /***/ }),
 
-/***/ 3496:
+/***/ 7286:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -3774,14 +3774,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MIN_AGENT_FINDING_CONFIDENCE = exports.MAX_AGENT_RESOLVED_FINDINGS = exports.MAX_AGENT_FINDINGS = void 0;
 exports.normalizeBugbotResponse = normalizeBugbotResponse;
 exports.prepareFindings = prepareFindings;
-const deduplicate_findings_1 = __nccwpck_require__(2908);
-const file_ignore_policy_1 = __nccwpck_require__(542);
-const limit_comments_1 = __nccwpck_require__(1643);
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
-const path_validation_1 = __nccwpck_require__(124);
-const severity_1 = __nccwpck_require__(4626);
-const finding_identity_1 = __nccwpck_require__(1853);
-const sensitive_text_1 = __nccwpck_require__(7122);
+const deduplicate_findings_1 = __nccwpck_require__(7491);
+const file_ignore_policy_1 = __nccwpck_require__(8774);
+const limit_comments_1 = __nccwpck_require__(7233);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8304);
+const path_validation_1 = __nccwpck_require__(2146);
+const severity_1 = __nccwpck_require__(1135);
+const finding_identity_1 = __nccwpck_require__(9248);
+const sensitive_text_1 = __nccwpck_require__(7472);
 /** Hard cap for model-controlled arrays before any filtering or publication. */
 exports.MAX_AGENT_FINDINGS = 500;
 exports.MAX_AGENT_RESOLVED_FINDINGS = 500;
@@ -3914,7 +3914,7 @@ function isRecord(value) {
 
 /***/ }),
 
-/***/ 8442:
+/***/ 7714:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -3924,11 +3924,11 @@ function isRecord(value) {
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publishFindings = publishFindings;
-const bugbot_mutation_error_1 = __nccwpck_require__(2937);
-const finding_1 = __nccwpck_require__(1011);
-const publish_issue_finding_comment_1 = __nccwpck_require__(4950);
-const publish_pr_review_comments_1 = __nccwpck_require__(352);
-const publish_overflow_comment_1 = __nccwpck_require__(974);
+const bugbot_mutation_error_1 = __nccwpck_require__(7020);
+const finding_1 = __nccwpck_require__(1592);
+const publish_issue_finding_comment_1 = __nccwpck_require__(9672);
+const publish_pr_review_comments_1 = __nccwpck_require__(9504);
+const publish_overflow_comment_1 = __nccwpck_require__(5231);
 async function publishFindings(param) {
     const { operation, context, findings, commitSha, overflowCount = 0, overflowTitles = [], ports, catalog } = param;
     const { existingByFindingId, canonicalPullRequest, prContext } = context;
@@ -3965,14 +3965,14 @@ async function publishFindings(param) {
 
 /***/ }),
 
-/***/ 4950:
+/***/ 9672:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publishIssueFindingComment = publishIssueFindingComment;
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
-const logging_ports_1 = __nccwpck_require__(6152);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8304);
+const logging_ports_1 = __nccwpck_require__(7793);
 async function publishIssueFindingComment(repository, issueNumber, finding, existing, commitSha, catalog) {
     const body = (0, bugbot_finding_marker_policy_1.buildCommentBody)(finding, false, undefined, { catalog });
     const options = commitSha ? { commitSha } : undefined;
@@ -3988,15 +3988,15 @@ async function publishIssueFindingComment(repository, issueNumber, finding, exis
 
 /***/ }),
 
-/***/ 974:
+/***/ 5231:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publishOverflowComment = publishOverflowComment;
-const logging_ports_1 = __nccwpck_require__(6152);
-const github_comment_publication_policy_1 = __nccwpck_require__(2712);
-const bugbot_message_catalog_1 = __nccwpck_require__(7406);
+const logging_ports_1 = __nccwpck_require__(7793);
+const github_comment_publication_policy_1 = __nccwpck_require__(7104);
+const bugbot_message_catalog_1 = __nccwpck_require__(1164);
 async function publishOverflowComment(repository, issueNumber, overflowCount, overflowTitles, commitSha, catalog = (0, bugbot_message_catalog_1.resolveStaticBugbotCatalog)('en-US')) {
     if (overflowCount <= 0)
         return;
@@ -4016,19 +4016,19 @@ ${catalog.message('bugbot.overflow.body', { count: `**${overflowCount}**` }, ove
 
 /***/ }),
 
-/***/ 352:
+/***/ 9504:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentPublisher = void 0;
-const bugbot_mutation_error_1 = __nccwpck_require__(2937);
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
-const path_validation_1 = __nccwpck_require__(124);
-const logging_ports_1 = __nccwpck_require__(6152);
-const github_comment_publication_policy_1 = __nccwpck_require__(2712);
-const bugbot_review_presentation_policy_1 = __nccwpck_require__(3799);
-const bugbot_message_catalog_1 = __nccwpck_require__(7406);
+const bugbot_mutation_error_1 = __nccwpck_require__(7020);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8304);
+const path_validation_1 = __nccwpck_require__(2146);
+const logging_ports_1 = __nccwpck_require__(7793);
+const github_comment_publication_policy_1 = __nccwpck_require__(7104);
+const bugbot_review_presentation_policy_1 = __nccwpck_require__(4649);
+const bugbot_message_catalog_1 = __nccwpck_require__(1164);
 class PullRequestReviewCommentPublisher {
     constructor(options) {
         this.options = options;
@@ -4187,18 +4187,18 @@ function sanitizeSummaryText(value, maximum) {
 
 /***/ }),
 
-/***/ 3059:
+/***/ 9678:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.queryBugbotFindings = queryBugbotFindings;
 exports.queryBugbotPartitionFindings = queryBugbotPartitionFindings;
-const agent_task_policy_1 = __nccwpck_require__(5712);
-const schema_1 = __nccwpck_require__(6808);
-const agent_output_locale_policy_1 = __nccwpck_require__(601);
-const application_error_1 = __nccwpck_require__(5999);
-const logging_ports_1 = __nccwpck_require__(6152);
+const agent_task_policy_1 = __nccwpck_require__(4816);
+const schema_1 = __nccwpck_require__(4744);
+const agent_output_locale_policy_1 = __nccwpck_require__(8114);
+const application_error_1 = __nccwpck_require__(1889);
+const logging_ports_1 = __nccwpck_require__(7793);
 const MAX_PARTITION_QUERY_ATTEMPTS = 3;
 function bugbotQueryOptions(schema) {
     return (0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('bugbot-review', schema);
@@ -4251,19 +4251,19 @@ async function queryBugbotPartitionFindings(repository, configuration, prompt, t
 
 /***/ }),
 
-/***/ 7515:
+/***/ 398:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.reconcileBugbotReviewState = reconcileBugbotReviewState;
-const bugbot_mutation_error_1 = __nccwpck_require__(2937);
-const review_projection_1 = __nccwpck_require__(859);
-const bugbot_reconciliation_policy_1 = __nccwpck_require__(8128);
-const bugbot_provider_projection_policy_1 = __nccwpck_require__(5821);
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
-const load_bugbot_reconciliation_snapshot_use_case_1 = __nccwpck_require__(4861);
-const synchronize_bugbot_review_presentation_use_case_1 = __nccwpck_require__(4491);
+const bugbot_mutation_error_1 = __nccwpck_require__(7020);
+const review_projection_1 = __nccwpck_require__(5952);
+const bugbot_reconciliation_policy_1 = __nccwpck_require__(5390);
+const bugbot_provider_projection_policy_1 = __nccwpck_require__(3245);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8304);
+const load_bugbot_reconciliation_snapshot_use_case_1 = __nccwpck_require__(6490);
+const synchronize_bugbot_review_presentation_use_case_1 = __nccwpck_require__(1210);
 /**
  * Orchestrates final Bugbot reconciliation. Provider acquisition, pure state
  * planning, and presentation mutations are deliberately owned by dedicated
@@ -4330,13 +4330,13 @@ function toSafeOperationMessage(error) {
 
 /***/ }),
 
-/***/ 5300:
+/***/ 8269:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveIssueFinding = resolveIssueFinding;
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8304);
 async function resolveIssueFinding(repository, resolution, catalog) {
     const body = resolution.comment.body;
     const marker = (0, bugbot_finding_marker_policy_1.parseMarker)(body).find((candidate) => candidate.findingId === resolution.findingId);
@@ -4353,14 +4353,14 @@ async function resolveIssueFinding(repository, resolution, catalog) {
 
 /***/ }),
 
-/***/ 4567:
+/***/ 6024:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolvePullRequestFinding = resolvePullRequestFinding;
-const pull_request_review_errors_1 = __nccwpck_require__(6445);
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
+const pull_request_review_errors_1 = __nccwpck_require__(2151);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8304);
 async function resolvePullRequestFinding(repository, resolution, catalog) {
     const comments = await repository.listPullRequestReviewComments(resolution.pullRequestNumber);
     const comment = comments.find((candidate) => candidate.identity === resolution.commentIdentity);
@@ -4389,7 +4389,7 @@ async function resolvePullRequestFinding(repository, resolution, catalog) {
 
 /***/ }),
 
-/***/ 9828:
+/***/ 2668:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -4434,7 +4434,7 @@ function sanitizeUserCommentForPrompt(raw) {
 
 /***/ }),
 
-/***/ 6808:
+/***/ 4744:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -4445,8 +4445,8 @@ function sanitizeUserCommentForPrompt(raw) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BUGBOT_FIX_INTENT_RESPONSE_SCHEMA = exports.BUGBOT_PARTITION_RESPONSE_SCHEMA = exports.BUGBOT_RESPONSE_SCHEMA = void 0;
 exports.buildBugbotPartitionResponseSchema = buildBugbotPartitionResponseSchema;
-const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
-const agent_output_locale_policy_1 = __nccwpck_require__(601);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8304);
+const agent_output_locale_policy_1 = __nccwpck_require__(8114);
 /** Detection returns findings and explicit lifecycle changes for prior finding IDs. */
 exports.BUGBOT_RESPONSE_SCHEMA = {
     type: 'object',
@@ -4583,7 +4583,7 @@ exports.BUGBOT_FIX_INTENT_RESPONSE_SCHEMA = {
 
 /***/ }),
 
-/***/ 4626:
+/***/ 1135:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -4619,18 +4619,18 @@ function meetsMinSeverity(findingSeverity, minSeverity) {
 
 /***/ }),
 
-/***/ 4491:
+/***/ 1210:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.synchronizeBugbotReviewPresentation = synchronizeBugbotReviewPresentation;
-const application_error_1 = __nccwpck_require__(5999);
-const bugbot_review_presentation_policy_1 = __nccwpck_require__(3799);
-const bugbot_review_ownership_policy_1 = __nccwpck_require__(3288);
-const review_projection_1 = __nccwpck_require__(859);
-const publication_identity_policy_1 = __nccwpck_require__(5403);
-const bugbot_message_catalog_1 = __nccwpck_require__(7406);
+const application_error_1 = __nccwpck_require__(1889);
+const bugbot_review_presentation_policy_1 = __nccwpck_require__(4649);
+const bugbot_review_ownership_policy_1 = __nccwpck_require__(1686);
+const review_projection_1 = __nccwpck_require__(5952);
+const publication_identity_policy_1 = __nccwpck_require__(7167);
+const bugbot_message_catalog_1 = __nccwpck_require__(1164);
 const REVIEW_UPDATE_BATCH_SIZE = 20;
 const MAX_REVIEW_UPDATES_PER_RUN = 100;
 const REVIEW_UPDATE_CONCURRENCY = 4;
@@ -4810,13 +4810,13 @@ async function mapWithConcurrency(values, concurrency, operation) {
 
 /***/ }),
 
-/***/ 6287:
+/***/ 9827:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DetectPotentialProblemsUseCase = void 0;
-const detect_potential_problems_workflow_1 = __nccwpck_require__(7033);
+const detect_potential_problems_workflow_1 = __nccwpck_require__(8282);
 /** Application boundary for detecting, publishing and resolving Bugbot findings. */
 class DetectPotentialProblemsUseCase {
     constructor(aiRepository, scm, telemetryPort, catalogResolver) {
@@ -4840,29 +4840,29 @@ exports.DetectPotentialProblemsUseCase = DetectPotentialProblemsUseCase;
 
 /***/ }),
 
-/***/ 7033:
+/***/ 8282:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runDetectPotentialProblemsWorkflow = runDetectPotentialProblemsWorkflow;
-const agent_1 = __nccwpck_require__(9937);
-const result_1 = __nccwpck_require__(3817);
-const task_emoji_1 = __nccwpck_require__(6103);
-const logging_ports_1 = __nccwpck_require__(6152);
-const pull_request_review_errors_1 = __nccwpck_require__(6445);
-const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
-const bugbot_context_request_1 = __nccwpck_require__(8299);
-const apply_detected_findings_1 = __nccwpck_require__(793);
-const bugbot_finding_status_policy_1 = __nccwpck_require__(3822);
-const bugbot_review_telemetry_1 = __nccwpck_require__(6790);
-const analyze_bugbot_revision_use_case_1 = __nccwpck_require__(4658);
-const bugbot_review_freshness_1 = __nccwpck_require__(4307);
-const reconcile_bugbot_review_state_use_case_1 = __nccwpck_require__(7515);
-const application_error_1 = __nccwpck_require__(5999);
-const bugbot_event_ownership_policy_1 = __nccwpck_require__(2771);
-const bugbot_message_catalog_1 = __nccwpck_require__(7406);
-const bugbot_partition_completion_policy_1 = __nccwpck_require__(7555);
+const agent_1 = __nccwpck_require__(1066);
+const result_1 = __nccwpck_require__(9917);
+const task_emoji_1 = __nccwpck_require__(8353);
+const logging_ports_1 = __nccwpck_require__(7793);
+const pull_request_review_errors_1 = __nccwpck_require__(2151);
+const load_bugbot_context_use_case_1 = __nccwpck_require__(1187);
+const bugbot_context_request_1 = __nccwpck_require__(9868);
+const apply_detected_findings_1 = __nccwpck_require__(798);
+const bugbot_finding_status_policy_1 = __nccwpck_require__(264);
+const bugbot_review_telemetry_1 = __nccwpck_require__(2658);
+const analyze_bugbot_revision_use_case_1 = __nccwpck_require__(7062);
+const bugbot_review_freshness_1 = __nccwpck_require__(1415);
+const reconcile_bugbot_review_state_use_case_1 = __nccwpck_require__(398);
+const application_error_1 = __nccwpck_require__(1889);
+const bugbot_event_ownership_policy_1 = __nccwpck_require__(2322);
+const bugbot_message_catalog_1 = __nccwpck_require__(1164);
+const bugbot_partition_completion_policy_1 = __nccwpck_require__(4151);
 const TASK_ID = 'DetectPotentialProblemsUseCase';
 /** Coordinates Bugbot context, analysis and finding publication behind application ports. */
 async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
@@ -5196,20 +5196,20 @@ function resolvePublicationCatalog(operation, dependencies, publishesToPullReque
 
 /***/ }),
 
-/***/ 9937:
+/***/ 1066:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.isAgentConfigurationReady = exports.AGENT_EXECUTABLE_BASENAMES = void 0;
-var agent_1 = __nccwpck_require__(9040);
+var agent_1 = __nccwpck_require__(8773);
 Object.defineProperty(exports, "AGENT_EXECUTABLE_BASENAMES", ({ enumerable: true, get: function () { return agent_1.AGENT_EXECUTABLE_BASENAMES; } }));
 Object.defineProperty(exports, "isAgentConfigurationReady", ({ enumerable: true, get: function () { return agent_1.isAgentConfigurationReady; } }));
 
 
 /***/ }),
 
-/***/ 7790:
+/***/ 2525:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 
@@ -5223,9 +5223,9 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
-const closed_issue_reconciliation_1 = __nccwpck_require__(1565);
-const approval_evidence_diagnostic_1 = __nccwpck_require__(8205);
-const branch_sync_validation_1 = __nccwpck_require__(981);
+const closed_issue_reconciliation_1 = __nccwpck_require__(1012);
+const approval_evidence_diagnostic_1 = __nccwpck_require__(3086);
+const branch_sync_validation_1 = __nccwpck_require__(155);
 exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'pull-request-link-restored',
     'pull-request-link-base-retained',
@@ -5523,7 +5523,7 @@ function normalizeApplicationErrorRecovery(recovery) {
 
 /***/ }),
 
-/***/ 3817:
+/***/ 9917:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -5552,7 +5552,7 @@ exports.Result = Result;
 
 /***/ }),
 
-/***/ 9040:
+/***/ 8773:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -5574,7 +5574,7 @@ function isAgentConfigurationReady(configuration) {
 
 /***/ }),
 
-/***/ 8205:
+/***/ 3086:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -5611,7 +5611,7 @@ exports.APPROVAL_EVIDENCE_REASONS = Object.freeze([
 
 /***/ }),
 
-/***/ 981:
+/***/ 155:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -5633,7 +5633,7 @@ function admittedBranchSyncValidationCode(value) {
 
 /***/ }),
 
-/***/ 4712:
+/***/ 8442:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -5641,7 +5641,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.selectCanonicalBugbotPullRequest = selectCanonicalBugbotPullRequest;
 exports.summarizeBugbotCoverage = summarizeBugbotCoverage;
 exports.completeBugbotSourceCoverage = completeBugbotSourceCoverage;
-const git_object_id_1 = __nccwpck_require__(8623);
+const git_object_id_1 = __nccwpck_require__(5534);
 function selectCanonicalBugbotPullRequest(target, candidates, source) {
     if (source === "exact-head" && candidates.length === 0)
         return { kind: "none" };
@@ -5725,7 +5725,7 @@ function matchesConstrainedHead(target, candidate) {
 
 /***/ }),
 
-/***/ 1011:
+/***/ 1592:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -5780,7 +5780,7 @@ function identitiesAreCompatible(existing, finding) {
 
 /***/ }),
 
-/***/ 1853:
+/***/ 9248:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -5854,7 +5854,7 @@ function fnv1a(value) {
 
 /***/ }),
 
-/***/ 3994:
+/***/ 8595:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -5922,13 +5922,13 @@ function resolveBugbotReviewEffort(configured, complexity) {
 
 /***/ }),
 
-/***/ 859:
+/***/ 5952:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildBugbotReviewProjection = buildBugbotReviewProjection;
-const review_state_1 = __nccwpck_require__(9200);
+const review_state_1 = __nccwpck_require__(7220);
 function buildBugbotReviewProjection(input) {
     const findings = [...input.findings].sort((left, right) => left.id.localeCompare(right.id));
     const counts = (0, review_state_1.countBugbotFindingStates)(findings.map((finding) => finding.state));
@@ -5983,7 +5983,7 @@ function stableDigest(value) {
 
 /***/ }),
 
-/***/ 9200:
+/***/ 7220:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -6056,7 +6056,7 @@ function countActionableBugbotFindings(counts) {
 
 /***/ }),
 
-/***/ 1565:
+/***/ 1012:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -6074,7 +6074,7 @@ exports.CLOSED_ISSUE_REASONS = Object.freeze(['completed', 'not_planned', 'dupli
 
 /***/ }),
 
-/***/ 8623:
+/***/ 5534:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -6094,7 +6094,7 @@ function canonicalGitObjectId(value) {
 
 /***/ }),
 
-/***/ 5793:
+/***/ 6812:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -6130,7 +6130,7 @@ function publicationTargetToken(target) {
 
 /***/ }),
 
-/***/ 4403:
+/***/ 4900:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -6145,7 +6145,7 @@ function githubUsersMatch(left, right) {
 
 /***/ }),
 
-/***/ 5386:
+/***/ 2028:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -6248,7 +6248,7 @@ function optionalLocale(value) {
 
 /***/ }),
 
-/***/ 7097:
+/***/ 9292:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -6260,7 +6260,7 @@ exports.validateDynamicCatalogMessages = validateDynamicCatalogMessages;
 exports.renderCatalogMessage = renderCatalogMessage;
 exports.catalogPlaceholders = catalogPlaceholders;
 exports.catalogPluralCategories = catalogPluralCategories;
-const locale_1 = __nccwpck_require__(5386);
+const locale_1 = __nccwpck_require__(2028);
 exports.MESSAGE_CATALOG_VERSION = '3';
 exports.CATALOG_PLURAL_CATEGORIES = Object.freeze([
     'zero',
@@ -6417,7 +6417,7 @@ function placeholdersForTemplate(value) {
 
 /***/ }),
 
-/***/ 9879:
+/***/ 889:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -6446,7 +6446,7 @@ function parsePositiveSafeInteger(value) {
 
 /***/ }),
 
-/***/ 7122:
+/***/ 7472:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -6468,7 +6468,7 @@ function redactSensitiveText(value) {
 
 /***/ }),
 
-/***/ 7057:
+/***/ 127:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -6578,7 +6578,7 @@ function normalizeOrigin(origin) {
 
 /***/ }),
 
-/***/ 9029:
+/***/ 7400:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -6588,7 +6588,7 @@ exports.getAnswerIssueHelpPrompt = getAnswerIssueHelpPrompt;
  * Prompt for the initial reply when a user opens a question/help issue.
  * Filled by the prompt provider; use getAnswerIssueHelpPrompt().
  */
-const fill_1 = __nccwpck_require__(2559);
+const fill_1 = __nccwpck_require__(1138);
 const TEMPLATE = `The user has just opened a question/help issue. Provide a helpful initial response to their question or request below. Be concise and actionable. Write every human-readable sentence in {{targetLocale}} while preserving code identifiers, paths, refs, commands, and URLs verbatim.
 
 Return a JSON object with \`outputLocale\` set exactly to \`{{targetLocale}}\` and \`answer\` containing the Markdown response.
@@ -6618,7 +6618,7 @@ function getAnswerIssueHelpPrompt(params) {
 
 /***/ }),
 
-/***/ 6998:
+/***/ 7685:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -6627,7 +6627,7 @@ exports.getBugbotPrompt = getBugbotPrompt;
 /**
  * Prompt for Bugbot detection (detect potential problems on push).
  */
-const fill_1 = __nccwpck_require__(2559);
+const fill_1 = __nccwpck_require__(1138);
 const TEMPLATE = `You are analyzing the latest code changes for potential bugs and issues.
 
 Write every human-readable finding title, description, evidence, and suggestion in {{targetLocale}}. Preserve identifiers, code, symbols, paths, refs, commands, and URLs verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
@@ -6683,7 +6683,7 @@ function getBugbotPrompt(params) {
 
 /***/ }),
 
-/***/ 7925:
+/***/ 3787:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -6692,8 +6692,8 @@ exports.getBugbotFixPrompt = getBugbotFixPrompt;
 /**
  * Prompt for Bugbot autofix (fix selected findings in workspace).
  */
-const fill_1 = __nccwpck_require__(2559);
-const untrusted_content_1 = __nccwpck_require__(7057);
+const fill_1 = __nccwpck_require__(1138);
+const untrusted_content_1 = __nccwpck_require__(127);
 const TEMPLATE = `${untrusted_content_1.UNTRUSTED_CONTENT_POLICY}
 
 You are in the repository workspace. Your task is to fix the reported code findings (bugs, vulnerabilities, or quality issues) listed below, and only those. The user has explicitly requested these fixes.
@@ -6732,7 +6732,7 @@ function getBugbotFixPrompt(params) {
 
 /***/ }),
 
-/***/ 399:
+/***/ 6434:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -6741,7 +6741,7 @@ exports.getBugbotFixIntentPrompt = getBugbotFixIntentPrompt;
 /**
  * Prompt for detecting the action requested by a user comment.
  */
-const fill_1 = __nccwpck_require__(2559);
+const fill_1 = __nccwpck_require__(1138);
 const TEMPLATE = `You are analyzing a user comment on an issue or pull request to classify the requested Copilot action. The available actions are: fix reported findings, apply a general repository change, run a read-only code review, or answer a question.
 
 {{projectContextInstruction}}
@@ -6766,14 +6766,14 @@ function getBugbotFixIntentPrompt(params) {
 
 /***/ }),
 
-/***/ 3425:
+/***/ 6156:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getAdaptCommentLanguagePrompt = getAdaptCommentLanguagePrompt;
 /** Builds the single, schema-constrained request adaptation prompt. */
-const fill_1 = __nccwpck_require__(2559);
+const fill_1 = __nccwpck_require__(1138);
 const ADAPT_TEMPLATE = `
 You adapt user-provided prose to {{locale}} for internal interpretation.
 
@@ -6800,7 +6800,7 @@ function getAdaptCommentLanguagePrompt(params) {
 
 /***/ }),
 
-/***/ 4623:
+/***/ 7656:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -6809,7 +6809,7 @@ exports.getCheckProgressPrompt = getCheckProgressPrompt;
 /**
  * Prompt for assessing issue progress from branch diff (CheckProgressUseCase).
  */
-const fill_1 = __nccwpck_require__(2559);
+const fill_1 = __nccwpck_require__(1138);
 const TEMPLATE = `Assess the progress of issue #{{issueNumber}} using the supplied immutable GitHub comparison between the base and source heads.
 
 Write every human-readable sentence in {{targetLocale}}. Preserve code identifiers, paths, refs, commands, URLs, percentages, and JSON keys verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
@@ -6848,7 +6848,7 @@ function getCheckProgressPrompt(params) {
 
 /***/ }),
 
-/***/ 2506:
+/***/ 5911:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -6857,7 +6857,7 @@ exports.getCliDoPrompt = getCliDoPrompt;
 /**
  * Prompt for CLI "copilot do" command: project context + user prompt.
  */
-const fill_1 = __nccwpck_require__(2559);
+const fill_1 = __nccwpck_require__(1138);
 const TEMPLATE = `{{projectContextInstruction}}
 
 {{userPrompt}}`;
@@ -6868,7 +6868,7 @@ function getCliDoPrompt(params) {
 
 /***/ }),
 
-/***/ 2559:
+/***/ 1138:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -6878,7 +6878,7 @@ exports.fillTemplate = fillTemplate;
  * Replaces {{paramName}} placeholders in a template with values from params.
  * Missing keys are left as {{paramName}}.
  */
-const untrusted_content_1 = __nccwpck_require__(7057);
+const untrusted_content_1 = __nccwpck_require__(127);
 const UNTRUSTED_TEMPLATE_KEYS = new Set([
     'commentBody',
     'description',
@@ -6920,7 +6920,7 @@ function fillTemplate(template, params) {
 
 /***/ }),
 
-/***/ 9518:
+/***/ 966:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -6931,40 +6931,40 @@ exports.getPrompt = getPrompt;
  * Prompt provider: one file per prompt, each exports a getter that fills the template with params.
  * Use getPrompt(name, params) for a generic call or import the typed getter (e.g. getAnswerIssueHelpPrompt).
  */
-const answer_issue_help_1 = __nccwpck_require__(9029);
-const think_1 = __nccwpck_require__(3146);
-const update_pull_request_description_1 = __nccwpck_require__(63);
-const user_request_1 = __nccwpck_require__(3103);
-const recommend_steps_1 = __nccwpck_require__(9039);
-const check_progress_1 = __nccwpck_require__(4623);
-const check_comment_language_1 = __nccwpck_require__(3425);
-const cli_do_1 = __nccwpck_require__(2506);
-const bugbot_1 = __nccwpck_require__(6998);
-const bugbot_fix_1 = __nccwpck_require__(7925);
-const bugbot_fix_intent_1 = __nccwpck_require__(399);
-var fill_1 = __nccwpck_require__(2559);
+const answer_issue_help_1 = __nccwpck_require__(7400);
+const think_1 = __nccwpck_require__(4386);
+const update_pull_request_description_1 = __nccwpck_require__(2976);
+const user_request_1 = __nccwpck_require__(9631);
+const recommend_steps_1 = __nccwpck_require__(4756);
+const check_progress_1 = __nccwpck_require__(7656);
+const check_comment_language_1 = __nccwpck_require__(6156);
+const cli_do_1 = __nccwpck_require__(5911);
+const bugbot_1 = __nccwpck_require__(7685);
+const bugbot_fix_1 = __nccwpck_require__(3787);
+const bugbot_fix_intent_1 = __nccwpck_require__(6434);
+var fill_1 = __nccwpck_require__(1138);
 Object.defineProperty(exports, "fillTemplate", ({ enumerable: true, get: function () { return fill_1.fillTemplate; } }));
-var answer_issue_help_2 = __nccwpck_require__(9029);
+var answer_issue_help_2 = __nccwpck_require__(7400);
 Object.defineProperty(exports, "getAnswerIssueHelpPrompt", ({ enumerable: true, get: function () { return answer_issue_help_2.getAnswerIssueHelpPrompt; } }));
-var think_2 = __nccwpck_require__(3146);
+var think_2 = __nccwpck_require__(4386);
 Object.defineProperty(exports, "getThinkPrompt", ({ enumerable: true, get: function () { return think_2.getThinkPrompt; } }));
-var update_pull_request_description_2 = __nccwpck_require__(63);
+var update_pull_request_description_2 = __nccwpck_require__(2976);
 Object.defineProperty(exports, "getUpdatePullRequestDescriptionPrompt", ({ enumerable: true, get: function () { return update_pull_request_description_2.getUpdatePullRequestDescriptionPrompt; } }));
-var user_request_2 = __nccwpck_require__(3103);
+var user_request_2 = __nccwpck_require__(9631);
 Object.defineProperty(exports, "getUserRequestPrompt", ({ enumerable: true, get: function () { return user_request_2.getUserRequestPrompt; } }));
-var recommend_steps_2 = __nccwpck_require__(9039);
+var recommend_steps_2 = __nccwpck_require__(4756);
 Object.defineProperty(exports, "getRecommendStepsPrompt", ({ enumerable: true, get: function () { return recommend_steps_2.getRecommendStepsPrompt; } }));
-var check_progress_2 = __nccwpck_require__(4623);
+var check_progress_2 = __nccwpck_require__(7656);
 Object.defineProperty(exports, "getCheckProgressPrompt", ({ enumerable: true, get: function () { return check_progress_2.getCheckProgressPrompt; } }));
-var check_comment_language_2 = __nccwpck_require__(3425);
+var check_comment_language_2 = __nccwpck_require__(6156);
 Object.defineProperty(exports, "getAdaptCommentLanguagePrompt", ({ enumerable: true, get: function () { return check_comment_language_2.getAdaptCommentLanguagePrompt; } }));
-var cli_do_2 = __nccwpck_require__(2506);
+var cli_do_2 = __nccwpck_require__(5911);
 Object.defineProperty(exports, "getCliDoPrompt", ({ enumerable: true, get: function () { return cli_do_2.getCliDoPrompt; } }));
-var bugbot_2 = __nccwpck_require__(6998);
+var bugbot_2 = __nccwpck_require__(7685);
 Object.defineProperty(exports, "getBugbotPrompt", ({ enumerable: true, get: function () { return bugbot_2.getBugbotPrompt; } }));
-var bugbot_fix_2 = __nccwpck_require__(7925);
+var bugbot_fix_2 = __nccwpck_require__(3787);
 Object.defineProperty(exports, "getBugbotFixPrompt", ({ enumerable: true, get: function () { return bugbot_fix_2.getBugbotFixPrompt; } }));
-var bugbot_fix_intent_2 = __nccwpck_require__(399);
+var bugbot_fix_intent_2 = __nccwpck_require__(6434);
 Object.defineProperty(exports, "getBugbotFixIntentPrompt", ({ enumerable: true, get: function () { return bugbot_fix_intent_2.getBugbotFixIntentPrompt; } }));
 /** Known prompt names for getPrompt() */
 exports.PROMPT_NAMES = {
@@ -7007,7 +7007,7 @@ function getPrompt(name, params) {
 
 /***/ }),
 
-/***/ 9039:
+/***/ 4756:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -7016,7 +7016,7 @@ exports.getRecommendStepsPrompt = getRecommendStepsPrompt;
 /**
  * Prompt for recommending implementation steps from an issue (RecommendStepsUseCase).
  */
-const fill_1 = __nccwpck_require__(2559);
+const fill_1 = __nccwpck_require__(1138);
 const TEMPLATE = `Based on the following issue description, produce a concise implementation plan. Return three to eight logically ordered steps (for example: contract, implementation, tests, and documentation). Each step needs a short action title and zero to two brief supporting details. Add one specific, verifiable acceptance criterion for the whole plan.
 
 Write every human-readable field in {{targetLocale}}. Preserve code identifiers, repository-relative paths, refs, and commands verbatim. Do not write Markdown or headings inside fields; the product owns presentation. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
@@ -7055,7 +7055,7 @@ function previousRecommendationInstruction(format) {
 
 /***/ }),
 
-/***/ 3146:
+/***/ 4386:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -7064,7 +7064,7 @@ exports.getThinkPrompt = getThinkPrompt;
 /**
  * Prompt for the Think use case (answer to @mention in issue/PR comment).
  */
-const fill_1 = __nccwpck_require__(2559);
+const fill_1 = __nccwpck_require__(1138);
 const COMMAND_TASKS = new Map([
     ['explain', 'Explain the file, symbol or behavior named in the current command arguments. Inspect the requested repository files when accessible. If you cannot inspect them, state that limitation instead of answering a different question.'],
     ['diagnose', 'Investigate the failure described in the current command arguments. Connect available evidence to likely causes and concrete recovery steps; distinguish verified facts from hypotheses.'],
@@ -7094,7 +7094,7 @@ function getThinkPrompt(params) {
 
 /***/ }),
 
-/***/ 63:
+/***/ 2976:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -7103,7 +7103,7 @@ exports.getUpdatePullRequestDescriptionPrompt = getUpdatePullRequestDescriptionP
 /**
  * Prompt for generating a concise PR description from an optional issue and the diff.
  */
-const fill_1 = __nccwpck_require__(2559);
+const fill_1 = __nccwpck_require__(1138);
 const TEMPLATE = `You are in the repository workspace. Your task is to write a concise, review-ready pull request description from the branch diff and any linked issue.
 
 Write every human-readable sentence in {{targetLocale}}. Preserve code identifiers, paths, refs, commands, URLs, issue/PR references, and conventional title prefixes verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
@@ -7152,7 +7152,7 @@ function getUpdatePullRequestDescriptionPrompt(params) {
 
 /***/ }),
 
-/***/ 3103:
+/***/ 9631:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -7161,7 +7161,7 @@ exports.getUserRequestPrompt = getUserRequestPrompt;
 /**
  * Prompt for the Do user request use case (generic "do this" in repo).
  */
-const fill_1 = __nccwpck_require__(2559);
+const fill_1 = __nccwpck_require__(1138);
 const TEMPLATE = `You are in the repository workspace. The user has asked you to do something. Perform their request by editing files and running commands directly in the workspace. Do not output diffs for someone else to apply.
 
 {{projectContextInstruction}}
@@ -7187,7 +7187,7 @@ function getUserRequestPrompt(params) {
 
 /***/ }),
 
-/***/ 3550:
+/***/ 3766:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -7416,7 +7416,7 @@ function round(value) {
 
 /***/ }),
 
-/***/ 2899:
+/***/ 8608:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -7425,7 +7425,7 @@ exports.loadBugbotBenchmark = loadBugbotBenchmark;
 exports.loadBugbotPredictions = loadBugbotPredictions;
 exports.evaluateBugbotBenchmark = evaluateBugbotBenchmark;
 const promises_1 = __nccwpck_require__(3977);
-const bugbot_quality_eval_1 = __nccwpck_require__(5467);
+const bugbot_quality_eval_1 = __nccwpck_require__(1577);
 async function loadBugbotBenchmark(path) {
     const parsed = JSON.parse(await (0, promises_1.readFile)(path, 'utf8'));
     if (!isRecord(parsed) || parsed.schemaVersion !== 1 || !Array.isArray(parsed.cases)) {
@@ -7516,7 +7516,7 @@ function isRecord(value) {
 
 /***/ }),
 
-/***/ 5467:
+/***/ 1577:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -7524,7 +7524,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DEFAULT_BUGBOT_QUALITY_THRESHOLDS = void 0;
 exports.evaluateBugbotFindings = evaluateBugbotFindings;
 exports.evaluateBugbotQualityGate = evaluateBugbotQualityGate;
-const finding_identity_1 = __nccwpck_require__(1853);
+const finding_identity_1 = __nccwpck_require__(9248);
 exports.DEFAULT_BUGBOT_QUALITY_THRESHOLDS = {
     precision: 0.9,
     recall: 0.85,
@@ -7632,7 +7632,7 @@ function format(value) {
 
 /***/ }),
 
-/***/ 3907:
+/***/ 5527:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -7651,7 +7651,7 @@ exports.COPILOT_ISSUE_WORKFLOW_INSTRUCTION = `Trusted Copilot issue workflow fac
 
 /***/ }),
 
-/***/ 254:
+/***/ 1978:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -7679,7 +7679,7 @@ function redactKnownEnvironmentSecrets(value, environment = process.env) {
 
 /***/ }),
 
-/***/ 6103:
+/***/ 8353:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -7814,11 +7814,11 @@ var exports = __webpack_exports__;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.buildBugbotReviewProjection = exports.isBugbotCleanState = exports.isBugbotActionableState = exports.countBugbotFindingStates = exports.countActionableBugbotFindings = exports.classifyBugbotFindingState = exports.BUGBOT_FINDING_STATES = exports.resolveBugbotReviewEffort = exports.normalizeBugbotReviewConfiguration = exports.buildFindingFingerprint = exports.buildSemanticFindingFingerprint = exports.parseBugbotTelemetry = exports.buildBugbotAnalytics = exports.loadBugbotPredictions = exports.loadBugbotBenchmark = exports.evaluateBugbotBenchmark = exports.evaluateBugbotQualityGate = exports.evaluateBugbotFindings = exports.BugbotReviewService = void 0;
-const detect_potential_problems_use_case_1 = __nccwpck_require__(6287);
-const application_error_1 = __nccwpck_require__(5999);
-const application_error_context_1 = __nccwpck_require__(4034);
-const review_configuration_1 = __nccwpck_require__(3994);
-const locale_1 = __nccwpck_require__(5386);
+const detect_potential_problems_use_case_1 = __nccwpck_require__(9827);
+const application_error_1 = __nccwpck_require__(1889);
+const application_error_context_1 = __nccwpck_require__(8040);
+const review_configuration_1 = __nccwpck_require__(8595);
+const locale_1 = __nccwpck_require__(2028);
 /** Provider-neutral programmatic entry point. Consumers supply agent and SCM adapters. */
 class BugbotReviewService {
     constructor(agent, scm, catalogResolver) {
@@ -8035,32 +8035,32 @@ function requireText(value, field, maximum) {
     }
     return normalized;
 }
-var bugbot_quality_eval_1 = __nccwpck_require__(5467);
+var bugbot_quality_eval_1 = __nccwpck_require__(1577);
 Object.defineProperty(exports, "evaluateBugbotFindings", ({ enumerable: true, get: function () { return bugbot_quality_eval_1.evaluateBugbotFindings; } }));
 Object.defineProperty(exports, "evaluateBugbotQualityGate", ({ enumerable: true, get: function () { return bugbot_quality_eval_1.evaluateBugbotQualityGate; } }));
-var bugbot_benchmark_1 = __nccwpck_require__(2899);
+var bugbot_benchmark_1 = __nccwpck_require__(8608);
 Object.defineProperty(exports, "evaluateBugbotBenchmark", ({ enumerable: true, get: function () { return bugbot_benchmark_1.evaluateBugbotBenchmark; } }));
 Object.defineProperty(exports, "loadBugbotBenchmark", ({ enumerable: true, get: function () { return bugbot_benchmark_1.loadBugbotBenchmark; } }));
 Object.defineProperty(exports, "loadBugbotPredictions", ({ enumerable: true, get: function () { return bugbot_benchmark_1.loadBugbotPredictions; } }));
-var bugbot_analytics_1 = __nccwpck_require__(3550);
+var bugbot_analytics_1 = __nccwpck_require__(3766);
 Object.defineProperty(exports, "buildBugbotAnalytics", ({ enumerable: true, get: function () { return bugbot_analytics_1.buildBugbotAnalytics; } }));
 Object.defineProperty(exports, "parseBugbotTelemetry", ({ enumerable: true, get: function () { return bugbot_analytics_1.parseBugbotTelemetry; } }));
-var finding_identity_1 = __nccwpck_require__(1853);
+var finding_identity_1 = __nccwpck_require__(9248);
 Object.defineProperty(exports, "buildSemanticFindingFingerprint", ({ enumerable: true, get: function () { return finding_identity_1.buildSemanticFindingFingerprint; } }));
 Object.defineProperty(exports, "buildFindingFingerprint", ({ enumerable: true, get: function () { return finding_identity_1.buildFindingFingerprint; } }));
-var review_configuration_2 = __nccwpck_require__(3994);
+var review_configuration_2 = __nccwpck_require__(8595);
 Object.defineProperty(exports, "normalizeBugbotReviewConfiguration", ({ enumerable: true, get: function () { return review_configuration_2.normalizeBugbotReviewConfiguration; } }));
 Object.defineProperty(exports, "resolveBugbotReviewEffort", ({ enumerable: true, get: function () { return review_configuration_2.resolveBugbotReviewEffort; } }));
-var review_state_1 = __nccwpck_require__(9200);
+var review_state_1 = __nccwpck_require__(7220);
 Object.defineProperty(exports, "BUGBOT_FINDING_STATES", ({ enumerable: true, get: function () { return review_state_1.BUGBOT_FINDING_STATES; } }));
 Object.defineProperty(exports, "classifyBugbotFindingState", ({ enumerable: true, get: function () { return review_state_1.classifyBugbotFindingState; } }));
 Object.defineProperty(exports, "countActionableBugbotFindings", ({ enumerable: true, get: function () { return review_state_1.countActionableBugbotFindings; } }));
 Object.defineProperty(exports, "countBugbotFindingStates", ({ enumerable: true, get: function () { return review_state_1.countBugbotFindingStates; } }));
 Object.defineProperty(exports, "isBugbotActionableState", ({ enumerable: true, get: function () { return review_state_1.isBugbotActionableState; } }));
 Object.defineProperty(exports, "isBugbotCleanState", ({ enumerable: true, get: function () { return review_state_1.isBugbotCleanState; } }));
-var review_projection_1 = __nccwpck_require__(859);
+var review_projection_1 = __nccwpck_require__(5952);
 Object.defineProperty(exports, "buildBugbotReviewProjection", ({ enumerable: true, get: function () { return review_projection_1.buildBugbotReviewProjection; } }));
-var application_error_2 = __nccwpck_require__(5999);
+var application_error_2 = __nccwpck_require__(1889);
 Object.defineProperty(exports, "ApplicationError", ({ enumerable: true, get: function () { return application_error_2.ApplicationError; } }));
 
 })();

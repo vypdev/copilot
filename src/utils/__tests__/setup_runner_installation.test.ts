@@ -75,7 +75,7 @@ describe('installation parity and reviewed migration', () => {
     writeFileSync(join(setup, 'workflows/custom.yaml'), workflow('  custom:\n    runs-on: ubuntu-latest\n'));
     writeFileSync(join(setup, 'workflows/README.md'), 'not a workflow');
     const review = inspectSetupInstallation(root, createDefaultSetupConfiguration(), setup);
-    expect(review.changes.map(change => change.path)).toEqual(['.github/workflows/custom.yaml']);
+    expect(review.changes.map(change => change.path)).toEqual(['.github/actions/copilot-verification-setup/action.yml', '.github/workflows/custom.yaml']);
     expect(review.jobs).toHaveLength(1);
   });
   test('legacy configurations retain customized managed routing and a compatible existing snapshot', () => {
@@ -88,7 +88,7 @@ describe('installation parity and reviewed migration', () => {
     expect(review.assets.find(asset => asset.path === '.github/workflows/copilot_issue.yml')?.status).toBe('customized');
     expect(review.assets.find(asset => asset.path === SETUP_RUNNER_SNAPSHOT)?.status).toBe('shared');
     expect(review.jobs[0]).toMatchObject({ runsOn: ['self-hosted', 'legacy', 'Linux'], retained: true });
-    expect(review.changes).toEqual([]); expect(readFileSync(join(root, SETUP_RUNNER_SNAPSHOT), 'utf8')).toBe(snapshot);
+    expect(review.changes).toEqual([expect.objectContaining({ path: '.github/actions/copilot-verification-setup/action.yml', before: null })]); expect(readFileSync(join(root, SETUP_RUNNER_SNAPSHOT), 'utf8')).toBe(snapshot);
   });
   test('an explicit hosted replacement reviews a compatible old self-hosted snapshot without changing it', () => {
     const before = renderSetupRunnerSnapshot(configuration())!; write(SETUP_RUNNER_SNAPSHOT, before);
