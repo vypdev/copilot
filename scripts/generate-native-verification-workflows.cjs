@@ -11,6 +11,7 @@ const SELF_ACTION = '$/';
 const SECRET_NAMES = ['PAT', 'OPENCODE_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'GOOGLE_API_KEY', 'OPENROUTER_API_KEY', 'CURSOR_API_KEY', 'CODEX_API_KEY'];
 const BINDINGS = require('../src/infrastructure/copilot_comment_inputs.json');
 const expr = value => '${{ ' + value + ' }}';
+const CURSOR_SECRET = expr("(vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || ''");
 
 function phaseSteps(action, inputAlias = 'copilot-inputs', id = 'copilot') {
   const steps = [];
@@ -53,7 +54,7 @@ function commentWorkflow(file, source = false) {
       permissions: { checks: 'write', contents: 'read' },
       with: { 'runs-on': JSON.stringify(source ? ['self-hosted', 'codex', 'Linux'] : 'ubuntu-latest'),
         ...(source ? { 'issue-managed-branches': 'true', 'pre-branch-sdd': 'true', 'ai-ignore-files': 'build/*,specs/CATALOG.md', 'prepare-source-verification': true } : {}) },
-      secrets: Object.fromEntries(SECRET_NAMES.map(name => [name, expr(`secrets.${name}`)])),
+      secrets: Object.fromEntries(SECRET_NAMES.map(name => [name, name === 'CURSOR_API_KEY' ? CURSOR_SECRET : expr(`secrets.${name}`)])),
     } },
   };
 }
@@ -70,7 +71,7 @@ function runtimeWorkflow() {
       AGENT_ALLOWED_MODELS: expr("vars.AGENT_ALLOWED_MODELS || 'openai/gpt-6-luna'"),
       ...Object.fromEntries(SECRET_NAMES.filter(name => name !== 'PAT').map(name => [name, expr('secrets.' + name)])),
       COPILOT_EVIDENCE_TOKEN: expr('github.token') } };
-  initial.env.CURSOR_API_KEY = expr("(vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || ''");
+  initial.env.CURSOR_API_KEY = CURSOR_SECRET;
   const preparation = "env.COPILOT_PREPARE_VERIFICATION == 'true'";
   const steps = [
     { name: 'Checkout Repository', uses: 'actions/checkout@v5', with: { 'persist-credentials': false, 'fetch-depth': 0 } },

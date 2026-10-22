@@ -3,6 +3,13 @@ import { join } from 'node:path';
 import { prepareUntrustedCommandEnvironment } from '../untrusted_command_environment';
 
 describe('prepareUntrustedCommandEnvironment', () => {
+    it('does not pass trusted worker or GitHub file-command channels to repository commands', () => {
+        const channels = ['GITHUB_OUTPUT', 'GITHUB_ENV', 'GITHUB_PATH', 'GITHUB_STEP_SUMMARY', 'COPILOT_NATIVE_WORKER_SESSION'];
+        const runtime = prepareUntrustedCommandEnvironment(Object.fromEntries(channels.map(name => [name, '/private/trusted-channel'])));
+        try {
+            for (const name of channels) expect(runtime.environment).not.toHaveProperty(name);
+        } finally { runtime.cleanup(); }
+    });
     it('keeps nested temporary work inside the isolated profile and removes it with that profile', () => {
         const runtime = prepareUntrustedCommandEnvironment({ TMP: 'host-temp', TEMP: 'host-temp', TMPDIR: 'host-temp', RUNNER_TEMP: 'host-runner' });
         const home = runtime.environment.HOME;

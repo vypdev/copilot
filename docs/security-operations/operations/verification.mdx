@@ -305,8 +305,10 @@ are not forwarded to verification. Use complete executable paths or supported
 runtime directories when a tool needs additional environment configuration.
 
 Copilot's PAT, provider/model inputs, agent auth stores and evidence token are not
-passed to the consumer action or verifier. The native runner and external actions
-retain normal GitHub Actions facilities and the job's scoped `GITHUB_TOKEN` context.
+passed to the consumer action or verifier. The Cursor API key retains its provider
+condition both before the reusable-workflow call and before entering the initial
+Copilot step. The native runner and external actions retain normal GitHub Actions
+facilities and the job's scoped `GITHUB_TOKEN` context.
 This is the existing trusted-runner boundary, not an OS sandbox against malicious
 maintainer code or service-level credentials. Review setup as executable code and
 avoid printing secrets. Agent credential profiles close before verification.
@@ -339,6 +341,9 @@ If a runner crash leaves an unknown reserved staging directory, preparation fail
 closed rather than overwriting it. Confirm the prior job has stopped, inspect its
 run, and remove only that stale `.git/copilot-verification-setup` directory before
 retrying. Normal completion/cancellation uses the Action post cleanup.
+Invalid session handoffs fail closed. An invocation removes only the setup request
+it created after validating the session; rejection before that point leaves
+preexisting request files untouched.
 
 Native composite execution is available in the generated **GitHub Actions**
 callbacks. The local CLI cannot execute `uses` steps: opted-in local verification

@@ -177,6 +177,7 @@ function validatePaths(source: string, inventory: SddRepositoryInventory, sddPat
     seen.add(file);
     if (change === 'create') {
       if (inventory.files.has(file) || inventory.directories.has(file)) fail('repository-path');
+      if ([...proposed].some(other => file.startsWith(`${other}/`) || other.startsWith(`${file}/`))) fail('repository-path');
       const segments = file.split('/');
       if (segments.some((_, index) => inventory.files.has(segments.slice(0, index + 1).join('/')) || inventory.blocked.has(segments.slice(0, index + 1).join('/')))) fail('repository-path');
       proposed.add(file);

@@ -20,6 +20,16 @@ describe('encapsulated native verification workflow contract', () => {
             expect(job.steps).toBeUndefined(); expect(job.env).toBeUndefined();
             expect(job.secrets.PAT).toBe('${{ secrets.PAT }}');
         });
+    it.each(['.github/workflows', 'setup/workflows'].flatMap(directory => ['copilot_issue_comment.yml', 'copilot_pull_request_comment.yml'].map(name => [directory, name])))(
+        'grants the Cursor secret only to selected providers in %s/%s', (directory, name) => {
+            const { file, workflow } = read(directory, name);
+            const job = Object.values(workflow.jobs)[0] as any;
+            const gate = "${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || '' }}";
+            expect(job.secrets.CURSOR_API_KEY).toBe(gate);
+            expect(runtimeWorkflow().jobs.copilot.steps.find((step: any) => step.id === 'copilot').env.CURSOR_API_KEY).toBe(gate);
+            job.secrets.CURSOR_API_KEY = '${{ secrets.CURSOR_API_KEY }}';
+            expect(() => assertNativeVerificationWorkflow(file, workflow)).toThrow(/native/u);
+        });
     it('parses the single central native workflow including shared input anchors', () => {
         const { file, workflow } = read('.github/workflows', RUNTIME);
         expect(workflow).toEqual(runtimeWorkflow());

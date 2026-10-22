@@ -906,3 +906,36 @@ catalog evidence and generated catalog. The implementation sequence is closed
 facts/reader, final boundary and localization, adapter mapping, deterministic
 tests, docs/catalog, then validation. Done requires all acceptance rows to pass,
 generated evidence to be current and strict rejection to remain intact.
+
+### Literal configuration marker mentions: release review #660 (2026-10-21)
+
+Finding 4342237487 exposed a false configuration error for an ordinary mention
+of one delimiter. The description-format adapter MUST distinguish such prose,
+inline/indented quotes and closed, unpaired code examples from actual state.
+Actual delimiters begin a line with at most three spaces. A complete legacy
+record inside a code fence MUST retain strict parsing, not become absent: this
+preserves the previous reader's state ownership and existing recovery guidance.
+Multiple complete records, incomplete actual delimiters and potential state
+behind an unclosed fence MUST fail closed without provider writes or state loss.
+JSON backticks, CRLF records and single-line records beginning a line remain
+supported. No payload schema, permission, locale, setting or reset is added.
+
+Both reading and persistence MUST use the same description-format policy in
+src/manager/description/configuration_markers.ts. A first write appends state
+after literal mentions without altering the human prefix; it closes a dangling
+code example with no existing record before appending owned metadata. An update
+replaces only the verified owned span. Generic non-configuration content blocks
+retain their existing adapter. The existing configuration.invalid diagnosis,
+nonretryability and maintainer recovery UI apply to ambiguous state. Rollback
+selects the prior reader while preserving description history and state.
+
+The additional floor is **21 distinct cases** in configuration_recovery.test.ts:
+nine ordinary mention/unpaired fence variants, six legacy/format/selection
+boundaries, three actual malformed/duplicate/ambiguous-state guards and three
+write/read preservation journeys. Every rejection asserts no provider write;
+write cases preserve the original human text and read the resulting supported
+state. Changed format policy targets at least 95% lines and 90% branches, with
+the existing global quality gates unchanged. These tests establish this format
+boundary rather than provider runtime readiness. Update troubleshooting, catalog
+evidence and generated catalog, then pass focused/full tests, type/lint,
+documentation/specification checks and rebuilt package gates before release.

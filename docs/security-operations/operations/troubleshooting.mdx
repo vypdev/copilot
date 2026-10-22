@@ -563,6 +563,14 @@ will fail again. The failed read does not change the body or stored state.
 | Missing schema, unsupported version, malformed JSON/value or incomplete delimiters | Stored state cannot be trusted | A maintainer must review it before retrying. |
 | Valid current-schema block | Supported state | Continue through normal validation; this is not a reset instruction. |
 
+An ordinary inline mention or closed code example containing only an opening or
+closing marker is not stored state and does not cause a configuration error.
+Complete legacy blocks inside code fences still undergo strict validation;
+avoid reproducing complete live delimiter pairs in examples. Multiple complete
+blocks or potential state behind an unclosed fence require maintainer review,
+so Copilot never silently discards one record or chooses between conflicting
+records. Reads and updates preserve the human description around the owned block.
+
 Recovery is manual and depends on what the block owns:
 
 1. Preserve the original body using GitHub history or a copy before editing.

@@ -5,6 +5,7 @@ import { logError } from "../../utils/logger";
 import { IssueContentInterface } from "./base/issue_content_interface";
 import { buildConfigurationPayload } from './configuration_payload_policy';
 import { toApplicationError, type ApplicationErrorRecovery } from '../../application/errors/application_error';
+import { readConfigurationBlock, writeConfigurationBlock } from './configuration_markers';
 
 
 export class ConfigurationHandler extends IssueContentInterface {
@@ -15,6 +16,18 @@ export class ConfigurationHandler extends IssueContentInterface {
     get visibleContent(): boolean {
         return false;
     }
+
+    override getContent = (description: string | undefined): string | undefined => {
+        const block = readConfigurationBlock(description);
+        return block.kind === 'present' ? block.content : undefined;
+    };
+
+    override updateContent = (description: string | undefined, content: string | undefined): string | undefined => {
+        if (description === undefined || content === undefined) return undefined;
+        const updated = writeConfigurationBlock(description, content);
+        if (updated === undefined) logError('The content has a problem with open-close tags: stored configuration.');
+        return updated;
+    };
 
     update = async (query: ExecutionConfigurationQuery, context: ConfigurationPersistenceContext) => {
         const storedRaw = await this.internalGetter(query);
@@ -41,8 +54,7 @@ export class ConfigurationHandler extends IssueContentInterface {
         try {
             const config = this.getContent(description);
             if (config === undefined) {
-                if (description?.includes('<!-- copilot-configuration-start')
-                    || description?.includes('copilot-configuration-end -->')) {
+                if (readConfigurationBlock(description).kind === 'invalid') {
                     throw new Error('Stored configuration markers are inconsistent.');
                 }
                 return undefined;

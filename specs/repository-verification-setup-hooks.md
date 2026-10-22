@@ -63,7 +63,7 @@ The **trusted source** is the configured main/production remote branch captured 
 
 ### 4.2 Non-goals
 
-Reusable workflows, job matrices owned by the consumer hook, YAML emulation, local Actions emulation, arbitrary helper paths and release/deployment changes are out of scope.
+Consumer-owned reusable workflows and job matrices inside the dependency hook, YAML emulation, local Actions emulation, arbitrary helper paths and release/deployment changes are out of scope. The Copilot-owned reusable coordinator is in scope and retains the complete operation and native setup in one job.
 
 ### 4.3 Fixed product/safety invariants
 
@@ -105,12 +105,18 @@ Text equivalent: Copilot prepares the candidate, pauses, the runner executes tru
 1. Composition MUST capture immutable trusted Git objects before candidate mutation. The action directory is limited to 32 regular files, 64 KiB per file and 256 KiB total. Its root metadata MUST be `action.yml`, valid composite YAML with 1–32 steps. Asset paths MUST use portable ASCII letters/digits/underscore/dot/dash/slash, at most 200 characters, without empty/parent segments or Windows reserved names. Symlinks, submodules, unsafe paths and nested local `uses` actions are rejected. Native external actions and reviewed auxiliary scripts are supported.
 2. At the existing verifier boundary, a private same-job worker MUST retain the admitted call stack. Generated workflows do not rerun the full operation to continue it.
 3. The worker MUST bind HEAD, symbolic branch, index, tracked changes and publishable untracked contents. Git observations are bounded to 16 MiB, 256 untracked files and 16 MiB aggregate untracked contents; oversized candidates fail closed. Ignored dependency caches are excluded.
-4. The trusted snapshot MUST be staged at the reserved local metadata path `.git/copilot-verification-setup`, outside publishable candidate files. Native execution requires the normal directory-based `.git` checkout produced by generated `actions/checkout` steps. The candidate's consumer action directory MUST never be rewritten. Staging MUST persist until native post steps finish. Runner state MUST retain the initial source SHA and digest of all captured file paths, bytes and modes. Before each composite post phase, a trusted Copilot post step MUST use its initially pinned absolute Git executable to restore that exact snapshot from Git objects at the pinned SHA and verify the saved digest, never a moved branch or candidate file. An unknown preexisting staging directory MUST fail closed without being overwritten.
+4. The trusted snapshot MUST be staged at the reserved local metadata path `.git/copilot-verification-setup`, outside publishable candidate files. Native execution requires the normal directory-based `.git` checkout produced by generated `actions/checkout` steps. The candidate's consumer action directory MUST never be rewritten. Staging MUST persist until native post steps finish. Runner state MUST retain the initial source SHA and digest of all captured file paths, bytes and modes. Before each runner-managed aggregate composite post phase, a trusted Copilot post step MUST use its initially pinned absolute Git executable to restore that exact snapshot from Git objects at the pinned SHA and verify the saved digest, never a moved branch or candidate file. This aggregate phase contains the nested actions' post hooks; it is not a composite YAML `post` key or a restoration between individual nested hooks. An unknown preexisting staging directory MUST fail closed without being overwritten.
 5. The continuation MUST match the session, current request, run, attempt, job and workspace. Duplicate/stale responses fail closed. The candidate identity MUST still match.
 6. Only new existing PATH directories within the workspace, private HOME or trusted tool cache, and an approved JAVA_HOME, MAY reach the verifier. The existing closed 16-KiB result validation and eight-directory ceiling remain in force.
 7. Runtime preflight and the configured command MUST execute in that same fresh environment. Basename resolution MUST use its validated PATH, preserving virtual-environment invocation paths rather than the worker PATH or canonical binary target. Subsequent commands repeat setup with a new HOME and the current manifests.
 
 ### 6.2 Alternative paths
+
+GitHub's [accepted runner lifecycle ADR](https://github.com/actions/runner/blob/main/docs/adrs/1144-composite-actions.md#prepost-steps-in-nested-actions)
+defines the aggregate post step and reverse ordering used above. The trusted
+worker output channel belongs to Copilot; repository verification processes
+receive the closed environment without GitHub file-command or worker-session
+paths. Same-user filesystem access remains the explicit §11 operator boundary.
 
 Disabled setup preserves existing behavior. Enabled setup without native workflow support, including local CLI verification, MUST fail closed with an explanation to update workflows and run in GitHub Actions. Snapshot errors are deferred on routes that do not verify. No automatic setup retry or shared readiness cache is permitted.
 
@@ -196,11 +202,13 @@ Existing localized result cards and plain-text error fallback remain in force. N
 | Invalid runtime output | No verifier/push; install under approved roots | Fresh HOME disposed |
 | Job canceled/worker exits | No new publication; inspect retained operation result | Post action signals cancellation, waits up to 10 seconds, terminates remaining worker and cleans owned staging after native posts |
 
+Request cleanup MUST run only after the invocation validates its native session and successfully publishes its own request. Invalid session paths or identity, and failures before request creation, MUST leave preexisting request files untouched. Successful and failed continuations MUST remove their owned request. Three distinct rejection regressions cover invalid path, invalid identity and failure before request creation; existing success/failure cases assert owned cleanup.
+
 Native setup steps have `timeout-minutes: 5`; the worker also rejects readiness after 300 seconds. The enclosing existing job timeout remains authoritative. A force-killed worker cannot promise application finally blocks ran: the Action cleans its own staging, and normal runner checkout cleanup/operator recovery owns remaining job-local candidate state. Already-completed remote effects MUST retain their existing truthful result semantics.
 
 ## 11. Security, permissions, and privacy
 
-Native setup receives only runtime metadata from the private verifier environment, never Copilot's PAT/model inputs or evidence token. Callers MUST explicitly forward the existing named Secrets to the reusable workflow; unrestricted `secrets: inherit` is not generated. The coordinator MUST keep provider secrets scoped to the initial Copilot Action step, not the job or consumer action. Checkout credentials remain unpersisted. Native actions can use runner facilities required for normal Actions execution; they are reviewed executable maintainer code.
+Native setup receives only runtime metadata from the private verifier environment, never Copilot's PAT/model inputs or evidence token. Callers MUST explicitly forward the existing named Secrets to the reusable workflow; unrestricted `secrets: inherit` is not generated. The existing Cursor provider condition MUST apply both to the caller's Secret grant and the initial Action environment: only the default provider or findings/fixer/planner/reviewer/tester role selecting Cursor may forward that key. The coordinator MUST keep provider secrets scoped to the initial Copilot Action step, not the job or consumer action. Checkout credentials remain unpersisted. Native actions can use runner facilities required for normal Actions execution; they are reviewed executable maintainer code.
 
 This preserves the trusted-runner boundary and makes no OS-sandbox claim: same-user processes and service-level credentials remain an operator trust concern. PATH/JAVA_HOME are validated after setup; arbitrary `GITHUB_ENV` keys do not enter the verifier. Native external action versions and dependency caches are maintained by the repository owner. Nested local `uses` is excluded because its deferred post scripts could otherwise refer to candidate assets outside the trusted staging tree.
 
@@ -223,7 +231,7 @@ Existing installations remain disabled by default. The unreleased `.copilot/veri
 
 ## 14. Testing strategy and numeric budget
 
-Minimum **190 distinct automated cases**, allocated without double counting:
+Minimum **193 distinct automated cases**, allocated without double counting:
 
 | Area | Minimum | Risk |
 |---|---:|---|
@@ -233,8 +241,8 @@ Minimum **190 distinct automated cases**, allocated without double counting:
 | Candidate/runner orchestration | 24 | Ordering, fresh profiles, candidate identity, failure gates |
 | Workflows/setup contracts | 58 | Native step structure, env, limits, source/distribution, preservation |
 | Real Git/composition integration | 8 | Exact managed ref, merge manifests, abort/push guards |
-| Runtime result filesystem security | 12 | Bounds, links, containment, races, owned staging |
-| **Total** | **190** | Native rewrite adds at least 70 cases beyond retained applicable baseline |
+| Runtime result filesystem security | 15 | Bounds, links, containment, races, owned staging and three early-rejection request ownership cases |
+| **Total** | **193** | Native rewrite adds at least 70 cases beyond retained applicable baseline; release review adds three ownership cases |
 
 Repository-wide thresholds remain in force. New pure policy targets 100% branches; changed setup adapters target aggregate 95% lines/statements and 90% branches/functions. Deterministic unit fakes cover runner responses without interpreting YAML. Separate native CI acceptance MUST execute real composite `uses`/`run` steps with Python/pytest and Node/pnpm on hosted Linux, Windows and macOS, asserting candidate changes, trusted-source selection, fresh profiles candidate preservation, source-runtime immutability even after candidate bundle changes, and final post cleanup. Controlled local Git acceptance covers the exact same managed branch and no release. Native CI evidence is additional to the distinct Jest budget.
 
@@ -288,7 +296,7 @@ Repository-wide thresholds remain in force. New pure policy targets 100% branche
 
 ## 20. References and decisions
 
-The maintainer selected the composite approach in the task on 2026-10-21. [Issue decision record](https://github.com/vypdev/copilot/issues/647#issuecomment-6318551564). Related contracts: `branch-synchronization`, repository verification prerequisites and the shared automated commit pipeline in the specification catalog. A reusable workflow and a Node ESM helper were rejected for this delivery; no second execution mode is retained.
+The maintainer selected the consumer-owned composite dependency action on 2026-10-21. [Issue decision record](https://github.com/vypdev/copilot/issues/647#issuecomment-6318551564). Consumer-owned reusable dependency workflows and the Node ESM helper were rejected. On 2026-10-22 the maintainer selected the Copilot-owned reusable coordinator in §20.1; it executes that same composite hook in one job, without adding a second dependency execution mode. Related contracts: `branch-synchronization`, repository verification prerequisites and the shared automated commit pipeline in the specification catalog.
 
 
 ### 20.1 Central comment coordinator — issue #662
