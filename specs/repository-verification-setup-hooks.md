@@ -63,7 +63,7 @@ The **trusted source** is the configured main/production remote branch captured 
 
 ### 4.2 Non-goals
 
-Reusable workflows, job matrices owned by the consumer hook, YAML emulation, local Actions emulation, arbitrary helper paths and release/deployment changes are out of scope.
+Consumer-owned reusable workflows and job matrices inside the dependency hook, YAML emulation, local Actions emulation, arbitrary helper paths and release/deployment changes are out of scope. The Copilot-owned reusable coordinator is in scope and retains the complete operation and native setup in one job.
 
 ### 4.3 Fixed product/safety invariants
 
@@ -202,6 +202,8 @@ Existing localized result cards and plain-text error fallback remain in force. N
 | Invalid runtime output | No verifier/push; install under approved roots | Fresh HOME disposed |
 | Job canceled/worker exits | No new publication; inspect retained operation result | Post action signals cancellation, waits up to 10 seconds, terminates remaining worker and cleans owned staging after native posts |
 
+Request cleanup MUST run only after the invocation validates its native session and successfully publishes its own request. Invalid session paths or identity, and failures before request creation, MUST leave preexisting request files untouched. Successful and failed continuations MUST remove their owned request. Three distinct rejection regressions cover invalid path, invalid identity and failure before request creation; existing success/failure cases assert owned cleanup.
+
 Native setup steps have `timeout-minutes: 5`; the worker also rejects readiness after 300 seconds. The enclosing existing job timeout remains authoritative. A force-killed worker cannot promise application finally blocks ran: the Action cleans its own staging, and normal runner checkout cleanup/operator recovery owns remaining job-local candidate state. Already-completed remote effects MUST retain their existing truthful result semantics.
 
 ## 11. Security, permissions, and privacy
@@ -229,7 +231,7 @@ Existing installations remain disabled by default. The unreleased `.copilot/veri
 
 ## 14. Testing strategy and numeric budget
 
-Minimum **190 distinct automated cases**, allocated without double counting:
+Minimum **193 distinct automated cases**, allocated without double counting:
 
 | Area | Minimum | Risk |
 |---|---:|---|
@@ -239,8 +241,8 @@ Minimum **190 distinct automated cases**, allocated without double counting:
 | Candidate/runner orchestration | 24 | Ordering, fresh profiles, candidate identity, failure gates |
 | Workflows/setup contracts | 58 | Native step structure, env, limits, source/distribution, preservation |
 | Real Git/composition integration | 8 | Exact managed ref, merge manifests, abort/push guards |
-| Runtime result filesystem security | 12 | Bounds, links, containment, races, owned staging |
-| **Total** | **190** | Native rewrite adds at least 70 cases beyond retained applicable baseline |
+| Runtime result filesystem security | 15 | Bounds, links, containment, races, owned staging and three early-rejection request ownership cases |
+| **Total** | **193** | Native rewrite adds at least 70 cases beyond retained applicable baseline; release review adds three ownership cases |
 
 Repository-wide thresholds remain in force. New pure policy targets 100% branches; changed setup adapters target aggregate 95% lines/statements and 90% branches/functions. Deterministic unit fakes cover runner responses without interpreting YAML. Separate native CI acceptance MUST execute real composite `uses`/`run` steps with Python/pytest and Node/pnpm on hosted Linux, Windows and macOS, asserting candidate changes, trusted-source selection, fresh profiles candidate preservation, source-runtime immutability even after candidate bundle changes, and final post cleanup. Controlled local Git acceptance covers the exact same managed branch and no release. Native CI evidence is additional to the distinct Jest budget.
 

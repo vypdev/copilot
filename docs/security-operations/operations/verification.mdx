@@ -339,6 +339,9 @@ If a runner crash leaves an unknown reserved staging directory, preparation fail
 closed rather than overwriting it. Confirm the prior job has stopped, inspect its
 run, and remove only that stale `.git/copilot-verification-setup` directory before
 retrying. Normal completion/cancellation uses the Action post cleanup.
+Invalid session handoffs fail closed. An invocation removes only the setup request
+it created after validating the session; rejection before that point leaves
+preexisting request files untouched.
 
 Native composite execution is available in the generated **GitHub Actions**
 callbacks. The local CLI cannot execute `uses` steps: opted-in local verification

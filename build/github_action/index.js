@@ -90619,6 +90619,7 @@ async function prepareRepositoryVerification(setup, environment) {
     const session = process.env.COPILOT_NATIVE_WORKER_SESSION;
     if (!session)
         throw new verification_setup_policy_1.VerificationSetupError('native-workflow-required', setup.sourceSha);
+    let requestCreated = false;
     try {
         (0, native_verification_protocol_1.nativeSession)(session);
         const requests = (0, native_verification_protocol_1.readNativeRecord)(session, 'request-count.json')?.count ?? 0;
@@ -90632,6 +90633,7 @@ async function prepareRepositoryVerification(setup, environment) {
         (0, native_verification_staging_1.stageNativeVerificationAction)(setup, session);
         const id = (0, node_crypto_1.randomUUID)();
         (0, native_verification_protocol_1.writeNativeRecord)(session, 'request.json', { id, sourceSha: setup.sourceSha, digest: (0, verification_setup_snapshot_1.verificationSetupDigest)(setup), environment });
+        requestCreated = true;
         (0, logging_ports_1.logInfo)(`Preparing repository verification (${verification_setup_policy_1.VERIFICATION_SETUP_PATH}; trusted source SHA: ${setup.sourceSha}).`);
         const deadline = Date.now() + verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.timeoutMs;
         let response;
@@ -90665,7 +90667,8 @@ async function prepareRepositoryVerification(setup, environment) {
         throw new verification_setup_policy_1.VerificationSetupError(error instanceof verification_setup_policy_1.VerificationSetupError ? error.reason : 'handoff-invalid', setup.sourceSha);
     }
     finally {
-        (0, node_fs_1.rmSync)((0, node_path_1.join)(session, 'request.json'), { force: true });
+        if (requestCreated)
+            (0, node_fs_1.rmSync)((0, node_path_1.join)(session, 'request.json'), { force: true });
     }
 }
 

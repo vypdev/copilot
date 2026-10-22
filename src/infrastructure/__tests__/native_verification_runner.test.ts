@@ -29,6 +29,18 @@ describe('native verification boundary', () => {
         delete process.env.COPILOT_NATIVE_WORKER_SESSION;
         await expect(prepareRepositoryVerification(f.setup, f.runtime.environment)).rejects.toMatchObject({ reason: 'native-workflow-required' });
     });
+    it.each(['invalid path', 'invalid identity', 'before request creation'])('preserves an unrelated request on %s rejection', async kind => {
+        const directory = kind === 'invalid path' ? f.root : f.session;
+        const request = join(directory, 'request.json');
+        fs.writeFileSync(request, 'preexisting request');
+        if (kind === 'invalid path') process.env.COPILOT_NATIVE_WORKER_SESSION = directory;
+        if (kind === 'invalid identity') writeNativeRecord(f.session, 'session.json', { schemaVersion: 1, workspace: 'other' });
+        const setup = kind === 'before request creation' ? { ...f.setup, workspace: f.session } as typeof f.setup : f.setup;
+        await expect(prepareRepositoryVerification(setup, f.runtime.environment)).rejects.toMatchObject({
+            reason: kind === 'before request creation' ? 'workspace-changed' : 'handoff-invalid',
+        });
+        expect(fs.readFileSync(request, 'utf8')).toBe('preexisting request');
+    });
     it('stages only pinned YAML and assets, then restores the candidate byte for byte', async () => {
         fs.mkdirSync(f.action, { recursive: true }); fs.writeFileSync(join(f.action, 'action.yml'), 'candidate');
         const running = prepareRepositoryVerification(f.setup, f.runtime.environment);
@@ -38,6 +50,7 @@ describe('native verification boundary', () => {
         f.respond(); await running;
         expect(fs.readFileSync(join(f.action, 'action.yml'), 'utf8')).toBe('candidate');
         expect(fs.existsSync(join(f.action, 'scripts'))).toBe(false);
+        expect(fs.existsSync(join(f.session, 'request.json'))).toBe(false);
     });
     it('retains native metadata outside the publishable candidate for deferred post steps', async () => {
         const running = prepareRepositoryVerification(f.setup, f.runtime.environment); f.respond(); await running;
@@ -94,6 +107,7 @@ describe('native verification boundary', () => {
         const running = prepareRepositoryVerification(f.setup, f.runtime.environment); f.respond(() => response);
         await expect(running).rejects.toThrow('Verification, commit and push are withheld');
         expect(fs.existsSync(f.action)).toBe(false);
+        expect(fs.existsSync(join(f.session, 'request.json'))).toBe(false);
     });
     it('withholds the command and probes after a setup failure', async () => {
         const execute = jest.fn(); const preflight = jest.fn(); const adapter = new GitCommitAdapter(execute, preflight, f.setup);

@@ -18,6 +18,7 @@ export async function prepareRepositoryVerification(setup: PreparedVerificationS
     if (setup.kind === 'blocked') throw new VerificationSetupError(setup.reason, setup.sourceSha);
     const session = process.env.COPILOT_NATIVE_WORKER_SESSION;
     if (!session) throw new VerificationSetupError('native-workflow-required', setup.sourceSha);
+    let requestCreated = false;
     try {
         nativeSession(session);
         const requests = readNativeRecord<{count: number}>(session, 'request-count.json')?.count ?? 0;
@@ -29,6 +30,7 @@ export async function prepareRepositoryVerification(setup: PreparedVerificationS
         stageNativeVerificationAction(setup, session);
         const id = randomUUID();
         writeNativeRecord(session, 'request.json', { id, sourceSha: setup.sourceSha, digest: verificationSetupDigest(setup), environment });
+        requestCreated = true;
         logInfo(`Preparing repository verification (${VERIFICATION_SETUP_PATH}; trusted source SHA: ${setup.sourceSha}).`);
         const deadline = Date.now() + VERIFICATION_SETUP_LIMITS.timeoutMs;
         let response: NativeVerificationResponse | undefined;
@@ -55,6 +57,6 @@ export async function prepareRepositoryVerification(setup: PreparedVerificationS
     } catch (error) {
         throw new VerificationSetupError(error instanceof VerificationSetupError ? error.reason : 'handoff-invalid', setup.sourceSha);
     } finally {
-        rmSync(join(session, 'request.json'), { force: true });
+        if (requestCreated) rmSync(join(session, 'request.json'), { force: true });
     }
 }
