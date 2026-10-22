@@ -4,7 +4,7 @@
   complete; clean-tree bundle validation and controlled live queue validation
   remain external completion gates
 - Date: 2026-09-10
-- Last updated: 2026-09-15
+- Last updated: 2026-10-21
 - Owners: `vypdev/copilot` product and engineering maintainers
 - Scope: discover the effective merge policy of every deployment target and
   prevent a managed pull request from entering an unusable merge queue.
@@ -89,7 +89,11 @@ longer exhibit these behaviors.
 6. Enqueueing does not pass GraphQL `expectedHeadOid`, and queue membership is
    not read before a retry.
 
-### 2.3 Live repository evidence captured on 2026-09-10
+### 2.3 Historical repository evidence captured on 2026-09-10
+
+The RepoWise required-check and automatic-trigger facts below are historical.
+The manual-only migration below supersedes them; queue readiness still inspects
+live effective rules rather than assuming that this snapshot remains current.
 
 - `GET /repos/vypdev/copilot/branches/master/protection` returned `404 Branch
   not protected` because no classic protection rule applies.
@@ -115,6 +119,9 @@ longer exhibit these behaviors.
   A workflow fixture MUST assert both limits and unconditional artifact upload.
 
 ### Event-scoped advisory history correction (2026-10-14)
+
+This event-range contract is retained as historical evidence. The manual-only
+migration below retires the automatic event-base path.
 
 Dogfooding [#496](https://github.com/vypdev/copilot/issues/496) reproduced a
 RepoWise 0.45.0 `MemoryError` while batch-reading all historical blobs in
@@ -151,6 +158,201 @@ historical audit. Run workflow/specification/documentation validators and
 the workflow regression suite; no coverage threshold is reduced.
   A fresh exact-head run must prove the producer reaches artifact upload and
   reports any incomplete advisory scan honestly; it is still an open gate.
+
+### Manual-only RepoWise migration (2026-10-21, issue #639)
+
+RepoWise MUST run only through `workflow_dispatch`. PRs, pushes, merge groups,
+schedules and reusable-workflow calls MUST NOT launch it. CI and merge queue
+MUST complete without a RepoWise result. This supersedes the earlier required
+RepoWise producer and event-range scanning contract, without changing runtime
+queue-readiness policy or any consumer's required checks.
+
+Live GitHub inspection on 2026-10-21 found active repository ruleset
+`25205979` (`Release automation required CI`) requiring only GitHub Actions
+`CI Check` on both `master` and `develop`. Classic protection on `master` is
+absent (404); classic protection on `develop` also requires only `CI Check`.
+The old `Master Push Check` and `Develop Push Check` rulesets are disabled.
+RepoWise therefore needs no live protection change for this migration. Operators
+MUST recheck effective rules before rollout; if RepoWise becomes required again,
+remove only that requirement before retiring automatic triggers, preserving all
+other checks. A manual-only required producer remains unsupported by the existing
+fail-closed merge-queue preflight; no attestation may bypass that known fact.
+
+```text
+Maintainer -> Actions / RepoWise Code Health / Run workflow -> select reviewed ref
+           -> bounded analysis -> commit-bound Job Summary and report artifact
+PR / push / merge group -> normal CI -> no RepoWise dependency
+```
+
+Text equivalent: maintainers explicitly select a reviewed repository branch and
+inspect that run's summary and artifact; automatic change validation does not
+start or await RepoWise. The native selector uses the repository default branch
+unless another ref is selected. No new input, secret, runtime option or durable
+application state is introduced. Dispatch is available because the workflow
+already exists on the default branch. CLI example:
+`gh workflow run repowise.yml --ref develop`.
+
+The workflow owns event admission, Ubuntu `codex` runner selection, read-only
+contents permission and originally a 30-minute job budget. Checkout MUST retain the selected
+revision and full history without credentials. The original advisory subprocesses used
+90-second and 2 GiB limits; issue #644 supersedes these budgets below. Manual
+security scanning covers full reachable history. Per-ref `repowise-` concurrency cancels an older manual run for the same
+ref without sharing CI's group. Python environments and reports remain isolated
+by run/attempt, with unconditional upload followed by cleanup. No domain, use
+case, port, provider DTO or composition change is needed: the repository workflow
+is the adapter boundary, enforced by the existing parsed-YAML contract validator.
+
+| Visible state | Meaning and next action | Retained evidence |
+|---|---|---|
+| Queued/running | Analysis requested; open this Actions run, no automatic CI wait | Native run/ref identity |
+| Complete | Read `Analyzed revision: <commit SHA>` and download `repowise-code-health` | `revision.txt`, index log, health Markdown/JSON, advisory status; 14 days |
+| Partial | `security: incomplete (exit <status>)`; inspect the warning before retrying | Completed health reports remain; no complete-audit claim |
+| Failed | A core setup/index/health step failed; inspect logs and retry after correction | Available files upload even after failure |
+| Canceled | A newer run for the same ref replaced this one, or an operator canceled it | Native cancellation state; runner loss/cancellation can prevent upload |
+
+The existing English Job Summary adds only the immutable commit SHA; it does not
+render an untrusted branch name. Native GitHub status and artifact links provide
+navigation in narrow/light/dark views. There are no new bot comments or locale
+inputs. Restoring automatic execution would require coordinated workflow,
+contract, documentation and required-check review; restoring only a required
+RepoWise rule would block change validation.
+
+Regression floor: **24 distinct workflow-contract cases**: one valid manual
+dispatch, five forbidden automatic/reusable triggers, one missing dispatch,
+seven budget/permission/checkout/concurrency mutations, one Ubuntu runner
+selection, and nine scan/report/revision/summary/artifact mutations. Retain the
+existing Python-isolation, cleanup and incomplete-scan cases and all repository
+coverage thresholds. These deterministic YAML mutations cover admission,
+execution bounds and reporting; runtime policy, localization and new provider
+adapter tests are not applicable because those contracts do not change.
+
+Acceptance and traceability:
+
+| Observable requirement | Evidence | Documentation |
+|---|---|---|
+| Automatic events do not launch RepoWise | Parsed trigger mutations plus final-head PR run inventory | `docs/development/testing.mdx` |
+| Manual selected-revision reports remain useful and bounded | Execution/report mutations plus final-head manual run and artifact | testing and self-hosted runner guides |
+| CI/merge queue can complete independently | Live rules above, retained merge-group contracts and final-head CI | deployment and release-process guides |
+
+Run workflow regressions, workflow/documentation/specification validators, and
+Graphify update. Completion requires a real manual run on the final revision and
+review of its summary/artifact; a queued run or static test is insufficient.
+Catalog evidence and the runner appendix in the setup-assistant SDD MUST agree.
+
+### Bounded manual RepoWise analysis (2026-10-21, issue #644)
+
+Status: implemented contract; native final-revision evidence is required before
+completion. Owner: Copilot maintainers. No open design decisions. This section
+supersedes the original budgets, incomplete-status handling and regression count
+above; admission, permissions, checkout, isolation and retention stay in force.
+
+The [previous manual run](https://github.com/vypdev/copilot/actions/runs/39573977241)
+spent 20m37s in the job: indexing took 8m6s, health ran twice, dead-code exceeded
+90 seconds and full-history security raised `MemoryError` under 2 GiB. Historical
+JavaScript blobs alone total approximately 9.2 GB. Upstream
+[RepoWise 0.58.0](https://github.com/repowise-dev/repowise/releases/tag/v0.58.0)
+serves stored health/dead-code, but its history reader still materializes all
+blobs. Upgrading alone does not resolve the memory failure. A local single-worker
+streaming trial covered 22,975 source blobs / 9,515,793,415 bytes in 1232 seconds;
+this CPU measurement motivates the fixed two-worker queue rather than merely
+extending the history deadline. Native final-head metrics remain the release gate.
+
+```text
+Manual selected ref -> one fresh standard index -> cached health MD/JSON + safe dead-code
+                    -> full-history secret scan, two bounded analysis workers
+                    -> validated reports + scope/timings -> artifact + summary
+```
+
+Text equivalent: index once, export stored results, scan full history with bounded
+blob residency, validate completeness, and publish evidence. No application
+runtime, setup session, domain model, provider port or public configuration changes
+are needed. The workflow owns execution and cleanup; `repowise_reports.py` owns
+phase sequencing, resource limits, validation and summary presentation;
+`repowise_history.py` adapts pinned RepoWise/Git interfaces. Neither imports the
+TypeScript application. YAML mutation tests enforce wiring; Python fixtures enforce
+the private-package adapter and output semantics.
+
+Fixed, non-configurable execution budgets:
+
+| Phase | Wall limit | Virtual memory per process | Behavior |
+|---|---:|---:|---|
+| Fresh standard index | 900s | 4096 MiB | No prose/editor/key/hook setup or worktree seeding; 500 commits for git analytics |
+| Each cached health format | 60s | 2048 MiB | All indexed origins, refactoring targets, no recomputation |
+| Cached safe-only dead-code | 60s | 2048 MiB | Requires successful dead-code phase and matching index SHA |
+| Full-history security | 1200s | 2048 MiB coordinator; 1024 MiB per worker | Two workers, all reachable refs/commits, supported source extensions, RepoWise secret kinds and upstream allowlists |
+| Complete job | 40 minutes | Phase limits above | Leaves two minutes beyond summed phase ceilings for setup/publication |
+
+The 500-commit analytics setting preserves the former index default and MUST NOT
+limit history security. Bundles remain included. The history adapter MUST retain
+upstream provenance, secret kinds, deduplication, line suppression, path allowlists
+and multiline PEM detection. It MUST fail on Git enumeration/read/persistence
+errors. At most two tasks/results are in flight, with one request/response per worker.
+The reader retains no blob cache; results are consumed in upstream history order.
+Memory scales with metadata plus current blob processing, not total historical
+content. Existing upstream metadata tables are still materialized. A single giant
+blob can exceed the process cap; that is incomplete, never silently skipped.
+
+The adapter uses two spawned processes with a fixed-width prefetch queue.
+Negative results do not copy source text back to the coordinator; positive results
+retain complete text for unchanged fingerprint/material handling. Worker failures
+propagate, and timeout kills the entire process group, including workers and Git.
+The adapter omits call/code-smell analysis that upstream history mode discards,
+and uses a conservative literal prefilter before the unchanged secret detectors.
+Fixtures MUST compare every supported secret kind, Unicode keyword matching,
+multiline PEM and removed/other-ref secrets against upstream behavior. The
+version is pinned exactly; any upgrade requires compatibility fixtures before
+publication. No remote cache or stale index is accepted. JSON health identifies
+`source: index`; index events MUST confirm ready status plus completed health and
+dead-code analysis at HEAD. Security MUST match the reachable commit count and
+requested/read source-blob count. Malformed JSON is removed instead of published
+as a complete report.
+
+The artifact MUST contain `revision.txt`, `scope.json` (SHA, ref snapshot, tool
+version and explicit scopes), `timings.json`, `history-resources.json`, per-phase
+logs/resource records, `summary.md`, advisory status and all completed reports.
+RSS is GNU time's largest-process peak, not a sum of simultaneous processes;
+virtual-memory limits apply to each process. Security output is RepoWise's JSON
+aggregate, not a guarantee that no secrets exist. The local database is removed
+and findings/secret material are not added to the artifact.
+
+The English summary shows status first by phase, SHA, seconds and peak RSS with
+artifact/retry instructions. Example rows: `dead-code | complete | 2.1 | 96.0` and
+`security | incomplete | 1200 | —`. Completed analysis says "Analysis complete.
+Findings are advisory"; partial analysis says "Analysis incomplete. Inspect phase
+logs in the artifact, fix the cause, then rerun." Incomplete scans now fail this
+optional job while preserving completed reports. Index failure blocks cached
+exports but still attempts the independent history scan. Timeout kills the process
+group. Cancellation/runner loss can still prevent publication; retry manually.
+No comments, locale settings or automatic retries are introduced. Native GitHub
+queued/running/canceled states and artifact links remain the navigation; textual
+statuses and plain tables work on narrow screens and in light/dark mode.
+
+Regression floor: **60 distinct cases**, comprising the retained **21** manual
+workflow admission/permission/isolation/wiring/report mutations and **39** Python
+cases: 14 detector/version compatibility, 5 blob/Git protocol/error cases,
+1 deleted-secret/other-ref/provenance integration, 15 resource/report/failure cases,
+and 4 bounded-prefetch/order/worker-failure/delegation cases. Cases use synthetic credentials, temporary repositories and mocked clocks/
+processes for timeouts; they do not need live services or real waits. The Python
+suite runs in the pinned Python 3.12 manual environment before analysis. Repository
+Jest coverage thresholds remain in force; the standalone Python adapter uses
+behavioral compatibility/failure evidence rather than a new percentage threshold.
+
+| Requirement | Acceptance/evidence | Documentation |
+|---|---|---|
+| Cached results belong to completed current index | Progress/state/JSON guards, fixtures and final-head artifact | Testing guide |
+| Full history completes without bulk contents | All-kind differential fixtures, deleted/other-ref provenance, native counts/RSS/bytes/timing | Testing + runner guides |
+| Failures remain truthful and bounded | Protocol, malformed data, exit, timeout/group kill, partial summary fixtures | Retry instructions |
+| Optional workflow remains isolated | Parsed YAML regressions, CI and manual final-head run | Manual dispatch guide |
+
+Roll out only through the linked PR. Rollback restores the former pin/workflow
+but also restores known incomplete scans; it must not restore automatic triggers
+or required checks. Definition of Done: the numeric test budget passes; workflow,
+documentation and specification validators pass; catalog evidence and Graphify
+are current; native final-head analysis produces **complete dead-code and security**
+with measured time/memory and inspected summary/artifact; CI passes independently.
+A queued run, green partial job, or merely relaxed limits is insufficient.
+
+### Other merge-queue evidence from the original implementation
 - Copilot's own required PR context is produced for merge groups by the
   dedicated `copilot_pull_request_merge_queue.yml` workflow. Keeping that
   lightweight producer separate avoids a skipped duplicate check on every
@@ -549,7 +751,6 @@ Queue rule: required
 
 Producer                 Source          Evidence
 CI Check                 GitHub Actions  Verified · ci_check.yml handles merge_group
-RepoWise code health     GitHub Actions  Verified · repowise.yml handles merge_group
 
 No action required. Rerun `copilot doctor` after changing rules, workflows, or
 attestations and before the next release.
@@ -874,3 +1075,26 @@ feature must prevent and violates the event-driven no-polling architecture.
   for merge-queue targets.
 - Automatic edits to rulesets or vendor CI.
 - A live destructive merge-queue test in a user repository.
+
+
+### Publication callback policy parity (2026-10-21, #643)
+
+Preparation, normal publication, reconciliation-only resume and managed-PR
+continuation MUST all pass the live `MERGE_QUEUE_CHECK_ATTESTATIONS` Repository
+Variable with an absent-value `[]` fallback. Consumer templates and source
+release/hotfix workflows share this contract. A normal callback starts
+reconciliation just as resume does; neither may substitute an empty literal or
+a snapshotted preparation value. Target selection, producer identity, failed
+policy handling and retained publication state remain unchanged. No new input,
+permission, UI state, automatic retry or deployment is introduced.
+
+Flow: prepared promotion -> confirmed publication -> live target policy ->
+reconciliation, or the existing blocked recovery state. Existing status cards
+and recovery guidance remain authoritative; install updated generated workflows
+to adopt the correction. The added numeric test budget is **24 distinct cases**:
+source/consumer × release/hotfix × preparation/publication/resume × missing/stale
+input. Existing continuation tests cover its fourth entrypoint. Structural
+workflow validation rejects either omission or a literal value; all canonical
+workflows must pass. Documentation: deployment orchestration's live-policy mapping.
+Acceptance: each entrypoint supplies the expression on the actual Action step;
+no publication/release is launched to test wiring.

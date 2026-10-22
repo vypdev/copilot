@@ -1,3 +1,4 @@
+import { toPullRequestReviewOperationError } from '../../../../../../data/repository/pull_request/pull_request_review_error_metadata';
 /**
  * Unit tests for publishFindings: issue comments (add/update), PR review comments (when file in prFiles), overflow.
  */
@@ -109,6 +110,29 @@ describe("publishFindings", () => {
         mockUpdatePullRequestReviewComment.mockReset().mockResolvedValue(undefined);
         mockUnresolvePullRequestReviewThread.mockReset().mockResolvedValue(undefined);
         mockUpdatePullRequestReview.mockReset().mockResolvedValue(undefined);
+    });
+
+    it('keeps the trusted issue finding ID when its location fingerprint matches a new model ID', async () => {
+        await publishFindings({ operation: baseOperation,
+            context: baseContext({ existingByFindingId: { original: { issue: {
+                commentId: 100, resolved: false, fingerprint: 'fp-11111111',
+            } } } }), findings: [finding({ id: 'replacement' })] });
+        expect(mockUpdateComment).toHaveBeenCalledWith(42, 100,
+            expect.stringContaining('finding_id:"original"'), undefined);
+        expect(mockAddComment).not.toHaveBeenCalled();
+    });
+
+    it('falls back to a file comment for an impossible current-line anchor without sending that line', async () => {
+        await publishFindings({ operation: baseOperation,
+            context: baseContext({ prContext: { prHeadSha: 'sha1',
+                prFiles: [{ filename: 'src/spotify.py', status: 'modified' }], pathToFirstDiffLine: { 'src/spotify.py': 72 },
+                pathToDiffLocations: { 'src/spotify.py': [{ line: 72, side: 'RIGHT' }] } } }),
+            findings: [finding({ file: 'src/spotify.py', line: 669, endLine: 670, suggestedCode: 'unsafe suggestion' })] });
+        const draft = mockCreateReviewWithComments.mock.calls[0][3][0];
+        expect(draft).toMatchObject({ path: 'src/spotify.py', subjectType: 'file' });
+        expect(draft).not.toHaveProperty('line');
+        expect(draft).not.toHaveProperty('startLine');
+        expect(draft.body).not.toContain('```suggestion');
     });
 
     it("adds issue comment for new finding", async () => {
@@ -711,4 +735,51 @@ describe("publishFindings", () => {
             ]),
         );
     });
+    it('reports exact batch publication operation and safe provider metadata', async () => {
+        mockCreateReviewWithComments.mockRejectedValue(toPullRequestReviewOperationError({ status: 403,
+            response: { headers: { 'x-github-request-id': 'AB12:34CD' }, data: 'PRIVATE' } }, 'publish-comments'));
+        await expect(publishFindings({ operation: baseOperation,
+            context: baseContext({ prContext: { prHeadSha: 'sha1',
+                prFiles: [{ filename: 'src/foo.ts', status: 'modified' }], pathToFirstDiffLine: { 'src/foo.ts': 5 } } }),
+            findings: [finding({ file: 'src/foo.ts' }), finding({ id: 'f2', file: 'src/foo.ts' })],
+        })).rejects.toMatchObject({ code: 'authorization.denied', diagnostic: { stage: 'publication', operation: 'publish-comments',
+            findingId: 'f1', affectedCount: 2, providerStatus: 'http-403', providerReference: 'AB12:34CD' } });
+    });
+
+    it('identifies an existing finding when updating its native comment fails', async () => {
+        mockUpdatePullRequestReviewComment.mockRejectedValue(toPullRequestReviewOperationError({ status: 503 }, 'update-comment'));
+        await expect(publishFindings({ operation: baseOperation,
+            context: baseContext({ existingByFindingId: { f1: { pullRequest: { commentIdentity: 'PRRC_1', pullRequestNumber: 50, resolved: false, fingerprint: 'fp-11111111' } } },
+                prContext: { prHeadSha: 'sha1', prFiles: [{ filename: 'src/foo.ts', status: 'modified' }], pathToFirstDiffLine: { 'src/foo.ts': 5 } } }),
+            findings: [finding()],
+        })).rejects.toMatchObject({ diagnostic: { stage: 'publication', operation: 'update-comment', findingId: 'f1', providerStatus: 'http-503' } });
+    });
+
+    it('excludes already-updated findings from a failed review creation batch', async () => {
+        mockCreateReviewWithComments.mockRejectedValue(toPullRequestReviewOperationError({ status: 503 }, 'publish-comments'));
+        await expect(publishFindings({ operation: baseOperation,
+            context: baseContext({ existingByFindingId: { f1: { pullRequest: { commentIdentity: 'PRRC_1', pullRequestNumber: 50,
+                resolved: false, fingerprint: 'fp-11111111' } } },
+                prContext: { prHeadSha: 'sha1', prFiles: [{ filename: 'src/foo.ts', status: 'modified' }], pathToFirstDiffLine: { 'src/foo.ts': 5 } } }),
+            findings: [finding(), finding({ id: 'f2', fingerprint: 'fp-22222222', semanticFingerprint: 'sf-22222222' })],
+        })).rejects.toMatchObject({ diagnostic: { findingId: 'f2', affectedCount: 1 } });
+        expect(mockUpdatePullRequestReviewComment).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports the overflow count without inventing a finding ID for an overflow-only review', async () => {
+        mockCreateReviewWithComments.mockRejectedValue(toPullRequestReviewOperationError({ status: 503 }, 'publish-comments'));
+        await expect(publishFindings({ operation: baseOperation,
+            context: baseContext({ prContext: { prHeadSha: 'sha1', prFiles: [], pathToFirstDiffLine: {} } }),
+            findings: [], overflowCount: 7, overflowTitles: ['Overflow'],
+        })).rejects.toMatchObject({ diagnostic: { findingId: 'unavailable', affectedCount: 7 } });
+    });
+
+    it('keeps issue-comment failures outside the PR mutation diagnostic path', async () => {
+        const cause = new Error('issue adapter failure');
+        mockAddComment.mockRejectedValue(cause);
+        await expect(publishFindings({ operation: baseOperation, context: baseContext(), findings: [finding()] }))
+            .rejects.toBe(cause);
+        expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+    });
+
 });

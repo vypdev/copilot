@@ -12,6 +12,9 @@ import { renderApprovalObserverWorkflow } from '../domain/setup_approval_workflo
 import { redactSensitiveText } from '../domain/security/sensitive_text';
 import { REPOSITORY_AGENT_GUIDE_PATH, REPOSITORY_AGENT_PROFILE_PATH, REPOSITORY_AGENT_MANIFEST_PATH,
   REPOSITORY_AGENT_SKILL_PATH } from '../application/policies/repository_agent_guidance_policy';
+import { SETUP_VERIFICATION_ACTION_PATH, type SetupVerificationActionReview } from '../domain/setup_verification_action';
+import { inspectSetupVerificationActionPath, readSetupVerificationActionStarter } from '../infrastructure/setup_verification_action';
+import { copilotCommentRunner } from '../domain/copilot_comment_workflow';
 
 export const SETUP_RUNNER_SNAPSHOT = '.copilot/runner-profile.json';
 const object = (value: unknown): Record<string, unknown> | undefined => value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -48,13 +51,25 @@ export function inspectSetupInstallation(root: string, configuration: SetupConfi
   const jobs: SetupInstallationReview['jobs'][number][] = [];
   const changes: SetupInstallationReview['changes'][number][] = [];
   const blockers: string[] = [];
+  let action: SetupVerificationActionReview['action'];
+  try { action = inspectSetupVerificationActionPath(root); }
+  catch (error) {
+    action = 'blocked';
+    blockers.push(error instanceof Error ? error.message : 'Verification setup path could not be inspected.');
+  }
+  const verificationSetup = { action, enabled: configuration.repository.verificationSetup ?? false,
+    mainBranch: configuration.repository.mainBranch };
+  assets.push({ path: SETUP_VERIFICATION_ACTION_PATH, enabled: verificationSetup.enabled,
+    status: action === 'create' ? 'missing' : action === 'preserve' ? 'customized' : 'incompatible' });
+  if (action === 'blocked') return { assets, jobs, changes, blockers, verificationSetup };
+  if (action === 'create') changes.push({ path: SETUP_VERIFICATION_ACTION_PATH, before: null, after: readSetupVerificationActionStarter() });
   const addJobs = (file: string, content: string, retained: boolean) => {
     const documents = loadAll(content);
     if (documents.length !== 1) throw new Error('Workflow review needs exactly one YAML document.');
     const parsedJobs = object(object(documents[0])?.jobs);
     if (!parsedJobs) throw new Error('Workflow jobs are unavailable for review.');
     for (const [job, raw] of Object.entries(parsedJobs)) {
-      const runsOn = object(raw)?.['runs-on'];
+      const runsOn = copilotCommentRunner(object(raw));
       if (runsOn === undefined) continue; // reusable workflow calls have no runner
       jobs.push({ file, job, role: setupRunnerRole(file, job) ?? 'validation',
         runsOn: runsOn as SetupInstallationReview['jobs'][number]['runsOn'], status: 'access-unknown', retained });
@@ -125,5 +140,5 @@ export function inspectSetupInstallation(root: string, configuration: SetupConfi
   if (after !== undefined && before !== after) changes.push({ path: SETUP_RUNNER_SNAPSHOT,
     before: before === undefined ? null : redactSensitiveText(before), after: redactSensitiveText(after) });
   if (after !== undefined && before !== undefined && !compatibleSetupRunnerSnapshot(before)) blockers.push('Runner snapshot is incompatible. Retain it or restore a supported version before replacing routing.');
-  return { assets, jobs, changes, blockers };
+  return { assets, jobs, changes, blockers, verificationSetup };
 }

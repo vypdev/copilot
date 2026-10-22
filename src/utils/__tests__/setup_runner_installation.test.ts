@@ -60,6 +60,16 @@ describe('installation parity and reviewed migration', () => {
   const write = (path: string, content: string) => { const absolute = join(root, path); mkdirSync(dirname(absolute), { recursive: true }); writeFileSync(absolute, content); };
   beforeEach(() => { root = mkdtempSync(join(tmpdir(), 'copilot-runner-parity-')); });
   afterEach(() => rmSync(root, { recursive: true, force: true }));
+  test('reviews and applies the same retained runner for compact reusable comment jobs', () => {
+    const legacy = single('[self-hosted, reviewed, Linux]').replace('run: echo fixture', 'uses: vypdev/copilot@v3');
+    write('.github/workflows/copilot_issue_comment.yml', legacy);
+    const config = { ...createDefaultSetupConfiguration(), runners: selectSetupRunnerMode('retain') };
+    const review = inspectSetupInstallation(root, config);
+    expect(review.jobs.find(job => job.file === 'copilot_issue_comment.yml')).toMatchObject({ role: 'agent', runsOn: ['self-hosted', 'reviewed', 'Linux'], retained: true });
+    const expected = review.changes.find(change => change.path === '.github/workflows/copilot_issue_comment.yml')!.after;
+    copySetupFiles(root, undefined, config.features, { setupConfiguration: config, updateExistingWorkflows: true, approvedWorkflowFiles: ['copilot_issue_comment.yml'] });
+    expect(readFileSync(join(root, '.github/workflows/copilot_issue_comment.yml'), 'utf8')).toBe(expected);
+  });
   test('an incomplete template package still inventories native YAML files without inventing managed assets', () => {
     const setup = join(root, 'empty-setup'); mkdirSync(setup);
     write('.github/workflows/native.yaml', workflow('  native:\n    runs-on: ubuntu-latest\n'));
@@ -75,7 +85,7 @@ describe('installation parity and reviewed migration', () => {
     writeFileSync(join(setup, 'workflows/custom.yaml'), workflow('  custom:\n    runs-on: ubuntu-latest\n'));
     writeFileSync(join(setup, 'workflows/README.md'), 'not a workflow');
     const review = inspectSetupInstallation(root, createDefaultSetupConfiguration(), setup);
-    expect(review.changes.map(change => change.path)).toEqual(['.github/workflows/custom.yaml']);
+    expect(review.changes.map(change => change.path)).toEqual(['.github/actions/copilot-verification-setup/action.yml', '.github/workflows/custom.yaml']);
     expect(review.jobs).toHaveLength(1);
   });
   test('legacy configurations retain customized managed routing and a compatible existing snapshot', () => {
@@ -88,7 +98,7 @@ describe('installation parity and reviewed migration', () => {
     expect(review.assets.find(asset => asset.path === '.github/workflows/copilot_issue.yml')?.status).toBe('customized');
     expect(review.assets.find(asset => asset.path === SETUP_RUNNER_SNAPSHOT)?.status).toBe('shared');
     expect(review.jobs[0]).toMatchObject({ runsOn: ['self-hosted', 'legacy', 'Linux'], retained: true });
-    expect(review.changes).toEqual([]); expect(readFileSync(join(root, SETUP_RUNNER_SNAPSHOT), 'utf8')).toBe(snapshot);
+    expect(review.changes).toEqual([expect.objectContaining({ path: '.github/actions/copilot-verification-setup/action.yml', before: null })]); expect(readFileSync(join(root, SETUP_RUNNER_SNAPSHOT), 'utf8')).toBe(snapshot);
   });
   test('an explicit hosted replacement reviews a compatible old self-hosted snapshot without changing it', () => {
     const before = renderSetupRunnerSnapshot(configuration())!; write(SETUP_RUNNER_SNAPSHOT, before);

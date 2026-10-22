@@ -50,15 +50,26 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-resolution-invalid',
     'sdd-draft-size-exceeded',
     'sdd-draft-format-invalid',
+    'sdd-draft-case-identity-invalid',
+    'sdd-draft-case-budget-invalid',
+    'sdd-draft-requirement-mapping-invalid',
+    'sdd-draft-repository-path-invalid',
+
     'workspace-changes-rejected',
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
+    'stored-configuration-schema-missing',
+    'stored-configuration-schema-unsupported',
+    'stored-configuration-invalid',
 
 ] as const);
 
 export type ApplicationErrorRecoveryId = typeof APPLICATION_ERROR_RECOVERY_IDS[number];
 
 interface ApplicationErrorRecoveryVariables {
+    readonly 'stored-configuration-schema-missing': Readonly<{ issueNumber: number; expectedVersion: number }>;
+    readonly 'stored-configuration-schema-unsupported': Readonly<{ issueNumber: number; expectedVersion: number; actualVersion: number }>;
+    readonly 'stored-configuration-invalid': Readonly<{ issueNumber: number; expectedVersion: number }>;
     readonly 'closed-issue-reconciliation-failed': ClosedIssueReconciliationFacts;
     readonly 'approval-evidence-read-failed': ApprovalEvidenceDiagnostic;
 
@@ -74,6 +85,11 @@ interface ApplicationErrorRecoveryVariables {
     readonly 'branch-sync-resolution-invalid': Readonly<{ validationCode: BranchSyncValidationCode; command: '/copilot sync-branch' }>;
     readonly 'sdd-draft-size-exceeded': Readonly<Record<string, never>>;
     readonly 'sdd-draft-format-invalid': Readonly<Record<string, never>>;
+    readonly 'sdd-draft-case-identity-invalid': Readonly<Record<string, never>>;
+    readonly 'sdd-draft-case-budget-invalid': Readonly<Record<string, never>>;
+    readonly 'sdd-draft-requirement-mapping-invalid': Readonly<Record<string, never>>;
+    readonly 'sdd-draft-repository-path-invalid': Readonly<Record<string, never>>;
+
     readonly 'workspace-changes-rejected': Readonly<Record<string, never>>;
 }
 
@@ -316,6 +332,9 @@ export class ApplicationError extends Error {
 }
 
 const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readonly string[]>> = Object.freeze({
+    'stored-configuration-schema-missing': Object.freeze(['issueNumber', 'expectedVersion']),
+    'stored-configuration-schema-unsupported': Object.freeze(['issueNumber', 'expectedVersion', 'actualVersion']),
+    'stored-configuration-invalid': Object.freeze(['issueNumber', 'expectedVersion']),
     'closed-issue-reconciliation-failed': Object.freeze(['resultId', 'phase', 'state', 'reason', 'changed', 'remaining']),
     'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
 
@@ -331,6 +350,11 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-draft-format-invalid': Object.freeze([]),
+    'sdd-draft-case-identity-invalid': Object.freeze([]),
+    'sdd-draft-case-budget-invalid': Object.freeze([]),
+    'sdd-draft-requirement-mapping-invalid': Object.freeze([]),
+    'sdd-draft-repository-path-invalid': Object.freeze([]),
+
     'workspace-changes-rejected': Object.freeze([]),
 });
 
@@ -347,6 +371,14 @@ function normalizeApplicationErrorRecovery(
     if (actualKeys.length !== expectedKeys.length
         || actualKeys.some((key, index) => key !== expectedKeys[index])) {
         throw new TypeError(`Application error recovery variables are invalid for ${recovery.id}.`);
+    }
+    if (recovery.id.startsWith('stored-configuration-')
+        && (![variables.issueNumber, variables.expectedVersion].every(value =>
+            typeof value === 'number' && Number.isSafeInteger(value) && value > 0)
+            || (recovery.id === 'stored-configuration-schema-unsupported'
+                && !(typeof variables.actualVersion === 'number'
+                    && Number.isSafeInteger(variables.actualVersion) && variables.actualVersion >= 0)))) {
+        throw new TypeError('Stored configuration diagnostic is invalid.');
     }
     if (recovery.id === 'managed-branch-enrichment-failed'
         && (typeof variables.branchName !== 'string'

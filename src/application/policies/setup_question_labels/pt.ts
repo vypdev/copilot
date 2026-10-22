@@ -2,6 +2,7 @@ import type { spanishQuestionLabels } from '../setup_question_translations';
 
 /** Portuguese presentation labels; semantic question IDs remain unchanged. */
 export const questionLabelsPt: Readonly<Record<keyof typeof spanishQuestionLabels, string>> = {
+  'repository.verificationSetup': 'Preparar dependências com a ação de verificação do repositório?',
   'features.issues': 'Automatizar questões: ramos, etiquetas, projetos e ciclo de vida',
   'features.pullRequests': 'Automatizar pull requests: revisão, descrição e ciclo de vida',
   'features.commits': 'Automatizar commits: progresso, tamanho e análise do Bugbot',

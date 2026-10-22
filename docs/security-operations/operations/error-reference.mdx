@@ -41,6 +41,16 @@ Retryability is determined by the code. A specific operation can make a
 normally retryable failure terminal, but presentation never turns a terminal
 code into a retry recommendation.
 
+For stored issue/PR state, `configuration.invalid` includes the affected number,
+the expected schema version, and a missing-schema, unsupported-version or
+malformed-content diagnosis in the failure annotation and Job Summary. It
+remains nonretryable until corrected; the same correlation reference survives
+to the final Action failure. The read does not rewrite the body. Use
+[stored-configuration recovery](/security-operations/operations/troubleshooting#unsupported-stored-configuration):
+only a verified obsolete unmanaged block may be removed after preserving a
+copy. Potentially valuable managed state requires maintainer review and verified
+restoration. Provider/authentication failures are not schema failures.
+
 Some partial operations add a closed recovery variant, for example to name a
 retained managed branch or a closed issue whose final explanation was not
 published. These variants use reviewed catalog templates and only bounded,

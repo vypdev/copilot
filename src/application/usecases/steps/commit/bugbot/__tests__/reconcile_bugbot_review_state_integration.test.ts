@@ -1,3 +1,5 @@
+import { bugbotMutationError } from '../../../../../errors/bugbot_mutation_error';
+import { toPullRequestReviewOperationError } from '../../../../../../data/repository/pull_request/pull_request_review_error_metadata';
 import type { Execution } from '../../../../../../data/model/execution';
 import type {
   PullRequestReviewComment,
@@ -38,6 +40,8 @@ function context(existingResolved = false): BugbotContext {
               threadResolved: true,
               resolution: 'fixed',
               parentReviewIdentity: '77',
+              fingerprint: 'fp-11111111',
+              semanticFingerprint: 'sf-11111111',
             },
           },
         }
@@ -72,6 +76,8 @@ function finding(): BugbotFinding {
     description: 'Retry can publish twice.',
     file: 'src/a.ts',
     line: 1,
+    fingerprint: 'fp-11111111',
+    semanticFingerprint: 'sf-11111111',
   };
 }
 
@@ -440,6 +446,8 @@ describe('Bugbot review reconciliation integration', () => {
             commentIdentity: 'PRRC_missing',
             pullRequestNumber: 358,
             resolved: false,
+            fingerprint: 'fp-11111111',
+            semanticFingerprint: 'sf-11111111',
           },
         },
       },
@@ -563,7 +571,8 @@ describe('Bugbot review reconciliation integration', () => {
     const loadedContext: BugbotContext = {
       ...context(),
       existingByFindingId: {
-        'finding-1': { issue: { commentId: 10, resolved: false } },
+        'finding-1': { issue: { commentId: 10, resolved: false,
+          fingerprint: 'fp-11111111', semanticFingerprint: 'sf-11111111' } },
       },
     };
     const test = harness({
@@ -685,7 +694,8 @@ describe('Bugbot review reconciliation integration', () => {
       ...context(),
       existingByFindingId: {
         'finding-1': {
-          issue: { commentId: 10, resolved: true, resolution: 'fixed' },
+          issue: { commentId: 10, resolved: true, resolution: 'fixed',
+            fingerprint: 'fp-11111111', semanticFingerprint: 'sf-11111111' },
         },
       },
     };
@@ -1286,4 +1296,34 @@ describe('Bugbot review reconciliation integration', () => {
 
     expect(report?.projection.findings[0]?.title).toBe('missing-title');
   });
+});
+
+
+it.each(['en-US', 'es-ES'])('keeps actionable mutation diagnostics separate from truncated conversation coverage in %s', async locale => {
+  const test = harness();
+  const loaded = context();
+  const baseExecution = execution();
+  const operation = { ...baseExecution, locale: { ...baseExecution.locale, pullRequest: locale } } as unknown as Execution;
+  const report = await reconcileBugbotReviewState({
+    execution: operation,
+    loadedContext: { ...loaded, coverage: { status: 'partial', sources: [{ source: 'human-conversation',
+      status: 'partial', pagesFetched: 1, itemsFetched: 1, itemsRetained: 1, omittedItems: 0,
+      truncatedItems: 1, truncatedItemIds: ['issue:6311517518'], limitReached: true }] } },
+    activeFindings: [],
+    mutationErrors: [bugbotMutationError(toPullRequestReviewOperationError({ status: 403,
+      response: { headers: { 'x-github-request-id': 'AB12:34CD' }, data: 'PRIVATE_RESPONSE' } }, 'resolve-thread'),
+      'resolution', ['finding-1'], 'mark-resolved')],
+    contextPorts: test.contextPorts, publicationPorts: test.publicationPorts,
+  });
+  expect(report?.projection.outcome).toBe('partial');
+  expect(report?.projection.coverage.status).toBe('partial');
+  expect(report?.errors[0]).toMatchObject({ code: 'authorization.denied' });
+  const body = String(test.addComment.mock.calls[0][3]).split('\\').join('');
+  expect(body).toContain('http-403');
+  expect(body).toContain('resolve-thread');
+  expect(body).toContain('finding-1');
+  expect(body).toContain('AB12:34CD');
+  expect(body).toContain('human-conversation');
+  expect(body).toContain('issue:6311517518');
+  expect(body).not.toContain('PRIVATE_RESPONSE');
 });

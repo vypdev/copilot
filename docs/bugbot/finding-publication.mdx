@@ -30,4 +30,14 @@ When the agent supplies an exact replacement, Bugbot renders a native GitHub sug
 
 Finding markers carry both a location fingerprint and a location-independent semantic fingerprint based on category plus an exact code snippet, symbol, or title fallback. An explicit provider id is reused only when its local identity is compatible; matching then falls back to location and, only when unambiguous, semantics. This keeps one thread across nearby line movement, rebases, and file renames without allowing a similar but unrelated finding to hijack or silently resolve it. Markers are loaded only when both the authenticated bot identity and comment author are known and match. Manual thread resolution becomes a durable dismissal and is not undone by a model response.
 
+When a current report uniquely matches a retained finding, its original finding
+ID remains in the marker while the title, location and explanation are refreshed
+on the same linked thread. Analysis, comment limits, publication and final counts
+use that same ID, so a changed model ID cannot leave an extra unknown record.
+Multiple current reports of that uniquely matched identity consume one comment
+slot. Ambiguous location or semantic matches retain separate evidence; Bugbot
+does not select the first provider result or resolve a suspected duplicate.
+An unrelated report that reuses another finding's ID receives a short local
+collision-free ID so both concerns retain separate evidence and threads.
+
 Publication MUST complete before a finding is marked resolved. Within each reopen or resolution transition the marker is updated before the native thread, making retries convergent. After mutation, Bugbot MUST re-read provider state; invalid responses, unsafe paths, malformed identifiers, missing expected publications, or publication failures are terminal for that finding and MUST NOT produce a false resolved state.

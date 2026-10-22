@@ -1,5 +1,6 @@
 import { SETUP_BATCH_MAX_TARGETS, type SetupBatchInstallationReceipt, type SetupBatchOperation,
   type SetupBatchPlan, type SetupBatchSharedResource, type SetupBatchTarget } from '../../domain/setup_batch';
+import { SETUP_VERIFICATION_ACTION_PATH } from '../../domain/setup_verification_action';
 
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u;
 const sha = /^[a-f0-9]{40}$/u;
@@ -88,6 +89,7 @@ export function parseSetupBatchOperation(value: unknown): SetupBatchOperation {
 export function validSetupBatchAssetPath(path: string): boolean {
   if (path.length > 240 || path.split('/').some(part => !part || part === '.' || part === '..') || /[^A-Za-z0-9_./-]/u.test(path)) return false;
   return path === 'AGENTS.md' || path === '.agents/skills/copilot-repository-workflow/SKILL.md'
+    || path === SETUP_VERIFICATION_ACTION_PATH
     || /^\.github\/(?:workflows|ISSUE_TEMPLATE)\/[A-Za-z0-9_.-]+\.(?:yml|yaml)$/u.test(path)
     || path === '.github/pull_request_template.md' || /^\.copilot\/(?:repository-profile|setup-manifest|runner-profile)\.json$/u.test(path)
     || path === '.copilot/AGENT_GUIDE.md' || path.startsWith('.copilot/setup-backups/');

@@ -1311,3 +1311,16 @@ in `docs/development/testing.mdx` MUST explain defaults, isolated probe,
 publication opt-in, runner recovery and partial evidence. Run full coverage,
 `validate:workflows`, `validate:documentation`, `validate:specifications` and the
 native platform smoke before declaring complete cross-platform acceptance.
+
+### Hosted Windows job headroom (2026-10-21, PR #654)
+
+The hosted platform fixture job uses a fixed 30-minute Windows limit and
+20 minutes for Ubuntu/macOS. Evidence: run 39644175943 completed Windows in
+19m34s; run 39645186744 reached the former 20-minute job bound during coverage
+without an assertion failure. This increases only orchestration headroom:
+agent process, PowerShell, ACL, credential, worker-concurrency and coverage
+requirements remain unchanged. A fresh exact-head Windows pass is mandatory;
+other platforms and a canceled run cannot substitute. Existing workflow and
+platform checks remain the acceptance artifacts; this configuration amendment
+adds no agent capability, user input or distinct application test case. See
+docs/development/testing.mdx for contributor operation.

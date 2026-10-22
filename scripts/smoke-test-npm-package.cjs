@@ -45,6 +45,11 @@ try {
   const help = execFileSync(process.execPath, [cliPath, '--help'], { encoding: 'utf8' });
   const bugbotApi = require(bugbotApiPath);
   const cliBundle = fs.readFileSync(cliPath, 'utf8');
+  const verificationStarter = fs.readFileSync(path.join(packageRoot, 'setup/actions/copilot-verification-setup/action.yml'), 'utf8');
+  if (!verificationStarter.includes('using: composite') || !verificationStarter.includes('exit 1')
+    || !verificationStarter.includes('MAIN_BRANCH') || !cliBundle.includes('setup/actions/copilot-verification-setup/action.yml')) {
+    throw new Error('Packaged setup must resolve the fail-closed consumer verification starter.');
+  }
   for (const runtime of ['github_action', 'api']) {
     const bundle = fs.readFileSync(path.join(packageRoot, 'build', runtime, 'index.js'), 'utf8');
     if (bundle.includes('Local setup web assets are incomplete') || bundle.includes('Control moved to another tab.')) {

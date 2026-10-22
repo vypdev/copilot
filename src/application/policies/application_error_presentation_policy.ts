@@ -7,6 +7,9 @@ import {
     type ApplicationErrorMessageReader,
 } from './application_error_message_catalog';
 
+// This trusted destination is inserted after localization, never supplied by a body or translation.
+const STORED_CONFIGURATION_RECOVERY_URL = 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#unsupported-stored-configuration';
+
 export interface ApplicationErrorPresentation {
     readonly impact: string;
     readonly code: string;
@@ -31,7 +34,9 @@ export function buildApplicationErrorPresentation(
     const descriptor = error.recovery
         ? `error.recovery.${error.recovery.id}` as const
         : `error.${error.code}` as const;
-    const variables = error.recovery?.variables;
+    const variables = error.recovery?.id.startsWith('stored-configuration-')
+        ? { ...error.recovery.variables, recoveryGuide: STORED_CONFIGURATION_RECOVERY_URL }
+        : error.recovery?.variables;
     return {
         impact: message(`${descriptor}.impact`, variables),
         code: error.code,

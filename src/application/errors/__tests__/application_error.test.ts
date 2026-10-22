@@ -9,6 +9,18 @@ import { runAtApplicationErrorBoundary, runWithApplicationErrorCorrelation } fro
 const CORRELATION_ID = '6f173f89-96a3-4fc8-b90e-4f8f48e0e319';
 
 describe('ApplicationError', () => {
+    it.each([
+        { id: 'stored-configuration-schema-missing', variables: { issueNumber: 0, expectedVersion: 3 } },
+        { id: 'stored-configuration-invalid', variables: { issueNumber: 144, expectedVersion: 0 } },
+        { id: 'stored-configuration-schema-unsupported', variables: { issueNumber: 144, expectedVersion: 3, actualVersion: 'PRIVATE' } },
+        { id: 'stored-configuration-schema-unsupported', variables: { issueNumber: 144, expectedVersion: 3, actualVersion: -1 } },
+        { id: 'stored-configuration-schema-unsupported', variables: { issueNumber: 144, expectedVersion: 3, actualVersion: Number.MAX_SAFE_INTEGER + 1 } },
+        { id: 'stored-configuration-schema-missing', variables: { issueNumber: 144, expectedVersion: 3, body: 'PRIVATE' } },
+    ])('rejects forged stored-configuration facts: $id $variables', recovery => {
+        expect(() => new ApplicationError('configuration.invalid', 'Invalid state.', {
+            recovery: recovery as never,
+        })).toThrow();
+    });
     it('rejects a forged branch synchronization diagnostic descriptor', () => {
         expect(() => new ApplicationError('workflow.failed', 'private', {
             recovery: { id: 'branch-sync-resolution-invalid', variables: { validationCode: 'TOKEN=secret', command: '/copilot sync-branch' } } as never,

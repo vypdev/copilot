@@ -5,6 +5,13 @@ description: Detailed configuration options for Copilot
 
 # Configuration Options
 
+The generated comment callbacks delegate their whole job to
+`vypdev/copilot/.github/workflows/copilot_comment_runtime.yml@v3`. The coordinator
+reads this repository's existing Variables and explicitly forwarded Secrets;
+project setup remains isolated from provider/PAT inputs. Setup stores the reviewed
+runner route as JSON in the call's `with.runs-on`, including label arrays and group
+objects. See [verification and coordinator configuration](/security-operations/operations/verification#repository-owned-setup).
+
 For a new installation, use [web setup](/setup-web). To configure a specific outcome, start with the [goal guides](/guides); they connect setup choices, runtime configuration and verification. This page is the input and scope reference.
 
 Copilot provides extensive configuration options to customize your workflow. Use the tabs below to jump to the category you need.
@@ -63,6 +70,7 @@ PR bot approval uses the versioned `pullRequestApproval` setup object and `PR_AP
     ## Branch Management
 
     - `issue-managed-branches`: Create and verify a linked branch after `in-progress` (default: "true")
+    - `verification-setup`: Run the trusted main-branch composite action before each configured verification command in generated GitHub Actions callbacks (default: "false"). Setup's terminal/web question maps `repository.verificationSetup` to `VERIFICATION_SETUP` using the existing storage/reuse precedence. Setup creates `.github/actions/copilot-verification-setup/action.yml` only if missing and preserves an existing action and its assets. Customize the failing starter and review it onto `MAIN_BRANCH` before enabling; generation and activation do not prove readiness. See [repository-owned setup](/security-operations/operations/verification#repository-owned-setup) and [upgrade/rollback](/security-operations/operations/upgrade-rollback#upgrade-an-existing-copilot-repository).
     - `pre-branch-sdd`: Require a validated SDD before implementation for eligible issues (default: "false")
     - `branch-management-emoji`: Emoji for branched issues (default: "🧑‍💻")
 
@@ -325,6 +333,14 @@ When updating the configuration (for example, after a push or label change), Cop
 4. **Transient exclusion**: `results` is never persisted, which prevents result payloads from accumulating in the issue description.
 
 The hidden block is owned by Copilot. Do not add third-party or manually managed keys to it; they are outside the contract and will be removed on the next write.
+
+An invalid stored block fails with `configuration.invalid` and is not retryable
+without correction. Its diagnostic identifies the issue/PR, distinguishes a
+missing schema from an unsupported version or malformed state, and states the
+required version. An absent block remains distinct from invalid stored state.
+Follow [stored-configuration recovery](/security-operations/operations/troubleshooting#unsupported-stored-configuration)
+before editing or removing a block; never add a version number merely to bypass
+validation. No automatic migration or reset is performed.
 
 ### Persistence failures
 

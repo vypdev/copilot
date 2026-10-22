@@ -3,6 +3,8 @@
 const { readFileSync, readdirSync } = require('node:fs');
 const path = require('node:path');
 const yaml = require('js-yaml');
+const commentContract = require('./generate-native-verification-workflows.cjs');
+const { assertCommentWorkflowCaller, assertCommentWorkflowRuntime } = require('./validate-comment-workflows.cjs');
 
 const repositoryRoot = path.resolve(__dirname, '..');
 const workflowDirectories = [
@@ -113,6 +115,7 @@ const AGENT_ROLE_INPUTS = Object.freeze(Object.fromEntries(
   ]]),
 ));
 const WORKFLOW_AGENT_ROLES = Object.freeze({
+  'copilot_comment_runtime.yml': ['findings', 'fixer', 'planner', 'reviewer', 'tester'],
   'copilot_issue.yml': ['planner'],
   'copilot_pull_request.yml': ['planner', 'reviewer'],
   'copilot_pull_request_review_state.yml': ['planner', 'reviewer'],
@@ -144,9 +147,16 @@ function relativeWorkflow(file) {
   return path.relative(repositoryRoot, file).replaceAll(path.sep, '/');
 }
 
+function expectedCopilotAction(relativeFile) {
+  if (path.basename(relativeFile) === commentContract.RUNTIME) return commentContract.SELF_ACTION;
+  if (relativeFile.startsWith('setup/workflows/')) return DISTRIBUTED_COPILOT_ACTION;
+  const native = require('./generate-native-verification-workflows.cjs');
+  return native.CALLBACKS.includes(path.basename(relativeFile)) ? native.SOURCE_ACTION : './';
+}
+
 function isCopilotAction(step) {
   return typeof step?.uses === 'string'
-    && (step.uses === './' || /(?:^|\/)copilot@/.test(step.uses));
+    && (step.uses === '$/' || step.uses === './' || step.uses === './../.copilot-native-runtime' || /(?:^|\/)copilot@/.test(step.uses));
 }
 
 function shouldPersistCheckoutCredentials(relativeFile, jobId) {
@@ -165,7 +175,7 @@ function assertMajorActionReferences(file, workflow) {
       .filter(value => typeof value === 'string');
     for (const uses of actionUses) {
       if (isCopilotAction({ uses })) {
-        const expected = relativeFile.startsWith('setup/workflows/') ? DISTRIBUTED_COPILOT_ACTION : './';
+        const expected = expectedCopilotAction(relativeFile);
         if (uses !== expected) {
           throw new Error(`${relativeFile} job ${jobId} must invoke Copilot with ${expected}.`);
         }
@@ -177,7 +187,7 @@ function assertMajorActionReferences(file, workflow) {
         }
         continue;
       }
-      if (uses.startsWith('./') || uses.startsWith('docker://')) continue;
+      if (uses.startsWith('./') || uses.startsWith('$/') || uses.startsWith('docker://')) continue;
       if (!MAJOR_ACTION_REFERENCE.test(uses)) {
         throw new Error(`${relativeFile} job ${jobId} action ${uses} must use a major version tag such as owner/action@v1.`);
       }
@@ -259,15 +269,34 @@ function assertRepoWiseTemporaryCleanup(relativeFile, job) {
     throw new Error(`${relativeFile} must select complete Python, isolate RepoWise files, and remove them after artifact upload.`);
   }
   const reports = (job.steps ?? []).find(step => step?.name === 'Generate RepoWise reports');
-  if (job.env?.REPOWISE_BASE_SHA !== "${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || '' }}"
-    || job.env?.REPOWISE_EVENT_NAME !== '${{ github.event_name }}'
-    || !reports?.run?.includes('[[ "$REPOWISE_BASE_SHA" =~ ^[0-9a-f]{40}$ ]]')
-    || !reports.run.includes('git cat-file -e "$REPOWISE_BASE_SHA^{commit}"')
-    || !reports.run.includes('git merge-base --is-ancestor "$REPOWISE_BASE_SHA" HEAD')
-    || !reports.run.includes('--since "$REPOWISE_BASE_SHA" --to HEAD')
-    || !reports.run.includes('[ "$REPOWISE_EVENT_NAME" = workflow_dispatch ]')
-    || !reports.run.includes('security: incomplete (event base unavailable or not an ancestor)')) {
-    throw new Error(`${relativeFile} must verify and report event-scoped security history; only manual dispatch may scan full history.`);
+  const install = (job.steps ?? []).find(step => step?.name === 'Install RepoWise');
+  if (!install?.run?.includes("'repowise==0.58.0'")
+    || !reports?.run?.includes('"$python_bin" scripts/repowise_reports.py --report-dir "$report_dir"')
+    || !reports.run.includes('"$python_bin" -m unittest discover -s scripts/tests -p \'test_repowise*.py\' -v')
+    || !reports.run.includes('trap cleanup EXIT')
+    || reports.run.replace('rmdir .vscode 2>/dev/null || true', '').includes('|| true')
+    || upload.if !== '${{ always() }}'
+    || upload.with?.['retention-days'] !== 14) {
+    throw new Error(`${relativeFile} must preserve pinned bounded reports, compatibility tests, cleanup and unconditional artifacts.`);
+  }
+}
+
+function assertManualRepoWiseWorkflow(file, workflow) {
+  const relativeFile = relativeWorkflow(file);
+  if (relativeFile !== '.github/workflows/repowise.yml') return;
+  if (Object.keys(workflow.on ?? {}).join(',') !== 'workflow_dispatch') {
+    throw new Error(`${relativeFile} must run only through workflow_dispatch.`);
+  }
+  const job = workflow.jobs?.['code-health'];
+  const checkout = (job?.steps ?? []).find(step => step?.uses === CHECKOUT_ACTION);
+  if (job?.['timeout-minutes'] !== 40
+    || JSON.stringify(workflow.permissions) !== JSON.stringify({ contents: 'read' })
+    || job.permissions !== undefined
+    || checkout?.with?.['fetch-depth'] !== 0
+    || checkout.with?.ref !== undefined
+    || workflow.concurrency?.group !== 'repowise-${{ github.ref }}'
+    || workflow.concurrency?.['cancel-in-progress'] !== true) {
+    throw new Error(`${relativeFile} must retain its manual job budget, read-only permissions, selected revision and per-ref concurrency.`);
   }
 }
 
@@ -315,6 +344,8 @@ function assertPlatformHistoryCheckout(relativeFile, job) {
 
 function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
+  if (path.basename(file) === commentContract.RUNTIME) return assertCommentWorkflowRuntime(file, workflow);
+  if (commentContract.CALLBACKS.includes(path.basename(file))) return assertCommentWorkflowCaller(file, workflow);
   if (relativeFile === '.github/workflows/setup_platform_smoke.yml') {
     const jobIds = Object.keys(workflow.jobs ?? {}).sort();
     if (JSON.stringify(jobIds) !== JSON.stringify(['setup-platform-smoke', 'setup-self-hosted-codex-smoke', 'upload-windows-coverage', 'windows-startup-probe'])) {
@@ -451,8 +482,9 @@ function assertRunner(file, workflow) {
     } else if (relativeFile === '.github/workflows/copilot_runner_diagnostics.yml') {
       if (jobId !== 'linux') throw new Error(`${relativeFile} contains an unsupported Codex diagnostic job.`);
       expected = ['self-hosted', 'codex', 'Linux'];
-    } else if (relativeFile === '.github/workflows/ci_check.yml'
-      || relativeFile === '.github/workflows/repowise.yml') {
+    } else if (relativeFile === '.github/workflows/repowise.yml') {
+      expected = ['self-hosted', 'codex', 'Linux'];
+    } else if (relativeFile === '.github/workflows/ci_check.yml') {
       expected = [QUALITY_RUNNER_BY_TRUST];
     }
     const labels = runnerLabels(job['runs-on']);
@@ -539,7 +571,7 @@ function assertAgentInstallationPrerequisites(file, workflow) {
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     const steps = job.steps ?? [];
     for (const step of steps) {
-      const repositoryVerificationStep = ['.github/workflows/copilot_issue_comment.yml', '.github/workflows/copilot_pull_request_comment.yml'].includes(relativeFile)
+      const repositoryVerificationStep = ['.github/workflows/copilot_issue_comment.yml', '.github/workflows/copilot_pull_request_comment.yml', '.github/workflows/copilot_comment_runtime.yml'].includes(relativeFile)
         && step.if === "env.COPILOT_PREPARE_VERIFICATION == 'true'"
         && ((step.name === 'Prepare repository Node' && step.uses === 'actions/setup-node@v7' && step.with?.['node-version'] === '24.x')
           || (step.name === 'Prepare repository pnpm' && step.uses === 'pnpm/action-setup@v5' && step.with?.version === '10.12.4')
@@ -570,7 +602,7 @@ function assertAgentWorkflowPermissions(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (!WORKFLOW_AGENT_ROLES[path.basename(file)]) return;
   const reviewEvidenceWorkflow = ['copilot_pull_request.yml', 'copilot_pull_request_review_state.yml',
-    'copilot_issue_comment.yml', 'copilot_pull_request_comment.yml'].includes(path.basename(file));
+    'copilot_issue_comment.yml', 'copilot_pull_request_comment.yml', 'copilot_comment_runtime.yml'].includes(path.basename(file));
   const expectedPermissions = reviewEvidenceWorkflow
     ? { checks: 'write', contents: 'read' }
     : { contents: 'read' };
@@ -582,6 +614,10 @@ function assertAgentWorkflowPermissions(file, workflow) {
       || permissionKeys.some((key, index) => key !== expectedKeys[index])
       || expectedKeys.some(key => permissions[key] !== expectedPermissions[key])) {
       throw new Error(`${relativeFile} job ${jobId} must grant GITHUB_TOKEN exactly ${expectedKeys.map(key => `${key}: ${expectedPermissions[key]}`).join(', ')}; mutations use the explicit PAT.`);
+    }
+    if (commentContract.CALLBACKS.includes(path.basename(file)) && job.uses) {
+      assertCommentWorkflowCaller(file, workflow);
+      continue;
     }
     if (reviewEvidenceWorkflow && !(job.steps ?? []).some(step =>
       isCopilotAction(step) && step?.env?.COPILOT_EVIDENCE_TOKEN === '${{ github.token }}')) {
@@ -1125,6 +1161,10 @@ function assertPhaseConditions(relativeFile, jobs, finalJob) {
   if (publishedActions.length !== 2) {
     throw new Error(`${relativeFile} must project publication through published_deployment_action.`);
   }
+  if ([...preparationActions, ...publishedActions].some(step =>
+    step.with?.['merge-queue-check-attestations'] !== "${{ vars.MERGE_QUEUE_CHECK_ATTESTATIONS || '[]' }}")) {
+    throw new Error(`${relativeFile} must pass live merge-queue attestations on every preparation and reconciliation entrypoint.`);
+  }
   const trustedContinuations = Object.values(jobs).flatMap(job => job.steps ?? [])
     .filter(step => isCopilotAction(step) && [
       'create_tag',
@@ -1233,7 +1273,6 @@ function assertMergeQueueWorkflowSupport(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   const required = new Set([
     '.github/workflows/ci_check.yml',
-    '.github/workflows/repowise.yml',
     '.github/workflows/copilot_pull_request_merge_queue.yml',
     'setup/workflows/copilot_pull_request_merge_queue.yml',
   ]);
@@ -1277,6 +1316,7 @@ function assertQueueWorkflow(file, workflow) {
   if (BOT_GATED_WORKFLOW_FILES.has(manifest.file) && queueJob.if !== expectedBotGate) {
     throw new Error(`${relativeFile} queue job ${manifest.jobId} must use the required bot actor${FORK_GATED_WORKFLOW_FILES.has(manifest.file) ? ' and same-repository PR' : ''} gate.`);
   }
+  if (commentContract.CALLBACKS.includes(manifest.file)) return assertCommentWorkflowCaller(file, workflow);
   if (typeof queueJob['timeout-minutes'] !== 'number'
     || queueJob['timeout-minutes'] < MIN_QUEUE_JOB_TIMEOUT_MINUTES) {
     throw new Error(`${relativeFile} queue job ${manifest.jobId} must have timeout-minutes >= ${MIN_QUEUE_JOB_TIMEOUT_MINUTES}.`);
@@ -1346,7 +1386,7 @@ function assertSequentialMutationWorkflow(file, workflow) {
 function assertIssueWorkflowProfileInput(file, workflow) {
   if (!ISSUE_WORKFLOW_PROFILE_FILES.has(path.basename(file))) return;
   const relativeFile = relativeWorkflow(file);
-  const expectedAction = relativeFile.startsWith('setup/workflows/') ? DISTRIBUTED_COPILOT_ACTION : './';
+  const expectedAction = expectedCopilotAction(relativeFile);
   const actionSteps = Object.values(workflow.jobs ?? {}).flatMap(job => job?.steps ?? [])
     .filter(step => step?.uses === expectedAction);
   if (actionSteps.length === 0 || actionSteps.some(step =>
@@ -1357,6 +1397,7 @@ function assertIssueWorkflowProfileInput(file, workflow) {
 
 function assertIssueBranchConfigurationInputs(file, workflow) {
   if (!WORKFLOW_AGENT_ROLES[path.basename(file)]) return;
+  if (commentContract.CALLBACKS.includes(path.basename(file))) return assertCommentWorkflowCaller(file, workflow);
   const relativeFile = relativeWorkflow(file);
   const distributed = relativeFile.startsWith('setup/workflows/');
   const branches = JSON.parse(readFileSync(path.join(repositoryRoot, '.copilot/repository-profile.json'), 'utf8')).branches;
@@ -1364,21 +1405,46 @@ function assertIssueBranchConfigurationInputs(file, workflow) {
     ? {
       'issue-managed-branches': "${{ vars.ISSUE_MANAGED_BRANCHES || 'true' }}",
       'pre-branch-sdd': "${{ vars.PRE_BRANCH_SDD || 'false' }}",
+      'verification-setup': "${{ vars.VERIFICATION_SETUP || 'false' }}",
     }
     : {
       'issue-managed-branches': branches.issueManagedBranches,
       'pre-branch-sdd': branches.preBranchSdd,
+      'verification-setup': "${{ vars.VERIFICATION_SETUP || 'false' }}",
     };
   const actionSteps = Object.values(workflow.jobs ?? {}).flatMap(job => job?.steps ?? [])
     .filter(isCopilotAction);
   if (actionSteps.length === 0 || actionSteps.some(step =>
     Object.entries(expected).some(([input, value]) => step.with?.[input] !== value))) {
-    throw new Error(`${relativeFile} must pass consistent issue-managed-branches and pre-branch-sdd inputs to every Copilot callback.`);
+    throw new Error(`${relativeFile} must pass consistent issue-managed-branches, pre-branch-sdd and verification-setup inputs to every Copilot callback.`);
   }
+}
+
+function assertNativeVerificationWorkflow(file, workflow) {
+  const contract = require('./generate-native-verification-workflows.cjs');
+  if (path.basename(file) === contract.RUNTIME) return assertCommentWorkflowRuntime(file, workflow);
+  if (contract.CALLBACKS.includes(path.basename(file))) return assertCommentWorkflowCaller(file, workflow);
+
 }
 
 function validateWorkflow(file, workflow) {
   if (!workflow || typeof workflow !== 'object') throw new Error('workflow document is empty.');
+  if (commentContract.CALLBACKS.includes(path.basename(file))) {
+    assertCommentWorkflowCaller(file, workflow);
+    assertDirectEventTriggers(file, workflow);
+    return;
+  }
+  if (path.basename(file) === commentContract.RUNTIME) {
+    assertCommentWorkflowRuntime(file, workflow);
+    assertCopilotActionInputs(file, workflow);
+    assertNoJobLevelSecrets(file, workflow);
+    assertAgentWorkflowPermissions(file, workflow);
+    assertAgentInputs(file, workflow);
+    assertRepositoryLocaleInputs(file, workflow);
+    return;
+  }
+  assertNativeVerificationWorkflow(file, workflow);
+  assertManualRepoWiseWorkflow(file, workflow);
   assertDirectEventTriggers(file, workflow);
   assertApprovalObserverWorkflow(file, workflow);
   assertPullRequestMergeQueueWorkflow(file, workflow);
@@ -1423,6 +1489,7 @@ function main() {
 if (require.main === module) main();
 
 module.exports = {
+  assertNativeVerificationWorkflow,
   QUEUE_WAIT_MINUTES,
   MIN_QUEUE_JOB_TIMEOUT_MINUTES,
   DEPLOYMENT_VALIDATION_TIMEOUT_MINUTES,

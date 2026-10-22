@@ -548,3 +548,72 @@ When current-repository organization reuse reports configuration/access changed
 after review, inspect the credential-health workflow too. Its installation or
 removal changes required bootstrap permissions. Prepare and approve a fresh plan
 instead of applying a previously audited permission set.
+
+## Unsupported stored configuration
+
+An issue or PR with an invalid stored Copilot block stops with
+`configuration.invalid` and **Retryable: No**. The annotation and Job Summary
+identify its number, the missing/unsupported/malformed state, the required
+schema version (currently `3`), and the same reference. Retrying unchanged state
+will fail again. The failed read does not change the body or stored state.
+
+| Stored content | Meaning | Next action |
+|---|---|---|
+| No Copilot block | No previous state to restore | An unlinked PR can follow its normal PR workflow. |
+| Missing schema, unsupported version, malformed JSON/value or incomplete delimiters | Stored state cannot be trusted | A maintainer must review it before retrying. |
+| Valid current-schema block | Supported state | Continue through normal validation; this is not a reset instruction. |
+
+An ordinary inline mention or closed code example containing only an opening or
+closing marker is not stored state and does not cause a configuration error.
+Complete legacy blocks inside code fences still undergo strict validation;
+avoid reproducing complete live delimiter pairs in examples. Multiple complete
+blocks or potential state behind an unclosed fence require maintainer review,
+so Copilot never silently discards one record or chooses between conflicting
+records. Reads and updates preserve the human description around the owned block.
+
+Recovery is manual and depends on what the block owns:
+
+1. Preserve the original body using GitHub history or a copy before editing.
+2. If a maintainer verifies that the issue/PR is unmanaged and the block is
+   only an obsolete marker with no branch, release, hotfix or orchestration
+   state to retain, remove **only that block**, preserve the human description,
+   and rerun the failed workflow. An obsolete reproduction example can instead
+   show its JSON without live Copilot comment delimiters: the current reader
+   also recognizes those delimiters inside fenced issue/PR examples.
+3. If managed state may exist or ownership is unclear, stop. Ask a maintainer
+   to inspect linked branches and operations and restore verified supported
+   state through the supported workflow before rerunning. Do not discard
+   unknown state.
+
+Never repair this by merely adding `schemaVersion: 3`, changing a version number,
+automatically migrating/resetting state, or turning the failed check into a
+successful skip. A version field alone does not prove that the stored branch or
+operation facts are valid. Authorization and temporary GitHub read failures
+retain their own error categories; follow their permission/provider recovery
+instead of deleting configuration.
+
+## Repository setup blocks verification
+
+`Repository setup blocked verification` means preparation did not establish a safe
+command environment. Verification and commit/push are withheld; branch sync uses
+its existing merge abort. Inspect the native setup step and closed cause in the
+run, then repair the reviewed action on `main-branch`.
+
+| Cause | Recovery |
+| --- | --- |
+| `source-unavailable` | Make the trusted origin ref available in the full checkout. |
+| `helper-invalid` | Review the fixed native composite and regular auxiliary files; respect file/step bounds and avoid nested local `uses`. |
+| `native-workflow-required` | Update generated callbacks and use their normal directory-based Git checkout in GitHub Actions. The local CLI cannot execute composite actions. |
+| `workspace-changed` / `candidate-changed` | Keep setup dependency-only; do not change publishable source, index, branch or lockfiles. Retry from a fresh candidate. |
+| `process-failed` | Inspect the native action's logs and fix its reviewed dependency installation. |
+| `timeout` | Fit each native setup within five minutes; no limit override or automatic retry exists. |
+| `output-limit` | A Copilot worker log line/output exceeded its framing bound; native setup logs use normal Actions limits. |
+| `cancelled` | Retry the authorized operation after cancellation is resolved. |
+| `handoff-invalid` | Rerun through updated generated callbacks; never reuse a session from another run/job or request. |
+| `result-invalid` | Export only supported, existing PATH/JAVA_HOME directories under the candidate, private HOME or trusted tool cache. |
+
+The consumer file is `.github/actions/copilot-verification-setup/action.yml`.
+Candidate edits do not replace the trusted snapshot. Enabling without a reviewed
+action blocks verification; the disabled default preserves existing behavior.
+See [repository-owned setup](/security-operations/operations/verification#repository-owned-setup)
+for native Python/pnpm examples, profile lifetime, trust boundaries and migration.

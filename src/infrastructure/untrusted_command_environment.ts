@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync } from 'node:fs';
+import { mkdirSync, realpathSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { createPrivateVerificationRuntimeRoot } from './agents/agent_private_install_root';
 
@@ -45,7 +45,7 @@ export function prepareUntrustedCommandEnvironment(
     source: NodeJS.ProcessEnv = process.env,
     platform: NodeJS.Platform = process.platform,
 ): PreparedUntrustedCommandEnvironment {
-    const runtimeHome = createPrivateVerificationRuntimeRoot();
+    const runtimeHome = realpathSync(createPrivateVerificationRuntimeRoot());
     const environment: Record<string, string> = { HOME: runtimeHome };
     for (const variable of ALLOWED_VARIABLES) {
         const value = source[variable];

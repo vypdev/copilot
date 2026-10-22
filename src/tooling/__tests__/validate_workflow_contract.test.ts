@@ -153,22 +153,20 @@ describe('workflow contract validator', () => {
     }
   });
 
-  it.each(['issue-managed-branches', 'pre-branch-sdd'])(
-    'rejects a PR comment callback that omits or disables the installed %s policy', input => {
-      const { file, workflow } = loadMutationWorkflow('.github/workflows', 'copilot_pull_request_comment.yml');
-      const action = workflow.jobs['copilot-pull-requests'].steps.find((step: { uses?: string }) => step.uses === './');
+  it.each(['issue-managed-branches', 'pre-branch-sdd', 'verification-setup'])(
+    'rejects a comment coordinator that omits or disables the installed %s policy', input => {
+      const { file, workflow } = loadMutationWorkflow('.github/workflows', 'copilot_comment_runtime.yml');
+      const action = workflow.jobs.copilot.steps.find((step: { id?: string }) => step.id === 'copilot');
       delete action.with[input];
-      expect(() => assertIssueBranchConfigurationInputs(file, workflow)).toThrow('must pass consistent');
+      expect(() => validateWorkflow(file, workflow)).toThrow('native comment runtime');
       action.with[input] = false;
-      expect(() => assertIssueBranchConfigurationInputs(file, workflow)).toThrow('must pass consistent');
+      expect(() => validateWorkflow(file, workflow)).toThrow('native comment runtime');
     },
   );
 
   it('rejects a distributed callback that enables the SDD gate instead of inheriting its configured default', () => {
     const { file, workflow } = loadMutationWorkflow('setup/workflows', 'copilot_pull_request_comment.yml');
-    const action = workflow.jobs['copilot-pull-requests'].steps.find(
-      (step: { uses?: string }) => step.uses?.startsWith('vypdev/copilot@'),
-    );
+    const action = workflow.jobs['copilot-pull-requests'];
     action.with['pre-branch-sdd'] = "${{ vars.PRE_BRANCH_SDD || 'true' }}";
     expect(() => assertIssueBranchConfigurationInputs(file, workflow)).toThrow('must pass consistent');
   });
@@ -193,7 +191,8 @@ describe('workflow contract validator', () => {
         'copilot_issue_comment.yml', 'copilot_pull_request.yml',
         'copilot_pull_request_comment.yml', 'copilot_pull_request_review_state.yml',
       ]) {
-        const workflow = yaml.load(readFileSync(path.join(process.cwd(), directory, fileName), 'utf8')) as MutationWorkflow;
+        const coordinator = ['copilot_issue_comment.yml', 'copilot_pull_request_comment.yml'].includes(fileName);
+        const workflow = yaml.load(readFileSync(path.join(process.cwd(), coordinator ? '.github/workflows' : directory, coordinator ? 'copilot_comment_runtime.yml' : fileName), 'utf8')) as MutationWorkflow;
         const steps = Object.values(workflow.jobs).flatMap(job => job.steps ?? []);
         const modelInputs = steps.filter(step => step.with?.['agent-model']);
         expect(modelInputs).not.toHaveLength(0);
@@ -494,7 +493,6 @@ describe('workflow contract validator', () => {
 
   it.each([
     '.github/workflows/ci_check.yml',
-    '.github/workflows/repowise.yml',
     '.github/workflows/copilot_pull_request_merge_queue.yml',
     'setup/workflows/copilot_pull_request_merge_queue.yml',
   ])('requires merge-group checks in %s', (relativeFile) => {
@@ -645,6 +643,21 @@ describe('workflow contract validator', () => {
       }, 'job tag must have timeout-minutes 10');
     }
   });
+
+  it.each(mutationDirectories.flatMap(directory => mutationWorkflowNames.flatMap(fileName =>
+    ['prepare', 'publish', 'resume'].flatMap(phase => ['missing', 'stale'].map(value => [directory, fileName, phase, value])))))(
+    'rejects %s/%s %s with %s merge-queue attestations', (directory, fileName, phase, value) => {
+      expectMutationRejected(directory, fileName, workflow => {
+        const action = phase === 'prepare' ? 'prepare_deployment_action' : 'published_deployment_action';
+        const job = phase === 'resume' ? workflow.jobs['resume-reconciliation']
+          : Object.entries(workflow.jobs).find(([id, job]) => id !== 'resume-reconciliation'
+            && (job.steps ?? []).some((step: any) => step.with?.['single-action'] === action))![1];
+        const step = job.steps.find((step: any) => step.with?.['single-action'] === action);
+        if (value === 'missing') delete step.with['merge-queue-check-attestations'];
+        else step.with['merge-queue-check-attestations'] = '[]';
+      }, 'live merge-queue attestations');
+    },
+  );
 
   it.each(mutationWorkflowNames)('enforces the active compiled-files budget for %s', (fileName) => {
     expectMutationRejected('.github/workflows', fileName, (workflow) => {
@@ -985,7 +998,6 @@ describe('workflow contract validator', () => {
     ['setup/workflows', 'copilot_credential_health.yml'],
     ['setup/workflows', 'copilot_issue.yml'],
     ['.github/workflows', 'ci_check.yml'],
-    ['.github/workflows', 'repowise.yml'],
   ])('prevents grouped routing from overriding the hosted/trust role in %s/%s', (directory, name) => {
     const { file, workflow } = loadMutationWorkflow(directory, name);
     Object.values(workflow.jobs)[0]['runs-on'] = { group: 'vypdev', labels: ['self-hosted', 'codex', 'Linux'] };
@@ -1270,9 +1282,6 @@ describe('workflow contract validator', () => {
     ['ci_check.yml', 'ci-check', 'pull_request', 'vypdev/copilot', '["self-hosted","codex","Linux"]'],
     ['ci_check.yml', 'ci-check', 'pull_request', 'outside/fork', '["ubuntu-latest"]'],
     ['ci_check.yml', 'ci-check', 'merge_group', 'vypdev/copilot', '["ubuntu-latest"]'],
-    ['repowise.yml', 'code-health', 'pull_request', 'vypdev/copilot', '["self-hosted","codex","Linux"]'],
-    ['repowise.yml', 'code-health', 'pull_request', 'outside/fork', '["ubuntu-latest"]'],
-    ['repowise.yml', 'code-health', 'merge_group', 'vypdev/copilot', '["ubuntu-latest"]'],
   ])('routes %s %s code from %s to %s', (fileName, jobId, eventName, headRepository, expectedRunner) => {
     const file = path.join(process.cwd(), '.github', 'workflows', fileName);
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
@@ -1423,31 +1432,81 @@ describe('workflow contract validator', () => {
     }
   });
 
-  it('bounds RepoWise advisory scans and preserves required health artifacts', () => {
+  it('bounds RepoWise advisory scans and preserves manual health artifacts', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'repowise.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     const steps = workflow.jobs['code-health'].steps;
     const reports = steps.find((step: { name?: string }) => step.name === 'Generate RepoWise reports');
     const upload = steps.find((step: { name?: string }) => step.name === 'Upload RepoWise reports');
-    expect(reports.run).toContain('health --no-workspace --refactoring-targets --format md');
-    expect(reports.run).toContain('health --no-workspace --refactoring-targets --format json');
-    expect(reports.run).toContain('ulimit -v 2097152; timeout --kill-after=10s 90s');
-    expect(reports.run).toContain('incomplete (exit %s)');
+    expect(reports.run).toContain('"$python_bin" scripts/repowise_reports.py --report-dir "$report_dir"');
+    expect(reports.run).toContain('"$python_bin" -m unittest discover');
+    const adapter = readFileSync(path.join(process.cwd(), 'scripts', 'repowise_reports.py'), 'utf8');
+    expect(adapter).toContain('resource.RLIMIT_AS');
+    expect(adapter).toContain('os.killpg(process.pid, signal.SIGKILL)');
+    expect(adapter).toContain('write_summary(report_dir, sha, results)');
     expect(upload.if).toBe('${{ always() }}');
   });
 
-  it.each(['event-base', 'ancestry', 'range', 'manual-only'] as const)(
-    'rejects loss of the RepoWise history scope boundary: %s', (boundary) => {
-      const file = path.join(process.cwd(), '.github', 'workflows', 'repowise.yml');
-      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+  it('accepts RepoWise manual dispatch with native branch selection and isolated concurrency', () => {
+    const { file, workflow } = loadMutationWorkflow('.github/workflows', 'repowise.yml');
+    expect(workflow.on).toEqual({ workflow_dispatch: null });
+    expect(workflow.concurrency).toEqual({ group: 'repowise-${{ github.ref }}', 'cancel-in-progress': true });
+    expect(() => validateWorkflow(file, workflow)).not.toThrow();
+  });
+
+  it.each(['push', 'pull_request', 'merge_group', 'workflow_call', 'schedule'])(
+    'rejects the RepoWise automatic or reusable trigger %s', event => {
+      const { file, workflow } = loadMutationWorkflow('.github/workflows', 'repowise.yml');
+      workflow.on[event] = event === 'schedule' ? [{ cron: '0 0 * * *' }] : {};
+      expect(() => validateWorkflow(file, workflow)).toThrow('must run only through workflow_dispatch');
+    },
+  );
+
+  it('rejects removal of RepoWise manual dispatch', () => {
+    const { file, workflow } = loadMutationWorkflow('.github/workflows', 'repowise.yml');
+    delete workflow.on.workflow_dispatch;
+    expect(() => validateWorkflow(file, workflow)).toThrow('must run only through workflow_dispatch');
+  });
+
+  it.each(['timeout', 'permissions', 'job-permissions', 'history', 'selected-ref', 'concurrency', 'cancellation'])(
+    'preserves the RepoWise manual execution boundary: %s', boundary => {
+      const { file, workflow } = loadMutationWorkflow('.github/workflows', 'repowise.yml');
+      const job = workflow.jobs['code-health'];
+      const checkout = job.steps.find((step: { uses?: string }) => step.uses === 'actions/checkout@v5');
+      if (boundary === 'timeout') job['timeout-minutes'] = 60;
+      else if (boundary === 'permissions') workflow.permissions.contents = 'write';
+      else if (boundary === 'job-permissions') job.permissions = { contents: 'write' };
+      else if (boundary === 'history') checkout.with['fetch-depth'] = 1;
+      else if (boundary === 'selected-ref') checkout.with.ref = 'master';
+      else if (boundary === 'concurrency') workflow.concurrency.group = 'ci-${{ github.ref }}';
+      else workflow.concurrency['cancel-in-progress'] = false;
+      expect(() => validateWorkflow(file, workflow)).toThrow('manual job budget, read-only permissions, selected revision and per-ref concurrency');
+    },
+  );
+
+  it('keeps RepoWise manual runs on Ubuntu codex runners', () => {
+    const { file, workflow } = loadMutationWorkflow('.github/workflows', 'repowise.yml');
+    expect(workflow.jobs['code-health']['runs-on']).toEqual(['self-hosted', 'codex', 'Linux']);
+    expect(() => validateWorkflow(file, workflow)).not.toThrow();
+    workflow.jobs['code-health']['runs-on'] = ['ubuntu-latest'];
+    expect(() => assertRunner(file, workflow)).toThrow('must use runs-on self-hosted, codex, Linux');
+  });
+
+  it.each(['pin', 'script', 'compatibility', 'cleanup', 'upload', 'retention'])(
+    'rejects loss of RepoWise manual report evidence: %s', boundary => {
+      const { file, workflow } = loadMutationWorkflow('.github/workflows', 'repowise.yml');
       expect(() => validateWorkflow(file, workflow)).not.toThrow();
       const job = workflow.jobs['code-health'];
       const reports = job.steps.find((step: { name?: string }) => step.name === 'Generate RepoWise reports');
-      if (boundary === 'event-base') job.env.REPOWISE_BASE_SHA = '${{ github.sha }}';
-      else if (boundary === 'ancestry') reports.run = reports.run.replace('git merge-base --is-ancestor "$REPOWISE_BASE_SHA" HEAD', 'true');
-      else if (boundary === 'range') reports.run = reports.run.replace('--since "$REPOWISE_BASE_SHA" --to HEAD', '');
-      else reports.run = reports.run.replace('[ "$REPOWISE_EVENT_NAME" = workflow_dispatch ]', 'true');
-      expect(() => validateWorkflow(file, workflow)).toThrow('event-scoped security history');
+      const install = job.steps.find((step: { name?: string }) => step.name === 'Install RepoWise');
+      const upload = job.steps.find((step: { name?: string }) => step.name === 'Upload RepoWise reports');
+      if (boundary === 'pin') install.run = install.run.replace('repowise==0.58.0', 'repowise');
+      else if (boundary === 'script') reports.run = reports.run.replace('scripts/repowise_reports.py', 'other.py');
+      else if (boundary === 'compatibility') reports.run = reports.run.replace('-m unittest discover', '-m other');
+      else if (boundary === 'cleanup') reports.run = reports.run.replace('trap cleanup EXIT', '');
+      else if (boundary === 'upload') delete upload.if;
+      else upload.with['retention-days'] = 1;
+      expect(() => validateWorkflow(file, workflow)).toThrow('pinned bounded reports, compatibility tests');
     },
   );
 
@@ -1574,7 +1633,7 @@ describe('workflow contract validator', () => {
 
     const file = path.join(process.cwd(), 'setup/workflows/copilot_issue_comment.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
-    workflow.jobs['copilot-issues'].steps.splice(1, 0, { uses: 'actions/setup-node@v7' });
+    workflow.jobs['copilot-issues'].steps = [{ uses: 'actions/setup-node@v7' }];
     expect(() => assertAgentInstallationPrerequisites(file, workflow)).toThrow('standalone official agent installation');
   });
 
@@ -1625,11 +1684,13 @@ describe('workflow contract validator', () => {
         job.permissions = { contents: 'read' };
         expect(() => assertAgentWorkflowPermissions(file, workflow)).toThrow('must grant GITHUB_TOKEN exactly');
         job.permissions = { checks: 'write', contents: 'read' };
-        const action = job.steps.find((step: any) => step.env?.COPILOT_EVIDENCE_TOKEN);
+        const central = loadMutationWorkflow('.github/workflows', 'copilot_comment_runtime.yml');
+        const runtime = central.workflow.jobs.copilot;
+        const action = runtime.steps.find((step: any) => step.env?.COPILOT_EVIDENCE_TOKEN);
         delete action.env.COPILOT_EVIDENCE_TOKEN;
-        expect(() => assertAgentWorkflowPermissions(file, workflow)).toThrow('must scope COPILOT_EVIDENCE_TOKEN');
-        job.steps.push({ run: 'true', env: { COPILOT_EVIDENCE_TOKEN: '${{ github.token }}' } });
-        expect(() => assertAgentWorkflowPermissions(file, workflow)).toThrow('must scope COPILOT_EVIDENCE_TOKEN');
+        expect(() => assertAgentWorkflowPermissions(central.file, central.workflow)).toThrow('must scope COPILOT_EVIDENCE_TOKEN');
+        runtime.steps.push({ run: 'true', env: { COPILOT_EVIDENCE_TOKEN: '${{ github.token }}' } });
+        expect(() => assertAgentWorkflowPermissions(central.file, central.workflow)).toThrow('must scope COPILOT_EVIDENCE_TOKEN');
       }
     },
   );

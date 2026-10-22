@@ -5,6 +5,7 @@
  * them in the domain prevents policies from depending on a particular use-case
  * folder and gives every adapter one stable semantic vocabulary.
  */
+import { buildFindingFingerprint } from './finding_identity';
 
 export interface BugbotFinding {
   id: string;
@@ -81,22 +82,72 @@ export function findExistingFindingInfo(
   existingByFindingId: ExistingByFindingId,
   finding: Pick<BugbotFinding, 'id' | 'fingerprint' | 'semanticFingerprint'>,
 ): ExistingFindingInfo | undefined {
+  return findExistingFindingMatch(existingByFindingId, finding)?.info;
+}
+
+/** A match carries its durable key so updating a comment cannot re-key it. */
+export function findExistingFindingMatch(
+  existingByFindingId: ExistingByFindingId,
+  finding: Pick<BugbotFinding, 'id' | 'fingerprint' | 'semanticFingerprint'>,
+): { id: string; info: ExistingFindingInfo } | undefined {
   const direct = existingByFindingId[finding.id];
-  if (direct && identitiesAreCompatible(direct, finding)) return direct;
-  const candidates = Object.values(existingByFindingId);
+  if (direct && identitiesAreCompatible(direct, finding)) return { id: finding.id, info: direct };
+  const candidates = Object.entries(existingByFindingId);
   if (finding.fingerprint) {
-    const locationMatch = candidates.find((candidate) =>
+    const locationMatches = candidates.filter(([, candidate]) =>
       candidate.issue?.fingerprint === finding.fingerprint
       || candidate.pullRequest?.fingerprint === finding.fingerprint,
     );
-    if (locationMatch) return locationMatch;
+    if (locationMatches.length > 0) return uniqueFindingMatch(locationMatches);
   }
   if (!finding.semanticFingerprint) return undefined;
-  const semanticMatches = candidates.filter((candidate) =>
+  const semanticMatches = candidates.filter(([, candidate]) =>
     candidate.issue?.semanticFingerprint === finding.semanticFingerprint
     || candidate.pullRequest?.semanticFingerprint === finding.semanticFingerprint,
   );
-  return semanticMatches.length === 1 ? semanticMatches[0] : undefined;
+  return uniqueFindingMatch(semanticMatches);
+}
+
+/**
+ * Preserve trusted IDs across title/location changes, before limits, publication
+ * and final projection. Multiple reports of one uniquely matched durable finding
+ * share one record; unmatched or ambiguous reports remain independent evidence.
+ */
+export function retainExistingFindingIds(
+  findings: readonly BugbotFinding[],
+  existingByFindingId: ExistingByFindingId,
+): BugbotFinding[] {
+  const retained = new Set<string>();
+  const durableIds = new Set(Object.keys(existingByFindingId));
+  // Reserve the whole input up front so a generated ID cannot take another
+  // report's ID, including one that occurs later in the response.
+  const reservedIds = new Set([...durableIds, ...findings.map((finding) => finding.id)]);
+  const emittedIds = new Set<string>();
+  return findings.flatMap((finding) => {
+    const match = findExistingFindingMatch(existingByFindingId, finding);
+    if (!match) {
+      let id = finding.id;
+      if (durableIds.has(id) || emittedIds.has(id)) {
+        const base = `candidate-${buildFindingFingerprint(finding)}`;
+        id = base;
+        let suffix = 0;
+        while (reservedIds.has(id)) id = `${base}-${++suffix}`;
+        reservedIds.add(id);
+      }
+      emittedIds.add(id);
+      return [id === finding.id ? finding : { ...finding, id }];
+    }
+    if (retained.has(match.id)) return [];
+    retained.add(match.id);
+    emittedIds.add(match.id);
+    return [finding.id === match.id ? finding : { ...finding, id: match.id }];
+  });
+}
+
+function uniqueFindingMatch(
+  matches: Array<[string, ExistingFindingInfo]>,
+): { id: string; info: ExistingFindingInfo } | undefined {
+  return matches.length === 1 ? { id: matches[0][0], info: matches[0][1] } : undefined;
 }
 
 function identitiesAreCompatible(

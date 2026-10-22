@@ -1,0 +1,10 @@
+name: Copilot native verification acceptance
+inputs:
+  verification-setup:
+    default: 'true'
+    description: Exercise the native verification bridge
+runs:
+  using: node24
+  main: dist/index.js
+  post: dist/index.js
+  post-if: always() && env.COPILOT_NATIVE_PHASE != ''

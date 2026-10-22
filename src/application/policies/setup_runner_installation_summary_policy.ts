@@ -1,6 +1,7 @@
 import type { SetupBatchTargetPlan } from '../../domain/setup_batch';
 import { selectedSetupRunsOn } from './setup_runner_policy';
 import type { SetupRunsOn } from '../../domain/setup_runner';
+import { setupVerificationActionSummary } from './setup_verification_action_summary_policy';
 
 function routeBlock(route: SetupRunsOn): readonly string[] {
   const json = JSON.stringify(route, null, 2);
@@ -25,5 +26,6 @@ export function setupRunnerInstallationSummary(plan: SetupBatchTargetPlan): stri
     `**Parity:** ${assets.filter(asset => asset.status === 'source-only').length} source extensions; ${assets.filter(asset => asset.status === 'missing').length} missing assets (including disabled optional capabilities); ${assets.filter(asset => asset.status === 'customized').length} customized; ${assets.filter(asset => asset.status === 'incompatible').length} incompatible metadata retained or blocked before regeneration.`,
     'Inspect the complete Files changed view and `.copilot/runner-profile.json`. Any replacements retain setup backups under `.copilot/setup-backups/`.',
     'Runner access, capacity and agent authentication are separate. Selection grants no group access and never falls back to another runner. Human merge and actual trusted workflow verification remain pending.',
+    ...setupVerificationActionSummary(review?.verificationSetup),
   ].join('\n');
 }

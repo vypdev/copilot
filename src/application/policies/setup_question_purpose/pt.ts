@@ -1,5 +1,6 @@
 /** Portuguese question-specific purposes. */
 export const purposesPt: Readonly<Record<string, string>> = {
+  'repository.verificationSetup': 'Ative a preparação das dependências antes da verificação; personalize e reveja o modelo na MAIN_BRANCH primeiro.',
   'issueWorkflows.enabled': 'Escolha os fluxos de questões que o Copilot poderá executar; cada um afeta de forma diferente ramos, etiquetas e automatizações.',
   'repositoryAgentGuidance.enabled': 'Gere instruções para ajudar os agentes de IA a trabalhar com segurança neste projeto.',
   'repositoryAgentGuidance.agentsPointer': 'Decida se o AGENTS.md da raiz aponta para as instruções geradas, é criado se faltar ou permanece intacto.',

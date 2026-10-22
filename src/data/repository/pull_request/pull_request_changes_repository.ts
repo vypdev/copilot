@@ -1,5 +1,5 @@
+import { toPullRequestReviewOperationError } from './pull_request_review_error_metadata';
 import { logError } from "../../../utils/logger";
-import { toPullRequestReviewOperationError } from "../../../application/ports/pull_request_review_errors";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubPullRequestChangesClient, GithubPullRequestFile } from "../../../infrastructure/github/ports/github_pull_request_provider_ports";
 import { requireArrayPage } from "../github/github_pagination_policy";

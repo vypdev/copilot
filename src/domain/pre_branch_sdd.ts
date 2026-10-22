@@ -73,6 +73,17 @@ export function isSafeSddPath(path: string): boolean {
   return SDD_PATH.test(path) && !['specs/CATALOG.md', 'specs/_template.md'].includes(path);
 }
 
+export type SddOwnershipFailureReason = 'update-owner-mismatch' | 'companion-owner-unknown'
+  | 'companion-path-registered' | 'new-owner-registered' | 'new-path-registered';
+
+/** Closed diagnostics contain no model-selected identifiers or provider text. */
+export class SddOwnershipFailure extends Error {
+  constructor(readonly reason: SddOwnershipFailureReason) {
+    super(`SDD ownership analysis rejected (${reason}).`);
+    this.name = 'SddOwnershipFailure';
+  }
+}
+
 /** The agent may propose ownership but cannot invent a catalogued owner or arbitrary path. */
 export function parseSddPlan(value: unknown, catalog: ReadonlyMap<string, readonly string[]>): SddPlan {
   if (!isRecord(value)) throw new Error('The SDD analysis must be an object.');
@@ -89,14 +100,12 @@ export function parseSddPlan(value: unknown, catalog: ReadonlyMap<string, readon
   const ownerPaths = catalog.get(capabilityId);
   const registered = [...catalog.values()].some(paths => paths.includes(path));
   if (action === 'update' && (!ownerPaths?.includes(path) || !registered)) {
-    throw new Error('The requested SDD update is not owned by the selected catalog capability.');
+    throw new SddOwnershipFailure('update-owner-mismatch');
   }
-  if (action === 'companion' && (!ownerPaths || registered)) {
-    throw new Error('A companion SDD requires an existing owner and a new path.');
-  }
-  if (action === 'new' && (ownerPaths || registered)) {
-    throw new Error('A new SDD requires an unregistered capability and path.');
-  }
+  if (action === 'companion' && !ownerPaths) throw new SddOwnershipFailure('companion-owner-unknown');
+  if (action === 'companion' && registered) throw new SddOwnershipFailure('companion-path-registered');
+  if (action === 'new' && ownerPaths) throw new SddOwnershipFailure('new-owner-registered');
+  if (action === 'new' && registered) throw new SddOwnershipFailure('new-path-registered');
   if (!Array.isArray(value.questions) || value.questions.length > 8) {
     throw new Error('The SDD analysis must contain at most eight blocking questions.');
   }
@@ -220,12 +229,12 @@ export function parseSddAnswer(body: string, questionId: string): string | undef
 
 /** Only these content failures may trigger a bounded draft regeneration. */
 export class SddDraftFormatFailure extends Error {
-  constructor(readonly reason: 'required-heading' | 'test-budget', message: string) { super(message); }
+  constructor(readonly reason: 'required-heading' | 'test-budget' | 'case-identity' | 'case-budget' | 'requirement-mapping' | 'repository-path', message: string) { super(message); }
 }
 
 /** An immutable owner cannot be repaired by regenerating its proposed appendix. */
 export class SddOwnerFormatFailure extends Error {
-  constructor(readonly reason: 'required-heading' | 'test-budget') {
+  constructor(readonly reason: SddDraftFormatFailure['reason']) {
     super(`The existing owning SDD violates its ${reason} contract; review the owner before retrying.`);
   }
 }
@@ -309,19 +318,35 @@ export function composeSddUpdate(existing: string, change: string): string {
   }
   validateSddMarkdown(change);
   if (change.length > SDD_MAX_UPDATE_CHARACTERS) throw new Error('An SDD update appendix exceeds 18000 characters; use a proportional change or a companion SDD.');
+  const appendix = shiftSddHeadings(change, 1);
+  const merged = `${existing.trimEnd()}\n\n${appendix.trim()}\n`;
+  validateSddMarkdown(merged);
+  return merged;
+}
+
+/** Recovery validates the original candidate, not a second copy of its retained baseline. */
+export function recoverSddUpdate(existing: string, published: string): string | undefined {
+  const prefix = `${existing.trimEnd()}\n\n`;
+  if (!published.startsWith(prefix)) return undefined;
+  // Composition normalizes outer whitespace and adds a publication newline.
+  // Reconstruct an equivalent candidate inside the original size bounds.
+  const change = shiftSddHeadings(published.slice(prefix.length), -1).trim().padEnd(SDD_MIN_DRAFT_CHARACTERS, '\n');
+  return composeSddUpdate(existing, change) === published ? change : undefined;
+}
+
+function shiftSddHeadings(source: string, direction: 1 | -1): string {
   let fence: string | undefined;
-  const appendix = change.split('\n').map(line => {
+  return source.split('\n').map(line => {
     const boundary = line.match(/^\s*(`{3,}|~{3,})/);
     if (boundary) {
       if (!fence) fence = boundary[1];
       else if (boundary[1][0] === fence[0] && boundary[1].length >= fence.length) fence = undefined;
       return line;
     }
-    return !fence && /^#{1,5} /.test(line) ? `#${line}` : line;
+    if (fence) return line;
+    return direction === 1 ? (/^#{1,5} /.test(line) ? `#${line}` : line)
+      : (/^#{2,6} /.test(line) ? line.slice(1) : line);
   }).join('\n');
-  const merged = `${existing.trimEnd()}\n\n${appendix.trim()}\n`;
-  validateSddMarkdown(merged);
-  return merged;
 }
 
 function serializeSddGateValue(value: SddGateRecord | readonly SddAnswer[]): string {

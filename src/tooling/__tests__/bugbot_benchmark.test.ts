@@ -6,6 +6,33 @@ import { evaluateBugbotBenchmark, loadBugbotBenchmark, loadBugbotPredictions } f
 describe('versioned Bugbot benchmark', () => {
   const root = join(__dirname, '..', '..', '..');
 
+  it.each([
+    'py-coverage-config-branch', 'py-http10-reconnect', 'docs-correct-regression-total',
+    'py-short-circuit-unhashable', 'py-helper-retry-validation', 'ts-exclusive-render-branches',
+  ])('treats a reported source/verdict mismatch as a false positive: %s', async (id) => {
+    const corpus = await loadBugbotBenchmark(join(root, 'quality/bugbot/corpus.v1.json'));
+    const item = corpus.cases.find((item) => item.id === id)!;
+    expect(item.expected).toEqual([]);
+    const result = evaluateBugbotBenchmark({ schemaVersion: 1, cases: [item] }, {
+      schemaVersion: 1, predictions: { [id]: [{ title: 'Unsupported defect', file: item.file, line: 1, confidence: 0.99 }] },
+    });
+    expect(result.metrics.falsePositives).toBe(1);
+    expect(result.violations).toEqual(expect.arrayContaining([expect.stringContaining('precision')]));
+  });
+
+  it.each(['py-short-circuit-unsafe-order', 'ts-composed-duplicate-ids'])(
+    'still requires the positive control with a reachable defect: %s', async (id) => {
+      const corpus = await loadBugbotBenchmark(join(root, 'quality/bugbot/corpus.v1.json'));
+      const item = corpus.cases.find((item) => item.id === id)!;
+      expect(item.expected).toHaveLength(1);
+      const result = evaluateBugbotBenchmark({ schemaVersion: 1, cases: [item] }, {
+        schemaVersion: 1, predictions: { [id]: [] },
+      });
+      expect(result.metrics.falseNegatives).toBe(1);
+      expect(result.violations).toEqual(expect.arrayContaining([expect.stringContaining('recall')]));
+    },
+  );
+
   it('loads the multilingual ground-truth corpus and passes its reference contract', async () => {
     const corpus = await loadBugbotBenchmark(join(root, 'quality/bugbot/corpus.v1.json'));
     const predictions = await loadBugbotPredictions(join(root, 'quality/bugbot/reference-predictions.v1.json'));

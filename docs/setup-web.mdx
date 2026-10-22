@@ -5,6 +5,11 @@ description: Install Copilot with the local browser assistant, then verify a rea
 
 This is the recommended interactive installation path. The assistant runs on your computer and prepares the selected workflows and GitHub resources. You review the plan before permission checks or installation changes begin.
 
+Comment callbacks call Copilot's reusable coordinator, keeping dependency setup,
+verification and cleanup in one job. Existing runner labels/groups remain visible
+in review. Check runner/platform prerequisites and migrate custom bootstrap before
+adopting this format; follow the [existing repository upgrade guide](/security-operations/operations/upgrade-rollback#upgrade-an-existing-copilot-repository).
+
 The assistant keeps tutorial, first-workflow and troubleshooting links available throughout the session. They open in another tab and retain your answers. Each question also links to its own reference and has a **Why this matters** explanation. See [Use the documentation](/using-the-docs) for version selection and offline help.
 
 ## Before you start
@@ -52,6 +57,18 @@ The page offers English, Spanish, French and Portuguese, plus System/Light/Dark 
 Choose **This repository** for your first installation. A new checkout offers **Start setup**; an existing installation offers inspection and maintenance choices. Use **Run the complete assistant** when you intend to configure the full installation. That path starts a new questionnaire with its defaults, so inspect existing settings before changing them.
 
 Choose **Basic guided setup** unless you need every advanced setting. Basic still asks for permission, branch, runner, Project, approval and storage decisions. **Customize every setting** exposes the advanced configuration. Use **Previous question** or the plan's **Change** controls to revise answers without losing the others.
+
+Both modes ask **Prepare dependencies with the repository verification setup
+action?** The default is disabled; configured and reused values remain visible.
+The plan shows whether `.github/actions/copilot-verification-setup/action.yml`
+will be created or preserved, the activation state and the configured trusted main
+branch. Apply creates a failing starter only when missing and preserves existing
+project actions and auxiliary files. Customize and review the action on
+`MAIN_BRANCH` before enabling `VERIFICATION_SETUP`, then exercise a real verifier.
+No dependency installation runs during setup. Follow the [upgrade and rollback
+guide](/security-operations/operations/upgrade-rollback#upgrade-an-existing-copilot-repository)
+for an existing installation; creating an installer PR does not establish runtime
+readiness.
 
 The six milestones are:
 

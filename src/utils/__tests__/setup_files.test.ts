@@ -57,7 +57,7 @@ describe('setup_files', () => {
     fs.mkdirSync(path.join(setupDir, 'workflows'), { recursive: true });
     fs.mkdirSync(path.join(tmpDir, '.github', 'workflows'), { recursive: true });
     fs.writeFileSync(path.join(setupDir, 'workflows', 'ci.yml'), 'name: test');
-    expect(copySetupFiles(tmpDir, setupDir)).toEqual({ copied: 1, skipped: 0 });
+    expect(copySetupFiles(tmpDir, setupDir)).toEqual({ copied: 2, skipped: 0 });
     expect(fs.existsSync(path.join(tmpDir, '.env'))).toBe(false);
   });
 
@@ -67,7 +67,7 @@ describe('setup_files', () => {
     fs.mkdirSync(path.join(tmpDir, '.github', 'workflows'), { recursive: true });
     fs.writeFileSync(path.join(setupDir, 'workflows', 'ci.yml'), 'new');
     fs.writeFileSync(path.join(tmpDir, '.github', 'workflows', 'ci.yml'), 'old');
-    expect(copySetupFiles(tmpDir, setupDir)).toEqual({ copied: 0, skipped: 1 });
+    expect(copySetupFiles(tmpDir, setupDir)).toEqual({ copied: 1, skipped: 1 });
     expect(compareSetupWorkflows(tmpDir, undefined, setupDir)).toEqual([
       { file: 'ci.yml', destination: '.github/workflows/ci.yml', status: 'changed' },
     ]);
@@ -141,9 +141,9 @@ describe('setup_files', () => {
           const url = new URL(destination);
           if (url.origin === 'https://docs.page') {
             expect(url.pathname).toBe('/vypdev/copilot/security-operations/operations/verification');
-            expect(url.hash).toBe('#repository-verification-prerequisites');
+            expect(['#repository-verification-prerequisites', '#repository-owned-setup']).toContain(url.hash);
             expect(fs.readFileSync(path.join(sourceRoot, 'docs/security-operations/operations/verification.mdx'), 'utf8'))
-              .toContain('## Repository verification prerequisites');
+              .toContain(url.hash === '#repository-owned-setup' ? '## Repository-owned setup' : '## Repository verification prerequisites');
           } else {
             expect(url.origin).toBe('https://github.com');
             expect(url.pathname).toMatch(/^\/vypdev\/copilot\/blob\/master\/docs\/agents\//u);
@@ -158,6 +158,7 @@ describe('setup_files', () => {
 
     expect(documentationLinks).toEqual([
       'https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-verification-prerequisites',
+      'https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-owned-setup',
       'https://github.com/vypdev/copilot/blob/master/docs/agents/repository-collaboration.mdx',
       'https://github.com/vypdev/copilot/blob/master/docs/agents/repository-guidance-troubleshooting.mdx',
     ]);
@@ -615,7 +616,7 @@ describe('setup_files', () => {
       updateExistingWorkflows: true,
       approvedWorkflowFiles: ['ci.yml'],
     });
-    expect(result).toEqual({ copied: 1, skipped: 0 });
+    expect(result).toEqual({ copied: 2, skipped: 0 });
     expect(fs.readFileSync(path.join(tmpDir, '.github', 'workflows', 'ci.yml'), 'utf8')).toBe('new');
     const backups = fs.readdirSync(path.join(tmpDir, '.copilot', 'setup-backups'));
     expect(backups).toHaveLength(1);

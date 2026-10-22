@@ -2,9 +2,17 @@
   import type { WebSetupPlan } from '../../../src/application/contracts/web_setup_view';
   import { runnerText } from '../i18n/runnerCopy';
   import { setupLocale } from '../i18n/localeStore';
+  import { verificationSetupText } from '../i18n/verificationSetupCopy';
   export let review: NonNullable<WebSetupPlan['installationReview']>;
 </script>
 <section class="installation-review">
+  {#if review.verificationSetup}<div class="verification-setup">
+    <h3>{verificationSetupText('title', $setupLocale)}</h3>
+    <p>{verificationSetupText(review.verificationSetup.action, $setupLocale)}: <code>.github/actions/copilot-verification-setup/action.yml</code></p>
+    <p><strong>{verificationSetupText(review.verificationSetup.enabled ? 'enabled' : 'disabled', $setupLocale)}</strong></p>
+    <p>{verificationSetupText('main', $setupLocale)}: <bdi>{review.verificationSetup.mainBranch}</bdi></p>
+    <p>{verificationSetupText('next', $setupLocale)}</p>
+  </div>{/if}
   <h3>{runnerText('title', $setupLocale)}</h3>
   <p>{runnerText('help', $setupLocale)}</p>
   {#if review.blockers.length}<p role="alert">{runnerText('blockedAction', $setupLocale)}</p><details><summary>{runnerText('blockers', $setupLocale)}</summary><ul>{#each review.blockers as blocker}<li>{blocker}</li>{/each}</ul></details>{/if}

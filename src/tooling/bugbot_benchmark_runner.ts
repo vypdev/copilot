@@ -5,6 +5,7 @@ import type { BugbotBenchmarkCorpus, BugbotBenchmarkPredictions, BugbotBenchmark
 import type { BugbotEvalFinding } from './bugbot_quality_eval';
 import { renderUntrustedField, UNTRUSTED_CONTENT_POLICY } from '../domain/security/untrusted_content';
 import { normalizeBugbotResponse } from '../application/usecases/steps/commit/bugbot/prepare_bugbot_findings_policy';
+import { BUGBOT_FINDING_GROUNDING_INSTRUCTION } from '../prompts/bugbot';
 
 const MAX_BENCHMARK_CASES = 200;
 
@@ -37,6 +38,8 @@ export function buildBugbotBenchmarkPrompt(testCase: BugbotBenchmarkCase): strin
 
 You are running a controlled Bugbot quality benchmark.
 Review only the supplied synthetic diff. Report actionable defects caused by added or changed code; do not report style, pre-existing issues, or speculative concerns. Return an empty findings array when the change is safe.
+
+${BUGBOT_FINDING_GROUNDING_INSTRUCTION}
 
 Language: ${testCase.language}
 Repository-relative file: ${testCase.file}

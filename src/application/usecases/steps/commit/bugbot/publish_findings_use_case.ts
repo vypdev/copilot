@@ -3,10 +3,12 @@
  * Issue publication, PR review policy, and overflow reporting live in dedicated collaborators.
  */
 
+import { bugbotMutationError } from '../../../../errors/bugbot_mutation_error';
 import type { BugbotFindingPublicationPorts } from "../../../../../application/ports/bugbot_finding_publication_ports";
 import type { BugbotContext } from "./types";
 import {
     findExistingFindingInfo,
+    retainExistingFindingIds,
     type BugbotFinding,
 } from "../../../../../domain/bugbot/finding";
 import { publishIssueFindingComment } from "./publish_issue_finding_comment";
@@ -45,7 +47,7 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
               })
             : undefined;
 
-    for (const finding of findings) {
+    for (const finding of retainExistingFindingIds(findings, existingByFindingId)) {
         if (operation.target.issueNumber > 0 && !reviewPublisher) {
             await publishIssueFindingComment(
                 ports.issueComments,
@@ -57,7 +59,11 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
             );
         }
         if (reviewPublisher) {
-            await reviewPublisher.publish(finding, findExistingFindingInfo(existingByFindingId, finding));
+            try {
+                await reviewPublisher.publish(finding, findExistingFindingInfo(existingByFindingId, finding));
+            } catch (cause) {
+                throw bugbotMutationError(cause, 'publication', [finding.id], 'publish-comments');
+            }
         }
     }
 

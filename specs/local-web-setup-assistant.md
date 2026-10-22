@@ -47,6 +47,13 @@ installation questionnaire. Terminal behavior and full-wizard guards remain.
 
 ## 1. Executive summary
 
+The additive verification starter, shared activation question, create/preserve
+review and upgrade behavior are defined in the catalogued companion
+[`verification-setup-onboarding.md`](./verification-setup-onboarding.md). It uses
+the existing boolean and setup approval pipeline; consumer action assets remain
+outside generator overwrite/retirement ownership.
+
+
 The default `copilot setup` remains the terminal wizard. `copilot setup --web`
 starts a short-lived web assistant on this machine and opens the default
 browser. It presents repository identity, setup choices, the temporary setup
@@ -2415,8 +2422,9 @@ called secure. That external policy review remains an open security gate.
 
 The 2026-10-05 runner-cost decision supersedes only the blanket hosted-runner
 requirement for the repository's `CI Check` and `RepoWise code health` jobs.
-Both MUST use an Ubuntu self-hosted `codex` runner for repository-owned PRs,
-pushes, and manual runs. A fork PR or any merge-group event MUST instead use
+As amended by issue #639 on 2026-10-21, `CI Check` MUST use an Ubuntu
+self-hosted `codex` runner for repository-owned PRs, pushes, and manual runs.
+A fork PR or any merge-group event MUST instead use
 disposable `ubuntu-latest`: a merge group can contain fork code but its event
 does not expose the original PR trust classification to the runner selector.
 The quality checks still run without executing that code on a persistent
@@ -2444,6 +2452,17 @@ The operator documentation MUST state the fork exception and OIDC publishing
 exception. A fresh run on each selected runner type is required before calling
 the routing operationally verified; static workflow checks alone do not prove
 runner availability or the outcome of remote jobs.
+
+Issue #639 supersedes RepoWise's automatic routing cases above. RepoWise MUST
+now run only under `workflow_dispatch` on Ubuntu `codex` with the native selected
+repository ref; it MUST NOT run on PR, push or merge-group events or be required
+for them. The retained CI routing cases still prove the fork/merge-group trust
+boundary. The [manual-only migration contract](./merge-queue-readiness.md#manual-only-repowise-migration-2026-10-21-issue-639)
+and its [bounded-analysis follow-up](./merge-queue-readiness.md#bounded-manual-repowise-analysis-2026-10-21-issue-644)
+define the 60-case regression floor, live required-check evidence, immutable
+revision reporting, measured phase budgets and cleanup, operator journey,
+failure/retry behavior and complete final-revision manual acceptance. This is a workflow
+scheduling change with no setup-session, PAT, web UX or new configuration change.
 
 The first [RepoWise run on `e197cb0c`](https://github.com/vypdev/copilot/actions/runs/37289899480)
 failed workflow validation before any job started. Its job-level `env` used
@@ -2613,8 +2632,9 @@ pass; the prior manual result does not substitute for it.
       recovery, and PAT cleanup/renewal guidance are linked and validated.
 - [ ] Build, lint, typecheck, coverage, architecture, workflow, package,
       documentation, catalog generation, and `validate:specifications` pass.
-- [ ] Repository-owned CI and RepoWise run on self-hosted Ubuntu, fork PRs on
-      hosted Ubuntu, and the approval observer on self-hosted `codex`.
+- [ ] Repository-owned CI and manual-only RepoWise run on self-hosted Ubuntu;
+      CI for fork PRs/merge groups runs on hosted Ubuntu, and the approval
+      observer runs on self-hosted `codex`.
       The self-hosted macOS, Ubuntu and Windows fixture matrix is manual only.
       npm publication remains hosted for Trusted Publishing. All six platform
       jobs pass their full fixture, package, coverage and validator contracts;
@@ -2935,3 +2955,18 @@ help and retained question, and public Git-ref documentation renders correctly.
 That inspection is agent evidence, not a substitute for the outstanding human
 accessibility or cross-platform acceptance reviews. No open product decision
 blocks this bounded amendment. Related work: issues #617 and PR #618.
+
+### Hosted Windows verification budget (2026-10-21, PR #654)
+
+The synchronized pre-branch SDD fix reached the hosted Windows job's 20-minute
+limit without a failing assertion (run 39645186744). The preceding exact-base
+Windows job took 19 minutes 34 seconds (run 39644175943). The hosted Windows
+job MUST have a fixed 30-minute limit to complete native setup, isolated
+fixtures, package checks and full coverage; hosted Ubuntu/macOS retain 20.
+The existing complete suite, two-worker cap, subprocess deadlines, coverage and
+acceptance budgets, documentation gates and deferred cleanup remain mandatory.
+A canceled or timed-out run is missing evidence, never a pass. Acceptance is a
+successful fresh Windows run on the reviewed head, alongside the other platform
+jobs. Existing parsed workflow-contract checks cover this configuration change;
+no new application behavior or test count is introduced. Contributor guidance
+is in docs/development/testing.mdx; no consumer setting or migration is added.

@@ -317,3 +317,7 @@ this change adds no stateful retry or remote race boundary.
   inference, credential broadening and parsing untrusted failed-command output.
 - Outside scope: live consumer Kotlin/Gradle retest, other home/cache variables,
   automatic setup questionnaire requirements, automatic dependency provisioning.
+
+## Optional repository setup amendment — issue #647
+
+The [repository-owned setup contract](./repository-verification-setup-hooks.md) adds an explicit disabled-default `verification-setup` boolean. When enabled, a trusted main-branch Node helper prepares each candidate command environment before these existing fixed runtime probes. The runtime declaration remains a version-only policy and never supplies script paths, commands, credentials or installer arguments. With setup disabled, prerequisite behavior is unchanged. The companion owns its incremental tests and bounded setup limits; all existing no-push, isolation and preflight constraints remain required.

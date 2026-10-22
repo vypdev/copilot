@@ -17,6 +17,7 @@ export function buildSetupParams(
   approvedWorkflowFiles: readonly string[] = [],
   remoteConfiguration?: SetupRemoteConfiguration,
   configurationSource?: 'organization' | 'customize',
+  verificationActionState?: import('../../domain/setup_verification_action').SetupVerificationActionState,
 ): Record<string, unknown> {
   return {
     ...(configuration ? buildSetupActionInputs(configuration) : {}),
@@ -34,5 +35,6 @@ export function buildSetupParams(
     ...(remoteConfiguration ? { setupRemoteConfiguration: remoteConfiguration } : {}),
     ...(configurationSource ? { setupConfigurationSource: configurationSource } : {}),
     setupWorkflowUpdates: approvedWorkflowFiles,
+    ...(verificationActionState ? { setupVerificationActionState: verificationActionState } : {}),
   };
 }

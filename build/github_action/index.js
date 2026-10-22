@@ -36897,6 +36897,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runGitHubAction = runGitHubAction;
 exports.runGitHubActionEntry = runGitHubActionEntry;
+const native_verification_controller_1 = __nccwpck_require__(71046);
 const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const core = __importStar(__nccwpck_require__(75855));
 const github = __importStar(__nccwpck_require__(78227));
@@ -37081,7 +37082,16 @@ async function runGitHubActionEntry(run = runGitHubAction) {
         catch (cause) {
             const semanticError = (0, application_error_1.toApplicationError)(cause, 'workflow.failed', 'GitHub Action execution failed.');
             (0, logger_1.logError)(semanticError);
-            core.setFailed((0, application_error_presentation_policy_1.renderApplicationErrorText)(semanticError, earlyGithubActionErrorMessage()));
+            const message = earlyGithubActionErrorMessage();
+            core.setFailed((0, application_error_presentation_policy_1.renderApplicationErrorText)(semanticError, message));
+            if (semanticError.recovery?.id.startsWith('stored-configuration-')) {
+                try {
+                    await (0, github_action_summary_composition_root_1.createGithubActionSummaryCompositionRoot)().publish((0, application_error_presentation_policy_1.renderApplicationErrorMarkdown)(semanticError, message));
+                }
+                catch (summaryCause) {
+                    (0, logger_1.logError)((0, application_error_1.toApplicationError)(summaryCause, 'provider.unavailable', 'Unable to publish the configuration failure summary.'));
+                }
+            }
         }
     });
 }
@@ -37097,7 +37107,7 @@ function earlyGithubActionErrorMessage() {
 // Only auto-run when executed as the action entry (not when imported by tests)
 /* istanbul ignore next -- the bundled production entry is covered by the Action smoke path. */
 if (typeof process.env.JEST_WORKER_ID === 'undefined') {
-    void runGitHubActionEntry();
+    void runGitHubActionEntry(() => (0, native_verification_controller_1.runNativeVerificationEntry)(runGitHubActionEntry));
 }
 
 
@@ -37522,6 +37532,7 @@ async function buildGithubActionExecution(input) {
         commitPrefixBuilder: getCommitPrefixBuilder(getInput),
         issue: (0, configuration_builders_1.buildIssue)((0, input_boolean_policy_1.parseIssueWorkflowBoolean)(getInput(input_keys_1.INPUT_KEYS.ISSUE_MANAGED_BRANCHES), input_keys_1.INPUT_KEYS.ISSUE_MANAGED_BRANCHES, true), (0, input_boolean_policy_1.isEnabledInput)(getInput(input_keys_1.INPUT_KEYS.REOPEN_ISSUE_ON_PUSH)), (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0), eventInputs),
         preBranchSdd: (0, input_boolean_policy_1.parseIssueWorkflowBoolean)(getInput(input_keys_1.INPUT_KEYS.PRE_BRANCH_SDD), input_keys_1.INPUT_KEYS.PRE_BRANCH_SDD, false),
+        verificationSetup: (0, input_boolean_policy_1.parseIssueWorkflowBoolean)(getInput(input_keys_1.INPUT_KEYS.VERIFICATION_SETUP), input_keys_1.INPUT_KEYS.VERIFICATION_SETUP, false),
         pullRequest: (0, configuration_builders_1.buildPullRequest)((0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0), (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.PULL_REQUEST_DESIRED_REVIEWERS_COUNT), 0), eventInputs),
         emoji: (0, configuration_builders_1.buildEmoji)(getInput(input_keys_1.INPUT_KEYS.EMOJI_LABELED_TITLE) === 'true', getInput(input_keys_1.INPUT_KEYS.BRANCH_MANAGEMENT_EMOJI)),
         tokens: (0, configuration_builders_1.buildTokens)(token),
@@ -38737,6 +38748,7 @@ exports.INPUT_KEYS = {
     // Issue
     ISSUE_MANAGED_BRANCHES: 'issue-managed-branches',
     PRE_BRANCH_SDD: 'pre-branch-sdd',
+    VERIFICATION_SETUP: 'verification-setup',
     REOPEN_ISSUE_ON_PUSH: 'reopen-issue-on-push',
     DESIRED_ASSIGNEES_COUNT: 'desired-assignees-count',
     // Pull Request
@@ -38854,6 +38866,46 @@ function approvalDiagnosticError(diagnostic) {
     return new application_error_1.ApplicationError(code, `Approval evidence read failed (${diagnostic.operation}, ${reason}).`, {
         recovery: { id: 'approval-evidence-read-failed', variables: diagnostic },
     });
+}
+
+
+/***/ }),
+
+/***/ 82937:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BugbotMutationError = void 0;
+exports.bugbotMutationError = bugbotMutationError;
+const application_error_1 = __nccwpck_require__(75999);
+const pull_request_review_errors_1 = __nccwpck_require__(46445);
+class BugbotMutationError extends application_error_1.ApplicationError {
+    constructor(diagnostic) {
+        super(diagnostic.errorCode, `Bugbot ${diagnostic.stage} failed: operation=${diagnostic.operation}; finding=${diagnostic.findingId}; affected=${diagnostic.affectedCount}; ${diagnostic.providerStatus}; provider-reference=${diagnostic.providerReference}. Completed effects are retained; correct the named cause and recheck the same target.`);
+        this.diagnostic = diagnostic;
+    }
+}
+exports.BugbotMutationError = BugbotMutationError;
+function bugbotMutationError(cause, stage, findingIds, fallback, affectedCount = findingIds.length) {
+    if (cause instanceof BugbotMutationError)
+        return cause;
+    const provider = cause instanceof pull_request_review_errors_1.PullRequestReviewOperationError ? cause : undefined;
+    const status = provider?.providerStatus;
+    const errorCode = status === 401 ? 'authorization.credential-invalid' : status === 403 ? 'authorization.denied'
+        : status === 404 ? 'provider.not-found' : status === 409 ? 'provider.conflict'
+            : status === 429 ? 'provider.rate-limited'
+                : status === 408 || status === 425 ? 'provider.unavailable'
+                    : status && status < 500 ? 'provider.contract-invalid' : 'provider.unavailable';
+    const first = findingIds[0];
+    return new BugbotMutationError(Object.freeze({
+        stage, operation: provider?.operation ?? fallback,
+        findingId: typeof first === 'string' && /^[A-Za-z0-9_./:-]{1,200}$/.test(first) ? first : 'unavailable',
+        affectedCount: Math.min(affectedCount, 10000),
+        providerStatus: status ? `http-${status}` : 'http-unavailable',
+        providerReference: provider?.providerReference ?? 'unavailable', errorCode,
+    }));
 }
 
 
@@ -40666,7 +40718,26 @@ const SPANISH_CONTENT = Object.freeze({
         retainedState: PRESERVED_STATE_ES,
     }),
 });
+const STORED_CONFIGURATION_ACTION_EN = 'A maintainer must review {recoveryGuide}. Preserve a copy before removing only a verified obsolete unmanaged block. If managed branch, release, hotfix or orchestration state may exist, stop and restore verified supported state with a maintainer. Do not just add a schema version or delete managed state. Correct the configuration before rerunning; retrying unchanged state will fail again.';
+const STORED_CONFIGURATION_ACTION_ES = 'Un mantenedor debe revisar {recoveryGuide}. Conserva una copia antes de retirar solo un bloque obsoleto confirmado como no gestionado. Si puede existir estado gestionado de ramas, releases, hotfixes u orquestación, detente y restaura estado compatible verificado con un mantenedor. No añadas simplemente una versión de esquema ni borres estado gestionado. Corrige la configuración antes de reejecutar; el mismo estado volverá a fallar.';
+const STORED_CONFIGURATION_RETAINED_EN = 'The issue/PR description and stored configuration were not changed by this read.';
+const STORED_CONFIGURATION_RETAINED_ES = 'Esta lectura no modificó la descripción de la issue/PR ni su configuración almacenada.';
 const ENGLISH_RECOVERY_CONTENT = Object.freeze({
+    'stored-configuration-schema-missing': Object.freeze({
+        impact: 'Automation stopped for issue/PR #{issueNumber}: the stored configuration has no schema version; version {expectedVersion} is required.',
+        action: STORED_CONFIGURATION_ACTION_EN,
+        retainedState: STORED_CONFIGURATION_RETAINED_EN,
+    }),
+    'stored-configuration-schema-unsupported': Object.freeze({
+        impact: 'Automation stopped for issue/PR #{issueNumber}: stored schema version {actualVersion} is unsupported; version {expectedVersion} is required.',
+        action: STORED_CONFIGURATION_ACTION_EN,
+        retainedState: STORED_CONFIGURATION_RETAINED_EN,
+    }),
+    'stored-configuration-invalid': Object.freeze({
+        impact: 'Automation stopped for issue/PR #{issueNumber}: the stored configuration, markers or schema value are malformed; valid schema version {expectedVersion} is required.',
+        action: STORED_CONFIGURATION_ACTION_EN,
+        retainedState: STORED_CONFIGURATION_RETAINED_EN,
+    }),
     'closed-issue-reconciliation-failed': Object.freeze({
         impact: 'Issue cleanup remains unverified: {resultId}, phase {phase}; native state {state}, reason {reason}.',
         action: 'Inspect the closed-issue or merged-PR run and current native state. Retry cleanup only if the issue is still closed with the intended reason; leave reopened work open. Resolve the named failure before retrying.',
@@ -40681,6 +40752,26 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'The changes were rejected during workspace verification.',
         action: 'Inspect the rejected paths in the workflow and correct the workspace before retrying.',
         retainedState: 'The normal commit and push steps were skipped. Verify the current state before retrying.',
+    }),
+    'sdd-draft-case-identity-invalid': Object.freeze({
+        impact: 'SDD publication stopped after one automatic repair: case IDs collide with an owning SDD or are ambiguous.',
+        action: 'Review the draft tables; use distinct fully qualified case IDs and preserve the baseline inventory. Retry the same issue workflow.',
+        retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
+    }),
+    'sdd-draft-case-budget-invalid': Object.freeze({
+        impact: 'SDD publication stopped after one automatic repair: per-area allocations disagree with the distinct case inventory.',
+        action: 'Review the draft tables; reconcile each area and the total with the enumerated cases. Retry the same issue workflow.',
+        retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
+    }),
+    'sdd-draft-requirement-mapping-invalid': Object.freeze({
+        impact: 'SDD publication stopped after one automatic repair: requirements and case mappings are incomplete or inconsistent.',
+        action: 'Review the draft tables; map every requirement to defined cases and match the reverse links. Retry the same issue workflow.',
+        retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
+    }),
+    'sdd-draft-repository-path-invalid': Object.freeze({
+        impact: 'SDD publication stopped after one automatic repair: cited repository paths cannot be verified at the immutable base.',
+        action: 'Review the draft tables; correct existing paths or explicitly declare intended new files. Retry the same issue workflow.',
+        retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
     }),
     'sdd-draft-format-invalid': Object.freeze({
         impact: 'SDD preparation stopped because the draft still lacked required headings or a numeric test budget after one automatic repair.',
@@ -40744,6 +40835,21 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     }),
 });
 const SPANISH_RECOVERY_CONTENT = Object.freeze({
+    'stored-configuration-schema-missing': Object.freeze({
+        impact: 'La automatización se detuvo para la issue/PR #{issueNumber}: la configuración almacenada no tiene versión de esquema; se requiere la versión {expectedVersion}.',
+        action: STORED_CONFIGURATION_ACTION_ES,
+        retainedState: STORED_CONFIGURATION_RETAINED_ES,
+    }),
+    'stored-configuration-schema-unsupported': Object.freeze({
+        impact: 'La automatización se detuvo para la issue/PR #{issueNumber}: la versión de esquema almacenada {actualVersion} no es compatible; se requiere la versión {expectedVersion}.',
+        action: STORED_CONFIGURATION_ACTION_ES,
+        retainedState: STORED_CONFIGURATION_RETAINED_ES,
+    }),
+    'stored-configuration-invalid': Object.freeze({
+        impact: 'La automatización se detuvo para la issue/PR #{issueNumber}: la configuración almacenada, sus delimitadores o el valor del esquema no son válidos; se requiere un esquema válido de versión {expectedVersion}.',
+        action: STORED_CONFIGURATION_ACTION_ES,
+        retainedState: STORED_CONFIGURATION_RETAINED_ES,
+    }),
     'closed-issue-reconciliation-failed': Object.freeze({
         impact: 'La limpieza de la issue sigue sin verificarse: {resultId}, fase {phase}; estado nativo {state}, motivo {reason}.',
         action: 'Revisa la ejecución de cierre o de la PR fusionada y el estado nativo actual. Reintenta la limpieza solo si la issue sigue cerrada con el motivo previsto; conserva abierto el trabajo reabierto. Resuelve el fallo indicado antes de reintentar.',
@@ -40758,6 +40864,26 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'Los cambios se rechazaron durante la verificación del espacio de trabajo.',
         action: 'Revisa las rutas rechazadas en la ejecución y corrige el espacio de trabajo antes de reintentar.',
         retainedState: 'Se omitieron los pasos normales de commit y push. Comprueba el estado actual antes de reintentar.',
+    }),
+    'sdd-draft-case-identity-invalid': Object.freeze({
+        impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: los identificadores de casos coinciden con un SDD existente o son ambiguos.',
+        action: 'Revisa las tablas del borrador; usa identificadores completos y distintos y conserva el inventario original. Reintenta el workflow de la misma incidencia.',
+        retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
+    }),
+    'sdd-draft-case-budget-invalid': Object.freeze({
+        impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: las asignaciones por área no coinciden con el inventario de casos distintos.',
+        action: 'Revisa las tablas del borrador; reconcilia cada área y el total con los casos enumerados. Reintenta el workflow de la misma incidencia.',
+        retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
+    }),
+    'sdd-draft-requirement-mapping-invalid': Object.freeze({
+        impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: los requisitos y sus casos están incompletos o son inconsistentes.',
+        action: 'Revisa las tablas del borrador; vincula cada requisito a casos definidos y comprueba los enlaces inversos. Reintenta el workflow de la misma incidencia.',
+        retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
+    }),
+    'sdd-draft-repository-path-invalid': Object.freeze({
+        impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: no se pueden verificar las rutas citadas en la revisión base inmutable.',
+        action: 'Revisa las tablas del borrador; corrige las rutas existentes o declara explícitamente los archivos nuevos previstos. Reintenta el workflow de la misma incidencia.',
+        retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
     }),
     'sdd-draft-format-invalid': Object.freeze({
         impact: 'La preparación del SDD se detuvo porque seguían faltando secciones obligatorias o un presupuesto numérico de pruebas tras un intento automático de corrección.',
@@ -40873,12 +40999,16 @@ exports.buildApplicationErrorPresentation = buildApplicationErrorPresentation;
 exports.renderApplicationErrorText = renderApplicationErrorText;
 exports.renderApplicationErrorMarkdown = renderApplicationErrorMarkdown;
 const application_error_message_catalog_1 = __nccwpck_require__(64809);
+// This trusted destination is inserted after localization, never supplied by a body or translation.
+const STORED_CONFIGURATION_RECOVERY_URL = 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#unsupported-stored-configuration';
 /** Shared semantic view model for terminal, GitHub, and API presentation. */
 function buildApplicationErrorPresentation(error, message = application_error_message_catalog_1.readEnglishApplicationErrorMessage) {
     const descriptor = error.recovery
         ? `error.recovery.${error.recovery.id}`
         : `error.${error.code}`;
-    const variables = error.recovery?.variables;
+    const variables = error.recovery?.id.startsWith('stored-configuration-')
+        ? { ...error.recovery.variables, recoveryGuide: STORED_CONFIGURATION_RECOVERY_URL }
+        : error.recovery?.variables;
     return {
         impact: message(`${descriptor}.impact`, variables),
         code: error.code,
@@ -41920,6 +42050,7 @@ exports.BUGBOT_MESSAGE_IDS = Object.freeze([
     'bugbot.overflow.body',
     'bugbot.common.more',
     'bugbot.diagnostic.operationFailed',
+    'bugbot.diagnostic.findingMutationFailed',
     'bugbot.diagnostic.identityUnavailable',
     'bugbot.diagnostic.pullRequestCommentsFailed',
     'bugbot.diagnostic.reviewThreadsFailed',
@@ -42005,6 +42136,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'bugbot.overflow.heading': 'More findings (comment limit)',
     'bugbot.overflow.body': Object.freeze({ one: 'There is {count} more finding that was not published as an individual comment. Review locally or in the full diff to see the list.', other: 'There are {count} more findings that were not published as individual comments. Review locally or in the full diff to see the list.' }),
     'bugbot.common.more': Object.freeze({ one: 'and {count} more.', other: 'and {count} more.' }),
+    'bugbot.diagnostic.findingMutationFailed': 'Finding mutation failed: stage={stage}; operation={operation}; finding={findingId}; affected={affectedCount}; {providerStatus}; provider reference={providerReference}. Completed effects are retained. Correct access/contract errors before retrying; for transient failures restore provider availability, then recheck the same PR. Recheck reconciles existing reviews and threads.',
     'bugbot.diagnostic.operationFailed': 'Bugbot could not complete one or more finding mutations.',
     'bugbot.diagnostic.identityUnavailable': 'The authenticated Bugbot identity is unavailable.',
     'bugbot.diagnostic.pullRequestCommentsFailed': 'Unable to re-read pull request review comments.',
@@ -42094,6 +42226,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'bugbot.overflow.heading': 'Más hallazgos (límite de comentarios)',
     'bugbot.overflow.body': Object.freeze({ one: 'Hay {count} hallazgo más que no se publicó como comentario individual. Revísalo localmente o en el diff completo para consultar la lista.', many: 'Hay {count} hallazgos más que no se publicaron como comentarios individuales. Revísalos localmente o en el diff completo para consultar la lista.', other: 'Hay {count} hallazgos más que no se publicaron como comentarios individuales. Revísalos localmente o en el diff completo para consultar la lista.' }),
     'bugbot.common.more': Object.freeze({ one: 'y {count} más.', many: 'y {count} más.', other: 'y {count} más.' }),
+    'bugbot.diagnostic.findingMutationFailed': 'Falló una mutación: fase={stage}; operación={operation}; hallazgo={findingId}; afectados={affectedCount}; {providerStatus}; referencia del proveedor={providerReference}. Se conservan los efectos completados. Corrige acceso/contrato antes de reintentar; para fallos transitorios restaura el proveedor y revisa la misma PR. La revisión reconcilia comentarios e hilos existentes.',
     'bugbot.diagnostic.operationFailed': 'Bugbot no pudo completar una o más mutaciones de hallazgos.',
     'bugbot.diagnostic.identityUnavailable': 'La identidad autenticada de Bugbot no está disponible.',
     'bugbot.diagnostic.pullRequestCommentsFailed': 'No se pudieron volver a leer los comentarios del review del pull request.',
@@ -42133,6 +42266,7 @@ async function resolveBugbotCatalog(locale, configuration, resolver) {
 }
 function renderBugbotDiagnostic(diagnostic, catalog) {
     switch (diagnostic.code) {
+        case 'finding-mutation-failed': return catalog.message('bugbot.diagnostic.findingMutationFailed', { ...diagnostic.mutation });
         case 'operation-failed': return catalog.message('bugbot.diagnostic.operationFailed');
         case 'identity-unavailable': return catalog.message('bugbot.diagnostic.identityUnavailable');
         case 'snapshot-pull-request-comments-failed': return catalog.message('bugbot.diagnostic.pullRequestCommentsFailed');
@@ -42760,6 +42894,10 @@ function renderBugbotStatusCard(projection, catalogOrLocale, links) {
             facts.push(catalog.message('bugbot.coverage.omitted', { count: source.omittedItems }));
         if (source.truncatedItems > 0)
             facts.push(catalog.message('bugbot.coverage.truncated', { count: source.truncatedItems }));
+        const truncatedIds = source.truncatedItemIds?.slice(0, 50)
+            .filter(id => /^(?:issue:[0-9]+|review:[A-Za-z0-9_=-]+)$/.test(id) && id.length <= 160);
+        if (truncatedIds?.length)
+            facts.push(`truncated-source-ids=${truncatedIds.join(', ')}`);
         if (source.providerLimitReached)
             facts.push(catalog.message('bugbot.coverage.providerLimit'));
         return `- ${source.source}: ${source.status}; ${facts.join(', ')}`;
@@ -42849,9 +42987,21 @@ function normalizeHistoricalSnapshot(originalBody, analyzedHeadSha, catalog) {
 function renderFindingRow(finding) {
     const label = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.title || finding.id, 500).replace(/[\r\n]+/gu, ' ');
     const state = stateLabel(finding.state);
+    const identity = finding.state === 'unknown'
+        ? ` — ${renderFindingId(finding.id)}`
+        : '';
     return finding.url
-        ? `- ${state} — [${label}](${finding.url})`
-        : `- ${state} — ${label}`;
+        ? `- ${state} — [${label}](${finding.url})${identity}`
+        : `- ${state} — ${label}${identity}`;
+}
+function renderFindingId(value) {
+    const id = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(value, 200).replace(/[\r\n]+/gu, ' ');
+    // A delimiter longer than every embedded backtick run keeps links, images
+    // and HTML inert even when the marker permits arbitrary Markdown punctuation.
+    let delimiter = '`';
+    while (id.includes(delimiter))
+        delimiter += '`';
+    return `${delimiter} ${id} ${delimiter}`;
 }
 function stateLabel(state) {
     return `[ ] ${state}`;
@@ -47706,6 +47856,8 @@ The setup runner profile selects placement; it does not install the project's la
 
 Declare reviewed version prefixes in \`.copilot/verification-prerequisites.json\` (schemaVersion 1, runtimes such as java 17, node 24, pnpm 10). Copilot checks declared versions in the credential-free verification environment before each configured verification command; a missing or incompatible runtime blocks publication. Without this optional declaration, existing verification behavior remains and no language is inferred. Java provisioning may use \`actions/setup-java\`; \`JAVA_HOME\` and \`PATH\` survive isolation, while agent credentials and tool-option injection variables do not. Do not add an unreviewed bootstrap or weaken verification to work around a missing runtime. Read [verification prerequisites and same-job setup](https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-verification-prerequisites).
 
+The optional repository-owned composite action prepares each candidate before verification. Setup creates .github/actions/copilot-verification-setup/action.yml only if missing and preserves an existing consumer action and its assets. The shared terminal/web assistant offers explicit activation, disabled by default. Customize the generated failing placeholder before enabling; setup generation and installer PRs do not prove runtime readiness. Review \`.github/actions/copilot-verification-setup/action.yml\` and its assets onto trusted main, update generated workflows, then enable \`VERIFICATION_SETUP=true\` (Action input \`verification-setup\`, disabled by default). GitHub Actions executes the trusted snapshot before each command with a fresh private HOME; candidate changes cannot replace it. Native post steps finish before profile cleanup. Setup failure blocks verification and commit/push. The local CLI cannot execute composite actions and fails closed when opted in. Read [repository-owned setup](https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-owned-setup).
+
 For the full contributor flow, read [repository collaboration](https://github.com/vypdev/copilot/blob/master/docs/agents/repository-collaboration.mdx). For drift and recovery, read [guidance troubleshooting](https://github.com/vypdev/copilot/blob/master/docs/agents/repository-guidance-troubleshooting.mdx).
 `;
 }
@@ -47922,6 +48074,40 @@ function selectConfirmedReviewers(requestedMembers, confirmedMembers) {
 }
 function calculateReviewersStillNeeded(desiredCount, currentCount, confirmedCount) {
     return Math.max(desiredCount - currentCount - confirmedCount, 0);
+}
+
+
+/***/ }),
+
+/***/ 81053:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.sddAnalysisStatusMarker = sddAnalysisStatusMarker;
+exports.renderSddAnalysisStatus = renderSddAnalysisStatus;
+function sddAnalysisStatusMarker(issueNumber) {
+    return `<!-- copilot:sdd-analysis-status:v1 issue="${issueNumber}" -->`;
+}
+const reasons = {
+    'update-owner-mismatch': ['The update path does not belong to the selected catalog owner.', 'La ruta de actualización no pertenece al propietario seleccionado del catálogo.'],
+    'companion-owner-unknown': ['The companion owner is absent from the catalog.', 'El propietario del SDD complementario no existe en el catálogo.'],
+    'companion-path-registered': ['The companion path is already registered in the catalog.', 'La ruta del SDD complementario ya está registrada en el catálogo.'],
+    'new-owner-registered': ['The proposed new capability already exists in the catalog.', 'La capacidad propuesta como nueva ya existe en el catálogo.'],
+    'new-path-registered': ['The proposed new SDD path is already registered in the catalog.', 'La ruta propuesta como nueva ya está registrada en el catálogo.'],
+};
+/** Stateless diagnostic, deliberately separate from the validated readiness record. */
+function renderSddAnalysisStatus(issueNumber, locale, reason) {
+    const spanish = /^es(?:-|$)/i.test(locale ?? '');
+    const marker = sddAnalysisStatusMarker(issueNumber);
+    if (!reason)
+        return spanish
+            ? `## Estado del análisis del SDD\n\nEl análisis posterior ha validado la propiedad. La publicación y la preparación de la rama siguen pendientes de sus comprobaciones.\n\n${marker}`
+            : `## SDD analysis status\n\nA subsequent analysis validated ownership. Publication and branch readiness remain subject to their checks.\n\n${marker}`;
+    return spanish
+        ? `## Estado del SDD: análisis bloqueado\n\nNo se ha preparado ningún borrador ni publicación nueva. ${reasons[reason][1]}\n\n**Acción de mantenimiento:** Aclara en la misma issue el ID de capacidad del catálogo y la ruta: una actualización usa una ruta de ese propietario; un complemento usa un propietario existente y una ruta nueva; una capacidad nueva necesita ID y ruta sin registrar. Después vuelve a ejecutar el workflow original. Cada ejecución hace un solo análisis; no hay reparación ni reintento automático. Se conservan las respuestas, los SDD y las publicaciones anteriores.\n\n**Diagnóstico:** \`${reason}\`. La decisión rechazada no autoriza una rama ni la etiqueta de preparación.\n\n${marker}`
+        : `## SDD work status: analysis blocked\n\nNo draft or new publication was prepared. ${reasons[reason][0]}\n\n**Maintainer action:** Clarify the catalog capability ID and path in this same issue: an update uses a path owned by that capability; a companion uses an existing owner and a new path; a new capability needs an unregistered ID and path. Then rerun the original workflow. Each invocation performs one analysis; there is no automatic repair or retry. Existing answers, SDDs and publications are retained.\n\n**Diagnostic:** \`${reason}\`. The rejected decision authorizes no branch or readiness label.\n\n${marker}`;
 }
 
 
@@ -48876,6 +49062,7 @@ exports.isSetupBatchInstallationReceipt = isSetupBatchInstallationReceipt;
 exports.parseSetupBatchOperation = parseSetupBatchOperation;
 exports.validSetupBatchAssetPath = validSetupBatchAssetPath;
 const setup_batch_1 = __nccwpck_require__(88308);
+const setup_verification_action_1 = __nccwpck_require__(33156);
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u;
 const sha = /^[a-f0-9]{40}$/u;
 const digest = /^[a-f0-9]{64}$/u;
@@ -48981,6 +49168,7 @@ function validSetupBatchAssetPath(path) {
     if (path.length > 240 || path.split('/').some(part => !part || part === '.' || part === '..') || /[^A-Za-z0-9_./-]/u.test(path))
         return false;
     return path === 'AGENTS.md' || path === '.agents/skills/copilot-repository-workflow/SKILL.md'
+        || path === setup_verification_action_1.SETUP_VERIFICATION_ACTION_PATH
         || /^\.github\/(?:workflows|ISSUE_TEMPLATE)\/[A-Za-z0-9_.-]+\.(?:yml|yaml)$/u.test(path)
         || path === '.github/pull_request_template.md' || /^\.copilot\/(?:repository-profile|setup-manifest|runner-profile)\.json$/u.test(path)
         || path === '.copilot/AGENT_GUIDE.md' || path.startsWith('.copilot/setup-backups/');
@@ -49087,6 +49275,7 @@ function createDefaultSetupConfiguration() {
             choreTree: 'chore',
             issueManagedBranches: true,
             preBranchSdd: false,
+            verificationSetup: false,
             reopenIssueOnPush: true,
             desiredAssigneesCount: 1,
             desiredReviewersCount: 1,
@@ -49243,6 +49432,7 @@ Object.defineProperty(exports, "buildSetupCredentialRequirements", ({ enumerable
 const locale_1 = __nccwpck_require__(15386);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
+const setup_verification_action_1 = __nccwpck_require__(33156);
 const repository_agent_guidance_policy_1 = __nccwpck_require__(67402);
 function buildSetupPlan(configuration, mergeQueueReadiness = [], approvalReadiness = []) {
     const workflowFiles = (0, setup_workflow_catalog_1.enabledSetupWorkflowFiles)((0, setup_issue_workflow_policy_1.effectiveIssueWorkflowFeatures)(configuration))
@@ -49254,6 +49444,7 @@ function buildSetupPlan(configuration, mergeQueueReadiness = [], approvalReadine
             .filter(file => configuration.features.release !== false || file !== 'release.yml')
             .filter(file => configuration.features.hotfix !== false || file !== 'hotfix.yml');
     const selectedFiles = [
+        setup_verification_action_1.SETUP_VERIFICATION_ACTION_PATH,
         ...(configuration.runners && configuration.runners.mode !== 'retain' ? ['.copilot/runner-profile.json'] : []),
         ...workflowFiles.map(file => `workflows/${file}`),
         ...issueTemplateFiles.map(file => `ISSUE_TEMPLATE/${file}`),
@@ -49354,6 +49545,7 @@ function buildSetupRepositoryVariables(configuration) {
     add('CHORE_TREE', repository.choreTree);
     add('ISSUE_MANAGED_BRANCHES', repository.issueManagedBranches);
     add('PRE_BRANCH_SDD', repository.preBranchSdd);
+    add('VERIFICATION_SETUP', repository.verificationSetup ?? false);
     add('REOPEN_ISSUE_ON_PUSH', repository.reopenIssueOnPush);
     add('DESIRED_ASSIGNEES_COUNT', repository.desiredAssigneesCount);
     add('DESIRED_REVIEWERS_COUNT', repository.desiredReviewersCount);
@@ -49416,6 +49608,7 @@ function buildSetupActionInputs(configuration) {
         'chore-tree': repository.choreTree,
         'issue-managed-branches': String(repository.issueManagedBranches),
         'pre-branch-sdd': String(repository.preBranchSdd),
+        'verification-setup': String(repository.verificationSetup ?? false),
         'reopen-issue-on-push': String(repository.reopenIssueOnPush),
         'desired-assignees-count': String(repository.desiredAssigneesCount),
         'desired-reviewers-count': String(repository.desiredReviewersCount),
@@ -49861,6 +50054,9 @@ function validateSetupConfiguration(configuration, options = {}) {
         || typeof configuration.repository.preBranchSdd !== 'boolean') {
         errors.push('issue-managed-branches and pre-branch-sdd must be boolean values.');
     }
+    if (configuration.repository.verificationSetup !== undefined && typeof configuration.repository.verificationSetup !== 'boolean') {
+        errors.push('verification-setup must be a boolean value.');
+    }
     if (configuration.repository.preBranchSdd && !configuration.repository.issueManagedBranches) {
         errors.push('pre-branch-sdd requires issue-managed-branches.');
     }
@@ -50263,6 +50459,7 @@ const repositoryFields = [
     ['HOTFIX_TREE', 'hotfixTree'], ['RELEASE_TREE', 'releaseTree'],
     ['DOCS_TREE', 'docsTree'], ['CHORE_TREE', 'choreTree'],
     ['ISSUE_MANAGED_BRANCHES', 'issueManagedBranches'], ['PRE_BRANCH_SDD', 'preBranchSdd'],
+    ['VERIFICATION_SETUP', 'verificationSetup'],
     ['REOPEN_ISSUE_ON_PUSH', 'reopenIssueOnPush'], ['DESIRED_ASSIGNEES_COUNT', 'desiredAssigneesCount'],
     ['DESIRED_REVIEWERS_COUNT', 'desiredReviewersCount'], ['INACTIVITY_THRESHOLD_HOURS', 'inactivityThresholdHours'],
     ['REPOSITORY_LOCALE', 'repositoryLocale'], ['ISSUES_LOCALE', 'issueLocale'],
@@ -50995,6 +51192,58 @@ function verificationRuntimeMatches(required, observed) {
 
 /***/ }),
 
+/***/ 65326:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VerificationSetupError = exports.VERIFICATION_SETUP_HELP = exports.VERIFICATION_SETUP_LIMITS = exports.VERIFICATION_SETUP_PATH = exports.VERIFICATION_SETUP_DIRECTORY = void 0;
+exports.parseVerificationSetupResult = parseVerificationSetupResult;
+exports.VERIFICATION_SETUP_DIRECTORY = '.github/actions/copilot-verification-setup';
+exports.VERIFICATION_SETUP_PATH = `${exports.VERIFICATION_SETUP_DIRECTORY}/action.yml`;
+exports.VERIFICATION_SETUP_LIMITS = Object.freeze({ timeoutMs: 300000, resultBytes: 16384, scriptBytes: 65536, snapshotBytes: 262144, files: 32, requests: 20 });
+exports.VERIFICATION_SETUP_HELP = 'https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-owned-setup';
+/** Closed facts only. Provider/helper output and raw exception causes never cross this boundary. */
+class VerificationSetupError extends Error {
+    constructor(reason, sourceSha, exitCode) {
+        const sha = sourceSha && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(sourceSha) ? sourceSha : 'unavailable';
+        const exit = Number.isInteger(exitCode) && exitCode >= 0 && exitCode <= 255 ? ` Exit status: ${exitCode}.` : '';
+        const action = reason === 'native-workflow-required'
+            ? 'Update the generated Copilot workflows and run this operation in GitHub Actions; the local CLI cannot execute composite actions.'
+            : `Review ${exports.VERIFICATION_SETUP_PATH} on the trusted main branch and rerun.`;
+        super(`Repository setup blocked verification (${reason}). ${action} Trusted source SHA: ${sha}.${exit} Verification, commit and push are withheld. Help: ${exports.VERIFICATION_SETUP_HELP}`);
+        this.reason = reason;
+        this.exitCode = exitCode;
+        this.name = 'VerificationSetupError';
+    }
+}
+exports.VerificationSetupError = VerificationSetupError;
+function record(value) {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+function pathString(value) {
+    return typeof value === 'string' && value.length > 0 && value.length <= 2048
+        && ![...value].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127);
+}
+/** Filesystem containment is checked by the adapter, after this closed schema is parsed. */
+function parseVerificationSetupResult(value) {
+    if (!record(value) || value.schemaVersion !== 1 || Object.keys(value).some(key => !['schemaVersion', 'path', 'environment'].includes(key))) {
+        throw new VerificationSetupError('result-invalid');
+    }
+    const paths = value.path === undefined ? [] : value.path;
+    const environment = value.environment === undefined ? {} : value.environment;
+    if (!Array.isArray(paths) || paths.length > 8 || !paths.every(pathString) || new Set(paths).size !== paths.length
+        || !record(environment) || Object.keys(environment).some(key => key !== 'JAVA_HOME')
+        || ('JAVA_HOME' in environment && !pathString(environment.JAVA_HOME))) {
+        throw new VerificationSetupError('result-invalid');
+    }
+    return Object.freeze({ path: Object.freeze([...paths]), ...(environment.JAVA_HOME ? { javaHome: environment.JAVA_HOME } : {}) });
+}
+
+
+/***/ }),
+
 /***/ 43193:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -51158,6 +51407,13 @@ class PullRequestReviewOperationError extends Error {
         super(buildMessage(operation, context));
         this.name = "PullRequestReviewOperationError";
         this.operation = operation;
+        const status = context?.providerStatus;
+        if (typeof status === 'number' && Number.isInteger(status) && status >= 400 && status <= 599) {
+            this.providerStatus = status;
+        }
+        if (typeof context?.providerReference === 'string' && /^[A-Za-z0-9:-]{1,64}$/.test(context.providerReference)) {
+            this.providerReference = context.providerReference;
+        }
     }
 }
 exports.PullRequestReviewOperationError = PullRequestReviewOperationError;
@@ -51196,6 +51452,18 @@ function bindSddEvidenceReadPorts(ports) {
         }),
     });
 }
+
+
+/***/ }),
+
+/***/ 26509:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DISABLED_VERIFICATION_SETUP = void 0;
+exports.DISABLED_VERIFICATION_SETUP = Object.freeze({ kind: 'disabled' });
 
 
 /***/ }),
@@ -53108,6 +53376,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
         }
         (0, logging_ports_1.logInfo)('📋 Ensuring .github and copying setup files...');
         const workspaceSelection = {
+            ...(request.verificationActionState ? { verificationActionState: request.verificationActionState } : {}),
             features: setupConfiguration?.features,
             setupConfiguration,
             ...(request.workflowUpdates.length > 0 ? {
@@ -53119,6 +53388,8 @@ async function runInitialSetupWorkflow(request, dependencies) {
         const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
         mark('files', filesResult.copied > 0 ? 'completed' : 'skipped');
         steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
+        if (request.verificationActionState)
+            steps.push(`✅ Verification setup action ${request.verificationActionState === 'create' ? 'created' : 'preserved'}; VERIFICATION_SETUP=${setupConfiguration?.repository.verificationSetup ?? false}. Customize and review on MAIN_BRANCH, then run a real verification.`);
         if (setupConfiguration?.manageRepositorySecrets && secretValues > 0)
             mark('secrets', 'in-progress');
         const secrets = await (0, setup_resource_provisioning_1.ensureRepositorySecrets)(request, dependencies, setupConfiguration, remoteConfiguration);
@@ -58131,6 +58402,8 @@ function projectInitialSetupContext(source) {
         ...(credentials ? { setupCredentials: deepFreezeCopy(credentials) } : {}),
         ...(remote ? { setupRemoteConfiguration: deepFreezeCopy(remote) } : {}),
         workflowUpdates: Object.freeze(asStringArray(source.inputs?.setupWorkflowUpdates)),
+        ...(source.inputs?.setupVerificationActionState === 'create' || source.inputs?.setupVerificationActionState === 'preserve'
+            ? { verificationActionState: source.inputs.setupVerificationActionState } : {}),
     });
 }
 function projectIssueCommentActionContext(source) {
@@ -58636,6 +58909,7 @@ exports.draftSddMarkdown = draftSddMarkdown;
 const application_error_1 = __nccwpck_require__(75999);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const agent_response_length_failure_1 = __nccwpck_require__(28528);
+const sdd_draft_consistency_1 = __nccwpck_require__(27910);
 /** Size and typed format failures share one regeneration; the writer still validates every candidate. */
 async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
     const maximum = plan.action === 'update' ? pre_branch_sdd_1.SDD_MAX_UPDATE_CHARACTERS : pre_branch_sdd_1.SDD_MAX_DRAFT_CHARACTERS;
@@ -58647,13 +58921,13 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
     };
     let problem = 'size';
     let formatReason = 'required-heading';
-    const contractPrompt = `${prompt}\n\nDraft contract: keep the complete draft within ${maximum} characters; aim for ${target} characters. Preserve the same owner, decisions and requirements. Include these literal canonical heading prefixes as Markdown headings, with the shown capitalization:\n${pre_branch_sdd_1.SDD_REQUIRED_HEADINGS.join('\n')}\nUse the canonical numeric test-budget table in section 14: Area | Minimum distinct cases | Behaviors/risks covered. Every allocation and the Total must be a positive integer, and the Total must equal the sum of the allocations. A justified positive integer sentence of distinct tests or cases is also accepted. Return only the required JSON.`;
+    const contractPrompt = `${prompt}\n\nDraft contract: keep the complete draft within ${maximum} characters; aim for ${target} characters. Preserve the same owner, decisions and requirements. Include these literal canonical heading prefixes as Markdown headings, with the shown capitalization:\n${pre_branch_sdd_1.SDD_REQUIRED_HEADINGS.join('\n')}\nUse the canonical numeric test-budget table in section 14: Area | Minimum distinct cases | Behaviors/risks covered. Every allocation and the Total must be a positive integer, and the Total must equal the sum of the allocations. Return only the required JSON.`;
     for (let attempt = 0; attempt < 2; attempt++) {
         let value;
         try {
             value = await agent.query({
                 configuration, agentId: 'pre-branch-sdd-draft',
-                prompt: attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : `The previous response failed the required SDD ${formatReason} contract.`} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.`,
+                prompt: `${attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : `The previous response failed the required SDD ${formatReason} contract.`} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.`}\n\n${sdd_draft_consistency_1.SDD_CONSISTENCY_PROMPT}`,
                 options: { expectJson: true, schemaName: 'pre_branch_sdd_draft', schema },
             });
         }
@@ -58687,11 +58961,20 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
     }
     if (problem === 'format')
         throw new application_error_1.ApplicationError('validation.invalid-input', `The SDD draft still violates its ${formatReason} format contract after one bounded repair.`, {
-            recovery: { id: 'sdd-draft-format-invalid', variables: {} },
+            recovery: { id: consistencyRecovery(formatReason), variables: {} },
         });
     throw new application_error_1.ApplicationError('validation.invalid-input', 'The SDD draft exceeded its size limit after one bounded repair.', {
         recovery: { id: 'sdd-draft-size-exceeded', variables: {} },
     });
+}
+function consistencyRecovery(reason) {
+    switch (reason) {
+        case 'case-identity': return 'sdd-draft-case-identity-invalid';
+        case 'case-budget': return 'sdd-draft-case-budget-invalid';
+        case 'requirement-mapping': return 'sdd-draft-requirement-mapping-invalid';
+        case 'repository-path': return 'sdd-draft-repository-path-invalid';
+        default: return 'sdd-draft-format-invalid';
+    }
 }
 
 
@@ -58710,8 +58993,10 @@ const issue_start_policy_1 = __nccwpck_require__(90332);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const recommendation_policy_1 = __nccwpck_require__(39410);
 const logging_ports_1 = __nccwpck_require__(6152);
+const sdd_analysis_status_policy_1 = __nccwpck_require__(81053);
 const application_error_1 = __nccwpck_require__(75999);
 const pre_branch_sdd_draft_workflow_1 = __nccwpck_require__(93454);
+const sdd_draft_consistency_1 = __nccwpck_require__(27910);
 const ANALYSIS_SCHEMA = {
     type: 'object',
     properties: {
@@ -58832,11 +59117,21 @@ class PreBranchSddGateUseCase {
             });
             const analysisValue = asRecord(analysis);
             const owners = new Map(snapshot.capabilities.map(capability => [capability.id, capability.specs]));
-            const plan = (0, pre_branch_sdd_1.parseSddPlan)(analysisValue, owners);
+            let plan;
+            try {
+                plan = (0, pre_branch_sdd_1.parseSddPlan)(analysisValue, owners);
+            }
+            catch (error) {
+                if (!(error instanceof pre_branch_sdd_1.SddOwnershipFailure))
+                    throw error;
+                await this.writeAnalysisStatus(context, allComments, error.reason);
+                throw new application_error_1.ApplicationError('provider.contract-invalid', `${error.message} Clarify the catalog owner/path in the same issue and rerun the original workflow. No automatic retry was attempted.`);
+            }
             if (card?.record.branchName && (plan.action !== 'update'
                 || plan.path !== card.record.plan.path || plan.capabilityId !== card.record.plan.capabilityId)) {
                 throw new Error('An existing linked branch can only revise its owning SDD on the same path.');
             }
+            await this.writeAnalysisStatus(context, allComments);
             const round = publicationRetry ? card.record.round
                 : card?.record.phase === 'awaiting-answer' && card.record.issueDigest === digest && !staleAwaiting
                     ? card.record.round + (plan.questions.length > 0 ? 1 : 0) : 1;
@@ -58856,9 +59151,19 @@ class PreBranchSddGateUseCase {
             const currentSdd = plan.action === 'update' ? await this.workspace.readSdd(snapshot.baseSha, plan.path) : undefined;
             if (plan.action === 'update' && !currentSdd)
                 throw new Error('The catalogued SDD owner is missing from the selected base.');
+            const ownerDocuments = [];
+            for (const path of snapshot.capabilities.find(capability => capability.id === plan.capabilityId)?.specs ?? []) {
+                const markdown = path === plan.path && currentSdd ? currentSdd : await this.workspace.readSdd(snapshot.baseSha, path);
+                if (!markdown)
+                    throw new Error('A catalogued owning SDD is unavailable at the selected immutable base.');
+                ownerDocuments.push({ path, markdown });
+            }
+            const reservedCases = JSON.stringify((0, sdd_draft_consistency_1.reservedSddCaseIds)(ownerDocuments));
+            if (reservedCases.length > 30000)
+                throw new Error('The owning SDD case inventory exceeds the bounded drafting context; maintainer review is required.');
             const newCapability = plan.action === 'new' ? parseNewCapability(analysisValue.newCapability, plan) : undefined;
             let prepared;
-            await (0, pre_branch_sdd_draft_workflow_1.draftSddMarkdown)(this.agent, context.agentConfiguration, plan, buildDraftPrompt(context, snapshot, plan, answers, currentSdd), async (markdown) => {
+            await (0, pre_branch_sdd_draft_workflow_1.draftSddMarkdown)(this.agent, context.agentConfiguration, plan, `${buildDraftPrompt(context, snapshot, plan, answers, currentSdd)}\n\nCase IDs reserved across every owning SDD at ${snapshot.baseSha}:\n${reservedCases}`, async (markdown) => {
                 prepared = await this.workspace.validateDraft(snapshot, plan, markdown, newCapability);
             });
             if (!prepared)
@@ -58947,6 +59252,20 @@ class PreBranchSddGateUseCase {
             await this.comments.addComment(issueNumber, body);
         else
             await this.comments.updateComment(issueNumber, cardId, body);
+    }
+    async writeAnalysisStatus(context, comments, reason) {
+        const marker = (0, sdd_analysis_status_policy_1.sddAnalysisStatusMarker)(context.issueNumber);
+        const prior = comments.filter(comment => comment.user?.login?.toLowerCase() === context.tokenUser.toLowerCase()
+            && comment.body?.includes(marker)).sort((a, b) => b.id - a.id)[0];
+        if (!reason && !prior)
+            return;
+        const body = (0, sdd_analysis_status_policy_1.renderSddAnalysisStatus)(context.issueNumber, context.issueLocale, reason);
+        if (prior) {
+            if (prior.body !== body)
+                await this.comments.updateComment(context.issueNumber, prior.id, body);
+        }
+        else
+            await this.comments.addComment(context.issueNumber, body);
     }
     async assertFresh(context, expectedBaseSha, sourceBranch) {
         const [liveBody, liveTitle, snapshot] = await Promise.all([
@@ -59708,7 +60027,7 @@ function partitionFailureCategory(error) {
     return error instanceof Error ? error.name : 'unknown';
 }
 function suppressDismissedFindings(execution, context, prepared) {
-    const activeFindings = (prepared.activeFindings ?? prepared.toPublish).filter((finding) => {
+    const activeFindings = (0, finding_1.retainExistingFindingIds)(prepared.activeFindings ?? prepared.toPublish, context.existingByFindingId).filter((finding) => {
         const existing = (0, finding_1.findExistingFindingInfo)(context.existingByFindingId, finding);
         return existing?.issue?.resolution !== 'dismissed' && existing?.pullRequest?.resolution !== 'dismissed';
     });
@@ -59728,6 +60047,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.applyDetectedFindings = applyDetectedFindings;
 const mark_findings_resolved_use_case_1 = __nccwpck_require__(96963);
 const publish_findings_use_case_1 = __nccwpck_require__(88442);
+const bugbot_mutation_error_1 = __nccwpck_require__(82937);
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
 async function applyDetectedFindings(operation, context, prepared, publicationPorts, resolutionPorts, catalog) {
     try {
@@ -59743,7 +60063,7 @@ async function applyDetectedFindings(operation, context, prepared, publicationPo
         });
     }
     catch (error) {
-        const publicationError = error instanceof pull_request_review_errors_1.PullRequestReviewOperationError
+        const publicationError = error instanceof bugbot_mutation_error_1.BugbotMutationError || error instanceof pull_request_review_errors_1.PullRequestReviewOperationError
             ? error
             : new Error("Unable to publish findings.");
         return [publicationError];
@@ -60294,6 +60614,7 @@ function buildPreviousFindingsContext(previousFindings) {
 `;
     const suffix = `
 **Your task 2:** For each finding above, analyze the current code and decide:
+- Trace the original failure precondition through current callers, validation helpers and effective configuration, including modules outside the original anchor. A retained finding is not proof that its old explanation is still true. Reuse its exact id if reporting the same defect again; do not create a second report for it.
 - If the problem **still exists** (same code or same issue present): do **not** include it in \`resolved_findings\`.
 - If the problem **no longer applies** (e.g. that code was removed or refactored away): include \`{ "id": "<exact id>", "resolution": "obsolete" }\` in \`resolved_findings\`.
 - If the problem **has been fixed** (code was changed and the issue is resolved): include \`{ "id": "<exact id>", "resolution": "fixed" }\` in \`resolved_findings\`.
@@ -60413,6 +60734,10 @@ function buildReviewConversationContext(issueComments, commentsByPullRequest, bo
         omitted,
         truncated: chronological.filter((entry) => entry.truncated).length,
         retained: chronological.length,
+        ...(chronological.some(entry => entry.truncated) ? {
+            truncatedItemIds: chronological.filter(entry => entry.truncated)
+                .map(entry => entry.providerId).filter(id => /^(?:issue:[0-9]+|review:[A-Za-z0-9_=-]+)$/.test(id) && id.length <= 160),
+        } : {}),
     };
 }
 function appendConversationEntry(entries, author, kind, body, createdAt, providerId) {
@@ -61904,6 +62229,7 @@ async function loadBugbotContext(request, ports, resolvedPreflight) {
             itemsFetched: conversationContext.retained + conversationContext.omitted,
             omittedItems: conversationContext.omitted,
             truncatedItems: conversationContext.truncated,
+            ...(conversationContext.truncatedItemIds ? { truncatedItemIds: conversationContext.truncatedItemIds } : {}),
             limitReached: conversationContext.omitted > 0 || conversationContext.truncated > 0,
         },
         {
@@ -62105,11 +62431,11 @@ Object.defineProperty(exports, "markFindingsResolved", ({ enumerable: true, get:
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.markFindingsResolved = markFindingsResolved;
-const pull_request_review_errors_1 = __nccwpck_require__(46445);
 const logging_ports_1 = __nccwpck_require__(6152);
 const resolve_issue_finding_1 = __nccwpck_require__(35300);
 const resolve_pull_request_finding_1 = __nccwpck_require__(64567);
 const review_state_1 = __nccwpck_require__(79200);
+const bugbot_mutation_error_1 = __nccwpck_require__(82937);
 const application_error_1 = __nccwpck_require__(75999);
 async function markFindingsResolved(param) {
     const errors = [];
@@ -62137,8 +62463,8 @@ async function repairExistingPullRequestFinding(ports, operation, findingId, des
         try {
             await ports.pullRequestComments.unresolvePullRequestReviewThread(destination.pullRequestNumber, destination.commentIdentity);
         }
-        catch {
-            addResolutionError(errors, 'pull request');
+        catch (cause) {
+            addResolutionError(errors, 'pull request', findingId, cause);
         }
     }
 }
@@ -62152,7 +62478,7 @@ async function resolveIssueIfNeeded(param, findingId, destination, errors) {
         return;
     const comment = param.context.issueComments.find(item => item.id === destination.commentId);
     if (comment?.body == null) {
-        addResolutionError(errors, 'issue');
+        addResolutionError(errors, 'issue', findingId);
         return;
     }
     try {
@@ -62163,8 +62489,8 @@ async function resolveIssueIfNeeded(param, findingId, destination, errors) {
             resolution: param.resolvedFindingResolutions?.get(findingId),
         }, param.catalog);
     }
-    catch {
-        addResolutionError(errors, 'issue');
+    catch (cause) {
+        addResolutionError(errors, 'issue', findingId, cause);
     }
 }
 async function tryResolvePullRequestFinding(ports, findingId, destination, errors, resolution, catalog) {
@@ -62176,17 +62502,14 @@ async function tryResolvePullRequestFinding(ports, findingId, destination, error
             resolution,
         }, catalog);
     }
-    catch {
-        addResolutionError(errors, 'pull request');
+    catch (cause) {
+        addResolutionError(errors, 'pull request', findingId, cause);
     }
 }
-function addResolutionError(errors, destination) {
-    const cause = destination === 'pull request'
-        ? new pull_request_review_errors_1.PullRequestReviewOperationError('mark-resolved')
-        : new Error('Unable to mark an issue finding as resolved.');
-    const semanticError = new application_error_1.ApplicationError('provider.unavailable', destination === 'pull request'
-        ? 'Unable to mark a pull request finding as resolved.'
-        : 'Unable to mark an issue finding as resolved.', { cause });
+function addResolutionError(errors, destination, findingId, cause) {
+    const semanticError = destination === 'pull request'
+        ? (0, bugbot_mutation_error_1.bugbotMutationError)(cause, 'resolution', [findingId], 'mark-resolved')
+        : new application_error_1.ApplicationError('provider.unavailable', 'Unable to mark an issue finding as resolved.');
     (0, logging_ports_1.logError)(semanticError);
     errors.push(semanticError);
 }
@@ -62439,6 +62762,7 @@ function isRecord(value) {
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publishFindings = publishFindings;
+const bugbot_mutation_error_1 = __nccwpck_require__(82937);
 const finding_1 = __nccwpck_require__(31011);
 const publish_issue_finding_comment_1 = __nccwpck_require__(84950);
 const publish_pr_review_comments_1 = __nccwpck_require__(50352);
@@ -62457,12 +62781,17 @@ async function publishFindings(param) {
             catalog,
         })
         : undefined;
-    for (const finding of findings) {
+    for (const finding of (0, finding_1.retainExistingFindingIds)(findings, existingByFindingId)) {
         if (operation.target.issueNumber > 0 && !reviewPublisher) {
             await (0, publish_issue_finding_comment_1.publishIssueFindingComment)(ports.issueComments, operation.target.issueNumber, finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding), commitSha, catalog);
         }
         if (reviewPublisher) {
-            await reviewPublisher.publish(finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding));
+            try {
+                await reviewPublisher.publish(finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding));
+            }
+            catch (cause) {
+                throw (0, bugbot_mutation_error_1.bugbotMutationError)(cause, 'publication', [finding.id], 'publish-comments');
+            }
         }
     }
     await reviewPublisher?.flush(overflowCount, overflowTitles);
@@ -62534,6 +62863,7 @@ ${catalog.message('bugbot.overflow.body', { count: `**${overflowCount}**` }, ove
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentPublisher = void 0;
+const bugbot_mutation_error_1 = __nccwpck_require__(82937);
 const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
 const path_validation_1 = __nccwpck_require__(70124);
 const logging_ports_1 = __nccwpck_require__(6152);
@@ -62605,11 +62935,16 @@ class PullRequestReviewCommentPublisher {
         if (this.findingsToCreate.length === 0 && overflowCount === 0)
             return;
         const { repository, operation, openPrNumber, prContext } = this.options;
-        await repository.createReviewWithComments(openPrNumber, prContext.prHeadSha, buildReviewSummary(this.findingsToCreate, this.commentsToCreate.length, this.unanchoredBodies, overflowCount, overflowTitles, operation.analysis.reviewConfiguration.traceRules
-            ? this.options.ruleSources ?? []
-            : [], operation.analysis.reviewConfiguration.traceRules
-            ? this.options.omittedRuleCount ?? 0
-            : 0, prContext.prHeadSha, this.catalog), this.commentsToCreate);
+        try {
+            await repository.createReviewWithComments(openPrNumber, prContext.prHeadSha, buildReviewSummary(this.findingsToCreate, this.commentsToCreate.length, this.unanchoredBodies, overflowCount, overflowTitles, operation.analysis.reviewConfiguration.traceRules
+                ? this.options.ruleSources ?? []
+                : [], operation.analysis.reviewConfiguration.traceRules
+                ? this.options.omittedRuleCount ?? 0
+                : 0, prContext.prHeadSha, this.catalog), this.commentsToCreate);
+        }
+        catch (cause) {
+            throw (0, bugbot_mutation_error_1.bugbotMutationError)(cause, 'publication', this.findingsToCreate.map(finding => finding.id), 'publish-comments', this.findingsToCreate.length + overflowCount);
+        }
     }
     get catalog() {
         return this.options.catalog ?? (0, bugbot_message_catalog_1.resolveStaticBugbotCatalog)(this.options.operation.locale.pullRequest);
@@ -62765,6 +63100,8 @@ async function queryBugbotPartitionFindings(repository, configuration, prompt, t
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.reconcileBugbotReviewState = reconcileBugbotReviewState;
+const bugbot_mutation_error_1 = __nccwpck_require__(82937);
+const finding_1 = __nccwpck_require__(31011);
 const review_projection_1 = __nccwpck_require__(80859);
 const bugbot_reconciliation_policy_1 = __nccwpck_require__(78128);
 const bugbot_provider_projection_policy_1 = __nccwpck_require__(85821);
@@ -62795,11 +63132,12 @@ async function reconcileBugbotReviewState(input) {
         };
     }
     const snapshot = snapshotResult.snapshot;
+    const activeFindings = (0, finding_1.retainExistingFindingIds)(input.activeFindings, input.loadedContext.existingByFindingId);
+    const expectedPublishedFindings = (0, finding_1.retainExistingFindingIds)(input.expectedPublishedFindings ?? input.activeFindings, input.loadedContext.existingByFindingId);
     const diagnostics = [
-        ...(input.mutationErrors ?? []).map((error) => ({
-            code: 'operation-failed',
-            operatorMessage: toSafeOperationMessage(error),
-        })),
+        ...(input.mutationErrors ?? []).map((error) => error instanceof bugbot_mutation_error_1.BugbotMutationError
+            ? { code: 'finding-mutation-failed', mutation: error.diagnostic }
+            : { code: 'operation-failed', operatorMessage: toSafeOperationMessage(error) }),
         ...(!input.target.trustedAuthorLogin?.trim()
             ? [{ code: 'identity-unavailable' }]
             : []),
@@ -62808,7 +63146,7 @@ async function reconcileBugbotReviewState(input) {
     const providerProjection = (0, bugbot_provider_projection_policy_1.projectBugbotProviderEvidence)({
         snapshot,
         trustedAuthorLogin: input.target.trustedAuthorLogin,
-        activeFindings: input.activeFindings,
+        activeFindings,
         existingByFindingId: input.loadedContext.existingByFindingId,
     });
     const plan = (0, bugbot_reconciliation_policy_1.buildBugbotReconciliationPlan)({
@@ -62818,8 +63156,8 @@ async function reconcileBugbotReviewState(input) {
             id,
             (0, bugbot_finding_marker_policy_1.extractTitleFromBody)(fullBody) || id,
         ])),
-        activeFindings: input.activeFindings,
-        expectedPublishedFindings: input.expectedPublishedFindings ?? input.activeFindings,
+        activeFindings,
+        expectedPublishedFindings,
         diagnostics,
         coverage: input.loadedContext.coverage,
     });
@@ -63323,14 +63661,16 @@ function toPresentationFailure(diagnostic) {
     const message = (0, bugbot_message_catalog_1.bugbotDiagnosticOperatorMessage)(diagnostic);
     return {
         diagnostic,
-        error: diagnostic.code === 'review-updates-pending'
-            ? new application_error_1.ApplicationError('workflow.presentation-pending', message, {
-                recovery: {
-                    id: 'bugbot-review-blocks-pending',
-                    variables: { pendingCount: diagnostic.count },
-                },
-            })
-            : new Error(message),
+        error: diagnostic.code === 'finding-mutation-failed'
+            ? new application_error_1.ApplicationError(diagnostic.mutation.errorCode, message)
+            : diagnostic.code === 'review-updates-pending'
+                ? new application_error_1.ApplicationError('workflow.presentation-pending', message, {
+                    recovery: {
+                        id: 'bugbot-review-blocks-pending',
+                        variables: { pendingCount: diagnostic.count },
+                    },
+                })
+                : new Error(message),
     };
 }
 function report(projection, reviewUpdates, pendingReviewUpdates, statusCardOperation, errors) {
@@ -63443,6 +63783,7 @@ exports.runVerifyCommands = runVerifyCommands;
 const logging_ports_1 = __nccwpck_require__(6152);
 const verify_command_policy_1 = __nccwpck_require__(96031);
 const verification_runtime_policy_1 = __nccwpck_require__(89347);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
 async function runVerifyCommands(commands, execute) {
     for (const command of commands) {
         const result = await executeVerifyCommand(command, execute);
@@ -63462,7 +63803,7 @@ async function executeVerifyCommand(command, execute) {
             : { success: false, failedCommand: formatCommandForDiagnostics(parsed) };
     }
     catch (error) {
-        if (error instanceof verification_runtime_policy_1.VerificationPrerequisiteError) {
+        if (error instanceof verification_runtime_policy_1.VerificationPrerequisiteError || error instanceof verification_setup_policy_1.VerificationSetupError) {
             return { success: false, failedCommand: formatCommandForDiagnostics(parsed),
                 error: `${error.message} Verification command: ${formatCommandForDiagnostics(parsed)}.` };
         }
@@ -68785,9 +69126,16 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-resolution-invalid',
     'sdd-draft-size-exceeded',
     'sdd-draft-format-invalid',
+    'sdd-draft-case-identity-invalid',
+    'sdd-draft-case-budget-invalid',
+    'sdd-draft-requirement-mapping-invalid',
+    'sdd-draft-repository-path-invalid',
     'workspace-changes-rejected',
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
+    'stored-configuration-schema-missing',
+    'stored-configuration-schema-unsupported',
+    'stored-configuration-invalid',
 ]);
 const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
 const UNCHANGED_STATE = 'No new state or external effect was created.';
@@ -68979,6 +69327,9 @@ class ApplicationError extends Error {
 exports.ApplicationError = ApplicationError;
 _ApplicationError_cause = new WeakMap();
 const RECOVERY_VARIABLE_KEYS = Object.freeze({
+    'stored-configuration-schema-missing': Object.freeze(['issueNumber', 'expectedVersion']),
+    'stored-configuration-schema-unsupported': Object.freeze(['issueNumber', 'expectedVersion', 'actualVersion']),
+    'stored-configuration-invalid': Object.freeze(['issueNumber', 'expectedVersion']),
     'closed-issue-reconciliation-failed': Object.freeze(['resultId', 'phase', 'state', 'reason', 'changed', 'remaining']),
     'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
     'pull-request-link-restored': Object.freeze([]),
@@ -68993,6 +69344,10 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-draft-format-invalid': Object.freeze([]),
+    'sdd-draft-case-identity-invalid': Object.freeze([]),
+    'sdd-draft-case-budget-invalid': Object.freeze([]),
+    'sdd-draft-requirement-mapping-invalid': Object.freeze([]),
+    'sdd-draft-repository-path-invalid': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
 function normalizeApplicationErrorRecovery(recovery) {
@@ -69007,6 +69362,13 @@ function normalizeApplicationErrorRecovery(recovery) {
     if (actualKeys.length !== expectedKeys.length
         || actualKeys.some((key, index) => key !== expectedKeys[index])) {
         throw new TypeError(`Application error recovery variables are invalid for ${recovery.id}.`);
+    }
+    if (recovery.id.startsWith('stored-configuration-')
+        && (![variables.issueNumber, variables.expectedVersion].every(value => typeof value === 'number' && Number.isSafeInteger(value) && value > 0)
+            || (recovery.id === 'stored-configuration-schema-unsupported'
+                && !(typeof variables.actualVersion === 'number'
+                    && Number.isSafeInteger(variables.actualVersion) && variables.actualVersion >= 0)))) {
+        throw new TypeError('Stored configuration diagnostic is invalid.');
     }
     if (recovery.id === 'managed-branch-enrichment-failed'
         && (typeof variables.branchName !== 'string'
@@ -69389,6 +69751,7 @@ class Execution {
         this.currentIssueWorkflowAdmission = components.issueWorkflowAdmission;
         this.currentConfiguration.issueWorkflowProfileDigest = components.issueWorkflowProfileDigest;
         this.preBranchSdd = components.preBranchSdd ?? false;
+        this.verificationSetup = components.verificationSetup ?? false;
     }
 }
 exports.Execution = Execution;
@@ -74451,6 +74814,7 @@ function combineOrganizationAccess(secrets, variables) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.isGithubAlreadyExists = exports.isGithubPermissionDenied = exports.isGithubRateLimited = exports.isGithubNotFound = exports.getGithubErrorStatus = void 0;
+exports.githubReadErrorCode = githubReadErrorCode;
 const getGithubErrorStatus = (error) => {
     if (typeof error !== "object" || error === null)
         return undefined;
@@ -74460,6 +74824,23 @@ const getGithubErrorStatus = (error) => {
 exports.getGithubErrorStatus = getGithubErrorStatus;
 const isGithubNotFound = (error) => (0, exports.getGithubErrorStatus)(error) === 404;
 exports.isGithubNotFound = isGithubNotFound;
+/** Maps failed metadata reads without copying untrusted provider text. */
+function githubReadErrorCode(error) {
+    const status = (0, exports.getGithubErrorStatus)(error);
+    if (status === 401)
+        return 'authorization.credential-invalid';
+    if ((0, exports.isGithubRateLimited)(error))
+        return 'provider.rate-limited';
+    if (status === 403)
+        return 'authorization.denied';
+    if (status === 404)
+        return 'provider.not-found';
+    if (status === 409 || status === 412)
+        return 'provider.conflict';
+    if (status === 400 || status === 422)
+        return 'provider.contract-invalid';
+    return 'provider.unavailable';
+}
 const isGithubRateLimited = (error) => {
     const status = (0, exports.getGithubErrorStatus)(error);
     if (status === 429)
@@ -75170,8 +75551,9 @@ class IssueContentRepository {
                 return issue.body ?? '';
             }
             catch (error) {
-                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to read issue #${issueNumber} description.`));
-                throw error;
+                const semanticError = (0, application_error_1.toApplicationError)(error, (0, github_error_policy_1.githubReadErrorCode)(error), 'Unable to read the issue or pull-request description.');
+                (0, logger_1.logError)(semanticError);
+                throw semanticError;
             }
         };
         this.getIssueDescription = async (owner, repository, issueNumber, token) => {
@@ -77533,8 +77915,8 @@ function collectDiagnostic(diagnostics, cause) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestChangesRepository = void 0;
+const pull_request_review_error_metadata_1 = __nccwpck_require__(54354);
 const logger_1 = __nccwpck_require__(91151);
-const pull_request_review_errors_1 = __nccwpck_require__(46445);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
 const application_error_1 = __nccwpck_require__(75999);
 class PullRequestChangesRepository {
@@ -77547,7 +77929,7 @@ class PullRequestChangesRepository {
             }
             catch (error) {
                 (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to read the pull request review diff.'));
-                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'list-files');
+                throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, 'list-files');
             }
         };
         this.getBoundedBugbotReviewDiffSnapshot = async (owner, repository, pullNumber, token) => {
@@ -77589,7 +77971,7 @@ class PullRequestChangesRepository {
             }
             catch (error) {
                 (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to read the pull request review diff.'));
-                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'list-files');
+                throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, 'list-files');
             }
         };
         /** Head commit SHA of the PR (for creating review). */
@@ -77608,7 +77990,7 @@ class PullRequestChangesRepository {
             }
             catch (error) {
                 (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to read the pull request head SHA.'));
-                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "get-head-sha");
+                throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, "get-head-sha");
             }
         };
     }
@@ -77951,6 +78333,7 @@ function toBugbotPullRequestIdentity(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentCommandRepository = void 0;
+const pull_request_review_error_metadata_1 = __nccwpck_require__(54354);
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
 class PullRequestReviewCommentCommandRepository {
@@ -78019,7 +78402,7 @@ class PullRequestReviewCommentCommandRepository {
             const context = comments.length > 0
                 ? { failedCount: comments.length, totalCount: comments.length }
                 : undefined;
-            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "publish-comments", context);
+            throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, "publish-comments", context);
         }
     }
     async updatePullRequestReview(owner, repository, pullRequestNumber, reviewIdentity, body, token) {
@@ -78040,7 +78423,7 @@ class PullRequestReviewCommentCommandRepository {
                 throw new pull_request_review_errors_1.PullRequestReviewOperationError('update-review');
         }
         catch (error) {
-            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'update-review');
+            throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, 'update-review');
         }
     }
     async updatePullRequestReviewComment(_owner, _repository, commentIdentity, body, token) {
@@ -78059,7 +78442,7 @@ class PullRequestReviewCommentCommandRepository {
             }
         }
         catch (error) {
-            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "update-comment");
+            throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, "update-comment");
         }
     }
 }
@@ -78075,7 +78458,7 @@ exports.PullRequestReviewCommentCommandRepository = PullRequestReviewCommentComm
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentQueryRepository = void 0;
-const pull_request_review_errors_1 = __nccwpck_require__(46445);
+const pull_request_review_error_metadata_1 = __nccwpck_require__(54354);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
 function toReviewComment(comment) {
     if (typeof comment.node_id !== "string" || comment.node_id.length === 0) {
@@ -78131,7 +78514,7 @@ class PullRequestReviewCommentQueryRepository {
             return comments;
         }
         catch (error) {
-            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "list-comments");
+            throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, "list-comments");
         }
     }
     async listBugbotPullRequestReviewCommentsBounded(owner, repository, pullRequestNumber, token) {
@@ -78174,7 +78557,7 @@ class PullRequestReviewCommentQueryRepository {
             };
         }
         catch (error) {
-            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "list-comments");
+            throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, "list-comments");
         }
     }
     async listPullRequestReviews(owner, repository, pullRequestNumber, token) {
@@ -78188,7 +78571,7 @@ class PullRequestReviewCommentQueryRepository {
             return reviews;
         }
         catch (error) {
-            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'list-reviews');
+            throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, 'list-reviews');
         }
     }
     async getPullRequestReviewCommentBody(owner, repository, _pullRequestNumber, commentId, token) {
@@ -78202,11 +78585,35 @@ class PullRequestReviewCommentQueryRepository {
             return data.body ?? null;
         }
         catch (error) {
-            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "get-comment");
+            throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, "get-comment");
         }
     }
 }
 exports.PullRequestReviewCommentQueryRepository = PullRequestReviewCommentQueryRepository;
+
+
+/***/ }),
+
+/***/ 54354:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.toPullRequestReviewOperationError = toPullRequestReviewOperationError;
+const pull_request_review_errors_1 = __nccwpck_require__(46445);
+/** Only safe HTTP metadata crosses the provider boundary; provider prose never does. */
+function toPullRequestReviewOperationError(error, operation, context) {
+    if (!error || typeof error !== 'object')
+        return (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, operation, context);
+    const record = error;
+    return (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, operation, {
+        ...context,
+        ...(typeof record.status === 'number' ? { providerStatus: record.status } : {}),
+        ...(typeof record.response?.headers?.['x-github-request-id'] === 'string'
+            ? { providerReference: record.response.headers['x-github-request-id'] } : {}),
+    });
+}
 
 
 /***/ }),
@@ -78319,6 +78726,7 @@ function nextConnectionCursor(pageInfo, seenCursors) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewThreadRepository = void 0;
+const pull_request_review_error_metadata_1 = __nccwpck_require__(54354);
 const logger_1 = __nccwpck_require__(91151);
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
 const pull_request_review_thread_locator_1 = __nccwpck_require__(2307);
@@ -78366,7 +78774,7 @@ class PullRequestReviewThreadRepository {
                 return states;
             }
             catch (error) {
-                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'list-threads');
+                throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, 'list-threads');
             }
         };
         this.listBugbotPullRequestReviewThreadStatesBounded = async (owner, repository, pullNumber, token) => {
@@ -78435,7 +78843,7 @@ class PullRequestReviewThreadRepository {
                 };
             }
             catch (error) {
-                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'list-threads');
+                throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, 'list-threads');
             }
         };
         this.resolvePullRequestReviewThread = async (owner, repository, pullNumber, commentIdentity, token) => {
@@ -78459,7 +78867,7 @@ class PullRequestReviewThreadRepository {
                 (0, logger_1.logDebugInfo)('Resolved pull request review thread.');
             }
             catch (error) {
-                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'resolve-thread');
+                throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, 'resolve-thread');
             }
         };
         this.unresolvePullRequestReviewThread = async (owner, repository, pullNumber, commentIdentity, token) => {
@@ -78483,7 +78891,7 @@ class PullRequestReviewThreadRepository {
                 (0, logger_1.logDebugInfo)('Reopened pull request review thread.');
             }
             catch (error) {
-                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'unresolve-thread');
+                throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, 'unresolve-thread');
             }
         };
     }
@@ -78500,7 +78908,7 @@ exports.PullRequestReviewThreadRepository = PullRequestReviewThreadRepository;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewerRepository = void 0;
-const pull_request_review_errors_1 = __nccwpck_require__(46445);
+const pull_request_review_error_metadata_1 = __nccwpck_require__(54354);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
 const COMPLETED_REVIEW_STATES = new Set([
     "APPROVED",
@@ -78533,7 +78941,7 @@ class PullRequestReviewerRepository {
             return [...reviewers.values()];
         }
         catch (error) {
-            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "list-reviewers");
+            throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, "list-reviewers");
         }
     }
     async addReviewersToPullRequest(owner, repository, pullRequestNumber, reviewers, token) {
@@ -78558,7 +78966,7 @@ class PullRequestReviewerRepository {
             return [...confirmed.values()];
         }
         catch (error) {
-            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "request-reviewers");
+            throw (0, pull_request_review_error_metadata_1.toPullRequestReviewOperationError)(error, "request-reviewers");
         }
     }
     async listRequestedReviewers(client, parameters) {
@@ -79976,10 +80384,15 @@ function matchesConstrainedHead(target, candidate) {
 /***/ }),
 
 /***/ 31011:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isExistingFindingFullyResolved = isExistingFindingFullyResolved;
+exports.findExistingFindingInfo = findExistingFindingInfo;
+exports.findExistingFindingMatch = findExistingFindingMatch;
+exports.retainExistingFindingIds = retainExistingFindingIds;
 /**
  * Provider-neutral Bugbot finding and durable identity contracts.
  *
@@ -79987,9 +80400,7 @@ function matchesConstrainedHead(target, candidate) {
  * them in the domain prevents policies from depending on a particular use-case
  * folder and gives every adapter one stable semantic vocabulary.
  */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isExistingFindingFullyResolved = isExistingFindingFullyResolved;
-exports.findExistingFindingInfo = findExistingFindingInfo;
+const finding_identity_1 = __nccwpck_require__(91853);
 function isExistingFindingFullyResolved(finding) {
     const destinations = [finding.issue, finding.pullRequest].filter((destination) => destination != null);
     return (destinations.length > 0 &&
@@ -79997,21 +80408,62 @@ function isExistingFindingFullyResolved(finding) {
         finding.pullRequest?.verificationRequired !== true);
 }
 function findExistingFindingInfo(existingByFindingId, finding) {
+    return findExistingFindingMatch(existingByFindingId, finding)?.info;
+}
+/** A match carries its durable key so updating a comment cannot re-key it. */
+function findExistingFindingMatch(existingByFindingId, finding) {
     const direct = existingByFindingId[finding.id];
     if (direct && identitiesAreCompatible(direct, finding))
-        return direct;
-    const candidates = Object.values(existingByFindingId);
+        return { id: finding.id, info: direct };
+    const candidates = Object.entries(existingByFindingId);
     if (finding.fingerprint) {
-        const locationMatch = candidates.find((candidate) => candidate.issue?.fingerprint === finding.fingerprint
+        const locationMatches = candidates.filter(([, candidate]) => candidate.issue?.fingerprint === finding.fingerprint
             || candidate.pullRequest?.fingerprint === finding.fingerprint);
-        if (locationMatch)
-            return locationMatch;
+        if (locationMatches.length > 0)
+            return uniqueFindingMatch(locationMatches);
     }
     if (!finding.semanticFingerprint)
         return undefined;
-    const semanticMatches = candidates.filter((candidate) => candidate.issue?.semanticFingerprint === finding.semanticFingerprint
+    const semanticMatches = candidates.filter(([, candidate]) => candidate.issue?.semanticFingerprint === finding.semanticFingerprint
         || candidate.pullRequest?.semanticFingerprint === finding.semanticFingerprint);
-    return semanticMatches.length === 1 ? semanticMatches[0] : undefined;
+    return uniqueFindingMatch(semanticMatches);
+}
+/**
+ * Preserve trusted IDs across title/location changes, before limits, publication
+ * and final projection. Multiple reports of one uniquely matched durable finding
+ * share one record; unmatched or ambiguous reports remain independent evidence.
+ */
+function retainExistingFindingIds(findings, existingByFindingId) {
+    const retained = new Set();
+    const durableIds = new Set(Object.keys(existingByFindingId));
+    // Reserve the whole input up front so a generated ID cannot take another
+    // report's ID, including one that occurs later in the response.
+    const reservedIds = new Set([...durableIds, ...findings.map((finding) => finding.id)]);
+    const emittedIds = new Set();
+    return findings.flatMap((finding) => {
+        const match = findExistingFindingMatch(existingByFindingId, finding);
+        if (!match) {
+            let id = finding.id;
+            if (durableIds.has(id) || emittedIds.has(id)) {
+                const base = `candidate-${(0, finding_identity_1.buildFindingFingerprint)(finding)}`;
+                id = base;
+                let suffix = 0;
+                while (reservedIds.has(id))
+                    id = `${base}-${++suffix}`;
+                reservedIds.add(id);
+            }
+            emittedIds.add(id);
+            return [id === finding.id ? finding : { ...finding, id }];
+        }
+        if (retained.has(match.id))
+            return [];
+        retained.add(match.id);
+        emittedIds.add(match.id);
+        return [finding.id === match.id ? finding : { ...finding, id: match.id }];
+    });
+}
+function uniqueFindingMatch(matches) {
+    return matches.length === 1 ? { id: matches[0][0], info: matches[0][1] } : undefined;
 }
 function identitiesAreCompatible(existing, finding) {
     const existingFingerprints = [
@@ -80550,6 +81002,63 @@ function containsBotMention(commentBody, tokenUser) {
 function isCopilotCommentRequest(commentBody, botLogin) {
     return (0, copilot_command_1.parseCopilotCommand)(commentBody).kind !== 'none'
         || containsBotMention(commentBody, botLogin);
+}
+
+
+/***/ }),
+
+/***/ 33430:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.COPILOT_COMMENT_REMOTE_WORKFLOW = exports.COPILOT_COMMENT_SELF_WORKFLOW = exports.COPILOT_COMMENT_RUNTIME = void 0;
+exports.isCopilotCommentWorkflow = isCopilotCommentWorkflow;
+exports.isCopilotCommentRunner = isCopilotCommentRunner;
+exports.copilotCommentRunner = copilotCommentRunner;
+/** The comment coordinator is a versioned Copilot workflow, not an arbitrary reusable job. */
+exports.COPILOT_COMMENT_RUNTIME = 'copilot_comment_runtime.yml';
+exports.COPILOT_COMMENT_SELF_WORKFLOW = `$/.github/workflows/${exports.COPILOT_COMMENT_RUNTIME}`;
+exports.COPILOT_COMMENT_REMOTE_WORKFLOW = `vypdev/copilot/.github/workflows/${exports.COPILOT_COMMENT_RUNTIME}@v3`;
+function isCopilotCommentWorkflow(value) {
+    return typeof value === 'string' && (value === exports.COPILOT_COMMENT_SELF_WORKFLOW
+        || /^vypdev\/copilot\/\.github\/workflows\/copilot_comment_runtime\.yml@(?:v3(?:\.[0-9]+\.[0-9]+)?|[a-f0-9]{40})$/u.test(value));
+}
+const literal = (value) => typeof value === 'string' && value.length > 0 && value.length <= 100
+    && value === value.trim() && !/[\p{Cc}\p{Cf}${}<>]/u.test(value);
+const labels = (value) => literal(value) || Array.isArray(value) && value.length > 0 && value.length <= 10
+    && value.every(literal) && new Set(value.map(label => label.toLowerCase())).size === value.length;
+/** Runner routing is literal data; expressions need their original full workflow reviewed. */
+function isCopilotCommentRunner(value) {
+    if (labels(value))
+        return true;
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const route = value;
+    const keys = Object.keys(route);
+    return keys.length > 0 && (route.group !== undefined || route.labels !== undefined)
+        && keys.every(key => key === 'group' || key === 'labels')
+        && (route.group === undefined || literal(route.group))
+        && (route.labels === undefined || labels(route.labels));
+}
+function copilotCommentRunner(job) {
+    if (!job || !isCopilotCommentWorkflow(job.uses))
+        return job?.['runs-on'];
+    const inputs = job.with;
+    if (typeof inputs?.['runs-on'] !== 'string')
+        throw new Error('Comment workflow runner JSON is unavailable; review the workflow separately.');
+    try {
+        if (inputs['runs-on'].length > 16000)
+            throw new Error('Runner JSON exceeds its bound.');
+        const route = JSON.parse(inputs['runs-on']);
+        if (!isCopilotCommentRunner(route))
+            throw new Error('Unsupported execution route.');
+        return route;
+    }
+    catch {
+        throw new Error('Comment workflow runner JSON is invalid; review the workflow separately.');
+    }
 }
 
 
@@ -82357,7 +82866,7 @@ function parsePositiveSafeInteger(value) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SDD_REQUIRED_HEADINGS = exports.SddOwnerFormatFailure = exports.SddDraftFormatFailure = exports.SDD_MAX_UPDATE_CHARACTERS = exports.SDD_MAX_DRAFT_CHARACTERS = exports.SDD_MIN_DRAFT_CHARACTERS = exports.SDD_GATE_MARKER = void 0;
+exports.SDD_REQUIRED_HEADINGS = exports.SddOwnerFormatFailure = exports.SddDraftFormatFailure = exports.SddOwnershipFailure = exports.SDD_MAX_UPDATE_CHARACTERS = exports.SDD_MAX_DRAFT_CHARACTERS = exports.SDD_MIN_DRAFT_CHARACTERS = exports.SDD_GATE_MARKER = void 0;
 exports.retainSddAnswers = retainSddAnswers;
 exports.normalizeSddIssueTitle = normalizeSddIssueTitle;
 exports.isSafeSddPath = isSafeSddPath;
@@ -82368,6 +82877,7 @@ exports.isSddAnswerComment = isSddAnswerComment;
 exports.parseSddAnswer = parseSddAnswer;
 exports.validateSddMarkdown = validateSddMarkdown;
 exports.composeSddUpdate = composeSddUpdate;
+exports.recoverSddUpdate = recoverSddUpdate;
 exports.SDD_GATE_MARKER = 'copilot:sdd-gate:v1';
 exports.SDD_MIN_DRAFT_CHARACTERS = 1800;
 exports.SDD_MAX_DRAFT_CHARACTERS = 70000;
@@ -82395,6 +82905,15 @@ function normalizeSddIssueTitle(title) {
 function isSafeSddPath(path) {
     return SDD_PATH.test(path) && !['specs/CATALOG.md', 'specs/_template.md'].includes(path);
 }
+/** Closed diagnostics contain no model-selected identifiers or provider text. */
+class SddOwnershipFailure extends Error {
+    constructor(reason) {
+        super(`SDD ownership analysis rejected (${reason}).`);
+        this.reason = reason;
+        this.name = 'SddOwnershipFailure';
+    }
+}
+exports.SddOwnershipFailure = SddOwnershipFailure;
 /** The agent may propose ownership but cannot invent a catalogued owner or arbitrary path. */
 function parseSddPlan(value, catalog) {
     if (!isRecord(value))
@@ -82412,14 +82931,16 @@ function parseSddPlan(value, catalog) {
     const ownerPaths = catalog.get(capabilityId);
     const registered = [...catalog.values()].some(paths => paths.includes(path));
     if (action === 'update' && (!ownerPaths?.includes(path) || !registered)) {
-        throw new Error('The requested SDD update is not owned by the selected catalog capability.');
+        throw new SddOwnershipFailure('update-owner-mismatch');
     }
-    if (action === 'companion' && (!ownerPaths || registered)) {
-        throw new Error('A companion SDD requires an existing owner and a new path.');
-    }
-    if (action === 'new' && (ownerPaths || registered)) {
-        throw new Error('A new SDD requires an unregistered capability and path.');
-    }
+    if (action === 'companion' && !ownerPaths)
+        throw new SddOwnershipFailure('companion-owner-unknown');
+    if (action === 'companion' && registered)
+        throw new SddOwnershipFailure('companion-path-registered');
+    if (action === 'new' && ownerPaths)
+        throw new SddOwnershipFailure('new-owner-registered');
+    if (action === 'new' && registered)
+        throw new SddOwnershipFailure('new-path-registered');
     if (!Array.isArray(value.questions) || value.questions.length > 8) {
         throw new Error('The SDD analysis must contain at most eight blocking questions.');
     }
@@ -82660,8 +83181,24 @@ function composeSddUpdate(existing, change) {
     validateSddMarkdown(change);
     if (change.length > exports.SDD_MAX_UPDATE_CHARACTERS)
         throw new Error('An SDD update appendix exceeds 18000 characters; use a proportional change or a companion SDD.');
+    const appendix = shiftSddHeadings(change, 1);
+    const merged = `${existing.trimEnd()}\n\n${appendix.trim()}\n`;
+    validateSddMarkdown(merged);
+    return merged;
+}
+/** Recovery validates the original candidate, not a second copy of its retained baseline. */
+function recoverSddUpdate(existing, published) {
+    const prefix = `${existing.trimEnd()}\n\n`;
+    if (!published.startsWith(prefix))
+        return undefined;
+    // Composition normalizes outer whitespace and adds a publication newline.
+    // Reconstruct an equivalent candidate inside the original size bounds.
+    const change = shiftSddHeadings(published.slice(prefix.length), -1).trim().padEnd(exports.SDD_MIN_DRAFT_CHARACTERS, '\n');
+    return composeSddUpdate(existing, change) === published ? change : undefined;
+}
+function shiftSddHeadings(source, direction) {
     let fence;
-    const appendix = change.split('\n').map(line => {
+    return source.split('\n').map(line => {
         const boundary = line.match(/^\s*(`{3,}|~{3,})/);
         if (boundary) {
             if (!fence)
@@ -82670,11 +83207,11 @@ function composeSddUpdate(existing, change) {
                 fence = undefined;
             return line;
         }
-        return !fence && /^#{1,5} /.test(line) ? `#${line}` : line;
+        if (fence)
+            return line;
+        return direction === 1 ? (/^#{1,5} /.test(line) ? `#${line}` : line)
+            : (/^#{2,6} /.test(line) ? line.slice(1) : line);
     }).join('\n');
-    const merged = `${existing.trimEnd()}\n\n${appendix.trim()}\n`;
-    validateSddMarkdown(merged);
-    return merged;
 }
 function serializeSddGateValue(value) {
     // Human answer text must never terminate its hidden state comment.
@@ -83273,6 +83810,254 @@ function replyRequestBodyDigest(body) {
 
 /***/ }),
 
+/***/ 27910:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SDD_CONSISTENCY_PROMPT = void 0;
+exports.reservedSddCaseIds = reservedSddCaseIds;
+exports.validateSddDraftConsistency = validateSddDraftConsistency;
+const pre_branch_sdd_1 = __nccwpck_require__(34730);
+const CASE = /\b(?:[A-Za-z][A-Za-z0-9]*-)+C\d+\b/gu;
+const CASE_ID = /^(?:[A-Za-z][A-Za-z0-9]*-)+C\d+$/u;
+const REQUIREMENT_ID = /^[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+$/u;
+/** Generated candidates use visible tables; retained legacy owners are never reformatted. */
+exports.SDD_CONSISTENCY_PROMPT = `Consistency contract for the proposed draft/appendix (not the retained owner):
+In section 4 include one table: Requirement | Behavior. Give every goal a stable requirement ID.
+In section 14 include one budget table: Area | Minimum distinct cases | Behaviors/risks covered; positive integers and one Total.
+Also in section 14 include one inventory table: Case ID | Area | Requirements | Scenario.
+Each row is one distinct executable case with a fully qualified ID such as capability-change-C01, one exact budget area, comma-separated requirement IDs and an observable scenario. Never use shorthand C01, ranges or redefine an ID found in any owning SDD. Reference retained baseline cases in prose using their full IDs; count only the new inventory.
+In section 17 include one table: Requirement | Cases. List comma-separated full case IDs for every requirement. Its links must exactly match the case inventory in both directions, with no undefined or generic documentation checks.
+In section 15 include one table: Path | Change. Change is update, reference or create. Include the selected SDD path itself with update for an existing SDD or create for a new/companion SDD. Use existing immutable-base files for update/reference. Only explicitly proposed new files may use create; never mark a missing current document as an existing artifact. Cite repository files as full repository-relative paths in backticks, or relative Markdown file links. Put every planned new file in this table. These tables are publication consistency checks, not runtime/security acceptance.`;
+function fail(reason) {
+    // Closed diagnostics: rejected Markdown and repository text never become repair instructions.
+    throw new pre_branch_sdd_1.SddDraftFormatFailure(reason, `The SDD draft violates its ${reason} consistency contract.`);
+}
+/** Excludes examples and hidden records from the contract. */
+function visible(source) {
+    let fence;
+    let comment = false;
+    return source.replace(/\r\n/gu, '\n').split('\n').map(line => {
+        const boundary = /^\s*(`{3,}|~{3,})/u.exec(line);
+        if (fence) {
+            // Comment syntax inside code is literal; only the original line can close it.
+            if (boundary && boundary[1][0] === fence[0] && boundary[1].length >= fence.length
+                && /^ {0,3}(?:`+|~+)[ \t]*$/u.test(line))
+                fence = undefined;
+            return '';
+        }
+        if (!comment && boundary) {
+            fence = boundary[1];
+            return '';
+        }
+        let result = '';
+        let offset = 0;
+        while (offset < line.length) {
+            const marker = comment ? '-->' : '<!--';
+            const next = line.indexOf(marker, offset);
+            if (next < 0)
+                return result + (comment ? '' : line.slice(offset));
+            if (!comment)
+                result += line.slice(offset, next) + ' ';
+            offset = next + marker.length;
+            comment = !comment;
+        }
+        return result;
+    }).join('\n');
+}
+function clean(value) { return value.trim().replace(/^(?:\*\*|__|`)(.*?)(?:\*\*|__|`)$/u, '$1').trim(); }
+function table(source, section, headers, reason) {
+    const sections = [...source.matchAll(/^## (\d+)\. [^\n]*$/gmu)];
+    const matches = sections.filter(heading => Number(heading[1]) === section);
+    if (matches.length !== 1)
+        return fail(reason);
+    const start = matches[0];
+    const end = sections.find(heading => heading.index > start.index)?.index ?? source.length;
+    const lines = source.slice(start.index + start[0].length, end).split('\n');
+    const found = [];
+    for (let index = 0; index < lines.length; index++) {
+        if (!/^\s*\|/u.test(lines[index]))
+            continue;
+        const cells = (line) => line.trim().replace(/^\||\|$/gu, '').split('|').map(clean);
+        const header = cells(lines[index]);
+        if (!headers.every((value, position) => header[position] === value) || header.length !== headers.length)
+            continue;
+        const separator = cells(lines[++index] ?? '');
+        if (separator.length !== headers.length || !separator.every(cell => /^:?-{3,}:?$/u.test(cell)))
+            return fail(reason);
+        const rows = [];
+        while (++index < lines.length && /^\s*\|/u.test(lines[index])) {
+            const row = cells(lines[index]);
+            if (row.length !== headers.length || row.some(cell => !cell))
+                return fail(reason);
+            rows.push(row);
+        }
+        if (!rows.length)
+            return fail(reason);
+        found.push(rows);
+    }
+    return found.length === 1 ? found[0] : fail(reason);
+}
+function ids(value, pattern, reason) {
+    const values = value.split(/\s*,\s*/u);
+    if (!values.every(id => pattern.test(id)) || new Set(values).size !== values.length)
+        return fail(reason);
+    return values;
+}
+function reservedSddCaseIds(documents) {
+    const reserved = new Set();
+    for (const document of documents) {
+        const source = visible(document.markdown);
+        const qualified = source.match(CASE) ?? [];
+        const namespaces = new Set(qualified.map(id => id.slice(0, id.lastIndexOf('-C') + 2)));
+        for (const id of qualified)
+            reserved.add(id);
+        // Legacy inventories often qualify C01 and abbreviate the remaining rows.
+        // Reserve every plausible namespace instead of silently assigning an alias a new meaning.
+        for (const match of source.matchAll(/(?<![\w-])C(\d+)\b/gu)) {
+            for (const namespace of namespaces)
+                reserved.add(`${namespace}${match[1]}`);
+        }
+        for (const match of source.matchAll(/\bC(\d+)\s*[-–—]\s*C?(\d+)\b/gu)) {
+            const start = Number(match[1]);
+            const end = Number(match[2]);
+            if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || end < start || end - start > 1000) {
+                throw new Error('An owning SDD case range cannot be reconciled within the fixed bound; review the baseline before retrying.');
+            }
+            for (let number = start; number <= end; number++) {
+                for (const namespace of namespaces)
+                    reserved.add(`${namespace}${String(number).padStart(match[1].length, '0')}`);
+            }
+        }
+    }
+    return [...reserved].sort();
+}
+function validateSddDraftConsistency(markdown, owners, inventory, sddPath) {
+    const source = visible(markdown);
+    const requirements = table(source, 4, ['Requirement', 'Behavior'], 'requirement-mapping');
+    const requirementIds = requirements.map(row => row[0]);
+    if (new Set(requirementIds).size !== requirementIds.length || !requirementIds.every(id => REQUIREMENT_ID.test(id)))
+        fail('requirement-mapping');
+    const cases = table(source, 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity');
+    const caseIds = cases.map(row => row[0]);
+    const reserved = new Set(reservedSddCaseIds(owners));
+    if (new Set(caseIds).size !== caseIds.length || caseIds.some(id => !CASE_ID.test(id) || reserved.has(id))
+        || /(?<![\w-])C\d+\b/u.test(source))
+        fail('case-identity');
+    // References to existing owner cases are allowed, but cannot count as newly defined cases.
+    if ([...source.matchAll(CASE)].some(([id]) => !caseIds.includes(id) && !reserved.has(id)))
+        fail('case-identity');
+    const budget = table(source, 14, ['Area', 'Minimum distinct cases', 'Behaviors/risks covered'], 'case-budget');
+    const counts = new Map();
+    let total;
+    for (const [area, value] of budget) {
+        const count = /^[1-9]\d*$/u.test(value) ? Number(value) : NaN;
+        if (!Number.isSafeInteger(count) || counts.has(area) || total !== undefined)
+            fail('case-budget');
+        if (area === 'Total')
+            total = count;
+        else
+            counts.set(area, count);
+    }
+    if (!counts.size || total !== caseIds.length || [...counts.values()].reduce((sum, count) => sum + count, 0) !== total
+        || cases.some(row => !counts.has(row[1])))
+        fail('case-budget');
+    for (const [area, count] of counts)
+        if (cases.filter(row => row[1] === area).length !== count)
+            fail('case-budget');
+    const edges = new Map(requirementIds.map(id => [id, new Set()]));
+    for (const [id, , links] of cases) {
+        for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping')) {
+            const linked = edges.get(requirement);
+            if (!linked)
+                fail('requirement-mapping');
+            linked.add(id);
+        }
+    }
+    const traceability = table(source, 17, ['Requirement', 'Cases'], 'requirement-mapping');
+    const seen = new Set();
+    for (const [requirement, links] of traceability) {
+        const expected = edges.get(requirement);
+        const actual = ids(links, CASE_ID, 'requirement-mapping');
+        if (!expected || seen.has(requirement) || expected.size !== actual.length || actual.some(id => !expected.has(id)))
+            fail('requirement-mapping');
+        seen.add(requirement);
+    }
+    if (seen.size !== edges.size || [...edges.values()].some(links => links.size === 0))
+        fail('requirement-mapping');
+    validatePaths(source, inventory, sddPath);
+}
+function safePath(value) {
+    return value.length > 0 && !/[\\:*?"<>|\p{Cc}]/u.test(value)
+        && value.split('/').every(segment => segment && segment !== '.' && segment !== '..' && segment.toLowerCase() !== '.git');
+}
+function validatePaths(source, inventory, sddPath) {
+    const rows = table(source, 15, ['Path', 'Change'], 'repository-path');
+    const expectedChange = inventory.files.has(sddPath) ? 'update' : 'create';
+    if (!rows.some(([file, change]) => file === sddPath && change === expectedChange))
+        fail('repository-path');
+    const proposed = new Set();
+    const seen = new Set();
+    for (const [file, change] of rows) {
+        if (!safePath(file) || seen.has(file) || inventory.blocked.has(file))
+            fail('repository-path');
+        seen.add(file);
+        if (change === 'create') {
+            if (inventory.files.has(file) || inventory.directories.has(file))
+                fail('repository-path');
+            if ([...proposed].some(other => file.startsWith(`${other}/`) || other.startsWith(`${file}/`)))
+                fail('repository-path');
+            const segments = file.split('/');
+            if (segments.some((_, index) => inventory.files.has(segments.slice(0, index + 1).join('/')) || inventory.blocked.has(segments.slice(0, index + 1).join('/'))))
+                fail('repository-path');
+            proposed.add(file);
+        }
+        else if (!['update', 'reference'].includes(change) || !inventory.files.has(file))
+            fail('repository-path');
+    }
+    const check = (file) => {
+        if (!safePath(file) || (!inventory.files.has(file) && !inventory.directories.has(file) && !proposed.has(file)))
+            fail('repository-path');
+    };
+    // Relative Markdown file links resolve against the selected SDD, never the current checkout.
+    for (const match of source.matchAll(/\]\(([^\s)]+)\)/gu)) {
+        const href = match[1].split(/[?#]/u)[0];
+        if (!href || /^(?:[a-z][a-z0-9+.-]*:|\/)/iu.test(href))
+            continue;
+        let decoded;
+        try {
+            decoded = decodeURIComponent(href);
+        }
+        catch {
+            return fail('repository-path');
+        }
+        const parts = sddPath.split('/').slice(0, -1);
+        for (const part of decoded.split('/')) {
+            if (part === '..') {
+                if (!parts.length)
+                    fail('repository-path');
+                parts.pop();
+            }
+            else if (part !== '.')
+                parts.push(part);
+        }
+        check(parts.join('/'));
+    }
+    for (const match of source.matchAll(/`([^`\n]+)`/gu)) {
+        const value = match[1];
+        if (value.includes('/') && !/^(?:[a-z][a-z0-9+.-]*:|\/)/iu.test(value) && !/\s/u.test(value))
+            check(value.replace(/\/$/u, ''));
+    }
+    const prose = source.replace(/\]\([^\s)]+\)/gu, ']()').replace(/[a-z][a-z0-9+.-]*:\/\/[^\s)>]+/giu, '');
+    for (const match of prose.matchAll(/(?<![\w./:-])([A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+\.[A-Za-z0-9]+)(?![\w/-])/gu))
+        check(match[1]);
+}
+
+
+/***/ }),
+
 /***/ 47122:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -83452,6 +84237,20 @@ exports.SETUP_RUNNER_REGISTRY = 'COPILOT_RUNNER_PROFILES';
 exports.DEFAULT_SETUP_RUNNERS = Object.freeze({
     mode: 'retain', profileId: '', group: '', labels: Object.freeze([]), validation: 'hosted',
 });
+
+
+/***/ }),
+
+/***/ 33156:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SETUP_VERIFICATION_ACTION_PARENTS = exports.SETUP_VERIFICATION_ACTION_PATH = void 0;
+/** Fixed consumer-owned asset: setup may create it, never regenerate or retire it. */
+exports.SETUP_VERIFICATION_ACTION_PATH = '.github/actions/copilot-verification-setup/action.yml';
+exports.SETUP_VERIFICATION_ACTION_PARENTS = ['.github', '.github/actions', '.github/actions/copilot-verification-setup'];
 
 
 /***/ }),
@@ -86280,12 +87079,14 @@ function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publica
     });
 }
 const copilot_history_port_factory_1 = __nccwpck_require__(12321);
-function createIssueCommentUseCaseCompositionRoot(binding) {
+const verification_setup_snapshot_1 = __nccwpck_require__(62148);
+const verification_setup_ports_1 = __nccwpck_require__(26509);
+function createIssueCommentUseCaseCompositionRoot(binding, setup = verification_setup_ports_1.DISABLED_VERIFICATION_SETUP) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     const findings = (0, agent_capability_composition_root_1.createFindingsQueryPort)();
     const language = (0, agent_capability_composition_root_1.createLanguageQueryPort)();
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
-    const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
+    const gitCommit = new git_commit_adapter_1.GitCommitAdapter(undefined, undefined, setup);
     const authenticatedUser = (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)();
     const bugbotGit = new bound_bugbot_git_mutation_adapter_1.BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
     const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding, new pull_request_changes_repository_1.PullRequestChangesRepository((0, github_pull_request_client_factory_1.createPullRequestChangesClient)())), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)((0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
@@ -86296,12 +87097,12 @@ function createIssueCommentUseCaseCompositionRoot(binding) {
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
     }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_evidence_composition_root_1.createSddEvidenceQueryPort)(binding, bugbot.scm.context), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_2.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
 }
-function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
+function createPullRequestReviewCommentUseCaseCompositionRoot(binding, setup = verification_setup_ports_1.DISABLED_VERIFICATION_SETUP) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     const findings = (0, agent_capability_composition_root_1.createFindingsQueryPort)();
     const language = (0, agent_capability_composition_root_1.createLanguageQueryPort)();
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
-    const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
+    const gitCommit = new git_commit_adapter_1.GitCommitAdapter(undefined, undefined, setup);
     const authenticatedUser = (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)();
     const bugbotGit = new bound_bugbot_git_mutation_adapter_1.BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
     const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestDescription)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding, new pull_request_changes_repository_1.PullRequestChangesRepository((0, github_pull_request_client_factory_1.createPullRequestChangesClient)())), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), (0, shared_capability_port_binding_1.bindOrganizationMembers)((0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
@@ -86328,7 +87129,7 @@ function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, set
             return singleAction.invoke(execution);
         },
         "issue-comment": async (execution) => {
-            issueComment ?? (issueComment = createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution)));
+            issueComment ?? (issueComment = createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution), (0, verification_setup_snapshot_1.captureVerificationSetup)(execution.verificationSetup, execution.branches.main)));
             return issueComment.invoke(execution);
         },
         issue: async (execution) => {
@@ -86336,7 +87137,7 @@ function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, set
             return issue.invoke(execution);
         },
         "pull-request-review-comment": async (execution) => {
-            pullRequestReviewComment ?? (pullRequestReviewComment = createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution)));
+            pullRequestReviewComment ?? (pullRequestReviewComment = createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution), (0, verification_setup_snapshot_1.captureVerificationSetup)(execution.verificationSetup, execution.branches.main)));
             return pullRequestReviewComment.invoke(execution);
         },
         "pull-request": async (execution) => {
@@ -87273,23 +88074,28 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GitCommitAdapter = void 0;
+const verification_executable_1 = __nccwpck_require__(20878);
+const native_verification_profiles_1 = __nccwpck_require__(22290);
 const exec = __importStar(__nccwpck_require__(18538));
 const git_authentication_environment_1 = __nccwpck_require__(16535);
 const untrusted_command_environment_1 = __nccwpck_require__(2304);
 const git_hook_isolation_1 = __nccwpck_require__(39764);
 const verification_runtime_preflight_1 = __nccwpck_require__(23100);
+const verification_setup_ports_1 = __nccwpck_require__(26509);
+const verification_setup_runner_1 = __nccwpck_require__(11709);
 class GitCommitAdapter {
     constructor(executeCommand = (program, args, options) => options
-        ? exec.exec(program, args, {
+        ? exec.exec(options.resolveFromEnvironment && options.env ? (0, verification_executable_1.verificationExecutable)(program, options.env) : program, args, {
             // Captured Git reads can contain NUL-delimited records that
             // hide subsequent lines in GitHub's Actions log viewer.
             ...(options.stdout ? { silent: true } : {}),
             ...(options.stdout ? { listeners: { stdout: options.stdout } } : {}),
             ...(options.env ? { env: options.env } : {}),
         })
-        : exec.exec(program, args), checkPrerequisites = verification_runtime_preflight_1.assertVerificationRuntimePrerequisites) {
+        : exec.exec(program, args), checkPrerequisites = verification_runtime_preflight_1.assertVerificationRuntimePrerequisites, verificationSetup = verification_setup_ports_1.DISABLED_VERIFICATION_SETUP) {
         this.executeCommand = executeCommand;
         this.checkPrerequisites = checkPrerequisites;
+        this.verificationSetup = verificationSetup;
     }
     async execute(program, args, options) {
         if (options?.verifyRuntimePrerequisites && !options.untrusted)
@@ -87300,15 +88106,19 @@ class GitCommitAdapter {
             throw new Error('Untrusted command execution does not accept a caller-supplied environment.');
         const runtime = (0, untrusted_command_environment_1.prepareUntrustedCommandEnvironment)();
         try {
-            if (options.verifyRuntimePrerequisites)
+            if (options.verifyRuntimePrerequisites) {
+                await (0, verification_setup_runner_1.prepareRepositoryVerification)(this.verificationSetup, runtime.environment);
                 this.checkPrerequisites(runtime.environment);
+            }
             return await this.executeCommand(program, args, {
                 ...(options.stdout ? { stdout: options.stdout } : {}),
                 env: runtime.environment,
+                ...(options.verifyRuntimePrerequisites && this.verificationSetup.kind === 'ready' ? { resolveFromEnvironment: true } : {}),
             });
         }
         finally {
-            runtime.cleanup();
+            if (!(0, native_verification_profiles_1.nativeVerificationRetainsProfile)(runtime.environment.HOME))
+                runtime.cleanup();
         }
     }
     async configureAuthor(name, email) {
@@ -88006,6 +88816,659 @@ exports.LoggerWorkflowPollingObserverAdapter = LoggerWorkflowPollingObserverAdap
 
 /***/ }),
 
+/***/ 18883:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.verificationCandidateIdentity = verificationCandidateIdentity;
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_crypto_1 = __nccwpck_require__(6005);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+/** Bind setup to the exact HEAD, branch, index, tracked edits and publishable untracked files. */
+function verificationCandidateIdentity(workspace, environment) {
+    const hash = (0, node_crypto_1.createHash)('sha256');
+    const git = (...args) => {
+        const result = (0, node_child_process_1.spawnSync)('git', ['--no-replace-objects', ...args], { cwd: workspace, env: environment, shell: false,
+            windowsHide: true, timeout: 10000, maxBuffer: 16 * 1024 * 1024 });
+        if (result.error || result.status !== 0)
+            throw new verification_setup_policy_1.VerificationSetupError('candidate-changed');
+        hash.update(result.stdout).update('\0');
+        return result.stdout;
+    };
+    git('rev-parse', '--verify', 'HEAD');
+    git('rev-parse', '--symbolic-full-name', 'HEAD');
+    git('ls-files', '--stage', '-z');
+    git('diff', '--no-ext-diff', '--no-textconv', '--binary', 'HEAD', '--');
+    const paths = git('ls-files', '--others', '--exclude-standard', '-z').toString('utf8').split('\0').filter(Boolean);
+    let total = 0;
+    if (paths.length > 256)
+        throw new verification_setup_policy_1.VerificationSetupError('candidate-changed');
+    for (const path of paths) {
+        const file = (0, node_path_1.join)(workspace, path);
+        const stat = (0, node_fs_1.lstatSync)(file);
+        total += stat.size;
+        if (total > 16 * 1024 * 1024)
+            throw new verification_setup_policy_1.VerificationSetupError('candidate-changed');
+        hash.update(path).update('\0');
+        if (stat.isSymbolicLink())
+            hash.update('120000\0').update((0, node_fs_1.readlinkSync)(file));
+        else if (stat.isFile())
+            hash.update(stat.mode & 0o100 ? '100755\0' : '100644\0').update((0, node_fs_1.readFileSync)(file));
+        else
+            throw new verification_setup_policy_1.VerificationSetupError('candidate-changed');
+        hash.update('\0');
+    }
+    return hash.digest('hex');
+}
+
+
+/***/ }),
+
+/***/ 71046:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.drainNativeWorkerLog = drainNativeWorkerLog;
+exports.awaitNativeBoundary = awaitNativeBoundary;
+exports.continueNativeVerification = continueNativeVerification;
+exports.cleanupNativeVerification = cleanupNativeVerification;
+exports.runNativeVerificationEntry = runNativeVerificationEntry;
+const native_verification_source_runtime_1 = __nccwpck_require__(85290);
+const verification_executable_1 = __nccwpck_require__(20878);
+const native_verification_redaction_1 = __nccwpck_require__(27632);
+const native_verification_profiles_1 = __nccwpck_require__(22290);
+const core = __importStar(__nccwpck_require__(75855));
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const agent_private_install_root_1 = __nccwpck_require__(44640);
+const agent_trusted_system_tools_1 = __nccwpck_require__(76049);
+const github_action_input_1 = __nccwpck_require__(57581);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+const native_verification_protocol_1 = __nccwpck_require__(88709);
+const native_verification_staging_1 = __nccwpck_require__(63587);
+const verification_setup_snapshot_1 = __nccwpck_require__(62148);
+function emitWorkerOutput(root) {
+    const file = (0, node_path_1.join)(root, 'worker-output');
+    if (process.env.GITHUB_OUTPUT && (0, node_fs_1.existsSync)(file))
+        (0, node_fs_1.appendFileSync)(process.env.GITHUB_OUTPUT, requireRead(file));
+    const summary = (0, node_path_1.join)(root, 'worker-summary');
+    if (process.env.GITHUB_STEP_SUMMARY && (0, node_fs_1.existsSync)(summary) && !(0, native_verification_protocol_1.readNativeRecord)(root, 'summary-emitted.json')) {
+        (0, node_fs_1.appendFileSync)(process.env.GITHUB_STEP_SUMMARY, requireRead(summary, 1048576));
+        (0, native_verification_protocol_1.writeNativeRecord)(root, 'summary-emitted.json', { emitted: true });
+    }
+}
+function requireRead(file, limit = 262144) {
+    const fd = (0, node_fs_1.openSync)(file, 'r');
+    try {
+        const size = (0, node_fs_1.statSync)(file).size;
+        if (size > limit)
+            throw new verification_setup_policy_1.VerificationSetupError('output-limit');
+        const data = Buffer.alloc(size);
+        (0, node_fs_1.readSync)(fd, data, 0, data.length, 0);
+        return data;
+    }
+    finally {
+        (0, node_fs_1.closeSync)(fd);
+    }
+}
+/** Drain complete lines so runner masking and workflow commands keep their native framing. */
+function drainNativeWorkerLog(root, flush = false) {
+    const file = (0, node_path_1.join)(root, 'worker-log');
+    if (!(0, node_fs_1.existsSync)(file))
+        return;
+    const cursor = (0, native_verification_protocol_1.readNativeRecord)(root, 'log-cursor.json')?.offset ?? 0;
+    const fd = (0, node_fs_1.openSync)(file, 'r');
+    let offset = cursor;
+    try {
+        const buffer = Buffer.alloc(65536);
+        let pending = Buffer.alloc(0);
+        let size;
+        while ((size = (0, node_fs_1.readSync)(fd, buffer, 0, buffer.length, offset + pending.length))) {
+            pending = Buffer.concat([pending, buffer.subarray(0, size)]);
+            const lastLine = pending.lastIndexOf(10);
+            if (lastLine >= 0) {
+                const complete = pending.subarray(0, lastLine + 1);
+                process.stdout.write(complete);
+                offset += complete.length;
+                pending = pending.subarray(lastLine + 1);
+            }
+            // Existing action logs may contain long lines; retain framing without unbounded buffering.
+            if (pending.length > 1048576)
+                throw new verification_setup_policy_1.VerificationSetupError('output-limit');
+        }
+        if (flush && pending.length) {
+            process.stdout.write(pending);
+            offset += pending.length;
+        }
+        (0, native_verification_protocol_1.writeNativeRecord)(root, 'log-cursor.json', { offset });
+    }
+    finally {
+        (0, node_fs_1.closeSync)(fd);
+    }
+}
+async function awaitNativeBoundary(root, timeoutMs = 7200000) {
+    const deadline = Date.now() + timeoutMs;
+    while (true) {
+        drainNativeWorkerLog(root);
+        const done = (0, native_verification_protocol_1.readNativeRecord)(root, 'done.json');
+        if (done) {
+            drainNativeWorkerLog(root, true);
+            emitWorkerOutput(root);
+            core.setOutput('verification-setup-pending', 'false');
+            if (done.exitCode !== 0)
+                core.setFailed('Copilot execution failed; inspect the preceding operation result.');
+            return;
+        }
+        const request = (0, native_verification_protocol_1.readNativeRecord)(root, 'request.json', 32768);
+        if (request) {
+            if (!/^[a-f0-9-]{36}$/u.test(request.id) || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(request.sourceSha)
+                || !/^[a-f0-9]{64}$/u.test(request.digest) || !request.environment || typeof request.environment.HOME !== 'string')
+                throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+            core.setOutput('verification-request', request.id);
+            core.setOutput('verification-source', request.sourceSha);
+            core.setOutput('verification-digest', request.digest);
+            core.saveState('native-verification-digest', request.digest);
+            core.saveState('native-verification-source', request.sourceSha);
+            for (const key of ['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'PATH', 'JAVA_HOME', 'TMP', 'TEMP', 'TMPDIR']) {
+                const value = request.environment[key] ?? '';
+                if (typeof value !== 'string' || /[\r\n\0]/u.test(value))
+                    throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+                core.setOutput(`verification-${key.toLowerCase()}`, value);
+            }
+            core.setOutput('verification-setup-pending', 'true');
+            return;
+        }
+        if (Date.now() >= deadline)
+            throw new verification_setup_policy_1.VerificationSetupError('timeout');
+        const session = (0, native_verification_protocol_1.nativeSession)(root);
+        try {
+            process.kill(session.pid, 0);
+        }
+        catch {
+            throw new verification_setup_policy_1.VerificationSetupError('process-failed');
+        }
+        await (0, native_verification_protocol_1.nativePause)(100);
+    }
+}
+async function continueNativeVerification(root, id, outcome, environment = process.env) {
+    (0, native_verification_protocol_1.nativeSession)(root);
+    const request = (0, native_verification_protocol_1.readNativeRecord)(root, 'request.json', 32768);
+    if (!request || request.id !== id || !/^[a-f0-9-]{36}$/u.test(id)
+        || (0, node_fs_1.existsSync)((0, node_path_1.join)(root, `response-${id}.json`)))
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    const response = { id, success: outcome === 'success', path: environment.PATH ?? '',
+        ...(environment.JAVA_HOME ? { javaHome: environment.JAVA_HOME } : {}) };
+    (0, node_fs_1.rmSync)((0, node_path_1.join)(root, 'request.json'));
+    (0, native_verification_protocol_1.writeNativeRecord)(root, `response-${id}.json`, response);
+    await awaitNativeBoundary(root);
+}
+async function cleanupNativeVerification(root, waitMs = 10000, deferProfileCleanup = false) {
+    if (!(0, node_fs_1.existsSync)(root))
+        return;
+    const session = (0, native_verification_protocol_1.nativeSession)(root);
+    if (!(0, native_verification_protocol_1.readNativeRecord)(root, 'done.json')) {
+        (0, native_verification_protocol_1.writeNativeRecord)(root, 'cancel.json', { cancelled: true });
+        const deadline = Date.now() + waitMs;
+        while (!(0, native_verification_protocol_1.readNativeRecord)(root, 'done.json') && Date.now() < deadline)
+            await (0, native_verification_protocol_1.nativePause)(100);
+        if (!(0, native_verification_protocol_1.readNativeRecord)(root, 'done.json')) {
+            try {
+                if (process.platform === 'win32')
+                    (0, node_child_process_1.spawnSync)((0, agent_trusted_system_tools_1.trustedWindowsSystemTool)('taskkill.exe'), ['/PID', String(session.pid), '/T', '/F'], { windowsHide: true, shell: false, timeout: 5000, stdio: 'ignore' });
+                else
+                    process.kill(-session.pid, 'SIGKILL');
+            }
+            catch { /* Worker may have exited while cancellation completed. */ }
+        }
+    }
+    if (!deferProfileCleanup)
+        (0, native_verification_staging_1.cleanupNativeVerificationAction)(root, session.workspace);
+    drainNativeWorkerLog(root, true);
+    if (!deferProfileCleanup) {
+        (0, native_verification_profiles_1.removeNativeVerificationProfiles)(root);
+        (0, node_fs_1.rmSync)(root, { recursive: true, force: true });
+    }
+}
+async function startNativeVerification() {
+    for (const secret of (0, native_verification_redaction_1.nativeWorkerSecrets)(process.env))
+        core.setSecret(secret);
+    const git = (0, verification_executable_1.verificationExecutable)('git', { PATH: process.env.PATH ?? '', PATHEXT: process.env.PATHEXT ?? '.EXE;.CMD;.BAT;.COM' });
+    core.saveState('native-verification-git', git);
+    core.setOutput('verification-git', git);
+    const root = (0, node_fs_1.realpathSync)((0, agent_private_install_root_1.createPrivateVerificationRuntimeRoot)());
+    for (const name of ['worker-output', 'worker-env', 'worker-path', 'worker-log', 'worker-summary'])
+        (0, node_fs_1.writeFileSync)((0, node_path_1.join)(root, name), '', { flag: 'wx', mode: 0o600 });
+    const log = (0, node_fs_1.openSync)((0, node_path_1.join)(root, 'worker-log'), 'a');
+    try {
+        const worker = (0, node_child_process_1.spawn)(process.execPath, [process.argv[1]], { cwd: process.cwd(), detached: true, windowsHide: true,
+            stdio: ['ignore', log, log], env: { ...process.env, COPILOT_NATIVE_PHASE: '', COPILOT_NATIVE_WORKER_SESSION: root,
+                GITHUB_STEP_SUMMARY: (0, node_path_1.join)(root, 'worker-summary'), GITHUB_OUTPUT: (0, node_path_1.join)(root, 'worker-output'), GITHUB_ENV: (0, node_path_1.join)(root, 'worker-env'), GITHUB_PATH: (0, node_path_1.join)(root, 'worker-path') } });
+        await new Promise((resolve, reject) => { worker.once('spawn', resolve); worker.once('error', reject); });
+        worker.unref();
+        (0, native_verification_protocol_1.writeNativeRecord)(root, 'session.json', { schemaVersion: 1, workspace: (0, node_fs_1.realpathSync)(process.cwd()), run: process.env.GITHUB_RUN_ID ?? '',
+            attempt: process.env.GITHUB_RUN_ATTEMPT ?? '', job: process.env.GITHUB_JOB ?? '', pid: worker.pid });
+        core.saveState('native-verification-ticket', root);
+        core.saveState('native-verification-owner', 'true');
+        core.setOutput('verification-ticket', root);
+        await awaitNativeBoundary(root);
+    }
+    catch (error) {
+        if ((0, node_fs_1.existsSync)((0, node_path_1.join)(root, 'session.json')))
+            await cleanupNativeVerification(root);
+        else
+            (0, node_fs_1.rmSync)(root, { recursive: true, force: true });
+        throw error;
+    }
+    finally {
+        (0, node_fs_1.closeSync)(log);
+    }
+}
+/** Native phases are runner-only control messages; no credentials or agent operations are replayed. */
+async function runNativeVerificationEntry(run) {
+    const post = core.getState('copilot-native-post');
+    if (post === 'true') {
+        const root = core.getState('native-verification-ticket');
+        if (root && core.getState('native-verification-owner') === 'true')
+            await cleanupNativeVerification(root);
+        else if (root && (0, node_fs_1.existsSync)(root) && core.getState('native-verification-source')) {
+            const session = (0, native_verification_protocol_1.nativeSession)(root);
+            try {
+                const snapshot = (0, verification_setup_snapshot_1.captureVerificationSetupAtCommit)(core.getState('native-verification-source'), session.workspace, core.getState('native-verification-git'));
+                if (snapshot.kind !== 'ready' || (0, verification_setup_snapshot_1.verificationSetupDigest)(snapshot) !== core.getState('native-verification-digest'))
+                    throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+                (0, native_verification_staging_1.stageNativeVerificationAction)(snapshot, root);
+            }
+            catch {
+                // A later native post must fail to load rather than execute candidate-modified metadata.
+                (0, native_verification_staging_1.cleanupNativeVerificationAction)(root, session.workspace);
+                throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+            }
+        }
+        const sourceRuntime = core.getState('native-source-runtime');
+        if (sourceRuntime)
+            (0, native_verification_source_runtime_1.cleanupNativeSourceRuntime)(sourceRuntime, (0, node_fs_1.realpathSync)(process.cwd()));
+        return;
+    }
+    core.saveState('copilot-native-post', 'true');
+    if (process.env.COPILOT_NATIVE_PHASE === 'prepare' && process.env.COPILOT_NATIVE_RUNTIME_CACHE)
+        core.saveState('native-source-runtime', process.env.COPILOT_NATIVE_RUNTIME_CACHE);
+    const worker = process.env.COPILOT_NATIVE_WORKER_SESSION;
+    if (worker) {
+        const deadline = Date.now() + 30000;
+        while (!(0, native_verification_protocol_1.readNativeRecord)(worker, 'session.json')) {
+            if (Date.now() >= deadline)
+                throw new verification_setup_policy_1.VerificationSetupError('timeout');
+            await (0, native_verification_protocol_1.nativePause)(10);
+        }
+        if ((0, native_verification_protocol_1.nativeSession)(worker).pid !== process.pid)
+            throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+        const restoreLog = (0, native_verification_redaction_1.redactNativeWorkerLogs)();
+        try {
+            await run();
+        }
+        finally {
+            restoreLog();
+            (0, native_verification_protocol_1.writeNativeRecord)(worker, 'done.json', { exitCode: Number(process.exitCode ?? 0) });
+        }
+        return;
+    }
+    const phase = process.env.COPILOT_NATIVE_PHASE;
+    if (!phase || phase === 'prepare' && (0, github_action_input_1.getGithubActionInput)('verification-setup') !== 'true') {
+        await run();
+        return;
+    }
+    if (process.env.GITHUB_ACTIONS !== 'true')
+        throw new verification_setup_policy_1.VerificationSetupError('native-workflow-required');
+    if (phase === 'prepare') {
+        await startNativeVerification();
+        return;
+    }
+    const root = process.env.COPILOT_NATIVE_TICKET;
+    if (!root)
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    (0, native_verification_protocol_1.nativeSession)(root);
+    core.saveState('native-verification-ticket', root);
+    core.saveState('native-verification-source', process.env.COPILOT_NATIVE_SOURCE ?? '');
+    core.saveState('native-verification-digest', process.env.COPILOT_NATIVE_DIGEST ?? '');
+    core.saveState('native-verification-git', process.env.COPILOT_NATIVE_GIT ?? '');
+    if (phase === 'continue') {
+        await continueNativeVerification(root, process.env.COPILOT_NATIVE_REQUEST ?? '', process.env.COPILOT_NATIVE_OUTCOME ?? '');
+        return;
+    }
+    if (phase === 'finish') {
+        (0, native_verification_protocol_1.nativeSession)(root);
+        const done = (0, native_verification_protocol_1.readNativeRecord)(root, 'done.json');
+        if (done) {
+            emitWorkerOutput(root);
+            if (done.exitCode !== 0)
+                core.setFailed('Copilot execution failed.');
+        }
+        else
+            core.setFailed(`Repository setup did not complete within ${verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.requests} native verification boundaries. Pending verification and subsequent publication are blocked; inspect earlier operation results for completed effects.`);
+        await cleanupNativeVerification(root, 10000, true);
+        return;
+    }
+    throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+}
+
+
+/***/ }),
+
+/***/ 22290:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.nativeVerificationProfilePaths = nativeVerificationProfilePaths;
+exports.registerNativeVerificationProfile = registerNativeVerificationProfile;
+exports.nativeVerificationRetainsProfile = nativeVerificationRetainsProfile;
+exports.removeNativeVerificationProfiles = removeNativeVerificationProfiles;
+const node_crypto_1 = __nccwpck_require__(6005);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+const native_verification_protocol_1 = __nccwpck_require__(88709);
+function nativeVerificationProfilePaths(root) {
+    const stored = (0, native_verification_protocol_1.readNativeRecord)(root, 'profiles.json', 65536);
+    const paths = stored === undefined ? [] : stored;
+    if (!Array.isArray(paths) || paths.length > 20 || new Set(paths).size !== paths.length || paths.some(path => typeof path !== 'string'
+        || (0, node_path_1.dirname)(path) !== (0, node_path_1.dirname)(root) || !/^copilot-verify-runtime-[A-Za-z0-9]+$/u.test((0, node_path_1.basename)(path)) || path === root))
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    return paths;
+}
+/** Native actions may have post steps. Preserve dependency-only profiles until those steps finish. */
+function registerNativeVerificationProfile(root, profile) {
+    const previous = nativeVerificationProfilePaths(root);
+    if (previous.length >= 20 || previous.includes(profile) || (0, node_path_1.dirname)(profile) !== (0, node_path_1.dirname)(root)
+        || profile === root || !/^copilot-verify-runtime-[A-Za-z0-9]+$/u.test((0, node_path_1.basename)(profile))
+        || (0, node_fs_1.realpathSync)(profile) !== profile || !(0, node_fs_1.lstatSync)(profile).isDirectory() || (0, node_fs_1.lstatSync)(profile).isSymbolicLink())
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    (0, node_fs_1.writeFileSync)((0, node_path_1.join)(profile, 'native-session-owner'), (0, node_crypto_1.createHash)('sha256').update(root).digest('hex'), { mode: 0o600, flag: 'wx' });
+    (0, native_verification_protocol_1.writeNativeRecord)(root, 'profiles.json', [...previous, profile]);
+}
+function nativeVerificationRetainsProfile(profile) {
+    const root = process.env.COPILOT_NATIVE_WORKER_SESSION;
+    return !!root && nativeVerificationProfilePaths(root).includes(profile);
+}
+function removeNativeVerificationProfiles(root) {
+    for (const path of nativeVerificationProfilePaths(root)) {
+        let stat;
+        try {
+            stat = (0, node_fs_1.lstatSync)(path);
+        }
+        catch (error) {
+            if (error.code === 'ENOENT')
+                continue;
+            throw error;
+        }
+        if (!stat.isDirectory() || stat.isSymbolicLink() || (0, node_fs_1.realpathSync)(path) !== path || (0, node_fs_1.readFileSync)((0, node_path_1.join)(path, 'native-session-owner'), 'utf8') !== (0, node_crypto_1.createHash)('sha256').update(root).digest('hex'))
+            throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+        (0, node_fs_1.rmSync)(path, { recursive: true, force: true });
+    }
+}
+
+
+/***/ }),
+
+/***/ 88709:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.nativePause = void 0;
+exports.writeNativeRecord = writeNativeRecord;
+exports.readNativeRecord = readNativeRecord;
+exports.nativeSession = nativeSession;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const node_crypto_1 = __nccwpck_require__(6005);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+function writeNativeRecord(root, name, value) {
+    const temporary = (0, node_path_1.join)(root, `${(0, node_crypto_1.randomUUID)()}.tmp`);
+    (0, node_fs_1.writeFileSync)(temporary, JSON.stringify(value), { mode: 0o600, flag: 'wx' });
+    (0, node_fs_1.renameSync)(temporary, (0, node_path_1.join)(root, name));
+}
+function readNativeRecord(root, name, limit = 16384) {
+    const file = (0, node_path_1.join)(root, name);
+    let descriptor;
+    try {
+        const before = (0, node_fs_1.lstatSync)(file, { bigint: true });
+        if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || before.size > BigInt(limit))
+            throw new Error();
+        descriptor = (0, node_fs_1.openSync)(file, node_fs_1.constants.O_RDONLY | (node_fs_1.constants.O_NOFOLLOW ?? 0));
+        const after = (0, node_fs_1.fstatSync)(descriptor, { bigint: true });
+        if (after.dev !== before.dev || after.ino !== before.ino || after.size !== before.size || after.mtimeNs !== before.mtimeNs)
+            throw new Error();
+        const data = (0, node_fs_1.readFileSync)(descriptor);
+        const final = (0, node_fs_1.fstatSync)(descriptor, { bigint: true });
+        if (data.length > limit || final.size !== after.size || final.mtimeNs !== after.mtimeNs)
+            throw new Error();
+        return JSON.parse(data.toString('utf8'));
+    }
+    catch (error) {
+        if (error.code === 'ENOENT')
+            return undefined;
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    }
+    finally {
+        if (descriptor !== undefined)
+            (0, node_fs_1.closeSync)(descriptor);
+    }
+}
+function nativeSession(root, environment = process.env) {
+    if (!/^copilot-verify-runtime-[A-Za-z0-9]+$/u.test((0, node_path_1.basename)(root)) || (0, node_fs_1.realpathSync)(root) !== root
+        || !(0, node_fs_1.lstatSync)(root).isDirectory() || (0, node_fs_1.lstatSync)(root).isSymbolicLink())
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    if (process.platform !== 'win32' && ((0, node_fs_1.lstatSync)(root).mode & 0o077) !== 0)
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    const session = readNativeRecord(root, 'session.json');
+    if (session?.schemaVersion !== 1 || session.workspace !== (0, node_fs_1.realpathSync)(process.cwd())
+        || session.run !== (environment.GITHUB_RUN_ID ?? '') || session.attempt !== (environment.GITHUB_RUN_ATTEMPT ?? '')
+        || session.job !== (environment.GITHUB_JOB ?? '') || !Number.isSafeInteger(session.pid) || session.pid <= 0)
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    return session;
+}
+const nativePause = (milliseconds) => new Promise(resolve => setTimeout(resolve, milliseconds));
+exports.nativePause = nativePause;
+
+
+/***/ }),
+
+/***/ 27632:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.nativeWorkerSecrets = nativeWorkerSecrets;
+exports.redactNativeWorkerLogs = redactNativeWorkerLogs;
+const node_string_decoder_1 = __nccwpck_require__(76915);
+const SECRET_KEY = /(?:TOKEN|SECRET|API_KEY|PASSWORD|AUTH_JSON)/iu;
+function nativeWorkerSecrets(environment) {
+    const values = Object.entries(environment).filter(([key, value]) => SECRET_KEY.test(key) && value).map(([, value]) => value);
+    if (environment.INPUT_VARS_JSON) {
+        try {
+            const inputs = JSON.parse(environment.INPUT_VARS_JSON);
+            for (const [key, value] of Object.entries(inputs))
+                if (SECRET_KEY.test(key) && typeof value === 'string')
+                    values.push(value);
+        }
+        catch { /* The existing input parser reports invalid configuration without raw values. */ }
+    }
+    return [...new Set(values.flatMap(value => [value, ...value.split(/[\r\n]/u)]).filter(value => value.length >= 3))].sort((a, b) => b.length - a.length);
+}
+/** Secrets are removed before bytes reach a private log file, not merely masked in the runner UI. */
+function redactNativeWorkerLogs(environment = process.env) {
+    const secrets = nativeWorkerSecrets(environment);
+    const restores = [];
+    for (const stream of [process.stdout, process.stderr]) {
+        const original = stream.write;
+        const decoder = new node_string_decoder_1.StringDecoder('utf8');
+        let pending = '';
+        const emit = (line) => {
+            const command = /^::add-mask::(.*?)(?:\r?\n)?$/u.exec(line);
+            if (command) {
+                const value = command[1].replace(/%0D/gu, '\r').replace(/%0A/gu, '\n').replace(/%25/gu, '%');
+                secrets.push(...value.split(/[\r\n]/u).filter(part => part.length >= 3));
+                return;
+            }
+            for (const secret of secrets)
+                line = line.split(secret).join('[REDACTED]');
+            original.call(stream, line);
+        };
+        stream.write = ((chunk, encoding, callback) => {
+            pending += typeof chunk === 'string' ? chunk : decoder.write(Buffer.from(chunk));
+            let end;
+            while ((end = pending.indexOf('\n')) >= 0) {
+                const line = pending.slice(0, end + 1);
+                pending = pending.slice(end + 1);
+                emit(line);
+            }
+            if (pending.length > 1048576)
+                throw new Error('Copilot worker log line exceeded its fixed limit.');
+            if (typeof encoding === 'function')
+                encoding();
+            else
+                callback?.();
+            return true;
+        });
+        restores.push(() => { pending += decoder.end(); if (pending)
+            emit(pending); stream.write = original; });
+    }
+    return () => { for (const restore of restores)
+        restore(); };
+}
+
+
+/***/ }),
+
+/***/ 85290:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.cleanupNativeSourceRuntime = cleanupNativeSourceRuntime;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+/** Only source workflows use this snapshot; installed remote Actions already live outside the candidate. */
+function cleanupNativeSourceRuntime(root, workspace) {
+    if (!root || !(0, node_fs_1.existsSync)(root))
+        return;
+    const allowed = ['.copilot-native-runtime', '.copilot-native-fixture-runtime'].map(name => (0, node_path_1.join)((0, node_path_1.dirname)(workspace), name));
+    if (!allowed.includes(root) || (0, node_fs_1.lstatSync)(root).isSymbolicLink() || (0, node_fs_1.realpathSync)(root) !== root)
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    let receipt;
+    try {
+        receipt = JSON.parse((0, node_fs_1.readFileSync)((0, node_path_1.join)(root, '.copilot-runtime-snapshot.json'), 'utf8'));
+    }
+    catch {
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    }
+    if (receipt?.kind !== 'copilot-native-runtime' || receipt.workspace !== workspace)
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    (0, node_fs_1.rmSync)(root, { recursive: true, force: true });
+}
+
+
+/***/ }),
+
+/***/ 63587:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.NATIVE_VERIFICATION_ACTION = void 0;
+exports.stageNativeVerificationAction = stageNativeVerificationAction;
+exports.cleanupNativeVerificationAction = cleanupNativeVerificationAction;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+const native_verification_protocol_1 = __nccwpck_require__(88709);
+exports.NATIVE_VERIFICATION_ACTION = '.git/copilot-verification-setup';
+function targetPath(workspace) {
+    const metadata = (0, node_path_1.join)(workspace, '.git');
+    const stat = (0, node_fs_1.lstatSync)(metadata);
+    if (!stat.isDirectory() || stat.isSymbolicLink() || (0, node_fs_1.realpathSync)(metadata) !== metadata)
+        throw new verification_setup_policy_1.VerificationSetupError('native-workflow-required');
+    return (0, node_path_1.join)(workspace, exports.NATIVE_VERIFICATION_ACTION);
+}
+/** Native composite metadata must remain available until its deferred post steps have finished. */
+function stageNativeVerificationAction(setup, session) {
+    const target = targetPath(setup.workspace);
+    const record = (0, native_verification_protocol_1.readNativeRecord)(session, 'staging.json');
+    if (record && record.target !== target || !record && !!(0, node_fs_1.lstatSync)(target, { throwIfNoEntry: false }))
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    (0, native_verification_protocol_1.writeNativeRecord)(session, 'staging.json', { target });
+    (0, node_fs_1.rmSync)(target, { recursive: true, force: true });
+    (0, node_fs_1.mkdirSync)(target, { mode: 0o700 });
+    for (const file of setup.files) {
+        const destination = (0, node_path_1.join)(target, file.path);
+        const remainder = (0, node_path_1.relative)(target, destination);
+        if (!remainder || remainder.startsWith(`..${node_path_1.sep}`) || remainder === '..')
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        (0, node_fs_1.mkdirSync)((0, node_path_1.dirname)(destination), { recursive: true, mode: 0o700 });
+        (0, node_fs_1.writeFileSync)(destination, Buffer.from(file.base64, 'base64'), { mode: file.executable ? 0o700 : 0o600, flag: 'wx' });
+    }
+}
+function cleanupNativeVerificationAction(session, workspace) {
+    const record = (0, native_verification_protocol_1.readNativeRecord)(session, 'staging.json');
+    if (!record)
+        return;
+    const target = targetPath(workspace);
+    if (record.target !== target)
+        throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+    (0, node_fs_1.rmSync)(target, { recursive: true, force: true });
+    (0, node_fs_1.rmSync)((0, node_path_1.join)(session, 'staging.json'), { force: true });
+}
+
+
+/***/ }),
+
 /***/ 35849:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -88053,6 +89516,7 @@ const node_crypto_1 = __nccwpck_require__(6005);
 const node_child_process_1 = __nccwpck_require__(17718);
 const node_util_1 = __nccwpck_require__(47261);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
+const sdd_draft_consistency_1 = __nccwpck_require__(27910);
 const git_authentication_environment_1 = __nccwpck_require__(16535);
 const git_hook_isolation_1 = __nccwpck_require__(39764);
 const runFile = (0, node_util_1.promisify)(node_child_process_1.execFile);
@@ -88126,6 +89590,17 @@ class PreBranchSddWorkspaceAdapter {
             if (fs.existsSync(target) !== (plan.action === 'update')) {
                 throw new Error('The SDD owner changed since analysis; restart clarification.');
             }
+            const owners = [];
+            const inventory = await this.inventoryAt(snapshot.baseSha);
+            for (const file of snapshot.capabilities.find(capability => capability.id === plan.capabilityId)?.specs ?? []) {
+                if (!(0, pre_branch_sdd_1.isSafeSddPath)(file))
+                    throw new Error('An owning SDD path is unsafe.');
+                if (!inventory.files.has(file))
+                    throw new Error('An owning SDD is not a regular file at the immutable base.');
+                assertRegularSpecFile(path.join(root, file));
+                owners.push({ path: file, markdown: await this.git(['show', `${snapshot.baseSha}:${file}`]) });
+            }
+            (0, sdd_draft_consistency_1.validateSddDraftConsistency)(markdown, owners, inventory, plan.path);
             if (plan.action === 'update') {
                 assertRegularSpecFile(target);
                 const owner = await this.git(['show', `${snapshot.baseSha}:${plan.path}`]);
@@ -88264,7 +89739,13 @@ class PreBranchSddWorkspaceAdapter {
             const raw = await this.git(['show', `${first}:specs/catalog.json`]);
             newCapability = JSON.parse(raw).capabilities.find(capability => capability.id === prepared.plan.capabilityId);
         }
-        const recovered = await this.validateDraft(snapshot, prepared.plan, content, newCapability);
+        const candidate = prepared.plan.action === 'update'
+            ? (0, pre_branch_sdd_1.recoverSddUpdate)(await this.git(['show', `${prepared.baseSha}:${prepared.plan.path}`]), content) : content;
+        if (!candidate)
+            return undefined;
+        const recovered = await this.validateDraft(snapshot, prepared.plan, candidate, newCapability);
+        if (recovered.markdown !== content)
+            return undefined;
         const committedPaths = (await this.git(['diff-tree', '--no-commit-id', '--name-only', '-r', first])).trim().split('\n').filter(Boolean).sort();
         if (committedPaths.join('\n') !== recovered.changedPaths.join('\n'))
             return undefined;
@@ -88298,6 +89779,25 @@ class PreBranchSddWorkspaceAdapter {
     async changedPaths(root) {
         const output = await this.git(['status', '--porcelain', '--untracked-files=all'], root);
         return output.split('\n').filter(Boolean).map(line => line.slice(3)).sort();
+    }
+    async inventoryAt(sha) {
+        const files = new Set();
+        const directories = new Set();
+        const blocked = new Set();
+        const tree = await this.git(['ls-tree', '-rz', '--full-tree', sha]);
+        for (const entry of tree.split('\0').filter(Boolean)) {
+            const tab = entry.indexOf('\t');
+            const file = entry.slice(tab + 1);
+            const mode = entry.slice(0, 6);
+            if (mode === '100644' || mode === '100755')
+                files.add(file);
+            else
+                blocked.add(file);
+            const parts = file.split('/');
+            for (let index = 1; index < parts.length; index++)
+                directories.add(parts.slice(0, index).join('/'));
+        }
+        return { files, directories, blocked };
     }
     async addDetachedWorktree(sha) {
         const root = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-sdd-'));
@@ -88407,6 +89907,190 @@ function writeSpecFile(target, content, exists) {
 
 /***/ }),
 
+/***/ 12471:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.inspectSetupVerificationActionPath = inspectSetupVerificationActionPath;
+exports.readSetupVerificationActionStarter = readSetupVerificationActionStarter;
+exports.createSetupVerificationAction = createSetupVerificationAction;
+const fs = __importStar(__nccwpck_require__(87561));
+const node_path_1 = __nccwpck_require__(49411);
+const setup_verification_action_1 = __nccwpck_require__(33156);
+const unsafe = () => new Error(`${setup_verification_action_1.SETUP_VERIFICATION_ACTION_PATH}: setup requires real parent directories and a regular action file. Inspect the path and remove unsafe links or collisions, then review setup again. Existing contents were preserved.`);
+const stale = () => new Error(`${setup_verification_action_1.SETUP_VERIFICATION_ACTION_PATH}: the path changed after review. No existing action was replaced. Review a fresh setup plan.`);
+const sameDirectory = (left, right) => left.ino > 0n
+    && left.dev === right.dev && left.ino === right.ino;
+const directoryFlags = fs.constants.O_RDONLY | (fs.constants.O_DIRECTORY ?? 0)
+    | (fs.constants.O_NOFOLLOW ?? 0) | (fs.constants.O_NONBLOCK ?? 0);
+function entry(path) {
+    try {
+        return fs.lstatSync(path, { bigint: true });
+    }
+    catch (error) {
+        if (error.code === 'ENOENT')
+            return undefined;
+        throw error;
+    }
+}
+/** Inspect metadata only: consumer action contents and auxiliary files are never read. */
+function inspectSetupVerificationActionPath(root) {
+    for (const parent of setup_verification_action_1.SETUP_VERIFICATION_ACTION_PARENTS) {
+        const info = entry((0, node_path_1.join)(root, parent));
+        if (!info)
+            return 'create';
+        if (!info.isDirectory() || info.isSymbolicLink())
+            throw unsafe();
+    }
+    const info = entry((0, node_path_1.join)(root, setup_verification_action_1.SETUP_VERIFICATION_ACTION_PATH));
+    if (!info)
+        return 'create';
+    if (!info.isFile() || info.isSymbolicLink())
+        throw unsafe();
+    return 'preserve';
+}
+/** Resolve the package-controlled starter, independently of workflow test overrides. */
+function readSetupVerificationActionStarter() {
+    return fs.readFileSync((0, node_path_1.join)(__dirname, '..', '..', 'setup/actions/copilot-verification-setup/action.yml'), 'utf8');
+}
+/** Exclusive creation cannot truncate a file that wins the Apply race. */
+function createSetupVerificationAction(root, expected) {
+    const state = inspectSetupVerificationActionPath(root);
+    if (expected && expected !== state)
+        throw stale();
+    if (state === 'preserve')
+        return { copied: 0, skipped: 1 };
+    const content = readSetupVerificationActionStarter();
+    const absoluteRoot = fs.realpathSync(root);
+    const previousDirectory = fs.realpathSync('.');
+    // Node has no portable openat. Pin each validated directory as the OS cwd,
+    // then use only single-component relative operations. On POSIX this retains
+    // the directory even if renamed; Windows locks the current directory.
+    // This critical section is synchronous: never await or invoke user callbacks
+    // here. The installer owns this main-thread section and always restores cwd.
+    try {
+        enterPinnedDirectory(absoluteRoot);
+        for (const segment of ['.github', 'actions', 'copilot-verification-setup']) {
+            try {
+                fs.mkdirSync(segment);
+            }
+            catch (error) {
+                if (error.code !== 'EEXIST')
+                    throw error;
+            }
+            enterPinnedDirectory(segment);
+        }
+        // Detect a relocated route before creation as well as after writing. A
+        // replacement after this check cannot redirect the cwd-relative open.
+        inspectSetupVerificationActionPath(absoluteRoot);
+        writeStarterInPinnedDirectory(absoluteRoot, content);
+    }
+    finally {
+        process.chdir(previousDirectory);
+    }
+    return { copied: 1, skipped: 0 };
+}
+function enterPinnedDirectory(path) {
+    let descriptor;
+    try {
+        descriptor = fs.openSync(path, directoryFlags);
+    }
+    catch (error) {
+        if (['ELOOP', 'ENOTDIR'].includes(error.code))
+            throw unsafe();
+        throw error;
+    }
+    try {
+        // Keep the directory handle open until cwd is pinned, preventing inode reuse.
+        const bound = fs.fstatSync(descriptor, { bigint: true });
+        const observed = fs.lstatSync(path, { bigint: true });
+        if (!bound.isDirectory() || !observed.isDirectory() || observed.isSymbolicLink())
+            throw unsafe();
+        if (!sameDirectory(bound, observed))
+            throw stale();
+        process.chdir(path);
+        if (!sameDirectory(bound, fs.lstatSync('.', { bigint: true })))
+            throw stale();
+    }
+    finally {
+        fs.closeSync(descriptor);
+    }
+}
+function writeStarterInPinnedDirectory(root, content) {
+    const destination = 'action.yml';
+    let descriptor;
+    try {
+        descriptor = fs.openSync(destination, 'wx', 0o644);
+    }
+    catch (error) {
+        if (error.code === 'EEXIST')
+            throw stale();
+        throw error;
+    }
+    let created;
+    try {
+        try {
+            created = fs.fstatSync(descriptor, { bigint: true });
+            fs.writeFileSync(descriptor, content, 'utf8');
+            if (inspectSetupVerificationActionPath(root) !== 'preserve')
+                throw stale();
+            if (!sameDirectory(fs.lstatSync('.', { bigint: true }), fs.lstatSync((0, node_path_1.join)(root, setup_verification_action_1.SETUP_VERIFICATION_ACTION_PARENTS[2]), { bigint: true })))
+                throw stale();
+        }
+        finally {
+            fs.closeSync(descriptor);
+        }
+    }
+    catch (error) {
+        // Remove only our incomplete file, never a concurrent replacement.
+        try {
+            const current = entry(destination);
+            if (created && current?.dev === created.dev && current.ino === created.ino)
+                fs.unlinkSync(destination);
+        }
+        catch { /* Preserve the original failure; an incomplete asset needs inspection. */ }
+        throw error;
+    }
+}
+
+
+/***/ }),
+
 /***/ 5729:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -88434,6 +90118,7 @@ class SetupWorkspaceMutationAdapter {
             updateExistingWorkflows: selection?.updateExistingWorkflows,
             approvedWorkflowFiles: selection?.approvedWorkflowFiles,
             setupConfiguration: selection?.setupConfiguration,
+            verificationActionState: selection.verificationActionState,
         });
     }
     hasValidToken(tokenOverride) {
@@ -88648,7 +90333,7 @@ const ALLOWED_VARIABLES = [
  * credentials or paths to local agent authentication stores.
  */
 function prepareUntrustedCommandEnvironment(source = process.env, platform = process.platform) {
-    const runtimeHome = (0, agent_private_install_root_1.createPrivateVerificationRuntimeRoot)();
+    const runtimeHome = (0, node_fs_1.realpathSync)((0, agent_private_install_root_1.createPrivateVerificationRuntimeRoot)());
     const environment = { HOME: runtimeHome };
     for (const variable of ALLOWED_VARIABLES) {
         const value = source[variable];
@@ -88673,6 +90358,39 @@ function prepareUntrustedCommandEnvironment(source = process.env, platform = pro
         environment,
         cleanup: () => (0, node_fs_1.rmSync)(runtimeHome, { recursive: true, force: true }),
     };
+}
+
+
+/***/ }),
+
+/***/ 20878:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.verificationExecutable = verificationExecutable;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+/** @actions/exec resolves basenames against its own process PATH; native tools belong to the verifier PATH. */
+function verificationExecutable(program, environment, platform = process.platform) {
+    const explicit = (0, node_path_1.isAbsolute)(program) || /[\\/]/u.test(program);
+    const candidates = explicit ? [(0, node_path_1.resolve)(program)] : (environment.PATH ?? '').split(node_path_1.delimiter).filter(Boolean).map(directory => (0, node_path_1.resolve)((0, node_path_1.join)(directory, program)));
+    const windowsExtensions = (environment.PATHEXT || '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean);
+    const hasWindowsExtension = windowsExtensions.some(extension => program.toLowerCase().endsWith(extension.toLowerCase()));
+    const extensions = platform === 'win32' && !hasWindowsExtension ? windowsExtensions : [''];
+    for (const candidate of candidates)
+        for (const extension of extensions) {
+            const file = candidate + extension;
+            try {
+                if ((0, node_fs_1.statSync)(file).isFile()) {
+                    (0, node_fs_1.accessSync)(file, node_fs_1.constants.X_OK);
+                    return file;
+                }
+            }
+            catch { /* Try only the next executable in the isolated PATH. */ }
+        }
+    throw new Error('Verification executable is unavailable in the isolated PATH.');
 }
 
 
@@ -88799,6 +90517,267 @@ function checkRuntime(requirement, environment, run, platform, job) {
     if (!(0, verification_runtime_policy_1.verificationRuntimeMatches)(requirement.version, observed)) {
         throw new verification_runtime_policy_1.VerificationPrerequisiteError('version-mismatch', requirement, observed, job);
     }
+}
+
+
+/***/ }),
+
+/***/ 23358:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.applyVerificationSetupResult = applyVerificationSetupResult;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+function contained(root, path) {
+    const remainder = (0, node_path_1.relative)(root, path);
+    return remainder === '' || (remainder !== '..' && !remainder.startsWith(`..${node_path_1.sep}`) && !(0, node_path_1.isAbsolute)(remainder));
+}
+/** Accept only existing contained directories, checking both lexical paths and symlink targets. */
+function approvedDirectory(value, roots) {
+    if (!(0, node_path_1.isAbsolute)(value) || value.includes(node_path_1.delimiter) || value.split(/[\\/]/u).includes('..')
+        || !roots.some(root => contained(root, value)))
+        throw new verification_setup_policy_1.VerificationSetupError('result-invalid');
+    const actual = (0, node_fs_1.realpathSync)(value);
+    if (!roots.some(root => contained(root, actual)) || !(0, node_fs_1.lstatSync)(actual).isDirectory())
+        throw new verification_setup_policy_1.VerificationSetupError('result-invalid');
+    return actual;
+}
+function applyVerificationSetupResult(file, environment, roots) {
+    let descriptor;
+    try {
+        let before;
+        try {
+            before = (0, node_fs_1.lstatSync)(file, { bigint: true });
+        }
+        catch (error) {
+            if (error.code === 'ENOENT')
+                return;
+            throw error;
+        }
+        if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || before.size > BigInt(verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.resultBytes))
+            throw new Error();
+        descriptor = (0, node_fs_1.openSync)(file, node_fs_1.constants.O_RDONLY | (node_fs_1.constants.O_NOFOLLOW ?? 0));
+        const opened = (0, node_fs_1.fstatSync)(descriptor, { bigint: true });
+        if (!opened.isFile() || opened.nlink !== 1n || opened.dev !== before.dev || opened.ino !== before.ino
+            || opened.size !== before.size || opened.mtimeNs !== before.mtimeNs)
+            throw new Error();
+        const bytes = Buffer.alloc(verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.resultBytes + 1);
+        const size = (0, node_fs_1.readSync)(descriptor, bytes, 0, bytes.length, 0);
+        if (size > verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.resultBytes)
+            throw new Error();
+        const after = (0, node_fs_1.fstatSync)(descriptor, { bigint: true });
+        if (after.size !== opened.size || after.mtimeNs !== opened.mtimeNs)
+            throw new Error();
+        const result = (0, verification_setup_policy_1.parseVerificationSetupResult)(JSON.parse(bytes.subarray(0, size).toString('utf8')));
+        const paths = result.path.map(value => approvedDirectory(value, roots));
+        const javaHome = result.javaHome ? approvedDirectory(result.javaHome, roots) : undefined;
+        if (paths.length)
+            environment.PATH = [...paths, ...(environment.PATH ? [environment.PATH] : [])].join(node_path_1.delimiter);
+        if (javaHome)
+            environment.JAVA_HOME = javaHome;
+    }
+    catch {
+        throw new verification_setup_policy_1.VerificationSetupError('result-invalid');
+    }
+    finally {
+        if (descriptor !== undefined)
+            (0, node_fs_1.closeSync)(descriptor);
+    }
+}
+
+
+/***/ }),
+
+/***/ 11709:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.prepareRepositoryVerification = prepareRepositoryVerification;
+const verification_setup_snapshot_1 = __nccwpck_require__(62148);
+const native_verification_profiles_1 = __nccwpck_require__(22290);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const node_crypto_1 = __nccwpck_require__(6005);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+const verification_setup_result_1 = __nccwpck_require__(23358);
+const logging_ports_1 = __nccwpck_require__(6152);
+const native_verification_protocol_1 = __nccwpck_require__(88709);
+const native_verification_staging_1 = __nccwpck_require__(63587);
+const native_verification_candidate_1 = __nccwpck_require__(18883);
+/** The runner executes YAML. This adapter pauses the admitted call stack at its verification boundary. */
+async function prepareRepositoryVerification(setup, environment) {
+    if (setup.kind === 'disabled')
+        return;
+    if (setup.kind === 'blocked')
+        throw new verification_setup_policy_1.VerificationSetupError(setup.reason, setup.sourceSha);
+    const session = process.env.COPILOT_NATIVE_WORKER_SESSION;
+    if (!session)
+        throw new verification_setup_policy_1.VerificationSetupError('native-workflow-required', setup.sourceSha);
+    let requestCreated = false;
+    try {
+        (0, native_verification_protocol_1.nativeSession)(session);
+        const requests = (0, native_verification_protocol_1.readNativeRecord)(session, 'request-count.json')?.count ?? 0;
+        if (requests >= verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.requests)
+            throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+        (0, native_verification_protocol_1.writeNativeRecord)(session, 'request-count.json', { count: requests + 1 });
+        if ((0, node_fs_1.realpathSync)(process.cwd()) !== setup.workspace)
+            throw new verification_setup_policy_1.VerificationSetupError('workspace-changed');
+        (0, native_verification_profiles_1.registerNativeVerificationProfile)(session, environment.HOME);
+        const identity = (0, native_verification_candidate_1.verificationCandidateIdentity)(setup.workspace, environment);
+        (0, native_verification_staging_1.stageNativeVerificationAction)(setup, session);
+        const id = (0, node_crypto_1.randomUUID)();
+        (0, native_verification_protocol_1.writeNativeRecord)(session, 'request.json', { id, sourceSha: setup.sourceSha, digest: (0, verification_setup_snapshot_1.verificationSetupDigest)(setup), environment });
+        requestCreated = true;
+        (0, logging_ports_1.logInfo)(`Preparing repository verification (${verification_setup_policy_1.VERIFICATION_SETUP_PATH}; trusted source SHA: ${setup.sourceSha}).`);
+        const deadline = Date.now() + verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.timeoutMs;
+        let response;
+        while (!(response = (0, native_verification_protocol_1.readNativeRecord)(session, `response-${id}.json`))) {
+            if ((0, native_verification_protocol_1.readNativeRecord)(session, 'cancel.json'))
+                throw new verification_setup_policy_1.VerificationSetupError('cancelled');
+            if (Date.now() >= deadline)
+                throw new verification_setup_policy_1.VerificationSetupError('timeout');
+            await (0, native_verification_protocol_1.nativePause)(100);
+        }
+        if (response.id !== id || response.success !== true)
+            throw new verification_setup_policy_1.VerificationSetupError('process-failed');
+        if ((0, native_verification_candidate_1.verificationCandidateIdentity)(setup.workspace, environment) !== identity)
+            throw new verification_setup_policy_1.VerificationSetupError('candidate-changed');
+        if (typeof response.path !== 'string' || response.path.length > 16384 || response.javaHome !== undefined && typeof response.javaHome !== 'string')
+            throw new verification_setup_policy_1.VerificationSetupError('result-invalid');
+        const original = new Set((environment.PATH ?? '').split(node_path_1.delimiter));
+        const previousProfiles = (0, native_verification_profiles_1.nativeVerificationProfilePaths)(session).filter(profile => profile !== environment.HOME);
+        const fromPreviousProfile = (path) => previousProfiles.some(profile => {
+            const part = (0, node_path_1.relative)(profile, path);
+            return part === '' || part !== '..' && !part.startsWith(`..${node_path_1.sep}`) && !(0, node_path_1.isAbsolute)(part);
+        });
+        const additions = [...new Set(response.path.split(node_path_1.delimiter).filter(path => path && !original.has(path) && !fromPreviousProfile(path)))];
+        const result = (0, node_path_1.join)(environment.HOME, 'native-setup-result.json');
+        (0, node_fs_1.writeFileSync)(result, JSON.stringify({ schemaVersion: 1, path: additions,
+            environment: response.javaHome && response.javaHome !== environment.JAVA_HOME ? { JAVA_HOME: response.javaHome } : {} }), { mode: 0o600, flag: 'wx' });
+        (0, verification_setup_result_1.applyVerificationSetupResult)(result, environment, [setup.workspace, environment.HOME, ...(setup.toolRoot ? [setup.toolRoot] : [])]);
+        (0, logging_ports_1.logInfo)('Repository setup completed; runtime preflight and verification may proceed.');
+    }
+    catch (error) {
+        throw new verification_setup_policy_1.VerificationSetupError(error instanceof verification_setup_policy_1.VerificationSetupError ? error.reason : 'handoff-invalid', setup.sourceSha);
+    }
+    finally {
+        if (requestCreated)
+            (0, node_fs_1.rmSync)((0, node_path_1.join)(session, 'request.json'), { force: true });
+    }
+}
+
+
+/***/ }),
+
+/***/ 62148:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.verificationSetupDigest = verificationSetupDigest;
+exports.captureVerificationSetup = captureVerificationSetup;
+exports.captureVerificationSetupAtCommit = captureVerificationSetupAtCommit;
+const node_path_1 = __nccwpck_require__(49411);
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_crypto_1 = __nccwpck_require__(6005);
+const node_fs_1 = __nccwpck_require__(87561);
+const js_yaml_1 = __nccwpck_require__(783);
+const verification_setup_ports_1 = __nccwpck_require__(26509);
+const verification_setup_policy_1 = __nccwpck_require__(65326);
+const untrusted_command_environment_1 = __nccwpck_require__(2304);
+/** Only immutable Git objects are read. Errors remain deferred on non-verifying routes. */
+function verificationSetupDigest(setup) {
+    return (0, node_crypto_1.createHash)('sha256').update(JSON.stringify(setup.files)).digest('hex');
+}
+function captureVerificationSetup(enabled, mainBranch, root = process.cwd()) {
+    return capture(enabled, mainBranch, root);
+}
+/** Post steps use the already pinned commit from runner state, never a mutable branch ref. */
+function captureVerificationSetupAtCommit(commit, root = process.cwd(), gitExecutable) {
+    return capture(true, '', root, commit, gitExecutable);
+}
+function capture(enabled, mainBranch, root, pinned, gitExecutable) {
+    if (!enabled)
+        return verification_setup_ports_1.DISABLED_VERIFICATION_SETUP;
+    let sourceSha;
+    let runtime;
+    let snapshot;
+    try {
+        runtime = (0, untrusted_command_environment_1.prepareUntrustedCommandEnvironment)();
+        const environment = runtime.environment;
+        if (!pinned && (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,200}$/u.test(mainBranch) || mainBranch.includes('..')
+            || mainBranch.includes('//') || mainBranch.endsWith('/') || mainBranch.endsWith('.lock')))
+            throw new Error();
+        if (gitExecutable !== undefined && !(0, node_path_1.isAbsolute)(gitExecutable))
+            throw new Error();
+        const workspace = (0, node_fs_1.realpathSync)(root);
+        const git = (...args) => {
+            const result = (0, node_child_process_1.spawnSync)(gitExecutable ?? 'git', ['--no-replace-objects', ...args], { cwd: workspace, env: environment,
+                shell: false, windowsHide: true, timeout: 5000, maxBuffer: verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.snapshotBytes + 4096 });
+            if (result.error || result.status !== 0)
+                throw new Error();
+            return result.stdout;
+        };
+        const sha = pinned ?? git('rev-parse', '--verify', `refs/remotes/origin/${mainBranch}^{commit}`).toString('utf8').trim();
+        if (!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(sha))
+            throw new Error();
+        sourceSha = sha;
+        const entries = git('ls-tree', '-rz', sourceSha, '--', verification_setup_policy_1.VERIFICATION_SETUP_DIRECTORY).toString('utf8').split('\0').filter(Boolean);
+        if (!entries.length || entries.length > verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.files)
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        let total = 0;
+        const files = entries.map(entry => {
+            const match = /^(100644|100755) blob ([a-f0-9]{40}|[a-f0-9]{64})\t(.+)$/u.exec(entry);
+            if (!match || !match[3].startsWith(`${verification_setup_policy_1.VERIFICATION_SETUP_DIRECTORY}/`))
+                throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+            const path = match[3].slice(verification_setup_policy_1.VERIFICATION_SETUP_DIRECTORY.length + 1);
+            if (!/^[A-Za-z0-9_./-]{1,200}$/u.test(path) || path.split('/').some(part => !part || part === '.' || part === '..' || part.endsWith('.') || /^(?:con|prn|aux|nul|com[0-9]|lpt[0-9])(?:\.|$)/iu.test(part)))
+                throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+            const bytes = git('cat-file', 'blob', match[2]);
+            total += bytes.length;
+            const digest = (0, node_crypto_1.createHash)(match[2].length === 40 ? 'sha1' : 'sha256').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
+            if (bytes.length > verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.scriptBytes || total > verification_setup_policy_1.VERIFICATION_SETUP_LIMITS.snapshotBytes || digest !== match[2])
+                throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+            return Object.freeze({ path, base64: bytes.toString('base64'), executable: match[1] === '100755' });
+        });
+        const manifest = files.find(file => file.path === 'action.yml');
+        if (!manifest)
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        const bytes = Buffer.from(manifest.base64, 'base64');
+        const text = bytes.toString('utf8');
+        if (!bytes.length || !bytes.equals(Buffer.from(text)) || text.includes('\0'))
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        let action;
+        try {
+            action = (0, js_yaml_1.load)(text);
+        }
+        catch {
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        }
+        if (action?.runs?.using !== 'composite' || !Array.isArray(action.runs.steps) || !action.runs.steps.length || action.runs.steps.length > 32)
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        if (action.runs.steps.some(step => !step || typeof step !== 'object' || 'uses' in step && typeof step.uses === 'string' && step.uses.startsWith('./')))
+            throw new verification_setup_policy_1.VerificationSetupError('helper-invalid');
+        const toolRoot = environment.RUNNER_TOOL_CACHE ? (0, node_fs_1.realpathSync)(environment.RUNNER_TOOL_CACHE) : undefined;
+        snapshot = Object.freeze({ kind: 'ready', files: Object.freeze(files), sourceSha, workspace, ...(toolRoot ? { toolRoot } : {}) });
+    }
+    catch (error) {
+        snapshot = Object.freeze({ kind: 'blocked', reason: error instanceof verification_setup_policy_1.VerificationSetupError ? error.reason : 'source-unavailable', ...(sourceSha ? { sourceSha } : {}) });
+    }
+    try {
+        runtime?.cleanup();
+    }
+    catch {
+        snapshot = Object.freeze({ kind: 'blocked', reason: 'source-unavailable', ...(sourceSha ? { sourceSha } : {}) });
+    }
+    return snapshot;
 }
 
 
@@ -88959,26 +90938,64 @@ const logger_1 = __nccwpck_require__(91151);
 const issue_content_interface_1 = __nccwpck_require__(60608);
 const configuration_payload_policy_1 = __nccwpck_require__(58043);
 const application_error_1 = __nccwpck_require__(75999);
+const configuration_markers_1 = __nccwpck_require__(4586);
 class ConfigurationHandler extends issue_content_interface_1.IssueContentInterface {
     constructor() {
         super(...arguments);
+        this.getContent = (description) => {
+            const block = (0, configuration_markers_1.readConfigurationBlock)(description);
+            return block.kind === 'present' ? block.content : undefined;
+        };
+        this.updateContent = (description, content) => {
+            if (description === undefined || content === undefined)
+                return undefined;
+            const updated = (0, configuration_markers_1.writeConfigurationBlock)(description, content);
+            if (updated === undefined)
+                (0, logger_1.logError)('The content has a problem with open-close tags: stored configuration.');
+            return updated;
+        };
         this.update = async (query, context) => {
             const storedRaw = await this.internalGetter(query);
             return this.internalUpdate(query, (0, configuration_payload_policy_1.buildConfigurationPayload)(context, storedRaw));
         };
         this.get = async (query) => {
+            let description;
             try {
-                const description = await this.issueDescriptionPort.getDescription(query.owner, query.repository, query.issueNumber, query.token);
+                description = await this.issueDescriptionPort.getDescription(query.owner, query.repository, query.issueNumber, query.token);
+            }
+            catch (cause) {
+                const semanticError = (0, application_error_1.toApplicationError)(cause, 'provider.unavailable', 'Unable to read issue configuration.');
+                (0, logger_1.logError)(semanticError);
+                throw semanticError;
+            }
+            const variables = { issueNumber: query.issueNumber, expectedVersion: config_1.CONFIG_SCHEMA_VERSION };
+            let recovery = { id: 'stored-configuration-invalid', variables };
+            try {
                 const config = this.getContent(description);
                 if (config === undefined) {
+                    if ((0, configuration_markers_1.readConfigurationBlock)(description).kind === 'invalid') {
+                        throw new Error('Stored configuration markers are inconsistent.');
+                    }
                     return undefined;
                 }
-                const branchConfig = (0, config_1.requireCurrentConfigurationPayload)(JSON.parse(config));
+                const parsed = JSON.parse(config);
+                if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                    const version = parsed.schemaVersion;
+                    if (version === undefined) {
+                        recovery = { id: 'stored-configuration-schema-missing', variables };
+                    }
+                    else if (typeof version === 'number' && Number.isSafeInteger(version)
+                        && version >= 0 && version !== config_1.CONFIG_SCHEMA_VERSION) {
+                        recovery = { id: 'stored-configuration-schema-unsupported', variables: { ...variables, actualVersion: version } };
+                    }
+                }
+                const branchConfig = (0, config_1.requireCurrentConfigurationPayload)(parsed);
                 return new config_1.Config(branchConfig);
             }
-            catch (error) {
-                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'configuration.invalid', 'Unable to read issue configuration.'));
-                throw error;
+            catch (cause) {
+                const semanticError = (0, application_error_1.toApplicationError)(cause, 'configuration.invalid', 'Stored issue/PR configuration is invalid.', { recovery });
+                (0, logger_1.logError)(semanticError);
+                throw semanticError;
             }
         };
     }
@@ -88990,6 +91007,96 @@ class ConfigurationHandler extends issue_content_interface_1.IssueContentInterfa
     }
 }
 exports.ConfigurationHandler = ConfigurationHandler;
+
+
+/***/ }),
+
+/***/ 4586:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CONFIGURATION_END = exports.CONFIGURATION_START = void 0;
+exports.readConfigurationBlock = readConfigurationBlock;
+exports.writeConfigurationBlock = writeConfigurationBlock;
+exports.CONFIGURATION_START = '<!-- copilot-configuration-start';
+exports.CONFIGURATION_END = 'copilot-configuration-end -->';
+/** Owned delimiters begin a line; ordinary mentions are not state. Complete legacy fenced records remain readable. */
+function readConfigurationBlock(description) {
+    if (description === undefined)
+        return { kind: 'absent' };
+    let fence;
+    let fencedMarker = false;
+    let fencedStart;
+    let nestedFencedStart = false;
+    let start;
+    let contentStart = 0;
+    let block;
+    let offset = 0;
+    for (const line of description.match(/[^\n]*(?:\n|$)/gu) ?? []) {
+        const text = line.replace(/\r?\n$/u, '');
+        const starts = /^ {0,3}<!-- copilot-configuration-start(?:[ \t]|$)/u.test(text);
+        const ends = /^ {0,3}copilot-configuration-end -->[ \t]*$/u.test(text);
+        const boundary = /^ {0,3}(`{3,}|~{3,})(.*)$/u.exec(text);
+        if (fence) {
+            fencedMarker || (fencedMarker = starts || ends);
+            if (starts) {
+                if (fencedStart !== undefined)
+                    nestedFencedStart = true;
+                else
+                    fencedStart = offset + text.indexOf(exports.CONFIGURATION_START);
+            }
+            const end = text.indexOf(exports.CONFIGURATION_END);
+            if (fencedStart !== undefined && end >= 0 && !text.slice(end + exports.CONFIGURATION_END.length).trim()) {
+                if (block || nestedFencedStart)
+                    return { kind: 'invalid' };
+                block = { kind: 'present', start: fencedStart, end: offset + end + exports.CONFIGURATION_END.length,
+                    content: description.slice(fencedStart + exports.CONFIGURATION_START.length, offset + end) };
+                fencedStart = undefined;
+            }
+            if (boundary && boundary[1][0] === fence[0] && boundary[1].length >= fence.length && !boundary[2].trim()) {
+                fence = undefined;
+                fencedMarker = false;
+                fencedStart = undefined;
+                nestedFencedStart = false;
+            }
+        }
+        else if (start !== undefined || starts) {
+            if (starts) {
+                if (start !== undefined || block)
+                    return { kind: 'invalid' };
+                start = offset + text.indexOf(exports.CONFIGURATION_START);
+                contentStart = start + exports.CONFIGURATION_START.length;
+            }
+            const end = text.indexOf(exports.CONFIGURATION_END);
+            if (end >= 0 && !text.slice(end + exports.CONFIGURATION_END.length).trim()) {
+                block = { kind: 'present', start: start, end: offset + end + exports.CONFIGURATION_END.length,
+                    content: description.slice(contentStart, offset + end) };
+                start = undefined;
+            }
+        }
+        else if (ends)
+            return { kind: 'invalid' };
+        else if (boundary && (boundary[1][0] !== '`' || !boundary[2].includes('`')))
+            fence = boundary[1];
+        offset += line.length;
+    }
+    // A legacy block behind an unclosed fence is ambiguous: never silently discard its state.
+    if (start !== undefined || fence && fencedMarker)
+        return { kind: 'invalid' };
+    return block ?? { kind: 'absent', ...(fence ? { closingFence: fence } : {}) };
+}
+function writeConfigurationBlock(description, content) {
+    const block = readConfigurationBlock(description);
+    if (block.kind === 'invalid')
+        return undefined;
+    const replacement = `${exports.CONFIGURATION_START}\n${content}\n${exports.CONFIGURATION_END}`;
+    if (block.kind === 'present')
+        return description.slice(0, block.start) + replacement + description.slice(block.end);
+    // Closing an otherwise empty dangling example preserves its rendered text and keeps new state outside it.
+    return `${description}\n\n${block.closingFence ? `${block.closingFence}\n\n` : ''}${replacement}`;
+}
 
 
 /***/ }),
@@ -89121,11 +91228,13 @@ function getBranchSyncConflictsPrompt(params) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BUGBOT_FINDING_GROUNDING_INSTRUCTION = void 0;
 exports.getBugbotPrompt = getBugbotPrompt;
 /**
  * Prompt for Bugbot detection (detect potential problems on push).
  */
 const fill_1 = __nccwpck_require__(2559);
+exports.BUGBOT_FINDING_GROUNDING_INSTRUCTION = 'Before returning a finding, try to disprove it against the exact reviewed source. Read effective repository configuration and inherited library/protocol defaults before inferring behavior from a missing command flag. Trace short-circuit guards, validation helpers and the actual caller/render path before claiming that an unsafe branch is reachable or that separate call sites coexist. Recompute arithmetic and check cited line numbers against the current file/diff. If your evidence refutes the alleged defect, withdraw the finding entirely; do not publish a contradictory or self-refuting report. These checks apply equally to low/info severity. Report a confirmed failure when those protections are absent; do not assume they exist.';
 const TEMPLATE = `You are analyzing the latest code changes for potential bugs and issues.
 
 Write every human-readable finding title, description, evidence, and suggestion in {{targetLocale}}. Preserve identifiers, code, symbols, paths, refs, commands, and URLs verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
@@ -89160,6 +91269,8 @@ For every finding:
 - use a stable semantic id, one finding per distinct root cause, and a practical suggested fix;
 - include the nearest stable \`symbol\` and a minimal exact \`codeSnippet\` when available so the finding can survive rebases, line movement, and file renames.
 - when a fix is a safe replacement of exactly the reported line range, include only the replacement text in \`suggestedCode\`; otherwise omit it.
+
+${exports.BUGBOT_FINDING_GROUNDING_INSTRUCTION}
 
 Return every finding field required by the response schema. Use null for file, line, endLine, severity, confidence, category, evidence, suggestion, symbol, codeSnippet, or suggestedCode when that value does not safely apply. Only include files outside the ignore list.
 {{previousBlock}}
@@ -90638,11 +92749,13 @@ const setup_approval_workflow_1 = __nccwpck_require__(9512);
 const setup_workflow_upgrade_1 = __nccwpck_require__(85493);
 const setup_installation_review_1 = __nccwpck_require__(23799);
 const repository_agent_guidance_policy_1 = __nccwpck_require__(67402);
+const setup_verification_action_1 = __nccwpck_require__(12471);
 /**
  * Ensure .github, .github/workflows and .github/ISSUE_TEMPLATE exist; create them if missing.
  * @param cwd - Directory (repo root)
  */
 function ensureGitHubDirs(cwd) {
+    (0, setup_verification_action_1.inspectSetupVerificationActionPath)(cwd);
     const githubDir = path.join(cwd, '.github');
     const workflowsDir = path.join(cwd, '.github', 'workflows');
     const issueTemplateDir = path.join(cwd, '.github', 'ISSUE_TEMPLATE');
@@ -90675,6 +92788,7 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
     const installationReview = options.setupConfiguration && (0, setup_installation_review_1.inspectSetupInstallation)(cwd, options.setupConfiguration, setupDir);
     if (installationReview?.blockers.length)
         throw new Error(installationReview.blockers.join(' '));
+    const verificationAction = (0, setup_verification_action_1.createSetupVerificationAction)(cwd, options.verificationActionState);
     const preserveSourceGuidance = installationReview?.assets.some(asset => asset.path === repository_agent_guidance_policy_1.REPOSITORY_AGENT_GUIDE_PATH && asset.status === 'source-only');
     const sourceInstallation = installationReview?.assets.some(asset => asset.path.startsWith('.github/workflows/') && asset.status === 'source-only');
     const snapshotContent = options.setupConfiguration && (0, setup_installation_review_1.renderSetupRunnerSnapshot)(options.setupConfiguration);
@@ -90729,7 +92843,7 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
             snapshot.copied++;
         }
     }
-    return [retired, workflows, approvalWorkflow, issueTemplates, pullRequestTemplate, guidance, snapshot].reduce((total, current) => ({
+    return [verificationAction, retired, workflows, approvalWorkflow, issueTemplates, pullRequestTemplate, guidance, snapshot].reduce((total, current) => ({
         copied: total.copied + current.copied,
         skipped: total.skipped + current.skipped,
     }), { copied: 0, skipped: 0 });
@@ -90943,6 +93057,9 @@ const setup_workflow_upgrade_1 = __nccwpck_require__(85493);
 const setup_approval_workflow_1 = __nccwpck_require__(9512);
 const sensitive_text_1 = __nccwpck_require__(47122);
 const repository_agent_guidance_policy_1 = __nccwpck_require__(67402);
+const setup_verification_action_1 = __nccwpck_require__(33156);
+const setup_verification_action_2 = __nccwpck_require__(12471);
+const copilot_comment_workflow_1 = __nccwpck_require__(33430);
 exports.SETUP_RUNNER_SNAPSHOT = '.copilot/runner-profile.json';
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
     ? value : undefined;
@@ -90984,6 +93101,22 @@ function inspectSetupInstallation(root, configuration, setup = (0, node_path_1.j
     const jobs = [];
     const changes = [];
     const blockers = [];
+    let action;
+    try {
+        action = (0, setup_verification_action_2.inspectSetupVerificationActionPath)(root);
+    }
+    catch (error) {
+        action = 'blocked';
+        blockers.push(error instanceof Error ? error.message : 'Verification setup path could not be inspected.');
+    }
+    const verificationSetup = { action, enabled: configuration.repository.verificationSetup ?? false,
+        mainBranch: configuration.repository.mainBranch };
+    assets.push({ path: setup_verification_action_1.SETUP_VERIFICATION_ACTION_PATH, enabled: verificationSetup.enabled,
+        status: action === 'create' ? 'missing' : action === 'preserve' ? 'customized' : 'incompatible' });
+    if (action === 'blocked')
+        return { assets, jobs, changes, blockers, verificationSetup };
+    if (action === 'create')
+        changes.push({ path: setup_verification_action_1.SETUP_VERIFICATION_ACTION_PATH, before: null, after: (0, setup_verification_action_2.readSetupVerificationActionStarter)() });
     const addJobs = (file, content, retained) => {
         const documents = (0, js_yaml_1.loadAll)(content);
         if (documents.length !== 1)
@@ -90992,7 +93125,7 @@ function inspectSetupInstallation(root, configuration, setup = (0, node_path_1.j
         if (!parsedJobs)
             throw new Error('Workflow jobs are unavailable for review.');
         for (const [job, raw] of Object.entries(parsedJobs)) {
-            const runsOn = object(raw)?.['runs-on'];
+            const runsOn = (0, copilot_comment_workflow_1.copilotCommentRunner)(object(raw));
             if (runsOn === undefined)
                 continue; // reusable workflow calls have no runner
             jobs.push({ file, job, role: (0, setup_runner_policy_1.setupRunnerRole)(file, job) ?? 'validation',
@@ -91080,7 +93213,7 @@ function inspectSetupInstallation(root, configuration, setup = (0, node_path_1.j
             before: before === undefined ? null : (0, sensitive_text_1.redactSensitiveText)(before), after: (0, sensitive_text_1.redactSensitiveText)(after) });
     if (after !== undefined && before !== undefined && !compatibleSetupRunnerSnapshot(before))
         blockers.push('Runner snapshot is incompatible. Retain it or restore a supported version before replacing routing.');
-    return { assets, jobs, changes, blockers };
+    return { assets, jobs, changes, blockers, verificationSetup };
 }
 
 
@@ -91099,6 +93232,7 @@ const js_yaml_1 = __nccwpck_require__(783);
 const node_util_1 = __nccwpck_require__(47261);
 const setup_runner_policy_1 = __nccwpck_require__(91027);
 const action_types_1 = __nccwpck_require__(19625);
+const copilot_comment_workflow_1 = __nccwpck_require__(33430);
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
 const document = (value) => {
     try {
@@ -91120,6 +93254,8 @@ const runner = (value) => labels(value) || !!object(value)
     && (object(value).labels === undefined || labels(object(value).labels));
 const copilotCommands = new Set(Object.values(action_types_1.ACTIONS));
 const callsRootAction = (jobs) => !!jobs && Object.values(jobs).some(job => {
+    if (object(job)?.uses === copilot_comment_workflow_1.COPILOT_COMMENT_SELF_WORKFLOW)
+        return true;
     const steps = object(job)?.steps;
     return Array.isArray(steps) && steps.some(step => {
         const invocation = object(step);
@@ -91182,6 +93318,32 @@ function renderSetupWorkflowUpgrade(template, existing, selection) {
     const templateJobs = object(document(template)?.jobs);
     if (!previousJobs || !templateJobs)
         throw new Error('Workflow jobs cannot be inspected; review the workflow separately.');
+    if (Object.values(templateJobs).some(job => (0, copilot_comment_workflow_1.isCopilotCommentWorkflow)(object(job)?.uses))) {
+        const parsed = document(template);
+        const jobs = object(parsed.jobs);
+        let changed = false;
+        for (const [name, value] of Object.entries(jobs)) {
+            const job = object(value);
+            if (!(0, copilot_comment_workflow_1.isCopilotCommentWorkflow)(job.uses))
+                throw new Error('Mixed comment workflow jobs require separate workflow review before setup.');
+            const previousJob = object(previousJobs[name]);
+            if (Array.isArray(previousJob?.steps) && previousJob.steps.some(raw => {
+                const uses = object(raw)?.uses;
+                return typeof uses !== 'string' || !(uses.startsWith('actions/checkout@')
+                    || /^vypdev\/copilot@[^\s]+$/u.test(uses) || uses === './.git/copilot-verification-setup');
+            }))
+                throw new Error('Custom comment job steps require migration to the reviewed repository verification setup action before switching to the reusable workflow. Review the workflow separately.');
+            const retained = (0, setup_runner_policy_1.selectedSetupRunsOn)(selection?.runners, selection && (0, setup_runner_policy_1.setupRunnerRole)(selection.file, name))
+                ?? (0, copilot_comment_workflow_1.copilotCommentRunner)(previousJob) ?? (0, copilot_comment_workflow_1.copilotCommentRunner)(job);
+            if (!runner(retained))
+                throw new Error('Existing runner selection is invalid; review the workflow separately.');
+            if (JSON.stringify(retained).includes('${{') && existing !== template)
+                throw new Error('Dynamic runner selection requires separate workflow review before setup.');
+            changed || (changed = !(0, node_util_1.isDeepStrictEqual)(retained, (0, copilot_comment_workflow_1.copilotCommentRunner)(job)));
+            job.with = { ...object(job.with), 'runs-on': JSON.stringify(retained) };
+        }
+        return changed ? (0, js_yaml_1.dump)(parsed, { noRefs: true, lineWidth: -1 }) : template;
+    }
     const lines = template.split('\n');
     let job = '';
     let insideJobs = false;
@@ -91554,6 +93716,14 @@ module.exports = require("node:querystring");
 
 "use strict";
 module.exports = require("node:stream");
+
+/***/ }),
+
+/***/ 76915:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:string_decoder");
 
 /***/ }),
 

@@ -1,5 +1,6 @@
 /** French question-specific purposes. */
 export const purposesFr: Readonly<Record<string, string>> = {
+  'repository.verificationSetup': 'Activez la préparation des dépendances du dépôt avant la vérification ; personnalisez et révisez le modèle sur MAIN_BRANCH au préalable.',
   'issueWorkflows.enabled': 'Choisissez les workflows de ticket que Copilot pourra exécuter ; chacun agit différemment sur les branches, étiquettes et automatisations.',
   'repositoryAgentGuidance.enabled': 'Générez des instructions pour aider les agents IA à travailler en sécurité dans ce projet.',
   'repositoryAgentGuidance.agentsPointer': 'Décidez si le fichier AGENTS.md racine renvoie aux instructions générées, est créé s’il manque, ou reste intact.',

@@ -247,7 +247,9 @@ function toPresentationFailure(diagnostic: BugbotPresentationDiagnostic): Presen
   const message = bugbotDiagnosticOperatorMessage(diagnostic);
   return {
     diagnostic,
-    error: diagnostic.code === 'review-updates-pending'
+    error: diagnostic.code === 'finding-mutation-failed'
+      ? new ApplicationError(diagnostic.mutation.errorCode, message)
+      : diagnostic.code === 'review-updates-pending'
       ? new ApplicationError('workflow.presentation-pending', message, {
           recovery: {
             id: 'bugbot-review-blocks-pending',

@@ -147,3 +147,9 @@ opencode.json
 
 # Repository-local scratch output, including sandboxed Jest transform caches
 .tmp/
+
+# Python analysis tooling
+__pycache__/
+
+# Native Actions acceptance bundle is built only by the platform smoke job.
+.github/actions/copilot-native-fixture/dist/

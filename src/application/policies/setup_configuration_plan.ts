@@ -15,6 +15,7 @@ import { buildSetupCredentialRequirements } from './setup_credential_requirement
 import { resolveLocaleProfile } from '../../domain/locale';
 import { ISSUE_WORKFLOW_CATALOG, ISSUE_WORKFLOW_KINDS, issueWorkflowFormFiles, serializeIssueWorkflowProfile } from '../../domain/issue_workflow_profile';
 import { effectiveIssueWorkflowFeatures, effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
+import { SETUP_VERIFICATION_ACTION_PATH } from '../../domain/setup_verification_action';
 import {
     REPOSITORY_AGENT_GUIDE_PATH,
     REPOSITORY_AGENT_MANIFEST_PATH,
@@ -39,6 +40,7 @@ export function buildSetupPlan(
             .filter(file => configuration.features.release !== false || file !== 'release.yml')
             .filter(file => configuration.features.hotfix !== false || file !== 'hotfix.yml');
     const selectedFiles = [
+        SETUP_VERIFICATION_ACTION_PATH,
         ...(configuration.runners && configuration.runners.mode !== 'retain' ? ['.copilot/runner-profile.json'] : []),
         ...workflowFiles.map(file => `workflows/${file}`),
         ...issueTemplateFiles.map(file => `ISSUE_TEMPLATE/${file}`),
@@ -140,6 +142,7 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     add('CHORE_TREE', repository.choreTree);
     add('ISSUE_MANAGED_BRANCHES', repository.issueManagedBranches);
     add('PRE_BRANCH_SDD', repository.preBranchSdd);
+    add('VERIFICATION_SETUP', repository.verificationSetup ?? false);
     add('REOPEN_ISSUE_ON_PUSH', repository.reopenIssueOnPush);
     add('DESIRED_ASSIGNEES_COUNT', repository.desiredAssigneesCount);
     add('DESIRED_REVIEWERS_COUNT', repository.desiredReviewersCount);
@@ -207,6 +210,7 @@ export function buildSetupActionInputs(configuration: SetupConfiguration): Recor
         'chore-tree': repository.choreTree,
         'issue-managed-branches': String(repository.issueManagedBranches),
         'pre-branch-sdd': String(repository.preBranchSdd),
+        'verification-setup': String(repository.verificationSetup ?? false),
         'reopen-issue-on-push': String(repository.reopenIssueOnPush),
         'desired-assignees-count': String(repository.desiredAssigneesCount),
         'desired-reviewers-count': String(repository.desiredReviewersCount),

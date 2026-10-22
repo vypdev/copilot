@@ -62,6 +62,7 @@ const runnerDiscoveryPresentation = {
 };
 /** Credential-free presentation evidence; no provider or mutation adapters. */
 const installationReview = {
+  verificationSetup: { action: 'create', enabled: false, mainBranch: 'main' },
   blockers: [],
   jobs: [
     { file: 'copilot_issue.yml', job: 'copilot-issues', role: 'agent', runsOn: { group: 'vypdev', labels: ['self-hosted', 'codex', 'Linux'] }, status: 'pending-capacity', retained: false },

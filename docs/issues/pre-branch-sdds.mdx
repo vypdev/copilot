@@ -20,6 +20,49 @@ and fenced examples do not prove a budget. Existing positive numeric prose
 remains supported. A malformed existing owner needs contributor review;
 regenerating a proposed appendix cannot repair that retained contract.
 
+Newly generated drafts and appendices also need a checkable inventory. They use
+these visible tables, with the English column names retained in localized prose:
+
+| Section | Columns | What publication verifies |
+|---|---|---|
+| 4 | `Requirement`, `Behavior` | Every declared goal has one stable ID |
+| 14 | `Area`, `Minimum distinct cases`, `Behaviors/risks covered` | Every area and the total match its distinct cases |
+| 14 | `Case ID`, `Area`, `Requirements`, `Scenario` | Fully qualified, unique IDs, exact areas and comma-separated requirement IDs |
+| 15 | `Path`, `Change` | `update` and `reference` files exist at the immutable base; `create` explicitly proposes an absent file |
+| 17 | `Requirement`, `Cases` | Every requirement names defined cases and the reverse links match |
+
+Tables inside a code fence cannot establish this inventory. A closing fence
+must use the same marker with at least the opening length, at most three leading
+spaces, and only spaces or tabs after it. A marker followed by text keeps the
+example fenced until a valid close or the end of the document. HTML comment
+syntax inside the code block is literal and cannot turn that line into a close.
+
+Use a separate case namespace for each proposed change, such as
+`identity-development-C01`. Copilot reserves identifiers across **every** SDD
+registered to the selected owner, including legacy shorthand inventories. A
+new case cannot redefine a baseline case. Use full IDs in references; shorthand
+and ranges do not establish new cases. Each case belongs to one budget area.
+Equal grand totals cannot hide an over-allocation in one area and a shortage in
+another. Generic documentation checks cannot replace defined acceptance cases.
+
+Cite repository files with full repository-relative paths in backticks or
+relative Markdown file links. Existing paths are checked against the selected
+Git commit, including files outside the catalog evidence arrays. Relative links
+may include a URL query and fragment; publication checks their file pathname.
+A file present
+only in the current checkout does not count. Declare intended new files in the
+section 15 table with `create`; ordinary documentation updates must identify
+the real existing document. Symlinks, submodules and paths below them cannot
+establish file evidence. Source paths remain language and layout neutral.
+The selected SDD must appear in this table too: use `create` for a new or
+companion SDD, and `update` for an existing one. A self-link or a `reference`
+row cannot replace that declaration.
+
+The new tables apply to generated candidates. Existing owner documents remain
+verbatim and do not require a table migration to receive an appendix. These
+checks establish internal consistency for draft publication. Product,
+architecture, security, operator review and runtime acceptance remain separate.
+
 `pre-branch-sdd: true` enables a specification gate for admitted **feature** issues and issues marked `contract-change`. It requires `issue-managed-branches: true` and an agent configuration that can return structured responses. The default is `false`.
 
 The repository must already contain a valid `specs/catalog.json`, `specs/README.md`, and `specs/_template.md`. The catalog identifies the owning SDD. The Action can update that SDD, add a companion SDD to its capability, or create a new proposed capability when the catalog evidence and referenced paths are valid. Drafting receives the selected owner's verified source, test and documentation paths at the immutable base, the canonical issue link and retained authorized answers. A new companion identifies the existing owner; its own new path is proposed evidence. It does not generate PRDs or ADRs in this flow.
@@ -118,6 +161,22 @@ Opening a PR replaces GitHub's direct issue-to-branch connection with its issue-
 
 Automatic updates retain the owning SDD from its original Git commit, including when Windows converts checkout line endings.
 
+### Ownership analysis recovery
+
+If the analysis proposes an unknown companion owner or a path already registered
+in the catalog, Copilot blocks before drafting and publishes an editable **SDD
+work status: analysis blocked** card. The card identifies a closed failure
+category without exposing the model's proposed values or raw response.
+
+Clarify the existing capability ID and intended SDD path in the same issue, then
+rerun the original workflow. Updates use a path registered to that owner;
+companions use an existing owner and a new path; new capabilities use a new ID
+and path. Each invocation makes one analysis attempt with no automatic repair.
+Existing answers, SDDs, branches and commits remain intact. A later valid analysis
+updates the diagnostic; normal publication checks still determine readiness.
+The diagnostic is separate from the validated question/publication record and
+cannot authorize a branch or `branched` label.
+
 ### Draft validation recovery
 
 Drafting aims for a complete compact document: about 6,000 characters for an
@@ -131,6 +190,15 @@ Copilot limits proposed update appendices to 18,000 characters and complete new
 or companion specifications to 70,000. If a generated draft exceeds its limit,
 it tries one concise regeneration for the same owner and answers. Missing
 required sections or a numeric test budget can use that same single attempt.
+Case identity, per-area case budgets, requirement mappings and repository paths
+share that attempt too. A repeated failure gives a specific recovery message:
+choose distinct full IDs, reconcile each area's cases, repair both directions
+of the mappings, or correct the paths and explicitly proposed files. No further
+generation or publication occurs in that run. Review the named contract and
+retry the same issue workflow; answered questions and historical commits remain.
+Proposed files must also be compatible with one another: a file cannot be the
+parent directory of another proposed file, in either declaration order or at
+any nesting depth. Sibling files and distinct pathname prefixes remain valid.
 All validation and freshness checks still apply. If the second draft still fails,
 no draft is published; existing answers and SDDs are retained. Retry with a proportional
 change or an approved companion specification.

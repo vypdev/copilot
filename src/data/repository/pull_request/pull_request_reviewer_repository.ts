@@ -1,5 +1,5 @@
+import { toPullRequestReviewOperationError } from './pull_request_review_error_metadata';
 import type { PullRequestReviewerPort } from "../../../application/ports/pull_request_reviewer_ports";
-import { toPullRequestReviewOperationError } from "../../../application/ports/pull_request_review_errors";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type {
   GithubPullRequestReviewerClient,

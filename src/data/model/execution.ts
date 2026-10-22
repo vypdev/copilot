@@ -65,6 +65,7 @@ export class Execution {
     currentIssueWorkflowAdmission?: IssueWorkflowAdmission;
     issueWorkflowRuntimeMode: IssueWorkflowRuntimeMode = 'execute';
     readonly preBranchSdd: boolean;
+    readonly verificationSetup: boolean;
 
     get eventName(): string {
         return this.inputs?.eventName ?? '';
@@ -206,6 +207,7 @@ export class Execution {
         this.currentIssueWorkflowAdmission = components.issueWorkflowAdmission;
         this.currentConfiguration.issueWorkflowProfileDigest = components.issueWorkflowProfileDigest;
         this.preBranchSdd = components.preBranchSdd ?? false;
+        this.verificationSetup = components.verificationSetup ?? false;
     }
 
 }

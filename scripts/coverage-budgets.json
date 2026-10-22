@@ -900,6 +900,81 @@
         }
       ],
       "successMessage": "approval evidence diagnostics coverage: PASS (95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Verification setup",
+      "missingEntryLabel": "verification setup",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/verification_setup_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        },
+        {
+          "files": [
+            "src/infrastructure/verification_setup_snapshot.ts",
+            "src/infrastructure/verification_setup_result.ts",
+            "src/infrastructure/verification_setup_runner.ts",
+            "src/infrastructure/native_verification_protocol.ts",
+            "src/infrastructure/native_verification_candidate.ts",
+            "src/infrastructure/native_verification_staging.ts",
+            "src/infrastructure/native_verification_controller.ts",
+            "src/infrastructure/native_verification_profiles.ts",
+            "src/infrastructure/native_verification_redaction.ts",
+            "src/infrastructure/verification_executable.ts",
+            "src/infrastructure/native_verification_source_runtime.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "verification setup coverage: PASS (95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Verification setup onboarding",
+      "missingEntryLabel": "verification setup onboarding",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/setup_verification_action_summary_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/infrastructure/setup_verification_action.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "verification setup onboarding coverage: PASS (summary decisions 100%; safe file adapter 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Finding identity continuity",
+      "missingEntryLabel": "finding identity continuity",
+      "rules": [
+        {
+          "files": [
+            "src/domain/bugbot/finding.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts",
+            "src/application/usecases/steps/commit/bugbot/publish_findings_use_case.ts",
+            "src/application/usecases/steps/commit/bugbot/reconcile_bugbot_review_state_use_case.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "finding identity continuity coverage: PASS (pure matching 100%; changed path 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

@@ -63,6 +63,45 @@ function harness() {
 }
 
 describe('PreBranchSddGateUseCase', () => {
+  it('supplies reserved identities from every immutable owner document when drafting a companion', async () => {
+    const h = harness();
+    h.loadSnapshot.mockResolvedValue({ ...snapshot, capabilities: [{ ...snapshot.capabilities[0], specs: ['specs/payments.md', 'specs/session.md'] }] });
+    h.readSdd.mockImplementation(async (_sha, path) => path === 'specs/payments.md' ? 'payments-C01 missing bearer' : 'payments-session-C01 valid session');
+    h.query.mockResolvedValueOnce({ ...plan, action: 'companion', path: 'specs/change.md', newCapability: null }).mockResolvedValueOnce({ markdown: '# Draft' });
+    expect((await h.useCase.begin(context())).status).toBe('drafted');
+    expect(h.readSdd.mock.calls).toEqual([[baseSha, 'specs/payments.md'], [baseSha, 'specs/session.md']]);
+    expect(h.query.mock.calls[1][0].prompt).toContain('["payments-C01","payments-session-C01"]');
+  });
+
+  it('blocks before drafting when a companion baseline cannot be read', async () => {
+    const h = harness();
+    h.readSdd.mockResolvedValue(undefined);
+    h.query.mockResolvedValueOnce({ ...plan, action: 'companion', path: 'specs/change.md', newCapability: null });
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.query).toHaveBeenCalledTimes(1);
+    expect(h.validateDraft).not.toHaveBeenCalled();
+  });
+
+  it('blocks oversized owner identity context without truncating or drafting', async () => {
+    const h = harness();
+    h.readSdd.mockResolvedValue(Array.from({ length: 2500 }, (_, index) => `payments-long-baseline-C${index}`).join('\n'));
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null });
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.query).toHaveBeenCalledTimes(1);
+    expect(h.validateDraft).not.toHaveBeenCalled();
+  });
+
+  it('keeps publication blocked after repeated case inconsistencies', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Contradictory draft' });
+    h.validateDraft.mockRejectedValue(new SddDraftFormatFailure('requirement-mapping', 'Mismatch'));
+    const result = await h.useCase.begin(context());
+    expect(result.status).toBe('blocked');
+    expect(h.validateDraft).toHaveBeenCalledTimes(2);
+    expect(h.publish).not.toHaveBeenCalled();
+    expect(h.labels()).not.toContain('branched');
+  });
+
   it('withholds oversized immutable owner evidence while preserving the owner and bounded drafting instructions', async () => {
     const h = harness();
     const large = { ...snapshot, capabilities: [{ ...snapshot.capabilities[0],
@@ -600,4 +639,98 @@ describe('PreBranchSddGateUseCase', () => {
     expect((await h.useCase.begin({ ...context(), agentConfiguration: undefined })).status).toBe('blocked');
     expect(h.query).not.toHaveBeenCalled();
   });
+});
+
+
+describe('safe ownership diagnostics (#636)', () => {
+  const invalid = [
+    ['update-owner-mismatch', { ...plan, path: 'specs/private-update.md' }],
+    ['companion-owner-unknown', { ...plan, action: 'companion', capabilityId: 'private-owner', path: 'specs/private-companion.md' }],
+    ['companion-path-registered', { ...plan, action: 'companion' }],
+    ['new-owner-registered', { ...plan, action: 'new', path: 'specs/private-new.md' }],
+    ['new-path-registered', { ...plan, action: 'new', capabilityId: 'private-owner' }],
+  ] as const;
+  it.each(invalid.flatMap(([code, decision]) => ['en-US', 'es-ES'].map(locale => ({ code, decision, locale }))))(
+    'blocks $code in $locale without exposing generated data or publishing a draft', async ({ code, decision, locale }) => {
+      const h = harness();
+      h.query.mockResolvedValue({ ...decision, reason: 'secret-provider-data '.repeat(4) });
+      const outcome = await h.useCase.begin({ ...context(), issueLocale: locale });
+      expect(outcome.status).toBe('blocked');
+      expect(h.query).toHaveBeenCalledTimes(1);
+      expect(h.readSdd).not.toHaveBeenCalled();
+      expect(h.validateDraft).not.toHaveBeenCalled();
+      expect(h.publish).not.toHaveBeenCalled();
+      expect(h.labels()).not.toContain('branched');
+      const body = h.comments[0].body;
+      expect(body).toContain(code);
+      expect(body).not.toMatch(/private-|secret-provider-data/);
+      expect(readSddGateRecord(body, 42)).toBeUndefined();
+      expect(outcome.results[0].errors[0]).toMatchObject({ code: 'provider.contract-invalid' });
+    },
+  );
+  it('reuses the owned diagnostic on retry and marks recovery without granting readiness', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce(invalid[1][1]).mockResolvedValueOnce(invalid[2][1]);
+    await h.useCase.begin(context());
+    await h.useCase.begin(context());
+    expect(h.addComment).toHaveBeenCalledTimes(1);
+    expect(h.updateComment).toHaveBeenCalledTimes(1);
+    h.query.mockResolvedValueOnce(plan).mockResolvedValueOnce({ markdown: '# Valid' });
+    expect((await h.useCase.begin(context())).status).toBe('drafted');
+    expect(h.comments[0].body).toContain('validated ownership');
+    expect(h.labels()).not.toContain('branched');
+  });
+  it('does not overwrite a foreign diagnostic marker', async () => {
+    const h = harness();
+    h.comments.push({ id: 99, body: '<!-- copilot:sdd-analysis-status:v1 issue="42" -->', user: { login: 'attacker' } });
+    h.query.mockResolvedValue(invalid[1][1]);
+    await h.useCase.begin(context());
+    expect(h.updateComment).not.toHaveBeenCalled();
+    expect(h.addComment).toHaveBeenCalledTimes(1);
+  });
+  it('does not classify an unrelated provider failure as rejected ownership or retry it', async () => {
+    const h = harness();
+    h.query.mockRejectedValue(new Error('Provider unavailable'));
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.query).toHaveBeenCalledTimes(1);
+    expect(h.addComment).not.toHaveBeenCalled();
+  });
+  it('withholds all publication when diagnostic publication itself fails', async () => {
+    const h = harness();
+    h.query.mockResolvedValue(invalid[1][1]);
+    h.addComment.mockRejectedValue(new Error('Comment unavailable'));
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.validateDraft).not.toHaveBeenCalled();
+    expect(h.publish).not.toHaveBeenCalled();
+  });
+});
+
+
+it('keeps repeated identical ownership failures to one unchanged diagnostic card', async () => {
+  const h = harness();
+  h.query.mockResolvedValue({ ...plan, action: 'companion', capabilityId: 'unknown' });
+  await h.useCase.begin(context());
+  await h.useCase.begin(context());
+  expect(h.addComment).toHaveBeenCalledTimes(1);
+  expect(h.updateComment).not.toHaveBeenCalled();
+});
+
+it('reports a later valid ownership analysis in Spanish without a readiness record', async () => {
+  const h = harness();
+  h.query.mockResolvedValueOnce({ ...plan, action: 'companion', capabilityId: 'unknown' });
+  await h.useCase.begin({ ...context(), issueLocale: 'es-ES' });
+  h.query.mockResolvedValueOnce(plan).mockResolvedValueOnce({ markdown: '# Valid' });
+  await h.useCase.begin({ ...context(), issueLocale: 'es-ES' });
+  expect(h.comments[0].body).toContain('ha validado la propiedad');
+  expect(readSddGateRecord(h.comments[0].body, 42)).toBeUndefined();
+});
+
+it('keeps malformed analysis outside ownership recovery and publishes no draft or diagnostic', async () => {
+  const h = harness();
+  h.query.mockResolvedValue({ ...plan, reason: 'short' });
+  expect((await h.useCase.begin(context())).status).toBe('blocked');
+  expect(h.query).toHaveBeenCalledTimes(1);
+  expect(h.addComment).not.toHaveBeenCalled();
+  expect(h.validateDraft).not.toHaveBeenCalled();
+  expect(h.publish).not.toHaveBeenCalled();
 });

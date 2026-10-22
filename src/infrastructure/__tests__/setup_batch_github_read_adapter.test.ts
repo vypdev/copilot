@@ -1,6 +1,7 @@
 import { SetupBatchGithubReadAdapter, SetupBatchGithubTransport, SetupBatchProviderError } from '../setup_batch_github_read_adapter';
 import type { SetupBatchTarget } from '../../domain/setup_batch';
 const sha = 'a'.repeat(40);
+const verificationAction = '.github/actions/copilot-verification-setup/action.yml';
 const repository = (id = 7) => ({ id, name: `repo-${id}`, owner: { id: 3, login: 'acme', type: 'Organization' },
   default_branch: 'master', private: true, archived: false, disabled: false, permissions: { push: true } });
 function fixture() {
@@ -13,6 +14,28 @@ function fixture() {
   return { request, remote, adapter, target, transport };
 }
 describe('bounded GitHub setup discovery and namespace inspection', () => {
+  it.each(['100644', '100755'])('VSO-10 inventories the existing consumer action with mode %s for preservation', async mode => {
+    const f = fixture(); const content = 'custom\r\n';
+    f.request.mockResolvedValueOnce({ data: { truncated: false, tree: [{ path: '.github/actions', type: 'tree', mode: '040000', sha },
+      { path: verificationAction, type: 'blob', mode, sha, size: Buffer.byteLength(content) },
+      { path: '.github/actions/copilot-verification-setup/auxiliary.sh', type: 'blob', mode: '100755', sha, size: 100 }] } })
+      .mockResolvedValueOnce({ data: { encoding: 'base64', content: Buffer.from(content).toString('base64') } });
+    expect(await f.adapter.files(f.target, 'fixture')).toEqual([{ path: verificationAction, content }]);
+    expect(f.request).toHaveBeenCalledTimes(2); expect(f.request.mock.calls[0][1]).toMatchObject({ tree_sha: f.target.baseSha });
+  });
+  it.each([
+    { path: '.github', type: 'blob', mode: '120000' },
+    { path: '.github/actions', type: 'blob', mode: '100644' },
+    { path: '.github/actions/copilot-verification-setup', type: 'commit', mode: '160000' },
+    { path: verificationAction, type: 'blob', mode: '120000' },
+    { path: verificationAction, type: 'tree', mode: '040000' },
+    { path: verificationAction, type: 'commit', mode: '160000' },
+    { path: '.github/Actions', type: 'tree', mode: '040000' },
+    { path: verificationAction.replace('action.yml', 'Action.yml'), type: 'blob', mode: '100644' },
+  ])('VSO-08 blocks unsafe remote action paths before downloading or rendering: $path $mode', async entry => {
+    const f = fixture(); f.request.mockResolvedValueOnce({ data: { truncated: false, tree: [{ ...entry, sha, size: 1 }] } });
+    await expect(f.adapter.files(f.target, 'fixture')).rejects.toThrow('malformed'); expect(f.request).toHaveBeenCalledTimes(1);
+  });
   it('uses the bounded default backoff clock after an explicit GitHub rate limit', async () => {
     jest.useFakeTimers();
     try {

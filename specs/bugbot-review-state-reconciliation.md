@@ -1601,3 +1601,197 @@ from one trusted bot-owned complete current-head card; it grants no approval
 or mutation authority. Marker/reader tests (24 cases) belong exclusively to
 the comment automation SDD budget. User documentation explains recheck recovery
 when evidence is absent or stale.
+
+
+### Actionable finding mutation failures (2026-10-21, #646)
+
+Observed: a native review and inline comment could persist before resolution
+failed; the adapter and application discarded the failed operation/HTTP facts,
+leaving only `provider.unavailable`. The exact consumer API cause remains unknown.
+This amendment MUST preserve incomplete evidence and completed effects while
+retaining closed stage (`publication`/`resolution`), adapter operation, first
+finding ID, affected batch count, optional HTTP status and safe provider request
+reference. Batch diagnosis names its first finding and count, without falsely
+claiming which individual item failed inside an atomic provider request.
+
+Only integer HTTP 400–599 and a 1–64-character alphanumeric/colon/hyphen request
+reference are retained. Raw error prose, response bodies, URLs, request headers,
+credentials and rejected provider content MUST NOT cross this diagnostic boundary.
+Finding IDs use a bounded 200-character identifier alphabet; unavailable or unsafe
+IDs are represented explicitly. Existing locally computed fingerprints remain
+reconciliation authority; diagnostic IDs grant no mutation permission.
+
+```text
+Publish native review -> attempt durable reconciliation -> failure retains effects
+-> safe diagnostic plus independent coverage -> correct cause -> normal recheck
+-> fresh provider read -> reuse native finding and retained dismissal
+```
+
+Text equivalent: partial success is retained and diagnosed; a recheck discovers
+existing provider state before continuing, without duplicate review/thread creation
+or reversal of a durable human dismissal. There is no new automatic retry or
+rollback and no change to freshness, ownership, evidence or mutation ordering.
+
+The semantic error class MUST preserve authorization, not-found, conflict,
+rate-limit, client-contract and transient-provider categories. Recovery details
+in the owned status card remain localized with existing English/Spanish catalogs.
+Example: “Finding mutation failed: stage=resolution; operation=resolve-thread;
+finding=backend/Dockerfile:20:healthcheck-requires-curl; affected=1; http-503;
+provider reference=AB12:34CD. Completed effects are retained.” Correct access and
+contract failures before retrying; restore availability for transient failures,
+then recheck the same PR. Existing pending, attention and successful cards remain.
+No new comment stream, permission, configuration input or durable marker schema.
+Absent metadata remains unavailable; no inference of a specific provider cause.
+
+Conversation truncation MUST remain independently partial. Coverage can attach
+up to 50 bounded provider identities for retained truncated sources (`issue:<id>`
+or `review:<node-id>`), never comment text or arbitrary links. The aggregate shows
+these identities under Incomplete coverage, separately from Recovery details.
+A failed mutation cannot turn partial coverage into complete, and a coverage
+limitation cannot conceal the semantic mutation failure. Existing projection
+precedence (partial coverage may yield a partial projection with failed Result)
+is retained. Old coverage without identities remains compatible and unverified.
+
+Adapters own safe provider metadata; application errors own the credential-free
+mutation diagnostic; publication/resolution use cases bind finding identity;
+reconciliation and catalog presentation consume typed facts. Domain coverage
+adds optional source identities only. Typecheck, architecture, localization and
+fault-injection regressions enforce these boundaries; SDKs remain outside policy.
+
+The additional budget is **26 distinct cases**: thirteen HTTP/classification/privacy
+and error-preservation cases, five publication-stage identity/batch cases, one real
+publication-to-failed-resolution-to-retry integration, two locale/projection and
+independent-coverage cases, two exact-source/privacy cases and three adapter cases.
+Existing global coverage/quality thresholds and all prior state/replay tests
+remain required. Acceptance proves a persisted native review survives a subsequent
+503, one recheck produces no duplicate native review/thread, dismissal bytes are
+retained, and diagnostics distinguish that error from truncated conversation.
+Documentation: Bugbot failure scenarios. Upgrade the Action and recheck the same
+PR after recovery; rollback only loses richer diagnostics. Definition of Done:
+all package, documentation, catalog and existing architecture gates pass; no live
+consumer recovery is claimed by deterministic fixtures.
+
+
+PR #651 review correction: batch mutation diagnostics MUST derive identity and
+count from the publisher's actually queued new findings, excluding individually
+updated or suppressed findings. Overflow summaries add their represented overflow
+count; an overflow-only batch reports that count and an unavailable finding ID,
+never a fabricated durable identity. The mixed/overflow cases above enforce this.
+
+
+PR #651 status-classification correction: HTTP 408 and 425 MUST retain transient
+`provider.unavailable` semantics rather than fall through to client-contract
+failure. These are two additional cases in the budget above.
+[RFC 9110 §15.5.9](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5.9)
+describes retry of an outstanding request after 408;
+[RFC 8470 §5.2](https://www.rfc-editor.org/rfc/rfc8470.html#section-5.2)
+requires a retry after 425 to avoid early data. Copilot adds no automatic replay: a
+normal recheck obtains fresh provider state before continuing, preserving completed
+effects and dismissal intent. Other client statuses retain their explicit mapping.
+
+
+PR #651 issue-route correction: only PR review publication enters the new typed
+review-mutation diagnostic. Issue-comment publication retains its existing
+application normalization path and MUST NOT be relabeled as `publish-comments`
+or a PR recheck target. A distinct issue-path regression enforces this boundary.
+
+### Finding identity continuity — #655 (2026-10-21)
+
+Observed implementation defect: fingerprint matching selected a trusted existing
+comment, but publication replaced its marker ID with the current model ID. The
+final read then saw the new ID and retained the previous unresolved ID as an
+unlinked unknown. [Issue #655](https://github.com/vypdev/copilot/issues/655)
+provides the consumer evidence; the exact historical API outage remains unknown.
+The #646 amendment above already owns mutation-stage/provider diagnostics.
+
+The matched durable key MUST be preserved while updating the same comment's
+current title, file, location, evidence and locally computed fingerprints. Pure
+domain matching returns both key and destination. A compatible direct ID wins;
+otherwise location matching MUST be unique, followed by unique semantic matching
+only when no location match exists. Ambiguous location evidence MUST NOT fall
+through to a weaker semantic match. No fuzzy title comparison or model-supplied
+identity authority is introduced.
+
+```text
+Current model report -> unique trusted fingerprint match -> retain original ID
+ -> fold reports of that retained identity -> apply comment limit -> update thread
+ -> re-read original ID -> one linked current finding -> idempotent recheck
+```
+
+Text equivalent: retain the trusted finding key throughout analysis, publication
+and final projection. The original marker and native comment/review identity
+trace the old finding to its refreshed current content. Several current reports
+matching that one retained key MUST occupy one comment slot. Unmatched reports
+and ambiguous matches remain independent evidence; no historical thread is
+deleted, automatically dismissed, or arbitrarily selected to make counts clean.
+Direct publication and reconciliation callers use the same pure policy.
+
+Unknown rows MUST expose a bounded sanitized exact finding ID even without a
+native link. Example partial card content:
+
+```markdown
+## Bugbot: review incomplete
+Run `/copilot recheck` after correcting the reported provider failure.
+- [ ] unknown — Dashboard state — ui/src/model.ts:73:operations-empty
+```
+
+The existing pending, action-required, failure, complete and locale contracts
+remain; no new status surface or notification is added. A true final-provider
+omission still produces unknown and the original bounded diagnostic. Failed
+marker or thread writes retain their completed effects and canonical finding ID
+in the typed mutation diagnostic; one fresh provider read and normal recheck
+converges without duplicate publication. Human dismissal retains precedence.
+
+State boundary: attempted but unpublished candidates are transient analysis
+evidence, not durable native findings. Their unknown rows diagnose that attempt.
+A later stochastic scan may supersede them; disappearance is neither explicit
+verification nor a fix/dismissal. Operators MUST retain the failed run's IDs and
+inspect those concerns. This correction does not add a second finding database
+inside the derived status card or promise durable recovery of unpublished bodies.
+
+Architecture/configuration/security: domain policy remains pure; application
+analysis, publication and final reconciliation share it; adapters and semantic
+ports remain unchanged. Matching uses only trusted parsed existing markers and
+locally computed fingerprints. No new permission, setting, marker version,
+background retry or migration is required. Upgrade and recheck the current PR;
+rollback retains visible history but reintroduces the re-keying risk. Existing
+head, ownership, publication-before-resolution and conservative-count rules
+remain non-configurable.
+
+Allocate **18 added deterministic lifecycle cases** only here: six domain
+matching/ambiguity/immutability cases; six publication-to-projection/retry,
+direct-call, failure, omission and human-dismissal replays; one partition
+fold-before-limit case; two issue-ID/impossible-anchor publication cases; and
+three localized/unsafe unknown-ID rendering cases. The eight quality-corpus
+cases and strengthened prompt contracts are owned only by the analysis SDD.
+Existing global thresholds remain; `finding.ts` requires 100% coverage and the
+changed analysis/publication/reconciliation path requires 95% lines/statements
+and 90% branches/functions. Deterministic fakes use no live model or waits.
+
+Acceptance/traceability: `finding.test.ts` proves unique durable-key matching and
+ambiguity refusal; `finding_identity_replay.test.ts` proves changed model
+ID/title/location yields one original linked record, zero orphan unknown, no
+new native review, equal replay digest, safe failure diagnostics and dismissal
+retention. Analyzer/publication tests prove comment-budget and issue/anchor
+behavior; presentation tests prove bounded actionable IDs in English/Spanish.
+Publication, failure and quality documentation describe recovery and evidence
+limits. Definition of Done: these cases, coverage budgets, full suite,
+architecture, specification/catalog, documentation, generated bundle/package
+gates and current-head PR CI/review pass. Synthetic fixtures do not establish a
+specific historical consumer API cause or live model-quality improvement.
+
+PR #658 review corrections: preserving a matched key MUST NOT let an incompatible
+model report reuse that key and overwrite its evidence in downstream maps. Reserve
+all durable and input IDs before allocation. Incompatible reports that collide
+with a durable or already-emitted ID receive a short locally computed fingerprint
+ID with a deterministic unused suffix; matched records retain their durable key.
+Reapplying normalization and a fresh provider recheck MUST preserve both reports
+and reuse both native threads. Reserve generated IDs against later input IDs too.
+
+Unknown IDs MUST render as literal code text, with a delimiter longer than any
+embedded backtick run. Links, images and HTML in an ID cannot create navigation
+or markup. GitHub's GFM renderer verified the malicious link/image/backtick/HTML
+fixture as one inert code span. Add **six distinct cases** to this SDD's budget:
+four domain collision/order/replay/reservation cases, one publication-to-projection
+two-thread replay and one Markdown-injection case. Existing coverage thresholds
+and all publication, identity and recovery rules remain required.

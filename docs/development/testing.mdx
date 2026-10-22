@@ -104,20 +104,48 @@ local topology before an architecture review with Graphify, and use the
 RepoWise index-only health/dead-code reports to distinguish current complexity
 from history-based churn signals:
 
-The required `RepoWise code health` workflow publishes its index and health
-reports. Its dead-code and history-security scans have separate time and memory limits;
-the Job Summary and artifact status identify an incomplete advisory scan
-instead of claiming that it passed.
-For PRs, pushes and merge groups, history-security scans cover the native event
-base through the checked-out HEAD, including commits that introduced and then
-removed a finding. The base must be a valid commit and an ancestor of HEAD;
-missing or unrelated evidence produces an incomplete advisory result. The
-artifact records both immutable bounds. Manual dispatch scans the complete
-reachable history within the same limits; a successful event-range scan is
-not evidence of a complete historical audit.
-Repository-owned PRs, pushes and merge groups run RepoWise and `CI Check` on
-self-hosted Ubuntu `codex` runners. Fork PRs use GitHub-hosted Ubuntu for
-these checks. The automatic setup fixture matrix remains hosted on three
+`RepoWise Code Health` is an optional manual workflow. PRs, pushes and merge
+groups do not launch it, and it must not be a required branch check. To run an
+analysis, open **Actions → RepoWise Code Health → Run workflow**, select a
+reviewed repository branch, and launch it. The CLI equivalent for development is
+`gh workflow run repowise.yml --ref develop`. The workflow already exists on the
+default branch, as required for [manual dispatch](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow).
+
+Open the run's Job Summary for the analyzed commit, phase status, elapsed time
+and peak RSS. Download `repowise-code-health` (14 days) for health Markdown/JSON,
+safe-only dead-code JSON, the security JSON aggregate, index/phase logs,
+`revision.txt`, `scope.json`, `timings.json` and `history-resources.json`.
+
+The pinned RepoWise 0.58.0 builds one fresh standard index and exports its stored
+health/dead-code results. Index git analytics retain a 500-commit limit; security
+separately covers **all reachable history**, including removed secrets and generated
+bundles, using RepoWise's supported source extensions, secret patterns and
+allowlists. Two spawned workers read one blob at a time each, with at most two
+tasks/results in flight and results consumed in upstream order. Worker failures
+propagate. The adapter avoids
+computing code-smell findings discarded by history mode. This remains an advisory
+signal scanner; an aggregate with no findings is not proof that no secrets exist.
+
+Indexing has a 900-second/4 GiB virtual-memory cap. Each health export and dead-code
+has a 60-second/2 GiB cap; security has a 1200-second/2 GiB coordinator cap and
+a 1 GiB cap per worker, inside the
+40-minute job. Limits apply per process; reported peak RSS is the largest process,
+not aggregate simultaneous memory. These budgets accommodate the roughly 9 GB of
+historical JavaScript without retaining all of it in memory. Two available CPU
+cores are recommended for the bounded parallel history scan.
+
+An interrupted scan, Git error, stale/failed index or invalid report marks analysis
+incomplete and fails this optional run. Completed reports and diagnostics still
+upload; invalid JSON is removed. Inspect the named phase log, fix the cause, then
+rerun. A newer manual run for the same ref cancels the older one; cancellation or
+runner loss can prevent publication. No manual run blocks automatic CI. Upgrading
+the pin requires the Python compatibility fixtures, which run before every manual
+analysis. They compare secret detection with upstream and verify deleted secrets,
+other refs, bounded reads and failures.
+
+Manual RepoWise runs use self-hosted Ubuntu `codex` runners. `CI Check` uses
+that pool for repository-owned PRs and pushes; fork PRs and all merge groups
+use disposable GitHub-hosted Ubuntu runners. The automatic setup fixture matrix remains hosted on three
 operating systems, with service-runner fixtures available by manual dispatch.
 Runner routing is contract-checked, but actual runner availability and remote
 results require evidence from the corresponding Actions runs.
@@ -184,6 +212,23 @@ or model-only `READY` response cannot certify real tool execution. See
 [tool smoke evidence](/security-operations/operations/smoke-tests).
 
 
+## Permission journal integration budget
+
+`setup_permission_operator_actions.test.ts` uses a real temporary directory and
+journal, including file writes, `fsync`, atomic replacement, recovery and cleanup.
+Its tests and hooks have a bounded 30-second Jest budget. A rejected dispatch
+alone flushes six journal versions, so the generic five-second unit-test deadline
+can expire during slow filesystem operations under hosted Windows coverage.
+
+For issue #577, adding 900 ms to each real journal flush reproduced the original
+five-second timeout. With the 30-second integration budget, all eight cases
+completed, including the two-transaction recovery case. This demonstrates the
+budget mismatch; historical CI logs do not identify the underlying host storage
+or scheduling delay. Keep real persistence and every authority/cleanup assertion.
+Fake timers cover Actions polling; recovery switches back to real timers before
+starting its next journal transaction. Other suites retain their existing budgets.
+Hosted Windows full coverage remains the platform verification gate.
+
 ## Semantic component rendering
 
 The component suites use a real Vite/Svelte SSR renderer isolated from Jest.
@@ -218,6 +263,11 @@ matrix. Every selected platform keeps package checks, full coverage, acceptance
 budgets and contract validators. Native macOS self-hosted acceptance remains
 pending until the operator restores the Apple Intel runners and macOS row;
 hosted macOS results cannot substitute for that evidence.
+
+Hosted Windows has a 30-minute job limit; hosted Ubuntu and macOS retain
+20 minutes. This includes native setup, package checks, isolated fixtures and
+the full coverage suite. A timeout is missing evidence and must be corrected
+or rerun before merging; it never substitutes for successful verification.
 
 `upload_windows_coverage` defaults to `false`. Coverage export is a separate
 explicit opt-in, never a prerequisite for hosted fixture validation. Set

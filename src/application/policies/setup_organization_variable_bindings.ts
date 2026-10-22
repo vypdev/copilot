@@ -14,6 +14,7 @@ const repositoryFields = [
   ['HOTFIX_TREE', 'hotfixTree'], ['RELEASE_TREE', 'releaseTree'],
   ['DOCS_TREE', 'docsTree'], ['CHORE_TREE', 'choreTree'],
   ['ISSUE_MANAGED_BRANCHES', 'issueManagedBranches'], ['PRE_BRANCH_SDD', 'preBranchSdd'],
+  ['VERIFICATION_SETUP', 'verificationSetup'],
   ['REOPEN_ISSUE_ON_PUSH', 'reopenIssueOnPush'], ['DESIRED_ASSIGNEES_COUNT', 'desiredAssigneesCount'],
   ['DESIRED_REVIEWERS_COUNT', 'desiredReviewersCount'], ['INACTIVITY_THRESHOLD_HOURS', 'inactivityThresholdHours'],
   ['REPOSITORY_LOCALE', 'repositoryLocale'], ['ISSUES_LOCALE', 'issueLocale'],

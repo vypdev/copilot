@@ -4,6 +4,28 @@ description: Clean Architecture boundaries for agent execution and workflow auto
 ---
 # Architecture
 
+Issue/review comment callbacks are compact entrypoints into the Copilot-owned
+`copilot_comment_runtime.yml` reusable workflow. One job owns the existing native
+worker, project composite setup, continuations and reverse post cleanup. Internal
+`uses: $/` references bind all runtime phases to the called workflow commit. The
+pure known-workflow/runner contract lives in `copilot_comment_workflow.ts`; existing
+setup adapters retain YAML/filesystem inspection, preview/Apply and migration.
+Safe Variable/default bindings are shared by the workflow generator and maintenance
+reader. See the [coordinator SDD](https://github.com/vypdev/copilot/blob/develop/specs/copilot-comment-workflow-coordinator.md)
+and [operational contract](/security-operations/operations/verification#repository-owned-setup).
+
+Verification setup onboarding uses the shared repository questionnaire and the
+existing `repository.verificationSetup` boolean. The package supplies a native
+composite starter under `setup/actions/`; the filesystem adapter inspects only
+the fixed consumer path and creates it exclusively when absent. Existing action
+contents and auxiliaries are outside generator overwrite and retirement ownership.
+Installation review records create/preserve/blocked, activation and trusted main
+as semantic facts shared by terminal, web and batch PR presentation. Batch Git
+inventory permits the exact entrypoint and rejects unsafe parent/file modes or
+case collisions before rendering. See [the onboarding
+SDD](https://github.com/vypdev/copilot/blob/develop/specs/verification-setup-onboarding.md)
+and the [verification guide](/security-operations/operations/verification#repository-owned-setup).
+
 ### Setup runner profiles and installation parity
 
 `setup_runner_policy` owns pure registry validation, precedence, fixed job roles,
@@ -633,3 +655,40 @@ The trusted credential health adapter is GET-only and pins packaged workflow
 content, default SHA, run identity, freshness and unchanged Secret metadata.
 It never inherits the legacy bootstrap or dispatch adapter. Architecture/cycle,
 SDK contract, replay, drift and presentation tests enforce these boundaries.
+
+## Repository verification setup
+
+The optional [repository-owned composite action](/security-operations/operations/verification#repository-owned-setup)
+is captured with all reviewed auxiliary files at comment-route composition from
+an immutable trusted main commit. Acquisition errors remain deferred. Existing
+actor, fork, native-head and workspace gates decide whether verification is reached.
+
+Branch synchronization and shared automated commit preflight request the same
+`untrusted + verifyRuntimePrerequisites` port intent. The Git adapter creates a
+fresh private HOME. Its infrastructure pauses the admitted same-job worker exactly
+before preflight, stages the trusted action in local Git metadata and lets GitHub Actions execute the
+native YAML. Continuation matches the operation/request/run/job, validates the unchanged candidate identity and bounded runtime directories, then
+resolves executables against the private runtime PATH and runs the existing probes
+and verifier. Staging survives native post steps; trusted Copilot post phases
+use the initially pinned absolute Git executable to reload pinned Git objects and verify their original digest before native post
+execution, then the initial Action post step cleans staging and profiles. The agent and publication are not replayed.
+
+Pure policy owns limits, schemas and sanitized errors. Snapshot, staging, protocol,
+profile and controller adapters own Git/filesystem/process details; application
+use cases retain mutation policy. Native action post steps can use dependency-only
+profiles until the original Action's final post cleanup removes them. They are
+never reused by later commands. Native step failure/cancellation blocks publication
+and triggers existing recovery. A final cleanup guard stops a leftover worker.
+
+Source callbacks first copy the Action manifest and runtime outside the mutable
+workspace, so rebuilding a candidate cannot replace continuation or post code.
+Remote installed Actions already use the runner action cache. Only native callback
+phases register active Copilot post behavior.
+
+The workflow generator emits twenty conditional setup/continuation slots and a
+completion step in each actual mutation callback. Structural validation compares
+the complete native contract, including timeout and runtime-only setup environment.
+All six configuration callbacks forward the opt-in, while only issue/review-comment
+mutation compositions execute it. Push analysis does not become a verifier.
+Native platform acceptance runs real `uses`/`run` on Linux, Windows and macOS;
+local real-Git integration covers exact managed-ref push and abort behavior.

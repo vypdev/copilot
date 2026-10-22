@@ -124,6 +124,20 @@ describe('InitialSetupUseCase', () => {
     expect(mockSetupPrepare).toHaveBeenCalledTimes(1);
     expect(mockSetupHasValidToken).toHaveBeenCalledTimes(1);
   });
+  it.each(['create', 'preserve'] as const)('VSO-09 carries reviewed %s intent to the workspace and reports its completed outcome', async state => {
+    const config = createDefaultSetupConfiguration(); config.manageRepositorySecrets = false; config.manageRepositoryVariables = false;
+    config.repository.verificationSetup = state === 'preserve';
+    const results = await useCase.invoke(baseParam({ inputs: { setupConfiguration: config, setupVerificationActionState: state } }));
+    expect(mockSetupPrepare).toHaveBeenCalledWith(expect.objectContaining({ verificationActionState: state }));
+    expect(results[0].success).toBe(true);
+    expect(results[0].steps).toContainEqual(expect.stringContaining(`Verification setup action ${state === 'create' ? 'created' : 'preserved'}; VERIFICATION_SETUP=${state === 'preserve'}`));
+  });
+  it('VSO-09 stops a stale action plan before writing Variables or provisioning issue resources', async () => {
+    mockSetupPrepare.mockImplementationOnce(() => { throw new Error('Verification action changed after review'); });
+    const results = await useCase.invoke(baseParam({ inputs: { setupVerificationActionState: 'create' } }));
+    expect(results[0].success).toBe(false); expect(mockSetupVariablesUpsert).not.toHaveBeenCalled(); expect(mockEnsureInitialLabels).not.toHaveBeenCalled();
+    expect(results[0].steps).not.toContainEqual(expect.stringContaining('Verification setup action created'));
+  });
 
   it('returns failure and does not continue when hasValidSetupToken is false', async () => {
     mockSetupHasValidToken.mockReturnValue(false);

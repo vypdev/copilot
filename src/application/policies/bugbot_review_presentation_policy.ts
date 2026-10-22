@@ -101,6 +101,9 @@ export function renderBugbotStatusCard(
     const facts = [catalog.message('bugbot.coverage.retained', { count: source.itemsRetained })];
     if (source.omittedItems > 0) facts.push(catalog.message('bugbot.coverage.omitted', { count: source.omittedItems }));
     if (source.truncatedItems > 0) facts.push(catalog.message('bugbot.coverage.truncated', { count: source.truncatedItems }));
+    const truncatedIds = source.truncatedItemIds?.slice(0, 50)
+      .filter(id => /^(?:issue:[0-9]+|review:[A-Za-z0-9_=-]+)$/.test(id) && id.length <= 160);
+    if (truncatedIds?.length) facts.push(`truncated-source-ids=${truncatedIds.join(', ')}`);
     if (source.providerLimitReached) facts.push(catalog.message('bugbot.coverage.providerLimit'));
     return `- ${source.source}: ${source.status}; ${facts.join(', ')}`;
   });
@@ -232,9 +235,21 @@ function normalizeHistoricalSnapshot(
 function renderFindingRow(finding: BugbotProjectedFinding): string {
   const label = sanitizeAgentMarkdown(finding.title || finding.id, 500).replace(/[\r\n]+/gu, ' ');
   const state = stateLabel(finding.state);
+  const identity = finding.state === 'unknown'
+    ? ` — ${renderFindingId(finding.id)}`
+    : '';
   return finding.url
-    ? `- ${state} — [${label}](${finding.url})`
-    : `- ${state} — ${label}`;
+    ? `- ${state} — [${label}](${finding.url})${identity}`
+    : `- ${state} — ${label}${identity}`;
+}
+
+function renderFindingId(value: string): string {
+  const id = sanitizeAgentMarkdown(value, 200).replace(/[\r\n]+/gu, ' ');
+  // A delimiter longer than every embedded backtick run keeps links, images
+  // and HTML inert even when the marker permits arbitrary Markdown punctuation.
+  let delimiter = '`';
+  while (id.includes(delimiter)) delimiter += '`';
+  return `${delimiter} ${id} ${delimiter}`;
 }
 
 function stateLabel(state: BugbotFindingState): string {

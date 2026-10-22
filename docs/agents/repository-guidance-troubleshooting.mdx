@@ -28,3 +28,50 @@ Setup writes each generated artifact atomically and the manifest last. Approved 
 Older generated guides may link to `../docs/agents/` files that were never installed in the destination repository. Update Copilot and rerun setup with the same configuration to replace an unchanged, setup-owned guide with absolute links to the shared documentation. The previous guide is backed up. If the guide was edited or is not setup-owned, preserve those edits and follow the normal conflict recovery above.
 
 Do not repair drift by editing `.copilot/repository-profile.json` or its hashes. Change the setup configuration and rerun setup so forms, Variables, workflows, guide, skill, and manifest converge from one plan.
+
+## AGENTS.md pointer hash scope
+
+In `.copilot/setup-manifest.json`, the `AGENTS.md` record has `role: "pointer"`.
+Its SHA-256 covers only the block from `<!-- copilot:agent-guidance:start -->`
+through `<!-- copilot:agent-guidance:end -->`, including both markers. Hashing
+normalizes CRLF to LF. Text outside that block, including a trailing newline
+after the end marker, is excluded so repository-authored instructions remain
+outside setup ownership.
+
+Comparing this record with `shasum -a 256 AGENTS.md` hashes different content.
+Even a freshly generated pointer-only file ends with a newline outside the
+managed block, so a different whole-file hash is expected. This alone is not
+generated-file corruption or drift.
+
+Use `copilot doctor --config copilot.setup.yml` to inspect the installation, or
+run this read-only check from the repository root with Node.js:
+
+```bash
+node <<'NODE'
+const fs = require('node:fs');
+const { createHash } = require('node:crypto');
+const manifest = JSON.parse(fs.readFileSync('.copilot/setup-manifest.json', 'utf8'));
+const record = manifest.artifacts['AGENTS.md'];
+if (record?.role !== 'pointer') throw new Error('No managed AGENTS.md pointer record.');
+const content = fs.readFileSync('AGENTS.md', 'utf8').replace(/\r\n/g, '\n');
+const start = '<!-- copilot:agent-guidance:start -->';
+const end = '<!-- copilot:agent-guidance:end -->';
+const from = content.indexOf(start);
+const to = content.indexOf(end);
+if (content.split(start).length !== 2 || content.split(end).length !== 2 || to < from) {
+  throw new Error('Missing, duplicate, or malformed pointer markers; inspect with doctor.');
+}
+const block = content.slice(from, to + end.length);
+const actual = createHash('sha256').update(block, 'utf8').digest('hex');
+console.log({ expected: record.sha256, actual, matches: actual === record.sha256 });
+process.exitCode = actual === record.sha256 ? 0 : 1;
+NODE
+```
+
+If this scoped check differs, inspect changes inside the markers and follow the
+normal drift recovery above. Preserve surrounding instructions and review the
+managed block before reconciling; do not replace its manifest hash with a
+whole-file digest.
+
+For workflow linter errors about `concurrency.queue`, see
+[validating `queue: max`](/issues/deployment-orchestration#validating-queue-max).

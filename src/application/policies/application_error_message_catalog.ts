@@ -205,7 +205,27 @@ const SPANISH_CONTENT: ErrorContent = Object.freeze({
   }),
 });
 
+const STORED_CONFIGURATION_ACTION_EN = 'A maintainer must review {recoveryGuide}. Preserve a copy before removing only a verified obsolete unmanaged block. If managed branch, release, hotfix or orchestration state may exist, stop and restore verified supported state with a maintainer. Do not just add a schema version or delete managed state. Correct the configuration before rerunning; retrying unchanged state will fail again.';
+const STORED_CONFIGURATION_ACTION_ES = 'Un mantenedor debe revisar {recoveryGuide}. Conserva una copia antes de retirar solo un bloque obsoleto confirmado como no gestionado. Si puede existir estado gestionado de ramas, releases, hotfixes u orquestación, detente y restaura estado compatible verificado con un mantenedor. No añadas simplemente una versión de esquema ni borres estado gestionado. Corrige la configuración antes de reejecutar; el mismo estado volverá a fallar.';
+const STORED_CONFIGURATION_RETAINED_EN = 'The issue/PR description and stored configuration were not changed by this read.';
+const STORED_CONFIGURATION_RETAINED_ES = 'Esta lectura no modificó la descripción de la issue/PR ni su configuración almacenada.';
+
 const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  'stored-configuration-schema-missing': Object.freeze({
+    impact: 'Automation stopped for issue/PR #{issueNumber}: the stored configuration has no schema version; version {expectedVersion} is required.',
+    action: STORED_CONFIGURATION_ACTION_EN,
+    retainedState: STORED_CONFIGURATION_RETAINED_EN,
+  }),
+  'stored-configuration-schema-unsupported': Object.freeze({
+    impact: 'Automation stopped for issue/PR #{issueNumber}: stored schema version {actualVersion} is unsupported; version {expectedVersion} is required.',
+    action: STORED_CONFIGURATION_ACTION_EN,
+    retainedState: STORED_CONFIGURATION_RETAINED_EN,
+  }),
+  'stored-configuration-invalid': Object.freeze({
+    impact: 'Automation stopped for issue/PR #{issueNumber}: the stored configuration, markers or schema value are malformed; valid schema version {expectedVersion} is required.',
+    action: STORED_CONFIGURATION_ACTION_EN,
+    retainedState: STORED_CONFIGURATION_RETAINED_EN,
+  }),
   'closed-issue-reconciliation-failed': Object.freeze({
     impact: 'Issue cleanup remains unverified: {resultId}, phase {phase}; native state {state}, reason {reason}.',
     action: 'Inspect the closed-issue or merged-PR run and current native state. Retry cleanup only if the issue is still closed with the intended reason; leave reopened work open. Resolve the named failure before retrying.',
@@ -221,6 +241,26 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'The changes were rejected during workspace verification.',
     action: 'Inspect the rejected paths in the workflow and correct the workspace before retrying.',
     retainedState: 'The normal commit and push steps were skipped. Verify the current state before retrying.',
+  }),
+  'sdd-draft-case-identity-invalid': Object.freeze({
+    impact: 'SDD publication stopped after one automatic repair: case IDs collide with an owning SDD or are ambiguous.',
+    action: 'Review the draft tables; use distinct fully qualified case IDs and preserve the baseline inventory. Retry the same issue workflow.',
+    retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
+  }),
+  'sdd-draft-case-budget-invalid': Object.freeze({
+    impact: 'SDD publication stopped after one automatic repair: per-area allocations disagree with the distinct case inventory.',
+    action: 'Review the draft tables; reconcile each area and the total with the enumerated cases. Retry the same issue workflow.',
+    retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
+  }),
+  'sdd-draft-requirement-mapping-invalid': Object.freeze({
+    impact: 'SDD publication stopped after one automatic repair: requirements and case mappings are incomplete or inconsistent.',
+    action: 'Review the draft tables; map every requirement to defined cases and match the reverse links. Retry the same issue workflow.',
+    retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
+  }),
+  'sdd-draft-repository-path-invalid': Object.freeze({
+    impact: 'SDD publication stopped after one automatic repair: cited repository paths cannot be verified at the immutable base.',
+    action: 'Review the draft tables; correct existing paths or explicitly declare intended new files. Retry the same issue workflow.',
+    retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
   }),
   'sdd-draft-format-invalid': Object.freeze({
     impact: 'SDD preparation stopped because the draft still lacked required headings or a numeric test budget after one automatic repair.',
@@ -285,6 +325,21 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
 });
 
 const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  'stored-configuration-schema-missing': Object.freeze({
+    impact: 'La automatización se detuvo para la issue/PR #{issueNumber}: la configuración almacenada no tiene versión de esquema; se requiere la versión {expectedVersion}.',
+    action: STORED_CONFIGURATION_ACTION_ES,
+    retainedState: STORED_CONFIGURATION_RETAINED_ES,
+  }),
+  'stored-configuration-schema-unsupported': Object.freeze({
+    impact: 'La automatización se detuvo para la issue/PR #{issueNumber}: la versión de esquema almacenada {actualVersion} no es compatible; se requiere la versión {expectedVersion}.',
+    action: STORED_CONFIGURATION_ACTION_ES,
+    retainedState: STORED_CONFIGURATION_RETAINED_ES,
+  }),
+  'stored-configuration-invalid': Object.freeze({
+    impact: 'La automatización se detuvo para la issue/PR #{issueNumber}: la configuración almacenada, sus delimitadores o el valor del esquema no son válidos; se requiere un esquema válido de versión {expectedVersion}.',
+    action: STORED_CONFIGURATION_ACTION_ES,
+    retainedState: STORED_CONFIGURATION_RETAINED_ES,
+  }),
   'closed-issue-reconciliation-failed': Object.freeze({
     impact: 'La limpieza de la issue sigue sin verificarse: {resultId}, fase {phase}; estado nativo {state}, motivo {reason}.',
     action: 'Revisa la ejecución de cierre o de la PR fusionada y el estado nativo actual. Reintenta la limpieza solo si la issue sigue cerrada con el motivo previsto; conserva abierto el trabajo reabierto. Resuelve el fallo indicado antes de reintentar.',
@@ -300,6 +355,26 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'Los cambios se rechazaron durante la verificación del espacio de trabajo.',
     action: 'Revisa las rutas rechazadas en la ejecución y corrige el espacio de trabajo antes de reintentar.',
     retainedState: 'Se omitieron los pasos normales de commit y push. Comprueba el estado actual antes de reintentar.',
+  }),
+  'sdd-draft-case-identity-invalid': Object.freeze({
+    impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: los identificadores de casos coinciden con un SDD existente o son ambiguos.',
+    action: 'Revisa las tablas del borrador; usa identificadores completos y distintos y conserva el inventario original. Reintenta el workflow de la misma incidencia.',
+    retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
+  }),
+  'sdd-draft-case-budget-invalid': Object.freeze({
+    impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: las asignaciones por área no coinciden con el inventario de casos distintos.',
+    action: 'Revisa las tablas del borrador; reconcilia cada área y el total con los casos enumerados. Reintenta el workflow de la misma incidencia.',
+    retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
+  }),
+  'sdd-draft-requirement-mapping-invalid': Object.freeze({
+    impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: los requisitos y sus casos están incompletos o son inconsistentes.',
+    action: 'Revisa las tablas del borrador; vincula cada requisito a casos definidos y comprueba los enlaces inversos. Reintenta el workflow de la misma incidencia.',
+    retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
+  }),
+  'sdd-draft-repository-path-invalid': Object.freeze({
+    impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: no se pueden verificar las rutas citadas en la revisión base inmutable.',
+    action: 'Revisa las tablas del borrador; corrige las rutas existentes o declara explícitamente los archivos nuevos previstos. Reintenta el workflow de la misma incidencia.',
+    retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
   }),
   'sdd-draft-format-invalid': Object.freeze({
     impact: 'La preparación del SDD se detuvo porque seguían faltando secciones obligatorias o un presupuesto numérico de pruebas tras un intento automático de corrección.',

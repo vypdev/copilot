@@ -804,3 +804,138 @@ pure cases cover native closure, closed label callbacks, open state and missing
 state. They belong only to this owner: the #474 extension is now 15 execution
 cases, separate from 56 semantic publication and six autofix cases. Terminal
 routing/bot-event tests belong to branch synchronization and are not recounted.
+
+### Stored configuration diagnostics and recovery: #635 (2026-10-21)
+
+**Problem and preserved contract.** Run
+[39565969565](https://github.com/vypdev/zstandard/actions/runs/39565969565/job/119108205733)
+rejected a PR block without a schema version. Rejection is intentional:
+only the current durable schema is supported. The defect was that the reader
+logged a semantic configuration error but rethrew its raw cause; the final
+boundary consequently presented `workflow.failed` and retryable true. An
+unlinked PR without any block remains eligible for its ordinary PR route.
+
+**Journey and architecture.** The description adapter maps read failures to
+semantic provider/authorization errors. The configuration reader performs strict
+parsing/validation and throws `configuration.invalid` with one closed recovery
+descriptor: `stored-configuration-schema-missing`,
+`stored-configuration-schema-unsupported`, or `stored-configuration-invalid`.
+Only a positive safe issue/PR number and expected version, plus a nonnegative
+safe numeric actual version for the unsupported case, cross this boundary.
+Malformed JSON, values, fields and incomplete delimiters use the invalid
+descriptor without copying body/schema text.
+
+```text
+Read issue/PR -> validate stored block -> fail with safe configuration facts
+             -> localized annotation + Job Summary -> maintainer correction -> rerun
+```
+
+The flow reads first, rejects unsupported state before PR/issue route mutations,
+and exposes a manual recovery action. The final Action boundary MUST preserve
+code, nonretryability and correlation identity. It uses existing presentation and
+summary ports even when execution setup never completed. Summary publication
+failure MUST NOT replace the original failed annotation or turn the run into
+success. Existing architecture/taint checks enforce the application/model/adapter
+boundaries; raw causes remain private.
+
+**Configuration and security.** No setting, schema version change, compatibility
+reader, automatic migration/reset, workflow, setup step or extra comment is
+introduced. Supported state and absent blocks keep their existing behavior.
+The failure MUST leave the issue/PR body and configuration untouched. Missing,
+old, future and malformed versions MUST remain failed and nonretryable without
+correction. A version number alone never establishes valid managed state.
+Provider failures retain their own categories and retryability. Closed variable
+validation excludes arbitrary text, URLs, credentials and extra fields.
+
+**GitHub content and recovery.** English and Spanish catalogs cover all three
+diagnoses. Other early locales use the established atomic fallback without a
+new model call. A fixed recovery URL is inserted by presentation after
+localization, so translations cannot supply URLs and remain subject to existing
+safe-text validation. Representative missing-schema content:
+
+```text
+Impact: Automation stopped for issue/PR #144: the stored configuration has no
+schema version; version 3 is required.
+Error code: configuration.invalid
+Action: A maintainer must review the recovery guide before correcting the block.
+Retained state: The issue/PR description and stored configuration were not changed by this read.
+Retryable: No
+Reference: <the same correlation UUID>
+```
+
+The complete action links to
+[recovery](/security-operations/operations/troubleshooting#unsupported-stored-configuration)
+and requires preservation of the original body before removing only a verified
+obsolete unmanaged block. If managed branch, release, hotfix or orchestration
+state may exist, the operator MUST stop for maintainer review and verified
+supported-state restoration. It MUST NOT advise blindly adding a schema version,
+deleting managed state, or skipping a failed check. Repeating unchanged invalid
+state remains failed without writes. After verified obsolete-marker removal,
+the real unlinked setup route MUST configure without inventing an issue link.
+
+Pending/completed states retain their existing presentation. Partial mutation,
+new cancellation/race machinery and navigation registration are not applicable
+to this early read failure. Rollout changes only diagnostics; rollback reverts
+the diagnostic change while preserving strict validation. Existing in-flight
+managed state is never automatically rewritten.
+
+**Verification floor: 15 distinct cases**, owned only by this extension:
+
+| Area | Cases | Acceptance/evidence |
+|---|---:|---|
+| Payload/routing | 6 | absent block, missing version, old version, future version, malformed JSON, valid current state |
+| Propagation/provider | 3 | final annotation/summary preserve code/reference/retry; authorization and transient reads retain their own categories |
+| Presentation/security | 4 | English, Spanish/fallback, hostile/oversized text excluded, no blind managed-state removal/version edits |
+| Recovery/replay | 2 | unchanged replay fails without writes; deliberate obsolete-marker removal recovers an unlinked PR |
+
+`configuration_recovery.test.ts` owns payload and real setup/replay evidence;
+`github_action.test.ts` owns annotation/summary/reference/fallback and summary
+failure evidence; issue-content adapter and error/presentation suites own
+provider mapping and bounded descriptor tests. Additional malformed-value,
+marker, forged-variable and mapping cases do not reduce this floor.
+Assertions inspect structured semantics and absence of mutation, not only
+snapshots. Existing repository and changed-module coverage thresholds, type
+checking, architecture/taint guards, documentation and specification validation
+remain required. Inspect a narrow annotation/Job Summary and its recovery link
+for readability; native replay of the new diagnostic remains a separate live
+verification step until the change is deployed.
+
+**Documentation and delivery.** Update configuration persistence, error reference
+and troubleshooting (including a stable recovery heading), plus the execution
+catalog evidence and generated catalog. The implementation sequence is closed
+facts/reader, final boundary and localization, adapter mapping, deterministic
+tests, docs/catalog, then validation. Done requires all acceptance rows to pass,
+generated evidence to be current and strict rejection to remain intact.
+
+### Literal configuration marker mentions: release review #660 (2026-10-21)
+
+Finding 4342237487 exposed a false configuration error for an ordinary mention
+of one delimiter. The description-format adapter MUST distinguish such prose,
+inline/indented quotes and closed, unpaired code examples from actual state.
+Actual delimiters begin a line with at most three spaces. A complete legacy
+record inside a code fence MUST retain strict parsing, not become absent: this
+preserves the previous reader's state ownership and existing recovery guidance.
+Multiple complete records, incomplete actual delimiters and potential state
+behind an unclosed fence MUST fail closed without provider writes or state loss.
+JSON backticks, CRLF records and single-line records beginning a line remain
+supported. No payload schema, permission, locale, setting or reset is added.
+
+Both reading and persistence MUST use the same description-format policy in
+src/manager/description/configuration_markers.ts. A first write appends state
+after literal mentions without altering the human prefix; it closes a dangling
+code example with no existing record before appending owned metadata. An update
+replaces only the verified owned span. Generic non-configuration content blocks
+retain their existing adapter. The existing configuration.invalid diagnosis,
+nonretryability and maintainer recovery UI apply to ambiguous state. Rollback
+selects the prior reader while preserving description history and state.
+
+The additional floor is **21 distinct cases** in configuration_recovery.test.ts:
+nine ordinary mention/unpaired fence variants, six legacy/format/selection
+boundaries, three actual malformed/duplicate/ambiguous-state guards and three
+write/read preservation journeys. Every rejection asserts no provider write;
+write cases preserve the original human text and read the resulting supported
+state. Changed format policy targets at least 95% lines and 90% branches, with
+the existing global quality gates unchanged. These tests establish this format
+boundary rather than provider runtime readiness. Update troubleshooting, catalog
+evidence and generated catalog, then pass focused/full tests, type/lint,
+documentation/specification checks and rebuilt package gates before release.
