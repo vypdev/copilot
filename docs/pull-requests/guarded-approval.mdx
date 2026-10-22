@@ -19,9 +19,11 @@ New `copilot setup` runs offer `recommend` by default: Copilot assesses evidence
 
 Use `copilot setup` interactively to select an exact CI check, its GitHub App ID, and the workflow that produces it. The coverage check must enforce your repository's coverage budget; a successful advisory upload does not prove a percentage. Setup displays the selected names, target branches, Bugbot prerequisites, and branch-rule readiness before confirmation. The generated `copilot_pull_request_approval.yml` must reach the repository default branch before its `workflow_run` wakeups operate.
 
-With `copilot setup --web`, the setup PAT can request conditional `Actions:
-read` and `Checks: read` grants so the assistant can offer candidates from
-completed pull-request runs from the last 90 days. Discovery requests up to
+With `copilot setup --web`, the assistant can offer candidates from completed
+pull-request runs from the last 90 days when the setup credential can read the
+Actions and Checks APIs. GitHub currently does not expose Checks API access for
+fine-grained PATs; if private-repository discovery is denied, enter the inspected
+producer tuples manually. There is no selectable PAT Checks permission to add. Discovery requests up to
 1,000 latest workflow runs over at most ten pages, selects up to 20 PR runs, sorts them by creation
 time and inspects at most 15, with up to 100 checks per commit. Historical or
 malformed dates are excluded. The lookup stops once it collects 20 recent PR
@@ -144,9 +146,13 @@ can also prevent the read. This state leaves existing PRs and reviews unchanged
 and publishes no assessment. `invalid-policy` instead means the value was read
 but failed validation: run doctor and correct the variable before retrying.
 
-Setup includes the same evidence reads for both active modes: Actions, Contents,
-Administration, Checks and Variables read, and Pull requests write to publish the
-assessment card. An installation with only approval assessment does not need
+Both active modes need evidence reads through Actions, Contents, Administration
+and Variables, plus Pull requests write for the assessment card. Native observer
+Checks reads use the job-local `GITHUB_TOKEN` supplied through
+`COPILOT_APPROVAL_CHECK_TOKEN`, with the generated workflow's `checks: write`
+permission; that credential also publishes the supplemental Check. The runtime
+`PAT` retains bot identity, policy reads and native review writes. It does not
+need an unavailable fine-grained PAT Checks grant. An installation with only approval assessment does not need
 Actions, Contents or Issues write. Existing tokens created before this permission
 fix need their grants checked when recommendation mode is enabled. The mode
 still determines whether a native approval may be submitted.
@@ -180,6 +186,7 @@ check alone does not prove access to that endpoint.
 
 | Diagnostic | Next action |
 | --- | --- |
+| `head-checks` / `merge-checks` denied | Restore the generated observer's `COPILOT_APPROVAL_CHECK_TOKEN: ${{ github.token }}` and job Checks permission. Do not broaden the bot PAT; fine-grained PATs cannot call the Checks API. |
 | `http-401` / `http-403` | Check the runtime credential and the named endpoint access; correct the specific denial before rerunning. |
 | `http-404` | Verify resource identity and visibility under that same credential. A private resource can be hidden by authorization. |
 | `http-429`, supported 5xx or `transport-unavailable` | Wait for provider recovery or rate-limit reset, then make a bounded new observation. |
@@ -205,3 +212,13 @@ submission and when evidence is reread after a review POST. If GitHub might
 have accepted a review, `publication-unknown` retains its review identity and
 the exact failed evidence operation. Recheck after resolving that cause; the
 observer reads native review history before considering another POST.
+
+
+The Checks client is selected before reading evidence. If its authenticated read
+is denied or returns malformed or oversized pages, the observer keeps the named
+`evidence-unavailable` failure and never retries that read with the bot PAT. The
+existing 3,000-record bound and head/App/workflow provenance checks still apply.
+Without a job-local token, the historical PAT-only path remains available for
+credentials that support Checks; it cannot convert a denied read into approval.
+GitHub documents the fine-grained PAT limitation in
+[Managing personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#fine-grained-personal-access-tokens-limitations).
