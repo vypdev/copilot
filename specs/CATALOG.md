@@ -30,7 +30,7 @@ debt or convert unknown historic intent into a design decision.
 | `cli-and-single-actions` | As-built baseline | Expose bounded local commands and workflow-dispatched operations through the shared application core | [CLI and single-action execution](./cli-and-single-action-execution.md) | 44 paths · 2026-10-19 |
 | `configurable-issue-workflows` | Implemented | Select one canonical set of issue workflows and enforce its forms, dependencies, branch policy, runtime admission, migration, and diagnosis | [Configurable issue workflows and fail-closed admission](./configurable-issue-workflows-and-admission.md) | 89 paths · 2026-10-13 |
 | `repository-agent-collaboration` | Implemented | Generate safe repository-local profiles, guidance, and a skill for agents contributing through configured issues, Action-managed branches, pull requests, and deployment boundaries | [Repository agent collaboration contract](./repository-agent-collaboration-contract.md) | 47 paths · 2026-10-17 |
-| `guarded-pull-request-approval` | Proposed | Specify and locally implement revision-bound, evidence-gated native bot approvals for eligible human pull requests, with safe setup defaults, read-only doctor checks, and explainable recovery | [Guarded pull-request approval and setup readiness](./guarded-pull-request-approval.md) + 2 companion | 94 paths · 2026-10-20 |
+| `guarded-pull-request-approval` | Proposed | Specify and locally implement revision-bound, evidence-gated native bot approvals for eligible human pull requests, with safe setup defaults, read-only doctor checks, and explainable recovery | [Guarded pull-request approval and setup readiness](./guarded-pull-request-approval.md) + 2 companion | 94 paths · 2026-10-22 |
 
 ## Evidence map
 
@@ -257,7 +257,7 @@ debt or convert unknown historic intent into a design decision.
 ### `guarded-pull-request-approval` — Guarded pull-request approval and setup readiness
 
 - Owner: Copilot maintainers
-- Last verified: 2026-10-20
+- Last verified: 2026-10-22
 - Specifications: [`specs/guarded-pull-request-approval.md`](./guarded-pull-request-approval.md) · [`specs/guarded-pull-request-approval-setup-and-doctor.md`](./guarded-pull-request-approval-setup-and-doctor.md) · [`specs/guarded-pull-request-approval-status.md`](./guarded-pull-request-approval-status.md)
 - Workflows: [`.github/workflows/ci_check.yml`](../.github/workflows/ci_check.yml) · [`.github/workflows/copilot_pull_request_approval.yml`](../.github/workflows/copilot_pull_request_approval.yml) · [`setup/workflows/copilot_pull_request.yml`](../setup/workflows/copilot_pull_request.yml) · [`setup/workflows/copilot_pull_request_review_state.yml`](../setup/workflows/copilot_pull_request_review_state.yml) · [`setup/workflows/copilot_pull_request_approval.yml`](../setup/workflows/copilot_pull_request_approval.yml)
 - Entrypoints: [`src/actions/github_action.ts`](../src/actions/github_action.ts) · [`src/actions/pull_request_approval_action.ts`](../src/actions/pull_request_approval_action.ts) · [`src/cli/commands/setup.ts`](../src/cli/commands/setup.ts) · [`src/cli/commands/doctor.ts`](../src/cli/commands/doctor.ts) · [`src/infrastructure/composition/pull_request_status_composition_root.ts`](../src/infrastructure/composition/pull_request_status_composition_root.ts)

@@ -485,3 +485,69 @@ MUST retain their causal diagnostic and any accepted review ID while keeping
 promoted to a verified approval. This preserves read-first recovery and never
 retries the review POST blindly. The three additional application cases above
 cover these final-boundary risks independently of initial-read failures.
+
+
+### Native Checks credential isolation — #670 (2026-10-22)
+
+Observed 3.10.0 consumer evidence: private Platform PR #204 passed application CI
+and Bugbot, but observer runs `39785896854` and `39799838760` failed with
+`head-checks` / `merge-checks` HTTP 403. The adapter read Checks with the bot PAT
+even though the trusted workflow supplied `COPILOT_APPROVAL_CHECK_TOKEN`. GitHub
+[documents that fine-grained PATs cannot call the Checks API](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#fine-grained-personal-access-tokens-limitations).
+The operator cannot add the suggested PAT permission.
+
+The adapter MUST use the existing job-local Checks client for both head and
+verified-merge Check Run pagination. Policy, bot identity, PR data, native review
+POSTs and assessment comments MUST retain the bot PAT client. The native token
+also retains its existing supplemental Check publication responsibility. Client
+selection happens before reads; an authenticated native denial MUST NOT retry
+with the PAT. Existing PAT-only callers retain their prior client selection,
+bounds and non-authorizing failure behavior. No new input, permission, policy,
+durable state, retry, workflow or installer behavior is introduced.
+
+```text
+trusted observer -> job-local token -> bounded head/merge Checks evidence
+                 -> bot PAT -> policy, identity, PR/rules/coverage evidence
+                 -> unchanged pure decision -> bot PAT native review + card
+                 -> job-local token supplemental Check
+```
+
+Text equivalent: only Check Run inventory changes credential. The adapter still
+terminates provider DTOs and sanitized errors; application/domain/presentation
+contracts and all current-head, producer, coverage and native approval fences
+remain unchanged. Existing architecture/workflow contracts enforce the trusted
+entrypoint and credential boundaries.
+
+Allocate **five additional distinct SDK cases**: one successful two-credential
+read plus retained bot review identity; two independent head/merge denials with
+no PAT fallback or review write; one malformed native page; and one native
+inventory above 3,000 records. Existing PAT-only fixtures prove compatibility.
+The changed adapter retains the repository's coverage gates and MUST meet at
+least 95% lines/statements and 90% branches/functions. Deterministic SDK clients
+replace network and waits. No new policy or UI state needs new domain cases.
+
+Operator recovery for a Checks denial is to restore the generated native token
+binding and job Checks permission, then rerun the observer. Representative
+technical state remains `merge-checks (http-403)`, `evidence-unavailable`, no
+authorized review, and retained prior PR/reviews. Pending, successful and partial
+review states keep the existing card/summary content; there is no extra comment
+or localization surface. The approval guide MUST distinguish this job credential
+from the fine-grained PAT and explain manual setup producer entry when private
+Checks discovery is unavailable.
+
+Acceptance: native read fixtures must return the exact configured App/workflow
+check for the verified merge; denials, malformed pages and overflow must retain
+the named causal failure and perform no native review. Existing producer/head
+and final reread cases must remain green. DoD includes these five cases, changed
+adapter coverage, types/lint, architecture, workflow/docs/specification gates,
+generated bundles/catalog and Graphify. Deploying the corrected Action and
+rechecking the private consumer is required for live acceptance; local fixtures
+do not establish production recovery. Rollback restores the previous client
+selection without changing native reviews.
+
+Local implementation evidence: five new cases first failed against the old
+client selection and then passed; the complete repository adapter suite passes
+137 cases. Full coverage passes 710 suites and 11,890 tests, with 35 existing
+skips; global lines/statements/functions/branches are 97.81/96.94/97.69/94.30%.
+The changed adapter reaches 98.90% lines, 97.42% statements, 100% functions and
+90.82% branches. These local facts do not claim native consumer recovery.

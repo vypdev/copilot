@@ -2579,7 +2579,7 @@
       "status": "proposed",
       "scope": "Specify and locally implement revision-bound, evidence-gated native bot approvals for eligible human pull requests, with safe setup defaults, read-only doctor checks, and explainable recovery",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-20",
+      "lastVerified": "2026-10-22",
       "specs": [
         "specs/guarded-pull-request-approval.md",
         "specs/guarded-pull-request-approval-setup-and-doctor.md",

@@ -121,6 +121,26 @@ function evidenceFixture() {
   return { pat, pages, repository: new PullRequestApprovalRepository('pat', settings) };
 }
 
+function nativeCheckFixture() {
+  const pat = evidenceOctokit();
+  const original = pat.paginate.iterator.getMockImplementation()!;
+  const listForRef = jest.fn();
+  const checks = {
+    rest: { checks: { listForRef } },
+    paginate: { iterator: jest.fn(async function* (method: unknown, params: { ref?: string; head_sha?: string }) {
+      if (method !== listForRef) throw new Error('Unexpected native check operation.');
+      yield* original(pat.rest.checks.listForRef, params);
+    }) },
+  };
+  pat.paginate.iterator.mockImplementation(async function* (method, params) {
+    if (method === pat.rest.checks.listForRef) throw { status: 403 };
+    yield* original(method, params);
+  });
+  (github.getOctokit as jest.Mock).mockReturnValueOnce(pat).mockReturnValueOnce(checks);
+  const repository = new PullRequestApprovalRepository('pat', { ...settings, githubToken: 'job-token' });
+  return { pat, checks, repository };
+}
+
 function numericFixture() {
   const f = evidenceFixture();
   f.pat.rest.actions.getRepoVariable.mockResolvedValue({ data: { value: serializePullRequestApprovalPolicy({
@@ -143,6 +163,59 @@ function bugbotCard(statusHead = head, pr = 42, evidenceHead = statusHead, diges
 
 describe('PullRequestApprovalRepository', () => {
   beforeEach(() => jest.clearAllMocks());
+
+  it('uses the native check credential for both revisions and retains bot review identity', async () => {
+    const f = nativeCheckFixture();
+    const evidence = await f.repository.loadEvidence(target);
+    expect(evidence.checks).toEqual([expect.objectContaining({
+      name: 'CI Check', sourceAppId: 15368, workflowName: 'CI Check', headSha: testedMerge,
+    })]);
+    for (const ref of [head, testedMerge]) {
+      expect(f.checks.paginate.iterator).toHaveBeenCalledWith(f.checks.rest.checks.listForRef,
+        expect.objectContaining({ owner: 'owner', repo: 'repo', ref, filter: 'all', per_page: 100 }));
+    }
+    await f.repository.submitApproval(target, head, 'Verified current evidence');
+    expect(f.pat.rest.users.getAuthenticated).toHaveBeenCalled();
+    expect(f.pat.rest.actions.getRepoVariable).toHaveBeenCalled();
+    expect(f.pat.rest.pulls.createReview).toHaveBeenCalledWith(expect.objectContaining({
+      commit_id: head, event: 'APPROVE',
+    }));
+    expect(f.pat.paginate.iterator.mock.calls.some(([method]) => method === f.pat.rest.checks.listForRef)).toBe(false);
+  });
+
+  it.each([[head, 'head-checks'], [testedMerge, 'merge-checks']])(
+    'fails closed after the native check credential cannot read %s without PAT fallback', async (ref, operation) => {
+      const f = nativeCheckFixture();
+      const original = f.checks.paginate.iterator.getMockImplementation()!;
+      f.checks.paginate.iterator.mockImplementation(async function* (method, params) {
+        if (params.ref === ref) throw { status: 403, message: 'PRIVATE-CREDENTIAL' };
+        yield* original(method, params);
+      });
+      await expect(f.repository.loadEvidence(target)).rejects.toMatchObject({
+        code: 'authorization.denied', recovery: { variables: { operation, reason: 'http-403' } },
+      });
+      expect(f.pat.paginate.iterator.mock.calls.some(([method]) => method === f.pat.rest.checks.listForRef)).toBe(false);
+      expect(f.pat.rest.pulls.createReview).not.toHaveBeenCalled();
+      expect(JSON.stringify((logInfo as jest.Mock).mock.calls)).not.toContain('PRIVATE-CREDENTIAL');
+    });
+
+  it('rejects malformed pages from the native check credential', async () => {
+    const f = nativeCheckFixture();
+    f.checks.paginate.iterator.mockImplementation(async function* () { yield { data: { check_runs: null } }; });
+    await expect(f.repository.loadEvidence(target)).rejects.toMatchObject({
+      recovery: { variables: { operation: 'head-checks', reason: 'invalid-page' } },
+    });
+    expect(f.pat.rest.pulls.createReview).not.toHaveBeenCalled();
+  });
+
+  it('retains the bounded inventory with the native check credential', async () => {
+    const f = nativeCheckFixture();
+    f.checks.paginate.iterator.mockImplementation(async function* () { yield { data: { check_runs: Array(3001).fill({}) } }; });
+    await expect(f.repository.loadEvidence(target)).rejects.toMatchObject({
+      recovery: { variables: { operation: 'head-checks', reason: 'page-limit' } },
+    });
+    expect(f.pat.rest.pulls.createReview).not.toHaveBeenCalled();
+  });
 
   it('prefers a repository policy Variable over organization scope', async () => {
     const pat = patOctokit();

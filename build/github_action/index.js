@@ -77558,12 +77558,13 @@ class PullRequestApprovalRepository {
                 collectDiagnostic(diagnostics, cause);
             }
         }
+        const checkClient = this.checkOctokit ?? this.octokit;
         const [files, reviews, comments, headChecks, mergeChecks, headRuns, mergeRuns, rules, user] = await Promise.all([
             this.allPages('files', this.octokit.rest.pulls.listFiles, { owner: target.owner, repo: target.repository, pull_number: target.pullNumber }),
             this.allPages('reviews', this.octokit.rest.pulls.listReviews, { owner: target.owner, repo: target.repository, pull_number: target.pullNumber }),
             this.allPages('comments', this.octokit.rest.issues.listComments, { owner: target.owner, repo: target.repository, issue_number: target.pullNumber }),
-            this.allPages('head-checks', this.octokit.rest.checks.listForRef, { owner: target.owner, repo: target.repository, ref: headSha, filter: 'all' }),
-            testedMergeSha ? this.allPages('merge-checks', this.octokit.rest.checks.listForRef, { owner: target.owner, repo: target.repository, ref: testedMergeSha, filter: 'all' }) : Promise.resolve([]),
+            this.allPages('head-checks', checkClient.rest.checks.listForRef, { owner: target.owner, repo: target.repository, ref: headSha, filter: 'all' }, checkClient),
+            testedMergeSha ? this.allPages('merge-checks', checkClient.rest.checks.listForRef, { owner: target.owner, repo: target.repository, ref: testedMergeSha, filter: 'all' }, checkClient) : Promise.resolve([]),
             this.allPages('head-runs', this.octokit.rest.actions.listWorkflowRunsForRepo, { owner: target.owner, repo: target.repository, head_sha: headSha }),
             testedMergeSha ? this.allPages('merge-runs', this.octokit.rest.actions.listWorkflowRunsForRepo, { owner: target.owner, repo: target.repository, head_sha: testedMergeSha }) : Promise.resolve([]),
             this.effectiveRules(target.owner, target.repository, pull.base.ref, diagnostics),
@@ -77821,10 +77822,10 @@ class PullRequestApprovalRepository {
             return { readable: false, dismissesStaleReviews: false, requiredChecks: [] };
         }
     }
-    async allPages(operation, method, params) {
+    async allPages(operation, method, params, client = this.octokit) {
         return (0, approval_evidence_read_1.readApprovalEvidence)(operation, async () => {
             const result = [];
-            for await (const response of this.octokit.paginate.iterator(method, { ...params, per_page: 100 })) {
+            for await (const response of client.paginate.iterator(method, { ...params, per_page: 100 })) {
                 const page = Array.isArray(response.data) ? response.data
                     : record(response.data)?.check_runs ?? record(response.data)?.workflow_runs
                         ?? record(response.data)?.artifacts ?? record(response.data)?.jobs;
