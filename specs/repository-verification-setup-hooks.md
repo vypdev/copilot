@@ -208,7 +208,7 @@ Native setup steps have `timeout-minutes: 5`; the worker also rejects readiness 
 
 ## 11. Security, permissions, and privacy
 
-Native setup receives only runtime metadata from the private verifier environment, never Copilot's PAT/model inputs or evidence token. Callers MUST explicitly forward the existing named Secrets to the reusable workflow; unrestricted `secrets: inherit` is not generated. The coordinator MUST keep provider secrets scoped to the initial Copilot Action step, not the job or consumer action. Checkout credentials remain unpersisted. Native actions can use runner facilities required for normal Actions execution; they are reviewed executable maintainer code.
+Native setup receives only runtime metadata from the private verifier environment, never Copilot's PAT/model inputs or evidence token. Callers MUST explicitly forward the existing named Secrets to the reusable workflow; unrestricted `secrets: inherit` is not generated. The existing Cursor provider condition MUST apply both to the caller's Secret grant and the initial Action environment: only the default provider or findings/fixer/planner/reviewer/tester role selecting Cursor may forward that key. The coordinator MUST keep provider secrets scoped to the initial Copilot Action step, not the job or consumer action. Checkout credentials remain unpersisted. Native actions can use runner facilities required for normal Actions execution; they are reviewed executable maintainer code.
 
 This preserves the trusted-runner boundary and makes no OS-sandbox claim: same-user processes and service-level credentials remain an operator trust concern. PATH/JAVA_HOME are validated after setup; arbitrary `GITHUB_ENV` keys do not enter the verifier. Native external action versions and dependency caches are maintained by the repository owner. Nested local `uses` is excluded because its deferred post scripts could otherwise refer to candidate assets outside the trusted staging tree.
 
@@ -296,7 +296,7 @@ Repository-wide thresholds remain in force. New pure policy targets 100% branche
 
 ## 20. References and decisions
 
-The maintainer selected the composite approach in the task on 2026-10-21. [Issue decision record](https://github.com/vypdev/copilot/issues/647#issuecomment-6318551564). Related contracts: `branch-synchronization`, repository verification prerequisites and the shared automated commit pipeline in the specification catalog. A reusable workflow and a Node ESM helper were rejected for this delivery; no second execution mode is retained.
+The maintainer selected the consumer-owned composite dependency action on 2026-10-21. [Issue decision record](https://github.com/vypdev/copilot/issues/647#issuecomment-6318551564). Consumer-owned reusable dependency workflows and the Node ESM helper were rejected. On 2026-10-22 the maintainer selected the Copilot-owned reusable coordinator in §20.1; it executes that same composite hook in one job, without adding a second dependency execution mode. Related contracts: `branch-synchronization`, repository verification prerequisites and the shared automated commit pipeline in the specification catalog.
 
 
 ### 20.1 Central comment coordinator — issue #662
