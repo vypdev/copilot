@@ -96,12 +96,13 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
                     && merge.data.parents.length === 2) testedMergeSha = pull.merge_commit_sha!;
             } catch (cause) { collectDiagnostic(diagnostics, cause); }
         }
+        const checkClient = this.checkOctokit ?? this.octokit;
         const [files, reviews, comments, headChecks, mergeChecks, headRuns, mergeRuns, rules, user] = await Promise.all([
             this.allPages<ApprovalGithubFile>('files', this.octokit.rest.pulls.listFiles, { owner: target.owner, repo: target.repository, pull_number: target.pullNumber }),
             this.allPages<ApprovalGithubReview>('reviews', this.octokit.rest.pulls.listReviews, { owner: target.owner, repo: target.repository, pull_number: target.pullNumber }),
             this.allPages<ApprovalGithubComment>('comments', this.octokit.rest.issues.listComments, { owner: target.owner, repo: target.repository, issue_number: target.pullNumber }),
-            this.allPages<ApprovalGithubCheck>('head-checks', this.octokit.rest.checks.listForRef, { owner: target.owner, repo: target.repository, ref: headSha, filter: 'all' as const }),
-            testedMergeSha ? this.allPages<ApprovalGithubCheck>('merge-checks', this.octokit.rest.checks.listForRef, { owner: target.owner, repo: target.repository, ref: testedMergeSha, filter: 'all' as const }) : Promise.resolve([]),
+            this.allPages<ApprovalGithubCheck>('head-checks', checkClient.rest.checks.listForRef, { owner: target.owner, repo: target.repository, ref: headSha, filter: 'all' as const }, checkClient),
+            testedMergeSha ? this.allPages<ApprovalGithubCheck>('merge-checks', checkClient.rest.checks.listForRef, { owner: target.owner, repo: target.repository, ref: testedMergeSha, filter: 'all' as const }, checkClient) : Promise.resolve([]),
             this.allPages<ApprovalGithubRun>('head-runs', this.octokit.rest.actions.listWorkflowRunsForRepo, { owner: target.owner, repo: target.repository, head_sha: headSha }),
             testedMergeSha ? this.allPages<ApprovalGithubRun>('merge-runs', this.octokit.rest.actions.listWorkflowRunsForRepo, { owner: target.owner, repo: target.repository, head_sha: testedMergeSha }) : Promise.resolve([]),
             this.effectiveRules(target.owner, target.repository, pull.base.ref, diagnostics),
@@ -352,10 +353,10 @@ export class PullRequestApprovalRepository implements PullRequestApprovalPort {
         }
     }
 
-    private async allPages<T>(operation: ApprovalEvidenceOperation, method: unknown, params: Record<string, unknown>): Promise<T[]> {
+    private async allPages<T>(operation: ApprovalEvidenceOperation, method: unknown, params: Record<string, unknown>, client = this.octokit): Promise<T[]> {
         return readApprovalEvidence(operation, async () => {
             const result: T[] = [];
-            for await (const response of this.octokit.paginate.iterator(method as never, { ...params, per_page: 100 } as never)) {
+            for await (const response of client.paginate.iterator(method as never, { ...params, per_page: 100 } as never)) {
                 const page = Array.isArray(response.data) ? response.data
                     : record(response.data)?.check_runs ?? record(response.data)?.workflow_runs
                         ?? record(response.data)?.artifacts ?? record(response.data)?.jobs;
