@@ -6,6 +6,15 @@ import { runVerifyCommands } from '../../application/usecases/steps/commit/bugbo
 import { writeNativeRecord } from '../native_verification_protocol';
 import { nativeVerificationFixture, COMPOSITE } from './native_verification_fixture';
 
+// Keep ACL process startup out of this protocol suite's five-second test budget.
+// Real Windows permissions are covered by agent_windows_runtime.test.ts and the
+// native platform smoke test; profiles, environment filtering and Git stay real.
+jest.mock('../agents/windows_runtime_acl', () => ({
+    ...jest.requireActual<typeof import('../agents/windows_runtime_acl')>('../agents/windows_runtime_acl'),
+    makeWindowsRuntimePathPrivate: jest.fn(),
+    verifyWindowsAgentExecutableAcl: jest.fn(),
+}));
+
 // The test driver supplies native runner results; production never interprets YAML.
 describe('native verification boundary', () => {
     let f: ReturnType<typeof nativeVerificationFixture>;
