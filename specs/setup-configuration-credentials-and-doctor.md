@@ -2,7 +2,7 @@
 
 - Status: Implemented — automated architecture, UX, documentation, and coverage gates complete; controlled live GitHub permission-path evidence remains external
 - Date: 2026-09-11
-- Last updated: 2026-10-09
+- Last updated: 2026-10-24
 - Catalog capability ID: `setup-and-doctor`
 - Last verified: 2026-10-09 (PR #452 per-role override and native Metadata-response regressions; prior shared-session, resource-progress and repository-only Apply fixture evidence remains applicable; live GitHub path remains external)
 - Owners: Copilot maintainers
@@ -487,6 +487,79 @@ not stored. Workflow/provider credentials are requested separately, masked,
 validated before write, and represented thereafter only by name/status. Secret
 and Variable scopes are independent. The product MUST not expose values through
 plan objects, errors, command history suggestions, backups, or doctor output.
+
+### Credential health transport hardening (issue #682, 2026-10-24)
+
+**Observed defect:** generated health jobs put provider/PAT values in curl argv;
+Google also put the value in a query string. Shared self-hosted processes can
+inspect arguments independently of GitHub's log masking. This was observed in
+GeckoCV PR #21 and is present in both source workflow surfaces.
+
+**Required behavior:** health checks MUST retain their existing explicit input,
+requested-secret-only environment, read-only endpoints, job IDs and timeout.
+Each request MUST deliver its sensitive authentication header over stdin via
+curl's `--header @-`; neither raw nor Basic-encoded credentials may enter argv
+or URLs. Cursor retains Basic authentication, with encoding performed through
+stdin. Google uses the provider-supported `x-goog-api-key` header. Empty values
+and CR or LF MUST fail before HTTP. curl MUST disable user curlrc processing,
+require HTTPS, keep its 20-second limit and reject redirects before forwarding
+custom secret headers. A failed request MUST fail the job; PAT's second check
+MUST NOT run after its first check fails. No additional provider, request retry,
+permission, configuration option or inferred health dispatch is introduced.
+
+```text
+Explicit check flag -> requested Secret in job environment -> validate value
+  -> authentication headers over stdin -> bounded HTTPS request -> job status
+```
+
+Text equivalent: the operator selects a check, only its requested Secret enters
+that job, validation runs before HTTP, authentication travels on stdin and the
+bounded request determines the existing job status. The shell and runner remain
+trusted to hold the requested value in memory/environment; this does not add
+OS-level isolation between processes running as the same account.
+
+This is a transport correction in the distributed workflow adapter, independent
+of the frontend-neutral setup/doctor use cases, health ports and orchestration.
+The narrow Actions permission probe pins the exact reviewed packaged health
+workflow digest. Its pin is updated with this asset; an unexpected remote file
+still uses the existing disabled-job override instead of trusted direct dispatch.
+No durable state or public schema changes. Existing installations must update
+the managed health workflow as part of a reviewed setup upgrade; backup and
+preservation rules remain unchanged. A source merge does not update copied
+consumer files. Rollback restores the preceding workflow and its old behavior.
+
+The user-visible job names and default-disabled inputs remain unchanged.
+Representative GitHub states are `Verify PAT: queued`, `Verify PAT: in progress`
+and a successful check. Validation details contain only `Required credential is
+missing.` or `Credential contains invalid line breaks.`; failed HTTP requests
+retain curl's bounded failure status and never print a response body or key.
+There are no additional issue comments, notifications or persisted secret files.
+The operator corrects the named Secret, or reviews a changed canonical provider
+endpoint when a redirect is rejected, before explicitly retrying the check.
+
+**Additional test floor: 82 distinct cases**, independent of existing budgets:
+80 black-box shell cases (8 credential types × 2 source workflows × valid,
+missing, CR, LF and HTTP-failure states), plus 2 structural opt-in/permission/
+secret-scope cases. A fake curl records actual argv and stdin without real
+credentials or network. Valid cases assert authentication arrives, both raw and
+Basic values are absent from argv, HTTPS/time/redirect bounds remain, output is
+value-free and PAT checks both endpoints. Negative cases assert zero HTTP for
+invalid input and one request/no retry on transport failure. Shell cases run on
+Unix; Windows retains both structural cases because canonical health execution
+is on Ubuntu. Existing repository coverage and native platform gates remain.
+
+Acceptance/traceability: argv/URL confidentiality, header authenticity and request
+bounds map to `credential_health_transport.test.ts` positive cases; validation
+and failure propagation map to its negative cases; opt-in and privilege bounds
+map to its structural cases. The existing workflow validator, setup/doctor
+adapter tests and catalog checks retain their boundaries. Documentation lives in
+`docs/security-operations/security/credentials.mdx`. Definition of Done includes
+these 82 cases, generated/source workflow parity, build/lint/type/docs/spec gates,
+consumer adoption and current-head review without unresolved findings.
+
+Primary references: [curl header stdin and redirect behavior](https://github.com/curl/curl/blob/master/docs/cmdline-opts/header.md)
+and [Gemini header authentication](https://ai.google.dev/gemini-api/docs/api-key).
+
 
 ## 12. Observability and operational UX
 

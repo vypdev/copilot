@@ -186,6 +186,12 @@ Use a frozen pnpm lockfile when validating dependency changes. Security override
 are constrained to affected version ranges; the Handlebars, source-map-js and
 brace-expansion patches retain their existing major versions.
 
+The runtime lockfile resolves the Actions SDK HTTP clients to `undici` 6.29.1,
+which fixes [GHSA-xjj6-f33q-929c](https://github.com/advisories/GHSA-xjj6-f33q-929c).
+Keep the production audit gate enabled and regenerate the bundled Action and CLI
+after changing this dependency; a source-only lockfile update does not replace
+the embedded HTTP client.
+
 The legacy `@istanbuljs/load-nyc-config` edge uses `js-yaml` 4.3.2, whose `load`
 API is compatible with that loader. This removes the old argparse/sprintf-js
 chain from development tooling rather than claiming a patched sprintf-js release

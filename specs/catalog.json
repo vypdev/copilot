@@ -754,7 +754,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-20",
+      "lastVerified": "2026-10-24",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
@@ -1078,7 +1078,8 @@
         "src/application/usecases/steps/commit/bugbot/__tests__/commit_verification_workspace.test.ts",
         "src/tooling/__tests__/verification_runtime_guidance.test.ts",
         "src/infrastructure/__tests__/verification_setup_configuration.test.ts",
-        "src/domain/__tests__/copilot_comment_workflow.test.ts"
+        "src/domain/__tests__/copilot_comment_workflow.test.ts",
+        "src/tooling/__tests__/credential_health_transport.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -2217,7 +2218,7 @@
       "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-17",
+      "lastVerified": "2026-10-24",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"
@@ -2302,6 +2303,7 @@
         "src/infrastructure/agents/__tests__/windows_executable_acl_policy.test.ts",
         "src/infrastructure/agents/__tests__/agent_runtime_manifest.test.ts",
         "src/infrastructure/agents/__tests__/agent_official_installer.test.ts",
+        "src/infrastructure/agents/__tests__/agent_installer_recovery.test.ts",
         "src/infrastructure/agents/__tests__/agent_official_version.test.ts",
         "src/tooling/__tests__/verify_agent_clis.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
