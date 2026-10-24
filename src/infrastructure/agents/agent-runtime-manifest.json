@@ -1,5 +1,5 @@
 {
-  "revision": "2026-10-02.standalone.1",
+  "revision": "2026-10-24.standalone.2",
   "providers": {
     "codex": {
       "executable": "codex",
@@ -7,7 +7,17 @@
       "legacyNpmPackage": "@openai/codex",
       "installation": {
         "unixScript": "https://chatgpt.com/codex/install.sh",
-        "windowsScript": "https://chatgpt.com/codex/install.ps1"
+        "windowsScript": "https://chatgpt.com/codex/install.ps1",
+        "scriptRecovery": {
+          "unix": {
+            "url": "https://raw.githubusercontent.com/openai/codex/b412ff32c417f855c2b2d1581b77058eed87c84b/scripts/install/install.sh",
+            "sha256": "150e3cf675682efeaac115aa3747add3f27887896d04ce6d0b56478d8b428bf6"
+          },
+          "windows": {
+            "url": "https://raw.githubusercontent.com/openai/codex/b412ff32c417f855c2b2d1581b77058eed87c84b/scripts/install/install.ps1",
+            "sha256": "3522b77d4485eac014e70fa946787c95fad3874a4e9047557c1e044eb268d13e"
+          }
+        }
       }
     },
     "opencode": {

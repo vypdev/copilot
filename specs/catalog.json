@@ -2217,7 +2217,7 @@
       "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-17",
+      "lastVerified": "2026-10-24",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"
@@ -2302,6 +2302,7 @@
         "src/infrastructure/agents/__tests__/windows_executable_acl_policy.test.ts",
         "src/infrastructure/agents/__tests__/agent_runtime_manifest.test.ts",
         "src/infrastructure/agents/__tests__/agent_official_installer.test.ts",
+        "src/infrastructure/agents/__tests__/agent_installer_recovery.test.ts",
         "src/infrastructure/agents/__tests__/agent_official_version.test.ts",
         "src/tooling/__tests__/verify_agent_clis.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts",

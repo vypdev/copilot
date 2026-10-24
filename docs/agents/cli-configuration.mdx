@@ -145,3 +145,9 @@ The run fails before the agent starts when any of the following is invalid:
 - missing or empty post-install runtime identity.
 
 This behavior is intentional: a run must never silently use another provider, another model, a repository-local default, or an unverified credential.
+
+Codex provisioning can recover one failed installer download using a reviewed,
+checksum-verified copy from OpenAI's official repository. This adds no setup
+option and does not pin the CLI version or change your provider/model. See
+[CLI provisioning](../security-operations/operations/cli-provisioning) for the
+trust boundary, failure diagnostics and upgrade procedure.

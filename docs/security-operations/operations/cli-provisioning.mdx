@@ -16,6 +16,17 @@ The Action first checks authentication for every active agent role. A required m
 | OpenCode | `opencode` | [OpenCode installer](https://opencode.ai/docs) on Unix; official GitHub release archive on Windows |
 | Cursor | `agent` | [Cursor CLI installer](https://cursor.com/docs/cli/installation) on Unix; official Cursor archive described by its Windows installer |
 
+If the Codex script download fails, the Action tries one reviewed recovery copy
+from the official `openai/codex` repository at a fixed commit. It checks that
+copy's SHA-256 before running it. The Unix and Windows scripts have separate
+digests; their downloads retain the same size, time and credential isolation
+limits. This pins the recovery installer code, while that official installer
+still selects the current stable CLI. A second download failure or checksum
+mismatch stops provisioning and removes the private files. Script execution or
+executable validation failures do not trigger another source or provider.
+Recovery URLs and digests are maintained in Copilot's manifest and cannot be
+changed through workflow inputs, repository variables or environment values.
+
 The six distributed agent workflows do not run `actions/setup-node`, pnpm, or npm. GitHub Actions supplies the Node runtime for the bundled JavaScript Action. Development, CI, documentation, and package workflows still use their own Node toolchain. The provider installers receive a minimal environment without GitHub tokens or model credentials. The Action does not run unselected installers or send prompts through an installer.
 
 Installer downloads and Unix shells use fixed system executable paths. Installer children receive a system-only `PATH`, so a workflow-added directory cannot replace `curl`, `sh`, `bash`, or a helper called by an official installer. On Windows, the Action validates and captures the runner's system directory at startup, including a Windows installation on another drive. Later environment changes cannot redirect `taskkill.exe`, PowerShell, curl, or the installer PATH.
@@ -52,3 +63,14 @@ Map the selected provider credential only on the Copilot Action step. The Action
 From the repository root, `node scripts/verify-agent-clis.cjs` checks executable availability, help, version, and sanitized credential state. A help or version check does not send a model request. On Windows it validates native binaries or safely resolves an existing npm shim without invoking `cmd.exe`.
 
 General Windows runtime fixtures retain ACL, private-artifact cleanup and cancellation checks. Codex integration on Windows services is unsupported; passing those fixtures does not change that support decision. Do not use a credential-bearing test dispatch without authorization. See [Agent CLI runners](/security-operations/operations/cli-runners) and [Runtime selection](/agents/runtime-selection).
+
+When an older Copilot version fails with `official-download-exit-22` during an
+official endpoint outage, upgrade the workflow Action/reusable-workflow refs to
+a reviewed release containing installer recovery, then rerun the failed job.
+A merge into Copilot's `develop` branch does not change a consumer's stable
+version or `@v3` until a release is published. If recovery reports
+`official-download-checksum` or `official-download-recovery-source`, keep the
+operation blocked and inspect the reviewed manifest and official source; do not
+replace the URL with an arbitrary mirror or disable integrity checks. An
+already provisioned compatible explicit `agent-executable` is the existing
+alternative when both official download locations are unavailable.

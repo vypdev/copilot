@@ -2,7 +2,7 @@
 
 - Status: In progress for official standalone agent installation
 - Date: 2026-09-11
-- Last updated: 2026-10-12
+- Last updated: 2026-10-24
 - Catalog capability ID: `agent-runtime`
 - Last verified: 2026-09-24
 - Owners: Copilot maintainers
@@ -1324,3 +1324,90 @@ other platforms and a canceled run cannot substitute. Existing workflow and
 platform checks remain the acceptance artifacts; this configuration amendment
 adds no agent capability, user input or distinct application test case. See
 docs/development/testing.mdx for contributor operation.
+
+### Codex installer endpoint recovery (issue #680, 2026-10-24)
+
+**Observed incident:** the documented `chatgpt.com/codex/install.sh` endpoint
+returned HTTP 404 before the agent started. This blocked both issue branch
+creation and native PR review. Installer execution and agent execution had not
+occurred; retrying the same source did not repair the outage.
+
+**Intentional contract:** only a failed primary Codex script download MAY use
+one recovery source. The infrastructure manifest MUST name the official
+`openai/codex` script at immutable commit
+`b412ff32c417f855c2b2d1581b77058eed87c84b`, with a separate SHA-256 for the Unix
+and Windows bytes. Recovery MUST validate the official repository, full commit,
+platform suffix and digest format before downloading; verify the downloaded
+bytes before starting a shell; and fail closed on a second download or integrity
+failure. This is a pin of reviewed installer code, not of the installed CLI:
+the official script still selects its current stable runtime. Historical
+`reviewedVersion` remains a smoke baseline.
+
+```text
+Primary Codex script download
+  -> success -> run once -> validate private executable -> normal agent task
+  -> failure -> fixed official recovery download -> SHA-256 verification
+                  -> success -> run once -> validate private executable
+                  -> failure -> stop and remove the private installation
+```
+
+The textual flow is: try the primary source, recover once only if its download
+fails, verify recovery bytes before execution, then use the existing private
+installation and executable validation. A script execution failure, invalid
+installed executable, or already-started task MUST NOT select recovery or a
+second provider. Cursor and OpenCode keep their existing sources.
+
+The recovery stays inside the installer adapter; application provisioning,
+role/model selection, semantic ports, authentication, and presentation keep
+their existing contracts. The infrastructure-only manifest has no Action input,
+CLI flag, repository variable, environment override or user-supplied URL. Each
+transfer retains HTTPS-only redirects, 1 MiB script bounds, 120-second curl and
+130-second process limits. The script still has a 300-second execution limit.
+Both attempts use the same private HOME and credential-free, system-only PATH.
+Partial files and the private root are removed on failure; runner installations,
+profiles and persistent PATH remain untouched.
+
+**Operator UX and recovery:** no additional issue comment or notification is
+created by source recovery. A successful recovery continues normal provisioning
+and review. A blocked operation retains its existing sanitized configuration
+error and stage diagnostic, such as `official-download-checksum` or
+`official-download-exit-22`; raw stderr, credentials and private paths remain
+excluded. Representative existing failure text is:
+
+> The codex runtime is unavailable or its official installation failed.
+
+The operator inspects the run's provisioning stage, updates to a reviewed
+Copilot release containing this recovery, then reruns the failed operation.
+Merging source into `develop` alone does not update consumers of stable tags.
+When both official sources are unavailable or integrity fails, the operation
+remains blocked before branch creation, review completion or publication; a
+pre-existing compatible explicit executable remains the documented alternative.
+Cancellation, replay and cleanup follow ordinary provisioning semantics. No
+new durable state or migration is introduced. Rollback selects the preceding
+Copilot release and restores its previous source behavior.
+
+**Additional numeric budget:** at least **13 distinct deterministic cases**,
+separate from existing budgets: one successful credential-free recovery; one
+checksum rejection; three failed/empty/oversized recovery transfers; five invalid
+source/digest metadata cases; one installer execution failure without recovery;
+and two other providers without recovery. Existing primary-success, oversized
+primary, runtime selection, ACL/link validation and provisioning tests remain.
+The recovery suite executes on native Linux, macOS and Windows CI; actual
+network-backed private installation plus version/headless-help validation is
+required in smoke evidence. Repository coverage thresholds remain in force.
+
+| Requirement / observable acceptance | Implementation / evidence | Documentation |
+|---|---|---|
+| Failed primary download can install the official stable Codex runtime once | `agent_installer_recovery.test.ts`, actual private-install smoke | CLI provisioning |
+| Changed bytes, nonofficial/unversioned sources and wrong-platform scripts never execute | recovery metadata/digest cases and existing private-root/link/ACL suites | CLI provisioning trust boundary |
+| Execution failure does not switch source/provider or restart a task | execution-failure and provider-isolation cases; existing provisioner tests | CLI configuration |
+| Upgrade is explicit; stable tags do not follow `develop` automatically | catalog/manifest and release ref evidence | CLI provisioning upgrade guidance |
+
+Definition of Done for this extension: the 13-case floor, actual private-install
+smoke, native platform checks, full current-head review without unresolved
+findings, existing build/architecture/documentation/specification checks and
+repository coverage gates pass before merge. Publication is a separate
+maintainer-authorized operation.
+
+Primary source: [official immutable Unix installer](https://github.com/openai/codex/blob/b412ff32c417f855c2b2d1581b77058eed87c84b/scripts/install/install.sh)
+and [Windows installer](https://github.com/openai/codex/blob/b412ff32c417f855c2b2d1581b77058eed87c84b/scripts/install/install.ps1).
