@@ -754,7 +754,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-20",
+      "lastVerified": "2026-10-24",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
@@ -1078,7 +1078,8 @@
         "src/application/usecases/steps/commit/bugbot/__tests__/commit_verification_workspace.test.ts",
         "src/tooling/__tests__/verification_runtime_guidance.test.ts",
         "src/infrastructure/__tests__/verification_setup_configuration.test.ts",
-        "src/domain/__tests__/copilot_comment_workflow.test.ts"
+        "src/domain/__tests__/copilot_comment_workflow.test.ts",
+        "src/tooling/__tests__/credential_health_transport.test.ts"
       ],
       "documentation": [
         "README.md",
