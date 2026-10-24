@@ -31,8 +31,8 @@ const ISOLATED_REPOWISE_VENV_NAME = 'repowise-venv-${{ github.run_id }}-${{ gith
 const ISOLATED_REPOWISE_REPORT_NAME = 'repowise-report-${{ github.run_id }}-${{ github.run_attempt }}-code-health';
 const CRLF_WHITESPACE = 'core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol';
 const PUSH_BRANCH_CONCURRENCY_GROUP = 'copilot-push-${{ github.repository }}-${{ github.ref_name }}';
-const PULL_REQUEST_ANALYSIS_CONCURRENCY_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis';
-const PULL_REQUEST_REVIEW_STATE_CONCURRENCY_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-review-state';
+const PULL_REQUEST_ANALYSIS_CONCURRENCY_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.number }}-analysis';
+const PULL_REQUEST_REVIEW_STATE_CONCURRENCY_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.number }}-review-state';
 const BUGBOT_CONCURRENCY_JOBS = Object.freeze({
   'copilot_commit.yml': Object.freeze({
     jobId: 'copilot-commits',
@@ -703,7 +703,7 @@ function assertReviewConcurrency(relativeFile, workflow) {
     }
     if (job.concurrency?.group !== group
       || job.concurrency?.['cancel-in-progress'] !== cancelInProgress) {
-      throw new Error(`${relativeFile} job ${jobId} must use its workflow- and event-specific branch group, avoid cross-canceling another event owner, and cancel superseded runs within its lane.`);
+      throw new Error(`${relativeFile} job ${jobId} must use its workflow- and event-specific group (PR number for pull requests), avoid cross-canceling another event owner, and cancel superseded runs within its lane.`);
     }
   }
 }

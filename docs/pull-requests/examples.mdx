@@ -24,7 +24,7 @@ jobs:
     name: Copilot - Pull Request
     runs-on: ubuntu-latest
     concurrency:
-      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis
+      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.number }}-analysis
       cancel-in-progress: true
     steps:
       - name: Checkout Repository
@@ -78,7 +78,7 @@ jobs:
     name: Copilot - Pull Request Review State
     runs-on: ubuntu-latest
     concurrency:
-      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-review-state
+      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.number }}-review-state
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@v5

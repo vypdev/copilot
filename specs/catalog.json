@@ -440,14 +440,17 @@
       "status": "implemented",
       "scope": "Reconcile review snapshots, findings, threads, comments, and check conclusions",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-21",
+      "lastVerified": "2026-10-24",
       "specs": [
         "specs/bugbot-review-state-reconciliation.md"
       ],
       "workflows": [
         ".github/workflows/copilot_commit.yml",
         ".github/workflows/copilot_pull_request.yml",
-        ".github/workflows/copilot_pull_request_comment.yml"
+        ".github/workflows/copilot_pull_request_comment.yml",
+        ".github/workflows/copilot_pull_request_review_state.yml",
+        "setup/workflows/copilot_pull_request.yml",
+        "setup/workflows/copilot_pull_request_review_state.yml"
       ],
       "entrypoints": [
         "src/application/usecases/steps/commit/detect_potential_problems_workflow.ts",
@@ -481,7 +484,8 @@
         "src/data/repository/pull_request/pull_request_review_error_metadata.ts",
         "src/domain/bugbot/finding.ts",
         "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts",
-        "src/application/usecases/steps/commit/bugbot/publish_findings_use_case.ts"
+        "src/application/usecases/steps/commit/bugbot/publish_findings_use_case.ts",
+        "scripts/validate-workflow-contract.cjs"
       ],
       "tests": [
         "src/domain/bugbot/__tests__/review_state.test.ts",

@@ -91,7 +91,7 @@ jobs:
     name: Copilot - Pull Request
     runs-on: ubuntu-latest
     concurrency:
-      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis
+      group: copilot-pr-${{ github.repository }}-${{ github.event.pull_request.number }}-analysis
       cancel-in-progress: true
     steps:
       - name: Checkout Repository
@@ -120,11 +120,20 @@ jobs:
 Install the shipped `copilot_pull_request_review_state.yml` alongside it. That
 workflow listens only to `pull_request_review`, uses the fixed
 `Copilot - Pull Request Review State` workflow/job name, and uses the same
-branch key with a `review-state` suffix.
+PR-number key with a `review-state` suffix.
+
+Existing installations retain their workflow files when the `@v3` action moves.
+To adopt PR-number groups, use a released CLI containing this fix and review
+`copilot setup --web --update-workflows`, or apply the two group expressions in a
+reviewed maintenance PR. Update analysis and review-state together and retain
+project-specific setup/release customizations. No new Variable, Secret or
+permission is required. Current-head checks and review remain the merge gate.
 
 - **`token`** is required (use a fine-grained PAT with repo and project permissions; see [Authentication](/authentication)).
 - **`project-ids`** is optional but needed if you want PRs linked to GitHub Project boards and moved to columns (e.g. "In Progress").
 - The conditional fetch downloads only the two commit objects needed by the incremental reviewer. Keep it when `synchronize` is enabled; a full-history checkout is not required.
+- Different PR numbers use independent groups even when they share a head branch
+  and target different bases. Repeated events retain the same PR/lane identity.
 - Keep both PR-specific concurrency groups and cancellation policies exactly as
   shown. A newer code/lifecycle event cancels only obsolete analysis; a newer
   review event cancels only obsolete review-state observation. The Commit
