@@ -488,13 +488,48 @@ readiness. `unknown` is a system failure and fails the review regardless of
 
 ### 6.5 Duplicate, stale, and out-of-order behavior
 
+#### PR identity isolation — issue #687
+
+The former head-branch key collided for simultaneous PRs to different bases.
+PR number is now the fixed, non-configurable owner within each PR lane; check
+names, permissions, event filters and application head/base guards stay in force.
+No new domain service, persisted state or user setting is needed: workflow
+adapters declare the identity and the executable workflow contract enforces it.
+
+| Illustrative events | Native groups | Visible effect |
+|---|---|---|
+| PR 21 and PR 22, both from master | Separate analysis and observer groups per PR | Each PR retains its own checks |
+| Two revisions of PR 21 | Same PR/lane group | Only its superseded run may be canceled |
+| PR 21 analysis and PR 21 review event | Distinct lane suffixes | Observation cannot cancel analysis |
+
+Text equivalent: one branch may own multiple PRs; each PR owns independent
+analysis and review-state lanes. A later revision replaces only work within the
+same PR and lane. Existing pending, complete, failed and superseded check copy
+and fixed check names remain the user UI; this change adds no comment surface.
+On rollout an old branch-key run can overlap a new PR-key run, so freshness and
+idempotency guards remain required. Canceled old runs never certify readiness;
+inspect the exact current-head result or rerun only the affected PR workflow.
+Existing consumers update both workflow keys together through reviewed PRs.
+Rollback restores the old templates but does not undo findings or reviews.
+
+The additional numeric budget is **6 distinct contract cases**: two behavioral
+replays (shipped/setup) exercise shared-head separation, stable PR identity and
+lane separation; four mutants (two workflows × two directories) reject the old
+branch key. All cases execute locally without models, timers or provider calls.
+Existing coverage and freshness/security budgets remain unchanged. Acceptance
+requires all six cases, workflow validation, specification validation and docs
+checks, plus independent current-head review with no pending findings.
+
+
 - A duplicate run for the same head and same provider state produces the same
   projection digest. Bodies that already contain that digest MUST NOT be
   updated again.
 - A run whose analyzed head is no longer the PR head MUST return superseded and
   MUST NOT mutate findings or current-state projections.
 - Shipped Commit, Pull Request analysis, and Pull Request review-state workflows
-  MUST use distinct branch-scoped concurrency groups. Pull Request code/lifecycle
+  MUST use distinct owner-scoped concurrency groups. Commit uses its repository
+  and branch; both PR workflows use their repository and PR number, so two PRs
+  sharing one head branch MUST NOT cancel each other. Pull Request code/lifecycle
   and review-state events MUST use separate lane suffixes and dedicated workflow
   files with fixed job names. Each uses cancel-in-progress semantics only
   for its own replaceable revisions, so review-state observation cannot cancel
@@ -1307,7 +1342,7 @@ examples should reuse the same fixtures as presentation tests where practical.
     superseded and does not update current-state surfaces.
 16. Given cancellation after one durable mutation, then the last verified card
     remains truthful and the next run repairs the discovered drift.
-17. Given duplicate same-head workflows, then branch-scoped workflow concurrency and
+17. Given duplicate same-PR workflows, then PR-scoped workflow concurrency and
     application idempotency prevent duplicate reviews/comments.
 18. Given a maintainer, external automation, or Copilot body update emits
     `pull_request: edited`, then the supplied PR workflow starts no run and the
@@ -1396,7 +1431,7 @@ examples should reuse the same fixtures as presentation tests where practical.
 | Safe resolution/reopen order | reconciliation plan/apply use case | every partial mutation boundary | How it works, Failure scenarios |
 | Human dismissal precedence | lifecycle policy + resolver adapter | bot/human/unknown resolver matrix | Concepts, Detection |
 | Freshness and concurrency | head guards + workflow contract | stale, duplicate, canceled, race cases | Workflow setup |
-| Review ownership and metadata non-preemption | distinct push/PR branch groups + exact-head push preflight + conditional PR cancellation | active/setup workflow parser, cross-group negative fixtures, ownership policy matrix, push-shaped detection integration, PR #363/#367 live evidence | Workflow setup, Configuration, How it works |
+| Review ownership and metadata non-preemption | distinct push-branch/PR-number lane groups + exact-head push preflight + conditional PR cancellation | active/setup workflow parser, cross-group negative fixtures, ownership policy matrix, push-shaped detection integration, PR #363/#367 live evidence | Workflow setup, Configuration, How it works |
 | Metadata/review publication ownership | result-publication mode + telemetry/evidence policies | metadata generic-comment negative, outcome matrix, completion integration, PR #363 latest-by-name/noise replay | Detection, Workflow setup, How it works, Troubleshooting |
 | Canonical Result evidence | discriminated telemetry-set and finding-state projections + completion/lifecycle/status/summary/Check policies | complete aggregation, malformed/duplicate telemetry siblings, required-outcome absence, missing/extra key, numeric limits, overflow, cross-surface fail-closed cases | Detection, Observability, Comment commands, Failure scenarios |
 | Coherent final snapshot | snapshot loader + explicit surface completeness | before/after head, head-change, missing-head, per-surface failure, shared issue/PR read cases | How it works, Failure scenarios |

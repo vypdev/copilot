@@ -234,7 +234,7 @@ describe('workflow contract validator', () => {
     expect(() => assertQueueBudget(90, 90)).not.toThrow();
   });
 
-  it('serializes each branch event owner without cross-canceling the other workflow', () => {
+  it('scopes replaceable event lanes to their branch or PR owner', () => {
     for (const directory of ['.github/workflows', 'setup/workflows']) {
       for (const manifest of QUEUE_WORKFLOW_MANIFEST) {
         const file = path.join(process.cwd(), directory, manifest.file);
@@ -245,7 +245,7 @@ describe('workflow contract validator', () => {
         if (['copilot_commit.yml', 'copilot_pull_request.yml', 'copilot_pull_request_review_state.yml'].includes(manifest.file)) {
           const expectedGroup = manifest.file === 'copilot_commit.yml'
             ? 'copilot-push-${{ github.repository }}-${{ github.ref_name }}'
-            : `copilot-pr-${'${{ github.repository }}'}-${'${{ github.event.pull_request.head.ref || github.ref_name }}'}-${manifest.file === 'copilot_pull_request.yml' ? 'analysis' : 'review-state'}`;
+            : `copilot-pr-${'${{ github.repository }}'}-${'${{ github.event.pull_request.number }}'}-${manifest.file === 'copilot_pull_request.yml' ? 'analysis' : 'review-state'}`;
           expect(workflow.jobs[manifest.jobId].concurrency).toEqual({
             group: expectedGroup,
             'cancel-in-progress': true,
@@ -256,6 +256,36 @@ describe('workflow contract validator', () => {
         expect(() => validateWorkflow(file, workflow)).not.toThrow();
       }
     }
+  });
+
+  it.each(['.github/workflows', 'setup/workflows'])(
+    'isolates two PRs on the same head branch while retaining stable independent lanes in %s',
+    directory => {
+      const render = (file: string, jobId: string, pullNumber: number, headRef = 'master') => {
+        const workflow = yaml.load(readFileSync(path.join(process.cwd(), directory, file), 'utf8')) as MutationWorkflow;
+        return workflow.jobs[jobId].concurrency.group
+          .replace('${{ github.repository }}', 'example/repository')
+          .replace('${{ github.event.pull_request.number }}', String(pullNumber))
+          .replace('${{ github.event.pull_request.head.ref || github.ref_name }}', headRef);
+      };
+      const analysis = (number: number, headRef?: string) => render('copilot_pull_request.yml', 'copilot-pull-requests', number, headRef);
+      const observer = (number: number, headRef?: string) => render('copilot_pull_request_review_state.yml', 'copilot-pull-request-review-state', number, headRef);
+      expect(analysis(21)).not.toBe(analysis(22));
+      expect(observer(21)).not.toBe(observer(22));
+      expect(analysis(21)).toBe(analysis(21, 'renamed-head'));
+      expect(observer(21)).toBe(observer(21, 'renamed-head'));
+      expect(analysis(21)).not.toBe(observer(21));
+    },
+  );
+
+  it.each(['.github/workflows', 'setup/workflows'].flatMap(directory => [
+    [directory, 'copilot_pull_request.yml', 'copilot-pull-requests', 'analysis'],
+    [directory, 'copilot_pull_request_review_state.yml', 'copilot-pull-request-review-state', 'review-state'],
+  ]))('rejects cross-PR branch collisions in %s/%s', (directory, fileName, jobId, lane) => {
+    const file = path.join(process.cwd(), directory, fileName);
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    workflow.jobs[jobId].concurrency.group = `copilot-pr-${'${{ github.repository }}'}-${'${{ github.event.pull_request.head.ref || github.ref_name }}'}-${lane}`;
+    expect(() => validateWorkflow(file, workflow)).toThrow('PR number');
   });
 
   it.each(['.github/workflows', 'setup/workflows'].flatMap(directory => [
@@ -275,7 +305,7 @@ describe('workflow contract validator', () => {
   it.each([
     ['copilot_commit.yml', 'copilot-commits', 'copilot-pr-${{ github.repository }}-${{ github.ref_name }}'],
     ['copilot_pull_request.yml', 'copilot-pull-requests', 'copilot-push-${{ github.repository }}-${{ github.ref_name }}'],
-    ['copilot_pull_request_review_state.yml', 'copilot-pull-request-review-state', 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}-analysis'],
+    ['copilot_pull_request_review_state.yml', 'copilot-pull-request-review-state', 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.number }}-analysis'],
   ])(
     'rejects a cross-workflow concurrency group in %s',
     (workflowFile, jobId, sharedGroup) => {
@@ -293,7 +323,7 @@ describe('workflow contract validator', () => {
       const file = path.join(process.cwd(), directory, 'copilot_pull_request.yml');
       const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
       workflow.jobs['copilot-pull-requests'].concurrency.group =
-        'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}';
+        'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.number }}';
 
       expect(() => validateWorkflow(file, workflow)).toThrow('avoid cross-canceling another event owner');
     },
