@@ -100913,7 +100913,7 @@ const MAX_WORKFLOW_PAGES = 5;
 const MAX_WORKFLOW_FILE_CHECKS = 64;
 // Hash of the packaged credential-health workflow: every job is guarded by a
 // false-by-default input. A different remote file is never dispatched directly.
-const TRUSTED_HEALTH_WORKFLOW_SHA256 = '7fa36bf72d144df6fe2ccc45b805ad442187aa6979dfda71446a54f607b18d61';
+const TRUSTED_HEALTH_WORKFLOW_SHA256 = '5f093b2c03bef389ccea68ef43bec3577cb1bfddc038da1884a146088f39a4ec';
 /** Dispatches a disabled-job branch override of a workflow already registered on default. */
 async function probeActions(context) {
     const preparationHttp = context.operatorHttp ?? context.http;
