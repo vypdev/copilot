@@ -20,7 +20,7 @@ const MAX_ARCHIVE_BYTES = 268_435_456;
 
 export type OfficialAgentInstallationStage = 'private-root' | 'download' | 'installer-script' | 'installed-file';
 export type OfficialAgentInstallationReason = 'hash-module' | 'network' | 'missing-command' | 'missing-file'
-    | PrivateInstalledAgentFailureReason | 'unknown';
+    | PrivateInstalledAgentFailureReason | 'recovery-source' | 'checksum' | 'unknown';
 
 export class OfficialAgentInstallationError extends Error {
     constructor(
@@ -142,13 +142,41 @@ function downloadScript(url: string, destination: string, environment: NodeJS.Pr
     return contents.toString('utf8');
 }
 
-function runScript(provider: AgentProvider, root: string, environment: NodeJS.ProcessEnv): string {
+/** Recovery is fixed in the reviewed manifest, never supplied by a repository or environment. */
+function downloadInstallerScript(provider: AgentProvider, script: string, environment: NodeJS.ProcessEnv): void {
     const source = getAgentRuntimeManifestEntry(provider).installation;
     const windows = process.platform === 'win32';
     const url = windows ? source.windowsScript : source.unixScript;
     if (!url) throw new Error(`No official ${provider} installer supports this platform.`);
+    try {
+        downloadScript(url, script, environment);
+        return;
+    } catch (error) {
+        if (provider !== 'codex' || !(error instanceof OfficialAgentInstallationError) || error.stage !== 'download') {
+            throw error;
+        }
+        const recovery = windows ? source.scriptRecovery?.windows : source.scriptRecovery?.unix;
+        if (!recovery) throw error;
+        const suffix = windows ? 'ps1' : 'sh';
+        const officialSource = new RegExp(`^https://raw\\.githubusercontent\\.com/openai/codex/[a-f0-9]{40}/scripts/install/install\\.${suffix}$`, 'u');
+        if (!officialSource.test(recovery.url) || !/^[a-f0-9]{64}$/u.test(recovery.sha256)) {
+            throw new OfficialAgentInstallationError('download', 'Official installer recovery source is invalid.',
+                undefined, undefined, 'recovery-source');
+        }
+        // download() removes a partial primary transfer. This is the only recovery attempt.
+        downloadScript(recovery.url, script, environment);
+        if (createHash('sha256').update(readFileSync(script)).digest('hex') !== recovery.sha256) {
+            rmSync(script, { force: true });
+            throw new OfficialAgentInstallationError('download', 'Official installer recovery checksum did not match.',
+                undefined, undefined, 'checksum');
+        }
+    }
+}
+
+function runScript(provider: AgentProvider, root: string, environment: NodeJS.ProcessEnv): string {
+    const windows = process.platform === 'win32';
     const script = join(root, windows ? 'install.ps1' : 'install.sh');
-    downloadScript(url, script, environment);
+    downloadInstallerScript(provider, script, environment);
     if (windows) {
         const powershell = trustedWindowsSystemTool(join('WindowsPowerShell', 'v1.0', 'powershell.exe'));
         try {

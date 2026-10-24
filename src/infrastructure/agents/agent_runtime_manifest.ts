@@ -1,6 +1,11 @@
 import manifestJson from './agent-runtime-manifest.json';
 import type { AgentProvider } from '../../domain/agent';
 
+export interface OfficialInstallerRecoverySource {
+    readonly url: string;
+    readonly sha256: string;
+}
+
 export interface AgentRuntimeManifestEntry {
     readonly executable: string;
     readonly reviewedVersion: string;
@@ -9,6 +14,10 @@ export interface AgentRuntimeManifestEntry {
         readonly unixScript: string;
         readonly windowsScript?: string;
         readonly windowsReleaseApi?: string;
+        readonly scriptRecovery?: {
+            readonly unix: OfficialInstallerRecoverySource;
+            readonly windows: OfficialInstallerRecoverySource;
+        };
     };
 }
 

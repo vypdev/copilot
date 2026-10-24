@@ -4,12 +4,22 @@ import { getAgentRuntimeManifest, readAgentRuntimeVersion } from '../agent_runti
 describe('agent runtime manifest', () => {
     it('records official standalone sources for every provider without package-manager recipes', () => {
         const manifest = getAgentRuntimeManifest();
-        expect(manifest.revision).toBe('2026-10-02.standalone.1');
+        expect(manifest.revision).toBe('2026-10-24.standalone.2');
         expect(Object.fromEntries(Object.entries(manifest.providers).map(([provider, entry]) => [provider, entry.executable])))
             .toEqual(AGENT_EXECUTABLE_BASENAMES);
         expect(manifest.providers.codex.installation).toEqual({
             unixScript: 'https://chatgpt.com/codex/install.sh',
             windowsScript: 'https://chatgpt.com/codex/install.ps1',
+            scriptRecovery: {
+                unix: {
+                    url: 'https://raw.githubusercontent.com/openai/codex/b412ff32c417f855c2b2d1581b77058eed87c84b/scripts/install/install.sh',
+                    sha256: '150e3cf675682efeaac115aa3747add3f27887896d04ce6d0b56478d8b428bf6',
+                },
+                windows: {
+                    url: 'https://raw.githubusercontent.com/openai/codex/b412ff32c417f855c2b2d1581b77058eed87c84b/scripts/install/install.ps1',
+                    sha256: '3522b77d4485eac014e70fa946787c95fad3874a4e9047557c1e044eb268d13e',
+                },
+            },
         });
         expect(manifest.providers.opencode.installation).toEqual({
             unixScript: 'https://opencode.ai/install',

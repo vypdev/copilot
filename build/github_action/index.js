@@ -84828,14 +84828,41 @@ function downloadScript(url, destination, environment) {
     }
     return contents.toString('utf8');
 }
-function runScript(provider, root, environment) {
+/** Recovery is fixed in the reviewed manifest, never supplied by a repository or environment. */
+function downloadInstallerScript(provider, script, environment) {
     const source = (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)(provider).installation;
     const windows = process.platform === 'win32';
     const url = windows ? source.windowsScript : source.unixScript;
     if (!url)
         throw new Error(`No official ${provider} installer supports this platform.`);
+    try {
+        downloadScript(url, script, environment);
+        return;
+    }
+    catch (error) {
+        if (provider !== 'codex' || !(error instanceof OfficialAgentInstallationError) || error.stage !== 'download') {
+            throw error;
+        }
+        const recovery = windows ? source.scriptRecovery?.windows : source.scriptRecovery?.unix;
+        if (!recovery)
+            throw error;
+        const suffix = windows ? 'ps1' : 'sh';
+        const officialSource = new RegExp(`^https://raw\\.githubusercontent\\.com/openai/codex/[a-f0-9]{40}/scripts/install/install\\.${suffix}$`, 'u');
+        if (!officialSource.test(recovery.url) || !/^[a-f0-9]{64}$/u.test(recovery.sha256)) {
+            throw new OfficialAgentInstallationError('download', 'Official installer recovery source is invalid.', undefined, undefined, 'recovery-source');
+        }
+        // download() removes a partial primary transfer. This is the only recovery attempt.
+        downloadScript(recovery.url, script, environment);
+        if ((0, node_crypto_1.createHash)('sha256').update((0, node_fs_1.readFileSync)(script)).digest('hex') !== recovery.sha256) {
+            (0, node_fs_1.rmSync)(script, { force: true });
+            throw new OfficialAgentInstallationError('download', 'Official installer recovery checksum did not match.', undefined, undefined, 'checksum');
+        }
+    }
+}
+function runScript(provider, root, environment) {
+    const windows = process.platform === 'win32';
     const script = (0, node_path_1.join)(root, windows ? 'install.ps1' : 'install.sh');
-    downloadScript(url, script, environment);
+    downloadInstallerScript(provider, script, environment);
     if (windows) {
         const powershell = (0, agent_trusted_system_tools_1.trustedWindowsSystemTool)((0, node_path_1.join)('WindowsPowerShell', 'v1.0', 'powershell.exe'));
         try {
@@ -101380,7 +101407,7 @@ module.exports = JSON.parse('{"single":{"topLeft":"┌","top":"─","topRight":"
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"revision":"2026-10-02.standalone.1","providers":{"codex":{"executable":"codex","reviewedVersion":"codex-cli 0.156.1","legacyNpmPackage":"@openai/codex","installation":{"unixScript":"https://chatgpt.com/codex/install.sh","windowsScript":"https://chatgpt.com/codex/install.ps1"}},"opencode":{"executable":"opencode","reviewedVersion":"1.18.3","legacyNpmPackage":"opencode-ai","installation":{"unixScript":"https://opencode.ai/install","windowsReleaseApi":"https://api.github.com/repos/anomalyco/opencode/releases/latest"}},"cursor":{"executable":"agent","reviewedVersion":"2026.09.10-fd3934a","installation":{"unixScript":"https://cursor.com/install","windowsScript":"https://cursor.com/install?win32=true"}}}}');
+module.exports = JSON.parse('{"revision":"2026-10-24.standalone.2","providers":{"codex":{"executable":"codex","reviewedVersion":"codex-cli 0.156.1","legacyNpmPackage":"@openai/codex","installation":{"unixScript":"https://chatgpt.com/codex/install.sh","windowsScript":"https://chatgpt.com/codex/install.ps1","scriptRecovery":{"unix":{"url":"https://raw.githubusercontent.com/openai/codex/b412ff32c417f855c2b2d1581b77058eed87c84b/scripts/install/install.sh","sha256":"150e3cf675682efeaac115aa3747add3f27887896d04ce6d0b56478d8b428bf6"},"windows":{"url":"https://raw.githubusercontent.com/openai/codex/b412ff32c417f855c2b2d1581b77058eed87c84b/scripts/install/install.ps1","sha256":"3522b77d4485eac014e70fa946787c95fad3874a4e9047557c1e044eb268d13e"}}}},"opencode":{"executable":"opencode","reviewedVersion":"1.18.3","legacyNpmPackage":"opencode-ai","installation":{"unixScript":"https://opencode.ai/install","windowsReleaseApi":"https://api.github.com/repos/anomalyco/opencode/releases/latest"}},"cursor":{"executable":"agent","reviewedVersion":"2026.09.10-fd3934a","installation":{"unixScript":"https://cursor.com/install","windowsScript":"https://cursor.com/install?win32=true"}}}}');
 
 /***/ })
 

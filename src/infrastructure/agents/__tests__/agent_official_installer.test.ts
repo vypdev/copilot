@@ -107,7 +107,7 @@ describe('official agent installer boundaries', () => {
         expect(() => installOfficialAgentCli('codex')).toThrow('size limit');
         expect(root).not.toBe('');
         expect(existsSync(root)).toBe(false);
-        expect(execute).toHaveBeenCalledTimes(1);
+        expect(execute).toHaveBeenCalledTimes(2);
     });
 
     (process.platform === 'win32' ? it : it.skip)('rejects oversized release metadata before writing it', () => {
