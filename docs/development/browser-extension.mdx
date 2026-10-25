@@ -1,0 +1,149 @@
+---
+title: Browser extension foundation
+description: Build and verify the private Chrome, Firefox and Safari engineering foundation.
+---
+
+# Browser extension foundation
+
+H1 introduces a **private engineering package**, version 0.1.0. It builds three
+development artifacts and checks their contracts, permissions and architecture.
+The complete extension remains proposed: all 150 functions, the local control
+center, Action integration and shared setup are required by the owning
+[specifications](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension.md).
+This increment activates no GitHub controls, connections or settings UI.
+
+```text
+Locked install -> contracts and typecheck -> three target builds
+ -> architecture/package checks -> two clean rebuilds -> review the receipt
+```
+
+Contributors install locked dependencies, check the shared contract, build all
+targets and compare their deterministic receipts before opening a PR.
+
+## Build and verify
+
+Use Node 24 and the repository's pnpm 10.12.4. From the repository root:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm run typecheck:extension
+pnpm run build:extension
+pnpm run test:extension
+pnpm run validate:extension
+```
+
+`test:extension` runs Vitest with per-file coverage. `validate:extension` checks
+the root package/CI contract, parses the generated artifacts, builds twice in
+fresh temporary directories and compares their receipts with the current output.
+The root build, typecheck, lint and CI coverage flow include the extension
+gates. Plain `pnpm test` retains Jest and its existing argument forwarding; use
+`test:extension` for the separate suite. Existing Action/CLI/web and coverage gates
+continue to apply.
+
+Inspect one target's manifest or run a focused Vitest test while diagnosing a
+problem. Acceptance always builds and validates all three targets; there is no
+arbitrary output-path or partial-target CLI override.
+
+## Target artifacts and compatibility
+
+Generated outputs are under `extension/dist/chrome`, `extension/dist/firefox`
+and `extension/dist/safari`. Each contains exactly `manifest.json`,
+`background.js` and `content.js`. `extension/dist/receipt.json` records
+`development-build-only`, the Git revision, an input-tree SHA-256 and asset hashes.
+The tree hash distinguishes pending source edits from the committed revision.
+No timestamps, absolute source paths or secrets are included in the receipt.
+
+| Target | Chosen API floor | Development background | Identity |
+|---|---|---|---|
+| Chrome | 140 | MV3 module service worker | Development name; unpacked artifact |
+| Firefox | 140, including ESR | MV3 nonpersistent scripts | Reserved `.invalid` development add-on ID |
+| Safari | 18.2 on macOS 15.2+ | MV3 nonpersistent scripts | Development resources; no signed containing app yet |
+
+These are compatibility targets, **not results from loading the extension**.
+Real Chrome/Firefox/Safari extension-loaded evidence, including a Safari containing
+app, belongs to [H2, issue #703](https://github.com/vypdev/copilot/issues/703).
+Generic WebKit, VM execution, a ZIP or build success does not establish that proof.
+Store identities, signing, accounts and publication remain later release work.
+
+## Permissions and data
+
+All targets declare only `storage`, reserved for subsequent settings work and
+unused by H1. Static content registration matches HTTPS github.com, the top frame
+only, with isolated execution by the browser default. Incognito is declared
+unsupported. There is no API/loopback host grant, optional permission, toolbar or
+options link, remote code, credential, browser history or telemetry.
+
+The content entry evaluates a pure URL guard and stops. Protected account,
+authentication, token/settings, billing/security and repository administration
+paths are excluded, including encoded sensitive paths and ambiguous URLs.
+It installs no observers, sends no messages, changes no DOM and makes no requests.
+H2 must enforce private-context/session rules before adding connected behavior;
+manifests alone are not a general authorization boundary.
+
+The shared connection-manifest v1 validator accepts an already decoded value.
+It returns a closed result, copies/freeze-validates accepted data and follows the
+versioned JSON Schema. Workflow/capability patterns require a true string end,
+including rejecting a trailing newline. Raw duplicate-key JSON parsing, status
+and request decoding are later work. A valid `enabled: false` value does not
+establish a connection.
+
+## Architecture and contributor rules
+
+Runtime code lives in `extension/src`: pure `domain`, future `application` and
+semantic ports, future browser/GitHub/DOM `adapters`, `infrastructure` entrypoints,
+and future `presentation`. Empty future layers need no placeholder runtime code.
+The sole permitted root-source import is
+`src/domain/browser_extension_contract/index.ts`. Shared contracts remain pure;
+Node setup, provider SDKs and Action policy stay outside browser bundles.
+
+The TypeScript AST/import-resolution gate rejects dependency direction violations,
+external/dynamic imports, unresolved/escaping paths, cycles, impure domain globals
+and presentation authority. Negative fixtures run the same validator as real code.
+Manifest parsing and bundle inspection also reject undeclared assets, permission
+drift, remote imports and prohibited runtime primitives. H1's strict bundle
+allowlist must be deliberately reviewed with future features.
+
+Pure policies require 100% branch coverage; other new executable modules require
+95% statements and 90% branches per file. Executable modules stay at most 220
+lines. The 28 named H1 acceptance cases supplement the unchanged 803-case complete
+product floor. Matrix repetitions do not count as new behavior cases.
+
+## Failure and recovery
+
+| Result | Meaning | Next action | Retained state |
+|---|---|---|---|
+| Pending | Checks/build still run | Wait for the current command/CI | No accepted new set |
+| Rule failure | A file/manifest/bundle violates a gate | Correct its reported rule, then rerun | Source and previous complete output |
+| Partial build | A target failed before replacement | Fix that target, then rebuild all | No partial new set is advertised |
+| Stale receipt | Inputs/output changed since the last build | Run build, tests and validation again | Existing evidence remains explicitly stale |
+| Complete | Contracts, artifacts and clean rebuilds agree | Review the PR evidence | Build proof; browser/product gates remain open |
+
+Builds use an exclusive output lock and isolated staging; successful replacement
+removes stale assets. A failed target cleans its staging and retains the previous
+complete output with its original receipt. Concurrent invocations fail rather than
+overwriting each other. After an interrupted process, first confirm that no build
+is active, then inspect `extension/dist.lock` and `extension/dist.previous` before
+manually removing only the obsolete lock or restoring the previous complete set.
+If cleanup fails after replacement, the command explicitly reports that the new complete set is present and the previous backup remains; it does not report that replacement failed. A pre-existing backup is never discarded automatically. Rebuild and revalidate
+after recovery; do not treat retained old output as the latest build.
+
+Generated extension outputs are ignored and excluded from the root npm package.
+Reverting H1 requires no user-data migration or external rollback. Keep root
+verification gates when reverting the extension orchestration.
+
+See [issue #702](https://github.com/vypdev/copilot/issues/702), the
+[foundation SDD](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-foundation.md),
+and the [complete-product milestone](https://github.com/vypdev/copilot/milestone/1).
+PR evidence records the actual commands and hashes and leaves merge to maintainers.
+
+## Tooling and primary references
+
+The lockfile selects TypeScript 5.9.3, Vite 8.3.1 and Vitest/coverage-v8 5.0.5.
+Vitest's declared Node/Vite peer ranges include this toolchain; only development
+dependencies are added to the private package.
+See [Vitest requirements](https://vitest.dev/guide/),
+[Vite library builds](https://vite.dev/guide/build.html#library-mode),
+[extension background differences](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/background),
+[Firefox development metadata](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/browser_specific_settings),
+[isolated content execution](https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts),
+and [Safari version requirements](https://developer.apple.com/documentation/safariservices/optimizing-your-web-extension-for-safari).

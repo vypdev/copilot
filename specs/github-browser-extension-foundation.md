@@ -1,9 +1,9 @@
 # GitHub Browser Extension Engineering Foundation (H1)
 
-- Status: Draft
+- Status: H1 implemented for review; development-build evidence only; no browser/product acceptance
 - Date: 2026-10-25
 - Catalog capability ID: `github-browser-extension`
-- Last verified: not applicable; this is prospective
+- Last verified: 2026-10-25; H1 source/build/test evidence only, with final checks recorded in the PR
 - Owners: Copilot maintainers
 - Scope: Establish a private, independently versioned, reproducible three-target browser extension engineering foundation without claiming product features or browser-loading evidence.
 - Related issues/PRs: [Issue #702](https://github.com/vypdev/copilot/issues/702); complete product accepted in PR #699 at `b4b06be9e9431bf337729a42a355cbb27f5a419c`.
@@ -37,14 +37,14 @@ Contributors need a portable foundation before implementing the accepted extensi
 3. The connection manifest v1 schema and example exist under `specs/browser-extension/` and define the contract H1 validates.
 4. The five owning SDDs describe the complete product; the catalog records it as proposed and runtime-unimplemented.
 
-These are baseline facts from the supplied immutable catalog and issue evidence. Future package contents and framework execution are proposed, not current behavior.
+These describe the immutable design baseline before H1. H1 now supplies the private package, pure contract/guard, target generation and executable architecture/build gates. The complete product is still proposed; no actual browser-loading proof is claimed.
 
 ### 2.3 Evidence
 
 - Code/workflow/documentation references: the five owner SDDs, `specs/README.md`, `specs/_template.md`, `specs/browser-extension/manifest-v1.schema.json`, `specs/browser-extension/examples/manifest-v1.json`, and the supplied validated catalog at the stated revision.
 - Incidents or concrete examples: none supplied. The prior managed candidate attempts failed closed on table format and then repository-path validation; those failures establish publication constraints, not product behavior.
 - External primary sources: official compatibility documentation for the selected TypeScript, Vite, and Vitest versions must be consulted and recorded during implementation; no version compatibility claim is inferred here.
-- Unknowns: exact dependency versions selected after checking official compatibility documentation. This is an implementation verification detail, not a blocking product decision.
+- Selected versions: TypeScript 5.9.3, Vite 8.3.1, Vitest and coverage-v8 5.0.5, locked in the private workspace. Official requirements and platform references are linked in the contributor guide. Actual browser evidence remains outside H1.
 
 ### 2.4 Retrospective classification (as-built baselines only)
 
@@ -150,7 +150,7 @@ Duplicate invocation is deterministic and has no browser effect. Stale output is
 | Build output location | Package command output | Package-local generated output | Declared target outputs only | Ignored/generated; not root npm package |
 | Browser target | Build selection | Build all three targets | Chrome 140; Firefox 140/ESR; Safari 18.2/macOS 15.2 | Build invocation; no runtime user setting |
 
-The build must use TypeScript, Vite, and extension-specific Vitest versions selected and locked against official compatibility documentation. Configuration must reject undeclared targets and arbitrary output destinations that bypass cleanup/validation. No secrets, URLs, arbitrary code, published identity, or signing values are accepted. Recommended configuration builds all targets; a meaningful alternative is an explicitly selected single target for local diagnosis, while CI and acceptance build all three. Permission limits and content inertness are not configurable. There is no migration of user data in H1.
+The build must use TypeScript, Vite, and extension-specific Vitest versions selected and locked against official compatibility documentation. Configuration must reject undeclared targets and arbitrary output destinations that bypass cleanup/validation. No secrets, URLs, arbitrary code, published identity, or signing values are accepted. Recommended configuration builds all targets; a meaningful alternative is focused test/manifest inspection for one target during diagnosis, while the public build/validation commands and acceptance always use all three. Permission limits and content inertness are not configurable. There is no migration of user data in H1.
 
 ## 8. Clean Architecture
 
@@ -380,13 +380,19 @@ Define:
 | `specs/catalog.json` | update |
 | `specs/CATALOG.md` | update |
 | `specs/github-browser-extension-platforms-and-delivery.md` | update |
+| `extension/tooling/gate_error.mts` | create |
+| `extension/tooling/package_contract.mts` | create |
+| `extension/tooling/validation.mts` | create |
+| `extension/test/integration/recovery.test.ts` | create |
+| `extension/test/integration/commands.test.ts` | create |
+| `eslint.config.mjs` | update |
+| `specs/browser-extension/manifest-v1.schema.json` | update |
 | `specs/README.md` | reference |
 | `specs/_template.md` | reference |
 | `specs/github-browser-extension.md` | reference |
 | `specs/github-browser-extension-functional-catalog.md` | reference |
 | `specs/github-browser-extension-action-integration.md` | reference |
 | `specs/github-browser-extension-control-center-and-setup.md` | reference |
-| `specs/browser-extension/manifest-v1.schema.json` | reference |
 | `specs/browser-extension/examples/manifest-v1.json` | reference |
 
 The contributor guide must show install/build/typecheck/test/validate commands, target differences and compatibility floors, architecture/shared contract, permission rationale, clean rebuild and recovery, and planned versus delivered scope. The root command surface must expose explicit extension build, typecheck, test, and validation commands; CI invokes relevant new gates without removing existing checks. Documentation navigation and catalog metadata identify the companion in the existing `github-browser-extension` catalog entry and preserve full-product proposed status. Generated output is ignored and excluded from root npm package contents. Validate catalog and generated CATALOG together using repository commands.
@@ -437,6 +443,14 @@ Architecture, documentation, and repository-change traceability is specified in 
 - [ ] Contributor docs and navigation explain commands, architecture, permissions, recovery, and planned versus delivered scope.
 - [ ] Catalog evidence and generated CATALOG accurately preserve the complete product's proposed status and distinguish build evidence from loaded-browser evidence; specification validation passes.
 - [ ] PR links Issue #702, reports exact verification and remaining product gates, and awaits maintainer review. No publication or release is implied.
+
+### H1 implementation evidence
+
+The H1 suite contains 46 distinct automated tests across 8 files, including every one of the 28 required named engineering cases. Local coverage is 100% statements/lines/functions and 98.47% branches; domain/shared-contract branches are 100%. Per-file thresholds remain enforced. Root hook/CI verification and exact revision evidence are recorded in the implementation PR. Plain root test retains Jest argument forwarding; the explicit extension suite is also part of the CI coverage flow.
+
+The contributor guide and private package README describe the checked commands, receipt format, permission rationale and interrupted-build recovery. The prospective manifest-v1 workflow/capability patterns now require a true end of string: JavaScript dollar anchors alone also match before a terminal newline. Differential schema/value tests reject that ambiguity, sparse malformed arrays and unsafe identities; valid wire values retain their meaning. This is not raw duplicate-key parsing or Action producer implementation.
+
+Executable implementation traceability: the four requirements map to the literal named tests in the contract/integration suites; additional tests cover replacement rollback, locks, source/artifact boundaries, commands and stale/nonreproducible receipts. The complete-product 803-case floor remains unchanged. Runtime layers with no H1 behavior remain future responsibilities rather than placeholder modules. Root npm package contents are inspected by the real pack dry-run as well as structural checks.
 
 ## 20. References and decisions
 

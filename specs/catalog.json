@@ -2716,7 +2716,7 @@
       "id": "github-browser-extension",
       "title": "Complete GitHub productivity extension and integrated Copilot setup",
       "status": "proposed",
-      "scope": "Complete proposed desktop product: 150 required functions, packaged local center, full compatible Action integration, shared setup and 803 distinct future acceptance cases; runtime remains unimplemented",
+      "scope": "Complete proposed desktop product: 150 required functions, local center, full compatible Action integration, shared setup and 803 distinct product cases; H1 adds inert engineering foundations with build/test evidence, while product features and actual browser loading remain future gates",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-10-25",
       "specs": [
@@ -2727,16 +2727,45 @@
         "specs/github-browser-extension-control-center-and-setup.md",
         "specs/github-browser-extension-foundation.md"
       ],
-      "workflows": [],
+      "workflows": [
+        ".github/workflows/ci_check.yml"
+      ],
       "entrypoints": [
-        "src/actions/github_action.ts"
+        "src/actions/github_action.ts",
+        "extension/src/infrastructure/content_entry.ts",
+        "extension/src/infrastructure/background_entry.ts",
+        "extension/tooling/cli.mts"
       ],
       "code": [
         "src/application/usecases/read_copilot_status_workflow.ts",
-        "src/application/ports/pull_request_status_read_ports.ts"
+        "src/application/ports/pull_request_status_read_ports.ts",
+        "extension/package.json",
+        "extension/tsconfig.json",
+        "extension/vitest.config.mts",
+        "extension/src/domain/eligibility.ts",
+        "extension/src/domain/target.ts",
+        "extension/src/infrastructure/target_manifests.ts",
+        "src/domain/browser_extension_contract/index.ts",
+        "src/domain/browser_extension_contract/manifest.ts",
+        "extension/tooling/architecture_validation.mts",
+        "extension/tooling/artifact_validation.mts",
+        "extension/tooling/build.mts",
+        "extension/tooling/cli.mts",
+        "extension/tooling/gate_error.mts",
+        "extension/tooling/package_contract.mts",
+        "extension/tooling/source_graph.mts",
+        "extension/tooling/validation.mts"
       ],
       "tests": [
-        "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts"
+        "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
+        "extension/test/contracts/architecture.test.ts",
+        "extension/test/contracts/eligibility.test.ts",
+        "extension/test/contracts/manifest_value.test.ts",
+        "extension/test/contracts/target_manifests.test.ts",
+        "extension/test/integration/build.test.ts",
+        "extension/test/integration/commands.test.ts",
+        "extension/test/integration/package.test.ts",
+        "extension/test/integration/recovery.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",
@@ -2763,7 +2792,9 @@
         "specs/browser-extension/features/WORK.v1.json",
         "specs/browser-extension/features/COPILOT.v1.json",
         "specs/browser-extension/features/CENTER.v1.json",
-        "specs/browser-extension/features/SETUP.v1.json"
+        "specs/browser-extension/features/SETUP.v1.json",
+        "docs/development/browser-extension.mdx",
+        "extension/README.md"
       ]
     }
   ]

@@ -34,7 +34,7 @@
         "type": "string",
         "minLength": 1,
         "maxLength": 160,
-        "pattern": "^\\.github/workflows/[A-Za-z0-9_.-]+\\.ya?ml$"
+        "pattern": "^\\.github/workflows/[A-Za-z0-9_.-]+\\.ya?ml$(?![\\s\\S])"
       },
       "maxItems": 8,
       "minItems": 1,
@@ -46,7 +46,7 @@
         "type": "string",
         "minLength": 1,
         "maxLength": 48,
-        "pattern": "^[a-z][a-z0-9-]{0,39}\\.v[1-9][0-9]{0,2}$"
+        "pattern": "^[a-z][a-z0-9-]{0,39}\\.v[1-9][0-9]{0,2}$(?![\\s\\S])"
       },
       "maxItems": 16,
       "minItems": 0,

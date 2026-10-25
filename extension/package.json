@@ -1,0 +1,20 @@
+{
+  "name": "@vypdev/copilot-browser-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "24.x" },
+  "scripts": {
+    "build": "node tooling/cli.mts build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --coverage",
+    "validate": "node tooling/cli.mts validate"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.1",
+    "@vitest/coverage-v8": "5.0.5",
+    "typescript": "5.9.3",
+    "vite": "8.3.1",
+    "vitest": "5.0.5"
+  }
+}

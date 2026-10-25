@@ -4,11 +4,11 @@ import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
-  { ignores: ['build/**', 'node_modules/**', '**/*.d.ts'] },
+  { ignores: ['build/**', '**/node_modules/**', '**/coverage/**', 'extension/dist*/**', '**/*.d.ts'] },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.ts', 'extension/**/*.ts', 'extension/**/*.mts'],
     languageOptions: {
       parserOptions: { ecmaVersion: 2020, sourceType: 'module' },
       globals: {
