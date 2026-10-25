@@ -1,0 +1,1294 @@
+{
+  "id": "COPILOT",
+  "title": "Copilot Action integration",
+  "features": [
+    {
+      "id": "BEX-COPILOT-01",
+      "family": "COPILOT",
+      "title": "Issue-to-release control tower",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Issue, PR and control center",
+      "userOutcome": "Show verified issue, SDD, branch, PR, run, promotion, publication and reconciliation links in one journey.",
+      "boundaryAcceptance": "Partial publication remains published even if later synchronization fails.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT01-C01",
+          "scenario": "Given the eligible issue, pr and control center and verified input, choosing issue-to-release control tower produces this observable result: Show verified issue, SDD, branch, PR, run, promotion, publication and reconciliation links in one journey."
+        },
+        {
+          "id": "bexp-COPILOT01-C02",
+          "scenario": "For issue-to-release control tower, exercise the concrete boundary: Partial publication remains published even if later synchronization fails."
+        },
+        {
+          "id": "bexp-COPILOT01-C03",
+          "scenario": "A denied, truncated or expired source for issue-to-release control tower shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-COPILOT01-C04",
+          "scenario": "Changing the selected repository/account/revision while issue-to-release control tower is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-COPILOT-02",
+      "family": "COPILOT",
+      "title": "SDD question workbench",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Issue clarification card",
+      "userOutcome": "Prepare numbered answers for the current verified questions with owner and revision context.",
+      "boundaryAcceptance": "A changed question round invalidates prepared answers rather than submitting stale decisions.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT02-C01",
+          "scenario": "Given the eligible issue clarification card and verified input, choosing sdd question workbench produces this observable result: Prepare numbered answers for the current verified questions with owner and revision context."
+        },
+        {
+          "id": "bexp-COPILOT02-C02",
+          "scenario": "For sdd question workbench, exercise the concrete boundary: A changed question round invalidates prepared answers rather than submitting stale decisions."
+        },
+        {
+          "id": "bexp-COPILOT02-C03",
+          "scenario": "SDD question workbench with a nonempty native draft offers append/keep/cancel and never submits or overwrites it automatically."
+        },
+        {
+          "id": "bexp-COPILOT02-C04",
+          "scenario": "A changed target or revoked capability before sdd question workbench prepares text cancels that preparation with a native source link."
+        },
+        {
+          "id": "bexp-COPILOT02-C05",
+          "scenario": "Keyboard-only use of sdd question workbench announces its exact destination/effect, preserves literal operands and returns focus after cancellation."
+        }
+      ],
+      "nativeTarget": "human-composer"
+    },
+    {
+      "id": "BEX-COPILOT-03",
+      "family": "COPILOT",
+      "title": "SDD publication comparison",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Issue and PR SDD panel",
+      "userOutcome": "Prepare the supported sdd-diff request and open verified first/current publications.",
+      "boundaryAcceptance": "Unavailable historical evidence cannot be inferred from a filename or an unverified comment.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT03-C01",
+          "scenario": "Given the eligible issue and pr sdd panel and verified input, choosing sdd publication comparison produces this observable result: Prepare the supported sdd-diff request and open verified first/current publications."
+        },
+        {
+          "id": "bexp-COPILOT03-C02",
+          "scenario": "For sdd publication comparison, exercise the concrete boundary: Unavailable historical evidence cannot be inferred from a filename or an unverified comment."
+        },
+        {
+          "id": "bexp-COPILOT03-C03",
+          "scenario": "SDD publication comparison with a nonempty native draft offers append/keep/cancel and never submits or overwrites it automatically."
+        },
+        {
+          "id": "bexp-COPILOT03-C04",
+          "scenario": "A changed target or revoked capability before sdd publication comparison prepares text cancels that preparation with a native source link."
+        },
+        {
+          "id": "bexp-COPILOT03-C05",
+          "scenario": "Keyboard-only use of sdd publication comparison announces its exact destination/effect, preserves literal operands and returns focus after cancellation."
+        }
+      ],
+      "nativeTarget": "human-composer"
+    },
+    {
+      "id": "BEX-COPILOT-04",
+      "family": "COPILOT",
+      "title": "Issue admission and start guidance",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Installed issue forms and issue sidebar",
+      "userOutcome": "Guide enabled issue-kind forms and the native in-progress transition with the Action as branch owner.",
+      "boundaryAcceptance": "The extension never creates, renames or deletes an Action-managed branch.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT04-C01",
+          "scenario": "Given the eligible installed issue forms and issue sidebar and verified input, choosing issue admission and start guidance produces this observable result: Guide enabled issue-kind forms and the native in-progress transition with the Action as branch owner."
+        },
+        {
+          "id": "bexp-COPILOT04-C02",
+          "scenario": "For issue admission and start guidance, exercise the concrete boundary: The extension never creates, renames or deletes an Action-managed branch."
+        },
+        {
+          "id": "bexp-COPILOT04-C03",
+          "scenario": "Opening issue admission and start guidance preserves the current native selection/input and requires the human's native confirmation; cancel performs no mutation."
+        },
+        {
+          "id": "bexp-COPILOT04-C04",
+          "scenario": "A changed target, permission or selection while issue admission and start guidance is being prepared invalidates the handoff and refreshes its exact scope."
+        },
+        {
+          "id": "bexp-COPILOT04-C05",
+          "scenario": "Keyboard-only use of issue admission and start guidance announces the exact native destination and effect, returns focus on cancel and submits nothing from the extension."
+        }
+      ],
+      "nativeTarget": "control-handoff"
+    },
+    {
+      "id": "BEX-COPILOT-05",
+      "family": "COPILOT",
+      "title": "Plan, clarify and estimate requests",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Supported issue or PR conversation",
+      "userOutcome": "Prepare the selected plan, clarify or estimate command with explicit request text and context.",
+      "boundaryAcceptance": "A read-oriented command's possible agent cost is shown before human submission.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT05-C01",
+          "scenario": "Given the eligible supported issue or pr conversation and verified input, choosing plan, clarify and estimate requests produces this observable result: Prepare the selected plan, clarify or estimate command with explicit request text and context."
+        },
+        {
+          "id": "bexp-COPILOT05-C02",
+          "scenario": "For plan, clarify and estimate requests, exercise the concrete boundary: A read-oriented command's possible agent cost is shown before human submission."
+        },
+        {
+          "id": "bexp-COPILOT05-C03",
+          "scenario": "Plan, clarify and estimate requests with a nonempty native draft offers append/keep/cancel and never submits or overwrites it automatically."
+        },
+        {
+          "id": "bexp-COPILOT05-C04",
+          "scenario": "A changed target or revoked capability before plan, clarify and estimate requests prepares text cancels that preparation with a native source link."
+        },
+        {
+          "id": "bexp-COPILOT05-C05",
+          "scenario": "Keyboard-only use of plan, clarify and estimate requests announces its exact destination/effect, preserves literal operands and returns focus after cancellation."
+        }
+      ],
+      "nativeTarget": "human-composer"
+    },
+    {
+      "id": "BEX-COPILOT-06",
+      "family": "COPILOT",
+      "title": "Explain, diagnose and test-plan requests",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Supported issue or PR conversation",
+      "userOutcome": "Prepare explain, diagnose or test-plan for the user's selected bounded context.",
+      "boundaryAcceptance": "Selected private code is not transmitted until the user explicitly includes and submits it.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT06-C01",
+          "scenario": "Given the eligible supported issue or pr conversation and verified input, choosing explain, diagnose and test-plan requests produces this observable result: Prepare explain, diagnose or test-plan for the user's selected bounded context."
+        },
+        {
+          "id": "bexp-COPILOT06-C02",
+          "scenario": "For explain, diagnose and test-plan requests, exercise the concrete boundary: Selected private code is not transmitted until the user explicitly includes and submits it."
+        },
+        {
+          "id": "bexp-COPILOT06-C03",
+          "scenario": "Explain, diagnose and test-plan requests with a nonempty native draft offers append/keep/cancel and never submits or overwrites it automatically."
+        },
+        {
+          "id": "bexp-COPILOT06-C04",
+          "scenario": "A changed target or revoked capability before explain, diagnose and test-plan requests prepares text cancels that preparation with a native source link."
+        },
+        {
+          "id": "bexp-COPILOT06-C05",
+          "scenario": "Keyboard-only use of explain, diagnose and test-plan requests announces its exact destination/effect, preserves literal operands and returns focus after cancellation."
+        }
+      ],
+      "nativeTarget": "human-composer"
+    },
+    {
+      "id": "BEX-COPILOT-07",
+      "family": "COPILOT",
+      "title": "Analysis and review requests",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Supported conversations",
+      "userOutcome": "Prepare analyze, review, findings or recheck with the exact target and expected review effect.",
+      "boundaryAcceptance": "Findings reconciliation is not falsely described as always model-free.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT07-C01",
+          "scenario": "Given the eligible supported conversations and verified input, choosing analysis and review requests produces this observable result: Prepare analyze, review, findings or recheck with the exact target and expected review effect."
+        },
+        {
+          "id": "bexp-COPILOT07-C02",
+          "scenario": "For analysis and review requests, exercise the concrete boundary: Findings reconciliation is not falsely described as always model-free."
+        },
+        {
+          "id": "bexp-COPILOT07-C03",
+          "scenario": "Analysis and review requests with a nonempty native draft offers append/keep/cancel and never submits or overwrites it automatically."
+        },
+        {
+          "id": "bexp-COPILOT07-C04",
+          "scenario": "A changed target or revoked capability before analysis and review requests prepares text cancels that preparation with a native source link."
+        },
+        {
+          "id": "bexp-COPILOT07-C05",
+          "scenario": "Keyboard-only use of analysis and review requests announces its exact destination/effect, preserves literal operands and returns focus after cancellation."
+        }
+      ],
+      "nativeTarget": "human-composer"
+    },
+    {
+      "id": "BEX-COPILOT-08",
+      "family": "COPILOT",
+      "title": "Finding state navigator",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Pull request findings",
+      "userOutcome": "Show open, fixed, obsolete, dismissed, reopened, verification and unknown states with current coverage.",
+      "boundaryAcceptance": "A resolved native thread alone cannot prove a finding was fixed.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT08-C01",
+          "scenario": "Given the eligible pull request findings and verified input, choosing finding state navigator produces this observable result: Show open, fixed, obsolete, dismissed, reopened, verification and unknown states with current coverage."
+        },
+        {
+          "id": "bexp-COPILOT08-C02",
+          "scenario": "For finding state navigator, exercise the concrete boundary: A resolved native thread alone cannot prove a finding was fixed."
+        },
+        {
+          "id": "bexp-COPILOT08-C03",
+          "scenario": "A denied, truncated or expired source for finding state navigator shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-COPILOT08-C04",
+          "scenario": "Changing the selected repository/account/revision while finding state navigator is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-COPILOT-09",
+      "family": "COPILOT",
+      "title": "Targeted finding corrections",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Authoritative PR review thread or verified branch-scoped route",
+      "userOutcome": "Prepare fix for explicit verified finding IDs and show the exact branch/revision that the Action will recheck.",
+      "boundaryAcceptance": "Unknown or foreign-fork write authority gives copy-only guidance instead of a guessed target.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT09-C01",
+          "scenario": "Given the eligible authoritative pr review thread or verified branch-scoped route and verified input, choosing targeted finding corrections produces this observable result: Prepare fix for explicit verified finding IDs and show the exact branch/revision that the Action will recheck."
+        },
+        {
+          "id": "bexp-COPILOT09-C02",
+          "scenario": "For targeted finding corrections, exercise the concrete boundary: Unknown or foreign-fork write authority gives copy-only guidance instead of a guessed target."
+        },
+        {
+          "id": "bexp-COPILOT09-C03",
+          "scenario": "Targeted finding corrections with a nonempty native draft offers append/keep/cancel and never submits or overwrites it automatically."
+        },
+        {
+          "id": "bexp-COPILOT09-C04",
+          "scenario": "A changed target or revoked capability before targeted finding corrections prepares text cancels that preparation with a native source link."
+        },
+        {
+          "id": "bexp-COPILOT09-C05",
+          "scenario": "Keyboard-only use of targeted finding corrections announces its exact destination/effect, preserves literal operands and returns focus after cancellation."
+        }
+      ],
+      "nativeTarget": "human-composer"
+    },
+    {
+      "id": "BEX-COPILOT-10",
+      "family": "COPILOT",
+      "title": "Finding dismissal preparation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Supported current finding context",
+      "userOutcome": "Prepare dismiss for selected current IDs with explicit rationale and scope.",
+      "boundaryAcceptance": "Dismissal remains a state-changing authorized request even though it changes no files.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT10-C01",
+          "scenario": "Given the eligible supported current finding context and verified input, choosing finding dismissal preparation produces this observable result: Prepare dismiss for selected current IDs with explicit rationale and scope."
+        },
+        {
+          "id": "bexp-COPILOT10-C02",
+          "scenario": "For finding dismissal preparation, exercise the concrete boundary: Dismissal remains a state-changing authorized request even though it changes no files."
+        },
+        {
+          "id": "bexp-COPILOT10-C03",
+          "scenario": "Finding dismissal preparation with a nonempty native draft offers append/keep/cancel and never submits or overwrites it automatically."
+        },
+        {
+          "id": "bexp-COPILOT10-C04",
+          "scenario": "A changed target or revoked capability before finding dismissal preparation prepares text cancels that preparation with a native source link."
+        },
+        {
+          "id": "bexp-COPILOT10-C05",
+          "scenario": "Keyboard-only use of finding dismissal preparation announces its exact destination/effect, preserves literal operands and returns focus after cancellation."
+        }
+      ],
+      "nativeTarget": "human-composer"
+    },
+    {
+      "id": "BEX-COPILOT-11",
+      "family": "COPILOT",
+      "title": "Implementation requests",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Supported authoritative branch-scoped context",
+      "userOutcome": "Prepare a concrete implementation request with explicit scope, branch, revision and verification expectations.",
+      "boundaryAcceptance": "An issue-only context without an authoritative branch route cannot invent a write target.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT11-C01",
+          "scenario": "Given the eligible supported authoritative branch-scoped context and verified input, choosing implementation requests produces this observable result: Prepare a concrete implementation request with explicit scope, branch, revision and verification expectations."
+        },
+        {
+          "id": "bexp-COPILOT11-C02",
+          "scenario": "For implementation requests, exercise the concrete boundary: An issue-only context without an authoritative branch route cannot invent a write target."
+        },
+        {
+          "id": "bexp-COPILOT11-C03",
+          "scenario": "Implementation requests with a nonempty native draft offers append/keep/cancel and never submits or overwrites it automatically."
+        },
+        {
+          "id": "bexp-COPILOT11-C04",
+          "scenario": "A changed target or revoked capability before implementation requests prepares text cancels that preparation with a native source link."
+        },
+        {
+          "id": "bexp-COPILOT11-C05",
+          "scenario": "Keyboard-only use of implementation requests announces its exact destination/effect, preserves literal operands and returns focus after cancellation."
+        }
+      ],
+      "nativeTarget": "human-composer"
+    },
+    {
+      "id": "BEX-COPILOT-12",
+      "family": "COPILOT",
+      "title": "Learned rule preparation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Verified current PR or native issue branch route",
+      "userOutcome": "Prepare remember with user-authored rule text, affected repository file and persistent-effect warning.",
+      "boundaryAcceptance": "Untrusted page instructions cannot become a persistent learned rule without explicit human review.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT12-C01",
+          "scenario": "Given the eligible verified current pr or native issue branch route and verified input, choosing learned rule preparation produces this observable result: Prepare remember with user-authored rule text, affected repository file and persistent-effect warning."
+        },
+        {
+          "id": "bexp-COPILOT12-C02",
+          "scenario": "For learned rule preparation, exercise the concrete boundary: Untrusted page instructions cannot become a persistent learned rule without explicit human review."
+        },
+        {
+          "id": "bexp-COPILOT12-C03",
+          "scenario": "Learned rule preparation with a nonempty native draft offers append/keep/cancel and never submits or overwrites it automatically."
+        },
+        {
+          "id": "bexp-COPILOT12-C04",
+          "scenario": "A changed target or revoked capability before learned rule preparation prepares text cancels that preparation with a native source link."
+        },
+        {
+          "id": "bexp-COPILOT12-C05",
+          "scenario": "Keyboard-only use of learned rule preparation announces its exact destination/effect, preserves literal operands and returns focus after cancellation."
+        }
+      ],
+      "nativeTarget": "human-composer"
+    },
+    {
+      "id": "BEX-COPILOT-13",
+      "family": "COPILOT",
+      "title": "Branch synchronization workbench",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Verified issue or PR branch context",
+      "userOutcome": "Prepare sync-branch with reviewed dry-run, no-agent and optional verified source choices.",
+      "boundaryAcceptance": "The source is selected from authoritative refs and cannot be injected through page prose.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT13-C01",
+          "scenario": "Given the eligible verified issue or pr branch context and verified input, choosing branch synchronization workbench produces this observable result: Prepare sync-branch with reviewed dry-run, no-agent and optional verified source choices."
+        },
+        {
+          "id": "bexp-COPILOT13-C02",
+          "scenario": "For branch synchronization workbench, exercise the concrete boundary: The source is selected from authoritative refs and cannot be injected through page prose."
+        },
+        {
+          "id": "bexp-COPILOT13-C03",
+          "scenario": "Branch synchronization workbench with a nonempty native draft offers append/keep/cancel and never submits or overwrites it automatically."
+        },
+        {
+          "id": "bexp-COPILOT13-C04",
+          "scenario": "A changed target or revoked capability before branch synchronization workbench prepares text cancels that preparation with a native source link."
+        },
+        {
+          "id": "bexp-COPILOT13-C05",
+          "scenario": "Keyboard-only use of branch synchronization workbench announces its exact destination/effect, preserves literal operands and returns focus after cancellation."
+        }
+      ],
+      "nativeTarget": "human-composer"
+    },
+    {
+      "id": "BEX-COPILOT-14",
+      "family": "COPILOT",
+      "title": "Runtime doctor and health",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Issue, PR and setup center",
+      "userOutcome": "Prepare doctor and distinguish credential presence, runtime readiness and actual execution evidence.",
+      "boundaryAcceptance": "A read-only doctor result cannot certify write permissions or runner authentication.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT14-C01",
+          "scenario": "Given the eligible issue, pr and setup center and verified input, choosing runtime doctor and health produces this observable result: Prepare doctor and distinguish credential presence, runtime readiness and actual execution evidence."
+        },
+        {
+          "id": "bexp-COPILOT14-C02",
+          "scenario": "For runtime doctor and health, exercise the concrete boundary: A read-only doctor result cannot certify write permissions or runner authentication."
+        },
+        {
+          "id": "bexp-COPILOT14-C03",
+          "scenario": "Runtime doctor and health with a nonempty native draft offers append/keep/cancel and never submits or overwrites it automatically."
+        },
+        {
+          "id": "bexp-COPILOT14-C04",
+          "scenario": "A changed target or revoked capability before runtime doctor and health prepares text cancels that preparation with a native source link."
+        },
+        {
+          "id": "bexp-COPILOT14-C05",
+          "scenario": "Keyboard-only use of runtime doctor and health announces its exact destination/effect, preserves literal operands and returns focus after cancellation."
+        }
+      ],
+      "nativeTarget": "human-composer"
+    },
+    {
+      "id": "BEX-COPILOT-15",
+      "family": "COPILOT",
+      "title": "Request history and receipts",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Supported conversation",
+      "userOutcome": "Prepare history and navigate current supported request receipts with correlation and source identity.",
+      "boundaryAcceptance": "Missing receipts do not imply an empty history or a failed execution.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT15-C01",
+          "scenario": "Given the eligible supported conversation and verified input, choosing request history and receipts produces this observable result: Prepare history and navigate current supported request receipts with correlation and source identity."
+        },
+        {
+          "id": "bexp-COPILOT15-C02",
+          "scenario": "For request history and receipts, exercise the concrete boundary: Missing receipts do not imply an empty history or a failed execution."
+        },
+        {
+          "id": "bexp-COPILOT15-C03",
+          "scenario": "Request history and receipts with a nonempty native draft offers append/keep/cancel and never submits or overwrites it automatically."
+        },
+        {
+          "id": "bexp-COPILOT15-C04",
+          "scenario": "A changed target or revoked capability before request history and receipts prepares text cancels that preparation with a native source link."
+        },
+        {
+          "id": "bexp-COPILOT15-C05",
+          "scenario": "Keyboard-only use of request history and receipts announces its exact destination/effect, preserves literal operands and returns focus after cancellation."
+        }
+      ],
+      "nativeTarget": "human-composer"
+    },
+    {
+      "id": "BEX-COPILOT-16",
+      "family": "COPILOT",
+      "title": "PR description and help",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Supported PR conversation",
+      "userOutcome": "Prepare description or help with the installed capability and potential PR-body effect explained.",
+      "boundaryAcceptance": "Description refresh cannot overwrite a native draft without an explicit operator decision.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT16-C01",
+          "scenario": "Given the eligible supported pr conversation and verified input, choosing pr description and help produces this observable result: Prepare description or help with the installed capability and potential PR-body effect explained."
+        },
+        {
+          "id": "bexp-COPILOT16-C02",
+          "scenario": "For pr description and help, exercise the concrete boundary: Description refresh cannot overwrite a native draft without an explicit operator decision."
+        },
+        {
+          "id": "bexp-COPILOT16-C03",
+          "scenario": "PR description and help with a nonempty native draft offers append/keep/cancel and never submits or overwrites it automatically."
+        },
+        {
+          "id": "bexp-COPILOT16-C04",
+          "scenario": "A changed target or revoked capability before pr description and help prepares text cancels that preparation with a native source link."
+        },
+        {
+          "id": "bexp-COPILOT16-C05",
+          "scenario": "Keyboard-only use of pr description and help announces its exact destination/effect, preserves literal operands and returns focus after cancellation."
+        }
+      ],
+      "nativeTarget": "human-composer"
+    },
+    {
+      "id": "BEX-COPILOT-17",
+      "family": "COPILOT",
+      "title": "Approval and blocker explanation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Pull request status",
+      "userOutcome": "Explain current review, check, finding, policy and branch-sync blockers with source links.",
+      "boundaryAcceptance": "The extension never grants approval or converts unknown-producer checks into verified checks.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT17-C01",
+          "scenario": "Given the eligible pull request status and verified input, choosing approval and blocker explanation produces this observable result: Explain current review, check, finding, policy and branch-sync blockers with source links."
+        },
+        {
+          "id": "bexp-COPILOT17-C02",
+          "scenario": "For approval and blocker explanation, exercise the concrete boundary: The extension never grants approval or converts unknown-producer checks into verified checks."
+        },
+        {
+          "id": "bexp-COPILOT17-C03",
+          "scenario": "A denied, truncated or expired source for approval and blocker explanation shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-COPILOT17-C04",
+          "scenario": "Changing the selected repository/account/revision while approval and blocker explanation is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-COPILOT-18",
+      "family": "COPILOT",
+      "title": "Queue and concurrency view",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Copilot runs and control center",
+      "userOutcome": "Show durable lifecycle, temporary activity and human waiting as independent facts.",
+      "boundaryAcceptance": "An old agent label cannot prove a current active run or permanently block a page feature.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT18-C01",
+          "scenario": "Given the eligible copilot runs and control center and verified input, choosing queue and concurrency view produces this observable result: Show durable lifecycle, temporary activity and human waiting as independent facts."
+        },
+        {
+          "id": "bexp-COPILOT18-C02",
+          "scenario": "For queue and concurrency view, exercise the concrete boundary: An old agent label cannot prove a current active run or permanently block a page feature."
+        },
+        {
+          "id": "bexp-COPILOT18-C03",
+          "scenario": "A denied, truncated or expired source for queue and concurrency view shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-COPILOT18-C04",
+          "scenario": "Changing the selected repository/account/revision while queue and concurrency view is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-COPILOT-19",
+      "family": "COPILOT",
+      "title": "Release and hotfix launch guidance",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Installed release and hotfix issue forms",
+      "userOutcome": "Prepare the appropriate native form with version, origin and production-first consequences for human submission.",
+      "boundaryAcceptance": "The extension never silently creates a release issue or selects an unverified version tag.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT19-C01",
+          "scenario": "Given the eligible installed release and hotfix issue forms and verified input, choosing release and hotfix launch guidance produces this observable result: Prepare the appropriate native form with version, origin and production-first consequences for human submission."
+        },
+        {
+          "id": "bexp-COPILOT19-C02",
+          "scenario": "For release and hotfix launch guidance, exercise the concrete boundary: The extension never silently creates a release issue or selects an unverified version tag."
+        },
+        {
+          "id": "bexp-COPILOT19-C03",
+          "scenario": "Opening release and hotfix launch guidance preserves all existing native form answers and requires human native submission; cancel performs no mutation."
+        },
+        {
+          "id": "bexp-COPILOT19-C04",
+          "scenario": "A changed installed form, target or required field while release and hotfix launch guidance is being prepared invalidates that preparation and preserves the existing native answers."
+        },
+        {
+          "id": "bexp-COPILOT19-C05",
+          "scenario": "Keyboard-only use of release and hotfix launch guidance announces the exact form, target and effect, restores focus on cancel and submits nothing from the extension."
+        }
+      ],
+      "nativeTarget": "control-handoff"
+    },
+    {
+      "id": "BEX-COPILOT-20",
+      "family": "COPILOT",
+      "title": "Deployment review handoff",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Verified deployment control center",
+      "userOutcome": "Show publication state, intended deploy-label or native approval action, modes and retained effects before opening the exact native control.",
+      "boundaryAcceptance": "Unknown deployment policy blocks an asserted safe launch; page opening never deploys.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT20-C01",
+          "scenario": "Given the eligible verified deployment control center and verified input, choosing deployment review handoff produces this observable result: Show publication state, intended deploy-label or native approval action, modes and retained effects before opening the exact native control."
+        },
+        {
+          "id": "bexp-COPILOT20-C02",
+          "scenario": "For deployment review handoff, exercise the concrete boundary: Unknown deployment policy blocks an asserted safe launch; page opening never deploys."
+        },
+        {
+          "id": "bexp-COPILOT20-C03",
+          "scenario": "Opening deployment review handoff preserves the current native selection/input and requires the human's native confirmation; cancel performs no mutation."
+        },
+        {
+          "id": "bexp-COPILOT20-C04",
+          "scenario": "A changed target, permission or selection while deployment review handoff is being prepared invalidates the handoff and refreshes its exact scope."
+        },
+        {
+          "id": "bexp-COPILOT20-C05",
+          "scenario": "Keyboard-only use of deployment review handoff announces the exact native destination and effect, returns focus on cancel and submits nothing from the extension."
+        }
+      ],
+      "nativeTarget": "control-handoff"
+    },
+    {
+      "id": "BEX-COPILOT-21",
+      "family": "COPILOT",
+      "title": "Reconciliation and recovery view",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Deployment issue and promotion/reconciliation PRs",
+      "userOutcome": "Separate published artifacts, pending development targets, cleanup and permitted recovery operations.",
+      "boundaryAcceptance": "Immutable tags, unknown lineage and nonretryable blocks are never repaired by browser metadata edits.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT21-C01",
+          "scenario": "Given the eligible deployment issue and promotion/reconciliation prs and verified input, choosing reconciliation and recovery view produces this observable result: Separate published artifacts, pending development targets, cleanup and permitted recovery operations."
+        },
+        {
+          "id": "bexp-COPILOT21-C02",
+          "scenario": "For reconciliation and recovery view, exercise the concrete boundary: Immutable tags, unknown lineage and nonretryable blocks are never repaired by browser metadata edits."
+        },
+        {
+          "id": "bexp-COPILOT21-C03",
+          "scenario": "A denied, truncated or expired source for reconciliation and recovery view shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-COPILOT21-C04",
+          "scenario": "Changing the selected repository/account/revision while reconciliation and recovery view is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-COPILOT-22",
+      "family": "COPILOT",
+      "title": "Policy and configuration provenance",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Copilot panel and settings",
+      "userOutcome": "Show versioned workflow/input/Variable scope and source-time policy limitations with exact links.",
+      "boundaryAcceptance": "Secret existence is presence only; hidden effective values remain unknown.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT22-C01",
+          "scenario": "Given the eligible copilot panel and settings and verified input, choosing policy and configuration provenance produces this observable result: Show versioned workflow/input/Variable scope and source-time policy limitations with exact links."
+        },
+        {
+          "id": "bexp-COPILOT22-C02",
+          "scenario": "For policy and configuration provenance, exercise the concrete boundary: Secret existence is presence only; hidden effective values remain unknown."
+        },
+        {
+          "id": "bexp-COPILOT22-C03",
+          "scenario": "A denied, truncated or expired source for policy and configuration provenance shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-COPILOT22-C04",
+          "scenario": "Changing the selected repository/account/revision while policy and configuration provenance is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-COPILOT-23",
+      "family": "COPILOT",
+      "title": "Run, cost and evidence inspection",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Copilot history and job summaries",
+      "userOutcome": "Present published duration, usage/cost and verification artifacts only when the producer supplies them.",
+      "boundaryAcceptance": "Missing usage is unknown, never zero, and no billing value is inferred from a model name.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT23-C01",
+          "scenario": "Given the eligible copilot history and job summaries and verified input, choosing run, cost and evidence inspection produces this observable result: Present published duration, usage/cost and verification artifacts only when the producer supplies them."
+        },
+        {
+          "id": "bexp-COPILOT23-C02",
+          "scenario": "For run, cost and evidence inspection, exercise the concrete boundary: Missing usage is unknown, never zero, and no billing value is inferred from a model name."
+        },
+        {
+          "id": "bexp-COPILOT23-C03",
+          "scenario": "A denied, truncated or expired source for run, cost and evidence inspection shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-COPILOT23-C04",
+          "scenario": "Changing the selected repository/account/revision while run, cost and evidence inspection is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-COPILOT-24",
+      "family": "COPILOT",
+      "title": "Capability and command compatibility",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Control center and every Copilot action",
+      "userOutcome": "Show the installed supported command/context matrix and explain unavailable product actions.",
+      "boundaryAcceptance": "An unknown Action version cannot receive a newly invented command syntax or event route.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-COPILOT"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-COPILOT24-C01",
+          "scenario": "Given the eligible control center and every copilot action and verified input, choosing capability and command compatibility produces this observable result: Show the installed supported command/context matrix and explain unavailable product actions."
+        },
+        {
+          "id": "bexp-COPILOT24-C02",
+          "scenario": "For capability and command compatibility, exercise the concrete boundary: An unknown Action version cannot receive a newly invented command syntax or event route."
+        },
+        {
+          "id": "bexp-COPILOT24-C03",
+          "scenario": "A denied, truncated or expired source for capability and command compatibility shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-COPILOT24-C04",
+          "scenario": "Changing the selected repository/account/revision while capability and command compatibility is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    }
+  ]
+}

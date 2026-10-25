@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "enabled": true,
+  "repositoryId": 1,
+  "producerActorId": 2,
+  "workflowPaths": [
+    ".github/workflows/copilot_issue.yml",
+    ".github/workflows/copilot_pull_request.yml",
+    ".github/workflows/copilot_issue_comment.yml"
+  ],
+  "capabilities": [
+    "context.v1",
+    "findings.v1",
+    "command-drafts.v1"
+  ],
+  "statusSchemaMajor": 1,
+  "publication": "current-status-comment"
+}

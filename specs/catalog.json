@@ -1392,7 +1392,8 @@
         "docs/guides/work-with-the-bot.mdx",
         "docs/guides/releases-and-hotfixes.mdx",
         "docs/security-operations/operations/verification.mdx",
-        "docs/security-operations/operations/upgrade-rollback.mdx"
+        "docs/security-operations/operations/upgrade-rollback.mdx",
+        "specs/github-browser-extension-control-center-and-setup.md"
       ]
     },
     {
@@ -2709,6 +2710,59 @@
         "docs/issues/comment-commands.mdx",
         "docs/bugbot/configuration.mdx",
         "docs/development/architecture.mdx"
+      ]
+    },
+    {
+      "id": "github-browser-extension",
+      "title": "Complete GitHub productivity extension and integrated Copilot setup",
+      "status": "proposed",
+      "scope": "Complete proposed desktop product: 150 required functions, packaged local center, full compatible Action integration, shared setup and 803 distinct future acceptance cases; runtime remains unimplemented",
+      "owner": "Copilot maintainers",
+      "lastVerified": "2026-10-25",
+      "specs": [
+        "specs/github-browser-extension.md",
+        "specs/github-browser-extension-action-integration.md",
+        "specs/github-browser-extension-platforms-and-delivery.md",
+        "specs/github-browser-extension-functional-catalog.md",
+        "specs/github-browser-extension-control-center-and-setup.md"
+      ],
+      "workflows": [],
+      "entrypoints": [
+        "src/actions/github_action.ts"
+      ],
+      "code": [
+        "src/application/usecases/read_copilot_status_workflow.ts",
+        "src/application/ports/pull_request_status_read_ports.ts"
+      ],
+      "tests": [
+        "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts"
+      ],
+      "documentation": [
+        "docs/development/specifications.mdx",
+        "docs/issues/comment-commands.mdx",
+        "specs/browser-extension/manifest-v1.schema.json",
+        "specs/browser-extension/status-v1.schema.json",
+        "specs/browser-extension/examples/manifest-v1.json",
+        "specs/browser-extension/examples/status-pr-v1.json",
+        "specs/browser-extension/examples/status-issue-v1.json",
+        "specs/browser-extension/examples/status-invalid-head-v1.json",
+        "specs/browser-extension/feature-catalog.v1.json",
+        "specs/browser-extension/feature-catalog.schema.json",
+        "specs/browser-extension/requests-v2.schema.json",
+        "specs/browser-extension/examples/requests-v2.json",
+        "specs/browser-extension/feature-catalog-index.schema.json",
+        "specs/browser-extension/features/NAV.v1.json",
+        "specs/browser-extension/features/CODE.v1.json",
+        "specs/browser-extension/features/REVIEW.v1.json",
+        "specs/browser-extension/features/ISSUE.v1.json",
+        "specs/browser-extension/features/SEARCH.v1.json",
+        "specs/browser-extension/features/NOTIFY.v1.json",
+        "specs/browser-extension/features/CI.v1.json",
+        "specs/browser-extension/features/RELEASE.v1.json",
+        "specs/browser-extension/features/WORK.v1.json",
+        "specs/browser-extension/features/COPILOT.v1.json",
+        "specs/browser-extension/features/CENTER.v1.json",
+        "specs/browser-extension/features/SETUP.v1.json"
       ]
     }
   ]

@@ -358,3 +358,9 @@ Evidence: `setup_organization_import_wizard.test.ts`,
 `setup_trusted_health_sdk_contract.integration.test.ts`, and
 `web_setup_batch_components.test.ts`. Owning test budget, migration, UX and
 operational acceptance are in the companion; existing quality gates remain.
+
+## Extension control-center integration proposal (2026-10-25)
+
+The [browser-extension local center and setup contract](github-browser-extension-control-center-and-setup.md) specifies a prospective additional consumer of the shared presentation and nonsecret setup contracts. It is not evidence that the current CLI/server implements an extension protocol. The existing same-origin Host/CSP/pairing/controller/credential/final-approval and cleanup guards remain normative. In particular, do not embed this page in an iframe, weaken CORS, export its session key or let an extension submit privileged approval/credentials through a generic answer proxy.
+
+Future implementation extracts browser-safe original Svelte components/catalogs and introduces a separate closed nonsecret broker adapter with revision/role fencing, while the CLI/application engine remains authoritative. Credential entry and final Apply stay in the trusted terminal/local-web authority; the extension may prepare choices and observe sanitized progress. Shared fixture/packaged browser tests must prove CLI/web/extension policy, question, plan, permission and recovery parity before acceptance. The extension specification includes 48 dedicated cross-boundary cases in addition to its per-feature cases; these are future tests, not current runtime proof. Existing CLI defaults and standalone local-web operation remain compatibility gates.

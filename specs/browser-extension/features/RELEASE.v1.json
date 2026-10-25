@@ -1,0 +1,410 @@
+{
+  "id": "RELEASE",
+  "title": "Releases, tags and repository changes",
+  "features": [
+    {
+      "id": "BEX-RELEASE-01",
+      "family": "RELEASE",
+      "title": "Release and tag navigation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Merged PRs, tags and releases",
+      "userOutcome": "Navigate verified native release/tag destinations and preserve immutable source links.",
+      "boundaryAcceptance": "A merge date alone cannot associate a PR with a release.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-RELEASE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-RELEASE01-C01",
+          "scenario": "Given the eligible merged prs, tags and releases and verified input, choosing release and tag navigation produces this observable result: Navigate verified native release/tag destinations and preserve immutable source links."
+        },
+        {
+          "id": "bexp-RELEASE01-C02",
+          "scenario": "For release and tag navigation, exercise the concrete boundary: A merge date alone cannot associate a PR with a release."
+        },
+        {
+          "id": "bexp-RELEASE01-C03",
+          "scenario": "After release and tag navigation mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-RELEASE-02",
+      "family": "RELEASE",
+      "title": "Release comparison builder",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Releases and compare pages",
+      "userOutcome": "Prepare comparisons between selected existing tags and disclose unavailable refs.",
+      "boundaryAcceptance": "A missing tag is not substituted with a similarly named branch.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-RELEASE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-RELEASE02-C01",
+          "scenario": "Given the eligible releases and compare pages and verified input, choosing release comparison builder produces this observable result: Prepare comparisons between selected existing tags and disclose unavailable refs."
+        },
+        {
+          "id": "bexp-RELEASE02-C02",
+          "scenario": "For release comparison builder, exercise the concrete boundary: A missing tag is not substituted with a similarly named branch."
+        },
+        {
+          "id": "bexp-RELEASE02-C03",
+          "scenario": "A denied, truncated or expired source for release comparison builder shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-RELEASE02-C04",
+          "scenario": "Changing the selected repository/account/revision while release comparison builder is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-RELEASE-03",
+      "family": "RELEASE",
+      "title": "Unreleased change inspection",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Repository overview",
+      "userOutcome": "Show a bounded comparison of the default branch and a selected verified release tag.",
+      "boundaryAcceptance": "The view labels its chosen baseline instead of claiming a universal latest-release definition.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-RELEASE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-RELEASE03-C01",
+          "scenario": "Given the eligible repository overview and verified input, choosing unreleased change inspection produces this observable result: Show a bounded comparison of the default branch and a selected verified release tag."
+        },
+        {
+          "id": "bexp-RELEASE03-C02",
+          "scenario": "For unreleased change inspection, exercise the concrete boundary: The view labels its chosen baseline instead of claiming a universal latest-release definition."
+        },
+        {
+          "id": "bexp-RELEASE03-C03",
+          "scenario": "A denied, truncated or expired source for unreleased change inspection shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-RELEASE03-C04",
+          "scenario": "Changing the selected repository/account/revision while unreleased change inspection is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-RELEASE-04",
+      "family": "RELEASE",
+      "title": "Changelog drafting",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Native release editor",
+      "userOutcome": "Prepare user-reviewed Markdown from explicitly selected linked PRs and commits with source attribution.",
+      "boundaryAcceptance": "The extension does not publish a release or claim every change was collected.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-RELEASE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-RELEASE04-C01",
+          "scenario": "Given the eligible native release editor and verified input, choosing changelog drafting produces this observable result: Prepare user-reviewed Markdown from explicitly selected linked PRs and commits with source attribution."
+        },
+        {
+          "id": "bexp-RELEASE04-C02",
+          "scenario": "For changelog drafting, exercise the concrete boundary: The extension does not publish a release or claim every change was collected."
+        },
+        {
+          "id": "bexp-RELEASE04-C03",
+          "scenario": "Changelog drafting with a nonempty native draft offers append/keep/cancel and never submits or overwrites it automatically."
+        },
+        {
+          "id": "bexp-RELEASE04-C04",
+          "scenario": "A changed target or revoked capability before changelog drafting prepares text cancels that preparation with a native source link."
+        },
+        {
+          "id": "bexp-RELEASE04-C05",
+          "scenario": "Keyboard-only use of changelog drafting announces its exact destination/effect, preserves literal operands and returns focus after cancellation."
+        }
+      ],
+      "nativeTarget": "human-composer"
+    },
+    {
+      "id": "BEX-RELEASE-05",
+      "family": "RELEASE",
+      "title": "Release asset verification context",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Release assets",
+      "userOutcome": "Show published checksums/signature/provenance links that actually exist for the selected asset.",
+      "boundaryAcceptance": "A checksum without an authenticated source is not labeled as a trusted signature.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-RELEASE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-RELEASE05-C01",
+          "scenario": "Given the eligible release assets and verified input, choosing release asset verification context produces this observable result: Show published checksums/signature/provenance links that actually exist for the selected asset."
+        },
+        {
+          "id": "bexp-RELEASE05-C02",
+          "scenario": "For release asset verification context, exercise the concrete boundary: A checksum without an authenticated source is not labeled as a trusted signature."
+        },
+        {
+          "id": "bexp-RELEASE05-C03",
+          "scenario": "A denied, truncated or expired source for release asset verification context shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-RELEASE05-C04",
+          "scenario": "Changing the selected repository/account/revision while release asset verification context is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-RELEASE-06",
+      "family": "RELEASE",
+      "title": "Dependency and security navigation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Dependency and security pages",
+      "userOutcome": "Link native dependency, advisory and update surfaces with available permissions shown.",
+      "boundaryAcceptance": "Private security alerts are not scraped from unrelated pages or exported by default.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-RELEASE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-RELEASE06-C01",
+          "scenario": "Given the eligible dependency and security pages and verified input, choosing dependency and security navigation produces this observable result: Link native dependency, advisory and update surfaces with available permissions shown."
+        },
+        {
+          "id": "bexp-RELEASE06-C02",
+          "scenario": "For dependency and security navigation, exercise the concrete boundary: Private security alerts are not scraped from unrelated pages or exported by default."
+        },
+        {
+          "id": "bexp-RELEASE06-C03",
+          "scenario": "After dependency and security navigation mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-RELEASE-07",
+      "family": "RELEASE",
+      "title": "Branch comparison workspace",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Branches and compare pages",
+      "userOutcome": "Compare explicitly selected branches with ahead/behind and ancestry facts from canonical data.",
+      "boundaryAcceptance": "Divergence is not described as safely deletable or automatically reconcilable.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-RELEASE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-RELEASE07-C01",
+          "scenario": "Given the eligible branches and compare pages and verified input, choosing branch comparison workspace produces this observable result: Compare explicitly selected branches with ahead/behind and ancestry facts from canonical data."
+        },
+        {
+          "id": "bexp-RELEASE07-C02",
+          "scenario": "For branch comparison workspace, exercise the concrete boundary: Divergence is not described as safely deletable or automatically reconcilable."
+        },
+        {
+          "id": "bexp-RELEASE07-C03",
+          "scenario": "A denied, truncated or expired source for branch comparison workspace shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-RELEASE07-C04",
+          "scenario": "Changing the selected repository/account/revision while branch comparison workspace is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-RELEASE-08",
+      "family": "RELEASE",
+      "title": "Release activity attention",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Workspace release views",
+      "userOutcome": "Track selected release or tag links through explicit foreground refresh and optional alerts.",
+      "boundaryAcceptance": "No background repository-wide polling or automatic package execution occurs.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-RELEASE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-RELEASE08-C01",
+          "scenario": "Given the eligible workspace release views and verified input, choosing release activity attention produces this observable result: Track selected release or tag links through explicit foreground refresh and optional alerts."
+        },
+        {
+          "id": "bexp-RELEASE08-C02",
+          "scenario": "For release activity attention, exercise the concrete boundary: No background repository-wide polling or automatic package execution occurs."
+        },
+        {
+          "id": "bexp-RELEASE08-C03",
+          "scenario": "An invalid or future-schema change to release activity attention preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-RELEASE08-C04",
+          "scenario": "Release activity attention survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    }
+  ]
+}

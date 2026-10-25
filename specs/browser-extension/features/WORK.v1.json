@@ -1,0 +1,406 @@
+{
+  "id": "WORK",
+  "title": "Personal workspaces and platform ergonomics",
+  "features": [
+    {
+      "id": "BEX-WORK-01",
+      "family": "WORK",
+      "title": "My work overview",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Local control center",
+      "userOutcome": "Aggregate explicit selected assigned issues, authored PRs and review requests with per-source completeness.",
+      "boundaryAcceptance": "The default scope never expands to every private organization repository.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-WORK"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-WORK01-C01",
+          "scenario": "Given the eligible local control center and verified input, choosing my work overview produces this observable result: Aggregate explicit selected assigned issues, authored PRs and review requests with per-source completeness."
+        },
+        {
+          "id": "bexp-WORK01-C02",
+          "scenario": "For my work overview, exercise the concrete boundary: The default scope never expands to every private organization repository."
+        },
+        {
+          "id": "bexp-WORK01-C03",
+          "scenario": "A denied, truncated or expired source for my work overview shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-WORK01-C04",
+          "scenario": "Changing the selected repository/account/revision while my work overview is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-WORK-02",
+      "family": "WORK",
+      "title": "Named repository workspaces",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Control center",
+      "userOutcome": "Create bounded personal workspace collections and switch context without changing repository policy.",
+      "boundaryAcceptance": "Private membership and metadata remain account-partitioned and excluded from ordinary exports.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-WORK"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-WORK02-C01",
+          "scenario": "Given the eligible control center and verified input, choosing named repository workspaces produces this observable result: Create bounded personal workspace collections and switch context without changing repository policy."
+        },
+        {
+          "id": "bexp-WORK02-C02",
+          "scenario": "For named repository workspaces, exercise the concrete boundary: Private membership and metadata remain account-partitioned and excluded from ordinary exports."
+        },
+        {
+          "id": "bexp-WORK02-C03",
+          "scenario": "An invalid or future-schema change to named repository workspaces preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-WORK02-C04",
+          "scenario": "Named repository workspaces survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-WORK-03",
+      "family": "WORK",
+      "title": "Work queues and next actions",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Control center",
+      "userOutcome": "Arrange personal reading/review/maintenance queues with source-linked next actions.",
+      "boundaryAcceptance": "Personal order cannot masquerade as a shared repository priority or SLA.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-WORK"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-WORK03-C01",
+          "scenario": "Given the eligible control center and verified input, choosing work queues and next actions produces this observable result: Arrange personal reading/review/maintenance queues with source-linked next actions."
+        },
+        {
+          "id": "bexp-WORK03-C02",
+          "scenario": "For work queues and next actions, exercise the concrete boundary: Personal order cannot masquerade as a shared repository priority or SLA."
+        },
+        {
+          "id": "bexp-WORK03-C03",
+          "scenario": "An invalid or future-schema change to work queues and next actions preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-WORK03-C04",
+          "scenario": "Work queues and next actions survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-WORK-04",
+      "family": "WORK",
+      "title": "Context-preserving split navigation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "GitHub links and command palette",
+      "userOutcome": "Offer explicit open-in-current or new-tab actions while preserving native browser behavior.",
+      "boundaryAcceptance": "The extension never scans all open tabs or steals focus from another application.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-WORK"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-WORK04-C01",
+          "scenario": "Given the eligible github links and command palette and verified input, choosing context-preserving split navigation produces this observable result: Offer explicit open-in-current or new-tab actions while preserving native browser behavior."
+        },
+        {
+          "id": "bexp-WORK04-C02",
+          "scenario": "For context-preserving split navigation, exercise the concrete boundary: The extension never scans all open tabs or steals focus from another application."
+        },
+        {
+          "id": "bexp-WORK04-C03",
+          "scenario": "After context-preserving split navigation mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-WORK-05",
+      "family": "WORK",
+      "title": "View and reading profiles",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "All supported GitHub pages",
+      "userOutcome": "Switch bounded named comfortable, compact and review profiles with a preview of changed features.",
+      "boundaryAcceptance": "Profiles cannot grant permissions or hide required native actions.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-WORK"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-WORK05-C01",
+          "scenario": "Given the eligible all supported github pages and verified input, choosing view and reading profiles produces this observable result: Switch bounded named comfortable, compact and review profiles with a preview of changed features."
+        },
+        {
+          "id": "bexp-WORK05-C02",
+          "scenario": "For view and reading profiles, exercise the concrete boundary: Profiles cannot grant permissions or hide required native actions."
+        },
+        {
+          "id": "bexp-WORK05-C03",
+          "scenario": "An invalid or future-schema change to view and reading profiles preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-WORK05-C04",
+          "scenario": "View and reading profiles survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-WORK-06",
+      "family": "WORK",
+      "title": "Local draft and session workspace",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Control center",
+      "userOutcome": "Inspect explicitly saved session snippets, notes and pending drafts with deletion and export choices.",
+      "boundaryAcceptance": "Disconnect cannot publish a draft or silently delete an explicitly persisted authored note.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-WORK"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-WORK06-C01",
+          "scenario": "Given the eligible control center and verified input, choosing local draft and session workspace produces this observable result: Inspect explicitly saved session snippets, notes and pending drafts with deletion and export choices."
+        },
+        {
+          "id": "bexp-WORK06-C02",
+          "scenario": "For local draft and session workspace, exercise the concrete boundary: Disconnect cannot publish a draft or silently delete an explicitly persisted authored note."
+        },
+        {
+          "id": "bexp-WORK06-C03",
+          "scenario": "An invalid or future-schema change to local draft and session workspace preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-WORK06-C04",
+          "scenario": "Local draft and session workspace survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-WORK-07",
+      "family": "WORK",
+      "title": "Unavailable capability explanations",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Every feature entry point",
+      "userOutcome": "Explain missing permission, producer, source, browser API or page support with one useful recovery action.",
+      "boundaryAcceptance": "The UI never implies a feature is complete merely because a button rendered.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-WORK"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-WORK07-C01",
+          "scenario": "Given the eligible every feature entry point and verified input, choosing unavailable capability explanations produces this observable result: Explain missing permission, producer, source, browser API or page support with one useful recovery action."
+        },
+        {
+          "id": "bexp-WORK07-C02",
+          "scenario": "For unavailable capability explanations, exercise the concrete boundary: The UI never implies a feature is complete merely because a button rendered."
+        },
+        {
+          "id": "bexp-WORK07-C03",
+          "scenario": "After unavailable capability explanations mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-WORK-08",
+      "family": "WORK",
+      "title": "Upgrade and compatibility center",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Control center",
+      "userOutcome": "Show extension, Action contract, setup companion and browser compatibility with exact sources.",
+      "boundaryAcceptance": "Unknown versions remain unknown and no release asset is executed automatically.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-WORK"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-WORK08-C01",
+          "scenario": "Given the eligible control center and verified input, choosing upgrade and compatibility center produces this observable result: Show extension, Action contract, setup companion and browser compatibility with exact sources."
+        },
+        {
+          "id": "bexp-WORK08-C02",
+          "scenario": "For upgrade and compatibility center, exercise the concrete boundary: Unknown versions remain unknown and no release asset is executed automatically."
+        },
+        {
+          "id": "bexp-WORK08-C03",
+          "scenario": "A denied, truncated or expired source for upgrade and compatibility center shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-WORK08-C04",
+          "scenario": "Changing the selected repository/account/revision while upgrade and compatibility center is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    }
+  ]
+}

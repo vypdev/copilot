@@ -1,0 +1,684 @@
+{
+  "id": "CODE",
+  "title": "Code, files and diffs",
+  "features": [
+    {
+      "id": "BEX-CODE-01",
+      "family": "CODE",
+      "title": "File tree and outline navigation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Files changed and code views",
+      "userOutcome": "Navigate loaded file groups, symbols exposed by native GitHub and exact path search with visible loaded-scope counts.",
+      "boundaryAcceptance": "Virtualized or unloaded files are labeled as a subset rather than silently omitted.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CODE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CODE01-C01",
+          "scenario": "Given the eligible files changed and code views and verified input, choosing file tree and outline navigation produces this observable result: Navigate loaded file groups, symbols exposed by native GitHub and exact path search with visible loaded-scope counts."
+        },
+        {
+          "id": "bexp-CODE01-C02",
+          "scenario": "For file tree and outline navigation, exercise the concrete boundary: Virtualized or unloaded files are labeled as a subset rather than silently omitted."
+        },
+        {
+          "id": "bexp-CODE01-C03",
+          "scenario": "After file tree and outline navigation mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CODE-02",
+      "family": "CODE",
+      "title": "Next and previous changed file",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Pull request Files changed",
+      "userOutcome": "Move among eligible files with a keyboard-accessible position indicator and return-to-origin action.",
+      "boundaryAcceptance": "Disposed file anchors cannot receive focus after a soft navigation.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CODE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CODE02-C01",
+          "scenario": "Given the eligible pull request files changed and verified input, choosing next and previous changed file produces this observable result: Move among eligible files with a keyboard-accessible position indicator and return-to-origin action."
+        },
+        {
+          "id": "bexp-CODE02-C02",
+          "scenario": "For next and previous changed file, exercise the concrete boundary: Disposed file anchors cannot receive focus after a soft navigation."
+        },
+        {
+          "id": "bexp-CODE02-C03",
+          "scenario": "After next and previous changed file mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CODE-03",
+      "family": "CODE",
+      "title": "Generated-file focus",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Pull request diffs",
+      "userOutcome": "Hide explicitly classified generated files with hidden counts and immediate restore.",
+      "boundaryAcceptance": "Filename suffix alone never establishes generated status or hides a required finding.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CODE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CODE03-C01",
+          "scenario": "Given the eligible pull request diffs and verified input, choosing generated-file focus produces this observable result: Hide explicitly classified generated files with hidden counts and immediate restore."
+        },
+        {
+          "id": "bexp-CODE03-C02",
+          "scenario": "For generated-file focus, exercise the concrete boundary: Filename suffix alone never establishes generated status or hides a required finding."
+        },
+        {
+          "id": "bexp-CODE03-C03",
+          "scenario": "After generated-file focus mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CODE-04",
+      "family": "CODE",
+      "title": "Whitespace and indentation readability",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Code and diffs",
+      "userOutcome": "Toggle visual whitespace markers, indentation guides and tab width without changing copied source.",
+      "boundaryAcceptance": "Native code selection, line anchors and diff meaning remain intact.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CODE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CODE04-C01",
+          "scenario": "Given the eligible code and diffs and verified input, choosing whitespace and indentation readability produces this observable result: Toggle visual whitespace markers, indentation guides and tab width without changing copied source."
+        },
+        {
+          "id": "bexp-CODE04-C02",
+          "scenario": "For whitespace and indentation readability, exercise the concrete boundary: Native code selection, line anchors and diff meaning remain intact."
+        },
+        {
+          "id": "bexp-CODE04-C03",
+          "scenario": "After whitespace and indentation readability mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CODE-05",
+      "family": "CODE",
+      "title": "Readability and wrap profiles",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Code, Markdown and diffs",
+      "userOutcome": "Apply per-surface font size, line height, wrapping and density through bounded design tokens.",
+      "boundaryAcceptance": "Unsupported combinations retain horizontal access and never clip native controls.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CODE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CODE05-C01",
+          "scenario": "Given the eligible code, markdown and diffs and verified input, choosing readability and wrap profiles produces this observable result: Apply per-surface font size, line height, wrapping and density through bounded design tokens."
+        },
+        {
+          "id": "bexp-CODE05-C02",
+          "scenario": "For readability and wrap profiles, exercise the concrete boundary: Unsupported combinations retain horizontal access and never clip native controls."
+        },
+        {
+          "id": "bexp-CODE05-C03",
+          "scenario": "An invalid or future-schema change to readability and wrap profiles preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-CODE05-C04",
+          "scenario": "Readability and wrap profiles survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CODE-06",
+      "family": "CODE",
+      "title": "Copy patch and changed fragment",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Diff hunks",
+      "userOutcome": "Prepare a bounded patch or selected fragment with source revision and explicit inclusion preview.",
+      "boundaryAcceptance": "Truncated or partially loaded hunks cannot be presented as the complete patch.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CODE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CODE06-C01",
+          "scenario": "Given the eligible diff hunks and verified input, choosing copy patch and changed fragment produces this observable result: Prepare a bounded patch or selected fragment with source revision and explicit inclusion preview."
+        },
+        {
+          "id": "bexp-CODE06-C02",
+          "scenario": "For copy patch and changed fragment, exercise the concrete boundary: Truncated or partially loaded hunks cannot be presented as the complete patch."
+        },
+        {
+          "id": "bexp-CODE06-C03",
+          "scenario": "After copy patch and changed fragment mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CODE-07",
+      "family": "CODE",
+      "title": "Rename and binary context",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Changed files",
+      "userOutcome": "Explain verified rename relationships and binary or image changes with native source links.",
+      "boundaryAcceptance": "An unavailable blob or similarity estimate is not proof of identical content.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CODE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CODE07-C01",
+          "scenario": "Given the eligible changed files and verified input, choosing rename and binary context produces this observable result: Explain verified rename relationships and binary or image changes with native source links."
+        },
+        {
+          "id": "bexp-CODE07-C02",
+          "scenario": "For rename and binary context, exercise the concrete boundary: An unavailable blob or similarity estimate is not proof of identical content."
+        },
+        {
+          "id": "bexp-CODE07-C03",
+          "scenario": "A denied, truncated or expired source for rename and binary context shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-CODE07-C04",
+          "scenario": "Changing the selected repository/account/revision while rename and binary context is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CODE-08",
+      "family": "CODE",
+      "title": "File history and blame links",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Code and diffs",
+      "userOutcome": "Open native history or blame at the observed file/ref and preserve line context where supported.",
+      "boundaryAcceptance": "A line that cannot be mapped opens the file with an explicit mapping limitation.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CODE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CODE08-C01",
+          "scenario": "Given the eligible code and diffs and verified input, choosing file history and blame links produces this observable result: Open native history or blame at the observed file/ref and preserve line context where supported."
+        },
+        {
+          "id": "bexp-CODE08-C02",
+          "scenario": "For file history and blame links, exercise the concrete boundary: A line that cannot be mapped opens the file with an explicit mapping limitation."
+        },
+        {
+          "id": "bexp-CODE08-C03",
+          "scenario": "After file history and blame links mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CODE-09",
+      "family": "CODE",
+      "title": "Symbol and text navigation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Rendered code",
+      "userOutcome": "Search loaded text and native symbol anchors with match counts and next/previous controls.",
+      "boundaryAcceptance": "Search does not execute repository code or infer cross-file symbol resolution.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CODE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CODE09-C01",
+          "scenario": "Given the eligible rendered code and verified input, choosing symbol and text navigation produces this observable result: Search loaded text and native symbol anchors with match counts and next/previous controls."
+        },
+        {
+          "id": "bexp-CODE09-C02",
+          "scenario": "For symbol and text navigation, exercise the concrete boundary: Search does not execute repository code or infer cross-file symbol resolution."
+        },
+        {
+          "id": "bexp-CODE09-C03",
+          "scenario": "After symbol and text navigation mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CODE-10",
+      "family": "CODE",
+      "title": "Review progress markers",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Pull request files",
+      "userOutcome": "Track personal visited files against exact head/base identity and show what remains.",
+      "boundaryAcceptance": "A changed revision invalidates only affected progress and never alters GitHub review state.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CODE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CODE10-C01",
+          "scenario": "Given the eligible pull request files and verified input, choosing review progress markers produces this observable result: Track personal visited files against exact head/base identity and show what remains."
+        },
+        {
+          "id": "bexp-CODE10-C02",
+          "scenario": "For review progress markers, exercise the concrete boundary: A changed revision invalidates only affected progress and never alters GitHub review state."
+        },
+        {
+          "id": "bexp-CODE10-C03",
+          "scenario": "An invalid or future-schema change to review progress markers preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-CODE10-C04",
+          "scenario": "Review progress markers survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CODE-11",
+      "family": "CODE",
+      "title": "File type and path filters",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Diff and directory lists",
+      "userOutcome": "Combine extension, directory and text filters while exposing hidden content and reset.",
+      "boundaryAcceptance": "Filtering cannot suppress native security or required-check blockers.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CODE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CODE11-C01",
+          "scenario": "Given the eligible diff and directory lists and verified input, choosing file type and path filters produces this observable result: Combine extension, directory and text filters while exposing hidden content and reset."
+        },
+        {
+          "id": "bexp-CODE11-C02",
+          "scenario": "For file type and path filters, exercise the concrete boundary: Filtering cannot suppress native security or required-check blockers."
+        },
+        {
+          "id": "bexp-CODE11-C03",
+          "scenario": "After file type and path filters mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CODE-12",
+      "family": "CODE",
+      "title": "Raw, rendered and download navigation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "File headers",
+      "userOutcome": "Offer native raw, rendered and download destinations with the exact source identity shown.",
+      "boundaryAcceptance": "An executable download is never opened or run automatically.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CODE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CODE12-C01",
+          "scenario": "Given the eligible file headers and verified input, choosing raw, rendered and download navigation produces this observable result: Offer native raw, rendered and download destinations with the exact source identity shown."
+        },
+        {
+          "id": "bexp-CODE12-C02",
+          "scenario": "For raw, rendered and download navigation, exercise the concrete boundary: An executable download is never opened or run automatically."
+        },
+        {
+          "id": "bexp-CODE12-C03",
+          "scenario": "After raw, rendered and download navigation mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CODE-13",
+      "family": "CODE",
+      "title": "Dependency and configuration context",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Manifests and lockfile changes",
+      "userOutcome": "Link observed package names, version changes and configuration references to allowlisted native evidence.",
+      "boundaryAcceptance": "A package name alone cannot infer vulnerability status or fetch arbitrary registry URLs.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CODE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CODE13-C01",
+          "scenario": "Given the eligible manifests and lockfile changes and verified input, choosing dependency and configuration context produces this observable result: Link observed package names, version changes and configuration references to allowlisted native evidence."
+        },
+        {
+          "id": "bexp-CODE13-C02",
+          "scenario": "For dependency and configuration context, exercise the concrete boundary: A package name alone cannot infer vulnerability status or fetch arbitrary registry URLs."
+        },
+        {
+          "id": "bexp-CODE13-C03",
+          "scenario": "A denied, truncated or expired source for dependency and configuration context shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-CODE13-C04",
+          "scenario": "Changing the selected repository/account/revision while dependency and configuration context is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CODE-14",
+      "family": "CODE",
+      "title": "Review checkpoints and return position",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Long diffs",
+      "userOutcome": "Resume an explicit per-revision review checkpoint with scroll and focused file context.",
+      "boundaryAcceptance": "A missing or rewritten file offers a safe fallback without inventing progress.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CODE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CODE14-C01",
+          "scenario": "Given the eligible long diffs and verified input, choosing review checkpoints and return position produces this observable result: Resume an explicit per-revision review checkpoint with scroll and focused file context."
+        },
+        {
+          "id": "bexp-CODE14-C02",
+          "scenario": "For review checkpoints and return position, exercise the concrete boundary: A missing or rewritten file offers a safe fallback without inventing progress."
+        },
+        {
+          "id": "bexp-CODE14-C03",
+          "scenario": "An invalid or future-schema change to review checkpoints and return position preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-CODE14-C04",
+          "scenario": "Review checkpoints and return position survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    }
+  ]
+}

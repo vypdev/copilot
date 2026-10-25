@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vypdev.github.io/copilot/specs/browser-extension/feature-catalog-index.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "const": "./feature-catalog-index.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "status": {
+      "const": "proposed-product-contract"
+    },
+    "runtimeVerified": {
+      "const": false
+    },
+    "releaseContract": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "locales": {
+      "const": [
+        "en",
+        "es",
+        "fr",
+        "pt"
+      ]
+    },
+    "families": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "enum": [
+              "NAV",
+              "CODE",
+              "REVIEW",
+              "ISSUE",
+              "SEARCH",
+              "NOTIFY",
+              "CI",
+              "RELEASE",
+              "WORK",
+              "COPILOT",
+              "CENTER",
+              "SETUP"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "file": {
+            "type": "string",
+            "pattern": "^features/(NAV|CODE|REVIEW|ISSUE|SEARCH|NOTIFY|CI|RELEASE|WORK|COPILOT|CENTER|SETUP)\\.v1\\.json$"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "file"
+        ]
+      }
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "status",
+    "runtimeVerified",
+    "releaseContract",
+    "locales",
+    "families"
+  ]
+}

@@ -1,0 +1,402 @@
+{
+  "id": "SEARCH",
+  "title": "Search and personal views",
+  "features": [
+    {
+      "id": "BEX-SEARCH-01",
+      "family": "SEARCH",
+      "title": "Named saved searches",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "GitHub search and lists",
+      "userOutcome": "Save and restore an explicit query with host, account and repository scope.",
+      "boundaryAcceptance": "Opening a shared query never silently replaces it with a personal default.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SEARCH"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SEARCH01-C01",
+          "scenario": "Given the eligible github search and lists and verified input, choosing named saved searches produces this observable result: Save and restore an explicit query with host, account and repository scope."
+        },
+        {
+          "id": "bexp-SEARCH01-C02",
+          "scenario": "For named saved searches, exercise the concrete boundary: Opening a shared query never silently replaces it with a personal default."
+        },
+        {
+          "id": "bexp-SEARCH01-C03",
+          "scenario": "An invalid or future-schema change to named saved searches preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-SEARCH01-C04",
+          "scenario": "Named saved searches survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SEARCH-02",
+      "family": "SEARCH",
+      "title": "Search query builder",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Search controls",
+      "userOutcome": "Build supported native qualifiers through readable chips and preview the exact query.",
+      "boundaryAcceptance": "Unsupported qualifiers remain editable text and are not represented as validated filters.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SEARCH"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SEARCH02-C01",
+          "scenario": "Given the eligible search controls and verified input, choosing search query builder produces this observable result: Build supported native qualifiers through readable chips and preview the exact query."
+        },
+        {
+          "id": "bexp-SEARCH02-C02",
+          "scenario": "For search query builder, exercise the concrete boundary: Unsupported qualifiers remain editable text and are not represented as validated filters."
+        },
+        {
+          "id": "bexp-SEARCH02-C03",
+          "scenario": "After search query builder mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SEARCH-03",
+      "family": "SEARCH",
+      "title": "In-page loaded-result filtering",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Search and repository lists",
+      "userOutcome": "Filter already loaded results by visible properties with local-versus-server scope explained.",
+      "boundaryAcceptance": "Local filtering cannot claim it searched unseen pages.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SEARCH"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SEARCH03-C01",
+          "scenario": "Given the eligible search and repository lists and verified input, choosing in-page loaded-result filtering produces this observable result: Filter already loaded results by visible properties with local-versus-server scope explained."
+        },
+        {
+          "id": "bexp-SEARCH03-C02",
+          "scenario": "For in-page loaded-result filtering, exercise the concrete boundary: Local filtering cannot claim it searched unseen pages."
+        },
+        {
+          "id": "bexp-SEARCH03-C03",
+          "scenario": "After in-page loaded-result filtering mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SEARCH-04",
+      "family": "SEARCH",
+      "title": "Cross-repository work searches",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Local workspace",
+      "userOutcome": "Run explicit bounded saved searches across selected repositories with per-repository completeness.",
+      "boundaryAcceptance": "Denied repositories stay unavailable instead of disappearing from the result summary.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SEARCH"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SEARCH04-C01",
+          "scenario": "Given the eligible local workspace and verified input, choosing cross-repository work searches produces this observable result: Run explicit bounded saved searches across selected repositories with per-repository completeness."
+        },
+        {
+          "id": "bexp-SEARCH04-C02",
+          "scenario": "For cross-repository work searches, exercise the concrete boundary: Denied repositories stay unavailable instead of disappearing from the result summary."
+        },
+        {
+          "id": "bexp-SEARCH04-C03",
+          "scenario": "A denied, truncated or expired source for cross-repository work searches shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-SEARCH04-C04",
+          "scenario": "Changing the selected repository/account/revision while cross-repository work searches is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SEARCH-05",
+      "family": "SEARCH",
+      "title": "Result provenance and completeness",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Search results",
+      "userOutcome": "Show repository/object identity, observation time and pagination/truncation alongside result counts.",
+      "boundaryAcceptance": "An exhausted budget cannot be shown as a complete zero-result search.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SEARCH"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SEARCH05-C01",
+          "scenario": "Given the eligible search results and verified input, choosing result provenance and completeness produces this observable result: Show repository/object identity, observation time and pagination/truncation alongside result counts."
+        },
+        {
+          "id": "bexp-SEARCH05-C02",
+          "scenario": "For result provenance and completeness, exercise the concrete boundary: An exhausted budget cannot be shown as a complete zero-result search."
+        },
+        {
+          "id": "bexp-SEARCH05-C03",
+          "scenario": "A denied, truncated or expired source for result provenance and completeness shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-SEARCH05-C04",
+          "scenario": "Changing the selected repository/account/revision while result provenance and completeness is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SEARCH-06",
+      "family": "SEARCH",
+      "title": "Recent local navigation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Control center and command palette",
+      "userOutcome": "Offer opt-in extension-local recent destinations with bounded retention and clear/delete controls.",
+      "boundaryAcceptance": "No browser history permission or background browsing-history collection is used.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SEARCH"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SEARCH06-C01",
+          "scenario": "Given the eligible control center and command palette and verified input, choosing recent local navigation produces this observable result: Offer opt-in extension-local recent destinations with bounded retention and clear/delete controls."
+        },
+        {
+          "id": "bexp-SEARCH06-C02",
+          "scenario": "For recent local navigation, exercise the concrete boundary: No browser history permission or background browsing-history collection is used."
+        },
+        {
+          "id": "bexp-SEARCH06-C03",
+          "scenario": "An invalid or future-schema change to recent local navigation preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-SEARCH06-C04",
+          "scenario": "Recent local navigation survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SEARCH-07",
+      "family": "SEARCH",
+      "title": "Search-to-workspace collections",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Search results",
+      "userOutcome": "Pin selected canonical results to an account-scoped personal collection with explicit privacy choice.",
+      "boundaryAcceptance": "Unloaded results and private titles are not copied into persistent collections implicitly.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SEARCH"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SEARCH07-C01",
+          "scenario": "Given the eligible search results and verified input, choosing search-to-workspace collections produces this observable result: Pin selected canonical results to an account-scoped personal collection with explicit privacy choice."
+        },
+        {
+          "id": "bexp-SEARCH07-C02",
+          "scenario": "For search-to-workspace collections, exercise the concrete boundary: Unloaded results and private titles are not copied into persistent collections implicitly."
+        },
+        {
+          "id": "bexp-SEARCH07-C03",
+          "scenario": "An invalid or future-schema change to search-to-workspace collections preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-SEARCH07-C04",
+          "scenario": "Search-to-workspace collections survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SEARCH-08",
+      "family": "SEARCH",
+      "title": "Accessible result traversal",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Search and lists",
+      "userOutcome": "Move among visible results with stable focus, position announcements and return links.",
+      "boundaryAcceptance": "Native text input and browser find retain their normal keyboard behavior.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SEARCH"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SEARCH08-C01",
+          "scenario": "Given the eligible search and lists and verified input, choosing accessible result traversal produces this observable result: Move among visible results with stable focus, position announcements and return links."
+        },
+        {
+          "id": "bexp-SEARCH08-C02",
+          "scenario": "For accessible result traversal, exercise the concrete boundary: Native text input and browser find retain their normal keyboard behavior."
+        },
+        {
+          "id": "bexp-SEARCH08-C03",
+          "scenario": "After accessible result traversal mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    }
+  ]
+}

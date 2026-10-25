@@ -1,0 +1,65 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "enabled",
+    "repositoryId",
+    "producerActorId",
+    "workflowPaths",
+    "capabilities",
+    "statusSchemaMajor",
+    "publication"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "repositoryId": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "producerActorId": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "workflowPaths": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160,
+        "pattern": "^\\.github/workflows/[A-Za-z0-9_.-]+\\.ya?ml$"
+      },
+      "maxItems": 8,
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 48,
+        "pattern": "^[a-z][a-z0-9-]{0,39}\\.v[1-9][0-9]{0,2}$"
+      },
+      "maxItems": 16,
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "statusSchemaMajor": {
+      "const": 1
+    },
+    "publication": {
+      "const": "current-status-comment"
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:vypdev:copilot:browser-extension:manifest:1",
+  "title": "Proposed browser connection manifest v1"
+}

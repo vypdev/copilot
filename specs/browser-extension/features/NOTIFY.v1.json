@@ -1,0 +1,417 @@
+{
+  "id": "NOTIFY",
+  "title": "Notifications and attention",
+  "features": [
+    {
+      "id": "BEX-NOTIFY-01",
+      "family": "NOTIFY",
+      "title": "Loaded inbox grouping",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Native notifications page",
+      "userOutcome": "Group visible notifications by repository, reason and object type without API credentials.",
+      "boundaryAcceptance": "The group count is explicitly limited to loaded notifications.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-NOTIFY"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-NOTIFY01-C01",
+          "scenario": "Given the eligible native notifications page and verified input, choosing loaded inbox grouping produces this observable result: Group visible notifications by repository, reason and object type without API credentials."
+        },
+        {
+          "id": "bexp-NOTIFY01-C02",
+          "scenario": "For loaded inbox grouping, exercise the concrete boundary: The group count is explicitly limited to loaded notifications."
+        },
+        {
+          "id": "bexp-NOTIFY01-C03",
+          "scenario": "After loaded inbox grouping mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-NOTIFY-02",
+      "family": "NOTIFY",
+      "title": "Notification source previews",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Native notifications list",
+      "userOutcome": "Show observed source state and source links beside the native notification entry.",
+      "boundaryAcceptance": "Private content absent from the current page is not fetched with a classic token fallback.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-NOTIFY"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-NOTIFY02-C01",
+          "scenario": "Given the eligible native notifications list and verified input, choosing notification source previews produces this observable result: Show observed source state and source links beside the native notification entry."
+        },
+        {
+          "id": "bexp-NOTIFY02-C02",
+          "scenario": "For notification source previews, exercise the concrete boundary: Private content absent from the current page is not fetched with a classic token fallback."
+        },
+        {
+          "id": "bexp-NOTIFY02-C03",
+          "scenario": "After notification source previews mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-NOTIFY-03",
+      "family": "NOTIFY",
+      "title": "Explicit notification selection",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Native notifications page",
+      "userOutcome": "Select loaded notifications by visible reason/state and preview the exact set before native actions.",
+      "boundaryAcceptance": "Selection never includes unloaded notifications or executes a destructive action on page open.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-NOTIFY"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-NOTIFY03-C01",
+          "scenario": "Given the eligible native notifications page and verified input, choosing explicit notification selection produces this observable result: Select loaded notifications by visible reason/state and preview the exact set before native actions."
+        },
+        {
+          "id": "bexp-NOTIFY03-C02",
+          "scenario": "For explicit notification selection, exercise the concrete boundary: Selection never includes unloaded notifications or executes a destructive action on page open."
+        },
+        {
+          "id": "bexp-NOTIFY03-C03",
+          "scenario": "After explicit notification selection mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-NOTIFY-04",
+      "family": "NOTIFY",
+      "title": "Mark-read and unsubscribe handoff",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Native notification controls",
+      "userOutcome": "Focus the native mark-read, done or unsubscribe action for the reviewed selection.",
+      "boundaryAcceptance": "The official notification API's classic-token requirement never silently broadens access.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-NOTIFY"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-NOTIFY04-C01",
+          "scenario": "Given the eligible native notification controls and verified input, choosing mark-read and unsubscribe handoff produces this observable result: Focus the native mark-read, done or unsubscribe action for the reviewed selection."
+        },
+        {
+          "id": "bexp-NOTIFY04-C02",
+          "scenario": "For mark-read and unsubscribe handoff, exercise the concrete boundary: The official notification API's classic-token requirement never silently broadens access."
+        },
+        {
+          "id": "bexp-NOTIFY04-C03",
+          "scenario": "Opening mark-read and unsubscribe handoff preserves the current native selection/input and requires the human's native confirmation; cancel performs no mutation."
+        },
+        {
+          "id": "bexp-NOTIFY04-C04",
+          "scenario": "A changed target, permission or selection while mark-read and unsubscribe handoff is being prepared invalidates the handoff and refreshes its exact scope."
+        },
+        {
+          "id": "bexp-NOTIFY04-C05",
+          "scenario": "Keyboard-only use of mark-read and unsubscribe handoff announces the exact native destination and effect, returns focus on cancel and submits nothing from the extension."
+        }
+      ],
+      "nativeTarget": "control-handoff"
+    },
+    {
+      "id": "BEX-NOTIFY-05",
+      "family": "NOTIFY",
+      "title": "Personal snooze and reminders",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Workspace attention queue",
+      "userOutcome": "Snooze a personal reference until a chosen local time and show its local-only status.",
+      "boundaryAcceptance": "Snoozing does not change GitHub subscription or guarantee a background notification delivery time.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-NOTIFY"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-NOTIFY05-C01",
+          "scenario": "Given the eligible workspace attention queue and verified input, choosing personal snooze and reminders produces this observable result: Snooze a personal reference until a chosen local time and show its local-only status."
+        },
+        {
+          "id": "bexp-NOTIFY05-C02",
+          "scenario": "For personal snooze and reminders, exercise the concrete boundary: Snoozing does not change GitHub subscription or guarantee a background notification delivery time."
+        },
+        {
+          "id": "bexp-NOTIFY05-C03",
+          "scenario": "An invalid or future-schema change to personal snooze and reminders preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-NOTIFY05-C04",
+          "scenario": "Personal snooze and reminders survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-NOTIFY-06",
+      "family": "NOTIFY",
+      "title": "Optional attention alerts",
+      "delivery": "required-for-product-acceptance",
+      "mode": "monitor",
+      "surface": "Extension toolbar and local center; basic OS notifications on Chrome/Firefox only",
+      "userOutcome": "Enable bounded opt-in alerts for explicitly tracked verified transitions with quiet hours and deduplication.",
+      "boundaryAcceptance": "Safari uses the accessible toolbar/center channel without an unsupported notifications grant; denied channels, suspension and missing evidence never create repeated prompts or guessed alerts.",
+      "permissionProfile": "explicit-bounded-alert-monitor",
+      "dataSource": "at most five explicitly tracked canonical targets through the shared read scheduler",
+      "freshnessRule": "alarm revalidates account/target/source; no stale or unknown alert",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [
+        "notifications",
+        "alarms"
+      ],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "explicit user gesture selects an available platform channel, enables the selected-target subscription and requests only supported optional grants; each alarm wake revalidates current eligibility, identity, grants and shared budgets before reads or alerts",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-NOTIFY"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-NOTIFY06-C01",
+          "scenario": "After explicit supported-channel/monitor grants and target selection, a due browser alarm observes one verified tracked transition and emits one redacted attention item through that platform adapter within quiet-hour and request budgets."
+        },
+        {
+          "id": "bexp-NOTIFY06-C02",
+          "scenario": "Safari omits OS notifications and their permission and delivers toolbar/center attention; Chrome/Firefox denial leaves the requested mode off until an explicit local-channel choice; suspension/restart never claims exact delivery or repeats prompts."
+        },
+        {
+          "id": "bexp-NOTIFY06-C03",
+          "scenario": "Pausing the repository or revoking a grant before an alarm fires prevents all reads and notifications for that target."
+        },
+        {
+          "id": "bexp-NOTIFY06-C04",
+          "scenario": "A duplicate alarm or worker restart cannot emit the same target/revision/transition alert twice; quiet hours defer or suppress according to the chosen policy."
+        },
+        {
+          "id": "bexp-NOTIFY06-C05",
+          "scenario": "More due targets than the six-GET-per-wake or shared hourly budget permits are rotated/deferred without exceeding any account/repository ceiling."
+        },
+        {
+          "id": "bexp-NOTIFY06-C06",
+          "scenario": "Changing or losing the selected session identity clears private queued alert evidence and requires explicit reconnect before private monitoring resumes."
+        },
+        {
+          "id": "bexp-NOTIFY06-C07",
+          "scenario": "A stale, partial, foreign-target or unknown source never generates a success/blocker alert as though it were verified current evidence."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-NOTIFY-07",
+      "family": "NOTIFY",
+      "title": "Mentions and review attention views",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Native inbox and visible lists",
+      "userOutcome": "Focus visible direct mentions and review requests while preserving access to all hidden categories.",
+      "boundaryAcceptance": "A matching string alone cannot classify a private team mention or authoritative review request.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-NOTIFY"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-NOTIFY07-C01",
+          "scenario": "Given the eligible native inbox and visible lists and verified input, choosing mentions and review attention views produces this observable result: Focus visible direct mentions and review requests while preserving access to all hidden categories."
+        },
+        {
+          "id": "bexp-NOTIFY07-C02",
+          "scenario": "For mentions and review attention views, exercise the concrete boundary: A matching string alone cannot classify a private team mention or authoritative review request."
+        },
+        {
+          "id": "bexp-NOTIFY07-C03",
+          "scenario": "After mentions and review attention views mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-NOTIFY-08",
+      "family": "NOTIFY",
+      "title": "Notification privacy and lifecycle",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Control center privacy page",
+      "userOutcome": "Inspect and clear local attention state with retention, quiet-hours and account isolation controls.",
+      "boundaryAcceptance": "Disconnect removes private cached evidence while preserving explicitly authored nonsecret settings.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-NOTIFY"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-NOTIFY08-C01",
+          "scenario": "Given the eligible control center privacy page and verified input, choosing notification privacy and lifecycle produces this observable result: Inspect and clear local attention state with retention, quiet-hours and account isolation controls."
+        },
+        {
+          "id": "bexp-NOTIFY08-C02",
+          "scenario": "For notification privacy and lifecycle, exercise the concrete boundary: Disconnect removes private cached evidence while preserving explicitly authored nonsecret settings."
+        },
+        {
+          "id": "bexp-NOTIFY08-C03",
+          "scenario": "An invalid or future-schema change to notification privacy and lifecycle preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-NOTIFY08-C04",
+          "scenario": "Notification privacy and lifecycle survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    }
+  ]
+}

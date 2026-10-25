@@ -1,0 +1,716 @@
+{
+  "id": "REVIEW",
+  "title": "Pull requests and reviews",
+  "features": [
+    {
+      "id": "BEX-REVIEW-01",
+      "family": "REVIEW",
+      "title": "Review readiness overview",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Pull request header",
+      "userOutcome": "Separate review requests, required checks, conflicts, queue state and Copilot assessment with source times.",
+      "boundaryAcceptance": "A successful advisory check cannot establish overall merge readiness.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-REVIEW"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-REVIEW01-C01",
+          "scenario": "Given the eligible pull request header and verified input, choosing review readiness overview produces this observable result: Separate review requests, required checks, conflicts, queue state and Copilot assessment with source times."
+        },
+        {
+          "id": "bexp-REVIEW01-C02",
+          "scenario": "For review readiness overview, exercise the concrete boundary: A successful advisory check cannot establish overall merge readiness."
+        },
+        {
+          "id": "bexp-REVIEW01-C03",
+          "scenario": "A denied, truncated or expired source for review readiness overview shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-REVIEW01-C04",
+          "scenario": "Changing the selected repository/account/revision while review readiness overview is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-REVIEW-02",
+      "family": "REVIEW",
+      "title": "Finding and comment navigator",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Pull request conversation and diffs",
+      "userOutcome": "Navigate native comments and verified findings by file, severity, author and current state.",
+      "boundaryAcceptance": "Incomplete collection preserves unknown totals and historical findings stay labeled.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-REVIEW"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-REVIEW02-C01",
+          "scenario": "Given the eligible pull request conversation and diffs and verified input, choosing finding and comment navigator produces this observable result: Navigate native comments and verified findings by file, severity, author and current state."
+        },
+        {
+          "id": "bexp-REVIEW02-C02",
+          "scenario": "For finding and comment navigator, exercise the concrete boundary: Incomplete collection preserves unknown totals and historical findings stay labeled."
+        },
+        {
+          "id": "bexp-REVIEW02-C03",
+          "scenario": "A denied, truncated or expired source for finding and comment navigator shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-REVIEW02-C04",
+          "scenario": "Changing the selected repository/account/revision while finding and comment navigator is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-REVIEW-03",
+      "family": "REVIEW",
+      "title": "Resolved and outdated thread controls",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Review threads",
+      "userOutcome": "Expand, collapse and restore selected thread categories while preserving editors and focus.",
+      "boundaryAcceptance": "An active draft or unresolved required action cannot be silently hidden.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-REVIEW"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-REVIEW03-C01",
+          "scenario": "Given the eligible review threads and verified input, choosing resolved and outdated thread controls produces this observable result: Expand, collapse and restore selected thread categories while preserving editors and focus."
+        },
+        {
+          "id": "bexp-REVIEW03-C02",
+          "scenario": "For resolved and outdated thread controls, exercise the concrete boundary: An active draft or unresolved required action cannot be silently hidden."
+        },
+        {
+          "id": "bexp-REVIEW03-C03",
+          "scenario": "After resolved and outdated thread controls mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-REVIEW-04",
+      "family": "REVIEW",
+      "title": "Conversation event focus",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Long issue and PR timelines",
+      "userOutcome": "Focus comments, state changes, reviews or bot activity with visible hidden-event counts.",
+      "boundaryAcceptance": "Filtered workflow failures remain discoverable through an explicit blocker indicator.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-REVIEW"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-REVIEW04-C01",
+          "scenario": "Given the eligible long issue and pr timelines and verified input, choosing conversation event focus produces this observable result: Focus comments, state changes, reviews or bot activity with visible hidden-event counts."
+        },
+        {
+          "id": "bexp-REVIEW04-C02",
+          "scenario": "For conversation event focus, exercise the concrete boundary: Filtered workflow failures remain discoverable through an explicit blocker indicator."
+        },
+        {
+          "id": "bexp-REVIEW04-C03",
+          "scenario": "After conversation event focus mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-REVIEW-05",
+      "family": "REVIEW",
+      "title": "Draft preservation and snippets",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Native comment and review editors",
+      "userOutcome": "Use local user-authored snippets with placeholder preview, append/keep/cancel and optional session drafts.",
+      "boundaryAcceptance": "No draft is sent to an agent or overwritten by a background refresh.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-REVIEW"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-REVIEW05-C01",
+          "scenario": "Given the eligible native comment and review editors and verified input, choosing draft preservation and snippets produces this observable result: Use local user-authored snippets with placeholder preview, append/keep/cancel and optional session drafts."
+        },
+        {
+          "id": "bexp-REVIEW05-C02",
+          "scenario": "For draft preservation and snippets, exercise the concrete boundary: No draft is sent to an agent or overwritten by a background refresh."
+        },
+        {
+          "id": "bexp-REVIEW05-C03",
+          "scenario": "An invalid or future-schema change to draft preservation and snippets preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-REVIEW05-C04",
+          "scenario": "Draft preservation and snippets survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-REVIEW-06",
+      "family": "REVIEW",
+      "title": "Changed-since-review navigation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Updated pull requests",
+      "userOutcome": "Compare a verified reviewed revision with the current head and open native comparisons.",
+      "boundaryAcceptance": "Force-pushed or unavailable commits show an unresolvable range instead of an empty diff.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-REVIEW"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-REVIEW06-C01",
+          "scenario": "Given the eligible updated pull requests and verified input, choosing changed-since-review navigation produces this observable result: Compare a verified reviewed revision with the current head and open native comparisons."
+        },
+        {
+          "id": "bexp-REVIEW06-C02",
+          "scenario": "For changed-since-review navigation, exercise the concrete boundary: Force-pushed or unavailable commits show an unresolvable range instead of an empty diff."
+        },
+        {
+          "id": "bexp-REVIEW06-C03",
+          "scenario": "A denied, truncated or expired source for changed-since-review navigation shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-REVIEW06-C04",
+          "scenario": "Changing the selected repository/account/revision while changed-since-review navigation is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-REVIEW-07",
+      "family": "REVIEW",
+      "title": "Requested reviewer context",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Pull request sidebar",
+      "userOutcome": "Explain requested versus submitted reviews and team-based requests from canonical facts.",
+      "boundaryAcceptance": "Team membership or reviewer presence cannot substitute for a current approval.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-REVIEW"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-REVIEW07-C01",
+          "scenario": "Given the eligible pull request sidebar and verified input, choosing requested reviewer context produces this observable result: Explain requested versus submitted reviews and team-based requests from canonical facts."
+        },
+        {
+          "id": "bexp-REVIEW07-C02",
+          "scenario": "For requested reviewer context, exercise the concrete boundary: Team membership or reviewer presence cannot substitute for a current approval."
+        },
+        {
+          "id": "bexp-REVIEW07-C03",
+          "scenario": "A denied, truncated or expired source for requested reviewer context shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-REVIEW07-C04",
+          "scenario": "Changing the selected repository/account/revision while requested reviewer context is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-REVIEW-08",
+      "family": "REVIEW",
+      "title": "Review submission preparation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Pull request review composer",
+      "userOutcome": "Open the native review summary with selected comment, approve or request-changes intent for human review.",
+      "boundaryAcceptance": "The extension never submits an approval or bypasses current repository review policy.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-REVIEW"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-REVIEW08-C01",
+          "scenario": "Given the eligible pull request review composer and verified input, choosing review submission preparation produces this observable result: Open the native review summary with selected comment, approve or request-changes intent for human review."
+        },
+        {
+          "id": "bexp-REVIEW08-C02",
+          "scenario": "For review submission preparation, exercise the concrete boundary: The extension never submits an approval or bypasses current repository review policy."
+        },
+        {
+          "id": "bexp-REVIEW08-C03",
+          "scenario": "Review submission preparation with a nonempty native draft offers append/keep/cancel and never submits or overwrites it automatically."
+        },
+        {
+          "id": "bexp-REVIEW08-C04",
+          "scenario": "A changed target or revoked capability before review submission preparation prepares text cancels that preparation with a native source link."
+        },
+        {
+          "id": "bexp-REVIEW08-C05",
+          "scenario": "Keyboard-only use of review submission preparation announces its exact destination/effect, preserves literal operands and returns focus after cancellation."
+        }
+      ],
+      "nativeTarget": "human-composer"
+    },
+    {
+      "id": "BEX-REVIEW-09",
+      "family": "REVIEW",
+      "title": "Conflict explanation and recovery links",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Conflicting pull requests",
+      "userOutcome": "Show which native comparison or managed synchronization control can resolve the observed conflict.",
+      "boundaryAcceptance": "Unknown mergeability stays pending and no browser edit manufactures a managed branch.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-REVIEW"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-REVIEW09-C01",
+          "scenario": "Given the eligible conflicting pull requests and verified input, choosing conflict explanation and recovery links produces this observable result: Show which native comparison or managed synchronization control can resolve the observed conflict."
+        },
+        {
+          "id": "bexp-REVIEW09-C02",
+          "scenario": "For conflict explanation and recovery links, exercise the concrete boundary: Unknown mergeability stays pending and no browser edit manufactures a managed branch."
+        },
+        {
+          "id": "bexp-REVIEW09-C03",
+          "scenario": "A denied, truncated or expired source for conflict explanation and recovery links shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-REVIEW09-C04",
+          "scenario": "Changing the selected repository/account/revision while conflict explanation and recovery links is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-REVIEW-10",
+      "family": "REVIEW",
+      "title": "Merge and queue handoff",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Pull request merge controls",
+      "userOutcome": "Prepare a contextual handoff showing target, revision, merge method and queue/protection implications.",
+      "boundaryAcceptance": "Unknown policy or a moved head blocks a claimed safe merge and returns to native GitHub.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-REVIEW"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-REVIEW10-C01",
+          "scenario": "Given the eligible pull request merge controls and verified input, choosing merge and queue handoff produces this observable result: Prepare a contextual handoff showing target, revision, merge method and queue/protection implications."
+        },
+        {
+          "id": "bexp-REVIEW10-C02",
+          "scenario": "For merge and queue handoff, exercise the concrete boundary: Unknown policy or a moved head blocks a claimed safe merge and returns to native GitHub."
+        },
+        {
+          "id": "bexp-REVIEW10-C03",
+          "scenario": "Opening merge and queue handoff preserves the current native selection/input and requires the human's native confirmation; cancel performs no mutation."
+        },
+        {
+          "id": "bexp-REVIEW10-C04",
+          "scenario": "A changed target, permission or selection while merge and queue handoff is being prepared invalidates the handoff and refreshes its exact scope."
+        },
+        {
+          "id": "bexp-REVIEW10-C05",
+          "scenario": "Keyboard-only use of merge and queue handoff announces the exact native destination and effect, returns focus on cancel and submits nothing from the extension."
+        }
+      ],
+      "nativeTarget": "control-handoff"
+    },
+    {
+      "id": "BEX-REVIEW-11",
+      "family": "REVIEW",
+      "title": "Task and checklist navigation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Descriptions and conversations",
+      "userOutcome": "Index loaded checklist items and link back to their source without editing them.",
+      "boundaryAcceptance": "Unchecked or partially loaded lists cannot be reported as complete.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-REVIEW"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-REVIEW11-C01",
+          "scenario": "Given the eligible descriptions and conversations and verified input, choosing task and checklist navigation produces this observable result: Index loaded checklist items and link back to their source without editing them."
+        },
+        {
+          "id": "bexp-REVIEW11-C02",
+          "scenario": "For task and checklist navigation, exercise the concrete boundary: Unchecked or partially loaded lists cannot be reported as complete."
+        },
+        {
+          "id": "bexp-REVIEW11-C03",
+          "scenario": "After task and checklist navigation mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-REVIEW-12",
+      "family": "REVIEW",
+      "title": "Change summary by ownership",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Pull request overview",
+      "userOutcome": "Group verified changed paths by directory and available CODEOWNERS evidence with completeness shown.",
+      "boundaryAcceptance": "Unparsed ownership rules remain unknown and never nominate an invented reviewer.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-REVIEW"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-REVIEW12-C01",
+          "scenario": "Given the eligible pull request overview and verified input, choosing change summary by ownership produces this observable result: Group verified changed paths by directory and available CODEOWNERS evidence with completeness shown."
+        },
+        {
+          "id": "bexp-REVIEW12-C02",
+          "scenario": "For change summary by ownership, exercise the concrete boundary: Unparsed ownership rules remain unknown and never nominate an invented reviewer."
+        },
+        {
+          "id": "bexp-REVIEW12-C03",
+          "scenario": "A denied, truncated or expired source for change summary by ownership shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-REVIEW12-C04",
+          "scenario": "Changing the selected repository/account/revision while change summary by ownership is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-REVIEW-13",
+      "family": "REVIEW",
+      "title": "Saved review filters",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Review conversations and Files changed",
+      "userOutcome": "Save personal author, state and path filters in a named profile with a visible active-filter summary.",
+      "boundaryAcceptance": "A shared URL or new account does not inherit another person's private review context.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-REVIEW"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-REVIEW13-C01",
+          "scenario": "Given the eligible review conversations and files changed and verified input, choosing saved review filters produces this observable result: Save personal author, state and path filters in a named profile with a visible active-filter summary."
+        },
+        {
+          "id": "bexp-REVIEW13-C02",
+          "scenario": "For saved review filters, exercise the concrete boundary: A shared URL or new account does not inherit another person's private review context."
+        },
+        {
+          "id": "bexp-REVIEW13-C03",
+          "scenario": "An invalid or future-schema change to saved review filters preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-REVIEW13-C04",
+          "scenario": "Saved review filters survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-REVIEW-14",
+      "family": "REVIEW",
+      "title": "Review evidence export",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Pull request overview",
+      "userOutcome": "Export an explicitly selected redacted review receipt with exact revisions, sources and missing evidence.",
+      "boundaryAcceptance": "The export excludes tokens, private source text and unrelated review comments by default.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-REVIEW"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-REVIEW14-C01",
+          "scenario": "Given the eligible pull request overview and verified input, choosing review evidence export produces this observable result: Export an explicitly selected redacted review receipt with exact revisions, sources and missing evidence."
+        },
+        {
+          "id": "bexp-REVIEW14-C02",
+          "scenario": "For review evidence export, exercise the concrete boundary: The export excludes tokens, private source text and unrelated review comments by default."
+        },
+        {
+          "id": "bexp-REVIEW14-C03",
+          "scenario": "A denied, truncated or expired source for review evidence export shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-REVIEW14-C04",
+          "scenario": "Changing the selected repository/account/revision while review evidence export is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    }
+  ]
+}
