@@ -55,7 +55,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "node scripts/clean-generated-bundles.cjs && pnpm run build:web && ncc build src/actions/github_action.ts -o build/github_action && ncc build src/cli.ts -o build/cli && ncc build src/api.ts -o build/api && node scripts/prepare-generated-bundles.cjs && node scripts/set-cli-executable.cjs",
+    "build": "node scripts/clean-generated-bundles.cjs && pnpm run build:web && ncc build src/actions/github_action.ts -o build/github_action && ncc build src/cli.ts -o build/cli && ncc build src/api.ts -o build/api && node scripts/prepare-generated-bundles.cjs && node scripts/set-cli-executable.cjs && pnpm run build:extension",
     "build:web": "vite build --config web/vite.config.mts",
     "check:web": "svelte-check --tsconfig web/tsconfig.json && vite build --config web/vite.config.mts",
     "validate:build": "node scripts/validate-build.cjs",
@@ -63,11 +63,11 @@
     "smoke:npm-package": "node scripts/smoke-test-npm-package.cjs",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage --json --outputFile=coverage/setup-acceptance-jest.json && node scripts/validate-coverage-budgets.cjs && node scripts/validate-setup-assistant-acceptance.cjs coverage/setup-acceptance-jest.json",
+    "test:coverage": "jest --coverage --json --outputFile=coverage/setup-acceptance-jest.json && node scripts/validate-coverage-budgets.cjs && node scripts/validate-setup-assistant-acceptance.cjs coverage/setup-acceptance-jest.json && pnpm run test:extension",
     "eval:bugbot": "jest src/tooling/__tests__/bugbot_quality_eval.test.ts src/tooling/__tests__/bugbot_benchmark.test.ts --runInBand",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && pnpm run typecheck:extension",
     "metrics:architecture": "node scripts/collect-architecture-metrics.cjs",
-    "lint": "eslint src",
+    "lint": "eslint src extension",
     "validate:agent-docs": "node scripts/validate-agent-documentation.cjs",
     "validate:docs-page": "node scripts/validate-docs-page-assets.cjs",
     "validate:documentation": "node scripts/validate-documentation-contract.cjs",
@@ -77,7 +77,11 @@
     "validate:setup-acceptance": "node scripts/validate-setup-assistant-acceptance.cjs",
     "lint:fix": "eslint src --fix",
     "postinstall": "node scripts/install-git-hooks.cjs",
-    "validate:browser-extension-specifications": "node --test test-support/browser-extension-specifications.test.cjs && node scripts/validate-browser-extension-specifications.cjs"
+    "validate:browser-extension-specifications": "node --test test-support/browser-extension-specifications.test.cjs && node scripts/validate-browser-extension-specifications.cjs",
+    "build:extension": "pnpm --dir extension run build",
+    "typecheck:extension": "pnpm --dir extension run typecheck",
+    "test:extension": "pnpm --dir extension run test",
+    "validate:extension": "pnpm --dir extension run validate"
   },
   "keywords": [],
   "author": "Efra Espada",

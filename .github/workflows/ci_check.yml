@@ -70,6 +70,9 @@ jobs:
         if: runner.os != 'Windows'
         run: pnpm run validate:build
 
+      - name: Validate extension architecture and reproducibility
+        run: pnpm run validate:extension
+
       - name: Validate npm package contents
         run: pnpm run validate:npm-package
 
@@ -91,7 +94,7 @@ jobs:
         # fail_ci_if_error is false, and the internal macOS runner may not have it.
         continue-on-error: true
         with:
-          files: ./coverage/lcov.info
+          files: ./coverage/lcov.info,./extension/coverage/lcov.info
           disable_search: true
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}

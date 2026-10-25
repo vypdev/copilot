@@ -76,6 +76,8 @@ acceptance are unknown until implementation; this proposal claims none of them.
 
 Not applicable: this is a prospective product contract, not an as-built baseline.
 
+The [H1 engineering companion](github-browser-extension-foundation.md) now adds a private inert build foundation and its own engineering evidence. The 150 product functions, 803 required product cases and actual loaded-browser acceptance remain proposed; engineering tests do not replace those gates.
+
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |

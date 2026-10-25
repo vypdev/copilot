@@ -330,6 +330,11 @@
           "icon": "code"
         },
         {
+          "title": "Browser extension foundation",
+          "href": "/development/browser-extension",
+          "icon": "code"
+        },
+        {
           "title": "Testing",
           "href": "/development/testing",
           "icon": "vial"

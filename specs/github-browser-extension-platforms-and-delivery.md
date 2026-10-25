@@ -29,8 +29,8 @@ resident CLI/web server is a runtime prerequisite.
 
 ## 2. Problem, current behavior, and evidence
 
-There is currently an Action/CLI and a local web setup assistant, with existing
-domain/application/adapter boundaries. There is no catalogued browser runtime,
+At the accepted design baseline there was an Action/CLI and a local web setup assistant, with existing
+domain/application/adapter boundaries. There was no catalogued browser runtime,
 browser manifest or verified extension package. Root `pnpm-workspace.yaml`
 currently supplies dependency overrides; it is not evidence of a multi-package
 extension build. `package.json` and the current architecture/coverage validators
@@ -43,6 +43,8 @@ They inform original requirements; no implementation, selectors, text or assets
 are copied. All platform/runtime statements here are proposed contracts until
 the explicit evidence matrix passes. Retrospective classification is not
 applicable to this prospective capability.
+
+H1 implementation evidence is now defined by [the engineering companion](github-browser-extension-foundation.md) and [contributor guide](../docs/development/browser-extension.mdx): a private workspace, inert entries, three target builds and executable architecture/artifact checks. This establishes build evidence only. All functional runtime, actual browser, security/accessibility and release gates below remain required.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -230,7 +232,7 @@ protected session exposure and typed message methods are non-configurable.
 
 ### 8.1 Physical boundaries and toolchain
 
-Proposed placement, to be introduced by later implementation PRs:
+H1 establishes the package/shared boundary; application, adapter and presentation implementations arrive with later features:
 
 ```text
 extension/

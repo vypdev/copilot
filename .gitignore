@@ -153,3 +153,10 @@ __pycache__/
 
 # Native Actions acceptance bundle is built only by the platform smoke job.
 .github/actions/copilot-native-fixture/dist/
+
+# Private extension engineering artifacts
+extension/dist/
+extension/dist.lock/
+extension/dist.previous/
+extension/dist.staging-*/
+extension/.vitest/
