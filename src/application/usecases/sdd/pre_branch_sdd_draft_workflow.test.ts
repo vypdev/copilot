@@ -2,11 +2,70 @@ import { draftSddMarkdown } from './pre_branch_sdd_draft_workflow';
 import { SddDraftFormatFailure, validateSddMarkdown, type SddPlan } from '../../../domain/pre_branch_sdd';
 import { AgentResponseLengthFailure } from '../../../domain/agent_response_length_failure';
 import { FindingsAgentAdapter } from '../../../data/repository/ai/findings_agent_adapter';
+import { validateSddDraftConsistency } from '../../../domain/sdd_draft_consistency';
+import { sddConsistencyFixture } from '../../../testing/sdd_consistency_fixture';
 
 const configuration = { provider: 'codex', model: 'model' } as never;
 const plan = { action: 'update', path: 'specs/payments.md', capabilityId: 'payments', reason: 'A bounded contract change.', questions: [] } as const;
 
 describe('draftSddMarkdown', () => {
+  const assemblyDraft = () => sddConsistencyFixture()
+    .replace(/\| Area \| Minimum distinct cases[\s\S]*?(?=\| Case ID)/u, '{{SDD_CASE_BUDGET}}\n\n')
+    .replace(/\| Requirement \| Cases \|[\s\S]*$/u, '{{SDD_REQUIREMENT_CASES}}\n');
+
+  it('assembles the native findings response before the unchanged publication checks run', async () => {
+    const execute = jest.fn().mockResolvedValue(JSON.stringify({ markdown: assemblyDraft() }));
+    const adapter = new FindingsAgentAdapter({ cli: { execute } });
+    const validate = jest.fn(async (candidate: string) => {
+      validateSddMarkdown(candidate);
+      validateSddDraftConsistency(candidate, [], {
+        files: new Set(['docs/payments.mdx']), directories: new Set(['docs']), blocked: new Set(),
+      }, 'specs/change.md');
+    });
+    const markdown = await draftSddMarkdown(adapter, { provider: 'codex', modelProvider: 'openai', model: 'gpt-5' },
+      { ...plan, action: 'new' }, 'Preserve all three distinct cases and both requirements.', validate);
+    expect(markdown).toContain('| Policy | 2 |');
+    expect(markdown).toContain('| Total | 3 |');
+    expect(markdown).toContain('| G-01 | payments-change-C01, payments-change-C02 |');
+    expect(markdown).not.toContain('{{SDD_');
+    expect(validate).toHaveBeenCalledTimes(1);
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(execute.mock.calls[0][0].prompt).toContain('Preserve every resolved minimum, per-area allocation');
+    expect(execute.mock.calls[0][0].prompt).toContain('hard limit applies after assembly');
+  });
+
+  it('spends the existing shared repair when generated slots are malformed without echoing that draft', async () => {
+    const invalid = assemblyDraft().replace('{{SDD_REQUIREMENT_CASES}}', 'Untrusted rejected content @actor');
+    const query = jest.fn().mockResolvedValueOnce({ markdown: invalid }).mockResolvedValueOnce({ markdown: assemblyDraft() });
+    const validate = jest.fn().mockResolvedValue(undefined);
+    await expect(draftSddMarkdown({ query }, configuration, plan, 'Original resolved inventory', validate)).resolves.toContain('| Total | 3 |');
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(validate).toHaveBeenCalledTimes(1);
+    expect(query.mock.calls[1][0].prompt).toContain('SDD requirement-mapping contract');
+    expect(query.mock.calls[1][0].prompt).not.toContain('Untrusted rejected content @actor');
+  });
+
+  it('enforces the final assembled character bound even when both raw responses fit their schema', async () => {
+    const raw = assemblyDraft();
+    const atLimit = `${'x'.repeat(18000 - raw.length - 1)}\n${raw}`;
+    expect(atLimit).toHaveLength(18000);
+    const query = jest.fn().mockResolvedValue({ markdown: atLimit });
+    const validate = jest.fn();
+    await expect(draftSddMarkdown({ query }, configuration, plan, 'Original', validate))
+      .rejects.toMatchObject({ recovery: { id: 'sdd-draft-size-exceeded' } });
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(validate).not.toHaveBeenCalled();
+  });
+
+  it('stops after the single assembly repair with the existing closed recovery and no writer call', async () => {
+    const query = jest.fn().mockResolvedValue({ markdown: assemblyDraft().replace('{{SDD_CASE_BUDGET}}', '') });
+    const validate = jest.fn();
+    await expect(draftSddMarkdown({ query }, configuration, plan, 'Original', validate))
+      .rejects.toMatchObject({ recovery: { id: 'sdd-draft-case-budget-invalid', variables: {} } });
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(validate).not.toHaveBeenCalled();
+  });
+
   it.each(['case-identity', 'case-budget', 'requirement-mapping', 'repository-path'] as const)(
     'repairs %s once with closed feedback and returns a specific non-ready recovery on repeated failure', async reason => {
       const query = jest.fn().mockResolvedValue({ markdown: 'Untrusted invalid document' });

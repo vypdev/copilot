@@ -8,7 +8,7 @@ import {
   type SddPlan,
 } from '../../../domain/pre_branch_sdd';
 import { AgentResponseLengthFailure } from '../../../domain/agent_response_length_failure';
-import { SDD_CONSISTENCY_PROMPT } from '../../../domain/sdd_draft_consistency';
+import { renderSddDerivedTables, SDD_CONSISTENCY_PROMPT, SDD_DERIVED_TABLES_PROMPT } from '../../../domain/sdd_draft_consistency';
 
 /** Size and typed format failures share one regeneration; the writer still validates every candidate. */
 export async function draftSddMarkdown(
@@ -33,7 +33,7 @@ export async function draftSddMarkdown(
     try {
       value = await agent.query({
       configuration, agentId: 'pre-branch-sdd-draft',
-        prompt: `${attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : `The previous response failed the required SDD ${formatReason} contract.`} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.`}\n\n${SDD_CONSISTENCY_PROMPT}`,
+        prompt: `${attempt === 0 ? contractPrompt : `${contractPrompt}\n\n${problem === 'size' ? `The previous response exceeded the ${maximum}-character draft limit.` : `The previous response failed the required SDD ${formatReason} contract.`} Regenerate a concise complete draft for this same owner and plan. Use the exact numbered canonical headings from the supplied template. Preserve all resolved requirements, architecture, documentation and acceptance. Do not change ownership or truncate a requirement.`}\n\n${SDD_CONSISTENCY_PROMPT}\n\n${SDD_DERIVED_TABLES_PROMPT}`,
       options: { expectJson: true, schemaName: 'pre_branch_sdd_draft', schema },
       });
     } catch (error) {
@@ -50,8 +50,10 @@ export async function draftSddMarkdown(
     const markdown = (value as { markdown: string }).markdown;
     if (markdown.length > maximum) { problem = 'size'; continue; }
     try {
-      await validate?.(markdown);
-      return markdown;
+      const assembled = renderSddDerivedTables(markdown);
+      if (assembled.length > maximum) { problem = 'size'; continue; }
+      await validate?.(assembled);
+      return assembled;
     } catch (error) {
       if (!(error instanceof SddDraftFormatFailure)) throw error;
       problem = 'format';
