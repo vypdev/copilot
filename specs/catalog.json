@@ -2749,7 +2749,20 @@
         "specs/browser-extension/feature-catalog.v1.json",
         "specs/browser-extension/feature-catalog.schema.json",
         "specs/browser-extension/requests-v2.schema.json",
-        "specs/browser-extension/examples/requests-v2.json"
+        "specs/browser-extension/examples/requests-v2.json",
+        "specs/browser-extension/feature-catalog-index.schema.json",
+        "specs/browser-extension/features/NAV.v1.json",
+        "specs/browser-extension/features/CODE.v1.json",
+        "specs/browser-extension/features/REVIEW.v1.json",
+        "specs/browser-extension/features/ISSUE.v1.json",
+        "specs/browser-extension/features/SEARCH.v1.json",
+        "specs/browser-extension/features/NOTIFY.v1.json",
+        "specs/browser-extension/features/CI.v1.json",
+        "specs/browser-extension/features/RELEASE.v1.json",
+        "specs/browser-extension/features/WORK.v1.json",
+        "specs/browser-extension/features/COPILOT.v1.json",
+        "specs/browser-extension/features/CENTER.v1.json",
+        "specs/browser-extension/features/SETUP.v1.json"
       ]
     }
   ]

@@ -23,6 +23,8 @@ Welcome and choose personal profile -> improve native GitHub -> configure local 
 
 The [product](github-browser-extension.md), [Action integration](github-browser-extension-action-integration.md), [platforms](github-browser-extension-platforms-and-delivery.md) and [control center/setup](github-browser-extension-control-center-and-setup.md) companions are normative. The [versioned feature catalog](browser-extension/feature-catalog.v1.json) is the authoritative structured inventory, not runtime implementation or evidence that tests ran.
 
+The catalog is a closed local index plus twelve family files in `browser-extension/features/`. Each fixed ID maps only to `features/<ID>.v1.json`; no remote reference, traversal, duplicate family or implicit directory discovery is allowed. The index schema and assembled catalog schema validate all parts, metadata and identities; every feature and case is retained in that assembled inventory. Each family file is limited to 96 KiB for reviewability. This partition addresses an observed GitHub comparison that omitted the former large single-file patch and correctly blocked the Action's progress assessment; it preserves complete evidence rather than exempting the catalog or weakening that gate. Publication verification must confirm patches exist for every changed file at the exact PR base/head.
+
 ## 2. Problem, current behavior, and evidence
 
 The complete product must make a broad GitHub workflow understandable and dependable: comprehensive functions, excellent UX, reusable setup, enforceable architecture, proportional tests and complete documentation. This catalog defines that required scope while preserving the existing 96 core behavior cases and all provenance/authorization/native-preservation protections.

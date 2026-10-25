@@ -2,17 +2,27 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { validate, validateFeatures, validateFeatureTraceability, validateRequests, compiler, readJson } = require('../scripts/validate-browser-extension-specifications.cjs');
+const { validate, validateFeatures, validateFeatureTraceability, validateRequests, compiler, readJson, loadFeatureCatalog } = require('../scripts/validate-browser-extension-specifications.cjs');
 
 const root = path.resolve(__dirname, '..');
 const featureSchema = compiler(root, 'feature-catalog.schema.json');
 const requestSchema = compiler(root, 'requests-v2.schema.json');
-const features = () => readJson(root, 'feature-catalog.v1.json');
+const features = () => loadFeatureCatalog(root);
 const requests = () => readJson(root, 'examples/requests-v2.json');
 const names = requests().commands.map(command => command.name);
 
 test('validates the complete proposed catalog, real schemas/fixtures and document ownership', () => {
-  assert.deepEqual(validate(root), { features: 150, commands: 21, cases: 803, schemas: 4, positiveFixtures: 5, expectedNegativeFixtures: 1 });
+  assert.deepEqual(validate(root), { features: 150, commands: 21, cases: 803, schemas: 5, positiveFixtures: 6, expectedNegativeFixtures: 1 });
+});
+
+test('rejects catalog references outside the fixed local family directory', () => {
+  const index = readJson(root, 'feature-catalog.v1.json'); index.families[0].file = '../../outside.json';
+  assert.throws(() => loadFeatureCatalog(root, index), /feature index violates its JSON schema/);
+});
+
+test('rejects swapping a valid family path into another family slot', () => {
+  const index = readJson(root, 'feature-catalog.v1.json'); index.families[0].file = index.families[1].file;
+  assert.throws(() => loadFeatureCatalog(root, index), /family path mismatch/);
 });
 
 test('rejects duplicate capabilities instead of counting the same feature twice', () => {

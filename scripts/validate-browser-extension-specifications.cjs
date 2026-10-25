@@ -35,6 +35,20 @@ function unique(values, name) {
   assert.equal(new Set(values).size, values.length, `${name} must be unique`);
 }
 
+function loadFeatureCatalog(root = ROOT, index = readJson(root, 'feature-catalog.v1.json')) {
+  requireSchema(compiler(root, 'feature-catalog-index.schema.json'), index, 'feature index');
+  unique(index.families.map(family => family.id), 'indexed family IDs');
+  const families = index.families.map(reference => {
+    assert.equal(reference.file, `features/${reference.id}.v1.json`, `${reference.id} family path mismatch`);
+    assert(fs.statSync(path.join(root, DATA, reference.file)).size <= 96 * 1024, `${reference.id} family exceeds reviewable file budget`);
+    const family = readJson(root, reference.file);
+    assert.equal(family.id, reference.id, `${reference.id} indexed family identity mismatch`);
+    assert.equal(family.title, reference.title, `${reference.id} indexed family title mismatch`);
+    return family;
+  });
+  return { ...index, $schema: './feature-catalog.schema.json', families };
+}
+
 function validateFeatures(catalog, schema) {
   requireSchema(schema, catalog, 'feature catalog');
   unique(catalog.families.map(family => family.id), 'family IDs');
@@ -89,7 +103,7 @@ function validateRequests(descriptor, schema, knownNames) {
 }
 
 function validate(root = ROOT) {
-  const catalog = readJson(root, 'feature-catalog.v1.json');
+  const catalog = loadFeatureCatalog(root);
   const result = validateFeatures(catalog, compiler(root, 'feature-catalog.schema.json'));
   const commandReference = fs.readFileSync(path.join(root, 'docs/issues/comment-commands.mdx'), 'utf8');
   const names = [...commandReference.matchAll(/^\| `\/copilot ([a-z-]+)/gm)].map(match => match[1]);
@@ -124,7 +138,7 @@ function validate(root = ROOT) {
   const capability = JSON.parse(fs.readFileSync(path.join(root, 'specs/catalog.json'), 'utf8')).capabilities.find(item => item.id === 'github-browser-extension');
   assert.equal(catalog.runtimeVerified, false, 'Specification inventory must not claim runtime evidence');
   for (const name of DOCUMENTS) assert(capability.specs.includes(`specs/${name}`), `${name} missing from capability ownership`);
-  return { features: result.features.length, commands: names.length, cases: 803, schemas: 4, positiveFixtures: 5, expectedNegativeFixtures: 1 };
+  return { features: result.features.length, commands: names.length, cases: 803, schemas: 5, positiveFixtures: 6, expectedNegativeFixtures: 1 };
 }
 
 if (require.main === module) {
@@ -132,4 +146,4 @@ if (require.main === module) {
   catch (error) { console.error(`Browser-extension specification contract: FAIL ${error.message}`); process.exitCode = 1; }
 }
 
-module.exports = { validate, validateFeatures, validateFeatureTraceability, validateRequests, compiler, readJson };
+module.exports = { validate, validateFeatures, validateFeatureTraceability, validateRequests, compiler, readJson, loadFeatureCatalog };
