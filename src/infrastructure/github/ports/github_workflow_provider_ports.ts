@@ -6,6 +6,14 @@ export interface GithubWorkflowRunsParameters {
     status?: string;
 }
 
+export interface GithubWorkflowDefinitionClient {
+    rest: {
+        repos: {
+            getContent(parameters: { owner: string; repo: string; path: string; ref: string }): Promise<{ data: unknown }>;
+        };
+    };
+}
+
 export interface GithubWorkflowRunsResponse {
     data: { workflow_runs: GithubWorkflowRun[] } | GithubWorkflowRun[];
 }

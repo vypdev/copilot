@@ -13,9 +13,11 @@ describe('LoggerWorkflowPollingObserverAdapter', () => {
     const observer = new LoggerWorkflowPollingObserverAdapter();
 
     observer.noActivePreviousRuns();
+    observer.nativeCoordinationVerified();
     observer.waitingForPreviousRuns(2, 2000);
 
     expect(logDebugInfo).toHaveBeenNthCalledWith(1, '✅ No previous runs active. Continuing...');
+    expect(logInfo).toHaveBeenCalledWith('Native workflow resource/lane coordination verified; continuing before setup.');
     expect(logInfo).toHaveBeenCalledWith(
       '⏳ Found 2 previous run(s) still active. Waiting 2s...',
     );

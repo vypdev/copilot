@@ -2,6 +2,10 @@ import type { WorkflowPollingObserverPort } from '../../application/ports/workfl
 import { logDebugInfo, logInfo } from '../../utils/logger';
 
 export class LoggerWorkflowPollingObserverAdapter implements WorkflowPollingObserverPort {
+    nativeCoordinationVerified(): void {
+        logInfo('Native workflow resource/lane coordination verified; continuing before setup.');
+    }
+
     noActivePreviousRuns(): void {
         logDebugInfo('✅ No previous runs active. Continuing...');
     }

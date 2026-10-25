@@ -31,6 +31,11 @@ flowchart LR
 
 AI capabilities require a configured agent runtime, an allowed model, and working authentication on the selected runner. Code-changing requests require repository write authority and run configured verification before commit/push. Release promotion follows the repository's merge policy. Installing Copilot does not grant permission to merge or deploy.
 
+On shared runners, the runtime verifies the executing workflow's native PR or
+branch concurrency before setup, so unrelated PRs can proceed independently.
+Custom and legacy workflows retain the conservative predecessor queue. See
+[workflow coordination and recovery](https://docs.page/vypdev/copilot/features#workflow-concurrency-and-sequential-execution).
+
 ## Start with the web assistant
 
 Use **Node.js 24 or newer**, `pnpm`, and a working checkout of the repository you want to configure:

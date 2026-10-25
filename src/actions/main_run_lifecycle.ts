@@ -28,13 +28,24 @@ export class WorkflowQueueFailureError extends Error {
 
 export function buildPreviousWorkflowRunsQuery(
     repository: RepositoryCoordinates,
+    event?: { readonly isSingleAction: boolean; readonly pullRequestNumber?: number },
 ): PreviousWorkflowRunsQuery {
     const workflowIdentifier = resolveWorkflowIdentifier(process.env.GITHUB_WORKFLOW_REF);
     const query: PreviousWorkflowRunsQuery = {
         owner: repository.owner,
         repository: repository.repo,
-        currentRunId: Number.parseInt(process.env.GITHUB_RUN_ID ?? '', 10),
+        currentRunId: Number(process.env.GITHUB_RUN_ID ?? Number.NaN),
         ...(workflowIdentifier ? { workflowIdentifier } : {}),
+        ...(event && !event.isSingleAction && process.env.GITHUB_WORKFLOW_SHA && process.env.GITHUB_JOB ? {
+            nativeCoordination: Object.freeze({
+                workflowRef: process.env.GITHUB_WORKFLOW_REF ?? '',
+                workflowRevision: process.env.GITHUB_WORKFLOW_SHA,
+                jobId: process.env.GITHUB_JOB,
+                eventName: process.env.GITHUB_EVENT_NAME ?? '',
+                ref: process.env.GITHUB_REF,
+                pullRequestNumber: event.pullRequestNumber,
+            }),
+        } : {}),
     };
     return query;
 }
@@ -42,9 +53,10 @@ export function buildPreviousWorkflowRunsQuery(
 export async function waitForPreviousWorkflowRuns(
     token: string,
     repository: RepositoryCoordinates,
+    event?: { readonly isSingleAction: boolean; readonly pullRequestNumber?: number },
 ): Promise<void> {
-    const query = buildPreviousWorkflowRunsQuery(repository);
-    if (process.env.GITHUB_ACTIONS === 'true' && !Number.isSafeInteger(query.currentRunId)) {
+    const query = buildPreviousWorkflowRunsQuery(repository, event);
+    if (process.env.GITHUB_ACTIONS === 'true' && (!Number.isSafeInteger(query.currentRunId) || query.currentRunId <= 0)) {
         throw new Error('GitHub workflow identity is unavailable; refusing to bypass sequential execution.');
     }
     if (process.env.GITHUB_ACTIONS === 'true' && !query.workflowIdentifier) {

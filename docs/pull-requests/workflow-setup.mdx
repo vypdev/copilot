@@ -129,6 +129,17 @@ reviewed maintenance PR. Update analysis and review-state together and retain
 project-specific setup/release customizations. No new Variable, Secret or
 permission is required. Current-head checks and review remain the merge gate.
 
+The runtime verifies these native groups before setup by reading the executing
+workflow at GitHub's `GITHUB_WORKFLOW_SHA` and selecting `GITHUB_JOB`. Existing
+repository contents-read access is required. Verified PR lanes do not poll
+queued runs for other PRs, which prevents a later job from holding a shared
+runner while its predecessor needs that same pool. Same-PR/lane replacement
+and all application freshness, findings and permission checks remain in force.
+There is no queue-bypass setting. Missing metadata or custom concurrency uses
+the conservative workflow queue; a workflow-read failure stops before setup.
+See [coordination and recovery](/features#workflow-concurrency-and-sequential-execution)
+for upgrading and rerunning affected older jobs.
+
 - **`token`** is required (use a fine-grained PAT with repo and project permissions; see [Authentication](/authentication)).
 - **`project-ids`** is optional but needed if you want PRs linked to GitHub Project boards and moved to columns (e.g. "In Progress").
 - The conditional fetch downloads only the two commit objects needed by the incremental reviewer. Keep it when `synchronize` is enabled; a full-history checkout is not required.
