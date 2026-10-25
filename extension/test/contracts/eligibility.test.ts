@@ -30,6 +30,12 @@ it('bexh1-foundation-C12 excludes repository administration while preserving nor
         expect(isEligibleGitHubUrl(`https://github.com/${route}`)).toBe(true);
     }
 });
+it('rejects native organization/enterprise SSO, SAML consumption and legacy session routes', () => {
+    for (const route of ['orgs/organization/sso', 'orgs/organization/sso/sign_up', 'enterprises/enterprise/sso',
+        'orgs/organization/saml/consume', 'enterprises/enterprise/saml/consume', 'orgs/organization/credential-authorizations', 'user_sessions']) {
+        expect(isEligibleGitHubUrl(`https://github.com/${route}`)).toBe(false);
+    }
+});
 it('the actual content entry performs only a guard for both eligible and protected URLs', async () => {
     const request = vi.fn(() => { throw new Error('unexpected request'); });
     vi.stubGlobal('fetch', request);

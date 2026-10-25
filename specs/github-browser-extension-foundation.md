@@ -446,7 +446,7 @@ Architecture, documentation, and repository-change traceability is specified in 
 
 ### H1 implementation evidence
 
-The H1 suite contains 46 distinct automated tests across 8 files, including every one of the 28 required named engineering cases. Local coverage is 100% statements/lines/functions and 98.47% branches; domain/shared-contract branches are 100%. Per-file thresholds remain enforced. Root hook/CI verification and exact revision evidence are recorded in the implementation PR. Plain root test retains Jest argument forwarding; the explicit extension suite is also part of the CI coverage flow.
+The H1 suite contains 47 distinct automated tests across 8 files, including every one of the 28 required named engineering cases and native GitHub SSO/SAML/session exclusion. Local coverage is 100% statements/lines/functions and at least 98% branches; domain/shared-contract branches are 100%. Per-file thresholds remain enforced. Root hook/CI verification and exact revision evidence are recorded in the implementation PR. Plain root test retains Jest argument forwarding; the explicit extension suite is also part of the CI coverage flow.
 
 The contributor guide and private package README describe the checked commands, receipt format, permission rationale and interrupted-build recovery. The prospective manifest-v1 workflow/capability patterns now require a true end of string: JavaScript dollar anchors alone also match before a terminal newline. Differential schema/value tests reject that ambiguity, sparse malformed arrays and unsafe identities; valid wire values retain their meaning. This is not raw duplicate-key parsing or Action producer implementation.
 

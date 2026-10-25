@@ -76,6 +76,8 @@ options link, remote code, credential, browser history or telemetry.
 The content entry evaluates a pure URL guard and stops. Protected account,
 authentication, token/settings, billing/security and repository administration
 paths are excluded, including encoded sensitive paths and ambiguous URLs.
+Native organization/enterprise SSO and SAML consumption routes on github.com
+are authentication surfaces and are excluded too.
 It installs no observers, sends no messages, changes no DOM and makes no requests.
 H2 must enforce private-context/session rules before adding connected behavior;
 manifests alone are not a general authorization boundary.
@@ -147,3 +149,5 @@ See [Vitest requirements](https://vitest.dev/guide/),
 [Firefox development metadata](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/browser_specific_settings),
 [isolated content execution](https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts),
 and [Safari version requirements](https://developer.apple.com/documentation/safariservices/optimizing-your-web-extension-for-safari).
+GitHub documents the protected [SSO entrypoints](https://docs.github.com/en/enterprise-cloud@latest/authentication/authenticating-with-single-sign-on/about-authentication-with-single-sign-on)
+and [SAML consumption routes](https://docs.github.com/en/enterprise-cloud@latest/admin/managing-iam/iam-configuration-reference/saml-configuration-reference).

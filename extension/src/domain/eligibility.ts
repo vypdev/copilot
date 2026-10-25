@@ -1,7 +1,7 @@
 const PROTECTED = new Set([
     'login', 'logout', 'signup', 'join', 'password_reset', 'password', 'sessions', 'session',
     'settings', 'account', 'accounts', 'billing', 'security', 'two-factor', 'sudo',
-    'oauth', 'auth', 'authentication', 'applications', 'tokens', 'personal-access-tokens',
+    'oauth', 'auth', 'authentication', 'applications', 'tokens', 'personal-access-tokens', 'user_sessions',
     'apps', 'organizations',
 ]);
 
@@ -18,5 +18,5 @@ export function isEligibleGitHubUrl(value: string): boolean {
     }
     if (segments.some(segment => /[\\/\p{Cc}]/u.test(segment) || segment === '.' || segment === '..')) return false;
     if (PROTECTED.has(segments[0])) return false;
-    return !['settings', 'security', 'billing'].includes(segments[2]);
+    return !['settings', 'security', 'billing', 'sso', 'saml', 'credential-authorizations'].includes(segments[2]);
 }
