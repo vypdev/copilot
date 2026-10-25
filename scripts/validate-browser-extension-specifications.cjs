@@ -59,6 +59,17 @@ function validateFeatures(catalog, schema) {
   return { features, featureCases: cases.length };
 }
 
+function validateFeatureTraceability(catalog, text) {
+  for (const family of catalog.families) {
+    const row = text.split('\n').find(line => line.startsWith(`| CAT-${family.id} |`) && line.includes('explicit cases in the JSON test inventory'));
+    assert(row, `CAT-${family.id} traceability row missing`);
+    const cells = row.split('|').map(cell => cell.trim());
+    assert.equal(cells[2], family.features.map(feature => feature.id).join(', '), `CAT-${family.id} feature traceability mismatch`);
+    const count = family.features.reduce((total, feature) => total + feature.tests.length, 0);
+    assert.equal(cells[3], `${count} explicit cases in the JSON test inventory`, `CAT-${family.id} case traceability mismatch`);
+  }
+}
+
 function validateRequests(descriptor, schema, knownNames) {
   requireSchema(schema, descriptor, 'request catalog');
   unique(descriptor.commands.map(command => command.name), 'command names');
@@ -108,6 +119,7 @@ function validate(root = ROOT) {
   assert.equal(core.length + center.length + result.featureCases, 803);
   assert(primary.includes('| specs/github-browser-extension.md | create |'), 'PR publication inventory must classify the new primary as create');
   const catalogText = texts.get(DOCUMENTS[3]);
+  validateFeatureTraceability(catalog, catalogText);
   for (const feature of result.features) assert(catalogText.includes(`| ${feature.id} — `), `${feature.id} missing from the readable catalog`);
   const capability = JSON.parse(fs.readFileSync(path.join(root, 'specs/catalog.json'), 'utf8')).capabilities.find(item => item.id === 'github-browser-extension');
   assert.equal(catalog.runtimeVerified, false, 'Specification inventory must not claim runtime evidence');
@@ -120,4 +132,4 @@ if (require.main === module) {
   catch (error) { console.error(`Browser-extension specification contract: FAIL ${error.message}`); process.exitCode = 1; }
 }
 
-module.exports = { validate, validateFeatures, validateRequests, compiler, readJson };
+module.exports = { validate, validateFeatures, validateFeatureTraceability, validateRequests, compiler, readJson };

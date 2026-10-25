@@ -400,7 +400,12 @@ Incognito/private browsing is a declared unsupported environment: explicitly dis
 where possible and check context/sender flags before every connected read/write
 to personal settings. If users manually allow it, refuse connection and retain
 no private browsing evidence. No `history`, `cookies`, `webRequest`,
-`notifications`, `nativeMessaging`, blanket host or unlimited-storage permission.
+`nativeMessaging`, blanket host or unlimited-storage permission.
+The sole desktop-alert permission path is the optional `notifications` and
+`alarms` grants in §6.2: request them only after the user explicitly enables
+the bounded I6 monitor and selects its targets. Denial leaves monitoring off;
+revocation stops its reads and alerts. Neither permission is an install-time
+requirement or authority for unrelated background activity.
 No third-party remote font/code/telemetry fetch; assets are packaged. Any added
 permission is a separately reviewed contract change with visible upgrade impact.
 

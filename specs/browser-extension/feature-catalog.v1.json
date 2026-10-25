@@ -3317,7 +3317,7 @@
             "safari"
           ],
           "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
-          "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+          "activation": "explicit user gesture enables the selected-target subscription and optional grants; each alarm wake revalidates current eligibility, identity, grants and shared budgets before reads or alerts",
           "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
           "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
           "requirements": [

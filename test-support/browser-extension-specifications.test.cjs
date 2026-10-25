@@ -1,7 +1,8 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const path = require('node:path');
-const { validate, validateFeatures, validateRequests, compiler, readJson } = require('../scripts/validate-browser-extension-specifications.cjs');
+const { validate, validateFeatures, validateFeatureTraceability, validateRequests, compiler, readJson } = require('../scripts/validate-browser-extension-specifications.cjs');
 
 const root = path.resolve(__dirname, '..');
 const featureSchema = compiler(root, 'feature-catalog.schema.json');
@@ -47,6 +48,13 @@ test('rejects a feature detached from its family requirement', () => {
 test('rejects replacing write-risk cases with a lower allocation', () => {
   const value = features(); const item = value.families.flatMap(family => family.features).find(feature => feature.mode === 'write'); item.tests.pop();
   assert.throws(() => validateFeatures(value, featureSchema), /risk-case allocation mismatch/);
+});
+
+test('rejects stale per-family case counts in readable requirement traceability', () => {
+  const text = fs.readFileSync(path.join(root, 'specs/github-browser-extension-functional-catalog.md'), 'utf8');
+  const stale = text.replace(/(\| CAT-NOTIFY \|[^\n]+\| )32 explicit cases/, (_, prefix) => `${prefix}29 explicit cases`);
+  assert.notEqual(stale, text);
+  assert.throws(() => validateFeatureTraceability(features(), stale), /CAT-NOTIFY case traceability mismatch/);
 });
 
 test('rejects weakening finding-dismissal actor authorization', () => {
