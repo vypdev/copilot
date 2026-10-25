@@ -528,8 +528,13 @@ complete annotation inventory. Source changes/revocation cancel and clear the
 affected private evidence. CI01/CI03 catalog cases exercise enabled, denied,
 partial, stale and moved-head paths under this contract.
 
-Each semantic request binds numeric repo and conversation to the sender's current
-tab epoch. No `{url,method,body}` message exists. HTTPS exact GitHub/API origins
+Each semantic request binds the numeric repository and a closed typed target to
+the sender's current tab/account epoch. Conversation reads require exact
+issue/PR identity; CI reads use a verified commit SHA, check ID or run/attempt
+identity and never fabricate a conversation number for a standalone commit.
+Separate named read operations validate their own target shape and parent
+relationship before the adapter constructs an endpoint. No `{url,method,body}`
+message exists. HTTPS exact GitHub/API origins
 only; reject redirects to another origin before forwarding credentials. Do not
 follow source-supplied URLs or retrieve raw artifacts/logs by default. All remote
 text is bounded text, not `innerHTML`, selector input, executable code or command
