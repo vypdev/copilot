@@ -17,6 +17,12 @@ Each row is one distinct executable case with a fully qualified ID such as capab
 In section 17 include one table: Requirement | Cases. List comma-separated full case IDs for every requirement. Its links must exactly match the case inventory in both directions, with no undefined or generic documentation checks.
 In section 15 include one table: Path | Change. Change is update, reference or create. Include the selected SDD path itself with update for an existing SDD or create for a new/companion SDD. Use existing immutable-base files for update/reference. Only explicitly proposed new files may use create; never mark a missing current document as an existing artifact. Cite repository files as full repository-relative paths in backticks, or relative Markdown file links. Put every planned new file in this table. These tables are publication consistency checks, not runtime/security acceptance.`;
 
+const BUDGET_SLOT = '{{SDD_CASE_BUDGET}}';
+const TRACEABILITY_SLOT = '{{SDD_REQUIREMENT_CASES}}';
+
+/** The provider writes definitions once; trusted code renders their two redundant projections. */
+export const SDD_DERIVED_TABLES_PROMPT = `Draft assembly: the consistency contract above describes the final document. In your raw Markdown, write the complete Requirement | Behavior table in section 4 and Case ID | Area | Requirements | Scenario inventory in section 14. Preserve every resolved minimum, per-area allocation and observable case as actual inventory rows, never ranges or summaries. Instead of independently writing the budget table, put ${BUDGET_SLOT} once on its own visible line in section 14. Instead of writing the reverse Requirement | Cases table, put ${TRACEABILITY_SLOT} once on its own visible line in section 17. Do not include either derived table yourself or put these slots in examples, fences or comments. Trusted code derives exact counts, Total and reciprocal links from your unchanged definitions, then runs every publication check. The compact character target is advisory: use more space when required to preserve the full resolved inventory and scope. The hard limit applies after assembly too.`;
+
 function fail(reason: SddConsistencyReason): never {
   // Closed diagnostics: rejected Markdown and repository text never become repair instructions.
   throw new SddDraftFormatFailure(reason, `The SDD draft violates its ${reason} consistency contract.`);
@@ -51,13 +57,17 @@ function visible(source: string): string {
 
 function clean(value: string): string { return value.trim().replace(/^(?:\*\*|__|`)(.*?)(?:\*\*|__|`)$/u, '$1').trim(); }
 
-function table(source: string, section: number, headers: readonly string[], reason: SddConsistencyReason): string[][] {
+function section(source: string, number: number, reason: SddConsistencyReason): string {
   const sections = [...source.matchAll(/^## (\d+)\. [^\n]*$/gmu)];
-  const matches = sections.filter(heading => Number(heading[1]) === section);
+  const matches = sections.filter(heading => Number(heading[1]) === number);
   if (matches.length !== 1) return fail(reason);
   const start = matches[0];
   const end = sections.find(heading => heading.index > start.index)?.index ?? source.length;
-  const lines = source.slice(start.index + start[0].length, end).split('\n');
+  return source.slice(start.index + start[0].length, end);
+}
+
+function table(source: string, number: number, headers: readonly string[], reason: SddConsistencyReason): string[][] {
+  const lines = section(source, number, reason).split('\n');
   const found: string[][][] = [];
   for (let index = 0; index < lines.length; index++) {
     if (!/^\s*\|/u.test(lines[index])) continue;
@@ -82,6 +92,41 @@ function ids(value: string, pattern: RegExp, reason: SddConsistencyReason): stri
   const values = value.split(/\s*,\s*/u);
   if (!values.every(id => pattern.test(id)) || new Set(values).size !== values.length) return fail(reason);
   return values;
+}
+
+/** Never repairs definitions or contradictory supplied tables; the writer independently revalidates. */
+export function renderSddDerivedTables(markdown: string): string {
+  if (!markdown.includes(BUDGET_SLOT) && !markdown.includes(TRACEABILITY_SLOT)) return markdown;
+  const source = visible(markdown);
+  for (const [slot, number, reason] of [
+    [BUDGET_SLOT, 14, 'case-budget'], [TRACEABILITY_SLOT, 17, 'requirement-mapping'],
+  ] as const) {
+    if (markdown.split(slot).length !== 2
+      || section(source, number, reason).split('\n').filter(line => line.trim() === slot).length !== 1) fail(reason);
+  }
+  const requirements = table(source, 4, ['Requirement', 'Behavior'], 'requirement-mapping').map(row => row[0]);
+  if (new Set(requirements).size !== requirements.length || requirements.some(id => !REQUIREMENT_ID.test(id))) fail('requirement-mapping');
+  const cases = table(source, 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity');
+  const caseIds = cases.map(row => row[0]);
+  if (new Set(caseIds).size !== caseIds.length || caseIds.some(id => !CASE_ID.test(id))) fail('case-identity');
+  const counts = new Map<string, number>();
+  const edges = new Map(requirements.map(id => [id, [] as string[]]));
+  for (const [id, area, links] of cases) {
+    if (area === 'Total') fail('case-budget');
+    counts.set(area, (counts.get(area) ?? 0) + 1);
+    for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping')) {
+      const linked = edges.get(requirement);
+      if (!linked) fail('requirement-mapping');
+      linked.push(id);
+    }
+  }
+  if ([...edges.values()].some(links => links.length === 0)) fail('requirement-mapping');
+  const budget = ['| Area | Minimum distinct cases | Behaviors/risks covered |', '|---|---:|---|',
+    ...[...counts].map(([area, count]) => `| ${area} | ${count} | Observable scenarios in the case inventory. |`),
+    `| Total | ${cases.length} | Distinct inventory cases; repeated executions do not add cases. |`].join('\n');
+  const traceability = ['| Requirement | Cases |', '|---|---|',
+    ...[...edges].map(([requirement, links]) => `| ${requirement} | ${links.join(', ')} |`)].join('\n');
+  return markdown.replace(BUDGET_SLOT, () => budget).replace(TRACEABILITY_SLOT, () => traceability);
 }
 
 export function reservedSddCaseIds(documents: readonly SddOwnerDocument[]): string[] {
