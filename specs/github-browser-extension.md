@@ -1,534 +1,717 @@
-# GitHub browser extension and Action-connected usability
+# GitHub Browser Extension — Product, MVP and Roadmap
 
-- Status: Draft
+- Status: Ready for review — proposed, not implemented
 - Date: 2026-10-25
 - Catalog capability ID: `github-browser-extension`
-- Last verified: not applicable (prospective capability)
-- Owners: Copilot maintainers
-- Scope: Specify standalone GitHub usability and optional Action context in Chrome, Firefox, and Safari; runtime and feature deployment are future work.
+- Last verified: 2026-10-25, repository/source research only; no extension execution
+- Owners: Copilot maintainers (product, engineering, security and release)
+- Scope: Personal improvements to github.com plus an optional Copilot context panel in desktop Chrome, Firefox and Safari.
 - Related issues/PRs: [Issue #694](https://github.com/vypdev/copilot/issues/694)
-- Required review gates: product UX, architecture, testing, documentation, security/operations, browser acceptance, and Safari delivery
-- Open decisions blocking readiness: Product, security, architecture, and browser reviewers must resolve any material questions before this draft can become Ready for implementation. No additional authorized answers were supplied.
+- Required review gates: product UX, architecture, testing, documentation, security/operations
+- Open decisions blocking design readiness: None. Implementation, platform evidence, account setup and store approval remain delivery gates, not completed facts.
 
 ## 1. Executive summary
 
-Specify an original extension that improves GitHub usability in the page context and optionally displays verified Copilot Action evidence. Standalone features work without an Action, backend, credential, or connected account. Connected mode is explicitly enabled per repository and remains read-only except for preparing narrowly scoped native comment drafts that a person reviews and submits. The Action remains the authority for accepting any submitted command.
-
-The central rule is that absent, stale, incomplete, conflicting, or untrusted evidence never means zero findings, success, or permission to act. Opening, navigating, and rendering GitHub pages never submits comments, mutates repository state, triggers an Action, or runs an agent.
+The extension makes daily GitHub work easier and explains work coordinated by
+Copilot where a developer is already reading it. Page-local improvements work
+without the Action or a token. A separately enabled connection presents verified
+Action publications, source links and requests prepared for human submission.
 
 ```text
-Install -> use standalone page helpers -> optionally connect a selected repository -> validate pinned Action evidence -> inspect state and sources -> prepare a supported native draft -> person reviews and submits -> Action authorizes the exact request
+Install → enable selected GitHub improvements → visit issue/PR
+  → optionally connect repository → inspect current context/findings
+  → prepare supported request → review and submit in GitHub → inspect Action result
 ```
+
+The user owns personal settings and comment submission. GitHub owns native facts.
+The Action owns automation policy, evidence and managed branch lifecycle. This
+document defines product behavior; [integration](github-browser-extension-action-integration.md)
+defines its data contract and [platforms](github-browser-extension-platforms-and-delivery.md)
+defines browser architecture, security and delivery.
 
 ## 2. Problem, current behavior, and evidence
 
 ### 2.1 Problem
 
-GitHub users need personal navigation, focus, and view controls alongside native issues, pull requests, code, checks, and releases. Action output can describe repository work but cannot add personal on-page controls. Separate dashboards lose page context. Connected summaries also need careful provenance and completeness handling so that an attractive panel does not overstate current state or authority.
+Developers repeatedly navigate files, references and conversation history. Authors
+and reviewers also reconstruct Copilot progress from labels, status comments,
+findings, checks and runs. Shared automation cannot retain each person's view
+preferences or add contextual controls throughout their browser session.
 
-### 2.2 Current behavior
+### 2.2 Observed behavior
 
-1. The repository has an Action and catalogued specifications for its current status, analysis, findings, lifecycle, publication, locale, and command-authorization contracts.
-2. An Action cannot add personal controls to github.com pages. No extension implementation is asserted by this draft.
-3. The supplied catalog has no existing owner for this cross-browser extension capability. Existing Action source, test, and documentation locations are integration baseline evidence only, not proof of extension behavior or framework support.
+1. `README.md` describes the existing issue → branch → implementation → PR → review
+   → release flow, CLI and local web setup assistant.
+2. `specs/catalog.json` catalogues managed issue lifecycle, SDD readiness, comment
+   authorization, Bugbot reconciliation and exact-revision PR readiness.
+3. `src/application/usecases/read_copilot_status_workflow.ts` combines native
+   issue/PR facts, SDD evidence and PR readiness; it is not a browser API.
+4. `src/application/ports/pull_request_status_read_ports.ts` already separates
+   read-only evidence access from approval mutation.
+5. `specs/comment-automation-and-authorization.md` restricts command contexts and
+   write authority. A general issue comment cannot invent a branch target.
 
-### 2.3 Evidence
+These are integration evidence, not evidence that browser support exists.
+The proposed catalog entry references existing Action entrypoints, read ports,
+status tests and documentation because the catalog requires existing evidence
+paths even for proposed capabilities. Those paths establish the integration
+baseline only. This change verifies specifications, schemas and examples; it
+does not establish extension code, runtime tests or browser support.
+The current local web setup assistant configures repositories; it is not the
+extension runtime or a required resident server.
 
-- Code/workflow/documentation references: `src/actions/github_action.ts`; `src/application/usecases/read_copilot_status_workflow.ts`; `src/application/usecases/__tests__/read_copilot_status_workflow.test.ts`; `docs/development/specifications.mdx`; `docs/issues/comment-commands.mdx`; supplied catalog evidence at commit `c78f75c9d1d1f05f8fb5bf63224604af9002e4bd`.
-- Incidents or concrete examples: Issue #694 identifies the limitation that Actions cannot add personal on-page controls.
-- External primary sources: dated Chrome, Mozilla, and Apple compatibility/API references must be verified and recorded during implementation planning; the supplied evidence does not include their URLs or versions. Technical research may inspect public extensions for mechanics only; no source, selectors, CSS, assets, prose, or branding may be copied.
-- Unknowns: Exact current vendor support windows, API details, store review requirements at delivery time, benchmark measurements, and any future implementation choices not fixed below.
+### 2.3 Evidence and unknowns
 
-### 2.4 Retrospective classification (as-built baselines only)
+Related owning contracts: [managed lifecycle](managed-issue-and-branch-lifecycle.md),
+[SDD status](pre-branch-sdd-status-readiness.md),
+[PR readiness](guarded-pull-request-approval-status.md),
+[commands](comment-automation-and-authorization.md),
+[findings](bugbot-review-state-reconciliation.md),
+[publication](semantic-github-publication-and-notification.md) and
+[locale](repository-locale-and-localization.md).
+Browser primary sources and technical mechanics research are recorded in the
+platform companion. Prototype performance, real browser results and store
+acceptance are unknown until implementation; this proposal claims none of them.
 
-Not applicable: this is a prospective specification and reconstructs no implemented extension baseline.
+### 2.4 Retrospective classification
+
+Not applicable: this is a prospective product contract, not an as-built baseline.
 
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |
 |---|---|---|---|
-| GitHub user | Navigate and focus native content efficiently | GitHub page, toolbar, or settings | Page helpers, panel, preferences |
-| Repository maintainer | Opt a repository into connected context | Extension settings and reviewed repository manifest | Repository controls and evidence panel |
-| Reviewer/request author | Inspect facts and prepare a supported request | Issue/PR panel or verified native review-thread reply | Source links and native draft editor |
-| Action operator | Publish durable current status and authorize a submitted request | Existing Action lifecycle | Existing GitHub issue/PR and run surfaces |
-| Extension contributor | Implement within browser and Clean Architecture boundaries | Development documentation | Code, fixtures, browser acceptance artifacts |
+| Developer | Navigate and read more efficiently | Repository/file/diff/list | Inline controls, personal preferences |
+| Issue/PR author | Understand the next action | Issue or PR | Copilot panel and native composer |
+| Reviewer | Inspect current findings with history | PR conversation or Files changed | Findings navigator and native review threads |
+| Repository maintainer | Enable trusted connected data | Reviewed default-branch configuration | Discovery, compatibility and Action source links |
+| Extension operator | Configure/recover a browser installation | Toolbar/options | Permissions, session connection, feature diagnostics |
 
-“Standalone” means a feature that needs only GitHub page content and local preferences. “Connected mode” means optional, per-repository reads of explicitly declared Action evidence and canonical GitHub resources. “Snapshot” is a bounded, versioned Action publication; it is not live policy certification. “Finding” is a source-identified result with provenance and completeness. “Draft” is text prepared in GitHub’s native editor but not submitted. “Generation” is the active page/repository/credential identity fence used to reject stale asynchronous results.
+**Standalone** means page-local features without API credentials or Copilot.
+**Connected** means explicitly enabled reads from a compatible repository.
+**Current** means identity and freshness checks pass at observation time.
+**Historical** is inspectable past evidence, never current readiness.
+**Prepared** means a draft exists; **submitted** and **executed** are later facts.
+The extension's name in examples is provisional `Copilot`; no store or trademark
+availability is claimed. Naming does not block this design.
 
-## 4. Goals
+## 4. Goals, non-goals, and fixed invariants
 
-### 4.1 Goals
+### 4.1 Normative product requirements
+
+- **P1 — Independent utility:** U1–U6 work without a token, Action or backend.
+- **P2 — Bounded scope:** the MVP consists of U1–U6 and K1–K3 on the three desktop
+  browsers. Catalog phases do not silently increase MVP scope.
+- **P3 — Honest context:** K1/K2 use the integration contract, show source/time and
+  distinguish missing, stale, partial and historical evidence from completion.
+- **P4 — Human submission:** K3 prepares supported requests for the exact native
+  composer, preserves drafts and never submits, merges, approves or dispatches.
+- **P5 — Personal control:** each feature has an explicit default, repository
+  override and reversible disable/pause/reset path.
+- **P6 — Native usability:** filters expose hidden counts, never silently hide
+  required action, and leave native content, editors and checks reachable.
+- **P7 — Inclusive presentation:** all primary states have keyboard, screen-reader,
+  light/dark, zoom/narrow and complete EN/ES presentations.
+- **P8 — Bounded work:** page work, requests and notification noise obey the
+  platform/integration budgets and stop on pause, navigation or revocation.
+- **P9 — Verifiable delivery:** the catalog, 96-case budget, documentation and
+  browser evidence gates in §§14–19 accompany implementation.
+
+The formal requirement IDs BEX-P1 through BEX-P9 correspond to P1 through P9
+below. All normative tables below refine those requirements. A reference to a companion's requirement
+incorporates that requirement; explanatory examples are not evidence of delivery.
 
 | Requirement | Behavior |
 |---|---|
-| BEX-USABILITY | Deliver U1–U6 standalone usability, preserve native behavior, handle navigation/lifecycle, provide bounded settings, accessible localized surfaces, performance budgets, and a documented roadmap. |
-| BEX-CONNECTED | Deliver K1–K3 optional connected context with least-privilege read access, trusted Action evidence, bounded reads, explicit freshness/completeness, and human-submitted supported drafts. |
-| BEX-PLATFORM | Specify Chrome, Firefox, and Safari delivery; portable core and adapters; privacy/security; real-browser acceptance; documentation; signing, delivery, and rollback. |
+| BEX-P1 | Standalone utility without Action, credential or backend. |
+| BEX-P2 | Nine bounded MVP capabilities across Chrome, Firefox and desktop Safari. |
+| BEX-P3 | Source-bound, complete and honest current versus historical context. |
+| BEX-P4 | Exact-context draft preservation and human-owned submission only. |
+| BEX-P5 | Bounded personal defaults, overrides, migration, pause and recovery. |
+| BEX-P6 | Idempotent native coexistence and explicit reversible filtering. |
+| BEX-P7 | Accessible, localized and responsive presentation for every primary state. |
+| BEX-P8 | Bounded DOM/network work and cancellation without unsolicited writes. |
+| BEX-P9 | Traceable tests, secure artifacts, documentation and actual browser proof. |
 
-U1–U6 comprise canonical links/permalinks, diff navigation and focus, conversation/thread controls, personal view preferences, discoverable accessible shortcuts, and settings/recovery. K1–K3 comprise issue/PR context, findings navigation, and supported native command drafts. Roadmap items include richer notification triage, cross-repository views, further code/release helpers, separately authorized API writes, Enterprise, and mobile.
+### 4.2 Outcomes and non-goals
 
-### 4.2 Non-goals
+Acceptance demonstrates: standalone installation without authentication; one
+primary next action in every connected state; one mount per feature/page; no
+request caused by rendering that posts a comment or invokes AI; and the complete
+browser matrix passing before a release is advertised as MVP complete.
 
-1. Runtime implementation, extension stores, and feature deployment are future work.
-2. No dashboard replacement, hosted authentication prerequisite, backend, telemetry, or history/private-code collection by default.
-3. No correction of foreign forks and no implement, sync, release, or deploy drafts in MVP.
-4. No mobile or GitHub Enterprise support in MVP; unsupported hosts fail gracefully.
-5. No copied third-party extension implementation or product branding.
+This specification-only change does not ship runtime code. MVP excludes direct
+API writes, automatic approvals/merge/deploy, hosted accounts, telemetry,
+cross-repository dashboards, arbitrary custom scripts/CSS, Enterprise hosts,
+mobile extensions, notification mutation and a replacement GitHub editor.
 
-### 4.3 Fixed product/safety invariants
+### 4.3 Fixed invariants
 
-1. Standalone functionality requires no Action, backend, or credential. Connected mode is explicitly opt-in per repository; public reads may be anonymous.
-2. Private reads may use an optional user-owned fine-grained PAT limited to selected repositories, with read-only Metadata, Contents, Issues, Pull requests, and Actions permissions only as needed. Respect organization approval, SSO, and endpoint restrictions. No client secret, workflow/bot PAT, cookie scraping, classic-token fallback, write scope, or hosted authentication prerequisite.
-3. Credentials and private evidence stay in protected `storage.session`, are cleared or invalidated on disconnect/revocation, and require reconnect after browser restart. Never expose them through content-script messages, page DOM, synchronized/exported preferences, URLs, or diagnostics.
-4. The Action owns authority. A reviewed `.copilot/browser-extension.json` pinned to an observed default-branch commit declares numeric producer ID, permitted workflow paths, and capabilities. Markers, labels, check names, stale runs, and source pointers alone establish no authority.
-5. Validate author, repository, conversation, run/attempt/workflow, head/base/policy/configuration identity, collection fences, observation time, freshness, pagination/completeness, and source links. Source pointers locate evidence; they do not authorize it. Hidden live policy is only assessed at source time.
-6. Missing evidence never means zero findings or green readiness. Keep durable lifecycle, transient activity, and human waiting distinct.
-7. K3 prepares status/analyze only in the supported issue/PR conversation. Fix/dismiss prepares only in a verified current same-repository finding’s supported native PR review-thread reply, with a verified viewer write hint. Unknown authority or target yields read-only or copy-only guidance. Preserve existing drafts: append/keep/cancel; replace only by explicit user choice. The person reviews and submits; the Action then authorizes actor, target, event, and exact revision.
-8. API compatibility floors: Chrome 140; Firefox 140 including ESR 140 compatibility; Safari 18.2 on macOS 15.2+. Desktop targets are Windows 11, macOS 15.2+, and Ubuntu 24.04 for Chrome/Firefox. These API floors do not assert vendor security support. Chrome uses an MV3 service worker; Firefox and Safari use nonpersistent background scripts. Real Safari acceptance is mandatory; generic WebKit is insufficient.
-9. Use a shared portable core with browser adapters and reviewed manifest/build differences. Integrated page panel must not depend on a vendor-only sidebar. Future hosts require optional exact-host permissions and per-host credentials.
-10. Initial Action publication creates/catalogues only `specs/github-browser-extension.md`. Later authorized branch work adds companions and JSON evidence under the same proposed capability. Share only the pure `src/domain/browser_extension_contract/index.ts` boundary; browser bundles contain no Node-only imports, credentials, or mutating Action entrypoints.
+P3/P4/P6 cannot be weakened by settings. An extension cannot grant Action write
+authority, create or rename a managed branch, infer a missing PR association, or
+turn absent findings into zero. Native controls remain the recovery path.
 
 ## 5. Current versus proposed product journey
 
-| Stage | Current | Proposed | User/operator effect |
+| Stage | Current | Proposed | User effect |
 |---|---|---|---|
-| Page usability | Native GitHub page; no Action-provided personal controls | Standalone helpers beside native content | User navigates and focuses without connecting an account |
-| Repository connection | No extension contract | Explicit per-repository opt-in and least-privilege read setup | User chooses scope and can pause it |
-| Evidence | Existing Action-owned status contracts | Bounded snapshot plus canonical reads and identity/completeness fences | Panel distinguishes current, stale, partial, and unavailable facts |
-| Request | Existing Action authorization contract | Extension prepares only a supported native draft | Person reviews/submits; Action authorizes exact revision |
-| Delivery | No extension delivery | Three desktop browsers, actual Safari acceptance, owned signing/store process | Maintainers plan prerequisites and rollback |
+| Install | Separate automation/setup tooling | Explain standalone and optional connection | Immediate value without credentials |
+| Navigate | Native links and repeated manual browsing | U1/U2 helpers beside known destinations | Fewer context switches |
+| Read | Repeated layout/filter choices | U3/U4, with visible filtering | Personal readable view |
+| Understand work | Compare comments/checks/runs | K1 with verified links and observation time | Know status and responsible actor |
+| Review | Open findings across threads | K2 grouped navigator with native links | Find active versus historical evidence |
+| Request work | Remember command/context restrictions | K3 preview in the correct composer | Explicit target and human submission |
+| Recover | Guess whether extension/Action failed | Per-feature reason and native fallback | Isolated recovery |
 
 ```mermaid
 flowchart LR
-    A[Open GitHub page] --> B[Standalone helpers]
-    B --> C{Repository explicitly connected?}
-    C -->|No| D[Standalone experience]
-    C -->|Yes| E[Validate manifest and snapshot]
-    E --> F{Evidence current and complete?}
-    F -->|No| G[Read-only unavailable or partial view]
-    F -->|Yes| H[Inspect facts and sources]
-    H --> I[Prepare supported native draft]
-    I --> J[Person reviews and submits]
-    J --> K[Action authorizes exact request]
+    I[Install and grant GitHub page access] --> U[Standalone improvements]
+    U --> O[Opt in to repository connection]
+    O --> V[Validate configuration and current publication]
+    V --> C[Context and findings]
+    C --> D[Prepare supported native draft]
+    D --> H[Human reviews and submits]
+    H --> A[Action authorizes and executes]
+    A --> V
 ```
 
-Text equivalent: open a page, use standalone helpers, optionally connect a repository, validate evidence, inspect facts, prepare a supported draft, and rely on the person and Action for submission and authorization.
+Text equivalent: install → standalone use → optional connection → verified
+context → prepared draft → human submission → Action result → refreshed context.
+Denied connection leaves standalone use available.
 
 ## 6. Functional behavior and state model
 
-### 6.1 Happy path
+### 6.1 MVP inventory
 
-1. Installation requests no blanket host or write permission; user configures standalone defaults.
-2. On a supported page, an eligible feature mounts once, owns its DOM resources, and preserves native content and URL queries.
-3. User may explicitly connect a repository. The extension checks the reviewed manifest at a pinned observed default-branch commit and requests only selected-repository read access if needed.
-4. Background reader validates the versioned snapshot and performs allowlisted canonical reads with bounded concurrency, conditional requests, pagination, and freshness checks.
-5. Panel shows source-linked facts and explicit limitations. Supported command preparation requires verified context and viewer write hint; all other cases stay read-only/copy-only.
-6. Person reviews and submits the native draft. The Action independently authorizes actor, target, event, and exact revision.
+The connected context, findings and draft capabilities use the issue
+identifiers K1, K2 and K3. Test cases use the separate browser694 namespace.
 
-### 6.2 Alternative paths
+All rows target Chrome/Firefox/Safari desktop under D1. `Page` means existing
+visible DOM/URL only; it does not authorize background API fetching. Clipboard
+writes require a user gesture and use the browser-adapted path in D3.
 
-- Public repositories may be read anonymously. Private access denial, unsupported endpoint, missing approval, or missing credential yields unavailable/read-only connected UI; standalone features continue.
-- Missing manifest, incompatible producer, unknown capability, or malformed evidence disables connected projections with upgrade guidance.
-- Incomplete pagination or collection yields partial scope and no aggregate zero or ready state.
-- Ambiguous issue/PR references remain plain text. Missing DOM anchors disable only affected controls.
-- Offline, rate limit, provider errors, or stale data retain clearly labeled historical source facts and offer bounded recovery.
-- Unsupported pages, hosts, and private browsing do not trigger connected reads; non-supported targets leave native GitHub usable.
-
-### 6.3 State machine
-
-| State | Entered when | User-visible meaning | Allowed next states | Recovery/owner |
+| ID | Problem, surface and concrete interaction | Data / permission / freshness | Default, dependency and coexistence | Acceptance |
 |---|---|---|---|---|
-| Standalone | Default or disconnected | Page helpers work without account connection | Connected, paused, unsupported | User settings |
-| Pending | A bounded read is active | Shows completed facts and active run; no human action required | Complete, partial, stale, unavailable, blocked | Reader; cancel on identity change |
-| Complete | Valid current snapshot and required collection are complete | Facts are assessed for stated revision/time | Pending, stale, partial, unavailable | Refresh under bounded policy |
-| Partial | Some required evidence/coverage is missing | Verified facts remain; aggregate readiness omitted | Pending, stale, unavailable | Reader/operator source |
-| Stale | Snapshot expired, superseded, or identity changed | Previous assessment is historical; current counts unknown | Pending, unavailable | Refresh after identity fence |
-| Action required | A verified human response is required by source | Names actor and exact destination | Pending, blocked, complete | Human at native destination |
-| Blocked | Evidence or prerequisite prevents transition | Cause and impact with retained facts | Pending, unavailable, complete | User, maintainer, or Action owner |
-| Unavailable | Access, network, host, or compatibility prevents reading | Native GitHub links remain; Action failure is not implied | Pending, standalone, unsupported | User or provider recovery |
-| Unsupported | Page/browser/host outside MVP | Connected controls absent; standalone eligible features may remain | Standalone | Product support boundary |
+| U1 | Copy issue/PR canonical URL or immutable file/line permalink; make only unambiguous references navigable | Page; GitHub page access; rederive after navigation | On; omit duplicate native control; ambiguous number stays text; unavailable commit disables permalink | Copy points to observed object/revision; hostile URL never linked |
+| U2 | PR Files changed: next/previous visible file and optional generated-file focus filter | Page; no API; mounted/rendered files only | Navigation on; filter off; use native generated classification, never guess from suffix; hidden count and Restore all | No missed native checks/comments; virtualization reports visible subset |
+| U3 | PR/issue conversation: expand/collapse resolved/outdated threads and jump to last loaded relevant event | Page; thread-native state; refresh on DOM changes | On controls; no auto-collapse active threads; preserve editor subtree; label events not yet loaded | Collapsing leaves draft intact; restore returns focus and content |
+| U4 | Issue/PR lists: restore explicit supported filter query and compact/comfortable personal density | Page URL plus local preferences; live query wins on navigation | Comfortable; saved view applied only on explicit Restore, never rewrites shared links; compact is opt-in | Opening a shared filtered link preserves its exact query |
+| U5 | Shortcut help and extension commands for U1/U2/panel | Page; no broad keyboard capture | Help on, added bindings off until enabled; native/OS conflicts disable the binding; no editable/composition interception | Keyboard-only flow works; typing in comments has no side effects |
+| U6 | Options: per-feature toggle, repository pause, reset, isolated diagnostic and settings export/import | Local extension settings only; no secrets/private evidence in exports | All recovery controls on; invalid imports rejected atomically | One broken feature can be disabled while GitHub and others work |
+| K1 | Issue/PR inline panel: state, completed facts, next actor/action, source links to issue/SDD/branch/PR/run | Validated publication plus canonical API facts under I1–I7 | Off until repository opt-in; unsupported/missing producer is explicit; source panel never infers linkage | Stale source shows stale; multiple linked PRs require selection |
+| K2 | PR findings navigator: group by path/severity/state and jump to native comment | I4 snapshot items; review-comment IDs validated | On only with connection; unavailable count stays unknown; historical items separately labeled; no thread mutation | File group includes counts/coverage; old finding cannot certify current head |
+| K3 | Prepare status/analyze, or eligible fix/dismiss request, in native composer with exact target preview | I8 allowed contexts and current user capability hints; no API write | Always user-triggered; existing nonempty draft triggers Append / Keep draft / Cancel; replace requires separate explicit choice | Correct review thread selected or copy-only fallback; never auto-submit |
 
-Duplicate mounts are idempotent. Stale, out-of-order, canceled, or superseded results cannot render. Partial completion preserves independently verified source facts. Resource disposal is mandatory on navigation, pause, permission revocation, account change, and extension update.
+U1–U6 show native accessible buttons with text labels/tooltips, use CSS tokens and
+budgeted DOM adapters, and follow P6/P7/D2–D5. K1–K3 inherit those requirements and
+I1–I10. No feature reads drafts as context for remote analysis. No per-user record
+is written into repository files.
+
+### 6.2 Full catalog beyond MVP
+
+Rows are candidates with a defined problem and phase, not commitments. `P1` here
+means post-MVP phase one; it does not refer to normative requirement P1. All
+candidates are off until a separately approved slice supplies implementation,
+documentation and tests. Each inherits P6–P8; all browser deviations are explicit
+in that slice, not hidden behind detection.
+
+| ID / phase | User problem and example surface | Mechanic and data | Permission/freshness / dependencies | Acceptance boundary |
+|---|---|---|---|---|
+| N1 / phase 1 | Workflow lacks easy return to originating PR | Workflow-to-PR link from native run associations | Actions/PR read; current run identity; K1 connection | No association means no fabricated PR |
+| N2 / phase 1 | Repeated repository navigation | Personal quick destinations and discoverable shortcuts | Page URLs/local settings; U5 | Current repo identity and native navigation preserved |
+| D1 / phase 1 | Indentation/whitespace hard to inspect | Explicit tab-width (2/4/8) and whitespace toggle in code/diff | Rendered text only; no source rewriting | Copied code bytes and line anchors unchanged |
+| D2 / phase 1 | PRs touch related files | Show authoritative open PR/file associations on demand | PR read; paginated API snapshot; bounded retrieval | Incomplete result labeled partial |
+| D3 / phase 1 | Large diff has noisy bot/generated changes | Explicit filters by native actor/classification | Page or connected native facts; U2; off | Counts/Restore all; no silent review clearance |
+| L1 / phase 1 | Lists obscure useful metadata | Compact badges for updated/locked/draft with textual labels | Page/native facts; refresh after navigation | No guessed state from decorative icons |
+| L2 / phase 1 | Conversations are long | Jump between loaded open/close/review events and explicit bot-noise grouping | Page; no automatic loading entire history | Hidden actions remain counted and reachable |
+| A1 / phase 1 | CI context is fragmented | On-demand concise run/check explanation with sources | Actions read; optional Checks access only if supported auth; K1 | Unavailable evidence never shown as pass |
+| Q1 / phase 2 | Notification triage repeats navigation | Saved views, source destination and explicit multi-open | Future notification permission/API design required | No mark-read/subscribe side effect on navigation |
+| R1 / phase 1 | Release comparison takes several hops | Compare current tag to user-selected preceding tag | Contents read or native links; immutable resolved refs | Not chronological guessing for semver/prereleases |
+| R2 / phase 2 | Unsure which release includes a merged PR | On-demand commit ancestry/tag evidence | Contents/PR read; bounded history with completeness | Unknown ancestry stays unknown |
+| X1 / phase 2 | Operate across repositories | Personal work overview | Separate authorization/cache/account isolation design | No widening host/repository access by discovery |
+| X2 / phase 2 | Repeat routine mutation | Reviewed API-write shortcuts | Separate write scopes, actor authorization, replay/cancellation design | Explicit operation-time confirmation and server checks |
+| X3 / phase 2 | Enterprise/mobile users need support | Exact-host adapters and platform-specific interaction | Separate opt-in host/store/test matrix | No wildcard hosts; unavailable support stated |
+
+Before promoting a candidate, expand its row to the same per-feature acceptance,
+data/permission/default/accessibility/performance/coexistence detail as §6.1;
+approval of this catalog alone is not authorization to ship it.
+
+### 6.3 State model
+
+| State | Entered when | Visible meaning / primary action | Transition / owner |
+|---|---|---|---|
+| Standalone | Connected mode off/manifest absent | Improvements available / Configure connection | User can opt in; U features independent |
+| Loading | Bounded collection in progress | Checking current context / no action needed | Reader → current, partial, unavailable |
+| Pending | Verified Action work in progress | Waiting for run / Inspect run | Action completes or user revisits |
+| Action required | Verified clarification/review blocker | Waiting for author/maintainer / Open source question | Human acts, Action republishes |
+| Blocked | Proven failed prerequisite | Work blocked, retained facts shown / Inspect blocker | Operator/author repairs; fresh evidence |
+| Partial | Some facts succeeded, others unavailable | Completed facts retained; no aggregate readiness / Inspect missing evidence | Fresh complete collection |
+| Complete snapshot | All required facts pass at fenced identity | Latest assessment complete at time T / View result | New revision/event invalidates snapshot |
+| Stale | TTL, identity, policy or generation changed | Previous result is historical / Refresh current context | Reader obtains fresh source |
+| Unavailable/incompatible | Denied/malformed/future major/missing producer | Current context unavailable / Open native GitHub | Operator restores compatibility/access |
+| Paused | Repository/features disabled | Extension paused here / Resume | User resumes; old requests stay canceled |
+
+Terminal native close/merge is shown directly with its reason and source; a
+historical percentage or finding card cannot reopen it. State priority and
+evidence ownership are specified in I4/I5.
 
 ## 7. User-facing configuration
 
-| Input | Type | Recommended default | Allowed values/range | Scope/persistence |
-|---|---|---|---|---|
-| Feature enabled | Boolean per known feature | Enabled for safe U1–U6 defaults where page anchors are supported | true/false | Global preference; repository pause overrides |
-| Repository connection | Boolean | Off | on/off | Numeric repository ID; local protected settings; pause wins |
-| Private read credential | User-owned fine-grained PAT | Absent | Selected repositories and needed read-only permissions | Protected session storage only; reconnect after restart |
-| Density | Enum | Comfortable | comfortable/compact | Personal preference; documented supported surfaces |
-| Thread collapse | Enum | Preserve native state | preserve/remember supported collapse state | Personal preference |
-| Shortcut set | Enum | Off | off/documented shortcut set | Global; never steals editable-field/native shortcuts |
-| Locale | Enum | Browser/user choice with complete English fallback | English/Spanish | Personal extension locale; independent of Action publication locale |
-| Import | JSON object | Not applicable | At most 64 KiB; known bounded settings only | Validate completely before write |
+Settings schema version 1 is extension-owned; no secrets are accepted by this
+schema. Unknown top-level keys, unknown feature IDs, invalid enums or oversized
+imports are rejected with no partial write. Import size is at most 64 KiB and
+repository overrides at most 100. Repository identities use GitHub numeric ID,
+not a mutable name alone; renamed repositories retain their preference mapping.
 
-Validation rejects unknown feature activation, invalid enums, unsafe URLs/code, and cross-field settings that imply auto-submission or weakened evidence rules. Settings are snapshotted per operation; repository identity uses numeric IDs so rename preserves the intended preferences without cross-repository bleed. Interrupted migrations preserve the last complete version. Future schema is read-only and exportable. Retired values are ignored with a visible migration explanation; unknown values never activate behavior. Reset clears preferences and session state as selected. Export excludes credentials, private evidence, and human draft contents. Import/export never includes arbitrary executable configuration.
+| Input | Type / default | Allowed values | Scope and persistence |
+|---|---|---|---|
+| `features` | Map; defaults in §6.1 | Known IDs → boolean | Global plus per-repo override, local storage |
+| `density` | Enum; `comfortable` | `comfortable`, `compact` | Global, repo override |
+| `locale` | Enum; `auto` | `auto`, `en`, `es` | Global; browser primary language then EN fallback |
+| `theme` | Enum; `github` | `github`, `light`, `dark` | Global; GitHub tokens/contrast respected |
+| `shortcuts` | Boolean; `false` | true/false | Global, repo override; fixed conflict-aware binding catalog |
+| `connected` | Boolean; `false` | true/false | Explicit numeric repository opt-in |
+| `paused` | Boolean; `false` | true/false | Global or repository; pause wins over enabled flags |
+| `savedViews` | Map; empty | ≤20 query strings, ≤2,000 chars each; issue/PR routes only | Repo; explicit restore, not automatic route replacement |
 
-Recommended example: standalone U1–U6 defaults, connected mode off, comfortable density, shortcuts off. Meaningful alternative: enable connection for one numeric repository ID, use anonymous public reads or a narrowly scoped session PAT for private reads, and set compact density. Evidence and authorization invariants are not configurable.
+K1/K2/K3 feature switches default enabled, but their eligibility is false until
+the user explicitly connects that repository; they never auto-connect. U5 help
+exists by default while additional key bindings stay off. If all C features are
+disabled, no connected reads are scheduled. Import cannot grant host permission,
+restore a credential or activate a new repository connection: imported connection
+preferences require a separate local user opt-in, and an active pause remains
+effective until explicitly resumed. Export previews repository preference scope;
+private API evidence and credentials are never part of settings.
 
-## 8. Clean Architecture
+Precedence: fixed safety/compatibility rules → global pause → repository pause →
+repository setting → global preference → shipped default. Snapshots take an
+immutable settings version per operation; a pause/revocation cancels it even
+after snapshotting. Unknown newer schema makes settings read-only with export
+and downgrade guidance; it is never silently rewritten. Migrations are atomic,
+idempotent and retain one previous non-secret settings version until next
+successful startup. Reset preview distinguishes global from current-repo reset;
+disconnect also clears protected session data under D4.
 
-### 8.1 Responsibilities and dependency direction
+Recommended settings: comfortable, locale auto, GitHub theme, U features at their
+row defaults, shortcuts and connected mode off. Alternative: compact and U5
+enabled in one repository, with K1/K2 connected there only. A repository cannot
+override personal locale, grant credentials or turn K3 into auto-submission.
 
-| Layer/boundary | Owns | Must not own/import |
-|---|---|---|
-| Domain/pure policy | Evidence identity, freshness/completeness, settings invariants, safe target resolution | Browser APIs, provider DTOs, DOM, Node APIs |
-| Application | Immutable use cases, semantic ports, orchestration and identity fences | Concrete SDKs, process globals, rendering |
-| Adapters/data | Map browser/provider data and typed errors to semantic contracts | Product policy or authority decisions |
-| Infrastructure/composition | Browser-specific storage, messaging, fetch, lifecycle wiring | Business decisions or broad permissions |
-| Entrypoints | Validate event sender and adapt browser/page events | Duplicate orchestration or arbitrary network proxy |
-| Presentation | View models, accessible renderers, native draft preparation UI | Evidence trust decisions, automatic submission |
+## 8. Clean Architecture design
 
-```mermaid
-flowchart LR
-    E[Browser and page entrypoints] --> A[Application use cases]
-    A --> D[Pure domain policies]
-    A --> P[Semantic ports]
-    I[Browser and GitHub adapters] --> P
-    A --> V[Presentation view models]
-    V --> R[Accessible renderer]
-```
+The platform companion D2/D3 specifies the component graph, semantic ports and
+executable import/message/manifest boundaries. Product owns feature eligibility,
+information hierarchy and next-action selection; presentation never owns
+authorization or provider state. Integration I1–I10 owns transport/provenance and
+Action-side changes. Browser code cannot import the Action composition root,
+Node process/filesystem adapters or runtime credentials.
 
-Text equivalent: entrypoints validate and call application use cases; domain policies decide pure invariants; semantic ports isolate browser/provider access; adapters implement ports; view models feed renderers.
-
-### 8.2 Contracts, state, and trust boundaries
-
-- Pure decisions: repository/conversation/run identity, capability allowlist, freshness, completeness, settings validation, safe URL and target resolution, draft eligibility.
-- Application contracts: immutable read request/result types with explicit repository/page/credential epochs, abort signal, and result provenance.
-- Semantic ports: canonical GitHub read, reviewed-manifest read, snapshot read, protected session credential access, page lifecycle, local settings, clock, and safe draft insertion affordance.
-- Durable state/schema ownership: local preferences are versioned and migrated atomically; credentials and private evidence live only in protected session storage; no process global is sole durable state. Action snapshot schema and manifest schema are separately versioned.
-- Concurrency/idempotency: bounded GET concurrency; conditional reads/cache; generation and identity fences before and after collection; abort obsolete work; coalesce same-target refreshes across tabs within budget; foreground refresh and background silence.
-- Trusted and untrusted inputs: GitHub DOM, comments, Markdown, URLs, messages, snapshots, markers, labels, and source pointers are untrusted until validated against numeric identity and policy.
-- Provider error mapping: 401 clears protected credentials/evidence and requests reconnect; 403 means unavailable without broader fallback; masked private 404 means access unknown; offline retains historical facts without retry loop; secondary rate limits use provider guidance or bounded backoff.
-
-### 8.3 Executable architecture constraints
-
-Automated checks must reject domain imports of browser, Node, UI, or provider SDK modules; cycles and dependency-direction violations; browser bundles containing Node-only imports, credentials, or mutating Action entrypoints; undeclared manifest permissions/hosts; remote executable code; schema incompatibility; and arbitrary URL/method/body message protocols. Parse dependency graphs, generated manifests, schema fixtures, package boundaries, and workflow structures rather than grepping prose. Preserve the private extension/pnpm workspace, root overrides and quality gates, TypeScript conventions, and locked Vite/Vitest baseline. Do not impose a `src/` root or `.test.ts` naming convention on consumer repositories. Only the pure `src/domain/browser_extension_contract/index.ts` boundary is shared.
+View settings are durable local state. API evidence and credentials are separate
+session state. Native GitHub and Action publications remain the durable shared
+source; browser memory never establishes a successful operation.
 
 ## 9. UI/UX and content contract
 
-### 9.1 Information hierarchy
+### 9.1 Primary context panel
 
-1. Current status
-2. Completed facts
-3. Next transition
-4. Human action or explicit statement that none is needed
-5. Impact and inspectable links
-6. Expandable sanitized diagnostics
+P3/P7: heading `Copilot`, one textual state, completed facts, next actor/action,
+impact, source links, then collapsed technical detail. Do not show internal schema
+IDs in the main flow. On wide screens mount beneath issue/PR header; at ≤760 CSS
+pixels use an in-flow collapsible panel, not a fixed overlay. Native headings,
+editors and checks are not displaced or hidden. No injected control duplicates a
+native equivalent with the same destination and effect.
 
-Keep native facts inspectable. Deterministic headings, labels, and markers; idempotent updates; bounded comment and notification noise where Action output changes. Do not hide blockers, required actions, native checks, or reviews. Filtered generated content must show loaded-scope counts and immediate restore.
-
-### 9.2 Representative primary view
-
-```markdown
-# Copilot context for PR 42
-
-**Current status:** Partial assessment for commit `abc1234` at 2026-10-25 10:00 UTC.
-
-**Completed:** 8 findings were collected from 2 of 3 review sources.
-
-**Next:** Review the remaining source coverage. No overall readiness result is available.
-
-**Human action:** None is required to let the current Action run finish.
-
-[Open PR 42](https://github.com/example/project/pull/42) · [Inspect Action run](https://github.com/example/project/actions/runs/123)
-
-<details><summary>Evidence details</summary>
-
-The snapshot is partial. Current aggregate finding count and live policy state are unknown.
-
-</details>
+```text
+Copilot · PR #158                      Updated 24 seconds ago
+Changes required — waiting for the PR author
+Completed: specification published · branch verified · CI completed
+2 current findings; review covers this revision
+Next: inspect the findings before preparing a correction request.
+[View findings]  [Issue #142] [Specification] [Inspect run]
+Technical details ▸ head/base, policy, run attempt and source time
 ```
 
-Concrete state variants:
+### 9.2 Required state variants
 
-**Pending/no action:** “Status: Analysis is running for PR 42. Completed: repository and head identity verified. Next: the Action is collecting review findings. Human action: none. Inspect the active run.”
+```text
+Pending
+Copilot is reviewing this revision. Branch verification completed.
+No action required. [Inspect current run]
 
-**Action required:** “Status: Clarification is needed before analysis continues. Completed: the current head and prior findings are retained. Next: @maintainer should answer in the linked PR conversation. Impact: readiness remains unknown. Inspect the run and conversation.”
+Action required
+Specification needs your answer. Branch has not been published.
+Next: the issue author answers Q2. [Open clarification]
 
-**Blocked/failed:** “Status: Connected evidence is unavailable. Cause: GitHub denied this read. Action: review selected-repository access or continue with native GitHub. Retained: the prior snapshot is labeled historical. No Action failure is implied.”
+Blocked
+Current context cannot confirm verification: the verification run failed.
+The published specification and branch remain available.
+Next: inspect the failure before retrying through GitHub. [Inspect blocker]
 
-**Partial:** “Status: Review coverage is incomplete. Completed: 8 findings from 2 of 3 sources. Next: wait for or inspect the missing source. Human action: none unless the source identifies an actor. Impact: no aggregate readiness or zero count is shown.”
+Partial
+Specification and branch verified. Current review evidence is unavailable.
+No overall readiness is claimed. [Inspect available sources]
 
-**Complete:** “Status: Snapshot complete for commit `abc1234`, assessed 2026-10-25 10:00 UTC. Completed: all declared sources were collected. Next: inspect findings and native checks. Human review obligations remain. This records source-time assessment, not hidden live policy.”
+Complete snapshot
+Latest assessment completed for revision abc1234 at 10:42.
+0 current findings with complete coverage. Human review still applies.
+[View assessment]
 
-### 9.3 Issue, PR, and comment behavior
+Stale
+A newer revision is open. The 10:42 assessment describes the previous revision.
+Current finding count is unknown. [Refresh current context]
 
-- Deterministic panel titles identify repository and conversation; native destinations use exact observed canonical links.
-- Page opening, navigation, and rendering never submit, mutate repository state, trigger Actions, or run agents.
-- Existing Action durable publication remains the lifecycle authority. Extension projections are read-only; markers and source links alone do not confer trust.
-- No extension comment is emitted automatically. Existing Action output updates must be idempotent and have an explicit bounded noise budget.
-- Labels and checks are supplemental; they cannot establish identity, freshness, completeness, or authorization alone.
-- Preserve shared URL queries until explicit Restore. Canonical references must not guess between an issue and a same-number PR.
+Unavailable / incompatible
+Connected context is unavailable for this Action version.
+Your GitHub view preferences still work. [Open native checks]
+```
 
-### 9.4 Accessibility, localization, and responsive behavior
+Errors follow impact → cause → action → retained facts. Sources use descriptive
+links, and absent links are omitted rather than rendered as dead controls.
+The findings view labels `Current`, `Historical`, `Coverage incomplete` in text;
+color/severity icons supplement text. Empty current findings is shown only with
+complete current coverage; otherwise `Current finding count unavailable`.
 
-Support English and Spanish with explicit language ownership and atomic fallback to complete English. Personal extension locale may differ from Action publication locale. Provide keyboard navigation, accessible names, focus restoration, screen-reader announcements, 200% zoom, narrow layouts, high contrast, reduced motion, and light/dark support. Visuals have text equivalents. Keep headings, tables, and links descriptive and readable. Sanitize untrusted Markdown/HTML; render unsafe URLs as unavailable text. Shortcuts are opt-in and respect native shortcuts, editable controls, and composition events.
+### 9.3 Draft preparation and noise
+
+Preview target repository/PR/thread, exact command and consequence before editing.
+For a nonempty editor, offer `Append request`, `Keep my draft`, `Cancel`; a
+separate `Replace draft…` path previews the old draft and requires confirmation.
+If safe targeting fails, show a copyable command and exact destination link.
+Appending is idempotent by operation ID and current editor digest; no duplicate
+append after rerender. Do not claim a copied draft was inserted.
+
+Opening/refreshing a page creates zero comments, notifications, Actions or AI
+requests. K3 native submission creates the user's normal GitHub comment; existing
+Action publication budgets remain authoritative. Extension diagnostics use local
+nonmodal messages; no notification permission is requested.
+
+### 9.4 Accessibility and localization
+
+P7/D5: every action has an accessible name, visible focus and keyboard path;
+expanded state is programmatic; dynamic results use a polite bounded status
+announcement. Preserve focus on equivalent owned control after refresh, otherwise
+restore a safe parent without stealing focus from native editing. Help bindings
+are discoverable and conflict-checked. Respect reduced motion and 200% zoom,
+320 CSS pixel layout, high contrast, and EN/ES complete catalogs. Resolve the
+extension's locale once per render; unsupported language uses complete English.
+Action publications retain their repository locale and are clearly attributed;
+do not machine-translate command operands or diagnostic source text.
 
 ## 10. Failure, recovery, and cleanup
 
-| Failure/partial state | User impact | Retained facts | Automatic retry | Required action | Cleanup |
-|---|---|---|---|---|---|
-| Missing/invalid manifest | Connected mode unavailable | Standalone preferences and controls | No | Review repository setup | Clear rejected evidence |
-| 401 | Private connected reads stop | No credential-derived current evidence | No | Reconnect | Clear token and private evidence |
-| 403 or masked private 404 | Access unknown/unavailable | Clearly historical facts only | Bounded on explicit refresh | Check approval/selected access | No permission expansion |
-| Offline/rate limit | Current refresh delayed | Historical facts labeled by time | No loop; bounded provider/backoff policy | Retry when allowed | Abort obsolete requests |
-| Partial pagination/source coverage | Aggregate unknown | Verified source facts | Bounded continuation only | Inspect missing source if needed | Preserve completeness markers |
-| Head/base/policy identity change | Previous aggregate no longer current | Historical snapshot with provenance | One fenced refresh | Inspect current run | Clear aggregate satisfaction/counts |
-| Navigation/account/revocation race | Old result could be misleading | No stale result accepted | Fresh identity read only | Reconnect if needed | Abort, increment epoch, clear private state |
-| Broken/missing anchor | One helper unavailable | Other features unaffected | No | Use native control | Dispose only affected resources |
-| Migration interruption | Settings may be old | Prior complete version | Safe one-time retry | None unless future schema | Atomic commit/rollback |
-| Disable/uninstall/update | Controls or connected mode stop | No repository side effects | No | Re-enable if desired | Dispose listeners, observers, secrets |
+| Failure | Impact and retained facts | Recovery | Cleanup |
+|---|---|---|---|
+| Missing DOM anchor | A named feature unavailable; native page works | Disable feature or reload after update | Owned nodes/listeners only |
+| Navigation while loading | Old response cannot affect new repo/PR | New page generation starts fresh | Abort old request/observers |
+| Offline/denied/rate limited | Connected evidence unavailable/stale | Native source and bounded retry I6 | Purge denied private data |
+| Bad settings import | Existing preferences retained | Correct error/export current version | No partial migration |
+| Extension updated in open tab | Duplicate generation rejected | One refresh prompt; native UI stays | Retire old owned generation |
+| Draft already edited | Request not inserted | Keep, append, replace explicitly, or copy | No draft telemetry/persistence |
+| Pause/uninstall | Owned enhancement removed; repository unaffected | Resume/reinstall intentionally | D4 session/credential cleanup |
 
-Errors follow impact, cause, action, retained-state order. User can restore native GitHub behavior by disabling a feature or extension. No cleanup action mutates the repository.
+The platform companion defines suspension, partial writes, settings quota and
+rollback; the integration companion defines replay, stale identity and API
+limits. No recovery automatically submits or retries a mutation.
 
 ## 11. Security, permissions, and privacy
 
-1. Installation asks no blanket host or API-write permissions. Optional exact-host/site access is requested only for the user-selected supported host and feature; MVP host is github.com. Standalone operation remains available when access is denied.
-2. Treat DOM, comments, Markdown, URLs, messages, and Action data as untrusted. Validate sender, tab, frame, origin, closed message schema, safe URL allowlist, canonical repository identity, and operation capability. Reject arbitrary URL/method/body requests and command separators or line breaks in finding operands.
-3. Keep PATs and private evidence in protected session storage only. No content-script access, page DOM, synchronized/exported preferences, URLs, logs, or diagnostics. Redact tokens. No history/private-code collection or telemetry by default.
-4. Protect login, authorization, and settings routes from observers and connected reads. No credentials on cross-origin redirects. Private browsing refuses connected operation and retains no navigation evidence.
-5. Account change invalidates the old epoch before clearing credentials/cache. Logout or viewer-change signal pauses connection without claiming PAT revocation. Revocation blocks late responses from repopulating private state.
-6. No remote executable patches. Review build output, manifests, permissions, CSP, dependencies, and generated artifacts. Unknown authority/target is read-only or copy-only.
-7. Browser security support is a separate release decision from API compatibility floors. Maintainers must record dated primary browser references and supported release evidence.
+P1/P4/P6 incorporate I7–I9 and D4. Standalone operation uses GitHub page access and
+local settings. Optional API permission/authentication is requested at connection
+time with exact origin and selected repository explanation. Tokens, private
+evidence, code, drafts and browsing history are excluded from synchronized
+preferences, exports, telemetry and diagnostics. No remote executable features,
+custom scripts or arbitrary fetch/command messages are supported.
 
 ## 12. Observability and operational UX
 
-- User-facing state: pending, action-required, failed/blocked, partial, complete, unavailable/incompatible, and stale, with facts and source time.
-- Job Summary/operator evidence: existing Action remains owner of durable lifecycle and summary publication; extension does not certify hidden live policy or create a parallel authority.
-- Logs, metrics, and correlation: no telemetry by default; local diagnostics are opt-in, bounded, sanitized, and exclude credentials, private evidence, and draft contents. Correlation uses non-secret run/repository identifiers only when safe.
-- Pending external dependency versus workflow failure: show separately; a pending human or external source is not an Action failure.
-- Rate-limit/retry behavior: conditional reads, bounded concurrency, foreground refresh, background silence, provider-aware retry timing, abort on identity change.
-- Noise/comment budget: extension generates no automatic comments or notifications; Action updates are idempotent and bounded by the existing publication contract.
+Per-feature diagnostics show enabled/paused/unsupported/error, affected surface,
+extension version, browser adapter and sanitized error code. They do not include
+page text, draft contents, private paths or credentials. Explicit export previews
+the sanitized report. Connected detail adds source/time/run link without bulk
+logs. No network telemetry ships in MVP. Action Job Summaries remain inspectable
+source evidence; future producer changes add a publication outcome and source
+identity under I10 without extra timeline comments.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
-- Existing in-flight operations/data: extension must not alter Action runs; generation fences prevent old responses affecting new pages or repositories.
-- Schema/configuration migration: version settings and snapshot/manifest contracts; reject malformed or duplicate-key JSON; preserve prior settings atomically; future settings remain read-only/exportable; future snapshot major disables connected projections.
-- Deprecated behavior and compatibility window: old/no/future producer versions retain standalone use and disclose connected compatibility; support window is a release decision backed by dated browser/provider evidence.
-- Rollout stages: specification and catalog first; implementation and companions later under approved branch work; browser artifacts and actual acceptance evidence precede release. Store publication is a separate delivery gate.
-- Rollback and irreversible effects: reviewed code/settings rollback restores a compatible view without credential backup. Disable/uninstall clears session secrets and owned resources and causes no repository side effects.
-- Safari delivery owner: maintainers’ Safari release owner provisions Apple Developer/App Store Connect roles, bundle IDs, signing custody, containing-app packaging, privacy/support/store assets, review, updates, and rollback. Default route is App Store Connect Web Extension Packager, then TestFlight, then macOS App Store containing app; Xcode development/fallback remains available. Actual Mac/Safari acceptance is required. These accounts and store operations are future prerequisites, not authorized actions of this specification issue.
+U features remain available with old/no Action. Connected schema compatibility is
+I2; an unsupported major fails closed for C features. Existing native comments,
+labels, drafts and checks are not migrated into extension ownership.
 
-## 14. Testing strategy
+Rollout sequence: internal unpacked builds on all three browsers → opt-in pilot
+with public/private fixtures → beta stores/TestFlight → reviewed release across
+the three targets. Each stage needs D8 evidence. Pausing one broken feature is
+the first recovery; a reviewed compatible package/settings version is rollback.
+Store version monotonicity may require publishing a higher version containing a
+revert rather than installing an older signed version. Never promise immediate
+store review or silently drop Safari to call the MVP shipped.
 
-The inventory below defines 96 distinct future implementation scenarios. They are not executed tests. Browser matrix repetitions do not add distinct cases. Retained Action contract cases remain owned by their existing specifications and are not counted here. Require repository quality thresholds to remain in force, full branch coverage for new pure evidence/authorization policies, deterministic clocks and fakes, replay/race tests, semantic golden assertions beyond snapshots, structural workflow/schema checks, and manual UX evidence automation cannot establish.
+## 14. Testing strategy and numeric budget
+
+**96 distinct future implementation cases**, derived from nine capabilities,
+asynchronous DOM navigation, a new trust/compatibility contract and three browser
+packages. This specification change does not create or claim these tests.
+
+| Area / case IDs | Minimum | Covered behavior inventory | Owner |
+|---|---:|---|---|
+| bex-F-C01–bex-F-C12 pure feature/configuration | 12 | eligibility by surface; defaults; pause precedence; repo identity/rename; invalid enum; unknown feature; oversized import; atomic migration; old schema; future schema; saved query precedence; nonconfigurable invariants | Product/platform |
+| bex-N-C01–bex-N-C14 lifecycle/races | 14 | initial mount; soft navigation; partial refresh; back/forward; virtualized insertion; removal; dedup; request cancellation; late response; cross-repo response; two tabs; update generation; pause during work; bounded observer disposal | Platform |
+| bex-A-C01–bex-A-C12 adapters/API | 12 | canonical issue; canonical PR; exact file SHA; ambiguous link; missing anchor; clipboard denied; 401; 403; masked 404; offline; 429/secondary limit; incomplete pagination | Platform/integration |
+| bex-I-C01–bex-I-C16 Action contract | 16 | absent manifest; valid manifest; unknown major; malformed payload; untrusted author; foreign repo; missing native association; multiple PRs; superseded run; head changed; base/policy changed; stale time; partial coverage; corrupt counts; unknown capabilities; final identity fence | Integration |
+| bex-V-C01–bex-V-C14 presentation/drafts | 14 | standalone; pending; action-required; blocked; partial; complete; stale; unavailable; EN/ES fallback; keyboard/focus; light/dark/zoom; editor preservation; append dedup; wrong-context copy fallback | Product |
+| bex-S-C01–bex-S-C16 permissions/security | 16 | host allowlist; protected route; least privilege; session token isolation; secret redaction; origin/sender spoof; arbitrary fetch rejection; command injection; unsafe URL; hostile Markdown; export exclusion; account change; logout; revocation; private/incognito separation; remote-code prohibition | Platform/integration |
+| bex-E-C01–bex-E-C12 packaging/migration/integration | 12 | Chrome load; Firefox load; Safari real extension load; worker suspension; event-page restart; API permission revoked; no-Action usability; mixed-version compatibility; settings rollback; uninstall cleanup; coexistence; performance budget | Platform |
+| **Total** | **96** | Repeated matrix execution is not a new behavior | All |
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
-|---|---:|---|
-| Domain/configuration/pure planning | 12 | Observable scenarios in the case inventory. |
-| State/application/idempotency/races | 14 | Observable scenarios in the case inventory. |
-| Adapters/provider error mapping | 12 | Observable scenarios in the case inventory. |
-| Workflows/permissions/schemas/setup | 16 | Observable scenarios in the case inventory. |
-| Presentation/localization/accessibility/sanitization | 14 | Observable scenarios in the case inventory. |
-| Integration/security/migration | 28 | Observable scenarios in the case inventory. |
-| Total | 96 | Distinct inventory cases; repeated executions do not add cases. |
+|---|---|---|
+| Feature policies | 12 | See the observable F inventory rows below. |
+| Navigation lifecycle | 14 | See the observable N inventory rows below. |
+| Provider adapters | 12 | See the observable A inventory rows below. |
+| Action evidence | 16 | See the observable I inventory rows below. |
+| Presentation and drafts | 14 | See the observable V inventory rows below. |
+| Security and permissions | 16 | See the observable S inventory rows below. |
+| Packaging and integration | 12 | See the observable E inventory rows below. |
+| Total | 96 | All distinct behaviors; matrix runs do not add cases. |
 
 | Case ID | Area | Requirements | Scenario |
 |---|---|---|---|
-| bex-F-C01 | Domain/configuration/pure planning | BEX-USABILITY | Unsupported page mounts no feature and makes no API request. |
-| bex-F-C02 | Domain/configuration/pure planning | BEX-USABILITY | Fresh settings resolve all shipped defaults without a credential. |
-| bex-F-C03 | Domain/configuration/pure planning | BEX-USABILITY | Repository pause wins over an enabled global feature. |
-| bex-F-C04 | Domain/configuration/pure planning | BEX-USABILITY | Repository rename retains numeric-ID preferences without affecting another repository. |
-| bex-F-C05 | Domain/configuration/pure planning | BEX-USABILITY | Invalid setting enum is rejected with previous settings intact. |
-| bex-F-C06 | Domain/configuration/pure planning | BEX-USABILITY | Unknown feature ID does not activate code or corrupt known preferences. |
-| bex-F-C07 | Domain/configuration/pure planning | BEX-USABILITY | An import over 64 KiB is rejected before any settings write. |
-| bex-F-C08 | Domain/configuration/pure planning | BEX-USABILITY | Interrupted migration retains the prior complete settings version. |
-| bex-F-C09 | Domain/configuration/pure planning | BEX-USABILITY | A supported old settings version migrates once with the same second-run result. |
-| bex-F-C10 | Domain/configuration/pure planning | BEX-USABILITY | A future settings schema remains read-only and exportable. |
-| bex-F-C11 | Domain/configuration/pure planning | BEX-USABILITY | Opening a shared filtered link preserves its query until explicit Restore. |
-| bex-F-C12 | Domain/configuration/pure planning | BEX-USABILITY | An imported preference cannot enable auto-submission or weaken evidence checks. |
-| bex-N-C01 | State/application/idempotency/races | BEX-USABILITY | Initial load creates one owned control set per eligible feature. |
-| bex-N-C02 | State/application/idempotency/races | BEX-USABILITY | Soft navigation disposes the old page generation before mounting the new one. |
-| bex-N-C03 | State/application/idempotency/races | BEX-USABILITY | Partial React refresh restores one keyed control without rewriting native content. |
-| bex-N-C04 | State/application/idempotency/races | BEX-USABILITY | Back/forward restoration preserves native scroll and one extension generation. |
-| bex-N-C05 | State/application/idempotency/races | BEX-USABILITY | A virtualized file insertion gets one helper with loaded-scope counts. |
-| bex-N-C06 | State/application/idempotency/races | BEX-USABILITY | Removed native anchors release their owned observers and listeners. |
-| bex-N-C07 | State/application/idempotency/races | BEX-USABILITY | Repeated initialization does not duplicate a button or draft request. |
-| bex-N-C08 | State/application/idempotency/races | BEX-USABILITY | Navigation aborts pending reads and retires their generation. |
-| bex-N-C09 | State/application/idempotency/races | BEX-USABILITY | A late response cannot restore a disposed page view. |
-| bex-N-C10 | State/application/idempotency/races | BEX-USABILITY | A previous repository response never renders in the new repository. |
-| bex-N-C11 | State/application/idempotency/races | BEX-USABILITY | Two tabs coalesce one target refresh within the shared request budget. |
-| bex-N-C12 | State/application/idempotency/races | BEX-USABILITY | An extension update retires old owned controls and offers one refresh affordance. |
-| bex-N-C13 | State/application/idempotency/races | BEX-USABILITY | Pausing during collection prevents further reads and DOM updates. |
-| bex-N-C14 | State/application/idempotency/races | BEX-USABILITY | After twenty navigation cycles resource counts return to the declared disposal baseline. |
-| bex-A-C01 | Adapters/provider error mapping | BEX-CONNECTED | The copied issue URL identifies the observed canonical repository and issue. |
-| bex-A-C02 | Adapters/provider error mapping | BEX-CONNECTED | The PR helper links the exact observed PR without selecting a same-number issue. |
-| bex-A-C03 | Adapters/provider error mapping | BEX-CONNECTED | A file permalink contains the verified immutable commit and line anchor. |
-| bex-A-C04 | Adapters/provider error mapping | BEX-CONNECTED | Ambiguous references stay plain text rather than guessed links. |
-| bex-A-C05 | Adapters/provider error mapping | BEX-CONNECTED | Missing DOM anchor disables only the affected helper. |
-| bex-A-C06 | Adapters/provider error mapping | BEX-CONNECTED | Denied clipboard access offers selectable text without claiming copy success. |
-| bex-A-C07 | Adapters/provider error mapping | BEX-CONNECTED | A 401 clears protected credentials/evidence and exposes reconnect guidance. |
-| bex-A-C08 | Adapters/provider error mapping | BEX-CONNECTED | A 403 marks current connected evidence unavailable without broader access fallback. |
-| bex-A-C09 | Adapters/provider error mapping | BEX-CONNECTED | A masked private 404 is unknown access, not proof the object does not exist. |
-| bex-A-C10 | Adapters/provider error mapping | BEX-CONNECTED | Offline refresh retains clearly historical source facts and creates no retry loop. |
-| bex-A-C11 | Adapters/provider error mapping | BEX-CONNECTED | A secondary rate limit postpones requests until the provider or bounded backoff allows them. |
-| bex-A-C12 | Adapters/provider error mapping | BEX-CONNECTED | Incomplete pagination exposes partial scope and no aggregate zero or ready state. |
-| bex-I-C01 | Workflows/permissions/schemas/setup | BEX-CONNECTED | Missing reviewed manifest leaves standalone features usable and connected mode off. |
-| bex-I-C02 | Workflows/permissions/schemas/setup | BEX-CONNECTED | A valid pinned manifest and compatible source expose only declared capabilities. |
-| bex-I-C03 | Workflows/permissions/schemas/setup | BEX-CONNECTED | A future schema major disables connected projections with upgrade guidance. |
-| bex-I-C04 | Workflows/permissions/schemas/setup | BEX-CONNECTED | Malformed or duplicate-key source JSON is rejected before projection. |
-| bex-I-C05 | Workflows/permissions/schemas/setup | BEX-CONNECTED | A copied marker from a different numeric author never becomes trusted evidence. |
-| bex-I-C06 | Workflows/permissions/schemas/setup | BEX-CONNECTED | Foreign repository/conversation identity is rejected despite matching display names. |
-| bex-I-C07 | Workflows/permissions/schemas/setup | BEX-CONNECTED | Missing explicit association does not invent an issue, branch or PR link. |
-| bex-I-C08 | Workflows/permissions/schemas/setup | BEX-CONNECTED | Multiple reported linked PRs require a PR-specific view instead of choosing the newest. |
-| bex-I-C09 | Workflows/permissions/schemas/setup | BEX-CONNECTED | An older run attempt or generation cannot overwrite newer observed evidence. |
-| bex-I-C10 | Workflows/permissions/schemas/setup | BEX-CONNECTED | A changed head clears aggregate satisfaction and current finding counts. |
-| bex-I-C11 | Workflows/permissions/schemas/setup | BEX-CONNECTED | Changed base/public policy identity clears the prior aggregate; hidden live policy remains unknown. |
-| bex-I-C12 | Workflows/permissions/schemas/setup | BEX-CONNECTED | Expired or future-skewed observation time yields stale/unavailable, not a current assessment. |
-| bex-I-C13 | Workflows/permissions/schemas/setup | BEX-CONNECTED | Partial review coverage preserves source facts but keeps the aggregate finding count unknown. |
-| bex-I-C14 | Workflows/permissions/schemas/setup | BEX-CONNECTED | Inconsistent finding totals/items are rejected rather than rounded to zero. |
-| bex-I-C15 | Workflows/permissions/schemas/setup | BEX-CONNECTED | Unsupported capability tokens never execute code or enable a command. |
-| bex-I-C16 | Workflows/permissions/schemas/setup | BEX-CONNECTED | A final identity/page/credential fence rejects a response superseded during collection. |
-| bex-V-C01 | Presentation/localization/accessibility/sanitization | BEX-USABILITY | Standalone view explains optional connection while U controls remain available. |
-| bex-V-C02 | Presentation/localization/accessibility/sanitization | BEX-USABILITY | Pending view names completed facts, the active run and that no human action is required. |
-| bex-V-C03 | Presentation/localization/accessibility/sanitization | BEX-USABILITY | Action-required view names the responsible actor and exact clarification destination. |
-| bex-V-C04 | Presentation/localization/accessibility/sanitization | BEX-USABILITY | Blocked view follows impact, cause, action and retained-facts order. |
-| bex-V-C05 | Presentation/localization/accessibility/sanitization | BEX-USABILITY | Partial view retains verified facts and omits overall readiness. |
-| bex-V-C06 | Presentation/localization/accessibility/sanitization | BEX-USABILITY | Complete snapshot view includes assessed revision/time and preserves human-review obligations. |
-| bex-V-C07 | Presentation/localization/accessibility/sanitization | BEX-USABILITY | Stale view separates the previous assessment from unknown current finding counts. |
-| bex-V-C08 | Presentation/localization/accessibility/sanitization | BEX-USABILITY | Unavailable view links native GitHub and does not imply underlying Action work failed. |
-| bex-V-C09 | Presentation/localization/accessibility/sanitization | BEX-USABILITY | Unsupported locale falls back atomically to complete English while Spanish is complete. |
-| bex-V-C10 | Presentation/localization/accessibility/sanitization | BEX-USABILITY | Keyboard focus survives refresh and all controls have accessible names. |
-| bex-V-C11 | Presentation/localization/accessibility/sanitization | BEX-USABILITY | Light/dark, high contrast, 200 percent zoom and narrow layout retain readable actions. |
-| bex-V-C12 | Presentation/localization/accessibility/sanitization | BEX-USABILITY | Keeping or canceling a prepared request preserves every existing native draft byte. |
-| bex-V-C13 | Presentation/localization/accessibility/sanitization | BEX-USABILITY | Append request happens once despite rerender and leaves submission to the user. |
-| bex-V-C14 | Presentation/localization/accessibility/sanitization | BEX-USABILITY | Unsupported correction context offers an exact copy-only destination without inserting a broad request. |
-| bex-S-C01 | Integration/security/migration | BEX-PLATFORM | An unapproved host or cross-origin redirect receives no credential or provider request. |
-| bex-S-C02 | Integration/security/migration | BEX-PLATFORM | Protected login/token/settings routes install no private observers or connected reads. |
-| bex-S-C03 | Integration/security/migration | BEX-PLATFORM | Standalone installation requests no API write or blanket host permission. |
-| bex-S-C04 | Integration/security/migration | BEX-PLATFORM | Content scripts cannot retrieve the protected session token through storage or messages. |
-| bex-S-C05 | Integration/security/migration | BEX-PLATFORM | Token-bearing diagnostics are redacted and no raw credential is returned to a view. |
-| bex-S-C06 | Integration/security/migration | BEX-PLATFORM | Forged origin/frame/tab sender fails before any semantic read operation. |
-| bex-S-C07 | Integration/security/migration | BEX-PLATFORM | An arbitrary URL/method/body message is rejected by the closed background protocol. |
-| bex-S-C08 | Integration/security/migration | BEX-PLATFORM | A finding operand containing command separators or line breaks cannot create a mutation draft. |
-| bex-S-C09 | Integration/security/migration | BEX-PLATFORM | Unsafe source URLs render as unavailable text rather than executable links. |
-| bex-S-C10 | Integration/security/migration | BEX-PLATFORM | Hostile Markdown/HTML cannot inject DOM, executable selectors or control text. |
-| bex-S-C11 | Integration/security/migration | BEX-PLATFORM | Settings/diagnostic export excludes tokens, private evidence and human draft contents. |
-| bex-S-C12 | Integration/security/migration | BEX-PLATFORM | Account change invalidates the old epoch before clearing its credential and cache. |
-| bex-S-C13 | Integration/security/migration | BEX-PLATFORM | Observed logout/different-viewer signal pauses connection without claiming the PAT was revoked. |
-| bex-S-C14 | Integration/security/migration | BEX-PLATFORM | Revocation blocks late responses from repopulating cleared private session state. |
-| bex-S-C15 | Integration/security/migration | BEX-PLATFORM | Private browsing refuses connected operation and retains no navigation evidence. |
-| bex-S-C16 | Integration/security/migration | BEX-PLATFORM | Bundle/manifest checks reject remote executable code and undeclared permission expansion. |
-| bex-E-C01 | Integration/security/migration | BEX-PLATFORM | Chrome loads the exact generated artifact and exercises all eligible MVP capabilities. |
-| bex-E-C02 | Integration/security/migration | BEX-PLATFORM | Firefox loads the target artifact on stable and selected ESR with the same semantics. |
-| bex-E-C03 | Integration/security/migration | BEX-PLATFORM | A real Safari containing-app extension is enabled and exercised; generic WebKit cannot substitute. |
-| bex-E-C04 | Integration/security/migration | BEX-PLATFORM | Chrome worker suspension resumes with session state or an explicit disconnect and fresh identity read. |
-| bex-E-C05 | Integration/security/migration | BEX-PLATFORM | Firefox/Safari event-page restart does not rely on persistent process globals. |
-| bex-E-C06 | Integration/security/migration | BEX-PLATFORM | Optional API site-access revocation aborts reads while standalone U features remain usable. |
-| bex-E-C07 | Integration/security/migration | BEX-PLATFORM | A repository without Copilot still provides standalone functionality without a token. |
-| bex-E-C08 | Integration/security/migration | BEX-PLATFORM | Old/no/future producer versions retain standalone use and disclose connected compatibility. |
-| bex-E-C09 | Integration/security/migration | BEX-PLATFORM | Reviewed code/settings rollback restores a compatible view without credential backup. |
-| bex-E-C10 | Integration/security/migration | BEX-PLATFORM | Disable/uninstall releases owned resources and session secrets without repository side effects. |
-| bex-E-C11 | Integration/security/migration | BEX-PLATFORM | A native/other-extension equivalent prevents duplicate helpers and leaves original controls intact. |
-| bex-E-C12 | Integration/security/migration | BEX-PLATFORM | Measured startup, DOM, retained-memory and request work meets the published budgets. |
+| bex-F-C01 | Feature policies | BEX-P1, BEX-P2 | Unsupported page mounts no feature and makes no API request. |
+| bex-F-C02 | Feature policies | BEX-P1, BEX-P5 | Fresh settings resolve all shipped defaults without a credential. |
+| bex-F-C03 | Feature policies | BEX-P5, BEX-P8 | Repository pause wins over an enabled global feature. |
+| bex-F-C04 | Feature policies | BEX-P5 | Repository rename retains numeric-ID preferences without affecting another repository. |
+| bex-F-C05 | Feature policies | BEX-P5 | Invalid setting enum is rejected with previous settings intact. |
+| bex-F-C06 | Feature policies | BEX-P2, BEX-P5 | Unknown feature ID does not activate code or corrupt known preferences. |
+| bex-F-C07 | Feature policies | BEX-P5, BEX-P9 | An import over 64 KiB is rejected before any settings write. |
+| bex-F-C08 | Feature policies | BEX-P5, BEX-P9 | Interrupted migration retains the prior complete settings version. |
+| bex-F-C09 | Feature policies | BEX-P5 | A supported old settings version migrates once with the same second-run result. |
+| bex-F-C10 | Feature policies | BEX-P5 | A future settings schema remains read-only and exportable. |
+| bex-F-C11 | Feature policies | BEX-P1, BEX-P6 | Opening a shared filtered link preserves its query until explicit Restore. |
+| bex-F-C12 | Feature policies | BEX-P3, BEX-P4, BEX-P5 | An imported preference cannot enable auto-submission or weaken evidence checks. |
+| bex-N-C01 | Navigation lifecycle | BEX-P6, BEX-P8 | Initial load creates one owned control set per eligible feature. |
+| bex-N-C02 | Navigation lifecycle | BEX-P6, BEX-P8 | Soft navigation disposes the old page generation before mounting the new one. |
+| bex-N-C03 | Navigation lifecycle | BEX-P6 | Partial React refresh restores one keyed control without rewriting native content. |
+| bex-N-C04 | Navigation lifecycle | BEX-P6 | Back/forward restoration preserves native scroll and one extension generation. |
+| bex-N-C05 | Navigation lifecycle | BEX-P6, BEX-P8 | A virtualized file insertion gets one helper with loaded-scope counts. |
+| bex-N-C06 | Navigation lifecycle | BEX-P6, BEX-P8 | Removed native anchors release their owned observers and listeners. |
+| bex-N-C07 | Navigation lifecycle | BEX-P4, BEX-P6 | Repeated initialization does not duplicate a button or draft request. |
+| bex-N-C08 | Navigation lifecycle | BEX-P3, BEX-P8 | Navigation aborts pending reads and retires their generation. |
+| bex-N-C09 | Navigation lifecycle | BEX-P3, BEX-P8 | A late response cannot restore a disposed page view. |
+| bex-N-C10 | Navigation lifecycle | BEX-P3 | A previous repository response never renders in the new repository. |
+| bex-N-C11 | Navigation lifecycle | BEX-P8 | Two tabs coalesce one target refresh within the shared request budget. |
+| bex-N-C12 | Navigation lifecycle | BEX-P6, BEX-P9 | An extension update retires old owned controls and offers one refresh affordance. |
+| bex-N-C13 | Navigation lifecycle | BEX-P5, BEX-P8 | Pausing during collection prevents further reads and DOM updates. |
+| bex-N-C14 | Navigation lifecycle | BEX-P6, BEX-P8 | After twenty navigation cycles resource counts return to the declared disposal baseline. |
+| bex-A-C01 | Provider adapters | BEX-P1, BEX-P6 | The copied issue URL identifies the observed canonical repository and issue. |
+| bex-A-C02 | Provider adapters | BEX-P1, BEX-P6 | The PR helper links the exact observed PR without selecting a same-number issue. |
+| bex-A-C03 | Provider adapters | BEX-P1, BEX-P6 | A file permalink contains the verified immutable commit and line anchor. |
+| bex-A-C04 | Provider adapters | BEX-P1, BEX-P6 | Ambiguous references stay plain text rather than guessed links. |
+| bex-A-C05 | Provider adapters | BEX-P1, BEX-P6 | Missing DOM anchor disables only the affected helper. |
+| bex-A-C06 | Provider adapters | BEX-P1, BEX-P6 | Denied clipboard access offers selectable text without claiming copy success. |
+| bex-A-C07 | Provider adapters | BEX-P3, BEX-P8 | A 401 clears protected credentials/evidence and exposes reconnect guidance. |
+| bex-A-C08 | Provider adapters | BEX-P3, BEX-P8 | A 403 marks current connected evidence unavailable without broader access fallback. |
+| bex-A-C09 | Provider adapters | BEX-P3 | A masked private 404 is unknown access, not proof the object does not exist. |
+| bex-A-C10 | Provider adapters | BEX-P3, BEX-P8 | Offline refresh retains clearly historical source facts and creates no retry loop. |
+| bex-A-C11 | Provider adapters | BEX-P8 | A secondary rate limit postpones requests until the provider or bounded backoff allows them. |
+| bex-A-C12 | Provider adapters | BEX-P3, BEX-P8 | Incomplete pagination exposes partial scope and no aggregate zero or ready state. |
+| bex-I-C01 | Action evidence | BEX-P1, BEX-P3 | Missing reviewed manifest leaves standalone features usable and connected mode off. |
+| bex-I-C02 | Action evidence | BEX-P2, BEX-P3 | A valid pinned manifest and compatible source expose only declared capabilities. |
+| bex-I-C03 | Action evidence | BEX-P2, BEX-P3 | A future schema major disables connected projections with upgrade guidance. |
+| bex-I-C04 | Action evidence | BEX-P3, BEX-P9 | Malformed or duplicate-key source JSON is rejected before projection. |
+| bex-I-C05 | Action evidence | BEX-P3, BEX-P9 | A copied marker from a different numeric author never becomes trusted evidence. |
+| bex-I-C06 | Action evidence | BEX-P3 | Foreign repository/conversation identity is rejected despite matching display names. |
+| bex-I-C07 | Action evidence | BEX-P3 | Missing explicit association does not invent an issue, branch or PR link. |
+| bex-I-C08 | Action evidence | BEX-P3, BEX-P4 | Multiple reported linked PRs require a PR-specific view instead of choosing the newest. |
+| bex-I-C09 | Action evidence | BEX-P3 | An older run attempt or generation cannot overwrite newer observed evidence. |
+| bex-I-C10 | Action evidence | BEX-P3 | A changed head clears aggregate satisfaction and current finding counts. |
+| bex-I-C11 | Action evidence | BEX-P3 | Changed base/public policy identity clears the prior aggregate; hidden live policy remains unknown. |
+| bex-I-C12 | Action evidence | BEX-P3, BEX-P8 | Expired or future-skewed observation time yields stale/unavailable, not a current assessment. |
+| bex-I-C13 | Action evidence | BEX-P3 | Partial review coverage preserves source facts but keeps the aggregate finding count unknown. |
+| bex-I-C14 | Action evidence | BEX-P3, BEX-P9 | Inconsistent finding totals/items are rejected rather than rounded to zero. |
+| bex-I-C15 | Action evidence | BEX-P2, BEX-P3 | Unsupported capability tokens never execute code or enable a command. |
+| bex-I-C16 | Action evidence | BEX-P3, BEX-P8 | A final identity/page/credential fence rejects a response superseded during collection. |
+| bex-V-C01 | Presentation and drafts | BEX-P1, BEX-P7 | Standalone view explains optional connection while U controls remain available. |
+| bex-V-C02 | Presentation and drafts | BEX-P3, BEX-P7 | Pending view names completed facts, the active run and that no human action is required. |
+| bex-V-C03 | Presentation and drafts | BEX-P3, BEX-P7 | Action-required view names the responsible actor and exact clarification destination. |
+| bex-V-C04 | Presentation and drafts | BEX-P3, BEX-P7 | Blocked view follows impact, cause, action and retained-facts order. |
+| bex-V-C05 | Presentation and drafts | BEX-P3, BEX-P7 | Partial view retains verified facts and omits overall readiness. |
+| bex-V-C06 | Presentation and drafts | BEX-P3, BEX-P7 | Complete snapshot view includes assessed revision/time and preserves human-review obligations. |
+| bex-V-C07 | Presentation and drafts | BEX-P3, BEX-P7 | Stale view separates the previous assessment from unknown current finding counts. |
+| bex-V-C08 | Presentation and drafts | BEX-P3, BEX-P7 | Unavailable view links native GitHub and does not imply underlying Action work failed. |
+| bex-V-C09 | Presentation and drafts | BEX-P7 | Unsupported locale falls back atomically to complete English while Spanish is complete. |
+| bex-V-C10 | Presentation and drafts | BEX-P6, BEX-P7 | Keyboard focus survives refresh and all controls have accessible names. |
+| bex-V-C11 | Presentation and drafts | BEX-P7 | Light/dark, high contrast, 200 percent zoom and narrow layout retain readable actions. |
+| bex-V-C12 | Presentation and drafts | BEX-P4, BEX-P6, BEX-P7 | Keeping or canceling a prepared request preserves every existing native draft byte. |
+| bex-V-C13 | Presentation and drafts | BEX-P4, BEX-P6 | Append request happens once despite rerender and leaves submission to the user. |
+| bex-V-C14 | Presentation and drafts | BEX-P4, BEX-P7 | Unsupported correction context offers an exact copy-only destination without inserting a broad request. |
+| bex-S-C01 | Security and permissions | BEX-P8, BEX-P9 | An unapproved host or cross-origin redirect receives no credential or provider request. |
+| bex-S-C02 | Security and permissions | BEX-P8, BEX-P9 | Protected login/token/settings routes install no private observers or connected reads. |
+| bex-S-C03 | Security and permissions | BEX-P1, BEX-P9 | Standalone installation requests no API write or blanket host permission. |
+| bex-S-C04 | Security and permissions | BEX-P9 | Content scripts cannot retrieve the protected session token through storage or messages. |
+| bex-S-C05 | Security and permissions | BEX-P9 | Token-bearing diagnostics are redacted and no raw credential is returned to a view. |
+| bex-S-C06 | Security and permissions | BEX-P3, BEX-P9 | Forged origin/frame/tab sender fails before any semantic read operation. |
+| bex-S-C07 | Security and permissions | BEX-P8, BEX-P9 | An arbitrary URL/method/body message is rejected by the closed background protocol. |
+| bex-S-C08 | Security and permissions | BEX-P4, BEX-P9 | A finding operand containing command separators or line breaks cannot create a mutation draft. |
+| bex-S-C09 | Security and permissions | BEX-P3, BEX-P9 | Unsafe source URLs render as unavailable text rather than executable links. |
+| bex-S-C10 | Security and permissions | BEX-P6, BEX-P9 | Hostile Markdown/HTML cannot inject DOM, executable selectors or control text. |
+| bex-S-C11 | Security and permissions | BEX-P5, BEX-P9 | Settings/diagnostic export excludes tokens, private evidence and human draft contents. |
+| bex-S-C12 | Security and permissions | BEX-P3, BEX-P9 | Account change invalidates the old epoch before clearing its credential and cache. |
+| bex-S-C13 | Security and permissions | BEX-P3, BEX-P9 | Observed logout/different-viewer signal pauses connection without claiming the PAT was revoked. |
+| bex-S-C14 | Security and permissions | BEX-P3, BEX-P9 | Revocation blocks late responses from repopulating cleared private session state. |
+| bex-S-C15 | Security and permissions | BEX-P9 | Private browsing refuses connected operation and retains no navigation evidence. |
+| bex-S-C16 | Security and permissions | BEX-P2, BEX-P9 | Bundle/manifest checks reject remote executable code and undeclared permission expansion. |
+| bex-E-C01 | Packaging and integration | BEX-P2, BEX-P9 | Chrome loads the exact generated artifact and exercises all eligible MVP capabilities. |
+| bex-E-C02 | Packaging and integration | BEX-P2, BEX-P9 | Firefox loads the target artifact on stable and selected ESR with the same semantics. |
+| bex-E-C03 | Packaging and integration | BEX-P2, BEX-P9 | A real Safari containing-app extension is enabled and exercised; generic WebKit cannot substitute. |
+| bex-E-C04 | Packaging and integration | BEX-P3, BEX-P8 | Chrome worker suspension resumes with session state or an explicit disconnect and fresh identity read. |
+| bex-E-C05 | Packaging and integration | BEX-P3, BEX-P8 | Firefox/Safari event-page restart does not rely on persistent process globals. |
+| bex-E-C06 | Packaging and integration | BEX-P1, BEX-P8, BEX-P9 | Optional API site-access revocation aborts reads while standalone U features remain usable. |
+| bex-E-C07 | Packaging and integration | BEX-P1, BEX-P2 | A repository without Copilot still provides standalone functionality without a token. |
+| bex-E-C08 | Packaging and integration | BEX-P2, BEX-P3, BEX-P9 | Old/no/future producer versions retain standalone use and disclose connected compatibility. |
+| bex-E-C09 | Packaging and integration | BEX-P5, BEX-P9 | Reviewed code/settings rollback restores a compatible view without credential backup. |
+| bex-E-C10 | Packaging and integration | BEX-P6, BEX-P9 | Disable/uninstall releases owned resources and session secrets without repository side effects. |
+| bex-E-C11 | Packaging and integration | BEX-P6, BEX-P9 | A native/other-extension equivalent prevents duplicate helpers and leaves original controls intact. |
+| bex-E-C12 | Packaging and integration | BEX-P8, BEX-P9 | Measured startup, DOM, retained-memory and request work meets the published budgets. |
 
-Define reproducible startup, DOM, retained-memory, and API request budgets and benchmark environment before implementation acceptance; do not present estimates as measured results. Test exact generated artifacts in real Chrome and Firefox stable/selected ESR, and real Safari on Mac. Record manual readability, keyboard/screen-reader, zoom, contrast, reduced-motion, navigation, and store/package evidence. Verify structural permissions, schema fixtures, migration, CSP, and package outputs.
+Keep existing repository thresholds. New pure evidence/authorization decisions
+require 100% branch coverage; other changed modules retain applicable budgets.
+Use fake clocks/IDs/providers, deterministic HTML/API fixtures, semantic UI
+assertions and schema/manifest/dependency parsing, not only snapshots or grep.
+bex-E-C03 requires actual Safari-extension evidence; generic WebKit does not suffice.
+D8 supplies the browser/OS matrix, real screen-reader/keyboard/theme artifacts and
+performance measurement procedure. Every behavior inventory item above has a
+stable case ID; matrix permutations are recorded separately.
 
 ## 15. Documentation and discoverability
 
+These are implementation deliverables; this specification does not publish an
+installation claim in user docs. Add a **docs/browser-extension/** navigation group
+in `docs.json` only when its linked files exist and clearly carry availability.
+
+| Audience | Planned artifact | Required content / validation |
+|---|---|---|
+| User | `docs/browser-extension/index.mdx`, `features.mdx` | Standalone → optional connected journey, feature defaults, visual/text example; links checked |
+| Setup owner | `installation.mdx`, `permissions.mdx` | Three store/dev install paths, optional read token, repository manifest, no bot token; fixture-checked examples |
+| User | `configuration.mdx`, `privacy.mdx` | Complete bounds/precedence, export/reset, session data, no telemetry; settings schema fixtures |
+| Operator | `troubleshooting.mdx`, `compatibility.mdx` | Unavailable/stale/partial, revoke, pause, upgrade/rollback, browser table; recovery fixture links |
+| Contributor | `architecture.mdx`, `action-contract.mdx` | Ports, trust, schema ownership and tests; executable boundary/schema checks |
+
+Also update README discoverability and the existing Action status/command docs
+when compatible producer support actually ships. Run repository documentation,
+asset/frontmatter, navigation and specification checks for changed artifacts.
+
+
+Publication consistency inventory: proposed future user-documentation paths
+are explicit design deliverables, not files shipped by this specification PR.
+
 | Path | Change |
 |---|---|
-| `specs/github-browser-extension.md` | create |
-| `specs/github-browser-extension-action-integration.md` | create |
-| `specs/github-browser-extension-platforms-and-delivery.md` | create |
-| `specs/catalog.json` | update |
-| `specs/CATALOG.md` | update |
-| `docs.json` | update |
-| `README.md` | update |
-| `specs/browser-extension/status-v1.schema.json` | create |
-| `specs/browser-extension/manifest-v1.schema.json` | create |
-| `specs/browser-extension/examples/status-invalid-head-v1.json` | create |
-| `specs/browser-extension/examples/manifest-v1.json` | create |
-| `specs/browser-extension/examples/status-pr-v1.json` | create |
-| `specs/browser-extension/examples/status-issue-v1.json` | create |
-| `docs/browser-extension/index.mdx` | create |
-| `docs/browser-extension/features.mdx` | create |
-| `docs/browser-extension/installation.mdx` | create |
-| `docs/browser-extension/permissions.mdx` | create |
-| `docs/browser-extension/configuration.mdx` | create |
-| `docs/browser-extension/privacy.mdx` | create |
-| `docs/browser-extension/troubleshooting.mdx` | create |
-| `docs/browser-extension/compatibility.mdx` | create |
-| `docs/browser-extension/architecture.mdx` | create |
-| `docs/browser-extension/action-contract.mdx` | create |
-| `.copilot/browser-extension.json` | create |
-| `src/domain/browser_extension_contract/index.ts` | create |
-| `extension/package.json` | create |
-| `src/actions/github_action.ts` | reference |
-| `src/application/usecases/read_copilot_status_workflow.ts` | reference |
-| `src/application/usecases/__tests__/read_copilot_status_workflow.test.ts` | reference |
-| `docs/development/specifications.mdx` | reference |
-| `docs/issues/comment-commands.mdx` | reference |
-
-| Audience | Artifact/page | Required content | Validation/navigation |
-|---|---|---|---|
-| User | `docs/browser-extension/index.mdx`, `features.mdx` | Normal path, standalone defaults, feature inventory, roadmap, visual with text equivalent | Registered route, link checks, reviewed examples |
-| Setup owner | `installation.mdx`, `permissions.mdx` | Supported browsers, optional permissions, PAT scope, organization approval, Safari prerequisites | Permission contract and manifest fixtures |
-| User/admin | `configuration.mdx`, `privacy.mdx` | All bounded settings, precedence, import/export, session storage, retention and cleanup | Settings/schema fixtures and privacy review |
-| Operator | `troubleshooting.mdx`, `action-contract.mdx` | State/recovery, replay boundaries, evidence provenance, freshness, cleanup | Decision tree and snapshot fixtures |
-| User/setup owner | `compatibility.mdx` | Floors, dated vendor support evidence, deprecation and rollback | Release matrix and link validation |
-| Contributor | `architecture.mdx` | Boundaries, trust model, contracts, package/build rules, validation | Architecture/dependency checks |
-| Maintainer | `specs/CATALOG.md`, `README.md`, `docs.json` | Proposed capability discoverability and navigation | `pnpm run validate:specifications` and documentation checks |
-
-Documentation must lead with the normal user path and a useful visual, then explain configuration, failures, migration, and internals. Keep examples synchronized with fixtures/contracts. The table classifies proposed paths: `create` means a future file, not implementation authorization; `update` and `reference` identify existing immutable-base files. Directory trees, when shown by later documentation, belong in fenced examples and do not assert current directories.
+| specs/github-browser-extension.md | update |
+| specs/github-browser-extension-action-integration.md | create |
+| specs/github-browser-extension-platforms-and-delivery.md | create |
+| specs/catalog.json | update |
+| specs/CATALOG.md | update |
+| docs.json | update |
+| README.md | update |
+| specs/browser-extension/status-v1.schema.json | create |
+| specs/browser-extension/manifest-v1.schema.json | create |
+| specs/browser-extension/examples/status-invalid-head-v1.json | create |
+| specs/browser-extension/examples/manifest-v1.json | create |
+| specs/browser-extension/examples/status-pr-v1.json | create |
+| specs/browser-extension/examples/status-issue-v1.json | create |
+| docs/browser-extension/index.mdx | create |
+| docs/browser-extension/features.mdx | create |
+| docs/browser-extension/installation.mdx | create |
+| docs/browser-extension/permissions.mdx | create |
+| docs/browser-extension/configuration.mdx | create |
+| docs/browser-extension/privacy.mdx | create |
+| docs/browser-extension/troubleshooting.mdx | create |
+| docs/browser-extension/compatibility.mdx | create |
+| docs/browser-extension/architecture.mdx | create |
+| docs/browser-extension/action-contract.mdx | create |
 
 ## 16. Acceptance scenarios
 
-1. Given a supported GitHub page and no credential, when the user opens it, then eligible standalone controls appear once, preserve native content, and make no API request unless a feature requires one.
-2. Given a shared filtered URL, when the page loads, then its query remains unchanged until the user explicitly chooses Restore.
-3. Given a repository explicitly connected with a valid pinned manifest and compatible snapshot, when bounded reads finish with complete identity and coverage, then the panel displays source-linked facts for the assessed revision and time.
-4. Given missing, stale, incomplete, contradictory, or future-major evidence, when projection is attempted, then no green readiness or zero finding aggregate appears and standalone features remain usable.
-5. Given an ambiguous reference or missing page anchor, when a helper is invoked, then it does not guess and only the affected helper is disabled.
-6. Given a verified supported K3 target and viewer write hint, when the user chooses prepare, then the exact request is appended once to the native draft while preserving existing draft bytes; the user must review and submit.
-7. Given an unsupported target, foreign fork, unknown authority, or malformed operand, when draft preparation is attempted, then the extension offers read-only or exact copy-only guidance and inserts no broad request.
-8. Given 401, 403, masked private 404, offline, or rate limit, when connected reads fail, then the specified recovery is shown, access is not broadened, and historical facts remain clearly labeled.
-9. Given navigation, account change, pause, permission revocation, or uninstall during a read, when a late response arrives, then the identity fence rejects it and private state/resources are cleared as required.
-10. Given forged sender/message, unapproved host, unsafe URL, hostile markup, or remote executable code, when input reaches a boundary, then it is rejected before provider access or rendering.
-11. Given Chrome 140+, Firefox 140 including selected ESR, and Safari 18.2 on macOS 15.2+, when exact delivery artifacts are tested, then all MVP semantics pass; Safari evidence comes from actual Safari, not generic WebKit.
-12. Given implementation readiness review, when reviewers inspect the draft, then each BEX requirement maps exactly to executable cases, documentation deliverables exist in the implementation plan, and no material gate remains unresolved.
+1. Install with no token/Action: U1–U6 work; connected panel offers explicit setup.
+2. Open a shared issue filter: its query remains unchanged until Restore is chosen.
+3. Hide generated files: show count and Restore all; native required action stays.
+4. Navigate/back while context loads: one owned control set; old response discarded.
+5. Current compatible Action assessment: show exact identity/time/source and next
+   actor; no claim that the extension authorizes merge.
+6. New head/partial findings/denied source: no zero count or overall ready state.
+7. Prepare fix in unsupported context: copy-only guidance to a verified location;
+   no broad issue comment that pretends to target a branch.
+8. Existing native draft: retain bytes on cancel/keep; append once; no submission.
+9. Pause/disconnect: stop requests and remove owned enhancements/session evidence;
+   native GitHub and repository state are unchanged.
+10. All browser matrix cases and human evidence meet D8 before MVP completion;
+    a missing Safari result is a release blocker, not a generic WebKit substitute.
 
 ## 17. Requirements traceability
 
+| Requirement | Owning policy/use case/adapter/presentation | Verification | Documentation |
+|---|---|---|---|
+| P1 | Feature eligibility, page adapters | bex-F-C01–bex-F-C02, bex-A-C01–bex-A-C06, bex-E-C07 | index/features |
+| P2 | Feature registry/catalog and package gates | bex-F-C06, bex-E-C01–bex-E-C03, D8 review | features/compatibility |
+| P3 | I1–I7 evidence reader, context/findings VM | bex-I-C01–bex-I-C16, bex-V-C02–bex-V-C08 | action-contract/troubleshooting |
+| P4 | DraftRequest and NativeComposer port | bex-V-C12–bex-V-C14, bex-S-C08, I8 acceptance | features/permissions |
+| P5 | Settings/pause/migration use cases | bex-F-C03–bex-F-C12, bex-N-C13, bex-E-C09–bex-E-C10 | configuration/privacy |
+| P6 | Feature lifecycle and renderers | bex-N-C01–bex-N-C14, bex-V-C10–bex-V-C12, bex-E-C11 | features/troubleshooting |
+| P7 | Catalog/render/focus policies | bex-V-C01–bex-V-C14, D8 human matrix | features/compatibility |
+| P8 | Request scheduler, observer budget | bex-A-C07–bex-A-C12, bex-E-C04–bex-E-C06/bex-E-C12 | privacy/troubleshooting |
+| P9 | Build/schema/import/store gates | bex-S-C01–bex-S-C16, bex-E-C01–bex-E-C12 and doc validation | architecture/installation |
+
 | Requirement | Cases |
 |---|---|
-| BEX-USABILITY | bex-F-C01, bex-F-C02, bex-F-C03, bex-F-C04, bex-F-C05, bex-F-C06, bex-F-C07, bex-F-C08, bex-F-C09, bex-F-C10, bex-F-C11, bex-F-C12, bex-N-C01, bex-N-C02, bex-N-C03, bex-N-C04, bex-N-C05, bex-N-C06, bex-N-C07, bex-N-C08, bex-N-C09, bex-N-C10, bex-N-C11, bex-N-C12, bex-N-C13, bex-N-C14, bex-V-C01, bex-V-C02, bex-V-C03, bex-V-C04, bex-V-C05, bex-V-C06, bex-V-C07, bex-V-C08, bex-V-C09, bex-V-C10, bex-V-C11, bex-V-C12, bex-V-C13, bex-V-C14 |
-| BEX-CONNECTED | bex-A-C01, bex-A-C02, bex-A-C03, bex-A-C04, bex-A-C05, bex-A-C06, bex-A-C07, bex-A-C08, bex-A-C09, bex-A-C10, bex-A-C11, bex-A-C12, bex-I-C01, bex-I-C02, bex-I-C03, bex-I-C04, bex-I-C05, bex-I-C06, bex-I-C07, bex-I-C08, bex-I-C09, bex-I-C10, bex-I-C11, bex-I-C12, bex-I-C13, bex-I-C14, bex-I-C15, bex-I-C16 |
-| BEX-PLATFORM | bex-S-C01, bex-S-C02, bex-S-C03, bex-S-C04, bex-S-C05, bex-S-C06, bex-S-C07, bex-S-C08, bex-S-C09, bex-S-C10, bex-S-C11, bex-S-C12, bex-S-C13, bex-S-C14, bex-S-C15, bex-S-C16, bex-E-C01, bex-E-C02, bex-E-C03, bex-E-C04, bex-E-C05, bex-E-C06, bex-E-C07, bex-E-C08, bex-E-C09, bex-E-C10, bex-E-C11, bex-E-C12 |
-
-Requirement mapping uses only the inventory above. Product, architecture, browser, privacy, and documentation review evidence is additionally required at the named gates; it does not substitute for executable case links.
+| BEX-P1 | bex-F-C01, bex-F-C02, bex-F-C11, bex-A-C01, bex-A-C02, bex-A-C03, bex-A-C04, bex-A-C05, bex-A-C06, bex-I-C01, bex-V-C01, bex-S-C03, bex-E-C06, bex-E-C07 |
+| BEX-P2 | bex-F-C01, bex-F-C06, bex-I-C02, bex-I-C03, bex-I-C15, bex-S-C16, bex-E-C01, bex-E-C02, bex-E-C03, bex-E-C07, bex-E-C08 |
+| BEX-P3 | bex-F-C12, bex-N-C08, bex-N-C09, bex-N-C10, bex-A-C07, bex-A-C08, bex-A-C09, bex-A-C10, bex-A-C12, bex-I-C01, bex-I-C02, bex-I-C03, bex-I-C04, bex-I-C05, bex-I-C06, bex-I-C07, bex-I-C08, bex-I-C09, bex-I-C10, bex-I-C11, bex-I-C12, bex-I-C13, bex-I-C14, bex-I-C15, bex-I-C16, bex-V-C02, bex-V-C03, bex-V-C04, bex-V-C05, bex-V-C06, bex-V-C07, bex-V-C08, bex-S-C06, bex-S-C09, bex-S-C12, bex-S-C13, bex-S-C14, bex-E-C04, bex-E-C05, bex-E-C08 |
+| BEX-P4 | bex-F-C12, bex-N-C07, bex-I-C08, bex-V-C12, bex-V-C13, bex-V-C14, bex-S-C08 |
+| BEX-P5 | bex-F-C02, bex-F-C03, bex-F-C04, bex-F-C05, bex-F-C06, bex-F-C07, bex-F-C08, bex-F-C09, bex-F-C10, bex-F-C12, bex-N-C13, bex-S-C11, bex-E-C09 |
+| BEX-P6 | bex-F-C11, bex-N-C01, bex-N-C02, bex-N-C03, bex-N-C04, bex-N-C05, bex-N-C06, bex-N-C07, bex-N-C12, bex-N-C14, bex-A-C01, bex-A-C02, bex-A-C03, bex-A-C04, bex-A-C05, bex-A-C06, bex-V-C10, bex-V-C12, bex-V-C13, bex-S-C10, bex-E-C10, bex-E-C11 |
+| BEX-P7 | bex-V-C01, bex-V-C02, bex-V-C03, bex-V-C04, bex-V-C05, bex-V-C06, bex-V-C07, bex-V-C08, bex-V-C09, bex-V-C10, bex-V-C11, bex-V-C12, bex-V-C14 |
+| BEX-P8 | bex-F-C03, bex-N-C01, bex-N-C02, bex-N-C05, bex-N-C06, bex-N-C08, bex-N-C09, bex-N-C11, bex-N-C13, bex-N-C14, bex-A-C07, bex-A-C08, bex-A-C10, bex-A-C11, bex-A-C12, bex-I-C12, bex-I-C16, bex-S-C01, bex-S-C02, bex-S-C07, bex-E-C04, bex-E-C05, bex-E-C06, bex-E-C12 |
+| BEX-P9 | bex-F-C07, bex-F-C08, bex-N-C12, bex-I-C04, bex-I-C05, bex-I-C14, bex-S-C01, bex-S-C02, bex-S-C03, bex-S-C04, bex-S-C05, bex-S-C06, bex-S-C07, bex-S-C08, bex-S-C09, bex-S-C10, bex-S-C11, bex-S-C12, bex-S-C13, bex-S-C14, bex-S-C15, bex-S-C16, bex-E-C01, bex-E-C02, bex-E-C03, bex-E-C06, bex-E-C08, bex-E-C09, bex-E-C10, bex-E-C11, bex-E-C12 |
 
 ## 18. Implementation sequence
 
-1. Resolve readiness decisions and publish the primary SDD/catalog entry; later branch work authors the Action integration and platform/delivery companions.
-2. Define versioned snapshot/manifest schemas, fixtures, compatibility rules, and pure shared boundary; add structural architecture, package, permission, and schema checks.
-3. Implement pure settings, identity, freshness, completeness, safe-target, and draft-eligibility policies with full branch coverage.
-4. Implement application use cases, semantic ports, session-state ownership, concurrency bounds, cancellation, and identity fences.
-5. Implement browser adapters, Action snapshot publication changes, canonical read mapping, provider error contracts, and workflow/schema contract tests.
-6. Implement page lifecycle and presentation states, settings, native draft affordance, accessibility, localization, and UX fixtures.
-7. Deliver documentation, migration/recovery, security review, browser packaging, actual Chrome/Firefox/Safari acceptance, performance evidence, and rollback evidence alongside implementation slices.
-8. Register only evidence that exists; generate `specs/CATALOG.md` and run repository specification, schema, docs, quality, and package validation before release.
+1. Approve these SDDs and catalog as proposed; resolve review findings before work.
+2. Implement a portable extension shell, browser adapters, settings and U6 with
+   actual extension-loaded smoke on Chrome/Firefox/Safari immediately.
+3. Deliver U1–U5 in small slices with native coexistence and original fixtures.
+4. Implement the Action producer/manifest contract and compatibility fixtures
+   before enabling K1; update existing owning SDDs/docs/tests with that change.
+5. Deliver protected session connection, K1/K2 and then K3 draft preparation.
+6. Complete docs, 96 cases, browser/human/performance evidence and staged rollout.
+7. Promote catalog candidates only through separately reviewed feature slices.
 
 ## 19. Definition of Done
 
-- [ ] Every normative requirement has acceptance and traceability.
-- [ ] Architecture boundaries are implemented and automatically enforced.
-- [ ] Numeric test budget, distribution, and coverage requirements pass.
-- [ ] Configuration defaults, limits, validation, persistence, and migration agree.
-- [ ] Primary UI states and content examples are implemented and reviewed.
-- [ ] Accessibility, localization, responsive behavior, sanitization, and noise budgets pass.
-- [ ] User/setup/operator/contributor documentation is complete and discoverable.
-- [ ] Failure, partial success, retry, idempotency, security, and cleanup pass.
-- [ ] Required generated artifacts and repository validation commands pass.
-- [ ] `specs/catalog.json` evidence and `specs/CATALOG.md` are current and `pnpm run validate:specifications` passes.
-- [ ] Chrome and Firefox artifacts pass target acceptance; actual Mac/Safari acceptance is recorded.
-- [ ] Safari delivery owner, signing/store prerequisites, and rollback evidence are recorded before store release.
-- [ ] No readiness-blocking decision remains unresolved.
+For this specification issue: three linked decision-complete SDDs, proposed
+catalog evidence, a generated catalog, valid links and passing specification
+checks; no runtime claim. Product/architecture/security review remains explicit.
+
+For future implementation:
+- [ ] P1–P9 and I/D companion requirements have acceptance evidence and traceability.
+- [ ] Architecture, manifests, schemas and package constraints are executable.
+- [ ] The 96 distinct cases, coverage budgets and three-browser matrix pass.
+- [ ] Bounds/defaults/settings migration and recovery match this contract.
+- [ ] Primary states, draft preservation, accessibility and complete EN/ES pass.
+- [ ] Failure/races/security/privacy/cleanup and zero unsolicited writes pass.
+- [ ] User/setup/operator/contributor docs exist and navigation is validated.
+- [ ] Platform accounts/signing and store readiness have named maintainer owners.
+- [ ] Catalog evidence distinguishes specification, implementation and live proof.
+- [ ] `pnpm run generate:specifications` and `pnpm run validate:specifications` pass.
+- [ ] No material architecture/public behavior/data safety decision remains open.
 
 ## 20. References and decisions
 
-- Primary sources: Chrome, Mozilla, and Apple browser/API compatibility documentation to be dated and cited by implementation planning; Issue #694 at https://github.com/vypdev/copilot/issues/694.
-- Related specs/ADRs/issues/PRs: Existing catalogued Action status, analysis, findings, lifecycle, publication, locale, and command-authorization specifications at the validated catalog commit; repository specification standard in `specs/README.md` and template in `specs/_template.md`.
-- Decisions and rejected alternatives: Six maintainer-authorized decisions in issue context define standalone/connected auth, evidence contract, human-submitted drafts, browser floors, Safari ownership/delivery, and architecture/workspace boundary. Dashboards lose native context; Action-only output lacks personal controls. No third-party extension code or product narrative is copied.
-- Follow-up work explicitly outside this spec: Runtime implementation, companion SDD creation, Action producer changes, schemas/fixtures, docs, catalog updates, browser packaging and store deployment, credential setup, signing, and feature release. Initial capability catalog record remains proposed and contains only `specs/github-browser-extension.md` as its spec; no future runtime/test evidence is asserted.
+Decisions: separate standalone/connected value; page-integrated panel; nine
+capability MVP across all three browsers; optional session-only read connection;
+native human submission; no hosted service prerequisite; one versioned producer
+contract rather than heuristic parsing of internal comments. Detailed alternatives
+are in the companions. Public extension mechanics inform requirements only;
+source/UI/assets/wording are independently implemented. External product names
+are confined to technical provenance, not the product UI or positioning.
+
+The expanded specification retains all 96 case identities from the Action-published inventory for issue #694. The detailed BEX-P requirements refine the three initial grouping requirements; all retained cases keep their observable scenario intent.

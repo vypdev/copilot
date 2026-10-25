@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "capabilities": [
+    "context.v1",
+    "findings.v1",
+    "command-drafts.v1"
+  ],
+  "identity": {
+    "repositoryId": 1,
+    "kind": "issue",
+    "number": 142
+  },
+  "producer": {
+    "actorId": 2,
+    "runId": 300,
+    "attempt": 1,
+    "workflowPath": ".github/workflows/copilot_issue.yml",
+    "sourceCommit": "cccccccccccccccccccccccccccccccccccccccc",
+    "actionVersion": "3.0.0",
+    "configurationDigest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  },
+  "publication": {
+    "commentId": 123,
+    "generation": 7,
+    "observedAt": "2026-10-25T10:42:00Z",
+    "outcome": "pending"
+  },
+  "native": {
+    "state": "open",
+    "reason": null
+  },
+  "lifecycle": {
+    "phase": "specifying",
+    "activity": "idle",
+    "waitingFor": "issue-author"
+  },
+  "assessment": {
+    "state": "not-applicable",
+    "policyDigest": null,
+    "coverage": "unknown",
+    "currentFindingCount": null,
+    "nextAction": "open-question"
+  },
+  "links": [],
+  "branch": null,
+  "sdd": {
+    "state": "awaiting-answers",
+    "path": "specs/example.md",
+    "commitSha": null,
+    "pendingQuestionIds": [
+      "Q2"
+    ]
+  },
+  "findings": null,
+  "commands": [
+    {
+      "name": "status",
+      "context": "conversation"
+    }
+  ]
+}

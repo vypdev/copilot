@@ -31,7 +31,7 @@ debt or convert unknown historic intent into a design decision.
 | `configurable-issue-workflows` | Implemented | Select one canonical set of issue workflows and enforce its forms, dependencies, branch policy, runtime admission, migration, and diagnosis | [Configurable issue workflows and fail-closed admission](./configurable-issue-workflows-and-admission.md) | 89 paths · 2026-10-13 |
 | `repository-agent-collaboration` | Implemented | Generate safe repository-local profiles, guidance, and a skill for agents contributing through configured issues, Action-managed branches, pull requests, and deployment boundaries | [Repository agent collaboration contract](./repository-agent-collaboration-contract.md) | 47 paths · 2026-10-17 |
 | `guarded-pull-request-approval` | Proposed | Specify and locally implement revision-bound, evidence-gated native bot approvals for eligible human pull requests, with safe setup defaults, read-only doctor checks, and explainable recovery | [Guarded pull-request approval and setup readiness](./guarded-pull-request-approval.md) + 2 companion | 94 paths · 2026-10-22 |
-| `github-browser-extension` | Proposed | Specify standalone usability and optional Action context in Chrome, Firefox and Safari; runtime is future work | [GitHub browser extension and Action-connected usability](./github-browser-extension.md) | 4 paths · 2026-10-25 |
+| `github-browser-extension` | Proposed | Specify standalone GitHub improvements and optional Action context across Chrome, Firefox and Safari; only specification/schema artifacts are verified, with existing Action paths serving as integration baseline | [GitHub browser extension and Action-connected usability](./github-browser-extension.md) + 2 companion | 12 paths · 2026-10-25 |
 
 ## Evidence map
 
@@ -270,12 +270,12 @@ debt or convert unknown historic intent into a design decision.
 
 - Owner: Copilot maintainers
 - Last verified: 2026-10-25
-- Specifications: [`specs/github-browser-extension.md`](./github-browser-extension.md)
+- Specifications: [`specs/github-browser-extension.md`](./github-browser-extension.md) · [`specs/github-browser-extension-action-integration.md`](./github-browser-extension-action-integration.md) · [`specs/github-browser-extension-platforms-and-delivery.md`](./github-browser-extension-platforms-and-delivery.md)
 - Workflows: Not applicable for this capability.
 - Entrypoints: [`src/actions/github_action.ts`](../src/actions/github_action.ts)
-- Core code: [`src/application/usecases/read_copilot_status_workflow.ts`](../src/application/usecases/read_copilot_status_workflow.ts)
+- Core code: [`src/application/usecases/read_copilot_status_workflow.ts`](../src/application/usecases/read_copilot_status_workflow.ts) · [`src/application/ports/pull_request_status_read_ports.ts`](../src/application/ports/pull_request_status_read_ports.ts)
 - Tests: [`src/application/usecases/__tests__/read_copilot_status_workflow.test.ts`](../src/application/usecases/__tests__/read_copilot_status_workflow.test.ts)
-- User documentation: [`docs/development/specifications.mdx`](../docs/development/specifications.mdx)
+- User documentation: [`docs/development/specifications.mdx`](../docs/development/specifications.mdx) · [`docs/issues/comment-commands.mdx`](../docs/issues/comment-commands.mdx) · [`specs/browser-extension/manifest-v1.schema.json`](./manifest-v1.schema.json) · [`specs/browser-extension/status-v1.schema.json`](./status-v1.schema.json) · [`specs/browser-extension/examples/manifest-v1.json`](./manifest-v1.json) · [`specs/browser-extension/examples/status-pr-v1.json`](./status-pr-v1.json) · [`specs/browser-extension/examples/status-issue-v1.json`](./status-issue-v1.json) · [`specs/browser-extension/examples/status-invalid-head-v1.json`](./status-invalid-head-v1.json)
 
 ## Maintenance contract
 

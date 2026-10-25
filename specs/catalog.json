@@ -2715,24 +2715,34 @@
       "id": "github-browser-extension",
       "title": "GitHub browser extension and Action-connected usability",
       "status": "proposed",
-      "scope": "Specify standalone usability and optional Action context in Chrome, Firefox and Safari; runtime is future work",
+      "scope": "Specify standalone GitHub improvements and optional Action context across Chrome, Firefox and Safari; only specification/schema artifacts are verified, with existing Action paths serving as integration baseline",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-10-25",
       "specs": [
-        "specs/github-browser-extension.md"
+        "specs/github-browser-extension.md",
+        "specs/github-browser-extension-action-integration.md",
+        "specs/github-browser-extension-platforms-and-delivery.md"
       ],
       "workflows": [],
       "entrypoints": [
         "src/actions/github_action.ts"
       ],
       "code": [
-        "src/application/usecases/read_copilot_status_workflow.ts"
+        "src/application/usecases/read_copilot_status_workflow.ts",
+        "src/application/ports/pull_request_status_read_ports.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts"
       ],
       "documentation": [
-        "docs/development/specifications.mdx"
+        "docs/development/specifications.mdx",
+        "docs/issues/comment-commands.mdx",
+        "specs/browser-extension/manifest-v1.schema.json",
+        "specs/browser-extension/status-v1.schema.json",
+        "specs/browser-extension/examples/manifest-v1.json",
+        "specs/browser-extension/examples/status-pr-v1.json",
+        "specs/browser-extension/examples/status-issue-v1.json",
+        "specs/browser-extension/examples/status-invalid-head-v1.json"
       ]
     }
   ]
