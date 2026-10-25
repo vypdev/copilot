@@ -2766,7 +2766,8 @@
         "extension/test/integration/commands.test.ts",
         "extension/test/integration/package.test.ts",
         "extension/test/integration/recovery.test.ts",
-        "src/domain/__tests__/browser_extension_contract.test.ts"
+        "src/domain/__tests__/browser_extension_contract.test.ts",
+        "extension/test/integration/receipt.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

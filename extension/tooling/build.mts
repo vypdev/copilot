@@ -7,7 +7,7 @@ import { TARGETS, TARGET_POLICY, type BrowserTarget } from '../src/domain/target
 import { targetManifest } from '../src/infrastructure/target_manifests.ts';
 import { readSources } from './source_graph.mts';
 import { validateArchitecture } from './architecture_validation.mts';
-import { ASSETS, readTarget, validateTarget, validateArtifactSet } from './artifact_validation.mts';
+import { assetHashes, readTarget, validateTarget, validateArtifactSet } from './artifact_validation.mts';
 import { FoundationGateError, PublishedCleanupError } from './gate_error.mts';
 
 export type BundlePort = (target: BrowserTarget, output: string) => Promise<void>;
@@ -70,7 +70,7 @@ export async function buildDevelopmentSet(root: string, output: string, bundle: 
             await writeFile(path.join(directory, 'manifest.json'), `${JSON.stringify(targetManifest(target), null, 2)}\n`);
             const files = await readTarget(directory);
             validateTarget(target, files);
-            hashes[target] = Object.fromEntries(ASSETS.map(file => [file, digest(files.get(file)!)]));
+            hashes[target] = assetHashes(files);
         }
         const receipt: BuildReceipt = { schemaVersion: 1, evidence: 'development-build-only', sourceRevision,
             sourceTreeSha256: digest(JSON.stringify(metadata.sort(([a], [b]) => a.localeCompare(b)))), targets: hashes };

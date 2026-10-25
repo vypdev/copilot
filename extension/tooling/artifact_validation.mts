@@ -1,12 +1,31 @@
 import ts from 'typescript';
 import { isDeepStrictEqual } from 'node:util';
 import { readdir, readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { targetManifest } from '../src/infrastructure/target_manifests.ts';
 import { TARGETS, type BrowserTarget } from '../src/domain/target.ts';
 import { FoundationGateError } from './gate_error.mts';
 
 export const ASSETS = ['background.js', 'content.js', 'manifest.json'] as const;
+
+export function assetHashes(files: ReadonlyMap<string, string>): Record<string, string> {
+    return Object.fromEntries(ASSETS.map(file => [file, createHash('sha256').update(files.get(file)!).digest('hex')]));
+}
+
+function readReceipt(raw: string): Record<string, unknown> {
+    let value: unknown;
+    try { value = JSON.parse(raw); } catch { throw new FoundationGateError('receipt: malformed JSON'); }
+    const object = (item: unknown): item is Record<string, unknown> => item !== null && typeof item === 'object' && !Array.isArray(item);
+    if (!object(value) || Buffer.byteLength(raw) > 16 * 1024
+        || !isDeepStrictEqual(Object.keys(value).sort(), ['evidence', 'schemaVersion', 'sourceRevision', 'sourceTreeSha256', 'targets'])
+        || value.schemaVersion !== 1 || value.evidence !== 'development-build-only'
+        || typeof value.sourceRevision !== 'string' || !/^[a-f0-9]{40}$(?![\s\S])/u.test(value.sourceRevision)
+        || typeof value.sourceTreeSha256 !== 'string' || !/^[a-f0-9]{64}$(?![\s\S])/u.test(value.sourceTreeSha256)
+        || !object(value.targets) || !isDeepStrictEqual(Object.keys(value.targets).sort(), [...TARGETS])
+        || raw !== `${JSON.stringify(value, null, 2)}\n`) throw new FoundationGateError('receipt: invalid closed metadata');
+    return value.targets;
+}
 
 export function validateTarget(target: BrowserTarget, files: ReadonlyMap<string, string>): void {
     if (!isDeepStrictEqual([...files.keys()].sort(), [...ASSETS])) throw new FoundationGateError(`${target}: undeclared-or-missing-asset`);
@@ -40,7 +59,12 @@ export function validateTarget(target: BrowserTarget, files: ReadonlyMap<string,
 export async function readTarget(directory: string): Promise<Map<string, string>> {
     const entries = await readdir(directory, { withFileTypes: true });
     if (entries.some(entry => !entry.isFile() || entry.isSymbolicLink())) throw new FoundationGateError('artifact-boundary: regular files only');
-    return new Map(await Promise.all(entries.map(async entry => [entry.name, await readFile(path.join(directory, entry.name), 'utf8')] as const)));
+    return new Map(await Promise.all(entries.map(async entry => {
+        const bytes = await readFile(path.join(directory, entry.name));
+        const text = bytes.toString('utf8');
+        if (!Buffer.from(text, 'utf8').equals(bytes)) throw new FoundationGateError('artifact-boundary: valid UTF-8 text required');
+        return [entry.name, text] as const;
+    })));
 }
 
 export async function validateArtifactSet(directory: string): Promise<void> {
@@ -49,5 +73,10 @@ export async function validateArtifactSet(directory: string): Promise<void> {
         || entries.some(entry => entry.isSymbolicLink() || (entry.name === 'receipt.json' ? !entry.isFile() : !entry.isDirectory()))) {
         throw new FoundationGateError('artifact-set: incomplete or unexpected target set');
     }
-    for (const target of TARGETS) validateTarget(target, await readTarget(path.join(directory, target)));
+    const recorded = readReceipt(await readFile(path.join(directory, 'receipt.json'), 'utf8'));
+    for (const target of TARGETS) {
+        const files = await readTarget(path.join(directory, target));
+        validateTarget(target, files);
+        if (!isDeepStrictEqual(recorded[target], assetHashes(files))) throw new FoundationGateError(`${target}: receipt-hash-mismatch`);
+    }
 }

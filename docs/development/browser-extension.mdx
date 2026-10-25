@@ -58,6 +58,11 @@ and `extension/dist/safari`. Each contains exactly `manifest.json`,
 `background.js` and `content.js`. `extension/dist/receipt.json` records
 `development-build-only`, the Git revision, an input-tree SHA-256 and asset hashes.
 The tree hash distinguishes pending source edits from the committed revision.
+Validation reads the bounded closed receipt and recomputes each declared asset
+hash from the actual UTF-8 bytes. A valid bundle changed after the receipt fails
+integrity validation; changing both bundle and receipt still fails comparison
+with fresh source builds. Invalid UTF-8 and malformed/noncanonical receipts are
+rejected rather than accepted as verified output.
 No timestamps, absolute source paths or secrets are included in the receipt.
 
 | Target | Chosen API floor | Development background | Identity |
