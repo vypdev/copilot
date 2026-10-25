@@ -1308,3 +1308,80 @@ deeper depths and accept siblings and distinct pathname prefixes. They raise
 the pure floor to 95 and the amendment total to 126. Existing closed path
 diagnostics, one-repair budget, immutable evidence and no-publication behavior
 remain unchanged; the pre-branch SDD guide documents this boundary.
+
+### Deterministic draft table assembly (2026-10-25, #695)
+
+Observed defect: [#694](https://github.com/vypdev/copilot/issues/694) repeatedly
+stopped before its first branch publication because independently generated
+budgets and reciprocal requirement links disagreed with the case inventory.
+[Run 40168044978](https://github.com/vypdev/copilot/actions/runs/40168044978)
+exhausted the shared repair with `case-budget`. Strict consistency checks remain
+intentional; this correction changes drafting, not publication readiness or the
+resolved acceptance scope. No rejected draft was published.
+
+The provider MUST write each requirement and observable case once, including
+the case's exact area and requirement edges. Raw Markdown uses
+`{{SDD_CASE_BUDGET}}` on a standalone visible line in section 14 and
+`{{SDD_REQUIREMENT_CASES}}` in section 17. Trusted pure code derives exact area
+counts, one Total and reciprocal links from those unchanged definitions. Each
+slot MUST occur exactly once in the raw response and in its correct visible
+section. Missing, duplicate, hidden, fenced, inline and misplaced slots fail
+closed. Responses containing neither slot retain their bytes and all checks.
+
+Assembly MUST NOT invent or drop cases, change scenarios, relabel areas, alter
+edges, overwrite contradictory supplied tables or normalize repository paths.
+Duplicate/invalid IDs, undefined/duplicate edges, uncovered requirements and a
+reserved Total area block. The unchanged validator independently checks supplied
+tables, immutable owner collisions and paths afterward. All resolved minima and
+area allocations remain drafting requirements; they cannot be reduced to meet
+the advisory size target. Human review still assesses natural-language scope
+and risk coverage; structural consistency cannot certify completeness.
+
+```text
+Resolved issue/answers -> explicit requirements and case inventory
+ -> pure derived tables -> assembled-size check -> unchanged workspace checks
+ -> freshness and remote branch/commit proof -> proposed draft publication
+```
+
+Text equivalent: trusted assembly projects definitions before writer validation;
+branch creation and runtime acceptance remain separate. The application passes
+only assembled Markdown to the existing writer port. The domain policy imports
+no provider, filesystem or Git capability. Both raw and assembled candidates
+MUST obey the existing 18,000/70,000-character limits. Assembly errors use closed
+format categories and share the existing two-attempt size/format ceiling.
+Rejected Markdown, IDs, paths and diagnostics never enter repair prompts or
+public messages. No input, permission, durable schema, label or card is added.
+
+Pending, blocked, partial-push recovery and completed UI retain existing localized
+content and noise limits. Slots disappear before successful publication.
+Completed means a consistent proposed draft exists, with implementation/runtime
+acceptance still open. Exhaustion publishes nothing and retains the answered
+plan and prior commits. In-flight drafts use assembly on their next generation;
+historical SDDs and owner bytes stay intact. Rollback selects the prior Action
+build. No navigation or configuration migration is needed.
+
+The additional floor is **40 distinct cases**, separate from earlier budgets:
+
+| Area | Minimum distinct cases | Behaviors/risks covered |
+|---|---:|---|
+| Pure assembly and validator boundaries | 36 | Legacy bytes, exact counts/edges, 96-case seven-area reproduction, multi-edge counting, CRLF/formatting, invalid slot visibility/placement, malformed definitions, supplied contradictions and owner/path rejection |
+| Application and real findings adapter | 4 | Native response reaches strict validation after assembly, closed malformed-slot repair, assembled-size rejection and exhausted repair without writer acceptance |
+| Total | 40 | Existing cases are not recounted |
+
+New pure assembly targets at least 95% line and branch coverage, using
+deterministic fixtures without providers or sleeps. The 96-case fixture tests
+assembly arithmetic; it is not 96 executed extension acceptance tests. Existing
+all-owner, real Git worktree, replay, localization and publication suites remain
+required. Documentation updates `docs/issues/pre-branch-sdds.mdx`; catalog
+evidence registers `src/domain/__tests__/sdd_derived_tables.test.ts` and the
+review date. Existing architecture constraints enforce the dependency boundary.
+
+Acceptance/traceability: the 96-case fixture MUST yield F12/N14/A12/I16/V14/S16/
+E12 and Total96 with exact reciprocal edges and unchanged scenarios. Invalid
+definitions, owner IDs, paths and supplied tables MUST remain rejected. The
+real findings adapter MUST send assembled Markdown through both existing
+validators. An oversized result or repeated malformed slot MUST stop after two
+attempts without writer acceptance. DoD includes these 40 cases, the unchanged
+broader publication suites, type/lint/architecture, specification/documentation
+validation, rebuilt bundles and package checks. The live #694 workflow is a
+separate post-promotion acceptance check.
