@@ -447,14 +447,19 @@ Revalidate current identity, grants, repository pause, source freshness and targ
 
 The complete product supports unauthenticated public reads and an **optional user-owned
 fine-grained PAT** for selected repositories with Metadata, Contents, Issues,
-Pull requests and Actions **read** permissions as needed by the endpoint
+Pull requests, Actions, Checks and Commit statuses **read** permissions as needed by the endpoint
 inventory. This read profile requests no write, organization administration, workflow-write, Secrets or
 bot workflow PAT; §11.3 defines the separately enabled optional write role. Connection UI explains why each read permission
 is needed and allows remaining standalone. A credential lacking an optional read
 capability makes that projection unavailable; it is not silently replaced with
-a broader token type. Do not assume fine-grained PAT supports every Checks,
-Projects, outside-collaborator or multi-organization scenario. The context panel uses the
-Action projection, not a requirement to independently call Checks APIs.
+a broader token type. Checks and Commit statuses are independent optional read
+grants for the general CI tools, not prerequisites for reading the Copilot
+projection. Fine-grained tokens support the selected Checks read endpoints in
+§11.2; do not generalize this to write operations, Projects,
+outside-collaborator or multi-organization scenarios. The Copilot assessment
+panel uses the authoritative Action projection. The general CI tools may read
+check/status facts directly under §11.2, without independently certifying
+Copilot approval or overall merge readiness.
 
 Create the token in GitHub's native token settings; the extension neither creates
 nor revokes it. Paste only in a trusted extension-origin connection view; never
@@ -487,8 +492,41 @@ is the selected portable least-privilege connection, with guided creation, clear
 | Source/status | issue/PR identity and exact conversation comments | Issues or Pull requests read; ≤3 pages/known comment |
 | PR linkage/current revision | canonical pull and supported native association | Pull requests/Issues read; deny unknown association |
 | Run/attempt/workflow source | Actions run/attempt metadata | Actions/Contents read; exact allowed workflow |
+| General CI check facts | GET commits/{full-sha}/check-runs and check-runs/{numeric-id} | Optional Checks read; exact repo, head SHA and verified check identity |
+| Selected check annotations | GET check-runs/{numeric-id}/annotations | Optional Checks read; verify parent repo/head before pagination |
+| Commit status facts | GET commits/{full-sha}/status | Optional Commit statuses read; separate contexts from check-run conclusions |
 | Finding destination | exact PR review/review-comment metadata | Pull requests read; exact repo/PR/comment |
 | User identity/capability hint | authenticated user and repository permissions | No repository-admin request; absent permission stays unknown |
+
+These paths are fixed templates beneath the selected repository API root, not
+caller-supplied URLs. The documented [check-run/annotation read endpoints](https://docs.github.com/en/rest/checks/runs#list-check-run-annotations)
+support fine-grained PATs with Checks read; [combined commit status](https://docs.github.com/en/rest/commits/statuses#get-the-combined-status-for-a-specific-reference)
+requires Commit statuses read (verified 2026-10-25). Public reads may be
+unauthenticated under the same endpoint/identity/budget constraints. Request each
+optional grant only for an explicitly enabled dependent feature; never obtain
+Checks write, a classic PAT or administration permission to fill a missing row.
+
+BEX-CI-01/02/03 use those direct facts, loaded native check content and canonical
+native destinations. The v1 Action projection supplies its assessment/findings
+and source links; it does not promise arbitrary check annotations. Each general
+CI view identifies its source and completeness separately from that projection.
+Required/advisory classification needs current verified native requirement
+evidence or a policy-bound Action classification; otherwise requiredness is
+unknown, even when a check succeeds. An external check ID is never invented as
+an Actions run/job ID. No direct check/status result grants approval or merge
+authority.
+
+Use at most 100 items/page and three pages per selected check/annotation/status
+collection, within the shared 12-GET/1-MiB refresh and hourly budgets. Remaining
+pages are visibly partial and need an explicit budgeted continuation. Bind
+annotations to the verified check's repository/full head SHA and preserve
+unmapped lines as unplaced evidence. Missing/denied optional scopes, unsupported
+access, unavailable policy or absent source data show the exact unavailable or
+unknown state and native link; loaded native rows may remain with a loaded-only
+label. Neither a denied source nor zero loaded rows means zero failures or a
+complete annotation inventory. Source changes/revocation cancel and clear the
+affected private evidence. CI01/CI03 catalog cases exercise enabled, denied,
+partial, stale and moved-head paths under this contract.
 
 Each semantic request binds numeric repo and conversation to the sender's current
 tab epoch. No `{url,method,body}` message exists. HTTPS exact GitHub/API origins

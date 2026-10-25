@@ -9,10 +9,10 @@
       "delivery": "required-for-product-acceptance",
       "mode": "read",
       "surface": "Pull request and commit checks",
-      "userOutcome": "Separate required, advisory, skipped, cancelled and unknown-producer checks with source details.",
-      "boundaryAcceptance": "A skipped matrix leg cannot count as a successful required browser or platform result.",
+      "userOutcome": "Show canonical check/status outcomes; classify required/advisory only with current requirement evidence, otherwise unknown.",
+      "boundaryAcceptance": "Checks/Commit statuses read are optional feature grants; denied or partial sources never become zero failures, and skipped legs never count as successful required evidence.",
       "permissionProfile": "selected-repository-read",
-      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "dataSource": "Integration 11.2: Checks read check-runs at the full head SHA, Commit statuses read contexts, and explicitly labeled loaded native requirement evidence; Action assessment remains separate.",
       "freshnessRule": "I1-I6 observation and identity fence",
       "default": "explicit-opt-in",
       "optionalBrowserPermissions": [],
@@ -36,15 +36,15 @@
       "tests": [
         {
           "id": "bexp-CI01-C01",
-          "scenario": "Given the eligible pull request and commit checks and verified input, choosing check hierarchy overview produces this observable result: Separate required, advisory, skipped, cancelled and unknown-producer checks with source details."
+          "scenario": "With selected-repository Checks read and Commit statuses read, canonical full-head check runs and status contexts are shown separately; current native requirement evidence classifies requiredness and its absence yields unknown."
         },
         {
           "id": "bexp-CI01-C02",
-          "scenario": "For check hierarchy overview, exercise the concrete boundary: A skipped matrix leg cannot count as a successful required browser or platform result."
+          "scenario": "A skipped matrix leg never becomes successful required evidence, and a successful advisory/unknown-policy check never establishes merge readiness."
         },
         {
           "id": "bexp-CI01-C03",
-          "scenario": "A denied, truncated or expired source for check hierarchy overview shows its exact unavailable/partial reason instead of a zero or success."
+          "scenario": "Denied Checks/Commit statuses read, truncated pagination or stale evidence shows source-specific unavailable/partial states with native links, retaining only labeled loaded-native rows and never claiming zero failures."
         },
         {
           "id": "bexp-CI01-C04",
@@ -63,7 +63,7 @@
       "userOutcome": "Navigate the exact workflow run, attempt, job and annotation referenced by a result.",
       "boundaryAcceptance": "A later attempt cannot silently replace the source of an older finding.",
       "permissionProfile": "selected-repository-read",
-      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "dataSource": "Integration 11.2: Actions read run/attempt/job identities and, when granted, Checks read check identities; external check IDs are not Actions IDs.",
       "freshnessRule": "I1-I6 observation and identity fence",
       "default": "explicit-opt-in",
       "optionalBrowserPermissions": [],
@@ -111,10 +111,10 @@
       "delivery": "required-for-product-acceptance",
       "mode": "read",
       "surface": "Check output and changed files",
-      "userOutcome": "Group canonical annotations by file/severity with exact line and revision mapping.",
-      "boundaryAcceptance": "Unmapped or truncated annotations remain visible as unplaced evidence.",
+      "userOutcome": "Group annotations from the verified Checks read endpoint by file/severity with exact line/revision mapping.",
+      "boundaryAcceptance": "Missing Checks read shows unavailable/native loaded-only fallback; unmapped or truncated annotations remain explicit partial/unplaced evidence.",
       "permissionProfile": "selected-repository-read",
-      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "dataSource": "Integration 11.2: GET check-runs/{verified-id}/annotations with optional selected-repository Checks read, parent repository/full-head validation and bounded pagination; loaded DOM is an explicit subset.",
       "freshnessRule": "I1-I6 observation and identity fence",
       "default": "explicit-opt-in",
       "optionalBrowserPermissions": [],
@@ -138,15 +138,15 @@
       "tests": [
         {
           "id": "bexp-CI03-C01",
-          "scenario": "Given the eligible check output and changed files and verified input, choosing annotation navigator produces this observable result: Group canonical annotations by file/severity with exact line and revision mapping."
+          "scenario": "With Checks read granted, verify the selected check parent repository/full head, read canonical annotations through its fixed endpoint and group by file/severity with exact line mapping; the Action projection is not an annotation source."
         },
         {
           "id": "bexp-CI03-C02",
-          "scenario": "For annotation navigator, exercise the concrete boundary: Unmapped or truncated annotations remain visible as unplaced evidence."
+          "scenario": "An unmapped line or a collection exceeding three 100-item pages or shared byte/request limits remains partial with unplaced evidence and an explicit budgeted continuation."
         },
         {
           "id": "bexp-CI03-C03",
-          "scenario": "A denied, truncated or expired source for annotation navigator shows its exact unavailable/partial reason instead of a zero or success."
+          "scenario": "Missing/denied Checks read shows unavailable with a native destination or labeled loaded-only native evidence; expired/partial data never becomes a complete or empty annotation inventory."
         },
         {
           "id": "bexp-CI03-C04",
