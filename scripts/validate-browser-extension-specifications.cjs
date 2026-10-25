@@ -76,14 +76,16 @@ function validateFeatures(catalog, schema) {
 function validateFeatureTraceability(catalog, text) {
   const section = text.split(/^## 17\. Requirements traceability$/m)[1]?.split(/^## 18\. /m)[0];
   assert(section, 'Feature requirements traceability section missing');
-  const rows = section.split('\n').filter(line => line.startsWith('| CAT-'));
+  const rows = section.split('\n').filter(line => line.includes('|'))
+    .map(line => line.trim().replace(/^\||\|$/g, '').split('|').map(cell => cell.trim()))
+    .filter(cells => /^CAT-/i.test(cells[0]));
   for (const family of catalog.families) {
-    const matches = rows.filter(line => line.startsWith(`| CAT-${family.id} |`));
+    const matches = rows.filter(cells => cells[0] === `CAT-${family.id}`);
     assert.equal(matches.length, 1, `CAT-${family.id} must have exactly one traceability row`);
-    const cells = matches[0].split('|').map(cell => cell.trim());
-    assert.equal(cells[2], family.features.map(feature => feature.id).join(', '), `CAT-${family.id} feature traceability mismatch`);
+    const cells = matches[0];
+    assert.equal(cells[1], family.features.map(feature => feature.id).join(', '), `CAT-${family.id} feature traceability mismatch`);
     const count = family.features.reduce((total, feature) => total + feature.tests.length, 0);
-    assert.equal(cells[3], `${count} explicit cases in the JSON test inventory`, `CAT-${family.id} case traceability mismatch`);
+    assert.equal(cells[2], `${count} explicit cases in the JSON test inventory`, `CAT-${family.id} case traceability mismatch`);
   }
   assert.equal(rows.length, catalog.families.length, 'Unregistered feature traceability rows');
 }

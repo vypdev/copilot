@@ -77,6 +77,17 @@ for (const suffix of ['', ' with conflicting cells']) {
   });
 }
 
+for (const outerPipes of [true, false]) {
+  test(`rejects conflicting compact Markdown rows with outer pipes ${outerPipes}`, () => {
+    const text = fs.readFileSync(path.join(root, 'specs/github-browser-extension-functional-catalog.md'), 'utf8');
+    const row = text.split('\n').find(line => line.startsWith('| CAT-NOTIFY |') && line.includes('explicit cases'));
+    let compact = row.replace(/\s*\|\s*/g, '|').replace('32 explicit cases', '29 explicit cases');
+    if (!outerPipes) compact = compact.slice(1, -1);
+    const duplicated = text.replace('## 18. Implementation sequence', `${compact}\n\n## 18. Implementation sequence`);
+    assert.throws(() => validateFeatureTraceability(features(), duplicated), /CAT-NOTIFY must have exactly one/);
+  });
+}
+
 test('rejects weakening finding-dismissal actor authorization', () => {
   const value = requests(); value.commands.find(command => command.name === 'dismiss').requiresWriteActor = false;
   assert.throws(() => validateRequests(value, requestSchema, names), /write-actor guard/);
