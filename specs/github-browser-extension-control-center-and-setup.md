@@ -127,7 +127,7 @@ Setup states: unpaired -> local-intent -> pairing -> inspecting -> editing -> re
 | density / theme / motion | Comfortable / system / system; bounded documented alternatives | Personal; cannot remove required access/contrast |
 | API connection | Off; at most five explicit named session identities | Partition host/user/repository/role; one chosen identity per operation |
 | optional writes | Off; enable named supported write families independently | No inherited grant; live review per operation |
-| alerts / quiet hours | Off; explicit bounded monitor at 5–60 minutes for at most five selected targets; at most 3 per 10 minutes and 20/day, default quiet hours 22:00–08:00 local | Personal; no delivered-at guarantee during browser suspension |
+| alerts / quiet hours | Off; explicit supported channel and bounded monitor at 5–60 minutes for at most five selected targets; at most 3 per 10 minutes and 20/day, default quiet hours 22:00–08:00 local | Personal; Chrome/Firefox OS or local channel, Safari toolbar/center; no delivered-at guarantee during browser suspension |
 | recents | Off; opt-in maximum 50 entries/7 days | Local extension activity only, no browser history permission |
 | diagnostics | Off for collection beyond closed health reasons; maximum 200 redacted entries/7 days | User-controlled, private detail session-only |
 | setup companion | Unpaired; manual exact local target/code | Broker capability session-only, no auto-discovery/reconnect |

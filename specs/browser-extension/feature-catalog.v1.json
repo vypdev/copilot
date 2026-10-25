@@ -3297,12 +3297,12 @@
         {
           "id": "BEX-NOTIFY-06",
           "family": "NOTIFY",
-          "title": "Optional desktop attention alerts",
+          "title": "Optional attention alerts",
           "delivery": "required-for-product-acceptance",
           "mode": "monitor",
-          "surface": "Extension toolbar and OS notifications",
+          "surface": "Extension toolbar and local center; basic OS notifications on Chrome/Firefox only",
           "userOutcome": "Enable bounded opt-in alerts for explicitly tracked verified transitions with quiet hours and deduplication.",
-          "boundaryAcceptance": "Permission denial, background suspension and missing evidence do not create repeated prompts or guessed alerts.",
+          "boundaryAcceptance": "Safari uses the accessible toolbar/center channel without an unsupported notifications grant; denied channels, suspension and missing evidence never create repeated prompts or guessed alerts.",
           "permissionProfile": "explicit-bounded-alert-monitor",
           "dataSource": "at most five explicitly tracked canonical targets through the shared read scheduler",
           "freshnessRule": "alarm revalidates account/target/source; no stale or unknown alert",
@@ -3317,7 +3317,7 @@
             "safari"
           ],
           "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
-          "activation": "explicit user gesture enables the selected-target subscription and optional grants; each alarm wake revalidates current eligibility, identity, grants and shared budgets before reads or alerts",
+          "activation": "explicit user gesture selects an available platform channel, enables the selected-target subscription and requests only supported optional grants; each alarm wake revalidates current eligibility, identity, grants and shared budgets before reads or alerts",
           "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
           "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
           "requirements": [
@@ -3331,11 +3331,11 @@
           "tests": [
             {
               "id": "bexp-NOTIFY06-C01",
-              "scenario": "After explicit alert/monitor grants and target selection, a due browser alarm observes one verified tracked transition and emits one redacted alert within quiet-hour and request budgets."
+              "scenario": "After explicit supported-channel/monitor grants and target selection, a due browser alarm observes one verified tracked transition and emits one redacted attention item through that platform adapter within quiet-hour and request budgets."
             },
             {
               "id": "bexp-NOTIFY06-C02",
-              "scenario": "A suspended device, browser restart or denied permission yields delayed/unavailable monitoring without claiming an exact delivery time or prompting repeatedly."
+              "scenario": "Safari omits OS notifications and their permission and delivers toolbar/center attention; Chrome/Firefox denial leaves the requested mode off until an explicit local-channel choice; suspension/restart never claims exact delivery or repeats prompts."
             },
             {
               "id": "bexp-NOTIFY06-C03",

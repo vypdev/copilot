@@ -161,7 +161,7 @@ input/navigation/background/store matrix; it is not implied by shared source.
 | Clipboard | User-gesture DOM clipboard adapter; no blanket read permission | Copyable selected text and native copy fallback |
 | Toolbar/options | Packaged options page, toolbar opens settings/current feature status | No resident popup connection required |
 | Background scheduling | No persistent timer/keepalive; normal page reads use activity/nextAllowedAt; explicit alert monitor uses one optional bounded alarm | Hidden pages do not poll; only the independently opted-in monitor follows I6 alarm limits |
-| Context menus and optional alerts | Narrow optional contextMenus/notifications/alarms grants from an explicit gesture | Native-page and center controls remain; no browser history permission |
+| Context menus and optional alerts | Narrow optional contextMenus/alarms grants from an explicit gesture; notifications only in Chrome/Firefox target manifests | Safari uses toolbar/center attention items; no unsupported permission or browser history permission |
 | Programmatic injection | Not required for static github.com matching | No `scripting`/`activeTab` permission without a later reviewed need |
 
 Browser/extension message listeners register synchronously at background entry,
@@ -170,6 +170,19 @@ from a typed base plus allowlisted differences, never string replacement over
 one vendor's JSON. Firefox add-on ID and Safari bundle/container identities are
 maintainer-owned release metadata. Development IDs are distinct from published
 identities and cannot share real credentials.
+
+The attention workflow is required on every target, with an explicit channel
+matrix: Chrome/Firefox support basic OS notifications plus the local center;
+Safari uses a toolbar badge and the same accessible center attention list.
+Safari does not expose the WebExtensions notifications API, so its generated
+manifest omits that permission and its UI never offers an OS channel or asks
+for an unsupported grant. Do not introduce Web Push, a hosted relay or native
+messaging to emulate it. The bounded alarm monitor and its privacy, quiet-hour,
+deduplication and revocation rules apply to both adapters. On Chrome/Firefox,
+denial of OS notification permission offers an explicit switch to the local
+channel; it never silently enables a different channel or removes an existing
+attention item. Tests cover unsupported/denied channels as well as delivery;
+no system-notification or exact-delivery claim is made for Safari.
 
 ### 6.3 Feature lifecycle (D3)
 
@@ -401,11 +414,14 @@ where possible and check context/sender flags before every connected read/write
 to personal settings. If users manually allow it, refuse connection and retain
 no private browsing evidence. No `history`, `cookies`, `webRequest`,
 `nativeMessaging`, blanket host or unlimited-storage permission.
-The sole desktop-alert permission path is the optional `notifications` and
-`alarms` grants in §6.2: request them only after the user explicitly enables
-the bounded I6 monitor and selects its targets. Denial leaves monitoring off;
-revocation stops its reads and alerts. Neither permission is an install-time
-requirement or authority for unrelated background activity.
+The sole attention-monitor permission path is the optional `alarms` grant and,
+on Chrome/Firefox for the selected OS channel, optional `notifications` in
+§6.2. Request grants only after the user explicitly enables the bounded I6
+monitor and selects its targets/channel. Denial leaves that requested mode
+off; revocation stops that mode and its queued delivery until an explicit new
+choice. Neither permission is an install-time requirement or authority for
+unrelated background activity. Safari's local channel needs no notifications
+grant.
 No third-party remote font/code/telemetry fetch; assets are packaged. Any added
 permission is a separately reviewed contract change with visible upgrade impact.
 
@@ -652,3 +668,5 @@ The product is independently designed and implemented. Feature mechanics inform 
 Chosen: full 150-function catalog, 803-case minimum, complete packaged options application, shared original Svelte setup UI/contracts, CLI-owned privileged setup with a separate nonsecret broker and trusted authority handoff, three target manifests, portable typed ports, protected session identities, optional closed write operations, original feature registry, no resident hosted service/remote executable patches, and actual Safari evidence. Rejected: a Chrome-only release advertised as three-browser complete, iframe of the protected local setup, global DOM scanning, worker keepalive, broad all-site grants, generic HTTP/shell mutation proxy, and generic WebKit as Safari-extension proof.
 
 Alarm adapters follow [Mozilla alarms](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/alarms) and [Chrome alarms](https://developer.chrome.com/docs/extensions/reference/api/alarms), inspected 2026-10-25. Do not assume Chrome 150 persistAcrossSessions support at the Chrome 140 floor or on other engines; recreate only the user-enabled logical alarm after validating safe session state.
+
+The [Mozilla notifications API](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/notifications) and its [browser compatibility data](https://github.com/mdn/browser-compat-data/blob/main/webextensions/api/notifications.json), inspected 2026-10-25, document no Safari notifications support. The target channel matrix above is normative; browser packaging and acceptance must verify it against the shipped versions.
