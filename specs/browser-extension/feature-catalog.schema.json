@@ -1,0 +1,280 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vypdev.github.io/copilot/specs/browser-extension/feature-catalog.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "const": "./feature-catalog.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "status": {
+      "const": "proposed-product-contract"
+    },
+    "runtimeVerified": {
+      "const": false
+    },
+    "releaseContract": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "locales": {
+      "const": [
+        "en",
+        "es",
+        "fr",
+        "pt"
+      ]
+    },
+    "families": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "NAV",
+              "CODE",
+              "REVIEW",
+              "ISSUE",
+              "SEARCH",
+              "NOTIFY",
+              "CI",
+              "RELEASE",
+              "WORK",
+              "COPILOT",
+              "CENTER",
+              "SETUP"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "features": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 64,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^BEX-[A-Z]+-[0-9]{2}$"
+                },
+                "family": {
+                  "type": "string",
+                  "enum": [
+                    "NAV",
+                    "CODE",
+                    "REVIEW",
+                    "ISSUE",
+                    "SEARCH",
+                    "NOTIFY",
+                    "CI",
+                    "RELEASE",
+                    "WORK",
+                    "COPILOT",
+                    "CENTER",
+                    "SETUP"
+                  ]
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                },
+                "delivery": {
+                  "const": "required-for-product-acceptance"
+                },
+                "mode": {
+                  "enum": [
+                    "local",
+                    "settings",
+                    "read",
+                    "draft",
+                    "write",
+                    "setup",
+                    "monitor"
+                  ]
+                },
+                "surface": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                },
+                "userOutcome": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                },
+                "boundaryAcceptance": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                },
+                "permissionProfile": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                },
+                "dataSource": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                },
+                "freshnessRule": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                },
+                "default": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                },
+                "privacy": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                },
+                "activation": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                },
+                "coexistence": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                },
+                "accessibility": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                },
+                "optionalBrowserPermissions": {
+                  "type": "array",
+                  "maxItems": 2,
+                  "uniqueItems": true,
+                  "items": {
+                    "enum": [
+                      "contextMenus",
+                      "notifications",
+                      "alarms"
+                    ]
+                  }
+                },
+                "browsers": {
+                  "const": [
+                    "chrome",
+                    "firefox",
+                    "safari"
+                  ]
+                },
+                "requirements": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 4,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^CAT-[A-Z]+$"
+                  }
+                },
+                "documentation": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 8,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^docs/browser-extension/[a-z-]+\\.mdx$"
+                  }
+                },
+                "tests": {
+                  "type": "array",
+                  "minItems": 3,
+                  "maxItems": 7,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "pattern": "^bexp-[A-Z]+[0-9]{2}-C[0-9]{2}$"
+                      },
+                      "scenario": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4096
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "scenario"
+                    ]
+                  }
+                },
+                "nativeTarget": {
+                  "enum": [
+                    "none",
+                    "human-composer",
+                    "control-handoff"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "family",
+                "title",
+                "delivery",
+                "mode",
+                "surface",
+                "userOutcome",
+                "boundaryAcceptance",
+                "permissionProfile",
+                "dataSource",
+                "freshnessRule",
+                "default",
+                "privacy",
+                "activation",
+                "coexistence",
+                "accessibility",
+                "optionalBrowserPermissions",
+                "browsers",
+                "requirements",
+                "documentation",
+                "tests",
+                "nativeTarget"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "features"
+        ]
+      }
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "status",
+    "runtimeVerified",
+    "releaseContract",
+    "locales",
+    "families"
+  ]
+}

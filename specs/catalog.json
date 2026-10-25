@@ -1392,7 +1392,8 @@
         "docs/guides/work-with-the-bot.mdx",
         "docs/guides/releases-and-hotfixes.mdx",
         "docs/security-operations/operations/verification.mdx",
-        "docs/security-operations/operations/upgrade-rollback.mdx"
+        "docs/security-operations/operations/upgrade-rollback.mdx",
+        "specs/github-browser-extension-control-center-and-setup.md"
       ]
     },
     {
@@ -2713,15 +2714,17 @@
     },
     {
       "id": "github-browser-extension",
-      "title": "GitHub browser extension and Action-connected usability",
+      "title": "Complete GitHub productivity extension and integrated Copilot setup",
       "status": "proposed",
-      "scope": "Specify standalone GitHub improvements and optional Action context across Chrome, Firefox and Safari; only specification/schema artifacts are verified, with existing Action paths serving as integration baseline",
+      "scope": "Complete proposed desktop product: 150 required functions, packaged local center, full compatible Action integration, shared setup and 803 distinct future acceptance cases; runtime remains unimplemented",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-10-25",
       "specs": [
         "specs/github-browser-extension.md",
         "specs/github-browser-extension-action-integration.md",
-        "specs/github-browser-extension-platforms-and-delivery.md"
+        "specs/github-browser-extension-platforms-and-delivery.md",
+        "specs/github-browser-extension-functional-catalog.md",
+        "specs/github-browser-extension-control-center-and-setup.md"
       ],
       "workflows": [],
       "entrypoints": [
@@ -2742,7 +2745,11 @@
         "specs/browser-extension/examples/manifest-v1.json",
         "specs/browser-extension/examples/status-pr-v1.json",
         "specs/browser-extension/examples/status-issue-v1.json",
-        "specs/browser-extension/examples/status-invalid-head-v1.json"
+        "specs/browser-extension/examples/status-invalid-head-v1.json",
+        "specs/browser-extension/feature-catalog.v1.json",
+        "specs/browser-extension/feature-catalog.schema.json",
+        "specs/browser-extension/requests-v2.schema.json",
+        "specs/browser-extension/examples/requests-v2.json"
       ]
     }
   ]

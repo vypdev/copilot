@@ -87,7 +87,7 @@ Normative tables below refine these IDs. Non-goals: iOS/iPadOS/Android,
 Enterprise hosts, webRequest interception, cookie access, host-wide automation,
 custom code/CSS, native messaging, browser history access, AI runtime and hosted
 telemetry. A per-feature hotfix can only arrive as a reviewed packaged release;
-MVP contains no remote executable or remote CSS injection service.
+The complete product contains no remote executable or remote CSS injection service.
 
 ## 5. Current versus proposed product journey
 
@@ -114,7 +114,7 @@ flowchart LR
 
 Text equivalent: shared source and lockfile produce three target packages;
 each is loaded as a real extension and tested before signing/store distribution.
-Failure of one required target blocks advertising the three-browser MVP.
+Failure of one required target blocks advertising the complete three-browser product.
 
 ## 6. Functional behavior and platform state
 
@@ -145,7 +145,7 @@ acceptance uses currently vendor-supported builds; old floor fixtures contain
 no real credentials or personal repositories. The release support table
 distinguishes API compatibility from currently supported vendor/OS versions.
 
-Mobile/Enterprise: unsupported in MVP, no matching script registration on extra
+Mobile/Enterprise: separate unsupported host/platform products for this declared desktop github.com contract, no matching script registration on extra
 hosts. Responsive page layout still works in desktop narrow windows. Future
 Enterprise support requires per-origin opt-in, credential/config cache isolation,
 API compatibility and exact host registration. Future mobile work needs its own
@@ -160,8 +160,8 @@ input/navigation/background/store matrix; it is not implied by shared source.
 | Settings/session | Required `storage`; use known keys/get(null), not newer `getKeys` APIs absent at floors | Quota/storage error disables persistence/connection explicitly |
 | Clipboard | User-gesture DOM clipboard adapter; no blanket read permission | Copyable selected text and native copy fallback |
 | Toolbar/options | Packaged options page, toolbar opens settings/current feature status | No resident popup connection required |
-| Background scheduling | No persistent timer/keepalive; react to tab/content activity and stored nextAllowedAt | Hidden/suspended pages do not poll |
-| Context menus/notifications/history | Not requested in MVP | U5 and inline UI supply actions/help |
+| Background scheduling | No persistent timer/keepalive; normal page reads use activity/nextAllowedAt; explicit alert monitor uses one optional bounded alarm | Hidden pages do not poll; only the independently opted-in monitor follows I6 alarm limits |
+| Context menus and optional alerts | Narrow optional contextMenus/notifications/alarms grants from an explicit gesture | Native-page and center controls remain; no browser history permission |
 | Programmatic injection | Not required for static github.com matching | No `scripting`/`activeTab` permission without a later reviewed need |
 
 Browser/extension message listeners register synchronously at background entry,
@@ -283,6 +283,8 @@ Text equivalent: isolated page entry calls use cases through DOM and typed
 background ports; background validates the sender, reads GitHub/session state
 and pure contracts, then returns a credential-free view to the renderer.
 
+The graph above illustrates the read/evidence path. Closed optional write use cases use a different semantic mutation port behind current intent/actor/revision policy; setup uses the separate shared coordinator/authority graph in the center companion. Neither adds network or credential authority to presentation.
+
 ### 8.3 Executable architecture constraints
 
 Implementation introduces structured checks for:
@@ -293,12 +295,20 @@ Implementation introduces structured checks for:
    unapproved web-accessible assets, wildcard hosts or new permission drift.
 3. Typed message schema: known methods only, closed bounded payloads, valid
    sender/tab/frame/origin and page/credential epochs; no arbitrary fetch gateway.
-4. GitHub adapter: GET-only endpoint allowlist and cross-origin credential stripping;
+4. GitHub adapter: separate GET-only read and closed named-write endpoint allowlists, live intent checks and cross-origin credential stripping;
    tests fail if an extension mutating method or command submission is added.
 5. Schema/golden compatibility: valid/invalid snapshots/config/migrations and
    original DOM fixtures; public contract changes require explicit version rules.
 6. Package/target receipts: lockfile and generated manifests/build hashes match the
    source revision; reproducibility check builds twice in clean temporary output.
+
+### 8.4 Full local application and shared setup packages
+
+The [complete catalog](github-browser-extension-functional-catalog.md) and [local center/setup SDD](github-browser-extension-control-center-and-setup.md) add required application routes and private shared setup-presentation/setup-contracts packages. Existing Svelte 5/TypeScript/Vite presentation is extracted through browser-safe explicit barrels; CLI/server/provider/crypto modules remain outside the browser dependency graph. Root commands build both local-web and extension consumers and enforce shared question/locale/plan fixture parity. Do not import the current Node web bridge/server into options code or create a second questionnaire/installer.
+
+The options page is a complete packaged application in its own tab, registered through options_ui/open_in_tab or a verified target equivalent. Toolbar, native page Settings entry and browser manager reach it. Every target has real options-page navigation, storage/messaging, accessibility and protected setup-handoff evidence. No remote iframe/SPA is loaded. Optional context-menu/alert grants are explicit; recents use only extension-owned navigation and never browser history permission. Local setup adds only an opt-in exact 127.0.0.1 broker host grant; no loopback scanning, broad CORS or generic content-script proxy. If exact-origin broker verification is unavailable, the tested trusted local-web handoff provides the complete setup journey.
+
+All new pure evidence/eligibility/intent/approval policies require 100% branches; other new modules require 95% statements/90% branches and covered changed executable lines, while root thresholds remain. Each module stays at most 220 lines and Svelte component at most 90 unless a named reviewed exception and equivalent decomposition evidence exists. Feature modules load on eligibility; the registry must not eagerly mount or scan for all 150 features.
 
 ## 9. UI/UX and content contract (D5)
 
@@ -325,7 +335,7 @@ View settings stay in this browser. Connection ends when the browser restarts.
 No browsing-history or code telemetry. [Review permissions] [Disconnect]
 ```
 
-Focus, live announcements, shortcut/help behavior, EN/ES fallback and narrow
+Focus, live announcements, shortcut/help behavior, EN/ES/FR/PT fallback and narrow
 layout are product P7. Extension update/feature failures use nonmodal inline
 notices; do not interrupt native typing, open surprise welcome tabs per update,
 or request more permission as error recovery. Setup onboarding appears once
@@ -350,7 +360,7 @@ Account switch uses the same path. Browser logout is not reliably observable by
 an extension: pause when a visible logged-out/different-viewer signal is observed
 and require explicit reconnect. Never claim that a PAT is invalidated by GitHub
 web logout. Optional token itself is revoked only through GitHub native settings.
-At most one session credential in MVP; no silent cross-account continuation.
+At most five explicit named session identities, partitioned by host/user/role, with one selected identity per operation; no silent cross-account continuation. Optional write-role credentials never broaden the read role or setup authority.
 
 ## 11. Security, permissions, and privacy (D4)
 
@@ -373,7 +383,7 @@ Every content message validates extension sender ID, top-level frame, exact
 HTTPS github.com origin, current tab route/object/epoch and closed method schema.
 Credential/settings commands require packaged extension-origin sender paths.
 Reject externally_connectable messages and web-page `postMessage` command bridges;
-MVP needs neither main-world injection nor page-cookie access. A compromised
+The product needs neither main-world injection nor page-cookie access. A compromised
 page cannot ask the background to fetch arbitrary URLs, switch repository,
 retrieve a secret or execute code. Redirected API reads cannot send Authorization
 to another origin. Remote strings are bounded text; URLs/commands/DOM selectors
@@ -386,7 +396,7 @@ these paths. Content registration alone may match github.com, but entrypoint
 exits before observers, storage reads containing private data or background
 requests on a protected route. No all-frames/related-frame injection.
 
-Incognito/private browsing is unsupported in MVP: explicitly disable in manifests
+Incognito/private browsing is a declared unsupported environment: explicitly disable in manifests
 where possible and check context/sender flags before every connected read/write
 to personal settings. If users manually allow it, refuse connection and retain
 no private browsing evidence. No `history`, `cookies`, `webRequest`,
@@ -414,7 +424,7 @@ to extension work.
 | Observers | ≤1 route observer plus ≤1 scoped observer per mounted feature; none after dispose | Instrumented lifecycle counters |
 | Owned DOM | ≤500 initial nodes; ≤50 findings mounted at once, virtualized/paged to 100 snapshot cap | Semantic DOM assertions |
 | Retained growth | After 20 issue/PR/route cycles, ≤2 MiB growth over first settled extension state; added retained heap target ≤20 MiB/tab | Five profiler comparisons/target with GC/procedure disclosed |
-| Idle | No foreground-independent polls, background keepalive or observers on protected pages | Fake clocks and real suspension inspection |
+| Idle | No ordinary foreground-independent polls, keepalive or protected-page observers; only the explicit bounded I6 monitor may wake | Fake clocks and real suspension inspection |
 | API | I6 concurrency/byte/hour/rate-limit budgets | Scheduler traces with no live waits |
 
 Heap measurement uses the supported profiler for each engine, not an assumed
@@ -423,9 +433,19 @@ establish a comparable measurement is recorded as missing evidence, not a pass.
 Large native pages/virtualized lists beyond fixtures keep bounded work and show
 partial loaded scope; do not remove caps to make data appear complete.
 
-### 12.2 Local diagnostics
+### 12.2 Complete-product UX and application quality gates
 
-Retain a ring of at most 100 sanitized events/session and aggregate counters:
+The center's packaged initial application code must be at most 2 MiB gzip JS, with lazy feature/detail modules; its meaningful first interaction is p95 at most 1 second on the declared reference machine after package load, and a local search/profile response is p95 at most 100 ms. A source read may take network time: show progress within 200 ms and retain completed independent sources. Measure on at least 30 cold and 30 warm runs per target. Registry metadata cannot eagerly activate all 150 modules. Existing content-script, task/heap/DOM/request limits above remain in force.
+
+Extension-owned UI and complete journeys require [WCAG 2.2 AA](https://www.w3.org/TR/WCAG22/), automated accessibility checks with zero critical/serious violations, and real keyboard/NVDA/VoiceOver evidence. Human review covers all primary states in light/dark/high contrast, reduced motion, 320 CSS px/200% zoom and English/Spanish/French/Portuguese. No essential hover-only action, focus trap or fixed-height nested scroll pane is allowed.
+
+Run 12 representative end-to-end tasks with at least six participants covering developer/reviewer/maintainer and first-time setup roles (72 task attempts). Require at least 95% unassisted completion, no critical authority/target misunderstanding, no draft loss or accidental write, and no unresolved critical/high-severity usability defect. Measure whether users find a named feature within 30 seconds and identify the current blocker/responsible actor within 10 seconds. Record consented anonymized outcomes, concrete failures and resulting fixes; test count alone cannot satisfy this gate. Daily actions should start within three interactions from their applicable surface; a deliberate confirmation is retained for consequential effects.
+
+Documentation acceptance covers every registered function, setting/default/grant, availability state, command context, setup/credential/plan/cleanup journey and upgrade/rollback. Validate example fixtures and route/link/assets, provide context help in the actual UI, and have a reader outside the implementation team complete normal setup and one failure/recovery exercise from the docs alone. API/store facts are reverified at release; incomplete human/browser/store evidence remains pending.
+
+### 12.3 Local diagnostics
+
+The content adapter retains at most 100 sanitized events/session. The separately opted-in local-center diagnostic history is capped at 200 redacted entries/7 days; these are distinct bounded stores. Aggregate counters include:
 feature ID, adapter/browser version, error code, page type (no full URL), request
 outcome/cached flag and disposal counts. No token, query text, draft, path,
 comment, user identity or private repo name by default. Manual export previews
@@ -450,7 +470,7 @@ reviewed packaged update, with no remote JavaScript or CSS hotfix channel.
 Rollout gates are D8/D9: all-target shell → internal fixture/pilot → beta store/
 TestFlight → stable release. Safari packaging begins with the shell, not after
 Chrome's feature completion. A store-specific incident may pause that rollout,
-but three-browser MVP completion remains blocked until parity evidence exists.
+but complete three-browser acceptance remains blocked until parity evidence exists.
 Rollback restores an approved compatible code/settings pair. If stores reject a
 lower version, submit a higher numeric build containing the reviewed revert.
 Disable connected manifest support independently while preserving standalone
@@ -458,9 +478,7 @@ features and native Action publications. No user token is included in backups.
 
 ## 14. Testing strategy and numeric budget (D8)
 
-Product §14 is the single **96-case minimum**. This companion owns F/N lifecycle,
-S security and E packaging areas and shares adapter/presentation coverage;
-it does not add a duplicate 96. Every requirement below maps to those IDs.
+The complete product budget is **803 distinct cases**: 96 retained core, 659 feature cases and 48 local-center/setup cross-boundary cases. This companion owns F/N lifecycle, S security and E packaging areas within the core and cross-cuts the new feature/center inventories; it does not add a duplicate 96. Every requirement maps to its explicit case IDs.
 Maintain root Action thresholds and separate extension reports; pure trust and
 authorization policies require 100% branch coverage. Test decisions, not getters
 or mirrored implementation. Use deterministic clocks, aborts, fake providers,
@@ -470,7 +488,7 @@ original HTML fixtures and semantic assertions in addition to snapshots.
 
 | Target | Automated minimum | Actual extension evidence | Human minimum |
 |---|---|---|---|
-| Chrome | Pure/DOM/manifest suites; extension-loaded smoke where runner supports it | U1–U6, K1–K3 public/private fixtures, suspension, back/forward | Keyboard and NVDA on Windows; light/dark/200% |
+| Chrome | Pure/DOM/manifest suites; extension-loaded smoke where runner supports it | All 150 eligible registered functions and public/private/permission-denied fixtures, suspension, back/forward | Keyboard and NVDA on Windows; light/dark/200% |
 | Firefox stable + chosen ESR | Same core suites and target manifest; browser-native loaded harness or recorded manual smoke | Real signed/temporary extension, event-page restart, private read denial | Keyboard and NVDA on Windows; theme/focus |
 | Safari | Same pure/DOM/schema suites; WebKit may supplement layout only | Actual enabled containing-app extension on macOS, permission prompts, session/suspension, TestFlight beta | VoiceOver, keyboard, light/dark/200% and narrow layout |
 
@@ -492,7 +510,7 @@ store acceptance. Missing categories stay pending, not checked off by proxy.
 
 ### 14.2 Contract/packaging test inventory
 
-bex-E-C01/bex-E-C02/bex-E-C03 validate each package loads the exact U/K capabilities and protected
+bex-E-C01/bex-E-C02/bex-E-C03 validate foundational package loading; the catalog/center cases validate all 150 functions and complete workflows on every target. Each package preserves protected
 routes. bex-E-C04/bex-E-C05 prove background restart with protected session state or honest
 disconnect. bex-E-C06 revokes optional origin while reads are pending. bex-E-C07/bex-E-C08 exercise
 no producer and mixed schema versions. bex-E-C09/bex-E-C10 prove nonsecret migration and
@@ -534,7 +552,7 @@ links using repository validators. Maintain translations with complete fallback.
    and show explicit recovery; no secret/private data appears in export.
 9. A native equivalent appears or one feature breaks: only that feature retires/
    pauses; native GitHub and remaining features work.
-10. Keyboard/screen-reader, themes/zoom/narrow and EN/ES pass with real human
+10. Keyboard/screen-reader, themes/zoom/narrow and EN/ES/FR/PT pass with real human
     evidence; screenshots alone are not an accessibility result.
 11. Reproducible packages, performance bounds, browser evidence and store/signing
     prerequisites pass before stable availability claims.
@@ -598,7 +616,7 @@ Future implementation gates:
 - [ ] D1–D10 and product/integration requirements have traceable acceptance.
 - [ ] Three real target packages load; minimum/current/ESR/platform matrix is recorded.
 - [ ] Structured dependency/message/schema/manifest/package constraints pass.
-- [ ] 96-case floor, root/changed-module coverage and pure-policy branches pass.
+- [ ] 803-case complete-product floor, root/changed-module coverage and pure-policy branches pass.
 - [ ] Real accessibility/theme/narrow/locale and profiler evidence meet budgets.
 - [ ] Session secrets, private cache, pause/revoke/cleanup and migration pass.
 - [ ] Original implementation/fixtures/assets and dependency/license inventory are reviewed.
@@ -622,27 +640,10 @@ and release. These support platform facts, not a claim of execution.
 - [Chrome remote-code policy](https://developer.chrome.com/docs/extensions/develop/migrate/remote-hosted-code): packaged executable code and reviewed update route.
 - [Mozilla extension signing](https://extensionworkshop.com/documentation/publish/signing-and-distribution-overview/): signed distribution options.
 
-### Technical mechanics appendix — research only
+### Original design and technical decisions
 
-The following public source paths were inspected as requested. References remain
-here for auditability; their names do not define product branding or UI. No code,
-selectors, CSS, assets or wording is reused. Implementation must create original
-fixtures from controlled GitHub pages, not copy a third-party test/source corpus.
+The product is independently designed and implemented. Feature mechanics inform ordinary requirements such as isolated activation, cancellation/disposal, settings migration, narrow permissions and native coexistence; no external extension source, selectors, CSS, assets, test corpus, prose or branding is incorporated or named in product documentation.
 
-| Inspected source | Original requirement derived | Deliberate boundary |
-|---|---|---|
-| [Feature lifecycle manager](https://github.com/refined-github/refined-github/blob/main/source/feature-manager.tsx), source blob `c0ced2e0aba6118fb51d5bea84de9f662de9a1cb` | Independent eligibility/init/disposal and cancellation across dynamic navigation | D3 specifies semantic own-resource lifecycle; no source/event-loop/selector copying |
-| [Feature eligibility utilities](https://github.com/refined-github/refined-github/blob/main/source/helpers/feature-utils.ts) | Pure per-page conditions and platform-aware affordances | D2 semantic policies with own names/tests |
-| [Settings lifecycle](https://github.com/refined-github/refined-github/blob/main/source/options-storage.ts), source blob `fa998ea2db42679e1edcf30854eaca993740d76f` | Per-feature preferences with migration | Product bounded schema; session secrets excluded, no arbitrary CSS |
-| [Background operations](https://github.com/refined-github/refined-github/blob/main/source/background.ts), source blob `393b08be51a00101543ea7a0a519f0ffc7b15aaf` | Explicit startup/permission/settings handling | Closed semantic GET messages; no generic fetch or remote hotfix service |
-| [Target manifest](https://github.com/refined-github/refined-github/blob/main/source/manifest.json), source blob `078928b35da6b2ac8ffac595fbc3110c23f14028` | Review cross-browser background/storage choices explicitly | Own least-permission target manifests; no all-sites access |
+Chosen: full 150-function catalog, 803-case minimum, complete packaged options application, shared original Svelte setup UI/contracts, CLI-owned privileged setup with a separate nonsecret broker and trusted authority handoff, three target manifests, portable typed ports, protected session identities, optional closed write operations, original feature registry, no resident hosted service/remote executable patches, and actual Safari evidence. Rejected: a Chrome-only release advertised as three-browser complete, iframe of the protected local setup, global DOM scanning, worker keepalive, broad all-site grants, generic HTTP/shell mutation proxy, and generic WebKit as Safari-extension proof.
 
-Research file blob IDs identify inspected text, not repository commit IDs.
-Implementation evidence should pin fresh source commits when repeating research.
-
-Decisions: three target manifests, portable core, event-driven background,
-protected session storage, no vendor sidebar, original feature registry, closed
-ports, no hosted service/remote patches, and real Safari evidence. Alternatives
-rejected: a Chrome-only first release called three-browser MVP, global DOM
-mutation observer, persistent worker keepalive, broad host access, and generic
-WebKit as Safari-extension proof.
+Alarm adapters follow [Mozilla alarms](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/alarms) and [Chrome alarms](https://developer.chrome.com/docs/extensions/reference/api/alarms), inspected 2026-10-25. Do not assume Chrome 150 persistAcrossSessions support at the Chrome 140 floor or on other engines; recreate only the user-enabled logical alarm after validating safe session state.

@@ -72,11 +72,12 @@
     "validate:docs-page": "node scripts/validate-docs-page-assets.cjs",
     "validate:documentation": "node scripts/validate-documentation-contract.cjs",
     "validate:workflows": "node scripts/validate-workflow-contract.cjs",
-    "generate:specifications": "node scripts/validate-specification-catalog.cjs --write && node scripts/validate-github-communication-test-budget.cjs",
-    "validate:specifications": "node scripts/validate-specification-catalog.cjs && node scripts/validate-github-communication-test-budget.cjs",
+    "generate:specifications": "node scripts/validate-specification-catalog.cjs --write && node scripts/validate-github-communication-test-budget.cjs && pnpm run validate:browser-extension-specifications",
+    "validate:specifications": "node scripts/validate-specification-catalog.cjs && node scripts/validate-github-communication-test-budget.cjs && pnpm run validate:browser-extension-specifications",
     "validate:setup-acceptance": "node scripts/validate-setup-assistant-acceptance.cjs",
     "lint:fix": "eslint src --fix",
-    "postinstall": "node scripts/install-git-hooks.cjs"
+    "postinstall": "node scripts/install-git-hooks.cjs",
+    "validate:browser-extension-specifications": "node --test test-support/browser-extension-specifications.test.cjs && node scripts/validate-browser-extension-specifications.cjs"
   },
   "keywords": [],
   "author": "Efra Espada",
@@ -98,6 +99,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^22.9.1",
     "@vercel/ncc": "^0.36.1",
+    "ajv": "6.15.0",
     "eslint": "^10.10.0",
     "jest": "^30.5.1",
     "svelte": "^5.57.1",

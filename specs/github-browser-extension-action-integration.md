@@ -94,7 +94,7 @@ GitHub reads. `unavailable` differs from `pending` and `not-applicable`.
 - **I10 — Producer compatibility:** additive publication with explicit version
   rollout, idempotency, partial-publication recovery and existing noise budgets.
 
-Normative tables refine I1–I10. Non-goals: direct API writes, new merge policy,
+Normative tables refine I1–I10. The complete product additionally includes the closed operation and full-command contracts in §11.3 and I8 below. Non-goals: arbitrary API writes, new merge policy,
 token provisioning service, realtime push server, browser-side AI, or reusing bot
 credentials. A trusted snapshot cannot grant user permissions or bypass checks.
 
@@ -284,7 +284,7 @@ an Action observation, not a fresh independent closure/linkage certificate. It
 does not guess closing associations from REST timeline text, titles or numbers. Zero linked PRs is
 not applicable. Multiple links show a chooser/links and require a PR-specific
 view. Neither same number nor branch naming creates a link. Fork PRs may display
-base-repository facts and verified review links, but MVP does not prepare write
+base-repository facts and verified review links, but the product does not prepare write
 commands against a foreign head repository. Unresolved permissions stay unknown.
 
 ### 6.4 State ownership, completeness and freshness
@@ -398,7 +398,7 @@ No diagram, color, hidden marker or badge alone communicates success.
 
 ### 10.1 Request budget and caching (I6)
 
-GET-only background adapter; no GraphQL mutation or model endpoint. Maximum two
+The evidence-reader background adapter is GET-only; optional writes use a different closed port under §11.3, never this read adapter or a model endpoint. Maximum two
 requests in flight across the extension, one coalesced refresh per target. One
 refresh is ≤12 GETs and ≤1 MiB decoded response data, with at most three comment
 pages; limit overrun yields partial. Deduplicate tabs by account/repo/target and
@@ -418,9 +418,15 @@ Rate-limit headers/Retry-After override schedules. Secondary limit/429/503 use
 bounded delays of 60, 120 and 300 seconds with deterministic jitter injected in
 tests; no unbounded retry or tight polling. A rate-limited session pauses related
 targets until reset and shows the next permitted time. Browser suspension does
-not need an alarm permission: resume/user activity schedules the next permitted
+not need an alarm permission for ordinary page reads: resume/user activity schedules the next permitted
 read from protected session timestamps. Missing/restarted state starts paused
 until native identity is re-established.
+
+### 10.1.1 Explicit bounded background attention
+
+Ordinary hidden pages do not poll. An independently enabled alert monitor may use a browser alarm for at most five explicitly selected canonical targets, with separate optional alarms/notifications grants. Default off; interval 5 minutes, allowed 5–60 minutes. One coalesced alarm per browser profile, at most six GET requests/wake and the same existing per-repository/account/concurrency/byte ceilings; overload rotates/defers targets and is visible. It never posts a command, invokes a model or expands to every repository.
+
+Revalidate current identity, grants, repository pause, source freshness and target on each wake. Persist only nonsecret scheduling preferences; private queued evidence/dedupe keys remain protected session data. Respect quiet hours and at most three alerts/10 minutes, 20/day. Browser/device sleep and alarm delivery can delay execution; never promise exact delivery or rely on cross-browser alarm persistence. Reconcile the one configured alarm after worker wake, clear it on disable and require reconnect before private monitoring after session loss. Partial/stale/unknown results generate an availability explanation, not a guessed transition alert. The seven explicit monitor cases in the catalog cover these boundaries.
 
 ### 10.2 Failures and effects
 
@@ -439,22 +445,22 @@ until native identity is re-established.
 
 ### 11.1 Resolved authentication choice
 
-MVP supports unauthenticated public reads and an **optional user-owned
+The complete product supports unauthenticated public reads and an **optional user-owned
 fine-grained PAT** for selected repositories with Metadata, Contents, Issues,
 Pull requests and Actions **read** permissions as needed by the endpoint
-inventory. No write, organization administration, workflow-write, Secrets or
-bot workflow PAT is requested. Connection UI explains why each read permission
+inventory. This read profile requests no write, organization administration, workflow-write, Secrets or
+bot workflow PAT; §11.3 defines the separately enabled optional write role. Connection UI explains why each read permission
 is needed and allows remaining standalone. A credential lacking an optional read
 capability makes that projection unavailable; it is not silently replaced with
 a broader token type. Do not assume fine-grained PAT supports every Checks,
-Projects, outside-collaborator or multi-organization scenario. MVP K1 uses the
+Projects, outside-collaborator or multi-organization scenario. The context panel uses the
 Action projection, not a requirement to independently call Checks APIs.
 
 Create the token in GitHub's native token settings; the extension neither creates
 nor revokes it. Paste only in a trusted extension-origin connection view; never
 in the page panel. Verify account via the authenticated native user read and
 target access through the allowlisted endpoints. One active account/credential
-per browser profile in MVP; switching accounts disconnects the previous one.
+per explicit operation; the local center supports at most five named session identities partitioned by host/user/role. Switching the active identity invalidates private evidence and requires a fresh target check.
 Organization approval/SSO restrictions remain explicit unavailable states.
 
 Default storage is `storage.session`, not local/sync: content scripts have no
@@ -462,7 +468,7 @@ credential read message and default session exposure remains disabled; set
 trusted-context access level where supported, without assuming Firefox provides
 that API. Session is cleared on browser restart, disable/uninstall, disconnect
 or detected revocation. D4 defines epochs/private browsing and suspension tests.
-MVP has no remember-token option. Browser storage is not advertised as an
+No browser connection has a remember-token option. Browser storage is not advertised as an
 encrypted credential vault.
 
 OAuth app device flow was evaluated: it avoids an embedded secret but private
@@ -470,8 +476,7 @@ repository scopes are broader and introduces app registration/support. GitHub
 App authentication offers selected permissions but requires installation/expiry
 and refresh lifecycle. Defer both to a separately reviewed authentication slice;
 no generic callback server or embedded client secret is introduced. PAT entry
-is a deliberate MVP usability tradeoff for uniform browser behavior and bounded
-repository reads. User onboarding must make it understandable, not mandatory.
+is the selected portable least-privilege connection, with guided creation, clear role/scope verification and revocation help. User onboarding makes it understandable and optional. The complete product also supports independently enabled selected write-role sessions for the closed operations below; a read session never silently escalates.
 
 ### 11.2 Endpoint and trust boundary inventory
 
@@ -493,6 +498,23 @@ text is bounded text, not `innerHTML`, selector input, executable code or comman
 template. Diagnostics redact tokens and private identifiers unless user explicitly
 previews a minimal export under D6. No browsing history/code/drafts leave the
 browser through extension-owned telemetry.
+
+### 11.3 Closed optional GitHub operations and setup separation
+
+The complete product includes explicit regular-label/assignee triage and selected run retry/cancel controls. These are not status reads or native command drafts. They use a separately selected user-owned write-role session and a closed semantic operation union; the read-role token is never silently promoted. Default off; grants are selected-repository Issues write or Actions write only as needed. Owner/maintain/push hints and provider authorization are both checked; neither a snapshot nor a browser feature grants authority.
+
+| Operation | Exact resource family | Required preflight/result |
+|---|---|---|
+| Add/remove regular labels | POST/DELETE canonical issue labels | Exact repo/object, current labels, selected delta and read-back; installed lifecycle/deploy labels excluded from this generic editor |
+| Add/remove assignees | POST/DELETE canonical issue assignees | Current eligible assignees, explicit delta, exact scope and read-back |
+| Retry failed run/jobs | POST exact run rerun-failed-jobs or exact job rerun | Workflow/run/attempt/job identity, actor grant and one explicit reviewed retry scope |
+| Cancel active run | POST exact run cancel | Current active attempt and retained effects warning; canonical terminal observation |
+
+No arbitrary `{url,method,body}`, default-branch file edit, approval/merge/deploy request, credential/Secret mutation or generic workflow-input dispatcher is exposed. Every action creates a local immutable intent binding host/user/repo/object/current revision or value, operation/delta, expiry (maximum 60 seconds) and single-use nonce. Recheck before sending; a moved target invalidates consent. Maximum 20 explicitly selected bulk items, one sequential write at a time and per-item receipts. Never include unloaded pages or new selection after approval.
+
+Provider acknowledgement and observed result are separate. GitHub endpoints do not promise a universal idempotency key: timeout/uncertain submission enters unknown-outcome, performs bounded canonical reconciliation and requires explicit new review when ambiguity remains. Do not blindly retry a POST, claim zero effects, automatically roll back other actors' changes or reuse a consumed intent. Account/grant revocation or pause prevents new items while retaining already observed receipts. Export only redacted selected evidence.
+
+The local setup center uses the [shared setup companion](github-browser-extension-control-center-and-setup.md), not these GitHub write sessions. Setup credentials/provider keys and the legacy web Apply capability never enter extension storage or content messages. The CLI remains the installer/provider/permission/cleanup authority. Personal settings, repository runtime policy, Action state and installation plans have separate owners and persistence.
 
 ## 12. Observability and operational UX
 
@@ -534,7 +556,7 @@ deprecated support gets explicit user/operator notice, never silent reinterpreta
 ## 14. Testing strategy and numeric budget
 
 Owns bex-I-C01–bex-I-C16 (16 distinct cases) and integration portions of bex-A-C07–bex-A-C12,
-bex-S-C01–bex-S-C16/bex-E-C08 in the shared **96-case** product budget. Counts are not additive.
+bex-S-C01–bex-S-C16/bex-E-C08 in the retained **96-case core** inventory. The complete product requires **803** distinct cases: 96 core, 659 catalog feature cases and 48 center/setup integration cases. These owned subsets are not counted twice.
 At least one strict parser positive/negative fixture per contract field family;
 tests distinguish JSON schema, semantic consistency, provenance and final
 freshness gates. Use deterministic fake GitHub adapters/clocks and replay/race
@@ -595,21 +617,29 @@ docs may imply that this specification PR enables connected mode.
 | I9 | Message/URL/text parsers | bex-S-C01–bex-S-C02/bex-S-C06–bex-S-C11/bex-S-C16 | architecture/privacy |
 | I10 | Existing publisher + additive envelope | bex-I-C09/bex-I-C16, bex-E-C08–bex-E-C09, pointer/race replay fixtures | action-contract/upgrade |
 
-### I8 command-context rules
+### I8 complete command-context rules
 
-| Draft | Eligible native destination | Additional bound |
+The complete product offers the entire current documented command family, not only four starter drafts. All requests remain native drafts that a human reviews/submits; the Action applies its current admission/authorization/context rules. Commands are never synthesized from page prose or translated.
+
+| Command family | Native destination and guard | Effect/cost disclosure |
 |---|---|---|
-| `/copilot status` | Exact issue or PR conversation | Parsed capability and native writable composer |
-| `/copilot analyze` | Exact supported issue/PR conversation | Producer capability; existing agent availability still decided by Action |
-| `/copilot fix FINDING-ID` | Exact current same-repo PR review-thread reply supported by current Action | Verified finding/comment/head, repository write hint for current viewer, no foreign fork |
-| `/copilot dismiss FINDING-ID` | Exact supported finding review-thread reply | Same current-target and authorization checks; explicit user choice |
+| help, status, sdd-diff, doctor, history | Exact supported issue/PR conversation | No model for these existing commands; publication/readiness/doctor/history remain distinct |
+| plan, clarify, estimate, test-plan, explain, diagnose | Exact supported issue/PR conversation, explicit user-selected bounded prose | Potential configured agent execution and included data shown |
+| analyze, review, findings, recheck | Exact canonical conversation/review target supported by the installed route | Review/model behavior follows current server contract; findings may run a fresh review |
+| description | Exact supported PR conversation | May update PR description; preserves native draft before human submission |
+| fix explicit IDs / all | Verified current same-repo authoritative PR review-thread reply, or separately advertised verified branch-scoped route | File-changing and actor-authorized; show selected IDs/all expansion and exact target |
+| dismiss explicit IDs | Exact supported current finding context, same write-actor guard | Finding-state mutation even though no files change; rationale and scope preview |
+| implement request | Authoritative verified branch-scoped route; review-thread branch is the supported default | File changes, scope and verification expectation; never an issue-only guessed PR |
+| remember rule | Current verified PR or native issue-branch route only when advertised/accepted by the installed runtime | Persistent learned rule/file effect; user-authored prose, no imported page instruction |
+| sync-branch with reviewed options | Verified issue/PR parent and working ref, under the installed synchronization contract | Dry-run/no-agent/source options; merge/fixer effects disclosed; Action owns mutation |
 
-No free-form command builder in MVP. Operands come from validated closed IDs,
-not page prose. Permission hints come from authenticated repo metadata/current
-native editor, never the snapshot's assertion about another user. If the viewer
-cannot be verified, mutation drafts are unavailable; status/copy-only guidance
-remains. The Action rechecks live permissions, event, target and freshness after
-submission. `implement`, sync, releases and deployment are outside MVP drafts.
+Consumer routing is the intersection of its compiled known grammar, the reviewed installed route/capability catalog, verified native target and current actor capability hint. A producer declaration never grants authority. Unknown/unsupported routes show an exact reason and copy-only/native documentation fallback, without fabricating a command or an issue-to-PR association. The runtime rechecks actor, target, policy and revisions after human submission. Existing complete-command 2,000-character and structured-argument bounds remain; quote literal finding IDs through the canonical grammar and never build a shell command.
+
+The existing v1 status `commands` field remains its closed four-command compatibility subset. Full command discovery is additive: reviewed capability `command-drafts.v2` enables the fixed repository-relative `.copilot/browser-extension-requests.v2.json`, fetched at the same pinned default-branch commit as the manifest. The new [closed request schema](browser-extension/requests-v2.schema.json) and [complete example](browser-extension/examples/requests-v2.json) specify the 21 known command names, eligible context categories, write-actor/verified-branch requirements and effect/agent categories. Maximum 32 entries, 16 KiB, unique command names. IDs must match the canonical repository/manifest producer. A stale/malformed/extra-key or semantically broadened descriptor is unavailable. The example is structural and does not prove a deployed route or current viewer authority.
+
+The consumer validates every descriptor against its compiled safe matrix: it may narrow supported routes, never remove a required write/branch guard or introduce an unknown command. Conversation context for file-changing requests additionally requires the explicitly advertised branch-scoped route and current native linkage; generic issue comments remain insufficient. Old v1 consumers ignore the unknown v2 capability and retain compatible read/draft features. No field is added silently to a closed v1 object. Producer implementation/rollout and exact-context fixtures must accompany the compatible Action release.
+
+Release/hotfix creation uses enabled native Issue Forms with reviewed fields and human submission. Admission/start/deployment labels, approvals, workflow dispatch and merge/queue controls remain native/Action-owned handoffs with explicit effect/policy review. The complete local tower covers source cut, SDD, branch, PR, review, promotion, package/release publication, reconciliation and cleanup, retaining already completed effects after later failures.
 
 ## 18. Implementation sequence
 
@@ -628,9 +658,9 @@ examples and limits are internally consistent, links/catalog validate and review
 is possible. Runtime implementation remains proposed.
 
 - [ ] I1–I10 have executable acceptance and traceability with the shared budget.
-- [ ] Shared package/browser imports enforce read-only boundaries and token isolation.
+- [ ] Shared package/browser imports enforce read/draft/write/setup boundaries, exact intent validation and token-role isolation.
 - [ ] Positive/negative schema/provenance/race/version fixtures pass.
-- [ ] Source/identity/coverage/freshness states and EN/ES content match product UX.
+- [ ] Source/identity/coverage/freshness states and EN/ES/FR/PT content match product UX.
 - [ ] Authentication, session cleanup, API limits, replay and partial recovery pass.
 - [ ] Producer changes update existing owning contracts/tests/docs together.
 - [ ] Three real browser integration gates, docs and compatibility/rollback pass.
@@ -641,7 +671,7 @@ is possible. Runtime implementation remains proposed.
 
 - [GitHub fine-grained token guidance](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens): selected repositories, organization restrictions and documented feature gaps; never assume all token families are equivalent.
 - [Endpoint permission inventory](https://docs.github.com/en/rest/authentication/permissions-required-for-fine-grained-personal-access-tokens): verify each chosen read endpoint during implementation; unsupported reads are unavailable.
-- [GitHub OAuth device flow](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps): evaluated alternative, not MVP authentication.
+- [GitHub OAuth device flow](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps): evaluated alternative, an evaluated alternative requiring its own owned application/broker and release evidence.
 - [GitHub App user tokens](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app): evaluated installation/expiry/permission tradeoff.
 - [GitHub rate limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api): budget ceilings are product limits below provider allowances, not promises of provider availability.
 - [GitHub API best practices](https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api): conditional reads, pagination and rate-limit recovery.
@@ -649,6 +679,6 @@ is possible. Runtime implementation remains proposed.
 
 Decision: passive API reads of one additive existing-status envelope; default-ref
 trust; session-only optional fine-grained read token; current evidence separated
-from human authorization. Alternatives rejected for MVP: DOM text as authority,
+from human authorization. Alternatives rejected: DOM text as authority,
 check names as proof, a status command on page load, remote backend requirement,
 classic broad PAT fallback and embedding OAuth secrets.

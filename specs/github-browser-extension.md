@@ -1,21 +1,20 @@
-# GitHub Browser Extension — Product, MVP and Roadmap
+# GitHub Browser Extension — Complete Product and Quality Contract
 
 - Status: Ready for review — proposed, not implemented
 - Date: 2026-10-25
 - Catalog capability ID: `github-browser-extension`
 - Last verified: 2026-10-25, repository/source research only; no extension execution
 - Owners: Copilot maintainers (product, engineering, security and release)
-- Scope: Personal improvements to github.com plus an optional Copilot context panel in desktop Chrome, Firefox and Safari.
+- Scope: Complete GitHub productivity product: 150 required capabilities, local control center, full Copilot integration and shared setup across desktop Chrome, Firefox and Safari.
 - Related issues/PRs: [Issue #694](https://github.com/vypdev/copilot/issues/694)
 - Required review gates: product UX, architecture, testing, documentation, security/operations
-- Open decisions blocking design readiness: None. Implementation, platform evidence, account setup and store approval remain delivery gates, not completed facts.
+- Open decisions blocking design readiness: None for the declared desktop github.com product. Implementation, real browser/security/accessibility evidence and store acceptance remain mandatory delivery gates.
 
 ## 1. Executive summary
 
-The extension makes daily GitHub work easier and explains work coordinated by
-Copilot where a developer is already reading it. Page-local improvements work
-without the Action or a token. A separately enabled connection presents verified
-Action publications, source links and requests prepared for human submission.
+The extension is a complete GitHub productivity application: 150 required capabilities in 12 families, a packaged full-page configuration/work center, comprehensive Copilot Action tooling and an integrated shared setup journey. Page-local improvements and local configuration work without the Action, credentials or a resident server. Connected evidence, native command drafts and separately enabled reviewed operations add repository context without transferring policy ownership to the browser.
+
+The [complete functional catalog](github-browser-extension-functional-catalog.md) defines every required function, its access/default, observable result, boundary and tests. The [local center and setup contract](github-browser-extension-control-center-and-setup.md) defines configuration UX and reuse of existing setup UI/application decisions. Work is implemented in dependency-sized increments; all registered functions and quality gates remain required for product acceptance.
 
 ```text
 Install → enable selected GitHub improvements → visit issue/PR
@@ -27,7 +26,7 @@ The user owns personal settings and comment submission. GitHub owns native facts
 The Action owns automation policy, evidence and managed branch lifecycle. This
 document defines product behavior; [integration](github-browser-extension-action-integration.md)
 defines its data contract and [platforms](github-browser-extension-platforms-and-delivery.md)
-defines browser architecture, security and delivery.
+defines browser architecture, security and delivery. The complete catalog and center/setup companions are equally normative; no smaller umbrella inventory limits their scope.
 
 ## 2. Problem, current behavior, and evidence
 
@@ -100,22 +99,19 @@ availability is claimed. Naming does not block this design.
 ### 4.1 Normative product requirements
 
 - **P1 — Independent utility:** U1–U6 work without a token, Action or backend.
-- **P2 — Bounded scope:** the MVP consists of U1–U6 and K1–K3 on the three desktop
-  browsers. Catalog phases do not silently increase MVP scope.
+- **P2 — Complete scope:** all 150 catalog capabilities, the complete local center and integrated setup are required on all three declared desktop browsers; implementation order cannot reduce final acceptance.
 - **P3 — Honest context:** K1/K2 use the integration contract, show source/time and
   distinguish missing, stale, partial and historical evidence from completion.
-- **P4 — Human submission:** K3 prepares supported requests for the exact native
-  composer, preserves drafts and never submits, merges, approves or dispatches.
+- **P4 — Explicit effects:** command drafts preserve native human submission; separately enabled regular triage/run operations use closed reviewed intents, fresh live checks and verified results. Rendering never authorizes an effect.
 - **P5 — Personal control:** each feature has an explicit default, repository
   override and reversible disable/pause/reset path.
 - **P6 — Native usability:** filters expose hidden counts, never silently hide
   required action, and leave native content, editors and checks reachable.
 - **P7 — Inclusive presentation:** all primary states have keyboard, screen-reader,
-  light/dark, zoom/narrow and complete EN/ES presentations.
+  light/dark, zoom/narrow and complete EN/ES/FR/PT presentations.
 - **P8 — Bounded work:** page work, requests and notification noise obey the
   platform/integration budgets and stop on pause, navigation or revocation.
-- **P9 — Verifiable delivery:** the catalog, 96-case budget, documentation and
-  browser evidence gates in §§14–19 accompany implementation.
+- **P9 — Verifiable delivery:** the complete catalog, 803-case minimum (96 core + 659 feature + 48 center/setup integration cases), documentation and real browser/UX/security evidence accompany implementation.
 
 The formal requirement IDs BEX-P1 through BEX-P9 correspond to P1 through P9
 below. All normative tables below refine those requirements. A reference to a companion's requirement
@@ -124,9 +120,9 @@ incorporates that requirement; explanatory examples are not evidence of delivery
 | Requirement | Behavior |
 |---|---|
 | BEX-P1 | Standalone utility without Action, credential or backend. |
-| BEX-P2 | Nine bounded MVP capabilities across Chrome, Firefox and desktop Safari. |
+| BEX-P2 | Complete 150-capability product, local center and shared setup across Chrome, Firefox and desktop Safari. |
 | BEX-P3 | Source-bound, complete and honest current versus historical context. |
-| BEX-P4 | Exact-context draft preservation and human-owned submission only. |
+| BEX-P4 | Exact-context native drafts plus explicitly reviewed closed optional operations; no unsolicited effects. |
 | BEX-P5 | Bounded personal defaults, overrides, migration, pause and recovery. |
 | BEX-P6 | Idempotent native coexistence and explicit reversible filtering. |
 | BEX-P7 | Accessible, localized and responsive presentation for every primary state. |
@@ -138,12 +134,9 @@ incorporates that requirement; explanatory examples are not evidence of delivery
 Acceptance demonstrates: standalone installation without authentication; one
 primary next action in every connected state; one mount per feature/page; no
 request caused by rendering that posts a comment or invokes AI; and the complete
-browser matrix passing before a release is advertised as MVP complete.
+browser matrix and catalog acceptance before a release is advertised as complete.
 
-This specification-only change does not ship runtime code. MVP excludes direct
-API writes, automatic approvals/merge/deploy, hosted accounts, telemetry,
-cross-repository dashboards, arbitrary custom scripts/CSS, Enterprise hosts,
-mobile extensions, notification mutation and a replacement GitHub editor.
+This specification change defines future implementation and acceptance, not a runtime release. Required functions include comprehensive page tools, read-only context, native human-submitted commands, selected optional regular-label/assignee/run operations, full local configuration/workspaces and shared setup. The product never silently approves/merges/deploys, runs arbitrary scripts, scrapes cookies, changes managed refs or hidden Action state, or introduces hosted billing/telemetry. Mobile and Enterprise remain separately verified host/platform contracts and are not advertised implicitly.
 
 ### 4.3 Fixed invariants
 
@@ -181,60 +174,30 @@ Denied connection leaves standalone use available.
 
 ## 6. Functional behavior and state model
 
-### 6.1 MVP inventory
+### 6.1 Complete product inventory
 
-The connected context, findings and draft capabilities use the issue
-identifiers K1, K2 and K3. Test cases use the separate browser694 namespace.
+The normative [functional catalog](github-browser-extension-functional-catalog.md) and its [structured inventory](browser-extension/feature-catalog.v1.json) define all 150 required functions, defaults, permissions, sources, freshness, privacy, browser support, acceptance and test IDs. U1–U6 and K1–K3 are umbrella names for foundational controls and the context/findings/draft entry points; the complete catalog defines final product scope. Test cases use the retained bex namespace; detailed feature cases use bexp and center/setup integration cases use bexhub.
 
-All rows target Chrome/Firefox/Safari desktop under D1. `Page` means existing
-visible DOM/URL only; it does not authorize background API fetching. Clipboard
-writes require a user gesture and use the browser-adapted path in D3.
+| Family | Required functions | User-visible scope |
+|---|---:|---|
+| Navigation/context | 12 | Command palette, exact links, ref/branch context, previews, bookmarks and menus |
+| Code/files/diffs | 14 | Tree/path/symbol navigation, filters, readability, patch/history/rename context and review checkpoints |
+| Pull requests/reviews | 14 | Readiness, findings/threads, drafts, changed-since-review, reviewers, conflicts/queue and evidence |
+| Issues/discussions | 12 | Triage/forms/relationships, explicit adjustments, duplicate research, notes, bulk selection and dependencies |
+| Search/views | 8 | Query builder, saved searches, bounded cross-repository results, collections and accessible navigation |
+| Notifications/attention | 8 | Native inbox grouping/selection/actions, personal snooze, optional alerts and privacy |
+| Actions/checks | 10 | Source-aware checks/attempts/annotations, failure comparisons, explicit retry/cancel, dispatch handoff and artifacts |
+| Releases/repository changes | 8 | Tags/comparisons/unreleased evidence, changelog drafts, provenance/security navigation and attention |
+| Personal workspaces | 8 | Selected my-work views, named workspaces, queues, profiles, session drafts and compatibility |
+| Copilot Action | 24 | Full lifecycle, SDD workbench, current supported commands, findings, sync/doctor/history, release/deploy/recovery and policy |
+| Local control center | 14 | Full application, feature/profile/connection/permission/appearance/language/privacy/activity/recovery management |
+| Shared setup/management | 18 | Inspector, complete questionnaire, quick/batch plans, runners, credential handoff, audits, Apply, doctor/drift/recovery and parity |
 
-| ID | Problem, surface and concrete interaction | Data / permission / freshness | Default, dependency and coexistence | Acceptance |
-|---|---|---|---|---|
-| U1 | Copy issue/PR canonical URL or immutable file/line permalink; make only unambiguous references navigable | Page; GitHub page access; rederive after navigation | On; omit duplicate native control; ambiguous number stays text; unavailable commit disables permalink | Copy points to observed object/revision; hostile URL never linked |
-| U2 | PR Files changed: next/previous visible file and optional generated-file focus filter | Page; no API; mounted/rendered files only | Navigation on; filter off; use native generated classification, never guess from suffix; hidden count and Restore all | No missed native checks/comments; virtualization reports visible subset |
-| U3 | PR/issue conversation: expand/collapse resolved/outdated threads and jump to last loaded relevant event | Page; thread-native state; refresh on DOM changes | On controls; no auto-collapse active threads; preserve editor subtree; label events not yet loaded | Collapsing leaves draft intact; restore returns focus and content |
-| U4 | Issue/PR lists: restore explicit supported filter query and compact/comfortable personal density | Page URL plus local preferences; live query wins on navigation | Comfortable; saved view applied only on explicit Restore, never rewrites shared links; compact is opt-in | Opening a shared filtered link preserves its exact query |
-| U5 | Shortcut help and extension commands for U1/U2/panel | Page; no broad keyboard capture | Help on, added bindings off until enabled; native/OS conflicts disable the binding; no editable/composition interception | Keyboard-only flow works; typing in comments has no side effects |
-| U6 | Options: per-feature toggle, repository pause, reset, isolated diagnostic and settings export/import | Local extension settings only; no secrets/private evidence in exports | All recovery controls on; invalid imports rejected atomically | One broken feature can be disabled while GitHub and others work |
-| K1 | Issue/PR inline panel: state, completed facts, next actor/action, source links to issue/SDD/branch/PR/run | Validated publication plus canonical API facts under I1–I7 | Off until repository opt-in; unsupported/missing producer is explicit; source panel never infers linkage | Stale source shows stale; multiple linked PRs require selection |
-| K2 | PR findings navigator: group by path/severity/state and jump to native comment | I4 snapshot items; review-comment IDs validated | On only with connection; unavailable count stays unknown; historical items separately labeled; no thread mutation | File group includes counts/coverage; old finding cannot certify current head |
-| K3 | Prepare status/analyze, or eligible fix/dismiss request, in native composer with exact target preview | I8 allowed contexts and current user capability hints; no API write | Always user-triggered; existing nonempty draft triggers Append / Keep draft / Cancel; replace requires separate explicit choice | Correct review thread selected or copy-only fallback; never auto-submit |
+### 6.2 Feature/access model
 
-U1–U6 show native accessible buttons with text labels/tooltips, use CSS tokens and
-budgeted DOM adapters, and follow P6/P7/D2–D5. K1–K3 inherit those requirements and
-I1–I10. No feature reads drafts as context for remote analysis. No per-user record
-is written into repository files.
+Local controls require only page access; additional selected-repository reads require explicit connection. Native drafts retain append/keep/cancel, correct context and human submission. Optional writes are separate named regular triage/run operations, never a generic request client; protected lifecycle/deployment operations hand off to authoritative native controls/Action. Setup uses shared presentation and the CLI-owned protected authority described in the center companion. Every function needs tested unavailable/partial/recovery behavior; access requirements do not remove a function from delivery acceptance.
 
-### 6.2 Full catalog beyond MVP
-
-Rows are candidates with a defined problem and phase, not commitments. `P1` here
-means post-MVP phase one; it does not refer to normative requirement P1. All
-candidates are off until a separately approved slice supplies implementation,
-documentation and tests. Each inherits P6–P8; all browser deviations are explicit
-in that slice, not hidden behind detection.
-
-| ID / phase | User problem and example surface | Mechanic and data | Permission/freshness / dependencies | Acceptance boundary |
-|---|---|---|---|---|
-| N1 / phase 1 | Workflow lacks easy return to originating PR | Workflow-to-PR link from native run associations | Actions/PR read; current run identity; K1 connection | No association means no fabricated PR |
-| N2 / phase 1 | Repeated repository navigation | Personal quick destinations and discoverable shortcuts | Page URLs/local settings; U5 | Current repo identity and native navigation preserved |
-| D1 / phase 1 | Indentation/whitespace hard to inspect | Explicit tab-width (2/4/8) and whitespace toggle in code/diff | Rendered text only; no source rewriting | Copied code bytes and line anchors unchanged |
-| D2 / phase 1 | PRs touch related files | Show authoritative open PR/file associations on demand | PR read; paginated API snapshot; bounded retrieval | Incomplete result labeled partial |
-| D3 / phase 1 | Large diff has noisy bot/generated changes | Explicit filters by native actor/classification | Page or connected native facts; U2; off | Counts/Restore all; no silent review clearance |
-| L1 / phase 1 | Lists obscure useful metadata | Compact badges for updated/locked/draft with textual labels | Page/native facts; refresh after navigation | No guessed state from decorative icons |
-| L2 / phase 1 | Conversations are long | Jump between loaded open/close/review events and explicit bot-noise grouping | Page; no automatic loading entire history | Hidden actions remain counted and reachable |
-| A1 / phase 1 | CI context is fragmented | On-demand concise run/check explanation with sources | Actions read; optional Checks access only if supported auth; K1 | Unavailable evidence never shown as pass |
-| Q1 / phase 2 | Notification triage repeats navigation | Saved views, source destination and explicit multi-open | Future notification permission/API design required | No mark-read/subscribe side effect on navigation |
-| R1 / phase 1 | Release comparison takes several hops | Compare current tag to user-selected preceding tag | Contents read or native links; immutable resolved refs | Not chronological guessing for semver/prereleases |
-| R2 / phase 2 | Unsure which release includes a merged PR | On-demand commit ancestry/tag evidence | Contents/PR read; bounded history with completeness | Unknown ancestry stays unknown |
-| X1 / phase 2 | Operate across repositories | Personal work overview | Separate authorization/cache/account isolation design | No widening host/repository access by discovery |
-| X2 / phase 2 | Repeat routine mutation | Reviewed API-write shortcuts | Separate write scopes, actor authorization, replay/cancellation design | Explicit operation-time confirmation and server checks |
-| X3 / phase 2 | Enterprise/mobile users need support | Exact-host adapters and platform-specific interaction | Separate opt-in host/store/test matrix | No wildcard hosts; unavailable support stated |
-
-Before promoting a candidate, expand its row to the same per-feature acceptance,
-data/permission/default/accessibility/performance/coexistence detail as §6.1;
-approval of this catalog alone is not authorization to ship it.
+Features share native coexistence, original adapters/assets, disposal, source honesty, privacy, performance and accessibility requirements. No feature reads drafts for remote analysis or starts a model on page open. No personal preference is written into repository files.
 
 ### 6.3 State model
 
@@ -267,7 +230,7 @@ not a mutable name alone; renamed repositories retain their preference mapping.
 |---|---|---|---|
 | `features` | Map; defaults in §6.1 | Known IDs → boolean | Global plus per-repo override, local storage |
 | `density` | Enum; `comfortable` | `comfortable`, `compact` | Global, repo override |
-| `locale` | Enum; `auto` | `auto`, `en`, `es` | Global; browser primary language then EN fallback |
+| `locale` | Enum; `auto` | `auto`, `en`, `es`, `fr`, `pt` | Global; browser primary language then complete-message EN fallback |
 | `theme` | Enum; `github` | `github`, `light`, `dark` | Global; GitHub tokens/contrast respected |
 | `shortcuts` | Boolean; `false` | true/false | Global, repo override; fixed conflict-aware binding catalog |
 | `connected` | Boolean; `false` | true/false | Explicit numeric repository opt-in |
@@ -276,15 +239,15 @@ not a mutable name alone; renamed repositories retain their preference mapping.
 
 K1/K2/K3 feature switches default enabled, but their eligibility is false until
 the user explicitly connects that repository; they never auto-connect. U5 help
-exists by default while additional key bindings stay off. If all C features are
+exists by default while additional key bindings stay off. If all connected features are
 disabled, no connected reads are scheduled. Import cannot grant host permission,
 restore a credential or activate a new repository connection: imported connection
 preferences require a separate local user opt-in, and an active pause remains
 effective until explicitly resumed. Export previews repository preference scope;
 private API evidence and credentials are never part of settings.
 
-Precedence: fixed safety/compatibility rules → global pause → repository pause →
-repository setting → global preference → shipped default. Snapshots take an
+Precedence: fixed safety/compatibility rules → emergency pause → tab pause → repository pause →
+repository setting → organization setting → host/account preference → global preference → shipped default. The center companion owns profile names and limits. Snapshots take an
 immutable settings version per operation; a pause/revocation cancels it even
 after snapshotting. Unknown newer schema makes settings read-only with export
 and downgrade guidance; it is never silently rewritten. Migrations are atomic,
@@ -387,12 +350,14 @@ nonmodal messages; no notification permission is requested.
 
 ### 9.4 Accessibility and localization
 
+The complete product must meet WCAG 2.2 AA for extension-owned UI and complete user journeys; this is an acceptance target, not a claim about native GitHub. All four locales and the human evaluation gates in the platform companion are required.
+
 P7/D5: every action has an accessible name, visible focus and keyboard path;
 expanded state is programmatic; dynamic results use a polite bounded status
 announcement. Preserve focus on equivalent owned control after refresh, otherwise
 restore a safe parent without stealing focus from native editing. Help bindings
 are discoverable and conflict-checked. Respect reduced motion and 200% zoom,
-320 CSS pixel layout, high contrast, and EN/ES complete catalogs. Resolve the
+320 CSS pixel layout, high contrast, and EN/ES/FR/PT complete catalogs. Resolve the
 extension's locale once per render; unsupported language uses complete English.
 Action publications retain their repository locale and are clearly attributed;
 do not machine-translate command operands or diagnostic source text.
@@ -428,7 +393,7 @@ Per-feature diagnostics show enabled/paused/unsupported/error, affected surface,
 extension version, browser adapter and sanitized error code. They do not include
 page text, draft contents, private paths or credentials. Explicit export previews
 the sanitized report. Connected detail adds source/time/run link without bulk
-logs. No network telemetry ships in MVP. Action Job Summaries remain inspectable
+logs. No network telemetry ships by default. Action Job Summaries remain inspectable
 source evidence; future producer changes add a publication outcome and source
 identity under I10 without extra timeline comments.
 
@@ -444,11 +409,11 @@ the three targets. Each stage needs D8 evidence. Pausing one broken feature is
 the first recovery; a reviewed compatible package/settings version is rollback.
 Store version monotonicity may require publishing a higher version containing a
 revert rather than installing an older signed version. Never promise immediate
-store review or silently drop Safari to call the MVP shipped.
+store review or silently drop Safari to call the complete product shipped.
 
 ## 14. Testing strategy and numeric budget
 
-**96 distinct future implementation cases**, derived from nine capabilities,
+**96 retained distinct core implementation cases**, covering foundational policy, lifecycle and evidence behavior. These are one part of the complete product budget: the functional catalog owns 659 additional cases and center/setup owns 48, for **803 distinct cases**. The core budget below is independently derived from
 asynchronous DOM navigation, a new trust/compatibility contract and three browser
 packages. This specification change does not create or claim these tests.
 
@@ -472,7 +437,7 @@ packages. This specification change does not create or claim these tests.
 | Presentation and drafts | 14 | See the observable V inventory rows below. |
 | Security and permissions | 16 | See the observable S inventory rows below. |
 | Packaging and integration | 12 | See the observable E inventory rows below. |
-| Total | 96 | All distinct behaviors; matrix runs do not add cases. |
+| Total | 96 | Retained core cases only; add 659 catalog and 48 center/setup cases for the 803-case product total. Matrix reruns do not add cases. |
 
 | Case ID | Area | Requirements | Scenario |
 |---|---|---|---|
@@ -560,7 +525,7 @@ packages. This specification change does not create or claim these tests.
 | bex-S-C14 | Security and permissions | BEX-P3, BEX-P9 | Revocation blocks late responses from repopulating cleared private session state. |
 | bex-S-C15 | Security and permissions | BEX-P9 | Private browsing refuses connected operation and retains no navigation evidence. |
 | bex-S-C16 | Security and permissions | BEX-P2, BEX-P9 | Bundle/manifest checks reject remote executable code and undeclared permission expansion. |
-| bex-E-C01 | Packaging and integration | BEX-P2, BEX-P9 | Chrome loads the exact generated artifact and exercises all eligible MVP capabilities. |
+| bex-E-C01 | Packaging and integration | BEX-P2, BEX-P9 | Chrome loads the exact generated artifact and exercises all eligible registered product capabilities. |
 | bex-E-C02 | Packaging and integration | BEX-P2, BEX-P9 | Firefox loads the target artifact on stable and selected ESR with the same semantics. |
 | bex-E-C03 | Packaging and integration | BEX-P2, BEX-P9 | A real Safari containing-app extension is enabled and exercised; generic WebKit cannot substitute. |
 | bex-E-C04 | Packaging and integration | BEX-P3, BEX-P8 | Chrome worker suspension resumes with session state or an explicit disconnect and fresh identity read. |
@@ -601,14 +566,26 @@ when compatible producer support actually ships. Run repository documentation,
 asset/frontmatter, navigation and specification checks for changed artifacts.
 
 
-Publication consistency inventory: proposed future user-documentation paths
+Publication inventory relative to the PR base develop: all five extension specifications are created by this PR. The Action first created the primary file in its initial SDD commit, then contributor commits expanded it; the PR-level Change column therefore says create. This is a full-product change plan relative to that base, not a claim that every row ships in this specification PR. README, docs.json and future user-documentation paths
 are explicit design deliverables, not files shipped by this specification PR.
 
 | Path | Change |
 |---|---|
-| specs/github-browser-extension.md | update |
+| specs/github-browser-extension.md | create |
 | specs/github-browser-extension-action-integration.md | create |
 | specs/github-browser-extension-platforms-and-delivery.md | create |
+| specs/github-browser-extension-functional-catalog.md | create |
+| specs/github-browser-extension-control-center-and-setup.md | create |
+| specs/browser-extension/feature-catalog.v1.json | create |
+| specs/browser-extension/feature-catalog.schema.json | create |
+| specs/browser-extension/requests-v2.schema.json | create |
+| specs/browser-extension/examples/requests-v2.json | create |
+| scripts/validate-browser-extension-specifications.cjs | create |
+| test-support/browser-extension-specifications.test.cjs | create |
+| package.json | update |
+| pnpm-lock.yaml | update |
+| specs/local-web-setup-assistant.md | update |
+| specs/setup-configuration-management.md | update |
 | specs/catalog.json | update |
 | specs/CATALOG.md | update |
 | docs.json | update |
@@ -644,7 +621,7 @@ are explicit design deliverables, not files shipped by this specification PR.
 8. Existing native draft: retain bytes on cancel/keep; append once; no submission.
 9. Pause/disconnect: stop requests and remove owned enhancements/session evidence;
    native GitHub and repository state are unchanged.
-10. All browser matrix cases and human evidence meet D8 before MVP completion;
+10. All browser matrix cases and human evidence meet D8 before complete product acceptance;
     a missing Safari result is a release blocker, not a generic WebKit substitute.
 
 ## 17. Requirements traceability
@@ -675,28 +652,26 @@ are explicit design deliverables, not files shipped by this specification PR.
 
 ## 18. Implementation sequence
 
-1. Approve these SDDs and catalog as proposed; resolve review findings before work.
-2. Implement a portable extension shell, browser adapters, settings and U6 with
-   actual extension-loaded smoke on Chrome/Firefox/Safari immediately.
-3. Deliver U1–U5 in small slices with native coexistence and original fixtures.
-4. Implement the Action producer/manifest contract and compatibility fixtures
-   before enabling K1; update existing owning SDDs/docs/tests with that change.
-5. Deliver protected session connection, K1/K2 and then K3 draft preparation.
-6. Complete docs, 96 cases, browser/human/performance evidence and staged rollout.
-7. Promote catalog candidates only through separately reviewed feature slices.
+1. Review the complete five-SDD contract, 150-function catalog, 803-case acceptance inventory and explicit authority/architecture constraints.
+2. Build the full local center, shared setup presentation/contracts and portable feature registry with real three-browser harnesses.
+3. Deliver native navigation/code/review/issue/search/notification/Actions/release/workspace families in dependency-sized increments, with tests and docs together.
+4. Deliver the versioned Action producer/evidence reader, complete compatible command catalog, findings/SDD/lifecycle/recovery views and exact-context native drafts.
+5. Deliver closed optional user-write operations and shared setup inspector/quick adjustments/full wizard/batch/doctor with protected credential/Apply handoff.
+6. Complete every required function, four locales, accessibility, performance/security/partial-state acceptance, signed artifacts and full documentation.
+7. Audit all 150 functions and all 803 distinct cases plus the actual browser/OS/version evidence before general product acceptance. Work waves do not constitute reduced product scopes.
 
 ## 19. Definition of Done
 
-For this specification issue: three linked decision-complete SDDs, proposed
+For this specification issue: five linked decision-complete SDDs and the complete structured functional catalog, proposed
 catalog evidence, a generated catalog, valid links and passing specification
 checks; no runtime claim. Product/architecture/security review remains explicit.
 
 For future implementation:
 - [ ] P1–P9 and I/D companion requirements have acceptance evidence and traceability.
 - [ ] Architecture, manifests, schemas and package constraints are executable.
-- [ ] The 96 distinct cases, coverage budgets and three-browser matrix pass.
+- [ ] All 803 distinct core/feature/center cases, coverage budgets and real three-browser/OS matrix pass.
 - [ ] Bounds/defaults/settings migration and recovery match this contract.
-- [ ] Primary states, draft preservation, accessibility and complete EN/ES pass.
+- [ ] Primary states, draft preservation, accessibility and complete EN/ES/FR/PT pass.
 - [ ] Failure/races/security/privacy/cleanup and zero unsolicited writes pass.
 - [ ] User/setup/operator/contributor docs exist and navigation is validated.
 - [ ] Platform accounts/signing and store readiness have named maintainer owners.
@@ -706,12 +681,8 @@ For future implementation:
 
 ## 20. References and decisions
 
-Decisions: separate standalone/connected value; page-integrated panel; nine
-capability MVP across all three browsers; optional session-only read connection;
-native human submission; no hosted service prerequisite; one versioned producer
-contract rather than heuristic parsing of internal comments. Detailed alternatives
-are in the companions. Public extension mechanics inform requirements only;
-source/UI/assets/wording are independently implemented. External product names
-are confined to technical provenance, not the product UI or positioning.
+Decisions: complete 150-function desktop product; packaged full-page local center; shared original setup presentation and one CLI-owned privileged engine; all current compatible Action request families; bounded read/native draft/reviewed optional write separation; one trustworthy producer contract; and real accessibility/security/performance/documentation/browser acceptance. No reduced feature inventory can satisfy final acceptance. Primary sources and implementation constraints are in the companions. All code, selectors, assets, UX and prose are independently authored.
+
+The original 96 core cases keep their stable identifiers and observable intent. Product scope is expanded by the additional structured feature and center/setup inventories; implementation evidence remains distinct from this specification.
 
 The expanded specification retains all 96 case identities from the Action-published inventory for issue #694. The detailed BEX-P requirements refine the three initial grouping requirements; all retained cases keep their observable scenario intent.
