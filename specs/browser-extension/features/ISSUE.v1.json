@@ -217,7 +217,7 @@
         },
         {
           "id": "bexp-ISSUE04-C07",
-          "scenario": "A partially completed selection for label and assignee adjustments separates verified effects, failed items and uncertain items with no automatic rollback."
+          "scenario": "After the provider acknowledges one label/assignee change, a denied read-back leaves that exact target acknowledged but verification unavailable; the UI cannot claim verified success, invent per-item failures or issue an automatic rollback."
         }
       ],
       "nativeTarget": "none"

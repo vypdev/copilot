@@ -264,7 +264,7 @@
         },
         {
           "id": "bexp-CI05-C07",
-          "scenario": "A partially completed selection for run retry controls separates verified effects, failed items and uncertain items with no automatic rollback."
+          "scenario": "After the provider accepts one retry, delayed visibility of the new attempt shows acknowledged and awaiting canonical verification; the extension neither invents an attempt number nor sends another retry."
         }
       ],
       "nativeTarget": "none"
@@ -327,7 +327,7 @@
         },
         {
           "id": "bexp-CI06-C07",
-          "scenario": "A partially completed selection for run cancellation controls separates verified effects, failed items and uncertain items with no automatic rollback."
+          "scenario": "After cancellation is accepted, the selected attempt may still run or complete naturally; show its verified terminal outcome and retained side effects without claiming cancellation succeeded or issuing a second cancel."
         }
       ],
       "nativeTarget": "none"

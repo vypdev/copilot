@@ -67,6 +67,16 @@ test('rejects stale per-family case counts in readable requirement traceability'
   assert.throws(() => validateFeatureTraceability(features(), stale), /CAT-NOTIFY case traceability mismatch/);
 });
 
+for (const suffix of ['', ' with conflicting cells']) {
+  test(`rejects duplicate feature traceability rows${suffix}`, () => {
+    const text = fs.readFileSync(path.join(root, 'specs/github-browser-extension-functional-catalog.md'), 'utf8');
+    const row = text.split('\n').find(line => line.startsWith('| CAT-NOTIFY |') && line.includes('explicit cases'));
+    const duplicate = suffix ? row.replace('32 explicit cases in the JSON test inventory', 'unavailable cases') : row;
+    const duplicated = text.replace('## 18. Implementation sequence', `${duplicate}\n\n## 18. Implementation sequence`);
+    assert.throws(() => validateFeatureTraceability(features(), duplicated), /CAT-NOTIFY must have exactly one/);
+  });
+}
+
 test('rejects weakening finding-dismissal actor authorization', () => {
   const value = requests(); value.commands.find(command => command.name === 'dismiss').requiresWriteActor = false;
   assert.throws(() => validateRequests(value, requestSchema, names), /write-actor guard/);
