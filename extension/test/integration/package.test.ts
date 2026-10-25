@@ -47,11 +47,13 @@ it('rejects package publication drift and verifies meaningful missing orchestrat
         (value: ReturnType<typeof pkg>) => { value.scripts.test = 'true'; },
         (value: ReturnType<typeof pkg>) => { value.scripts.typecheck = 'true'; },
         (value: ReturnType<typeof pkg>) => { delete value.scripts['test:coverage']; },
+        (value: ReturnType<typeof pkg>) => { value.scripts['test:coverage'] = 'jest --coverage && node scripts/validate-coverage-budgets.cjs'; },
     ]) { const value = pkg(); mutate(value); expect(() => validatePackageContract(value, extension(), workspace(), ci())).toThrow(); }
     expect(() => validatePackageContract(pkg(), { ...extension(), private: false }, workspace(), ci())).toThrow('identity');
     expect(() => validatePackageContract(pkg(), { ...extension(), version: '99' }, workspace(), ci())).toThrow('identity');
     expect(() => validatePackageContract(pkg(), extension(), {}, ci())).toThrow('overrides');
     expect(() => validatePackageContract(pkg(), extension(), { packages: ['extension'], overrides: { undici: 'changed' } }, ci())).toThrow('overrides');
     expect(() => validatePackageContract(pkg(), extension(), workspace(), {})).toThrow('CI gate');
+    expect(() => validatePackageContract(pkg(), extension(), workspace(), { jobs: { missingSteps: {} } })).toThrow('CI gate');
     expect(() => validatePackageContract({}, extension(), workspace(), ci())).toThrow('file selection');
 });

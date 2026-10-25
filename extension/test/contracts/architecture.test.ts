@@ -77,3 +77,19 @@ it('sanitizes control characters in source diagnostics while retaining readable 
         expect((error as Error).message).toContain('\n');
     }
 });
+it('rejects malformed static/type module specifiers without resolving them as trusted dependencies', () => {
+    for (const source of ['import a from 42; export { a };', 'export type A = import(42);',
+        'export type A = import(unknown);']) {
+        rejects('extension/src/application/a.ts', source, 'external-or-dynamic-import');
+    }
+});
+it('keeps diagnostics from a forbidden imported adapter separate from pure-domain diagnostics', () => {
+    const graph = inwardGraph();
+    graph.set('extension/src/domain/a.ts', "export { broken } from '../infrastructure/broken';");
+    graph.set('extension/src/infrastructure/broken.ts', 'export const broken = missingAdapterGlobal;');
+    try { validateArchitecture(root, graph); throw new Error('expected rejection'); }
+    catch (error) {
+        expect((error as Error).message).toContain('dependency-direction');
+        expect((error as Error).message).not.toContain('broken.ts: pure-environment');
+    }
+});

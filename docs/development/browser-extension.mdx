@@ -42,6 +42,10 @@ continue to apply.
 The extension also emits `extension/coverage/lcov.info` with repository-relative
 source paths. CI uploads it together with the retained root Jest report so the
 shared contract and browser/tooling modules are included in coverage reporting.
+The root Jest suite also consumes the shared barrel under CommonJS, checking its
+public exports and the same wire contract independently of the ESM test runner.
+This accounts for declaration/re-export lines when combining the reports; runtime
+coverage exclusions and thresholds are unchanged.
 
 Inspect one target's manifest or run a focused Vitest test while diagnosing a
 problem. Acceptance always builds and validates all three targets; there is no

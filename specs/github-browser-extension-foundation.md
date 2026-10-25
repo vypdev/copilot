@@ -385,6 +385,7 @@ Define:
 | `extension/tooling/validation.mts` | create |
 | `extension/test/integration/recovery.test.ts` | create |
 | `extension/test/integration/commands.test.ts` | create |
+| `src/domain/__tests__/browser_extension_contract.test.ts` | create |
 | `eslint.config.mjs` | update |
 | `specs/browser-extension/manifest-v1.schema.json` | update |
 | `specs/README.md` | reference |
@@ -446,11 +447,11 @@ Architecture, documentation, and repository-change traceability is specified in 
 
 ### H1 implementation evidence
 
-The H1 suite contains 47 distinct automated tests across 8 files, including every one of the 28 required named engineering cases and native GitHub SSO/SAML/session exclusion. Local coverage is 100% statements/lines/functions and at least 98% branches; domain/shared-contract branches are 100%. Per-file thresholds remain enforced. Root hook/CI verification and exact revision evidence are recorded in the implementation PR. Plain root test retains Jest argument forwarding; the explicit extension suite is also part of the CI coverage flow.
+The H1 suite contains 49 distinct automated tests across 8 files, including every one of the 28 required named engineering cases and native GitHub SSO/SAML/session exclusion. Local coverage is 100% statements/lines/functions/branches across every executable H1 module. The shared barrel and value contract also have eight CommonJS compatibility tests under root Jest, reported separately from the extension cases. Per-file thresholds remain enforced. Root hook/CI verification and exact revision evidence are recorded in the implementation PR. Plain root test retains Jest argument forwarding; the explicit extension suite is also part of the CI coverage flow.
 
 The contributor guide and private package README describe the checked commands, receipt format, permission rationale and interrupted-build recovery. The prospective manifest-v1 workflow/capability patterns now require a true end of string: JavaScript dollar anchors alone also match before a terminal newline. Differential schema/value tests reject that ambiguity, sparse malformed arrays and unsafe identities; valid wire values retain their meaning. This is not raw duplicate-key parsing or Action producer implementation.
 
-CI publishes the root Jest LCOV report together with extension LCOV coverage, using repository-relative source paths for extension and shared-root modules. This supplements the unchanged root thresholds with independently enforced per-file extension/shared-contract budgets; neither suite hides the other's failures.
+CI publishes the root Jest LCOV report together with extension LCOV coverage, using repository-relative source paths for extension and shared-root modules. This supplements the unchanged root thresholds with independently enforced per-file extension/shared-contract budgets; neither suite hides the other's failures. The shared contract is exercised by both module systems so merged coverage includes CommonJS re-export/declaration lines as well as ESM execution. Malformed static/type imports, forbidden-adapter diagnostic scoping and a workflow job with no steps have explicit regressions; no runtime coverage is excluded.
 
 Executable implementation traceability: the four requirements map to the literal named tests in the contract/integration suites; additional tests cover replacement rollback, locks, source/artifact boundaries, commands and stale/nonreproducible receipts. The complete-product 803-case floor remains unchanged. Runtime layers with no H1 behavior remain future responsibilities rather than placeholder modules. Root npm package contents are inspected by the real pack dry-run as well as structural checks.
 
