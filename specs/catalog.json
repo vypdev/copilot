@@ -2710,6 +2710,30 @@
         "docs/bugbot/configuration.mdx",
         "docs/development/architecture.mdx"
       ]
+    },
+    {
+      "id": "github-browser-extension",
+      "title": "GitHub browser extension and Action-connected usability",
+      "status": "proposed",
+      "scope": "Specify standalone usability and optional Action context in Chrome, Firefox and Safari; runtime is future work",
+      "owner": "Copilot maintainers",
+      "lastVerified": "2026-10-25",
+      "specs": [
+        "specs/github-browser-extension.md"
+      ],
+      "workflows": [],
+      "entrypoints": [
+        "src/actions/github_action.ts"
+      ],
+      "code": [
+        "src/application/usecases/read_copilot_status_workflow.ts"
+      ],
+      "tests": [
+        "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts"
+      ],
+      "documentation": [
+        "docs/development/specifications.mdx"
+      ]
     }
   ]
 }
