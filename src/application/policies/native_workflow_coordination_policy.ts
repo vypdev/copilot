@@ -15,7 +15,8 @@ export function expectedNativeWorkflowGroup(query: PreviousWorkflowRunsQuery): s
 
     if (native.eventName === 'push' && native.ref?.startsWith('refs/heads/')
         && native.ref.length > 'refs/heads/'.length) return PUSH_GROUP;
-    if (!Number.isSafeInteger(native.pullRequestNumber) || (native.pullRequestNumber ?? 0) <= 0) return undefined;
+    const pullRequestNumber = native.pullRequestNumber;
+    if (typeof pullRequestNumber !== 'number' || !Number.isSafeInteger(pullRequestNumber) || pullRequestNumber <= 0) return undefined;
     if (native.eventName === 'pull_request') return `${PR_GROUP}-analysis`;
     if (native.eventName === 'pull_request_review') return `${PR_GROUP}-review-state`;
     return undefined;

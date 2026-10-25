@@ -44705,7 +44705,8 @@ function expectedNativeWorkflowGroup(query) {
     if (native.eventName === 'push' && native.ref?.startsWith('refs/heads/')
         && native.ref.length > 'refs/heads/'.length)
         return PUSH_GROUP;
-    if (!Number.isSafeInteger(native.pullRequestNumber) || (native.pullRequestNumber ?? 0) <= 0)
+    const pullRequestNumber = native.pullRequestNumber;
+    if (typeof pullRequestNumber !== 'number' || !Number.isSafeInteger(pullRequestNumber) || pullRequestNumber <= 0)
         return undefined;
     if (native.eventName === 'pull_request')
         return `${PR_GROUP}-analysis`;

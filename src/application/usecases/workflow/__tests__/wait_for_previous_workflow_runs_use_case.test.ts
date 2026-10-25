@@ -29,6 +29,32 @@ function policy(overrides: Partial<WorkflowPollingPolicy> = {}): WorkflowPolling
 }
 
 describe('WaitForPreviousWorkflowRunsUseCase', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('uses the system clock and random source for bounded polling by default', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(1000);
+    const random = jest.spyOn(Math, 'random').mockReturnValue(0.5);
+    const predecessors = { countActivePreviousRuns: jest.fn().mockResolvedValueOnce(1).mockResolvedValue(0) };
+    const delay = { wait: jest.fn().mockResolvedValue(undefined) };
+    const observed = observer();
+
+    await new WaitForPreviousWorkflowRunsUseCase(predecessors, delay, observed).invoke(query);
+
+    expect(predecessors.countActivePreviousRuns).toHaveBeenCalledWith(query, { deadlineAtMilliseconds: 5401000 });
+    expect(delay.wait).toHaveBeenCalledWith(5000);
+    expect(random).toHaveBeenCalledTimes(1);
+    expect(observed.noActivePreviousRuns).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not require a native-coordination observer to delegate safely', async () => {
+    const predecessors = { countActivePreviousRuns: jest.fn() };
+    const delay = { wait: jest.fn() };
+    await new WaitForPreviousWorkflowRunsUseCase(predecessors, delay, observer(), undefined,
+      { nowMilliseconds: () => 0 }, undefined, { isCoordinated: jest.fn().mockResolvedValue(true) }).invoke(query);
+    expect(predecessors.countActivePreviousRuns).not.toHaveBeenCalled();
+    expect(delay.wait).not.toHaveBeenCalled();
+  });
+
   it('delegates to proven native coordination without enumerating or waiting for queued predecessors', async () => {
     const predecessors = { countActivePreviousRuns: jest.fn().mockResolvedValue(1) };
     const native = { isCoordinated: jest.fn().mockResolvedValue(true) };
@@ -187,5 +213,29 @@ describe('WaitForPreviousWorkflowRunsUseCase', () => {
       { next: () => 0.5 },
     ).invoke(query)).rejects.toThrow('Timeout waiting for previous runs to finish.');
     expect(queryPort.countActivePreviousRuns).not.toHaveBeenCalled();
+  });
+
+  it('does not start native proof when the queue deadline has already expired', async () => {
+    const queryPort = { countActivePreviousRuns: jest.fn() };
+    const native = { isCoordinated: jest.fn() };
+    await expect(new WaitForPreviousWorkflowRunsUseCase(queryPort, { wait: jest.fn() }, observer(),
+      policy({ maximumQueueWaitMilliseconds: 100 }),
+      { nowMilliseconds: jest.fn().mockReturnValueOnce(0).mockReturnValue(100) }, undefined, native,
+    ).invoke(query)).rejects.toThrow('Timeout waiting for previous runs to finish.');
+    expect(native.isCoordinated).not.toHaveBeenCalled();
+    expect(queryPort.countActivePreviousRuns).not.toHaveBeenCalled();
+  });
+
+  it.each([0, 1])('rejects a provider result arriving at the deadline, even with %i predecessors', async active => {
+    let now = 0;
+    const queryPort = { countActivePreviousRuns: jest.fn(async () => { now = 100; return active; }) };
+    const delay = { wait: jest.fn() };
+    const observed = observer();
+    await expect(new WaitForPreviousWorkflowRunsUseCase(queryPort, delay, observed,
+      policy({ maximumQueueWaitMilliseconds: 100 }), { nowMilliseconds: () => now },
+    ).invoke(query)).rejects.toThrow('Timeout waiting for previous runs to finish.');
+    expect(observed.noActivePreviousRuns).not.toHaveBeenCalled();
+    expect(observed.waitingForPreviousRuns).not.toHaveBeenCalled();
+    expect(delay.wait).not.toHaveBeenCalled();
   });
 });
