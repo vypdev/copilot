@@ -59,10 +59,12 @@ export async function mainRun(
     logDebugInfo(`Event: ${execution.eventName}, actor: ${execution.actor}, repo: ${repository.owner}/${repository.repo}, debug: ${execution.debug}`);
 
     if (process.env.GITHUB_ACTIONS === 'true' && !execution.singleAction.isPublishIssueCommentAction) {
-        // Every GitHub workflow invocation queues before setup or route work so
-        // executions of the same workflow file cannot overlap mutations. A
-        // failure notification must remain runnable when that queue gate fails.
-        await waitForPreviousWorkflowRuns(execution.tokens.token, repository);
+        // Verify native resource/lane coordination or retain the predecessor
+        // fence before setup. Failure notifications must remain runnable.
+        await waitForPreviousWorkflowRuns(execution.tokens.token, repository, {
+            isSingleAction: execution.isSingleAction,
+            pullRequestNumber: execution.inputs?.pull_request?.number,
+        });
     }
 
     const setupExecution = createSetupExecutionUseCase(latestTagQueryPort, {

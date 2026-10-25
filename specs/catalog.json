@@ -533,9 +533,9 @@
       "id": "execution-lifecycle",
       "title": "Execution admission, queueing, routing, and result publication",
       "status": "implemented",
-      "scope": "Shared GitHub Action lifecycle from event admission through durable user-facing results",
+      "scope": "Shared GitHub Action lifecycle with pinned native resource/lane coordination proof, conservative predecessor fencing, routing and durable user-facing results",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-21",
+      "lastVerified": "2026-10-25",
       "specs": [
         "specs/execution-admission-queue-and-publication.md",
         "specs/execution-error-and-context-hardening.md",
@@ -604,7 +604,13 @@
         "src/manager/description/configuration_handler.ts",
         "src/manager/description/configuration_markers.ts",
         "src/data/repository/issue/issue_content_repository.ts",
-        "src/data/repository/github/github_error_policy.ts"
+        "src/data/repository/github/github_error_policy.ts",
+        "src/application/policies/native_workflow_coordination_policy.ts",
+        "src/application/ports/workflow_run_ports.ts",
+        "src/application/usecases/workflow/wait_for_previous_workflow_runs_use_case.ts",
+        "src/data/repository/workflow/active_previous_workflow_runs_repository.ts",
+        "src/data/repository/workflow/native_workflow_coordination_repository.ts",
+        "src/infrastructure/composition/workflow_queue_composition_root.ts"
       ],
       "tests": [
         "src/tooling/__tests__/coverage_budget_validator.test.ts",
@@ -644,7 +650,12 @@
         "src/infrastructure/composition/__tests__/change_size_project_membership_composition_root.test.ts",
         "src/manager/description/__tests__/configuration_recovery.test.ts",
         "src/manager/description/__tests__/configuration_handler.test.ts",
-        "src/data/repository/issue/__tests__/issue_content_repository.test.ts"
+        "src/data/repository/issue/__tests__/issue_content_repository.test.ts",
+        "src/application/policies/__tests__/native_workflow_coordination_policy.test.ts",
+        "src/data/repository/workflow/__tests__/native_workflow_coordination_repository.test.ts",
+        "src/data/repository/workflow/__tests__/active_previous_workflow_runs_repository.test.ts",
+        "src/actions/__tests__/common_action.test.ts",
+        "src/tooling/__tests__/validate_workflow_contract.test.ts"
       ],
       "documentation": [
         "docs/overview.mdx",
@@ -655,7 +666,10 @@
         "docs/bugbot/failure-scenarios.mdx",
         "docs/development/architecture.mdx",
         "docs/issues/assignees-and-projects.mdx",
-        "docs/configuration.mdx"
+        "docs/configuration.mdx",
+        "README.md",
+        "docs/features.mdx",
+        "docs/pull-requests/workflow-setup.mdx"
       ]
     },
     {

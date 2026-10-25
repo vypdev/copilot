@@ -1,5 +1,6 @@
 import type {
     PreviousWorkflowRunsQuery,
+    NativeWorkflowCoordinationQueryPort,
     PreviousWorkflowRunsQueryPort,
     WorkflowPollingDelayPort,
     WorkflowPollingObserverPort,
@@ -27,11 +28,21 @@ export class WaitForPreviousWorkflowRunsUseCase implements ParamUseCase<Previous
         private readonly policy: WorkflowPollingPolicy = WORKFLOW_QUEUE_POLICY,
         private readonly clock: WorkflowQueueClockPort = SYSTEM_CLOCK,
         private readonly random: WorkflowPollingRandomPort = SYSTEM_RANDOM,
+        private readonly nativeCoordination?: NativeWorkflowCoordinationQueryPort,
     ) {}
 
     async invoke(query: PreviousWorkflowRunsQuery): Promise<void> {
         const deadlineAtMilliseconds = this.clock.nowMilliseconds() + this.policy.maximumQueueWaitMilliseconds;
         let pollIndex = 0;
+
+        if (this.nativeCoordination && this.clock.nowMilliseconds() < deadlineAtMilliseconds) {
+            const coordinated = await this.nativeCoordination.isCoordinated(query, { deadlineAtMilliseconds });
+            if (this.clock.nowMilliseconds() >= deadlineAtMilliseconds) throw queueTimeoutError();
+            if (coordinated) {
+                this.observerPort.nativeCoordinationVerified?.();
+                return;
+            }
+        }
 
         while (true) {
             if (this.clock.nowMilliseconds() >= deadlineAtMilliseconds) {

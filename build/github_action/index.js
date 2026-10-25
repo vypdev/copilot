@@ -36807,10 +36807,12 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, c
     (0, logger_1.logInfo)('GitHub Action: starting main run.');
     (0, logger_1.logDebugInfo)(`Event: ${execution.eventName}, actor: ${execution.actor}, repo: ${repository.owner}/${repository.repo}, debug: ${execution.debug}`);
     if (process.env.GITHUB_ACTIONS === 'true' && !execution.singleAction.isPublishIssueCommentAction) {
-        // Every GitHub workflow invocation queues before setup or route work so
-        // executions of the same workflow file cannot overlap mutations. A
-        // failure notification must remain runnable when that queue gate fails.
-        await (0, main_run_lifecycle_1.waitForPreviousWorkflowRuns)(execution.tokens.token, repository);
+        // Verify native resource/lane coordination or retain the predecessor
+        // fence before setup. Failure notifications must remain runnable.
+        await (0, main_run_lifecycle_1.waitForPreviousWorkflowRuns)(execution.tokens.token, repository, {
+            isSingleAction: execution.isSingleAction,
+            pullRequestNumber: execution.inputs?.pull_request?.number,
+        });
     }
     const setupExecution = (0, execution_setup_composition_root_1.createSetupExecutionUseCase)(latestTagQueryPort, {
         owner: repository.owner,
@@ -38253,19 +38255,29 @@ class WorkflowQueueFailureError extends Error {
     }
 }
 exports.WorkflowQueueFailureError = WorkflowQueueFailureError;
-function buildPreviousWorkflowRunsQuery(repository) {
+function buildPreviousWorkflowRunsQuery(repository, event) {
     const workflowIdentifier = (0, workflow_context_1.resolveWorkflowIdentifier)(process.env.GITHUB_WORKFLOW_REF);
     const query = {
         owner: repository.owner,
         repository: repository.repo,
-        currentRunId: Number.parseInt(process.env.GITHUB_RUN_ID ?? '', 10),
+        currentRunId: Number(process.env.GITHUB_RUN_ID ?? Number.NaN),
         ...(workflowIdentifier ? { workflowIdentifier } : {}),
+        ...(event && !event.isSingleAction && process.env.GITHUB_WORKFLOW_SHA && process.env.GITHUB_JOB ? {
+            nativeCoordination: Object.freeze({
+                workflowRef: process.env.GITHUB_WORKFLOW_REF ?? '',
+                workflowRevision: process.env.GITHUB_WORKFLOW_SHA,
+                jobId: process.env.GITHUB_JOB,
+                eventName: process.env.GITHUB_EVENT_NAME ?? '',
+                ref: process.env.GITHUB_REF,
+                pullRequestNumber: event.pullRequestNumber,
+            }),
+        } : {}),
     };
     return query;
 }
-async function waitForPreviousWorkflowRuns(token, repository) {
-    const query = buildPreviousWorkflowRunsQuery(repository);
-    if (process.env.GITHUB_ACTIONS === 'true' && !Number.isSafeInteger(query.currentRunId)) {
+async function waitForPreviousWorkflowRuns(token, repository, event) {
+    const query = buildPreviousWorkflowRunsQuery(repository, event);
+    if (process.env.GITHUB_ACTIONS === 'true' && (!Number.isSafeInteger(query.currentRunId) || query.currentRunId <= 0)) {
         throw new Error('GitHub workflow identity is unavailable; refusing to bypass sequential execution.');
     }
     if (process.env.GITHUB_ACTIONS === 'true' && !query.workflowIdentifier) {
@@ -46206,6 +46218,60 @@ function boundedMergeQueueDiagnostic(value) {
         .replace(/::/gu, '﹕﹕')
         .replace(/@/gu, '@\u200b')
         .slice(0, 500);
+}
+
+
+/***/ }),
+
+/***/ 70998:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.expectedNativeWorkflowGroup = expectedNativeWorkflowGroup;
+exports.hasNativeWorkflowCoordination = hasNativeWorkflowCoordination;
+const PUSH_GROUP = 'copilot-push-${{ github.repository }}-${{ github.ref_name }}';
+const PR_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.number }}';
+/** Closed recognition of the installed contract, without evaluating expressions. */
+function expectedNativeWorkflowGroup(query) {
+    const native = query.nativeCoordination;
+    if (!native || !Number.isSafeInteger(query.currentRunId) || query.currentRunId <= 0
+        || !/^[\w.-]+\.ya?ml$/u.test(query.workflowIdentifier ?? '')
+        || !native.workflowRef.startsWith(`${query.owner}/${query.repository}/.github/workflows/${query.workflowIdentifier}@`)
+        || native.workflowRef.endsWith('@')
+        || !/^[a-f\d]{40}$/iu.test(native.workflowRevision)
+        || !/^[a-zA-Z_][\w-]*$/u.test(native.jobId))
+        return undefined;
+    if (native.eventName === 'push' && native.ref?.startsWith('refs/heads/')
+        && native.ref.length > 'refs/heads/'.length)
+        return PUSH_GROUP;
+    const pullRequestNumber = native.pullRequestNumber;
+    if (typeof pullRequestNumber !== 'number' || !Number.isSafeInteger(pullRequestNumber) || pullRequestNumber <= 0)
+        return undefined;
+    if (native.eventName === 'pull_request')
+        return `${PR_GROUP}-analysis`;
+    if (native.eventName === 'pull_request_review')
+        return `${PR_GROUP}-review-state`;
+    return undefined;
+}
+function hasNativeWorkflowCoordination(workflow, jobId, expectedGroup) {
+    const definition = record(workflow);
+    const jobs = record(definition?.jobs);
+    const job = record(jobs?.[jobId]);
+    const concurrency = record(job?.concurrency);
+    // Custom/reusable/workflow-level contracts retain conservative polling.
+    // A single direct job also avoids confusing a reusable callee's job ID
+    // with a different protected job in its caller's workflow context.
+    return definition?.concurrency === undefined && jobs !== undefined && Object.keys(jobs).length === 1
+        && Array.isArray(job?.steps)
+        && job?.uses === undefined && concurrency?.group === expectedGroup
+        && concurrency?.['cancel-in-progress'] === true
+        && (concurrency.queue === undefined || concurrency.queue === 'single');
+}
+function record(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value)
+        ? value : undefined;
 }
 
 
@@ -69055,18 +69121,28 @@ const application_error_1 = __nccwpck_require__(75999);
 const SYSTEM_CLOCK = { nowMilliseconds: () => Date.now() };
 const SYSTEM_RANDOM = { next: () => Math.random() };
 class WaitForPreviousWorkflowRunsUseCase {
-    constructor(queryPort, delayPort, observerPort, policy = workflow_queue_policy_1.WORKFLOW_QUEUE_POLICY, clock = SYSTEM_CLOCK, random = SYSTEM_RANDOM) {
+    constructor(queryPort, delayPort, observerPort, policy = workflow_queue_policy_1.WORKFLOW_QUEUE_POLICY, clock = SYSTEM_CLOCK, random = SYSTEM_RANDOM, nativeCoordination) {
         this.queryPort = queryPort;
         this.delayPort = delayPort;
         this.observerPort = observerPort;
         this.policy = policy;
         this.clock = clock;
         this.random = random;
+        this.nativeCoordination = nativeCoordination;
         this.taskId = 'WaitForPreviousWorkflowRunsUseCase';
     }
     async invoke(query) {
         const deadlineAtMilliseconds = this.clock.nowMilliseconds() + this.policy.maximumQueueWaitMilliseconds;
         let pollIndex = 0;
+        if (this.nativeCoordination && this.clock.nowMilliseconds() < deadlineAtMilliseconds) {
+            const coordinated = await this.nativeCoordination.isCoordinated(query, { deadlineAtMilliseconds });
+            if (this.clock.nowMilliseconds() >= deadlineAtMilliseconds)
+                throw queueTimeoutError();
+            if (coordinated) {
+                this.observerPort.nativeCoordinationVerified?.();
+                return;
+            }
+        }
         while (true) {
             if (this.clock.nowMilliseconds() >= deadlineAtMilliseconds) {
                 throw queueTimeoutError();
@@ -80099,6 +80175,55 @@ function isActivePreviousRun(run, query) {
 
 /***/ }),
 
+/***/ 74039:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.NativeWorkflowCoordinationRepository = void 0;
+const js_yaml_1 = __nccwpck_require__(783);
+const native_workflow_coordination_policy_1 = __nccwpck_require__(70998);
+const workflow_runs_retry_1 = __nccwpck_require__(86434);
+const MAX_WORKFLOW_BYTES = 256 * 1024;
+/** Reads the workflow GitHub executed, never the possibly modified checkout. */
+class NativeWorkflowCoordinationRepository {
+    constructor(client, retry) {
+        this.client = client;
+        this.retry = retry;
+    }
+    async isCoordinated(query, context) {
+        const group = (0, native_workflow_coordination_policy_1.expectedNativeWorkflowGroup)(query);
+        const native = query.nativeCoordination;
+        if (!group || !native)
+            return false;
+        const response = await (0, workflow_runs_retry_1.withWorkflowRunsRetry)(() => this.client.rest.repos.getContent({
+            owner: query.owner,
+            repo: query.repository,
+            path: `.github/workflows/${query.workflowIdentifier}`,
+            ref: native.workflowRevision,
+        }), { ...this.retry, policy: this.retry.policy ?? workflow_runs_retry_1.WORKFLOW_RUNS_RETRY_POLICY,
+            deadlineAtMilliseconds: context.deadlineAtMilliseconds });
+        const file = response.data;
+        if (!file || Array.isArray(file) || file.type !== 'file' || file.encoding !== 'base64'
+            || typeof file.content !== 'string' || file.content.length > MAX_WORKFLOW_BYTES * 2) {
+            throw new Error('Executing workflow content is unavailable.');
+        }
+        const encoded = file.content.replace(/\s/gu, '');
+        const bytes = Buffer.from(encoded, 'base64');
+        if (bytes.toString('base64') !== encoded)
+            throw new Error('Executing workflow encoding is invalid.');
+        if (bytes.length > MAX_WORKFLOW_BYTES)
+            throw new Error('Executing workflow exceeds the inspection limit.');
+        const workflow = (0, js_yaml_1.load)(bytes.toString('utf8'), { schema: js_yaml_1.JSON_SCHEMA });
+        return (0, native_workflow_coordination_policy_1.hasNativeWorkflowCoordination)(workflow, native.jobId, group);
+    }
+}
+exports.NativeWorkflowCoordinationRepository = NativeWorkflowCoordinationRepository;
+
+
+/***/ }),
+
 /***/ 29509:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -88044,12 +88169,17 @@ const timer_workflow_polling_delay_adapter_1 = __nccwpck_require__(10339);
 const logger_workflow_polling_observer_adapter_1 = __nccwpck_require__(52883);
 const system_workflow_queue_clock_adapter_1 = __nccwpck_require__(49664);
 const system_workflow_polling_random_adapter_1 = __nccwpck_require__(32679);
-const github_workflow_client_factory_1 = __nccwpck_require__(29839);
+const native_workflow_coordination_repository_1 = __nccwpck_require__(74039);
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
 function createWaitForPreviousWorkflowRunsUseCase(token) {
-    const client = (0, github_workflow_client_factory_1.createWorkflowRunsClient)().getClient(token);
+    const client = (0, octokit_client_resolver_1.getOctokitClient)(token);
     const delayPort = new timer_workflow_polling_delay_adapter_1.TimerWorkflowPollingDelayAdapter();
     const observerPort = new logger_workflow_polling_observer_adapter_1.LoggerWorkflowPollingObserverAdapter();
-    return new wait_for_previous_workflow_runs_use_case_1.WaitForPreviousWorkflowRunsUseCase(new active_previous_workflow_runs_repository_1.ActivePreviousWorkflowRunsRepository(client, delayPort, undefined, new system_workflow_queue_clock_adapter_1.SystemWorkflowQueueClockAdapter(), new system_workflow_polling_random_adapter_1.SystemWorkflowPollingRandomAdapter(), observerPort), delayPort, observerPort);
+    const clock = new system_workflow_queue_clock_adapter_1.SystemWorkflowQueueClockAdapter();
+    const random = new system_workflow_polling_random_adapter_1.SystemWorkflowPollingRandomAdapter();
+    return new wait_for_previous_workflow_runs_use_case_1.WaitForPreviousWorkflowRunsUseCase(new active_previous_workflow_runs_repository_1.ActivePreviousWorkflowRunsRepository(client, delayPort, undefined, clock, random, observerPort), delayPort, observerPort, undefined, clock, random, new native_workflow_coordination_repository_1.NativeWorkflowCoordinationRepository(client, {
+        delayPort, clock, random, observer: observerPort,
+    }));
 }
 
 
@@ -89058,6 +89188,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LoggerWorkflowPollingObserverAdapter = void 0;
 const logger_1 = __nccwpck_require__(91151);
 class LoggerWorkflowPollingObserverAdapter {
+    nativeCoordinationVerified() {
+        (0, logger_1.logInfo)('Native workflow resource/lane coordination verified; continuing before setup.');
+    }
     noActivePreviousRuns() {
         (0, logger_1.logDebugInfo)('✅ No previous runs active. Continuing...');
     }
