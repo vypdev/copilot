@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { ROOT_PACKAGE_FILES, validatePackageContract } from '../../tooling/package_contract.mts';
+import vitestConfig from '../../vitest.config.mts';
 
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const require = createRequire(import.meta.url);
@@ -30,6 +31,13 @@ it('bexh1-foundation-C28 parses root commands and CI gates; contributor guidance
     expect(docs).toContain('development-build-only');
     expect(docs).toContain('18.2');
     expect(read('docs.json')).toContain('/development/browser-extension');
+    const workflow = yaml.load(read('.github/workflows/ci_check.yml')) as {
+        jobs: { 'ci-check': { steps: { name?: string; with?: { files?: string } }[] } };
+    };
+    const upload = workflow.jobs['ci-check'].steps.find(step => step.name === 'Upload coverage to Codecov');
+    expect(upload?.with?.files?.split(',')).toEqual(['./coverage/lcov.info', './extension/coverage/lcov.info']);
+    expect(vitestConfig.test?.coverage).toMatchObject({ allowExternal: true,
+        reporter: expect.arrayContaining([['lcovonly', { projectRoot: root }]]) });
 });
 it('rejects package publication drift and verifies meaningful missing orchestration/CI failures', () => {
     for (const mutate of [

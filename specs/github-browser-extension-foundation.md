@@ -450,6 +450,8 @@ The H1 suite contains 47 distinct automated tests across 8 files, including ever
 
 The contributor guide and private package README describe the checked commands, receipt format, permission rationale and interrupted-build recovery. The prospective manifest-v1 workflow/capability patterns now require a true end of string: JavaScript dollar anchors alone also match before a terminal newline. Differential schema/value tests reject that ambiguity, sparse malformed arrays and unsafe identities; valid wire values retain their meaning. This is not raw duplicate-key parsing or Action producer implementation.
 
+CI publishes the root Jest LCOV report together with extension LCOV coverage, using repository-relative source paths for extension and shared-root modules. This supplements the unchanged root thresholds with independently enforced per-file extension/shared-contract budgets; neither suite hides the other's failures.
+
 Executable implementation traceability: the four requirements map to the literal named tests in the contract/integration suites; additional tests cover replacement rollback, locks, source/artifact boundaries, commands and stale/nonreproducible receipts. The complete-product 803-case floor remains unchanged. Runtime layers with no H1 behavior remain future responsibilities rather than placeholder modules. Root npm package contents are inspected by the real pack dry-run as well as structural checks.
 
 ## 20. References and decisions
