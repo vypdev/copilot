@@ -3,16 +3,22 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": "24.x" },
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "build": "node tooling/cli.mts build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --coverage",
-    "validate": "node tooling/cli.mts validate"
+    "validate": "node tooling/cli.mts validate",
+    "test:browsers": "node tooling/browser_cli.mts",
+    "build:safari": "node tooling/safari_cli.mts"
   },
   "devDependencies": {
+    "@types/jsdom": "28.0.3",
     "@types/node": "^22.9.1",
     "@vitest/coverage-v8": "5.0.5",
+    "jsdom": "29.1.1",
     "typescript": "5.9.3",
     "vite": "8.3.1",
     "vitest": "5.0.5"

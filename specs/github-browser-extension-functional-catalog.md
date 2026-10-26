@@ -442,3 +442,14 @@ These are work waves, not alternative product scopes or reduced release tiers.
 - [GitHub notifications](https://docs.github.com/en/rest/activity/notifications) documents classic-token-only endpoints; native notification interaction is the chosen complete supported experience.
 
 Primary sources inspected 2026-10-25; reverify provider/API/store details at implementation and release. All behavior, architecture, selectors, assets and text are independently authored. The product documentation contains no external extension branding or copied functional descriptions.
+
+
+### H2 runtime evidence boundary
+
+[H2 runtime](github-browser-extension-runtime.md) now implements shared lifecycle,
+versioned nonsecret settings, protected read sessions, a closed GET-only gateway,
+activity/epoch fencing and native-browser harnesses. Its engineering page/panel
+and tests do not complete inventory functions, the 96 full core scenarios or the
+803-case product floor. The implementation PR records exact browser/source/
+container receipts and failures separately; no compatibility, signed distribution
+or complete local-center/setup availability is inferred from build success.

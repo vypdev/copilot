@@ -81,7 +81,9 @@
     "build:extension": "pnpm --dir extension run build",
     "typecheck:extension": "pnpm --dir extension run typecheck",
     "test:extension": "pnpm --dir extension run test",
-    "validate:extension": "pnpm --dir extension run validate"
+    "validate:extension": "pnpm --dir extension run validate",
+    "test:browsers:extension": "pnpm --dir extension run test:browsers",
+    "build:safari:extension": "pnpm --dir extension run build:safari"
   },
   "keywords": [],
   "author": "Efra Espada",

@@ -6,10 +6,14 @@ export const DEVELOPMENT_VERSION = '0.1.0';
 export function targetManifest(target: BrowserTarget) {
     const base = {
         manifest_version: 3,
-        name: 'Copilot Browser — Development Foundation',
-        description: 'Private engineering foundation. No GitHub features are activated.',
+        name: 'Copilot Browser — Development Runtime',
+        description: 'Private runtime and session engineering preview. Complete product in development.',
         version: DEVELOPMENT_VERSION,
         permissions: ['storage'],
+        host_permissions: ['https://github.com/*'],
+        optional_host_permissions: ['https://api.github.com/*'],
+        action: { default_title: 'Copilot runtime settings' },
+        options_ui: { page: 'runtime.html', open_in_tab: true },
         incognito: 'not_allowed',
         content_security_policy: { extension_pages: "script-src 'self'; object-src 'none'; base-uri 'none'" },
         content_scripts: [{ matches: ['https://github.com/*'], js: ['content.js'],

@@ -2719,19 +2719,21 @@
       "id": "github-browser-extension",
       "title": "Complete GitHub productivity extension and integrated Copilot setup",
       "status": "proposed",
-      "scope": "Complete proposed desktop product: 150 required functions, local center, full compatible Action integration, shared setup and 803 distinct product cases; H1 adds inert engineering foundations with build/test evidence, while product features and actual browser loading remain future gates",
+      "scope": "Complete proposed desktop product: 150 required functions, local center, Action integration, shared setup and 803 product cases. H1 establishes builds; H2 implements shared runtime/session/settings/GET services and exact native-browser harnesses. Full product/core acceptance and signed delivery remain separate gates.",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-25",
+      "lastVerified": "2026-10-26",
       "specs": [
         "specs/github-browser-extension.md",
         "specs/github-browser-extension-action-integration.md",
         "specs/github-browser-extension-platforms-and-delivery.md",
         "specs/github-browser-extension-functional-catalog.md",
         "specs/github-browser-extension-control-center-and-setup.md",
-        "specs/github-browser-extension-foundation.md"
+        "specs/github-browser-extension-foundation.md",
+        "specs/github-browser-extension-runtime.md"
       ],
       "workflows": [
-        ".github/workflows/ci_check.yml"
+        ".github/workflows/ci_check.yml",
+        ".github/workflows/setup_platform_smoke.yml"
       ],
       "entrypoints": [
         "src/actions/github_action.ts",
@@ -2757,7 +2759,44 @@
         "extension/tooling/gate_error.mts",
         "extension/tooling/package_contract.mts",
         "extension/tooling/source_graph.mts",
-        "extension/tooling/validation.mts"
+        "extension/tooling/validation.mts",
+        "extension/src/adapters/browser/api.ts",
+        "extension/src/adapters/browser/cancellation.ts",
+        "extension/src/adapters/browser/resource_scope.ts",
+        "extension/src/adapters/browser/storage.ts",
+        "extension/src/adapters/dom/runtime_panel.ts",
+        "extension/src/adapters/github/get_reader.ts",
+        "extension/src/application/lifecycle.ts",
+        "extension/src/application/message_gateway.ts",
+        "extension/src/application/protected_session.ts",
+        "extension/src/application/read_ports.ts",
+        "extension/src/application/read_scheduler.ts",
+        "extension/src/application/runtime_ports.ts",
+        "extension/src/application/settings_repository.ts",
+        "extension/src/domain/feature_defaults.ts",
+        "extension/src/domain/page.ts",
+        "extension/src/domain/protocol.ts",
+        "extension/src/domain/read.ts",
+        "extension/src/domain/scheduling.ts",
+        "extension/src/domain/session.ts",
+        "extension/src/domain/settings.ts",
+        "extension/src/domain/value.ts",
+        "extension/src/infrastructure/background_entry.ts",
+        "extension/src/infrastructure/background_runtime.ts",
+        "extension/src/infrastructure/build_identity.ts",
+        "extension/src/infrastructure/content_entry.ts",
+        "extension/src/infrastructure/content_runtime.ts",
+        "extension/src/infrastructure/options_runtime.ts",
+        "extension/src/infrastructure/runtime_entry.ts",
+        "extension/src/presentation/runtime_copy.ts",
+        "extension/tooling/browser_cli.mts",
+        "extension/tooling/loaded_manifest.mts",
+        "extension/tooling/runtime_harness.mts",
+        "extension/tooling/safari_cli.mts",
+        "extension/tooling/safari_container.mts",
+        "extension/tooling/static_assets.mts",
+        "extension/tooling/webdriver.mts",
+        "extension/src/application/shared_read_cancellation.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -2770,7 +2809,28 @@
         "extension/test/integration/package.test.ts",
         "extension/test/integration/recovery.test.ts",
         "src/domain/__tests__/browser_extension_contract.test.ts",
-        "extension/test/integration/receipt.test.ts"
+        "extension/test/integration/receipt.test.ts",
+        "extension/test/contracts/loaded_manifest.test.ts",
+        "extension/test/contracts/runtime_browser.test.ts",
+        "extension/test/contracts/runtime_navigation.test.ts",
+        "extension/test/contracts/runtime_entries.test.ts",
+        "extension/test/contracts/runtime_protocol.test.ts",
+        "extension/test/contracts/runtime_reads.test.ts",
+        "extension/test/contracts/runtime_scheduling.test.ts",
+        "extension/test/contracts/runtime_settings.test.ts",
+        "extension/test/integration/browser-harness.test.ts",
+        "extension/test/integration/gateway.test.ts",
+        "extension/test/integration/runtime.test.ts",
+        "extension/test/integration/runtime_dom.test.ts",
+        "extension/test/integration/runtime_options.test.ts",
+        "extension/test/integration/safari-container.test.ts",
+        "extension/test/integration/scheduler.test.ts",
+        "extension/test/integration/session.test.ts",
+        "extension/test/integration/settings_repository.test.ts",
+        "extension/test/integration/webdriver.test.ts",
+        "extension/test/integration/session_races.test.ts",
+        "extension/test/integration/shared_reads.test.ts",
+        "extension/test/integration/runtime_settings_navigation.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",
@@ -2799,7 +2859,8 @@
         "specs/browser-extension/features/CENTER.v1.json",
         "specs/browser-extension/features/SETUP.v1.json",
         "docs/development/browser-extension.mdx",
-        "extension/README.md"
+        "extension/README.md",
+        "docs/browser-extension/runtime.mdx"
       ]
     }
   ]

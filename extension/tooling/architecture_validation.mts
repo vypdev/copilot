@@ -8,6 +8,7 @@ const DIRECTIONS: Record<string, readonly string[]> = {
     presentation: ['presentation', 'domain'], adapters: ['adapters', 'application', 'domain'],
     infrastructure: ['infrastructure', 'adapters', 'application', 'presentation', 'domain'],
 };
+const NETWORK = new Set(['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'sendBeacon']);
 const AUTHORITY = new Set(['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'chrome', 'browser',
     'localStorage', 'sessionStorage', 'sendBeacon', 'credentials', 'authorization', 'token']);
 
@@ -15,6 +16,7 @@ export function validateArchitecture(root: string, sources: Sources): void {
     const errors: string[] = [];
     const graph = new Map<string, string[]>();
     const { program, resolve } = sourceProgram(root, sources);
+    const checker = program.getTypeChecker();
     const report = (file: string, rule: string) => errors.push(`${file}: ${rule}`);
     for (const diagnostic of program.getSyntacticDiagnostics()) {
         report(path.relative(root, diagnostic.file!.fileName), `syntax TS${diagnostic.code}`);
@@ -39,6 +41,7 @@ export function validateArchitecture(root: string, sources: Sources): void {
         }
         graph.set(name, dependencies);
         function visit(node: ts.Node): void {
+            if (hasNetworkAuthority(node, checker) && name !== 'extension/src/adapters/github/get_reader.ts') report(name, 'network-authority');
             if (ts.isIdentifier(node)) {
                 const parent = node.parent;
                 const propertyName = (ts.isPropertyAssignment(parent) || ts.isPropertySignature(parent)
@@ -71,4 +74,15 @@ export function validateArchitecture(root: string, sources: Sources): void {
     for (const name of graph.keys()) walk(name);
     if (errors.length) throw new FoundationGateError([...new Set(errors)].sort().slice(0, 40).join('\n')
         .replace(/\p{Cc}/gu, character => character === '\n' ? character : '?'));
+}
+
+
+/** Inspect capability acquisition, including computed aliases, without treating ordinary payload strings as code. */
+function hasNetworkAuthority(node: ts.Node, checker: ts.TypeChecker): boolean {
+    if (ts.isIdentifier(node)) return NETWORK.has(node.text);
+    const expression = ts.isElementAccessExpression(node) ? node.argumentExpression
+        : ts.isComputedPropertyName(node) ? node.expression : undefined;
+    if (!expression) return false;
+    const type = checker.getTypeAtLocation(expression);
+    return (type.isUnion() ? type.types : [type]).some(member => member.isStringLiteral() && NETWORK.has(member.value));
 }

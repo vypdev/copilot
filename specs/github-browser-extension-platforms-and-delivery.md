@@ -672,3 +672,14 @@ Chosen: full 150-function catalog, 803-case minimum, complete packaged options a
 Alarm adapters follow [Mozilla alarms](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/alarms) and [Chrome alarms](https://developer.chrome.com/docs/extensions/reference/api/alarms), inspected 2026-10-25. Do not assume Chrome 150 persistAcrossSessions support at the Chrome 140 floor or on other engines; recreate only the user-enabled logical alarm after validating safe session state.
 
 The [Mozilla notifications API](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/notifications) and its [browser compatibility data](https://github.com/mdn/browser-compat-data/blob/main/webextensions/api/notifications.json), inspected 2026-10-25, document no Safari notifications support. The target channel matrix above is normative; browser packaging and acceptance must verify it against the shipped versions.
+
+
+### H2 runtime evidence boundary
+
+[H2 runtime](github-browser-extension-runtime.md) now implements shared lifecycle,
+versioned nonsecret settings, protected read sessions, a closed GET-only gateway,
+activity/epoch fencing and native-browser harnesses. Its engineering page/panel
+and tests do not complete inventory functions, the 96 full core scenarios or the
+803-case product floor. The implementation PR records exact browser/source/
+container receipts and failures separately; no compatibility, signed distribution
+or complete local-center/setup availability is inferred from build success.

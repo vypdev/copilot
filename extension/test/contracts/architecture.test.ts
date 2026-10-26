@@ -5,6 +5,8 @@ import { validateArchitecture } from '../../tooling/architecture_validation.mts'
 import { targetManifest } from '../../src/infrastructure/target_manifests.ts';
 import { validateTarget } from '../../tooling/artifact_validation.mts';
 
+import { RUNTIME_HTML } from '../../tooling/static_assets.mts';
+
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 function rejects(file: string, source: string, rule: string): void {
     const graph = inwardGraph(); graph.set(file, source);
@@ -50,7 +52,7 @@ it('bexh1-foundation-C21 rejects cycles, unresolved imports, dynamic/type import
 });
 it('bexh1-foundation-C22 rejects executable bundles, duplicate manifests, undeclared assets and permission drift', () => {
     const assets = () => new Map([['manifest.json', `${JSON.stringify(targetManifest('chrome'), null, 2)}\n`],
-        ['background.js', ''], ['content.js', '(() => { const x = 1; return x; })();']]);
+        ['runtime.html', RUNTIME_HTML], ['runtime.js', ''], ['background.js', ''], ['content.js', '(() => { const x = 1; return x; })();']]);
     expect(() => validateTarget('chrome', assets())).not.toThrow();
     for (const code of ['eval("1")', 'new Function("return 1")', 'require("node:fs")',
         'import("https://evil.invalid/code.js")', 'import "./remote.js";', 'export * from "./remote.js";', 'fetch("/")']) {
@@ -92,4 +94,34 @@ it('keeps diagnostics from a forbidden imported adapter separate from pure-domai
         expect((error as Error).message).toContain('dependency-direction');
         expect((error as Error).message).not.toContain('broken.ts: pure-environment');
     }
+});
+
+
+it('rejects computed network authority in a non-reader adapter before packaging', () => {
+    rejects('extension/src/adapters/browser/escape.ts', "export const escaped = globalThis['fetch'];", 'network-authority');
+});
+
+
+it.each(['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'sendBeacon'])('rejects bracket-acquired %s even when the result or key is aliased', capability => {
+    for (const source of [
+        `export const escaped = globalThis['${capability}'];`,
+        `const request = globalThis['${capability}']; export { request };`,
+        `const key = '${capability}'; export const escaped = globalThis[key];`,
+    ]) rejects('extension/src/adapters/browser/escape.ts', source, 'network-authority');
+});
+it('rejects optional computed access, computed destructuring and union keys containing network authority', () => {
+    for (const source of [
+        "export const escaped = globalThis?.['fetch'];",
+        "const { ['fetch']: request } = globalThis; export { request };",
+        "export const escape = (key: 'fetch' | 'safe' | 7) => globalThis[key];",
+    ]) rejects('extension/src/infrastructure/escape.ts', source, 'network-authority');
+});
+it('keeps network access in the designated reader and unrelated computed data/payloads valid', () => {
+    const graph = inwardGraph();
+    graph.set('extension/src/adapters/github/get_reader.ts', "export const read = globalThis['fetch'];");
+    graph.set('extension/src/infrastructure/computed.ts', `const values = { safe: 'fetch', 7: 'XMLHttpRequest' };
+        export const read = (key: 'safe' | 7) => values[key];
+        export const safe = values['safe']; export const numeric = values[7];
+        export const dynamic = (key: string, values: Record<string, string>) => values[key];`);
+    expect(() => validateArchitecture(root, graph)).not.toThrow();
 });
