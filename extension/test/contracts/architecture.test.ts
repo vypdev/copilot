@@ -95,3 +95,33 @@ it('keeps diagnostics from a forbidden imported adapter separate from pure-domai
         expect((error as Error).message).not.toContain('broken.ts: pure-environment');
     }
 });
+
+
+it('rejects computed network authority in a non-reader adapter before packaging', () => {
+    rejects('extension/src/adapters/browser/escape.ts', "export const escaped = globalThis['fetch'];", 'network-authority');
+});
+
+
+it.each(['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'sendBeacon'])('rejects bracket-acquired %s even when the result or key is aliased', capability => {
+    for (const source of [
+        `export const escaped = globalThis['${capability}'];`,
+        `const request = globalThis['${capability}']; export { request };`,
+        `const key = '${capability}'; export const escaped = globalThis[key];`,
+    ]) rejects('extension/src/adapters/browser/escape.ts', source, 'network-authority');
+});
+it('rejects optional computed access, computed destructuring and union keys containing network authority', () => {
+    for (const source of [
+        "export const escaped = globalThis?.['fetch'];",
+        "const { ['fetch']: request } = globalThis; export { request };",
+        "export const escape = (key: 'fetch' | 'safe' | 7) => globalThis[key];",
+    ]) rejects('extension/src/infrastructure/escape.ts', source, 'network-authority');
+});
+it('keeps network access in the designated reader and unrelated computed data/payloads valid', () => {
+    const graph = inwardGraph();
+    graph.set('extension/src/adapters/github/get_reader.ts', "export const read = globalThis['fetch'];");
+    graph.set('extension/src/infrastructure/computed.ts', `const values = { safe: 'fetch', 7: 'XMLHttpRequest' };
+        export const read = (key: 'safe' | 7) => values[key];
+        export const safe = values['safe']; export const numeric = values[7];
+        export const dynamic = (key: string, values: Record<string, string>) => values[key];`);
+    expect(() => validateArchitecture(root, graph)).not.toThrow();
+});

@@ -192,6 +192,15 @@ Text equivalent: entrypoints call application use cases; application depends on 
 
 ### 8.3 Executable architecture constraints
 
+Network-authority checks inspect capability acquisition, including computed
+string properties, constant-key aliases, optional element access, computed
+binding names and literal-union keys containing an authority name. Assigning
+such an acquisition to another variable does not bypass the gate. Ordinary
+payload strings and unrelated indexed data remain data. The designated
+`adapters/github/get_reader.ts` exemption is unchanged; no public configuration
+can add another network-authorized module. These source checks complement the
+closed runtime ports and permission model.
+
 The existing AST/import and artifact/hash/reproducibility gates remain. Add checks that pure domain modules import no browser/framework/provider modules; application imports only domain and semantic ports; reader adapters reject non-GET methods and disallowed redirects; composition is the only browser-global boundary; entrypoints do not duplicate use-case orchestration; and schemas validate closed typed messages and settings fixtures. Keep new modules at or below 220 lines and Svelte components at or below 90 lines unless a reviewed decomposition exception is recorded.
 
 ## 9. UI/UX and content contract
@@ -545,9 +554,10 @@ permission and retains its native receipt even on failure.
 
 ### Local verification receipt (2026-10-26)
 
-The extension suite currently passes 259 tests in 30 files (56 retained H1
-engineering cases plus 203 H2 cases/regressions). All 38 required H2 case IDs
-appear in the executable suites. The local report covers 1,187/1,187 lines, 1,460/1,460 branches, 1,793/1,793 statements and 289/289 functions. All measured executable coverage is 100%. Per-file executable-line coverage is now enforced at 100% rather
+The extension suite currently passes 267 tests in 30 files (56 retained H1
+engineering cases, 203 H2 cases/regressions, and eight additional architecture
+regressions). All 38 required H2 case IDs
+appear in the executable suites. The local report covers 1,193/1,193 lines, 1,472/1,472 branches, 1,803/1,803 statements and 291/291 functions. All measured executable coverage is 100%. Per-file executable-line coverage is now enforced at 100% rather
 than the prior 95%, with no runtime exclusion or lowered gate. These deterministic
 results are not native-browser proof. Exact-head CI/Codecov and native/human
 browser receipts are recorded in the PR, with every failure left explicit.
@@ -632,3 +642,16 @@ hidden fails a distinct prerequisite assertion; the harness MUST NOT override pa
 visibility or weaken the runtime's hidden-page pause. Orchestration tests cover
 immediate/delayed visibility, an always-hidden fixture and the exact native focus
 selector. This is necessary for Safari's native automation window lifecycle.
+
+
+### Review-derived architecture regression budget
+
+Eight additional executable cases cover the computed network-authority finding
+on PR #719: one exact non-reader bracket-access reproduction; five parameter
+rows for fetch, XMLHttpRequest, WebSocket, EventSource and sendBeacon (each also
+checks function and constant-key aliases); one optional-access/computed-binding/
+union-key case; and one reader-exemption/unrelated-data case. These are extra
+engineering regressions, not a recount of the 38 H2 acceptance IDs or 803 planned
+product cases. They exercise the actual AST gate and require all changed lines
+and newly measured branches covered. Tooling belongs to the build-input digest,
+so the browser receipt campaign must be refreshed after this change.

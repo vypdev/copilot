@@ -181,7 +181,12 @@ GET operations and I6 scheduling. `src/application` owns feature generations,
 atomic settings, protected sessions, per-tab leases and the shared scheduler.
 Browser, scoped DOM and HTTP adapters implement semantic ports. Composition
 registers wake listeners synchronously; views receive no credential. Only the
-GET adapter has network authority. The expanded artifact gate permits browser
+GET adapter has network authority. The AST check also rejects statically named
+network properties acquired through brackets, constant-key aliases, optional
+access, computed destructuring or union keys. Assigning that acquisition to a
+new variable does not exempt it. Ordinary payload strings and unrelated indexed
+data remain valid; there is no configuration override for another reader.
+The expanded artifact gate permits browser
 APIs in their specific bundles while retaining no Node/eval/remote imports,
 exact manifests/assets, canonical receipts and recomputed asset hashes.
 
