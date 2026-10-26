@@ -1403,3 +1403,16 @@ matrix covers en-US/es-ES, en-AU/es-MX, representative dynamic fr-FR/de-DE/ar-SA
 ja-JP, cache reuse and whole-slice fallback if a command descriptor is missing.
 This verifies the protocol and safe presentation, not native linguistic quality
 for every BCP 47 locale. No locale configuration or durable state changes.
+
+
+### Blocked SDD diagnostics — #714 (2026-10-26)
+
+The feature-owned pre-branch failure card resolves SDD copy and shared semantic
+error copy using the existing exact/base/dynamic/fallback protocol. If the two
+required slices disagree on resolved language, the entire card uses reviewed
+English. Code IDs, numeric observations, Markdown and validated runtime links
+are inserted after localization. Raw candidate/validator content is never a
+translation variable. A 16,000-character card bound falls back to reviewed
+English with an explicit note rather than dropping facts. The owning pre-branch
+SDD defines its additional locale matrix and primary acceptance budget; no
+locale configuration or persistence migration is introduced.

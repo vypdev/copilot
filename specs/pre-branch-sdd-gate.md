@@ -3,7 +3,7 @@
 - Status: Implemented — automated verification complete; live provider UX review pending
 - Date: 2026-09-17
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: 2026-10-19 (portable catalog evidence and prerequisite diagnostics, #595)
+- Last verified: 2026-10-26 (actionable blocked preparation and safe diagnostics, #714)
 - Owners: Copilot maintainers
 - Scope: clarify, update, validate, and publish the owning SDD before eligible branch-based work
 - Related issues/PRs: none; local design work; companion SDD `issue-start-and-branch-readiness.md`
@@ -578,7 +578,8 @@ ownership/validation.
 | Native schema length rejection recovery | 9 | Actual findings adapter rejection/repair, exhausted schema repair, foreign path/bound and forged diagnostic rejection, short response rejection, mixed writer/schema failures and typed validator metadata |
 | Canonical numeric table budgets | 20 | Three valid table/owner routes, twelve invalid or misplaced table cases, unsafe integer rejection, positive/zero prose compatibility, immutable owner failure identity, actual findings acceptance and real scratch-worktree owner preservation |
 | Compact generation targets | 2 | Update and companion target size, unchanged hard schema bounds, original resolved requirements and shared two-attempt ceiling |
-| **Total** | **151** | No case counted twice |
+| Blocked preparation and safe diagnostics (#714) | 14 | Five cause/recovery presentations, three primary-publication/idempotency cases, three bounded/privacy/ownership evidence cases and three retry/retention/no-premature-branch cases; locale matrix is additional |
+| **Total** | **165** | No case counted twice |
 
 The Windows adapter fixture MUST inject a destination creation immediately
 before the no-replace operation, assert that the operation fails with the
@@ -1217,15 +1218,16 @@ Pending: validation runs with answers retained. Action required/blocked: after
 the shared repair, a closed category identifies case identities, allocations,
 requirement mappings or paths. Representative content: "SDD publication stopped
 after one automatic repair: per-area allocations disagree with the distinct
-case inventory. Review the draft tables; reconcile each area and the total with
+case inventory. Review the safe validation diagnostics in the issue status card; reconcile each area and the total with
 the enumerated cases. Retry the same issue workflow." Retained state says
 answers and published SDDs remain and no draft was published. Partial push
 success keeps the exact branch/commit for ordinary replay. Complete means the
 consistent draft was published; runtime acceptance remains open. English and
 Spanish messages use the existing impact/action/retained-state order, textual
 headings, mobile/screen-reader behavior and closed sanitized content. Rejected
-Markdown, case IDs, paths and diagnostic text MUST NOT enter repair instructions
-or public messages. There is no additional card, label, credential or setting.
+Markdown, case IDs, paths and raw diagnostic text MUST NOT enter repair instructions
+or public messages. The #714 amendment extends the existing analysis-status
+identity with safe typed facts; it adds no label, credential or setting.
 
 The amendment has a minimum **126 distinct cases**, separate from earlier floors:
 
@@ -1385,3 +1387,160 @@ attempts without writer acceptance. DoD includes these 40 cases, the unchanged
 broader publication suites, type/lint/architecture, specification/documentation
 validation, rebuilt bundles and package checks. The live #694 workflow is a
 separate post-promotion acceptance check.
+
+
+### Blocked preparation and safe validation evidence — #714 (2026-10-26)
+
+**Evidence and scope.** In #702, runs 40220870653, 40220870768 and 40220870888
+rejected inconsistent requirement/case tables after the bounded repair. The
+conversation had only its welcome; the run said no semantic publication intent
+existed and instructed the maintainer to inspect an unpublished draft. This
+amendment fixes publication and safe diagnosis. It does not infer that a
+rejected candidate proves a validator defect, relax consistency checks, repair
+an immutable owner, add draft retries or authorize a branch prematurely.
+
+**Intentional contract.** The gate MUST publish/update one trusted-bot-owned
+analysis-status card when draft/content or operational preparation is blocked.
+Existing closed ownership-analysis failures retain their separately reviewed
+#636 recovery copy and unchanged-replay behavior, using the same upsert seam. This is a feature-owned
+publication through its existing bound comment upsert capability. Its marker
+remains `copilot:sdd-analysis-status:v1` for that exact issue; it is not an SDD
+readiness record. Generic resume publication continues to admit only explicit
+semantic intents. The issue coordinator MUST omit the optional welcome while
+the SDD gate is waiting or blocked, and MUST withhold recommendation, branch
+preparation and deployment until their existing conditions pass.
+
+```mermaid
+flowchart LR
+  A[Existing authorized issue flow] --> B[Immutable owner and answers]
+  B --> C[Draft and strict validation]
+  C -->|eligible failure| D[One shared repair]
+  D -->|rejected| E[Closed numeric diagnostic]
+  E --> F[One owned blocked card]
+  F -->|same issue retry| B
+  C -->|valid| G[Existing branch and publication proof]
+  D -->|valid| G
+  G --> H[Clear prior blocked view]
+```
+
+Text equivalent: existing admission precedes immutable-owner/answer collection.
+The candidate passes strict checks or consumes the one existing repair. A
+terminal rejection produces bounded typed evidence and updates its owned card.
+A retry uses the same issue and retained evidence. Only validated drafts reach
+ordinary Action-owned branch/publication proof; recovery of the separate status
+card cannot establish readiness or undo a verified commit.
+
+**State and UX.** A preparation-blocked card MUST say no new specification or
+branch was published by that preparation attempt, identify the safe cause and
+one next action, preserve answers/published specifications, and provide the
+current run link when trustworthy runtime coordinates exist. Technical details
+include the error code, correlation, closed reason/phase, attempt count and
+available section/data-row/count observations. A missing run link or specific
+table fact is explicitly unavailable. Unknown/provider failures use reviewed
+operational copy; raw errors do not become a supposed ownership diagnosis.
+
+Representative view (illustrative):
+
+> **Specification preparation is blocked**
+>
+> No new specification or branch was published by this preparation attempt.
+>
+> **Impact:** Requirements and case mappings are incomplete or inconsistent.
+>
+> **Action:** Review the safe validation diagnostics below. Clarify requirements
+> or decisions in this issue if needed, then retry this same issue workflow.
+>
+> **Retained state:** Existing answers and published specifications are retained.
+>
+> **Validation diagnostics:** requirement-mapping, validation, two draft attempts;
+> reverse links in section 17, data row 1, expected count 2, observed count 1.
+> The actual card links its workflow run and shows its correlation reference.
+
+A partial publication MUST use different copy: an exact linked branch or commit
+may already exist, publication is unconfirmed, and recovery inspects/reuses that
+same branch. A verified publication remains `published` even if refreshing a
+prior diagnostic card fails; that UI failure is returned separately for ordinary
+reconciliation. A successful replay of verified publication clears the prior
+blocked view without regenerating the SDD. Waiting for answers replaces the old
+failure view with the question-card next action. A stale issue/title/base MUST
+not publish outdated candidate diagnostics. Existing race/freshness checks and
+branch/commit ownership remain in force.
+
+**Architecture and privacy decision.** A new provider artifact is intentionally
+unnecessary: the reviewed evidence is a structured projection, not the candidate
+itself. Domain diagnostics contain only a closed reason, phase and at most
+**eight** facts. Facts contain a closed check ID, section from 0/4/14/15/17
+(0 means unspecified), optional positive data-row ordinal, and optional integer
+expected/observed counts in **0..100,000**. Row ordinals are in 1..100,000.
+Unknown/extra properties, arbitrary text, invalid numbers or oversized lists
+MUST fail closed. The domain error copies/freezes these facts; the application
+maps them to existing semantic recovery IDs and constructs error prose from
+closed reasons. Raw candidate Markdown, requirement/case IDs, areas, paths,
+scenarios, source and validator messages are not diagnostic variables.
+
+Actual table failures supply observations such as missing/duplicate sections,
+wrong table/column counts, absent cells, invalid identities, reserved baseline
+collisions, undefined requirement references, reciprocal-link cardinalities,
+budget disagreement and unverified paths. Only proven facts may be included;
+missing detail stays unavailable. This evidence explains the check and its
+location/count without copying potentially secret table cells or content.
+
+The application use case coordinates failure/recovered publication through
+existing repository-bound comment ports. The renderer and locale catalogs own
+prose/Markdown; domain code imports no I/O, provider or presentation capability.
+Infrastructure supplies optional run coordinates from the current runtime plus
+the bound repository, never from a draft or an error message. HTTPS origin,
+repository components and positive run ID are validated before forming a URL;
+credentials, path/query/fragment injection and invalid coordinates are withheld.
+A language port resolves reviewed copy only and receives no candidate content.
+Existing dependency, cycle, type, exact reviewed publication-mutation inventory
+and composition suites enforce these cuts. The gate retains two create and two
+update call sites; ownership/preparation diagnostics share the same upsert.
+
+**Locale, bounds, access and retention.** EN/ES, compatible base catalogs,
+validated arbitrary BCP 47 localization and whole-artifact English fallback are
+supported. Required SDD/error slices MUST resolve to the same language; a mismatch
+falls back for the complete card. The rendered diagnostic card is bounded to
+**16,000 characters**. Oversized localized copy falls back to reviewed English
+with an explicit technical note, preserving every validated fact rather than
+truncating evidence or requirements.
+
+The card inherits issue/repository visibility and existing trusted Action
+comment-write authority. A human-authored marker is never updated as owned.
+No actions-write scope, artifact upload/download token, signed URL, private
+candidate store or elevated permission is added. The current card is replaced
+on retry/recovery; GitHub may retain safe prior comment revisions. Diagnostic
+facts have no separately expiring artifact. Workflow links follow normal Action
+log retention; an expired run is recovered by retrying the same issue for fresh
+bounded evidence. Raw runtime debug retention remains outside this diagnostic
+feature and is not newly enabled or exposed. There is no configuration, storage
+schema migration, new public command or automatic background regeneration.
+Rollback restores the former visibility gap without changing retained answers,
+owner documents or publication proof.
+
+**Acceptance, documentation and risk budget.** The fourteen minimum distinct
+cases in section 14 are new: five cause/recovery behavior groups (identities,
+budgets, reciprocal mappings, repository paths and size/format); three primary
+outcome/replay/owned-marker cases; three evidence privacy/bound/access cases;
+three same-issue retry, retained-answer/owner and no-premature-branch cases.
+Additional cases cover stale sources, unavailable diagnostics, UI publication
+failure, partial commit recovery and verified-publication preservation. The
+locale matrix is additional: en-US/es-ES, en-AU/es-MX, representative dynamic
+fr-FR/de-DE/ar-SA/ja-JP, cache reuse, invalid-slice fallback and oversized-copy
+fallback. These protocol fixtures do not claim human linguistic review for every
+locale or a live consumer recovery.
+
+Traceability: bounded facts and actual check observations ->
+`src/domain/__tests__/sdd_validation_diagnostic.test.ts` and existing consistency
+fixtures; copy/localization/links/card bounds ->
+`src/application/policies/__tests__/sdd_preparation_status_policy.test.ts`;
+answers/retry/partial/ownership/source preservation ->
+`pre_branch_sdd_gate_use_case.test.ts`; welcome priority ->
+`issue_use_case.test.ts`; runtime facts -> composition tests. User recovery and
+retention belong to `docs/issues/pre-branch-sdds.mdx`; contributor guidance and
+error-reference links describe diagnosis without changing acceptance. Completion
+requires full root/extension tests and coverage budgets, preserved pure-policy
+checks, type/lint, docs/spec/catalog validation, regenerated bundles and
+Graphify, complete remote review without open findings, and Codecov covering
+every modified coverable line against the exact current base. Protected-path
+human approval remains an independent gate.

@@ -164,7 +164,11 @@
         "src/application/errors/comment_command_validation_error.ts",
         "src/application/policies/comment_command_validation_message_catalog.ts",
         "src/application/policies/comment_command_validation_presentation_policy.ts",
-        "src/domain/copilot_command_vocabulary.ts"
+        "src/domain/copilot_command_vocabulary.ts",
+        "src/domain/sdd_validation_diagnostic.ts",
+        "src/application/errors/sdd_draft_preparation_failure.ts",
+        "src/application/policies/sdd_preparation_message_catalog.ts",
+        "src/application/policies/sdd_preparation_status_policy.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -268,7 +272,9 @@
         "src/data/repository/issue/__tests__/issue_title_repository.test.ts",
         "src/domain/__tests__/copilot_command_validation.test.ts",
         "src/application/policies/__tests__/comment_command_validation_presentation.test.ts",
-        "src/application/usecases/__tests__/command_validation_diagnostics.test.ts"
+        "src/application/usecases/__tests__/command_validation_diagnostics.test.ts",
+        "src/domain/__tests__/sdd_validation_diagnostic.test.ts",
+        "src/application/policies/__tests__/sdd_preparation_status_policy.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -307,7 +313,9 @@
         "docs/development/testing.mdx",
         "docs/issues/branch-management.mdx",
         "docs/agents/execution-contract.mdx",
-        "docs/security-operations/operations/error-reference.mdx"
+        "docs/security-operations/operations/error-reference.mdx",
+        "docs/issues/pre-branch-sdds.mdx",
+        "docs/development/specifications.mdx"
       ]
     },
     {
@@ -1546,7 +1554,7 @@
       "status": "implemented",
       "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-25",
+      "lastVerified": "2026-10-26",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
         "specs/pre-branch-sdd-gate.md",
@@ -1624,7 +1632,11 @@
         "src/application/policies/setup_doctor_message_catalog.ts",
         "src/domain/sdd_prerequisite_policy.cjs",
         "src/application/policies/sdd_analysis_status_policy.ts",
-        "src/domain/sdd_draft_consistency.ts"
+        "src/domain/sdd_draft_consistency.ts",
+        "src/domain/sdd_validation_diagnostic.ts",
+        "src/application/errors/sdd_draft_preparation_failure.ts",
+        "src/application/policies/sdd_preparation_message_catalog.ts",
+        "src/application/policies/sdd_preparation_status_policy.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1669,7 +1681,9 @@
         "src/infrastructure/__tests__/branch_sync_sdd_catalog.test.ts",
         "src/cli/__tests__/setup_presenters.test.ts",
         "src/domain/__tests__/sdd_draft_consistency.test.ts",
-        "src/domain/__tests__/sdd_derived_tables.test.ts"
+        "src/domain/__tests__/sdd_derived_tables.test.ts",
+        "src/domain/__tests__/sdd_validation_diagnostic.test.ts",
+        "src/application/policies/__tests__/sdd_preparation_status_policy.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
@@ -1681,7 +1695,8 @@
         "docs/issues/labels-and-branch-types.mdx",
         "docs/issues/configuration.mdx",
         "docs/configuration.mdx",
-        "docs/single-actions/workflow-and-cli.mdx"
+        "docs/single-actions/workflow-and-cli.mdx",
+        "docs/security-operations/operations/error-reference.mdx"
       ]
     },
     {

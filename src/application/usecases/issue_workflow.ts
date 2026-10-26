@@ -198,7 +198,7 @@ export async function runIssueWorkflow(
       : undefined;
     results.push(...recommendationResults);
     await appendWelcomeFallback(results, recommendationResults, context, ports);
-  } else if (context.newIssue && context.onboardingEligible) {
+  } else if (context.newIssue && context.onboardingEligible && !sddWaiting) {
     await appendWelcomeFallback(results, [], context, ports);
   }
   return issueWorkflowOutcome(results, branchConfigurationPatch, recommendationStatePatch);

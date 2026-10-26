@@ -67,6 +67,63 @@ architecture, security, operator review and runtime acceptance remain separate.
 
 The repository must already contain a valid `specs/catalog.json`, `specs/README.md`, and `specs/_template.md`. The catalog identifies the owning SDD. The Action can update that SDD, add a companion SDD to its capability, or create a new proposed capability when the catalog evidence and referenced paths are valid. Drafting receives the selected owner's verified source, test and documentation paths at the immutable base, the canonical issue link and retained authorized answers. A new companion identifies the existing owner; its own new path is proposed evidence. It does not generate PRDs or ADRs in this flow.
 
+## When specification preparation is blocked
+
+A repeated draft validation failure updates one bot-owned **Specification
+preparation is blocked** card in the issue. The card names the cause, explains
+what remains unchanged, links the workflow run when its runtime identity is
+available, and shows a correlation reference. A welcome or recommendation does
+not replace this blocking result. No new branch or specification is published
+by a failed preparation attempt.
+
+Open **Validation diagnostics** in that card. It shows the closed validation
+check and, where available, the affected section, data-row ordinal and expected
+or observed counts. For example, a reverse mapping row may expect two cases
+while naming only one. An owning-case collision reports a reserved-identity
+check and collision count. These are observations from the actual validator;
+missing evidence is reported as unavailable rather than guessed.
+
+An illustrative failure view is:
+
+> **Specification preparation is blocked**
+>
+> No new specification or branch was published by this preparation attempt.
+>
+> **Action:** Review the safe validation diagnostics below. Clarify requirements
+> or decisions in this issue if needed, then retry this same issue workflow.
+>
+> **Retained state:** Existing answers and published specifications are retained.
+>
+> **Validation diagnostics:** requirement-mapping; section 17; data row 1;
+> expected count 2; observed count 1. The card also includes its run and reference.
+
+The diagnostic feature retains only fixed checks and bounded numeric facts.
+It does not publish the rejected Markdown, case/requirement identifiers,
+repository paths, scenario prose, source, credentials or raw validator messages.
+There is no downloadable candidate or artifact token to retrieve. The current
+safe card remains available under the issue's normal repository permissions;
+GitHub may retain its prior revisions. A retry replaces its current facts.
+Workflow logs follow the repository's existing retention; if a run has expired,
+retry this same issue to obtain a fresh bounded attempt and safe diagnostics.
+
+The limits are fixed: at most two drafting attempts per invocation (one shared
+eligible size/format repair), eight diagnostic facts, bounded coordinates/counts
+and a 16,000-character diagnostic card. The card never truncates a requirement
+or turns a rejected draft into acceptance. If localized copy exceeds its card
+bound, the complete card falls back to reviewed English with an explicit note.
+English/Spanish, compatible base locales, validated dynamic localization and
+atomic English fallback follow the repository locale policy. There are no new
+configuration options, permissions or artifact scopes.
+
+Retry after correcting the issue's requirements/decisions or the repository
+prerequisites identified by the failure. Existing authorized answers, immutable
+owners, baseline cases and published SDDs remain. A valid retry clears the
+blocked view; branch readiness still requires the independent linked-branch and
+publication checks. If a branch/commit already exists and publication recovery
+is pending, the card says so and recovery reuses that exact branch. A later
+failure to refresh the diagnostic card does not erase a verified publication.
+Stale issue/base evidence cannot overwrite the card with outdated diagnostics.
+
 ## Repository layouts and support limits
 
 Catalog version 1 accepts source, entrypoint, test and documentation evidence

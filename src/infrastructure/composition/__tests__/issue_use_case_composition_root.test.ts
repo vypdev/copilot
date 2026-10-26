@@ -52,6 +52,7 @@ jest.mock("../organization_members_composition_root", () => ({
 }));
 jest.mock("../agent_capability_composition_root", () => ({
   createFindingsQueryPort: jest.fn(() => findingsQuery),
+  createLanguageQueryPort: jest.fn(() => ({ query: jest.fn() })),
 }));
 
 const branchLifecycle = { kind: "branch-lifecycle" };
@@ -122,4 +123,22 @@ describe("issue use case composition root", () => {
     expect(GitCliRepository).toHaveBeenCalledTimes(1);
     expect(GitCliRepository).toHaveBeenCalledWith('token');
   });
+});
+
+
+it('binds current-run facts without adding credentials to SDD presentation', () => {
+  const priorOrigin = process.env.GITHUB_SERVER_URL;
+  const priorId = process.env.GITHUB_RUN_ID;
+  try {
+    process.env.GITHUB_SERVER_URL = 'https://github.example.test';
+    process.env.GITHUB_RUN_ID = '123';
+    createIssueUseCaseCompositionRoot({ owner: 'owner', repository: 'repo', token: 'PRIVATE_TOKEN' });
+    expect(composeIssueUseCase.mock.calls.at(-1)?.[5]).toMatchObject({ presentation: {
+      run: { serverOrigin: 'https://github.example.test', runId: '123', owner: 'owner', repository: 'repo' },
+      catalogResolver: expect.objectContaining({ resolve: expect.any(Function) }),
+    } });
+  } finally {
+    if (priorOrigin === undefined) delete process.env.GITHUB_SERVER_URL; else process.env.GITHUB_SERVER_URL = priorOrigin;
+    if (priorId === undefined) delete process.env.GITHUB_RUN_ID; else process.env.GITHUB_RUN_ID = priorId;
+  }
 });

@@ -246,22 +246,22 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
   }),
   'sdd-draft-case-identity-invalid': Object.freeze({
     impact: 'SDD publication stopped after one automatic repair: case IDs collide with an owning SDD or are ambiguous.',
-    action: 'Review the draft tables; use distinct fully qualified case IDs and preserve the baseline inventory. Retry the same issue workflow.',
+    action: 'Review the safe validation diagnostics in the issue status card; use distinct fully qualified case IDs and preserve the baseline inventory. Retry the same issue workflow.',
     retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
   }),
   'sdd-draft-case-budget-invalid': Object.freeze({
     impact: 'SDD publication stopped after one automatic repair: per-area allocations disagree with the distinct case inventory.',
-    action: 'Review the draft tables; reconcile each area and the total with the enumerated cases. Retry the same issue workflow.',
+    action: 'Review the safe validation diagnostics in the issue status card; reconcile each area and the total with the enumerated cases. Retry the same issue workflow.',
     retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
   }),
   'sdd-draft-requirement-mapping-invalid': Object.freeze({
     impact: 'SDD publication stopped after one automatic repair: requirements and case mappings are incomplete or inconsistent.',
-    action: 'Review the draft tables; map every requirement to defined cases and match the reverse links. Retry the same issue workflow.',
+    action: 'Review the safe validation diagnostics in the issue status card; map every requirement to defined cases and match the reverse links. Retry the same issue workflow.',
     retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
   }),
   'sdd-draft-repository-path-invalid': Object.freeze({
     impact: 'SDD publication stopped after one automatic repair: cited repository paths cannot be verified at the immutable base.',
-    action: 'Review the draft tables; correct existing paths or explicitly declare intended new files. Retry the same issue workflow.',
+    action: 'Review the safe validation diagnostics in the issue status card; correct existing paths or explicitly declare intended new files. Retry the same issue workflow.',
     retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
   }),
   'sdd-draft-format-invalid': Object.freeze({
@@ -361,22 +361,22 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
   }),
   'sdd-draft-case-identity-invalid': Object.freeze({
     impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: los identificadores de casos coinciden con un SDD existente o son ambiguos.',
-    action: 'Revisa las tablas del borrador; usa identificadores completos y distintos y conserva el inventario original. Reintenta el workflow de la misma incidencia.',
+    action: 'Revisa los diagnósticos seguros de validación de la tarjeta de estado; usa identificadores completos y distintos y conserva el inventario original. Reintenta el workflow de la misma incidencia.',
     retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
   }),
   'sdd-draft-case-budget-invalid': Object.freeze({
     impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: las asignaciones por área no coinciden con el inventario de casos distintos.',
-    action: 'Revisa las tablas del borrador; reconcilia cada área y el total con los casos enumerados. Reintenta el workflow de la misma incidencia.',
+    action: 'Revisa los diagnósticos seguros de validación de la tarjeta de estado; reconcilia cada área y el total con los casos enumerados. Reintenta el workflow de la misma incidencia.',
     retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
   }),
   'sdd-draft-requirement-mapping-invalid': Object.freeze({
     impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: los requisitos y sus casos están incompletos o son inconsistentes.',
-    action: 'Revisa las tablas del borrador; vincula cada requisito a casos definidos y comprueba los enlaces inversos. Reintenta el workflow de la misma incidencia.',
+    action: 'Revisa los diagnósticos seguros de validación de la tarjeta de estado; vincula cada requisito a casos definidos y comprueba los enlaces inversos. Reintenta el workflow de la misma incidencia.',
     retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
   }),
   'sdd-draft-repository-path-invalid': Object.freeze({
     impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: no se pueden verificar las rutas citadas en la revisión base inmutable.',
-    action: 'Revisa las tablas del borrador; corrige las rutas existentes o declara explícitamente los archivos nuevos previstos. Reintenta el workflow de la misma incidencia.',
+    action: 'Revisa los diagnósticos seguros de validación de la tarjeta de estado; corrige las rutas existentes o declara explícitamente los archivos nuevos previstos. Reintenta el workflow de la misma incidencia.',
     retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
   }),
   'sdd-draft-format-invalid': Object.freeze({
