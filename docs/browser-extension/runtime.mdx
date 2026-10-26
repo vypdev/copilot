@@ -116,3 +116,8 @@ backoff adds up to one second of jitter and survives worker recreation.
 If two extension pages connect concurrently, the most recent attempt owns the
 selected read session. An older attempt cannot mix its credential or repository
 with the newer identity, or overwrite its status after a late permission result.
+
+This also applies while connection preferences are being saved: an older failed
+save or permission check cannot disconnect the newer session. Leaving a page or
+reloading the same URL cancels that page's pending background read through the
+browser's native navigation events.

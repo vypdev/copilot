@@ -8,11 +8,11 @@ import { SETTINGS_KEY } from '../../src/application/settings_repository.ts';
 
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 it('github-browser-extension-runtime-C19/github-browser-extension-runtime-C22 protects session access where supported and works with Firefox/Safari restricted defaults without newer APIs', async () => {
-    const h = browserFixture(); const storage = new BrowserStorage(h.area);
-    expect(await storage.protect()).toBe(true); expect(h.area.setAccessLevel).toHaveBeenCalledWith({ accessLevel: 'TRUSTED_CONTEXTS' });
+    const h = browserFixture(); const storage = new BrowserStorage(h.sessionArea);
+    expect(await storage.protect()).toBe(true); expect(h.sessionArea.setAccessLevel).toHaveBeenCalledWith({ accessLevel: 'TRUSTED_CONTEXTS' });
     await storage.set('key', { nonsecret: 1 }); expect(await storage.get('key')).toEqual({ nonsecret: 1 });
     await storage.remove('key'); expect(await storage.get('key')).toBe(undefined);
-    delete h.area.setAccessLevel; expect(await storage.protect()).toBe(true);
+    delete h.sessionArea.setAccessLevel; expect(await storage.protect()).toBe(true);
     const absent = new BrowserStorage(undefined); expect(await absent.protect()).toBe(false);
     for (const operation of [() => absent.get('key'), () => absent.set('key', 'value'), () => absent.remove('key')]) await expect(operation()).rejects.toThrow('storage-unavailable');
 });
@@ -24,7 +24,7 @@ it('github-browser-extension-runtime-C22/github-browser-extension-runtime-C38 fe
 it('github-browser-extension-runtime-C12 registers all background wake listeners synchronously, dispatches a closed response and cleans up every listener', async () => {
     const h = browserFixture(); const stop = startBackground(h.api);
     expect(h.onMessage.listeners.size).toBe(1); expect(h.onUpdated.listeners.size).toBe(1);
-    expect(h.permissionRemoved.listeners.size).toBe(1); expect(h.area.get).not.toHaveBeenCalled();
+    expect(h.permissionRemoved.listeners.size).toBe(1); expect(h.sessionArea.get).not.toHaveBeenCalled();
     const respond = vi.fn(); const listener = [...h.onMessage.listeners][0];
     expect(listener(null, {}, respond)).toBe(true); await vi.waitFor(() => expect(respond).toHaveBeenCalledWith({ state: 'rejected', sourceTree: 'unbundled' }));
     stop(); expect(h.onMessage.listeners.size).toBe(0); expect(h.onUpdated.listeners.size).toBe(0);

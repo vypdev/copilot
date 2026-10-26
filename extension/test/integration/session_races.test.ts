@@ -1,7 +1,8 @@
 import { expect, it, vi } from 'vitest';
+import { BrowserCancellation } from '../../src/adapters/browser/cancellation.ts';
 import type { ScheduledRead } from '../../src/application/read_scheduler.ts';
 import { SESSION_KEY } from '../../src/application/protected_session.ts';
-import { sessionHarness, CONNECTED, deferred, requestResult } from '../fixtures/runtime.ts';
+import { sessionHarness, CONNECTED, PAGE, deferred, requestResult } from '../fixtures/runtime.ts';
 
 it('revoke while protected restore is reading storage rejects both late values and late failures', async () => {
     for (const failure of [false, true]) {
@@ -70,4 +71,24 @@ it('a denied permission result from an obsolete Connect cannot overwrite a newer
     const old = h.service.connect('synthetic_first', CONNECTED.repository); await vi.waitFor(() => expect(h.ports.permitted).toHaveBeenCalledTimes(2));
     expect(await h.service.connect(CONNECTED.secret, CONNECTED.repository)).toMatchObject({ state: 'connected' });
     permission.resolve(false); await old; expect(h.service.status().state).toBe('connected'); expect(h.values.get(SESSION_KEY)).toEqual(CONNECTED);
+});
+
+it.each([false, true])('an obsolete page permission result (%s) cannot revoke a newer connection', async allowed => {
+    const h = sessionHarness(); await h.service.connect(CONNECTED.secret, CONNECTED.repository);
+    const permission = deferred<boolean>(); h.ports.permitted.mockReturnValueOnce(permission.promise);
+    const page = h.service.snapshot({ ...PAGE, viewer: null }, true, true, new BrowserCancellation());
+    await vi.waitFor(() => expect(h.ports.permitted).toHaveBeenCalledTimes(4));
+    expect(await h.service.connect('synthetic_new_connection', CONNECTED.repository)).toMatchObject({ state: 'connected' });
+    permission.resolve(allowed); expect(await page).toMatchObject({ state: 'disconnected' });
+    expect(h.service.status().state).toBe('connected'); expect(h.values.get(SESSION_KEY)).toMatchObject({ secret: 'synthetic_new_connection' });
+});
+it('an obsolete failed revoke cannot overwrite a newer Connect state while its identity read is pending', async () => {
+    const h = sessionHarness(); await h.service.start(); const removal = deferred<void>(); const identity = deferred<ScheduledRead>();
+    vi.mocked(h.port.remove).mockReturnValueOnce(removal.promise);
+    const older = h.service.revoke(); await vi.waitFor(() => expect(h.port.remove).toHaveBeenCalledTimes(2));
+    const run = vi.spyOn(h.scheduler, 'run').mockReturnValueOnce(identity.promise); const newer = h.service.connect(CONNECTED.secret, CONNECTED.repository);
+    await vi.waitFor(() => expect(h.service.status().epoch).toBe(3)); removal.reject(new Error('private')); await older;
+    await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(1)); expect(h.service.status().state).toBe('disconnected');
+    identity.resolve({ state: 'ok', data: { id: '1', login: 'octo' }, bytes: 1, etag: '' });
+    expect(await newer).toMatchObject({ state: 'connected' });
 });

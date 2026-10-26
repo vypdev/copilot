@@ -545,9 +545,9 @@ permission and retains its native receipt even on failure.
 
 ### Local verification receipt (2026-10-26)
 
-The extension suite currently passes 202 tests in 28 files (56 retained H1
-engineering cases plus 146 H2 cases/regressions). All 38 required H2 case IDs
-appear in the executable suites. The local report covers 1,114/1,114 lines, 1,391/1,391 branches, 1,682/1,682 statements and 275/275 functions. All measured executable coverage is 100%. Per-file executable-line coverage is now enforced at 100% rather
+The extension suite currently passes 218 tests in 29 files (56 retained H1
+engineering cases plus 162 H2 cases/regressions). All 38 required H2 case IDs
+appear in the executable suites. The local report covers 1,127/1,127 lines, 1,404/1,404 branches, 1,703/1,703 statements and 281/281 functions. All measured executable coverage is 100%. Per-file executable-line coverage is now enforced at 100% rather
 than the prior 95%, with no runtime exclusion or lowered gate. These deterministic
 results are not native-browser proof. Exact-head CI/Codecov and native/human
 browser receipts are recorded in the PR, with every failure left explicit.
@@ -561,3 +561,14 @@ Native Safari 27.0.1 reports its extension UUID in lowercase in MessageSender.or
 Each explicit Connect captures its own synchronously advanced revocation epoch before awaiting protected storage. Only that current attempt may perform identity reads or mutate connection state. Concurrent attempts cannot share credential-bound viewer/repository reads, and late permission denials or startup status failures cannot overwrite a newer successful connection.
 
 A malformed independent rate-reset header is ignored rather than discarding valid Retry-After guidance. The deterministic rate-limit suite covers that mixed-validity response.
+
+The gateway fences post-Connect preference mutations and failure cleanup to both
+its operation and the protected session epoch. Application settings mutations
+serialize against the latest complete envelope; a superseded caller cannot
+revoke the newer connection or create a stale-revision conflict for it. Pending
+page permission checks and failed older cleanup cannot change a newer session.
+Native tab URL changes and loading events own background page-lease cancellation,
+including protected navigation and same-URL reloads. The existing content sender
+policy remains closed on protected routes. Composition regressions exercise the
+real adapters with independent local/session storage maps and assert that the
+credential and scheduler never enter persistent local preferences.

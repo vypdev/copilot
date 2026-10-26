@@ -33,7 +33,10 @@ export function startBackground(api: BrowserApi): () => void {
         void gateway.handle(value, sender).then(result => respond({ ...(record(result) ? result : { state: 'unavailable' }), sourceTree: buildSourceIdentity() })); return true;
     };
     const removed = (id: number) => gateway.invalidate(id);
-    const updated = (id: number, changes: { url?: string }) => { if (changes.url) gateway.invalidate(id); };
+    // Native tab events cancel the owning lease even on protected routes and same-URL reloads.
+    const updated = (id: number, changes: { url?: string; status?: string }) => {
+        if (changes.url || changes.status === 'loading') gateway.invalidate(id);
+    };
     const permission = (value: { origins?: string[] }) => {
         if (value.origins?.some(origin => origin === 'https://api.github.com/*' || origin === '<all_urls>')) {
             gateway.invalidate(); void sessions.revoke();

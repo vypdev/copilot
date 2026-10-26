@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest';
+import { SESSION_KEY } from '../../src/application/protected_session.ts';
 import { MessageGateway } from '../../src/application/message_gateway.ts';
 import { SettingsRepository, SETTINGS_KEY } from '../../src/application/settings_repository.ts';
 import { DEFAULT_SETTINGS } from '../../src/domain/settings.ts';
@@ -98,4 +99,48 @@ it('credential revocation in another request and background-tab transitions fenc
 it('failed Connect does not enable a repository preference or claim a connected session', async () => {
     const h = harness(); vi.mocked(h.reader.read).mockResolvedValueOnce({ state: 'denied', bytes: 0 });
     expect(await h.connect()).toMatchObject({ state: 'unavailable' }); expect(h.local.port.set).not.toHaveBeenCalled();
+});
+
+it.each([false, true])('an obsolete Connect settings read (%s failure) cannot revoke or overwrite the newer connection', async failure => {
+    const h = harness(); const loaded = deferred<unknown>(); vi.mocked(h.local.port.get).mockReturnValueOnce(loaded.promise);
+    vi.mocked(h.reader.read).mockImplementation(async (request, secret) => ({ state: 'ok', bytes: 1, etag: '',
+        data: request.type === 'viewer' ? { id: secret === 'synthetic_new_connection' ? '2' : '1', login: secret === 'synthetic_new_connection' ? 'second' : 'octo' }
+            : { id: secret === 'synthetic_new_connection' ? '9' : '7', name: request.type === 'repository' ? request.name : 'unexpected' } }));
+    const older = h.connect(); await vi.waitFor(() => expect(h.local.port.get).toHaveBeenCalledTimes(1));
+    const epoch = h.service.status().epoch;
+    const newer = h.gateway.handle({ version: 1, method: 'session.connect', secret: 'synthetic_new_connection', repository: 'octo/newrepo' }, extension);
+    await vi.waitFor(() => expect(h.service.status().epoch).toBeGreaterThan(epoch));
+    await vi.waitFor(() => expect(h.service.status().state).toBe('connected'));
+    if (failure) loaded.reject(new Error('private')); else loaded.resolve(undefined);
+    expect(await older).toMatchObject({ state: 'stale' }); expect(await newer).toMatchObject({ state: 'connected' });
+    expect(h.service.status().state).toBe('connected'); expect(h.local.values.get(SETTINGS_KEY)).toMatchObject({ current: { revision: 1, repositories: { '9': { connected: true } } } });
+    expect(h.values.get(SESSION_KEY)).toMatchObject({ secret: 'synthetic_new_connection', viewerId: '2', repositoryId: '9', repository: 'octo/newrepo' });
+    expect(JSON.stringify(h.local.values.get(SETTINGS_KEY))).not.toContain('synthetic_new_connection');
+});
+it.each([false, true])('a superseded in-flight settings commit (%s failure) cannot disconnect the current Connect or create a false revision conflict', async failure => {
+    const h = harness(); const persisted = deferred<void>();
+    vi.mocked(h.local.port.set).mockImplementationOnce(async (key, value) => { await persisted.promise; h.local.values.set(key, value); });
+    const older = h.connect(); await vi.waitFor(() => expect(h.local.port.set).toHaveBeenCalledTimes(1)); const epoch = h.service.status().epoch;
+    const newer = h.connect(); await vi.waitFor(() => expect(h.service.status().epoch).toBeGreaterThan(epoch));
+    await vi.waitFor(() => expect(h.service.status().state).toBe('connected'));
+    if (failure) persisted.reject(new Error('private')); else persisted.resolve();
+    expect(await older).toMatchObject({ state: 'stale' }); expect(await newer).toMatchObject({ state: 'connected' });
+    expect(h.service.status().state).toBe('connected'); expect(h.local.values.get(SETTINGS_KEY)).toMatchObject({ current: { revision: failure ? 1 : 2 } });
+});
+it.each(['disconnect', 'permission'])('a %s transition during Connect preference persistence remains authoritative', async transition => {
+    const h = harness(); const loaded = deferred<unknown>(); vi.mocked(h.local.port.get).mockReturnValueOnce(loaded.promise);
+    const older = h.connect(); await vi.waitFor(() => expect(h.local.port.get).toHaveBeenCalledTimes(1));
+    if (transition === 'disconnect') await h.gateway.handle({ version: 1, method: 'session.disconnect' }, extension);
+    else await h.service.revoke();
+    loaded.resolve(undefined); expect(await older).toMatchObject({ state: 'stale' });
+    expect(h.service.status().state).toBe('disconnected'); expect(h.local.port.set).not.toHaveBeenCalled();
+});
+it('concurrent gateway Connect requests discard the superseded service result before enabling repository preferences', async () => {
+    const h = harness(); const results = await Promise.all([h.connect(), h.connect()]);
+    expect(results[0]).toMatchObject({ state: 'stale' }); expect(results[1]).toMatchObject({ state: 'connected' });
+    expect(h.local.port.set).toHaveBeenCalledTimes(1);
+});
+it('a rejected session service returns a bounded unavailable response without exposing the original exception', async () => {
+    const h = harness(); vi.spyOn(h.service, 'connect').mockRejectedValueOnce(new Error(CONNECTED.secret));
+    expect(await h.connect()).toEqual({ state: 'unavailable' });
 });

@@ -1,4 +1,4 @@
-import { allowedMessage, parseMessage, type Sender } from '../domain/protocol.ts';
+import { allowedMessage, parseMessage, type Message, type Sender } from '../domain/protocol.ts';
 import { currentFence, type PageFence } from '../domain/session.ts';
 import { effectiveSettings } from '../domain/settings.ts';
 import type { CancellationOwner } from './read_ports.ts';
@@ -14,6 +14,7 @@ export interface GatewayPorts {
 }
 export class MessageGateway {
     private readonly pages = new Map<number, PageLease>();
+    private connectionOperation = 0;
     constructor(private readonly id: string, private readonly origin: string, private readonly settings: SettingsRepository,
         private readonly sessions: ProtectedSessionService, private readonly ports: GatewayPorts) {}
     invalidate(tabId?: number): void {
@@ -22,6 +23,26 @@ export class MessageGateway {
         }
         for (const lease of this.pages.values()) lease.cancel.abort();
         this.pages.clear(); this.ports.notify();
+    }
+    private async connect(message: Extract<Message, { method: 'session.connect' }>): Promise<unknown> {
+        const operation = ++this.connectionOperation;
+        this.invalidate();
+        const status = await this.sessions.connect(message.secret, message.repository);
+        const epoch = status.epoch;
+        const current = () => operation === this.connectionOperation && epoch === this.sessions.status().epoch;
+        if (!current()) return { state: 'stale' };
+        try {
+            if (status.state === 'connected') {
+                const id = this.sessions.selectedRepositoryId();
+                await this.settings.update(settings => ({ ...settings, repositories: { ...settings.repositories,
+                    [id]: { ...settings.repositories[id], connected: true } } }), current);
+            }
+            if (!current()) return { state: 'stale' };
+            this.ports.notify(); return this.sessions.status();
+        } catch {
+            if (!current()) return { state: 'stale' };
+            await this.sessions.revoke(); return { state: 'unavailable' };
+        }
     }
     async handle(value: unknown, sender: Sender): Promise<unknown> {
         const message = parseMessage(value);
@@ -33,20 +54,9 @@ export class MessageGateway {
                 this.invalidate(); return { state: 'ready', settings };
             }
             if (message.method === 'session.disconnect') {
-                this.invalidate(); await this.sessions.revoke(); return this.sessions.status();
+                this.connectionOperation++; this.invalidate(); await this.sessions.revoke(); return this.sessions.status();
             }
-            if (message.method === 'session.connect') {
-                this.invalidate();
-                const status = await this.sessions.connect(message.secret, message.repository);
-                if (status.state === 'connected') {
-                    const loaded = await this.settings.read();
-                    if (loaded.state !== 'ready') { await this.sessions.revoke(); return { state: 'unavailable' }; }
-                    const id = this.sessions.selectedRepositoryId();
-                    await this.settings.write({ ...loaded.settings, repositories: { ...loaded.settings.repositories,
-                        [id]: { ...loaded.settings.repositories[id], connected: true } } }, loaded.settings.revision);
-                }
-                this.ports.notify(); return this.sessions.status();
-            }
+            if (message.method === 'session.connect') return await this.connect(message);
             if (message.method === 'session.status') { await this.sessions.start(); return this.sessions.status(); }
             const id = sender.tab!.id!;
             if (message.method === 'page.release') {
@@ -73,7 +83,6 @@ export class MessageGateway {
             return result;
         } catch {
             // Provider exceptions/raw payloads/credentials never cross this boundary.
-            if (message.method === 'session.connect') await this.sessions.revoke();
             return { state: 'unavailable' };
         }
     }

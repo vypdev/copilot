@@ -76,10 +76,10 @@ export class ProtectedSessionService {
     }
     /** Fence and abort synchronously, before the first storage await. */
     async revoke(): Promise<void> {
-        this.epoch++; this.retryAt = undefined; this.connection = undefined; this.state = 'disconnected';
+        const epoch = ++this.epoch; this.retryAt = undefined; this.connection = undefined; this.state = 'disconnected';
         this.cancellation.abort(); this.cancellation = this.ports.cancellation(); this.scheduler.invalidate();
         try { await this.persist(() => this.store.remove(SESSION_KEY)); }
-        catch { this.state = 'unavailable'; }
+        catch { if (epoch === this.epoch) this.state = 'unavailable'; }
     }
     private persist(operation: () => Promise<void>): Promise<void> {
         const next = this.persistence.then(operation); this.persistence = next.catch(() => undefined); return next;
@@ -90,11 +90,12 @@ export class ProtectedSessionService {
         const epoch = this.epoch;
         const page = pageIdentity(message.route);
         if (!session || !page || !['issue', 'pull'].includes(page.kind) || !page.number) return this.status();
-        if (!await this.ports.permitted() || message.viewer === null || message.viewer.toLowerCase() !== session.viewerLogin.toLowerCase()) {
+        const permitted = await this.ports.permitted();
+        if (epoch !== this.epoch || this.connection !== session) return { state: 'disconnected', epoch: this.epoch };
+        if (!permitted || message.viewer === null || message.viewer.toLowerCase() !== session.viewerLogin.toLowerCase()) {
             await this.revoke(); return this.status();
         }
         if (message.repositoryId !== session.repositoryId || page.repository !== session.repository.toLowerCase()) return { state: 'unavailable', epoch: this.epoch };
-        if (epoch !== this.epoch || this.connection !== session) return { state: 'disconnected', epoch: this.epoch };
         const combined = this.ports.cancellation();
         const releasePage = pageCancellation.onAbort(() => combined.abort());
         const releaseSession = this.cancellation.onAbort(() => combined.abort());

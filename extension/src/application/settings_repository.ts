@@ -13,12 +13,19 @@ export class SettingsRepository {
         return loadSettings(current);
     }
     write(value: unknown, expectedRevision: number): Promise<Settings> {
+        return this.update(settings => {
+            if (settings.revision !== expectedRevision) throw new Error('settings-conflict-or-invalid');
+            return value;
+        });
+    }
+    /** Serialize application mutations against the latest complete settings envelope. */
+    update(change: (settings: Settings) => unknown, current: () => boolean = () => true): Promise<Settings> {
         const operation = this.queue.then(async () => {
             const loaded = await this.read();
-            if (expectedRevision >= Number.MAX_SAFE_INTEGER || loaded.state !== 'ready' || loaded.settings.revision !== expectedRevision || !validSettings(value)) {
-                throw new Error('settings-conflict-or-invalid');
-            }
-            const next = deepFreeze({ ...value, revision: expectedRevision + 1 });
+            if (loaded.state !== 'ready' || !current()) throw new Error('settings-conflict-or-invalid');
+            const value = change(loaded.settings);
+            if (loaded.settings.revision >= Number.MAX_SAFE_INTEGER || !validSettings(value)) throw new Error('settings-conflict-or-invalid');
+            const next = deepFreeze({ ...value, revision: loaded.settings.revision + 1 });
             const envelope: Envelope = { current: next, previous: loaded.settings };
             // One storage operation atomically publishes current + one nonsecret rollback.
             await this.storage.set(SETTINGS_KEY, envelope);

@@ -2809,6 +2809,7 @@
         "extension/test/integration/receipt.test.ts",
         "extension/test/contracts/loaded_manifest.test.ts",
         "extension/test/contracts/runtime_browser.test.ts",
+        "extension/test/contracts/runtime_navigation.test.ts",
         "extension/test/contracts/runtime_entries.test.ts",
         "extension/test/contracts/runtime_protocol.test.ts",
         "extension/test/contracts/runtime_reads.test.ts",

@@ -45,3 +45,10 @@ it('github-browser-extension-runtime-C18 rejects exhausted safe-integer revision
     await expect(repository.write(DEFAULT_SETTINGS, Number.MAX_SAFE_INTEGER)).rejects.toThrow('settings-conflict');
     expect(h.values.get(SETTINGS_KEY)).toEqual(envelope); expect(h.port.set).not.toHaveBeenCalled();
 });
+
+it('application preference mutations serialize against current settings instead of reusing a stale external revision', async () => {
+    const h = memoryStore(); const repository = new SettingsRepository(h.port);
+    const first = repository.update(settings => ({ ...settings, repositories: { ...settings.repositories, '7': { connected: true } } }));
+    const second = repository.update(settings => ({ ...settings, repositories: { ...settings.repositories, '8': { connected: true } } }));
+    await first; expect(await second).toMatchObject({ revision: 2, repositories: { '7': { connected: true }, '8': { connected: true } } });
+});

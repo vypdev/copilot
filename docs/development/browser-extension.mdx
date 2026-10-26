@@ -269,3 +269,16 @@ UUID; the runtime normalizes hostname case while keeping its closed path,
 scheme, runtime identity and frame checks. A failed native-browser run removes
 its previous success receipt, and successful receipts require completed driver
 cleanup.
+
+Native `tabs.onUpdated` URL and loading events cancel the background page lease,
+including protected destinations and same-URL reloads. Content disposal does not
+broaden the protected-route message policy. The browser composition fixture uses
+independent local and session storage areas: integration tests assert that only
+nonsecret preferences reach local storage and only protected session storage
+holds connection/scheduler state.
+
+Post-Connect preference changes use the serialized settings update port and
+retain the initiating operation/session fence. An older failed settings commit
+cannot disconnect a newer account, and a newer update reads the latest complete
+envelope after any in-flight commit. Test dependencies support Node 24.0.0;
+verify frozen installation with engine checking when updating the lockfile.
