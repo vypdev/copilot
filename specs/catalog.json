@@ -1857,7 +1857,8 @@
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md",
-        "specs/bugbot-exhaustive-partitioned-analysis.md"
+        "specs/bugbot-exhaustive-partitioned-analysis.md",
+        "specs/bugbot-lossless-conversation-context.md"
       ],
       "workflows": [
         ".github/workflows/copilot_commit.yml",
