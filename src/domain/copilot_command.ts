@@ -1,29 +1,7 @@
-/** Explicit commands are the safe, deterministic entry point for mutations. */
-export const COPILOT_COMMAND_NAMES = [
-    'help',
-    'analyze',
-    'plan',
-    'clarify',
-    'estimate',
-    'test-plan',
-    'status',
-    'sdd-diff',
-    'doctor',
-    'history',
-    'description',
-    'explain',
-    'diagnose',
-    'review',
-    'findings',
-    'fix',
-    'dismiss',
-    'remember',
-    'recheck',
-    'implement',
-    'sync-branch',
-] as const;
+import type { CopilotCommandValidationDiagnostic, CopilotCommandValidationReason } from './copilot_command_validation';
 
-export type CopilotCommandName = typeof COPILOT_COMMAND_NAMES[number];
+import { COPILOT_COMMAND_NAMES, type CopilotCommandName } from './copilot_command_vocabulary';
+export { COPILOT_COMMAND_NAMES, type CopilotCommandName } from './copilot_command_vocabulary';
 
 const COPILOT_COMMANDS_WITH_ADAPTABLE_PROSE: ReadonlySet<CopilotCommandName> = new Set([
     'plan',
@@ -49,7 +27,7 @@ export interface ParsedCopilotCommand {
 export type CopilotCommandParseResult =
     | { readonly kind: 'none' }
     | { readonly kind: 'command'; readonly command: ParsedCopilotCommand }
-    | { readonly kind: 'invalid'; readonly reason: string };
+    | { readonly kind: 'invalid'; readonly reason: string; readonly validation: CopilotCommandValidationDiagnostic };
 
 const COMMAND_PREFIX = /^\/copilot(?:\s+|$)/iu;
 const MAX_COMMAND_LENGTH = 2_000;
@@ -63,39 +41,40 @@ export function parseCopilotCommand(raw: unknown): CopilotCommandParseResult {
     if (typeof raw !== 'string' || !/^\s*\/copilot(?:\s|$)/iu.test(raw)) return { kind: 'none' };
     const input = raw.trim();
     if (input.length > MAX_COMMAND_LENGTH) {
-        return { kind: 'invalid', reason: `Copilot commands must be at most ${MAX_COMMAND_LENGTH} characters.` };
+        return invalid('comment-command-length', 'help', `Copilot commands must be at most ${MAX_COMMAND_LENGTH} characters.`);
     }
 
     const withoutPrefix = input.replace(COMMAND_PREFIX, '').trim();
-    if (!withoutPrefix) return { kind: 'invalid', reason: 'Use /copilot followed by a command.' };
+    if (!withoutPrefix) return invalid('comment-command-name-missing', 'help', 'Use /copilot followed by a command.');
     const tokens = withoutPrefix.split(/\s+/u).filter(Boolean);
     const name = tokens.shift()?.toLowerCase();
     if (!name || !COPILOT_COMMAND_NAMES.includes(name as CopilotCommandName)) {
-        return { kind: 'invalid', reason: `Unknown Copilot command. Supported commands: ${COPILOT_COMMAND_NAMES.join(', ')}.` };
+        return invalid('comment-command-name-unknown', 'help', `Unknown Copilot command. Supported commands: ${COPILOT_COMMAND_NAMES.join(', ')}.`);
     }
+    const commandName = name as CopilotCommandName;
     if (name === 'status' && tokens.length > 0) {
-        return { kind: 'invalid', reason: '/copilot status accepts no arguments.' };
+        return invalid('comment-command-arguments-unexpected', commandName, '/copilot status accepts no arguments.');
     }
     const argumentsList = name === 'dismiss' || name === 'fix'
         ? parseFindingIdentifiers(withoutPrefix.slice(name.length).trim())
         : tokens;
     if (!argumentsList) {
-        return { kind: 'invalid', reason: 'Use valid double-quoted finding IDs when an identifier contains spaces.' };
+        return invalid('comment-command-finding-quoting', commandName, 'Use valid double-quoted finding IDs when an identifier contains spaces.');
     }
     if (argumentsList.length > MAX_ARGUMENTS
         && !copilotCommandAcceptsAdaptableProse(name as CopilotCommandName)
         && name !== 'remember') {
-        return { kind: 'invalid', reason: `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.` };
+        return invalid('comment-command-argument-count', commandName, `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.`);
     }
-    if (name === 'sdd-diff' && argumentsList.length > 0) return { kind: 'invalid', reason: '/copilot sdd-diff does not accept arguments.' };
+    if (name === 'sdd-diff' && argumentsList.length > 0) return invalid('comment-command-arguments-unexpected', commandName, '/copilot sdd-diff does not accept arguments.');
     if (name === 'doctor' && argumentsList.length > 0) {
-        return { kind: 'invalid', reason: '/copilot doctor does not accept arguments.' };
+        return invalid('comment-command-arguments-unexpected', commandName, '/copilot doctor does not accept arguments.');
     }
     if ((name === 'fix' || name === 'dismiss' || name === 'implement' || name === 'remember') && argumentsList.length === 0) {
-        return { kind: 'invalid', reason: `/${name} requires at least one argument.` };
+        return invalid('comment-command-arguments-missing', commandName, `/${name} requires at least one argument.`);
     }
     if (name === 'history' && argumentsList.length) {
-        return { kind: 'invalid', reason: '/copilot history accepts no arguments or model selection.' };
+        return invalid('comment-command-arguments-unexpected', commandName, '/copilot history accepts no arguments or model selection.');
     }
     return {
         kind: 'command',
@@ -117,4 +96,8 @@ function parseFindingIdentifiers(input: string): string[] | undefined {
         cursor = match.index + match[0].length;
     }
     return input.slice(cursor).trim() ? undefined : identifiers;
+}
+
+function invalid(reasonId: CopilotCommandValidationReason, command: CopilotCommandName, reason: string): CopilotCommandParseResult {
+    return { kind: 'invalid', reason, validation: { reason: reasonId, command } };
 }

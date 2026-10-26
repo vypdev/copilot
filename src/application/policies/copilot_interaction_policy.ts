@@ -66,6 +66,8 @@ export function buildCopilotHelpMessage(
         '',
         ...commandLines(CHANGE_COMMANDS, catalog),
         '',
+        catalog.render('interaction.help.validation'),
+        '',
         catalog.render('interaction.help.footer', { bot: botDisplay }),
     ].join('\n');
 }

@@ -1,3 +1,4 @@
+import { COPILOT_COMMAND_VALIDATION_REASONS } from '../../../domain/copilot_command_validation';
 import {
     APPLICATION_ERROR_METADATA,
     APPLICATION_ERROR_RECOVERY_IDS,
@@ -19,6 +20,14 @@ const RECOVERY_CASES: readonly Readonly<{
     english: string;
     spanish: string;
 }>[] = [
+    ...COPILOT_COMMAND_VALIDATION_REASONS.map(id => ({
+        recovery: { id, variables: { command: id.startsWith('comment-command-review-') ? 'review' as const
+            : id.startsWith('comment-command-sync-') ? 'sync-branch' as const
+                : id === 'comment-command-arguments-unexpected' ? 'status' as const
+                    : id === 'comment-command-arguments-missing' || id === 'comment-command-finding-quoting' ? 'fix' as const : 'help' as const } },
+        english: 'No command action ran. Existing files, branches and reviews were preserved.',
+        spanish: 'No se ejecutó ninguna acción del comando. Se conservaron los archivos, las ramas y las revisiones existentes.',
+    })),
     ...(['sdd-draft-case-identity-invalid', 'sdd-draft-case-budget-invalid', 'sdd-draft-requirement-mapping-invalid', 'sdd-draft-repository-path-invalid'] as const).map(id => ({
         recovery: { id, variables: {} },
         english: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',

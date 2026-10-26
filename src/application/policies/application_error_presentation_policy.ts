@@ -1,3 +1,5 @@
+import { isCopilotCommandValidationReason } from '../../domain/copilot_command_validation';
+import { commandValidationPresentationVariables } from './comment_command_validation_presentation_policy';
 import type {
     ApplicationErrorCode,
     ApplicationErrorRecovery,
@@ -34,7 +36,9 @@ export function buildApplicationErrorPresentation(
     const descriptor = error.recovery
         ? `error.recovery.${error.recovery.id}` as const
         : `error.${error.code}` as const;
-    const variables = error.recovery?.id.startsWith('stored-configuration-')
+    const variables = error.recovery && isCopilotCommandValidationReason(error.recovery.id)
+        ? commandValidationPresentationVariables(error.recovery.id, (error.recovery.variables as Readonly<Record<string, unknown>>).command)
+        : error.recovery?.id.startsWith('stored-configuration-')
         ? { ...error.recovery.variables, recoveryGuide: STORED_CONFIGURATION_RECOVERY_URL }
         : error.recovery?.variables;
     return {

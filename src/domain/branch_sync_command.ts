@@ -1,3 +1,5 @@
+import type { CopilotCommandValidationDiagnostic } from './copilot_command_validation';
+
 export interface BranchSyncCommandOptions {
   readonly dryRun: boolean;
   readonly useAgent: boolean;
@@ -6,7 +8,7 @@ export interface BranchSyncCommandOptions {
 
 export type BranchSyncCommandParseResult =
   | { readonly valid: true; readonly options: BranchSyncCommandOptions }
-  | { readonly valid: false; readonly reason: string };
+  | { readonly valid: false; readonly reason: string; readonly validation: CopilotCommandValidationDiagnostic };
 
 const NATURAL_LANGUAGE_PATTERNS = [
   /\bupdate\s+(?:the\s+)?issue(?:'s|’s)?\s+branch\b/iu,
@@ -37,10 +39,12 @@ export function parseBranchSyncCommandArguments(
       parentOverride = args[index + 1]?.trim();
       index += 1;
     } else {
-      return { valid: false, reason: `Unsupported sync-branch option: ${argument}.` };
+      return { valid: false, reason: 'Unsupported sync-branch option.',
+        validation: { reason: 'comment-command-sync-option', command: 'sync-branch' } };
     }
     if (!parentOverride) {
-      return { valid: false, reason: "--from requires a parent branch name." };
+      return { valid: false, reason: '--from requires a parent branch name.',
+        validation: { reason: 'comment-command-sync-parent', command: 'sync-branch' } };
     }
   }
 

@@ -1,3 +1,5 @@
+import { COPILOT_COMMAND_VALIDATION_REASONS, isCopilotCommandValidationReason, isValidCopilotCommandValidation, type CopilotCommandValidationReason } from '../../domain/copilot_command_validation';
+import type { CopilotCommandName } from '../../domain/copilot_command';
 import { CLOSED_ISSUE_RESULTS, CLOSED_ISSUE_PHASES, CLOSED_ISSUE_REASONS, type ClosedIssueReconciliationFacts } from '../../domain/closed_issue_reconciliation';
 import { APPROVAL_EVIDENCE_PERMISSIONS, APPROVAL_EVIDENCE_REASONS, type ApprovalEvidenceDiagnostic } from '../../domain/approval_evidence_diagnostic';
 
@@ -38,6 +40,7 @@ export type ApplicationErrorCode =
     | 'unexpected';
 
 export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
+    ...COPILOT_COMMAND_VALIDATION_REASONS,
     'pull-request-link-restored',
     'pull-request-link-base-retained',
     'pull-request-link-reference-retained',
@@ -66,7 +69,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
 
 export type ApplicationErrorRecoveryId = typeof APPLICATION_ERROR_RECOVERY_IDS[number];
 
-interface ApplicationErrorRecoveryVariables {
+interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotCommandValidationReason, Readonly<{ command: CopilotCommandName }>>> {
     readonly 'stored-configuration-schema-missing': Readonly<{ issueNumber: number; expectedVersion: number }>;
     readonly 'stored-configuration-schema-unsupported': Readonly<{ issueNumber: number; expectedVersion: number; actualVersion: number }>;
     readonly 'stored-configuration-invalid': Readonly<{ issueNumber: number; expectedVersion: number }>;
@@ -332,6 +335,19 @@ export class ApplicationError extends Error {
 }
 
 const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readonly string[]>> = Object.freeze({
+    'comment-command-length': Object.freeze(['command']),
+    'comment-command-name-missing': Object.freeze(['command']),
+    'comment-command-name-unknown': Object.freeze(['command']),
+    'comment-command-argument-count': Object.freeze(['command']),
+    'comment-command-arguments-unexpected': Object.freeze(['command']),
+    'comment-command-arguments-missing': Object.freeze(['command']),
+    'comment-command-finding-quoting': Object.freeze(['command']),
+    'comment-command-review-format': Object.freeze(['command']),
+    'comment-command-review-effort': Object.freeze(['command']),
+    'comment-command-review-boolean': Object.freeze(['command']),
+    'comment-command-review-option': Object.freeze(['command']),
+    'comment-command-sync-option': Object.freeze(['command']),
+    'comment-command-sync-parent': Object.freeze(['command']),
     'stored-configuration-schema-missing': Object.freeze(['issueNumber', 'expectedVersion']),
     'stored-configuration-schema-unsupported': Object.freeze(['issueNumber', 'expectedVersion', 'actualVersion']),
     'stored-configuration-invalid': Object.freeze(['issueNumber', 'expectedVersion']),
@@ -371,6 +387,10 @@ function normalizeApplicationErrorRecovery(
     if (actualKeys.length !== expectedKeys.length
         || actualKeys.some((key, index) => key !== expectedKeys[index])) {
         throw new TypeError(`Application error recovery variables are invalid for ${recovery.id}.`);
+    }
+    if (isCopilotCommandValidationReason(recovery.id)
+        && !isValidCopilotCommandValidation(recovery.id, variables.command)) {
+        throw new TypeError('Comment command validation diagnostic is invalid.');
     }
     if (recovery.id.startsWith('stored-configuration-')
         && (![variables.issueNumber, variables.expectedVersion].every(value =>
