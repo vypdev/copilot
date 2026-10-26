@@ -2822,7 +2822,8 @@
         "extension/test/integration/scheduler.test.ts",
         "extension/test/integration/session.test.ts",
         "extension/test/integration/settings_repository.test.ts",
-        "extension/test/integration/webdriver.test.ts"
+        "extension/test/integration/webdriver.test.ts",
+        "extension/test/integration/session_races.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

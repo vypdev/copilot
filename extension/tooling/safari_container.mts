@@ -40,8 +40,15 @@ export async function buildSafariContainer(root: string, run: ContainerCommand =
         '--app-name', 'CopilotH2', '--bundle-identifier', CONTAINER_ID, '--macos-only', '--swift', '--copy-resources', '--no-open', '--no-prompt', '--force']);
     const file = path.join(project, 'project.pbxproj'); const source = await readFile(file, 'utf8');
     await writeFile(file, source.replaceAll('invalid.extensions.copilot.CopilotH2', CONTAINER_ID).replaceAll('MARKETING_VERSION = 1.0;', 'MARKETING_VERSION = 0.1.0;'));
-    const log = await run('/usr/bin/xcodebuild', ['-project', project, '-scheme', 'CopilotH2', '-configuration', 'Debug', '-derivedDataPath', derived,
-        'CODE_SIGN_IDENTITY=-', 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_STYLE=Manual', 'DEVELOPMENT_TEAM=', 'build']);
+    let log: string;
+    try { log = await run('/usr/bin/xcodebuild', ['-project', project, '-scheme', 'CopilotH2', '-configuration', 'Debug', '-derivedDataPath', derived,
+        'CODE_SIGN_IDENTITY=-', 'CODE_SIGNING_ALLOWED=YES', 'CODE_SIGN_STYLE=Manual', 'DEVELOPMENT_TEAM=', 'build']); }
+    catch (error) {
+        const failure = error as { stdout?: unknown; stderr?: unknown } | null;
+        const captured = [failure?.stdout, failure?.stderr].filter(value => typeof value === 'string').join('\n').slice(0, 4 * 1024 * 1024);
+        await writeFile(path.join(workspace, 'build.log'), captured || 'Xcode build failed without captured output.\n');
+        throw error;
+    }
     await writeFile(path.join(workspace, 'build.log'), log);
     await run('/usr/bin/open', [app]);
     const receipt = await verifySafariContainer(root, app, run);

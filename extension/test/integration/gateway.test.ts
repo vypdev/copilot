@@ -30,6 +30,7 @@ it('github-browser-extension-runtime-C17 manages only exact extension connection
     expect(JSON.stringify(h.local.values.get(SETTINGS_KEY))).not.toContain(CONNECTED.secret);
     expect(await h.gateway.handle({ version: 1, method: 'session.status' }, extension)).toMatchObject({ state: 'connected' });
     expect(await h.gateway.handle(PAGE, sender)).toMatchObject({ state: 'current' });
+    expect(await h.gateway.handle(PAGE, sender)).toMatchObject({ state: 'cooldown' });
     expect(await h.gateway.handle({ version: 1, method: 'session.disconnect' }, extension)).toMatchObject({ state: 'disconnected' });
     expect(h.ports.notify).toHaveBeenCalled();
 });
@@ -92,4 +93,9 @@ it('credential revocation in another request and background-tab transitions fenc
     const hidden = harness(); await hidden.connect(); hidden.ports.currentTab.mockResolvedValueOnce({ url: PAGE.route, incognito: false, active: true })
         .mockResolvedValueOnce({ url: PAGE.route, incognito: false, active: false });
     expect(await hidden.gateway.handle(PAGE, sender)).toMatchObject({ state: 'stale' });
+});
+
+it('failed Connect does not enable a repository preference or claim a connected session', async () => {
+    const h = harness(); vi.mocked(h.reader.read).mockResolvedValueOnce({ state: 'denied', bytes: 0 });
+    expect(await h.connect()).toMatchObject({ state: 'unavailable' }); expect(h.local.port.set).not.toHaveBeenCalled();
 });

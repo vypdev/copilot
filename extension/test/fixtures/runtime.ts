@@ -40,6 +40,6 @@ export function sessionHarness() {
     const service = new ProtectedSessionService(store.port, scheduler, ports);
     return { ...store, service, scheduler, ports, reader, advance: (ms: number) => { now += ms; } };
 }
-export function requestResult(request: ReadRequest): ReadResult {
+export function requestResult(request: ReadRequest): Extract<ReadResult, { state: 'ok' }> {
     return { state: 'ok', etag: '', bytes: 10, data: request.type === 'viewer' ? { id: '1', login: 'octo' } : { id: '7', name: 'octo/example' } };
 }

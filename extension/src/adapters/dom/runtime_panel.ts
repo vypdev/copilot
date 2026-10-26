@@ -37,7 +37,7 @@ export function mountRuntimePanel(context: RuntimeContext, scope: ResourceScope,
             if (response.state === 'current' && record(response.data) && typeof response.data.title === 'string') {
                 evidence.textContent = `${context.page.kind === 'pull' ? 'PR' : 'Issue'} #${context.page.number}: ${response.data.title}`;
             } else evidence.textContent = '';
-        } catch { if (scope.current()) status.textContent = copy.unavailable; }
+        } catch { if (scope.current() && operation === sequence) status.textContent = copy.unavailable; }
         finally { if (scope.current() && operation === sequence) read.disabled = false; }
     };
     const click = () => { void load(); }; read.addEventListener('click', click); scope.own(() => read.removeEventListener('click', click));

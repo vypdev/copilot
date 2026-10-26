@@ -76,3 +76,14 @@ it('driver readiness retries are bounded, premature exit/missing driver fail exp
 it('driver pause is bounded and independently clock-testable', async () => {
     vi.useFakeTimers(); const wait = pauseDriver(50); await vi.advanceTimersByTimeAsync(50); await wait;
 });
+
+it('native Safari extension replies accept only the bounded documented identifier shapes and fail closed on malformed provider data', async () => {
+    for (const result of ['owned%20identifier', 42, null, { unexpected: 'raw-private' }, '', 'x'.repeat(257)]) {
+        const h = transport('safari'); const send = h.send.getMockImplementation()!;
+        h.send.mockImplementation(async (url: string, options: RequestInit) => url.endsWith('/webextension')
+            ? new Response(JSON.stringify({ value: result })) : send(url, options));
+        if (result === 'owned%20identifier') { await h.driver.start(); await h.driver.close(); }
+        else await expect(h.driver.start()).rejects.toThrow('prerequisite:safari-extension-installation');
+        expect(h.child.kill).toHaveBeenCalledTimes(1);
+    }
+});

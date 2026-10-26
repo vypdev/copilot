@@ -1,3 +1,6 @@
+vi.mock('node:os', async original => {
+    const actual = await original<typeof import('node:os')>(); return { ...actual, platform: vi.fn(actual.platform) };
+});
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 vi.mock('node:child_process', async original => {
     const actual = await original<typeof import('node:child_process')>();
@@ -5,7 +8,7 @@ vi.mock('node:child_process', async original => {
 });
 import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { tmpdir } from 'node:os';
+import { tmpdir, platform } from 'node:os';
 import path from 'node:path';
 import { buildDevelopmentSet } from '../../tooling/build.mts';
 import { runBrowserHarness, localHarnessEnvironment, type HarnessTarget } from '../../tooling/runtime_harness.mts';
@@ -102,11 +105,17 @@ it('browser CLI writes only completed native-run receipts, closes its driver, an
     const verify = vi.spyOn(safari, 'verifySafariContainer').mockResolvedValue({ appId: 'invalid.extensions.copilot.h2', extensionId: 'invalid.extensions.copilot.h2.Extension',
         version: '0.1.0', xcode: 'test', sourceTreeSha256: sourceTree, resources: {}, signature: 'local-ad-hoc-development-only', distribution: false });
     await browserMain(['safari'], scratch, { COPILOT_H2_SAFARI_APP: '/isolated/CopilotH2.app' });
+    await browserMain(['safari'], scratch, {});
     expect(verify).toHaveBeenCalledWith(scratch, '/isolated/CopilotH2.app');
     run.mockRejectedValueOnce(new Error('synthetic-private-error'));
     await expect(browserMain(['chrome'], scratch, env)).rejects.toThrow('browser-execution-failed');
     const failed = JSON.parse(await readFile(path.join(scratch, '.tmp/extension-browser-evidence/chrome-failed.json'), 'utf8'));
     expect(JSON.stringify(failed)).not.toContain('synthetic-private-error');
+    for (const error of [Object.assign(new TypeError('private'), { code: 'ENOENT' }), { code: 'EACCES' }, Object.assign(new Error('private'), { name: 'ForeignError' })]) {
+        start.mockRejectedValueOnce(error); await expect(browserMain(['chrome'], scratch, env)).rejects.toThrow('browser-execution-failed');
+        const failure = JSON.parse(await readFile(path.join(scratch, '.tmp/extension-browser-evidence/chrome-failed.json'), 'utf8'));
+        expect(JSON.stringify(failure)).not.toContain('private'); expect(failure.errorCategory).toBe(error instanceof TypeError ? 'TypeError' : 'unknown');
+    }
     start.mockRejectedValueOnce(new Error('prerequisite:missing-driver')); await expect(browserMain(['chrome'], scratch, env)).rejects.toThrow('prerequisite:missing-driver');
     verify.mockRestore(); run.mockRestore(); close.mockRestore(); start.mockRestore(); log.mockRestore(); execute.mockRestore();
 });
@@ -122,4 +131,14 @@ it('rejects an expanded live permission manifest and retains only its own nonsec
         ? { id: 'test', session: true, manifest: { ...targetManifest('chrome'), permissions: ['cookies'] } } : evaluate(script, args)) as BrowserDriver['evaluate'];
     await expect(runBrowserHarness(temporary, 'chrome', driver, environment)).rejects.toThrow('exact-generated-manifest-loaded');
     expect(JSON.parse(await readFile(path.join(temporary, '.tmp/extension-browser-evidence/chrome-manifest.json'), 'utf8')).permissions).toEqual(['cookies']);
+});
+
+it('receipt environment records native macOS identity or native Unix kernel identity without substituting a browser', async () => {
+    const childProcess = await import('node:child_process'); const execute = vi.spyOn(childProcess, 'execFileSync').mockReturnValue('macOS exact identity');
+    for (const host of ['darwin', 'linux'] as const) {
+        vi.mocked(platform).mockReturnValue(host); const env = localHarnessEnvironment('driver', 'container');
+        expect(env.os).toEqual(host === 'darwin' ? 'macOS exact identity' : expect.stringContaining('linux'));
+    }
+    const actual = await vi.importActual<typeof import('node:os')>('node:os'); vi.mocked(platform).mockImplementation(actual.platform);
+    execute.mockRestore();
 });

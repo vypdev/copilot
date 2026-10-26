@@ -62,7 +62,9 @@ export class ProtectedSessionService {
             repositoryId: repo.id, repository: repo.name };
         await this.persist(async () => { if (epoch === this.epoch) await this.store.set(SESSION_KEY, connection); });
         const permitted = await this.ports.permitted();
-        if (epoch === this.epoch && permitted) { this.connection = connection; this.state = 'connected'; }
+        if (epoch !== this.epoch) return;
+        if (!permitted) { await this.revoke(); return; }
+        this.connection = connection; this.state = 'connected';
     }
     private defer(result: ScheduledRead, epoch: number): boolean {
         if (result.state !== 'limited' && result.state !== 'cooldown' && result.state !== 'budget') return false;

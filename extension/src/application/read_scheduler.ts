@@ -22,7 +22,7 @@ export class ReadScheduler {
         const epoch = this.epoch;
         const task = this.execute(key, repository, request, secret, cancellation, activity, epoch);
         this.pending.set(key, task);
-        try { return await task; } finally { if (this.pending.get(key) === task) this.pending.delete(key); }
+        try { return await task; } finally { this.pending.delete(key); }
     }
     private async execute(key: string, repository: string, request: ReadRequest, secret: string, cancellation: ReadCancellation,
         activity: Activity, epoch: number): Promise<ScheduledRead> {

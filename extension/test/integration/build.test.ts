@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runInNewContext } from 'node:vm';
 import { buildDevelopmentSet, type BuildReceipt } from '../../tooling/build.mts';
-import { readTarget, validateArtifactSet } from '../../tooling/artifact_validation.mts';
+import { readTarget, validateArtifactSet, validateTarget } from '../../tooling/artifact_validation.mts';
 import { TARGETS } from '../../src/domain/target.ts';
 import { PublishedCleanupError } from '../../tooling/gate_error.mts';
 
@@ -91,4 +91,9 @@ it('reports completed replacement honestly when backup cleanup fails after publi
     }, { publish: async (staging, destination) => { await rename(staging, destination); throw new PublishedCleanupError('retained backup'); } }))
         .rejects.toThrow('complete NEW set is present');
     await expect(validateArtifactSet(output)).resolves.toBeUndefined();
+});
+
+it('rejects a modified packaged runtime page even when the five declared asset names remain correct', async () => {
+    const files = new Map(await readTarget(path.join(temporary, 'first/chrome'))); files.set('runtime.html', RUNTIME_HTML + '<script>untrusted()</script>');
+    expect(() => validateTarget('chrome', files)).toThrow('runtime-page-drift');
 });

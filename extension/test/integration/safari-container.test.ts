@@ -72,3 +72,18 @@ it('Safari CLI preserves import inertness, reports local app path only after bui
     await safariEntrypoint(['node', entry], async () => { throw new Error('private raw error'); });
     expect(error).toHaveBeenCalledWith(expect.not.stringContaining('private raw error')); process.exitCode = previous; log.mockRestore(); error.mockRestore();
 });
+
+it('failed Xcode builds replace any stale success log with bounded captured diagnostics or an explicit unavailable-log fact', async () => {
+    const project = path.join(temporary, '.tmp/safari-h2/project/CopilotH2/CopilotH2.xcodeproj'); await mkdir(project, { recursive: true });
+    for (const failure of [Object.assign(new Error('build-failed'), { stdout: 'compiler output', stderr: 'compiler diagnostic' }), null, { stdout: 42, stderr: 'x'.repeat(4 * 1024 * 1024 + 1) }]) {
+        await writeFile(path.join(project, 'project.pbxproj'), 'invalid.extensions.copilot.CopilotH2 MARKETING_VERSION = 1.0;');
+        const run: ContainerCommand = async (file, args) => {
+            if (file.endsWith('xcodebuild')) throw failure;
+            return commands()(file, args);
+        };
+        await expect(buildSafariContainer(temporary, run)).rejects.toBe(failure);
+        const log = await readFile(path.join(temporary, '.tmp/safari-h2/build.log'), 'utf8');
+        expect(log.length).toBeLessThanOrEqual(4 * 1024 * 1024);
+        expect(log).toBe(failure === null ? 'Xcode build failed without captured output.\n' : failure instanceof Error ? 'compiler output\ncompiler diagnostic' : 'x'.repeat(4 * 1024 * 1024));
+    }
+});

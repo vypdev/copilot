@@ -545,11 +545,11 @@ permission and retains its native receipt even on failure.
 
 ### Local verification receipt (2026-10-26)
 
-The extension suite currently passes 172 tests in 26 files (56 retained H1
-engineering cases plus 112 H2 cases/regressions). All 38 required H2 case IDs
-appear in the executable suites. The local report covers 1,070/1,070 lines;
-new pure domain branches are 100%; remaining per-file statement/branch/function
-gates pass. Per-file executable-line coverage is now enforced at 100% rather
+The extension suite currently passes 191 tests in 27 files (56 retained H1
+engineering cases plus 135 H2 cases/regressions). All 38 required H2 case IDs
+appear in the executable suites. The local report covers 1,076/1,076 lines, 1,356/1,356 branches, 1,611/1,611 statements and 263/263 functions. All measured executable coverage is 100%. Per-file executable-line coverage is now enforced at 100% rather
 than the prior 95%, with no runtime exclusion or lowered gate. These deterministic
 results are not native-browser proof. Exact-head CI/Codecov and native/human
 browser receipts are recorded in the PR, with every failure left explicit.
+
+The final race campaign also verifies permission loss after protected persistence, stale failed panel responses, restore/persistence/revoke interleavings, and bounded failure logs for the actual Xcode containing-app build. Provider-limit and native-browser receipt tests do not substitute for browser acceptance.

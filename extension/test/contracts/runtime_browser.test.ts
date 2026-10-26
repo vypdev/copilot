@@ -3,6 +3,7 @@ import { BrowserStorage } from '../../src/adapters/browser/storage.ts';
 import { browserApi } from '../../src/adapters/browser/api.ts';
 import { browserFixture } from '../fixtures/browser.ts';
 import { startBackground } from '../../src/infrastructure/background_runtime.ts';
+import { MessageGateway } from '../../src/application/message_gateway.ts';
 import { SETTINGS_KEY } from '../../src/application/settings_repository.ts';
 
 afterEach(() => vi.unstubAllGlobals());
@@ -72,4 +73,23 @@ it('background composition executes the real settings/session/read ports with a 
     expect(await call(page, sender)).toMatchObject({ state: 'inactive' });
     vi.stubGlobal('navigator', undefined); expect(await call({ ...page, generation: 2 }, sender)).toMatchObject({ state: 'current' });
     stop();
+});
+
+it('background rejects a damaged internal response instead of forwarding a raw primitive', async () => {
+    const handle = vi.spyOn(MessageGateway.prototype, 'handle').mockResolvedValueOnce(null);
+    const h = browserFixture(); const stop = startBackground(h.api); const respond = vi.fn();
+    [...h.onMessage.listeners][0](null, {}, respond);
+    await vi.waitFor(() => expect(respond).toHaveBeenCalledWith({ state: 'unavailable', sourceTree: 'unbundled' }));
+    stop(); handle.mockRestore();
+});
+
+it('background provider limits return only a jittered nonsecret deadline through the protected Connect composition', async () => {
+    const h = browserFixture(); vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+        const reply = new Response(null, { status: 429, headers: { 'retry-after': '120' } }); Object.defineProperty(reply, 'url', { value: url }); return reply;
+    }));
+    const stop = startBackground(h.api); const respond = vi.fn();
+    [...h.onMessage.listeners][0]({ version: 1, method: 'session.connect', secret: 'synthetic_marker', repository: 'octo/example' },
+        { id: 'test', url: 'chrome-extension://test/runtime.html' }, respond);
+    await vi.waitFor(() => expect(respond).toHaveBeenCalledWith(expect.objectContaining({ state: 'limited', retryAt: expect.any(Number) })));
+    expect(JSON.stringify(respond.mock.calls)).not.toContain('synthetic_marker'); stop();
 });

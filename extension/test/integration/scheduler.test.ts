@@ -61,8 +61,8 @@ it('github-browser-extension-runtime-C23 enforces response-cache memory/cardinal
     expect(await restarted.run('x', 'repo', { type: 'viewer' }, 'synthetic', new BrowserCancellation(), activity)).toMatchObject({ state: 'budget', retryAt: 3700000 });
     h.advance(3600001); expect((await h.run('after-hour')).state).toBe('ok');
     const many = harness();
-    for (let i = 0; i < 129; i++) { if (i === 128) many.advance(3600001); await many.run(String(i)); }
-    expect(many.reader.read).toHaveBeenCalledTimes(121);
+    for (let i = 0; i < 129; i++) { if (i === 128) many.advance(3600001); await many.scheduler.run(String(i), `repo${i % 2}`, { type: 'viewer' }, 'synthetic', new BrowserCancellation(), activity); }
+    expect(many.reader.read).toHaveBeenCalledTimes(129);
 });
 it('cancelled reservations and denied reads cannot populate or retain successful cache entries', async () => {
     const h = harness(); const cancelled = new BrowserCancellation(); cancelled.abort();

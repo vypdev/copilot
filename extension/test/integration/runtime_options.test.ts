@@ -88,3 +88,16 @@ it('disposed and malformed startup/revoke/Connect results cannot expose provider
     expect(live.document.getElementById('status')!.dataset.state).toBe('unavailable');
     const grant = deferred<boolean>(); vi.mocked(live.api.permissions.request).mockReturnValue(grant.promise); live.submit(); live.stop(); grant.resolve(true); await Promise.resolve();
 });
+
+it('late failing Connect/disconnect operations and startup completion cannot replace a newer explicit operation', async () => {
+    for (const method of ['connect', 'disconnect']) {
+        const h = options(); await Promise.resolve(); const pending = deferred<unknown>(); vi.mocked(h.api.runtime.sendMessage).mockReturnValueOnce(pending.promise);
+        if (method === 'connect') { h.submit(); await vi.waitFor(() => expect(h.api.runtime.sendMessage).toHaveBeenCalledTimes(2)); }
+        else (h.document.getElementById('disconnect') as HTMLButtonElement).click();
+        h.stop(); pending.reject(new Error('private')); await Promise.resolve(); expect(h.document.body.textContent).not.toContain('private');
+    }
+    const h = browserFixture(); const pending = deferred<unknown>(); vi.mocked(h.api.runtime.sendMessage).mockReturnValueOnce(pending.promise).mockResolvedValue({ state: 'disconnected' });
+    const dom = new JSDOM(RUNTIME_HTML); cleanups.push(() => dom.window.close()); cleanups.push(startOptions(h.api, dom.window.document, 'en'));
+    (dom.window.document.getElementById('disconnect') as HTMLButtonElement).click(); await Promise.resolve(); pending.resolve({ state: 'connected' }); await Promise.resolve();
+    expect(dom.window.document.getElementById('status')!.dataset.state).toBe('disconnected');
+});

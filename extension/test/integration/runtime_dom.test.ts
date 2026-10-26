@@ -11,10 +11,10 @@ import { githubDom } from '../fixtures/dom.ts';
 
 const cleanups: (() => void)[] = [];
 afterEach(() => { for (const stop of cleanups.splice(0).reverse()) stop(); vi.unstubAllGlobals(); });
-function panel() {
+function panel(valid = () => true, route?: string) {
     const dom = githubDom(); cleanups.push(() => dom.dom.window.close()); const h = browserFixture();
-    const scope = new BrowserResourceScope(() => true); cleanups.push(() => scope.dispose()); const copy = runtimeCopy('en');
-    const controller = mountRuntimePanel(context(), scope, h.api, dom.document, copy, (state, retryAt) => statusText(state, copy, retryAt), () => ({ viewer: 'octo', repositoryId: '7' }));
+    const scope = new BrowserResourceScope(valid); cleanups.push(() => scope.dispose()); const copy = runtimeCopy('en');
+    const controller = mountRuntimePanel(context(route), scope, h.api, dom.document, copy, (state, retryAt) => statusText(state, copy, retryAt), () => ({ viewer: 'octo', repositoryId: '7' }));
     return { ...dom, ...h, scope, controller };
 }
 function content() {
@@ -148,4 +148,37 @@ it('github-browser-extension-runtime-C23 renders bounded retry deadlines and saf
     const h = panel(); vi.mocked(h.api.runtime.sendMessage).mockResolvedValue({ state: 'limited', retryAt: deadline });
     h.document.querySelector('button')!.click();
     await vi.waitFor(() => expect(h.document.querySelector('[role=status]')!.textContent).toContain(new Date(deadline).toLocaleString()));
+});
+
+it('panel epoch loss blocks queued clicks and rejects old failed reads without erasing a newer status', async () => {
+    let valid = true; const inactive = panel(() => valid); valid = false; inactive.document.querySelector('button')!.click();
+    expect(inactive.api.runtime.sendMessage).not.toHaveBeenCalled();
+    const h = panel(); const old = deferred<unknown>(); const latest = deferred<unknown>();
+    vi.mocked(h.api.runtime.sendMessage).mockReturnValueOnce(old.promise).mockReturnValueOnce(latest.promise);
+    const button = h.document.querySelector('button')!; button.dispatchEvent(new h.dom.window.Event('click')); button.dispatchEvent(new h.dom.window.Event('click'));
+    old.reject(new Error('private')); await Promise.resolve(); expect(h.document.querySelector('[role=status]')!.textContent).toContain('Checking');
+    latest.resolve({ state: 'disconnected' }); await vi.waitFor(() => expect(button.disabled).toBe(false));
+    const gone = panel(); const pending = deferred<unknown>(); vi.mocked(gone.api.runtime.sendMessage).mockReturnValueOnce(pending.promise);
+    gone.document.querySelector('button')!.click(); gone.scope.dispose(); pending.reject(new Error('private')); await Promise.resolve();
+    expect(gone.document.querySelector('section')).toBe(null);
+});
+it('queued native page hints after teardown and obsolete failed settings reads cannot revive an old scope', async () => {
+    const h = githubDom(); cleanups.push(() => h.dom.window.close()); const b = browserFixture(); const old = deferred<unknown>();
+    const event = vi.spyOn(h.window, 'addEventListener'); vi.mocked(b.api.runtime.sendMessage).mockReturnValueOnce(old.promise)
+        .mockResolvedValue({ state: 'ready', settings: DEFAULT_SETTINGS });
+    const stop = startContent(b.api, h.window, h.document)!; cleanups.push(stop);
+    h.document.querySelector('meta[name="octolytics-dimension-issue_id"]')!.remove();
+    h.document.dispatchEvent(new h.dom.window.Event('visibilitychange'));
+    await vi.waitFor(() => expect(h.document.querySelector('section')).not.toBe(null)); old.reject(new Error('private')); await Promise.resolve();
+    expect(h.document.querySelector<HTMLElement>('section')!.dataset.copilotSettings).toBe('ready');
+    h.window.history.replaceState({}, '', '/settings/tokens'); Object.defineProperty(h.document, 'visibilityState', { value: 'hidden' });
+    h.document.dispatchEvent(new h.dom.window.Event('visibilitychange')); stop();
+    const hint = event.mock.calls.find(([name]) => name === 'pageshow')![1] as EventListener; hint(new h.dom.window.Event('pageshow'));
+    expect(h.document.querySelector('section')).toBe(null);
+});
+
+it('pull-request projections use the PR label while preserving the native pull context', async () => {
+    const h = panel(() => true, 'https://github.com/octo/example/pull/42');
+    vi.mocked(h.api.runtime.sendMessage).mockResolvedValue({ state: 'current', data: { title: 'Pull fixture' } });
+    h.document.querySelector('button')!.click(); await vi.waitFor(() => expect(h.document.querySelector('section')!.textContent).toContain('PR #42: Pull fixture'));
 });

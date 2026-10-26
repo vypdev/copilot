@@ -90,3 +90,22 @@ it('honors ETag revalidation, bounds provider ETags, and cancels a stalled trans
     const operation = new GitHubGetReader(transport as typeof fetch).read(request, '', new BrowserCancellation());
     await vi.advanceTimersByTimeAsync(20000); expect((await operation).state).toBe('offline'); expect(vi.getTimerCount()).toBe(0);
 });
+
+it('a provider stream failure discards accumulated bytes, releases the reader lock and returns no partial private object', async () => {
+    let reads = 0; const body = new ReadableStream({ pull(controller) {
+        if (reads++ === 0) controller.enqueue(new TextEncoder().encode('{"private":'));
+        else controller.error(new Error('synthetic-private-error'));
+    } });
+    const result = await new GitHubGetReader(vi.fn(async () => response(body)) as typeof fetch).read(request, '', new BrowserCancellation());
+    expect(result).toEqual({ state: 'offline', bytes: 0 }); expect(body.locked).toBe(false);
+});
+
+it('cancellation as the last body chunk drains rejects the complete object before decoding or projection', async () => {
+    const owner = new BrowserCancellation(); let reads = 0;
+    const body = new ReadableStream({ pull(controller) {
+        if (reads++ === 0) controller.enqueue(new TextEncoder().encode(JSON.stringify(data)));
+        else { owner.abort(); controller.close(); }
+    } }, { highWaterMark: 0 });
+    const result = await new GitHubGetReader(vi.fn(async () => response(body)) as typeof fetch).read(request, '', owner);
+    expect(result).toEqual({ state: 'aborted', bytes: 0 }); expect(body.locked).toBe(false);
+});

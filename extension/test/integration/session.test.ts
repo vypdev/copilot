@@ -72,7 +72,7 @@ it('github-browser-extension-runtime-C11 permission-await races cannot resurrect
     const h = sessionHarness(); await h.service.connect(CONNECTED.secret, CONNECTED.repository);
     const permission = deferred<boolean>(); h.ports.permitted.mockReturnValueOnce(permission.promise);
     const reads = vi.mocked(h.reader.read).mock.calls.length; const snapshot = h.service.snapshot(PAGE, true, true, new BrowserCancellation());
-    await Promise.resolve(); await h.service.revoke(); permission.resolve(true);
+    await vi.waitFor(() => expect(h.ports.permitted).toHaveBeenCalledTimes(4)); await h.service.revoke(); permission.resolve(true);
     expect(await snapshot).toMatchObject({ state: 'disconnected' }); expect(h.reader.read).toHaveBeenCalledTimes(reads);
 });
 it('github-browser-extension-runtime-C08 page cancellation and foreign repository/unsupported page cannot expose another selected target', async () => {

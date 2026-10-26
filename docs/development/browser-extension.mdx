@@ -257,3 +257,7 @@ official-download hashes. The macOS 27.0.1 ESR startup prerequisite failure is
 recorded separately; a Linux pass never claims macOS ESR compatibility. This
 choice keeps the browser/OS and failed-prerequisite evidence explicit rather
 than disabling the browser sandbox.
+
+Failed Xcode builds replace `.tmp/safari-h2/build.log` with captured stdout/stderr
+(up to 4 MiB), or an explicit message when the command returned no diagnostics.
+A stale successful log is never presented as evidence for a failed build.
