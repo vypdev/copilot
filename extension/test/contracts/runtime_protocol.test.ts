@@ -47,7 +47,7 @@ it('github-browser-extension-runtime-C26 rejects sender, top frame, exact origin
     expect(pageSender(sender, 'test')).toBe(true); expect(pageSender({ ...sender, origin: undefined }, 'test')).toBe(true);
     for (const patch of [{ id: 'foreign' }, { frameId: 1 }, { tab: undefined }, { tab: { ...sender.tab, id: 0 } },
         { tab: { ...sender.tab, incognito: true } }, { tab: { ...sender.tab, incognito: undefined } }, { url: undefined },
-        { tab: { ...sender.tab, url: 'https://github.com/other/repo' } }, { origin: 'https://evil.invalid' },
+        { tab: { ...sender.tab, url: 'https://evil.invalid/other/repo' } }, { tab: { ...sender.tab, url: undefined } }, { origin: 'https://evil.invalid' },
         { url: 'https://github.com/login', tab: { ...sender.tab, url: 'https://github.com/login' } }]) expect(pageSender({ ...sender, ...patch }, 'test')).toBe(false);
     expect(extensionSender(extension, 'test', origin)).toBe(true);
     expect(extensionSender({ id: 'test', url: extension.url }, 'test', origin)).toBe(true);
@@ -88,4 +88,23 @@ it('github-browser-extension-runtime-C26 normalizes only extension hostname case
         'safari-web-extension://foreign/runtime.html']) expect(extensionSender({ ...sender, url }, 'own-safari-id', root)).toBe(false);
     expect(extensionSender(sender, 'own-safari-id', 'malformed')).toBe(false);
     expect(extensionSender({ ...sender, origin: 'safari-web-extension://foreign' }, 'own-safari-id', root)).toBe(false);
+});
+
+it('local settings opening is closed and limited to eligible top-level content senders', () => {
+    const message = { version: 1, method: 'settings.open' } as const;
+    expect(parseMessage(message)).toEqual(message); expect(allowedMessage(message, sender, 'test', origin)).toBe(true);
+    expect(allowedMessage(message, extension, 'test', origin)).toBe(false);
+    expect(allowedMessage(message, { ...sender, frameId: 1 }, 'test', origin)).toBe(false);
+    for (const extra of [{ url: 'https://evil.invalid' }, { windowId: 99 }, { secret: 'private' }]) expect(parseMessage({ ...message, ...extra })).toBe(null);
+});
+
+it('same-document navigation validates both native frame and tab URLs while snapshots bind to the current native tab', () => {
+    const navigated = { ...sender, tab: { ...sender.tab, url: 'https://github.com/other/repo/pull/42' } };
+    expect(pageSender(navigated, 'test')).toBe(true);
+    expect(allowedMessage({ ...PAGE, route: navigated.tab.url }, navigated, 'test', origin)).toBe(true);
+    expect(allowedMessage(PAGE, navigated, 'test', origin)).toBe(false);
+    for (const url of ['https://github.com/settings/tokens', 'https://evil.invalid/octo/example/issues/42']) {
+        expect(pageSender({ ...navigated, tab: { ...navigated.tab, url } }, 'test')).toBe(false);
+        expect(pageSender({ ...navigated, url }, 'test')).toBe(false);
+    }
 });

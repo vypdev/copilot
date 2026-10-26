@@ -27,8 +27,9 @@ and Safari requires the actual generated containing app enabled in Safari.
 These are development installations, not store packages. Keep test profiles
 separate from personal browsing. The package opens no surprise welcome tab.
 
-On an eligible github.com page, the **Copilot runtime** section links to its
-packaged runtime settings page. The toolbar opens the same page. Authentication,
+On an eligible github.com page, the **Copilot runtime** section has a **Runtime settings** button. Activate it with the keyboard or pointer
+to open its private packaged settings page in the same browser window. The button
+ignores synthetic page-script clicks and prevents duplicate opens while pending. The toolbar opens the same page. Authentication,
 account/token/settings, billing/security and repository administration routes are
 protected: they install no runtime observer, request or state read. Private
 browsing and Enterprise/mobile hosts are unsupported.
@@ -96,7 +97,7 @@ disable/restart the extension/browser if it cannot confirm local cleanup.
 | Current native activity | Read completed for this exact issue/PR | Inspect the native object | No write or Action authority |
 
 Missing/future settings show a disabled recovery diagnostic and a local settings
-link. A missing anchor disables only that helper. Native editors, draft bytes,
+button. A missing anchor disables only that helper. Native editors, draft bytes,
 selection and focus remain owned by GitHub. Do not infer success from a missing
 panel or treat an unavailable source as zero findings.
 

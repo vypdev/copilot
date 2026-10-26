@@ -12,7 +12,8 @@ const extension = { id: 'test', url: `${origin}runtime.html` };
 const sender = { id: 'test', url: PAGE.route, frameId: 0, tab: { id: 1, url: PAGE.route, incognito: false } };
 function harness() {
     const h = sessionHarness(); const local = memoryStore(); const settings = new SettingsRepository(local.port);
-    const ports = { currentTab: vi.fn(async (): Promise<{ url: string; incognito: boolean; active: boolean }> => ({ url: PAGE.route, incognito: false, active: true })),
+    const ports = { currentTab: vi.fn(async (): Promise<{ url: string; incognito: boolean; active: boolean; windowId?: number }> => ({ url: PAGE.route, incognito: false, active: true, windowId: 1 })),
+        openSettings: vi.fn(async (_windowId: number) => undefined),
         cancellation: () => new BrowserCancellation(), online: () => true, notify: vi.fn() };
     const gateway = new MessageGateway('test', origin, settings, h.service, ports);
     const connect = () => gateway.handle({ version: 1, method: 'session.connect', secret: CONNECTED.secret, repository: CONNECTED.repository }, extension);
@@ -143,4 +144,29 @@ it('concurrent gateway Connect requests discard the superseded service result be
 it('a rejected session service returns a bounded unavailable response without exposing the original exception', async () => {
     const h = harness(); vi.spyOn(h.service, 'connect').mockRejectedValueOnce(new Error(CONNECTED.secret));
     expect(await h.connect()).toEqual({ state: 'unavailable' });
+});
+
+it('eligible local settings opening uses only the verified native window and needs no session, network or preference read', async () => {
+    const h = harness(); vi.mocked(h.local.port.get).mockRejectedValue(new Error('private'));
+    h.ports.currentTab.mockResolvedValueOnce({ url: PAGE.route, incognito: false, active: true, windowId: 9 });
+    expect(await h.gateway.handle({ version: 1, method: 'settings.open' }, sender)).toEqual({ state: 'opened' });
+    expect(h.ports.openSettings).toHaveBeenCalledExactlyOnceWith(9); expect(h.local.port.get).not.toHaveBeenCalled();
+    expect(h.reader.read).not.toHaveBeenCalled();
+});
+it.each([{ url: 'https://github.com/settings/tokens' }, { incognito: true }, { active: false }, { windowId: undefined }, { windowId: -1 }])('settings opening rejects departed/private/inactive/unverified native contexts %j', async patch => {
+    const h = harness(); h.ports.currentTab.mockResolvedValueOnce({ url: PAGE.route, incognito: false, active: true, windowId: 1, ...patch });
+    expect(await h.gateway.handle({ version: 1, method: 'settings.open' }, sender)).toEqual({ state: 'rejected' });
+    expect(h.ports.openSettings).not.toHaveBeenCalled();
+});
+it('a native settings-tab creation failure is sanitized and leaves the session and preferences untouched', async () => {
+    const h = harness(); h.ports.openSettings.mockRejectedValueOnce(new Error('private'));
+    expect(await h.gateway.handle({ version: 1, method: 'settings.open' }, sender)).toEqual({ state: 'unavailable' });
+    expect(h.local.port.set).not.toHaveBeenCalled(); expect(h.reader.read).not.toHaveBeenCalled();
+});
+
+it('same-document settings opening uses current native tab metadata without trusting the old frame route', async () => {
+    const h = harness(); const route = 'https://github.com/other/repo/pull/42';
+    h.ports.currentTab.mockResolvedValueOnce({ url: route, incognito: false, active: true, windowId: 9 });
+    expect(await h.gateway.handle({ version: 1, method: 'settings.open' }, { ...sender, tab: { ...sender.tab, url: route } })).toEqual({ state: 'opened' });
+    expect(h.ports.openSettings).toHaveBeenCalledWith(9);
 });

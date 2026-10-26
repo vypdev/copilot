@@ -545,9 +545,9 @@ permission and retains its native receipt even on failure.
 
 ### Local verification receipt (2026-10-26)
 
-The extension suite currently passes 218 tests in 29 files (56 retained H1
-engineering cases plus 162 H2 cases/regressions). All 38 required H2 case IDs
-appear in the executable suites. The local report covers 1,127/1,127 lines, 1,404/1,404 branches, 1,703/1,703 statements and 281/281 functions. All measured executable coverage is 100%. Per-file executable-line coverage is now enforced at 100% rather
+The extension suite currently passes 256 tests in 30 files (56 retained H1
+engineering cases plus 200 H2 cases/regressions). All 38 required H2 case IDs
+appear in the executable suites. The local report covers 1,178/1,178 lines, 1,458/1,458 branches, 1,781/1,781 statements and 288/288 functions. All measured executable coverage is 100%. Per-file executable-line coverage is now enforced at 100% rather
 than the prior 95%, with no runtime exclusion or lowered gate. These deterministic
 results are not native-browser proof. Exact-head CI/Codecov and native/human
 browser receipts are recorded in the PR, with every failure left explicit.
@@ -577,3 +577,50 @@ The Linux native ESR fixture compares the downloaded Firefox and geckodriver
 archives with pinned upstream SHA-256 values before extracting either archive.
 The trusted expected values come from Mozilla's release SHA256SUMS and the
 geckodriver GitHub release asset digest; a mismatch is a hard failure.
+
+
+### Native settings navigation contract (2026-10-26)
+
+The runtime settings control MUST be a semantic button operable by pointer or
+keyboard. Only a trusted native gesture on the current scope sends the exact
+`{version:1, method:"settings.open"}` message. While that open is pending, the
+button prevents duplicate tabs; a failed or malformed result restores the action
+and displays localized unavailable guidance without overwriting a newer activity
+result. Disposed controls and obsolete responses cannot mutate current UI.
+
+The closed gateway permits that operation only from the extension's top-level,
+nonprivate eligible content context. It checks the current native active tab and
+window identity, then invokes a narrow open-settings port. Composition opens only
+its fixed private `runtime.html` in that window. Caller URLs, credentials, window
+IDs and arbitrary navigation are rejected. No public resources or new permissions
+are introduced. The toolbar remains another entry point to the same private page.
+
+Same-document navigation may retain the native sender's original frame URL. Both
+native frame and current-tab URLs MUST remain eligible github.com routes, while
+snapshot routes bind to current native tab metadata and `tabs.get` before/after
+transport. Protected or foreign URLs on either side, child frames, foreign runtime
+IDs and private contexts are rejected. This separates frame provenance from the
+current route instead of requiring stale frame metadata to equal a changed route.
+
+The actual browser harness MUST click this button through native WebDriver,
+recover exactly one added view, wait for its complete load and validate its private
+extension URL. Missing or ambiguous views, other click errors, stale source hashes
+and foreign Safari runtime IDs fail acceptance. ChromeDriver explicitly enables
+extension-target introspection. Only Safari's observed no-such-window click
+transition may be recovered, and only when exactly one new view is found. Safari
+uses an owned blank view for uninstall; cleanup completes before a success receipt.
+The actual Safari runtime ID MUST equal the verified containing extension ID (with
+its native unsigned-development suffix allowed), not an unrelated unpacked ID.
+
+Traceability: H2-R04/R07/R10/R11 -> protocol/gateway/runtime panel/NativeDriver ->
+`runtime_settings_navigation.test.ts`, `runtime_protocol.test.ts`, `gateway.test.ts`,
+`runtime_browser.test.ts`, `webdriver.test.ts`, `browser-harness.test.ts` and native
+receipts -> both browser-extension user/contributor guides. Representative user
+flow: **Runtime settings** -> private settings tab -> **Disconnected** -> optional
+explicit Connect. Failure: **Activity is unavailable. Check access or reconnect;
+your settings remain.** -> retry the enabled settings button. These cases augment
+the 38-case floor and preserve the full product's 803-case contract.
+
+Primary API references: [Chrome sender metadata](https://developer.chrome.com/docs/extensions/reference/api/runtime#type-MessageSender),
+[ChromeDriver extension targets](https://developer.chrome.com/docs/chromedriver/capabilities),
+[Mozilla sender metadata](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/runtime/MessageSender).

@@ -7,6 +7,7 @@ import { createServer } from 'node:net';
 export interface BrowserDriver {
     readonly capabilities: Record<string, unknown>;
     navigate(url: string): Promise<void>;
+    openRuntimeOptions(): Promise<string>;
     evaluate<T>(script: string, args?: unknown[]): Promise<T>;
     evaluateAsync<T>(script: string, args?: unknown[]): Promise<T>;
     close(): Promise<void>;
@@ -25,6 +26,7 @@ export function pauseDriver(milliseconds: number): Promise<void> { return new Pr
 export class NativeDriver implements BrowserDriver {
     private session = '';
     private installed = '';
+    private cleanupWindow = '';
     private child: ChildProcess | undefined;
     private temporary = '';
     private endpoint = '';
@@ -59,7 +61,7 @@ export class NativeDriver implements BrowserDriver {
             if (firefox) alwaysMatch['moz:firefoxOptions'] = { binary: this.configuration.binary, args: ['-headless'], prefs: {
                 'extensions.webextensions.uuids': JSON.stringify({ 'copilot-foundation-dev@extensions.invalid': '00000000-0000-4000-8000-000000000703' }),
             } };
-            else if (!safari) alwaysMatch['goog:chromeOptions'] = { binary: this.configuration.binary,
+            else if (!safari) alwaysMatch['goog:chromeOptions'] = { binary: this.configuration.binary, enableExtensionTargets: true,
                 args: ['--headless=new', '--no-first-run', '--no-default-browser-check',
                     `--user-data-dir=${path.join(this.temporary, 'profile')}`, `--load-extension=${this.configuration.artifact}`,
                     `--disable-extensions-except=${this.configuration.artifact}`] };
@@ -72,7 +74,9 @@ export class NativeDriver implements BrowserDriver {
                     && 'extension' in result ? result.extension : undefined;
                 if (typeof installed !== 'string' || !installed || installed.length > 256) throw new Error('prerequisite:safari-extension-installation');
                 this.installed = installed;
-                // Create the automation view after its WebExtension controller is configured.
+                // Both owned views use the configured controller; cleanup never unloads its active page.
+                const cleanup = await this.command<{ handle: string }>('POST', `/session/${this.session}/window/new`, { type: 'tab' });
+                this.cleanupWindow = cleanup.handle;
                 const window = await this.command<{ handle: string }>('POST', `/session/${this.session}/window/new`, { type: 'tab' });
                 await this.command('POST', `/session/${this.session}/window`, { handle: window.handle });
             }
@@ -83,15 +87,50 @@ export class NativeDriver implements BrowserDriver {
         try { await this.command('POST', `/session/${this.session}/url`, { url }); }
         catch (error) { throw new Error(`${(error as Error).message}:${url.startsWith('https://github.com/') ? 'public-bootstrap' : 'packaged-options'}`, { cause: error }); }
     }
+    async openRuntimeOptions(): Promise<string> {
+        const route = `/session/${this.session}`;
+        const before = await this.command<string[]>('GET', `${route}/window/handles`);
+        const reference = await this.command<Record<string, unknown>>('POST', `${route}/element`,
+            { using: 'css selector', value: '[data-copilot-open-settings]' });
+        const element = reference['element-6066-11e4-a52e-4f735466cecf'];
+        if (typeof element !== 'string' || !element || element.length > 512) throw new Error('assertion:runtime-options-element');
+        let transitionFailure: unknown;
+        try { await this.command('POST', `${route}/element/${encodeURIComponent(element)}/click`, {}); }
+        catch (error) {
+            // Safari may replace the source context while opening the extension page.
+            if (this.configuration.target !== 'safari' || !String(error).endsWith(':404:no such window')) throw error;
+            transitionFailure = error;
+        }
+        let context = '';
+        for (let attempt = 0; attempt < 150; attempt++) {
+            const after = await this.command<string[]>('GET', `${route}/window/handles`);
+            const added = after.filter(handle => !before.includes(handle));
+            if (added.length > 1) throw new Error('assertion:runtime-options-context-ambiguous');
+            if (added.length === 1) { context = added[0]; break; }
+            await this.pause(100);
+        }
+        if (!context) throw transitionFailure ?? new Error('assertion:runtime-options-context-missing');
+        await this.command('POST', `${route}/window`, { handle: context });
+        for (let attempt = 0; attempt < 150; attempt++) {
+            const url = await this.command<string>('GET', `${route}/url`);
+            if (url && url !== 'about:blank' && await this.evaluate('return document.readyState;') === 'complete') return url;
+            await this.pause(100);
+        }
+        throw new Error('assertion:runtime-options-load-incomplete');
+    }
     evaluate<T>(script: string, args: unknown[] = []): Promise<T> { return this.command('POST', `/session/${this.session}/execute/sync`, { script, args }); }
     evaluateAsync<T>(script: string, args: unknown[] = []): Promise<T> { return this.command('POST', `/session/${this.session}/execute/async`, { script, args }); }
     async close(): Promise<void> {
         try {
-            try { if (this.installed) await this.command('DELETE', `/session/${this.session}/webextension/${encodeURIComponent(decodeURIComponent(this.installed))}`); }
+            try { if (this.installed) {
+                // Uninstall from the owned blank view, not the extension view being unloaded.
+                await this.command('POST', `/session/${this.session}/window`, { handle: this.cleanupWindow });
+                await this.command('DELETE', `/session/${this.session}/webextension/${encodeURIComponent(decodeURIComponent(this.installed))}`);
+            } }
             finally { if (this.session) await this.command('DELETE', `/session/${this.session}`); }
         }
         finally {
-            this.session = ''; this.installed = ''; this.child?.kill(); this.child = undefined;
+            this.session = ''; this.installed = ''; this.cleanupWindow = ''; this.child?.kill(); this.child = undefined;
             if (this.temporary) { await rm(this.temporary, { recursive: true, force: true }); this.temporary = ''; }
         }
     }

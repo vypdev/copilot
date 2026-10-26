@@ -86,7 +86,10 @@ Store identities, signing, accounts and publication remain later release work.
 All targets require `storage` and exact `https://github.com/*` page access. The
 only optional host is `https://api.github.com/*`, requested by explicit Connect.
 Static content scripts are isolated and top-frame-only; incognito is unsupported.
-Toolbar/options open the packaged local runtime page. There is no loopback grant,
+Toolbar/options open the packaged local runtime page. The in-page settings
+button sends only the closed `settings.open` method; the background opens the
+fixed private page in the originating native window after verifying the current
+active, nonprivate tab. There is no caller URL or public extension resource. There is no loopback grant,
 remote code, cookie/history access or telemetry. API grants never create a session
 without canonical native identity checks; a credential never enters page content.
 
@@ -210,7 +213,7 @@ only the explicitly tested inert defaults are normalized. New grants/remote code
 or a foreign extension origin fail acceptance.
 
 Safari prerequisites are macOS 27.0.1 build 26A434, Safari 27.0.1 build
-22625.1.29.11.28, Xcode 27.1 build 25183.120.5, enabled remote automation and local
+22625.1.29.11.28, Xcode 27.1 build 27A9275, enabled remote automation and local
 development-extension support. Build the actual containing app:
 
 ```sh
@@ -287,3 +290,23 @@ The native ESR CI step verifies both downloaded archives before extraction or
 execution. Firefox's pinned SHA-256 comes from Mozilla's release SHA256SUMS;
 geckodriver's comes from its official GitHub release asset digest. A mismatch
 stops the step. Update version, URL and reviewed upstream digest together.
+
+
+The native harness clicks the same settings button as a user, then follows exactly
+one newly created native context and waits for that private page to finish loading.
+ChromeDriver enables extension targets explicitly; otherwise current drivers omit
+those views. Safari may mask an extension link in page JavaScript and replace a
+source context while opening it; the harness never derives the options URL from
+page markup or substitutes an unrelated view. It verifies the actual SDK extension
+ID in Safari, separately from the temporary WebDriver installation ID, plus all
+three executed source hashes. Safari cleanup switches to an owned blank configured
+view before uninstalling, then deletes its session and temporary profile.
+
+Same-document navigation can leave a native sender's frame URL at its original
+route. Both native frame and current-tab URLs must be eligible github.com routes;
+the closed snapshot route binds to the current native tab and is checked against
+`tabs.get` before and after the read. Protected, foreign-origin, child-frame and
+private senders remain rejected. Settings opening verifies that same current tab.
+See [native message sender fields](https://developer.chrome.com/docs/extensions/reference/api/runtime#type-MessageSender),
+[ChromeDriver extension targets](https://developer.chrome.com/docs/chromedriver/capabilities),
+and [Mozilla's sender contract](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/runtime/MessageSender).

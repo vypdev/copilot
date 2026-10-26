@@ -13,8 +13,9 @@ const artifacts = '/isolated/artifacts';
 afterEach(() => { mocks.listenFailure = false; mocks.closeFailure = false; vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 function transport(target: 'chrome' | 'firefox' | 'firefox-esr' | 'safari' = 'chrome') {
     const child = { exitCode: null as number | null, on: vi.fn(), kill: vi.fn() }; mocks.spawn.mockReturnValue(child);
+    let windows = 0;
     const send = vi.fn(async (url: string, options: RequestInit) => {
-        const value = url.endsWith('/window/new') ? { handle: 'owned-tab' } : url.endsWith('/webextension') ? { extension: 'owned-extension-id' } : url.endsWith('/session') && options.method === 'POST' ? { sessionId: 'owned-test-session', capabilities: { browserName: target } }
+        const value = url.endsWith('/window') && options.method === 'GET' ? 'initial-blank' : url.endsWith('/window/new') ? { handle: `owned-tab-${++windows}` } : url.endsWith('/webextension') ? { extension: 'owned-extension-id' } : url.endsWith('/session') && options.method === 'POST' ? { sessionId: 'owned-test-session', capabilities: { browserName: target } }
             : url.endsWith('/execute/sync') ? 'sync-result' : url.endsWith('/execute/async') ? 'async-result' : {};
         return new Response(JSON.stringify({ value }), { headers: { 'content-type': 'application/json' } });
     });
@@ -32,6 +33,7 @@ it('native WebDriver protocol uses a bounded owned profile, correct Chrome flags
     await h.driver.navigate('https://github.com/vypdev/copilot/issues/703');
     expect(await h.driver.evaluate('return 1;')).toBe('sync-result'); expect(await h.driver.evaluateAsync('arguments[0]()', [1])).toBe('async-result');
     const start = JSON.parse(String(h.send.mock.calls.find(([url]) => url.endsWith('/session'))![1].body));
+    expect(start.capabilities.alwaysMatch['goog:chromeOptions'].enableExtensionTargets).toBe(true);
     expect(start.capabilities.alwaysMatch['goog:chromeOptions'].args).toContain(`--load-extension=${artifacts}`);
     await h.driver.close(); await h.driver.close(); expect(h.child.kill).toHaveBeenCalledTimes(1);
     expect(h.send.mock.calls.some(([url, options]) => url.endsWith('/owned-test-session') && options.method === 'DELETE')).toBe(true);
@@ -86,4 +88,67 @@ it('native Safari extension replies accept only the bounded documented identifie
         else await expect(h.driver.start()).rejects.toThrow('prerequisite:safari-extension-installation');
         expect(h.child.kill).toHaveBeenCalledTimes(1);
     }
+});
+
+function settingsTransport(target: 'chrome' | 'safari' = 'chrome') {
+    const h = transport(target); const base = h.send.getMockImplementation()!;
+    const state = { clicked: false, element: 'settings/button', handles: ['fixture'], url: 'chrome-extension://test/runtime.html', ready: 'complete',
+        clickError: '', clickStatus: 200, handlesDelay: 0, loadsDelay: 0 };
+    h.send.mockImplementation(async (url: string, options: RequestInit) => {
+        let value: unknown;
+        if (url.endsWith('/window/handles')) value = state.clicked && state.handlesDelay-- <= 0 ? state.handles : ['fixture'];
+        else if (url.endsWith('/element')) value = { 'element-6066-11e4-a52e-4f735466cecf': state.element };
+        else if (url.endsWith('/click')) {
+            state.clicked = true;
+            return new Response(JSON.stringify({ value: state.clickError ? { error: state.clickError, message: 'private-provider-output' } : null }), { status: state.clickStatus });
+        } else if (url.endsWith('/url') && options.method === 'GET') value = state.loadsDelay-- > 0 ? 'about:blank' : state.url;
+        else if (url.endsWith('/execute/sync')) value = state.ready;
+        else return base(url, options);
+        return new Response(JSON.stringify({ value }));
+    });
+    return { ...h, state };
+}
+it('a real settings click follows only its newly added native context after bounded event delivery and load', async () => {
+    const h = settingsTransport(); await h.driver.start(); h.state.handles = ['fixture', 'settings']; h.state.handlesDelay = 1; h.state.loadsDelay = 1;
+    expect(await h.driver.openRuntimeOptions()).toBe('chrome-extension://test/runtime.html');
+    const click = h.send.mock.calls.find(([url]) => url.endsWith('/click'))!;
+    expect(click[0]).toContain('/element/settings%2Fbutton/click');
+    expect(h.send.mock.calls.some(([url, options]) => url.endsWith('/window') && options.body === JSON.stringify({ handle: 'settings' }))).toBe(true);
+    await h.driver.close();
+});
+it('Safari recovers a replaced source context only when exactly one new native view exists and cleans up from its owned blank view', async () => {
+    const h = settingsTransport('safari'); await h.driver.start();
+    h.state.handles = ['settings']; h.state.clickStatus = 404; h.state.clickError = 'no such window';
+    expect(await h.driver.openRuntimeOptions()).toContain('/runtime.html'); await h.driver.close();
+    const uninstall = h.send.mock.calls.findIndex(([url, options]) => url.includes('/webextension/') && options.method === 'DELETE');
+    expect(JSON.parse(String(h.send.mock.calls[uninstall - 1][1].body))).toEqual({ handle: 'owned-tab-1' });
+    expect(h.send.mock.calls.some(([url, options]) => url.endsWith('/window') && options.body === JSON.stringify({ handle: 'owned-tab-2' }))).toBe(true);
+});
+it.each([['chrome', 404, 'no such window'], ['safari', 500, 'no such window'], ['safari', 404, 'stale element reference']] as const)('native %s click failure %i %s is not accepted as a successful context transition', async (target, status, error) => {
+    const h = settingsTransport(target); await h.driver.start(); h.state.clickStatus = status; h.state.clickError = error;
+    await expect(h.driver.openRuntimeOptions()).rejects.toThrow(`:${status}:${error}`); await h.driver.close();
+});
+it.each([['chrome', '', 200, 'runtime-options-context-missing'], ['safari', 'no such window', 404, ':404:no such window']] as const)('a %s click never substitutes the original view when its new context is absent', async (target, error, status, expected) => {
+    const h = settingsTransport(target); await h.driver.start(); h.state.clickStatus = status; h.state.clickError = error;
+    await expect(h.driver.openRuntimeOptions()).rejects.toThrow(expected); await h.driver.close();
+});
+it('ambiguous settings contexts are rejected instead of inspecting an unrelated tab', async () => {
+    const h = settingsTransport(); await h.driver.start(); h.state.handles = ['fixture', 'settings', 'unrelated'];
+    await expect(h.driver.openRuntimeOptions()).rejects.toThrow('runtime-options-context-ambiguous'); await h.driver.close();
+});
+it.each([undefined, '', 42, 'x'.repeat(513)])('malformed native element reference %j is rejected before any click', async element => {
+    const h = settingsTransport(); await h.driver.start(); h.state.element = element as string;
+    await expect(h.driver.openRuntimeOptions()).rejects.toThrow('runtime-options-element'); expect(h.state.clicked).toBe(false); await h.driver.close();
+});
+it.each([['', 'complete'], ['about:blank', 'complete'], ['chrome-extension://test/runtime.html', 'interactive']])('a settings page %s in state %s must finish loading within the bounded native wait', async (url, ready) => {
+    const h = settingsTransport(); await h.driver.start(); Object.assign(h.state, { handles: ['fixture', 'settings'], url, ready });
+    await expect(h.driver.openRuntimeOptions()).rejects.toThrow('runtime-options-load-incomplete'); await h.driver.close();
+});
+it('a failed Safari uninstall still deletes its native session and owned process/profile', async () => {
+    const h = transport('safari'); await h.driver.start(); const base = h.send.getMockImplementation()!;
+    h.send.mockImplementation(async (url: string, options: RequestInit) => url.includes('/webextension/')
+        ? new Response(JSON.stringify({ value: { error: 'uninstall-failed' } }), { status: 500 }) : base(url, options));
+    await expect(h.driver.close()).rejects.toThrow('uninstall-failed'); expect(h.child.kill).toHaveBeenCalledTimes(1);
+    expect(h.send.mock.calls.some(([url, options]) => url.endsWith('/owned-test-session') && options.method === 'DELETE')).toBe(true);
+    await h.driver.close(); expect(h.child.kill).toHaveBeenCalledTimes(1);
 });

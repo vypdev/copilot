@@ -8,6 +8,7 @@ export interface Sender {
     readonly tab?: { readonly id?: number; readonly url?: string; readonly incognito?: boolean; readonly active?: boolean };
 }
 export type Message = { readonly method: 'settings.read'; readonly version: 1 }
+    | { readonly method: 'settings.open'; readonly version: 1 }
     | { readonly method: 'session.status'; readonly version: 1 }
     | { readonly method: 'session.disconnect'; readonly version: 1 }
     | { readonly method: 'page.release'; readonly version: 1; readonly generation: number }
@@ -15,7 +16,7 @@ export type Message = { readonly method: 'settings.read'; readonly version: 1 }
     | { readonly method: 'session.connect'; readonly version: 1; readonly secret: string; readonly repository: string }
     | { readonly method: 'page.snapshot'; readonly version: 1; readonly route: string; readonly generation: number;
         readonly repositoryId: string; readonly viewer: string | null; readonly visible: boolean; readonly manual: boolean };
-const PAGE = new Set(['settings.read', 'session.status', 'page.snapshot', 'page.release']);
+const PAGE = new Set(['settings.read', 'settings.open', 'session.status', 'page.snapshot', 'page.release']);
 function extensionLocation(value: unknown): string | null {
     if (typeof value !== 'string') return null;
     const match = /^((?:chrome-extension|moz-extension|safari-web-extension):\/\/)([A-Za-z0-9-]{1,128})(\/(?:runtime\.html)?)$(?![\s\S])/u.exec(value);
@@ -28,15 +29,16 @@ export function extensionSender(sender: Sender, id: string, origin: string): boo
         && (sender.origin === undefined || extensionLocation(`${sender.origin}/`) === root)
         && (sender.frameId === undefined || sender.frameId === 0) && sender.tab?.incognito !== true;
 }
+// Same-document navigation can retain the original frame URL; both native URLs must remain eligible.
 export function pageSender(sender: Sender, id: string): boolean {
     return sender.id === id && sender.frameId === 0 && sender.tab?.incognito === false
         && natural(sender.tab.id) && sender.tab.id > 0 && typeof sender.url === 'string'
-        && sender.tab.url === sender.url && (sender.origin === undefined || sender.origin === 'https://github.com')
+        && typeof sender.tab.url === 'string' && isEligibleGitHubUrl(sender.tab.url) && (sender.origin === undefined || sender.origin === 'https://github.com')
         && isEligibleGitHubUrl(sender.url);
 }
 export function parseMessage(value: unknown): Message | null {
     if (!record(value) || value.version !== 1 || typeof value.method !== 'string') return null;
-    if (['settings.read', 'session.status', 'session.disconnect'].includes(value.method)) {
+    if (['settings.read', 'settings.open', 'session.status', 'session.disconnect'].includes(value.method)) {
         return keys(value, ['version', 'method']) && Object.keys(value).length === 2 ? value as Message : null;
     }
     if (value.method === 'page.release') return keys(value, ['version', 'method', 'generation'])
@@ -56,7 +58,7 @@ export function parseMessage(value: unknown): Message | null {
     return value as unknown as Message;
 }
 export function allowedMessage(message: Message, sender: Sender, id: string, origin: string): boolean {
-    if (extensionSender(sender, id, origin)) return message.method !== 'page.snapshot' && message.method !== 'page.release';
+    if (extensionSender(sender, id, origin)) return message.method !== 'page.snapshot' && message.method !== 'page.release' && message.method !== 'settings.open';
     return PAGE.has(message.method) && pageSender(sender, id)
-        && (message.method !== 'page.snapshot' || message.route === sender.url);
+        && (message.method !== 'page.snapshot' || message.route === sender.tab?.url);
 }

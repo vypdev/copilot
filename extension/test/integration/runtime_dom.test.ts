@@ -28,7 +28,8 @@ it('github-browser-extension-runtime-C13/github-browser-extension-runtime-C27 pr
     h.document.querySelector('button')!.click(); await vi.waitFor(() => expect(h.document.querySelector('[role=status]')!.textContent).toContain('refreshed'));
     expect(draft.value).toBe(text); expect(draft.selectionStart).toBe(2); expect(draft.selectionEnd).toBe(9); expect(h.document.activeElement).toBe(draft);
     expect(h.document.querySelector('[data-copilot-runtime]')!.textContent).toContain('Issue #42: <img'); expect(h.document.querySelector('img')).toBe(null);
-    expect(h.document.querySelector('[data-copilot-runtime] a')!.getAttribute('href')).toBe('chrome-extension://test/runtime.html');
+    expect(h.document.querySelector<HTMLButtonElement>('[data-copilot-open-settings]')!.type).toBe('button');
+    expect(h.document.querySelector('[data-copilot-runtime] a')).toBe(null);
 });
 it('github-browser-extension-runtime-C28/github-browser-extension-runtime-C30 renders unavailable and malformed provider states as bounded text without raw HTML or URLs', async () => {
     const h = panel();

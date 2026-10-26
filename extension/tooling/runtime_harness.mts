@@ -3,6 +3,7 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { platform, release, arch } from 'node:os';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
+import { CONTAINER_ID } from './safari_container.mts';
 import { loadedManifestMatches } from './loaded_manifest.mts';
 import { validateArtifactSet } from './artifact_validation.mts';
 import type { BrowserDriver } from './webdriver.mts';
@@ -30,12 +31,12 @@ export async function runBrowserHarness(root: string, target: HarnessTarget, dri
     await driver.navigate('https://github.com/vypdev/copilot/issues/703');
     await driver.evaluate('document.documentElement.innerHTML = arguments[0]; history.replaceState({}, "", "/octo/example/issues/42"); window.dispatchEvent(new Event("turbo:render"));',
         [GITHUB_FIXTURE.replace(/^<!doctype html><html lang="en">/u, '').replace(/<\/html>$/u, '')]);
-    let options = '';
+    let mounted = false;
     for (let attempt = 0; attempt < 150; attempt++) {
-        options = await driver.evaluate<string>('return document.querySelector("[data-copilot-runtime] a")?.href || "";');
-        if (options) break; await environment.wait();
+        mounted = await driver.evaluate<boolean>('return !!document.querySelector("[data-copilot-open-settings]");');
+        if (mounted) break; await environment.wait();
     }
-    assert(/^(?:chrome-extension|moz-extension|safari-web-extension):\/\/[^/]+\/runtime\.html$(?![\s\S])/u.test(options), 'packaged-content-entry-loaded');
+    assert(mounted, 'packaged-content-entry-loaded');
     for (let attempt = 0; attempt < 30; attempt++) {
         if (await driver.evaluate<number>('return document.querySelectorAll("[data-copilot-runtime]").length;') === 1) break;
         await environment.wait();
@@ -51,7 +52,15 @@ export async function runBrowserHarness(root: string, target: HarnessTarget, dri
     assert(await driver.evaluate<boolean>('const draft=document.querySelector("textarea");return draft.value===arguments[0] && draft.selectionStart===2 && draft.selectionEnd===9 && document.activeElement===draft;', [original]), 'native-draft-selection-and-focus-preserved');
     await driver.evaluate('history.pushState({}, "", "/settings/tokens");window.dispatchEvent(new Event("turbo:render"));');
     assert(await driver.evaluate<number>('return document.querySelectorAll("[data-copilot-runtime]").length;') === 0, 'protected-navigation-disposes-owned-ui');
-    await driver.navigate(options);
+    await driver.evaluate('history.pushState({}, "", arguments[0]); window.dispatchEvent(new Event("turbo:render"));', ['/octo/example/issues/42']);
+    let resumed = false;
+    for (let attempt = 0; attempt < 150; attempt++) {
+        resumed = await driver.evaluate<number>('return document.querySelectorAll("[data-copilot-runtime]").length;') === 1;
+        if (resumed) break; await environment.wait();
+    }
+    assert(resumed, 'eligible-navigation-resumes-owned-ui');
+    const options = await driver.openRuntimeOptions();
+    assert(/^(?:chrome-extension|moz-extension|safari-web-extension):\/\/[^/]+\/runtime\.html$(?![\s\S])/u.test(options), 'native-runtime-settings-navigation');
     const native = await driver.evaluate<{ id: string; manifest: unknown; session: boolean }>('const api=globalThis.browser??globalThis.chrome;return {id:api.runtime.id,manifest:api.runtime.getManifest(),session:!!api.storage.session};');
     const matches = loadedManifestMatches(target === 'firefox-esr' ? 'firefox' : target, native.manifest, options.slice(0, -'runtime.html'.length));
     if (!matches) {
@@ -60,6 +69,7 @@ export async function runBrowserHarness(root: string, target: HarnessTarget, dri
     }
     assert(matches, 'exact-generated-manifest-loaded');
     assert(native.id.length > 0 && native.session, 'native-runtime-and-protected-session-api-present');
+    assert(target !== 'safari' || [`${CONTAINER_ID}.Extension`, `${CONTAINER_ID}.Extension (UNSIGNED)`].includes(native.id), 'actual-safari-containing-extension-loaded');
     assert(await driver.evaluate<string>('return document.documentElement.dataset.copilotSourceTree;') === receipt.sourceTreeSha256, 'exact-options-build-loaded');
     const state = await driver.evaluateAsync<{ state: string; sourceTree: string }>('const done=arguments[arguments.length-1];(globalThis.browser??globalThis.chrome).runtime.sendMessage({version:1,method:"session.disconnect"}).then(done,()=>done({state:"failed"}));');
     assert(state.sourceTree === receipt.sourceTreeSha256, 'exact-background-build-loaded');
@@ -69,7 +79,7 @@ export async function runBrowserHarness(root: string, target: HarnessTarget, dri
     return { schemaVersion: 1, evidence: 'actual-extension-loaded', target, sourceRevision: receipt.sourceRevision,
         sourceTreeSha256: receipt.sourceTreeSha256, artifacts: receipt.targets[target === 'firefox-esr' ? 'firefox' : target],
         fixtureSha256: createHash('sha256').update(GITHUB_FIXTURE).digest('hex'), os: environment.os, browser, version,
-        driver: environment.driver, containingApp: environment.container, assertions,
+        driver: environment.driver, containingApp: environment.container, extensionId: native.id, assertions,
         limitations: ['No real credential or private repository used.', 'Public github.com bootstrap; independently authored DOM fixture; genuine loaded extension APIs.',
             'Provider responses and API floors are separate deterministic suites.', 'Complete product, signing/store release, human UX and full multi-OS matrix remain pending.'] };
 }

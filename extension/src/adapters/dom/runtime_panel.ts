@@ -15,13 +15,13 @@ export function mountRuntimePanel(context: RuntimeContext, scope: ResourceScope,
     const status = document.createElement('p'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
     status.textContent = copy.standalone;
     const read = document.createElement('button'); read.type = 'button'; read.textContent = copy.read; read.disabled = copy.ready === false;
-    const settings = document.createElement('a'); settings.href = api.runtime.getURL('runtime.html'); settings.textContent = copy.settings;
+    const settings = document.createElement('button'); settings.type = 'button'; settings.dataset.copilotOpenSettings = '1'; settings.textContent = copy.settings;
     const evidence = document.createElement('p');
     const details = document.createElement('details'); const summary = document.createElement('summary'); summary.textContent = copy.details;
     const digest = document.createElement('code'); digest.textContent = `SHA-256 ${copy.sourceTree ?? 'unbundled'}`; details.append(summary, digest);
     panel.append(heading, status, evidence, read, document.createTextNode(' '), settings, details);
     anchor.append(panel); scope.own(() => panel.remove());
-    let sequence = 0;
+    let sequence = 0; let openings = 0;
     const load = async () => {
         if (!scope.current()) return;
         const operation = ++sequence; read.disabled = true; status.textContent = copy.pending;
@@ -40,6 +40,20 @@ export function mountRuntimePanel(context: RuntimeContext, scope: ResourceScope,
         } catch { if (scope.current() && operation === sequence) status.textContent = copy.unavailable; }
         finally { if (scope.current() && operation === sequence) read.disabled = false; }
     };
+    const open = (event: MouseEvent) => {
+        if (!scope.current() || !event.isTrusted || settings.disabled) return;
+        const operation = ++openings; const reading = sequence; settings.disabled = true;
+        const failed = () => { if (scope.current() && operation === openings && reading === sequence) status.textContent = copy.unavailable; };
+        const run = async () => {
+            try {
+                const response = await api.runtime.sendMessage({ version: 1, method: 'settings.open' });
+                if (!record(response) || response.state !== 'opened') failed();
+            } catch { failed(); }
+            finally { if (scope.current() && operation === openings) settings.disabled = false; }
+        };
+        void run();
+    };
+    settings.addEventListener('click', open); scope.own(() => settings.removeEventListener('click', open));
     const click = () => { void load(); }; read.addEventListener('click', click); scope.own(() => read.removeEventListener('click', click));
     return { refresh() {
         if (!scope.current()) return;

@@ -20,10 +20,10 @@ export interface BrowserApi {
         onRemoved: BrowserEvent<(permissions: { origins?: string[] }) => void>;
     };
     tabs: {
-        get(id: number): Promise<{ url?: string; active?: boolean; incognito?: boolean }>;
+        get(id: number): Promise<{ url?: string; active?: boolean; incognito?: boolean; windowId?: number }>;
         query(query: { url: string }): Promise<{ id?: number }[]>;
         sendMessage(id: number, message: unknown): Promise<unknown>;
-        create(value: { url: string }): Promise<unknown>;
+        create(value: { url: string; windowId?: number }): Promise<unknown>;
         onRemoved: BrowserEvent<(id: number) => void>;
         onUpdated: BrowserEvent<(id: number, changes: { url?: string; status?: string }) => void>;
     };

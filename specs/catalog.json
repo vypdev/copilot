@@ -2826,7 +2826,8 @@
         "extension/test/integration/settings_repository.test.ts",
         "extension/test/integration/webdriver.test.ts",
         "extension/test/integration/session_races.test.ts",
-        "extension/test/integration/shared_reads.test.ts"
+        "extension/test/integration/shared_reads.test.ts",
+        "extension/test/integration/runtime_settings_navigation.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

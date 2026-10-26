@@ -94,3 +94,12 @@ it('background provider limits return only a jittered nonsecret deadline through
     await vi.waitFor(() => expect(respond).toHaveBeenCalledWith(expect.objectContaining({ state: 'limited', retryAt: 220500 })));
     expect(JSON.stringify(respond.mock.calls)).not.toContain('synthetic_marker'); stop();
 });
+
+it('settings navigation opens the fixed private runtime page in the verified originating window', async () => {
+    const h = browserFixture(); const stop = startBackground(h.api); const respond = vi.fn();
+    const route = 'https://github.com/octo/example/issues/42';
+    [...h.onMessage.listeners][0]({ version: 1, method: 'settings.open' }, { id: 'test', url: route, frameId: 0, tab: { id: 1, url: route, incognito: false } }, respond);
+    await vi.waitFor(() => expect(respond).toHaveBeenCalledWith({ state: 'opened', sourceTree: 'unbundled' }));
+    expect(h.api.tabs.create).toHaveBeenCalledExactlyOnceWith({ url: 'chrome-extension://test/runtime.html', windowId: 1 });
+    expect(h.api.permissions.request).not.toHaveBeenCalled(); stop();
+});

@@ -27,7 +27,8 @@ export function startBackground(api: BrowserApi): () => void {
         }).catch(() => undefined);
     };
     const gateway = new MessageGateway(api.runtime.id, api.runtime.getURL(''), new SettingsRepository(local), sessions,
-        { currentTab: id => api.tabs.get(id), cancellation: () => new BrowserCancellation(),
+        { currentTab: id => api.tabs.get(id), openSettings: windowId => api.tabs.create({ url: api.runtime.getURL('runtime.html'), windowId }),
+            cancellation: () => new BrowserCancellation(),
             online: () => globalThis.navigator?.onLine !== false, notify });
     const message: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender, respond) => {
         void gateway.handle(value, sender).then(result => respond({ ...(record(result) ? result : { state: 'unavailable' }), sourceTree: buildSourceIdentity() })); return true;

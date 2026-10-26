@@ -24,7 +24,7 @@ export function browserFixture() {
         sendMessage: vi.fn(async () => ({ state: 'disconnected' })), onMessage },
     storage: { local: local.area, session: session.area, onChanged: changed },
     permissions: { contains: vi.fn(async () => true), request: vi.fn(async () => true), onRemoved: permissionRemoved },
-    tabs: { get: vi.fn(async () => ({ url: 'https://github.com/octo/example/issues/42', active: true, incognito: false })),
+    tabs: { get: vi.fn(async () => ({ url: 'https://github.com/octo/example/issues/42', active: true, incognito: false, windowId: 1 })),
         query: vi.fn(async () => []), sendMessage: vi.fn(async () => undefined), create: vi.fn(async () => undefined), onUpdated, onRemoved },
     action: { onClicked: clicked }, extension: { inIncognitoContext: false } };
     return { api, localArea: local.area, localValues: local.values, sessionArea: session.area, sessionValues: session.values, onMessage, onUpdated, onRemoved, permissionRemoved, changed, clicked };

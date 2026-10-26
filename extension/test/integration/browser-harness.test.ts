@@ -26,15 +26,16 @@ function fakeDriver(target: HarnessTarget, missingAnchor = false): BrowserDriver
     let protectedRoute = false;
     return { capabilities: { browserName: target.startsWith('firefox') ? 'firefox' : target,
         browserVersion: { chrome: '156.0.8078.47', firefox: '158.0.1', 'firefox-esr': '153.5.1', safari: '27.0.1' }[target] },
-    navigate: vi.fn(async () => undefined), close: vi.fn(async () => undefined),
+    navigate: vi.fn(async () => undefined), openRuntimeOptions: vi.fn(async () => 'chrome-extension://test/runtime.html'), close: vi.fn(async () => undefined),
     evaluate: vi.fn(async (script: string, args: unknown[] = []) => {
-        if (script.includes('?.href')) return missingAnchor ? '' : 'chrome-extension://test/runtime.html';
+        if (script.includes('!!document.querySelector')) return !missingAnchor;
         if (script.includes('dataset.copilotSourceTree')) return sourceTree;
         if (script.includes('querySelectorAll')) return protectedRoute ? 0 : 1;
         if (script.includes('draft.value===')) return true;
         if (script.includes('return draft.value')) return 'Authored draft 🧪';
-        if (script.includes('getManifest')) return { id: 'test', session: true, manifest: targetManifest(target === 'firefox-esr' ? 'firefox' : target) };
+        if (script.includes('getManifest')) return { id: target === 'safari' ? 'invalid.extensions.copilot.h2.Extension (UNSIGNED)' : 'test', session: true, manifest: targetManifest(target === 'firefox-esr' ? 'firefox' : target) };
         if (script.includes('/settings/tokens') || args[0] === '/settings/tokens') protectedRoute = true;
+        if (args[0] === '/octo/example/issues/42') protectedRoute = false;
         return undefined;
     }) as BrowserDriver['evaluate'],
     evaluateAsync: vi.fn(async (script: string) => ({ state: script.includes('session.disconnect') ? 'disconnected' : 'rejected', sourceTree })) as BrowserDriver['evaluateAsync'] };
@@ -45,7 +46,7 @@ it('github-browser-extension-runtime-C32/github-browser-extension-runtime-C33/gi
         const driver = fakeDriver(target); const receipt = await runBrowserHarness(temporary, target, driver, environment);
         expect(receipt.evidence).toBe('actual-extension-loaded'); expect(receipt.sourceTreeSha256).toBe(sourceTree);
         expect(receipt.fixtureSha256).toMatch(/^[a-f\d]{64}$/u); expect(receipt.assertions).toContain('native-draft-selection-and-focus-preserved');
-        expect(receipt.assertions).toContain('exact-background-build-loaded'); expect(driver.navigate).toHaveBeenCalledTimes(2);
+        expect(receipt.assertions).toContain('exact-background-build-loaded'); expect(driver.navigate).toHaveBeenCalledTimes(1); expect(driver.openRuntimeOptions).toHaveBeenCalledTimes(1);
         // These fakes prove harness assertions only. Published acceptance receipts come from NativeDriver runs.
     }
 });
@@ -145,4 +146,27 @@ it('receipt environment records native macOS identity or native Unix kernel iden
     }
     const actual = await vi.importActual<typeof import('node:os')>('node:os'); vi.mocked(platform).mockImplementation(actual.platform);
     execute.mockRestore();
+});
+
+it('settings acceptance rejects external destinations and a different Safari extension identity', async () => {
+    const external = fakeDriver('chrome'); vi.mocked(external.openRuntimeOptions).mockResolvedValue('https://evil.invalid/runtime.html');
+    await expect(runBrowserHarness(temporary, 'chrome', external, environment)).rejects.toThrow('native-runtime-settings-navigation');
+    const safari = fakeDriver('safari'); const evaluate = safari.evaluate;
+    safari.evaluate = vi.fn(async (script: string, args?: unknown[]) => script.includes('getManifest')
+        ? { id: 'unrelated.extension', session: true, manifest: targetManifest('safari') } : evaluate(script, args)) as BrowserDriver['evaluate'];
+    await expect(runBrowserHarness(temporary, 'safari', safari, environment)).rejects.toThrow('actual-safari-containing-extension-loaded');
+});
+it('eligible navigation must resume the owned panel before settings is clicked', async () => {
+    for (const resume of [false, true]) {
+        const driver = fakeDriver('chrome'); const evaluate = driver.evaluate; let protectedNavigation = false; let resumeCalls = 0;
+        driver.evaluate = vi.fn(async (script: string, args?: unknown[]) => {
+            if (script.includes('/settings/tokens')) protectedNavigation = true;
+            if (protectedNavigation && script.includes('querySelectorAll')) {
+                if (resumeCalls++ === 0 || !resume || resumeCalls === 2) return 0;
+            }
+            return evaluate(script, args);
+        }) as BrowserDriver['evaluate'];
+        if (resume) expect((await runBrowserHarness(temporary, 'chrome', driver, environment)).assertions).toContain('eligible-navigation-resumes-owned-ui');
+        else { await expect(runBrowserHarness(temporary, 'chrome', driver, environment)).rejects.toThrow('eligible-navigation-resumes-owned-ui'); expect(driver.openRuntimeOptions).not.toHaveBeenCalled(); }
+    }
 });

@@ -1,13 +1,15 @@
 import { allowedMessage, parseMessage, type Message, type Sender } from '../domain/protocol.ts';
 import { currentFence, type PageFence } from '../domain/session.ts';
 import { effectiveSettings } from '../domain/settings.ts';
+import { natural } from '../domain/value.ts';
 import type { CancellationOwner } from './read_ports.ts';
 import { ProtectedSessionService } from './protected_session.ts';
 import { SettingsRepository } from './settings_repository.ts';
 
 interface PageLease { readonly fence: PageFence; readonly cancel: CancellationOwner }
 export interface GatewayPorts {
-    currentTab(id: number): Promise<{ readonly url?: string; readonly active?: boolean; readonly incognito?: boolean }>;
+    currentTab(id: number): Promise<{ readonly url?: string; readonly active?: boolean; readonly incognito?: boolean; readonly windowId?: number }>;
+    openSettings(windowId: number): Promise<unknown>;
     cancellation(): CancellationOwner;
     online(): boolean;
     notify(): void;
@@ -64,6 +66,10 @@ export class MessageGateway {
                 return { state: 'released' };
             }
             const current = await this.ports.currentTab(id);
+            if (message.method === 'settings.open') {
+                if (current.url !== sender.tab?.url || current.incognito !== false || current.active !== true || !natural(current.windowId)) return { state: 'rejected' };
+                await this.ports.openSettings(current.windowId); return { state: 'opened' };
+            }
             if (current.incognito !== false || current.url !== message.route) return { state: 'rejected' };
             const fence = { generation: message.generation, route: message.route, repositoryId: message.repositoryId };
             const previous = this.pages.get(id);
