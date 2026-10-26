@@ -7,6 +7,7 @@ import { createServer } from 'node:net';
 export interface BrowserDriver {
     readonly capabilities: Record<string, unknown>;
     navigate(url: string): Promise<void>;
+    focusFixture(): Promise<void>;
     openRuntimeOptions(): Promise<string>;
     evaluate<T>(script: string, args?: unknown[]): Promise<T>;
     evaluateAsync<T>(script: string, args?: unknown[]): Promise<T>;
@@ -86,6 +87,13 @@ export class NativeDriver implements BrowserDriver {
     async navigate(url: string): Promise<void> {
         try { await this.command('POST', `/session/${this.session}/url`, { url }); }
         catch (error) { throw new Error(`${(error as Error).message}:${url.startsWith('https://github.com/') ? 'public-bootstrap' : 'packaged-options'}`, { cause: error }); }
+    }
+    async focusFixture(): Promise<void> {
+        // Only the independently authored fixture heading is clicked, never live GitHub controls.
+        const route = `/session/${this.session}`;
+        const reference = await this.command<Record<string, string>>('POST', `${route}/element`,
+            { using: 'css selector', value: 'main > h1' });
+        await this.command('POST', `${route}/element/${encodeURIComponent(reference['element-6066-11e4-a52e-4f735466cecf'])}/click`, {});
     }
     async openRuntimeOptions(): Promise<string> {
         const route = `/session/${this.session}`;

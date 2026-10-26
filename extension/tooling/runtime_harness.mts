@@ -31,6 +31,13 @@ export async function runBrowserHarness(root: string, target: HarnessTarget, dri
     await driver.navigate('https://github.com/vypdev/copilot/issues/703');
     await driver.evaluate('document.documentElement.innerHTML = arguments[0]; history.replaceState({}, "", "/octo/example/issues/42"); window.dispatchEvent(new Event("turbo:render"));',
         [GITHUB_FIXTURE.replace(/^<!doctype html><html lang="en">/u, '').replace(/<\/html>$/u, '')]);
+    await driver.focusFixture();
+    let visible = false;
+    for (let attempt = 0; attempt < 150; attempt++) {
+        visible = await driver.evaluate<boolean>('return document.visibilityState === "visible";');
+        if (visible) break; await environment.wait();
+    }
+    assert(visible, 'native-fixture-visible');
     let mounted = false;
     for (let attempt = 0; attempt < 150; attempt++) {
         mounted = await driver.evaluate<boolean>('return !!document.querySelector("[data-copilot-open-settings]");');

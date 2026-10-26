@@ -545,9 +545,9 @@ permission and retains its native receipt even on failure.
 
 ### Local verification receipt (2026-10-26)
 
-The extension suite currently passes 256 tests in 30 files (56 retained H1
-engineering cases plus 200 H2 cases/regressions). All 38 required H2 case IDs
-appear in the executable suites. The local report covers 1,178/1,178 lines, 1,458/1,458 branches, 1,781/1,781 statements and 288/288 functions. All measured executable coverage is 100%. Per-file executable-line coverage is now enforced at 100% rather
+The extension suite currently passes 259 tests in 30 files (56 retained H1
+engineering cases plus 203 H2 cases/regressions). All 38 required H2 case IDs
+appear in the executable suites. The local report covers 1,187/1,187 lines, 1,460/1,460 branches, 1,793/1,793 statements and 289/289 functions. All measured executable coverage is 100%. Per-file executable-line coverage is now enforced at 100% rather
 than the prior 95%, with no runtime exclusion or lowered gate. These deterministic
 results are not native-browser proof. Exact-head CI/Codecov and native/human
 browser receipts are recorded in the PR, with every failure left explicit.
@@ -624,3 +624,11 @@ the 38-case floor and preserve the full product's 803-case contract.
 Primary API references: [Chrome sender metadata](https://developer.chrome.com/docs/extensions/reference/api/runtime#type-MessageSender),
 [ChromeDriver extension targets](https://developer.chrome.com/docs/chromedriver/capabilities),
 [Mozilla sender metadata](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/runtime/MessageSender).
+
+
+Native browser acceptance first MUST give pointer focus to the inert authored
+fixture heading and verify real document visibility. An automation tab that stays
+hidden fails a distinct prerequisite assertion; the harness MUST NOT override page
+visibility or weaken the runtime's hidden-page pause. Orchestration tests cover
+immediate/delayed visibility, an always-hidden fixture and the exact native focus
+selector. This is necessary for Safari's native automation window lifecycle.

@@ -310,3 +310,10 @@ private senders remain rejected. Settings opening verifies that same current tab
 See [native message sender fields](https://developer.chrome.com/docs/extensions/reference/api/runtime#type-MessageSender),
 [ChromeDriver extension targets](https://developer.chrome.com/docs/chromedriver/capabilities),
 and [Mozilla's sender contract](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/runtime/MessageSender).
+
+
+Before checking the runtime, the harness gives native pointer focus to the inert
+heading in its independently authored DOM fixture and verifies that document
+visibility is genuinely visible. Safari can otherwise leave an automation tab
+hidden; the runtime correctly pauses such a tab. No live GitHub control is clicked
+for focus, and no script overrides visibility, extension code or native APIs.

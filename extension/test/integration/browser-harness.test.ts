@@ -26,8 +26,9 @@ function fakeDriver(target: HarnessTarget, missingAnchor = false): BrowserDriver
     let protectedRoute = false;
     return { capabilities: { browserName: target.startsWith('firefox') ? 'firefox' : target,
         browserVersion: { chrome: '156.0.8078.47', firefox: '158.0.1', 'firefox-esr': '153.5.1', safari: '27.0.1' }[target] },
-    navigate: vi.fn(async () => undefined), openRuntimeOptions: vi.fn(async () => 'chrome-extension://test/runtime.html'), close: vi.fn(async () => undefined),
+    navigate: vi.fn(async () => undefined), focusFixture: vi.fn(async () => undefined), openRuntimeOptions: vi.fn(async () => 'chrome-extension://test/runtime.html'), close: vi.fn(async () => undefined),
     evaluate: vi.fn(async (script: string, args: unknown[] = []) => {
+        if (script.includes('visibilityState')) return true;
         if (script.includes('!!document.querySelector')) return !missingAnchor;
         if (script.includes('dataset.copilotSourceTree')) return sourceTree;
         if (script.includes('querySelectorAll')) return protectedRoute ? 0 : 1;
@@ -169,4 +170,13 @@ it('eligible navigation must resume the owned panel before settings is clicked',
         if (resume) expect((await runBrowserHarness(temporary, 'chrome', driver, environment)).assertions).toContain('eligible-navigation-resumes-owned-ui');
         else { await expect(runBrowserHarness(temporary, 'chrome', driver, environment)).rejects.toThrow('eligible-navigation-resumes-owned-ui'); expect(driver.openRuntimeOptions).not.toHaveBeenCalled(); }
     }
+});
+
+it.each([false, true])('native fixture visibility %s is a real prerequisite after an owned pointer focus', async eventuallyVisible => {
+    const driver = fakeDriver('safari'); const evaluate = driver.evaluate; let checks = 0;
+    driver.evaluate = vi.fn(async (script: string, args?: unknown[]) => script.includes('visibilityState')
+        ? eventuallyVisible && checks++ > 0 : evaluate(script, args)) as BrowserDriver['evaluate'];
+    if (eventuallyVisible) expect((await runBrowserHarness(temporary, 'safari', driver, environment)).assertions).toContain('native-fixture-visible');
+    else await expect(runBrowserHarness(temporary, 'safari', driver, environment)).rejects.toThrow('native-fixture-visible');
+    expect(driver.focusFixture).toHaveBeenCalledExactlyOnceWith();
 });

@@ -152,3 +152,10 @@ it('a failed Safari uninstall still deletes its native session and owned process
     expect(h.send.mock.calls.some(([url, options]) => url.endsWith('/owned-test-session') && options.method === 'DELETE')).toBe(true);
     await h.driver.close(); expect(h.child.kill).toHaveBeenCalledTimes(1);
 });
+
+it('native fixture focus clicks only the authored inert heading before inspecting extension visibility', async () => {
+    const h = settingsTransport('safari'); await h.driver.start(); await h.driver.focusFixture();
+    const find = h.send.mock.calls.find(([url]) => url.endsWith('/element'))!;
+    expect(JSON.parse(String(find[1].body))).toEqual({ using: 'css selector', value: 'main > h1' });
+    expect(h.state.clicked).toBe(true); await h.driver.close();
+});
