@@ -1,3 +1,5 @@
+import type { CopilotCommandValidationDiagnostic } from '../../domain/copilot_command_validation';
+import { commentCommandValidationError } from '../errors/comment_command_validation_error';
 import { renderSddDiff } from '../policies/sdd_diff_presentation_policy';
 import { resolveSddDiffCatalog } from '../policies/sdd_diff_message_catalog';
 import { readCopilotDoctor } from './read_copilot_doctor_workflow';
@@ -209,7 +211,7 @@ async function runReviewCommand(
     command: ParsedCopilotCommand,
 ): Promise<Result[]> {
     const parsedOptions = parseBugbotReviewCommandOptions(command.arguments);
-    if (!parsedOptions.valid) return [invalidCommentCommandResult(options.taskId, parsedOptions.reason)];
+    if (!parsedOptions.valid) return [invalidCommentCommandResult(options.taskId, parsedOptions.reason, { reason: parsedOptions.validationReason, command: command.name })];
     const results = [new Result({
         id: `${options.taskId}.ExplicitCommand`,
         success: true,
@@ -251,11 +253,11 @@ function runThinkCommand(
     ]);
 }
 
-export function invalidCommentCommandResult(taskId: string, reason: string): Result {
+export function invalidCommentCommandResult(taskId: string, reason: string, validation?: CopilotCommandValidationDiagnostic): Result {
     return new Result({
         id: taskId,
         success: false,
         executed: false,
-        errors: [new ApplicationError('validation.invalid-input', reason)],
+        errors: [commentCommandValidationError(reason, validation)],
     });
 }

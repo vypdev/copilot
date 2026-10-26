@@ -1,3 +1,4 @@
+import { ENGLISH_COMMAND_VALIDATION_CONTENT, SPANISH_COMMAND_VALIDATION_CONTENT } from './comment_command_validation_message_catalog';
 import type {
   ApplicationErrorCode,
   ApplicationErrorRecoveryId,
@@ -211,6 +212,7 @@ const STORED_CONFIGURATION_RETAINED_EN = 'The issue/PR description and stored co
 const STORED_CONFIGURATION_RETAINED_ES = 'Esta lectura no modificó la descripción de la issue/PR ni su configuración almacenada.';
 
 const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  ...ENGLISH_COMMAND_VALIDATION_CONTENT,
   'stored-configuration-schema-missing': Object.freeze({
     impact: 'Automation stopped for issue/PR #{issueNumber}: the stored configuration has no schema version; version {expectedVersion} is required.',
     action: STORED_CONFIGURATION_ACTION_EN,
@@ -325,6 +327,7 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
 });
 
 const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  ...SPANISH_COMMAND_VALIDATION_CONTENT,
   'stored-configuration-schema-missing': Object.freeze({
     impact: 'La automatización se detuvo para la issue/PR #{issueNumber}: la configuración almacenada no tiene versión de esquema; se requiere la versión {expectedVersion}.',
     action: STORED_CONFIGURATION_ACTION_ES,

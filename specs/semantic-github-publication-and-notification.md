@@ -2011,3 +2011,16 @@ before adopting a superseded invocation. The localized Job Summary exposes
 verified/already-converged cleanup or bounded partial-failure recovery. Required
 errors remain fatal; no generic stale-error suppression or new conversation
 message is introduced. The lifecycle extension owns the additional test budget.
+
+
+### Rejected command replies — #701 (2026-10-26)
+
+Command validation failures retain the existing `application-error` semantic
+reply intent and source-comment identity. The closed reason/command recovery
+specified by the comment-automation SDD survives result projection and is
+rendered through the shared localized presenter. No standalone validation
+comment, raw command, new marker or retry identity is introduced. Replaying the
+same rejected source MUST reuse/update its canonical reply; a corrected new
+comment proceeds through normal admission. The command route/replay suite owns
+this acceptance case and its numeric budget, with existing freshness, duplicate
+and trusted-bot checks retained. No schema or provider API change is required.

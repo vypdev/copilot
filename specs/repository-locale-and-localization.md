@@ -1387,3 +1387,19 @@ Live dogfooding on PR #460 (2026-10-10) exposed a translated command expanding b
 Native read probes `6128129885` and `6128130253` returned correct command hashes but unnecessarily rewrote English requests and published “Request interpreted from American English” disclosures with source `en` and target `en-US`. A schema-valid provider `translated` decision does not require a disclosure when the verified source and target primary language and maximized writing script already match and the reason code is `none`. The application MUST preserve the exact original authorized comment and project `matches`, discarding the unsolicited rewrite. Provider classification still uses one call. Target-locale mismatch, unknown/failed decisions, protected operands, native command limits, membership authority and foreign-language behavior remain unchanged.
 
 Mixed-language reasons and differing writing scripts remain eligible for translation; this prevents an English-dominant mixed request or Simplified-to-Traditional Chinese request from being incorrectly skipped. Four conservative test declarations cover generic/exact English (two parameter rows count once), explicit English region, mixed prose and differing scripts. The qualifying localization inventory is 153; the original 146-case minimum and all coverage gates remain unchanged. A fresh native English/Spanish acceptance remains required after publication.
+
+
+### Command validation copy — #701 (2026-10-26)
+
+All 13 closed command rejection reasons use the shared application-error catalog
+and the existing exact/base/dynamic/atomic-fallback resolution. Reviewed en-US
+and es-ES copy names the cause, safe next step and preserved command state. The
+translator receives prose with placeholders only; code spans, command prefix,
+examples, synchronization syntax and documentation URLs are inserted by the
+presenter afterward. Unknown input never becomes a translation variable.
+
+The numeric acceptance budget belongs to the comment-automation SDD. Its locale
+matrix covers en-US/es-ES, en-AU/es-MX, representative dynamic fr-FR/de-DE/ar-SA/
+ja-JP, cache reuse and whole-slice fallback if a command descriptor is missing.
+This verifies the protocol and safe presentation, not native linguistic quality
+for every BCP 47 locale. No locale configuration or durable state changes.

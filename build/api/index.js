@@ -5336,10 +5336,12 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const copilot_command_validation_1 = __nccwpck_require__(4237);
 const closed_issue_reconciliation_1 = __nccwpck_require__(1565);
 const approval_evidence_diagnostic_1 = __nccwpck_require__(8205);
 const branch_sync_validation_1 = __nccwpck_require__(981);
 exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
+    ...copilot_command_validation_1.COPILOT_COMMAND_VALIDATION_REASONS,
     'pull-request-link-restored',
     'pull-request-link-base-retained',
     'pull-request-link-reference-retained',
@@ -5553,6 +5555,19 @@ class ApplicationError extends Error {
 exports.ApplicationError = ApplicationError;
 _ApplicationError_cause = new WeakMap();
 const RECOVERY_VARIABLE_KEYS = Object.freeze({
+    'comment-command-length': Object.freeze(['command']),
+    'comment-command-name-missing': Object.freeze(['command']),
+    'comment-command-name-unknown': Object.freeze(['command']),
+    'comment-command-argument-count': Object.freeze(['command']),
+    'comment-command-arguments-unexpected': Object.freeze(['command']),
+    'comment-command-arguments-missing': Object.freeze(['command']),
+    'comment-command-finding-quoting': Object.freeze(['command']),
+    'comment-command-review-format': Object.freeze(['command']),
+    'comment-command-review-effort': Object.freeze(['command']),
+    'comment-command-review-boolean': Object.freeze(['command']),
+    'comment-command-review-option': Object.freeze(['command']),
+    'comment-command-sync-option': Object.freeze(['command']),
+    'comment-command-sync-parent': Object.freeze(['command']),
     'stored-configuration-schema-missing': Object.freeze(['issueNumber', 'expectedVersion']),
     'stored-configuration-schema-unsupported': Object.freeze(['issueNumber', 'expectedVersion', 'actualVersion']),
     'stored-configuration-invalid': Object.freeze(['issueNumber', 'expectedVersion']),
@@ -5588,6 +5603,10 @@ function normalizeApplicationErrorRecovery(recovery) {
     if (actualKeys.length !== expectedKeys.length
         || actualKeys.some((key, index) => key !== expectedKeys[index])) {
         throw new TypeError(`Application error recovery variables are invalid for ${recovery.id}.`);
+    }
+    if ((0, copilot_command_validation_1.isCopilotCommandValidationReason)(recovery.id)
+        && !(0, copilot_command_validation_1.isValidCopilotCommandValidation)(recovery.id, variables.command)) {
+        throw new TypeError('Comment command validation diagnostic is invalid.');
     }
     if (recovery.id.startsWith('stored-configuration-')
         && (![variables.issueNumber, variables.expectedVersion].every(value => typeof value === 'number' && Number.isSafeInteger(value) && value > 0)
@@ -6235,6 +6254,50 @@ exports.CLOSED_ISSUE_PHASES = Object.freeze([
     'card-inventory', 'card-freshness', 'card-update', 'card-verification',
 ]);
 exports.CLOSED_ISSUE_REASONS = Object.freeze(['completed', 'not_planned', 'duplicate', 'reopened', 'unknown', 'unavailable']);
+
+
+/***/ }),
+
+/***/ 4237:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.COPILOT_COMMAND_VALIDATION_REASONS = void 0;
+exports.isCopilotCommandValidationReason = isCopilotCommandValidationReason;
+exports.isValidCopilotCommandValidation = isValidCopilotCommandValidation;
+/** Closed public reasons; none contains user text, operands, paths or credentials. */
+exports.COPILOT_COMMAND_VALIDATION_REASONS = Object.freeze([
+    'comment-command-length', 'comment-command-name-missing', 'comment-command-name-unknown',
+    'comment-command-argument-count', 'comment-command-arguments-unexpected', 'comment-command-arguments-missing',
+    'comment-command-finding-quoting', 'comment-command-review-format', 'comment-command-review-effort',
+    'comment-command-review-boolean', 'comment-command-review-option',
+    'comment-command-sync-option', 'comment-command-sync-parent',
+]);
+const REVIEW_COMMANDS = Object.freeze(['analyze', 'review', 'findings', 'recheck']);
+const COMMANDS_BY_REASON = Object.freeze({
+    'comment-command-length': Object.freeze(['help']),
+    'comment-command-name-missing': Object.freeze(['help']),
+    'comment-command-name-unknown': Object.freeze(['help']),
+    'comment-command-argument-count': Object.freeze(['help', 'analyze', 'sdd-diff', 'doctor', 'history', 'description',
+        'review', 'findings', 'fix', 'dismiss', 'recheck', 'sync-branch']),
+    'comment-command-arguments-unexpected': Object.freeze(['status', 'sdd-diff', 'doctor', 'history']),
+    'comment-command-arguments-missing': Object.freeze(['fix', 'dismiss', 'implement', 'remember']),
+    'comment-command-finding-quoting': Object.freeze(['fix', 'dismiss']),
+    'comment-command-review-format': REVIEW_COMMANDS,
+    'comment-command-review-effort': REVIEW_COMMANDS,
+    'comment-command-review-boolean': REVIEW_COMMANDS,
+    'comment-command-review-option': REVIEW_COMMANDS,
+    'comment-command-sync-option': Object.freeze(['sync-branch']),
+    'comment-command-sync-parent': Object.freeze(['sync-branch']),
+});
+function isCopilotCommandValidationReason(value) {
+    return exports.COPILOT_COMMAND_VALIDATION_REASONS.some(reason => reason === value);
+}
+function isValidCopilotCommandValidation(reason, command) {
+    return isCopilotCommandValidationReason(reason)
+        && COMMANDS_BY_REASON[reason].some(value => value === command);
+}
 
 
 /***/ }),

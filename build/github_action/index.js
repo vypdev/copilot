@@ -39178,6 +39178,24 @@ function closedIssueReconciliationError(cause, facts) {
 
 /***/ }),
 
+/***/ 36711:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.commentCommandValidationError = commentCommandValidationError;
+const application_error_1 = __nccwpck_require__(75999);
+/** Select reviewed recovery copy using bounded facts; never publish the original command. */
+function commentCommandValidationError(reason, validation) {
+    return new application_error_1.ApplicationError('validation.invalid-input', reason, validation
+        ? { recovery: { id: validation.reason, variables: { command: validation.command } } }
+        : {});
+}
+
+
+/***/ }),
+
 /***/ 72594:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -40808,6 +40826,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readEnglishApplicationErrorMessage = exports.APPLICATION_ERROR_CATALOG_DEFINITIONS = exports.SPANISH_APPLICATION_ERROR_DEFINITION = exports.ENGLISH_APPLICATION_ERROR_DEFINITION = exports.SPANISH_APPLICATION_ERROR_MESSAGES = exports.ENGLISH_APPLICATION_ERROR_MESSAGES = exports.APPLICATION_ERROR_MESSAGE_IDS = exports.APPLICATION_ERROR_CODES = void 0;
 exports.resolveStaticApplicationErrorCatalog = resolveStaticApplicationErrorCatalog;
 exports.resolveApplicationErrorCatalog = resolveApplicationErrorCatalog;
+const comment_command_validation_message_catalog_1 = __nccwpck_require__(62002);
 const application_error_1 = __nccwpck_require__(97790);
 const message_catalog_1 = __nccwpck_require__(27097);
 const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
@@ -40971,6 +40990,7 @@ const STORED_CONFIGURATION_ACTION_ES = 'Un mantenedor debe revisar {recoveryGuid
 const STORED_CONFIGURATION_RETAINED_EN = 'The issue/PR description and stored configuration were not changed by this read.';
 const STORED_CONFIGURATION_RETAINED_ES = 'Esta lectura no modificó la descripción de la issue/PR ni su configuración almacenada.';
 const ENGLISH_RECOVERY_CONTENT = Object.freeze({
+    ...comment_command_validation_message_catalog_1.ENGLISH_COMMAND_VALIDATION_CONTENT,
     'stored-configuration-schema-missing': Object.freeze({
         impact: 'Automation stopped for issue/PR #{issueNumber}: the stored configuration has no schema version; version {expectedVersion} is required.',
         action: STORED_CONFIGURATION_ACTION_EN,
@@ -41083,6 +41103,7 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     }),
 });
 const SPANISH_RECOVERY_CONTENT = Object.freeze({
+    ...comment_command_validation_message_catalog_1.SPANISH_COMMAND_VALIDATION_CONTENT,
     'stored-configuration-schema-missing': Object.freeze({
         impact: 'La automatización se detuvo para la issue/PR #{issueNumber}: la configuración almacenada no tiene versión de esquema; se requiere la versión {expectedVersion}.',
         action: STORED_CONFIGURATION_ACTION_ES,
@@ -41246,6 +41267,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildApplicationErrorPresentation = buildApplicationErrorPresentation;
 exports.renderApplicationErrorText = renderApplicationErrorText;
 exports.renderApplicationErrorMarkdown = renderApplicationErrorMarkdown;
+const copilot_command_validation_1 = __nccwpck_require__(44237);
+const comment_command_validation_presentation_policy_1 = __nccwpck_require__(6420);
 const application_error_message_catalog_1 = __nccwpck_require__(64809);
 // This trusted destination is inserted after localization, never supplied by a body or translation.
 const STORED_CONFIGURATION_RECOVERY_URL = 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#unsupported-stored-configuration';
@@ -41254,9 +41277,11 @@ function buildApplicationErrorPresentation(error, message = application_error_me
     const descriptor = error.recovery
         ? `error.recovery.${error.recovery.id}`
         : `error.${error.code}`;
-    const variables = error.recovery?.id.startsWith('stored-configuration-')
-        ? { ...error.recovery.variables, recoveryGuide: STORED_CONFIGURATION_RECOVERY_URL }
-        : error.recovery?.variables;
+    const variables = error.recovery && (0, copilot_command_validation_1.isCopilotCommandValidationReason)(error.recovery.id)
+        ? (0, comment_command_validation_presentation_policy_1.commandValidationPresentationVariables)(error.recovery.id, error.recovery.variables.command)
+        : error.recovery?.id.startsWith('stored-configuration-')
+            ? { ...error.recovery.variables, recoveryGuide: STORED_CONFIGURATION_RECOVERY_URL }
+            : error.recovery?.variables;
     return {
         impact: message(`${descriptor}.impact`, variables),
         code: error.code,
@@ -43521,6 +43546,187 @@ function projectClosedIssueCleanupCounts(results) {
 
 /***/ }),
 
+/***/ 62002:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SPANISH_COMMAND_VALIDATION_CONTENT = exports.ENGLISH_COMMAND_VALIDATION_CONTENT = void 0;
+exports.ENGLISH_COMMAND_VALIDATION_CONTENT = Object.freeze({
+    'comment-command-length': Object.freeze({
+        impact: "The complete command exceeds the 2,000-character limit.",
+        action: "Shorten the command to at most 2,000 characters, including its prefix and arguments. Put explanations in a separate comment. Example: {commandExample}. Command help: {commandHelp}.",
+        retainedState: "No command action ran. Existing files, branches and reviews were preserved.",
+    }),
+    'comment-command-name-missing': Object.freeze({
+        impact: "The {commandPrefix} prefix is missing a command name.",
+        action: "Choose a supported command from help. Example: {commandExample}. Command help: {commandHelp}.",
+        retainedState: "No command action ran. Existing files, branches and reviews were preserved.",
+    }),
+    'comment-command-name-unknown': Object.freeze({
+        impact: "The command name is not supported.",
+        action: "Choose a supported command from help; do not append a new command name to the rejected input. Example: {commandExample}. Command help: {commandHelp}.",
+        retainedState: "No command action ran. Existing files, branches and reviews were preserved.",
+    }),
+    'comment-command-argument-count': Object.freeze({
+        impact: "The command exceeds the limit of 20 arguments.",
+        action: "Remove extra arguments and send explanations in a separate comment. Finding IDs in valid double quotes count as one argument. Example: {commandExample}. Command help: {commandHelp}.",
+        retainedState: "No command action ran. Existing files, branches and reviews were preserved.",
+    }),
+    'comment-command-arguments-unexpected': Object.freeze({
+        impact: "This command accepts no arguments.",
+        action: "Send the command alone. Put explanations in a separate comment. Example: {commandExample}. Command help: {commandHelp}.",
+        retainedState: "No command action ran. Existing files, branches and reviews were preserved.",
+    }),
+    'comment-command-arguments-missing': Object.freeze({
+        impact: "This command requires at least one argument.",
+        action: "Replace the angle-bracket placeholder in the example with the intended finding ID, request or rule before sending it. Example: {commandExample}. Command help: {commandHelp}.",
+        retainedState: "No command action ran. Existing files, branches and reviews were preserved.",
+    }),
+    'comment-command-finding-quoting': Object.freeze({
+        impact: "A finding ID is not validly double-quoted or contains an empty value or newline.",
+        action: "Copy the complete finding ID from the review. Use valid JSON double quotes for IDs with spaces; escape quotes and backslashes. Replace the example ID before sending. Example: {commandExample}. Command help: {commandHelp}.",
+        retainedState: "No command action ran. Existing files, branches and reviews were preserved.",
+    }),
+    'comment-command-review-format': Object.freeze({
+        impact: "Review commands accept only key=value options, not trailing prose.",
+        action: "Use effort=low, effort=default, effort=high or effort=smart. Boolean options dry-run, trace-rules and suggested-changes accept true or false. Put explanations in a separate comment. Example: {commandExample}. Command help: {commandHelp}.",
+        retainedState: "No command action ran. Existing files, branches and reviews were preserved.",
+    }),
+    'comment-command-review-effort': Object.freeze({
+        impact: "The review effort value is not supported.",
+        action: "Choose exactly one of effort=low, effort=default, effort=high or effort=smart. Example: {commandExample}. Command help: {commandHelp}.",
+        retainedState: "No command action ran. Existing files, branches and reviews were preserved.",
+    }),
+    'comment-command-review-boolean': Object.freeze({
+        impact: "A boolean review option has an invalid value.",
+        action: "Use exactly true or false for dry-run, trace-rules and suggested-changes. Example: {commandExample}. Command help: {commandHelp}.",
+        retainedState: "No command action ran. Existing files, branches and reviews were preserved.",
+    }),
+    'comment-command-review-option': Object.freeze({
+        impact: "The review option name is not supported.",
+        action: "Use only effort, dry-run, trace-rules and suggested-changes, each as key=value. Example: {commandExample}. Command help: {commandHelp}.",
+        retainedState: "No command action ran. Existing files, branches and reviews were preserved.",
+    }),
+    'comment-command-sync-option': Object.freeze({
+        impact: "The branch synchronization option is not supported.",
+        action: "Use only these options: {syncOptions}. Replace the parent placeholder if used. Example: {commandExample}. Command help: {commandHelp}.",
+        retainedState: "No command action ran. Existing files, branches and reviews were preserved.",
+    }),
+    'comment-command-sync-parent': Object.freeze({
+        impact: "The --from option is missing a parent branch name.",
+        action: "Supply a valid parent branch after --from, or remove the override to use the configured parent. The example previews the configured synchronization. Example: {commandExample}. Command help: {commandHelp}.",
+        retainedState: "No command action ran. Existing files, branches and reviews were preserved.",
+    }),
+});
+exports.SPANISH_COMMAND_VALIDATION_CONTENT = Object.freeze({
+    'comment-command-length': Object.freeze({
+        impact: "El comando completo supera el límite de 2.000 caracteres.",
+        action: "Reduce el comando a un máximo de 2.000 caracteres, incluidos el prefijo y los argumentos. Escribe las explicaciones en otro comentario. Ejemplo: {commandExample}. Ayuda de comandos: {commandHelp}.",
+        retainedState: "No se ejecutó ninguna acción del comando. Se conservaron los archivos, las ramas y las revisiones existentes.",
+    }),
+    'comment-command-name-missing': Object.freeze({
+        impact: "Al prefijo {commandPrefix} le falta el nombre del comando.",
+        action: "Elige un comando compatible en la ayuda. Ejemplo: {commandExample}. Ayuda de comandos: {commandHelp}.",
+        retainedState: "No se ejecutó ninguna acción del comando. Se conservaron los archivos, las ramas y las revisiones existentes.",
+    }),
+    'comment-command-name-unknown': Object.freeze({
+        impact: "El nombre del comando no es compatible.",
+        action: "Elige un comando compatible en la ayuda; no añadas otro nombre de comando al texto rechazado. Ejemplo: {commandExample}. Ayuda de comandos: {commandHelp}.",
+        retainedState: "No se ejecutó ninguna acción del comando. Se conservaron los archivos, las ramas y las revisiones existentes.",
+    }),
+    'comment-command-argument-count': Object.freeze({
+        impact: "El comando supera el límite de 20 argumentos.",
+        action: "Retira los argumentos sobrantes y envía las explicaciones en otro comentario. Cada identificador entre comillas dobles válidas cuenta como un argumento. Ejemplo: {commandExample}. Ayuda de comandos: {commandHelp}.",
+        retainedState: "No se ejecutó ninguna acción del comando. Se conservaron los archivos, las ramas y las revisiones existentes.",
+    }),
+    'comment-command-arguments-unexpected': Object.freeze({
+        impact: "Este comando no acepta argumentos.",
+        action: "Envía solo el comando. Escribe las explicaciones en otro comentario. Ejemplo: {commandExample}. Ayuda de comandos: {commandHelp}.",
+        retainedState: "No se ejecutó ninguna acción del comando. Se conservaron los archivos, las ramas y las revisiones existentes.",
+    }),
+    'comment-command-arguments-missing': Object.freeze({
+        impact: "Este comando requiere al menos un argumento.",
+        action: "Sustituye el marcador entre corchetes angulares del ejemplo por el identificador, la petición o la regla antes de enviarlo. Ejemplo: {commandExample}. Ayuda de comandos: {commandHelp}.",
+        retainedState: "No se ejecutó ninguna acción del comando. Se conservaron los archivos, las ramas y las revisiones existentes.",
+    }),
+    'comment-command-finding-quoting': Object.freeze({
+        impact: "Un identificador no tiene comillas dobles válidas o contiene un valor vacío o un salto de línea.",
+        action: "Copia el identificador completo de la revisión. Usa comillas dobles JSON válidas si contiene espacios; escapa comillas y barras inversas. Sustituye el identificador del ejemplo antes de enviarlo. Ejemplo: {commandExample}. Ayuda de comandos: {commandHelp}.",
+        retainedState: "No se ejecutó ninguna acción del comando. Se conservaron los archivos, las ramas y las revisiones existentes.",
+    }),
+    'comment-command-review-format': Object.freeze({
+        impact: "Los comandos de revisión solo aceptan opciones clave=valor, sin texto libre adicional.",
+        action: "Usa effort=low, effort=default, effort=high o effort=smart. Las opciones booleanas dry-run, trace-rules y suggested-changes aceptan true o false. Escribe las explicaciones en otro comentario. Ejemplo: {commandExample}. Ayuda de comandos: {commandHelp}.",
+        retainedState: "No se ejecutó ninguna acción del comando. Se conservaron los archivos, las ramas y las revisiones existentes.",
+    }),
+    'comment-command-review-effort': Object.freeze({
+        impact: "El valor de esfuerzo de revisión no es compatible.",
+        action: "Elige uno de estos valores: effort=low, effort=default, effort=high o effort=smart. Ejemplo: {commandExample}. Ayuda de comandos: {commandHelp}.",
+        retainedState: "No se ejecutó ninguna acción del comando. Se conservaron los archivos, las ramas y las revisiones existentes.",
+    }),
+    'comment-command-review-boolean': Object.freeze({
+        impact: "Una opción booleana de revisión tiene un valor no válido.",
+        action: "Usa exactamente true o false para dry-run, trace-rules y suggested-changes. Ejemplo: {commandExample}. Ayuda de comandos: {commandHelp}.",
+        retainedState: "No se ejecutó ninguna acción del comando. Se conservaron los archivos, las ramas y las revisiones existentes.",
+    }),
+    'comment-command-review-option': Object.freeze({
+        impact: "El nombre de la opción de revisión no es compatible.",
+        action: "Usa solo effort, dry-run, trace-rules y suggested-changes, con el formato clave=valor. Ejemplo: {commandExample}. Ayuda de comandos: {commandHelp}.",
+        retainedState: "No se ejecutó ninguna acción del comando. Se conservaron los archivos, las ramas y las revisiones existentes.",
+    }),
+    'comment-command-sync-option': Object.freeze({
+        impact: "La opción de sincronización de rama no es compatible.",
+        action: "Usa solo estas opciones: {syncOptions}. Sustituye el marcador de rama padre si lo usas. Ejemplo: {commandExample}. Ayuda de comandos: {commandHelp}.",
+        retainedState: "No se ejecutó ninguna acción del comando. Se conservaron los archivos, las ramas y las revisiones existentes.",
+    }),
+    'comment-command-sync-parent': Object.freeze({
+        impact: "A la opción --from le falta el nombre de la rama padre.",
+        action: "Indica una rama padre válida después de --from o retira la opción para usar la rama configurada. El ejemplo previsualiza la sincronización configurada. Ejemplo: {commandExample}. Ayuda de comandos: {commandHelp}.",
+        retainedState: "No se ejecutó ninguna acción del comando. Se conservaron los archivos, las ramas y las revisiones existentes.",
+    }),
+});
+
+
+/***/ }),
+
+/***/ 6420:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.commandValidationPresentationVariables = commandValidationPresentationVariables;
+const COMMAND_HELP_URL = 'https://docs.page/vypdev/copilot/issues/comment-commands';
+const EXAMPLES = Object.freeze({
+    help: '/copilot help', plan: '/copilot plan', clarify: '/copilot clarify', estimate: '/copilot estimate',
+    'test-plan': '/copilot test-plan', status: '/copilot status', 'sdd-diff': '/copilot sdd-diff',
+    doctor: '/copilot doctor', history: '/copilot history', description: '/copilot description',
+    explain: '/copilot explain', diagnose: '/copilot diagnose', analyze: '/copilot analyze',
+    review: '/copilot review', findings: '/copilot findings', recheck: '/copilot recheck',
+    fix: '/copilot fix <finding-id>', dismiss: '/copilot dismiss <finding-id>',
+    implement: '/copilot implement <request>', remember: '/copilot remember <rule>',
+    'sync-branch': '/copilot sync-branch --dry-run',
+});
+/** Insert protected syntax/destination after localization, never from the rejected input. */
+function commandValidationPresentationVariables(reason, command) {
+    let example = typeof command === 'string' && Object.prototype.hasOwnProperty.call(EXAMPLES, command)
+        ? EXAMPLES[command] : EXAMPLES.help;
+    if (reason === 'comment-command-finding-quoting' && (command === 'fix' || command === 'dismiss')) {
+        example = '/copilot ' + command + ' "path:line:finding with spaces"';
+    }
+    else if (reason.startsWith('comment-command-review-')
+        && ['analyze', 'review', 'findings', 'recheck'].some(value => value === command)) {
+        example = '/copilot ' + command + (reason === 'comment-command-review-boolean' ? ' dry-run=true' : ' effort=smart');
+    }
+    return Object.freeze({ commandExample: '`' + example + '`', commandHelp: COMMAND_HELP_URL,
+        commandPrefix: '`/copilot`', syncOptions: '`--dry-run`, `--no-agent`, `--from <parent-branch>`, `--from=<parent-branch>`' });
+}
+
+
+/***/ }),
+
 /***/ 27150:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -44143,6 +44349,8 @@ function buildCopilotHelpMessage(username, locale = 'en-US', catalog = (0, publi
         `### ${catalog.render('interaction.help.changesHeading')}`,
         '',
         ...commandLines(CHANGE_COMMANDS, catalog),
+        '',
+        catalog.render('interaction.help.validation'),
         '',
         catalog.render('interaction.help.footer', { bot: botDisplay }),
     ].join('\n');
@@ -46736,6 +46944,7 @@ const PUBLICATION_SURFACE_MESSAGE_IDS = Object.freeze([
     'interaction.help.readOnlyHeading',
     'interaction.help.changesHeading',
     'interaction.help.footer',
+    'interaction.help.validation',
     'interaction.help.command.help',
     'interaction.help.command.plan',
     'interaction.help.command.clarify',
@@ -46935,6 +47144,7 @@ const ENGLISH_MESSAGES = Object.freeze({
     'publication.access.heading': 'Issue closed: contributor access required',
     'publication.access.explanation': 'This repository accepts automated issue processing only from eligible contributors.',
     'publication.access.recovery': 'If you believe this is incorrect, contact a maintainer or follow the repository contribution policy.',
+    'interaction.help.validation': 'Commands are limited to 2,000 characters. Structured commands accept at most 20 arguments. Review options use key=value; send explanations separately. Commands with prose (plan, clarify, estimate, test-plan, explain, diagnose, implement and remember) retain the character limit without the 20-argument limit. A rejected command explains the cause and a safe next action without repeating your input.',
     'interaction.help.heading': 'Copilot commands',
     'interaction.help.introduction': 'I’m {bot}, the repository assistant. Use these commands on an issue or pull request:',
     'interaction.help.readOnlyHeading': 'Read-only',
@@ -47148,6 +47358,7 @@ const SPANISH_MESSAGES = Object.freeze({
     'publication.access.heading': 'Issue cerrada: se requiere acceso de colaborador',
     'publication.access.explanation': 'Este repositorio solo permite el procesamiento automatizado de issues creadas por colaboradores autorizados.',
     'publication.access.recovery': 'Si crees que se trata de un error, contacta con un mantenedor o consulta la política de contribución del repositorio.',
+    'interaction.help.validation': 'Los comandos tienen un límite de 2.000 caracteres. Los comandos estructurados aceptan hasta 20 argumentos. Las opciones de revisión usan clave=valor; envía las explicaciones por separado. Los comandos con texto libre (plan, clarify, estimate, test-plan, explain, diagnose, implement y remember) conservan el límite de caracteres sin el límite de 20 argumentos. Un comando rechazado explica la causa y cómo continuar sin repetir tu entrada.',
     'interaction.help.heading': 'Comandos de Copilot',
     'interaction.help.introduction': 'Soy {bot}, el asistente del repositorio. Usa estos comandos en una issue o pull request:',
     'interaction.help.readOnlyHeading': 'Solo lectura',
@@ -55812,6 +56023,7 @@ async function verifyClosedIssueCardRetirement(input) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runBranchSyncCommand = runBranchSyncCommand;
+const comment_command_validation_error_1 = __nccwpck_require__(36711);
 const result_1 = __nccwpck_require__(73817);
 const branch_sync_command_1 = __nccwpck_require__(51114);
 const application_error_1 = __nccwpck_require__(75999);
@@ -55819,7 +56031,7 @@ const application_error_1 = __nccwpck_require__(75999);
 async function runBranchSyncCommand(context, options, args, authorization) {
     const parsed = (0, branch_sync_command_1.parseBranchSyncCommandArguments)(args);
     if (!parsed.valid)
-        return [invalid(options.taskId, parsed.reason)];
+        return [invalid(options.taskId, parsed)];
     if (!options.syncBranchUseCase)
         return [unavailable(options.taskId)];
     const allowed = await authorization.isActorAllowedToModifyFiles(context.actor);
@@ -55827,8 +56039,8 @@ async function runBranchSyncCommand(context, options, args, authorization) {
         return [unauthorized(options.taskId)];
     return options.syncBranchUseCase.invoke(parsed.options);
 }
-function invalid(taskId, reason) {
-    return new result_1.Result({ id: taskId, success: false, executed: false, errors: [new application_error_1.ApplicationError('validation.invalid-input', reason)] });
+function invalid(taskId, parsed) {
+    return new result_1.Result({ id: taskId, success: false, executed: false, errors: [(0, comment_command_validation_error_1.commentCommandValidationError)(parsed.reason, parsed.validation)] });
 }
 function unavailable(taskId) {
     return new result_1.Result({
@@ -56229,6 +56441,7 @@ async function runDoUserRequestAction(param, options, intentPayload) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runExplicitCommentCommand = runExplicitCommentCommand;
 exports.invalidCommentCommandResult = invalidCommentCommandResult;
+const comment_command_validation_error_1 = __nccwpck_require__(36711);
 const sdd_diff_presentation_policy_1 = __nccwpck_require__(63302);
 const sdd_diff_message_catalog_1 = __nccwpck_require__(2230);
 const read_copilot_doctor_workflow_1 = __nccwpck_require__(12416);
@@ -56398,7 +56611,7 @@ function stateCommandReceipt(command, outcome, details = {}) {
 async function runReviewCommand(param, options, command) {
     const parsedOptions = (0, review_command_1.parseBugbotReviewCommandOptions)(command.arguments);
     if (!parsedOptions.valid)
-        return [invalidCommentCommandResult(options.taskId, parsedOptions.reason)];
+        return [invalidCommentCommandResult(options.taskId, parsedOptions.reason, { reason: parsedOptions.validationReason, command: command.name })];
     const results = [new result_1.Result({
             id: `${options.taskId}.ExplicitCommand`,
             success: true,
@@ -56432,12 +56645,12 @@ function runThinkCommand(param, options, command) {
         ...results,
     ]);
 }
-function invalidCommentCommandResult(taskId, reason) {
+function invalidCommentCommandResult(taskId, reason, validation) {
     return new result_1.Result({
         id: taskId,
         success: false,
         executed: false,
-        errors: [new application_error_1.ApplicationError('validation.invalid-input', reason)],
+        errors: [(0, comment_command_validation_error_1.commentCommandValidationError)(reason, validation)],
     });
 }
 
@@ -56726,7 +56939,7 @@ async function runCommentAutomation(initialParam, options, actorAuthorizationPor
             return [new result_1.Result({ id: options.taskId, success: true, executed: false })];
         }
         if (command.kind === 'invalid') {
-            return [(0, comment_automation_command_workflow_1.invalidCommentCommandResult)(options.taskId, command.reason)];
+            return [(0, comment_automation_command_workflow_1.invalidCommentCommandResult)(options.taskId, command.reason, command.validation)];
         }
         const isPublicMetadataCommand = command.kind === 'command'
             && (command.command.name === 'help' || command.command.name === 'status' || command.command.name === 'sdd-diff'
@@ -56758,7 +56971,7 @@ async function runCommentAutomation(initialParam, options, actorAuthorizationPor
             param = (0, comment_automation_context_1.withCommentLanguageAdaptation)(param, adaptation);
         const adaptedCommand = (0, copilot_command_1.parseCopilotCommand)(param.userComment);
         if (adaptedCommand.kind === 'invalid') {
-            return [...languageResults, (0, comment_automation_command_workflow_1.invalidCommentCommandResult)(options.taskId, adaptedCommand.reason)];
+            return [...languageResults, (0, comment_automation_command_workflow_1.invalidCommentCommandResult)(options.taskId, adaptedCommand.reason, adaptedCommand.validation)];
         }
         if (adaptedCommand.kind === 'command') {
             const explicitResults = await (0, comment_automation_command_workflow_1.runExplicitCommentCommand)(param, options, adaptedCommand.command, actorAuthorizationPort);
@@ -69526,10 +69739,12 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const copilot_command_validation_1 = __nccwpck_require__(44237);
 const closed_issue_reconciliation_1 = __nccwpck_require__(21565);
 const approval_evidence_diagnostic_1 = __nccwpck_require__(98205);
 const branch_sync_validation_1 = __nccwpck_require__(90981);
 exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
+    ...copilot_command_validation_1.COPILOT_COMMAND_VALIDATION_REASONS,
     'pull-request-link-restored',
     'pull-request-link-base-retained',
     'pull-request-link-reference-retained',
@@ -69743,6 +69958,19 @@ class ApplicationError extends Error {
 exports.ApplicationError = ApplicationError;
 _ApplicationError_cause = new WeakMap();
 const RECOVERY_VARIABLE_KEYS = Object.freeze({
+    'comment-command-length': Object.freeze(['command']),
+    'comment-command-name-missing': Object.freeze(['command']),
+    'comment-command-name-unknown': Object.freeze(['command']),
+    'comment-command-argument-count': Object.freeze(['command']),
+    'comment-command-arguments-unexpected': Object.freeze(['command']),
+    'comment-command-arguments-missing': Object.freeze(['command']),
+    'comment-command-finding-quoting': Object.freeze(['command']),
+    'comment-command-review-format': Object.freeze(['command']),
+    'comment-command-review-effort': Object.freeze(['command']),
+    'comment-command-review-boolean': Object.freeze(['command']),
+    'comment-command-review-option': Object.freeze(['command']),
+    'comment-command-sync-option': Object.freeze(['command']),
+    'comment-command-sync-parent': Object.freeze(['command']),
     'stored-configuration-schema-missing': Object.freeze(['issueNumber', 'expectedVersion']),
     'stored-configuration-schema-unsupported': Object.freeze(['issueNumber', 'expectedVersion', 'actualVersion']),
     'stored-configuration-invalid': Object.freeze(['issueNumber', 'expectedVersion']),
@@ -69778,6 +70006,10 @@ function normalizeApplicationErrorRecovery(recovery) {
     if (actualKeys.length !== expectedKeys.length
         || actualKeys.some((key, index) => key !== expectedKeys[index])) {
         throw new TypeError(`Application error recovery variables are invalid for ${recovery.id}.`);
+    }
+    if ((0, copilot_command_validation_1.isCopilotCommandValidationReason)(recovery.id)
+        && !(0, copilot_command_validation_1.isValidCopilotCommandValidation)(recovery.id, variables.command)) {
+        throw new TypeError('Comment command validation diagnostic is invalid.');
     }
     if (recovery.id.startsWith('stored-configuration-')
         && (![variables.issueNumber, variables.expectedVersion].every(value => typeof value === 'number' && Number.isSafeInteger(value) && value > 0)
@@ -80711,10 +80943,12 @@ function parseBranchSyncCommandArguments(args) {
             index += 1;
         }
         else {
-            return { valid: false, reason: `Unsupported sync-branch option: ${argument}.` };
+            return { valid: false, reason: 'Unsupported sync-branch option.',
+                validation: { reason: 'comment-command-sync-option', command: 'sync-branch' } };
         }
         if (!parentOverride) {
-            return { valid: false, reason: "--from requires a parent branch name." };
+            return { valid: false, reason: '--from requires a parent branch name.',
+                validation: { reason: 'comment-command-sync-parent', command: 'sync-branch' } };
         }
     }
     return { valid: true, options: { dryRun, useAgent, parentOverride } };
@@ -81038,26 +81272,27 @@ function parseBugbotReviewCommandOptions(arguments_) {
     for (const argument of arguments_) {
         const separator = argument.indexOf('=');
         if (separator <= 0)
-            return invalid(`Invalid review option "${argument}". Use key=value.`);
+            return invalid('comment-command-review-format', 'Invalid review option. Use key=value.');
         const key = argument.slice(0, separator).toLowerCase();
         const value = argument.slice(separator + 1).toLowerCase();
         if (key === 'effort') {
             if (!EFFORTS.has(value))
-                return invalid('effort must be low, default, high, or smart.');
+                return invalid('comment-command-review-effort', 'effort must be low, default, high, or smart.');
             overrides.effort = value;
             continue;
         }
+        if (!['dry-run', 'trace-rules', 'suggested-changes'].includes(key)) {
+            return invalid('comment-command-review-option', 'Unknown review option.');
+        }
         const booleanValue = parseBoolean(value);
         if (booleanValue === undefined)
-            return invalid(`${key} must be true or false.`);
+            return invalid('comment-command-review-boolean', 'Boolean review options must be true or false.');
         if (key === 'dry-run')
             overrides.publicationMode = booleanValue ? 'dry-run' : 'publish';
         else if (key === 'trace-rules')
             overrides.traceRules = booleanValue;
         else if (key === 'suggested-changes')
             overrides.suggestedChanges = booleanValue;
-        else
-            return invalid(`Unknown review option "${key}".`);
     }
     return { valid: true, overrides };
 }
@@ -81068,8 +81303,8 @@ function parseBoolean(value) {
         return false;
     return undefined;
 }
-function invalid(reason) {
-    return { valid: false, reason: `${reason} Supported options: effort, dry-run, trace-rules, suggested-changes.` };
+function invalid(validationReason, reason) {
+    return { valid: false, validationReason, reason: `${reason} Supported options: effort, dry-run, trace-rules, suggested-changes.` };
 }
 
 
@@ -81323,7 +81558,7 @@ function hasVisibleCommentContent(value) {
 /***/ }),
 
 /***/ 11771:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
@@ -81331,30 +81566,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.COPILOT_COMMAND_NAMES = void 0;
 exports.copilotCommandAcceptsAdaptableProse = copilotCommandAcceptsAdaptableProse;
 exports.parseCopilotCommand = parseCopilotCommand;
-/** Explicit commands are the safe, deterministic entry point for mutations. */
-exports.COPILOT_COMMAND_NAMES = [
-    'help',
-    'analyze',
-    'plan',
-    'clarify',
-    'estimate',
-    'test-plan',
-    'status',
-    'sdd-diff',
-    'doctor',
-    'history',
-    'description',
-    'explain',
-    'diagnose',
-    'review',
-    'findings',
-    'fix',
-    'dismiss',
-    'remember',
-    'recheck',
-    'implement',
-    'sync-branch',
-];
+const copilot_command_vocabulary_1 = __nccwpck_require__(245);
+var copilot_command_vocabulary_2 = __nccwpck_require__(245);
+Object.defineProperty(exports, "COPILOT_COMMAND_NAMES", ({ enumerable: true, get: function () { return copilot_command_vocabulary_2.COPILOT_COMMAND_NAMES; } }));
 const COPILOT_COMMANDS_WITH_ADAPTABLE_PROSE = new Set([
     'plan',
     'clarify',
@@ -81380,40 +81594,41 @@ function parseCopilotCommand(raw) {
         return { kind: 'none' };
     const input = raw.trim();
     if (input.length > MAX_COMMAND_LENGTH) {
-        return { kind: 'invalid', reason: `Copilot commands must be at most ${MAX_COMMAND_LENGTH} characters.` };
+        return invalid('comment-command-length', 'help', `Copilot commands must be at most ${MAX_COMMAND_LENGTH} characters.`);
     }
     const withoutPrefix = input.replace(COMMAND_PREFIX, '').trim();
     if (!withoutPrefix)
-        return { kind: 'invalid', reason: 'Use /copilot followed by a command.' };
+        return invalid('comment-command-name-missing', 'help', 'Use /copilot followed by a command.');
     const tokens = withoutPrefix.split(/\s+/u).filter(Boolean);
     const name = tokens.shift()?.toLowerCase();
-    if (!name || !exports.COPILOT_COMMAND_NAMES.includes(name)) {
-        return { kind: 'invalid', reason: `Unknown Copilot command. Supported commands: ${exports.COPILOT_COMMAND_NAMES.join(', ')}.` };
+    if (!name || !copilot_command_vocabulary_1.COPILOT_COMMAND_NAMES.includes(name)) {
+        return invalid('comment-command-name-unknown', 'help', `Unknown Copilot command. Supported commands: ${copilot_command_vocabulary_1.COPILOT_COMMAND_NAMES.join(', ')}.`);
     }
+    const commandName = name;
     if (name === 'status' && tokens.length > 0) {
-        return { kind: 'invalid', reason: '/copilot status accepts no arguments.' };
+        return invalid('comment-command-arguments-unexpected', commandName, '/copilot status accepts no arguments.');
     }
     const argumentsList = name === 'dismiss' || name === 'fix'
         ? parseFindingIdentifiers(withoutPrefix.slice(name.length).trim())
         : tokens;
     if (!argumentsList) {
-        return { kind: 'invalid', reason: 'Use valid double-quoted finding IDs when an identifier contains spaces.' };
+        return invalid('comment-command-finding-quoting', commandName, 'Use valid double-quoted finding IDs when an identifier contains spaces.');
     }
     if (argumentsList.length > MAX_ARGUMENTS
         && !copilotCommandAcceptsAdaptableProse(name)
         && name !== 'remember') {
-        return { kind: 'invalid', reason: `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.` };
+        return invalid('comment-command-argument-count', commandName, `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.`);
     }
     if (name === 'sdd-diff' && argumentsList.length > 0)
-        return { kind: 'invalid', reason: '/copilot sdd-diff does not accept arguments.' };
+        return invalid('comment-command-arguments-unexpected', commandName, '/copilot sdd-diff does not accept arguments.');
     if (name === 'doctor' && argumentsList.length > 0) {
-        return { kind: 'invalid', reason: '/copilot doctor does not accept arguments.' };
+        return invalid('comment-command-arguments-unexpected', commandName, '/copilot doctor does not accept arguments.');
     }
     if ((name === 'fix' || name === 'dismiss' || name === 'implement' || name === 'remember') && argumentsList.length === 0) {
-        return { kind: 'invalid', reason: `/${name} requires at least one argument.` };
+        return invalid('comment-command-arguments-missing', commandName, `/${name} requires at least one argument.`);
     }
     if (name === 'history' && argumentsList.length) {
-        return { kind: 'invalid', reason: '/copilot history accepts no arguments or model selection.' };
+        return invalid('comment-command-arguments-unexpected', commandName, '/copilot history accepts no arguments or model selection.');
     }
     return {
         kind: 'command',
@@ -81440,6 +81655,89 @@ function parseFindingIdentifiers(input) {
     }
     return input.slice(cursor).trim() ? undefined : identifiers;
 }
+function invalid(reasonId, command, reason) {
+    return { kind: 'invalid', reason, validation: { reason: reasonId, command } };
+}
+
+
+/***/ }),
+
+/***/ 44237:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.COPILOT_COMMAND_VALIDATION_REASONS = void 0;
+exports.isCopilotCommandValidationReason = isCopilotCommandValidationReason;
+exports.isValidCopilotCommandValidation = isValidCopilotCommandValidation;
+/** Closed public reasons; none contains user text, operands, paths or credentials. */
+exports.COPILOT_COMMAND_VALIDATION_REASONS = Object.freeze([
+    'comment-command-length', 'comment-command-name-missing', 'comment-command-name-unknown',
+    'comment-command-argument-count', 'comment-command-arguments-unexpected', 'comment-command-arguments-missing',
+    'comment-command-finding-quoting', 'comment-command-review-format', 'comment-command-review-effort',
+    'comment-command-review-boolean', 'comment-command-review-option',
+    'comment-command-sync-option', 'comment-command-sync-parent',
+]);
+const REVIEW_COMMANDS = Object.freeze(['analyze', 'review', 'findings', 'recheck']);
+const COMMANDS_BY_REASON = Object.freeze({
+    'comment-command-length': Object.freeze(['help']),
+    'comment-command-name-missing': Object.freeze(['help']),
+    'comment-command-name-unknown': Object.freeze(['help']),
+    'comment-command-argument-count': Object.freeze(['help', 'analyze', 'sdd-diff', 'doctor', 'history', 'description',
+        'review', 'findings', 'fix', 'dismiss', 'recheck', 'sync-branch']),
+    'comment-command-arguments-unexpected': Object.freeze(['status', 'sdd-diff', 'doctor', 'history']),
+    'comment-command-arguments-missing': Object.freeze(['fix', 'dismiss', 'implement', 'remember']),
+    'comment-command-finding-quoting': Object.freeze(['fix', 'dismiss']),
+    'comment-command-review-format': REVIEW_COMMANDS,
+    'comment-command-review-effort': REVIEW_COMMANDS,
+    'comment-command-review-boolean': REVIEW_COMMANDS,
+    'comment-command-review-option': REVIEW_COMMANDS,
+    'comment-command-sync-option': Object.freeze(['sync-branch']),
+    'comment-command-sync-parent': Object.freeze(['sync-branch']),
+});
+function isCopilotCommandValidationReason(value) {
+    return exports.COPILOT_COMMAND_VALIDATION_REASONS.some(reason => reason === value);
+}
+function isValidCopilotCommandValidation(reason, command) {
+    return isCopilotCommandValidationReason(reason)
+        && COMMANDS_BY_REASON[reason].some(value => value === command);
+}
+
+
+/***/ }),
+
+/***/ 245:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.COPILOT_COMMAND_NAMES = void 0;
+/** Explicit commands are the safe, deterministic entry point for mutations. */
+exports.COPILOT_COMMAND_NAMES = [
+    'help',
+    'analyze',
+    'plan',
+    'clarify',
+    'estimate',
+    'test-plan',
+    'status',
+    'sdd-diff',
+    'doctor',
+    'history',
+    'description',
+    'explain',
+    'diagnose',
+    'review',
+    'findings',
+    'fix',
+    'dismiss',
+    'remember',
+    'recheck',
+    'implement',
+    'sync-branch',
+];
 
 
 /***/ }),

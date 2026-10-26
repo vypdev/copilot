@@ -7,7 +7,7 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-20",
+      "lastVerified": "2026-10-26",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md",
@@ -159,7 +159,12 @@
         "src/data/repository/issue/issue_title_repository.ts",
         "src/domain/closed_issue_reconciliation.ts",
         "src/application/errors/closed_issue_reconciliation_error.ts",
-        "src/application/policies/closed_issue_reconciliation_outcome_policy.ts"
+        "src/application/policies/closed_issue_reconciliation_outcome_policy.ts",
+        "src/domain/copilot_command_validation.ts",
+        "src/application/errors/comment_command_validation_error.ts",
+        "src/application/policies/comment_command_validation_message_catalog.ts",
+        "src/application/policies/comment_command_validation_presentation_policy.ts",
+        "src/domain/copilot_command_vocabulary.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -260,7 +265,10 @@
         "src/application/policies/__tests__/pull_request_title_policy.test.ts",
         "src/application/usecases/steps/common/__tests__/pull_request_title_compatibility.test.ts",
         "src/application/usecases/steps/common/__tests__/update_title_use_case.test.ts",
-        "src/data/repository/issue/__tests__/issue_title_repository.test.ts"
+        "src/data/repository/issue/__tests__/issue_title_repository.test.ts",
+        "src/domain/__tests__/copilot_command_validation.test.ts",
+        "src/application/policies/__tests__/comment_command_validation_presentation.test.ts",
+        "src/application/usecases/__tests__/command_validation_diagnostics.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -547,7 +555,7 @@
       "status": "implemented",
       "scope": "Shared GitHub Action lifecycle with pinned native resource/lane coordination proof, conservative predecessor fencing, routing and durable user-facing results",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-25",
+      "lastVerified": "2026-10-26",
       "specs": [
         "specs/execution-admission-queue-and-publication.md",
         "specs/execution-error-and-context-hardening.md",
@@ -622,7 +630,12 @@
         "src/application/usecases/workflow/wait_for_previous_workflow_runs_use_case.ts",
         "src/data/repository/workflow/active_previous_workflow_runs_repository.ts",
         "src/data/repository/workflow/native_workflow_coordination_repository.ts",
-        "src/infrastructure/composition/workflow_queue_composition_root.ts"
+        "src/infrastructure/composition/workflow_queue_composition_root.ts",
+        "src/domain/copilot_command_validation.ts",
+        "src/application/errors/comment_command_validation_error.ts",
+        "src/application/policies/comment_command_validation_message_catalog.ts",
+        "src/application/policies/comment_command_validation_presentation_policy.ts",
+        "src/domain/copilot_command_vocabulary.ts"
       ],
       "tests": [
         "src/tooling/__tests__/coverage_budget_validator.test.ts",
@@ -667,7 +680,10 @@
         "src/data/repository/workflow/__tests__/native_workflow_coordination_repository.test.ts",
         "src/data/repository/workflow/__tests__/active_previous_workflow_runs_repository.test.ts",
         "src/actions/__tests__/common_action.test.ts",
-        "src/tooling/__tests__/validate_workflow_contract.test.ts"
+        "src/tooling/__tests__/validate_workflow_contract.test.ts",
+        "src/domain/__tests__/copilot_command_validation.test.ts",
+        "src/application/policies/__tests__/comment_command_validation_presentation.test.ts",
+        "src/application/usecases/__tests__/command_validation_diagnostics.test.ts"
       ],
       "documentation": [
         "docs/overview.mdx",
@@ -681,7 +697,8 @@
         "docs/configuration.mdx",
         "README.md",
         "docs/features.mdx",
-        "docs/pull-requests/workflow-setup.mdx"
+        "docs/pull-requests/workflow-setup.mdx",
+        "docs/issues/comment-commands.mdx"
       ]
     },
     {
@@ -1765,7 +1782,7 @@
       "status": "implemented",
       "scope": "Admit only explicit commands or exact mentions, then route them while protecting repository mutations",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-26",
       "specs": [
         "specs/comment-automation-and-authorization.md"
       ],
@@ -1815,7 +1832,12 @@
         "src/application/policies/implementation_result_policy.ts",
         "src/application/policies/agent_execution_failure_policy.ts",
         "src/application/usecases/steps/commit/bugbot/workspace_changes.ts",
-        "src/application/usecases/steps/commit/workspace_mutation_guard.ts"
+        "src/application/usecases/steps/commit/workspace_mutation_guard.ts",
+        "src/domain/copilot_command_validation.ts",
+        "src/application/errors/comment_command_validation_error.ts",
+        "src/application/policies/comment_command_validation_message_catalog.ts",
+        "src/application/policies/comment_command_validation_presentation_policy.ts",
+        "src/domain/copilot_command_vocabulary.ts"
       ],
       "tests": [
         "src/actions/__tests__/github_action.test.ts",
@@ -1847,7 +1869,10 @@
         "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts",
         "src/application/usecases/__tests__/comment_automation_action_workflow.test.ts",
         "src/application/usecases/steps/commit/__tests__/user_request_use_case.test.ts",
-        "src/application/usecases/steps/commit/bugbot/__tests__/workspace_changes.test.ts"
+        "src/application/usecases/steps/commit/bugbot/__tests__/workspace_changes.test.ts",
+        "src/domain/__tests__/copilot_command_validation.test.ts",
+        "src/application/policies/__tests__/comment_command_validation_presentation.test.ts",
+        "src/application/usecases/__tests__/command_validation_diagnostics.test.ts"
       ],
       "documentation": [
         "docs/issues/comment-commands.mdx",
@@ -1856,7 +1881,8 @@
         "docs/bugbot/examples.mdx",
         "docs/bugbot/how-it-works.mdx",
         "docs/authentication.mdx",
-        "docs/bugbot/permissions.mdx"
+        "docs/bugbot/permissions.mdx",
+        "docs/security-operations/operations/error-reference.mdx"
       ]
     },
     {

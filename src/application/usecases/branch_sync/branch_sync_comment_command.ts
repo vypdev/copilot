@@ -1,3 +1,4 @@
+import { commentCommandValidationError } from '../../errors/comment_command_validation_error';
 import { Result } from "../../../data/model/result";
 import { parseBranchSyncCommandArguments } from "../../../domain/branch_sync_command";
 import type { BoundActorAuthorizationPort } from "../../ports/actor_authorization_ports";
@@ -13,7 +14,7 @@ export async function runBranchSyncCommand(
   authorization: BoundActorAuthorizationPort,
 ): Promise<Result[]> {
   const parsed = parseBranchSyncCommandArguments(args);
-  if (!parsed.valid) return [invalid(options.taskId, parsed.reason)];
+  if (!parsed.valid) return [invalid(options.taskId, parsed)];
   if (!options.syncBranchUseCase) return [unavailable(options.taskId)];
 
   const allowed = await authorization.isActorAllowedToModifyFiles(context.actor);
@@ -21,8 +22,8 @@ export async function runBranchSyncCommand(
   return options.syncBranchUseCase.invoke(parsed.options);
 }
 
-function invalid(taskId: string, reason: string): Result {
-  return new Result({ id: taskId, success: false, executed: false, errors: [new ApplicationError('validation.invalid-input', reason)] });
+function invalid(taskId: string, parsed: Extract<ReturnType<typeof parseBranchSyncCommandArguments>, { valid: false }>): Result {
+  return new Result({ id: taskId, success: false, executed: false, errors: [commentCommandValidationError(parsed.reason, parsed.validation)] });
 }
 
 function unavailable(taskId: string): Result {
