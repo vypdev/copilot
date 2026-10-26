@@ -70,3 +70,7 @@ export interface PullRequestReviewThreadState {
     resolved: boolean;
     resolvedByLogin?: string;
 }
+/** Fresh thread facts for an already-bound repository identity. */
+export interface BoundPullRequestReviewThreadStateQueryPort {
+    listPullRequestReviewThreadStates(pullRequestNumber: number): Promise<Record<string, PullRequestReviewThreadState>>;
+}

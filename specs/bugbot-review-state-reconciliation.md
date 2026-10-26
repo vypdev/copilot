@@ -3,7 +3,7 @@
 - Status: Implemented
 - Date: 2026-09-11
 - Catalog capability ID: `bugbot-review-state-reconciliation`
-- Last verified: 2026-09-16 on `develop` plus PR #394 live UX iteration
+- Last verified: 2026-10-26 on `develop` plus issue #700 regression campaign; PR #394 retains the earlier live UX evidence
 - Owners: `vypdev/copilot` product and engineering maintainers
 - Scope: make every Bugbot pull-request surface present one coherent, current,
   recoverable finding state without erasing the historical review record.
@@ -458,7 +458,7 @@ readiness. `unknown` is a system failure and fails the review regardless of
 | Open | Valid resolution claim `obsolete` | `obsolete` | update marker/body, resolve thread, re-read |
 | Open marker + human-resolved thread | Provider state | `dismissed` | persist dismissed marker, keep thread resolved |
 | Fixed/obsolete | Active finding | `reopened` | update marker/body, unresolve thread, re-read |
-| Dismissed | Model reports same finding | remain dismissed | suppress model reopening; no mutation |
+| Dismissed with no verified native reopening | Model reports same finding | remain dismissed | suppress model reopening; no mutation |
 | Resolved marker + open thread | Next supported review | `verification-required` | include in analysis; do not silently re-resolve |
 | Open marker + bot-resolved thread | Retry after partial reopen | repair toward open | unresolve thread, re-read |
 | Open marker + human-resolved thread | Human action | dismissed | persist dismissal on next reconciliation |
@@ -562,6 +562,101 @@ checks, plus independent current-head review with no pending findings.
   active again; the old resolved classification is not blindly restored.
 - The documentation MUST state this bounded eventual-consistency behavior next
   to the native resolve/unresolve instructions.
+
+
+#### Withdrawn dismissals — issue #700 (2026-10-26)
+
+Observed defect: an authenticated bot marker with reason 'dismissed' and a
+fresh open native thread was correctly retained as 'verification-required',
+but analysis suppressed both its active reports and explicit resolution
+claims. Resolution publication also left an already-resolved marker's old
+reason unchanged. The regression reproduces the consumer incident in
+[issue #700](https://github.com/vypdev/copilot/issues/700) without provider
+credentials or a live consumer mutation.
+
+The repaired contract is:
+
+- **R700-1:** a trusted, resolved PR dismissal is withdrawn only when its
+  observed native thread is open and the context explicitly requires
+  verification. A missing thread fact is not withdrawal. An independent
+  issue-comment dismissal stays protected.
+- **R700-2:** only a retained finding included in the prompt may receive an
+  explicit, validated 'fixed' or 'obsolete' adjudication. An active report
+  with the same durable identity wins over a contradictory resolution claim.
+  Omission never means fixed.
+- **R700-3:** before refreshing a dismissed reason or publishing its active
+  report, read the original native thread again. A renewed native dismissal
+  is preserved. An unavailable, missing, or invalid fact fails closed through
+  the existing sanitized mutation diagnostic and recovery path.
+- **R700-4:** write the verified marker/reason before resolving the thread.
+  Preserve the original comment, identity, review, finding text and earlier
+  notes. A failed thread mutation leaves verification required; a fresh
+  replay completes the pending transition without duplicate publication.
+- **R700-5:** final projection uses fresh provider evidence. Guarded approval
+  with 'allowHumanDismissed: false' accepts verified fixed/obsolete findings
+  only after independent current-head check and complete-review requirements
+  pass. Dismissed, active, unknown, omitted, and partially reviewed evidence
+  retain their existing gates.
+
+~~~text
+Human reopens native dismissal -> verification required
+  -> retained finding explicitly assessed on current head
+  -> revalidate original thread immediately before mutation
+     -> renewed dismissal: preserve it
+     -> unavailable facts: keep non-clean state and show recovery
+     -> still open:
+        active -> refresh original finding/open marker -> reopened
+        fixed/obsolete -> refresh reason -> resolve thread -> verified projection
+~~~
+
+Text equivalent: reopening permits fresh adjudication; it does not itself
+resolve the finding or grant approval. The current provider state and an
+explicit outcome must agree before the projection becomes clean.
+
+| Observed outcome | Visible current state and next action |
+|---|---|
+| Reopened; analysis pending or omits this finding | 'Verification required' — inspect the exact thread and run '/copilot recheck' with the relevant evidence available |
+| Explicitly verified fixed/obsolete; native mutation succeeds | Latest resolution note records the verified reason; canonical status and Review Check reflect the fresh native state |
+| Agent still reports the defect | Original comment/thread is reused; 'Reopened' — fix the reported defect |
+| Native dismissal renewed during analysis | 'Dismissed' — preserve the human decision; guarded policy still applies |
+| Marker written; resolving thread fails | 'Verification required' — completed marker update retained; correct provider failure and recheck |
+| Custom adapter cannot read current native facts | Existing mutation diagnostic; no reason refresh or active overwrite — implement the fresh-thread query and recheck |
+
+There is no new user setting, schema migration, permission expansion, change
+to trusted authors, or automatic approval exception. Existing credentials
+already read native thread state. Provider reads and writes are not an atomic
+GitHub transaction; the pre-write check protects decisions observed during
+analysis, while the existing read-after-write projection and next supported
+reconciliation handle later changes.
+
+Architecture: the shared pure eligibility policy decides whether a dismissal
+is protected. Analysis consumes that decision for both active findings and
+resolution claims. Application publication revalidates through the semantic
+thread-query port; composition binds the existing repository adapter. The
+optional bound/unbound query is additive for custom adapters: old operations
+remain compatible, but re-adjudication without fresh native evidence fails
+closed. Domain/application dependency and public API validation remain
+mandatory.
+
+Additional test budget: **32 distinct new cases**, beyond the existing
+baseline; changes to existing composition assertions are not counted.
+
+| Area | New minimum | Evidence |
+|---|---:|---|
+| Pure eligibility and independent destination protection | 8 | 'bugbot_resolution_eligibility_policy.test.ts': native withdrawal, omitted claim, six incomplete/different fact rows, independent issue dismissal |
+| Analysis -> mutation -> fresh projection and guarded approval | 24 | 'reopened_dismissal_reconciliation.test.ts': fixed/obsolete, active, omission, untouched/renewed dismissal, unavailable adapters/facts, partial writes/replay, stale claims, malformed/ambiguous/untrusted identity, missing checks and incomplete evidence |
+| **Total** | **32** | Each parameter row represents distinct behavior; no composition assertion is counted again |
+
+Acceptance maps R700-1/2 to the eligibility and analysis cases, R700-3 to
+renewed-dismissal and unavailable-native-fact cases, R700-4 to ordered-write
+and replay cases, and R700-5 to actual guarded-policy assertions. All modified
+coverable lines must pass Codecov at 100% against the PR's current base;
+repository coverage budgets and mandatory hooks remain unchanged.
+Documentation is updated in 'docs/bugbot/detection.mdx',
+'docs/bugbot/failure-scenarios.mdx', and 'docs/bugbot/programmatic-api.mdx'.
+No live consumer repair, release, or publication is implied by these
+deterministic upstream regressions.
+
 
 ### 6.7 PR lifecycle boundaries
 

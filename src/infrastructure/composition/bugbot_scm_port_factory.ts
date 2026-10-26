@@ -129,6 +129,8 @@ export class BugbotScmPortFactory {
         ),
       listPullRequestReviewComments: (pullRequestNumber: number) =>
         this.pullRequests.listPullRequestReviewComments(owner, repository, pullRequestNumber, token),
+      listPullRequestReviewThreadStates: (pullRequestNumber: number) =>
+        this.pullRequests.listPullRequestReviewThreadStates(owner, repository, pullRequestNumber, token),
     };
 
     return {

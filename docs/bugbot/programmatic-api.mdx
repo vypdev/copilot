@@ -90,3 +90,20 @@ error.
 
 See [Application error reference](/security-operations/operations/error-reference)
 for the stable code meanings and operator actions.
+
+### Native dismissal re-verification
+
+Custom SCM adapters may add `listPullRequestReviewThreadStates` to the bound
+publication and resolution ports (and the corresponding unbound port). It
+returns current native thread facts keyed by the original review-comment
+identity. The GitHub composition already supplies this query with its existing
+repository identity and credential binding.
+
+The query is optional for existing adapters, preserving their existing
+operations. Re-adjudicating an explicitly reopened dismissal requires a fresh
+fact for that exact comment. A missing query, missing entry, invalid fact or
+failed read stops the mutation through the existing review-operation error;
+it never grants authority to overwrite the dismissed reason. A thread that is
+resolved again is preserved. Keep the original finding/review identity and use
+the normal recheck after repairing adapter access. No approval policy setting
+or permission expansion is needed.

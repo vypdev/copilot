@@ -30,7 +30,8 @@ type ResolutionKeysAreExact = Assert<
 type PullRequestWriteKeys =
   | "createReviewWithComments"
   | "updatePullRequestReviewComment"
-  | "unresolvePullRequestReviewThread";
+  | "unresolvePullRequestReviewThread"
+  | "listPullRequestReviewThreadStates";
 type PullRequestWriteKeysAreExact = Assert<
   Equal<keyof BugbotPullRequestWritePort, PullRequestWriteKeys>
 >;
@@ -38,9 +39,17 @@ type PullRequestResolutionKeys =
   | "listPullRequestReviewComments"
   | "updatePullRequestReviewComment"
   | "resolvePullRequestReviewThread"
-  | "unresolvePullRequestReviewThread";
+  | "unresolvePullRequestReviewThread"
+  | "listPullRequestReviewThreadStates";
 type PullRequestResolutionKeysAreExact = Assert<
   Equal<keyof BugbotPullRequestResolutionPort, PullRequestResolutionKeys>
+>;
+
+type WriteReverificationQueryIsOptional = Assert<
+  undefined extends BugbotPullRequestWritePort['listPullRequestReviewThreadStates'] ? true : false
+>;
+type ResolutionReverificationQueryIsOptional = Assert<
+  undefined extends BugbotPullRequestResolutionPort['listPullRequestReviewThreadStates'] ? true : false
 >;
 
 describe("Bugbot port boundaries", () => {

@@ -43002,18 +43002,28 @@ function hasMissingNonCleanDurableDestination(findingId, finding, observed) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.filterEligibleBugbotResolutionIds = filterEligibleBugbotResolutionIds;
+exports.isReopenedBugbotDismissal = isReopenedBugbotDismissal;
+exports.hasProtectedBugbotDismissal = hasProtectedBugbotDismissal;
 /**
  * Resolution is allowed only for prior findings retained in this run's prompt.
- * A user dismissal is durable and cannot be overwritten by an agent response.
+ * A user dismissal stays protected until its native thread is explicitly reopened.
  */
 function filterEligibleBugbotResolutionIds(claimedIds, eligibleIds, existingByFindingId) {
     return new Set([...claimedIds].filter((findingId) => {
         if (!eligibleIds.has(findingId))
             return false;
         const existing = existingByFindingId[findingId];
-        return existing?.issue?.resolution !== 'dismissed'
-            && existing?.pullRequest?.resolution !== 'dismissed';
+        return !hasProtectedBugbotDismissal(existing);
     }));
+}
+/** Native reopening withdraws only this trusted PR destination's dismissal. */
+function isReopenedBugbotDismissal(finding) {
+    return finding?.resolution === 'dismissed' && finding.resolved
+        && finding.threadResolved === false && finding.verificationRequired === true;
+}
+function hasProtectedBugbotDismissal(finding) {
+    return finding?.issue?.resolution === 'dismissed'
+        || (finding?.pullRequest?.resolution === 'dismissed' && !isReopenedBugbotDismissal(finding.pullRequest));
 }
 
 
@@ -60430,7 +60440,7 @@ function partitionFailureCategory(error) {
 function suppressDismissedFindings(execution, context, prepared) {
     const activeFindings = (0, finding_1.retainExistingFindingIds)(prepared.activeFindings ?? prepared.toPublish, context.existingByFindingId).filter((finding) => {
         const existing = (0, finding_1.findExistingFindingInfo)(context.existingByFindingId, finding);
-        return existing?.issue?.resolution !== 'dismissed' && existing?.pullRequest?.resolution !== 'dismissed';
+        return !(0, bugbot_resolution_eligibility_policy_1.hasProtectedBugbotDismissal)(existing);
     });
     const limited = (0, limit_comments_1.applyCommentLimit)(activeFindings, execution.analysis.commentLimit);
     return { ...prepared, ...limited, activeFindings };
@@ -62860,6 +62870,7 @@ async function tryResolvePullRequestFinding(ports, findingId, destination, error
             commentIdentity: destination.commentIdentity,
             pullRequestNumber: destination.pullRequestNumber,
             resolution,
+            reopened: destination.resolved && destination.verificationRequired === true && destination.threadResolved === false,
         }, catalog);
     }
     catch (cause) {
@@ -63230,6 +63241,8 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const bugbot_review_presentation_policy_1 = __nccwpck_require__(43799);
 const bugbot_message_catalog_1 = __nccwpck_require__(7406);
+const bugbot_resolution_eligibility_policy_1 = __nccwpck_require__(89189);
+const verify_reopened_finding_thread_1 = __nccwpck_require__(46841);
 class PullRequestReviewCommentPublisher {
     constructor(options) {
         this.options = options;
@@ -63244,9 +63257,11 @@ class PullRequestReviewCommentPublisher {
             existing.pullRequest.pullRequestNumber === openPrNumber) {
             // A human dismissal is durable. Model output alone cannot reverse it;
             // reopening the native thread is the explicit human signal to recheck.
-            if (existing.pullRequest.resolution === 'dismissed'
-                && existing.pullRequest.threadResolved !== false) {
-                return;
+            if (existing.pullRequest.resolution === 'dismissed') {
+                if (!(0, bugbot_resolution_eligibility_policy_1.isReopenedBugbotDismissal)(existing.pullRequest))
+                    return;
+                if (!await (0, verify_reopened_finding_thread_1.isReopenedFindingThreadStillOpen)(this.options.repository, openPrNumber, existing.pullRequest.commentIdentity))
+                    return;
             }
             // Existing comments do not carry enough anchor metadata to prove that a
             // GitHub suggestion is still attached to a RIGHT-side changed line.
@@ -63612,18 +63627,28 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolvePullRequestFinding = resolvePullRequestFinding;
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
 const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
+const verify_reopened_finding_thread_1 = __nccwpck_require__(46841);
 async function resolvePullRequestFinding(repository, resolution, catalog) {
     const comments = await repository.listPullRequestReviewComments(resolution.pullRequestNumber);
     const comment = comments.find((candidate) => candidate.identity === resolution.commentIdentity);
     if (comment?.body == null) {
         throw new pull_request_review_errors_1.PullRequestReviewOperationError("resolve-thread");
     }
-    const marker = (0, bugbot_finding_marker_policy_1.parseMarker)(comment.body).find((candidate) => candidate.findingId === resolution.findingId);
-    if (marker == null) {
+    const markers = (0, bugbot_finding_marker_policy_1.parseMarker)(comment.body).filter((candidate) => candidate.findingId === resolution.findingId);
+    const marker = markers[0];
+    if (markers.length !== 1) {
         throw new pull_request_review_errors_1.PullRequestReviewOperationError("resolve-thread");
     }
-    if (!marker.resolved) {
-        const reason = resolution.resolution ?? 'fixed';
+    const reason = resolution.resolution ?? 'fixed';
+    const changesResolvedReason = marker.resolved && (marker.resolution ?? 'fixed') !== reason;
+    if (changesResolvedReason) {
+        // A newly observed or untouched dismissal is never overwritten by a stale claim.
+        if (!resolution.reopened || !resolution.resolution)
+            return;
+        if (!await (0, verify_reopened_finding_thread_1.isReopenedFindingThreadStillOpen)(repository, resolution.pullRequestNumber, resolution.commentIdentity))
+            return;
+    }
+    if (!marker.resolved || changesResolvedReason) {
         const replacement = `${(0, bugbot_finding_marker_policy_1.buildResolvedFindingNote)(reason, catalog)}${(0, bugbot_finding_marker_policy_1.buildMarker)(resolution.findingId, true, marker.fingerprint, marker.semanticFingerprint, reason)}`;
         const replaced = (0, bugbot_finding_marker_policy_1.replaceMarkerInBody)(comment.body, resolution.findingId, true, replacement);
         if (!replaced.found)
@@ -64193,6 +64218,27 @@ function formatCommandForDiagnostics(command) {
 }
 function isSensitiveArgumentName(argument) {
     return /^--?(?:api[-_]?key|access[-_]?token|refresh[-_]?token|token|secret|password|authorization|pat)$/i.test(argument);
+}
+
+
+/***/ }),
+
+/***/ 46841:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isReopenedFindingThreadStillOpen = isReopenedFindingThreadStillOpen;
+const pull_request_review_errors_1 = __nccwpck_require__(46445);
+/** Revalidate withdrawal at mutation time; unavailable facts never grant permission. */
+async function isReopenedFindingThreadStillOpen(port, pullRequestNumber, commentIdentity) {
+    if (!port.listPullRequestReviewThreadStates)
+        throw new pull_request_review_errors_1.PullRequestReviewOperationError('list-threads');
+    const thread = (await port.listPullRequestReviewThreadStates(pullRequestNumber))[commentIdentity];
+    if (typeof thread?.resolved !== 'boolean')
+        throw new pull_request_review_errors_1.PullRequestReviewOperationError('list-threads');
+    return !thread.resolved;
 }
 
 
@@ -86630,6 +86676,7 @@ class BugbotScmPortFactory {
             resolvePullRequestReviewThread: (pullRequestNumber, commentIdentity) => this.pullRequests.resolvePullRequestReviewThread(owner, repository, pullRequestNumber, commentIdentity, token),
             unresolvePullRequestReviewThread: (pullRequestNumber, commentIdentity) => this.pullRequests.unresolvePullRequestReviewThread(owner, repository, pullRequestNumber, commentIdentity, token),
             listPullRequestReviewComments: (pullRequestNumber) => this.pullRequests.listPullRequestReviewComments(owner, repository, pullRequestNumber, token),
+            listPullRequestReviewThreadStates: (pullRequestNumber) => this.pullRequests.listPullRequestReviewThreadStates(owner, repository, pullRequestNumber, token),
         };
         return {
             context,

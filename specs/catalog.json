@@ -440,7 +440,7 @@
       "status": "implemented",
       "scope": "Reconcile review snapshots, findings, threads, comments, and check conclusions",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-24",
+      "lastVerified": "2026-10-26",
       "specs": [
         "specs/bugbot-review-state-reconciliation.md"
       ],
@@ -485,7 +485,15 @@
         "src/domain/bugbot/finding.ts",
         "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts",
         "src/application/usecases/steps/commit/bugbot/publish_findings_use_case.ts",
-        "scripts/validate-workflow-contract.cjs"
+        "scripts/validate-workflow-contract.cjs",
+        "src/application/policies/bugbot_resolution_eligibility_policy.ts",
+        "src/application/usecases/steps/commit/bugbot/resolve_pull_request_finding.ts",
+        "src/application/usecases/steps/commit/bugbot/mark_findings_resolved_workflow.ts",
+        "src/application/usecases/steps/commit/bugbot/verify_reopened_finding_thread.ts",
+        "src/application/ports/bugbot_pull_request_resolution_ports.ts",
+        "src/application/ports/bugbot_pull_request_write_ports.ts",
+        "src/application/ports/pull_request_review_comment_ports.ts",
+        "src/infrastructure/composition/bugbot_scm_port_factory.ts"
       ],
       "tests": [
         "src/domain/bugbot/__tests__/review_state.test.ts",
@@ -515,7 +523,11 @@
         "src/domain/bugbot/__tests__/finding.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/finding_identity_replay.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/analyze_bugbot_revision_use_case.test.ts",
-        "src/application/usecases/steps/commit/bugbot/__tests__/publish_findings_use_case.test.ts"
+        "src/application/usecases/steps/commit/bugbot/__tests__/publish_findings_use_case.test.ts",
+        "src/application/policies/__tests__/bugbot_resolution_eligibility_policy.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/reopened_dismissal_reconciliation.test.ts",
+        "src/infrastructure/composition/__tests__/bugbot_scm_port_factory.test.ts",
+        "src/application/ports/__tests__/bugbot_port_boundaries.test.ts"
       ],
       "documentation": [
         "docs/bugbot/detection.mdx",
