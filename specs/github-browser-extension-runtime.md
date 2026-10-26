@@ -492,7 +492,7 @@ session storage and has no timer loop. Private response cache is memory-only,
 at most 128 entries/1 MiB/60 seconds, and is invalidated on credential changes;
 it is deliberately dropped on worker suspension. Missing state is revalidated
 before reads. Rate-limit updates share the same serialized state gate as read
-reservations. H2 manual reads obey the 10-second cooldown; future automatic
+reservations. Cooldown, quota and provider-limit states carry a nonsecret next-allowed timestamp through the gateway to localized wait guidance; the reader honors both Retry-After seconds and HTTP-date values. Exhausted safe-integer settings revisions reject writes without replacing the recovery envelope. H2 manual reads obey the 10-second cooldown; future automatic
 consumers cannot bypass I6 or poll hidden pages.
 
 The actual harness uses native ChromeDriver/geckodriver/SafariDriver. It starts
@@ -545,9 +545,9 @@ permission and retains its native receipt even on failure.
 
 ### Local verification receipt (2026-10-26)
 
-The extension suite currently passes 168 tests in 26 files (56 retained H1
+The extension suite currently passes 172 tests in 26 files (56 retained H1
 engineering cases plus 112 H2 cases/regressions). All 38 required H2 case IDs
-appear in the executable suites. The local report covers 1,061/1,061 lines;
+appear in the executable suites. The local report covers 1,070/1,070 lines;
 new pure domain branches are 100%; remaining per-file statement/branch/function
 gates pass. Per-file executable-line coverage is now enforced at 100% rather
 than the prior 95%, with no runtime exclusion or lowered gate. These deterministic

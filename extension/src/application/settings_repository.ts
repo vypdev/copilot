@@ -15,7 +15,7 @@ export class SettingsRepository {
     write(value: unknown, expectedRevision: number): Promise<Settings> {
         const operation = this.queue.then(async () => {
             const loaded = await this.read();
-            if (loaded.state !== 'ready' || loaded.settings.revision !== expectedRevision || !validSettings(value)) {
+            if (expectedRevision >= Number.MAX_SAFE_INTEGER || loaded.state !== 'ready' || loaded.settings.revision !== expectedRevision || !validSettings(value)) {
                 throw new Error('settings-conflict-or-invalid');
             }
             const next = deepFreeze({ ...value, revision: expectedRevision + 1 });

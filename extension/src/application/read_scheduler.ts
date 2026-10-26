@@ -4,7 +4,7 @@ import type { StoragePort } from './runtime_ports.ts';
 import type { GitHubReadPort, ReadCancellation, ReadResult } from './read_ports.ts';
 
 interface CacheEntry { readonly result: Extract<ReadResult, { state: 'ok' }>; readonly expires: number; readonly epoch: number }
-export type ScheduledRead = ReadResult | { readonly state: 'inactive' | 'cooldown' | 'budget' | 'busy' | 'storage-unavailable'; readonly bytes: 0 };
+export type ScheduledRead = (ReadResult & { readonly retryAt?: number }) | { readonly state: 'inactive' | 'cooldown' | 'budget' | 'busy' | 'storage-unavailable'; readonly bytes: 0; readonly retryAt?: number };
 export class ReadScheduler {
     private state: ScheduleState | undefined;
     private readonly pending = new Map<string, Promise<ScheduledRead>>();
@@ -33,7 +33,7 @@ export class ReadScheduler {
                 this.state = persisted ?? initialSchedule(this.now());
             }
             if (this.now() < this.state.started) return 'cooldown' as const;
-            if (this.now() - this.state.started >= 3600000) this.state = initialSchedule(this.now());
+            if (this.now() - this.state.started >= 3600000) this.state = { ...initialSchedule(this.now()), blockedUntil: this.state.blockedUntil, failures: this.state.failures };
             const decision = scheduleDecision(this.state, this.now(), key, repository, !!secret, activity);
             if (decision !== 'allowed') return decision;
             const next = reserveRead(this.state, this.now(), key, repository, !!secret, activity.manual);
@@ -43,7 +43,9 @@ export class ReadScheduler {
         this.gate = reserve.catch(() => undefined);
         let decision: Awaited<typeof reserve>;
         try { decision = await reserve; } catch { return { state: 'storage-unavailable', bytes: 0 }; }
-        if (decision !== 'allowed') return { state: decision, bytes: 0 };
+        if (decision !== 'allowed') return { state: decision, bytes: 0,
+            ...(decision === 'budget' ? { retryAt: this.state!.started + 3600000 } : decision === 'cooldown'
+                ? { retryAt: Math.max(this.state!.started, this.state!.blockedUntil, this.state!.targets[key] ?? 0) } : {}) };
         if (cancellation.aborted || epoch !== this.epoch) return { state: 'aborted', bytes: 0 };
         const cached = this.cache.get(key);
         if (cached && cached.epoch === epoch && cached.expires > this.now() && !activity.manual) return cached.result;
@@ -57,6 +59,7 @@ export class ReadScheduler {
             });
             this.gate = update.catch(() => undefined);
             try { await update; } catch { return { state: 'storage-unavailable', bytes: 0 }; }
+            return { ...result, retryAt: this.state!.blockedUntil };
         }
         if (result.state === 'unchanged') {
             if (!cached || cached.epoch !== epoch) return { state: 'invalid', bytes: 0 };
@@ -71,7 +74,7 @@ export class ReadScheduler {
                 this.cache.delete(old); bytes -= entry.result.bytes;
             }
             this.cache.set(key, { result, epoch, expires: this.now() + 60000 });
-        } else if (result.state !== 'limited') this.cache.delete(key);
+        } else this.cache.delete(key);
         return result;
     }
 }

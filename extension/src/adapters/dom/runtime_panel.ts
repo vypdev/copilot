@@ -5,7 +5,7 @@ import { record } from '../../domain/value.ts';
 /** Only extension-created nodes are written or removed. Native editors are never inspected. */
 export function mountRuntimePanel(context: RuntimeContext, scope: ResourceScope, api: BrowserApi,
     document: Document, copy: { title: string; standalone: string; read: string; settings: string; pending: string; unavailable: string; details: string; sourceTree?: string; ready?: boolean },
-    present: (state: string) => string, observed: () => { viewer: string | null; repositoryId: string }): FeatureController {
+    present: (state: string, retryAt?: unknown) => string, observed: () => { viewer: string | null; repositoryId: string }): FeatureController {
     const anchor = document.querySelector('main');
     const existing = document.querySelector('[data-copilot-runtime]');
     if (!anchor || existing) return { refresh() {}, dispose() {} };
@@ -32,7 +32,7 @@ export function mountRuntimePanel(context: RuntimeContext, scope: ResourceScope,
                 visible: document.visibilityState === 'visible', manual: true });
             if (!scope.current() || operation !== sequence) return;
             if (!record(response) || typeof response.state !== 'string') { status.textContent = copy.unavailable; return; }
-            status.textContent = present(response.state);
+            status.textContent = present(response.state, response.retryAt);
             // API strings are plain text, never Markdown, selectors, HTML or executable links.
             if (response.state === 'current' && record(response.data) && typeof response.data.title === 'string') {
                 evidence.textContent = `${context.page.kind === 'pull' ? 'PR' : 'Issue'} #${context.page.number}: ${response.data.title}`;

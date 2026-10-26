@@ -14,7 +14,7 @@ afterEach(() => { for (const stop of cleanups.splice(0).reverse()) stop(); vi.un
 function panel() {
     const dom = githubDom(); cleanups.push(() => dom.dom.window.close()); const h = browserFixture();
     const scope = new BrowserResourceScope(() => true); cleanups.push(() => scope.dispose()); const copy = runtimeCopy('en');
-    const controller = mountRuntimePanel(context(), scope, h.api, dom.document, copy, state => statusText(state, copy), () => ({ viewer: 'octo', repositoryId: '7' }));
+    const controller = mountRuntimePanel(context(), scope, h.api, dom.document, copy, (state, retryAt) => statusText(state, copy, retryAt), () => ({ viewer: 'octo', repositoryId: '7' }));
     return { ...dom, ...h, scope, controller };
 }
 function content() {
@@ -134,4 +134,18 @@ it('native root absence and fallback never rewrite native content and can resume
     h.document.querySelector('#js-repo-pjax-container')!.remove(); h.window.dispatchEvent(new h.dom.window.Event('turbo:render')); await Promise.resolve();
     const main = h.document.createElement('main'); h.document.body.append(main); h.window.dispatchEvent(new h.dom.window.Event('pageshow'));
     await vi.waitFor(() => expect(main.querySelectorAll('[data-copilot-runtime]')).toHaveLength(1));
+});
+
+it('github-browser-extension-runtime-C23 renders bounded retry deadlines and safe wait guidance in each locale without reconnect advice', async () => {
+    const deadline = Date.now() + 120000;
+    for (const locale of ['en', 'es', 'fr', 'pt']) {
+        const copy = runtimeCopy(locale);
+        for (const state of ['cooldown', 'budget', 'limited']) {
+            expect(statusText(state, copy, deadline)).toBe(copy.retry.replace('{time}', new Date(deadline).toLocaleString()));
+            for (const invalid of [undefined, -1, 'secret', 0, Number.MAX_SAFE_INTEGER]) expect(statusText(state, copy, invalid)).toBe(copy.wait);
+        }
+    }
+    const h = panel(); vi.mocked(h.api.runtime.sendMessage).mockResolvedValue({ state: 'limited', retryAt: deadline });
+    h.document.querySelector('button')!.click();
+    await vi.waitFor(() => expect(h.document.querySelector('[role=status]')!.textContent).toContain(new Date(deadline).toLocaleString()));
 });

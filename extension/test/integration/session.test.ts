@@ -92,3 +92,16 @@ it('github-browser-extension-runtime-C16 clears unauthorized credentials but ret
         if (state === 'unauthorized') expect(h.values.has(SESSION_KEY)).toBe(false);
     }
 });
+
+it('github-browser-extension-runtime-C16/C23 preserves nonsecret wait deadlines for Connect and page reads and clears them on disconnect', async () => {
+    for (const phase of ['viewer', 'repository']) {
+        const h = sessionHarness();
+        if (phase === 'repository') vi.mocked(h.reader.read).mockResolvedValueOnce({ state: 'ok', data: { id: '1', login: 'octo' }, etag: '', bytes: 1 });
+        vi.mocked(h.reader.read).mockResolvedValueOnce({ state: 'limited', retryAfter: 120, bytes: 0 });
+        expect(await h.service.connect(CONNECTED.secret, CONNECTED.repository)).toMatchObject({ state: 'limited', retryAt: 220000 });
+        expect(h.values.has(SESSION_KEY)).toBe(false); await h.service.revoke(); expect(h.service.status()).not.toHaveProperty('retryAt');
+    }
+    const h = sessionHarness(); await h.service.connect(CONNECTED.secret, CONNECTED.repository);
+    vi.mocked(h.reader.read).mockResolvedValueOnce({ state: 'limited', retryAfter: 120, bytes: 0 });
+    expect(await h.service.snapshot(PAGE, true, true, new BrowserCancellation())).toMatchObject({ state: 'limited', retryAt: 220000 });
+});

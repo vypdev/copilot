@@ -1,5 +1,7 @@
+import { natural } from '../domain/value.ts';
+
 const en = {
-    title: 'Copilot runtime', standalone: 'Standalone · optional connection is disconnected.',
+    title: 'Copilot runtime', wait: 'Reads are paused. Wait before trying again.', retry: 'Reads are paused. Try again at {time}.', standalone: 'Standalone · optional connection is disconnected.',
     current: 'Connected; read-only activity refreshed.', pending: 'Checking this page. No action required.',
     unavailable: 'Activity is unavailable. Check access or reconnect; your settings remain.',
     stale: 'This page changed. Read again for the current page; your settings remain.',
@@ -14,7 +16,7 @@ const en = {
 };
 export type RuntimeCopy = typeof en;
 const es: RuntimeCopy = {
-    title: 'Runtime de Copilot', standalone: 'Modo local · conexión opcional desconectada.',
+    title: 'Runtime de Copilot', wait: 'Lecturas pausadas. Espera antes de reintentar.', retry: 'Lecturas pausadas. Reintenta a las {time}.', standalone: 'Modo local · conexión opcional desconectada.',
     current: 'Conectado; actividad de solo lectura actualizada.', pending: 'Comprobando la página. No se requiere ninguna acción.',
     unavailable: 'Actividad no disponible. Revisa el acceso o reconecta; se conserva la configuración.',
     stale: 'La página ha cambiado. Lee de nuevo la página actual; se conserva la configuración.',
@@ -28,7 +30,7 @@ const es: RuntimeCopy = {
     details: 'Detalles técnicos', noSession: 'Desconectado. Conecta explícitamente para leer el repositorio seleccionado.',
 };
 const fr: RuntimeCopy = {
-    title: 'Runtime Copilot', standalone: 'Mode local · connexion facultative déconnectée.',
+    title: 'Runtime Copilot', wait: 'Lectures en pause. Patientez avant de réessayer.', retry: 'Lectures en pause. Réessayez à {time}.', standalone: 'Mode local · connexion facultative déconnectée.',
     current: 'Connecté ; activité en lecture seule actualisée.', pending: 'Vérification de la page. Aucune action requise.',
     unavailable: 'Activité indisponible. Vérifiez l’accès ou reconnectez-vous ; les réglages sont conservés.',
     stale: 'La page a changé. Relisez la page actuelle ; les réglages sont conservés.',
@@ -42,7 +44,7 @@ const fr: RuntimeCopy = {
     details: 'Détails techniques', noSession: 'Déconnecté. Connectez-vous explicitement pour lire le dépôt sélectionné.',
 };
 const pt: RuntimeCopy = {
-    title: 'Runtime do Copilot', standalone: 'Modo local · ligação opcional desligada.',
+    title: 'Runtime do Copilot', wait: 'Leituras em pausa. Aguarde antes de tentar novamente.', retry: 'Leituras em pausa. Tente novamente às {time}.', standalone: 'Modo local · ligação opcional desligada.',
     current: 'Ligado; atividade só de leitura atualizada.', pending: 'A verificar a página. Nenhuma ação necessária.',
     unavailable: 'Atividade indisponível. Verifique o acesso ou volte a ligar; as definições mantêm-se.',
     stale: 'A página mudou. Leia novamente a página atual; as definições mantêm-se.',
@@ -59,7 +61,11 @@ export function runtimeCopy(locale: string): RuntimeCopy {
     const language = locale.toLowerCase().split('-')[0];
     return ({ en, es, fr, pt } as Record<string, RuntimeCopy>)[language] ?? en;
 }
-export function statusText(state: string, copy: RuntimeCopy): string {
+export function statusText(state: string, copy: RuntimeCopy, retryAt?: unknown, now = Date.now()): string {
+    if (['cooldown', 'budget', 'limited'].includes(state)) {
+        return natural(retryAt) && retryAt > now && retryAt <= 8640000000000000
+            ? copy.retry.replace('{time}', new Date(retryAt).toLocaleString()) : copy.wait;
+    }
     if (state === 'current' || state === 'connected') return copy.current;
     if (state === 'disconnected') return copy.noSession;
     if (state === 'paused' || state === 'inactive') return copy.paused;

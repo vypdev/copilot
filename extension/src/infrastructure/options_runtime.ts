@@ -18,7 +18,7 @@ export function startOptions(api: BrowserApi, document: Document, language: stri
     const render = (response: unknown) => {
         if (stopped) return;
         const state = record(response) && typeof response.state === 'string' ? response.state : 'unavailable';
-        text('status', state === 'connected' ? copy.connected : statusText(state, copy));
+        text('status', state === 'connected' ? copy.connected : statusText(state, copy, record(response) ? response.retryAt : undefined));
         document.getElementById('status')!.dataset.state = state;
     };
     const submit = async (event: Event) => {

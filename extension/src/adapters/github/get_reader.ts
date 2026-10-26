@@ -24,7 +24,8 @@ export class GitHubGetReader implements GitHubReadPort {
             if (response.status === 401) return { state: 'unauthorized', bytes: 0 };
             if ([429, 503].includes(response.status) || (response.status === 403
                 && (response.headers.has('retry-after') || response.headers.get('x-ratelimit-remaining') === '0'))) {
-                const retry = Number(response.headers.get('retry-after'));
+                const header = response.headers.get('retry-after');
+                const retry = header && /^\d+$/u.test(header) ? Number(header) : (Date.parse(header ?? '') - Date.now()) / 1000;
                 const reset = Number(response.headers.get('x-ratelimit-reset')) * 1000 - Date.now();
                 return { state: 'limited', retryAfter: Math.max(Number.isFinite(retry) ? retry : 0, reset / 1000), bytes: 0 };
             }

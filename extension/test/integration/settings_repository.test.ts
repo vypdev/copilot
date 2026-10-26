@@ -38,3 +38,10 @@ it('github-browser-extension-runtime-C24 rollback rejects absent/invalid recover
         h.values.set(SETTINGS_KEY, { current: DEFAULT_SETTINGS, previous }); await expect(repository.rollback(0)).rejects.toThrow('settings-no-rollback');
     }
 });
+
+it('github-browser-extension-runtime-C18 rejects exhausted safe-integer revisions without destroying the current envelope', async () => {
+    const h = memoryStore(); const envelope = { current: { ...DEFAULT_SETTINGS, revision: Number.MAX_SAFE_INTEGER } };
+    h.values.set(SETTINGS_KEY, envelope); const repository = new SettingsRepository(h.port);
+    await expect(repository.write(DEFAULT_SETTINGS, Number.MAX_SAFE_INTEGER)).rejects.toThrow('settings-conflict');
+    expect(h.values.get(SETTINGS_KEY)).toEqual(envelope); expect(h.port.set).not.toHaveBeenCalled();
+});

@@ -23,7 +23,7 @@ it('github-browser-extension-runtime-C23 coalesces tabs, enforces two in-flight 
     expect(h.values.get('copilot.schedule.v1')).toMatchObject({ count: 2, repositories: { repo: 2 } });
 });
 it('github-browser-extension-runtime-C23 uses TTL/ETag cache without leaking invalidated generations and persists cooldown across restart', async () => {
-    const h = harness(); expect(await h.run()).toEqual(success); expect(await h.run()).toMatchObject({ state: 'cooldown' });
+    const h = harness(); expect(await h.run()).toEqual(success); expect(await h.run()).toMatchObject({ state: 'cooldown', retryAt: 110000 });
     h.advance(10001); expect(await h.run('target', { ...activity, manual: false })).toEqual(success); expect(h.reader.read).toHaveBeenCalledTimes(1);
     h.advance(60001); vi.mocked(h.reader.read).mockResolvedValueOnce({ state: 'unchanged', bytes: 0 });
     expect(await h.run()).toEqual(success); expect(vi.mocked(h.reader.read).mock.calls[1][3]).toBe('known');
@@ -45,7 +45,7 @@ it('github-browser-extension-runtime-C23 malformed storage, quota failure, backw
 });
 it('github-browser-extension-runtime-C23 persists rate-limit/backoff guidance and does not auto-retry or require keepalive', async () => {
     const h = harness(); vi.mocked(h.reader.read).mockResolvedValueOnce({ state: 'limited', retryAfter: 120, bytes: 0 });
-    expect(await h.run()).toMatchObject({ state: 'limited' }); expect(await h.run('other')).toMatchObject({ state: 'cooldown' });
+    expect(await h.run()).toMatchObject({ state: 'limited', retryAt: 220000 }); expect(await h.run('other')).toMatchObject({ state: 'cooldown', retryAt: 220000 });
     h.advance(120001); expect(await h.run()).toEqual(success);
     const failed = harness(); vi.mocked(failed.reader.read).mockImplementation(async () => {
         vi.mocked(failed.port.set).mockRejectedValue(new Error('quota')); return { state: 'limited', retryAfter: 60, bytes: 0 };
@@ -58,7 +58,7 @@ it('github-browser-extension-runtime-C23 enforces response-cache memory/cardinal
     await h.run('first', { ...activity, manual: false }); expect(h.reader.read).toHaveBeenCalledTimes(3);
     const full = initialSchedule(100000); h.values.set('copilot.schedule.v1', { ...full, count: 600 });
     const restarted = new ReadScheduler(h.port, h.reader, () => 100000, () => 0);
-    expect(await restarted.run('x', 'repo', { type: 'viewer' }, 'synthetic', new BrowserCancellation(), activity)).toMatchObject({ state: 'budget' });
+    expect(await restarted.run('x', 'repo', { type: 'viewer' }, 'synthetic', new BrowserCancellation(), activity)).toMatchObject({ state: 'budget', retryAt: 3700000 });
     h.advance(3600001); expect((await h.run('after-hour')).state).toBe('ok');
     const many = harness();
     for (let i = 0; i < 129; i++) { if (i === 128) many.advance(3600001); await many.run(String(i)); }
@@ -69,4 +69,13 @@ it('cancelled reservations and denied reads cannot populate or retain successful
     expect(await h.run('cancelled', activity, cancelled)).toMatchObject({ state: 'aborted' }); expect(h.reader.read).not.toHaveBeenCalled();
     await h.run(); h.advance(10001); vi.mocked(h.reader.read).mockResolvedValueOnce({ state: 'denied', bytes: 0 }); await h.run();
     h.advance(10001); await h.run('target', { ...activity, manual: false }); expect(h.reader.read).toHaveBeenCalledTimes(3);
+});
+
+it('github-browser-extension-runtime-C23 preserves provider Retry-After across hourly budget reset and worker recreation', async () => {
+    const h = harness(); vi.mocked(h.reader.read).mockResolvedValueOnce({ state: 'limited', retryAfter: 7200, bytes: 0 });
+    expect(await h.run()).toMatchObject({ state: 'limited', retryAt: 7300000 }); h.advance(3600001);
+    expect(await h.run('other')).toMatchObject({ state: 'cooldown', retryAt: 7300000 });
+    const restarted = new ReadScheduler(h.port, h.reader, () => 3700001, () => 0);
+    expect(await restarted.run('other', 'repo', { type: 'viewer' }, 'synthetic', new BrowserCancellation(), activity)).toMatchObject({ state: 'cooldown', retryAt: 7300000 });
+    expect(h.reader.read).toHaveBeenCalledTimes(1);
 });

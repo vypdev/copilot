@@ -52,9 +52,11 @@ it('github-browser-extension-runtime-C16 maps 401, 403, masked 404, 429, 503 and
     vi.spyOn(Date, 'now').mockReturnValue(100000);
     for (const [status, headers, expected] of [[401, {}, 'unauthorized'], [403, {}, 'denied'], [404, {}, 'denied'],
         [429, { 'retry-after': '120' }, 'limited'], [503, { 'retry-after': 'invalid' }, 'limited'],
+        [503, { 'retry-after': new Date(220000).toUTCString() }, 'limited'],
         [403, { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '500' }, 'limited']] as const) {
         const result = await new GitHubGetReader(vi.fn(async () => response(null, status, headers)) as typeof fetch).read(request, '', new BrowserCancellation());
         expect(result.state).toBe(expected);
+        if (status === 503 && headers['retry-after'] !== 'invalid') expect(result).toMatchObject({ retryAfter: 120 });
         if (status === 429) expect(result).toMatchObject({ retryAfter: 120 });
         if (status === 403 && expected === 'limited') expect(result).toMatchObject({ retryAfter: 400 });
     }
