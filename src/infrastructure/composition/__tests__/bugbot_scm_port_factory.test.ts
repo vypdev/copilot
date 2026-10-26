@@ -83,6 +83,11 @@ describe('Bugbot SCM port factory', () => {
     await scm.publication.pullRequestComments.createReviewWithComments(7, 'head', 'review', []);
     await scm.publication.pullRequestComments.updatePullRequestReviewComment('comment', 'body');
     await scm.publication.pullRequestComments.unresolvePullRequestReviewThread(7, 'thread');
+    expect(scm.publication.pullRequestComments.listPullRequestReviewThreadStates).toBeDefined();
+    await scm.publication.pullRequestComments.listPullRequestReviewThreadStates!(7);
+    expect(scm.resolution.pullRequestComments.listPullRequestReviewThreadStates).toBeDefined();
+    await scm.resolution.pullRequestComments.listPullRequestReviewThreadStates!(7);
+    expect(pullRequests.listPullRequestReviewThreadStates).toHaveBeenCalledWith('base-owner', 'repo', 7, 'secret');
     await scm.resolution.issueComments.updateComment(11, 22, 'resolved');
     await scm.resolution.pullRequestComments.listPullRequestReviewComments(7);
     await scm.resolution.pullRequestComments.updatePullRequestReviewComment('comment', 'resolved');

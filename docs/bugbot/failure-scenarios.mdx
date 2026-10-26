@@ -25,7 +25,9 @@ description: Diagnose terminal failures across detection, publication, autofix, 
     Keep the workspace changes isolated, report the failed command, and do not commit or push.
   </Accordion>
   <Accordion title="The review and its thread disagree" icon="rotate">
-    Bugbot reports `verification-required`, never clean. A retry completes bot-owned partial transitions. If a person reopened a resolved thread, run `/copilot recheck` so the agent can decide whether the finding is active or still fixed.
+    Bugbot reports `verification-required`, never clean. A retry completes bot-owned partial transitions. If a person reopened a resolved thread, run `/copilot recheck` so the agent explicitly verifies whether the finding is active, fixed, or obsolete. This also supports a withdrawn dismissal: the original marker's reason can be refreshed after the native thread is revalidated. Existing finding text, earlier notes, comments and reviews remain audit history; the latest resolution note and canonical status describe the verified current result.
+
+    If the reviewer omits the retained finding or current native facts cannot be read, it stays non-clean. Inspect the exact thread, make its evidence available and recheck after correcting the reported provider failure. Do not delete the review, edit a bot marker, or loosen `allowHumanDismissed` to clear it. A dismissal renewed while analysis runs is preserved. If the marker update succeeded but resolving the native thread failed, the next fresh recheck completes that transition without duplicating the review.
   </Accordion>
   <Accordion title="A historical review still looks stale" icon="clock">
     Use the canonical **Bugbot status** card and `Copilot / Review` Check for the aggregate state. Run `/copilot recheck` to repair the generated status block; the historical snapshot text is intentionally retained.

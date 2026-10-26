@@ -9,7 +9,7 @@ import { prepareBugbotFindings } from './prepare_bugbot_findings';
 import type { PreparedBugbotFindings } from './prepare_bugbot_findings';
 import { queryBugbotFindings, queryBugbotPartitionFindings } from './query_bugbot_findings';
 import type { BugbotReviewTelemetry } from './bugbot_review_telemetry';
-import { filterEligibleBugbotResolutionIds } from '../../../../policies/bugbot_resolution_eligibility_policy';
+import { filterEligibleBugbotResolutionIds, hasProtectedBugbotDismissal } from '../../../../policies/bugbot_resolution_eligibility_policy';
 import type { BugbotReviewOperationContext } from './bugbot_review_operation_context';
 import { runWithConcurrencyLimit } from '../../../../policies/bounded_concurrency_policy';
 import {
@@ -139,7 +139,7 @@ function suppressDismissedFindings(
         context.existingByFindingId,
     ).filter((finding) => {
         const existing = findExistingFindingInfo(context.existingByFindingId, finding);
-        return existing?.issue?.resolution !== 'dismissed' && existing?.pullRequest?.resolution !== 'dismissed';
+        return !hasProtectedBugbotDismissal(existing);
     });
     const limited = applyCommentLimit(activeFindings, execution.analysis.commentLimit);
     return { ...prepared, ...limited, activeFindings };

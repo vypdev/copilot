@@ -20,6 +20,9 @@ import {
   type BugbotMessageCatalog,
 } from '../../../../policies/bugbot_message_catalog';
 
+import { isReopenedBugbotDismissal } from '../../../../policies/bugbot_resolution_eligibility_policy';
+import { isReopenedFindingThreadStillOpen } from './verify_reopened_finding_thread';
+
 export interface PullRequestReviewCommentPublisherOptions {
   repository: BoundBugbotPullRequestWritePort;
   operation: BugbotReviewOperationContext;
@@ -51,9 +54,9 @@ export class PullRequestReviewCommentPublisher {
     ) {
       // A human dismissal is durable. Model output alone cannot reverse it;
       // reopening the native thread is the explicit human signal to recheck.
-      if (existing.pullRequest.resolution === 'dismissed'
-          && existing.pullRequest.threadResolved !== false) {
-        return;
+      if (existing.pullRequest.resolution === 'dismissed') {
+        if (!isReopenedBugbotDismissal(existing.pullRequest)) return;
+        if (!await isReopenedFindingThreadStillOpen(this.options.repository, openPrNumber, existing.pullRequest.commentIdentity)) return;
       }
       // Existing comments do not carry enough anchor metadata to prove that a
       // GitHub suggestion is still attached to a RIGHT-side changed line.

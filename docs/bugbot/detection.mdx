@@ -187,7 +187,7 @@ Historical issue/PR finding records stay linked by stable identity. On a PR, the
 | `verification-required` | Marker and native thread facts disagree, or a person reopened a clean finding. | Actionable until a fresh analysis converges it. |
 | `unknown` | Trusted Bugbot evidence is malformed, missing, or cannot be verified. | Always fails closed. |
 
-Resolving a review thread manually does not itself trigger a GitHub Actions workflow. On the next supported event—or immediately after `/copilot recheck`—Bugbot attributes a non-bot resolver and persists a durable dismissal. Manually reopening a clean thread similarly becomes `verification-required` until analysis confirms whether it is fixed or active.
+Resolving a review thread manually does not itself trigger a GitHub Actions workflow. On the next supported event—or immediately after `/copilot recheck`—Bugbot attributes a non-bot resolver and persists a durable dismissal. Manually reopening a clean thread similarly becomes `verification-required` until analysis confirms whether it is fixed or active. Reopening a dismissed thread explicitly withdraws that thread's dismissal. A retained finding can then be verified as fixed or obsolete, or reported again in its original thread. Bugbot rechecks the native thread before replacing a dismissed reason; a person dismissing it again during analysis keeps that decision. An untouched dismissal remains durable. Omission by the reviewer is not a fix, and guarded approval still requires its independent checks and complete evidence.
 
 Open, reopened, or verification-required findings make the `Copilot / Review` Check Run neutral by
 default, while the Job Summary still contains the complete bounded state

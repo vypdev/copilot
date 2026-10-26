@@ -9,11 +9,15 @@ import {
 import type { BugbotFindingResolution } from '../../../../../domain/bugbot/finding';
 import type { BugbotMessageCatalog } from '../../../../policies/bugbot_message_catalog';
 
+import { isReopenedFindingThreadStillOpen } from './verify_reopened_finding_thread';
+
 export interface PullRequestFindingResolution {
   findingId: string;
   commentIdentity: string;
   pullRequestNumber: number;
   resolution?: BugbotFindingResolution;
+  /** Native reopening observed in the trusted analysis context; revalidated before changing a resolved reason. */
+  reopened?: boolean;
 }
 
 export async function resolvePullRequestFinding(
@@ -31,15 +35,22 @@ export async function resolvePullRequestFinding(
     throw new PullRequestReviewOperationError("resolve-thread");
   }
 
-  const marker = parseMarker(comment.body).find(
+  const markers = parseMarker(comment.body).filter(
     (candidate) => candidate.findingId === resolution.findingId,
   );
-  if (marker == null) {
+  const marker = markers[0];
+  if (markers.length !== 1) {
     throw new PullRequestReviewOperationError("resolve-thread");
   }
 
-  if (!marker.resolved) {
-    const reason = resolution.resolution ?? 'fixed';
+  const reason = resolution.resolution ?? 'fixed';
+  const changesResolvedReason = marker.resolved && (marker.resolution ?? 'fixed') !== reason;
+  if (changesResolvedReason) {
+    // A newly observed or untouched dismissal is never overwritten by a stale claim.
+    if (!resolution.reopened || !resolution.resolution) return;
+    if (!await isReopenedFindingThreadStillOpen(repository, resolution.pullRequestNumber, resolution.commentIdentity)) return;
+  }
+  if (!marker.resolved || changesResolvedReason) {
     const replacement = `${buildResolvedFindingNote(reason, catalog)}${buildMarker(resolution.findingId, true, marker.fingerprint, marker.semanticFingerprint, reason)}`;
     const replaced = replaceMarkerInBody(
       comment.body,
