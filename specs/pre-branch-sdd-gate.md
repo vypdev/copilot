@@ -578,7 +578,7 @@ ownership/validation.
 | Native schema length rejection recovery | 9 | Actual findings adapter rejection/repair, exhausted schema repair, foreign path/bound and forged diagnostic rejection, short response rejection, mixed writer/schema failures and typed validator metadata |
 | Canonical numeric table budgets | 20 | Three valid table/owner routes, twelve invalid or misplaced table cases, unsafe integer rejection, positive/zero prose compatibility, immutable owner failure identity, actual findings acceptance and real scratch-worktree owner preservation |
 | Compact generation targets | 2 | Update and companion target size, unchanged hard schema bounds, original resolved requirements and shared two-attempt ceiling |
-| Blocked preparation and safe diagnostics (#714) | 14 | Five cause/recovery presentations, three primary-publication/idempotency cases, three bounded/privacy/ownership evidence cases and three retry/retention/no-premature-branch cases; locale matrix is additional |
+| Blocked preparation and safe diagnostics (#714) | 21 | Fourteen cause/recovery, publication/idempotency, privacy/ownership and retention cases plus seven publication-freshness race/revision cases; locale matrix is additional |
 | **Total** | **165** | No case counted twice |
 
 The Windows adapter fixture MUST inject a destination creation immediately
@@ -1463,8 +1463,13 @@ prior diagnostic card fails; that UI failure is returned separately for ordinary
 reconciliation. A successful replay of verified publication clears the prior
 blocked view without regenerating the SDD. Waiting for answers replaces the old
 failure view with the question-card next action. A stale issue/title/base MUST
-not publish outdated candidate diagnostics. Existing race/freshness checks and
-branch/commit ownership remain in force.
+not publish outdated candidate diagnostics or overwrite the current recovery
+record. A publication already classified `workflow.stale` MUST perform no
+recovery-card mutation. Other publication failures MUST recheck the exact source
+and issue before retaining a pending record and again after localized diagnostic
+copy resolves. For revisions, the exact returned commit may advance the source
+branch; unrelated head movement remains stale. This does not replace publication
+verification or grant readiness. Existing branch/commit ownership remains in force.
 
 **Architecture and privacy decision.** A new provider artifact is intentionally
 unnecessary: the reviewed evidence is a structured projection, not the candidate
@@ -1522,11 +1527,14 @@ schema migration, new public command or automatic background regeneration.
 Rollback restores the former visibility gap without changing retained answers,
 owner documents or publication proof.
 
-**Acceptance, documentation and risk budget.** The fourteen minimum distinct
-cases in section 14 are new: five cause/recovery behavior groups (identities,
+**Acceptance, documentation and risk budget.** The twenty-one minimum distinct
+cases in section 14 are new. Fourteen cover: five cause/recovery behavior groups (identities,
 budgets, reciprocal mappings, repository paths and size/format); three primary
 outcome/replay/owned-marker cases; three evidence privacy/bound/access cases;
 three same-issue retry, retained-answer/owner and no-premature-branch cases.
+Seven publication-freshness regressions additionally preserve current cards for
+stale body/title/base, issue changes during a failed push, changes during
+localization, the exact returned revision commit and a foreign revision advance.
 Additional cases cover stale sources, unavailable diagnostics, UI publication
 failure, partial commit recovery and verified-publication preservation. The
 locale matrix is additional: en-US/es-ES, en-AU/es-MX, representative dynamic

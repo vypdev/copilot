@@ -124,7 +124,10 @@ blocked view; branch readiness still requires the independent linked-branch and
 publication checks. If a branch/commit already exists and publication recovery
 is pending, the card says so and recovery reuses that exact branch. A later
 failure to refresh the diagnostic card does not erase a verified publication.
-Stale issue/base evidence cannot overwrite the card with outdated diagnostics.
+Stale issue/title/base evidence cannot overwrite the current status or recovery
+record. Recovery rechecks that evidence before retaining a pending record and
+after diagnostic localization. A revision may retain its own returned commit;
+an unrelated branch advance requires a new analysis on the same issue.
 
 ## Repository layouts and support limits
 

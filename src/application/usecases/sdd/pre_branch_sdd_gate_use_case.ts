@@ -248,8 +248,9 @@ export class PreBranchSddGateUseCase {
   }
 
   async publish(context: PreBranchSddContext, draft: Extract<PreBranchSddOutcome, { status: 'drafted' }>, branchName: string): Promise<PreBranchSddOutcome> {
+    let failureSource = { sha: draft.prepared.baseSha, branch: draft.record.branchName ?? context.baseBranch };
     try {
-      await this.assertFresh(context, draft.prepared.baseSha, draft.record.branchName ?? context.baseBranch);
+      await this.assertFresh(context, failureSource.sha, failureSource.branch);
       const linked = await this.linkedBranch.getLinkedBranch(context.issueNumber, branchName);
       if (!linked) throw new Error('The exact SDD branch is not linked to this issue.');
       const recovered = await this.workspace.recoverPublished(branchName, draft.prepared);
@@ -257,6 +258,8 @@ export class PreBranchSddGateUseCase {
         throw new Error('The linked branch head changed before the SDD commit; rerun on the same branch.');
       }
       const commitSha = recovered ?? await this.workspace.publish(branchName, draft.prepared);
+      // A revision advances its own source branch; only that returned commit is an expected change.
+      if (failureSource.branch === branchName) failureSource = { ...failureSource, sha: commitSha };
       const verified = await this.workspace.verifyPublication(branchName, draft.prepared.baseSha, commitSha, draft.prepared.plan.path);
       if (!verified) throw new Error('The pushed SDD commit could not be verified on the exact linked branch.');
       if (!await this.linkedBranch.getLinkedBranch(context.issueNumber, branchName)) {
@@ -276,9 +279,11 @@ export class PreBranchSddGateUseCase {
       };
     } catch (error) {
       const failure = this.failure(error);
+      if (failure.errors[0].code === 'workflow.stale') return { status: 'blocked', results: [failure] };
       try {
+        await this.assertFresh(context, failureSource.sha, failureSource.branch);
         await this.writeCard(context.issueNumber, draft.cardId, { ...draft.record, branchName }, context.issueLocale, context.issueUrl);
-        await this.writePreparationFailure(context, failure.errors[0], error, true);
+        await this.writePreparationFailure(context, failure.errors[0], error, true, failureSource);
       } catch (publicationError) {
         return { status: 'blocked', results: [failure, this.failure(publicationError)] };
       }

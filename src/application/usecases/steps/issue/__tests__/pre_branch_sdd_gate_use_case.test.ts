@@ -880,6 +880,92 @@ describe('SDD diagnostic retention and recovery (#714)', () => {
     expect(h.publish).not.toHaveBeenCalled();
   });
 
+  it.each(['body', 'title', 'base'] as const)('preserves the current cards when publication starts from a stale %s', async changed => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    const draft = await h.useCase.begin(context());
+    if (draft.status !== 'drafted') throw new Error('Expected validated draft');
+    const current = '<!-- copilot:sdd-analysis-status:v1 issue="42" --> Current run';
+    h.comments.push({ id: 900, body: current, user: { login: 'copilot[bot]' } });
+    if (changed === 'body') h.getDescription.mockResolvedValue('Updated issue body');
+    if (changed === 'title') h.getTitle.mockResolvedValue('Updated issue title');
+    if (changed === 'base') h.loadSnapshot.mockResolvedValue({ ...snapshot, baseSha: 'd'.repeat(40) });
+    h.addComment.mockClear(); h.updateComment.mockClear();
+    const result = await h.useCase.publish(context(), draft, 'feature/42-change');
+    expect(result.status).toBe('blocked');
+    expect(result.results.flatMap(result => result.errors)).toEqual([expect.objectContaining({ code: 'workflow.stale' })]);
+    expect(h.addComment).not.toHaveBeenCalled();
+    expect(h.updateComment).not.toHaveBeenCalled();
+    expect(h.comments).toEqual([{ id: 900, body: current, user: { login: 'copilot[bot]' } }]);
+    expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it('rechecks the source before writing either recovery card after a publication failure', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    const draft = await h.useCase.begin(context());
+    if (draft.status !== 'drafted') throw new Error('Expected validated draft');
+    const current = '<!-- copilot:sdd-analysis-status:v1 issue="42" --> Current run';
+    h.comments.push({ id: 900, body: current, user: { login: 'copilot[bot]' } });
+    h.publish.mockImplementation(async () => {
+      h.getDescription.mockResolvedValue('Newer human request');
+      throw new Error('Interrupted push');
+    });
+    h.addComment.mockClear(); h.updateComment.mockClear();
+    const result = await h.useCase.publish(context(), draft, 'feature/42-change');
+    expect(result.status).toBe('blocked');
+    expect(result.results.flatMap(result => result.errors)).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'workflow.stale' })]));
+    expect(h.addComment).not.toHaveBeenCalled();
+    expect(h.updateComment).not.toHaveBeenCalled();
+    expect(h.comments[0].body).toBe(current);
+  });
+
+  it('withholds publication diagnostics if the source changes while localized copy resolves', async () => {
+    const resolve = jest.fn();
+    const h = harness({ catalogResolver: { resolve } });
+    resolve.mockImplementation(async request => {
+      h.getTitle.mockResolvedValue('New human title');
+      return { requestedLocale: 'fr-FR', resolvedLocale: 'en-US', source: 'fallback',
+        fallbackReason: 'dynamic-response-invalid', messages: request.sourceCatalog.messages };
+    });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    const draft = await h.useCase.begin(context());
+    if (draft.status !== 'drafted') throw new Error('Expected validated draft');
+    const current = '<!-- copilot:sdd-analysis-status:v1 issue="42" --> Current run';
+    h.comments.push({ id: 900, body: current, user: { login: 'copilot[bot]' } });
+    h.publish.mockRejectedValue(new Error('Interrupted push'));
+    const result = await h.useCase.publish({ ...context(), issueLocale: 'fr-FR' }, draft, 'feature/42-change');
+    expect(result.status).toBe('blocked');
+    expect(resolve).toHaveBeenCalledTimes(2);
+    expect(result.results.flatMap(result => result.errors)).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'workflow.stale' })]));
+    expect(h.comments.find(comment => comment.id === 900)?.body).toBe(current);
+    expect(h.updateComment).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])('guards revision recovery against the actual returned commit (foreign advance: %s)', async foreignAdvance => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    const draft = await h.useCase.begin(context());
+    if (draft.status !== 'drafted') throw new Error('Expected validated draft');
+    const revision = { ...draft, record: { ...draft.record, branchName: 'feature/42-change', commitSha: baseSha } };
+    h.publish.mockImplementation(async () => {
+      h.loadSnapshot.mockResolvedValue({ ...snapshot, baseSha: foreignAdvance ? 'd'.repeat(40) : commitSha });
+      return commitSha;
+    });
+    h.verifyPublication.mockResolvedValue(false);
+    const result = await h.useCase.publish(context(), revision, 'feature/42-change');
+    expect(result.status).toBe('blocked');
+    if (foreignAdvance) {
+      expect(h.comments).toHaveLength(0);
+      expect(result.results.flatMap(result => result.errors)).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'workflow.stale' })]));
+    } else {
+      expect(h.comments.find(comment => comment.body.includes('copilot:sdd-analysis-status:v1'))?.body).toContain('publication needs recovery');
+      expect(h.comments.map(comment => readSddGateRecord(comment.body, 42)).find(Boolean))
+        .toMatchObject({ branchName: 'feature/42-change', phase: 'awaiting-answer', commitSha: baseSha });
+      expect(result.results).toHaveLength(1);
+    }
+  });
+
   it('does not overwrite a human-owned forged draft diagnostic marker', async () => {
     const h = harness(); failDraft(h);
     const forged = '<!-- copilot:sdd-analysis-status:v1 issue="42" --> PRIVATE_HUMAN_TEXT';
