@@ -261,3 +261,11 @@ than disabling the browser sandbox.
 Failed Xcode builds replace `.tmp/safari-h2/build.log` with captured stdout/stderr
 (up to 4 MiB), or an explicit message when the command returned no diagnostics.
 A stale successful log is never presented as evidence for a failed build.
+
+Safari's extension checkbox and website grant are separate. On github.com, open
+the extension toolbar item and allow that exact website for the development
+session. Keep private browsing disabled. Safari may lowercase its sender-origin
+UUID; the runtime normalizes hostname case while keeping its closed path,
+scheme, runtime identity and frame checks. A failed native-browser run removes
+its previous success receipt, and successful receipts require completed driver
+cleanup.

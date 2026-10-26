@@ -12,7 +12,7 @@ import { MessageGateway } from '../application/message_gateway.ts';
 export function startBackground(api: BrowserApi): () => void {
     const local = new BrowserStorage(api.storage.local);
     const session = new BrowserStorage(api.storage.session);
-    const scheduler = new ReadScheduler(session, new GitHubGetReader(), () => Date.now(), () => 0);
+    const scheduler = new ReadScheduler(session, new GitHubGetReader(), () => Date.now(), () => Math.random() * 1000);
     const sessions = new ProtectedSessionService(session, scheduler, {
         cancellation: () => new BrowserCancellation(),
         permitted: async () => api.extension?.inIncognitoContext !== true

@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { verifySafariContainer } from './safari_container.mts';
@@ -33,6 +33,8 @@ export async function browserMain(args: readonly string[], root = ROOT, environm
         const driverVersion = execFileSync(configuration.driver, ['--version'], { encoding: 'utf8' }).split('\n')[0];
         phase = 'extension-loaded-assertions';
         const receipt = await runBrowserHarness(root, target as HarnessTarget, driver, localHarnessEnvironment(driverVersion, container));
+        phase = 'native-driver-cleanup'; await driver.close(); driver = undefined;
+        await rm(path.join(output, `${target}-failed.json`), { force: true });
         await writeFile(path.join(output, `${target}.json`), `${JSON.stringify(receipt, null, 2)}\n`);
         console.log(`PASS: ${target}; actual extension loaded; receipt ${path.join(output, `${target}.json`)}`);
     } catch (error) {
@@ -41,6 +43,7 @@ export async function browserMain(args: readonly string[], root = ROOT, environm
             substitution: 'none', acceptance: false, phase,
             errorCategory: error instanceof Error && ['TypeError', 'TimeoutError', 'AbortError', 'Error'].includes(error.name) ? error.name : 'unknown',
             providerCode: error !== null && typeof error === 'object' && 'code' in error && ['ENOENT', 'EACCES', 'ENOTEMPTY', 'EBUSY', 'ECONNREFUSED'].includes(String(error.code)) ? String(error.code) : undefined };
+        await rm(path.join(output, `${receipt.target}.json`), { force: true });
         await writeFile(path.join(output, `${receipt.target}-failed.json`), `${JSON.stringify(receipt, null, 2)}\n`);
         throw new Error(`Browser acceptance failed: ${reason}; inspect ${output}`, { cause: error });
     } finally { await driver?.close(); }

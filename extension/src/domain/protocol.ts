@@ -16,9 +16,16 @@ export type Message = { readonly method: 'settings.read'; readonly version: 1 }
     | { readonly method: 'page.snapshot'; readonly version: 1; readonly route: string; readonly generation: number;
         readonly repositoryId: string; readonly viewer: string | null; readonly visible: boolean; readonly manual: boolean };
 const PAGE = new Set(['settings.read', 'session.status', 'page.snapshot', 'page.release']);
+function extensionLocation(value: unknown): string | null {
+    if (typeof value !== 'string') return null;
+    const match = /^((?:chrome-extension|moz-extension|safari-web-extension):\/\/)([A-Za-z0-9-]{1,128})(\/(?:runtime\.html)?)$(?![\s\S])/u.exec(value);
+    // Safari reports sender.origin with a lowercase UUID while getURL keeps uppercase.
+    return match ? `${match[1]}${match[2].toLowerCase()}${match[3]}` : null;
+}
 export function extensionSender(sender: Sender, id: string, origin: string): boolean {
-    return sender.id === id && sender.url === `${origin}runtime.html`
-        && (sender.origin === undefined || `${sender.origin}/` === origin)
+    const root = extensionLocation(origin);
+    return root !== null && sender.id === id && extensionLocation(sender.url) === `${root}runtime.html`
+        && (sender.origin === undefined || extensionLocation(`${sender.origin}/`) === root)
         && (sender.frameId === undefined || sender.frameId === 0) && sender.tab?.incognito !== true;
 }
 export function pageSender(sender: Sender, id: string): boolean {

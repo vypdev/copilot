@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest';
+import type { ScheduledRead } from '../../src/application/read_scheduler.ts';
 import { SESSION_KEY } from '../../src/application/protected_session.ts';
 import { sessionHarness, CONNECTED, deferred, requestResult } from '../fixtures/runtime.ts';
 
@@ -44,5 +45,13 @@ it('late persisted rate-limit replies cannot overwrite a newer disconnected epoc
     vi.mocked(h.port.set).mockResolvedValueOnce().mockReturnValueOnce(persisted.promise);
     const connect = h.service.connect(CONNECTED.secret, CONNECTED.repository);
     await vi.waitFor(() => expect(h.port.set).toHaveBeenCalledTimes(2)); await h.service.revoke(); persisted.resolve(); await connect;
+    expect(h.service.status().state).toBe('disconnected'); expect(h.service.status()).not.toHaveProperty('retryAt');
+});
+
+it('the session epoch independently fences an obsolete scheduler completion even if its cancellation boundary returned a late limit', async () => {
+    const h = sessionHarness(); await h.service.start(); const pending = deferred<ScheduledRead>();
+    const run = vi.spyOn(h.scheduler, 'run').mockReturnValueOnce(pending.promise);
+    const connect = h.service.connect(CONNECTED.secret, CONNECTED.repository); await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(1));
+    await h.service.revoke(); pending.resolve({ state: 'limited', bytes: 0, retryAfter: 120, retryAt: 220000 }); await connect;
     expect(h.service.status().state).toBe('disconnected'); expect(h.service.status()).not.toHaveProperty('retryAt');
 });

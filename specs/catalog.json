@@ -2792,7 +2792,8 @@
         "extension/tooling/safari_cli.mts",
         "extension/tooling/safari_container.mts",
         "extension/tooling/static_assets.mts",
-        "extension/tooling/webdriver.mts"
+        "extension/tooling/webdriver.mts",
+        "extension/src/application/shared_read_cancellation.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -2823,7 +2824,8 @@
         "extension/test/integration/session.test.ts",
         "extension/test/integration/settings_repository.test.ts",
         "extension/test/integration/webdriver.test.ts",
-        "extension/test/integration/session_races.test.ts"
+        "extension/test/integration/session_races.test.ts",
+        "extension/test/integration/shared_reads.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

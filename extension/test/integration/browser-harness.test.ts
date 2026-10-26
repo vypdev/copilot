@@ -111,6 +111,10 @@ it('browser CLI writes only completed native-run receipts, closes its driver, an
     await expect(browserMain(['chrome'], scratch, env)).rejects.toThrow('browser-execution-failed');
     const failed = JSON.parse(await readFile(path.join(scratch, '.tmp/extension-browser-evidence/chrome-failed.json'), 'utf8'));
     expect(JSON.stringify(failed)).not.toContain('synthetic-private-error');
+    await expect(readFile(path.join(scratch, '.tmp/extension-browser-evidence/chrome.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+    close.mockRejectedValueOnce(new Error('cleanup-failed'));
+    await expect(browserMain(['chrome'], scratch, env)).rejects.toThrow('browser-execution-failed');
+    await expect(readFile(path.join(scratch, '.tmp/extension-browser-evidence/chrome.json'))).rejects.toMatchObject({ code: 'ENOENT' });
     for (const error of [Object.assign(new TypeError('private'), { code: 'ENOENT' }), { code: 'EACCES' }, Object.assign(new Error('private'), { name: 'ForeignError' })]) {
         start.mockRejectedValueOnce(error); await expect(browserMain(['chrome'], scratch, env)).rejects.toThrow('browser-execution-failed');
         const failure = JSON.parse(await readFile(path.join(scratch, '.tmp/extension-browser-evidence/chrome-failed.json'), 'utf8'));

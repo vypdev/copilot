@@ -77,3 +77,15 @@ it('hidden-page release is closed, generation bound and allowed only from the ex
     expect(allowedMessage(message, extension, 'test', origin)).toBe(false);
     expect(parseMessage({ ...message, generation: -1 })).toBe(null); expect(parseMessage({ ...message, extra: true })).toBe(null);
 });
+
+it('github-browser-extension-runtime-C26 normalizes only extension hostname case, including observed Safari UUID casing, without broadening sender authority', () => {
+    const root = 'safari-web-extension://5D000A05-5ECC-4E66-8859-E7B895B1328C/';
+    const sender = { id: 'own-safari-id', url: `${root}runtime.html`, origin: root.slice(0, -1).toLowerCase(), frameId: 0, tab: { incognito: false } };
+    expect(extensionSender(sender, 'own-safari-id', root)).toBe(true);
+    for (const url of [undefined, 'not a URL', 'https://example.invalid/runtime.html', 'safari-web-extension://user@host/runtime.html',
+        'safari-web-extension://:password@host/runtime.html', 'safari-web-extension://host:123/runtime.html', `${root}runtime.html?q=1`,
+        `${root}runtime.html#fragment`, `${root}nested/../runtime.html`, `${root}RUNTIME.html`, `${root}runtime.html/`,
+        'safari-web-extension://foreign/runtime.html']) expect(extensionSender({ ...sender, url }, 'own-safari-id', root)).toBe(false);
+    expect(extensionSender(sender, 'own-safari-id', 'malformed')).toBe(false);
+    expect(extensionSender({ ...sender, origin: 'safari-web-extension://foreign' }, 'own-safari-id', root)).toBe(false);
+});

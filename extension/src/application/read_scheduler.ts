@@ -1,28 +1,39 @@
-import { initialSchedule, rateLimit, reserveRead, scheduleDecision, validSchedule, type Activity, type ScheduleState } from '../domain/scheduling.ts';
+import { initialSchedule, rateLimit, readActivityAllowed, reserveRead, scheduleDecision, validSchedule, type Activity, type ScheduleState } from '../domain/scheduling.ts';
 import type { ReadRequest } from '../domain/read.ts';
 import type { StoragePort } from './runtime_ports.ts';
 import type { GitHubReadPort, ReadCancellation, ReadResult } from './read_ports.ts';
+
+import { SharedReadCancellation } from './shared_read_cancellation.ts';
 
 interface CacheEntry { readonly result: Extract<ReadResult, { state: 'ok' }>; readonly expires: number; readonly epoch: number }
 export type ScheduledRead = (ReadResult & { readonly retryAt?: number }) | { readonly state: 'inactive' | 'cooldown' | 'budget' | 'busy' | 'storage-unavailable'; readonly bytes: 0; readonly retryAt?: number };
 export class ReadScheduler {
     private state: ScheduleState | undefined;
-    private readonly pending = new Map<string, Promise<ScheduledRead>>();
+    private readonly pending = new Map<string, { task: Promise<ScheduledRead>; cancellation: SharedReadCancellation }>();
     private readonly cache = new Map<string, CacheEntry>();
     private gate: Promise<unknown> = Promise.resolve();
     private epoch = 0;
     constructor(private readonly store: StoragePort, private readonly reader: GitHubReadPort,
         private readonly now: () => number, private readonly jitter: () => number) {}
-    invalidate(): void { this.epoch++; this.cache.clear(); }
+    invalidate(): void { this.epoch++; this.cache.clear(); for (const entry of this.pending.values()) entry.cancellation.abort(); }
     async run(key: string, repository: string, request: ReadRequest, secret: string, cancellation: ReadCancellation,
         activity: Activity): Promise<ScheduledRead> {
+        if (cancellation.aborted) return { state: 'aborted', bytes: 0 };
+        if (!readActivityAllowed(!!secret, activity)) return { state: 'inactive', bytes: 0 };
         const duplicate = this.pending.get(key);
-        if (duplicate) return duplicate;
+        if (duplicate) return this.consume(duplicate, cancellation);
         if (this.pending.size >= 2) return { state: 'busy', bytes: 0 };
-        const epoch = this.epoch;
-        const task = this.execute(key, repository, request, secret, cancellation, activity, epoch);
-        this.pending.set(key, task);
-        try { return await task; } finally { this.pending.delete(key); }
+        const shared = new SharedReadCancellation(); const release = shared.join(cancellation)!;
+        const task = this.execute(key, repository, request, secret, shared, activity, this.epoch);
+        const entry = { task, cancellation: shared }; this.pending.set(key, entry);
+        try { const result = await task; return cancellation.aborted ? { state: 'aborted', bytes: 0 } : result; }
+        finally { release(); shared.dispose(); this.pending.delete(key); }
+    }
+    private async consume(entry: { task: Promise<ScheduledRead>; cancellation: SharedReadCancellation }, source: ReadCancellation): Promise<ScheduledRead> {
+        const release = entry.cancellation.join(source);
+        if (!release) return { state: entry.cancellation.aborted ? 'aborted' : 'busy', bytes: 0 };
+        try { const result = await entry.task; return source.aborted ? { state: 'aborted', bytes: 0 } : result; }
+        finally { release(); }
     }
     private async execute(key: string, repository: string, request: ReadRequest, secret: string, cancellation: ReadCancellation,
         activity: Activity, epoch: number): Promise<ScheduledRead> {

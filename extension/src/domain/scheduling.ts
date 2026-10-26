@@ -20,9 +20,12 @@ export function validSchedule(value: unknown): value is ScheduleState {
         && Object.values(value.targets).every(natural);
 }
 export interface Activity { readonly visible: boolean; readonly active: boolean; readonly online: boolean; readonly pending: boolean; readonly manual: boolean }
+export function readActivityAllowed(authenticated: boolean, activity: Activity): boolean {
+    return activity.visible && activity.active && activity.online && (activity.manual || (activity.pending && authenticated));
+}
 export function scheduleDecision(state: ScheduleState, now: number, target: string, repository: string, authenticated: boolean,
     activity: Activity): 'allowed' | 'inactive' | 'cooldown' | 'budget' {
-    if (!activity.visible || !activity.active || !activity.online || (!activity.manual && (!activity.pending || !authenticated))) return 'inactive';
+    if (!readActivityAllowed(authenticated, activity)) return 'inactive';
     if (state.blockedUntil > now || (state.targets[target] ?? 0) > now) return 'cooldown';
     if (state.count >= 600 || (authenticated ? (state.repositories[repository] ?? 0) >= 120 : state.anonymous >= 30)
         || (!Object.hasOwn(state.repositories, repository) && Object.keys(state.repositories).length >= 100)
