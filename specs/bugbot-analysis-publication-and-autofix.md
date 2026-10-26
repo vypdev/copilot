@@ -228,8 +228,8 @@ transitions are ordered marker-first and repaired by replay.
 
 Confidence floor, schema validation, head guards, path safety, marker ownership,
 publication ordering, independent review, provider page limits/concurrency,
-lossless Unicode-safe fragmentation, prompt bounds (100 prior findings/48,000 characters, 50 conversation entries/
-24,000 characters, 1,000 diff files, 12,000-character fragments, 64,000
+lossless Unicode-safe fragmentation, prompt bounds (100 prior findings/48,000 characters, 50 logical conversation entries/
+24,000 rendered characters with 4,000-unit Unicode-safe payload fragments, 1,000 diff files, 12,000-character fragments, 64,000
 characters per partition, 64 partitions, and 2,000 aggregate candidates), retained-only
 resolution eligibility, and credential isolation are not configurable.
 The one-retry post-autofix bound is fixed and adds no user setting. Only the
@@ -624,3 +624,7 @@ documents TOML settings and branch measurement;
 [Python BaseHTTPRequestHandler](https://docs.python.org/3/library/http.server.html#http.server.BaseHTTPRequestHandler.protocol_version)
 documents its default HTTP/1.0 response protocol. The issue supplies exact consumer
 source and runs; these fixtures do not claim to replay that external runtime.
+
+The [lossless conversation companion](./bugbot-lossless-conversation-context.md)
+owns complete comment retention and logical-source accounting. No producer trust
+exception or approval relaxation is introduced.

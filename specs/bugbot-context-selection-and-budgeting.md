@@ -2,7 +2,7 @@
 
 - Status: Implemented
 - Date: 2026-09-11
-- Last updated: 2026-10-11
+- Last updated: 2026-10-26
 - Catalog capability ID: `bugbot-analysis-and-autofix`
 - Last verified: 2026-10-11 on `master`
 - Owners: Copilot and Bugbot maintainers
@@ -239,15 +239,21 @@ before any item/character budget.
 | Context section | Item cap | Section cap | Per-item cap | Selection order |
 |---|---:|---:|---:|---|
 | unresolved previous findings | 100 | 48,000 chars including wrappers/note | existing finding body cap | newest unresolved first, render chronological |
-| human conversation | 50 | 24,000 chars including omission note | 4,000 chars | newest first for packing, render chronological |
+| human conversation | 50 | 24,000 chars including omission note | 4,000 UTF-16 units per payload fragment | newest first for packing, render chronological |
 | diff | 1,000 files pre-plan; max 64 partitions | 64,000 chars per partition | 12,000 UTF-16 code units per fragment | provider file order; ignored files removed first; lossless line/hard splitting without separating surrogate pairs |
 | review rules | deduplicated | 100,000 chars | 30,000 chars | organization then repository specificity |
 
 Every record gains a normalized `createdAt` and stable provider ID. Combined
 conversation sorting is ascending `(createdAt, sourceKind, providerId)`; packing
 walks that sequence from newest to oldest until both item and character budgets
-are reached, then reverses selected entries for chronological rendering. An
-oversized item is truncated to its per-item cap and does not prevent newer items.
+are reached, then reverses selected entries for chronological rendering. A selected logical comment is normalized and sanitized before lossless Unicode-safe
+fragmentation. Each payload fragment is bounded to 4,000 UTF-16 units; the rendered
+24,000-character section cap includes metadata, wrappers, separators and omission
+notice. Complete fragments count as one retained comment with no truncation.
+Actual section/provider exhaustion retains honest partial coverage; genuinely
+oversized sources may retain an explicitly truncated preview. Source attribution
+is also bounded and framed as untrusted data. See
+[`bugbot-lossless-conversation-context.md`](./bugbot-lossless-conversation-context.md).
 
 The coverage manifest records per source: fetched pages/items, retained items,
 omitted items when known, truncated items/chars, limit reached, and status. Diff

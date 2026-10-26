@@ -354,7 +354,7 @@ describe('Bugbot review context', () => {
       }],
     });
 
-    expect(conversation.truncated).toBe(1);
+    expect(conversation.truncated).toBe(0);
     expect(conversation.block.length).toBeLessThanOrEqual(24_000);
     expect(diff.fragments).toBe(2);
     expect(diff.partitions.map((partition) => partition.block).join('')).not.toContain('[patch truncated]');
@@ -643,15 +643,15 @@ describe('Bugbot review context', () => {
 
 
 it('identifies the exact retained general and inline records truncated by the prompt budget', () => {
-  const result = buildReviewConversationContext([{ id: 42, body: 'x'.repeat(4075), user: { login: 'human' } }],
-    new Map([[12, [{ id: 50, identity: 'PRRC_50', body: 'y'.repeat(4001), authorLogin: 'human' }]]]), 'bugbot');
+  const result = buildReviewConversationContext([{ id: 42, body: 'x'.repeat(30_000), user: { login: 'human' } }],
+    new Map([[12, [{ id: 50, identity: 'PRRC_50', body: 'y'.repeat(30_000), authorLogin: 'human' }]]]), 'bugbot');
   expect(result.truncated).toBe(2);
   expect(result.truncatedItemIds).toEqual(['issue:42', 'review:PRRC_50']);
 });
 
 it('does not expose a malformed provider identity as recovery metadata', () => {
   const result = buildReviewConversationContext([], new Map([[12, [{ id: 50, identity: '@team<script>',
-    body: 'y'.repeat(4001), authorLogin: 'human' }]]]), 'bugbot');
+    body: 'y'.repeat(30_000), authorLogin: 'human' }]]]), 'bugbot');
   expect(result.truncated).toBe(1);
   expect(result.truncatedItemIds).toEqual([]);
 });

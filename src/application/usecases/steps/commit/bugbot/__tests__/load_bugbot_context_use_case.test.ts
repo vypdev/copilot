@@ -435,3 +435,41 @@ describe('loadBugbotContext', () => {
     expect(context.previousFindingsBlock).toContain('older finding was omitted');
   });
 });
+
+
+it('bugbot-analysis-and-autofix-C11 loads the complete report once without false partial conversation coverage', async () => {
+  const body = '## Codecov report\n'.padEnd(5959, 'x');
+  const reader = ports({ listIssueComments: jest.fn().mockResolvedValue({ value: [{ id: 7, body,
+    user: { login: 'codecov-commenter' }, isAutomatedAuthor: false }], coverage: coverage('issue-comments', 1) }) });
+  const result = await loadBugbotContext(request(), reader);
+  expect(result.coverage.status).toBe('complete');
+  expect(result.coverage.sources.find(source => source.source === 'human-conversation')).toMatchObject({
+    status: 'complete', itemsFetched: 1, itemsRetained: 1, omittedItems: 0, truncatedItems: 0, limitReached: false,
+  });
+  expect(result.reviewConversationBlock).toContain('Discussion fragment 2/2');
+  expect(result.reviewConversationBlock).not.toContain('[untrusted content truncated]');
+});
+it('bugbot-analysis-and-autofix-C12 keeps mixed-source accounting and real partial context independently of complete diff analysis', async () => {
+  const reader = ports({ listIssueComments: jest.fn().mockResolvedValue({ value: [
+    { id: 1, body: 'report'.repeat(1000), user: { login: 'codecov-commenter' }, isAutomatedAuthor: false },
+    { id: 2, body: 'bot'.repeat(10000), user: { login: 'bugbot' } },
+    { id: 3, body: 'bot'.repeat(10000), user: { login: 'scanner' }, isAutomatedAuthor: true },
+    { id: 4, body: 'human'.repeat(10000), user: { login: 'reviewer' } },
+  ], coverage: coverage('issue-comments', 4) }) });
+  const result = await loadBugbotContext(request(), reader);
+  expect(result.coverage.status).toBe('partial');
+  expect(result.coverage.sources.find(source => source.source === 'diff')?.status).toBe('complete');
+  expect(result.coverage.sources.find(source => source.source === 'human-conversation')).toMatchObject({
+    status: 'partial', itemsRetained: 2, truncatedItems: 1, truncatedItemIds: ['issue:4'], limitReached: true,
+  });
+});
+it('bugbot-analysis-and-autofix-C13 never repairs incomplete diff evidence by fully retaining conversation', async () => {
+  const reader = ports(); const snapshot = await reader.getReviewDiffSnapshot(50);
+  reader.getReviewDiffSnapshot = jest.fn().mockResolvedValue({ ...snapshot,
+    coverage: coverage('diff', 1, { status: 'partial', omittedItems: 1, limitReached: true }) });
+  reader.listIssueComments = jest.fn().mockResolvedValue({ value: [{ id: 7, body: 'report'.repeat(1000) }], coverage: coverage('issue-comments', 1) });
+  const result = await loadBugbotContext(request(), reader);
+  expect(result.coverage.status).toBe('partial');
+  expect(result.coverage.sources.find(source => source.source === 'diff')?.status).toBe('partial');
+  expect(result.coverage.sources.find(source => source.source === 'human-conversation')).toMatchObject({ status: 'complete', truncatedItems: 0 });
+});

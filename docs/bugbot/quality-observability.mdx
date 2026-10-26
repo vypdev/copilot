@@ -107,3 +107,11 @@ Enterprise links remain correct and adds a run link only when
 `GITHUB_REPOSITORY` and `GITHUB_RUN_ID` identify the current repository. No
 workflow name or project-specific CI check is part of the generic review
 service.
+
+
+Conversation retained/omitted/truncated counts describe logical source comments,
+not their internal prompt fragments. A fully reconstructed multi-fragment comment
+is one retained item with zero truncation. Complete diff analysis and partial
+conversation coverage remain independent facts. Metadata/wrapper/separator costs
+and omission notices count toward the unchanged 24,000-character section budget;
+no raw comment body or fragment payload enters telemetry.

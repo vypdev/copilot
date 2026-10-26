@@ -267,3 +267,19 @@ head, close the obsolete PR or invoke the review from the intended PR event.
 - **[Configuration](/bugbot/configuration)** — severity, effort, rules, dry-run, suggestions, telemetry, and limits.
 - **[Quality and observability](/bugbot/quality-observability)** — benchmark, analytics, and API.
 - **[Examples](/bugbot/examples)** — Push workflow, single action, and CLI examples.
+
+
+## Conversation completeness
+
+A generated report from a User account and an ordinary human comment follow the
+same untrusted conversation rules. A 5,959-character report can be retained in
+full as ordered fragments without granting trust to its heading or author name.
+The fixed budget is 50 logical comments and 24,000 rendered characters, with at
+most 4,000 UTF-16 units per payload fragment. Source attribution is bounded
+untrusted metadata too. No fragment creates a separate source or notification.
+
+Only fully retained comments have zero truncation. Genuine source/provider or
+section exhaustion still makes the overall review partial, even when the diff
+analysis completed with no findings. Inspect **Incomplete coverage** before
+calling that review complete. Approval and protected-path requirements remain
+unchanged; retaining a report does not authorize a merge.

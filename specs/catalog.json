@@ -1853,11 +1853,12 @@
       "status": "implemented",
       "scope": "Select one canonical PR, exhaustively analyze its bounded diff partitions, publish stable findings atomically, and apply authorized verified fixes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-21",
+      "lastVerified": "2026-10-26",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md",
-        "specs/bugbot-exhaustive-partitioned-analysis.md"
+        "specs/bugbot-exhaustive-partitioned-analysis.md",
+        "specs/bugbot-lossless-conversation-context.md"
       ],
       "workflows": [
         ".github/workflows/copilot_commit.yml",
@@ -1878,6 +1879,7 @@
         "src/application/policies/bugbot_result_finding_state_projection_policy.ts",
         "src/application/policies/bugbot_telemetry_projection_policy.ts",
         "src/application/policies/bugbot_diff_partition_policy.ts",
+        "src/application/policies/bugbot_conversation_packing_policy.ts",
         "src/application/policies/bugbot_partition_completion_policy.ts",
         "src/application/policies/action_summary_policy.ts",
         "src/application/policies/copilot_evidence_policy.ts",
@@ -1931,6 +1933,7 @@
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_operation_context.test.ts",
         "src/application/policies/__tests__/bugbot_partition_completion_policy.test.ts",
+        "src/application/policies/__tests__/bugbot_conversation_packing_policy.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/analyze_bugbot_revision_use_case.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_partition_aggregation.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_context_request.test.ts",
