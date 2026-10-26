@@ -1327,3 +1327,29 @@ it.each(['en-US', 'es-ES'])('keeps actionable mutation diagnostics separate from
   expect(body).toContain('issue:6311517518');
   expect(body).not.toContain('PRIVATE_RESPONSE');
 });
+
+
+it('keeps incomplete discussion visible independently of completed diff analysis', async () => {
+  const incompleteSource = 'human-conversation' as const;
+  const test = harness();
+  const report = await reconcileBugbotReviewState({
+    execution: execution(),
+    loadedContext: { ...context(), coverage: { status: 'partial', sources: [
+      { source: 'diff', status: 'complete', pagesFetched: 1, itemsFetched: 4, itemsRetained: 4, omittedItems: 0, truncatedItems: 0, limitReached: false },
+      { source: incompleteSource, status: 'partial', pagesFetched: 1, itemsFetched: 1, itemsRetained: 1, omittedItems: 0,
+        truncatedItems: 1, truncatedItemIds: ['issue:7'], limitReached: true },
+    ] } },
+    activeFindings: [], contextPorts: test.contextPorts, publicationPorts: test.publicationPorts,
+  });
+  expect(report?.projection.outcome).toBe('partial');
+  expect(report?.projection.coverage.sources).toEqual(expect.arrayContaining([
+    expect.objectContaining({ source: 'diff', status: 'complete' }),
+    expect.objectContaining({ source: incompleteSource, status: 'partial', truncatedItemIds: ['issue:7'] }),
+  ]));
+  const body = String(test.addComment.mock.calls[0][3]).split('\\').join('');
+  expect(body).toContain(incompleteSource);
+  expect(body).toContain('issue:7');
+  expect(body).toContain('diff');
+  expect(body).toContain('complete');
+  expect(body).toContain('partial');
+});

@@ -149,3 +149,13 @@ describe('BugbotIssueCommentQueryRepository', () => {
     )).rejects.toMatchObject({ code: 'provider.unavailable' });
   });
 });
+
+
+it('bugbot-analysis-and-autofix-C08 preserves a User report body and native source identity without bot-login heuristics', async () => {
+  const response = connection(7, 1, false, null); const record = response.repository.issueOrPullRequest.comments.nodes[0];
+  record.author = { login: 'codecov-commenter', __typename: 'User' }; record.body = 'report'.padEnd(5959, 'x');
+  const repository = new BugbotIssueCommentQueryRepository({ getClient: () => ({ graphql: jest.fn().mockResolvedValue(response) }) } as never);
+  const result = await repository.listBugbotIssueCommentsBounded('owner', 'repo', 7, 'token');
+  expect(result.items[0]).toMatchObject({ id: 7, body: record.body, user: { login: 'codecov-commenter' } });
+  expect(result.items[0].isAutomatedAuthor).not.toBe(true); expect(result.coverage.status).toBe('complete');
+});

@@ -1,3 +1,4 @@
+import { packReviewConversation } from '../../application/policies/bugbot_conversation_packing_policy';
 import { decidePullRequestApproval, isDocumentationOnlyDiff, type ApprovalEvidence } from '../pull_request_approval';
 import { DEFAULT_PULL_REQUEST_APPROVAL_POLICY, parsePullRequestApprovalPolicy, validatePullRequestApprovalPolicy, type PullRequestApprovalPolicy } from '../pull_request_approval_policy';
 
@@ -161,4 +162,16 @@ describe('guarded PR approval policy', () => {
     expect(decidePullRequestApproval(numeric, { ...evidence(), changedPaths: ['docs/feature.mdx', 'src/example.ts'] }).code)
       .toBe('coverage-evidence');
   });
+});
+
+
+it('retaining a long report does not authorize a review whose other conversation or diff evidence is partial', () => {
+  const retained = packReviewConversation([{ providerId: 'issue:7', kind: 'report', body: 'x'.repeat(5959) }]);
+  expect(retained).toMatchObject({ retained: 1, truncated: 0 });
+  for (const change of [{ coverage: 'partial' }, { outcome: 'partial' }]) {
+    const current = evidence();
+    expect(decidePullRequestApproval(policy, { ...current, bugbot: { ...current.bugbot!, ...change } }).code).toBe('bugbot-incomplete');
+  }
+  const current = evidence();
+  expect(decidePullRequestApproval(policy, { ...current, changedPaths: ['.github/workflows/ci.yml'] }).code).toBe('protected-path');
 });

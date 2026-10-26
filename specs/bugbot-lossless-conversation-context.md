@@ -1,9 +1,9 @@
 # Lossless Bugbot Conversation Context
 
-- Status: Draft
+- Status: Implementation for review
 - Date: 2026-10-26
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: not applicable
+- Last verified: 2026-10-26 (local implementation; remote checks recorded in the PR)
 - Owners: Copilot maintainers
 - Scope: Preserve complete sanitized review conversation comments within the existing bounded context while retaining truthful completeness reporting and existing safety gates.
 - Related issues/PRs: [Issue #724](https://github.com/vypdev/copilot/issues/724); [PR #719](https://github.com/vypdev/copilot/pull/719)
@@ -429,3 +429,33 @@ The referenced baseline specifications retain their existing selection cases and
 - Related specs/ADRs/issues/PRs: `specs/bugbot-context-selection-and-budgeting.md`; `specs/bugbot-analysis-publication-and-autofix.md`; capability `bugbot-analysis-and-autofix`.
 - Decisions: use a focused companion SDD; generic lossless fragmentation, not producer verification; preserve all existing bounds, source identity, newest-first selection, chronological rendering, filtering, untrusted framing, truthful partial counts, and approval gates. The 5,959-character report fits the existing total budget and is retained whole when the remaining budget permits.
 - Follow-up work explicitly outside this spec: extension-branch work; increasing context budgets; changing Codecov evidence; changing finding, diff, protected-path, or guarded-approval policy.
+
+### Implementation evidence and boundary clarification
+
+`src/application/policies/bugbot_conversation_packing_policy.ts` is the pure owner
+of normalization, Unicode validation, safe fragment framing and exact rendered
+section accounting. The existing builder maps semantic source records and keeps
+native automated-author exclusions. The existing loader, domain coverage summary,
+projection and approval policies retain their public contracts. They require no
+production changes merely because their behavior is covered by new integration
+cases. The architecture gate parses imports and composition with TypeScript AST.
+
+Attribution is framed as bounded untrusted metadata, never a trusted instruction.
+Metadata beyond its 4,000-unit field bound marks the logical source truncated.
+A source that cannot fit even alone under the section cap retains a Unicode-safe,
+explicitly truncated preview and its validated recovery ID. A complete source
+that cannot fit the remaining section is omitted with the real logical count;
+no fragment is silently published as a complete comment. The omission notice and
+all separators are measured before accepting a selection. These fixed internal
+bounds add no public configuration or producer allowlist.
+
+Manual presentation evidence (2026-10-26): the existing aggregate status for
+[PR #719 at `2536960`](https://github.com/vypdev/copilot/pull/719#issuecomment-6412425234)
+was inspected at a 390 × 844 CSS-pixel viewport. “Review incomplete”, the next
+action, `diff: complete`, `human-conversation: partial`, recovery identity
+`issue:6403412627`, and the PR/commit/workflow links remain readable without
+color. The viewport was restored afterwards. This verifies the existing partial
+UI, not successful execution of the candidate Action; that requires the new PR's
+checks. The truncated source on that run is a human comment of 4,466 characters.
+Both that comment and the 5,959-character Codecov User report reconstruct in
+full through the candidate source builder without increasing the 24,000-unit cap.

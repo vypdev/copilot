@@ -53,7 +53,10 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
    PR review comments, and review threads use at most two pages of 100; the diff
    uses at most ten pages of 100 files; and at most two independent detail reads
    run concurrently. Conversation packing keeps the newest 50 entries within
-   24,000 characters and renders the retained entries chronologically. Reaching
+   24,000 rendered characters and renders retained logical entries chronologically.
+   A complete comment is normalized/sanitized before safe fragments of at most
+   4,000 UTF-16 units. Fragments preserve its text and count as one comment;
+   wrappers, metadata, separators and the omission notice share the total cap. Reaching
    a fixed non-diff context cap produces explicit **partial coverage**. The
    per-prompt diff cap creates another partition instead of omitting changed
    patches. GitHub's 1,000-file enumeration cap still produces partial coverage
