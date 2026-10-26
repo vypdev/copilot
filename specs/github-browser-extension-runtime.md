@@ -572,3 +572,8 @@ including protected navigation and same-URL reloads. The existing content sender
 policy remains closed on protected routes. Composition regressions exercise the
 real adapters with independent local/session storage maps and assert that the
 credential and scheduler never enter persistent local preferences.
+
+The Linux native ESR fixture compares the downloaded Firefox and geckodriver
+archives with pinned upstream SHA-256 values before extracting either archive.
+The trusted expected values come from Mozilla's release SHA256SUMS and the
+geckodriver GitHub release asset digest; a mismatch is a hard failure.

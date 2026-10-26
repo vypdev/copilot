@@ -669,7 +669,10 @@ jobs:
           mkdir -p "$RUNNER_TEMP/copilot-h2-browsers"
           curl --fail --location --retry 2 https://archive.mozilla.org/pub/firefox/releases/153.5.1esr/linux-x86_64/en-US/firefox-153.5.1esr.tar.xz --output "$RUNNER_TEMP/copilot-h2-browsers/firefox.tar.xz"
           curl --fail --location --retry 2 https://github.com/mozilla/geckodriver/releases/download/v0.37.1/geckodriver-v0.37.1-linux64.tar.gz --output "$RUNNER_TEMP/copilot-h2-browsers/geckodriver.tar.gz"
-          sha256sum "$RUNNER_TEMP/copilot-h2-browsers/firefox.tar.xz" "$RUNNER_TEMP/copilot-h2-browsers/geckodriver.tar.gz"
+          # Mozilla SHA256SUMS: https://archive.mozilla.org/pub/firefox/releases/153.5.1esr/SHA256SUMS
+          printf '%s  %s\n' 'e289bdc532decf2b54dea9b5ac64cf6f84a62eeec4d4a9ec2f69590f61b0ff1c' "$RUNNER_TEMP/copilot-h2-browsers/firefox.tar.xz" | sha256sum --check --strict
+          # GitHub release asset digest: https://api.github.com/repos/mozilla/geckodriver/releases/tags/v0.37.1
+          printf '%s  %s\n' 'e815130ea95983e162ae91843b48d3a3ce991735635fce83a647afde21e09f7e' "$RUNNER_TEMP/copilot-h2-browsers/geckodriver.tar.gz" | sha256sum --check --strict
           tar -xJf "$RUNNER_TEMP/copilot-h2-browsers/firefox.tar.xz" -C "$RUNNER_TEMP/copilot-h2-browsers"
           tar -xzf "$RUNNER_TEMP/copilot-h2-browsers/geckodriver.tar.gz" -C "$RUNNER_TEMP/copilot-h2-browsers"
       - name: Exercise extension in native ESR

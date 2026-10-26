@@ -282,3 +282,8 @@ retain the initiating operation/session fence. An older failed settings commit
 cannot disconnect a newer account, and a newer update reads the latest complete
 envelope after any in-flight commit. Test dependencies support Node 24.0.0;
 verify frozen installation with engine checking when updating the lockfile.
+
+The native ESR CI step verifies both downloaded archives before extraction or
+execution. Firefox's pinned SHA-256 comes from Mozilla's release SHA256SUMS;
+geckodriver's comes from its official GitHub release asset digest. A mismatch
+stops the step. Update version, URL and reviewed upstream digest together.
