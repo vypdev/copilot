@@ -1,10 +1,12 @@
-# Copilot Browser engineering foundation
+# Copilot Browser runtime
 
-Private version 0.1.0. H1 builds inert Chrome, Firefox and Safari development
-resources; the complete 150-function product and actual browser loading remain
-later acceptance gates. No store identity or public release is implied.
+Private version 0.1.0. H1 supplies deterministic three-target builds; H2 supplies
+shared scoped lifecycle, protected read sessions, versioned bounded settings,
+closed GET-only messages, activity-aware scheduling and native-browser harnesses.
+The full 150-function/803-case product, local center and shared setup remain
+required. No store identity or public release is implied.
 
-Use Node 24 / pnpm 10.12.4. At the repository root:
+Use Node 24 / pnpm 10.12.4 at the repository root:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -14,12 +16,15 @@ pnpm run test:extension
 pnpm run validate:extension
 ```
 
-Read the [contributor guide](../docs/development/browser-extension.mdx) for the
-architecture, target differences, permissions, diagnostics and interrupted-build
-recovery. Inspect `dist/receipt.json` only after validation; it distinguishes the
-committed revision and source-tree hash and explicitly says `development-build-only`.
-Outputs are ignored and excluded from the published root Action/CLI package.
+Read the [engineering guide](../docs/development/browser-extension.mdx) for exact
+Chrome/Firefox/ESR binaries, native harness commands, Safari containing-app
+prerequisites and failure receipts, and the [runtime preview](../docs/browser-extension/runtime.mdx)
+for connection/privacy/recovery. Never use real credentials in automated tests.
 
-Tests trace [H1's 28 required engineering cases](../specs/github-browser-extension-foundation.md)
-and add boundary/failure coverage. They do not replace the 803 complete-product
-cases or establish actual extension-loaded Safari/Firefox/Chrome support.
+Each development target has `manifest.json`, `background.js`, `content.js`,
+`runtime.html` and `runtime.js`; `dist/receipt.json` binds the revision, input-tree
+and recomputed asset hashes. Executed content/options/background expose the same
+nonsecret input digest so an old cached bundle cannot satisfy native acceptance.
+Outputs are ignored and excluded from the Action/CLI npm package. Build evidence,
+deterministic harness tests, actual loaded-browser receipts and complete product
+acceptance are separate facts.

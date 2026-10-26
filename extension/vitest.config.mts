@@ -9,7 +9,7 @@ export default defineConfig({
             reporter: ['text', 'json-summary', ['lcovonly', { projectRoot: fileURLToPath(new URL('..', import.meta.url)) }]],
             include: ['src/**/*.ts', 'tooling/*.mts', '../src/domain/browser_extension_contract/**/*.ts'],
             thresholds: {
-                perFile: true, statements: 95, branches: 90, functions: 95, lines: 95,
+                perFile: true, statements: 95, branches: 90, functions: 95, lines: 100,
                 'src/domain/**': { branches: 100 },
                 '../src/domain/browser_extension_contract/**': { branches: 100 },
             },

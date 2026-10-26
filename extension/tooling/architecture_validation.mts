@@ -46,6 +46,8 @@ export function validateArchitecture(root: string, sources: Sources): void {
                 if (['eval', 'Function', 'require', 'globalThis', 'window', 'document', 'chrome', 'browser',
                     'process', 'Buffer', 'fetch', 'self', 'navigator', 'localStorage', 'sessionStorage'].includes(node.text)
                     && layer === 'domain' && !propertyName) report(name, 'pure-global');
+                if (['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'sendBeacon'].includes(node.text)
+                    && name !== 'extension/src/adapters/github/get_reader.ts') report(name, 'network-authority');
                 if (['eval', 'Function', 'require'].includes(node.text)) report(name, 'executable-primitive');
                 if (layer === 'presentation' && (AUTHORITY.has(node.text) || node.text === 'globalThis')) report(name, 'presentation-authority');
             }

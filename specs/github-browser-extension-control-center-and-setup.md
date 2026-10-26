@@ -339,3 +339,14 @@ Owning current contracts: [local web setup](local-web-setup-assistant.md), [conf
 Primary platform evidence: [Chrome options](https://developer.chrome.com/docs/extensions/develop/ui/options-page), [Mozilla options](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/user_interface/Options_pages), [Chrome cross-origin requests](https://developer.chrome.com/docs/extensions/develop/concepts/network-requests), [Mozilla optional host permissions](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/optional_host_permissions), [native messaging](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_messaging). Inspected 2026-10-25; actual target behavior must be verified during implementation.
 
 Chosen: packaged full-page application, shared original Svelte UI/contracts, one setup authority, separate nonsecret broker, protected same-origin credential/Apply handoff and explicit offline intent. Rejected: iframe of current setup, importing Node bridge into a browser, generic fetch/shell proxy, broad CORS, broker-acquired legacy session/Apply credentials, a duplicate installer and an options popup that substitutes for the complete application.
+
+
+### H2 runtime evidence boundary
+
+[H2 runtime](github-browser-extension-runtime.md) now implements shared lifecycle,
+versioned nonsecret settings, protected read sessions, a closed GET-only gateway,
+activity/epoch fencing and native-browser harnesses. Its engineering page/panel
+and tests do not complete inventory functions, the 96 full core scenarios or the
+803-case product floor. The implementation PR records exact browser/source/
+container receipts and failures separately; no compatibility, signed distribution
+or complete local-center/setup availability is inferred from build success.

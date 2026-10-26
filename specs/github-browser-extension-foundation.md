@@ -1,6 +1,6 @@
 # GitHub Browser Extension Engineering Foundation (H1)
 
-- Status: H1 implemented for review; development-build evidence only; no browser/product acceptance
+- Status: H1 historical baseline merged in PR #715; current runtime changes are owned by H2
 - Date: 2026-10-25
 - Catalog capability ID: `github-browser-extension`
 - Last verified: 2026-10-25; H1 source/build/test evidence only, with final checks recorded in the PR
@@ -464,3 +464,14 @@ Executable implementation traceability: the four requirements map to the literal
 - Related specs/issues/PRs: the five owning SDDs listed in metadata; [Issue #702](https://github.com/vypdev/copilot/issues/702); PR #699 at the stated baseline revision.
 - Decisions and rejected alternatives: follow the complete accepted product through dependency-sized increments. Reject Chrome-only scaffolding, copied extensions, Node setup/runtime imports into the browser, weakening root gates, and treating build success as browser acceptance.
 - Follow-up work explicitly outside this spec: runtime/lifecycle/protected sessions and real browser harnesses; complete center; all catalog feature families; Action producer/consumer contracts; shared setup presentation/broker; actual Chrome/Firefox/Safari loading and real Safari containing-app evidence; store identity/signing/publication; and all 803 full-product acceptance cases.
+
+
+### H2 runtime evidence boundary
+
+[H2 runtime](github-browser-extension-runtime.md) now implements shared lifecycle,
+versioned nonsecret settings, protected read sessions, a closed GET-only gateway,
+activity/epoch fencing and native-browser harnesses. Its engineering page/panel
+and tests do not complete inventory functions, the 96 full core scenarios or the
+803-case product floor. The implementation PR records exact browser/source/
+container receipts and failures separately; no compatibility, signed distribution
+or complete local-center/setup availability is inferred from build success.

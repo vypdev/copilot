@@ -74,6 +74,15 @@ Setup installs the selected workflows, Issue Forms, labels, issue types, Variabl
 
 Release templates are registry-neutral. Publishing your application or package requires your own build, validation, and deployment steps. This repository's npm publishing workflow is an example, not something setup installs into every consumer repository.
 
+## Browser extension development
+
+The private browser runtime is being built as a complete Chrome/Firefox/Safari
+product. H2 adds scoped runtime services and protected read sessions; the full
+feature inventory and local setup/control center remain required milestones.
+See the [runtime preview](docs/browser-extension/runtime.mdx) and
+[build, browser evidence and architecture guide](docs/development/browser-extension.mdx).
+No browser-store availability or complete-product acceptance is implied.
+
 ## Advanced integrations and contributing
 
 For a manually maintained workflow, use `vypdev/copilot@v3` and supply `token: ${{ secrets.PAT }}`. Follow the [manual integration instructions](https://docs.page/vypdev/copilot/how-to-use#manual-workflow-integration-advanced) to install the supporting resources and event workflows.

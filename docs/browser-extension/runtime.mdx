@@ -1,0 +1,107 @@
+---
+title: Browser runtime preview
+description: Development installation, optional read sessions, privacy and recovery for the H2 browser runtime.
+---
+
+# Browser runtime preview
+
+This is the private H2 engineering preview, version 0.1.0. It supplies the shared
+runtime and a small health/connection surface while the complete extension is
+being implemented. The full feature catalog, local control center and setup
+journeys remain required; this page makes no store or complete-product claim.
+
+```text
+Load a development target → open an eligible GitHub page → inspect runtime health
+ → optionally Connect selected-repository read access → explicitly Read activity
+ → navigate, hide or Disconnect → old work stops; native GitHub remains
+```
+
+The preview never posts comments, submits drafts, approves/merges, triggers the
+Action, invokes a model or changes repository configuration.
+
+## Install for local development
+
+Follow [build and native-browser instructions](/development/browser-extension).
+Chrome uses the unpacked Chrome target, Firefox uses its temporary add-on path,
+and Safari requires the actual generated containing app enabled in Safari.
+These are development installations, not store packages. Keep test profiles
+separate from personal browsing. The package opens no surprise welcome tab.
+
+On an eligible github.com page, the **Copilot runtime** section links to its
+packaged runtime settings page. The toolbar opens the same page. Authentication,
+account/token/settings, billing/security and repository administration routes are
+protected: they install no runtime observer, request or state read. Private
+browsing and Enterprise/mobile hosts are unsupported.
+
+## Optional read session
+
+Standalone health needs no credential or API host grant. To read a selected
+repository, open runtime settings, enter `owner/name` and your own selected-
+repository fine-grained read credential, then choose **Connect read access for
+this session**. GitHub Metadata, Issues read or Pull requests read is sufficient
+for the H2 native projections as applicable; broader future Action projections
+are not activated by this preview. Never enter a bot/deployment/workflow token.
+
+Connect requests only `https://api.github.com/*` after the explicit gesture. The
+background confirms the native user and selected repository before enabling that
+numeric repository ID. The credential field is cleared before asynchronous work;
+no credential is returned to the page. API grant denial leaves standalone mode
+and nonsecret settings available.
+
+Choose **Read current activity** on the relevant issue/PR. An issue and a PR with
+the same number remain distinct. This is a native activity snapshot, not Copilot
+review/readiness evidence or merge authorization. H2 does not poll automatically.
+Manual reads obey a 10-second cooldown; hidden/inactive/offline pages cannot read.
+
+## Pause, settings and privacy
+
+Versioned preferences remain in browser-local nonsecret storage. The core
+supports global/numeric-repository overrides, immutable revisions, pause,
+atomic migration and one previous nonsecret rollback. Full feature/profile/
+import/export/rollback editing belongs to the upcoming local center. H2's
+packaged page exposes the read-session journey; developer configuration uses
+the tested repository port, not arbitrary page scripts.
+
+Settings are limited to 64 KiB, 100 repository overrides and 20 saved views per
+repository (2,000 characters each). Unknown features/enums/authority fields are
+rejected atomically. A future settings version remains read-only; install a
+compatible package before editing. Imports cannot grant connection or release
+an existing pause. Global pause and independently paused feature scopes always
+win over enabled flags.
+
+Credentials live only in protected browser session storage. No disk/sync/
+IndexedDB fallback, cookies, browsing-history upload or telemetry is used.
+Private response cache is bounded, memory-only and discarded on session change
+or background suspension. Scheduling quotas/timestamps remain protected session
+state. A browser restart requires explicit reconnect; session loss is a clear
+disconnect. Background restart revalidates permission and native identity.
+
+**Disconnect this session** invalidates the credential generation before aborting
+work and clearing protected state. Observed logout/different viewer, revoked API
+site access or 401 does the same. It does not revoke a PAT at GitHub: use native
+GitHub settings for provider revocation. A protected-storage failure is explicit;
+disable/restart the extension/browser if it cannot confirm local cleanup.
+
+## Recovery
+
+| State | Meaning | Next action | Retained state |
+|---|---|---|---|
+| Checking | Current read is pending | Wait or leave the page to cancel | Native GitHub and settings |
+| Disconnected | No verified read session | Connect explicitly or keep standalone use | Nonsecret preferences |
+| Paused/inactive | Settings or tab activity stop reads | Resume/revisit the active page | Nonsecret preferences |
+| Unavailable | Permission, API, storage or source could not be verified | Check exact grant/session; retry after the stated cooldown | Safe settings; no current evidence claim |
+| Page changed | An older generation finished late | Read the current object | Native draft, focus and selection |
+| Current native activity | Read completed for this exact issue/PR | Inspect the native object | No write or Action authority |
+
+Missing/future settings show a disabled recovery diagnostic and a local settings
+link. A missing anchor disables only that helper. Native editors, draft bytes,
+selection and focus remain owned by GitHub. Do not infer success from a missing
+panel or treat an unavailable source as zero findings.
+
+The interface has complete English, Spanish, French and Portuguese runtime copy,
+keyboard labels and textual states. The full product's human assistive technology,
+responsive/performance and usability matrix remains a separate release gate.
+
+For contributors and operators, receipts, failed prerequisites, exact browser
+versions, source digests and cleanup commands are described in the
+[engineering guide](/development/browser-extension).

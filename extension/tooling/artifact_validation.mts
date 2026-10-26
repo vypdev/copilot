@@ -5,9 +5,10 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { targetManifest } from '../src/infrastructure/target_manifests.ts';
 import { TARGETS, type BrowserTarget } from '../src/domain/target.ts';
+import { RUNTIME_HTML } from './static_assets.mts';
 import { FoundationGateError } from './gate_error.mts';
 
-export const ASSETS = ['background.js', 'content.js', 'manifest.json'] as const;
+export const ASSETS = ['background.js', 'content.js', 'manifest.json', 'runtime.html', 'runtime.js'] as const;
 
 export function assetHashes(files: ReadonlyMap<string, string>): Record<string, string> {
     return Object.fromEntries(ASSETS.map(file => [file, createHash('sha256').update(files.get(file)!).digest('hex')]));
@@ -35,7 +36,8 @@ export function validateTarget(target: BrowserTarget, files: ReadonlyMap<string,
     if (!isDeepStrictEqual(manifest, targetManifest(target)) || raw !== `${JSON.stringify(manifest, null, 2)}\n`) {
         throw new FoundationGateError(`${target}: manifest-drift (permissions, hosts, identity, background or canonical JSON)`);
     }
-    for (const name of ['background.js', 'content.js']) {
+    if (files.get('runtime.html') !== RUNTIME_HTML) throw new FoundationGateError(`${target}: runtime-page-drift`);
+    for (const name of ['background.js', 'content.js', 'runtime.js']) {
         const text = files.get(name)!;
         if (Buffer.byteLength(text) > 1024 * 1024) throw new FoundationGateError(`${target}/${name}: bundle-size`);
         const syntax = ts.transpileModule(text, { fileName: name, reportDiagnostics: true,
@@ -43,7 +45,9 @@ export function validateTarget(target: BrowserTarget, files: ReadonlyMap<string,
         if (syntax.length) throw new FoundationGateError(`${target}/${name}: bundle-syntax`);
         const source = ts.createSourceFile(name, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
         const forbidden = new Set(['eval', 'Function', 'require', 'process', 'Buffer', '__dirname', '__filename',
-            'module', 'document', 'fetch', 'XMLHttpRequest', 'WebSocket', 'chrome', 'browser']);
+            'module', 'XMLHttpRequest', 'WebSocket']);
+        if (name !== 'background.js') forbidden.add('fetch');
+        if (name === 'background.js') forbidden.add('document');
         function visit(node: ts.Node): void {
             if ((ts.isIdentifier(node) && forbidden.has(node.text))
                 || ts.isImportDeclaration(node) || ts.isExportDeclaration(node)

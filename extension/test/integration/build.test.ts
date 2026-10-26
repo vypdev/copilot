@@ -9,6 +9,8 @@ import { readTarget, validateArtifactSet } from '../../tooling/artifact_validati
 import { TARGETS } from '../../src/domain/target.ts';
 import { PublishedCleanupError } from '../../tooling/gate_error.mts';
 
+import { RUNTIME_HTML } from '../../tooling/static_assets.mts';
+
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 let temporary: string;
 let first: BuildReceipt;
@@ -26,7 +28,7 @@ it('bexh1-foundation-C23 builds actual declared target assets whose content entr
     expect(first.sourceRevision).toMatch(/^[a-f0-9]{40}$/u);
     for (const target of TARGETS) {
         const files = await readTarget(path.join(temporary, 'first', target));
-        expect([...files.keys()].sort()).toEqual(['background.js', 'content.js', 'manifest.json']);
+        expect([...files.keys()].sort()).toEqual(['background.js', 'content.js', 'manifest.json', 'runtime.html', 'runtime.js']);
         for (const href of ['https://github.com/owner/repo', 'https://github.com/settings/tokens']) {
             const context = { location: { href } };
             // A VM is an inertness check, explicitly not actual extension-loaded browser proof.
@@ -47,6 +49,7 @@ it('bexh1-foundation-C26 rejects a target failure, removes staging and retains t
     await expect(buildDevelopmentSet(root, output, async (target, directory) => {
         if (target === 'firefox') throw new Error('private arbitrary bundler exception');
         await writeFile(path.join(directory, 'background.js'), ''); await writeFile(path.join(directory, 'content.js'), '');
+        await writeFile(path.join(directory, 'runtime.html'), RUNTIME_HTML); await writeFile(path.join(directory, 'runtime.js'), '');
     })).rejects.toThrow('build/firefox: development set not replaced');
     expect(JSON.parse(await readFile(path.join(output, 'receipt.json'), 'utf8'))).toEqual(first);
     expect((await readdir(temporary)).filter(name => name.startsWith('first.'))).toEqual([]);
@@ -76,6 +79,7 @@ it('retains actionable trusted gate diagnostics when bundle validation fails', a
     await expect(buildDevelopmentSet(root, output, async (_target, directory) => {
         await writeFile(path.join(directory, 'background.js'), 'require("node:fs")');
         await writeFile(path.join(directory, 'content.js'), '');
+        await writeFile(path.join(directory, 'runtime.html'), RUNTIME_HTML); await writeFile(path.join(directory, 'runtime.js'), '');
     })).rejects.toThrow('chrome/background.js: forbidden-executable-or-runtime');
     expect((await readdir(temporary)).filter(name => name.startsWith('invalid-bundle'))).toEqual([]);
 });
@@ -83,6 +87,7 @@ it('reports completed replacement honestly when backup cleanup fails after publi
     const output = path.join(temporary, 'published');
     await expect(buildDevelopmentSet(root, output, async (_target, directory) => {
         await writeFile(path.join(directory, 'background.js'), ''); await writeFile(path.join(directory, 'content.js'), '');
+        await writeFile(path.join(directory, 'runtime.html'), RUNTIME_HTML); await writeFile(path.join(directory, 'runtime.js'), '');
     }, { publish: async (staging, destination) => { await rename(staging, destination); throw new PublishedCleanupError('retained backup'); } }))
         .rejects.toThrow('complete NEW set is present');
     await expect(validateArtifactSet(output)).resolves.toBeUndefined();

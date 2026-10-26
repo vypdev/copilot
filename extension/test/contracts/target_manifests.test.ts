@@ -22,9 +22,13 @@ it('bexh1-foundation-C16 has only top-frame packaged GitHub content and storage 
         expect(manifest.incognito).toBe('not_allowed');
         expect(manifest.content_scripts).toEqual([{ matches: ['https://github.com/*'], js: ['content.js'],
             all_frames: false, match_about_blank: false, run_at: 'document_idle' }]);
-        for (const key of ['host_permissions', 'optional_permissions', 'options_ui', 'action', 'web_accessible_resources', 'externally_connectable']) {
+        for (const key of ['optional_permissions', 'web_accessible_resources', 'externally_connectable']) {
             expect(manifest).not.toHaveProperty(key);
         }
+        expect(manifest.host_permissions).toEqual(['https://github.com/*']);
+        expect(manifest.optional_host_permissions).toEqual(['https://api.github.com/*']);
+        expect(manifest.options_ui).toEqual({ page: 'runtime.html', open_in_tab: true });
+        expect(manifest.action).toEqual({ default_title: 'Copilot runtime settings' });
         expect(isBrowserTarget(target)).toBe(true);
     }
     expect(isBrowserTarget('edge')).toBe(false);

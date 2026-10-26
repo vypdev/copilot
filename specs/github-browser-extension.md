@@ -701,3 +701,14 @@ Decisions: complete 150-function desktop product; packaged full-page local cente
 The original 96 core cases keep their stable identifiers and observable intent. Product scope is expanded by the additional structured feature and center/setup inventories; implementation evidence remains distinct from this specification.
 
 The expanded specification retains all 96 case identities from the Action-published inventory for issue #694. The detailed BEX-P requirements refine the three initial grouping requirements; all retained cases keep their observable scenario intent.
+
+
+### H2 runtime evidence boundary
+
+[H2 runtime](github-browser-extension-runtime.md) now implements shared lifecycle,
+versioned nonsecret settings, protected read sessions, a closed GET-only gateway,
+activity/epoch fencing and native-browser harnesses. Its engineering page/panel
+and tests do not complete inventory functions, the 96 full core scenarios or the
+803-case product floor. The implementation PR records exact browser/source/
+container receipts and failures separately; no compatibility, signed distribution
+or complete local-center/setup availability is inferred from build success.

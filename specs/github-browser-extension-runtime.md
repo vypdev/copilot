@@ -1,9 +1,9 @@
 # GitHub Browser Extension Runtime, Lifecycle, Protected Sessions, and Browser Evidence
 
-- Status: Draft
+- Status: H2 implementation for review; browser acceptance recorded separately
 - Date: 2026-10-25
 - Catalog capability ID: `github-browser-extension`
-- Last verified: not applicable; this is a prospective specification
+- Last verified: 2026-10-26; deterministic source/tests; exact browser receipts belong to the implementation PR
 - Owners: Copilot maintainers
 - Scope: Define H2 browser runtime lifecycle, protected session handling, and actual Chrome, Firefox, and Safari extension-loaded evidence within the complete GitHub productivity extension.
 - Related issues/PRs: [Issue #703](https://github.com/vypdev/copilot/issues/703); dependency #702 completed by merged PR #715; product baseline merged PR #699
@@ -31,7 +31,7 @@ Users need extension features to remain correct as GitHub pages navigate or upda
 1. At the supplied base revision, H1 provides a private extension workspace, domain eligibility/target policies, typed target manifests, inert content/background entrypoints, and architecture/artifact/reproducibility gates.
 2. H1 is not lifecycle, session, or actual-browser loading proof. It includes 56 extension tests across 9 files with 100% statements, branches, functions, and lines, plus 8 root CommonJS contract tests, as reported in the authorized answer.
 3. The existing specifications define the complete proposed product and remain authoritative for overall scope. Current files include the primary, functional catalog, platform/delivery, action integration, control center/setup, and foundation specifications.
-4. H2 is prospective. No implementation behavior or browser compatibility is claimed by this document.
+4. H2 now supplies the implementation below. `extension/src/domain/` owns identity/settings/message/scheduling decisions; `application/` owns feature scopes, atomic settings, protected sessions and the gateway; narrow browser/DOM/GET adapters are composed by synchronous target entrypoints. Runtime/build evidence is separate from the actual browser receipts and full-product acceptance.
 
 ### 2.3 Evidence
 
@@ -147,11 +147,11 @@ Duplicate mount/refresh/dispose calls MUST converge on one active scope and one 
 | Input | Type | Recommended default | Allowed values/range | Scope/persistence |
 |---|---|---|---|---|
 | Feature enabled | Boolean per feature | `true` for product-enabled features; user can pause independently | true/false | Versioned nonsecret settings; feature scope |
-| Cache lifetime | Integer seconds | Existing catalog I6 default and maximum | Must be bounded by I6; no caller override above cap | In-memory/session cache only; timestamps identify freshness |
-| Scheduler activity | Enum | `active-tab` | `active-tab`, `visible-page`, `paused` | Runtime/session; reread on activity transition |
+| Cache lifetime | Fixed safety bound, not a setting | 60 seconds; 1 MiB/128 entries maximum | No caller override; session-private process cache is dropped on suspension | Background; persisted scheduling timestamps survive worker restart |
+| Scheduler activity | Semantic operation input, not a persistent setting | Visible active online tab; explicit manual read | Hidden/inactive/offline/paused refuses work; future pending consumers may use fixed 60-second cadence | Reread at each request; no keepalive |
 | Protected connection | Explicit user action | Disconnected until Connect | connected/disconnected; no user-supplied token setting | Protected session facility only |
 
-Validation MUST reject unknown enum values and out-of-bound cache values. Settings writes are schema-versioned, atomic where supported, and never contain credentials. Missing settings migrate to documented safe defaults; retired values map through explicit migration; unknown future schema is preserved and treated as unavailable rather than reset. An operation snapshots its settings and epoch at start; a relevant settings change increments the epoch and cancels the old operation.
+Validation MUST reject unknown settings, enums and out-of-bound values. Cache limits and scheduler safety are deliberately not accepted as settings. Settings writes are schema-versioned, atomic where supported, and never contain credentials. Missing settings migrate to documented safe defaults; retired values map through explicit migration; unknown future schema is preserved and treated as unavailable rather than reset. An operation snapshots its settings and epoch at start; a relevant settings change increments the epoch and cancels the old operation.
 
 Recommended configuration: enabled feature, active-tab scheduler, default I6 bounded cache, disconnected until explicit Connect. Meaningful alternative: pause an individual feature while other features remain enabled. Credentials, origins, arbitrary URLs, executable code, and safety limits are intentionally not configurable.
 
@@ -222,7 +222,7 @@ The existing AST/import and artifact/hash/reproducibility gates remain. Add chec
 
 ## What happens next
 
-This panel updates while the page remains active. Leaving the page stops its requests.
+Choose Read current activity to collect this page. Leaving or hiding the page cancels its work. H2 does not start automatic polling.
 
 ## Links
 
@@ -419,7 +419,7 @@ User documentation MUST explain normal connection, feature pause, freshness, per
 5. Implement bounded activity-aware scheduler/cache and restart/revalidation behavior.
 6. Build isolated Chrome/Firefox harnesses and the Safari actual-containing-app harness with receipt schema and prerequisite failures.
 7. Update user/setup/operator/contributor docs and catalog evidence alongside behavior.
-8. Run existing root gates, changed-module coverage, architecture/artifact checks, all browser receipts, and manual UX review; report unrun or blocked matrices accurately.
+8. Run existing root gates, changed-module coverage, architecture/artifact checks, all browser receipts, and manual UX review; report unrun or blocked matrices accurately. Current H2 emits a source-tree digest in all three execution contexts; the harness rejects an old content, options or background bundle even if its manifest version matches.
 
 ## 19. Definition of Done
 
@@ -445,3 +445,111 @@ User documentation MUST explain normal connection, feature pause, freshness, per
 - Browser matrix: macOS 27.0.1 build 26A434 with Xcode 27.1 build 25183.120.5; Chrome for Testing 156.0.8078.47 revision 1706539; Firefox stable 158.0.1; Firefox ESR 153.5.1esr; Safari 27.0.1 build 22625.1.29.11.28 using private development version 0.1.0 and an isolated development identity distinct from store identity. Record downloaded hashes, driver versions, and returned capabilities.
 - API floors: Chrome 140, Firefox/ESR 140, Safari 18.2/macOS 15.2. Test surfaces and deterministic absence; do not claim those floor binaries ran.
 - Follow-up work outside this spec: full multi-OS/current/previous product matrix, human UX, signing/store approval, and any product behavior outside the H2-owned cross-cutting runtime and evidence increment.
+
+### Implementation evidence and bounded delivery
+
+The exact modules/tests are catalogued in `specs/catalog.json`. H2 has no
+Action-status producer or finding decoder and makes no ready-to-merge claim.
+The runtime-health section and packaged connection page are engineering surfaces,
+not completed inventory functions or the complete H3 local center. Current
+connection is one explicitly selected read-role session (within the product's
+five-identity ceiling); multi-identity selection/profile UI remains H3 work.
+
+Settings v1 has `schemaVersion`, optimistic `revision`, `features`, `density`,
+`locale`, `theme`, `shortcuts`, `paused` and numeric-ID `repositories`. Defaults,
+64 KiB, 100 repository overrides and 20 bounded saved views are enforced by
+`domain/settings.ts`; unsupported/secret/cyclic fields fail without publication.
+A prior schema-0 compact preference migrates atomically; this is a tested
+migration fixture, not a claim that schema 0 was released. A future record stays
+read-only. `SettingsRepository` serializes migrations and writes and retains one
+complete nonsecret rollback in the same storage operation. Full settings editing,
+imports/exports/profile and rollback UI are owned by the complete center hito.
+
+The observer reconciles a scoped route anchor with constant work and never scans
+editor content. One controller owns its nodes, listeners and AbortController;
+route, native-object, settings and credential generations fence late results.
+An unavailable configuration exposes a disabled recovery diagnostic; it never
+activates product features. A protected direct load installs no resources.
+Background message listeners register before asynchronous storage operations.
+A hidden page releases its matching lease; an obsolete release cannot cancel
+another generation. No GitHub comment, mutation, notification, AI invocation,
+keepalive interval or external telemetry is introduced.
+
+Protected session storage is the only credential location. Unsupported storage
+or denial produces unavailable/disconnected, never a disk fallback. Connect
+requests the exact optional API host in a local user gesture, canonicalizes the
+viewer/repository with GETs, then atomically enables that numeric repository.
+Every read is scoped to that identity and current native tab; disconnect,
+observed viewer mismatch/logout, 401 or host revocation invalidates the epoch
+before abort/clear. Storage failure is explicit; it cannot prove a PAT was
+revoked at GitHub. Normal browser restart requires explicit reconnect.
+
+The read adapter exposes only viewer/repository/issue/PR semantic operations.
+It omits cookies, refuses redirects, bounds UTF-8/JSON responses to 1 MiB and
+uses a scoped 20-second deadline. The shared scheduler deduplicates tabs, caps
+concurrency at two, persists hourly quotas/next-allowed timestamps in protected
+session storage and has no timer loop. Private response cache is memory-only,
+at most 128 entries/1 MiB/60 seconds, and is invalidated on credential changes;
+it is deliberately dropped on worker suspension. Missing state is revalidated
+before reads. Rate-limit updates share the same serialized state gate as read
+reservations. H2 manual reads obey the 10-second cooldown; future automatic
+consumers cannot bypass I6 or poll hidden pages.
+
+The actual harness uses native ChromeDriver/geckodriver/SafariDriver. It starts
+from an unauthenticated public github.com bootstrap, replaces its main DOM with
+an independently authored fixture, and never injects extension code or mocks
+its APIs. It verifies 20 route cycles, protected navigation, native draft bytes,
+selection/focus, exact target permissions and all three executed source digests.
+Chrome uses an isolated profile; Firefox uses a temporary add-on and isolated
+profile with the local driver access required for extension-page automation.
+Firefox's observed nullable defaults/absolute extension paths are normalized by
+an explicit closed allowlist; permission/code expansion is rejected. Safari
+uses an actual built and registered ad-hoc containing app, verifies its embedded
+resources/signature/identifiers, and loads those resources in native Safari's
+separate automation session through its WebExtension endpoint. Native-profile
+container enablement and API/permission UX are separate human prerequisites;
+WebKit and harness fakes are never substituted as browser evidence. Receipts
+state this distinction and retain failed prerequisites/assertions explicitly.
+
+The 38 H2 cases remain the minimum, with additional boundary/race/security cases.
+The following retained core portions are exercised through those owner cases;
+this is not a claim that their complete producer/consumer/product scenarios pass:
+
+| Retained core portions | H2 owner cases/evidence | Remaining complete-product dependency |
+|---|---|---|
+| bex-F-C01–bex-F-C10, bex-F-C12 | C01–C06, C18, C24, settings/protocol tests | Feature/profile/import/export UI and current evidence consumers |
+| bex-N-C01–bex-N-C14 | C01–C02, C06–C16, runtime/DOM/gateway/session tests | All registered feature adapters and full interaction/performance matrix |
+| bex-S-C01–bex-S-C07, bex-S-C11–bex-S-C16 | C04, C11, C15–C26, C30–C31, closed transport and session tests | Producer/evidence/export/operations contracts and human permission matrix |
+| bex-E-C01–bex-E-C06, bex-E-C09–bex-E-C12 | C12, C22–C25, C32–C38, exact native receipts | Full feature set, multi-OS/version, human accessibility/performance and signed delivery |
+
+The complete 150 functions/803 cases stay proposed. Contributor/user recovery,
+commands and browser prerequisites are in `docs/development/browser-extension.mdx`
+and `docs/browser-extension/runtime.mdx`. No store/release availability is implied.
+
+
+### ESR runner decision (2026-10-26)
+
+The official macOS ESR 153.5.1esr bundle passes deep code-signature verification
+but cannot create a Marionette session on this macOS 27.0.1 machine in either
+headed or headless mode. Its native startup reports a sandbox-extension/GPU
+helper failure; no browser sandbox or OS protection is disabled to obtain a pass.
+Retain that failed prerequisite separately. The executable ESR acceptance job
+uses the product's supported hosted Ubuntu matrix entry (baseline 24.04+) with the same exact
+153.5.1esr browser and geckodriver 0.37.1, official distribution URLs, isolated
+profiles, download hashes and genuine extension loading. This is Linux ESR
+evidence, not a macOS ESR pass; macOS ESR remains part of the complete-product
+platform matrix. Chrome/Firefox stable and Safari evidence identify their actual
+macOS build independently. The CI job contains no provider credential or write
+permission and retains its native receipt even on failure.
+
+
+### Local verification receipt (2026-10-26)
+
+The extension suite currently passes 168 tests in 26 files (56 retained H1
+engineering cases plus 112 H2 cases/regressions). All 38 required H2 case IDs
+appear in the executable suites. The local report covers 1,061/1,061 lines;
+new pure domain branches are 100%; remaining per-file statement/branch/function
+gates pass. Per-file executable-line coverage is now enforced at 100% rather
+than the prior 95%, with no runtime exclusion or lowered gate. These deterministic
+results are not native-browser proof. Exact-head CI/Codecov and native/human
+browser receipts are recorded in the PR, with every failure left explicit.

@@ -5,6 +5,8 @@ import { validateArchitecture } from '../../tooling/architecture_validation.mts'
 import { targetManifest } from '../../src/infrastructure/target_manifests.ts';
 import { validateTarget } from '../../tooling/artifact_validation.mts';
 
+import { RUNTIME_HTML } from '../../tooling/static_assets.mts';
+
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 function rejects(file: string, source: string, rule: string): void {
     const graph = inwardGraph(); graph.set(file, source);
@@ -50,7 +52,7 @@ it('bexh1-foundation-C21 rejects cycles, unresolved imports, dynamic/type import
 });
 it('bexh1-foundation-C22 rejects executable bundles, duplicate manifests, undeclared assets and permission drift', () => {
     const assets = () => new Map([['manifest.json', `${JSON.stringify(targetManifest('chrome'), null, 2)}\n`],
-        ['background.js', ''], ['content.js', '(() => { const x = 1; return x; })();']]);
+        ['runtime.html', RUNTIME_HTML], ['runtime.js', ''], ['background.js', ''], ['content.js', '(() => { const x = 1; return x; })();']]);
     expect(() => validateTarget('chrome', assets())).not.toThrow();
     for (const code of ['eval("1")', 'new Function("return 1")', 'require("node:fs")',
         'import("https://evil.invalid/code.js")', 'import "./remote.js";', 'export * from "./remote.js";', 'fetch("/")']) {
