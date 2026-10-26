@@ -6,9 +6,9 @@ export type SddDraftFormatReason = typeof SDD_DRAFT_FORMAT_REASONS[number];
 export const SDD_VALIDATION_DETAILS = Object.freeze([
   'validation-contract', 'size-limit', 'response-shape', 'required-heading', 'numeric-budget',
   'section-count', 'table-count', 'table-separator', 'table-columns', 'table-empty-cell', 'table-empty',
-  'identifier-list', 'requirement-identity', 'case-identity', 'case-reserved', 'case-reference',
+  'identifier-list', 'requirement-identity', 'case-identity', 'case-reserved', 'case-reference', 'case-shorthand',
   'budget-area', 'budget-integer', 'budget-order', 'budget-total', 'budget-distribution',
-  'requirement-reference', 'requirement-coverage', 'traceability-links',
+  'requirement-reference', 'requirement-coverage', 'traceability-links', 'traceability-membership', 'traceability-requirement',
   'owner-path', 'path-identity', 'create-existing-path', 'create-path-overlap', 'create-path-parent',
   'path-operation', 'path-reference', 'path-link',
 ] as const);

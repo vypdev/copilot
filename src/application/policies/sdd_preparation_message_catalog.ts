@@ -36,6 +36,9 @@ const UI = Object.freeze({
 } satisfies Record<string, readonly [string, string]>);
 
 const FACTS = Object.freeze({
+  'case-shorthand': ['Unqualified shorthand case references are present; their meaning cannot be established as a full case identity.', 'Hay referencias abreviadas a casos; no se puede establecer su significado como identidad completa.'] as const,
+  'traceability-membership': ['The reverse mapping has the expected number of case IDs but different members; the count reports mismatched links.', 'El mapeo inverso tiene la cantidad esperada de casos, pero sus miembros no coinciden; la cantidad indica vínculos distintos.'] as const,
+  'traceability-requirement': ['A reverse mapping row names an undefined or repeated requirement.', 'Una fila de mapeo inverso nombra un requisito no definido o repetido.'] as const,
   "validation-contract": ["A content contract was rejected; this validator supplied no more specific table facts.", "Se rechazó un contrato de contenido; este validador no proporcionó datos más concretos de tablas."] as const,
   "size-limit": ["The candidate exceeded the complete draft size limit.", "El candidato superó el límite de tamaño del borrador completo."] as const,
   "response-shape": ["The drafting response did not contain the required Markdown string.", "La respuesta de redacción no contenía la cadena Markdown obligatoria."] as const,
@@ -52,7 +55,7 @@ const FACTS = Object.freeze({
   "case-identity": ["Case identifiers must be fully qualified and distinct; shorthand references cannot establish identity.", "Los identificadores de casos deben ser completos y distintos; las referencias abreviadas no establecen identidad."] as const,
   "case-reserved": ["A proposed case reuses an identity reserved by an immutable owning specification.", "Un caso propuesto reutiliza una identidad reservada por una especificación propietaria inmutable."] as const,
   "case-reference": ["A case reference is absent from both the candidate and retained owner inventories.", "Una referencia de caso no existe ni en el inventario del candidato ni en el del propietario conservado."] as const,
-  "budget-area": ["A case uses the reserved total label as its budget area.", "Un caso usa la etiqueta reservada del total como área de presupuesto."] as const,
+  "budget-area": ["A case uses an invalid or undeclared budget area.", "Un caso usa un área de presupuesto no válida o no declarada."] as const,
   "budget-integer": ["A budget allocation is not a positive safe integer.", "Una asignación de presupuesto no es un entero positivo seguro."] as const,
   "budget-order": ["A budget area is repeated or an allocation appears after the total.", "Un área de presupuesto está repetida o aparece una asignación después del total."] as const,
   "budget-total": ["Budget totals or area membership disagree with the distinct case inventory.", "Los totales o las áreas de presupuesto no coinciden con el inventario de casos distintos."] as const,

@@ -63,3 +63,34 @@ describe('bounded public SDD diagnostics', () => {
     }
   });
 });
+
+
+describe('precise failing SDD facts (#714)', () => {
+  it.each([
+    ['invalid case identity', (s: string) => s.replace(/payments-change-C01/gu, 'PRIVATE_CASE'), { detail: 'identifier-list', section: 14, row: 1, expected: 0, observed: 1 }],
+    ['invalid requirement identity', (s: string) => s.replace(/G-01/gu, 'PRIVATE_REQ'), { detail: 'identifier-list', section: 4, row: 1, expected: 0, observed: 1 }],
+    ['duplicate requirement', (s: string) => s.replace(/G-02/gu, 'G-01'), { detail: 'requirement-identity', section: 4, expected: 2, observed: 1 }],
+    ['shorthand prose reference', (s: string) => s + '\nSee C01.', { detail: 'case-shorthand', section: 0, expected: 0, observed: 1 }],
+    ['invalid inventory requirement list', (s: string) => s.replace('C01 | Policy | G-01 |', 'C01 | Policy | PRIVATE_REQ |'), { detail: 'identifier-list', section: 14, observed: 1 }],
+    ['equal-count wrong members', (s: string) => s.replace('G-01 | payments-change-C01, payments-change-C02', 'G-01 | payments-change-C01, payments-change-C03'), { detail: 'traceability-membership', section: 17, row: 1, expected: 0, observed: 2 }],
+    ['unknown reverse requirement', (s: string) => s.replace('G-01 | payments-change-C01, payments-change-C02', 'G-99 | payments-change-C01, payments-change-C02'), { detail: 'traceability-requirement', section: 17, row: 1, expected: 0, observed: 1 }],
+    ['unknown budget area', (s: string) => s.replace('C03 | Adapter |', 'C03 | PRIVATE_AREA |'), { detail: 'budget-area', section: 14, expected: 0, observed: 1 }],
+    ['inconsistent sum', (s: string) => s.replace('| Policy | 2 |', '| Policy | 3 |'), { detail: 'budget-total', section: 14, expected: 3, observed: 4 }],
+    ['unknown documentation operation', (s: string) => s.replace('| docs/payments.mdx | update |', '| docs/payments.mdx | delete |'), { detail: 'path-operation', section: 15, row: 1 }],
+    ['overlapping proposed paths', (s: string) => s.replace('| specs/change.md | create |', '| specs/change.md | create |\n| specs/change.md/child | create |'), { detail: 'create-path-overlap', section: 15, row: 3 }],
+    ['blocked proposed parent', (s: string) => s.replace('| specs/change.md | create |', '| specs/change.md | create |\n| docs/payments.mdx/child | create |'), { detail: 'create-path-parent', section: 15, row: 3 }],
+    ['invalid relative link', (s: string) => s + '\n[reference](%ZZ)', { detail: 'path-link', section: 0 }],
+    ['missing prose reference', (s: string) => s + '\nInspect `docs/PRIVATE.mdx`.', { detail: 'path-reference', section: 0 }],
+  ] as const)('reports the actual failing constraint for %s', (_label, change, fact) => {
+    try {
+      validateSddDraftConsistency(change(sddConsistencyFixture()), [], {
+        files: new Set(['docs/payments.mdx']), directories: new Set(['docs']), blocked: new Set(),
+      }, 'specs/change.md');
+      throw new Error('Expected rejection');
+    } catch (error) {
+      expect(error).toBeInstanceOf(SddDraftFormatFailure);
+      expect((error as SddDraftFormatFailure).diagnostic.facts).toContainEqual(expect.objectContaining(fact));
+      expect(JSON.stringify((error as SddDraftFormatFailure).diagnostic)).not.toContain('PRIVATE');
+    }
+  });
+});

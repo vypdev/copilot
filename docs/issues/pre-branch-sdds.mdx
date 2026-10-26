@@ -80,7 +80,9 @@ Open **Validation diagnostics** in that card. It shows the closed validation
 check and, where available, the affected section, data-row ordinal and expected
 or observed counts. For example, a reverse mapping row may expect two cases
 while naming only one. An owning-case collision reports a reserved-identity
-check and collision count. These are observations from the actual validator;
+check and collision count. The card reports the first proven rejection, not an exhaustive audit. Same-size
+mapping sets can still disagree on their members; that check reports mismatched
+links rather than implying equal counts prove correctness. These are observations from the actual validator;
 missing evidence is reported as unavailable rather than guessed.
 
 An illustrative failure view is:

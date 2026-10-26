@@ -1470,7 +1470,8 @@ branch/commit ownership remain in force.
 unnecessary: the reviewed evidence is a structured projection, not the candidate
 itself. Domain diagnostics contain only a closed reason, phase and at most
 **eight** facts. Facts contain a closed check ID, section from 0/4/14/15/17
-(0 means unspecified), optional positive data-row ordinal, and optional integer
+(0 means unspecified), an optional positive row ordinal (or required-heading
+list position when the check explicitly says so), and optional integer
 expected/observed counts in **0..100,000**. Row ordinals are in 1..100,000.
 Unknown/extra properties, arbitrary text, invalid numbers or oversized lists
 MUST fail closed. The domain error copies/freezes these facts; the application
@@ -1481,8 +1482,11 @@ scenarios, source and validator messages are not diagnostic variables.
 Actual table failures supply observations such as missing/duplicate sections,
 wrong table/column counts, absent cells, invalid identities, reserved baseline
 collisions, undefined requirement references, reciprocal-link cardinalities,
-budget disagreement and unverified paths. Only proven facts may be included;
-missing detail stays unavailable. This evidence explains the check and its
+budget disagreement and unverified paths. Only proven facts may be included. The first rejection is not an exhaustive
+audit, and counts identify the failing constraint. Equal-cardinality mapping
+errors report membership differences; malformed identities report invalid
+entries. Unknown citation locations remain unspecified rather than guessed.
+Missing detail stays unavailable. This evidence explains the check and its
 location/count without copying potentially secret table cells or content.
 
 The application use case coordinates failure/recovered publication through
