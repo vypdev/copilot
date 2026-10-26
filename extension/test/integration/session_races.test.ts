@@ -55,3 +55,19 @@ it('the session epoch independently fences an obsolete scheduler completion even
     await h.service.revoke(); pending.resolve({ state: 'limited', bytes: 0, retryAfter: 120, retryAt: 220000 }); await connect;
     expect(h.service.status().state).toBe('disconnected'); expect(h.service.status()).not.toHaveProperty('retryAt');
 });
+
+it('concurrent explicit Connect attempts cannot coalesce credentials or persist one account against another repository', async () => {
+    const h = sessionHarness(); await h.service.start();
+    vi.mocked(h.reader.read).mockImplementation(async (request, secret) => ({ state: 'ok', etag: '', bytes: 1,
+        data: request.type === 'viewer' ? { id: secret === 'synthetic_second' ? '2' : '1', login: secret === 'synthetic_second' ? 'second' : 'first' }
+            : { id: secret === 'synthetic_second' ? '9' : '7', name: request.type === 'repository' ? request.name : 'unexpected' } }));
+    await Promise.all([h.service.connect('synthetic_first', 'octo/first'), h.service.connect('synthetic_second', 'octo/second')]);
+    expect(h.values.get(SESSION_KEY)).toMatchObject({ secret: 'synthetic_second', viewerId: '2', viewerLogin: 'second', repositoryId: '9', repository: 'octo/second' });
+    expect(vi.mocked(h.reader.read).mock.calls.map(([, secret]) => secret)).toEqual(['synthetic_second', 'synthetic_second']);
+});
+it('a denied permission result from an obsolete Connect cannot overwrite a newer successful connection', async () => {
+    const h = sessionHarness(); await h.service.start(); const permission = deferred<boolean>(); h.ports.permitted.mockReturnValueOnce(permission.promise);
+    const old = h.service.connect('synthetic_first', CONNECTED.repository); await vi.waitFor(() => expect(h.ports.permitted).toHaveBeenCalledTimes(2));
+    expect(await h.service.connect(CONNECTED.secret, CONNECTED.repository)).toMatchObject({ state: 'connected' });
+    permission.resolve(false); await old; expect(h.service.status().state).toBe('connected'); expect(h.values.get(SESSION_KEY)).toEqual(CONNECTED);
+});

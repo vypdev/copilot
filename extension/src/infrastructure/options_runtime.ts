@@ -16,7 +16,6 @@ export function startOptions(api: BrowserApi, document: Document, language: stri
     const disconnect = document.getElementById('disconnect') as HTMLButtonElement;
     let stopped = false; let operation = 0;
     const render = (response: unknown) => {
-        if (stopped) return;
         const state = record(response) && typeof response.state === 'string' ? response.state : 'unavailable';
         text('status', state === 'connected' ? copy.connected : statusText(state, copy, record(response) ? response.retryAt : undefined));
         document.getElementById('status')!.dataset.state = state;
@@ -42,7 +41,7 @@ export function startOptions(api: BrowserApi, document: Document, language: stri
     const submitListener = (event: Event) => { void submit(event); };
     const revokeListener = () => { void revoke(); };
     form.addEventListener('submit', submitListener); disconnect.addEventListener('click', revokeListener);
-    void api.runtime.sendMessage({ version: 1, method: 'session.status' }).then(result => { if (operation === 0) render(result); }, () => render(null));
+    void api.runtime.sendMessage({ version: 1, method: 'session.status' }).then(result => { if (operation === 0) render(result); }, () => { if (operation === 0) render(null); });
     return () => { stopped = true; operation++; secret.value = ''; form.removeEventListener('submit', submitListener);
         disconnect.removeEventListener('click', revokeListener); };
 }

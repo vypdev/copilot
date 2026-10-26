@@ -27,7 +27,7 @@ export class GitHubGetReader implements GitHubReadPort {
                 const header = response.headers.get('retry-after');
                 const retry = header && /^\d+$/u.test(header) ? Number(header) : (Date.parse(header ?? '') - Date.now()) / 1000;
                 const reset = Number(response.headers.get('x-ratelimit-reset')) * 1000 - Date.now();
-                return { state: 'limited', retryAfter: Math.max(Number.isFinite(retry) ? retry : 0, reset / 1000), bytes: 0 };
+                return { state: 'limited', retryAfter: Math.max(Number.isFinite(retry) ? retry : 0, Number.isFinite(reset) ? reset / 1000 : 0), bytes: 0 };
             }
             if ([403, 404].includes(response.status)) return { state: 'denied', bytes: 0 };
             if (!response.ok || !response.headers.get('content-type')?.includes('application/json') || !response.body) return { state: 'invalid', bytes: 0 };

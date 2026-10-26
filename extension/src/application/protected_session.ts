@@ -38,11 +38,14 @@ export class ProtectedSessionService {
     }
     async connect(secret: string, repository: string): Promise<SessionStatus> {
         await this.start();
-        await this.revoke();
-        const epoch = this.epoch;
+        const removal = this.revoke(); const epoch = this.epoch;
+        await removal;
         try {
-            if (!await this.ports.protected() || !await this.ports.permitted()) { this.state = 'unavailable'; return this.status(); }
-            if (epoch === this.epoch) await this.establish(secret, repository, epoch);
+            if (epoch !== this.epoch) return this.status();
+            const ready = await this.ports.protected() && await this.ports.permitted();
+            if (epoch !== this.epoch) return this.status();
+            if (!ready) { this.state = 'unavailable'; return this.status(); }
+            await this.establish(secret, repository, epoch);
         } catch { if (epoch === this.epoch) { await this.revoke(); this.state = 'unavailable'; } }
         return this.status();
     }

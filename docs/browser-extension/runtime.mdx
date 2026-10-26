@@ -112,3 +112,7 @@ Coalesced reads keep one transport for up to 128 waiting consumers. Closing one
 tab cancels that tab's result while other active tabs can finish. Closing the
 last consumer or disconnecting the session aborts the transport. Provider
 backoff adds up to one second of jitter and survives worker recreation.
+
+If two extension pages connect concurrently, the most recent attempt owns the
+selected read session. An older attempt cannot mix its credential or repository
+with the newer identity, or overwrite its status after a late permission result.

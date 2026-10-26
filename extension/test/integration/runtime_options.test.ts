@@ -101,3 +101,11 @@ it('late failing Connect/disconnect operations and startup completion cannot rep
     (dom.window.document.getElementById('disconnect') as HTMLButtonElement).click(); await Promise.resolve(); pending.resolve({ state: 'connected' }); await Promise.resolve();
     expect(dom.window.document.getElementById('status')!.dataset.state).toBe('disconnected');
 });
+
+it('a rejected startup status cannot overwrite a successful explicit Connect completed after startup', async () => {
+    const h = browserFixture(); const startup = deferred<unknown>(); vi.mocked(h.api.runtime.sendMessage).mockReturnValueOnce(startup.promise).mockResolvedValue({ state: 'connected' });
+    const dom = new JSDOM(RUNTIME_HTML); cleanups.push(() => dom.window.close()); cleanups.push(startOptions(h.api, dom.window.document, 'en'));
+    dom.window.document.getElementById('connection')!.dispatchEvent(new dom.window.Event('submit', { cancelable: true }));
+    await vi.waitFor(() => expect(dom.window.document.getElementById('status')!.dataset.state).toBe('connected'));
+    startup.reject(new Error('private')); await Promise.resolve(); expect(dom.window.document.getElementById('status')!.dataset.state).toBe('connected');
+});
