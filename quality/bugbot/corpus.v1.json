@@ -385,6 +385,76 @@
       "startLine": 1,
       "diff": "+import androidx.compose.foundation.layout.*\n+import androidx.compose.material3.*\n+import androidx.compose.runtime.Composable\n+import androidx.compose.ui.Alignment\n+import androidx.compose.ui.Modifier\n+import androidx.compose.ui.unit.dp\n+@Composable\n+fun AuthForm(email: String, onEmailChange: (String) -> Unit) {\n+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {\n+        Card(modifier = Modifier.width(400.dp).padding(16.dp)) {\n+            Column(Modifier.padding(24.dp)) {\n+                OutlinedTextField(email, onEmailChange, modifier = Modifier.fillMaxWidth())\n+                Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text(\"Submit\") }\n+            }\n+        }\n+    }\n+}",
       "expected": []
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/ci.yml",
+      "startLine": 185,
+      "id": "android-listed-minor-platform",
+      "category": "negative",
+      "description": "Dated synthetic complete catalog snapshot for stable channel, host macOS, 2026-10-26: <remotePackage path=\"platforms;android-37.0\"/><remotePackage path=\"platforms;android-37.1\"/><remotePackage path=\"platforms;android-37.2\"/>. Source identity: https://dl.google.com/android/repository/repository2-3.xml. Configuration: compileSdk=37. Execution receipt for this exact workflow revision and command: fresh job-owned SDK root, no preinstalled platform or restored cache; exit=0, installed package.xml localPackage path=\"platforms;android-37.0\"; Android build with compileSdk=37 succeeded.",
+      "diff": "+sdkmanager --install \"platforms;android-37.0\"",
+      "expected": []
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/ci.yml",
+      "startLine": 185,
+      "id": "android-absent-platform-package",
+      "category": "reliability",
+      "description": "Dated synthetic complete catalog snapshot for stable channel, host macOS, 2026-10-26: <remotePackage path=\"platforms;android-37.0\"/><remotePackage path=\"platforms;android-37.1\"/><remotePackage path=\"platforms;android-37.2\"/>. Source identity: https://dl.google.com/android/repository/repository2-3.xml. Configuration: compileSdk=37. Fresh installation on this exact workflow revision using the default stable channel exits 1: Failed to find package platforms;android-37. No mirror or local override is configured.",
+      "diff": "+sdkmanager --install \"platforms;android-37\"",
+      "expected": [
+        {
+          "id": "absent-sdk-package",
+          "title": "Requested SDK package is absent from the applicable inventory",
+          "file": ".github/workflows/ci.yml",
+          "line": 185,
+          "severity": "medium",
+          "category": "reliability",
+          "codeSnippet": "sdkmanager --install \"platforms;android-37\""
+        }
+      ]
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/ci.yml",
+      "startLine": 185,
+      "id": "external-package-unverified-inventory",
+      "category": "negative",
+      "description": "A workflow requests an SDK package with a minor suffix. No applicable inventory, documentation, installation attempt or execution receipt is available. External lookup is unavailable in the read-only reviewer.",
+      "diff": "+sdkmanager --install \"platforms;android-38.0\"",
+      "expected": []
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/ci.yml",
+      "startLine": 185,
+      "id": "android-stale-inventory-current-install",
+      "category": "negative",
+      "description": "A retained 2025-10-01 catalog snapshot predates this package and does not list it. A 2026-10-26 receipt at this exact workflow revision records a fresh job-owned SDK root, no restored cache, exit=0 for the exact command, localPackage path=\"platforms;android-37.0\", and a successful compileSdk=37 Android build. No current inventory is retained.",
+      "diff": "+sdkmanager --install \"platforms;android-37.0\"",
+      "expected": []
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/ci.yml",
+      "startLine": 185,
+      "id": "android-unrelated-green-job",
+      "category": "reliability",
+      "description": "Dated synthetic complete catalog snapshot for stable channel, host macOS, 2026-10-26: <remotePackage path=\"platforms;android-37.0\"/><remotePackage path=\"platforms;android-37.1\"/><remotePackage path=\"platforms;android-37.2\"/>. Source identity: https://dl.google.com/android/repository/repository2-3.xml. Configuration: compileSdk=37. This exact workflow revision fails its fresh install command with exit 1: Failed to find package platforms;android-37. Another green desktop-only job skipped SDK installation and used cached artifacts from a different revision.",
+      "diff": "+sdkmanager --install \"platforms;android-37\"",
+      "expected": [
+        {
+          "id": "absent-sdk-package",
+          "title": "Requested SDK package is absent from the applicable inventory",
+          "file": ".github/workflows/ci.yml",
+          "line": 185,
+          "severity": "medium",
+          "category": "reliability",
+          "codeSnippet": "sdkmanager --install \"platforms;android-37\""
+        }
+      ]
     }
   ]
 }

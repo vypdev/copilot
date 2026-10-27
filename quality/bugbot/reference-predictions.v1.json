@@ -48,6 +48,11 @@
     "kt-compose-required-width-overflow": [{"id": "kt-compose-required-width-overflow-defect", "title": "Required width makes the padded controls overflow the 280dp parent", "file": "ui/AuthForm.kt", "line": 10, "severity": "low", "category": "correctness", "symbol": "AuthForm", "codeSnippet": "Modifier.requiredWidth(400.dp).padding(16.dp)", "confidence": 0.95}],
     "kt-compose-fill-before-cap": [{"id": "kt-compose-fill-before-cap-defect", "title": "Filling before the cap removes the intended wide-screen bound", "file": "ui/AuthForm.kt", "line": 10, "severity": "low", "category": "correctness", "symbol": "AuthForm", "codeSnippet": "Modifier.fillMaxWidth().widthIn(max = 400.dp).padding(16.dp)", "confidence": 0.95}],
     "kt-compose-cap-before-fill": [],
-    "kt-compose-padded-preferred-width": []
+    "kt-compose-padded-preferred-width": [],
+    "android-listed-minor-platform": [],
+    "android-absent-platform-package": [{"id": "absent-sdk-package", "title": "Requested SDK package is absent from the applicable inventory", "file": ".github/workflows/ci.yml", "line": 185, "severity": "medium", "category": "reliability", "codeSnippet": "sdkmanager --install \"platforms;android-37\"", "confidence": 0.98}],
+    "external-package-unverified-inventory": [],
+    "android-stale-inventory-current-install": [],
+    "android-unrelated-green-job": [{"id": "absent-sdk-package", "title": "Requested SDK package is absent from the applicable inventory", "file": ".github/workflows/ci.yml", "line": 185, "severity": "medium", "category": "reliability", "codeSnippet": "sdkmanager --install \"platforms;android-37\"", "confidence": 0.98}]
   }
 }
