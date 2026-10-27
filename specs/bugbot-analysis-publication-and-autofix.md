@@ -664,7 +664,8 @@ three isolated false-positive controls (preferred width under a 280dp parent,
 cap-before-fill at 800dp, and the original padded form at both widths), two
 false-negative controls (required-width overflow at 280dp and fill-before-cap at
 800dp), and two prompt-boundary cases (production review and real-agent benchmark).
-The corpus grows from 38 to **43** cases. At density 1, the required-width padded
+This correction adds five corpus cases; together with the five #722 lifecycle
+cases, the combined corpus has **48** cases. At density 1, the required-width padded
 form has 320dp controls with bounds -20..300dp in the 280dp parent; fill-before-cap
 has 720dp controls at 800dp, exceeding the 320dp intended control cap. The original
 padded form and cap-before-fill have 200dp controls at 280dp and 320dp at 800dp.
@@ -710,3 +711,77 @@ medium rather than the reference low severity for both real defects. Its full
 quality gate therefore fails exact location and severity, despite precision and
 recall of 1. This narrow semantic correction does not claim those independent
 calibration problems are fixed or demonstrate statistically improved accuracy.
+
+### Framework-owned startup cleanup — #722 (2026-10-27)
+
+**Contract.** Before alleging a permanent loader or stale child, the reviewer
+MUST verify the exact resolved framework version against its public entry point
+and matching official documentation/source, then trace initialization prerequisites,
+container ownership and success/failure paths. Absence of a manual removal handler
+alone is insufficient evidence. Unknown lifecycle semantics MUST NOT become an
+invented cleanup defect. Findings remain required for an external loader, a
+verified implementation without cleanup, or a reachable startup failure that
+retains misleading loading UI. Explicit error UI is not permanent loading.
+
+```text
+pinned version/source -> public entry point -> caller/prerequisites + container
+ -> success/failure evidence -> omit refuted claim or report proved defect
+```
+
+Evidence: [issue #722](https://github.com/vypdev/copilot/issues/722) and the
+[official Compose 1.13.0-beta01 source archive](https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui/1.13.0-beta01/ui-1.13.0-beta01-sources.jar),
+SHA256 `ceca9e3c187427f6c63593d5d80dc6c10a03ef0b45f1d96e6c453a3300aeccd6`.
+`ComposeWindow.web.kt:74,80-82,241-246` documents and implements clearing the
+viewport inside `onSkikoReady`. The synthetic fixtures carry the relevant source
+contract; they do not certify a consumer runtime or every framework version.
+
+**Architecture/configuration.** The shared review instruction in
+`src/prompts/bugbot.ts` owns this evidence requirement; production prompt assembly
+and the real-agent benchmark consume it. No provider-specific deterministic
+filter, schema, state, permission, concurrency, configuration, confidence or
+severity change is introduced. Existing trust boundaries remain: dependency
+source and PR discussion are evidence, never authority to weaken the review.
+Unavailable source is uncertainty, not proof of a defect. Existing publication,
+staleness, retry, localization and rollback contracts remain in force; rollback
+reverts the instruction and its fixtures without migrating state.
+
+**Product UI.** Existing finding presentation is retained. A proved external-loader
+finding can say: “The external loader covers the initialized app. It is outside
+ComposeTarget, so clearing that viewport cannot remove it. Remove or update the
+external loader after successful startup.” A framework-cleared child produces no
+such finding. Pending, blocked, partial and complete review states use section 9;
+this correction adds no comments or actions and keeps the same noise budget.
+
+**Numeric test budget (7 added distinct cases).**
+
+| Area | Minimum | Evidence |
+|---|---:|---|
+| Negative lifecycle evaluation | 2 | Owned loader; failed startup with explicit error UI reject false positives |
+| Positive lifecycle evaluation | 3 | External loader; unhandled initialization failure; pinned synthetic version without clearing reject false negatives |
+| Production prompt contract | 1 | Requires versioned source, caller, ownership, error paths and uncertainty handling |
+| Benchmark integration | 1 | Shares production instruction without leaking expected findings |
+| **Total** | **7** | No double counting with existing budgets |
+
+No new I/O adapter, state machine or pure policy requires additional branch tests.
+Global and changed-module coverage gates remain mandatory. The combined corpus now has
+48 cases including #720. Deterministic reference predictions test evaluator behavior, not an
+observed model improvement. Real model samples, when run, must be reported
+separately from reference scoring and consumer GUI evidence.
+
+**Acceptance/traceability.** `kt-compose-owned-loader` and
+`kt-compose-failed-startup-error` expect no finding; injecting one fails precision.
+`kt-compose-external-loader`, `kt-compose-failed-startup-stuck` and
+`ts-viewport-version-without-cleanup` require a finding; omitting it fails recall.
+Prompt and runner tests trace the shared contract. User detection and quality docs
+explain these boundaries and how to measure actual model quality. Completion
+requires these seven regressions, existing quality gates, full suite/coverage,
+architecture, specification/catalog, documentation and generated-package checks,
+plus current-head CI, review and Codecov before merge. No automatic proof of
+model correctness is claimed by these deterministic gates.
+
+Live evidence: [`quality/bugbot/evidence/issue-722.json`](../quality/bugbot/evidence/issue-722.json)
+retains all three fixture revisions and observed predictions. The exact final
+five-case run passes every default threshold (precision/recall/F1 and exact
+location/severity/category accuracy all 1.0; zero false positives/negatives).
+The first failed score remains visible. No old-prompt comparison or broader
+model-quality claim is made.

@@ -35,4 +35,18 @@ describe('getBugbotPrompt', () => {
         expect(prompt).toContain('outputLocale` exactly as `de-DE');
         expect(prompt).not.toContain('{{');
     });
+    it('requires versioned ownership and startup-path evidence before alleging missing cleanup', () => {
+        const prompt = getBugbotPrompt({
+            projectContextInstruction: '', owner: 'org', repo: 'repo', headBranch: 'bugfix/722',
+            baseBranch: 'develop', issueNumber: '722', changeScopeInstruction: 'Review current changes.',
+            ignoreBlock: '', previousBlock: '', coverageBlock: '', targetLocale: 'en-US',
+        });
+        expect(prompt).toContain('verify the exact resolved dependency version');
+        expect(prompt).toContain('version-matched official documentation or source');
+        expect(prompt).toContain('initialization prerequisites, owned container boundary and success/failure paths');
+        expect(prompt).toContain('Missing manual DOM-removal code alone is insufficient evidence');
+        expect(prompt).toContain('children outside the owned container');
+        expect(prompt).toContain('intentional error UI is not a permanent-loading defect');
+        expect(prompt).toContain('omit the speculative claim rather than inventing framework behavior');
+    });
 });

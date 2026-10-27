@@ -1986,7 +1986,8 @@
         "quality/bugbot/corpus.v1.json",
         "quality/bugbot/reference-predictions.v1.json",
         "src/tooling/bugbot_benchmark_runner.ts",
-        "quality/bugbot/compose-720-observations.v1.json"
+        "quality/bugbot/compose-720-observations.v1.json",
+        "quality/bugbot/evidence/issue-722.json"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
