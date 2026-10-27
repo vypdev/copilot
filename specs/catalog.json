@@ -1986,6 +1986,7 @@
         "quality/bugbot/corpus.v1.json",
         "quality/bugbot/reference-predictions.v1.json",
         "src/tooling/bugbot_benchmark_runner.ts",
+        "quality/bugbot/compose-720-observations.v1.json",
         "quality/bugbot/evidence/issue-722.json"
       ],
       "tests": [
@@ -2031,7 +2032,8 @@
         "src/application/usecases/__tests__/autofix_conversation_branch_authority.test.ts",
         "src/tooling/__tests__/bugbot_benchmark.test.ts",
         "src/tooling/__tests__/bugbot_benchmark_runner.test.ts",
-        "src/prompts/__tests__/bugbot.test.ts"
+        "src/prompts/__tests__/bugbot.test.ts",
+        "src/prompts/__tests__/bugbot_framework_semantics.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
