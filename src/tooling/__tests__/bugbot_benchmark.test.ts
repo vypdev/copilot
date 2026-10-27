@@ -9,6 +9,7 @@ describe('versioned Bugbot benchmark', () => {
   it.each([
     'py-coverage-config-branch', 'py-http10-reconnect', 'docs-correct-regression-total',
     'py-short-circuit-unhashable', 'py-helper-retry-validation', 'ts-exclusive-render-branches',
+    'kt-compose-owned-loader', 'kt-compose-failed-startup-error',
   ])('treats a reported source/verdict mismatch as a false positive: %s', async (id) => {
     const corpus = await loadBugbotBenchmark(join(root, 'quality/bugbot/corpus.v1.json'));
     const item = corpus.cases.find((item) => item.id === id)!;
@@ -20,7 +21,10 @@ describe('versioned Bugbot benchmark', () => {
     expect(result.violations).toEqual(expect.arrayContaining([expect.stringContaining('precision')]));
   });
 
-  it.each(['py-short-circuit-unsafe-order', 'ts-composed-duplicate-ids'])(
+  it.each([
+    'py-short-circuit-unsafe-order', 'ts-composed-duplicate-ids',
+    'kt-compose-external-loader', 'kt-compose-failed-startup-stuck', 'ts-viewport-version-without-cleanup',
+  ])(
     'still requires the positive control with a reachable defect: %s', async (id) => {
       const corpus = await loadBugbotBenchmark(join(root, 'quality/bugbot/corpus.v1.json'));
       const item = corpus.cases.find((item) => item.id === id)!;

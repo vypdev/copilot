@@ -1918,7 +1918,7 @@
       "status": "implemented",
       "scope": "Select one canonical PR, exhaustively analyze its bounded diff partitions, publish stable findings atomically, and apply authorized verified fixes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-26",
+      "lastVerified": "2026-10-27",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md",
@@ -1992,7 +1992,8 @@
         "src/application/usecases/steps/commit/bugbot/commit_and_push_workflow.ts",
         "quality/bugbot/corpus.v1.json",
         "quality/bugbot/reference-predictions.v1.json",
-        "src/tooling/bugbot_benchmark_runner.ts"
+        "src/tooling/bugbot_benchmark_runner.ts",
+        "quality/bugbot/evidence/issue-722.json"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",

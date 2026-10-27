@@ -1,0 +1,547 @@
+{
+  "schemaVersion": 1,
+  "issue": "https://github.com/vypdev/copilot/issues/722",
+  "date": "2026-10-27",
+  "runtime": {
+    "provider": "codex",
+    "model": "gpt-6-luna",
+    "modelProvider": "openai",
+    "cli": "0.164.0-alpha.11.1",
+    "node": "24.20.0",
+    "configuration": "Repository default findings configuration; no model or effort override."
+  },
+  "command": "node build/cli/index.js bugbot-benchmark --corpus <selected-five-lifecycle-cases.json> --predictions <observed-predictions.json>",
+  "sourceBase": "f3601d7270aafae1656be99c6d79e36b03245d6a",
+  "promptSourceSha256": "a83c7e890fc596bc916b49bc2099ac534a1b9ba211e065bf63931457f90f3f59",
+  "scope": "Five controlled synthetic source-evidence cases. Ground-truth expected arrays are excluded by the production benchmark prompt builder.",
+  "limits": [
+    "All runs use the corrected production prompt; there is no old-prompt comparison or claim of a measured before/after improvement.",
+    "Small samples do not guarantee future model accuracy. No consumer GUI or runtime was executed by this benchmark.",
+    "The initial failed score and intermediate fixture revision are retained; reference predictions are separate deterministic scorer fixtures."
+  ],
+  "runs": [
+    {
+      "id": "initial",
+      "notes": "Source metadata was mixed with changed lines. The startup exception was labelled correctness rather than reliability; that category mismatch and a line offset made the strict scorer fail. This result is retained.",
+      "corpus": {
+        "schemaVersion": 1,
+        "cases": [
+          {
+            "id": "kt-compose-owned-loader",
+            "language": "kotlin",
+            "category": "negative",
+            "description": "Review removal of a manual load handler with the supplied pinned framework source and host markup.",
+            "file": "frontend/Main.kt",
+            "startLine": 1,
+            "diff": " // Compose 1.13.0-beta01 official source webMain/androidx/compose/ui/window/ComposeWindow.web.kt:74,80-82,241-246: ComposeViewport clears viewportContainer with replaceChildren() inside onSkikoReady before mounting content.\n // Source: https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui/1.13.0-beta01/ui-1.13.0-beta01-sources.jar\n // index.html: <div id=\"ComposeTarget\"><div id=\"loading\">Loading...</div></div>\n-window.addEventListener(\"load\", () => document.getElementById(\"loading\").remove());\n+fun main() {\n+    ComposeViewport(viewportContainerId = \"ComposeTarget\") { App() }\n+}",
+            "expected": []
+          },
+          {
+            "id": "kt-compose-external-loader",
+            "language": "html",
+            "category": "correctness",
+            "description": "Review the changed host markup. The entry point calls ComposeViewport(\"ComposeTarget\") successfully; the supplied framework contract and the complete loader cleanup code are shown.",
+            "file": "frontend/index.html",
+            "startLine": 1,
+            "diff": "+<!-- Compose 1.13.0-beta01 official source webMain/androidx/compose/ui/window/ComposeWindow.web.kt:74,80-82,241-246: ComposeViewport clears viewportContainer with replaceChildren() inside onSkikoReady before mounting content. -->\n+<div id=\"ComposeTarget\"></div>\n+<div id=\"loading\" style=\"position:fixed;inset:0;z-index:9999;background:white\">Loading...</div>\n-<script>window.addEventListener(\"load\", () => document.getElementById(\"loading\").remove());</script>",
+            "expected": [
+              {
+                "id": "external-loader",
+                "title": "The external loader covers the initialized app",
+                "file": "frontend/index.html",
+                "line": 3,
+                "severity": "medium",
+                "category": "correctness",
+                "codeSnippet": "<div id=\"loading\" style=\"position:fixed;inset:0;z-index:9999;background:white\">Loading...</div>"
+              }
+            ]
+          },
+          {
+            "id": "kt-compose-failed-startup-error",
+            "language": "kotlin",
+            "category": "negative",
+            "description": "Review startup with a failing dependency initializer and the supplied framework contract. The host initially has a Loading... child inside ComposeTarget.",
+            "file": "frontend/Main.kt",
+            "startLine": 1,
+            "diff": "+// Compose 1.13.0-beta01 official source webMain/androidx/compose/ui/window/ComposeWindow.web.kt:74,80-82,241-246: ComposeViewport clears viewportContainer with replaceChildren() inside onSkikoReady before mounting content.\n+fun main() {\n+    try {\n+        initializeDependencies() // may throw before ComposeViewport is called\n+        ComposeViewport(viewportContainerId = \"ComposeTarget\") { App() }\n+    } catch (error: Exception) {\n+        document.getElementById(\"loading\")!!.textContent = \"Unable to start. Reload to retry.\"\n+    }\n+}",
+            "expected": []
+          },
+          {
+            "id": "kt-compose-failed-startup-stuck",
+            "language": "kotlin",
+            "category": "correctness",
+            "description": "Review startup with the supplied framework contract. The host starts with a Loading... child inside ComposeTarget. initializeDependencies throws when required saved settings are malformed; there is no global error handler or other loader update.",
+            "file": "frontend/Main.kt",
+            "startLine": 1,
+            "diff": "+// Compose 1.13.0-beta01 official source webMain/androidx/compose/ui/window/ComposeWindow.web.kt:74,80-82,241-246: ComposeViewport clears viewportContainer with replaceChildren() inside onSkikoReady before mounting content.\n+fun main() {\n+    initializeDependencies()\n+    ComposeViewport(viewportContainerId = \"ComposeTarget\") { App() }\n+}",
+            "expected": [
+              {
+                "id": "startup-loader",
+                "title": "Dependency initialization failure leaves the loading state indefinitely",
+                "file": "frontend/Main.kt",
+                "line": 3,
+                "severity": "medium",
+                "category": "correctness",
+                "symbol": "main",
+                "codeSnippet": "initializeDependencies()"
+              }
+            ]
+          },
+          {
+            "id": "ts-viewport-version-without-cleanup",
+            "language": "typescript",
+            "category": "correctness",
+            "description": "Review a synthetic viewport package integration. The pinned viewport-framework 1.0 source is supplied. Version 2.0 clears the target before mount, but this repository resolves 1.0. The full caller and loader cleanup are shown.",
+            "file": "src/startup.ts",
+            "startLine": 1,
+            "diff": "+// Resolved viewport-framework@1.0 source: export function mount(target, app) { target.appendChild(app); }\n+// index.html: <div id=\"target\"><div id=\"loading\">Loading...</div></div>\n+import { mount } from \"viewport-framework\";\n+mount(document.getElementById(\"target\")!, createApp());\n-document.getElementById(\"loading\")!.remove();",
+            "expected": [
+              {
+                "id": "version-loader",
+                "title": "The pinned viewport implementation preserves the loading element",
+                "file": "src/startup.ts",
+                "line": 4,
+                "severity": "medium",
+                "category": "correctness",
+                "codeSnippet": "mount(document.getElementById(\"target\")!, createApp());"
+              }
+            ]
+          }
+        ]
+      },
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "kt-compose-owned-loader": [],
+          "kt-compose-external-loader": [
+            {
+              "id": "frontend/index.html:3:loading-overlay-persists",
+              "title": "Loading overlay is never removed",
+              "description": "The deleted load handler was the only code that removed the loading overlay. `ComposeViewport(\"ComposeTarget\")` clears and mounts content inside `ComposeTarget`, but the overlay is its sibling, so it remains visible over the page after Compose starts successfully.",
+              "file": "frontend/index.html",
+              "line": 3,
+              "endLine": 3,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The diff adds the `loading` element as a sibling of `ComposeTarget` and removes the handler that called `document.getElementById(\"loading\").remove()`. The supplied Compose contract only clears the viewport container.",
+              "suggestion": "Restore loader removal after successful startup, or place the loader inside the Compose viewport container if its clearing behavior should remove it.",
+              "codeSnippet": "<div id=\"loading\" style=\"position:fixed;inset:0;z-index:9999;background:white\">Loading...</div>",
+              "fingerprint": "fp-64f9583d",
+              "semanticFingerprint": "sf-3bb7985a"
+            }
+          ],
+          "kt-compose-failed-startup-error": [],
+          "kt-compose-failed-startup-stuck": [
+            {
+              "id": "frontend/Main.kt:2:startup-throws-before-compose",
+              "title": "Startup failure leaves the loading screen in place",
+              "description": "If `initializeDependencies()` throws for malformed saved settings, execution never reaches `ComposeViewport`. Its documented clearing behavior therefore does not run, so the existing `Loading...` child remains in `ComposeTarget` with no error state or global handler to update it.",
+              "file": "frontend/Main.kt",
+              "line": 2,
+              "endLine": 2,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "reliability",
+              "evidence": "The supplied startup code calls `initializeDependencies()` before `ComposeViewport`, and the scenario states that initialization throws and no other loader update or global error handler exists.",
+              "suggestion": "Catch initialization failures and render an error state or otherwise replace the loader before returning from startup.",
+              "symbol": "main",
+              "codeSnippet": "initializeDependencies()",
+              "fingerprint": "fp-ff552416",
+              "semanticFingerprint": "sf-b1f43399"
+            }
+          ],
+          "ts-viewport-version-without-cleanup": [
+            {
+              "id": "src/startup.ts:4:loading-indicator-not-removed",
+              "title": "Loading indicator remains after mount",
+              "description": "The resolved `viewport-framework@1.0` mount implementation appends the app without clearing the target. Since the prior removal of `#loading` was deleted, the loading indicator remains visible alongside the mounted app.",
+              "file": "src/startup.ts",
+              "line": 4,
+              "endLine": 4,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The supplied framework source is `target.appendChild(app)`, and the diff removes `document.getElementById(\"loading\")!.remove()` after the mount call.",
+              "suggestion": "Restore removal of the loading element after a successful mount.",
+              "codeSnippet": "mount(document.getElementById(\"target\")!, createApp());",
+              "suggestedCode": "mount(document.getElementById(\"target\")!, createApp());\ndocument.getElementById(\"loading\")!.remove();",
+              "fingerprint": "fp-17778b8d",
+              "semanticFingerprint": "sf-ce2481d5"
+            }
+          ]
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 3,
+          "actual": 3,
+          "matched": 2,
+          "precision": 0.6666666666666666,
+          "recall": 0.6666666666666666,
+          "locationAccuracy": 1,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 0.6666666666666666,
+          "falsePositives": 1,
+          "falseNegatives": 1,
+          "meanLineDistance": 0,
+          "confidenceBrierScore": 0.3267333333333333
+        },
+        "violations": [
+          "precision 0.667 is below 0.900",
+          "recall 0.667 is below 0.850",
+          "f1 0.667 is below 0.870",
+          "confidenceBrierScore 0.327 exceeds 0.160"
+        ],
+        "missingCases": []
+      }
+    },
+    {
+      "id": "revised",
+      "notes": "Framework metadata moved into scenario context, unified diff line mapping added, and startup exceptions classified as reliability. Two hunk old-line counts were subsequently corrected without changing code or expected findings.",
+      "corpus": {
+        "schemaVersion": 1,
+        "cases": [
+          {
+            "id": "kt-compose-owned-loader",
+            "language": "kotlin",
+            "category": "negative",
+            "description": "Review removal of the manual host-page load handler. Main.kt calls ComposeViewport(viewportContainerId = \"ComposeTarget\") { App() } successfully. Compose 1.13.0-beta01 official source webMain/androidx/compose/ui/window/ComposeWindow.web.kt:74,80-82,241-246: ComposeViewport clears viewportContainer with replaceChildren() inside onSkikoReady before mounting content. Source: https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui/1.13.0-beta01/ui-1.13.0-beta01-sources.jar",
+            "file": "frontend/index.html",
+            "startLine": 1,
+            "diff": "@@ -1,4 +1,3 @@\n <div id=\"ComposeTarget\">\n   <div id=\"loading\">Loading...</div>\n </div>\n-<script>window.addEventListener(\"load\", () => document.getElementById(\"loading\").remove());</script>",
+            "expected": []
+          },
+          {
+            "id": "kt-compose-external-loader",
+            "language": "html",
+            "category": "correctness",
+            "description": "Review the changed host markup. The entry point calls ComposeViewport(\"ComposeTarget\") successfully; the supplied framework contract and the complete loader cleanup code are shown. Compose 1.13.0-beta01 official source webMain/androidx/compose/ui/window/ComposeWindow.web.kt:74,80-82,241-246: ComposeViewport clears viewportContainer with replaceChildren() inside onSkikoReady before mounting content.",
+            "file": "frontend/index.html",
+            "startLine": 1,
+            "diff": "@@ -1,3 +1,2 @@\n+<div id=\"ComposeTarget\"></div>\n+<div id=\"loading\" style=\"position:fixed;inset:0;z-index:9999;background:white\">Loading...</div>\n-<script>window.addEventListener(\"load\", () => document.getElementById(\"loading\").remove());</script>",
+            "expected": [
+              {
+                "id": "external-loader",
+                "title": "The external loader covers the initialized app",
+                "file": "frontend/index.html",
+                "line": 2,
+                "severity": "medium",
+                "category": "correctness",
+                "codeSnippet": "<div id=\"loading\" style=\"position:fixed;inset:0;z-index:9999;background:white\">Loading...</div>"
+              }
+            ]
+          },
+          {
+            "id": "kt-compose-failed-startup-error",
+            "language": "kotlin",
+            "category": "negative",
+            "description": "Review startup with a failing dependency initializer and the supplied framework contract. The host initially has a Loading... child inside ComposeTarget. Compose 1.13.0-beta01 official source webMain/androidx/compose/ui/window/ComposeWindow.web.kt:74,80-82,241-246: ComposeViewport clears viewportContainer with replaceChildren() inside onSkikoReady before mounting content.",
+            "file": "frontend/Main.kt",
+            "startLine": 1,
+            "diff": "@@ -0,0 +1,8 @@\n+fun main() {\n+    try {\n+        initializeDependencies() // may throw before ComposeViewport is called\n+        ComposeViewport(viewportContainerId = \"ComposeTarget\") { App() }\n+    } catch (error: Exception) {\n+        document.getElementById(\"loading\")!!.textContent = \"Unable to start. Reload to retry.\"\n+    }\n+}",
+            "expected": []
+          },
+          {
+            "id": "kt-compose-failed-startup-stuck",
+            "language": "kotlin",
+            "category": "correctness",
+            "description": "Review startup with the supplied framework contract. The host starts with a Loading... child inside ComposeTarget. initializeDependencies throws when required saved settings are malformed; there is no global error handler or other loader update. Compose 1.13.0-beta01 official source webMain/androidx/compose/ui/window/ComposeWindow.web.kt:74,80-82,241-246: ComposeViewport clears viewportContainer with replaceChildren() inside onSkikoReady before mounting content.",
+            "file": "frontend/Main.kt",
+            "startLine": 1,
+            "diff": "@@ -0,0 +1,4 @@\n+fun main() {\n+    initializeDependencies()\n+    ComposeViewport(viewportContainerId = \"ComposeTarget\") { App() }\n+}",
+            "expected": [
+              {
+                "id": "startup-loader",
+                "title": "Dependency initialization failure leaves the loading state indefinitely",
+                "file": "frontend/Main.kt",
+                "line": 2,
+                "severity": "medium",
+                "category": "reliability",
+                "symbol": "main",
+                "codeSnippet": "initializeDependencies()"
+              }
+            ]
+          },
+          {
+            "id": "ts-viewport-version-without-cleanup",
+            "language": "typescript",
+            "category": "correctness",
+            "description": "Review a synthetic viewport package integration. The pinned viewport-framework 1.0 source is supplied. Version 2.0 clears the target before mount, but this repository resolves 1.0. The full caller and loader cleanup are shown. Resolved viewport-framework@1.0 source: export function mount(target, app) { target.appendChild(app); } index.html: <div id=\"target\"><div id=\"loading\">Loading...</div></div>",
+            "file": "src/startup.ts",
+            "startLine": 1,
+            "diff": "@@ -1,3 +1,2 @@\n+import { mount } from \"viewport-framework\";\n+mount(document.getElementById(\"target\")!, createApp());\n-document.getElementById(\"loading\")!.remove();",
+            "expected": [
+              {
+                "id": "version-loader",
+                "title": "The pinned viewport implementation preserves the loading element",
+                "file": "src/startup.ts",
+                "line": 2,
+                "severity": "medium",
+                "category": "correctness",
+                "codeSnippet": "mount(document.getElementById(\"target\")!, createApp());"
+              }
+            ]
+          }
+        ]
+      },
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "kt-compose-owned-loader": [],
+          "kt-compose-external-loader": [
+            {
+              "id": "frontend/index.html:2:loading-overlay-persists",
+              "title": "Loading overlay remains above the viewport",
+              "description": "The `loading` element is a sibling of `ComposeTarget`, and the removed `load` listener was its only cleanup. ComposeViewport clears only its viewport container, so successful startup leaves this fixed, high-z-index overlay covering the rendered content.",
+              "file": "frontend/index.html",
+              "line": 2,
+              "endLine": 2,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The diff adds the fixed overlay on line 2 and removes the `load` listener that removed it. The supplied ComposeViewport contract clears `ComposeTarget`, not this sibling.",
+              "suggestion": "Remove the overlay after ComposeViewport has initialized successfully, or place it inside the container that ComposeViewport clears.",
+              "symbol": "loading",
+              "codeSnippet": "<div id=\"loading\" style=\"position:fixed;inset:0;z-index:9999;background:white\">Loading...</div>",
+              "fingerprint": "fp-3286c8a8",
+              "semanticFingerprint": "sf-3bb7985a"
+            }
+          ],
+          "kt-compose-failed-startup-error": [],
+          "kt-compose-failed-startup-stuck": [
+            {
+              "id": "frontend/Main.kt:2:startup-loader-stuck",
+              "title": "Dependency initialization failure leaves the loading screen stuck",
+              "description": "If `initializeDependencies()` throws because saved settings are malformed, execution stops before `ComposeViewport` starts. The host's existing `Loading...` child is therefore never replaced, and there is no error handler or other loader update to show the failure.",
+              "file": "frontend/Main.kt",
+              "line": 2,
+              "endLine": 2,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "reliability",
+              "evidence": "`initializeDependencies()` runs before `ComposeViewport` on line 3. The supplied startup contract says initialization can throw, and Compose clears the viewport container only after startup reaches `onSkikoReady`, which this failure prevents.",
+              "suggestion": "Handle initialization failures and update the loading UI to display an error before returning or rethrowing.",
+              "symbol": "main",
+              "codeSnippet": "initializeDependencies()",
+              "suggestedCode": "try {\n    initializeDependencies()\n} catch (error: Throwable) {\n    showStartupError(error)\n    return\n}",
+              "fingerprint": "fp-bbd1da9c",
+              "semanticFingerprint": "sf-b1f43399"
+            }
+          ],
+          "ts-viewport-version-without-cleanup": [
+            {
+              "id": "src/startup.ts:2:loading-overlay-remains",
+              "title": "Loading overlay is never removed",
+              "description": "The change removes the explicit `loading` element cleanup and mounts the app with `viewport-framework@1.0`, whose `mount` implementation only appends the app to the target. Because the target already contains the loading element, it remains visible after startup.",
+              "file": "src/startup.ts",
+              "line": 2,
+              "endLine": 2,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The supplied 1.0 source is `export function mount(target, app) { target.appendChild(app); }`, and the diff deletes `document.getElementById(\"loading\")!.remove();`.",
+              "suggestion": "Remove the loading element after a successful mount, or clear it as part of startup.",
+              "codeSnippet": "mount(document.getElementById(\"target\")!, createApp());",
+              "fingerprint": "fp-962f4330",
+              "semanticFingerprint": "sf-ce2481d5"
+            }
+          ]
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 3,
+          "actual": 3,
+          "matched": 3,
+          "precision": 1,
+          "recall": 1,
+          "locationAccuracy": 1,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "meanLineDistance": 0,
+          "confidenceBrierScore": 0.000033333333333333396
+        },
+        "violations": [],
+        "missingCases": []
+      }
+    },
+    {
+      "id": "final",
+      "notes": "Exact final checked-in lifecycle fixtures, including corrected hunk counts.",
+      "corpus": {
+        "schemaVersion": 1,
+        "cases": [
+          {
+            "id": "kt-compose-owned-loader",
+            "language": "kotlin",
+            "category": "negative",
+            "description": "Review removal of the manual host-page load handler. Main.kt calls ComposeViewport(viewportContainerId = \"ComposeTarget\") { App() } successfully. Compose 1.13.0-beta01 official source webMain/androidx/compose/ui/window/ComposeWindow.web.kt:74,80-82,241-246: ComposeViewport clears viewportContainer with replaceChildren() inside onSkikoReady before mounting content. Source: https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui/1.13.0-beta01/ui-1.13.0-beta01-sources.jar",
+            "file": "frontend/index.html",
+            "startLine": 1,
+            "diff": "@@ -1,4 +1,3 @@\n <div id=\"ComposeTarget\">\n   <div id=\"loading\">Loading...</div>\n </div>\n-<script>window.addEventListener(\"load\", () => document.getElementById(\"loading\").remove());</script>",
+            "expected": []
+          },
+          {
+            "id": "kt-compose-external-loader",
+            "language": "html",
+            "category": "correctness",
+            "description": "Review the changed host markup. The entry point calls ComposeViewport(\"ComposeTarget\") successfully; the supplied framework contract and the complete loader cleanup code are shown. Compose 1.13.0-beta01 official source webMain/androidx/compose/ui/window/ComposeWindow.web.kt:74,80-82,241-246: ComposeViewport clears viewportContainer with replaceChildren() inside onSkikoReady before mounting content.",
+            "file": "frontend/index.html",
+            "startLine": 1,
+            "diff": "@@ -1 +1,2 @@\n+<div id=\"ComposeTarget\"></div>\n+<div id=\"loading\" style=\"position:fixed;inset:0;z-index:9999;background:white\">Loading...</div>\n-<script>window.addEventListener(\"load\", () => document.getElementById(\"loading\").remove());</script>",
+            "expected": [
+              {
+                "id": "external-loader",
+                "title": "The external loader covers the initialized app",
+                "file": "frontend/index.html",
+                "line": 2,
+                "severity": "medium",
+                "category": "correctness",
+                "codeSnippet": "<div id=\"loading\" style=\"position:fixed;inset:0;z-index:9999;background:white\">Loading...</div>"
+              }
+            ]
+          },
+          {
+            "id": "kt-compose-failed-startup-error",
+            "language": "kotlin",
+            "category": "negative",
+            "description": "Review startup with a failing dependency initializer and the supplied framework contract. The host initially has a Loading... child inside ComposeTarget. Compose 1.13.0-beta01 official source webMain/androidx/compose/ui/window/ComposeWindow.web.kt:74,80-82,241-246: ComposeViewport clears viewportContainer with replaceChildren() inside onSkikoReady before mounting content.",
+            "file": "frontend/Main.kt",
+            "startLine": 1,
+            "diff": "@@ -0,0 +1,8 @@\n+fun main() {\n+    try {\n+        initializeDependencies() // may throw before ComposeViewport is called\n+        ComposeViewport(viewportContainerId = \"ComposeTarget\") { App() }\n+    } catch (error: Exception) {\n+        document.getElementById(\"loading\")!!.textContent = \"Unable to start. Reload to retry.\"\n+    }\n+}",
+            "expected": []
+          },
+          {
+            "id": "kt-compose-failed-startup-stuck",
+            "language": "kotlin",
+            "category": "correctness",
+            "description": "Review startup with the supplied framework contract. The host starts with a Loading... child inside ComposeTarget. initializeDependencies throws when required saved settings are malformed; there is no global error handler or other loader update. Compose 1.13.0-beta01 official source webMain/androidx/compose/ui/window/ComposeWindow.web.kt:74,80-82,241-246: ComposeViewport clears viewportContainer with replaceChildren() inside onSkikoReady before mounting content.",
+            "file": "frontend/Main.kt",
+            "startLine": 1,
+            "diff": "@@ -0,0 +1,4 @@\n+fun main() {\n+    initializeDependencies()\n+    ComposeViewport(viewportContainerId = \"ComposeTarget\") { App() }\n+}",
+            "expected": [
+              {
+                "id": "startup-loader",
+                "title": "Dependency initialization failure leaves the loading state indefinitely",
+                "file": "frontend/Main.kt",
+                "line": 2,
+                "severity": "medium",
+                "category": "reliability",
+                "symbol": "main",
+                "codeSnippet": "initializeDependencies()"
+              }
+            ]
+          },
+          {
+            "id": "ts-viewport-version-without-cleanup",
+            "language": "typescript",
+            "category": "correctness",
+            "description": "Review a synthetic viewport package integration. The pinned viewport-framework 1.0 source is supplied. Version 2.0 clears the target before mount, but this repository resolves 1.0. The full caller and loader cleanup are shown. Resolved viewport-framework@1.0 source: export function mount(target, app) { target.appendChild(app); } index.html: <div id=\"target\"><div id=\"loading\">Loading...</div></div>",
+            "file": "src/startup.ts",
+            "startLine": 1,
+            "diff": "@@ -1 +1,2 @@\n+import { mount } from \"viewport-framework\";\n+mount(document.getElementById(\"target\")!, createApp());\n-document.getElementById(\"loading\")!.remove();",
+            "expected": [
+              {
+                "id": "version-loader",
+                "title": "The pinned viewport implementation preserves the loading element",
+                "file": "src/startup.ts",
+                "line": 2,
+                "severity": "medium",
+                "category": "correctness",
+                "codeSnippet": "mount(document.getElementById(\"target\")!, createApp());"
+              }
+            ]
+          }
+        ]
+      },
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "kt-compose-owned-loader": [],
+          "kt-compose-external-loader": [
+            {
+              "id": "frontend/index.html:2:loader-never-removed",
+              "title": "Loading overlay is never removed",
+              "description": "The changed markup adds a fixed, full-screen loading overlay, but removes the prior `load` listener that deleted it. `ComposeViewport(\"ComposeTarget\")` clears only the `ComposeTarget` container, so this sibling overlay remains above the mounted content indefinitely.",
+              "file": "frontend/index.html",
+              "line": 2,
+              "endLine": 2,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The diff adds `<div id=\"loading\" style=\"position:fixed;inset:0;z-index:9999;background:white\">Loading...</div>` and removes the script that called `document.getElementById(\"loading\").remove()` on window load. The supplied Compose contract clears only the viewport container.",
+              "suggestion": "Restore cleanup for the loading element after Compose has initialized successfully.",
+              "symbol": "ComposeViewport(\"ComposeTarget\")",
+              "codeSnippet": "<div id=\"loading\" style=\"position:fixed;inset:0;z-index:9999;background:white\">Loading...</div>",
+              "fingerprint": "fp-64f9583d",
+              "semanticFingerprint": "sf-3bb7985a"
+            }
+          ],
+          "kt-compose-failed-startup-error": [],
+          "kt-compose-failed-startup-stuck": [
+            {
+              "id": "frontend/Main.kt:2:loader-stuck-on-initialization-failure",
+              "title": "Initialization failure leaves the loading screen in place",
+              "description": "If `initializeDependencies()` throws for malformed saved settings, execution stops before `ComposeViewport` is called. Compose therefore never reaches its viewport-clearing step, and there is no error handler or other loader update, so the host remains stuck displaying `Loading...`.",
+              "file": "frontend/Main.kt",
+              "line": 2,
+              "endLine": 2,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "reliability",
+              "evidence": "The initialization call precedes `ComposeViewport` on line 3. Under the supplied scenario, initialization throws, and the stated Compose 1.13.0-beta01 contract clears the container only during viewport startup.",
+              "suggestion": "Handle initialization failure and update the host with an error state, or ensure the loading UI is cleared when initialization fails.",
+              "symbol": "main",
+              "codeSnippet": "initializeDependencies()",
+              "fingerprint": "fp-93ce04bd",
+              "semanticFingerprint": "sf-b1f43399"
+            }
+          ],
+          "ts-viewport-version-without-cleanup": [
+            {
+              "id": "src/startup.ts:2:loading-overlay-remains",
+              "title": "Loading indicator remains after mount",
+              "description": "The resolved `viewport-framework@1.0` implementation appends the app to the target without clearing its existing children. Since this change removes the previous `loading` element removal, the loading indicator remains visible alongside the mounted app.",
+              "file": "src/startup.ts",
+              "line": 2,
+              "endLine": 2,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The supplied target contains `#loading`, and the resolved v1 `mount` implementation is `target.appendChild(app)`. The diff removes `document.getElementById(\"loading\")!.remove();`.",
+              "suggestion": "Remove the loading element after a successful mount.",
+              "codeSnippet": "mount(document.getElementById(\"target\")!, createApp());",
+              "suggestedCode": "mount(document.getElementById(\"target\")!, createApp());\ndocument.getElementById(\"loading\")!.remove();",
+              "fingerprint": "fp-17778b8d",
+              "semanticFingerprint": "sf-ce2481d5"
+            }
+          ]
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 3,
+          "actual": 3,
+          "matched": 3,
+          "precision": 1,
+          "recall": 1,
+          "locationAccuracy": 1,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "meanLineDistance": 0,
+          "confidenceBrierScore": 0.000033333333333333396
+        },
+        "violations": [],
+        "missingCases": []
+      }
+    }
+  ]
+}
