@@ -291,3 +291,10 @@ When generated bundles conflict, the fixer must regenerate the admitted bundles
 before returning its resolution. The Action stages that result and verifies it
 again. A rebuild that changes the staged resolution during verification stops
 the synchronization with `unstaged-changes`; no synchronization commit is pushed.
+
+
+### Candidate dependencies and blocked verification
+
+An installation on the default checkout does not prepare a different temporary merge. Copilot's source workflow installs the frozen current workspace at each verification boundary, including after eligible conflict resolution. Consumer projects keep their explicit same-job provisioning or reviewed optional repository setup.
+
+If synchronization stops during verification, its existing result card identifies the phase, safe command label/ordinal, closed cause and original head. `restored` confirms the original local head after abort; `unverified` requires operator inspection before retrying. No sync commit/push is attempted after verifier failure. Repair the reported dependency graph, same-job setup/runtime or verifier, then rerun `/copilot sync-branch`; repeated blind retries do not repair missing workspace packages. See [verification and source readiness](../security-operations/operations/verification).

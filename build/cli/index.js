@@ -39736,6 +39736,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Retry SDD preparation with a proportional appendix or an approved companion specification.',
         retainedState: 'Existing answers and published SDDs were preserved; no draft was published.',
     }),
+    'branch-sync-verification-failed': Object.freeze({
+        impact: 'Branch synchronization stopped at verification command {commandIndex} ({command}): stage {stage}, reason {reason}.',
+        action: 'Inspect the failed stage in the linked workflow logs. For dependencies, provision the source Node/pnpm toolchain and repair the frozen candidate workspace graph; for setup/runtime, repair the same-job prerequisites; for command failures, correct the configured verifier. Then retry {syncCommand}. Blind retries do not repair a graph mismatch.',
+        retainedState: 'No synchronization commit or push was attempted. Original head: {childSha}. Local rollback: {restoration}; restored means the original head was verified, unverified requires operator inspection before retrying.',
+    }),
     'branch-sync-resolution-invalid': Object.freeze({
         impact: 'Branch synchronization stopped because workspace validation rejected the resolution ({validationCode}).',
         action: 'Inspect this validation code in the workflow logs and correct the resolution before retrying {command}.',
@@ -39859,6 +39864,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Reintenta la preparación del SDD con un apéndice proporcional o una especificación complementaria aprobada.',
         retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',
     }),
+    'branch-sync-verification-failed': Object.freeze({
+        impact: 'La sincronización se detuvo en el comando de verificación {commandIndex} ({command}): fase {stage}, motivo {reason}.',
+        action: 'Revisa la fase fallida en los logs del workflow enlazado. Para dependencias, prepara Node/pnpm del repositorio fuente y corrige el grafo congelado del candidato; para setup/runtime, corrige los requisitos del mismo job; para fallos del comando, corrige el verificador configurado. Después reintenta {syncCommand}. Repetir sin cambios no corrige un grafo incompatible.',
+        retainedState: 'No se intentó crear ni subir un commit de sincronización. Head original: {childSha}. Rollback local: {restoration}; restored confirma el head original, unverified requiere inspección del operador antes de reintentar.',
+    }),
     'branch-sync-resolution-invalid': Object.freeze({
         impact: 'La sincronización se detuvo porque la validación del repositorio rechazó la resolución ({validationCode}).',
         action: 'Revisa este código de validación en los logs del workflow y corrige la resolución antes de reintentar {command}.',
@@ -39974,9 +39984,11 @@ function buildApplicationErrorPresentation(error, message = application_error_me
         : `error.${error.code}`;
     const variables = error.recovery && (0, copilot_command_validation_1.isCopilotCommandValidationReason)(error.recovery.id)
         ? (0, comment_command_validation_presentation_policy_1.commandValidationPresentationVariables)(error.recovery.id, error.recovery.variables.command)
-        : error.recovery?.id.startsWith('stored-configuration-')
-            ? { ...error.recovery.variables, recoveryGuide: STORED_CONFIGURATION_RECOVERY_URL }
-            : error.recovery?.variables;
+        : error.recovery?.id === 'branch-sync-verification-failed'
+            ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch' }
+            : error.recovery?.id.startsWith('stored-configuration-')
+                ? { ...error.recovery.variables, recoveryGuide: STORED_CONFIGURATION_RECOVERY_URL }
+                : error.recovery?.variables;
     return {
         impact: message(`${descriptor}.impact`, variables),
         code: error.code,
@@ -54134,6 +54146,24 @@ function setupVerificationActionSummary(review) {
 
 /***/ }),
 
+/***/ 5306:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SourceDependencyError = void 0;
+class SourceDependencyError extends Error {
+    constructor(reason) {
+        super(`Candidate dependency preparation blocked (${reason}). Review the source verification environment and frozen workspace graph before retrying.`);
+        this.reason = reason;
+    }
+}
+exports.SourceDependencyError = SourceDependencyError;
+
+
+/***/ }),
+
 /***/ 3449:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -58560,7 +58590,7 @@ function failedBranchSyncResult(reason, cause, recovery) {
         executed: true,
         steps: [reason],
         errors: [cause === undefined
-                ? new application_error_1.ApplicationError('workflow.failed', reason, { recovery })
+                ? new application_error_1.ApplicationError('workflow.failed', reason, { recovery, ...(recovery?.id === 'branch-sync-verification-failed' ? { retryable: false } : {}) })
                 : (0, application_error_1.toApplicationError)(cause, 'workflow.failed', reason, { recovery })],
     });
 }
@@ -58623,8 +58653,16 @@ class SyncBranchUseCase {
         if (conflictResolution.failure)
             return [await this.abortFailure(conflictResolution.failure.reason, conflictResolution.failure.recovery)];
         const verification = await this.verifyPreparedMerge(context, preparation);
-        if (verification.failure)
+        if (verification.failure) {
+            if (verification.diagnostic) {
+                const restored = await this.safeAbort();
+                const childSha = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u.test(preparation.childSha) ? preparation.childSha : 'unavailable';
+                return [(0, branch_sync_execution_policy_1.failedBranchSyncResult)(verification.safeError ?? 'Branch synchronization verification failed; no synchronization commit or push was attempted.', undefined, {
+                        id: 'branch-sync-verification-failed', variables: { ...verification.diagnostic, childSha, restoration: restored ? 'restored' : 'unverified' },
+                    })];
+            }
             return [await this.abortFailure(verification.failure, verification.recovery)];
+        }
         const author = await this.authenticatedUser.getUserDetails();
         const remoteValidation = await this.workspace.assertRemoteHeadsUnchanged(parentBranch, preparation.parentSha, target.workingBranch, preparation.childSha);
         if (!remoteValidation.valid) {
@@ -58671,6 +58709,8 @@ class SyncBranchUseCase {
             return {
                 commandCount: commands.length,
                 failure: verification.error ?? `Verification failed: ${verification.failedCommand ?? "unknown command"}.`,
+                diagnostic: verification.failure,
+                safeError: verification.safeError,
             };
         }
         const conflictPaths = preparation.kind === "conflicted" ? preparation.conflictPaths : [];
@@ -58699,9 +58739,11 @@ class SyncBranchUseCase {
     async safeAbort() {
         try {
             await this.workspace.abort();
+            return true;
         }
         catch {
             (0, logging_ports_1.logError)("Unable to abort the in-progress branch merge cleanly.");
+            return false;
         }
     }
 }
@@ -69536,18 +69578,22 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const verify_command_policy_1 = __nccwpck_require__(96031);
 const verification_runtime_policy_1 = __nccwpck_require__(89347);
 const verification_setup_policy_1 = __nccwpck_require__(65326);
+const source_verification_dependency_policy_1 = __nccwpck_require__(5306);
+const verification_failure_1 = __nccwpck_require__(60177);
 async function runVerifyCommands(commands, execute) {
-    for (const command of commands) {
+    for (const [index, command] of commands.entries()) {
         const result = await executeVerifyCommand(command, execute);
-        if (!result.success)
-            return result;
+        if (!result.success) {
+            const label = verification_failure_1.VERIFICATION_COMMAND_LABELS.find(value => value === command) ?? 'configured-command';
+            return { ...result, failure: { stage: 'command', reason: 'command-failed', ...result.failure, command: label, commandIndex: index + 1 } };
+        }
     }
     return { success: true };
 }
 async function executeVerifyCommand(command, execute) {
     const parsed = (0, verify_command_policy_1.parseVerifyCommand)(command);
     if (!parsed)
-        return invalidCommand(command);
+        return { ...invalidCommand(command), failure: diagnostic('command', 'command-invalid') };
     try {
         const exitCode = await execute(parsed.program, parsed.args);
         return exitCode === 0
@@ -69555,13 +69601,19 @@ async function executeVerifyCommand(command, execute) {
             : { success: false, failedCommand: formatCommandForDiagnostics(parsed) };
     }
     catch (error) {
+        if (error instanceof source_verification_dependency_policy_1.SourceDependencyError)
+            return { success: false, safeError: error.message, failure: diagnostic('dependencies', error.reason) };
         if (error instanceof verification_runtime_policy_1.VerificationPrerequisiteError || error instanceof verification_setup_policy_1.VerificationSetupError) {
-            return { success: false, failedCommand: formatCommandForDiagnostics(parsed),
+            return { success: false, safeError: error.message, failedCommand: formatCommandForDiagnostics(parsed),
+                failure: error instanceof verification_runtime_policy_1.VerificationPrerequisiteError ? diagnostic('runtime', 'runtime-blocked') : diagnostic('repository-setup', 'setup-blocked'),
                 error: `${error.message} Verification command: ${formatCommandForDiagnostics(parsed)}.` };
         }
         (0, logging_ports_1.logError)('Verify command failed.');
         return { success: false, failedCommand: formatCommandForDiagnostics(parsed) };
     }
+}
+function diagnostic(stage, reason) {
+    return { stage, reason, command: 'configured-command', commandIndex: 1 };
 }
 function invalidCommand(command) {
     const error = 'Invalid verify command (use no shell operators; quotes allowed).';
@@ -79710,6 +79762,7 @@ const copilot_command_validation_1 = __nccwpck_require__(44237);
 const closed_issue_reconciliation_1 = __nccwpck_require__(21565);
 const approval_evidence_diagnostic_1 = __nccwpck_require__(98205);
 const branch_sync_validation_1 = __nccwpck_require__(90981);
+const verification_failure_1 = __nccwpck_require__(60177);
 exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     ...copilot_command_validation_1.COPILOT_COMMAND_VALIDATION_REASONS,
     'pull-request-link-restored',
@@ -79722,6 +79775,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-agent-disabled',
     'branch-sync-fixer-unavailable',
     'branch-sync-resolution-invalid',
+    'branch-sync-verification-failed',
     'sdd-draft-size-exceeded',
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
@@ -79955,6 +80009,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'branch-sync-agent-disabled': Object.freeze(['command']),
     'branch-sync-fixer-unavailable': Object.freeze(['command']),
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
+    'branch-sync-verification-failed': Object.freeze(['stage', 'reason', 'command', 'commandIndex', 'childSha', 'restoration']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
@@ -80013,6 +80068,9 @@ function normalizeApplicationErrorRecovery(recovery) {
     if (recovery.id === 'branch-sync-resolution-invalid'
         && !branch_sync_validation_1.BRANCH_SYNC_VALIDATION_CODES.some(code => code === variables.validationCode)) {
         throw new TypeError('Application error recovery synchronization validation code is invalid.');
+    }
+    if (recovery.id === 'branch-sync-verification-failed' && !(0, verification_failure_1.isBranchSyncVerificationFailure)(variables)) {
+        throw new TypeError('Branch synchronization verification diagnostic is invalid.');
     }
     if (recovery.id === 'closed-issue-reconciliation-failed'
         && (!closed_issue_reconciliation_1.CLOSED_ISSUE_RESULTS.some(value => value === variables.resultId)
@@ -95249,6 +95307,30 @@ function featureEnabled(feature, features) {
 
 /***/ }),
 
+/***/ 60177:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VERIFICATION_COMMAND_LABELS = exports.VERIFICATION_FAILURE_REASONS = exports.VERIFICATION_FAILURE_STAGES = void 0;
+exports.isBranchSyncVerificationFailure = isBranchSyncVerificationFailure;
+/** Closed operational facts; never populate these with subprocess output or arbitrary argv. */
+exports.VERIFICATION_FAILURE_STAGES = ['dependencies', 'repository-setup', 'runtime', 'command'];
+exports.VERIFICATION_FAILURE_REASONS = ['tool-unavailable', 'unsupported-graph', 'install-failed', 'candidate-changed', 'setup-blocked', 'runtime-blocked', 'command-failed', 'command-invalid'];
+exports.VERIFICATION_COMMAND_LABELS = ['configured-command', 'pnpm run build', 'pnpm run typecheck', 'pnpm run test:coverage', 'pnpm run lint', 'pnpm run validate:documentation', 'pnpm run validate:specifications'];
+function isBranchSyncVerificationFailure(value) {
+    return exports.VERIFICATION_FAILURE_STAGES.some(item => item === value.stage)
+        && exports.VERIFICATION_FAILURE_REASONS.some(item => item === value.reason)
+        && exports.VERIFICATION_COMMAND_LABELS.some(item => item === value.command)
+        && typeof value.commandIndex === 'number' && Number.isSafeInteger(value.commandIndex) && value.commandIndex >= 1 && value.commandIndex <= 20
+        && typeof value.childSha === 'string' && /^(?:[0-9a-f]{40}|[0-9a-f]{64}|unavailable)$/u.test(value.childSha)
+        && (value.restoration === 'restored' || value.restoration === 'unverified');
+}
+
+
+/***/ }),
+
 /***/ 87997:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -96428,6 +96510,9 @@ class BranchSyncWorkspaceAdapter {
                     || await this.read("git", ["rev-parse", "MERGE_HEAD"]) !== snapshot.parentSha)
                     throw error;
                 await this.git.execute("git", ["reset", "--hard", snapshot.childSha]);
+            }
+            if (this.snapshot && await this.read('git', ['rev-parse', 'HEAD']) !== this.snapshot.childSha) {
+                throw new Error('Original branch head restoration could not be verified.');
             }
         }
         finally {
@@ -99124,6 +99209,7 @@ const git_hook_isolation_1 = __nccwpck_require__(39764);
 const verification_runtime_preflight_1 = __nccwpck_require__(23100);
 const verification_setup_ports_1 = __nccwpck_require__(26509);
 const verification_setup_runner_1 = __nccwpck_require__(11709);
+const source_verification_dependencies_1 = __nccwpck_require__(94558);
 class GitCommitAdapter {
     constructor(executeCommand = (program, args, options) => options
         ? exec.exec(options.resolveFromEnvironment && options.env ? (0, verification_executable_1.verificationExecutable)(program, options.env) : program, args, {
@@ -99133,10 +99219,11 @@ class GitCommitAdapter {
             ...(options.stdout ? { listeners: { stdout: options.stdout } } : {}),
             ...(options.env ? { env: options.env } : {}),
         })
-        : exec.exec(program, args), checkPrerequisites = verification_runtime_preflight_1.assertVerificationRuntimePrerequisites, verificationSetup = verification_setup_ports_1.DISABLED_VERIFICATION_SETUP) {
+        : exec.exec(program, args), checkPrerequisites = verification_runtime_preflight_1.assertVerificationRuntimePrerequisites, verificationSetup = verification_setup_ports_1.DISABLED_VERIFICATION_SETUP, prepareSourceDependencies = (0, source_verification_dependencies_1.captureSourceDependencyPreparation)()) {
         this.executeCommand = executeCommand;
         this.checkPrerequisites = checkPrerequisites;
         this.verificationSetup = verificationSetup;
+        this.prepareSourceDependencies = prepareSourceDependencies;
     }
     async execute(program, args, options) {
         if (options?.verifyRuntimePrerequisites && !options.untrusted)
@@ -99150,6 +99237,7 @@ class GitCommitAdapter {
             if (options.verifyRuntimePrerequisites) {
                 await (0, verification_setup_runner_1.prepareRepositoryVerification)(this.verificationSetup, runtime.environment);
                 this.checkPrerequisites(runtime.environment);
+                await this.prepareSourceDependencies(runtime.environment);
             }
             return await this.executeCommand(program, args, {
                 ...(options.stdout ? { stdout: options.stdout } : {}),
@@ -105008,6 +105096,153 @@ class SetupReconcileWorkspaceAdapter {
     }
 }
 exports.SetupReconcileWorkspaceAdapter = SetupReconcileWorkspaceAdapter;
+
+
+/***/ }),
+
+/***/ 94558:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.captureSourceDependencyPreparation = captureSourceDependencyPreparation;
+const node_child_process_1 = __nccwpck_require__(17718);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const js_yaml_1 = __nccwpck_require__(783);
+const source_verification_dependency_policy_1 = __nccwpck_require__(5306);
+const verification_executable_1 = __nccwpck_require__(20878);
+const native_verification_candidate_1 = __nccwpck_require__(18883);
+const logging_ports_1 = __nccwpck_require__(6152);
+const run = (node, args, cwd, env) => new Promise((resolve, reject) => {
+    // Do not forward registry errors, URLs, paths or runner command syntax into public output.
+    (0, node_child_process_1.execFile)(node, [...args], { cwd, env, timeout: 300000, maxBuffer: 65536, windowsHide: true }, (error, stdout) => error ? reject(new source_verification_dependency_policy_1.SourceDependencyError('install-failed')) : resolve(stdout));
+});
+const inside = (root, path) => {
+    const part = (0, node_path_1.relative)(root, path);
+    return part === '' || !(0, node_path_1.isAbsolute)(part) && part !== '..' && !part.startsWith(`..${node_path_1.sep}`);
+};
+/** Capture the provisioned source-only tool before any candidate checkout or fixer mutation. */
+function captureSourceDependencyPreparation(metadata = process.env, workspace = process.cwd(), execute = run, platform = process.platform) {
+    if (metadata.GITHUB_ACTIONS !== 'true' || metadata.GITHUB_REPOSITORY !== 'vypdev/copilot' || metadata.COPILOT_PREPARE_VERIFICATION !== 'true')
+        return async () => { };
+    let root;
+    let pnpm;
+    try {
+        root = (0, node_fs_1.realpathSync)(workspace);
+        const home = metadata.PNPM_HOME;
+        if (home) {
+            // pnpm/action-setup owns this metadata. Prefer its installed package
+            // entry even if a later setup-node step shadows PATH with Corepack.
+            if (!(0, node_path_1.isAbsolute)(home) || inside(root, (0, node_fs_1.realpathSync)(home)))
+                throw new Error('unavailable');
+            pnpm = (0, node_fs_1.realpathSync)((0, node_path_1.join)((0, node_path_1.dirname)((0, node_fs_1.realpathSync)(home)), 'pnpm/bin/pnpm.cjs'));
+        }
+        else {
+            pnpm = (0, node_fs_1.realpathSync)((0, verification_executable_1.verificationExecutable)('pnpm', metadata));
+        }
+        // Source callers provision pnpm/action-setup on Linux, macOS or Windows. No Corepack download,
+        // candidate node_modules tool, arbitrary shell wrapper or inferred consumer installer.
+        if (!['linux', 'darwin', 'win32'].includes(platform) || (0, node_path_1.basename)(pnpm) !== 'pnpm.cjs' || inside(root, pnpm))
+            throw new Error('unavailable');
+    }
+    catch {
+        return async () => { throw new source_verification_dependency_policy_1.SourceDependencyError('tool-unavailable'); };
+    }
+    return async (environment) => {
+        if ((0, node_fs_1.realpathSync)(process.cwd()) !== root)
+            throw new source_verification_dependency_policy_1.SourceDependencyError('candidate-changed');
+        validateGraph(root);
+        const identity = candidateIdentity(root, environment);
+        try {
+            const flags = ['--config.manage-package-manager-versions=false', '--ignore-pnpmfile'];
+            const version = await execute(process.execPath, [pnpm, ...flags, '--version'], (0, node_path_1.dirname)(pnpm), environment);
+            if (version.trim() !== '10.12.4')
+                throw new source_verification_dependency_policy_1.SourceDependencyError('tool-unavailable');
+            (0, logging_ports_1.logInfo)('Preparing candidate workspace dependencies (pnpm 10.12.4; frozen lockfile; scripts and pnpmfile hooks disabled).');
+            await execute(process.execPath, [pnpm, ...flags, 'install', '--frozen-lockfile', '--ignore-scripts', '--prod=false', '--reporter=silent', '--store-dir', (0, node_path_1.join)(root, '.tmp/copilot-verification-store')], root, environment);
+        }
+        catch (error) {
+            throw error instanceof source_verification_dependency_policy_1.SourceDependencyError ? error : new source_verification_dependency_policy_1.SourceDependencyError('install-failed');
+        }
+        if (candidateIdentity(root, environment) !== identity)
+            throw new source_verification_dependency_policy_1.SourceDependencyError('candidate-changed');
+    };
+}
+/** Deliberately bounded source graph, not a generic package-manager configuration interpreter. */
+function validateGraph(root) {
+    try {
+        const read = (path, maximum) => {
+            const file = (0, node_path_1.join)(root, path);
+            const stat = (0, node_fs_1.lstatSync)(file, { bigint: true });
+            if (!stat.isFile() || stat.nlink !== 1n || stat.size > BigInt(maximum) || !inside(root, (0, node_fs_1.realpathSync)(file)))
+                throw new Error('unsafe');
+            const descriptor = (0, node_fs_1.openSync)(file, node_fs_1.constants.O_RDONLY | node_fs_1.constants.O_NOFOLLOW);
+            try {
+                const opened = (0, node_fs_1.fstatSync)(descriptor, { bigint: true });
+                if (opened.dev !== stat.dev || opened.ino !== stat.ino || opened.size !== stat.size || opened.nlink !== 1n)
+                    throw new Error('changed');
+                const bytes = Buffer.alloc(maximum + 1);
+                const size = (0, node_fs_1.readSync)(descriptor, bytes, 0, bytes.length, 0);
+                if (size !== Number(opened.size))
+                    throw new Error('changed');
+                return bytes.subarray(0, size).toString('utf8');
+            }
+            finally {
+                (0, node_fs_1.closeSync)(descriptor);
+            }
+        };
+        for (const path of ['.tmp', '.tmp/copilot-verification-store']) {
+            if (optionalEntry((0, node_path_1.join)(root, path))?.isSymbolicLink())
+                throw new Error('unsafe cache');
+        }
+        const manifest = JSON.parse(read('package.json', 131072));
+        const workspace = (0, js_yaml_1.load)(read('pnpm-workspace.yaml', 131072), { schema: js_yaml_1.JSON_SCHEMA });
+        read('pnpm-lock.yaml', 4194304);
+        if (manifest.name !== '@vypdev/copilot' || manifest.packageManager !== 'pnpm@10.12.4'
+            || Object.keys(manifest.pnpm ?? {}).some(key => key !== 'overrides')
+            || !workspace || typeof workspace !== 'object' || Array.isArray(workspace)
+            || Object.keys(workspace).some(key => key !== 'packages' && key !== 'overrides'))
+            throw new Error('unsupported');
+        const packages = workspace.packages ?? [];
+        if (!Array.isArray(packages) || packages.length > 32)
+            throw new Error('unsupported');
+        for (const path of ['', ...packages]) {
+            if (typeof path !== 'string' || path.length > 200 || path !== '' && !/^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/u.test(path))
+                throw new Error('unsafe');
+            if (optionalEntry((0, node_path_1.join)(root, path, '.npmrc')))
+                throw new Error('unsupported');
+            if (path) {
+                const member = JSON.parse(read(`${path}/package.json`, 131072));
+                if (member.pnpm !== undefined)
+                    throw new Error('unsupported');
+            }
+        }
+    }
+    catch {
+        throw new source_verification_dependency_policy_1.SourceDependencyError('unsupported-graph');
+    }
+}
+function candidateIdentity(root, environment) {
+    try {
+        return (0, native_verification_candidate_1.verificationCandidateIdentity)(root, environment);
+    }
+    catch {
+        throw new source_verification_dependency_policy_1.SourceDependencyError('candidate-changed');
+    }
+}
+/** Presence checks must inspect the entry itself, including dangling symlinks. */
+function optionalEntry(path) {
+    try {
+        return (0, node_fs_1.lstatSync)(path);
+    }
+    catch (error) {
+        if (error.code === 'ENOENT')
+            return undefined;
+        throw error;
+    }
+}
 
 
 /***/ }),

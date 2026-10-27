@@ -2,11 +2,15 @@ import { logError } from '../../../../ports/logging_ports';
 import { parseVerifyCommand, type ParsedVerifyCommand } from './verify_command_policy';
 import { VerificationPrerequisiteError } from '../../../../policies/verification_runtime_policy';
 import { VerificationSetupError } from '../../../../policies/verification_setup_policy';
+import { SourceDependencyError } from '../../../../policies/source_verification_dependency_policy';
+import { VERIFICATION_COMMAND_LABELS, type VerificationFailure } from '../../../../../domain/verification_failure';
 
 export interface VerifyCommandResult {
     success: boolean;
     failedCommand?: string;
     error?: string;
+    failure?: VerificationFailure;
+    safeError?: string;
 }
 
 export type VerifyCommandExecutor = (program: string, args: string[]) => Promise<number>;
@@ -15,9 +19,12 @@ export async function runVerifyCommands(
     commands: string[],
     execute: VerifyCommandExecutor,
 ): Promise<VerifyCommandResult> {
-    for (const command of commands) {
+    for (const [index, command] of commands.entries()) {
         const result = await executeVerifyCommand(command, execute);
-        if (!result.success) return result;
+        if (!result.success) {
+            const label = VERIFICATION_COMMAND_LABELS.find(value => value === command) ?? 'configured-command';
+            return { ...result, failure: { stage: 'command', reason: 'command-failed', ...result.failure, command: label, commandIndex: index + 1 } };
+        }
     }
     return { success: true };
 }
@@ -27,20 +34,26 @@ async function executeVerifyCommand(
     execute: VerifyCommandExecutor,
 ): Promise<VerifyCommandResult> {
     const parsed = parseVerifyCommand(command);
-    if (!parsed) return invalidCommand(command);
+    if (!parsed) return { ...invalidCommand(command), failure: diagnostic('command', 'command-invalid') };
     try {
         const exitCode = await execute(parsed.program, parsed.args);
         return exitCode === 0
             ? { success: true }
             : { success: false, failedCommand: formatCommandForDiagnostics(parsed) };
    } catch (error) {
+        if (error instanceof SourceDependencyError) return { success: false, safeError: error.message, failure: diagnostic('dependencies', error.reason) };
         if (error instanceof VerificationPrerequisiteError || error instanceof VerificationSetupError) {
-            return { success: false, failedCommand: formatCommandForDiagnostics(parsed),
+            return { success: false, safeError: error.message, failedCommand: formatCommandForDiagnostics(parsed),
+                failure: error instanceof VerificationPrerequisiteError ? diagnostic('runtime', 'runtime-blocked') : diagnostic('repository-setup', 'setup-blocked'),
                 error: `${error.message} Verification command: ${formatCommandForDiagnostics(parsed)}.` };
         }
         logError('Verify command failed.');
        return { success: false, failedCommand: formatCommandForDiagnostics(parsed) };
     }
+}
+
+function diagnostic(stage: VerificationFailure['stage'], reason: VerificationFailure['reason']): VerificationFailure {
+    return { stage, reason, command: 'configured-command', commandIndex: 1 };
 }
 
 function invalidCommand(command: string): VerifyCommandResult {

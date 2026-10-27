@@ -5340,6 +5340,7 @@ const copilot_command_validation_1 = __nccwpck_require__(4237);
 const closed_issue_reconciliation_1 = __nccwpck_require__(1565);
 const approval_evidence_diagnostic_1 = __nccwpck_require__(8205);
 const branch_sync_validation_1 = __nccwpck_require__(981);
+const verification_failure_1 = __nccwpck_require__(177);
 exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     ...copilot_command_validation_1.COPILOT_COMMAND_VALIDATION_REASONS,
     'pull-request-link-restored',
@@ -5352,6 +5353,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-agent-disabled',
     'branch-sync-fixer-unavailable',
     'branch-sync-resolution-invalid',
+    'branch-sync-verification-failed',
     'sdd-draft-size-exceeded',
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
@@ -5585,6 +5587,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'branch-sync-agent-disabled': Object.freeze(['command']),
     'branch-sync-fixer-unavailable': Object.freeze(['command']),
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
+    'branch-sync-verification-failed': Object.freeze(['stage', 'reason', 'command', 'commandIndex', 'childSha', 'restoration']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
@@ -5643,6 +5646,9 @@ function normalizeApplicationErrorRecovery(recovery) {
     if (recovery.id === 'branch-sync-resolution-invalid'
         && !branch_sync_validation_1.BRANCH_SYNC_VALIDATION_CODES.some(code => code === variables.validationCode)) {
         throw new TypeError('Application error recovery synchronization validation code is invalid.');
+    }
+    if (recovery.id === 'branch-sync-verification-failed' && !(0, verification_failure_1.isBranchSyncVerificationFailure)(variables)) {
+        throw new TypeError('Branch synchronization verification diagnostic is invalid.');
     }
     if (recovery.id === 'closed-issue-reconciliation-failed'
         && (!closed_issue_reconciliation_1.CLOSED_ISSUE_RESULTS.some(value => value === variables.resultId)
@@ -6805,6 +6811,29 @@ function isUnsafePromptCharacter(character) {
 function normalizeOrigin(origin) {
     const normalized = origin.trim().replace(/[^a-zA-Z0-9._:-]/g, '_');
     return normalized || 'unknown';
+}
+
+
+/***/ }),
+
+/***/ 177:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VERIFICATION_COMMAND_LABELS = exports.VERIFICATION_FAILURE_REASONS = exports.VERIFICATION_FAILURE_STAGES = void 0;
+exports.isBranchSyncVerificationFailure = isBranchSyncVerificationFailure;
+/** Closed operational facts; never populate these with subprocess output or arbitrary argv. */
+exports.VERIFICATION_FAILURE_STAGES = ['dependencies', 'repository-setup', 'runtime', 'command'];
+exports.VERIFICATION_FAILURE_REASONS = ['tool-unavailable', 'unsupported-graph', 'install-failed', 'candidate-changed', 'setup-blocked', 'runtime-blocked', 'command-failed', 'command-invalid'];
+exports.VERIFICATION_COMMAND_LABELS = ['configured-command', 'pnpm run build', 'pnpm run typecheck', 'pnpm run test:coverage', 'pnpm run lint', 'pnpm run validate:documentation', 'pnpm run validate:specifications'];
+function isBranchSyncVerificationFailure(value) {
+    return exports.VERIFICATION_FAILURE_STAGES.some(item => item === value.stage)
+        && exports.VERIFICATION_FAILURE_REASONS.some(item => item === value.reason)
+        && exports.VERIFICATION_COMMAND_LABELS.some(item => item === value.command)
+        && typeof value.commandIndex === 'number' && Number.isSafeInteger(value.commandIndex) && value.commandIndex >= 1 && value.commandIndex <= 20
+        && typeof value.childSha === 'string' && /^(?:[0-9a-f]{40}|[0-9a-f]{64}|unavailable)$/u.test(value.childSha)
+        && (value.restoration === 'restored' || value.restoration === 'unverified');
 }
 
 
