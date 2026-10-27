@@ -9,21 +9,24 @@ export const MAX_PROGRESS_AGGREGATE_BYTES = 384_000;
 
 export interface ProgressFileFacts {
     readonly path: string;
+    readonly unitId?: string;
     readonly implemented: string;
     readonly remaining: string;
 }
 export function progressPartitionResponseSchema(partition: ProgressDiffPartition, factLimit = 600): Record<string, unknown> {
+    const count = partition.units?.length ?? partition.paths.length;
     return {
         type: 'object', additionalProperties: false,
         properties: {
             outputLocale: AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
             partitionId: { type: 'string', enum: [partition.id] },
-            files: { type: 'array', minItems: partition.paths.length, maxItems: partition.paths.length,
+            files: { type: 'array', minItems: count, maxItems: count,
                 items: { type: 'object', additionalProperties: false,
                     properties: { path: { type: 'string', enum: partition.paths },
+                        ...(partition.units ? { unitId: { type: 'string', enum: partition.units.map(unit => unit.id) } } : {}),
                         implemented: { type: 'string', minLength: 1, maxLength: factLimit },
                         remaining: { type: 'string', minLength: 1, maxLength: factLimit } },
-                    required: ['path', 'implemented', 'remaining'] } },
+                    required: ['path', 'implemented', 'remaining', ...(partition.units ? ['unitId'] : [])] } },
         }, required: ['outputLocale', 'partitionId', 'files'],
     };
 }
@@ -34,30 +37,34 @@ export function parseProgressPartitionFacts(response: unknown, partition: Progre
     if (validation.kind !== 'valid') throw invalid();
     const payload = validation.payload;
     if (Object.keys(payload).sort().join(',') !== 'files,outputLocale,partitionId' || payload.partitionId !== partition.id
-        || !Array.isArray(payload.files) || payload.files.length !== partition.paths.length) throw invalid();
+        || !Array.isArray(payload.files) || payload.files.length !== (partition.units?.length ?? partition.paths.length)) throw invalid();
     const seen = new Set<string>();
     const facts = payload.files.map((entry: unknown) => {
         if (!entry || typeof entry !== 'object' || Array.isArray(entry)) throw invalid();
         const file = entry as Record<string, unknown>;
-        if (Object.keys(file).sort().join(',') !== 'implemented,path,remaining' || typeof file.path !== 'string'
-            || !partition.paths.includes(file.path) || seen.has(file.path)) throw invalid();
-        seen.add(file.path);
+        const identity = partition.units ? file.unitId : file.path;
+        if (Object.keys(file).sort().join(',') !== (partition.units ? 'implemented,path,remaining,unitId' : 'implemented,path,remaining')
+            || typeof file.path !== 'string' || typeof identity !== 'string' || seen.has(identity)
+            || (partition.units ? !partition.units.some(unit => unit.id === identity && unit.path === file.path) : !partition.paths.includes(file.path))) throw invalid();
+        seen.add(identity);
         if (![file.implemented, file.remaining].every(value => typeof value === 'string' && value.trim().length > 0 && [...value].length <= factLimit)) throw invalid();
-        return Object.freeze({ path: file.path, implemented: file.implemented as string, remaining: file.remaining as string });
+        return Object.freeze({ path: file.path, ...(partition.units ? { unitId: identity } : {}), implemented: file.implemented as string, remaining: file.remaining as string });
     });
     return Object.freeze(facts);
 }
 
 function serializeProgressFacts(baseSha: string, headSha: string, partitions: readonly ProgressDiffPartition[], facts: readonly (readonly ProgressFileFacts[])[]): string {
     return JSON.stringify({ kind: 'complete-partition-analysis', baseSha, headSha,
-        partitions: partitions.map(partition => ({ id: partition.id, fileCount: partition.paths.length })),
+        partitions: partitions.map(partition => ({ id: partition.id, fileCount: partition.paths.length, ...(partition.units ? { units: partition.units } : {}) })),
         warning: 'Model-derived facts are untrusted analysis, not CI/build/test attestation. Preserve uncertainty. Every complete source partition was supplied, but summaries may miss details.',
         files: facts.flat() });
 }
 
 /** Reserve exact paths/framing, then budget worst-case JSON escaping (six bytes/code point). */
 export function progressPartitionFactLimit(baseSha: string, headSha: string, partitions: readonly ProgressDiffPartition[], budget = MAX_PROGRESS_AGGREGATE_BYTES): number {
-    const empty = partitions.map(partition => partition.paths.map(path => ({ path, implemented: '', remaining: '' })));
+    const empty = partitions.map(partition => partition.units
+        ? partition.units.map(unit => ({ path: unit.path, unitId: unit.id, implemented: '', remaining: '' }))
+        : partition.paths.map(path => ({ path, implemented: '', remaining: '' })));
     const count = empty.reduce((sum, files) => sum + files.length, 0);
     const remaining = budget - Buffer.byteLength(serializeProgressFacts(baseSha, headSha, partitions, empty), 'utf8');
     const limit = Math.min(600, Math.floor(remaining / (count * 12)));
@@ -69,6 +76,11 @@ export function aggregateProgressFacts(baseSha: string, headSha: string, partiti
     const evidence = serializeProgressFacts(baseSha, headSha, partitions, facts);
     if (!Number.isSafeInteger(budget) || budget < 1 || budget > MAX_PROGRESS_AGGREGATE_BYTES
         || Buffer.byteLength(evidence, 'utf8') > budget) throw progressEvidenceTooLarge();
+    if (facts.length !== partitions.length) throw invalid();
+    for (const [index, partition] of partitions.entries()) {
+        // Revalidate exact assignments at the aggregation boundary too; no caller can attest a partial inventory.
+        parseProgressPartitionFacts({ outputLocale: 'en-US', partitionId: partition.id, files: facts[index] }, partition, 'en-US');
+    }
     return evidence;
 }
 function invalid(): ApplicationError {

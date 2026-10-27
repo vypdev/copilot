@@ -2,10 +2,12 @@ export interface GithubBranchComparisonClient {
     rest: {
         repos: {
             compareCommits(parameters: Record<string, unknown>): Promise<{ data: {
+                base_commit?: { sha: string };
+                merge_base_commit?: { sha: string };
                 ahead_by: number;
                 behind_by: number;
                 total_commits: number;
-                files?: Array<{ filename: string; status: string; additions?: number; deletions?: number; changes?: number; blob_url: string; raw_url: string; contents_url: string; patch?: string }>;
+                files?: Array<{ filename: string; previous_filename?: string; status: string; additions?: number; deletions?: number; changes?: number; blob_url: string; raw_url: string; contents_url: string; patch?: string }>;
                 commits: Array<{ sha: string; commit: { message: string; author?: { name?: string; email?: string; date?: string } } }>;
             } }>;
         };

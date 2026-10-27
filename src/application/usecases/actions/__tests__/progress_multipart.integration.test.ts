@@ -8,6 +8,7 @@ import { AGENT_PROMPT_MAX_BYTES } from '../../../../domain/agent_execution_plan'
 import { progressScopeSourceLines } from '../../../policies/progress_scope_policy';
 import { getProgressScopePrompt } from '../../../../prompts/progress_scope';
 import type { ProgressDiffEvidence } from '../../../ports/progress_diff_query_ports';
+import { progressContentUnits } from '../../../policies/progress_content_evidence_policy';
 import { ApplicationError } from '../../../errors/application_error';
 import { resolveStaticApplicationErrorCatalog } from '../../../policies/application_error_message_catalog';
 
@@ -28,7 +29,7 @@ function fixture(changes?: readonly ProgressDiffChange[]) {
         if (request.options?.schemaName === 'progress_scope') return { outputLocale: 'en-US', lines: [{ id: 'L1', kind: 'required' }] };
         if (request.options?.schemaName === 'progress_partition_facts') {
             const part = diff.partitions[partIndex++];
-            return { outputLocale: 'en-US', partitionId: part.id, files: part.paths.map(path => ({ path, implemented: `Implements ${path}.`, remaining: 'Verification unknown.' })) };
+            return { outputLocale: 'en-US', partitionId: part.id, files: part.units ? part.units.map(unit => ({ unitId: unit.id, path: unit.path, implemented: `Implements ${unit.path}.`, remaining: 'Verification unknown.' })) : part.paths.map(path => ({ path, implemented: `Implements ${path}.`, remaining: 'Verification unknown.' })) };
         }
         return { outputLocale: 'en-US', progress: 70, requirements: [{ id: 'R1', status: 'verification-unknown', evidence: 'external-unverified', summary: 'Implemented; verification remains.', remaining: 'Verify behavior.' }] };
     });
@@ -159,5 +160,51 @@ describe('atomic complete multipart progress', () => {
         const catalog = resolveStaticApplicationErrorCatalog('es-ES');
         expect(catalog.message('error.validation.evidence-too-large.action')).toContain('divide el trabajo');
         expect(catalog.message('error.validation.evidence-too-large.retainedState')).toContain('etiquetas de progreso');
+    });
+});
+
+
+describe('recovered content progress publication', () => {
+    function recovered() {
+        return fixture(progressContentUnits({ path: 'specs/large.md', status: 'added', additions: 0, deletions: 0 },
+            { comparisonBaseSha: base, head: { path: 'specs/large.md', sha: 'd'.repeat(40), mode: '100644', text: 'x'.repeat(300_000) } }, 'file-1'));
+    }
+    it('extracts every content unit before one final assessment and one publication', async () => {
+        const f = recovered(); expect((await f.invoke())[0].success).toBe(true);
+        expect(f.query).toHaveBeenCalledTimes(f.diff.partitions.length + 2); expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
+        const final = f.query.mock.calls.at(-1)![0].prompt;
+        for (const unit of f.diff.partitions.flatMap(part => part.units!)) expect(final).toContain(unit.id);
+        expect(final).toContain('not CI/build/test attestation');
+    });
+    it.each(['missing unit', 'replayed partition', 'forged path', 'wrong locale', 'provider failure'])('retains progress after partial analysis: %s', async scenario => {
+        const f = recovered(), original = f.query.getMockImplementation()!; let parts = 0;
+        f.query.mockImplementation(async request => {
+            const response = await original(request);
+            if (request.options?.schemaName === 'progress_partition_facts' && ++parts === 2) {
+                if (scenario === 'provider failure') throw new ApplicationError('provider.unavailable', 'Temporary outage');
+                if (scenario === 'missing unit') response.files = [];
+                if (scenario === 'replayed partition') response.partitionId = f.diff.partitions[0].id;
+                if (scenario === 'wrong locale') response.outputLocale = 'es-ES';
+                if (scenario === 'forged path') (response.files as { path: string }[])[0].path = 'unassigned';
+            }
+            return response;
+        });
+        expect((await f.invoke())[0].success).toBe(false); expect(f.setProgressLabel).not.toHaveBeenCalled(); expect(f.setLabels).not.toHaveBeenCalled();
+        expect(f.query.mock.calls.some(([request]) => request.options?.schemaName === 'progress_response')).toBe(false);
+    });
+    it.each(['head', 'base', 'closed'])('retains publication after all recovered units when source becomes %s', async scenario => {
+        const f = recovered();
+        if (scenario === 'closed') f.isIssueOpen.mockResolvedValueOnce(true).mockResolvedValue(false);
+        else f.getBranchHeadSha.mockResolvedValueOnce(head).mockResolvedValueOnce(base).mockResolvedValueOnce(scenario === 'head' ? 'c'.repeat(40) : head).mockResolvedValueOnce('c'.repeat(40));
+        expect((await f.invoke())[0].payload).not.toHaveProperty('progress'); expect(f.setProgressLabel).not.toHaveBeenCalled();
+    });
+    it('does not request scope or models when immutable recovery is unavailable', async () => {
+        const f = recovered(); f.getDiff.mockRejectedValue(new ApplicationError('validation.evidence-unavailable', 'Unreviewed paths: specs/large.md'));
+        expect((await f.invoke())[0].errors[0]).toMatchObject({ retryable: false }); expect(f.query).not.toHaveBeenCalled(); expect(f.setProgressLabel).not.toHaveBeenCalled();
+    });
+    it('does not publish a malformed final result after complete recovered-unit extraction', async () => {
+        const f = recovered(), original = f.query.getMockImplementation()!;
+        f.query.mockImplementation(async request => request.options?.schemaName === 'progress_response' ? { outputLocale: 'en-US', progress: 100, requirements: [] } : original(request));
+        expect((await f.invoke())[0].success).toBe(false); expect(f.setProgressLabel).not.toHaveBeenCalled();
     });
 });

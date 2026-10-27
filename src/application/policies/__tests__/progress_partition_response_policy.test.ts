@@ -50,7 +50,7 @@ describe('complete progress partition facts', () => {
         expect(() => parseProgressPartitionFacts(value, part, 'en-US', 20)).toThrow();
     });
     it('aggregates every validated path with immutable identity and explicit uncertainty', () => {
-        const evidence = JSON.parse(aggregateProgressFacts('a', 'b', [part], [parse(response()), []]));
+        const evidence = JSON.parse(aggregateProgressFacts('a', 'b', [part], [parse(response())]));
         expect(evidence).toMatchObject({ baseSha: 'a', headSha: 'b', partitions: [{ id: part.id, fileCount: 2 }], files: facts() });
         expect(evidence.warning).toContain('not CI/build/test attestation');
     });

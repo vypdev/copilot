@@ -2,14 +2,18 @@ import { ApplicationError } from '../../application/errors/application_error';
 import type { ProgressDiffEvidence } from '../../application/ports/progress_diff_query_ports';
 import type { GithubBranchComparisonClient } from '../../infrastructure/github/ports/github_branch_provider_ports';
 import type { GithubClientPort } from '../../infrastructure/github/ports/github_client_provider_port';
-import { partitionProgressDiff } from '../../application/policies/progress_diff_partition_policy';
+import { isCompleteProgressPatch } from '../../application/policies/progress_patch_completeness_policy';
+import { ImmutableProgressContentRepository, safeProgressPath } from './immutable_progress_content_repository';
+import type { GithubProgressObjectClient } from '../../infrastructure/github/ports/github_progress_object_provider_port';
+import { MAX_PROGRESS_RECOVERED_FILES, progressContentUnits, progressRecoveryError } from '../../application/policies/progress_content_evidence_policy';
+import { partitionProgressDiff, serializeProgressDiff, MAX_PROGRESS_EVIDENCE_BYTES, type ProgressDiffChange } from '../../application/policies/progress_diff_partition_policy';
 
 const MAX_COMPARISON_FILES = 300;
 const STATUSES = new Set(['added', 'removed', 'modified', 'renamed', 'copied', 'changed', 'unchanged']);
 
 /** Reads exact GitHub objects, omitting generated bundle patches but retaining their file facts. */
 export class ProgressDiffRepository {
-    constructor(private readonly client: GithubClientPort<GithubBranchComparisonClient>) {}
+    constructor(private readonly client: GithubClientPort<GithubBranchComparisonClient>, private readonly objects?: GithubClientPort<GithubProgressObjectClient>) {}
     async getDiff(owner: string, repository: string, baseSha: string, headSha: string, token: string): Promise<ProgressDiffEvidence> {
         if (![baseSha, headSha].every(sha => /^[a-f0-9]{40}$/u.test(sha))) throw unavailable('workflow.stale');
         const { data } = await this.client.getClient(token).rest.repos.compareCommits({ owner, repo: repository, base: baseSha, head: headSha, per_page: 1, page: 1 });
@@ -18,21 +22,38 @@ export class ProgressDiffRepository {
         const paths = new Set<string>();
         const changes = data.files.map(file => {
             const path = file.filename;
-            if (typeof path !== 'string' || !path || path.length > 1024 || path.startsWith('/') || path.includes('\\')
-                || path.includes('\0') || path.split('/').includes('..') || paths.has(path) || !STATUSES.has(file.status)
+            if (!safeProgressPath(path) || paths.has(path) || !STATUSES.has(file.status)
                 || ![file.additions, file.deletions].every(value => Number.isSafeInteger(value) && value! >= 0)) throw unavailable();
             paths.add(path);
             const generated = path.startsWith('build/') || path === 'specs/CATALOG.md';
             const unchanged = file.status === 'unchanged' && file.additions === 0 && file.deletions === 0;
-            if (!generated && !unchanged && (typeof file.patch !== 'string' || !file.patch)) {
-                throw new ApplicationError('validation.evidence-unavailable',
-                    'GitHub omitted a required file patch from the pinned comparison. Progress was not assessed and existing state was retained.');
-            }
-            return { path, status: file.status, additions: file.additions!, deletions: file.deletions!,
-                ...(generated ? { evidence: 'generated-metadata-only' as const } : { patch: file.patch ?? '' }) };
+            const complete = generated || unchanged || (isCompleteProgressPatch(file.patch, file.additions!, file.deletions!)
+                && Buffer.byteLength(serializeProgressDiff(baseSha, headSha, [{ path, status: file.status, additions: file.additions!, deletions: file.deletions!, patch: file.patch }]), 'utf8') <= MAX_PROGRESS_EVIDENCE_BYTES);
+            return { change: { path, status: file.status, additions: file.additions!, deletions: file.deletions!,
+                ...(generated ? { evidence: 'generated-metadata-only' as const } : complete ? { patch: file.patch ?? '' } : {}) },
+                recover: !complete, previousPath: file.previous_filename };
         });
         if (baseSha === headSha && changes.length > 0) throw unavailable('workflow.stale');
-        return partitionProgressDiff(baseSha, headSha, changes);
+        const missing = changes.filter(file => file.recover);
+        if (missing.length === 0) return partitionProgressDiff(baseSha, headSha, changes.map(file => file.change));
+        const unreviewed = changes.map(file => file.change.path);
+        if (missing.length > MAX_PROGRESS_RECOVERED_FILES) throw progressRecoveryError('file recovery budget exhausted', unreviewed, true);
+        if (!this.objects) throw progressRecoveryError('immutable content recovery is unavailable', unreviewed);
+        if (data.base_commit?.sha !== baseSha || !/^[a-f0-9]{40}$/u.test(data.merge_base_commit?.sha ?? '')) {
+            throw progressRecoveryError('the comparison preimage could not be pinned', unreviewed);
+        }
+        const recovery = new ImmutableProgressContentRepository(this.objects.getClient(token), owner, repository);
+        const complete: ProgressDiffChange[] = [];
+        for (const [index, file] of changes.entries()) {
+            if (!file.recover) { complete.push({ ...file.change, unitId: `file-${index + 1}-patch` }); continue; }
+            const content = await recovery.recover(data.merge_base_commit!.sha, headSha, file.change.path, file.change.status, file.previousPath, [file.change.path, ...unreviewed.filter(path => path !== file.change.path)]);
+            complete.push(...progressContentUnits(file.change, content, `file-${index + 1}`));
+        }
+        try { return partitionProgressDiff(baseSha, headSha, complete); }
+        catch (error) {
+            if (error instanceof ApplicationError && error.code === 'validation.evidence-too-large') throw progressRecoveryError('complete content exceeds the bounded multipart analysis budget', unreviewed, true);
+            throw error;
+        }
     }
 }
 function unavailable(code: 'workflow.stale' | 'provider.unavailable' = 'provider.unavailable'): ApplicationError {
