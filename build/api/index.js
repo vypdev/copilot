@@ -6816,7 +6816,8 @@ function escapeIssueFieldHeadingMarkdown(field) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ALL_ISSUE_WORKFLOWS = exports.ISSUE_WORKFLOW_CATALOG = exports.ISSUE_WORKFLOW_KINDS = void 0;
+exports.ALL_ISSUE_WORKFLOWS = exports.ISSUE_WORKFLOW_CATALOG = exports.ISSUE_WORKFLOW_RELEASE_TYPES = exports.ISSUE_WORKFLOW_KINDS = void 0;
+exports.parseIssueWorkflowReleaseType = parseIssueWorkflowReleaseType;
 exports.createIssueWorkflowProfile = createIssueWorkflowProfile;
 exports.parseIssueWorkflowProfile = parseIssueWorkflowProfile;
 exports.serializeIssueWorkflowProfile = serializeIssueWorkflowProfile;
@@ -6832,6 +6833,11 @@ const strict_json_keys_1 = __nccwpck_require__(5768);
 exports.ISSUE_WORKFLOW_KINDS = [
     'feature', 'bugfix', 'documentation', 'chore', 'help', 'hotfix', 'release',
 ];
+/** Canonical values shared by admission, form inspection and deterministic readers. */
+exports.ISSUE_WORKFLOW_RELEASE_TYPES = Object.freeze(['Patch', 'Minor', 'Major']);
+function parseIssueWorkflowReleaseType(value) {
+    return exports.ISSUE_WORKFLOW_RELEASE_TYPES.find(type => type.toLowerCase() === value.trim().toLowerCase());
+}
 exports.ISSUE_WORKFLOW_CATALOG = {
     feature: {
         id: 'feature', label: 'Feature', formFile: 'feature_request.yml', nativeIssueType: 'Feature', labels: ['feature', 'enhancement'], branchManaged: true,
@@ -6978,7 +6984,7 @@ function invalidIssueWorkflowFields(kind, fields, profile) {
     const value = (heading) => fields.get(mapped(heading));
     const invalid = [];
     if (kind === 'release') {
-        if (!/^(patch|minor|major)$/iu.test(value('Release Type')))
+        if (!parseIssueWorkflowReleaseType(value('Release Type')))
             invalid.push(mapped('Release Type'));
         if (!value('Changelog'))
             invalid.push(mapped('Changelog'));

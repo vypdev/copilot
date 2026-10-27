@@ -2,6 +2,9 @@ import { type WorkflowFieldMappings } from './issue_workflow_field_mapping';
 /** Stable workflow identifiers used by setup, generated guidance, and Actions. */
 export type IssueWorkflowKind = 'feature' | 'bugfix' | 'documentation' | 'chore' | 'help' | 'hotfix' | 'release';
 export declare const ISSUE_WORKFLOW_KINDS: readonly IssueWorkflowKind[];
+/** Canonical values shared by admission, form inspection and deterministic readers. */
+export declare const ISSUE_WORKFLOW_RELEASE_TYPES: readonly ["Patch", "Minor", "Major"];
+export declare function parseIssueWorkflowReleaseType(value: string): typeof ISSUE_WORKFLOW_RELEASE_TYPES[number] | undefined;
 export interface IssueWorkflowDefinition {
     readonly id: IssueWorkflowKind;
     readonly label: string;

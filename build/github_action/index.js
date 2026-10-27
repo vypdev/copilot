@@ -66705,7 +66705,7 @@ class GetReleaseTypeUseCase {
                 }));
                 return result;
             }
-            const releaseType = param.body === undefined && !param.issueWorkflowProfile ? (0, content_utils_1.extractReleaseType)('Release Type', description) : (0, content_utils_1.extractReleaseType)('Release Type', `### Release Type\n${(0, issue_workflow_body_1.readIssueWorkflowFields)(description, [(0, issue_workflow_profile_1.issueWorkflowHeading)(param.issueWorkflowProfile ?? issue_workflow_profile_1.ALL_ISSUE_WORKFLOWS, 'release', 'Release Type')])[0].value.replace(/^(patch|minor|major)$/iu, value => value[0].toUpperCase() + value.slice(1).toLowerCase())}`);
+            const releaseType = param.body === undefined && !param.issueWorkflowProfile ? (0, content_utils_1.extractReleaseType)('Release Type', description) : (0, issue_workflow_profile_1.parseIssueWorkflowReleaseType)((0, issue_workflow_body_1.readIssueWorkflowFields)(description, [(0, issue_workflow_profile_1.issueWorkflowHeading)(param.issueWorkflowProfile ?? issue_workflow_profile_1.ALL_ISSUE_WORKFLOWS, 'release', 'Release Type')])[0].value);
             if (releaseType === undefined) {
                 result.push(new result_1.Result({
                     id: this.taskId,
@@ -84054,11 +84054,11 @@ function compareIssueFormSchema(value, profile, kind) {
             problems.push({ heading, reason: 'required' });
         const field = matching[0];
         const attributes = object(field.attributes);
-        if (kind === 'release' && canonical === 'Release Type' && field.type === 'dropdown'
-            && (!Array.isArray(attributes.options) || attributes.options.length === 0 || attributes.options.some(option => typeof option !== 'string' || !/^(patch|minor|major)$/iu.test(option))))
+        if (kind === 'release' && canonical === 'Release Type' && !validReleaseControl(field, attributes))
             problems.push({ heading, reason: 'value' });
         const versionField = kind === 'release' && canonical === 'Release Version' || kind === 'hotfix' && ['Base Version', 'Hotfix Version'].includes(canonical);
-        if (versionField && object(field.validations)?.required !== true && !(0, issue_workflow_profile_1.isAutomaticOrVersion)(formDefault(attributes)))
+        if (versionField && (!validVersionControl(field, attributes)
+            || object(field.validations)?.required !== true && !(0, issue_workflow_profile_1.isAutomaticOrVersion)(formDefault(attributes))))
             problems.push({ heading, reason: 'value' });
     }
     for (const field of fields) {
@@ -84076,11 +84076,25 @@ function compareIssueFormSchema(value, profile, kind) {
 }
 function formDefault(attributes) {
     if (typeof attributes.value === 'string')
-        return attributes.value;
+        return attributes.value.trim();
     if (!Array.isArray(attributes.options) || typeof attributes.default !== 'number' || !Number.isSafeInteger(attributes.default) || attributes.default < 0)
         return '';
     const value = attributes.options[attributes.default];
-    return typeof value === 'string' ? value : '';
+    return typeof value === 'string' ? value.trim() : '';
+}
+function validReleaseControl(field, attributes) {
+    if (field.type !== 'dropdown' || attributes.multiple === true || !Array.isArray(attributes.options))
+        return false;
+    const options = attributes.options.map(option => typeof option === 'string' ? (0, issue_workflow_profile_1.parseIssueWorkflowReleaseType)(option) : undefined);
+    return options.length === issue_workflow_profile_1.ISSUE_WORKFLOW_RELEASE_TYPES.length && issue_workflow_profile_1.ISSUE_WORKFLOW_RELEASE_TYPES.every(type => options.includes(type));
+}
+function validVersionControl(field, attributes) {
+    if (field.type === 'textarea' && attributes.render !== undefined)
+        return false;
+    if (field.type !== 'dropdown')
+        return true;
+    return attributes.multiple !== true && Array.isArray(attributes.options) && attributes.options.length > 0
+        && attributes.options.every(option => typeof option === 'string' && (0, issue_workflow_profile_1.isAutomaticOrVersion)(option.trim()));
 }
 
 
@@ -84092,7 +84106,8 @@ function formDefault(attributes) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ALL_ISSUE_WORKFLOWS = exports.ISSUE_WORKFLOW_CATALOG = exports.ISSUE_WORKFLOW_KINDS = void 0;
+exports.ALL_ISSUE_WORKFLOWS = exports.ISSUE_WORKFLOW_CATALOG = exports.ISSUE_WORKFLOW_RELEASE_TYPES = exports.ISSUE_WORKFLOW_KINDS = void 0;
+exports.parseIssueWorkflowReleaseType = parseIssueWorkflowReleaseType;
 exports.createIssueWorkflowProfile = createIssueWorkflowProfile;
 exports.parseIssueWorkflowProfile = parseIssueWorkflowProfile;
 exports.serializeIssueWorkflowProfile = serializeIssueWorkflowProfile;
@@ -84108,6 +84123,11 @@ const strict_json_keys_1 = __nccwpck_require__(95768);
 exports.ISSUE_WORKFLOW_KINDS = [
     'feature', 'bugfix', 'documentation', 'chore', 'help', 'hotfix', 'release',
 ];
+/** Canonical values shared by admission, form inspection and deterministic readers. */
+exports.ISSUE_WORKFLOW_RELEASE_TYPES = Object.freeze(['Patch', 'Minor', 'Major']);
+function parseIssueWorkflowReleaseType(value) {
+    return exports.ISSUE_WORKFLOW_RELEASE_TYPES.find(type => type.toLowerCase() === value.trim().toLowerCase());
+}
 exports.ISSUE_WORKFLOW_CATALOG = {
     feature: {
         id: 'feature', label: 'Feature', formFile: 'feature_request.yml', nativeIssueType: 'Feature', labels: ['feature', 'enhancement'], branchManaged: true,
@@ -84254,7 +84274,7 @@ function invalidIssueWorkflowFields(kind, fields, profile) {
     const value = (heading) => fields.get(mapped(heading));
     const invalid = [];
     if (kind === 'release') {
-        if (!/^(patch|minor|major)$/iu.test(value('Release Type')))
+        if (!parseIssueWorkflowReleaseType(value('Release Type')))
             invalid.push(mapped('Release Type'));
         if (!value('Changelog'))
             invalid.push(mapped('Changelog'));

@@ -1,4 +1,4 @@
-import { ISSUE_WORKFLOW_CATALOG, isAutomaticOrVersion, issueWorkflowHeading, type IssueWorkflowKind, type IssueWorkflowProfile } from './issue_workflow_profile';
+import { ISSUE_WORKFLOW_CATALOG, ISSUE_WORKFLOW_RELEASE_TYPES, parseIssueWorkflowReleaseType, isAutomaticOrVersion, issueWorkflowHeading, type IssueWorkflowKind, type IssueWorkflowProfile } from './issue_workflow_profile';
 export interface IssueFormSchemaProblem {
     readonly heading: string;
     readonly reason: 'missing' | 'duplicate' | 'required' | 'unsupported' | 'shape' | 'value';
@@ -23,10 +23,10 @@ export function compareIssueFormSchema(value: unknown, profile: IssueWorkflowPro
         if (definition.requiredValueHeadings.includes(canonical) && object(matching[0].validations)?.required !== true)
             problems.push({ heading, reason: 'required' });
         const field = matching[0]; const attributes = object(field.attributes)!;
-        if (kind === 'release' && canonical === 'Release Type' && field.type === 'dropdown'
-            && (!Array.isArray(attributes.options) || attributes.options.length === 0 || attributes.options.some(option => typeof option !== 'string' || !/^(patch|minor|major)$/iu.test(option)))) problems.push({heading, reason:'value'});
+        if (kind === 'release' && canonical === 'Release Type' && !validReleaseControl(field, attributes)) problems.push({heading, reason:'value'});
         const versionField = kind === 'release' && canonical === 'Release Version' || kind === 'hotfix' && ['Base Version','Hotfix Version'].includes(canonical);
-        if (versionField && object(field.validations)?.required !== true && !isAutomaticOrVersion(formDefault(attributes))) problems.push({heading,reason:'value'});
+        if (versionField && (!validVersionControl(field, attributes)
+            || object(field.validations)?.required !== true && !isAutomaticOrVersion(formDefault(attributes)))) problems.push({heading,reason:'value'});
 
     }
     for (const field of fields) {
@@ -44,8 +44,20 @@ export function compareIssueFormSchema(value: unknown, profile: IssueWorkflowPro
 }
 
 function formDefault(attributes: Record<string, unknown>): string {
-    if (typeof attributes.value === 'string') return attributes.value;
+    if (typeof attributes.value === 'string') return attributes.value.trim();
     if (!Array.isArray(attributes.options) || typeof attributes.default !== 'number' || !Number.isSafeInteger(attributes.default) || attributes.default < 0) return '';
     const value = attributes.options[attributes.default];
-    return typeof value === 'string' ? value : '';
+    return typeof value === 'string' ? value.trim() : '';
+}
+
+function validReleaseControl(field: Record<string, unknown>, attributes: Record<string, unknown>): boolean {
+    if (field.type !== 'dropdown' || attributes.multiple === true || !Array.isArray(attributes.options)) return false;
+    const options = attributes.options.map(option => typeof option === 'string' ? parseIssueWorkflowReleaseType(option) : undefined);
+    return options.length === ISSUE_WORKFLOW_RELEASE_TYPES.length && ISSUE_WORKFLOW_RELEASE_TYPES.every(type => options.includes(type));
+}
+function validVersionControl(field: Record<string, unknown>, attributes: Record<string, unknown>): boolean {
+    if (field.type === 'textarea' && attributes.render !== undefined) return false;
+    if (field.type !== 'dropdown') return true;
+    return attributes.multiple !== true && Array.isArray(attributes.options) && attributes.options.length > 0
+        && attributes.options.every(option => typeof option === 'string' && isAutomaticOrVersion(option.trim()));
 }

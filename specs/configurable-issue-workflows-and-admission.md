@@ -1142,8 +1142,8 @@ no findings and complete Codecov; live consumer/runtime adoption remains explici
 unverified until separately authorized rollout.
 
 
-Local acceptance inventory for #725 allocates **148** conservative new physical
-Jest declarations: 71 pure schema/mapping/JSON/Markdown/diagnostic cases, 37 setup/
+Local acceptance inventory for #725 allocates **154** conservative new physical
+Jest declarations: 77 pure schema/mapping/JSON/Markdown/diagnostic cases, 37 setup/
 doctor/rendering/storage cases, 26 runtime/version/gate/projection cases and 14
 completion/summary/locale/replay/repair cases. Parameterized rows and the new
 closed-recovery fixture entry are not inflated into additional declarations.
@@ -1152,3 +1152,13 @@ GitHub remains responsible for its complete native form-schema validation.
 Legacy standalone version readers without a supplied profile or admitted body
 retain their prior extractor contract. Runtime always passes its validated live
 snapshot; explicit profiles/snapshots use structural mapped fields.
+
+
+PR #750 review refinement: governed release type controls must be single-select
+dropdowns offering each canonical Patch/Minor/Major exactly once (case-insensitive).
+The same canonical enum parser drives admission, native form inspection and mapped
+version readers; a free-text control or partial/duplicate enum is drift. Semantic
+version dropdowns must have only supported Automatic/semver choices and one selection;
+code-rendered version textareas are incompatible with the plain runtime value.
+Supported textual defaults and selections use the runtime's whitespace trimming.
+Six additional pure form regressions reproduce the prior gaps before the fix.

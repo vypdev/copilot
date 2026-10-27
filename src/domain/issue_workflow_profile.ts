@@ -15,6 +15,12 @@ export const ISSUE_WORKFLOW_KINDS: readonly IssueWorkflowKind[] = [
   'feature', 'bugfix', 'documentation', 'chore', 'help', 'hotfix', 'release',
 ];
 
+/** Canonical values shared by admission, form inspection and deterministic readers. */
+export const ISSUE_WORKFLOW_RELEASE_TYPES = Object.freeze(['Patch', 'Minor', 'Major'] as const);
+export function parseIssueWorkflowReleaseType(value: string): typeof ISSUE_WORKFLOW_RELEASE_TYPES[number] | undefined {
+  return ISSUE_WORKFLOW_RELEASE_TYPES.find(type => type.toLowerCase() === value.trim().toLowerCase());
+}
+
 export interface IssueWorkflowDefinition {
   readonly id: IssueWorkflowKind;
   readonly label: string;
@@ -195,7 +201,7 @@ function invalidIssueWorkflowFields(kind: IssueWorkflowKind, fields: ReadonlyMap
   const value = (heading: string) => fields.get(mapped(heading))!;
   const invalid: string[] = [];
   if (kind === 'release') {
-    if (!/^(patch|minor|major)$/iu.test(value('Release Type'))) invalid.push(mapped('Release Type'));
+    if (!parseIssueWorkflowReleaseType(value('Release Type'))) invalid.push(mapped('Release Type'));
     if (!value('Changelog')) invalid.push(mapped('Changelog'));
     if (!isAutomaticOrVersion(value('Release Version'))) invalid.push(mapped('Release Version'));
   }

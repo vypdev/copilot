@@ -1,4 +1,4 @@
-import { ALL_ISSUE_WORKFLOWS, issueWorkflowHeading } from '../../../../domain/issue_workflow_profile';
+import { ALL_ISSUE_WORKFLOWS, issueWorkflowHeading, parseIssueWorkflowReleaseType } from '../../../../domain/issue_workflow_profile';
 import { readIssueWorkflowFields } from '../../../../domain/issue_workflow_body';
 import { Result } from "../../../../data/model/result";
 import { extractReleaseType } from "../../../../utils/content_utils";
@@ -46,7 +46,7 @@ export class GetReleaseTypeUseCase implements ParamUseCase<VersionDescriptionCon
                 return result;
             }
 
-            const releaseType = param.body === undefined && !param.issueWorkflowProfile ? extractReleaseType('Release Type', description) : extractReleaseType('Release Type', `### Release Type\n${readIssueWorkflowFields(description, [issueWorkflowHeading(param.issueWorkflowProfile ?? ALL_ISSUE_WORKFLOWS, 'release', 'Release Type')])[0].value.replace(/^(patch|minor|major)$/iu, value => value[0].toUpperCase() + value.slice(1).toLowerCase())}`)
+            const releaseType = param.body === undefined && !param.issueWorkflowProfile ? extractReleaseType('Release Type', description) : parseIssueWorkflowReleaseType(readIssueWorkflowFields(description, [issueWorkflowHeading(param.issueWorkflowProfile ?? ALL_ISSUE_WORKFLOWS, 'release', 'Release Type')])[0].value)
 
             if (releaseType === undefined) {
                 result.push(
