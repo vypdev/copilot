@@ -563,7 +563,7 @@
       "status": "implemented",
       "scope": "Shared GitHub Action lifecycle with pinned native resource/lane coordination proof, conservative predecessor fencing, routing and durable user-facing results",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-26",
+      "lastVerified": "2026-10-27",
       "specs": [
         "specs/execution-admission-queue-and-publication.md",
         "specs/execution-error-and-context-hardening.md",
@@ -643,7 +643,13 @@
         "src/application/errors/comment_command_validation_error.ts",
         "src/application/policies/comment_command_validation_message_catalog.ts",
         "src/application/policies/comment_command_validation_presentation_policy.ts",
-        "src/domain/copilot_command_vocabulary.ts"
+        "src/domain/copilot_command_vocabulary.ts",
+        "src/domain/change_size_reconciliation.ts",
+        "src/application/ports/change_size_provider_error.ts",
+        "src/data/repository/github/change_size_provider_failure.ts",
+        "src/application/usecases/steps/commit/change_size_reconciliation.ts",
+        "src/infrastructure/composition/change_size_diagnostics_composition_root.ts",
+        "src/data/repository/issue/issue_label_repository.ts"
       ],
       "tests": [
         "src/tooling/__tests__/coverage_budget_validator.test.ts",
@@ -691,7 +697,11 @@
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/domain/__tests__/copilot_command_validation.test.ts",
         "src/application/policies/__tests__/comment_command_validation_presentation.test.ts",
-        "src/application/usecases/__tests__/command_validation_diagnostics.test.ts"
+        "src/application/usecases/__tests__/command_validation_diagnostics.test.ts",
+        "src/domain/__tests__/change_size_reconciliation.test.ts",
+        "src/data/repository/github/__tests__/change_size_provider_failure.test.ts",
+        "src/application/usecases/steps/commit/__tests__/change_size_reconciliation.test.ts",
+        "src/data/repository/issue/__tests__/issue_label_repository.test.ts"
       ],
       "documentation": [
         "docs/overview.mdx",

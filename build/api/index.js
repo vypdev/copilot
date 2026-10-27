@@ -5336,6 +5336,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const change_size_reconciliation_1 = __nccwpck_require__(5304);
 const copilot_command_validation_1 = __nccwpck_require__(4237);
 const closed_issue_reconciliation_1 = __nccwpck_require__(1565);
 const approval_evidence_diagnostic_1 = __nccwpck_require__(8205);
@@ -5363,6 +5364,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'workspace-changes-rejected',
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
+    'change-size-reconciliation-failed',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -5534,7 +5536,9 @@ class ApplicationError extends Error {
         this.retryable = options.retryable ?? metadata.retryable;
         this.impact = metadata.impact;
         this.action = metadata.action;
-        this.retainedState = metadata.retainedState;
+        this.retainedState = options.recovery?.id === 'change-size-reconciliation-failed'
+            ? 'Completed effects were retained; the failed and later size operations remain unverified.'
+            : metadata.retainedState;
         this.correlationId = correlationId;
         this.recovery = normalizeApplicationErrorRecovery(options.recovery);
         __classPrivateFieldSet(this, _ApplicationError_cause, options.cause, "f");
@@ -5575,6 +5579,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'stored-configuration-invalid': Object.freeze(['issueNumber', 'expectedVersion']),
     'closed-issue-reconciliation-failed': Object.freeze(['resultId', 'phase', 'state', 'reason', 'changed', 'remaining']),
     'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
+    'change-size-reconciliation-failed': Object.freeze(['operation', 'issueNumber', 'targetNumber', 'projectIndex', 'verifiedOperations', 'pendingProjectSizes', 'providerStatus', 'providerReference']),
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
     'pull-request-link-reference-retained': Object.freeze([]),
@@ -5657,6 +5662,9 @@ function normalizeApplicationErrorRecovery(recovery) {
             || !approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_REASONS.some(reason => reason === variables.reason)
             || approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_PERMISSIONS[variables.operation] !== variables.permission)) {
         throw new TypeError('Approval evidence diagnostic is invalid.');
+    }
+    if (recovery.id === 'change-size-reconciliation-failed' && !(0, change_size_reconciliation_1.isChangeSizeReconciliationFacts)(variables)) {
+        throw new TypeError('Change size reconciliation diagnostic is invalid.');
     }
     return Object.freeze({
         id: recovery.id,
@@ -6239,6 +6247,29 @@ function countBugbotFindingStates(states) {
 }
 function countActionableBugbotFindings(counts) {
     return counts.open + counts.reopened + counts['verification-required'];
+}
+
+
+/***/ }),
+
+/***/ 5304:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CHANGE_SIZE_OPERATIONS = void 0;
+exports.isChangeSizeReconciliationFacts = isChangeSizeReconciliationFacts;
+exports.CHANGE_SIZE_OPERATIONS = Object.freeze([
+    'calculate-size', 'issue-labels', 'issue-project-size', 'list-pull-requests',
+    'pr-label-read', 'pr-label-write', 'pr-project-membership', 'pr-project-size',
+]);
+function isChangeSizeReconciliationFacts(value) {
+    return exports.CHANGE_SIZE_OPERATIONS.some(operation => operation === value.operation)
+        && [value.issueNumber, value.targetNumber].every(number => Number.isSafeInteger(number) && Number(number) > 0)
+        && [value.projectIndex, value.verifiedOperations, value.pendingProjectSizes]
+            .every(number => Number.isSafeInteger(number) && Number(number) >= 0)
+        && typeof value.providerStatus === 'string' && /^(?:http-[1-5][0-9]{2}|http-unavailable)$/u.test(value.providerStatus)
+        && typeof value.providerReference === 'string' && /^[A-Za-z0-9:-]{1,64}$/u.test(value.providerReference);
 }
 
 

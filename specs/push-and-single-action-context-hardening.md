@@ -586,3 +586,92 @@ cases** (absent receipt, foreign receipt, verified no-change without mutation)
 and retain the existing mutation-failure cases. The changed field adapter joins
 the same module coverage budget. Replay acceptance requires a successful native
 reopened run with an already-correct Size; the prior failed run stays historical.
+
+
+### Size reconciliation diagnostics and replay — #718 (2026-10-27)
+
+Status: implemented contract; native current-head CI/review/Codecov remain PR
+acceptance gates. Owners: Copilot maintainers. No unresolved design decisions.
+The [consumer incident](https://github.com/vypdev/copilot/issues/718) establishes
+partial issue/Project effects followed by an opaque size failure, then success
+on the unchanged head. It does not establish a particular provider outage.
+
+The size stage MUST report its failed operation and target after every awaited
+boundary, including calculation, issue labels, issue Project size, PR discovery,
+PR label read/write, membership and PR Project size. The closed recovery record
+`change-size-reconciliation-failed` contains `operation`, `issueNumber`,
+`targetNumber`, the one-based configured `projectIndex` (zero when not applicable),
+`verifiedOperations`, `pendingProjectSizes`, `providerStatus` and
+`providerReference`. The Project position identifies the configured target without
+publishing an arbitrary Project name or identifier. Verified operations count
+successful reads and reconciliations, including already-correct fields; they do
+not claim that every call changed state. The failed call and all later calls
+remain unverified, including when a failed write actually applied remotely.
+
+```text
+calculate -> issue labels -> issue Project sizes -> discover PRs -> PR labels
+ -> membership -> linked: PR size | verified absent: pending lifecycle linkage
+ any failure -> retained effects + exact failed target -> fresh same-workflow replay
+```
+
+Text equivalent: stop at the first failed required operation, retain completed
+effects, then reread provider facts on an explicit workflow retry. Required PR label reads MUST propagate missing/inaccessible resources instead of
+treating them as empty labels. Required reads validate names and read at most
+100 pages of 100 labels, failing on truncation; optional legacy readers retain
+their contract. Replay MUST
+skip correct labels and use the existing idempotent Project field writer. There
+is no new retry loop, sleep, compensation, Project-link mutation, Status change,
+permission, input or persisted state schema. Concurrency and membership/write
+races retain the existing fail-closed behavior. Existing in-flight configurations
+need no migration; rollback removes diagnostics but does not reverse effects.
+
+Architecture: the adapter exception boundary interprets HTTP/GraphQL/transport
+facts and discards response bodies, headers and SDK exceptions. The application
+receives only semantic failure evidence and owns invocation-local operation
+context. Domain validation closes the public recovery fields and bounds request
+references; the existing semantic serializer and English/Spanish message catalogs
+present the same context in logs, summaries, annotations and API results. Unknown
+exceptions MUST remain `unexpected`, nonretryable; known authorization, missing
+resources, invalid contracts, conflicts, limits and outages retain their existing
+semantic categories and narrowed retryability/correlation. SDK DTOs MUST NOT
+enter application workflows; TypeScript, import/architecture ratchets, and the
+composition and exception-boundary tests enforce this direction.
+
+Operator views use existing run/issue/PR links and create zero extra comments:
+
+| State | Representative visible content | Next action |
+|---|---|---|
+| Running | Issue and related PR sizes are being reconciled. | None while the run executes. |
+| Pending | PR Project size awaits lifecycle linkage; completed labels remain. | Allow the PR lifecycle to link, then inspect or replay. |
+| Blocked | Size reconciliation stopped at pr-label-read for target #99; provider http-403. | Correct access before rerunning the same workflow. |
+| Partial/failed | pr-project-size for target #99, configured Project position 1; seven operations verified. The failed and later operations remain unverified. | Inspect the target, then replay after the named cause is resolved. |
+| Complete | Issue and related PR sizes are reconciled. | No action required. |
+
+The action and retained-state text MUST explain that a failed operation may have
+applied and must be reread. Optional Check Run publication remains a separate
+nonblocking stage; its warning MUST NOT replace the required size error, its
+category, its correlation ID or the final failed conclusion. Reference/status
+absence is explicit, never inferred as provider unavailability. Content uses text,
+not color alone; existing locale fallback remains atomic.
+
+Risk-derived additional test floor: **42 distinct cases**: 14 provider taxonomy
+and semantic-preservation cases, 8 validation/redaction cases, 12 boundary/replay
+cases (eight boundaries plus four ambiguous applied writes), 4 orchestration
+cases (pending before later failure, no Projects, semantic and unknown failures),
+3 locale/presentation cases, and 1 required/optional completion isolation case.
+New domain validation MUST have 100% measured line/branch/function coverage;
+existing repository and changed sizing-module budgets remain in force. Every
+modified executable line must be covered locally and Codecov must independently
+confirm complete patch coverage before the requested merge. No real provider
+fault or duplicate effect is claimed from deterministic tests.
+
+Traceability: failed target/retained state -> `change_size_reconciliation.test.ts`;
+provider taxonomy/redaction -> `change_size_provider_failure.test.ts`; closed
+serialization -> domain `change_size_reconciliation.test.ts`; optional isolation
+-> `github_action_completion.test.ts`. Documentation:
+`docs/issues/assignees-and-projects.mdx` explains diagnosis and same-head recovery.
+Definition of Done additionally requires full tests, coverage, types, lint,
+specification/catalog and documentation checks, build validation, Graphify update,
+and current-head review/checks with no active findings. Native acceptance is the
+resulting PR's checks and reviews; no synthetic consumer failure is required.
+Primary provider reference: [GitHub REST troubleshooting](https://docs.github.com/en/rest/using-the-rest-api/troubleshooting-the-rest-api).

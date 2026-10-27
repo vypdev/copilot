@@ -46,6 +46,14 @@ const RECOVERY_CASES: readonly Readonly<{
         spanish: 'Se conservó el estado nativo. Cambios confirmados: 1; cambios pendientes en el último plan verificado: 1. Una lectura no disponible no demuestra que haya finalizado.',
     },
     {
+        recovery: { id: 'change-size-reconciliation-failed', variables: {
+            operation: 'pr-project-size', issueNumber: 42, targetNumber: 99, projectIndex: 1,
+            verifiedOperations: 7, pendingProjectSizes: 0, providerStatus: 'http-403', providerReference: 'ABCD:1234',
+        } },
+        english: 'Completed effects were retained. Verified operations: 7; PR Project sizes awaiting lifecycle linkage: 0. The failed and later operations remain unverified; an optional Check Run warning is a separate publication stage.',
+        spanish: 'Se conservaron los efectos completados. Operaciones verificadas: 7; tamaños de PR en Projects pendientes de vinculación: 0. La operación fallida y las posteriores siguen sin verificar; un aviso del Check Run opcional corresponde a otra etapa de publicación.',
+    },
+    {
         recovery: { id: 'approval-evidence-read-failed', variables: { operation: 'jobs', reason: 'http-403', permission: 'actions-read' } },
         english: 'No approval is authorized by this failed read. Existing PRs, reviews and completed external effects were preserved.',
         spanish: 'Esta lectura fallida no autoriza ninguna aprobación. Se conservaron las PRs, revisiones y efectos externos completados.',

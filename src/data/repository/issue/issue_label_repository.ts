@@ -2,7 +2,7 @@ import { logDebugInfo, logError } from "../../../utils/logger";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubIssueLabelsClient } from "../../../infrastructure/github/ports/github_issue_provider_ports";
 import { requireArrayPage } from "../github/github_pagination_policy";
-import { toApplicationError } from '../../../application/errors/application_error';
+import { ApplicationError, toApplicationError } from '../../../application/errors/application_error';
 
 export class IssueLabelRepository {
     constructor(private readonly githubClient: GithubClientPort<GithubIssueLabelsClient>) {}
@@ -25,6 +25,24 @@ export class IssueLabelRepository {
             logError(toApplicationError(error, 'provider.unavailable', `Unable to fetch labels for issue #${issueNumber}.`));
             throw error;
         }
+    };
+
+    /** Required mutation evidence: missing, malformed or truncated labels never mean empty. */
+    getRequiredLabels = async (owner: string, repository: string, issueNumber: number, token: string): Promise<string[]> => {
+        const octokit = this.githubClient.getClient(token);
+        const names: string[] = [];
+        for (let page = 1; page <= 100; page += 1) {
+            const { data } = await octokit.rest.issues.listLabelsOnIssue({ owner, repo: repository, issue_number: issueNumber, per_page: 100, page });
+            const labels = requireArrayPage<{ name?: unknown }>(data, 'required issue labels');
+            for (const label of labels) {
+                if (!label || typeof label.name !== 'string' || !label.name.trim()) {
+                    throw new ApplicationError('provider.contract-invalid', 'Required label evidence was malformed.');
+                }
+                names.push(label.name);
+            }
+            if (labels.length < 100) return names;
+        }
+        throw new ApplicationError('provider.contract-invalid', 'Required label pagination exceeded its fixed bound.');
     };
 
     setLabels = async (
