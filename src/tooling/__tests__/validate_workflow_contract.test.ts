@@ -154,10 +154,13 @@ describe('workflow contract validator', () => {
   });
 
 
-  it('provisions source runtimes without installing the default checkout dependency graph', () => {
+  it('seeds trusted fixer build tools while requiring separate candidate readiness', () => {
     const {file, workflow} = loadMutationWorkflow('.github/workflows', 'copilot_comment_runtime.yml');
     const steps = workflow.jobs.copilot.steps;
-    expect(steps.some((step: {run?:string}) => /pnpm install/u.test(step.run ?? ''))).toBe(false);
+    const seed = steps.find((step: {name?:string}) => step.name === 'Seed trusted source build tools');
+    expect(seed?.run).toBe('pnpm install --frozen-lockfile --ignore-scripts --ignore-pnpmfile --config.manage-package-manager-versions=false --prod=false');
+    expect(seed?.if).toBe("env.COPILOT_PREPARE_VERIFICATION == 'true'");
+    expect(steps.indexOf(seed)).toBeLessThan(steps.findIndex((step: {id?:string}) => step.id === 'copilot'));
     expect(steps.find((step: {name?:string}) => step.name === 'Prepare repository pnpm')?.if).toBe("env.COPILOT_PREPARE_VERIFICATION == 'true'");
     expect(() => validateWorkflow(file, workflow)).not.toThrow();
     steps.splice(3,0,{name:'Install repository verification dependencies',if:"env.COPILOT_PREPARE_VERIFICATION == 'true'",run:'pnpm install --frozen-lockfile --ignore-scripts',shell:'bash'});

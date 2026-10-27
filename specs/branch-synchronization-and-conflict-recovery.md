@@ -738,7 +738,7 @@ The root pnpm workspace already includes `extension`; a second hardcoded member
 install is not the remedy. Commands after the failing typecheck were not reached.
 
 The source coordinator MUST provision Node 24/pnpm 10.12.4 before the Action,
-but MUST NOT install dependencies on that initial checkout. The existing
+and MAY retain a frozen script/hook-free default-checkout install solely to seed trusted build tools for the fixer. It MUST NOT treat that seed as candidate dependency readiness. Removing the seed would regress the existing requirement to regenerate admitted conflicting bundles with the offline build before trusted staging. The existing
 `prepare-source-verification` opt-in and `COPILOT_PREPARE_VERIFICATION` admission
 hint authorize only the fixed source preparation described here: exact repository
 `vypdev/copilot`, GitHub Actions, and its configured Linux source runner. They do
@@ -858,7 +858,7 @@ cross-references. Catalog evidence and generated index MUST stay current.
 Acceptance requires: current graph on clean/fixer paths; no readiness cache;
 unsafe/missing metadata/tool/process/candidate failure withholding verifier and
 push; exact restored/unverified semantics; unchanged consumers and native setup;
-closed bilingual copy; workflow rejecting initial-checkout installs; full tests,
+closed bilingual copy; workflow distinguishing the fixed trusted tool seed from mandatory candidate readiness; full tests,
 coverage, build/package, docs/spec/workflow validators and Graphify update.
 
 Rollout is deliberately separate: merging this change to `develop` alone does

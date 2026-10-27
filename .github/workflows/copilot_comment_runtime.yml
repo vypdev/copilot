@@ -69,6 +69,10 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24.x
+      - name: Seed trusted source build tools
+        if: env.COPILOT_PREPARE_VERIFICATION == 'true'
+        run: pnpm install --frozen-lockfile --ignore-scripts --ignore-pnpmfile --config.manage-package-manager-versions=false --prod=false
+        shell: bash
       - name: Run Copilot
         id: copilot
         uses: $/
