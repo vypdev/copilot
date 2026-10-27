@@ -4,6 +4,7 @@ import { RetireBranchSyncUseCase } from '../retire_branch_sync_use_case';
 import type { Execution } from "../../../../data/model/execution";
 import {
   buildAlignedBranchSyncComment,
+  buildUnrelatedBranchSyncComment,
   buildRetiredBranchSyncComment,
   branchSyncPublicationIdentity,
   buildBranchSyncTransitionIntent,
@@ -49,7 +50,7 @@ function setup(input: {
 } = {}) {
   const dependencies = {
     listOpenDependencies: jest.fn().mockResolvedValue([dependency]),
-    resolveTarget: jest.fn(),
+    resolveTarget: jest.fn().mockImplementation(async (number: number) => ({ ...dependency, issueNumber: number, conversationNumber: number, workingBranch: `feature/${number}` })),
   };
   const comparisons = { compare: jest.fn().mockResolvedValue({ aheadBy: 1, behindBy: input.behindBy ?? 2 }) };
   const stored = [...(input.comments ?? [])];
@@ -71,17 +72,20 @@ function setup(input: {
     }),
   };
   const nativeIssues = { readIssue: jest.fn().mockResolvedValue({ number: 42, state: 'open', reason: 'unknown', labels: [] }) };
+  const freshness = { matches: jest.fn().mockImplementation(async (witness: ReplyRequestSnapshot) => {
+    const card = stored.find(comment => comment.id === witness.commentId);
+    return witness.target.kind === 'issue' && witness.target.number === 42 && card?.user?.login === witness.author
+      && replyRequestBodyDigest(card?.body ?? '') === witness.bodyDigest;
+  }) };
   return {
+    freshness,
     nativeIssues,
     dependencies,
     comparisons,
     notifications,
     stored,
-    useCase: new ObserveBranchSyncUseCase(dependencies, comparisons, notifications, input.resolver, nativeIssues, new RetireBranchSyncUseCase(nativeIssues, notifications, { matches: async (witness: ReplyRequestSnapshot) => {
-      const card = stored.find(comment => comment.id === witness.commentId);
-      return witness.target.kind === 'issue' && witness.target.number === 42 && card?.user?.login === witness.author
-        && replyRequestBodyDigest(card?.body ?? '') === witness.bodyDigest;
-    } })),
+    useCase: new ObserveBranchSyncUseCase(dependencies, comparisons, notifications, input.resolver, nativeIssues,
+      new RetireBranchSyncUseCase(nativeIssues, notifications, freshness), freshness),
   };
 }
 
@@ -421,4 +425,71 @@ it('keeps an already aligned reopened card unchanged', async () => {
   f.nativeIssues.readIssue.mockResolvedValue({ number: 42, state: 'open', reason: 'reopened', labels: [] });
   await f.useCase.invoke(execution());
   expect(f.notifications.updateComment).not.toHaveBeenCalled(); expect(f.notifications.addComment).not.toHaveBeenCalled();
+});
+
+
+describe('observer relationship freshness (#723)', () => {
+  it('withholds comparisons and writes when discovery no longer matches current configuration', async () => {
+    const f=setup(); f.dependencies.resolveTarget.mockResolvedValue({...dependency,conversationNumber:42,workingBranch:'replacement'});
+    const [result]=await f.useCase.invoke(execution());
+    expect(result.success).toBe(false); expect(f.comparisons.compare).not.toHaveBeenCalled(); expect(f.notifications.addComment).not.toHaveBeenCalled();
+  });
+  it('withholds a stale-card creation after a relationship changes during comparison', async () => {
+    const f=setup(); f.comparisons.compare.mockImplementationOnce(async()=>{
+      f.dependencies.resolveTarget.mockResolvedValue(undefined); return {aheadBy:1,behindBy:2};
+    });
+    const [result]=await f.useCase.invoke(execution());
+    expect(result.success).toBe(false); expect(f.notifications.addComment).not.toHaveBeenCalled();
+  });
+  it('retires an unrelated aligned card while retaining current branch drift', async () => {
+    const body=buildAlignedBranchSyncComment({...dependency,workingBranch:'feature/80'},messages);
+    const f=setup({comments:[{id:8,body,user:{login:'vypbot'}}]});
+    const [result]=await f.useCase.invoke(execution());
+    expect(result).toMatchObject({success:true,payload:{state:'stale',retiredCards:1}});
+    expect(f.notifications.addComment).toHaveBeenCalledTimes(1);
+    expect(f.stored.find(value=>value.id===8)?.body).toContain('Previous branch advisory retired');
+    expect(f.comparisons.compare).toHaveBeenCalledWith('develop','feature/42');
+  });
+  it('retires old actionable guidance without creating an aligned card from scratch', async () => {
+    const body=buildStaleBranchSyncComment({owner:'org',repository:'repo',dependency:{...dependency,workingBranch:'feature/74'},comparison:{aheadBy:6,behindBy:7},messages});
+    const f=setup({behindBy:0,comments:[{id:8,body,user:{login:'vypbot'}}]});
+    const [result]=await f.useCase.invoke(execution());
+    expect(result).toMatchObject({success:true,payload:{state:'aligned',retiredCards:1}});
+    expect(f.notifications.addComment).not.toHaveBeenCalled(); expect(f.stored[0].body).not.toContain('/copilot sync-branch');
+  });
+  it('reports partial historical effects when a later current-card publication fails', async () => {
+    const body=buildAlignedBranchSyncComment({...dependency,workingBranch:'feature/80'},messages);
+    const f=setup({comments:[{id:8,body,user:{login:'vypbot'}}]}); f.notifications.addComment.mockRejectedValueOnce(new Error('provider failed'));
+    const [result]=await f.useCase.invoke(execution());
+    expect(result).toMatchObject({success:false,payload:{retiredCards:1,reconciliationComplete:false}});
+    expect(f.stored[0].body).toContain('Previous branch advisory retired');
+  });
+  it('fails closed when live relationship identity, parent, or conversation is unavailable', async () => {
+    for (const target of [undefined,{...dependency,conversationNumber:41},{...dependency,conversationNumber:42,issueNumber:41},{...dependency,conversationNumber:42,parentBranch:'main'}]) {
+      const f=setup(); f.dependencies.resolveTarget.mockResolvedValue(target);
+      const [result]=await f.useCase.invoke(execution()); expect(result.success).toBe(false); expect(f.notifications.addComment).not.toHaveBeenCalled();
+    }
+  });
+});
+
+
+it('restores an aligned current pair whose historical card was retired under another relationship', async () => {
+  const body=buildUnrelatedBranchSyncComment(branchSyncPublicationIdentity(dependency),{...dependency,workingBranch:'replacement'},messages);
+  const f=setup({behindBy:0,comments:[{id:8,body,user:{login:'vypbot'}}]});
+  const [result]=await f.useCase.invoke(execution());
+  expect(result.success).toBe(true); expect(f.stored[0].body).toContain('Branch synchronized');
+});
+it('reactivates a retired pair as stale without claiming an aligned-to-stale transition', async () => {
+  const body=buildUnrelatedBranchSyncComment(branchSyncPublicationIdentity(dependency),{...dependency,workingBranch:'replacement'},messages);
+  const f=setup({comments:[{id:8,body,user:{login:'vypbot'}}]});
+  const [result]=await f.useCase.invoke(execution({inputs:{after:'a'.repeat(40)}}));
+  expect(result.success).toBe(true); expect(f.stored[0].body).toContain('Action required'); expect(f.notifications.addComment).not.toHaveBeenCalled();
+});
+
+
+it('rejects notification mutations bound to another issue before reaching the provider', async () => {
+  const f=setup();
+  const scoped=(f.useCase as unknown as {openNotifications(value:typeof dependency):typeof f.notifications}).openNotifications(dependency);
+  await expect(scoped.updateComment(43,8,'wrong issue')).rejects.toMatchObject({code:'workflow.stale'});
+  expect(f.notifications.updateComment).not.toHaveBeenCalled();
 });

@@ -234,3 +234,19 @@ ${messages.message('branchSync.closed.status')}
 
 ${messages.message('branchSync.closed.history')}`;
 }
+
+
+/** Keep the historical key, explicitly retire its advice, and name only the verified current relationship. */
+export function buildUnrelatedBranchSyncComment(
+  identity: Readonly<PublicationIdentity>, current: BranchDependency, messages: BranchSyncMessageCatalog,
+): string {
+  return `${buildPublicationMarker({ identity, sourceVersion: `relationship-retired:${createSemanticDigest(current)}`,
+    digest: createSemanticDigest({ state: 'relationship-retired', identity, current }) })}
+
+## ${messages.message('branchSync.relationship.heading')}
+
+${messages.message('branchSync.relationship.current', { issueNumber: current.issueNumber,
+    workingBranch: inlineRef(current.workingBranch), parentBranch: inlineRef(current.parentBranch) })}
+
+${messages.message('branchSync.relationship.history')}`;
+}

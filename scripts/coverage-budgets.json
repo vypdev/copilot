@@ -1025,6 +1025,22 @@
         }
       ],
       "successMessage": "size reconciliation diagnostics coverage: PASS (closed facts 100%; changed path 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Authoritative branch advisory relationships",
+      "missingEntryLabel": "authoritative branch advisory relationships",
+      "rules": [
+        {
+          "files": [
+            "src/data/repository/branch_sync/branch_dependency_policy.ts",
+            "src/application/policies/branch_sync_relationship_retirement_policy.ts",
+            "src/application/usecases/actions/retire_unrelated_branch_sync_cards.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "authoritative branch advisory relationships: PASS (100% lines/statements/functions/branches)"
     }
   ]
 }
