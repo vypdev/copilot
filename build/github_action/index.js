@@ -41047,6 +41047,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect the closed-issue or merged-PR run and current native state. Retry cleanup only if the issue is still closed with the intended reason; leave reopened work open. Resolve the named failure before retrying.',
         retainedState: 'Native state was preserved. Confirmed changes: {changed}; remaining required changes in the last verified plan: {remaining}. Unavailable reads do not establish completion.',
     }),
+    'change-size-reconciliation-failed': Object.freeze({
+        impact: 'Size reconciliation stopped at {operation} for target #{targetNumber} (issue #{issueNumber}, configured Project position {projectIndex}; 0 means no Project). Provider: {providerStatus}; request: {providerReference}.',
+        action: 'Correct the named authorization, resource or contract error before rerunning the same workflow. For transient failures, wait for provider recovery or rate-limit reset. Reread the target: the failed operation may have applied remotely.',
+        retainedState: 'Completed effects were retained. Verified operations: {verifiedOperations}; PR Project sizes awaiting lifecycle linkage: {pendingProjectSizes}. The failed and later operations remain unverified; an optional Check Run warning is a separate publication stage.',
+    }),
     'approval-evidence-read-failed': Object.freeze({
         impact: 'Approval evidence could not be verified: {operation} ({reason}).',
         action: 'Inspect {permission} access for the runtime credential and the named evidence response. Correct authorization, missing-resource or schema errors before rerunning; retry transient failures only after provider recovery or rate-limit reset.',
@@ -41174,6 +41179,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'La limpieza de la issue sigue sin verificarse: {resultId}, fase {phase}; estado nativo {state}, motivo {reason}.',
         action: 'Revisa la ejecución de cierre o de la PR fusionada y el estado nativo actual. Reintenta la limpieza solo si la issue sigue cerrada con el motivo previsto; conserva abierto el trabajo reabierto. Resuelve el fallo indicado antes de reintentar.',
         retainedState: 'Se conservó el estado nativo. Cambios confirmados: {changed}; cambios pendientes en el último plan verificado: {remaining}. Una lectura no disponible no demuestra que haya finalizado.',
+    }),
+    'change-size-reconciliation-failed': Object.freeze({
+        impact: 'La reconciliación de tamaño se detuvo en {operation} para el destino #{targetNumber} (issue #{issueNumber}, posición del Project configurado {projectIndex}; 0 indica sin Project). Proveedor: {providerStatus}; petición: {providerReference}.',
+        action: 'Corrige el error de autorización, recurso o contrato antes de reejecutar el mismo workflow. Ante fallos transitorios, espera a la recuperación del proveedor o del límite. Relee el destino: la operación fallida puede haberse aplicado remotamente.',
+        retainedState: 'Se conservaron los efectos completados. Operaciones verificadas: {verifiedOperations}; tamaños de PR en Projects pendientes de vinculación: {pendingProjectSizes}. La operación fallida y las posteriores siguen sin verificar; un aviso del Check Run opcional corresponde a otra etapa de publicación.',
     }),
     'approval-evidence-read-failed': Object.freeze({
         impact: 'No se pudo verificar la evidencia de aprobación: {operation} ({reason}).',
@@ -52194,6 +52204,27 @@ exports.AGENT_EXECUTION_TOOL_DIAGNOSTICS = ['reported-sandbox-setup-mutex'];
 exports.AGENT_EXECUTION_OUTPUT_DIAGNOSTICS = [
     'output-limit', 'empty-output', 'malformed-json-event', 'invalid-json-event', 'missing-text-events', 'unclassified',
 ];
+
+
+/***/ }),
+
+/***/ 85930:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ChangeSizeProviderError = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+/** Adapter-owned, sanitized failure evidence; never carries a public provider body. */
+class ChangeSizeProviderError extends application_error_1.ApplicationError {
+    constructor(code, providerStatus, providerReference, options = {}) {
+        super(code, 'The size provider operation failed.', options);
+        this.providerStatus = providerStatus;
+        this.providerReference = providerReference;
+    }
+}
+exports.ChangeSizeProviderError = ChangeSizeProviderError;
 
 
 /***/ }),
@@ -64930,6 +64961,48 @@ async function hasWorkspaceChanges(gitCommitPort) {
 
 /***/ }),
 
+/***/ 76829:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ChangeSizeReconciliation = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+const change_size_provider_error_1 = __nccwpck_require__(85930);
+/** Invocation-local evidence, never a replacement for fresh provider facts on replay. */
+class ChangeSizeReconciliation {
+    constructor(issueNumber) {
+        this.issueNumber = issueNumber;
+        this.verifiedOperations = 0;
+        this.pendingProjectSizes = 0;
+    }
+    async run(operation, targetNumber, projectIndex, perform) {
+        try {
+            const result = await perform();
+            this.verifiedOperations += 1;
+            return result;
+        }
+        catch (cause) {
+            const semantic = cause instanceof application_error_1.ApplicationError ? cause : undefined;
+            const provider = cause instanceof change_size_provider_error_1.ChangeSizeProviderError ? cause : undefined;
+            throw new application_error_1.ApplicationError(semantic?.code ?? 'unexpected', 'Size reconciliation stopped before completion.', {
+                ...(semantic ? { retryable: semantic.retryable, correlationId: semantic.correlationId } : {}),
+                recovery: { id: 'change-size-reconciliation-failed', variables: {
+                        operation, issueNumber: this.issueNumber, targetNumber, projectIndex,
+                        verifiedOperations: this.verifiedOperations, pendingProjectSizes: this.pendingProjectSizes,
+                        providerStatus: provider?.providerStatus ?? 'http-unavailable',
+                        providerReference: provider?.providerReference ?? 'unavailable',
+                    } },
+            });
+        }
+    }
+}
+exports.ChangeSizeReconciliation = ChangeSizeReconciliation;
+
+
+/***/ }),
+
 /***/ 28356:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -64972,11 +65045,13 @@ exports.CheckChangesIssueSizeUseCase = CheckChangesIssueSizeUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCheckChangesIssueSize = runCheckChangesIssueSize;
+const change_size_reconciliation_1 = __nccwpck_require__(76829);
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const update_change_size_labels_1 = __nccwpck_require__(51200);
 const application_error_1 = __nccwpck_require__(75999);
 async function runCheckChangesIssueSize(param, taskId, dependencies) {
+    const reconciliation = new change_size_reconciliation_1.ChangeSizeReconciliation(param.issueNumber);
     try {
         const baseBranch = param.baseBranch;
         if (!baseBranch) {
@@ -64984,7 +65059,7 @@ async function runCheckChangesIssueSize(param, taskId, dependencies) {
             return [];
         }
         const headBranch = param.headBranch;
-        const size = await dependencies.branchChangeSizePort.getSizeCategoryAndReason(headBranch, baseBranch, param.thresholds, param.labels);
+        const size = await reconciliation.run('calculate-size', param.issueNumber, 0, () => dependencies.branchChangeSizePort.getSizeCategoryAndReason(headBranch, baseBranch, param.thresholds, param.labels));
         logSize(size.size, size.githubSize, size.reason, param.currentSize);
         const update = await (0, update_change_size_labels_1.updateIssueAndRelatedPullRequests)({
             issueNumber: param.issueNumber,
@@ -64999,7 +65074,7 @@ async function runCheckChangesIssueSize(param, taskId, dependencies) {
             projectBoardCommandPort: dependencies.projectBoardCommandPort,
             pullRequestBranchQueryPort: dependencies.pullRequestRepository,
             projectMembershipQueryPort: dependencies.projectMembershipQueryPort,
-        });
+        }, reconciliation);
         (0, logging_ports_1.logDebugInfo)(`Updated labels on issue #${param.issueNumber}:`);
         (0, logging_ports_1.logDebugInfo)(`Labels: ${update.issueLabelNames}`);
         return [new result_1.Result({
@@ -65017,13 +65092,14 @@ async function runCheckChangesIssueSize(param, taskId, dependencies) {
             })];
     }
     catch (error) {
-        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to check the size of the changes.');
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'unexpected', 'Unable to reconcile the size of the changes.');
         (0, logging_ports_1.logError)(semanticError);
         return [new result_1.Result({
                 id: taskId,
                 success: false,
                 executed: true,
-                steps: ['Tried to check the size of the changes, but there was a problem.'],
+                steps: ['Size reconciliation stopped; completed effects were retained. Inspect the failed operation before retrying.'],
+                payload: { changeSize: { reconciliation: semanticError.recovery } },
                 errors: [semanticError],
             })];
     }
@@ -65565,47 +65641,47 @@ async function runNotifyNewCommitOnIssueWorkflow(param, taskId, issueRepository)
 /***/ }),
 
 /***/ 51200:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.replaceSizeLabel = replaceSizeLabel;
 exports.updateIssueAndRelatedPullRequests = updateIssueAndRelatedPullRequests;
+const change_size_reconciliation_1 = __nccwpck_require__(76829);
 function replaceSizeLabel(currentLabels, sizeLabels, nextSize) {
     return [...currentLabels.filter((name) => !sizeLabels.includes(name)), nextSize];
 }
-async function updateProjectSize(projects, issueOrPullRequestNumber, githubSize, projectBoardCommandPort) {
-    for (const project of projects) {
-        await projectBoardCommandPort.setTaskSize(project, issueOrPullRequestNumber, githubSize);
-    }
-}
-async function updateOpenPullRequestSize(request, pullRequestNumber, ports) {
-    const pullRequestLabels = await ports.issueLabelsPort.getLabels(pullRequestNumber);
+async function updateOpenPullRequestSize(request, pullRequestNumber, ports, reconciliation) {
+    const pullRequestLabels = await reconciliation.run('pr-label-read', pullRequestNumber, 0, () => ports.issueLabelsPort.getLabels(pullRequestNumber));
     const pullRequestLabelNames = replaceSizeLabel(pullRequestLabels, request.sizeLabels, request.size);
     if (!sameLabels(pullRequestLabels, pullRequestLabelNames)) {
-        await ports.issueLabelsPort.setLabels(pullRequestNumber, pullRequestLabelNames);
+        await reconciliation.run('pr-label-write', pullRequestNumber, 0, () => ports.issueLabelsPort.setLabels(pullRequestNumber, pullRequestLabelNames));
     }
     const pending = [];
-    for (const project of request.projects) {
-        if (await ports.projectMembershipQueryPort.isContentLinked(project, pullRequestNumber)) {
-            await ports.projectBoardCommandPort.setTaskSize(project, pullRequestNumber, request.githubSize);
+    for (const [index, project] of request.projects.entries()) {
+        if (await reconciliation.run('pr-project-membership', pullRequestNumber, index + 1, () => ports.projectMembershipQueryPort.isContentLinked(project, pullRequestNumber))) {
+            await reconciliation.run('pr-project-size', pullRequestNumber, index + 1, () => ports.projectBoardCommandPort.setTaskSize(project, pullRequestNumber, request.githubSize));
         }
-        else
+        else {
             pending.push({ pullRequestNumber, projectId: project.id });
+            reconciliation.pendingProjectSizes += 1;
+        }
     }
     return pending;
 }
-async function updateIssueAndRelatedPullRequests(request, ports) {
+async function updateIssueAndRelatedPullRequests(request, ports, reconciliation = new change_size_reconciliation_1.ChangeSizeReconciliation(request.issueNumber)) {
     const issueLabelNames = replaceSizeLabel(request.currentIssueLabels, request.sizeLabels, request.size);
     if (!sameLabels(request.currentIssueLabels, issueLabelNames)) {
-        await ports.issueLabelsPort.setLabels(request.issueNumber, issueLabelNames);
+        await reconciliation.run('issue-labels', request.issueNumber, 0, () => ports.issueLabelsPort.setLabels(request.issueNumber, issueLabelNames));
     }
-    await updateProjectSize(request.projects, request.issueNumber, request.githubSize, ports.projectBoardCommandPort);
-    const openPullRequestNumbers = await ports.pullRequestBranchQueryPort.getOpenPullRequestNumbersByHeadBranch(request.headBranch);
+    for (const [index, project] of request.projects.entries()) {
+        await reconciliation.run('issue-project-size', request.issueNumber, index + 1, () => ports.projectBoardCommandPort.setTaskSize(project, request.issueNumber, request.githubSize));
+    }
+    const openPullRequestNumbers = await reconciliation.run('list-pull-requests', request.issueNumber, 0, () => ports.pullRequestBranchQueryPort.getOpenPullRequestNumbersByHeadBranch(request.headBranch));
     const pendingProjectSizes = [];
     for (const pullRequestNumber of openPullRequestNumbers) {
-        pendingProjectSizes.push(...await updateOpenPullRequestSize(request, pullRequestNumber, ports));
+        pendingProjectSizes.push(...await updateOpenPullRequestSize(request, pullRequestNumber, ports, reconciliation));
     }
     return { issueLabelNames, openPullRequestNumbers, pendingProjectSizes };
 }
@@ -70133,6 +70209,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const change_size_reconciliation_1 = __nccwpck_require__(25304);
 const copilot_command_validation_1 = __nccwpck_require__(44237);
 const closed_issue_reconciliation_1 = __nccwpck_require__(21565);
 const approval_evidence_diagnostic_1 = __nccwpck_require__(98205);
@@ -70162,6 +70239,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'workspace-changes-rejected',
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
+    'change-size-reconciliation-failed',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -70333,7 +70411,9 @@ class ApplicationError extends Error {
         this.retryable = options.retryable ?? metadata.retryable;
         this.impact = metadata.impact;
         this.action = metadata.action;
-        this.retainedState = metadata.retainedState;
+        this.retainedState = options.recovery?.id === 'change-size-reconciliation-failed'
+            ? 'Completed effects were retained; the failed and later size operations remain unverified.'
+            : metadata.retainedState;
         this.correlationId = correlationId;
         this.recovery = normalizeApplicationErrorRecovery(options.recovery);
         __classPrivateFieldSet(this, _ApplicationError_cause, options.cause, "f");
@@ -70374,6 +70454,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'stored-configuration-invalid': Object.freeze(['issueNumber', 'expectedVersion']),
     'closed-issue-reconciliation-failed': Object.freeze(['resultId', 'phase', 'state', 'reason', 'changed', 'remaining']),
     'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
+    'change-size-reconciliation-failed': Object.freeze(['operation', 'issueNumber', 'targetNumber', 'projectIndex', 'verifiedOperations', 'pendingProjectSizes', 'providerStatus', 'providerReference']),
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
     'pull-request-link-reference-retained': Object.freeze([]),
@@ -70460,6 +70541,9 @@ function normalizeApplicationErrorRecovery(recovery) {
             || !approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_REASONS.some(reason => reason === variables.reason)
             || approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_PERMISSIONS[variables.operation] !== variables.permission)) {
         throw new TypeError('Approval evidence diagnostic is invalid.');
+    }
+    if (recovery.id === 'change-size-reconciliation-failed' && !(0, change_size_reconciliation_1.isChangeSizeReconciliationFacts)(variables)) {
+        throw new TypeError('Change size reconciliation diagnostic is invalid.');
     }
     return Object.freeze({
         id: recovery.id,
@@ -75406,6 +75490,53 @@ exports.GitCliRepository = GitCliRepository;
 
 /***/ }),
 
+/***/ 5299:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.withChangeSizeProviderFailure = withChangeSizeProviderFailure;
+const application_error_1 = __nccwpck_require__(75999);
+const change_size_provider_error_1 = __nccwpck_require__(85930);
+const github_error_policy_1 = __nccwpck_require__(58791);
+/** Terminates SDK/transport exceptions before they enter the size application workflow. */
+async function withChangeSizeProviderFailure(perform) {
+    try {
+        return await perform();
+    }
+    catch (cause) {
+        if (cause instanceof change_size_provider_error_1.ChangeSizeProviderError)
+            throw cause;
+        const record = object(cause);
+        const response = object(record.response);
+        const headers = object(response.headers ?? record.headers);
+        const rawStatus = (0, github_error_policy_1.getGithubErrorStatus)(cause);
+        const status = typeof rawStatus === 'number' && Number.isInteger(rawStatus) && rawStatus >= 100 && rawStatus <= 599 ? rawStatus : undefined;
+        const types = Array.isArray(record.errors) ? record.errors.map(error => object(error).type) : [];
+        const code = cause instanceof application_error_1.ApplicationError ? cause.code
+            : (0, github_error_policy_1.isGithubRateLimited)(cause) || types.includes('RATE_LIMITED') ? 'provider.rate-limited'
+                : status === 401 ? 'authorization.credential-invalid'
+                    : status === 403 || types.includes('FORBIDDEN') || types.includes('UNAUTHORIZED') ? 'authorization.denied'
+                        : status === 404 || types.includes('NOT_FOUND') ? 'provider.not-found'
+                            : status === 409 || status === 412 ? 'provider.conflict'
+                                : status === 400 || status === 422 ? 'provider.contract-invalid'
+                                    : status === 408 || typeof status === 'number' && status >= 500 && status <= 599
+                                        || ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'EAI_AGAIN'].includes(String(record.code))
+                                        || types.includes('INTERNAL') || types.includes('SERVICE_UNAVAILABLE')
+                                        ? 'provider.unavailable' : types.length > 0 ? 'provider.contract-invalid' : 'unexpected';
+        const referenceKey = Object.keys(headers).find(key => key.toLowerCase() === 'x-github-request-id');
+        const reference = referenceKey ? headers[referenceKey] : undefined;
+        throw new change_size_provider_error_1.ChangeSizeProviderError(code, typeof status === 'number' && Number.isInteger(status) && status >= 100 && status <= 599 ? `http-${status}` : 'http-unavailable', typeof reference === 'string' && /^[A-Za-z0-9:-]{1,64}$/u.test(reference) ? reference : 'unavailable', cause instanceof application_error_1.ApplicationError ? { retryable: cause.retryable, correlationId: cause.correlationId } : {});
+    }
+}
+function object(value) {
+    return typeof value === 'object' && value !== null && !Array.isArray(value) ? value : {};
+}
+
+
+/***/ }),
+
 /***/ 57628:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -76871,6 +77002,24 @@ class IssueLabelRepository {
                 (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to fetch labels for issue #${issueNumber}.`));
                 throw error;
             }
+        };
+        /** Required mutation evidence: missing, malformed or truncated labels never mean empty. */
+        this.getRequiredLabels = async (owner, repository, issueNumber, token) => {
+            const octokit = this.githubClient.getClient(token);
+            const names = [];
+            for (let page = 1; page <= 100; page += 1) {
+                const { data } = await octokit.rest.issues.listLabelsOnIssue({ owner, repo: repository, issue_number: issueNumber, per_page: 100, page });
+                const labels = (0, github_pagination_policy_1.requireArrayPage)(data, 'required issue labels');
+                for (const label of labels) {
+                    if (!label || typeof label.name !== 'string' || !label.name.trim()) {
+                        throw new application_error_1.ApplicationError('provider.contract-invalid', 'Required label evidence was malformed.');
+                    }
+                    names.push(label.name);
+                }
+                if (labels.length < 100)
+                    return names;
+            }
+            throw new application_error_1.ApplicationError('provider.contract-invalid', 'Required label pagination exceeded its fixed bound.');
         };
         this.setLabels = async (owner, repository, issueNumber, labels, token) => {
             const octokit = this.githubClient.getClient(token);
@@ -81914,6 +82063,30 @@ function countBugbotFindingStates(states) {
 }
 function countActionableBugbotFindings(counts) {
     return counts.open + counts.reopened + counts['verification-required'];
+}
+
+
+/***/ }),
+
+/***/ 25304:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CHANGE_SIZE_OPERATIONS = void 0;
+exports.isChangeSizeReconciliationFacts = isChangeSizeReconciliationFacts;
+exports.CHANGE_SIZE_OPERATIONS = Object.freeze([
+    'calculate-size', 'issue-labels', 'issue-project-size', 'list-pull-requests',
+    'pr-label-read', 'pr-label-write', 'pr-project-membership', 'pr-project-size',
+]);
+function isChangeSizeReconciliationFacts(value) {
+    return exports.CHANGE_SIZE_OPERATIONS.some(operation => operation === value.operation)
+        && [value.issueNumber, value.targetNumber].every(number => Number.isSafeInteger(number) && Number(number) > 0)
+        && [value.projectIndex, value.verifiedOperations, value.pendingProjectSizes]
+            .every(number => Number.isSafeInteger(number) && Number(number) >= 0)
+        && typeof value.providerStatus === 'string' && /^(?:http-[1-5][0-9]{2}|http-unavailable)$/u.test(value.providerStatus)
+        && typeof value.providerReference === 'string' && /^[A-Za-z0-9:-]{1,64}$/u.test(value.providerReference);
 }
 
 
@@ -87644,6 +87817,40 @@ exports.BugbotScmPortFactory = BugbotScmPortFactory;
 
 /***/ }),
 
+/***/ 80230:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.withChangeSizeDiagnostics = withChangeSizeDiagnostics;
+const change_size_provider_failure_1 = __nccwpck_require__(5299);
+/** Keep provider DTO inspection at the adapter boundary and preserve narrow port authority. */
+function withChangeSizeDiagnostics(ports) {
+    return {
+        issueRepository: {
+            getLabels: number => (0, change_size_provider_failure_1.withChangeSizeProviderFailure)(() => ports.issueRepository.getLabels(number)),
+            setLabels: (number, labels) => (0, change_size_provider_failure_1.withChangeSizeProviderFailure)(() => ports.issueRepository.setLabels(number, labels)),
+        },
+        projectBoardCommandPort: {
+            ...ports.projectBoardCommandPort,
+            setTaskSize: (project, number, size) => (0, change_size_provider_failure_1.withChangeSizeProviderFailure)(() => ports.projectBoardCommandPort.setTaskSize(project, number, size)),
+        },
+        pullRequestRepository: {
+            getOpenPullRequestNumbersByHeadBranch: branch => (0, change_size_provider_failure_1.withChangeSizeProviderFailure)(() => ports.pullRequestRepository.getOpenPullRequestNumbersByHeadBranch(branch)),
+        },
+        branchChangeSizePort: {
+            getSizeCategoryAndReason: (head, base, thresholds, labels) => (0, change_size_provider_failure_1.withChangeSizeProviderFailure)(() => ports.branchChangeSizePort.getSizeCategoryAndReason(head, base, thresholds, labels)),
+        },
+        projectMembershipQueryPort: {
+            isContentLinked: (project, number) => (0, change_size_provider_failure_1.withChangeSizeProviderFailure)(() => ports.projectMembershipQueryPort.isContentLinked(project, number)),
+        },
+    };
+}
+
+
+/***/ }),
+
 /***/ 99375:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -88450,6 +88657,7 @@ exports.createPullRequestReviewCommentUseCaseCompositionRoot = createPullRequest
 exports.createCommitUseCaseCompositionRoot = createCommitUseCaseCompositionRoot;
 exports.createMainRunRouteCompositionRoot = createMainRunRouteCompositionRoot;
 exports.createClosedIssueRetirementUseCase = createClosedIssueRetirementUseCase;
+const change_size_diagnostics_composition_root_1 = __nccwpck_require__(80230);
 const sdd_diff_composition_root_1 = __nccwpck_require__(83434);
 const pull_request_status_composition_root_1 = __nccwpck_require__(49891);
 const github_runtime_doctor_composition_root_1 = __nccwpck_require__(36459);
@@ -88602,7 +88810,15 @@ function createPullRequestReviewCommentUseCaseCompositionRoot(binding, setup = v
     }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_2.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
-    return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssueReopen)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase((0, lifecycle_capability_port_binding_2.bindProjectBoardCommands)(projectBoardCommandPort, binding), (0, lifecycle_capability_port_binding_2.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding), (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchChangeSize)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, change_size_project_membership_composition_root_1.createChangeSizeProjectMembershipQueryPort)(binding)), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
+    const labels = (0, issue_labels_composition_root_1.createIssueLabelRepository)();
+    const size = (0, change_size_diagnostics_composition_root_1.withChangeSizeDiagnostics)({
+        projectBoardCommandPort: (0, lifecycle_capability_port_binding_2.bindProjectBoardCommands)(projectBoardCommandPort, binding),
+        issueRepository: (0, lifecycle_capability_port_binding_2.bindIssueLabels)({ getLabels: labels.getRequiredLabels, setLabels: labels.setLabels }, binding),
+        pullRequestRepository: (0, push_single_action_capability_port_binding_1.bindPullRequestBranchQuery)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding),
+        branchChangeSizePort: (0, push_single_action_capability_port_binding_1.bindBranchChangeSize)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding),
+        projectMembershipQueryPort: (0, change_size_project_membership_composition_root_1.createChangeSizeProjectMembershipQueryPort)(binding),
+    });
+    return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, push_single_action_capability_port_binding_1.bindIssueReopen)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding)), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase(size.projectBoardCommandPort, size.issueRepository, size.pullRequestRepository, size.branchChangeSizePort, size.projectMembershipQueryPort), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
 }
 function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface, setupProgress) {
     let singleAction;

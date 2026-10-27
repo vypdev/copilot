@@ -127,7 +127,7 @@ describe('CheckChangesIssueSizeUseCase', () => {
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
     expect(results[0].steps).toContain(
-      'Tried to check the size of the changes, but there was a problem.'
+      'Size reconciliation stopped; completed effects were retained. Inspect the failed operation before retrying.'
     );
   });
 

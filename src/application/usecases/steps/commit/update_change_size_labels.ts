@@ -1,3 +1,4 @@
+import { ChangeSizeReconciliation } from './change_size_reconciliation';
 import type { ProjectReference } from '../../../ports/project_board_link_ports';
 import type { BoundIssueLabelsPort } from '../../../ports/issue_management_ports';
 import type { BoundProjectBoardCommandPort } from '../../../ports/project_board_command_ports';
@@ -31,38 +32,25 @@ export function replaceSizeLabel(currentLabels: readonly string[], sizeLabels: r
     return [...currentLabels.filter((name) => !sizeLabels.includes(name)), nextSize];
 }
 
-async function updateProjectSize(
-    projects: readonly ProjectReference[],
-    issueOrPullRequestNumber: number,
-    githubSize: string,
-    projectBoardCommandPort: BoundProjectBoardCommandPort,
-): Promise<void> {
-    for (const project of projects) {
-        await projectBoardCommandPort.setTaskSize(
-            project,
-            issueOrPullRequestNumber,
-            githubSize,
-        );
-    }
-}
-
 async function updateOpenPullRequestSize(
     request: ChangeSizeLabelRequest,
     pullRequestNumber: number,
     ports: ChangeSizeLabelPorts,
+    reconciliation: ChangeSizeReconciliation,
 ): Promise<{ pullRequestNumber: number; projectId: string }[]> {
-    const pullRequestLabels = await ports.issueLabelsPort.getLabels(
-        pullRequestNumber,
-    );
+    const pullRequestLabels = await reconciliation.run('pr-label-read', pullRequestNumber, 0, () => ports.issueLabelsPort.getLabels(pullRequestNumber));
     const pullRequestLabelNames = replaceSizeLabel(pullRequestLabels, request.sizeLabels, request.size);
     if (!sameLabels(pullRequestLabels, pullRequestLabelNames)) {
-        await ports.issueLabelsPort.setLabels(pullRequestNumber, pullRequestLabelNames);
+        await reconciliation.run('pr-label-write', pullRequestNumber, 0, () => ports.issueLabelsPort.setLabels(pullRequestNumber, pullRequestLabelNames));
     }
     const pending: { pullRequestNumber: number; projectId: string }[] = [];
-    for (const project of request.projects) {
-        if (await ports.projectMembershipQueryPort.isContentLinked(project, pullRequestNumber)) {
-            await ports.projectBoardCommandPort.setTaskSize(project, pullRequestNumber, request.githubSize);
-        } else pending.push({ pullRequestNumber, projectId: project.id });
+    for (const [index, project] of request.projects.entries()) {
+        if (await reconciliation.run('pr-project-membership', pullRequestNumber, index + 1, () => ports.projectMembershipQueryPort.isContentLinked(project, pullRequestNumber))) {
+            await reconciliation.run('pr-project-size', pullRequestNumber, index + 1, () => ports.projectBoardCommandPort.setTaskSize(project, pullRequestNumber, request.githubSize));
+        } else {
+            pending.push({ pullRequestNumber, projectId: project.id });
+            reconciliation.pendingProjectSizes += 1;
+        }
     }
     return pending;
 }
@@ -70,24 +58,20 @@ async function updateOpenPullRequestSize(
 export async function updateIssueAndRelatedPullRequests(
     request: ChangeSizeLabelRequest,
     ports: ChangeSizeLabelPorts,
+    reconciliation = new ChangeSizeReconciliation(request.issueNumber),
 ): Promise<ChangeSizeLabelResult> {
     const issueLabelNames = replaceSizeLabel(request.currentIssueLabels, request.sizeLabels, request.size);
     if (!sameLabels(request.currentIssueLabels, issueLabelNames)) {
-        await ports.issueLabelsPort.setLabels(request.issueNumber, issueLabelNames);
+        await reconciliation.run('issue-labels', request.issueNumber, 0, () => ports.issueLabelsPort.setLabels(request.issueNumber, issueLabelNames));
     }
-    await updateProjectSize(
-        request.projects,
-        request.issueNumber,
-        request.githubSize,
-        ports.projectBoardCommandPort,
-    );
+    for (const [index, project] of request.projects.entries()) {
+        await reconciliation.run('issue-project-size', request.issueNumber, index + 1, () => ports.projectBoardCommandPort.setTaskSize(project, request.issueNumber, request.githubSize));
+    }
 
-    const openPullRequestNumbers = await ports.pullRequestBranchQueryPort.getOpenPullRequestNumbersByHeadBranch(
-        request.headBranch,
-    );
+    const openPullRequestNumbers = await reconciliation.run('list-pull-requests', request.issueNumber, 0, () => ports.pullRequestBranchQueryPort.getOpenPullRequestNumbersByHeadBranch(request.headBranch));
     const pendingProjectSizes: { pullRequestNumber: number; projectId: string }[] = [];
     for (const pullRequestNumber of openPullRequestNumbers) {
-        pendingProjectSizes.push(...await updateOpenPullRequestSize(request, pullRequestNumber, ports));
+        pendingProjectSizes.push(...await updateOpenPullRequestSize(request, pullRequestNumber, ports, reconciliation));
     }
 
     return { issueLabelNames, openPullRequestNumbers, pendingProjectSizes };

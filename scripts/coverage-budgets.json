@@ -999,6 +999,30 @@
         }
       ],
       "successMessage": "source candidate verification readiness: PASS (100% lines/statements/branches/functions)"
+    },
+    {
+      "name": "Size reconciliation diagnostics",
+      "missingEntryLabel": "size reconciliation diagnostics",
+      "rules": [
+        {
+          "files": [
+            "src/domain/change_size_reconciliation.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/ports/change_size_provider_error.ts",
+            "src/data/repository/github/change_size_provider_failure.ts",
+            "src/application/usecases/steps/commit/change_size_reconciliation.ts",
+            "src/infrastructure/composition/change_size_diagnostics_composition_root.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "size reconciliation diagnostics coverage: PASS (closed facts 100%; changed path 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

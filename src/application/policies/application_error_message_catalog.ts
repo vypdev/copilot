@@ -233,6 +233,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Inspect the closed-issue or merged-PR run and current native state. Retry cleanup only if the issue is still closed with the intended reason; leave reopened work open. Resolve the named failure before retrying.',
     retainedState: 'Native state was preserved. Confirmed changes: {changed}; remaining required changes in the last verified plan: {remaining}. Unavailable reads do not establish completion.',
   }),
+  'change-size-reconciliation-failed': Object.freeze({
+    impact: 'Size reconciliation stopped at {operation} for target #{targetNumber} (issue #{issueNumber}, configured Project position {projectIndex}; 0 means no Project). Provider: {providerStatus}; request: {providerReference}.',
+    action: 'Correct the named authorization, resource or contract error before rerunning the same workflow. For transient failures, wait for provider recovery or rate-limit reset. Reread the target: the failed operation may have applied remotely.',
+    retainedState: 'Completed effects were retained. Verified operations: {verifiedOperations}; PR Project sizes awaiting lifecycle linkage: {pendingProjectSizes}. The failed and later operations remain unverified; an optional Check Run warning is a separate publication stage.',
+  }),
   'approval-evidence-read-failed': Object.freeze({
     impact: 'Approval evidence could not be verified: {operation} ({reason}).',
     action: 'Inspect {permission} access for the runtime credential and the named evidence response. Correct authorization, missing-resource or schema errors before rerunning; retry transient failures only after provider recovery or rate-limit reset.',
@@ -362,6 +367,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'La limpieza de la issue sigue sin verificarse: {resultId}, fase {phase}; estado nativo {state}, motivo {reason}.',
     action: 'Revisa la ejecución de cierre o de la PR fusionada y el estado nativo actual. Reintenta la limpieza solo si la issue sigue cerrada con el motivo previsto; conserva abierto el trabajo reabierto. Resuelve el fallo indicado antes de reintentar.',
     retainedState: 'Se conservó el estado nativo. Cambios confirmados: {changed}; cambios pendientes en el último plan verificado: {remaining}. Una lectura no disponible no demuestra que haya finalizado.',
+  }),
+  'change-size-reconciliation-failed': Object.freeze({
+    impact: 'La reconciliación de tamaño se detuvo en {operation} para el destino #{targetNumber} (issue #{issueNumber}, posición del Project configurado {projectIndex}; 0 indica sin Project). Proveedor: {providerStatus}; petición: {providerReference}.',
+    action: 'Corrige el error de autorización, recurso o contrato antes de reejecutar el mismo workflow. Ante fallos transitorios, espera a la recuperación del proveedor o del límite. Relee el destino: la operación fallida puede haberse aplicado remotamente.',
+    retainedState: 'Se conservaron los efectos completados. Operaciones verificadas: {verifiedOperations}; tamaños de PR en Projects pendientes de vinculación: {pendingProjectSizes}. La operación fallida y las posteriores siguen sin verificar; un aviso del Check Run opcional corresponde a otra etapa de publicación.',
   }),
   'approval-evidence-read-failed': Object.freeze({
     impact: 'No se pudo verificar la evidencia de aprobación: {operation} ({reason}).',
