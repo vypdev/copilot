@@ -2,9 +2,14 @@
  * Prompt for assessing issue progress from branch diff (CheckProgressUseCase).
  */
 import { fillTemplate } from './fill';
-import { PROGRESS_SCOPE_INSTRUCTIONS } from './progress_scope';
+import { PROGRESS_SCOPE_INSTRUCTIONS, renderProgressPromptData } from './progress_scope';
+import { UNTRUSTED_CONTENT_POLICY } from '../domain/security/untrusted_content';
+import { AGENT_PROMPT_MAX_BYTES } from '../domain/agent_execution_plan';
+import { MAX_PROGRESS_SCOPE_BYTES } from '../application/policies/progress_scope_policy';
 
-const TEMPLATE = `Assess the progress of issue #{{issueNumber}} using the supplied immutable GitHub comparison between the base and source heads.
+const TEMPLATE = `${UNTRUSTED_CONTENT_POLICY}
+
+Assess the progress of issue #{{issueNumber}} using the supplied immutable GitHub comparison between the base and source heads.
 
 Write every human-readable sentence in {{targetLocale}}. Preserve code identifiers, paths, refs, commands, URLs, percentages, and JSON keys verbatim. Echo \`outputLocale\` exactly as \`{{targetLocale}}\`.
 
@@ -51,11 +56,10 @@ export function getCheckProgressPrompt(params: CheckProgressParams): string {
         issueNumber: String(params.issueNumber),
         baseBranch: params.baseBranch,
         currentBranch: params.currentBranch,
-        issueDescription: params.issueDescription,
-        issueDescriptionJson: JSON.stringify(params.issueDescription),
+        issueDescriptionJson: renderProgressPromptData(JSON.stringify(params.issueDescription), 'progress.issue-description', AGENT_PROMPT_MAX_BYTES),
         scopeInstructions: PROGRESS_SCOPE_INSTRUCTIONS,
-        acceptanceScope: params.acceptanceScope ?? '{}',
+        acceptanceScope: renderProgressPromptData(params.acceptanceScope ?? '{}', 'progress.acceptance-scope', MAX_PROGRESS_SCOPE_BYTES),
         targetLocale: params.targetLocale,
-        diffEvidence: params.diffEvidence,
+        diffEvidence: renderProgressPromptData(params.diffEvidence, 'progress.comparison', AGENT_PROMPT_MAX_BYTES),
     });
 }

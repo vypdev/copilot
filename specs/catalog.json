@@ -281,7 +281,8 @@
         "src/application/policies/__tests__/progress_scope_policy.test.ts",
         "src/application/usecases/actions/__tests__/progress_scope.integration.test.ts",
         "src/application/usecases/actions/__tests__/progress_response.test.ts",
-        "src/prompts/__tests__/check_progress.test.ts"
+        "src/prompts/__tests__/check_progress.test.ts",
+        "src/prompts/__tests__/progress_scope.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",

@@ -2109,6 +2109,17 @@ subset may define the final assessment schema. Source order assigns R/X display
 identities and quote text comes from the captured issue, never a free model quote.
 Repeated text at different physical lines retains independent source identities.
 
+The classifier, every comparison-part request and the final assessment MUST prefix
+the trusted untrusted-content policy. Complete issue JSON, extracted acceptance
+scope and comparison/model evidence MUST use verbatim untrusted-data blocks with
+a non-colliding terminator. Labels saying “untrusted” or JSON serialization alone
+are insufficient framing. The prompt builder checks UTF-8 byte bounds before
+framing and never clips or normalizes away source qualifiers; the 64,000-byte
+scope and 524,288-byte runtime ceilings remain unchanged. Delimiter-like content
+and embedded instructions remain data. Framing overhead participates in existing
+complete-prompt preflight; any overflow rejects the affected query with the
+existing terminal size diagnostic and preserves previous progress.
+
 Required and uncertain lines both enter the final assessment. An uncertain line
 MUST remain `verification-unknown` and request scope clarification; it cannot be
 supported or turned into missing implementation. Every original line is thus
@@ -2194,9 +2205,15 @@ from nondeterministic model behavior and actual execution.
 
 ### Verification, documentation and acceptance
 
-Minimum **50 new distinct cases**: 28 pure complete-source/identity/status/evidence/bounds
-cases, ten orchestration/single/multipart/failure/race/retry cases, six prompt
-and trust/locale cases, and six strict-schema/security/regression compositions.
+Minimum **58 new distinct cases**: 28 pure complete-source/identity/status/evidence/bounds
+cases, ten orchestration/single/multipart/failure/race/retry cases, twelve prompt
+and trust/locale cases, and eight strict-schema/security/regression compositions.
+The eight trust-boundary additions cover exact Unicode/delimiter preservation,
+UTF-8 rather than UTF-16 limits, complete long source inventory, oversized
+classification rejection, isolated final issue/scope/model fields, exact/oversized
+scope bounds, and adversarial single/multipart request compositions. Four of the
+final/pipeline regressions fail against the pre-fix sources; passing protocol
+replays do not claim deterministic resistance by a live model.
 Parameterized rows count separately only for distinct behavior; the existing
 135-case communication baseline is not replaced. New pure policy MUST reach
 100% in all four coverage metrics; existing full-suite/module budgets remain.
@@ -2211,7 +2228,7 @@ Codecov lines including zero partials remain merge gates.
 | Preserve uncertainty | external/unavailable/contradictory support rejection; unknown execution accepted below 100 | progress evidence |
 | Every remaining item is scoped | complete unique ID set; extra/free-form remaining rejected; ordered projected citations | example card |
 | No partial or stale publication | failed extraction/part/final and issue-edit/head/native races; retry reads fresh scope | retained state and recovery |
-| Fixed bounds and trust | 1,024/1,025 source lines, 32/33 clauses, 1,200/1,201 and supplementary Unicode, serialized/combined overflow; preflight before queries; no new permissions | limits and model limitations |
+| Fixed bounds and trust | 1,024/1,025 source lines, 32/33 clauses, 1,200/1,201 and supplementary Unicode, serialized/combined overflow; preflight before queries; all-phase untrusted framing, delimiter collision and UTF-8 bounds; no new permissions | limits and model limitations |
 | Provider compatibility and independent gates | strict schema/local validator compositions, full native CI/review/Codecov evidence | no setup migration; CI/review remain independent |
 
 Implementation sequence: scope/projection policy and SDD; prompt and sequential
