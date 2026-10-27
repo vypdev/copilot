@@ -98,3 +98,14 @@ For a catalogued change, reviewers should be able to answer yes to all of these:
 Human evidence remains necessary where automation cannot judge GitHub or
 terminal readability: desktop/mobile, light/dark, screen-reader order, narrow
 terminal widths, and real provider/setup/merge-queue behavior.
+
+
+## Safe diagnostics for unpublished drafts
+
+A generated candidate that fails its single bounded repair remains unpublished.
+The pre-branch gate owns its reusable issue status card and exposes only closed
+check IDs and bounded section/row/count facts. The validator's raw text, IDs,
+paths and candidate are not public evidence. Diagnostics do not establish
+readiness or implementation acceptance. See [blocked preparation recovery](/issues/pre-branch-sdds#when-specification-preparation-is-blocked)
+for limits, locale fallback, retention and retry behavior. Contributors should
+add deterministic rejection/retry/privacy cases when extending these checks.

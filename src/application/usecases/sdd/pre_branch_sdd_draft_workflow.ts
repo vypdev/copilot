@@ -1,6 +1,7 @@
 import type { AgentConfiguration } from '../../ports/agent_configuration_ports';
 import type { FindingsQueryPort } from '../../ports/agent_findings_ports';
-import { ApplicationError } from '../../errors/application_error';
+import { SddDraftPreparationFailure } from '../../errors/sdd_draft_preparation_failure';
+import type { SddValidationDiagnostic } from '../../../domain/sdd_validation_diagnostic';
 import {
   SDD_MIN_DRAFT_CHARACTERS, SDD_MAX_DRAFT_CHARACTERS, SDD_MAX_UPDATE_CHARACTERS,
   SddDraftFormatFailure,
@@ -27,6 +28,8 @@ export async function draftSddMarkdown(
   };
   let problem: 'size' | 'format' = 'size';
   let formatReason: SddDraftFormatFailure['reason'] = 'required-heading';
+  let diagnostic: SddValidationDiagnostic = { reason: 'size', phase: 'response',
+    facts: [{ detail: 'size-limit', section: 0, expected: maximum }] };
   const contractPrompt = `${prompt}\n\nDraft contract: keep the complete draft within ${maximum} characters; aim for ${target} characters. Preserve the same owner, decisions and requirements. Include these literal canonical heading prefixes as Markdown headings, with the shown capitalization:\n${SDD_REQUIRED_HEADINGS.join('\n')}\nUse the canonical numeric test-budget table in section 14: Area | Minimum distinct cases | Behaviors/risks covered. Every allocation and the Total must be a positive integer, and the Total must equal the sum of the allocations. Return only the required JSON.`;
   for (let attempt = 0; attempt < 2; attempt++) {
     let value;
@@ -41,39 +44,36 @@ export async function draftSddMarkdown(
       // Provider failures and other schema violations retain their original identity.
       if (!(error instanceof AgentResponseLengthFailure) || error.path !== '$.markdown' || error.maximum !== maximum) throw error;
       problem = 'size';
+      diagnostic = { reason: 'size', phase: 'response', facts: [{ detail: 'size-limit', section: 0, expected: maximum }] };
       continue;
     }
     if (!value || typeof value !== 'object' || Array.isArray(value)
       || typeof (value as { markdown?: unknown }).markdown !== 'string') {
-      throw new ApplicationError('validation.invalid-input', 'The drafting agent returned no SDD Markdown.');
+      throw new SddDraftPreparationFailure({ reason: 'response-shape', phase: 'response', facts: [{ detail: 'response-shape', section: 0 }] }, attempt === 0 ? 1 : 2);
     }
     const markdown = (value as { markdown: string }).markdown;
-    if (markdown.length > maximum) { problem = 'size'; continue; }
+    if (markdown.length > maximum) {
+      problem = 'size';
+      diagnostic = { reason: 'size', phase: 'response', facts: [{ detail: 'size-limit', section: 0, expected: maximum }] };
+      continue;
+    }
+    let assembledCandidate = false;
     try {
       const assembled = renderSddDerivedTables(markdown);
-      if (assembled.length > maximum) { problem = 'size'; continue; }
+      if (assembled.length > maximum) {
+        problem = 'size';
+        diagnostic = { reason: 'size', phase: 'assembly', facts: [{ detail: 'size-limit', section: 0, expected: maximum }] };
+        continue;
+      }
+      assembledCandidate = true;
       await validate?.(assembled);
       return assembled;
     } catch (error) {
       if (!(error instanceof SddDraftFormatFailure)) throw error;
       problem = 'format';
       formatReason = error.reason;
+      diagnostic = { ...error.diagnostic, phase: assembledCandidate ? 'validation' : 'assembly' };
     }
   }
-  if (problem === 'format') throw new ApplicationError('validation.invalid-input', `The SDD draft still violates its ${formatReason} format contract after one bounded repair.`, {
-    recovery: { id: consistencyRecovery(formatReason), variables: {} },
-  });
-  throw new ApplicationError('validation.invalid-input', 'The SDD draft exceeded its size limit after one bounded repair.', {
-    recovery: { id: 'sdd-draft-size-exceeded', variables: {} },
-  });
-}
-
-function consistencyRecovery(reason: SddDraftFormatFailure['reason']) {
-  switch (reason) {
-    case 'case-identity': return 'sdd-draft-case-identity-invalid';
-    case 'case-budget': return 'sdd-draft-case-budget-invalid';
-    case 'requirement-mapping': return 'sdd-draft-requirement-mapping-invalid';
-    case 'repository-path': return 'sdd-draft-repository-path-invalid';
-    default: return 'sdd-draft-format-invalid';
-  }
+  throw new SddDraftPreparationFailure(diagnostic, 2);
 }

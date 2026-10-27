@@ -263,6 +263,21 @@ describe("IssueUseCase", () => {
     expect(param.labels.currentIssueLabels).not.toContain('branched');
   });
 
+  it('keeps a blocked SDD outcome primary instead of adding the welcome fallback (#714)', async () => {
+    const begin = jest.fn().mockResolvedValue({ status: 'blocked', results: [new Result({
+      id: 'PreBranchSddGateUseCase', success: false, executed: true,
+    })] });
+    const publish = jest.fn();
+    const param = minimalExecution({ tokenUser: 'vypbot', eventName: 'issues',
+      inputs: { eventName: 'issues', action: 'opened' }, issue: { opened: true },
+      issueStartDecision: { started: true, branchRequired: true, sddRequired: true, helpRequired: false } });
+    const results = await createUseCase(undefined, { begin, publish } as never).invoke(param);
+    expect(results.some(result => result.id === 'CopilotWelcomeUseCase')).toBe(false);
+    expect(mockRecommendStepsInvoke).not.toHaveBeenCalled();
+    expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
+    expect(publish).not.toHaveBeenCalled();
+  });
+
   it('waits for SDD answers without preparing a branch or deployment', async () => {
     const begin = jest.fn().mockResolvedValue({ status: 'waiting', results: [new Result({ id: 'PreBranchSddGateUseCase', success: true, executed: true })] });
     const publish = jest.fn();

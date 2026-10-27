@@ -22,7 +22,7 @@
       "file": "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts",
       "addComment": 2,
       "updateComment": 2,
-      "reason": "Creates or updates the verified bot-owned SDD clarification/publication card, plus one separate issue-bound ownership-analysis diagnostic; rejected plans never create a readiness record, and unchanged diagnostics emit no write."
+      "reason": "Creates or updates the verified bot-owned SDD clarification/publication card and one issue-bound analysis/preparation diagnostic through a shared upsert; closed facts never create readiness, foreign markers remain inert, and unchanged diagnostics emit no write."
     },
     {
       "file": "src/application/usecases/steps/commit/bugbot/publish_issue_finding_comment.ts",

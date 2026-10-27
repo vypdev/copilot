@@ -1,3 +1,4 @@
+import type { SddValidationFact } from './sdd_validation_diagnostic';
 import { SddDraftFormatFailure } from './pre_branch_sdd';
 
 export type SddConsistencyReason = 'case-identity' | 'case-budget' | 'requirement-mapping' | 'repository-path';
@@ -23,9 +24,9 @@ const TRACEABILITY_SLOT = '{{SDD_REQUIREMENT_CASES}}';
 /** The provider writes definitions once; trusted code renders their two redundant projections. */
 export const SDD_DERIVED_TABLES_PROMPT = `Draft assembly: the consistency contract above describes the final document. In your raw Markdown, write the complete Requirement | Behavior table in section 4 and Case ID | Area | Requirements | Scenario inventory in section 14. Preserve every resolved minimum, per-area allocation and observable case as actual inventory rows, never ranges or summaries. Instead of independently writing the budget table, put ${BUDGET_SLOT} once on its own visible line in section 14. Instead of writing the reverse Requirement | Cases table, put ${TRACEABILITY_SLOT} once on its own visible line in section 17. Do not include either derived table yourself or put these slots in examples, fences or comments. Trusted code derives exact counts, Total and reciprocal links from your unchanged definitions, then runs every publication check. The compact character target is advisory: use more space when required to preserve the full resolved inventory and scope. The hard limit applies after assembly too.`;
 
-function fail(reason: SddConsistencyReason): never {
+function fail(reason: SddConsistencyReason, fact: SddValidationFact = { detail: 'validation-contract', section: 0 }): never {
   // Closed diagnostics: rejected Markdown and repository text never become repair instructions.
-  throw new SddDraftFormatFailure(reason, `The SDD draft violates its ${reason} consistency contract.`);
+  throw new SddDraftFormatFailure(reason, `The SDD draft violates its ${reason} consistency contract.`, { reason, phase: 'validation', facts: [fact] });
 }
 
 /** Excludes examples and hidden records from the contract. */
@@ -57,16 +58,16 @@ function visible(source: string): string {
 
 function clean(value: string): string { return value.trim().replace(/^(?:\*\*|__|`)(.*?)(?:\*\*|__|`)$/u, '$1').trim(); }
 
-function section(source: string, number: number, reason: SddConsistencyReason): string {
+function section(source: string, number: Exclude<SddValidationFact['section'], 0>, reason: SddConsistencyReason): string {
   const sections = [...source.matchAll(/^## (\d+)\. [^\n]*$/gmu)];
   const matches = sections.filter(heading => Number(heading[1]) === number);
-  if (matches.length !== 1) return fail(reason);
+  if (matches.length !== 1) return fail(reason, { detail: 'section-count', section: number, expected: 1, observed: matches.length });
   const start = matches[0];
   const end = sections.find(heading => heading.index > start.index)?.index ?? source.length;
   return source.slice(start.index + start[0].length, end);
 }
 
-function table(source: string, number: number, headers: readonly string[], reason: SddConsistencyReason): string[][] {
+function table(source: string, number: Exclude<SddValidationFact['section'], 0>, headers: readonly string[], reason: SddConsistencyReason): string[][] {
   const lines = section(source, number, reason).split('\n');
   const found: string[][][] = [];
   for (let index = 0; index < lines.length; index++) {
@@ -75,22 +76,23 @@ function table(source: string, number: number, headers: readonly string[], reaso
     const header = cells(lines[index]);
     if (!headers.every((value, position) => header[position] === value) || header.length !== headers.length) continue;
     const separator = cells(lines[++index] ?? '');
-    if (separator.length !== headers.length || !separator.every(cell => /^:?-{3,}:?$/u.test(cell))) return fail(reason);
+    if (separator.length !== headers.length || !separator.every(cell => /^:?-{3,}:?$/u.test(cell))) return fail(reason, { detail: 'table-separator', section: number, row: index + 1 });
     const rows: string[][] = [];
     while (++index < lines.length && /^\s*\|/u.test(lines[index])) {
       const row = cells(lines[index]);
-      if (row.length !== headers.length || row.some(cell => !cell)) return fail(reason);
+      if (row.length !== headers.length) return fail(reason, { detail: 'table-columns', section: number, row: rows.length + 1, expected: headers.length, observed: row.length });
+      if (row.some(cell => !cell)) return fail(reason, { detail: 'table-empty-cell', section: number, row: rows.length + 1 });
       rows.push(row);
     }
-    if (!rows.length) return fail(reason);
+    if (!rows.length) return fail(reason, { detail: 'table-empty', section: number, observed: 0 });
     found.push(rows);
   }
-  return found.length === 1 ? found[0] : fail(reason);
+  return found.length === 1 ? found[0] : fail(reason, { detail: 'table-count', section: number, expected: 1, observed: found.length });
 }
 
-function ids(value: string, pattern: RegExp, reason: SddConsistencyReason): string[] {
+function ids(value: string, pattern: RegExp, reason: SddConsistencyReason, section: SddValidationFact['section']): string[] {
   const values = value.split(/\s*,\s*/u);
-  if (!values.every(id => pattern.test(id)) || new Set(values).size !== values.length) return fail(reason);
+  if (!values.every(id => pattern.test(id)) || new Set(values).size !== values.length) return fail(reason, { detail: 'identifier-list', section, observed: values.length });
   return values;
 }
 
@@ -105,22 +107,22 @@ export function renderSddDerivedTables(markdown: string): string {
       || section(source, number, reason).split('\n').filter(line => line.trim() === slot).length !== 1) fail(reason);
   }
   const requirements = table(source, 4, ['Requirement', 'Behavior'], 'requirement-mapping').map(row => row[0]);
-  if (new Set(requirements).size !== requirements.length || requirements.some(id => !REQUIREMENT_ID.test(id))) fail('requirement-mapping');
+  uniqueIdentifiers(requirements, REQUIREMENT_ID, 'requirement-mapping', 4);
   const cases = table(source, 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity');
   const caseIds = cases.map(row => row[0]);
-  if (new Set(caseIds).size !== caseIds.length || caseIds.some(id => !CASE_ID.test(id))) fail('case-identity');
+  uniqueIdentifiers(caseIds, CASE_ID, 'case-identity', 14);
   const counts = new Map<string, number>();
   const edges = new Map(requirements.map(id => [id, [] as string[]]));
   for (const [id, area, links] of cases) {
-    if (area === 'Total') fail('case-budget');
+    if (area === 'Total') fail('case-budget', { detail: 'budget-area', section: 14 });
     counts.set(area, (counts.get(area) ?? 0) + 1);
-    for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping')) {
+    for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping', 14)) {
       const linked = edges.get(requirement);
-      if (!linked) fail('requirement-mapping');
+      if (!linked) fail('requirement-mapping', { detail: 'requirement-reference', section: 14, expected: 0, observed: 1 });
       linked.push(id);
     }
   }
-  if ([...edges.values()].some(links => links.length === 0)) fail('requirement-mapping');
+  if ([...edges.values()].some(links => links.length === 0)) fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: 0, observed: [...edges.values()].filter(links => links.length === 0).length });
   const budget = ['| Area | Minimum distinct cases | Behaviors/risks covered |', '|---|---:|---|',
     ...[...counts].map(([area, count]) => `| ${area} | ${count} | Observable scenarios in the case inventory. |`),
     `| Total | ${cases.length} | Distinct inventory cases; repeated executions do not add cases. |`].join('\n');
@@ -164,45 +166,56 @@ export function validateSddDraftConsistency(
   const source = visible(markdown);
   const requirements = table(source, 4, ['Requirement', 'Behavior'], 'requirement-mapping');
   const requirementIds = requirements.map(row => row[0]);
-  if (new Set(requirementIds).size !== requirementIds.length || !requirementIds.every(id => REQUIREMENT_ID.test(id))) fail('requirement-mapping');
+  uniqueIdentifiers(requirementIds, REQUIREMENT_ID, 'requirement-mapping', 4);
   const cases = table(source, 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity');
   const caseIds = cases.map(row => row[0]);
   const reserved = new Set(reservedSddCaseIds(owners));
-  if (new Set(caseIds).size !== caseIds.length || caseIds.some(id => !CASE_ID.test(id) || reserved.has(id))
-    || /(?<![\w-])C\d+\b/u.test(source)) fail('case-identity');
+  uniqueIdentifiers(caseIds, CASE_ID, 'case-identity', 14);
+  const shorthand = [...source.matchAll(/(?<![\w-])C\d+\b/gu)];
+  if (shorthand.length) fail('case-identity', { detail: 'case-shorthand', section: 0, expected: 0, observed: shorthand.length });
+  if (caseIds.some(id => reserved.has(id))) fail('case-identity', { detail: 'case-reserved', section: 14, expected: 0, observed: caseIds.filter(id => reserved.has(id)).length });
   // References to existing owner cases are allowed, but cannot count as newly defined cases.
-  if ([...source.matchAll(CASE)].some(([id]) => !caseIds.includes(id) && !reserved.has(id))) fail('case-identity');
+  if ([...source.matchAll(CASE)].some(([id]) => !caseIds.includes(id) && !reserved.has(id))) fail('case-identity', { detail: 'case-reference', section: 0 });
 
   const budget = table(source, 14, ['Area', 'Minimum distinct cases', 'Behaviors/risks covered'], 'case-budget');
   const counts = new Map<string, number>();
   let total: number | undefined;
   for (const [area, value] of budget) {
     const count = /^[1-9]\d*$/u.test(value) ? Number(value) : NaN;
-    if (!Number.isSafeInteger(count) || counts.has(area) || total !== undefined) fail('case-budget');
+    if (!Number.isSafeInteger(count)) fail('case-budget', { detail: 'budget-integer', section: 14 });
+    if (counts.has(area) || total !== undefined) fail('case-budget', { detail: 'budget-order', section: 14 });
     if (area === 'Total') total = count;
     else counts.set(area, count);
   }
-  if (!counts.size || total !== caseIds.length || [...counts.values()].reduce((sum, count) => sum + count, 0) !== total
-    || cases.some(row => !counts.has(row[1]))) fail('case-budget');
-  for (const [area, count] of counts) if (cases.filter(row => row[1] === area).length !== count) fail('case-budget');
+  if (!counts.size) fail('case-budget', { detail: 'budget-total', section: 14, expected: 1, observed: 0 });
+  if (total !== caseIds.length) fail('case-budget', { detail: 'budget-total', section: 14, expected: caseIds.length, ...(total !== undefined && total <= 100_000 ? { observed: total } : {}) });
+  const sum = [...counts.values()].reduce((value, count) => value + count, 0);
+  if (sum !== total) fail('case-budget', { detail: 'budget-total', section: 14, expected: total, ...(sum <= 100_000 ? { observed: sum } : {}) });
+  const unknownAreas = cases.filter(row => !counts.has(row[1])).length;
+  if (unknownAreas) fail('case-budget', { detail: 'budget-area', section: 14, expected: 0, observed: unknownAreas });
+  for (const [area, count] of counts) if (cases.filter(row => row[1] === area).length !== count) fail('case-budget', { detail: 'budget-distribution', section: 14, expected: count, observed: cases.filter(row => row[1] === area).length });
 
   const edges = new Map(requirementIds.map(id => [id, new Set<string>()]));
   for (const [id, , links] of cases) {
-    for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping')) {
+    for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping', 14)) {
       const linked = edges.get(requirement);
-      if (!linked) fail('requirement-mapping');
+      if (!linked) fail('requirement-mapping', { detail: 'requirement-reference', section: 14, expected: 0, observed: 1 });
       linked.add(id);
     }
   }
+  if ([...edges.values()].some(links => links.size === 0)) fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: 0, observed: [...edges.values()].filter(links => links.size === 0).length });
   const traceability = table(source, 17, ['Requirement', 'Cases'], 'requirement-mapping');
   const seen = new Set<string>();
   for (const [requirement, links] of traceability) {
     const expected = edges.get(requirement);
-    const actual = ids(links, CASE_ID, 'requirement-mapping');
-    if (!expected || seen.has(requirement) || expected.size !== actual.length || actual.some(id => !expected.has(id))) fail('requirement-mapping');
+    const actual = ids(links, CASE_ID, 'requirement-mapping', 17);
+    if (!expected || seen.has(requirement)) fail('requirement-mapping', { detail: 'traceability-requirement', section: 17, row: seen.size + 1, expected: 0, observed: 1 });
+    if (expected.size !== actual.length) fail('requirement-mapping', { detail: 'traceability-links', section: 17, row: seen.size + 1, expected: expected.size, observed: actual.length });
+    const mismatch = [...expected].filter(id => !actual.includes(id)).length + actual.filter(id => !expected.has(id)).length;
+    if (mismatch) fail('requirement-mapping', { detail: 'traceability-membership', section: 17, row: seen.size + 1, expected: 0, observed: mismatch });
     seen.add(requirement);
   }
-  if (seen.size !== edges.size || [...edges.values()].some(links => links.size === 0)) fail('requirement-mapping');
+  if (seen.size !== edges.size) fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: edges.size, observed: seen.size });
   validatePaths(source, inventory, sddPath);
 }
 
@@ -214,32 +227,32 @@ function safePath(value: string): boolean {
 function validatePaths(source: string, inventory: SddRepositoryInventory, sddPath: string): void {
   const rows = table(source, 15, ['Path', 'Change'], 'repository-path');
   const expectedChange = inventory.files.has(sddPath) ? 'update' : 'create';
-  if (!rows.some(([file, change]) => file === sddPath && change === expectedChange)) fail('repository-path');
+  if (!rows.some(([file, change]) => file === sddPath && change === expectedChange)) fail('repository-path', { detail: 'owner-path', section: 15 });
   const proposed = new Set<string>();
   const seen = new Set<string>();
   for (const [file, change] of rows) {
-    if (!safePath(file) || seen.has(file) || inventory.blocked.has(file)) fail('repository-path');
+    if (!safePath(file) || seen.has(file) || inventory.blocked.has(file)) fail('repository-path', { detail: 'path-identity', section: 15, row: seen.size + 1 });
     seen.add(file);
     if (change === 'create') {
-      if (inventory.files.has(file) || inventory.directories.has(file)) fail('repository-path');
-      if ([...proposed].some(other => file.startsWith(`${other}/`) || other.startsWith(`${file}/`))) fail('repository-path');
+      if (inventory.files.has(file) || inventory.directories.has(file)) fail('repository-path', { detail: 'create-existing-path', section: 15, row: seen.size });
+      if ([...proposed].some(other => file.startsWith(`${other}/`) || other.startsWith(`${file}/`))) fail('repository-path', { detail: 'create-path-overlap', section: 15, row: seen.size });
       const segments = file.split('/');
-      if (segments.some((_, index) => inventory.files.has(segments.slice(0, index + 1).join('/')) || inventory.blocked.has(segments.slice(0, index + 1).join('/')))) fail('repository-path');
+      if (segments.some((_, index) => inventory.files.has(segments.slice(0, index + 1).join('/')) || inventory.blocked.has(segments.slice(0, index + 1).join('/')))) fail('repository-path', { detail: 'create-path-parent', section: 15, row: seen.size });
       proposed.add(file);
-    } else if (!['update', 'reference'].includes(change) || !inventory.files.has(file)) fail('repository-path');
+    } else if (!['update', 'reference'].includes(change) || !inventory.files.has(file)) fail('repository-path', { detail: 'path-operation', section: 15, row: seen.size });
   }
   const check = (file: string) => {
-    if (!safePath(file) || (!inventory.files.has(file) && !inventory.directories.has(file) && !proposed.has(file))) fail('repository-path');
+    if (!safePath(file) || (!inventory.files.has(file) && !inventory.directories.has(file) && !proposed.has(file))) fail('repository-path', { detail: 'path-reference', section: 0 });
   };
   // Relative Markdown file links resolve against the selected SDD, never the current checkout.
   for (const match of source.matchAll(/\]\(([^\s)]+)\)/gu)) {
     const href = match[1].split(/[?#]/u)[0];
     if (!href || /^(?:[a-z][a-z0-9+.-]*:|\/)/iu.test(href)) continue;
     let decoded: string;
-    try { decoded = decodeURIComponent(href); } catch { return fail('repository-path'); }
+    try { decoded = decodeURIComponent(href); } catch { return fail('repository-path', { detail: 'path-link', section: 0 }); }
     const parts = sddPath.split('/').slice(0, -1);
     for (const part of decoded.split('/')) {
-      if (part === '..') { if (!parts.length) fail('repository-path'); parts.pop(); }
+      if (part === '..') { if (!parts.length) fail('repository-path', { detail: 'path-link', section: 0 }); parts.pop(); }
       else if (part !== '.') parts.push(part);
     }
     check(parts.join('/'));
@@ -250,4 +263,11 @@ function validatePaths(source: string, inventory: SddRepositoryInventory, sddPat
   }
   const prose = source.replace(/\]\([^\s)]+\)/gu, ']()').replace(/[a-z][a-z0-9+.-]*:\/\/[^\s)>]+/giu, '');
   for (const match of prose.matchAll(/(?<![\w./:-])([A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+\.[A-Za-z0-9]+)(?![\w/-])/gu)) check(match[1]);
+}
+
+function uniqueIdentifiers(values: readonly string[], pattern: RegExp, reason: 'case-identity' | 'requirement-mapping', section: 4 | 14): void {
+  const distinct = new Set(values).size;
+  if (distinct !== values.length) fail(reason, { detail: reason === 'case-identity' ? 'case-identity' : 'requirement-identity', section, expected: values.length, observed: distinct });
+  const invalid = values.findIndex(value => !pattern.test(value));
+  if (invalid >= 0) fail(reason, { detail: 'identifier-list', section, row: invalid + 1, expected: 0, observed: values.filter(value => !pattern.test(value)).length });
 }

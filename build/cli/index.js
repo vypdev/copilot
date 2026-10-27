@@ -38471,6 +38471,42 @@ exports.DeploymentMergeEffectError = DeploymentMergeEffectError;
 
 /***/ }),
 
+/***/ 12321:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SddDraftPreparationFailure = void 0;
+const sdd_validation_diagnostic_1 = __nccwpck_require__(34211);
+const application_error_1 = __nccwpck_require__(75999);
+const RECOVERY = Object.freeze({
+    'required-heading': 'sdd-draft-format-invalid', 'test-budget': 'sdd-draft-format-invalid',
+    'case-identity': 'sdd-draft-case-identity-invalid', 'case-budget': 'sdd-draft-case-budget-invalid',
+    'requirement-mapping': 'sdd-draft-requirement-mapping-invalid', 'repository-path': 'sdd-draft-repository-path-invalid',
+    size: 'sdd-draft-size-exceeded', 'response-shape': undefined,
+});
+/** Carries safe evidence to the feature-owned card without serializing candidate content. */
+class SddDraftPreparationFailure extends application_error_1.ApplicationError {
+    constructor(diagnostic, attempts) {
+        const normalized = (0, sdd_validation_diagnostic_1.normalizeSddValidationDiagnostic)(diagnostic);
+        if ((attempts !== 1 && attempts !== 2) || (attempts === 1 && normalized.reason !== 'response-shape')) {
+            throw new TypeError('Invalid bounded SDD attempt count.');
+        }
+        const id = RECOVERY[normalized.reason];
+        const message = normalized.reason === 'response-shape' ? 'The drafting agent returned no SDD Markdown.'
+            : normalized.reason === 'size' ? 'The SDD draft exceeded its size limit after one bounded repair.'
+                : `The SDD draft still violates its ${normalized.reason} format contract after one bounded repair.`;
+        super('validation.invalid-input', message, id ? { recovery: { id, variables: {} } } : {});
+        this.attempts = attempts;
+        this.diagnostic = normalized;
+    }
+}
+exports.SddDraftPreparationFailure = SddDraftPreparationFailure;
+
+
+/***/ }),
+
 /***/ 38313:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -39662,22 +39698,22 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     }),
     'sdd-draft-case-identity-invalid': Object.freeze({
         impact: 'SDD publication stopped after one automatic repair: case IDs collide with an owning SDD or are ambiguous.',
-        action: 'Review the draft tables; use distinct fully qualified case IDs and preserve the baseline inventory. Retry the same issue workflow.',
+        action: 'Review the safe validation diagnostics in the issue status card; use distinct fully qualified case IDs and preserve the baseline inventory. Retry the same issue workflow.',
         retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
     }),
     'sdd-draft-case-budget-invalid': Object.freeze({
         impact: 'SDD publication stopped after one automatic repair: per-area allocations disagree with the distinct case inventory.',
-        action: 'Review the draft tables; reconcile each area and the total with the enumerated cases. Retry the same issue workflow.',
+        action: 'Review the safe validation diagnostics in the issue status card; reconcile each area and the total with the enumerated cases. Retry the same issue workflow.',
         retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
     }),
     'sdd-draft-requirement-mapping-invalid': Object.freeze({
         impact: 'SDD publication stopped after one automatic repair: requirements and case mappings are incomplete or inconsistent.',
-        action: 'Review the draft tables; map every requirement to defined cases and match the reverse links. Retry the same issue workflow.',
+        action: 'Review the safe validation diagnostics in the issue status card; map every requirement to defined cases and match the reverse links. Retry the same issue workflow.',
         retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
     }),
     'sdd-draft-repository-path-invalid': Object.freeze({
         impact: 'SDD publication stopped after one automatic repair: cited repository paths cannot be verified at the immutable base.',
-        action: 'Review the draft tables; correct existing paths or explicitly declare intended new files. Retry the same issue workflow.',
+        action: 'Review the safe validation diagnostics in the issue status card; correct existing paths or explicitly declare intended new files. Retry the same issue workflow.',
         retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
     }),
     'sdd-draft-format-invalid': Object.freeze({
@@ -39775,22 +39811,22 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
     }),
     'sdd-draft-case-identity-invalid': Object.freeze({
         impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: los identificadores de casos coinciden con un SDD existente o son ambiguos.',
-        action: 'Revisa las tablas del borrador; usa identificadores completos y distintos y conserva el inventario original. Reintenta el workflow de la misma incidencia.',
+        action: 'Revisa los diagnósticos seguros de validación de la tarjeta de estado; usa identificadores completos y distintos y conserva el inventario original. Reintenta el workflow de la misma incidencia.',
         retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
     }),
     'sdd-draft-case-budget-invalid': Object.freeze({
         impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: las asignaciones por área no coinciden con el inventario de casos distintos.',
-        action: 'Revisa las tablas del borrador; reconcilia cada área y el total con los casos enumerados. Reintenta el workflow de la misma incidencia.',
+        action: 'Revisa los diagnósticos seguros de validación de la tarjeta de estado; reconcilia cada área y el total con los casos enumerados. Reintenta el workflow de la misma incidencia.',
         retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
     }),
     'sdd-draft-requirement-mapping-invalid': Object.freeze({
         impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: los requisitos y sus casos están incompletos o son inconsistentes.',
-        action: 'Revisa las tablas del borrador; vincula cada requisito a casos definidos y comprueba los enlaces inversos. Reintenta el workflow de la misma incidencia.',
+        action: 'Revisa los diagnósticos seguros de validación de la tarjeta de estado; vincula cada requisito a casos definidos y comprueba los enlaces inversos. Reintenta el workflow de la misma incidencia.',
         retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
     }),
     'sdd-draft-repository-path-invalid': Object.freeze({
         impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: no se pueden verificar las rutas citadas en la revisión base inmutable.',
-        action: 'Revisa las tablas del borrador; corrige las rutas existentes o declara explícitamente los archivos nuevos previstos. Reintenta el workflow de la misma incidencia.',
+        action: 'Revisa los diagnósticos seguros de validación de la tarjeta de estado; corrige las rutas existentes o declara explícitamente los archivos nuevos previstos. Reintenta el workflow de la misma incidencia.',
         retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
     }),
     'sdd-draft-format-invalid': Object.freeze({
@@ -47397,6 +47433,201 @@ function buildSddIssueDigest(context, baseSha) {
         context.issueNumber, (0, pre_branch_sdd_1.normalizeSddIssueTitle)(context.issueTitle), (0, recommendation_policy_1.getVisibleIssueDescription)(context.issueBody),
         context.admittedKind, context.profileDigest ?? '', baseSha,
     ])).digest('hex');
+}
+
+
+/***/ }),
+
+/***/ 88171:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SDD_PREPARATION_CATALOGS = exports.SPANISH_SDD_PREPARATION_CATALOG = exports.ENGLISH_SDD_PREPARATION_CATALOG = exports.SDD_PREPARATION_MESSAGE_IDS = void 0;
+exports.resolveStaticSddPreparationCatalog = resolveStaticSddPreparationCatalog;
+exports.resolveSddPreparationCatalog = resolveSddPreparationCatalog;
+const sdd_validation_diagnostic_1 = __nccwpck_require__(34211);
+const message_catalog_1 = __nccwpck_require__(27097);
+const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
+const UI = Object.freeze({
+    fallbackSize: ['Diagnostic copy fell back to English because the localized card exceeded its fixed size bound.', 'El texto del diagnóstico pasó a inglés porque la tarjeta localizada superó su límite fijo.'],
+    fallbackSlices: ['Diagnostic copy fell back to English because its required catalog slices did not resolve to one language.', 'El texto del diagnóstico pasó a inglés porque sus catálogos obligatorios no se resolvieron en un mismo idioma.'],
+    "heading": ["Specification preparation is blocked", "La preparación de la especificación está bloqueada"],
+    "publicationHeading": ["Specification publication needs recovery", "La publicación de la especificación necesita recuperación"],
+    "noPublication": ["No new specification or branch was published by this preparation attempt.", "Este intento de preparación no publicó ninguna especificación ni rama nueva."],
+    "publicationRetained": ["An existing linked branch or commit may already exist. Publication is not confirmed; inspect the workflow before retrying on the same branch.", "Puede existir una rama enlazada o un commit. La publicación no está confirmada; revisa el workflow antes de reintentar en la misma rama."],
+    "action": ["Review the safe validation diagnostics below. Clarify requirements or decisions in this issue if needed, then retry this same issue workflow.", "Revisa los diagnósticos seguros de validación que aparecen debajo. Aclara los requisitos o las decisiones en esta incidencia si es necesario y reintenta su mismo workflow."],
+    "retained": ["Existing answers and published specifications are retained. Publication validation does not establish implementation acceptance.", "Se conservan las respuestas y las especificaciones publicadas. La validación de publicación no demuestra la aceptación de la implementación."],
+    "diagnostics": ["Validation diagnostics", "Diagnósticos de validación"],
+    "noEvidence": ["Specific table facts are unavailable for this failure. Inspect the sanitized workflow result; no candidate content is retained in this card.", "Este fallo no dispone de datos concretos de tablas. Revisa el resultado saneado del workflow; esta tarjeta no conserva contenido del candidato."],
+    "privacy": ["Only closed checks and bounded section, row and count facts are shown. Candidate text, identifiers, paths, source and credentials are withheld. No downloadable candidate is retained; rerunning creates a new bounded attempt.", "Solo se muestran comprobaciones cerradas y datos acotados de secciones, filas y cantidades. Se omiten texto, identificadores, rutas, código y credenciales del candidato. No se conserva un candidato descargable; reintentar inicia un nuevo intento acotado."],
+    "impact": ["Impact", "Impacto"],
+    "actionLabel": ["Action", "Acción"],
+    "retainedLabel": ["Retained state", "Estado conservado"],
+    "workflow": ["Workflow run", "Ejecución del workflow"],
+    "runUnavailable": ["The workflow run link is unavailable in this runtime.", "Este entorno no dispone de enlace a la ejecución del workflow."],
+    "reference": ["Reference", "Referencia"],
+    "code": ["Error code", "Código de error"],
+    "reason": ["Reason", "Motivo"],
+    "phase": ["Phase", "Fase"],
+    "attempts": ["Draft attempts", "Intentos de borrador"],
+    "section": ["Section", "Sección"],
+    "row": ["Data row", "Fila de datos"],
+    "expected": ["Expected count", "Cantidad esperada"],
+    "observed": ["Observed count", "Cantidad observada"],
+    "recoveredHeading": ["SDD preparation status", "Estado de preparación del SDD"],
+    "published": ["The specification publication was verified on the linked branch. Branch readiness remains subject to its separate checks.", "Se verificó la publicación de la especificación en la rama enlazada. La preparación de la rama sigue sujeta a comprobaciones independientes."],
+    "waiting": ["Waiting for the numbered answers in the specification question card. No new specification was published.", "Se esperan las respuestas numeradas de la tarjeta de preguntas. No se publicó ninguna especificación nueva."],
+});
+const FACTS = Object.freeze({
+    'case-shorthand': ['Unqualified shorthand case references are present; their meaning cannot be established as a full case identity.', 'Hay referencias abreviadas a casos; no se puede establecer su significado como identidad completa.'],
+    'traceability-membership': ['The reverse mapping has the expected number of case IDs but different members; the count reports mismatched links.', 'El mapeo inverso tiene la cantidad esperada de casos, pero sus miembros no coinciden; la cantidad indica vínculos distintos.'],
+    'traceability-requirement': ['A reverse mapping row names an undefined or repeated requirement.', 'Una fila de mapeo inverso nombra un requisito no definido o repetido.'],
+    "validation-contract": ["A content contract was rejected; this validator supplied no more specific table facts.", "Se rechazó un contrato de contenido; este validador no proporcionó datos más concretos de tablas."],
+    "size-limit": ["The candidate exceeded the complete draft size limit.", "El candidato superó el límite de tamaño del borrador completo."],
+    "response-shape": ["The drafting response did not contain the required Markdown string.", "La respuesta de redacción no contenía la cadena Markdown obligatoria."],
+    "required-heading": ["A canonical heading is missing; the row identifies its position in the required-heading list.", "Falta una sección canónica; la fila indica su posición en la lista de secciones obligatorias."],
+    "numeric-budget": ["No valid numeric test budget was found.", "No se encontró un presupuesto numérico de pruebas válido."],
+    "section-count": ["The required section is missing or repeated.", "La sección obligatoria falta o está repetida."],
+    "table-count": ["Exactly one canonical table is required in this section.", "Esta sección requiere exactamente una tabla canónica."],
+    "table-separator": ["The table header separator has invalid columns or formatting.", "El separador de la cabecera tiene columnas o formato no válidos."],
+    "table-columns": ["A data row has the wrong number of columns.", "Una fila de datos tiene un número incorrecto de columnas."],
+    "table-empty-cell": ["A required table cell is empty.", "Una celda obligatoria de la tabla está vacía."],
+    "table-empty": ["The canonical table has no data rows.", "La tabla canónica no tiene filas de datos."],
+    "identifier-list": ["An identifier list has invalid syntax or repeated entries.", "Una lista de identificadores tiene sintaxis no válida o entradas repetidas."],
+    "requirement-identity": ["Requirement identifiers must be valid and distinct.", "Los identificadores de requisitos deben ser válidos y distintos."],
+    "case-identity": ["Case identifiers must be fully qualified and distinct; shorthand references cannot establish identity.", "Los identificadores de casos deben ser completos y distintos; las referencias abreviadas no establecen identidad."],
+    "case-reserved": ["A proposed case reuses an identity reserved by an immutable owning specification.", "Un caso propuesto reutiliza una identidad reservada por una especificación propietaria inmutable."],
+    "case-reference": ["A case reference is absent from both the candidate and retained owner inventories.", "Una referencia de caso no existe ni en el inventario del candidato ni en el del propietario conservado."],
+    "budget-area": ["A case uses an invalid or undeclared budget area.", "Un caso usa un área de presupuesto no válida o no declarada."],
+    "budget-integer": ["A budget allocation is not a positive safe integer.", "Una asignación de presupuesto no es un entero positivo seguro."],
+    "budget-order": ["A budget area is repeated or an allocation appears after the total.", "Un área de presupuesto está repetida o aparece una asignación después del total."],
+    "budget-total": ["Budget totals or area membership disagree with the distinct case inventory.", "Los totales o las áreas de presupuesto no coinciden con el inventario de casos distintos."],
+    "budget-distribution": ["An area allocation disagrees with its enumerated cases.", "La asignación de un área no coincide con sus casos enumerados."],
+    "requirement-reference": ["A case refers to a requirement not defined in the requirement table.", "Un caso se refiere a un requisito que no está definido en la tabla de requisitos."],
+    "requirement-coverage": ["The requirement inventory and covered requirement set are incomplete.", "El inventario de requisitos y el conjunto de requisitos cubiertos están incompletos."],
+    "traceability-links": ["A reverse requirement row has missing, extra, duplicate or inconsistent case links.", "Una fila de trazabilidad inversa tiene vínculos de casos ausentes, adicionales, repetidos o incoherentes."],
+    "owner-path": ["The selected owning specification is missing from the path table or uses the wrong operation.", "La especificación propietaria seleccionada falta en la tabla de rutas o usa una operación incorrecta."],
+    "path-identity": ["A path is invalid, repeated or blocked by the immutable repository inventory.", "Una ruta no es válida, está repetida o está bloqueada por el inventario inmutable del repositorio."],
+    "create-existing-path": ["A proposed new file already exists as a file or directory.", "Un archivo propuesto como nuevo ya existe como archivo o directorio."],
+    "create-path-overlap": ["Two proposed file paths overlap.", "Dos rutas de archivos propuestos se solapan."],
+    "create-path-parent": ["A proposed path has a blocked or file-valued parent.", "Una ruta propuesta tiene un padre bloqueado o que es un archivo."],
+    "path-operation": ["The path operation is unsupported or targets a missing existing file.", "La operación de ruta no es compatible o apunta a un archivo existente que falta."],
+    "path-reference": ["A repository reference cannot be verified as an existing or explicitly proposed path.", "No se puede verificar una referencia como ruta existente o explícitamente propuesta."],
+    "path-link": ["A relative file link is invalid or escapes its repository boundary.", "Un enlace relativo no es válido o sale de los límites del repositorio."],
+});
+exports.SDD_PREPARATION_MESSAGE_IDS = Object.freeze([
+    ...Object.keys(UI).map(key => `sddPreparation.${key}`),
+    ...sdd_validation_diagnostic_1.SDD_VALIDATION_DETAILS.map(key => `sddPreparation.fact.${key}`),
+]);
+function definition(locale, column) {
+    return Object.freeze({ version: message_catalog_1.MESSAGE_CATALOG_VERSION, locale, compatibleBaseLanguage: locale.slice(0, 2),
+        messages: Object.freeze(Object.fromEntries([
+            ...Object.entries(UI).map(([key, values]) => [`sddPreparation.${key}`, values[column]]),
+            ...Object.entries(FACTS).map(([key, values]) => [`sddPreparation.fact.${key}`, values[column]]),
+        ])) });
+}
+exports.ENGLISH_SDD_PREPARATION_CATALOG = definition('en-US', 0);
+exports.SPANISH_SDD_PREPARATION_CATALOG = definition('es-ES', 1);
+exports.SDD_PREPARATION_CATALOGS = Object.freeze([exports.ENGLISH_SDD_PREPARATION_CATALOG, exports.SPANISH_SDD_PREPARATION_CATALOG]);
+function resolveStaticSddPreparationCatalog(locale) {
+    return (0, resolved_message_catalog_policy_1.resolveStaticMessageCatalogView)(locale, exports.ENGLISH_SDD_PREPARATION_CATALOG, exports.SDD_PREPARATION_CATALOGS);
+}
+function resolveSddPreparationCatalog(locale, configuration, resolver) {
+    return (0, resolved_message_catalog_policy_1.resolveMessageCatalogView)(locale, exports.SDD_PREPARATION_MESSAGE_IDS, exports.ENGLISH_SDD_PREPARATION_CATALOG, exports.SDD_PREPARATION_CATALOGS, configuration, resolver);
+}
+
+
+/***/ }),
+
+/***/ 78345:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.sddWorkflowRunUrl = sddWorkflowRunUrl;
+exports.renderSddPreparationFailure = renderSddPreparationFailure;
+exports.renderSddPreparationRecovered = renderSddPreparationRecovered;
+const application_error_1 = __nccwpck_require__(97790);
+const sdd_validation_diagnostic_1 = __nccwpck_require__(34211);
+const application_error_message_catalog_1 = __nccwpck_require__(64809);
+const application_error_presentation_policy_1 = __nccwpck_require__(95067);
+const sdd_analysis_status_policy_1 = __nccwpck_require__(81053);
+const sdd_preparation_message_catalog_1 = __nccwpck_require__(88171);
+/** Runtime-owned coordinates; rejected documents cannot supply destinations. */
+function sddWorkflowRunUrl(facts) {
+    if (!facts || ![facts.owner, facts.repository].every(value => typeof value === 'string' && /^[A-Za-z0-9_.-]{1,100}$/u.test(value))
+        || typeof facts.runId !== 'string' || !/^[1-9]\d{0,19}$/u.test(facts.runId)
+        || typeof facts.serverOrigin !== 'string' || facts.serverOrigin.length > 2048 || /\s/u.test(facts.serverOrigin))
+        return undefined;
+    try {
+        const origin = new URL(facts.serverOrigin);
+        if (origin.protocol !== 'https:' || origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash)
+            return undefined;
+        const url = `${origin.origin}/${facts.owner}/${facts.repository}/actions/runs/${facts.runId}`;
+        return url.length <= 4096 ? url : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+function renderSddPreparationFailure(options, catalog = (0, sdd_preparation_message_catalog_1.resolveStaticSddPreparationCatalog)(options.locale ?? 'en-US'), errorMessage) {
+    if (!Number.isSafeInteger(options.issueNumber) || options.issueNumber < 1
+        || !Object.prototype.hasOwnProperty.call(application_error_1.APPLICATION_ERROR_METADATA, options.error.code)
+        || typeof options.error.retryable !== 'boolean' || !(0, application_error_1.isApplicationErrorCorrelationId)(options.error.correlationId)) {
+        throw new TypeError('Invalid SDD status identity or semantic error facts.');
+    }
+    const diagnostic = options.diagnostic ? (0, sdd_validation_diagnostic_1.normalizeSddValidationDiagnostic)(options.diagnostic) : undefined;
+    if (options.attempts !== undefined && options.attempts !== 1 && options.attempts !== 2)
+        throw new TypeError('Invalid SDD diagnostic attempt count.');
+    const message = (key) => catalog.message(key);
+    const recovery = options.error.recovery;
+    const source = { code: options.error.code, retryable: options.error.retryable, correlationId: options.error.correlationId,
+        ...(recovery && application_error_1.APPLICATION_ERROR_RECOVERY_IDS.includes(recovery.id) && recovery.id.startsWith('sdd-draft-')
+            && recovery.variables && Object.keys(recovery.variables).length === 0 ? { recovery } : {}) };
+    const view = (0, application_error_presentation_policy_1.buildApplicationErrorPresentation)(source, errorMessage ?? (0, application_error_message_catalog_1.resolveStaticApplicationErrorCatalog)(catalog.locale).message);
+    const runUrl = sddWorkflowRunUrl(options.run);
+    const lines = [
+        `## ${message(options.publicationPending ? 'sddPreparation.publicationHeading' : 'sddPreparation.heading')}`,
+        '',
+        options.publicationPending ? message('sddPreparation.publicationRetained') : message('sddPreparation.noPublication'),
+        '', `**${message('sddPreparation.impact')}:** ${view.impact}`,
+        '', `**${message('sddPreparation.actionLabel')}:** ${diagnostic ? message('sddPreparation.action') + ' ' : ''}${view.action}`,
+        '', `**${message('sddPreparation.retainedLabel')}:** ${message('sddPreparation.retained')}`,
+        '', runUrl ? `[${message('sddPreparation.workflow')}](${runUrl})` : message('sddPreparation.runUnavailable'),
+        '', '<details>', `<summary>${message('sddPreparation.diagnostics')}</summary>`, '',
+        `**${message('sddPreparation.code')}:** \`${view.code}\``,
+        `**${message('sddPreparation.reference')}:** \`${view.reference}\``,
+    ];
+    if (diagnostic) {
+        lines.push(`**${message('sddPreparation.reason')}:** \`${diagnostic.reason}\``, `**${message('sddPreparation.phase')}:** \`${diagnostic.phase}\``);
+        if (options.attempts !== undefined)
+            lines.push(`**${message('sddPreparation.attempts')}:** ${options.attempts}`);
+        for (const fact of diagnostic.facts) {
+            lines.push('', `- ${message(`sddPreparation.fact.${fact.detail}`)}`);
+            for (const key of ['section', 'row', 'expected', 'observed']) {
+                if (fact[key] !== undefined && (key !== 'section' || fact.section !== 0)) {
+                    lines.push(`  - ${message(`sddPreparation.${key}`)}: ${fact[key]}`);
+                }
+            }
+        }
+    }
+    else
+        lines.push('', message('sddPreparation.noEvidence'));
+    lines.push('', message('sddPreparation.privacy'), '', '</details>', '', (0, sdd_analysis_status_policy_1.sddAnalysisStatusMarker)(options.issueNumber));
+    const body = lines.join('\n');
+    if (body.length > 16000) {
+        return renderSddPreparationFailure(options, (0, sdd_preparation_message_catalog_1.resolveStaticSddPreparationCatalog)('en-US'), (0, application_error_message_catalog_1.resolveStaticApplicationErrorCatalog)('en-US').message)
+            + '\n\n' + (0, sdd_preparation_message_catalog_1.resolveStaticSddPreparationCatalog)('en-US').message('sddPreparation.fallbackSize');
+    }
+    return body;
+}
+/** Clears the prior failure view without creating another source of branch authority. */
+function renderSddPreparationRecovered(issueNumber, phase, locale, catalog = (0, sdd_preparation_message_catalog_1.resolveStaticSddPreparationCatalog)(locale ?? 'en-US')) {
+    return [`## ${catalog.message('sddPreparation.recoveredHeading')}`, '',
+        catalog.message(`sddPreparation.${phase}`), '', (0, sdd_analysis_status_policy_1.sddAnalysisStatusMarker)(issueNumber)].join('\n');
 }
 
 
@@ -60164,7 +60395,7 @@ async function runIssueWorkflow(context, taskId, ports) {
         results.push(...recommendationResults);
         await appendWelcomeFallback(results, recommendationResults, context, ports);
     }
-    else if (context.newIssue && context.onboardingEligible) {
+    else if (context.newIssue && context.onboardingEligible && !sddWaiting) {
         await appendWelcomeFallback(results, [], context, ports);
     }
     return issueWorkflowOutcome(results, branchConfigurationPatch, recommendationStatePatch);
@@ -61525,7 +61756,7 @@ async function readPullRequestStatusReadiness(param, taskId, ports) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.draftSddMarkdown = draftSddMarkdown;
-const application_error_1 = __nccwpck_require__(75999);
+const sdd_draft_preparation_failure_1 = __nccwpck_require__(12321);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const agent_response_length_failure_1 = __nccwpck_require__(28528);
 const sdd_draft_consistency_1 = __nccwpck_require__(27910);
@@ -61540,6 +61771,8 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
     };
     let problem = 'size';
     let formatReason = 'required-heading';
+    let diagnostic = { reason: 'size', phase: 'response',
+        facts: [{ detail: 'size-limit', section: 0, expected: maximum }] };
     const contractPrompt = `${prompt}\n\nDraft contract: keep the complete draft within ${maximum} characters; aim for ${target} characters. Preserve the same owner, decisions and requirements. Include these literal canonical heading prefixes as Markdown headings, with the shown capitalization:\n${pre_branch_sdd_1.SDD_REQUIRED_HEADINGS.join('\n')}\nUse the canonical numeric test-budget table in section 14: Area | Minimum distinct cases | Behaviors/risks covered. Every allocation and the Total must be a positive integer, and the Total must equal the sum of the allocations. Return only the required JSON.`;
     for (let attempt = 0; attempt < 2; attempt++) {
         let value;
@@ -61556,23 +61789,28 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
             if (!(error instanceof agent_response_length_failure_1.AgentResponseLengthFailure) || error.path !== '$.markdown' || error.maximum !== maximum)
                 throw error;
             problem = 'size';
+            diagnostic = { reason: 'size', phase: 'response', facts: [{ detail: 'size-limit', section: 0, expected: maximum }] };
             continue;
         }
         if (!value || typeof value !== 'object' || Array.isArray(value)
             || typeof value.markdown !== 'string') {
-            throw new application_error_1.ApplicationError('validation.invalid-input', 'The drafting agent returned no SDD Markdown.');
+            throw new sdd_draft_preparation_failure_1.SddDraftPreparationFailure({ reason: 'response-shape', phase: 'response', facts: [{ detail: 'response-shape', section: 0 }] }, attempt === 0 ? 1 : 2);
         }
         const markdown = value.markdown;
         if (markdown.length > maximum) {
             problem = 'size';
+            diagnostic = { reason: 'size', phase: 'response', facts: [{ detail: 'size-limit', section: 0, expected: maximum }] };
             continue;
         }
+        let assembledCandidate = false;
         try {
             const assembled = (0, sdd_draft_consistency_1.renderSddDerivedTables)(markdown);
             if (assembled.length > maximum) {
                 problem = 'size';
+                diagnostic = { reason: 'size', phase: 'assembly', facts: [{ detail: 'size-limit', section: 0, expected: maximum }] };
                 continue;
             }
+            assembledCandidate = true;
             await validate?.(assembled);
             return assembled;
         }
@@ -61581,24 +61819,10 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
                 throw error;
             problem = 'format';
             formatReason = error.reason;
+            diagnostic = { ...error.diagnostic, phase: assembledCandidate ? 'validation' : 'assembly' };
         }
     }
-    if (problem === 'format')
-        throw new application_error_1.ApplicationError('validation.invalid-input', `The SDD draft still violates its ${formatReason} format contract after one bounded repair.`, {
-            recovery: { id: consistencyRecovery(formatReason), variables: {} },
-        });
-    throw new application_error_1.ApplicationError('validation.invalid-input', 'The SDD draft exceeded its size limit after one bounded repair.', {
-        recovery: { id: 'sdd-draft-size-exceeded', variables: {} },
-    });
-}
-function consistencyRecovery(reason) {
-    switch (reason) {
-        case 'case-identity': return 'sdd-draft-case-identity-invalid';
-        case 'case-budget': return 'sdd-draft-case-budget-invalid';
-        case 'requirement-mapping': return 'sdd-draft-requirement-mapping-invalid';
-        case 'repository-path': return 'sdd-draft-repository-path-invalid';
-        default: return 'sdd-draft-format-invalid';
-    }
+    throw new sdd_draft_preparation_failure_1.SddDraftPreparationFailure(diagnostic, 2);
 }
 
 
@@ -61611,6 +61835,10 @@ function consistencyRecovery(reason) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PreBranchSddGateUseCase = void 0;
+const sdd_draft_preparation_failure_1 = __nccwpck_require__(12321);
+const sdd_preparation_status_policy_1 = __nccwpck_require__(78345);
+const sdd_preparation_message_catalog_1 = __nccwpck_require__(88171);
+const application_error_message_catalog_1 = __nccwpck_require__(64809);
 const sdd_issue_identity_policy_1 = __nccwpck_require__(99167);
 const result_1 = __nccwpck_require__(73817);
 const issue_start_policy_1 = __nccwpck_require__(90332);
@@ -61657,7 +61885,7 @@ const ANALYSIS_SCHEMA = {
 };
 /** Two separate agent calls enforce that blockers are answered before any SDD draft exists. */
 class PreBranchSddGateUseCase {
-    constructor(agent, workspace, comments, labels, actors, descriptions, titles, linkedBranch) {
+    constructor(agent, workspace, comments, labels, actors, descriptions, titles, linkedBranch, presentation = {}) {
         this.agent = agent;
         this.workspace = workspace;
         this.comments = comments;
@@ -61666,9 +61894,12 @@ class PreBranchSddGateUseCase {
         this.descriptions = descriptions;
         this.titles = titles;
         this.linkedBranch = linkedBranch;
+        this.presentation = presentation;
         this.taskId = 'PreBranchSddGateUseCase';
     }
     async begin(context) {
+        let ownershipStatusWritten = false;
+        let failureSource;
         try {
             await this.ensureSddLabel(context.issueNumber);
             if (!context.tokenUser.trim())
@@ -61683,6 +61914,7 @@ class PreBranchSddGateUseCase {
                 throw new Error('The retained SDD branch is no longer linked to this issue.');
             }
             const snapshot = await this.workspace.loadSnapshot(sourceBranch);
+            failureSource = { branch: sourceBranch, sha: snapshot.baseSha };
             if (retainedBranch && !card?.record.commitSha) {
                 if (card?.record.branchName && snapshot.baseSha !== card.record.baseSha) {
                     const recovered = await this.workspace.recoverPublished(retainedBranch, {
@@ -61714,9 +61946,10 @@ class PreBranchSddGateUseCase {
             if (card?.record.phase === 'published' && card.record.issueDigest === digest) {
                 const revisionVerified = !card.record.revisionSha || await this.workspace.verifyPublication(card.record.branchName, card.record.revisionBaseSha, card.record.revisionSha, card.record.plan.path);
                 if (revisionVerified) {
+                    const restored = await this.clearPreparationFailure(context, failureSource);
                     return {
                         status: 'published', branchName: card.record.branchName, commitSha: card.record.revisionSha ?? card.record.commitSha,
-                        results: [this.result(true, false, `The published SDD commit ${card.record.revisionSha ?? card.record.commitSha} remains verified.`)],
+                        results: [this.result(true, false, `The published SDD commit ${card.record.revisionSha ?? card.record.commitSha} remains verified.`), ...restored],
                     };
                 }
                 throw new Error('The SDD revision is absent from the linked remote branch.');
@@ -61726,6 +61959,7 @@ class PreBranchSddGateUseCase {
                 const currentAnswers = card.record.plan.questions.length === 0 ? []
                     : await this.collectAnswers(card.record, card.id, allComments, context);
                 if (currentAnswers.length < card.record.plan.questions.length) {
+                    await this.writePreparationRecovered(context, 'waiting', failureSource);
                     return { status: 'waiting', results: [this.result(true, true, 'Waiting for the numbered SDD answers; no draft or branch was created.')] };
                 }
                 answers = (0, pre_branch_sdd_1.retainSddAnswers)(card.record.answers ?? [], currentAnswers);
@@ -61749,6 +61983,7 @@ class PreBranchSddGateUseCase {
                 if (!(error instanceof pre_branch_sdd_1.SddOwnershipFailure))
                     throw error;
                 await this.writeAnalysisStatus(context, allComments, error.reason);
+                ownershipStatusWritten = true;
                 throw new application_error_1.ApplicationError('provider.contract-invalid', `${error.message} Clarify the catalog owner/path in the same issue and rerun the original workflow. No automatic retry was attempted.`);
             }
             if (card?.record.branchName && (plan.action !== 'update'
@@ -61770,6 +62005,7 @@ class PreBranchSddGateUseCase {
             };
             if (plan.questions.length > 0) {
                 await this.writeCard(context.issueNumber, card?.id, record, context.issueLocale, context.issueUrl);
+                await this.writePreparationRecovered(context, 'waiting', failureSource);
                 return { status: 'waiting', results: [this.result(true, true, `Asked ${plan.questions.length} blocking SDD question(s); no draft or branch was created.`)] };
             }
             const currentSdd = plan.action === 'update' ? await this.workspace.readSdd(snapshot.baseSha, plan.path) : undefined;
@@ -61796,12 +62032,22 @@ class PreBranchSddGateUseCase {
             return { status: 'drafted', prepared, record, ...(card ? { cardId: card.id } : {}), results: [this.result(true, true, `Validated ${plan.path} before branch publication.`)] };
         }
         catch (error) {
-            return { status: 'blocked', results: [this.failure(error)] };
+            const failure = this.failure(error);
+            if (!ownershipStatusWritten && failure.errors[0].code !== 'workflow.stale') {
+                try {
+                    await this.writePreparationFailure(context, failure.errors[0], error, false, failureSource);
+                }
+                catch (publicationError) {
+                    return { status: 'blocked', results: [failure, this.failure(publicationError)] };
+                }
+            }
+            return { status: 'blocked', results: [failure] };
         }
     }
     async publish(context, draft, branchName) {
+        let failureSource = { sha: draft.prepared.baseSha, branch: draft.record.branchName ?? context.baseBranch };
         try {
-            await this.assertFresh(context, draft.prepared.baseSha, draft.record.branchName ?? context.baseBranch);
+            await this.assertFresh(context, failureSource.sha, failureSource.branch);
             const linked = await this.linkedBranch.getLinkedBranch(context.issueNumber, branchName);
             if (!linked)
                 throw new Error('The exact SDD branch is not linked to this issue.');
@@ -61810,6 +62056,9 @@ class PreBranchSddGateUseCase {
                 throw new Error('The linked branch head changed before the SDD commit; rerun on the same branch.');
             }
             const commitSha = recovered ?? await this.workspace.publish(branchName, draft.prepared);
+            // A revision advances its own source branch; only that returned commit is an expected change.
+            if (failureSource.branch === branchName)
+                failureSource = { ...failureSource, sha: commitSha };
             const verified = await this.workspace.verifyPublication(branchName, draft.prepared.baseSha, commitSha, draft.prepared.plan.path);
             if (!verified)
                 throw new Error('The pushed SDD commit could not be verified on the exact linked branch.');
@@ -61823,15 +62072,20 @@ class PreBranchSddGateUseCase {
                 ...(revision ? { revisionSha: commitSha, revisionBaseSha: draft.prepared.baseSha } : {}),
             };
             await this.writeCard(context.issueNumber, draft.cardId, published, context.issueLocale, context.issueUrl);
+            const restored = await this.clearPreparationFailure(context, failureSource);
             return {
                 status: 'published', branchName, commitSha,
-                results: [this.result(true, true, `Published and verified ${revision ? 'the SDD revision' : 'the first SDD commit'} ${commitSha} on ${branchName}.`)],
+                results: [this.result(true, true, `Published and verified ${revision ? 'the SDD revision' : 'the first SDD commit'} ${commitSha} on ${branchName}.`), ...restored],
             };
         }
         catch (error) {
             const failure = this.failure(error);
+            if (failure.errors[0].code === 'workflow.stale')
+                return { status: 'blocked', results: [failure] };
             try {
+                await this.assertFresh(context, failureSource.sha, failureSource.branch);
                 await this.writeCard(context.issueNumber, draft.cardId, { ...draft.record, branchName }, context.issueLocale, context.issueUrl);
+                await this.writePreparationFailure(context, failure.errors[0], error, true, failureSource);
             }
             catch (publicationError) {
                 return { status: 'blocked', results: [failure, this.failure(publicationError)] };
@@ -61884,11 +62138,55 @@ class PreBranchSddGateUseCase {
         if (!reason && !prior)
             return;
         const body = (0, sdd_analysis_status_policy_1.renderSddAnalysisStatus)(context.issueNumber, context.issueLocale, reason);
+        await this.upsertPreparationStatus(context, comments, body, Boolean(reason));
+    }
+    async writePreparationFailure(context, error, cause, publicationPending, source) {
+        if (!context.tokenUser.trim())
+            throw new application_error_1.ApplicationError('configuration.unsupported', 'The SDD diagnostic card requires a trusted bot identity.');
+        const comments = await this.comments.listIssueComments(context.issueNumber);
+        const [catalog, errorCatalog] = await Promise.all([
+            (0, sdd_preparation_message_catalog_1.resolveSddPreparationCatalog)(context.issueLocale ?? 'en-US', context.agentConfiguration, this.presentation.catalogResolver),
+            (0, application_error_message_catalog_1.resolveApplicationErrorCatalog)(context.issueLocale ?? 'en-US', context.agentConfiguration, this.presentation.catalogResolver),
+        ]);
+        const aligned = catalog.locale === errorCatalog.locale;
+        const body = (0, sdd_preparation_status_policy_1.renderSddPreparationFailure)({ issueNumber: context.issueNumber, locale: context.issueLocale,
+            error, publicationPending, run: this.presentation.run,
+            ...(cause instanceof sdd_draft_preparation_failure_1.SddDraftPreparationFailure ? { diagnostic: cause.diagnostic, attempts: cause.attempts } : {}),
+        }, aligned ? catalog : (0, sdd_preparation_message_catalog_1.resolveStaticSddPreparationCatalog)('en-US'), aligned ? errorCatalog.message : (0, application_error_message_catalog_1.resolveStaticApplicationErrorCatalog)('en-US').message)
+            + (aligned ? '' : '\n\n' + (0, sdd_preparation_message_catalog_1.resolveStaticSddPreparationCatalog)('en-US').message('sddPreparation.fallbackSlices'));
+        if (source)
+            await this.assertFresh(context, source.sha, source.branch);
+        await this.upsertPreparationStatus(context, comments, body, true);
+    }
+    async writePreparationRecovered(context, phase, source) {
+        const comments = await this.comments.listIssueComments(context.issueNumber);
+        if (!comments.some(comment => comment.user?.login?.toLowerCase() === context.tokenUser.toLowerCase()
+            && comment.body?.includes((0, sdd_analysis_status_policy_1.sddAnalysisStatusMarker)(context.issueNumber))))
+            return;
+        const catalog = await (0, sdd_preparation_message_catalog_1.resolveSddPreparationCatalog)(context.issueLocale ?? 'en-US', context.agentConfiguration, this.presentation.catalogResolver);
+        const body = (0, sdd_preparation_status_policy_1.renderSddPreparationRecovered)(context.issueNumber, phase, context.issueLocale, catalog);
+        await this.assertFresh(context, source.sha, source.branch);
+        await this.upsertPreparationStatus(context, comments, body, false);
+    }
+    async clearPreparationFailure(context, source) {
+        try {
+            await this.writePreparationRecovered(context, 'published', source);
+            return [];
+        }
+        catch (error) {
+            // Verified publication remains a fact if refreshing its separate diagnostic card fails.
+            return [this.failure((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'The SDD publication is verified; its diagnostic status card still needs refresh.'))];
+        }
+    }
+    async upsertPreparationStatus(context, comments, body, create) {
+        const marker = (0, sdd_analysis_status_policy_1.sddAnalysisStatusMarker)(context.issueNumber);
+        const prior = comments.filter(comment => comment.user?.login?.toLowerCase() === context.tokenUser.toLowerCase()
+            && comment.body?.includes(marker)).sort((a, b) => b.id - a.id)[0];
         if (prior) {
             if (prior.body !== body)
                 await this.comments.updateComment(context.issueNumber, prior.id, body);
         }
-        else
+        else if (create)
             await this.comments.addComment(context.issueNumber, body);
     }
     async assertFresh(context, expectedBaseSha, sourceBranch) {
@@ -61900,7 +62198,7 @@ class PreBranchSddGateUseCase {
         if (snapshot.baseSha !== expectedBaseSha
             || (0, recommendation_policy_1.getVisibleIssueDescription)(liveBody ?? '') !== (0, recommendation_policy_1.getVisibleIssueDescription)(context.issueBody)
             || (0, pre_branch_sdd_1.normalizeSddIssueTitle)(liveTitle ?? '') !== (0, pre_branch_sdd_1.normalizeSddIssueTitle)(context.issueTitle)) {
-            throw new Error('The issue or development base changed during SDD preparation; rerun analysis before publishing.');
+            throw new application_error_1.ApplicationError('workflow.stale', 'The issue or development base changed during SDD preparation; rerun analysis before publishing.');
         }
     }
     result(success, executed, step) {
@@ -61910,7 +62208,8 @@ class PreBranchSddGateUseCase {
         // The runtime logger redacts credentials and makes workflow-command text inert.
         (0, logging_ports_1.logError)(`Pre-branch SDD gate failed: ${error instanceof Error ? error.message : 'unknown failure'}`);
         const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'The pre-branch SDD gate is blocked.');
-        return new result_1.Result({ id: this.taskId, success: false, executed: true, steps: [semanticError.message], errors: [semanticError] });
+        return new result_1.Result({ id: this.taskId, success: false, executed: true, steps: [semanticError.message], errors: [semanticError],
+            ...(error instanceof sdd_draft_preparation_failure_1.SddDraftPreparationFailure ? { payload: { sddDiagnostic: error.diagnostic, attempts: error.attempts } } : {}) });
     }
 }
 exports.PreBranchSddGateUseCase = PreBranchSddGateUseCase;
@@ -93181,7 +93480,7 @@ function parsePositiveSafeInteger(value) {
 /***/ }),
 
 /***/ 34730:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
@@ -93198,6 +93497,7 @@ exports.parseSddAnswer = parseSddAnswer;
 exports.validateSddMarkdown = validateSddMarkdown;
 exports.composeSddUpdate = composeSddUpdate;
 exports.recoverSddUpdate = recoverSddUpdate;
+const sdd_validation_diagnostic_1 = __nccwpck_require__(34211);
 exports.SDD_GATE_MARKER = 'copilot:sdd-gate:v1';
 exports.SDD_MIN_DRAFT_CHARACTERS = 1800;
 exports.SDD_MAX_DRAFT_CHARACTERS = 70000;
@@ -93392,9 +93692,13 @@ function parseSddAnswer(body, questionId) {
 }
 /** Only these content failures may trigger a bounded draft regeneration. */
 class SddDraftFormatFailure extends Error {
-    constructor(reason, message) {
+    constructor(reason, message, diagnostic) {
         super(message);
         this.reason = reason;
+        this.diagnostic = (0, sdd_validation_diagnostic_1.normalizeSddValidationDiagnostic)(diagnostic ?? { reason, phase: 'validation',
+            facts: [{ detail: 'validation-contract', section: 0 }] });
+        if (this.diagnostic.reason !== reason)
+            throw new TypeError('SDD diagnostic reason does not match its failure.');
     }
 }
 exports.SddDraftFormatFailure = SddDraftFormatFailure;
@@ -93414,11 +93718,11 @@ function validateSddMarkdown(markdown) {
         throw new Error('The SDD draft length is outside the supported range.');
     for (const heading of exports.SDD_REQUIRED_HEADINGS) {
         if (!markdown.includes(heading))
-            throw new SddDraftFormatFailure('required-heading', `The SDD draft is missing ${heading}.`);
+            throw new SddDraftFormatFailure('required-heading', `The SDD draft is missing ${heading}.`, { reason: 'required-heading', phase: 'validation', facts: [{ detail: 'required-heading', section: 0, row: exports.SDD_REQUIRED_HEADINGS.indexOf(heading) + 1 }] });
     }
     if (!/\b[1-9]\d*\s+(?:distinct\s+)?(?:cases|tests|casos|pruebas)\b/i.test(markdown)
         && !hasNumericSddBudgetTable(markdown)) {
-        throw new SddDraftFormatFailure('test-budget', 'The SDD must include a numeric test budget.');
+        throw new SddDraftFormatFailure('test-budget', 'The SDD must include a numeric test budget.', { reason: 'test-budget', phase: 'validation', facts: [{ detail: 'numeric-budget', section: 14 }] });
     }
 }
 /** Accept the canonical template table only when its allocations prove its total. */
@@ -94156,9 +94460,9 @@ const BUDGET_SLOT = '{{SDD_CASE_BUDGET}}';
 const TRACEABILITY_SLOT = '{{SDD_REQUIREMENT_CASES}}';
 /** The provider writes definitions once; trusted code renders their two redundant projections. */
 exports.SDD_DERIVED_TABLES_PROMPT = `Draft assembly: the consistency contract above describes the final document. In your raw Markdown, write the complete Requirement | Behavior table in section 4 and Case ID | Area | Requirements | Scenario inventory in section 14. Preserve every resolved minimum, per-area allocation and observable case as actual inventory rows, never ranges or summaries. Instead of independently writing the budget table, put ${BUDGET_SLOT} once on its own visible line in section 14. Instead of writing the reverse Requirement | Cases table, put ${TRACEABILITY_SLOT} once on its own visible line in section 17. Do not include either derived table yourself or put these slots in examples, fences or comments. Trusted code derives exact counts, Total and reciprocal links from your unchanged definitions, then runs every publication check. The compact character target is advisory: use more space when required to preserve the full resolved inventory and scope. The hard limit applies after assembly too.`;
-function fail(reason) {
+function fail(reason, fact = { detail: 'validation-contract', section: 0 }) {
     // Closed diagnostics: rejected Markdown and repository text never become repair instructions.
-    throw new pre_branch_sdd_1.SddDraftFormatFailure(reason, `The SDD draft violates its ${reason} consistency contract.`);
+    throw new pre_branch_sdd_1.SddDraftFormatFailure(reason, `The SDD draft violates its ${reason} consistency contract.`, { reason, phase: 'validation', facts: [fact] });
 }
 /** Excludes examples and hidden records from the contract. */
 function visible(source) {
@@ -94197,7 +94501,7 @@ function section(source, number, reason) {
     const sections = [...source.matchAll(/^## (\d+)\. [^\n]*$/gmu)];
     const matches = sections.filter(heading => Number(heading[1]) === number);
     if (matches.length !== 1)
-        return fail(reason);
+        return fail(reason, { detail: 'section-count', section: number, expected: 1, observed: matches.length });
     const start = matches[0];
     const end = sections.find(heading => heading.index > start.index)?.index ?? source.length;
     return source.slice(start.index + start[0].length, end);
@@ -94214,24 +94518,26 @@ function table(source, number, headers, reason) {
             continue;
         const separator = cells(lines[++index] ?? '');
         if (separator.length !== headers.length || !separator.every(cell => /^:?-{3,}:?$/u.test(cell)))
-            return fail(reason);
+            return fail(reason, { detail: 'table-separator', section: number, row: index + 1 });
         const rows = [];
         while (++index < lines.length && /^\s*\|/u.test(lines[index])) {
             const row = cells(lines[index]);
-            if (row.length !== headers.length || row.some(cell => !cell))
-                return fail(reason);
+            if (row.length !== headers.length)
+                return fail(reason, { detail: 'table-columns', section: number, row: rows.length + 1, expected: headers.length, observed: row.length });
+            if (row.some(cell => !cell))
+                return fail(reason, { detail: 'table-empty-cell', section: number, row: rows.length + 1 });
             rows.push(row);
         }
         if (!rows.length)
-            return fail(reason);
+            return fail(reason, { detail: 'table-empty', section: number, observed: 0 });
         found.push(rows);
     }
-    return found.length === 1 ? found[0] : fail(reason);
+    return found.length === 1 ? found[0] : fail(reason, { detail: 'table-count', section: number, expected: 1, observed: found.length });
 }
-function ids(value, pattern, reason) {
+function ids(value, pattern, reason, section) {
     const values = value.split(/\s*,\s*/u);
     if (!values.every(id => pattern.test(id)) || new Set(values).size !== values.length)
-        return fail(reason);
+        return fail(reason, { detail: 'identifier-list', section, observed: values.length });
     return values;
 }
 /** Never repairs definitions or contradictory supplied tables; the writer independently revalidates. */
@@ -94247,27 +94553,25 @@ function renderSddDerivedTables(markdown) {
             fail(reason);
     }
     const requirements = table(source, 4, ['Requirement', 'Behavior'], 'requirement-mapping').map(row => row[0]);
-    if (new Set(requirements).size !== requirements.length || requirements.some(id => !REQUIREMENT_ID.test(id)))
-        fail('requirement-mapping');
+    uniqueIdentifiers(requirements, REQUIREMENT_ID, 'requirement-mapping', 4);
     const cases = table(source, 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity');
     const caseIds = cases.map(row => row[0]);
-    if (new Set(caseIds).size !== caseIds.length || caseIds.some(id => !CASE_ID.test(id)))
-        fail('case-identity');
+    uniqueIdentifiers(caseIds, CASE_ID, 'case-identity', 14);
     const counts = new Map();
     const edges = new Map(requirements.map(id => [id, []]));
     for (const [id, area, links] of cases) {
         if (area === 'Total')
-            fail('case-budget');
+            fail('case-budget', { detail: 'budget-area', section: 14 });
         counts.set(area, (counts.get(area) ?? 0) + 1);
-        for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping')) {
+        for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping', 14)) {
             const linked = edges.get(requirement);
             if (!linked)
-                fail('requirement-mapping');
+                fail('requirement-mapping', { detail: 'requirement-reference', section: 14, expected: 0, observed: 1 });
             linked.push(id);
         }
     }
     if ([...edges.values()].some(links => links.length === 0))
-        fail('requirement-mapping');
+        fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: 0, observed: [...edges.values()].filter(links => links.length === 0).length });
     const budget = ['| Area | Minimum distinct cases | Behaviors/risks covered |', '|---|---:|---|',
         ...[...counts].map(([area, count]) => `| ${area} | ${count} | Observable scenarios in the case inventory. |`),
         `| Total | ${cases.length} | Distinct inventory cases; repeated executions do not add cases. |`].join('\n');
@@ -94307,55 +94611,73 @@ function validateSddDraftConsistency(markdown, owners, inventory, sddPath) {
     const source = visible(markdown);
     const requirements = table(source, 4, ['Requirement', 'Behavior'], 'requirement-mapping');
     const requirementIds = requirements.map(row => row[0]);
-    if (new Set(requirementIds).size !== requirementIds.length || !requirementIds.every(id => REQUIREMENT_ID.test(id)))
-        fail('requirement-mapping');
+    uniqueIdentifiers(requirementIds, REQUIREMENT_ID, 'requirement-mapping', 4);
     const cases = table(source, 14, ['Case ID', 'Area', 'Requirements', 'Scenario'], 'case-identity');
     const caseIds = cases.map(row => row[0]);
     const reserved = new Set(reservedSddCaseIds(owners));
-    if (new Set(caseIds).size !== caseIds.length || caseIds.some(id => !CASE_ID.test(id) || reserved.has(id))
-        || /(?<![\w-])C\d+\b/u.test(source))
-        fail('case-identity');
+    uniqueIdentifiers(caseIds, CASE_ID, 'case-identity', 14);
+    const shorthand = [...source.matchAll(/(?<![\w-])C\d+\b/gu)];
+    if (shorthand.length)
+        fail('case-identity', { detail: 'case-shorthand', section: 0, expected: 0, observed: shorthand.length });
+    if (caseIds.some(id => reserved.has(id)))
+        fail('case-identity', { detail: 'case-reserved', section: 14, expected: 0, observed: caseIds.filter(id => reserved.has(id)).length });
     // References to existing owner cases are allowed, but cannot count as newly defined cases.
     if ([...source.matchAll(CASE)].some(([id]) => !caseIds.includes(id) && !reserved.has(id)))
-        fail('case-identity');
+        fail('case-identity', { detail: 'case-reference', section: 0 });
     const budget = table(source, 14, ['Area', 'Minimum distinct cases', 'Behaviors/risks covered'], 'case-budget');
     const counts = new Map();
     let total;
     for (const [area, value] of budget) {
         const count = /^[1-9]\d*$/u.test(value) ? Number(value) : NaN;
-        if (!Number.isSafeInteger(count) || counts.has(area) || total !== undefined)
-            fail('case-budget');
+        if (!Number.isSafeInteger(count))
+            fail('case-budget', { detail: 'budget-integer', section: 14 });
+        if (counts.has(area) || total !== undefined)
+            fail('case-budget', { detail: 'budget-order', section: 14 });
         if (area === 'Total')
             total = count;
         else
             counts.set(area, count);
     }
-    if (!counts.size || total !== caseIds.length || [...counts.values()].reduce((sum, count) => sum + count, 0) !== total
-        || cases.some(row => !counts.has(row[1])))
-        fail('case-budget');
+    if (!counts.size)
+        fail('case-budget', { detail: 'budget-total', section: 14, expected: 1, observed: 0 });
+    if (total !== caseIds.length)
+        fail('case-budget', { detail: 'budget-total', section: 14, expected: caseIds.length, ...(total !== undefined && total <= 100000 ? { observed: total } : {}) });
+    const sum = [...counts.values()].reduce((value, count) => value + count, 0);
+    if (sum !== total)
+        fail('case-budget', { detail: 'budget-total', section: 14, expected: total, ...(sum <= 100000 ? { observed: sum } : {}) });
+    const unknownAreas = cases.filter(row => !counts.has(row[1])).length;
+    if (unknownAreas)
+        fail('case-budget', { detail: 'budget-area', section: 14, expected: 0, observed: unknownAreas });
     for (const [area, count] of counts)
         if (cases.filter(row => row[1] === area).length !== count)
-            fail('case-budget');
+            fail('case-budget', { detail: 'budget-distribution', section: 14, expected: count, observed: cases.filter(row => row[1] === area).length });
     const edges = new Map(requirementIds.map(id => [id, new Set()]));
     for (const [id, , links] of cases) {
-        for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping')) {
+        for (const requirement of ids(links, REQUIREMENT_ID, 'requirement-mapping', 14)) {
             const linked = edges.get(requirement);
             if (!linked)
-                fail('requirement-mapping');
+                fail('requirement-mapping', { detail: 'requirement-reference', section: 14, expected: 0, observed: 1 });
             linked.add(id);
         }
     }
+    if ([...edges.values()].some(links => links.size === 0))
+        fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: 0, observed: [...edges.values()].filter(links => links.size === 0).length });
     const traceability = table(source, 17, ['Requirement', 'Cases'], 'requirement-mapping');
     const seen = new Set();
     for (const [requirement, links] of traceability) {
         const expected = edges.get(requirement);
-        const actual = ids(links, CASE_ID, 'requirement-mapping');
-        if (!expected || seen.has(requirement) || expected.size !== actual.length || actual.some(id => !expected.has(id)))
-            fail('requirement-mapping');
+        const actual = ids(links, CASE_ID, 'requirement-mapping', 17);
+        if (!expected || seen.has(requirement))
+            fail('requirement-mapping', { detail: 'traceability-requirement', section: 17, row: seen.size + 1, expected: 0, observed: 1 });
+        if (expected.size !== actual.length)
+            fail('requirement-mapping', { detail: 'traceability-links', section: 17, row: seen.size + 1, expected: expected.size, observed: actual.length });
+        const mismatch = [...expected].filter(id => !actual.includes(id)).length + actual.filter(id => !expected.has(id)).length;
+        if (mismatch)
+            fail('requirement-mapping', { detail: 'traceability-membership', section: 17, row: seen.size + 1, expected: 0, observed: mismatch });
         seen.add(requirement);
     }
-    if (seen.size !== edges.size || [...edges.values()].some(links => links.size === 0))
-        fail('requirement-mapping');
+    if (seen.size !== edges.size)
+        fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: edges.size, observed: seen.size });
     validatePaths(source, inventory, sddPath);
 }
 function safePath(value) {
@@ -94366,29 +94688,29 @@ function validatePaths(source, inventory, sddPath) {
     const rows = table(source, 15, ['Path', 'Change'], 'repository-path');
     const expectedChange = inventory.files.has(sddPath) ? 'update' : 'create';
     if (!rows.some(([file, change]) => file === sddPath && change === expectedChange))
-        fail('repository-path');
+        fail('repository-path', { detail: 'owner-path', section: 15 });
     const proposed = new Set();
     const seen = new Set();
     for (const [file, change] of rows) {
         if (!safePath(file) || seen.has(file) || inventory.blocked.has(file))
-            fail('repository-path');
+            fail('repository-path', { detail: 'path-identity', section: 15, row: seen.size + 1 });
         seen.add(file);
         if (change === 'create') {
             if (inventory.files.has(file) || inventory.directories.has(file))
-                fail('repository-path');
+                fail('repository-path', { detail: 'create-existing-path', section: 15, row: seen.size });
             if ([...proposed].some(other => file.startsWith(`${other}/`) || other.startsWith(`${file}/`)))
-                fail('repository-path');
+                fail('repository-path', { detail: 'create-path-overlap', section: 15, row: seen.size });
             const segments = file.split('/');
             if (segments.some((_, index) => inventory.files.has(segments.slice(0, index + 1).join('/')) || inventory.blocked.has(segments.slice(0, index + 1).join('/'))))
-                fail('repository-path');
+                fail('repository-path', { detail: 'create-path-parent', section: 15, row: seen.size });
             proposed.add(file);
         }
         else if (!['update', 'reference'].includes(change) || !inventory.files.has(file))
-            fail('repository-path');
+            fail('repository-path', { detail: 'path-operation', section: 15, row: seen.size });
     }
     const check = (file) => {
         if (!safePath(file) || (!inventory.files.has(file) && !inventory.directories.has(file) && !proposed.has(file)))
-            fail('repository-path');
+            fail('repository-path', { detail: 'path-reference', section: 0 });
     };
     // Relative Markdown file links resolve against the selected SDD, never the current checkout.
     for (const match of source.matchAll(/\]\(([^\s)]+)\)/gu)) {
@@ -94400,13 +94722,13 @@ function validatePaths(source, inventory, sddPath) {
             decoded = decodeURIComponent(href);
         }
         catch {
-            return fail('repository-path');
+            return fail('repository-path', { detail: 'path-link', section: 0 });
         }
         const parts = sddPath.split('/').slice(0, -1);
         for (const part of decoded.split('/')) {
             if (part === '..') {
                 if (!parts.length)
-                    fail('repository-path');
+                    fail('repository-path', { detail: 'path-link', section: 0 });
                 parts.pop();
             }
             else if (part !== '.')
@@ -94422,6 +94744,65 @@ function validatePaths(source, inventory, sddPath) {
     const prose = source.replace(/\]\([^\s)]+\)/gu, ']()').replace(/[a-z][a-z0-9+.-]*:\/\/[^\s)>]+/giu, '');
     for (const match of prose.matchAll(/(?<![\w./:-])([A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+\.[A-Za-z0-9]+)(?![\w/-])/gu))
         check(match[1]);
+}
+function uniqueIdentifiers(values, pattern, reason, section) {
+    const distinct = new Set(values).size;
+    if (distinct !== values.length)
+        fail(reason, { detail: reason === 'case-identity' ? 'case-identity' : 'requirement-identity', section, expected: values.length, observed: distinct });
+    const invalid = values.findIndex(value => !pattern.test(value));
+    if (invalid >= 0)
+        fail(reason, { detail: 'identifier-list', section, row: invalid + 1, expected: 0, observed: values.filter(value => !pattern.test(value)).length });
+}
+
+
+/***/ }),
+
+/***/ 34211:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SDD_VALIDATION_DETAILS = exports.SDD_DRAFT_FORMAT_REASONS = void 0;
+exports.normalizeSddValidationDiagnostic = normalizeSddValidationDiagnostic;
+/** Public diagnostics contain only closed checks and bounded ordinal/count facts. */
+exports.SDD_DRAFT_FORMAT_REASONS = Object.freeze([
+    'required-heading', 'test-budget', 'case-identity', 'case-budget', 'requirement-mapping', 'repository-path',
+]);
+exports.SDD_VALIDATION_DETAILS = Object.freeze([
+    'validation-contract', 'size-limit', 'response-shape', 'required-heading', 'numeric-budget',
+    'section-count', 'table-count', 'table-separator', 'table-columns', 'table-empty-cell', 'table-empty',
+    'identifier-list', 'requirement-identity', 'case-identity', 'case-reserved', 'case-reference', 'case-shorthand',
+    'budget-area', 'budget-integer', 'budget-order', 'budget-total', 'budget-distribution',
+    'requirement-reference', 'requirement-coverage', 'traceability-links', 'traceability-membership', 'traceability-requirement',
+    'owner-path', 'path-identity', 'create-existing-path', 'create-path-overlap', 'create-path-parent',
+    'path-operation', 'path-reference', 'path-link',
+]);
+const REASONS = [...exports.SDD_DRAFT_FORMAT_REASONS, 'size', 'response-shape'];
+const PHASES = ['response', 'assembly', 'validation'];
+/** Fail closed on extra fields, arbitrary text, unbounded facts or invalid coordinates. */
+function normalizeSddValidationDiagnostic(input) {
+    if (!input || typeof input !== 'object' || Array.isArray(input)
+        || Object.keys(input).sort().join(',') !== 'facts,phase,reason'
+        || !REASONS.includes(input.reason) || !PHASES.includes(input.phase)
+        || !Array.isArray(input.facts) || input.facts.length < 1 || input.facts.length > 8) {
+        throw new TypeError('Invalid bounded SDD validation diagnostic.');
+    }
+    const facts = input.facts.map(fact => {
+        if (!fact || typeof fact !== 'object' || Array.isArray(fact)
+            || Object.keys(fact).some(key => !['detail', 'section', 'row', 'expected', 'observed'].includes(key))
+            || !exports.SDD_VALIDATION_DETAILS.includes(fact.detail) || ![0, 4, 14, 15, 17].includes(fact.section)
+            || (fact.row !== undefined && !boundedInteger(fact.row, 1))
+            || (fact.expected !== undefined && !boundedInteger(fact.expected, 0))
+            || (fact.observed !== undefined && !boundedInteger(fact.observed, 0))) {
+            throw new TypeError('Invalid bounded SDD validation fact.');
+        }
+        return Object.freeze({ ...fact });
+    });
+    return Object.freeze({ reason: input.reason, phase: input.phase, facts: Object.freeze(facts) });
+}
+function boundedInteger(value, minimum) {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value >= minimum && value <= 100000;
 }
 
 
@@ -96557,7 +96938,7 @@ function createUpgradeCliUseCase(cliUpgradePort = new active_cli_upgrade_adapter
 
 /***/ }),
 
-/***/ 12321:
+/***/ 86416:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -97004,6 +97385,7 @@ function composeIssueUseCase(...dependencies) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createIssueUseCaseCompositionRoot = createIssueUseCaseCompositionRoot;
+const resolve_message_catalog_use_case_1 = __nccwpck_require__(99961);
 const github_branch_client_factory_1 = __nccwpck_require__(30144);
 const github_issue_client_factory_1 = __nccwpck_require__(95883);
 const github_project_client_factory_1 = __nccwpck_require__(23691);
@@ -97091,7 +97473,11 @@ function createIssueUseCaseCompositionRoot(binding) {
         removeNotNeededBranches: new remove_not_needed_branches_use_case_1.RemoveNotNeededBranchesUseCase(boundBranchLifecycle, branchName),
         deployAdded: new label_deploy_added_use_case_1.DeployAddedUseCase((0, lifecycle_capability_port_binding_1.bindBranchWorkflow)(new workflow_dispatch_repository_1.WorkflowDispatchRepository((0, github_workflow_client_factory_1.createWorkflowDispatchClient)()), binding), moveIssueToInProgress),
     };
-    return (0, issue_use_case_composition_1.composeIssueUseCase)(new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueContent, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), new answer_issue_help_use_case_1.AnswerIssueHelpUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, (0, shared_capability_port_binding_1.bindIssueCommentQuery)(issueContent, binding), (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding), new pre_branch_sdd_gate_use_case_1.PreBranchSddGateUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), new pre_branch_sdd_workspace_adapter_1.PreBranchSddWorkspaceAdapter(process.cwd(), binding.token), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContent, binding), (0, lifecycle_capability_port_binding_1.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding), (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueContent, binding), (0, shared_capability_port_binding_1.bindIssueTitle)(issueTitle, binding), boundLinkedBranchReadiness));
+    return (0, issue_use_case_composition_1.composeIssueUseCase)(new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueContent, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), new answer_issue_help_use_case_1.AnswerIssueHelpUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, (0, shared_capability_port_binding_1.bindIssueCommentQuery)(issueContent, binding), (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding), new pre_branch_sdd_gate_use_case_1.PreBranchSddGateUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), new pre_branch_sdd_workspace_adapter_1.PreBranchSddWorkspaceAdapter(process.cwd(), binding.token), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueContent, binding), (0, lifecycle_capability_port_binding_1.bindIssueLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding), (0, lifecycle_capability_port_binding_1.bindActorAuthorization)((0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), binding), (0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueContent, binding), (0, shared_capability_port_binding_1.bindIssueTitle)(issueTitle, binding), boundLinkedBranchReadiness, { catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase((0, agent_capability_composition_root_1.createLanguageQueryPort)()),
+        ...(process.env.GITHUB_SERVER_URL && process.env.GITHUB_RUN_ID ? { run: {
+                serverOrigin: process.env.GITHUB_SERVER_URL, runId: process.env.GITHUB_RUN_ID,
+                owner: binding.owner, repository: binding.repository,
+            } } : {}) }));
 }
 
 
@@ -97381,7 +97767,7 @@ function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publica
         catalogResolver,
     });
 }
-const copilot_history_port_factory_1 = __nccwpck_require__(12321);
+const copilot_history_port_factory_1 = __nccwpck_require__(86416);
 const verification_setup_snapshot_1 = __nccwpck_require__(62148);
 const verification_setup_ports_1 = __nccwpck_require__(26509);
 function createIssueCommentUseCaseCompositionRoot(binding, setup = verification_setup_ports_1.DISABLED_VERIFICATION_SETUP) {

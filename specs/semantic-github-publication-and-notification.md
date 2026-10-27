@@ -2024,3 +2024,15 @@ same rejected source MUST reuse/update its canonical reply; a corrected new
 comment proceeds through normal admission. The command route/replay suite owns
 this acceptance case and its numeric budget, with existing freshness, duplicate
 and trusted-bot checks retained. No schema or provider API change is required.
+
+
+### Feature-owned SDD blocking status — #714 (2026-10-26)
+
+The pre-branch gate's existing analysis-status identity owns safe failure and
+recovery cards through its repository-bound upsert port. It is not parsed as a
+readiness record or routed as a generic issue error. While the SDD is waiting or
+blocked, the optional issue welcome MUST be omitted; a welcome/recommendation
+cannot stand in for the blocking outcome. Other generic event errors remain
+operator evidence unless explicitly mapped. The owning pre-branch SDD defines
+bounded typed diagnostics, same-issue replay, partial-publication facts and the
+fourteen-case primary budget; semantic publication does not count them again.
