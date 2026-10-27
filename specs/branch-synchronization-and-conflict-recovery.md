@@ -769,7 +769,7 @@ pnpm 10.12.4 can load candidate hooks for `--version` even with
 argv: frozen lockfile, dev dependencies included, lifecycle scripts and pnpmfile
 hooks disabled, manager auto-switching disabled, silent bounded output, and an
 ignored `.tmp/copilot-verification-store` shared only as a package cache across
-fresh verifier profiles. Cache symlinks are rejected; cached packages never
+fresh verifier profiles. Cache symlinks, including dangling links, are rejected with no-follow entry metadata checks; absence is accepted only for ENOENT and metadata access errors fail closed. The same presence rule rejects dangling source npmrc entries; cached packages never
 substitute for installing/revalidating the current graph. Existing runner checkout
 cleanup owns ignored dependencies/cache; private HOME cleanup runs on success and
 failure. This is not an OS sandbox against same-user hostile processes.
@@ -835,7 +835,7 @@ reporting failure cannot undo or mislabel an already completed push.
 
 ### Test budget, documentation, acceptance, and rollout
 
-Incremental floor: **71 distinct cases**, counted only here: 51 source adapter/
+Incremental floor: **76 distinct cases**, counted only here: 56 source adapter/
 security/real-Git cases (including clean and fixed-conflict workspace transitions,
 version-probe directory, bounded descriptor changes, cache/path rejection and
 credential-free ordering); 13 closed diagnostic validation cases; 4 sync failure/

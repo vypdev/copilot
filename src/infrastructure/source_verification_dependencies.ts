@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { lstatSync, realpathSync, existsSync, openSync, closeSync, fstatSync, readSync, constants } from 'node:fs';
+import { lstatSync, realpathSync, openSync, closeSync, fstatSync, readSync, constants } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, sep } from 'node:path';
 import { load, JSON_SCHEMA } from 'js-yaml';
 import { SourceDependencyError } from '../application/policies/source_verification_dependency_policy';
@@ -78,7 +78,7 @@ function validateGraph(root: string): void {
             } finally { closeSync(descriptor); }
         };
         for (const path of ['.tmp', '.tmp/copilot-verification-store']) {
-            if (existsSync(join(root, path)) && lstatSync(join(root, path)).isSymbolicLink()) throw new Error('unsafe cache');
+            if (optionalEntry(join(root, path))?.isSymbolicLink()) throw new Error('unsafe cache');
         }
         const manifest = JSON.parse(read('package.json', 131_072));
         const workspace = load(read('pnpm-workspace.yaml', 131_072), { schema: JSON_SCHEMA }) as Record<string, unknown>;
@@ -91,7 +91,7 @@ function validateGraph(root: string): void {
         if (!Array.isArray(packages) || packages.length > 32) throw new Error('unsupported');
         for (const path of ['', ...packages]) {
             if (typeof path !== 'string' || path.length > 200 || path !== '' && !/^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/u.test(path)) throw new Error('unsafe');
-            if (existsSync(join(root, path, '.npmrc'))) throw new Error('unsupported');
+            if (optionalEntry(join(root, path, '.npmrc'))) throw new Error('unsupported');
             if (path) {
                 const member = JSON.parse(read(`${path}/package.json`, 131_072));
                 if (member.pnpm !== undefined) throw new Error('unsupported');
@@ -103,4 +103,13 @@ function validateGraph(root: string): void {
 function candidateIdentity(root: string, environment: Record<string, string>): string {
     try { return verificationCandidateIdentity(root, environment); }
     catch { throw new SourceDependencyError('candidate-changed'); }
+}
+
+/** Presence checks must inspect the entry itself, including dangling symlinks. */
+function optionalEntry(path: string): ReturnType<typeof lstatSync> | undefined {
+    try { return lstatSync(path); }
+    catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+        throw error;
+    }
 }

@@ -91783,7 +91783,7 @@ function validateGraph(root) {
             }
         };
         for (const path of ['.tmp', '.tmp/copilot-verification-store']) {
-            if ((0, node_fs_1.existsSync)((0, node_path_1.join)(root, path)) && (0, node_fs_1.lstatSync)((0, node_path_1.join)(root, path)).isSymbolicLink())
+            if (optionalEntry((0, node_path_1.join)(root, path))?.isSymbolicLink())
                 throw new Error('unsafe cache');
         }
         const manifest = JSON.parse(read('package.json', 131072));
@@ -91800,7 +91800,7 @@ function validateGraph(root) {
         for (const path of ['', ...packages]) {
             if (typeof path !== 'string' || path.length > 200 || path !== '' && !/^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/u.test(path))
                 throw new Error('unsafe');
-            if ((0, node_fs_1.existsSync)((0, node_path_1.join)(root, path, '.npmrc')))
+            if (optionalEntry((0, node_path_1.join)(root, path, '.npmrc')))
                 throw new Error('unsupported');
             if (path) {
                 const member = JSON.parse(read(`${path}/package.json`, 131072));
@@ -91819,6 +91819,17 @@ function candidateIdentity(root, environment) {
     }
     catch {
         throw new source_verification_dependency_policy_1.SourceDependencyError('candidate-changed');
+    }
+}
+/** Presence checks must inspect the entry itself, including dangling symlinks. */
+function optionalEntry(path) {
+    try {
+        return (0, node_fs_1.lstatSync)(path);
+    }
+    catch (error) {
+        if (error.code === 'ENOENT')
+            return undefined;
+        throw error;
     }
 }
 

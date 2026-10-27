@@ -202,3 +202,30 @@ it.each(['linux','darwin','win32'] as const)('prepares the provisioned source to
     expect(execute).toHaveBeenCalledTimes(2);
     expect(execute.mock.calls[1][1]).toContain('install');
 });
+
+it.each(['.tmp','.tmp/copilot-verification-store'])('rejects a dangling cache symlink at %s before starting pnpm', async cache => {
+    if(cache.includes('/')) mkdirSync(join(root,'.tmp'));
+    symlinkSync(join(tool,'missing-target'),join(root,cache),'junction');
+    expect(existsSync(join(root,cache))).toBe(false);
+    const execute=jest.fn().mockResolvedValue('10.12.4');
+    await expect(prepare(execute)(env())).rejects.toMatchObject({reason:'unsupported-graph'});
+    expect(execute).not.toHaveBeenCalled();
+});
+it('fails closed when cache metadata cannot be inspected', async () => {
+    const original=filesystem.lstatSync;
+    jest.spyOn(filesystem,'lstatSync').mockImplementation(((file: string, options: unknown) => {
+        if(String(file)===join(root,'.tmp')) throw Object.assign(new Error('private path'),{code:'EACCES'});
+        return original(file,options as never);
+    }) as never);
+    const execute=jest.fn().mockResolvedValue('10.12.4');
+    await expect(prepare(execute)(env())).rejects.toMatchObject({reason:'unsupported-graph'});
+    expect(execute).not.toHaveBeenCalled();
+});
+
+it.each(['','extension'])('rejects a dangling npmrc in source workspace member %s', async member => {
+    if(member) {mkdirSync(join(root,member));write('extension/package.json','{"name":"extension"}');write('pnpm-workspace.yaml','packages: [extension]');}
+    symlinkSync(join(tool,'missing-npmrc'),join(root,member,'.npmrc'));
+    const execute=jest.fn().mockResolvedValue('10.12.4');
+    await expect(prepare(execute)(env())).rejects.toMatchObject({reason:'unsupported-graph'});
+    expect(execute).not.toHaveBeenCalled();
+});
