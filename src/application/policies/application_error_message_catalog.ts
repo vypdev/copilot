@@ -161,7 +161,7 @@ const SPANISH_CONTENT: ErrorContent = Object.freeze({
   }),
   'validation.evidence-unavailable': Object.freeze({
     impact: 'No se evaluó el progreso porque no se pudieron verificar un patch necesario ni sus contenidos inmutables completos.',
-    action: 'Inspecciona las rutas sin revisar en la comparación entre los commits base y head exactos o divide el trabajo en cambios revisados más pequeños con patches completos antes de otra evaluación. Reintentar los mismos commits no recuperará la evidencia inmutable no disponible.',
+    action: 'Inspecciona las rutas sin revisar y la base prevista de la pull request en la comparación entre los commits base y head exactos. Aporta evidencia completa y revisable antes de otra evaluación. Reintentar los mismos commits no recuperará la evidencia inmutable no disponible.',
     retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas; no se realizó ninguna evaluación del modelo.',
   }),
   'validation.evidence-too-large': Object.freeze({
@@ -232,6 +232,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'Issue cleanup remains unverified: {resultId}, phase {phase}; native state {state}, reason {reason}.',
     action: 'Inspect the closed-issue or merged-PR run and current native state. Retry cleanup only if the issue is still closed with the intended reason; leave reopened work open. Resolve the named failure before retrying.',
     retainedState: 'Native state was preserved. Confirmed changes: {changed}; remaining required changes in the last verified plan: {remaining}. Unavailable reads do not establish completion.',
+  }),
+  'progress-binary-evidence-unavailable': Object.freeze({
+    impact: 'Progress was not assessed because required binary or non-text contents cannot be reviewed. Unreviewed paths ({pathCount} total; {shownCount} shown; complete inventory in run details): {paths}.',
+    action: 'Inspect the intended pull request base and the pinned paths. Changed binary contents need reviewable source and provenance; file metadata or a successful build does not establish binary correctness.',
+    retainedState: 'Existing progress labels and assessments were preserved; no model assessment was made. Project verification remains a separate result.',
   }),
   'issue-workflow-admission-blocked': Object.freeze({
     impact: 'Issue workflow {kind} was not admitted ({reason}). Fields or labels needing attention: {fields}.',
@@ -372,6 +377,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'La limpieza de la issue sigue sin verificarse: {resultId}, fase {phase}; estado nativo {state}, motivo {reason}.',
     action: 'Revisa la ejecución de cierre o de la PR fusionada y el estado nativo actual. Reintenta la limpieza solo si la issue sigue cerrada con el motivo previsto; conserva abierto el trabajo reabierto. Resuelve el fallo indicado antes de reintentar.',
     retainedState: 'Se conservó el estado nativo. Cambios confirmados: {changed}; cambios pendientes en el último plan verificado: {remaining}. Una lectura no disponible no demuestra que haya finalizado.',
+  }),
+  'progress-binary-evidence-unavailable': Object.freeze({
+    impact: 'No se evaluó el progreso porque no se pueden revisar los contenidos binarios o no textuales necesarios. Rutas sin revisar ({pathCount} en total; {shownCount} mostradas; inventario completo en los detalles de ejecución): {paths}.',
+    action: 'Inspecciona la base prevista de la pull request y las rutas fijadas. Los contenidos binarios cambiados necesitan fuentes revisables y procedencia; los metadatos o un build correcto no prueban la corrección del binario.',
+    retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones; no se realizó ninguna evaluación del modelo. La verificación del proyecto sigue siendo un resultado independiente.',
   }),
   'issue-workflow-admission-blocked': Object.freeze({
     impact: 'La issue no fue admitida en el flujo {kind} ({reason}). Campos o etiquetas que requieren atención: {fields}.',

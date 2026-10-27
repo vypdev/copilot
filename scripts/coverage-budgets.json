@@ -839,21 +839,28 @@
             "src/application/policies/progress_scope_policy.ts",
             "src/prompts/progress_scope.ts",
             "src/application/policies/progress_content_evidence_policy.ts",
-            "src/application/policies/progress_patch_completeness_policy.ts"
+            "src/application/policies/progress_patch_completeness_policy.ts",
+            "src/application/policies/progress_comparison_source_policy.ts",
+            "src/domain/progress_binary_evidence_diagnostic.ts",
+            "src/domain/progress_evidence_path.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"
         },
         {
           "files": [
-            "src/application/usecases/actions/summarize_progress_diff_workflow.ts"
+            "src/application/usecases/actions/summarize_progress_diff_workflow.ts",
+            "src/application/usecases/actions/check_progress_workflow.ts",
+            "src/application/usecases/actions/progress_analysis_workflow.ts"
           ],
           "mode": "each",
           "thresholdProfile": "default"
         },
         {
           "files": [
-            "src/data/repository/immutable_progress_content_repository.ts"
+            "src/data/repository/immutable_progress_content_repository.ts",
+            "src/data/repository/progress_comparison_source_repository.ts",
+            "src/infrastructure/composition/check_progress_composition_root.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"

@@ -33,15 +33,15 @@ export class ProgressDiffRepository {
                 ...(generated ? { evidence: 'generated-metadata-only' as const } : complete ? { patch: file.patch ?? '' } : {}) },
                 recover: !complete, previousPath: file.previous_filename };
         });
+        if (data.base_commit?.sha !== baseSha || !/^[a-f0-9]{40}$/u.test(data.merge_base_commit?.sha ?? '')) {
+            throw progressRecoveryError('the comparison preimage could not be pinned', changes.map(file => file.change.path));
+        }
         if (baseSha === headSha && changes.length > 0) throw unavailable('workflow.stale');
         const missing = changes.filter(file => file.recover);
         if (missing.length === 0) return partitionProgressDiff(baseSha, headSha, changes.map(file => file.change));
         const unreviewed = changes.map(file => file.change.path);
         if (missing.length > MAX_PROGRESS_RECOVERED_FILES) throw progressRecoveryError('file recovery budget exhausted', unreviewed, true);
         if (!this.objects) throw progressRecoveryError('immutable content recovery is unavailable', unreviewed);
-        if (data.base_commit?.sha !== baseSha || !/^[a-f0-9]{40}$/u.test(data.merge_base_commit?.sha ?? '')) {
-            throw progressRecoveryError('the comparison preimage could not be pinned', unreviewed);
-        }
         const recovery = new ImmutableProgressContentRepository(this.objects.getClient(token), owner, repository);
         const complete: ProgressDiffChange[] = [];
         for (const [index, file] of changes.entries()) {

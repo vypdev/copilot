@@ -86,7 +86,7 @@ describe('CheckProgressUseCase', () => {
       { getOpenPullRequestNumbersByHeadBranch: mockGetOpenPullRequestNumbersByHeadBranch },
       { query: localizedProgress },
       { isIssueOpen: jest.fn(async () => true), getBranchHeadSha: mockGetBranchHeadSha },
-      { getDiff: mockGetDiff },
+      { getDiff: mockGetDiff }, { getSource: jest.fn(async () => ({ kind: 'none' as const })) }
     );
     invoke = (param) => useCase.invoke(projectProgressContext(param));
     mockGetDescription.mockReset();
@@ -339,7 +339,7 @@ describe('CheckProgressUseCase', () => {
   });
   it('retains progress and makes no model call when the authenticated provider omits a lockfile patch', async () => {
     mockGetDescription.mockResolvedValue('Issue body');
-    const compareCommits = jest.fn(async () => ({ data: { files: [{ filename: 'frontend/pnpm-lock.yaml', status: 'modified', additions: 973, deletions: 1410 }] } }));
+    const compareCommits = jest.fn(async () => ({ data: { base_commit: { sha: BASE_HEAD }, merge_base_commit: { sha: BASE_HEAD }, files: [{ filename: 'frontend/pnpm-lock.yaml', status: 'modified', additions: 973, deletions: 1410 }] } }));
     const repository = new ProgressDiffRepository({ getClient: () => ({ rest: { repos: { compareCommits } } }) } as never);
     mockGetDiff.mockImplementation((base, head) => repository.getDiff('owner', 'repo', base, head, 'token'));
     const results = await invoke(baseParam());

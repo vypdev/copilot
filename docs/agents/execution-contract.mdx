@@ -99,7 +99,12 @@ process and ACL contracts. Codex integration fixtures run only on macOS and
 Ubuntu; they do not certify a Windows service sandbox.
 
 Progress assessments receive a complete comparison pinned to the repository's
-base and source commits. Generated `build/` outputs and the exact generated
+selected base and source commits. One exact native open same-repository PR
+selects its actual base ref; proven absence uses configured development. Both
+refs are pinned natively, not inferred from PR `base.sha`, body text or local Git.
+Ambiguous/foreign/stale/unavailable native authority fails closed. Before labels,
+the body is reread, then ownership, then refs/native-open state. Creation, closure,
+retarget or replacement invalidates the old assessment. Generated `build/` outputs and the exact generated
 `specs/CATALOG.md` index contribute file facts only; editable catalogs, lockfiles
 and specifications require complete source evidence. These facts never certify
 a build or test. Complete patches and identified recovered-content units are
@@ -123,10 +128,21 @@ and every complete prompt is admitted before the first model request. Exact
 unit/partition/path/locale responses must all validate before final assessment;
 there is no partial percentage or durable partial-analysis reuse.
 
+Inherited production binaries may be absent from the complete actual PR delta
+even when they differ from development; this is a comparison-source correction,
+not a binary metadata exemption. Actually changed binary/non-text contents remain
+unassessed. Their typed recovery shows bounded exact names, total/shown counts
+and a complete numbered inventory in run details, while distinguishing progress
+from project verification. Up to eight whole names fit an 8,192-byte structured
+diagnostic; nothing is clipped. Paths are reversible JSON code spans and native
+branch metadata has a separate complete 4,096-byte untrusted prompt envelope.
+No binary bytes, URLs or credentials enter these diagnostics.
+
 Unverifiable contents report nonretryable `validation.evidence-unavailable` with
 bounded unreviewed paths; exhausted resource/analysis limits report nonretryable
 `validation.evidence-too-large`. Existing progress remains unchanged. Inspect
-the pinned comparison or split the work into smaller reviewed changes. Manual
+the intended PR target and pinned paths and supply complete reviewable evidence.
+Actually changed binaries require source/provenance, not a successful compile. Manual
 inspection does not update Copilot progress. A genuine provider outage keeps
 its existing retryability; changed source/body/native-open status still blocks
 publication. See [progress evidence](/issues/branch-management#progress-evidence)

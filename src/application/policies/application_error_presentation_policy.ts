@@ -1,3 +1,4 @@
+import { progressBinaryEvidencePresentation } from '../../domain/progress_binary_evidence_diagnostic';
 import { issueWorkflowDiagnosticPresentation } from '../../domain/issue_workflow_diagnostic';
 import { isCopilotCommandValidationReason } from '../../domain/copilot_command_validation';
 import { commandValidationPresentationVariables } from './comment_command_validation_presentation_policy';
@@ -37,7 +38,9 @@ export function buildApplicationErrorPresentation(
     const descriptor = error.recovery
         ? `error.recovery.${error.recovery.id}` as const
         : `error.${error.code}` as const;
-    const variables = error.recovery?.id === 'issue-workflow-admission-blocked'
+    const variables = error.recovery?.id === 'progress-binary-evidence-unavailable'
+        ? progressBinaryEvidencePresentation(error.recovery.variables)
+        : error.recovery?.id === 'issue-workflow-admission-blocked'
         ? issueWorkflowDiagnosticPresentation(error.recovery.variables)
         : error.recovery && isCopilotCommandValidationReason(error.recovery.id)
         ? commandValidationPresentationVariables(error.recovery.id, (error.recovery.variables as Readonly<Record<string, unknown>>).command)

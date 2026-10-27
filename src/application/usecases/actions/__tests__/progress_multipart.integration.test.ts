@@ -36,7 +36,7 @@ function fixture(changes?: readonly ProgressDiffChange[]) {
     const getDescription = jest.fn(async () => 'Implement the described behavior and verify it.');
     const useCase = new CheckProgressUseCase({ getDescription },
         { getLabels: jest.fn(async () => []), setLabels }, { setProgressLabel }, { getListOfBranches: jest.fn(async () => []) },
-        { getOpenPullRequestNumbersByHeadBranch: jest.fn(async () => []) }, { query }, { isIssueOpen, getBranchHeadSha }, { getDiff });
+        { getOpenPullRequestNumbersByHeadBranch: jest.fn(async () => []) }, { query }, { isIssueOpen, getBranchHeadSha }, { getDiff }, { getSource: jest.fn(async () => ({ kind: 'none' as const })) });
     return { diff, query, getDescription, setProgressLabel, setLabels, isIssueOpen, getBranchHeadSha, getDiff, invoke: () => useCase.invoke(context) };
 }
 

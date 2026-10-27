@@ -1,3 +1,5 @@
+import { renderProgressEvidencePath } from '../../domain/progress_evidence_path';
+import { progressBinaryEvidenceFacts } from '../../domain/progress_binary_evidence_diagnostic';
 import { ApplicationError } from '../errors/application_error';
 import type { ProgressDiffChange } from '../ports/progress_diff_query_ports';
 
@@ -15,7 +17,16 @@ export interface RecoveredProgressContent { readonly comparisonBaseSha: string; 
 /** Bounded operator diagnostic; paths are data, never provider URLs, tokens or blob contents. */
 export function progressRecoveryError(reason: string, paths: readonly string[], tooLarge = false): ApplicationError {
     return new ApplicationError(tooLarge ? 'validation.evidence-too-large' : 'validation.evidence-unavailable',
-        `Progress was not assessed: ${reason}. Unreviewed paths (${paths.length}): ${paths.slice(0, 8).map(path => JSON.stringify(path)).join(', ')}${paths.length > 8 ? ', …' : ''}. Existing progress was retained.`);
+        progressRecoveryMessage(reason, paths));
+}
+
+function progressRecoveryMessage(reason: string, paths: readonly string[]): string {
+    return `Progress was not assessed: ${reason}. Unreviewed paths (${paths.length}): ${paths.slice(0, 8).map(renderProgressEvidencePath).join(', ')}${paths.length > 8 ? ', …' : ''}. Existing progress was retained.`;
+}
+
+export function progressBinaryEvidenceUnavailable(paths: readonly string[]): ApplicationError {
+    return new ApplicationError('validation.evidence-unavailable', progressRecoveryMessage('binary or invalid UTF-8 content cannot be assessed', paths),
+        { recovery: { id: 'progress-binary-evidence-unavailable', variables: progressBinaryEvidenceFacts(paths) } });
 }
 
 /** Complete UTF-8, JSON-budgeted slices. No normalization, truncation or duplicated boundary bytes. */

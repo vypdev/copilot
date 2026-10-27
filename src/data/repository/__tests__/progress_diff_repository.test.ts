@@ -5,7 +5,7 @@ const base = 'a'.repeat(40), head = 'b'.repeat(40);
 function fixture() {
     const file = { filename: 'src/feature.ts', status: 'modified', additions: 1, deletions: 1, changes: 2,
         blob_url: 'PRIVATE_BLOB_URL', raw_url: 'PRIVATE_RAW_URL', contents_url: 'PRIVATE_CONTENTS_URL', patch: '@@ -1 +1 @@\n-old\n+implemented' };
-    const data = { ahead_by: 1, behind_by: 0, total_commits: 1, files: [file], commits: [] };
+    const data = { base_commit: { sha: base }, merge_base_commit: { sha: base }, ahead_by: 1, behind_by: 0, total_commits: 1, files: [file], commits: [] };
     const compareCommits = jest.fn(async () => ({ data }));
     const getClient = jest.fn(() => ({ rest: { repos: { compareCommits } } }));
     const repository = new ProgressDiffRepository({ getClient } as unknown as { getClient(token: string): GithubBranchComparisonClient });
