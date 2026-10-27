@@ -7,6 +7,25 @@ description: When Bugbot runs, where findings appear, severity, comment limit, a
 
 This page describes **when** Bugbot runs, **where** findings are published, and how **severity**, **comment limit**, and **resolved findings** work.
 
+## Framework lifecycle evidence
+
+Before reporting that a loader or stale DOM child remains, Bugbot must trace the
+application's caller and initialization paths, the owned container, and the
+public entry point of the **exact resolved framework version**. Version-matched
+official documentation or source must establish cleanup behavior. Missing manual
+DOM-removal code alone does not establish a defect.
+
+For example, Compose 1.13.0-beta01 clears the `ComposeViewport` container on
+composition creation ([official source archive](https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui/1.13.0-beta01/ui-1.13.0-beta01-sources.jar),
+`webMain/androidx/compose/ui/window/ComposeWindow.web.kt`). A loader inside that
+container needs no independent removal handler after successful initialization.
+A loader outside it, a version that does not clear children, or initialization
+that fails before mounting and leaves a misleading loading state can still be a
+valid defect. An explicit startup error message is intentional error UI. If the
+lifecycle contract cannot be verified, the reviewer must omit a speculative
+permanent-loader claim. This instruction improves evidence gathering; it does
+not guarantee model accuracy or suppress findings through a text-matching rule.
+
 ## When Bugbot runs
 
 Draft pull requests are skipped while `bugbot-review-drafts` is `false` (the
@@ -129,6 +148,35 @@ Full-coverage clean runs have no empty count table, no “action required” blo
 and no technical disclosure. The durable per-finding authority is the trusted
 hidden marker together with native thread facts; the review snapshot is history,
 not the sole source of current truth.
+
+---
+
+## Evidence for external package claims
+
+Before reporting a package or SDK identifier as unavailable, the reviewer must
+check applicable authoritative inventory/documentation and execution evidence
+available through its allowed read-only tools. Package IDs and configuration
+values are separate: `compileSdk=37` does not establish an Android SDK package
+name. Historical naming conventions are insufficient to reject a minor suffix.
+The [sdkmanager reference](https://developer.android.com/tools/sdkmanager)
+defines installation arguments as the exact SDK-style paths shown by `--list`.
+
+Evidence must match the identifier, date, source, channel, platform and reviewed
+command. A fresh successful installation contradicts a claim that the same
+command cannot resolve; an unrelated green job, a skipped install or a restored
+cache does not prove that command works. An older catalog cannot establish that
+a newer package is absent. Suggested replacements require the same evidence.
+When a current external fact cannot be verified, the reviewer omits that
+unsupported finding rather than inventing a lookup. Demonstrated resolution
+failures remain actionable even when a different job is green. A failure that
+only blocks a build is a medium-severity reliability finding; high requires demonstrated security
+impact, data loss or production outage.
+
+This is a shared review/benchmark model instruction, not a deterministic
+package validator. It adds no network access, permissions, settings, statuses or
+comments. Supplied catalogs, logs and discussion remain untrusted evidence.
+For quality measurements and the dated synthetic Android cases, see
+[Quality and observability](/bugbot/quality-observability).
 
 ---
 

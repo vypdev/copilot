@@ -289,6 +289,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Retry SDD preparation with a proportional appendix or an approved companion specification.',
     retainedState: 'Existing answers and published SDDs were preserved; no draft was published.',
   }),
+  'branch-sync-verification-failed': Object.freeze({
+    impact: 'Branch synchronization stopped at verification command {commandIndex} ({command}): stage {stage}, reason {reason}.',
+    action: 'Inspect the failed stage in the linked workflow logs. For dependencies, provision the source Node/pnpm toolchain and repair the frozen candidate workspace graph; for setup/runtime, repair the same-job prerequisites; for command failures, correct the configured verifier. Then retry {syncCommand}. Blind retries do not repair a graph mismatch.',
+    retainedState: 'No synchronization commit or push was attempted. Original head: {childSha}. Local rollback: {restoration}; restored means the original head was verified, unverified requires operator inspection before retrying.',
+  }),
   'branch-sync-resolution-invalid': Object.freeze({
     impact: 'Branch synchronization stopped because workspace validation rejected the resolution ({validationCode}).',
     action: 'Inspect this validation code in the workflow logs and correct the resolution before retrying {command}.',
@@ -418,6 +423,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'La preparación del SDD se detuvo porque el borrador seguía siendo demasiado largo tras un intento automático de reducción.',
     action: 'Reintenta la preparación del SDD con un apéndice proporcional o una especificación complementaria aprobada.',
     retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',
+  }),
+  'branch-sync-verification-failed': Object.freeze({
+    impact: 'La sincronización se detuvo en el comando de verificación {commandIndex} ({command}): fase {stage}, motivo {reason}.',
+    action: 'Revisa la fase fallida en los logs del workflow enlazado. Para dependencias, prepara Node/pnpm del repositorio fuente y corrige el grafo congelado del candidato; para setup/runtime, corrige los requisitos del mismo job; para fallos del comando, corrige el verificador configurado. Después reintenta {syncCommand}. Repetir sin cambios no corrige un grafo incompatible.',
+    retainedState: 'No se intentó crear ni subir un commit de sincronización. Head original: {childSha}. Rollback local: {restoration}; restored confirma el head original, unverified requiere inspección del operador antes de reintentar.',
   }),
   'branch-sync-resolution-invalid': Object.freeze({
     impact: 'La sincronización se detuvo porque la validación del repositorio rechazó la resolución ({validationCode}).',

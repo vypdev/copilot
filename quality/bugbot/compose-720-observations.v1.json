@@ -1,0 +1,203 @@
+{
+  "schemaVersion": 1,
+  "issue": "https://github.com/vypdev/copilot/issues/720",
+  "date": "2026-10-27",
+  "baselineSource": "f3601d7270aafae1656be99c6d79e36b03245d6a",
+  "model": "gpt-6-luna",
+  "effort": "CLI default",
+  "scope": "Five synthetic Compose cases, not a Compose runtime execution or a statistically established model improvement.",
+  "command": "node build/cli/index.js bugbot-benchmark --corpus <five kt-compose cases from corpus.v1.json> --predictions <output.json> --findings-model gpt-6-luna",
+  "runs": [
+    {
+      "name": "baseline",
+      "detectionMetrics": {
+        "precision": 1,
+        "recall": 1,
+        "falsePositives": 0,
+        "falseNegatives": 0
+      },
+      "limitations": [
+        "severityAccuracy=0; expected low, observed medium"
+      ],
+      "predictions": {
+        "kt-compose-preferred-width-narrow": [],
+        "kt-compose-required-width-overflow": [
+          {
+            "id": "ui/AuthForm.kt:10:required-width-overflows-parent",
+            "title": "Required width makes the form controls overflow",
+            "description": "The card is forced to 400dp even when its parent is bounded to 280dp. After the card’s 16dp outer padding and the column’s 24dp padding, the text field and button are each 320dp wide, so they exceed the parent by 40dp. At wider widths, this fixed sizing also prevents the controls from adapting to the available width.",
+            "file": "ui/AuthForm.kt",
+            "line": 10,
+            "endLine": 10,
+            "severity": "medium",
+            "confidence": 0.99,
+            "category": "correctness",
+            "evidence": "The `requiredWidth(400.dp)` constraint fixes the card width; the nested 16dp and 24dp padding leaves 320dp for the controls, which exceeds the 280dp parent constraint.",
+            "suggestion": "Use a width modifier that respects the parent constraints and caps the card at 320dp.",
+            "symbol": "AuthForm",
+            "codeSnippet": "Card(modifier = Modifier.requiredWidth(400.dp).padding(16.dp))",
+            "suggestedCode": "Card(modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth().padding(16.dp))",
+            "fingerprint": "fp-c9106886",
+            "semanticFingerprint": "sf-9c8ce8e9"
+          }
+        ],
+        "kt-compose-fill-before-cap": [
+          {
+            "id": "ui/AuthForm.kt:10:width-cap-ineffective",
+            "title": "Width cap is applied after fillMaxWidth",
+            "description": "At the 800dp constraint, fillMaxWidth tightens the width to 800dp before widthIn(max = 400.dp) is applied. The later cap cannot reduce that already-tight constraint, so the form fields exceed the required 320dp maximum. Apply the cap before filling the available width and account for the card’s internal padding.",
+            "file": "ui/AuthForm.kt",
+            "line": 10,
+            "endLine": 10,
+            "severity": "medium",
+            "confidence": 0.98,
+            "category": "correctness",
+            "evidence": "The modifier chain is `fillMaxWidth().widthIn(max = 400.dp)`. With bounded max width 800dp, fillMaxWidth sets min and max to 800dp; the subsequent widthIn cannot shrink that width. The Column’s 24dp horizontal padding leaves fields wider than 320dp.",
+            "suggestion": "Apply the width cap before fillMaxWidth, using a cap that leaves at most 320dp for the fields after the Column’s horizontal padding.",
+            "symbol": "AuthForm",
+            "codeSnippet": "Modifier.fillMaxWidth().widthIn(max = 400.dp).padding(16.dp)",
+            "suggestedCode": "Modifier.widthIn(max = 368.dp).fillMaxWidth().padding(16.dp)",
+            "fingerprint": "fp-1d7b67f5",
+            "semanticFingerprint": "sf-77f9cd4d"
+          }
+        ],
+        "kt-compose-cap-before-fill": [],
+        "kt-compose-padded-preferred-width": []
+      }
+    },
+    {
+      "name": "rejected candidate without explicit padding propagation",
+      "detectionMetrics": {
+        "precision": 0.6666666666666666,
+        "recall": 1,
+        "falsePositives": 1,
+        "falseNegatives": 0
+      },
+      "limitations": [
+        "Incorrect padded-form finding omitted the Card modifier padding; candidate rejected.",
+        "Exact location, severity and Brier thresholds also failed."
+      ],
+      "predictions": {
+        "kt-compose-preferred-width-narrow": [],
+        "kt-compose-required-width-overflow": [
+          {
+            "id": "ui/AuthForm.kt:9:required-width-overflows-parent",
+            "title": "Required width overflows the bounded parent",
+            "description": "`requiredWidth(400.dp)` forces the Card to measure at 400dp even though the centered Box is bounded to 280dp. The following 16dp padding leaves 368dp for the Card content; the Column's 24dp horizontal padding leaves the fields 320dp wide. This exceeds the parent width and the stated 320dp control cap is only met at the 800dp use case.",
+            "file": "ui/AuthForm.kt",
+            "line": 9,
+            "endLine": 9,
+            "severity": "medium",
+            "confidence": 1,
+            "category": "correctness",
+            "evidence": "The supplied line is `Card(modifier = Modifier.requiredWidth(400.dp).padding(16.dp))`; `requiredWidth` can override incoming maximum constraints, and the subsequent horizontal paddings yield 400 - 32 - 48 = 320dp fields under the stated constraints.",
+            "suggestion": "Use a width modifier that obeys the parent's incoming constraints and caps the form at 320dp, accounting for the outer and inner padding when setting the cap.",
+            "symbol": "AuthForm",
+            "codeSnippet": "Card(modifier = Modifier.requiredWidth(400.dp).padding(16.dp))",
+            "fingerprint": "fp-1995efbe",
+            "semanticFingerprint": "sf-9c8ce8e9"
+          }
+        ],
+        "kt-compose-fill-before-cap": [
+          {
+            "id": "ui/AuthForm.kt:9:field-width-cap-lost",
+            "title": "The width cap is defeated by fillMaxWidth",
+            "description": "At an 800dp parent width, the outer fillMaxWidth fixes the width constraint at 800dp before widthIn(max = 400.dp) is applied. The later cap cannot shrink that fixed minimum, so the Card and its fillMaxWidth fields exceed the required 320dp interactive-field limit.",
+            "file": "ui/AuthForm.kt",
+            "line": 9,
+            "endLine": 9,
+            "severity": "medium",
+            "confidence": 0.98,
+            "category": "correctness",
+            "evidence": "The modifier chain is fillMaxWidth().widthIn(max = 400.dp).padding(16.dp). With bounded parent width 800dp, fillMaxWidth establishes an exact 800dp constraint; widthIn cannot reduce it. The padding leaves the Card content and its fillMaxWidth fields substantially wider than 320dp.",
+            "suggestion": "Apply the maximum width before filling the available width, while retaining the padding and checking the resulting content width against the 320dp limit.",
+            "symbol": "AuthForm",
+            "codeSnippet": "Modifier.fillMaxWidth().widthIn(max = 400.dp).padding(16.dp)",
+            "fingerprint": "fp-a320f52b",
+            "semanticFingerprint": "sf-77f9cd4d"
+          }
+        ],
+        "kt-compose-cap-before-fill": [],
+        "kt-compose-padded-preferred-width": [
+          {
+            "id": "ui/AuthForm.kt:10:wide-field-cap-exceeded",
+            "title": "Fields exceed the 320dp wide-screen limit",
+            "description": "In the 800dp render, `width(400.dp)` gives the Card a 400dp content width. The Column’s 24dp horizontal padding leaves each field 352dp wide, exceeding the required 320dp maximum.",
+            "file": "ui/AuthForm.kt",
+            "line": 10,
+            "endLine": 10,
+            "severity": "medium",
+            "confidence": 0.99,
+            "category": "correctness",
+            "evidence": "The Card’s preferred width is 400dp under the 800dp parent constraint; the Column subtracts 48dp, so the fill-width fields are 352dp wide.",
+            "suggestion": "Cap the Card’s preferred width at 320dp while allowing it to shrink to the available width.",
+            "symbol": "AuthForm",
+            "codeSnippet": "Card(modifier = Modifier.width(400.dp).padding(16.dp)) {",
+            "suggestedCode": "Card(modifier = Modifier.widthIn(max = 320.dp).padding(16.dp)) {",
+            "fingerprint": "fp-ab923fad",
+            "semanticFingerprint": "sf-40bf9dfb"
+          }
+        ]
+      }
+    },
+    {
+      "name": "final explicit padding propagation",
+      "detectionMetrics": {
+        "precision": 1,
+        "recall": 1,
+        "falsePositives": 0,
+        "falseNegatives": 0
+      },
+      "limitations": [
+        "locationAccuracy=0; expected Card line 10, observed line 9",
+        "severityAccuracy=0; expected low, observed medium",
+        "The full real-agent quality gate does not pass; detection metrics alone are not a full quality score."
+      ],
+      "predictions": {
+        "kt-compose-preferred-width-narrow": [],
+        "kt-compose-required-width-overflow": [
+          {
+            "id": "ui/AuthForm.kt:9:required-width-overflows-parent",
+            "title": "Required card width makes controls overflow the narrow parent",
+            "description": "`requiredWidth(400.dp)` overrides the Box's 280dp maximum. The Card's outer 16dp padding and the Column's 24dp padding on each side leave the full-width controls 320dp wide, so they extend 20dp beyond each side of the parent when centered.",
+            "file": "ui/AuthForm.kt",
+            "line": 9,
+            "endLine": 9,
+            "severity": "medium",
+            "confidence": 0.99,
+            "category": "correctness",
+            "evidence": "At the 280dp parent width, the required 400dp card width minus 32dp of outer padding and 48dp of Column padding gives each control a width of 320dp, exceeding the parent by 40dp total.",
+            "suggestion": "Use a width modifier that respects the parent's maximum while retaining the 320dp cap at wider widths, and verify it under both parent constraints.",
+            "symbol": "AuthForm",
+            "codeSnippet": "Card(modifier = Modifier.requiredWidth(400.dp).padding(16.dp))",
+            "fingerprint": "fp-735bd9e2",
+            "semanticFingerprint": "sf-9c8ce8e9"
+          }
+        ],
+        "kt-compose-fill-before-cap": [
+          {
+            "id": "ui/AuthForm.kt:9:width-cap-overridden",
+            "title": "The form exceeds the 320 dp field width cap",
+            "description": "`fillMaxWidth()` runs before `widthIn(max = 400.dp)`, so it establishes an exact width from the parent before the cap is applied. At the 800 dp parent width, the card stays 800 dp wide; after its 16 dp and 24 dp padding on each side, the fields are 720 dp wide. This violates the required 320 dp maximum for interactive fields.",
+            "file": "ui/AuthForm.kt",
+            "line": 9,
+            "endLine": 9,
+            "severity": "medium",
+            "confidence": 0.99,
+            "category": "correctness",
+            "evidence": "The modifier chain is `fillMaxWidth().widthIn(max = 400.dp).padding(16.dp)`. At 800 dp, the card remains 800 dp wide, leaving 800 - 32 - 48 = 720 dp for each full-width field.",
+            "suggestion": "Apply the width cap before filling the available width so it can constrain the card at wide parent sizes while still allowing it to fill narrower parents.",
+            "symbol": "AuthForm",
+            "codeSnippet": "Modifier.fillMaxWidth().widthIn(max = 400.dp).padding(16.dp)",
+            "suggestedCode": "Modifier.widthIn(max = 400.dp).fillMaxWidth().padding(16.dp)",
+            "fingerprint": "fp-a75d5118",
+            "semanticFingerprint": "sf-77f9cd4d"
+          }
+        ],
+        "kt-compose-cap-before-fill": [],
+        "kt-compose-padded-preferred-width": []
+      }
+    }
+  ],
+  "cliVersion": "codex-cli 0.164.0-alpha.11.1"
+}

@@ -5,7 +5,7 @@ description: Measure Bugbot accuracy, latency, outcomes, feedback, and regressio
 
 # Bugbot quality and observability
 
-Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 38 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
+Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 53 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
 
 The #655 cases cover branch coverage enabled through repository configuration,
 inherited HTTP/1.0 connection behavior, correct arithmetic, short-circuit guards,
@@ -15,6 +15,46 @@ duplicate IDs. The reviewer is instructed to check effective settings, defaults,
 call paths and counterevidence before reporting a defect. Passing the checked-in
 predictions proves the evaluator contract; measuring a model's improvement still
 requires running the real-agent benchmark and inspecting its predictions.
+
+The #721 extension adds five dated external-package scenarios: a catalog-listed
+Android minor package with a fresh successful install/build, a confirmed absent
+package, unavailable inventory, an old catalog contradicted by a current fresh
+installation, and a real failed install accompanied by an unrelated cached green
+job. The applicable catalog and execution details travel with each synthetic
+case; the expected verdict never enters the prompt. These cases do not freeze
+the live Android catalog or replay the consumer runner. Both production review
+and the real-agent benchmark use the same external-fact evidence instruction.
+
+The #720 cases check Compose preferred width under narrow constraints, real
+`requiredWidth` overflow, both `widthIn`/`fillMaxWidth` orders on a wide parent,
+and a padded bounded form. The reviewer checks the exact framework API,
+measurement constraints, padding and modifier order before alleging overflow.
+It also checks a proposed replacement against narrow responsiveness and the
+wide-screen cap, and withholds unverified code suggestions. Genuine overflow
+and lost-cap defects remain reportable. These synthetic examples test the
+review/evaluator contract; they do not execute Compose or certify a model's
+accuracy. The [reported desktop counterexample](https://github.com/vypdev/copilot/issues/720)
+retains the separate runtime evidence. The recorded
+`quality/bugbot/compose-720-observations.v1.json` sample distinguishes baseline,
+a rejected intermediate instruction and the final instruction. The final sample
+has zero false positives and zero missed defects across the five cases, but its
+full quality gate still fails exact location and severity calibration. This is
+not a claim that every quality threshold passed or that model accuracy improved
+statistically. Reference predictions remain separate from these observations.
+
+The five #722 lifecycle cases cover Compose-owned cleanup, a loader outside the
+owned container, a failed startup with explicit error UI, a failed initializer
+that leaves loading stuck, and a synthetic pinned version without cleanup.
+The source archive for Compose 1.13.0-beta01 was verified with SHA256
+`ceca9e3c187427f6c63593d5d80dc6c10a03ef0b45f1d96e6c453a3300aeccd6`.
+These are controlled source-evidence scenarios, not a replay of the consumer GUI.
+Two cases require no finding; three positive controls require an actionable
+finding. Reference predictions validate scoring and never prove model accuracy.
+The live Codex sample in `quality/bugbot/evidence/issue-722.json` retains the
+initial failed scorer result, fixture refinements and the final five-case run.
+The final run passes all default thresholds with zero false positives or
+negatives. It is a small sample using the corrected prompt, not an old-versus-new
+prompt comparison or a guarantee of general model quality.
 
 ## Quality gates
 

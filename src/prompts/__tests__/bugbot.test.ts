@@ -35,4 +35,37 @@ describe('getBugbotPrompt', () => {
         expect(prompt).toContain('outputLocale` exactly as `de-DE');
         expect(prompt).not.toContain('{{');
     });
+    it('requires versioned ownership and startup-path evidence before alleging missing cleanup', () => {
+        const prompt = getBugbotPrompt({
+            projectContextInstruction: '', owner: 'org', repo: 'repo', headBranch: 'bugfix/722',
+            baseBranch: 'develop', issueNumber: '722', changeScopeInstruction: 'Review current changes.',
+            ignoreBlock: '', previousBlock: '', coverageBlock: '', targetLocale: 'en-US',
+        });
+        expect(prompt).toContain('verify the exact resolved dependency version');
+        expect(prompt).toContain('version-matched official documentation or source');
+        expect(prompt).toContain('initialization prerequisites, owned container boundary and success/failure paths');
+        expect(prompt).toContain('Missing manual DOM-removal code alone is insufficient evidence');
+        expect(prompt).toContain('children outside the owned container');
+        expect(prompt).toContain('intentional error UI is not a permanent-loading defect');
+        expect(prompt).toContain('omit the speculative claim rather than inventing framework behavior');
+    });
+});
+
+describe('external-fact evidence in review prompts', () => {
+    it.each([false, true])('requires current evidence with partitioned=%s', (partitioned) => {
+        const prompt = getBugbotPrompt({
+            projectContextInstruction: '', owner: 'org', repo: 'repo',
+            headBranch: 'bugfix/721', baseBranch: 'develop', issueNumber: '721',
+            changeScopeInstruction: 'Inspect the supplied diff.', ignoreBlock: '',
+            previousBlock: '', coverageBlock: '', targetLocale: 'en-US',
+            ...(partitioned ? { partitionBlock: 'Review only partition 1/2.', outputContractBlock: 'Return partition attestation.' } : {}),
+        });
+        expect(prompt).toContain('historical naming conventions and model memory do not prove absence');
+        expect(prompt).toContain('do not establish that the reviewed command succeeds');
+        expect(prompt).toContain('omit that unsupported finding');
+        expect(prompt).toContain('Verify a proposed replacement');
+        expect(prompt).toContain('still report a demonstrated package-resolution failure');
+        expect(prompt).toContain('evaluate each execution path independently');
+        expect(prompt).toContain('only blocks a build is a medium-severity reliability finding');
+    });
 });

@@ -617,3 +617,10 @@ Candidate edits do not replace the trusted snapshot. Enabling without a reviewed
 action blocks verification; the disabled default preserves existing behavior.
 See [repository-owned setup](/security-operations/operations/verification#repository-owned-setup)
 for native Python/pnpm examples, profile lifetime, trust boundaries and migration.
+
+
+### Sync branch cannot resolve workspace packages
+
+If root build passes but a workspace typecheck reports missing tools, compare the installed graph with the actual merged candidate. In the source incidents tracked by [#746](https://github.com/vypdev/copilot/issues/746), Node/pnpm were present, but installation ran on `master` before the extension workspace existed. Commands after typecheck were not executed. Installing one extra member or disabling verification does not fix the sequencing error.
+
+The corrected source coordinator provisions runtimes first and prepares the frozen candidate graph immediately before every verifier. Its sync result distinguishes dependency, native setup, runtime and command failures, and reports whether the original head was restored. Repair the reported prerequisite and inspect an unverified rollback before retrying. Confirm the corrected runtime and workflow are adopted on the default branch used by comment events: `develop` checks alone do not update a running `master` Action. Read [verification](./verification) for source limits and consumer setup alternatives.

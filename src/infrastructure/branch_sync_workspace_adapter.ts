@@ -196,6 +196,9 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
           || await this.read("git", ["rev-parse", "MERGE_HEAD"]) !== snapshot.parentSha) throw error;
         await this.git.execute("git", ["reset", "--hard", snapshot.childSha]);
       }
+      if (this.snapshot && await this.read('git', ['rev-parse', 'HEAD']) !== this.snapshot.childSha) {
+        throw new Error('Original branch head restoration could not be verified.');
+      }
     } finally {
       this.snapshot = undefined;
       this.mergeInProgress = false;

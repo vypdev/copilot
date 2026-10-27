@@ -979,6 +979,28 @@
       "successMessage": "finding identity continuity coverage: PASS (pure matching 100%; changed path 95% lines/statements, 90% branches/functions)"
     },
     {
+      "name": "Source candidate verification readiness",
+      "missingEntryLabel": "source candidate verification readiness",
+      "rules": [
+        {
+          "files": [
+            "src/domain/verification_failure.ts",
+            "src/application/policies/source_verification_dependency_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/infrastructure/source_verification_dependencies.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "source candidate verification readiness: PASS (100% lines/statements/branches/functions)"
+    },
+    {
       "name": "Size reconciliation diagnostics",
       "missingEntryLabel": "size reconciliation diagnostics",
       "rules": [

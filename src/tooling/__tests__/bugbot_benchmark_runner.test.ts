@@ -1,3 +1,4 @@
+import { BUGBOT_FINDING_GROUNDING_INSTRUCTION } from '../../prompts/bugbot';
 import { buildBugbotBenchmarkPrompt, runBugbotBenchmarkAgent } from '../bugbot_benchmark_runner';
 import type { BugbotBenchmarkCase } from '../bugbot_benchmark';
 
@@ -11,6 +12,17 @@ describe('Bugbot benchmark runner', () => {
         const prompt = buildBugbotBenchmarkPrompt(testCase);
         expect(prompt).toContain('src/example.ts');
         expect(prompt).toContain('[BEGIN_UNTRUSTED_DATA');
+        expect(prompt).not.toContain('Hidden ground truth title');
+    });
+
+    it('uses the production lifecycle-grounding contract without exposing the expected verdict', () => {
+        const prompt = buildBugbotBenchmarkPrompt({
+            ...testCase, description: 'Framework viewport initialization',
+            diff: '+ComposeViewport(viewportContainerId = "ComposeTarget") { App() }',
+        });
+        expect(prompt).toContain(BUGBOT_FINDING_GROUNDING_INSTRUCTION);
+        expect(prompt).toContain('verify the exact resolved dependency version');
+        expect(prompt).toContain('owned container boundary and success/failure paths');
         expect(prompt).not.toContain('Hidden ground truth title');
     });
 
@@ -46,4 +58,14 @@ describe('Bugbot benchmark runner', () => {
 
         expect(result.predictions['case-1']).toEqual([expect.objectContaining({ id: 'valid' })]);
     });
+});
+
+it('uses the production external-fact evidence contract without leaking verdicts', () => {
+    const prompt = buildBugbotBenchmarkPrompt({
+        ...testCase, diff: '+sdkmanager --install "platforms;android-37.0"',
+        description: 'A dated package-catalog and fresh installation receipt accompany this change.',
+    });
+    expect(prompt).toContain('historical naming conventions and model memory do not prove absence');
+    expect(prompt).toContain('platforms;android-37.0');
+    expect(prompt).not.toContain('Hidden ground truth title');
 });

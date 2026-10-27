@@ -41,3 +41,22 @@ An unrelated report that reuses another finding's ID receives a short local
 collision-free ID so both concerns retain separate evidence and threads.
 
 Publication MUST complete before a finding is marked resolved. Within each reopen or resolution transition the marker is updated before the native thread, making retries convergent. After mutation, Bugbot MUST re-read provider state; invalid responses, unsafe paths, malformed identifiers, missing expected publications, or publication failures are terminal for that finding and MUST NOT produce a false resolved state.
+
+
+## Framework claims and suggested fixes
+
+Before reporting a framework-specific defect, Bugbot is instructed to verify
+the exact API/version and trace the actual constraints and caller path. For
+Compose, `width` respects incoming measurement constraints, while `requiredWidth`
+can override them. A numeric width alone does not establish clipped controls.
+Modifier order and padding affect the actual interactive bounds.
+
+A suggestion must preserve both the failing boundary and other intended behavior.
+For example, `fillMaxWidth().widthIn(max = 400.dp)` can lose the wide-screen cap
+because the first modifier supplies an exact width to the second. The reviewer
+checks narrow and wide parents before offering replacement code and omits an
+unverified code suggestion. If counterevidence disproves the alleged defect, it
+omits the finding. A demonstrated `requiredWidth` overflow or lost cap remains
+reportable. These are model instructions, not a deterministic layout validator;
+see [Quality and observability](/bugbot/quality-observability) for the fixtures
+and the distinction between scorer checks and real-model evidence.
