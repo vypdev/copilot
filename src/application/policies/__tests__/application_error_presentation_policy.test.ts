@@ -21,6 +21,11 @@ const RECOVERY_CASES: readonly Readonly<{
     spanish: string;
 }>[] = [
     {
+        recovery: { id: 'progress-binary-evidence-unavailable', variables: { paths: '["lib/a.dll"]', pathCount: 1 } },
+        english: 'Existing progress labels and assessments were preserved; no model assessment was made. Project verification remains a separate result.',
+        spanish: 'Se conservaron las etiquetas de progreso y las evaluaciones; no se realizó ninguna evaluación del modelo. La verificación del proyecto sigue siendo un resultado independiente.',
+    },
+    {
         recovery: { id:'issue-workflow-admission-blocked', variables:{kind:'bugfix',reason:'missing-fields',fields:'["VaultStadio Version"]'} },
         english: 'No branch or planner was started. Issue configuration is unchanged; this run only reports the admission diagnostic.',
         spanish: 'No se inició ninguna rama ni planificador. La configuración de la issue permanece igual; esta ejecución solo informa del diagnóstico de admisión.',

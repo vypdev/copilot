@@ -1,10 +1,10 @@
-# Complete immutable progress content recovery
+# Complete immutable progress evidence
 
 - Status: Implemented; remote verification pending
 - Date: 2026-10-27
 - Catalog capability ID: github-communication-experience
 - Owners: Copilot maintainers
-- Scope: complete progress evidence when GitHub omits, truncates or cannot fit a required text patch.
+- Scope: native comparison ownership, complete text recovery, and honest diagnostics for unsupported binary evidence.
 - Related issue: [#726](https://github.com/vypdev/copilot/issues/726)
 - Review gates: UX, architecture, security, tests, documentation and operations.
 - Open decisions blocking readiness: none.
@@ -18,7 +18,7 @@ content recovery. It MUST analyze every resulting unit before one final
 assessment. An unavailable assessment retains the previous progress.
 
 ```text
-Pinned comparison -> validate inventory -> verify missing contents -> plan all
+Native PR target or configured fallback -> pinned comparison -> validate inventory -> verify missing contents -> plan all
 bounded units -> scope -> analyze every part -> final assessment -> freshness
 checks -> existing progress publication
 ```
@@ -50,7 +50,7 @@ UTF-8 content slice with file identity, side, offset and total bytes. A **part**
 is a bounded collection of units. A **recovered file** has independently verified
 base/head presence, paths, modes, blob hashes and exact contents. For divergent
 branches, the preimage is the comparison's pinned merge base, not the current
-development tree. The requested development SHA and head still identify the
+development tree. The selected comparison-base SHA and head still identify the
 comparison and the final freshness checks.
 
 ## 4. Goals, non-goals and invariants
@@ -71,7 +71,7 @@ comparison and the final freshness checks.
 
 ```mermaid
 flowchart LR
-    A[Pinned comparison] --> B[Validate every file]
+    A[Pin native PR target or configured fallback] --> B[Validate every file]
     B --> C[Verify immutable omitted contents]
     C --> D[Plan complete bounded units]
     D --> E[Analyze every assigned unit]
@@ -329,3 +329,186 @@ may substitute for evidence.
 - #726 receipts provide consumer dimensions and object identities, not a claimed
   universal GitHub patch size threshold. Metadata-only and larger-global-cap
   workarounds are rejected because they weaken or evade complete analysis.
+
+## 21. Native PR comparison source and inherited binary evidence — #727
+
+- Status: Implemented; verification pending (2026-10-27).
+- Owner: existing `github-communication-experience` capability.
+- Evidence: [#727](https://github.com/vypdev/copilot/issues/727), isolated from the
+  separate optional Check Run publication issue #728.
+- Open decisions: none; a native review target owns its comparison, while an
+  actually changed unsupported binary remains unassessed.
+
+### Problem, product decision and exact evidence
+
+The reported zstandard head `4ac3c633f45166acd2b14c169fe675b6e640d1a6`
+compared with development `22eb4de4ce8f5d959b735cb4c7a91c3ca35cf73e`
+has 55 changed paths, including five different binary blobs with zero provider
+line counters and intentionally absent text patches. Native PR #172 targeted
+`master` at `804c1a879ba54d766547ef31cb1ae8a88cfde8dc`. The exact production
+comparison has 15 text files, no missing patches, ahead=6 and behind=0; those
+binary paths are unchanged in that complete inventory. This was reproduced by
+read-only public API queries. A successful consumer build is separate evidence,
+not proof of binary correctness. Synthetic tests preserve these relationships
+without adopting consumer changes or special filename rules.
+
+Progress MUST use the actual base of one native open, same-repository PR that
+owns the exact managed head. Proven native absence MUST retain the configured
+development fallback. It MUST NOT use a target named in issue prose, local Git,
+model output, a response URL, or the first of several candidates. This fixes
+inherited production files through the correct complete comparison; no binary
+is silently filtered or declared content-reviewed. The independently pinned
+base and head plus the provider-confirmed comparison preimage form the lineage
+context. Patchless changed binaries remaining in that selected inventory MUST
+retain the existing fail-closed result before any model or progress mutation.
+Binary add/modify/delete/rename are not automatically reviewable from metadata.
+
+### Journey and architecture
+
+```mermaid
+flowchart LR
+    A[Progress requested] --> B[Read native PR ownership]
+    B --> C[One exact same-repo PR]
+    B --> D[Proven no PR]
+    C --> E[Pin actual base ref natively]
+    D --> F[Pin configured development]
+    E --> G[Complete immutable comparison]
+    F --> G
+    G --> H[Complete text evidence and assessment]
+    G --> I[Unsupported binary: retain progress]
+    H --> J[Revalidate PR ownership, refs, issue and body]
+    J --> K[Existing progress publication]
+```
+
+Text equivalent: read ownership, select the native target or verified fallback,
+pin native refs, admit the complete comparison, assess supported evidence, then
+revalidate all identities before existing publication. An ambiguous/unavailable
+source, unsupported binary or stale owner retains previous progress.
+
+`BoundProgressComparisonSourceQueryPort` exposes only semantic source reads.
+The data adapter lists exact `owner:branch`, `state=open`, page 1, at most two
+candidates, then gets the sole candidate authoritatively. It MUST validate PR
+number/open state, both repository identities, exact head ref/SHA and safe base
+ref. Fork/foreign/malformed results MUST fail closed. Two candidates MUST be
+ambiguous without guessing or pagination. Provider outages remain provider
+errors; absence cannot be inferred from an unavailable query. Runtime composition
+MUST supply this capability; a missing port is configuration-unsupported.
+
+The pure source policy selects and freezes one source snapshot. The application
+MUST pin `base.ref` through the native branch-head port: PR `base.sha` can retain
+a historical snapshot. It MUST reread the acceptance body, then ownership, then native refs before
+publication, even for a previously absent PR. Closure, creation, retarget, replacement, head/base movement,
+native issue closure and body edits invalidate publication. Native branch names
+remain untrusted JSON inside a noncolliding prompt data envelope; Unicode control
+characters are escaped for operator logs. No workspace, process, PR write, actor
+impersonation, credential expansion or synchronization capability is introduced.
+Existing dependency-cycle/type/provider/workflow checks enforce the boundaries.
+
+### Domain/state, compatibility and fixed configuration
+
+The states are unresolved source, verified configured fallback, verified native
+PR source, admitted evidence, in-memory assessment, stale/blocked and published.
+Only the last state may change progress. No new card, label, comment, event,
+notification, completion cadence, durable partial checkpoint or state migration
+is added. `developmentBranch` in result payloads retains its configured meaning;
+`comparisonBaseBranch`, `comparisonSource` and `baseSha` disclose the actual
+immutable assessment provenance. These are result facts, not configuration.
+
+There is no opt-in flag or new setting. The normal recommendation is the real
+native review target; standalone work with no PR uses configured development
+(default `develop`). A native release/custom branch is supported under the same
+same-repository checks. No human/model-provided alternate SHA or base is accepted.
+The fixed source budget is two candidates, at most two native PR reads per source
+check, two checks per successful assessment; native branch refs are limited to
+255 UTF-8 bytes and the complete branch-identity JSON prompt to 4,096 bytes.
+All #726 comparison/recovery/model limits remain unchanged.
+
+### Binary diagnostics, UX and operator recovery
+
+An unsupported binary/non-text blob MUST report the closed
+`progress-binary-evidence-unavailable` recovery descriptor under existing
+`validation.evidence-unavailable`, nonretryable for the identical input. The
+shared CLI/GitHub presenter MUST show exact bounded paths, disclose the total
+unreviewed count and distinguish unavailable progress from project verification.
+The complete pinned unreviewed inventory MUST be logged in at most 299 numbered
+records. Each path is a reversible JSON literal in a noncolliding code span;
+control/bidi characters, mentions, HTML and table separators remain inert.
+No file contents, credentials or provider URLs enter the diagnostic.
+
+Structured recovery stores at most eight complete prefix paths within 8,192
+serialized UTF-8 bytes; it MUST stop before a whole path exceeds the budget,
+never clip a path. Each path retains the existing 1,024-byte bound. The displayed
+named count and total MUST disclose a bounded excerpt, with all paths inspectable
+in run details. Public error serialization MUST stay bounded below the GitHub
+comment limit for worst-case admitted path fixtures. This is a diagnostic bound,
+not permission to omit source from analysis.
+
+Representative existing operator surfaces (not new timeline cards):
+
+```text
+Pending: Checking progress for issue #171.
+Technical source: native PR #172, master@804c1a8 -> head@4ac3c63.
+Next: collect complete pinned evidence. No human action required.
+
+Complete: Progress updated to 70%.
+[R1] Prepare dependency hook — Source implementation observed; project execution
+remains a separate verification result.
+
+Blocked/partial analysis: Progress was not assessed. Existing progress retained.
+No partial percentage is published; retry reloads the complete current evidence.
+
+Impact: Progress was not assessed because required binary or non-text contents
+cannot be reviewed. Unreviewed paths (5 total; 5 shown; complete inventory in run
+details): `"lib/linux.so"`; `"lib/windows.dll"`; ...
+Action: Inspect the intended PR base and pinned paths. Actually changed binary
+contents require reviewable source and provenance; metadata or a successful build
+does not establish binary correctness.
+Retained state: Existing labels/assessments preserved; no model assessment made.
+Project verification remains a separate result. Retryable: No.
+```
+
+Pending/complete/stale/partial states reuse existing progress/run ownership and
+links. Inspecting an intended base is not authorization to retarget a PR merely
+to hide changes, change policy, synthesize success or split existing production
+libraries. An actual unsupported changed binary still cannot receive a model
+percentage without a future adequate evidence capability. Existing English,
+Spanish/regional resolution and fallback apply atomically. Narrow/mobile and
+light/dark views use textual labels and native run links, never color alone.
+No partial facts become a completed assessment; other workflow verification
+results keep their independent success/failure and cleanup facts.
+
+### Numeric acceptance budget and traceability
+
+Additional minimum **90 distinct regression cases**, allocated without double
+counting the earlier #726 budget: 24 pure source/ref/freshness decisions, 30
+provider identity/bounds/binary cases, 20 application integration/races, and 16
+closed diagnostic/localization/sanitization cases. New pure policies/domain
+helpers MUST have 100% statements/branches/functions/lines; source/recovery
+adapters MUST achieve 100%; changed progress orchestration MUST retain at least
+95% statements/lines and 90% branches/functions. Existing global gates remain.
+Deterministic fakes use no waits/live services. All root/extension tests, types,
+lint, build/package smoke, docs/workflows/spec/catalog and Graphify remain gates.
+The communication ledger separately uses conservative declaration counts.
+
+| Requirement | Executable owner/evidence | User documentation |
+|---|---|---|
+| Exact native target/default and all source races | source policy/repository plus `progress_comparison_source.integration.test.ts` | branch management |
+| 55 development paths versus 15 native production text paths | coherent synthetic Git-object and comparison fixture in integration suite | execution contract |
+| Binary operations/zero counters/provider and byte limits | `progress_binary_evidence.test.ts`, immutable adapter regressions | troubleshooting/error reference |
+| Closed path facts, bounded serialization, EN/ES/fallback and inert names | `progress_binary_evidence_diagnostic.test.ts` plus shared error/prompt/composition suites | operator error reference |
+| No extra authority/cycles, all prompt/source budgets | required read-only port, composition/type/cycle tests and existing envelope gates | contributor execution contract |
+
+Acceptance MUST reproduce the native 55/15 distinction, retain all paths when a
+binary truly remains unassessed, make zero model/label calls before complete
+admission, reject ambiguous/foreign/changed sources and malicious metadata, and
+permit one existing publication only after fresh complete evidence. Rollout is
+a normal reviewed runtime/package upgrade with no consumer edits or new scopes.
+Rollback returns the previous configured-development comparison and generic
+binary guidance; it does not enable partial reviews. The implementation sequence
+is contracts/pure policy, read-only adapter, source fences, diagnostics/prompts,
+then tests/specs/docs/generated bundles and full verification. DoD requires every
+acceptance case, numeric/exhaustive budgets, architecture, UX/localization,
+documentation and normal local/remote gates; live consumer adoption is separate.
+
+Primary sources: [native PR reads](https://docs.github.com/en/rest/pulls/pulls#get-a-pull-request)
+and [pinned comparisons](https://docs.github.com/en/rest/commits/commits#compare-two-commits).

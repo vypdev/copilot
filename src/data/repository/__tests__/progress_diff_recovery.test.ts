@@ -74,5 +74,10 @@ it.each([new Error('unexpected planner defect'), new ApplicationError('workflow.
 it('lists all unreviewed paths and leads with the file whose immutable recovery failed', async () => {
     const f = fixture({}, { 'ready': 'x', 'broken': Buffer.from([0]) });
     Object.assign(f.data.files[0], { additions: 1, patch: '@@ -0,0 +1 @@\n+x' });
-    await expect(f.read()).rejects.toMatchObject({ message: expect.stringContaining('Unreviewed paths (2): "broken", "ready"') });
+    await expect(f.read()).rejects.toMatchObject({ message: expect.stringContaining('Unreviewed paths (2): `"broken"`, `"ready"`') });
+});
+
+it('requires the native comparison base identity even when every text patch is complete',async()=>{
+    const f=fixture({}, {a:'text'});Object.assign(f.data.files[0],{additions:1,patch:'@@ -0,0 +1 @@\n+text'});delete(f.data as {base_commit?:unknown}).base_commit;
+    await expect(f.read()).rejects.toMatchObject({code:'validation.evidence-unavailable'});expect(f.getCommit).not.toHaveBeenCalled();
 });

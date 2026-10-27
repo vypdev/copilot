@@ -2268,3 +2268,14 @@ bounds and freshness gates, and semantic publication ownership. Its 104-case
 regression floor owns recovery, units and exact aggregation; it adds no card or
 notification route. The communication ledger uses conservative declaration
 counts independently of that scenario floor.
+
+
+## Native progress comparison and inherited binaries — #727 (2026-10-27)
+
+[The recovery SDD amendment](./immutable-progress-content-recovery.md#21-native-pr-comparison-source-and-inherited-binary-evidence--727)
+binds progress to one exact native same-repository PR target, with a proven
+configured-development fallback only when no PR owns that head. It preserves all
+complete-evidence and source-freshness gates and reports actually unsupported
+binary paths through the existing localized error surface. Its additional
+90-case budget owns source identity, binary retention and diagnostic boundaries;
+no semantic publication identity, card or notification budget is added.

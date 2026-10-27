@@ -1,7 +1,10 @@
+import { logInfo } from '../../application/ports/logging_ports';
+import { isProgressEvidencePath as safeProgressPath, renderProgressEvidencePath } from '../../domain/progress_evidence_path';
+export { safeProgressPath };
 import { createHash } from 'node:crypto';
 import type { GithubProgressObjectClient } from '../../infrastructure/github/ports/github_progress_object_provider_port';
 import { MAX_PROGRESS_OBJECT_REQUESTS, MAX_PROGRESS_RECOVERED_BYTES, MAX_PROGRESS_RECOVERED_FILE_BYTES, MAX_PROGRESS_TREE_ENTRIES,
-    progressRecoveryError, type ProgressContentSnapshot, type RecoveredProgressContent } from '../../application/policies/progress_content_evidence_policy';
+    progressRecoveryError, progressBinaryEvidenceUnavailable, type ProgressContentSnapshot, type RecoveredProgressContent } from '../../application/policies/progress_content_evidence_policy';
 
 const oid = (value: unknown): value is string => typeof value === 'string' && /^[a-f0-9]{40}$/u.test(value);
 type Entry = Awaited<ReturnType<GithubProgressObjectClient['rest']['git']['getTree']>>['data']['tree'][number];
@@ -84,16 +87,13 @@ export class ImmutableProgressContentRepository {
             if (bytes.length !== entry.size || bytes.toString('base64') !== encoded
                 || createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex') !== entry.sha) throw progressRecoveryError('blob bytes do not match their immutable identity', paths);
             text = bytes.toString('utf8');
-            if (bytes.includes(0) || !Buffer.from(text, 'utf8').equals(bytes)) throw progressRecoveryError('binary or invalid UTF-8 content cannot be assessed', paths);
+            if (bytes.includes(0) || !Buffer.from(text, 'utf8').equals(bytes)) {
+                paths.forEach((unreviewedPath, index) => logInfo(`Unreviewed progress path ${index + 1} of ${paths.length}: ${renderProgressEvidencePath(unreviewedPath)}`));
+                throw progressBinaryEvidenceUnavailable(paths);
+            }
             this.blobs.set(entry.sha!, text);
         }
         if (Buffer.byteLength(text, 'utf8') !== entry.size) throw progressRecoveryError('cached blob size disagrees with its directory entry', paths);
         return Object.freeze({ path, sha: entry.sha!, mode: entry.mode!, text });
     }
-}
-
-export function safeProgressPath(path: unknown): path is string {
-    return typeof path === 'string' && path.length > 0 && Buffer.byteLength(path, 'utf8') <= 1024
-        && !path.startsWith('/') && !path.includes('\\') && !path.includes('\0')
-        && path.split('/').every(segment => segment !== '' && segment !== '.' && segment !== '..');
 }

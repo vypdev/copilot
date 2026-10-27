@@ -44,9 +44,34 @@ Automatic title formatting keeps the boundaries between hyphenated words. A titl
 
 ## Progress evidence
 
-Progress assessments use an immutable GitHub comparison of the development base and the managed branch head. The agent receives the source patches directly and does not need shell commands. Generated build files contribute metadata only; a percentage does not certify CI or a build.
+Progress assessments use an immutable GitHub comparison of the actual native PR target and the managed branch head. If no open PR owns that exact head branch, they use the configured development base. The agent receives the source patches directly and does not need shell commands. Generated build files contribute metadata only; a percentage does not certify CI or a build.
 
 Copilot first classifies every nonempty line of the full issue body by source identifier as required, excluded, context or uncertain, before it analyzes patches. The scope request, comparison parts and final assessment keep complete issue text, extracted scope and model facts inside explicit untrusted-data blocks. Embedded instructions cannot grant workflow authority. Inputs that exceed the fixed UTF-8 budgets are rejected with retained progress rather than shortened to fit. Small comparisons then use one assessment. Larger complete comparisons are reviewed in up to 16 parts, each containing complete patches or identified content slices within the unchanged 256,000-byte UTF-8 evidence limit. Every part must return bounded facts for every assigned file or content unit before one final assessment can update progress. These facts preserve uncertainty and do not certify CI. Their final combined summary has a maximum 384,000-byte budget. Copilot reserves every admitted path and the issue/prompt envelope inside the unchanged 512 KiB runtime ceiling, then requests concise facts using the same calculated limit in the schema and parser. No returned facts are silently shortened. Source parts and the manifest retain the 256,000-byte limit.
+
+### Which comparison is assessed
+
+One native open PR in the same repository selects its actual base branch, including
+production or release targets. Copilot verifies the exact head, reads the native
+base ref and pins both SHAs. It does not trust a possibly historical PR `base.sha`,
+a target named in issue prose, local checkout state or model output. Two matching
+PRs, foreign/fork identities, unavailable reads or an invalid head fail closed;
+Copilot does not guess a target or silently fall back. A runtime missing this
+read capability reports an unsupported configuration.
+
+Before publishing, Copilot rereads the acceptance body, PR ownership and native
+refs. A PR closing, appearing, changing target or being replaced, or a source/base
+moving, retains the prior progress. Branch names are untrusted data in prompts
+and escaped metadata in run logs. The result keeps the configured
+`developmentBranch` and separately records `comparisonBaseBranch`,
+`comparisonSource` and the actual `baseSha`.
+
+This matters for inherited production binaries. A maintenance PR against master
+may have only text changes even though comparing it against develop includes
+already-produced libraries. Copilot assesses the complete native-target delta;
+it does not filter those libraries or call their metadata a content review.
+Standalone work without a PR still uses development. Binary changes genuinely
+remaining in the selected comparison require adequate reviewable evidence and
+remain unassessed when that evidence is unavailable.
 
 ### Omitted or incomplete patches
 
@@ -78,6 +103,17 @@ and names up to eight unreviewed paths plus their total count. An exhausted work
 or analysis budget reports `validation.evidence-too-large`. Both are terminal
 for that deterministic input and preserve progress. Inspect the pinned revision
 or split reviewed work; a genuine provider outage keeps its normal retryability.
+For unsupported binary/non-text contents, the shared CLI/Job Summary reports
+exact unreviewed paths and distinguishes unavailable progress from project
+verification. It shows up to eight complete names within an 8,192-byte diagnostic
+budget, with total/shown counts; the complete pinned inventory appears in at most
+299 numbered run-log records. Names remain reversible JSON literals, with control,
+HTML, mention and Markdown characters kept inert. No source or binary bytes are
+logged. Inspect the intended PR base and pinned paths. Actually changed binaries
+need reviewable source and provenance; zero counters or a successful compile do
+not establish binary correctness. Do not retarget a legitimate PR to hide changes
+or split production libraries merely to manufacture textual patches.
+
 A failed middle part never publishes partial progress or requests a final
 percentage. Replay reloads exact evidence and does not reuse partial facts.
 

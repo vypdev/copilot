@@ -36,7 +36,7 @@ function fixture(multipart = false, description = issue) {
     });
     const useCase = new CheckProgressUseCase({ getDescription }, { getLabels: jest.fn(async () => []), setLabels }, { setProgressLabel },
         { getListOfBranches: jest.fn(async () => []) }, { getOpenPullRequestNumbersByHeadBranch: jest.fn(async () => []) }, { query },
-        { isIssueOpen: jest.fn(async () => true), getBranchHeadSha }, { getDiff: jest.fn(async () => diff) });
+        { isIssueOpen: jest.fn(async () => true), getBranchHeadSha }, { getDiff: jest.fn(async () => diff) }, { getSource: jest.fn(async () => ({ kind: 'none' as const })) });
     return { query, getDescription, getBranchHeadSha, setProgressLabel, setLabels, invoke: () => useCase.invoke(context) };
 }
 

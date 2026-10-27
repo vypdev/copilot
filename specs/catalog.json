@@ -178,7 +178,13 @@
         "src/application/policies/progress_content_evidence_policy.ts",
         "src/application/policies/progress_patch_completeness_policy.ts",
         "src/data/repository/immutable_progress_content_repository.ts",
-        "src/infrastructure/github/ports/github_progress_object_provider_port.ts"
+        "src/infrastructure/github/ports/github_progress_object_provider_port.ts",
+        "src/application/policies/progress_comparison_source_policy.ts",
+        "src/application/ports/progress_comparison_source_ports.ts",
+        "src/data/repository/progress_comparison_source_repository.ts",
+        "src/domain/progress_binary_evidence_diagnostic.ts",
+        "src/domain/progress_evidence_path.ts",
+        "src/infrastructure/github/ports/github_progress_comparison_provider_port.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -294,7 +300,13 @@
         "src/application/policies/__tests__/progress_content_evidence_policy.test.ts",
         "src/application/policies/__tests__/progress_patch_completeness_policy.test.ts",
         "src/data/repository/__tests__/immutable_progress_content_repository.test.ts",
-        "src/data/repository/__tests__/progress_diff_recovery.test.ts"
+        "src/data/repository/__tests__/progress_diff_recovery.test.ts",
+        "src/application/policies/__tests__/progress_comparison_source_policy.test.ts",
+        "src/data/repository/__tests__/progress_comparison_source_repository.test.ts",
+        "src/application/usecases/actions/__tests__/progress_comparison_source.integration.test.ts",
+        "src/domain/__tests__/progress_binary_evidence_diagnostic.test.ts",
+        "src/data/repository/__tests__/progress_binary_evidence.test.ts",
+        "src/infrastructure/composition/__tests__/progress_comparison_binding.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",

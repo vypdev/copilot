@@ -1,3 +1,5 @@
+import { selectProgressComparisonSource, sameProgressComparisonSource } from '../../policies/progress_comparison_source_policy';
+import type { ProgressComparisonSource } from '../../ports/progress_comparison_source_ports';
 import { Result } from '../../../data/model/result';
 import type { BoundIssueLabelsPort, BoundIssueProgressPort } from '../../ports/issue_management_ports';
 import type { BoundPullRequestBranchQueryPort } from '../../ports/pull_request_branch_ports';
@@ -26,6 +28,7 @@ export async function runCheckProgressWorkflow(
     logInfo(`${getTaskEmoji(taskId)} Executing ${taskId}.`);
 
     try {
+        if (typeof dependencies.progressComparisonSourceQuery?.getSource !== 'function') throw new ApplicationError('configuration.unsupported', 'Progress analysis requires a native comparison source query; absence cannot be assumed.');
         if (!dependencies.publicationSourceQuery.isIssueOpen) throw new ApplicationError('configuration.unsupported', 'Progress analysis requires a native issue state query.');
         if (param.issueNumber > 0 && await dependencies.publicationSourceQuery.isIssueOpen(param.issueNumber) !== true) {
             throw new ApplicationError('workflow.stale', 'Progress analysis requires a verified open issue. Existing state retained.');
@@ -37,18 +40,21 @@ export async function runCheckProgressWorkflow(
             return [buildStaleSourceResult(taskId, analysis.branch, analysis.sourceHeadSha)];
         }
 
-        const { attemptResult, issueNumber, issueDescription, branch, developmentBranch, baseSha, sourceHeadSha } = analysis;
+        const { attemptResult, issueNumber, issueDescription, branch, developmentBranch, baseSha, sourceHeadSha, comparisonSource } = analysis;
         const { progress, summary, reasoning, remaining } = attemptResult;
         logProgressAssessment(progress, summary, reasoning, remaining);
 
-        if (!await sourceIsCurrent(branch, sourceHeadSha, developmentBranch, baseSha, dependencies.publicationSourceQuery)
+        // Read the acceptance body before the final ownership/ref fence: these provider reads can race.
+        if (await dependencies.issueDescriptionQueryPort.getDescription(issueNumber) !== issueDescription) {
+            throw new ApplicationError('workflow.stale', 'Issue acceptance scope changed during progress assessment. Existing progress was retained.');
+        }
+        const currentSource = selectProgressComparisonSource(
+            await dependencies.progressComparisonSourceQuery.getSource(branch), developmentBranch, branch, sourceHeadSha);
+        if (!sameProgressComparisonSource(comparisonSource, currentSource)
+          || !await sourceIsCurrent(branch, sourceHeadSha, comparisonSource.baseBranch, baseSha, dependencies.publicationSourceQuery)
           || await dependencies.publicationSourceQuery.isIssueOpen(issueNumber) !== true) {
             logInfo(`Progress mutation omitted: ${branch} no longer points at the analyzed source.`);
             return [buildStaleSourceResult(taskId, branch, sourceHeadSha)];
-        }
-
-        if (await dependencies.issueDescriptionQueryPort.getDescription(issueNumber) !== issueDescription) {
-            throw new ApplicationError('workflow.stale', 'Issue acceptance scope changed during progress assessment. Existing progress was retained.');
         }
 
         if (progress === 0) {
@@ -60,6 +66,8 @@ export async function runCheckProgressWorkflow(
                 summary,
                 reasoning,
                 sourceHeadSha,
+                comparisonSource,
+                baseSha,
             )];
         }
 
@@ -74,6 +82,8 @@ export async function runCheckProgressWorkflow(
             reasoning,
             remaining,
             sourceHeadSha,
+            comparisonSource,
+            baseSha,
         )];
     } catch (error) {
         const semanticError = toApplicationError(error, 'workflow.failed', `Unable to complete ${taskId}.`);
@@ -117,6 +127,8 @@ function buildZeroProgressResult(
     summary: string,
     reasoning: string,
     sourceHeadSha: string,
+    comparisonSource: ProgressComparisonSource,
+    baseSha: string,
 ): Result {
     const message = 'Progress detection returned 0%. This may be due to a model error or no changes detected. Consider re-running the check.';
     logError(message);
@@ -134,6 +146,9 @@ function buildZeroProgressResult(
             branch,
             developmentBranch,
             sourceHeadSha,
+            comparisonBaseBranch: comparisonSource.baseBranch,
+            comparisonSource,
+            baseSha,
         },
     });
 }
@@ -164,6 +179,8 @@ function buildProgressResult(
     reasoning: string,
     remaining: string,
     sourceHeadSha: string,
+    comparisonSource: ProgressComparisonSource,
+    baseSha: string,
 ): Result {
     return new Result({
         id: taskId,
@@ -179,6 +196,9 @@ function buildProgressResult(
             branch,
             developmentBranch,
             sourceHeadSha,
+            comparisonBaseBranch: comparisonSource.baseBranch,
+            comparisonSource,
+            baseSha,
         },
     });
 }

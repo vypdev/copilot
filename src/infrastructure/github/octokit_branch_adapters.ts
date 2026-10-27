@@ -1,3 +1,4 @@
+import type { GithubProgressComparisonClient } from './ports/github_progress_comparison_provider_port';
 import type { GithubProgressObjectClient } from './ports/github_progress_object_provider_port';
 import { getOctokitClient } from "./octokit_client_resolver";
 import type { GithubClientPort } from "./ports/github_client_provider_port";
@@ -12,4 +13,8 @@ export class OctokitBranchComparisonClientAdapter implements GithubClientPort<Gi
 
 export class OctokitProgressObjectClientAdapter implements GithubClientPort<GithubProgressObjectClient> {
     getClient(token: string): GithubProgressObjectClient { return getOctokitClient(token); }
+}
+
+export class OctokitProgressComparisonClientAdapter implements GithubClientPort<GithubProgressComparisonClient> {
+    getClient(token: string): GithubProgressComparisonClient { return getOctokitClient(token); }
 }
