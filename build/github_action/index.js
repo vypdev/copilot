@@ -36781,6 +36781,7 @@ function buildBranches(values) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.mainRun = mainRun;
+const issue_workflow_diagnostic_1 = __nccwpck_require__(14347);
 const result_1 = __nccwpck_require__(73817);
 const logger_1 = __nccwpck_require__(91151);
 const main_run_route_1 = __nccwpck_require__(8466);
@@ -36844,7 +36845,7 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, c
     });
     execution.issueWorkflowRuntimeMode = runtimeDecision.mode;
     if (runtimeDecision.mode === 'noop' || runtimeDecision.mode === 'block') {
-        return [issueWorkflowAdmissionResult(runtimeDecision.mode, runtimeDecision.message)];
+        return [issueWorkflowAdmissionResult(runtimeDecision.mode, runtimeDecision.message, execution.currentIssueWorkflowAdmission)];
     }
     await prepareRuntime?.(execution);
     const routeHandlers = (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort, compositionSurface, setupProgress);
@@ -36899,7 +36900,7 @@ function hasManagedIssueWorkflowState(execution) {
         previous.hotfixBranch,
     ].some(value => typeof value === 'string' && value.length > 0);
 }
-function issueWorkflowAdmissionResult(mode, message = 'Issue workflow admission stopped this run.') {
+function issueWorkflowAdmissionResult(mode, message = 'Issue workflow admission stopped this run.', admission) {
     if (mode === 'noop') {
         return new result_1.Result({
             id: 'IssueWorkflowAdmission',
@@ -36908,12 +36909,13 @@ function issueWorkflowAdmissionResult(mode, message = 'Issue workflow admission 
             steps: [`⏭️ ${message}`],
         });
     }
+    const diagnostic = (0, issue_workflow_diagnostic_1.issueWorkflowDiagnostic)(admission);
     return new result_1.Result({
         id: 'IssueWorkflowAdmission',
         success: false,
         executed: false,
         steps: [`🛑 ${message}`],
-        errors: [new application_error_1.ApplicationError('configuration.invalid', message)],
+        errors: [new application_error_1.ApplicationError('configuration.invalid', message, diagnostic ? { recovery: { id: 'issue-workflow-admission-blocked', variables: diagnostic } } : {})],
     });
 }
 async function runTrackedRoute(execution, route, run, lifecycleStateUseCase, agentActivityUseCase) {
@@ -37495,8 +37497,9 @@ async function finishGithubAction(execution, results, issueNotificationPort, con
     execution.currentConfiguration.results = results;
     core.setOutput('bugbot-telemetry', JSON.stringify(extractBugbotTelemetry(results)));
     const dryRun = results.some((result) => (0, result_1.getResultPayload)(result.payload)?.dryRun === true);
+    const admissionStopped = execution.issueWorkflowRuntimeMode === 'block' || execution.issueWorkflowRuntimeMode === 'noop';
     const ownsDeploymentPresentation = execution.singleAction.isDeploymentOrchestrationAction;
-    if (!dryRun && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
+    if (!dryRun && !admissionStopped && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
         const publicationContext = (0, publish_resume_workflow_1.projectPublishResultContext)(execution);
         const requestRead = publicationContext.requestSource ? (0, reply_request_composition_root_1.createReplyRequestReadPort)({
             owner: execution.owner, repository: execution.repo, token: execution.tokens.token,
@@ -37504,6 +37507,9 @@ async function finishGithubAction(execution, results, issueNotificationPort, con
         const publicationOutcome = await new publish_resume_use_case_1.PublishResultUseCase(issueNotificationPort, catalogResolver, publicationSourceQuery, requestRead).invoke(publicationContext);
         if (publicationOutcome)
             results.push(publicationOutcome);
+    }
+    else if (admissionStopped) {
+        (0, logger_1.logInfo)('Issue admission stopped: exact recovery is reported only in the Job Summary.');
     }
     else if (execution.singleAction.isPublishIssueCommentAction || ownsDeploymentPresentation) {
         (0, logger_1.logInfo)('Generic result publication skipped: this single action owns its user-facing presentation.');
@@ -37562,16 +37568,17 @@ function extractBugbotTelemetry(results) {
     });
 }
 async function writeActionSummary(execution, summaryPort, catalogResolver) {
+    const admissionStopped = execution.issueWorkflowRuntimeMode === 'block' || execution.issueWorkflowRuntimeMode === 'noop';
     const operation = execution.currentConfiguration.deploymentOrchestration;
     const locale = execution.locale;
-    const summaryLocale = execution.singleAction.isDeploymentOrchestrationAction && operation
+    const summaryLocale = !admissionStopped && execution.singleAction.isDeploymentOrchestrationAction && operation
         ? operation.locale
         : locale;
     let body;
     let localizationLabels;
     let appendLocalizationEvidence = false;
     let errorMessage;
-    if (execution.singleAction.isDeploymentOrchestrationAction && operation) {
+    if (!admissionStopped && execution.singleAction.isDeploymentOrchestrationAction && operation) {
         const effectiveLocale = operation.locale;
         const catalog = await (0, deployment_message_catalog_1.resolveDeploymentCatalog)(effectiveLocale.repository, execution.ai.getAgentConfiguration('planner'), catalogResolver);
         const messages = (0, deployment_message_catalog_1.deploymentCopy)(catalog);
@@ -37602,7 +37609,9 @@ async function writeActionSummary(execution, summaryPort, catalogResolver) {
         }, operation.phase === 'blocked' ? (0, deployment_operation_1.requiredDeploymentFailure)(operation).previousPhase : undefined, catalog);
     }
     else {
-        const catalog = await (0, action_summary_message_catalog_1.resolveActionSummaryCatalog)(locale.repository, execution.ai.getAgentConfiguration('planner'), catalogResolver);
+        const catalog = admissionStopped
+            ? (0, action_summary_message_catalog_1.resolveStaticActionSummaryCatalog)(locale.repository)
+            : await (0, action_summary_message_catalog_1.resolveActionSummaryCatalog)(locale.repository, execution.ai.getAgentConfiguration('planner'), catalogResolver);
         errorMessage = (id, variables) => catalog.message(id, variables);
         body = (0, action_summary_policy_1.buildActionSummary)(actionSummaryContext(execution, catalogResolver?.observations?.() ?? []), catalog);
     }
@@ -41049,6 +41058,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect the closed-issue or merged-PR run and current native state. Retry cleanup only if the issue is still closed with the intended reason; leave reopened work open. Resolve the named failure before retrying.',
         retainedState: 'Native state was preserved. Confirmed changes: {changed}; remaining required changes in the last verified plan: {remaining}. Unavailable reads do not establish completion.',
     }),
+    'issue-workflow-admission-blocked': Object.freeze({
+        impact: 'Issue workflow {kind} was not admitted ({reason}). Fields or labels needing attention: {fields}.',
+        action: 'Correct the exact headings and populated values using the installed Issue Form, or remove conflicting workflow labels. If form and profile disagree, run copilot doctor and review issueWorkflows.fieldMappings. Rerun the workflow after repair.',
+        retainedState: 'No branch or planner was started. Issue configuration is unchanged; this run only reports the admission diagnostic.',
+    }),
     'change-size-reconciliation-failed': Object.freeze({
         impact: 'Size reconciliation stopped at {operation} for target #{targetNumber} (issue #{issueNumber}, configured Project position {projectIndex}; 0 means no Project). Provider: {providerStatus}; request: {providerReference}.',
         action: 'Correct the named authorization, resource or contract error before rerunning the same workflow. For transient failures, wait for provider recovery or rate-limit reset. Reread the target: the failed operation may have applied remotely.',
@@ -41181,6 +41195,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'La limpieza de la issue sigue sin verificarse: {resultId}, fase {phase}; estado nativo {state}, motivo {reason}.',
         action: 'Revisa la ejecución de cierre o de la PR fusionada y el estado nativo actual. Reintenta la limpieza solo si la issue sigue cerrada con el motivo previsto; conserva abierto el trabajo reabierto. Resuelve el fallo indicado antes de reintentar.',
         retainedState: 'Se conservó el estado nativo. Cambios confirmados: {changed}; cambios pendientes en el último plan verificado: {remaining}. Una lectura no disponible no demuestra que haya finalizado.',
+    }),
+    'issue-workflow-admission-blocked': Object.freeze({
+        impact: 'La issue no fue admitida en el flujo {kind} ({reason}). Campos o etiquetas que requieren atención: {fields}.',
+        action: 'Corrige los encabezados exactos y sus valores con el formulario instalado, o elimina las etiquetas de flujo incompatibles. Si formulario y perfil discrepan, ejecuta copilot doctor y revisa issueWorkflows.fieldMappings. Vuelve a ejecutar el workflow tras la corrección.',
+        retainedState: 'No se inició ninguna rama ni planificador. La configuración de la issue permanece igual; esta ejecución solo informa del diagnóstico de admisión.',
     }),
     'change-size-reconciliation-failed': Object.freeze({
         impact: 'La reconciliación de tamaño se detuvo en {operation} para el destino #{targetNumber} (issue #{issueNumber}, posición del Project configurado {projectIndex}; 0 indica sin Project). Proveedor: {providerStatus}; petición: {providerReference}.',
@@ -41345,6 +41364,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildApplicationErrorPresentation = buildApplicationErrorPresentation;
 exports.renderApplicationErrorText = renderApplicationErrorText;
 exports.renderApplicationErrorMarkdown = renderApplicationErrorMarkdown;
+const issue_workflow_diagnostic_1 = __nccwpck_require__(14347);
 const copilot_command_validation_1 = __nccwpck_require__(44237);
 const comment_command_validation_presentation_policy_1 = __nccwpck_require__(6420);
 const application_error_message_catalog_1 = __nccwpck_require__(64809);
@@ -41355,13 +41375,15 @@ function buildApplicationErrorPresentation(error, message = application_error_me
     const descriptor = error.recovery
         ? `error.recovery.${error.recovery.id}`
         : `error.${error.code}`;
-    const variables = error.recovery && (0, copilot_command_validation_1.isCopilotCommandValidationReason)(error.recovery.id)
-        ? (0, comment_command_validation_presentation_policy_1.commandValidationPresentationVariables)(error.recovery.id, error.recovery.variables.command)
-        : error.recovery?.id === 'branch-sync-verification-failed'
-            ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch' }
-            : error.recovery?.id.startsWith('stored-configuration-')
-                ? { ...error.recovery.variables, recoveryGuide: STORED_CONFIGURATION_RECOVERY_URL }
-                : error.recovery?.variables;
+    const variables = error.recovery?.id === 'issue-workflow-admission-blocked'
+        ? (0, issue_workflow_diagnostic_1.issueWorkflowDiagnosticPresentation)(error.recovery.variables)
+        : error.recovery && (0, copilot_command_validation_1.isCopilotCommandValidationReason)(error.recovery.id)
+            ? (0, comment_command_validation_presentation_policy_1.commandValidationPresentationVariables)(error.recovery.id, error.recovery.variables.command)
+            : error.recovery?.id === 'branch-sync-verification-failed'
+                ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch' }
+                : error.recovery?.id.startsWith('stored-configuration-')
+                    ? { ...error.recovery.variables, recoveryGuide: STORED_CONFIGURATION_RECOVERY_URL }
+                    : error.recovery?.variables;
     return {
         impact: message(`${descriptor}.impact`, variables),
         code: error.code,
@@ -44118,6 +44140,8 @@ const copilot_command_1 = __nccwpck_require__(11771);
  * fingerprint and latest recommendation in the hidden issue configuration.
  */
 function shouldPersistConfiguration(execution) {
+    if (execution.issueWorkflowRuntimeMode === 'block' || execution.issueWorkflowRuntimeMode === 'noop')
+        return false;
     if (!execution.isSingleAction) {
         if (execution.eventName === 'issues' && execution.inputs?.issue?.state === 'closed')
             return false;
@@ -44523,6 +44547,8 @@ function commandLines(commands, catalog) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveDeployWorkflowPlan = resolveDeployWorkflowPlan;
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const issue_workflow_body_1 = __nccwpck_require__(99376);
 const content_utils_1 = __nccwpck_require__(92816);
 function resolveDeployWorkflowPlan(param) {
     if (!param.issue.labeled || param.issue.labelAdded !== param.deployLabel)
@@ -44534,7 +44560,7 @@ function resolveDeployWorkflowPlan(param) {
             workflow: param.workflows.release,
             version: param.release.version ?? "",
             title: sanitizeTitle(param.issue.title),
-            changelog: (0, content_utils_1.extractChangelogUpToAdditionalContext)(param.issue.body, "Changelog"),
+            changelog: workflowChangelog(param, 'release', 'Changelog'),
             issue: param.issue.number,
         };
     }
@@ -44545,7 +44571,7 @@ function resolveDeployWorkflowPlan(param) {
             workflow: param.workflows.hotfix,
             version: param.hotfix.version ?? "",
             title: sanitizeTitle(param.issue.title),
-            changelog: (0, content_utils_1.extractChangelogUpToAdditionalContext)(param.issue.body, "Hotfix Solution"),
+            changelog: workflowChangelog(param, 'hotfix', 'Hotfix Solution'),
             issue: param.issue.number,
         };
     }
@@ -44563,6 +44589,11 @@ function sanitizeTitle(title) {
         .trim()
         .replace(/-+/g, "-")
         .trim();
+}
+function workflowChangelog(param, kind, canonical) {
+    if (!param.issueWorkflowProfile)
+        return (0, content_utils_1.extractChangelogUpToAdditionalContext)(param.issue.body, canonical);
+    return (0, issue_workflow_body_1.readIssueWorkflowFields)(param.issue.body, [(0, issue_workflow_profile_1.issueWorkflowHeading)(param.issueWorkflowProfile, kind, canonical)])[0].value || 'No changelog provided';
 }
 
 
@@ -48602,6 +48633,7 @@ exports.renderRepositoryAgentArtifacts = renderRepositoryAgentArtifacts;
 exports.renderRepositoryAgentGuide = renderRepositoryAgentGuide;
 exports.renderRepositoryAgentSkill = renderRepositoryAgentSkill;
 exports.renderRepositoryAgentPointerBlock = renderRepositoryAgentPointerBlock;
+const issue_workflow_field_mapping_1 = __nccwpck_require__(14945);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const issue_start_policy_1 = __nccwpck_require__(90332);
@@ -48646,7 +48678,7 @@ function buildRepositoryAgentProfile(configuration) {
                 nativeIssueType: definition.nativeIssueType,
                 createsManagedBranch: definition.branchManaged && configuration.repository.issueManagedBranches,
                 branchPrefix: prefix[kind],
-                requiredFields: Object.freeze([...definition.requiredHeadings]),
+                requiredFields: (0, issue_workflow_profile_1.issueWorkflowRequiredHeadings)(profile, kind),
                 workflow: workflow[kind],
             })];
     }));
@@ -48687,7 +48719,7 @@ function renderRepositoryAgentGuide(profile) {
     const rows = profile.issueWorkflows.enabled.map(kind => {
         const fact = profile.issueWorkflows.forms[kind];
         const entry = fact.template ? `\`.github/ISSUE_TEMPLATE/${fact.template}\`` : 'maintainer-approved manual issue';
-        const fields = fact.requiredFields.length > 0 ? fact.requiredFields.join('; ') : 'none';
+        const fields = fact.requiredFields.length > 0 ? fact.requiredFields.map(issue_workflow_field_mapping_1.escapeIssueFieldHeadingMarkdown).join('; ') : 'none';
         const branch = fact.createsManagedBranch ? `Action-managed \`${fact.branchPrefix}/…\`` : 'none';
         return `| \`${kind}\` | ${entry} | ${fact.labels.map(label => `\`${label}\``).join(', ')} | ${fields} | ${branch} |`;
     }).join('\n');
@@ -50482,6 +50514,8 @@ function mergeSetupConfiguration(base, overrides = {}) {
         },
         issueWorkflows: {
             enabled: enabledIssueWorkflows,
+            ...((overrides.issueWorkflows?.fieldMappings ?? base.issueWorkflows.fieldMappings)
+                ? { fieldMappings: structuredClone(overrides.issueWorkflows?.fieldMappings ?? base.issueWorkflows.fieldMappings) } : {}),
         },
         repositoryAgentGuidance: {
             ...base.repositoryAgentGuidance,
@@ -51112,7 +51146,6 @@ const issue_inactivity_1 = __nccwpck_require__(38572);
 const deployment_configuration_1 = __nccwpck_require__(22495);
 const locale_1 = __nccwpck_require__(15386);
 const issue_workflow_profile_1 = __nccwpck_require__(26744);
-const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const pull_request_approval_policy_1 = __nccwpck_require__(98820);
 const setup_project_selection_policy_1 = __nccwpck_require__(73750);
 const setup_runner_policy_1 = __nccwpck_require__(91027);
@@ -51160,6 +51193,15 @@ function validateSetupConfiguration(configuration, options = {}) {
         }
     }
     const enabledWorkflows = configuration.issueWorkflows?.enabled ?? issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS;
+    try {
+        const profile = (0, issue_workflow_profile_1.createIssueWorkflowProfile)(enabledWorkflows, configuration.issueWorkflows?.fieldMappings);
+        const parsed = (0, issue_workflow_profile_1.parseIssueWorkflowProfile)((0, issue_workflow_profile_1.serializeIssueWorkflowProfile)(profile));
+        if ('error' in parsed)
+            errors.push(parsed.error);
+    }
+    catch (cause) {
+        errors.push(cause.message);
+    }
     if (!configuration.repository.issueManagedBranches
         && enabledWorkflows.some(kind => kind === 'release' || kind === 'hotfix')) {
         errors.push('release and hotfix issue workflows require issue-managed-branches.');
@@ -51174,7 +51216,7 @@ function validateSetupConfiguration(configuration, options = {}) {
             errors.push(`features.${kind} must match issueWorkflows.enabled; use the issue workflow selector as the source of truth.`);
         }
     }
-    if (configuration.features.issues !== false && (0, setup_issue_workflow_policy_1.effectiveIssueWorkflowProfile)(configuration).enabled.length === 0) {
+    if (configuration.features.issues !== false && enabledWorkflows.length === 0) {
         errors.push('At least one issue workflow must be enabled when issue automation is enabled.');
     }
     if (!configuration.repositoryAgentGuidance || !['prompt', 'create-if-missing', 'disabled'].includes(configuration.repositoryAgentGuidance.agentsPointer)) {
@@ -51489,7 +51531,7 @@ function effectiveIssueWorkflowProfile(configuration) {
         ? []
         : configured.filter(kind => kind !== 'release' || configuration.features.release !== false)
             .filter(kind => kind !== 'hotfix' || configuration.features.hotfix !== false);
-    return (0, issue_workflow_profile_1.createIssueWorkflowProfile)(enabled);
+    return (0, issue_workflow_profile_1.createIssueWorkflowProfile)(enabled, configuration.issueWorkflows?.fieldMappings);
 }
 /** The workflow profile is authoritative for release/hotfix setup assets. */
 function effectiveIssueWorkflowFeatures(configuration) {
@@ -57750,7 +57792,7 @@ class ExecutionBranchVersionResolver {
         return unchanged(context);
     }
     async resolveRelease(context) {
-        const query = { issueNumber: context.issueNumber };
+        const query = { issueNumber: context.issueNumber, ...(context.body !== undefined ? { body: context.body } : {}), ...(context.issueWorkflowProfile ? { issueWorkflowProfile: context.issueWorkflowProfile } : {}) };
         const versionInfo = (await this.getReleaseVersion.invoke(query)).at(-1);
         let type = context.release.type;
         let version = context.release.version;
@@ -57785,7 +57827,7 @@ class ExecutionBranchVersionResolver {
         };
     }
     async resolveHotfix(context) {
-        const versionInfo = (await this.getHotfixVersion.invoke({ issueNumber: context.issueNumber })).at(-1);
+        const versionInfo = (await this.getHotfixVersion.invoke({ issueNumber: context.issueNumber, ...(context.body !== undefined ? { body: context.body } : {}), ...(context.issueWorkflowProfile ? { issueWorkflowProfile: context.issueWorkflowProfile } : {}) })).at(-1);
         let baseVersion;
         let version;
         if (versionInfo?.executed && versionInfo.success) {
@@ -58111,6 +58153,8 @@ async function runSetupExecution(context, dependencies) {
     let currentPullRequestLabels = [...context.currentPullRequestLabels];
     if (context.isIssue && !context.isSingleAction && issueResolution.issueNumber !== undefined && issueAdmission?.status === 'eligible') {
         const resolution = await dependencies.branchVersionResolver.resolve({
+            body: liveIssueBody,
+            issueWorkflowProfile: context.issueWorkflowProfile,
             issueNumber: issueResolution.issueNumber,
             release,
             hotfix,
@@ -58323,6 +58367,7 @@ exports.IssueCommentUseCase = IssueCommentUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueUseCase = void 0;
+const issue_workflow_diagnostic_1 = __nccwpck_require__(14347);
 const result_1 = __nccwpck_require__(73817);
 const application_error_1 = __nccwpck_require__(75999);
 const logging_ports_1 = __nccwpck_require__(6152);
@@ -58409,12 +58454,13 @@ function buildIssueWorkflowAdmissionResult(taskId, admission) {
                     ? `missing headings: ${admission.missingHeadings.join(', ')}`
                     : `invalid fields: ${admission.invalidFields?.join(', ') ?? 'unknown'}`}.`
                 : 'Issue workflow admission failed.';
+    const diagnostic = (0, issue_workflow_diagnostic_1.issueWorkflowDiagnostic)(admission);
     return new result_1.Result({
         id: taskId,
         success: false,
         executed: true,
         steps: [`🛑 ${message}`],
-        errors: [new application_error_1.ApplicationError('configuration.invalid', message)],
+        errors: [new application_error_1.ApplicationError('configuration.invalid', message, diagnostic ? { recovery: { id: 'issue-workflow-admission-blocked', variables: diagnostic } } : {})],
     });
 }
 function projectIssueWorkflowRouteContext(param) {
@@ -58748,12 +58794,13 @@ function projectIssueWorkflowStepContexts(source) {
             managedBranchTypes,
         }),
         deployAdded: Object.freeze({
+            issueWorkflowProfile: source.issueWorkflowProfile,
             issue: Object.freeze({
                 labeled: source.issue.labeled,
                 labelAdded: source.issue.labelAdded,
                 number: source.issue.number,
                 title: source.issue.title,
-                body: source.issue.body,
+                body: source.issue.liveBody ?? source.issue.body,
             }),
             deployLabel: source.labels.deploy,
             release: Object.freeze({ ...source.release }),
@@ -66529,6 +66576,8 @@ function buildCommitPrefix(branchName, transforms, onUnknownTransform) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GetHotfixVersionUseCase = void 0;
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const issue_workflow_body_1 = __nccwpck_require__(99376);
 const result_1 = __nccwpck_require__(73817);
 const content_utils_1 = __nccwpck_require__(92816);
 const logging_ports_1 = __nccwpck_require__(6152);
@@ -66552,7 +66601,7 @@ class GetHotfixVersionUseCase {
                 }));
                 return result;
             }
-            const description = await this.issueRepository.getDescription(param.issueNumber);
+            const description = param.body ?? await this.issueRepository.getDescription(param.issueNumber);
             if (description === undefined) {
                 result.push(new result_1.Result({
                     id: this.taskId,
@@ -66562,8 +66611,8 @@ class GetHotfixVersionUseCase {
                 }));
                 return result;
             }
-            const baseVersion = (0, content_utils_1.extractVersion)('Base Version', description);
-            const hotfixVersion = (0, content_utils_1.extractVersion)('Hotfix Version', description);
+            const baseVersion = param.body === undefined && !param.issueWorkflowProfile ? (0, content_utils_1.extractVersion)('Base Version', description) : (0, content_utils_1.extractVersion)('Base Version', `### Base Version\n${(0, issue_workflow_body_1.readIssueWorkflowFields)(description, [(0, issue_workflow_profile_1.issueWorkflowHeading)(param.issueWorkflowProfile ?? issue_workflow_profile_1.ALL_ISSUE_WORKFLOWS, 'hotfix', 'Base Version')])[0].value.replace(/^v(?=\d)/u, '')}`);
+            const hotfixVersion = param.body === undefined && !param.issueWorkflowProfile ? (0, content_utils_1.extractVersion)('Hotfix Version', description) : (0, content_utils_1.extractVersion)('Hotfix Version', `### Hotfix Version\n${(0, issue_workflow_body_1.readIssueWorkflowFields)(description, [(0, issue_workflow_profile_1.issueWorkflowHeading)(param.issueWorkflowProfile ?? issue_workflow_profile_1.ALL_ISSUE_WORKFLOWS, 'hotfix', 'Hotfix Version')])[0].value.replace(/^v(?=\d)/u, '')}`);
             if (baseVersion === undefined) {
                 result.push(new result_1.Result({
                     id: this.taskId,
@@ -66621,6 +66670,8 @@ function isPositiveIssueNumber(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GetReleaseTypeUseCase = void 0;
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const issue_workflow_body_1 = __nccwpck_require__(99376);
 const result_1 = __nccwpck_require__(73817);
 const content_utils_1 = __nccwpck_require__(92816);
 const logging_ports_1 = __nccwpck_require__(6152);
@@ -66644,7 +66695,7 @@ class GetReleaseTypeUseCase {
                 }));
                 return result;
             }
-            const description = await this.issueRepository.getDescription(param.issueNumber);
+            const description = param.body ?? await this.issueRepository.getDescription(param.issueNumber);
             if (description === undefined) {
                 result.push(new result_1.Result({
                     id: this.taskId,
@@ -66654,7 +66705,7 @@ class GetReleaseTypeUseCase {
                 }));
                 return result;
             }
-            const releaseType = (0, content_utils_1.extractReleaseType)('Release Type', description);
+            const releaseType = param.body === undefined && !param.issueWorkflowProfile ? (0, content_utils_1.extractReleaseType)('Release Type', description) : (0, issue_workflow_profile_1.parseIssueWorkflowReleaseType)((0, issue_workflow_body_1.readIssueWorkflowFields)(description, [(0, issue_workflow_profile_1.issueWorkflowHeading)(param.issueWorkflowProfile ?? issue_workflow_profile_1.ALL_ISSUE_WORKFLOWS, 'release', 'Release Type')])[0].value);
             if (releaseType === undefined) {
                 result.push(new result_1.Result({
                     id: this.taskId,
@@ -66702,6 +66753,8 @@ function isPositiveIssueNumber(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GetReleaseVersionUseCase = void 0;
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const issue_workflow_body_1 = __nccwpck_require__(99376);
 const result_1 = __nccwpck_require__(73817);
 const content_utils_1 = __nccwpck_require__(92816);
 const logging_ports_1 = __nccwpck_require__(6152);
@@ -66725,7 +66778,7 @@ class GetReleaseVersionUseCase {
                 }));
                 return result;
             }
-            const description = await this.issueRepository.getDescription(param.issueNumber);
+            const description = param.body ?? await this.issueRepository.getDescription(param.issueNumber);
             if (description === undefined) {
                 (0, logging_ports_1.logDebugInfo)(`GetReleaseVersion: no description for issue ${param.issueNumber}.`);
                 result.push(new result_1.Result({
@@ -66736,7 +66789,7 @@ class GetReleaseVersionUseCase {
                 }));
                 return result;
             }
-            const releaseVersion = (0, content_utils_1.extractVersion)('Release Version', description);
+            const releaseVersion = param.body === undefined && !param.issueWorkflowProfile ? (0, content_utils_1.extractVersion)('Release Version', description) : (0, content_utils_1.extractVersion)('Release Version', `### Release Version\n${(0, issue_workflow_body_1.readIssueWorkflowFields)(description, [(0, issue_workflow_profile_1.issueWorkflowHeading)(param.issueWorkflowProfile ?? issue_workflow_profile_1.ALL_ISSUE_WORKFLOWS, 'release', 'Release Version')])[0].value.replace(/^v(?=\d)/u, '')}`);
             if (releaseVersion === undefined) {
                 (0, logging_ports_1.logDebugInfo)(`GetReleaseVersion: no "Release Version" found in description (issue ${param.issueNumber}).`);
                 result.push(new result_1.Result({
@@ -70486,6 +70539,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const issue_workflow_diagnostic_1 = __nccwpck_require__(14347);
 const change_size_reconciliation_1 = __nccwpck_require__(25304);
 const copilot_command_validation_1 = __nccwpck_require__(44237);
 const closed_issue_reconciliation_1 = __nccwpck_require__(21565);
@@ -70517,6 +70571,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
     'change-size-reconciliation-failed',
+    'issue-workflow-admission-blocked',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -70731,6 +70786,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'stored-configuration-invalid': Object.freeze(['issueNumber', 'expectedVersion']),
     'closed-issue-reconciliation-failed': Object.freeze(['resultId', 'phase', 'state', 'reason', 'changed', 'remaining']),
     'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
+    'issue-workflow-admission-blocked': Object.freeze(['kind', 'reason', 'fields']),
     'change-size-reconciliation-failed': Object.freeze(['operation', 'issueNumber', 'targetNumber', 'projectIndex', 'verifiedOperations', 'pendingProjectSizes', 'providerStatus', 'providerReference']),
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
@@ -70819,6 +70875,8 @@ function normalizeApplicationErrorRecovery(recovery) {
             || approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_PERMISSIONS[variables.operation] !== variables.permission)) {
         throw new TypeError('Approval evidence diagnostic is invalid.');
     }
+    if (recovery.id === 'issue-workflow-admission-blocked' && !(0, issue_workflow_diagnostic_1.isIssueWorkflowDiagnostic)(variables))
+        throw new TypeError('Issue admission diagnostic is invalid.');
     if (recovery.id === 'change-size-reconciliation-failed' && !(0, change_size_reconciliation_1.isChangeSizeReconciliationFacts)(variables)) {
         throw new TypeError('Change size reconciliation diagnostic is invalid.');
     }
@@ -83779,22 +83837,297 @@ function branchIsReady(input) {
 
 /***/ }),
 
-/***/ 26744:
+/***/ 99376:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ALL_ISSUE_WORKFLOWS = exports.ISSUE_WORKFLOW_CATALOG = exports.ISSUE_WORKFLOW_KINDS = void 0;
+exports.readIssueWorkflowFields = readIssueWorkflowFields;
+/** Source positions stay unchanged: examples/comments cannot introduce structural form headings. */
+function readIssueWorkflowFields(body, headings) {
+    const structural = maskIssueWorkflowExamples(body);
+    return Object.freeze(headings.map(heading => {
+        const escaped = heading.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+        const matches = [...structural.matchAll(new RegExp(`^#{1,6}[ \t]+${escaped}[ \t]*$`, 'gmi'))];
+        if (matches.length !== 1)
+            return Object.freeze({ heading, count: matches.length, value: '' });
+        const start = matches[0].index + matches[0][0].length;
+        const next = /^#{1,6}[ \t]+/mu.exec(structural.slice(start));
+        const end = next ? start + next.index : body.length;
+        const value = body.slice(start, end).replace(/<!--[\s\S]*?(?:-->|$)/gu, '').trim();
+        return Object.freeze({ heading, count: 1, value: /^_No response_$/iu.test(value) ? '' : value });
+    }));
+}
+function maskIssueWorkflowExamples(body) {
+    let fence;
+    let comment = false;
+    const blank = (value) => value.replace(/[^\r\n]/g, ' ');
+    return Array.from(body.matchAll(/[^\n]*(?:\n|$)/gu), match => match[0]).map(line => {
+        const plain = line.replace(/\r?\n$/u, '');
+        if (fence) {
+            if (new RegExp(`^ {0,3}${fence.char}{${fence.length},}\\s*$`, 'u').test(plain))
+                fence = undefined;
+            return blank(line);
+        }
+        // A comment marker inside a fenced example must not hide later real fields.
+        const opening = !comment && /^ {0,3}(`{3,}|~{3,})/u.exec(plain);
+        if (opening) {
+            fence = { char: opening[1][0], length: opening[1].length };
+            return blank(line);
+        }
+        let structural = '';
+        let offset = 0;
+        while (offset < line.length) {
+            if (comment) {
+                const end = line.indexOf('-->', offset);
+                const stop = end < 0 ? line.length : end + 3;
+                structural += blank(line.slice(offset, stop));
+                offset = stop;
+                comment = end < 0;
+            }
+            else {
+                const start = line.indexOf('<!--', offset);
+                if (start < 0) {
+                    structural += line.slice(offset);
+                    break;
+                }
+                structural += line.slice(offset, start);
+                offset = start;
+                comment = true;
+            }
+        }
+        return structural;
+    }).join('');
+}
+
+
+/***/ }),
+
+/***/ 14347:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.issueWorkflowDiagnostic = issueWorkflowDiagnostic;
+exports.isIssueWorkflowDiagnostic = isIssueWorkflowDiagnostic;
+exports.issueWorkflowDiagnosticPresentation = issueWorkflowDiagnosticPresentation;
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const issue_workflow_field_mapping_1 = __nccwpck_require__(14945);
+function issueWorkflowDiagnostic(admission) {
+    if (!admission || admission.status === 'eligible')
+        return undefined;
+    if (admission.status === 'invalid') {
+        if (!admission.missingHeadings.length && !admission.invalidFields?.length)
+            return undefined;
+        return Object.freeze({ kind: admission.kind,
+            reason: admission.missingHeadings.length ? 'missing-fields' : 'invalid-fields',
+            fields: JSON.stringify(admission.missingHeadings.length ? admission.missingHeadings : admission.invalidFields) });
+    }
+    return Object.freeze({ kind: admission.status === 'conflict' ? 'conflict' : admission.status === 'unmanaged' ? 'unmanaged' : admission.kind,
+        reason: admission.status === 'conflict' ? 'conflicting-kinds' : admission.status === 'disabled' ? 'disabled-kind' : 'unmanaged',
+        fields: JSON.stringify(admission.status === 'conflict' ? admission.kinds : []) });
+}
+function isIssueWorkflowDiagnostic(value) {
+    if (typeof value.kind !== 'string' || typeof value.fields !== 'string' || value.fields.length > 1500)
+        return false;
+    let fields;
+    try {
+        fields = JSON.parse(value.fields);
+    }
+    catch {
+        return false;
+    }
+    if (!Array.isArray(fields) || fields.length > 7 || fields.some(field => typeof field !== 'string'))
+        return false;
+    if (value.reason === 'conflicting-kinds')
+        return value.kind === 'conflict' && fields.length > 1 && new Set(fields).size === fields.length && fields.every(field => issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS.includes(field));
+    if (value.reason === 'unmanaged')
+        return value.kind === 'unmanaged' && fields.length === 0;
+    if (!issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS.some(kind => kind === value.kind))
+        return false;
+    if (value.reason === 'disabled-kind')
+        return fields.length === 0;
+    if (value.reason !== 'missing-fields' && value.reason !== 'invalid-fields')
+        return false;
+    return fields.length > 0 && fields.length <= 5 && fields.every(field => (0, issue_workflow_field_mapping_1.isIssueFieldHeading)(field.replace(/ \(duplicate\)$/u, '')));
+}
+/** Bound heading data stays inert in Markdown tables, HTML, mentions and code spans. */
+function issueWorkflowDiagnosticPresentation(facts) {
+    const fields = JSON.parse(facts.fields).map(issue_workflow_field_mapping_1.escapeIssueFieldHeadingMarkdown);
+    return { kind: facts.kind, reason: facts.reason, fields: fields.length ? fields.join('; ') : '—' };
+}
+
+
+/***/ }),
+
+/***/ 14945:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ISSUE_FIELD_HEADING_MAX_BYTES = void 0;
+exports.normalizeWorkflowFieldMappings = normalizeWorkflowFieldMappings;
+exports.isIssueFieldHeading = isIssueFieldHeading;
+exports.escapeIssueFieldHeadingMarkdown = escapeIssueFieldHeadingMarkdown;
+exports.ISSUE_FIELD_HEADING_MAX_BYTES = 128;
+/** One explicit replacement per canonical semantic field; never guesses an alias from an issue body. */
+function normalizeWorkflowFieldMappings(value, definitions, enabled) {
+    if (value === undefined)
+        return undefined;
+    if (!isRecord(value))
+        throw new Error('Issue field mappings must be an object.');
+    const mappings = {};
+    for (const kind of Object.keys(value)) {
+        if (!Object.prototype.hasOwnProperty.call(definitions, kind) || !enabled.includes(kind)) {
+            throw new Error('Issue field mappings must refer only to known enabled workflows.');
+        }
+        const fields = value[kind];
+        if (!isRecord(fields))
+            throw new Error('Each issue field mapping must be an object.');
+        const headings = definitions[kind].requiredHeadings;
+        if (Object.keys(fields).some(key => !headings.includes(key)))
+            throw new Error('Issue field mapping contains an unknown canonical field.');
+        const entries = headings.filter(heading => Object.prototype.hasOwnProperty.call(fields, heading)).map(heading => {
+            const target = fields[heading];
+            if (!isIssueFieldHeading(target))
+                throw new Error('Mapped issue headings must be nonempty single-line text of at most 128 UTF-8 bytes.');
+            return [heading, target];
+        });
+        const mapped = Object.fromEntries(entries);
+        const effective = headings.map(heading => (mapped[heading] ?? heading).toLowerCase());
+        if (new Set(effective).size !== effective.length)
+            throw new Error('Issue field mappings cannot make two semantic fields share a heading.');
+        if (entries.length)
+            mappings[kind] = Object.freeze(mapped);
+    }
+    return Object.keys(mappings).length ? Object.freeze(Object.fromEntries(Object.keys(definitions)
+        .filter(kind => Object.prototype.hasOwnProperty.call(mappings, kind)).map(kind => [kind, mappings[kind]]))) : undefined;
+}
+function isIssueFieldHeading(value) {
+    return typeof value === 'string' && value.length > 0 && value.trim() === value
+        && new TextEncoder().encode(value).length <= exports.ISSUE_FIELD_HEADING_MAX_BYTES
+        && !/[\p{Cc}\p{Zl}\p{Zp}]/u.test(value);
+}
+function isRecord(value) {
+    if (value === null || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const prototype = Object.getPrototypeOf(value);
+    // Native structuredClone and plain maps from another realm remain dictionaries.
+    return prototype === null || Object.getPrototypeOf(prototype) === null;
+}
+function escapeIssueFieldHeadingMarkdown(field) {
+    return field.replace(/[&<>|`\\*_[\]{}!#]/gu, char => `&#${char.codePointAt(0)};`).replace(/@/gu, '&#64;');
+}
+
+
+/***/ }),
+
+/***/ 39098:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.compareIssueFormSchema = compareIssueFormSchema;
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
+/** Native acknowledgement checkboxes and optional context do not define admission roles. */
+function compareIssueFormSchema(value, profile, kind) {
+    const body = object(value)?.body;
+    if (!Array.isArray(body) || body.length > 100 || body.some(field => !object(field)))
+        return [{ heading: '', reason: 'shape' }];
+    const fields = body.map(field => object(field));
+    const scalar = fields.filter(field => ['input', 'textarea', 'dropdown'].includes(String(field.type)));
+    const definition = issue_workflow_profile_1.ISSUE_WORKFLOW_CATALOG[kind];
+    const expected = definition.requiredHeadings.map(canonical => ({ canonical, heading: (0, issue_workflow_profile_1.issueWorkflowHeading)(profile, kind, canonical) }));
+    const problems = [];
+    for (const { canonical, heading } of expected) {
+        const matching = scalar.filter(field => typeof object(field.attributes)?.label === 'string' && object(field.attributes).label.toLowerCase() === heading.toLowerCase());
+        if (matching.length !== 1) {
+            problems.push({ heading, reason: matching.length ? 'duplicate' : 'missing' });
+            continue;
+        }
+        if (definition.requiredValueHeadings.includes(canonical) && object(matching[0].validations)?.required !== true)
+            problems.push({ heading, reason: 'required' });
+        const field = matching[0];
+        const attributes = object(field.attributes);
+        if (kind === 'release' && canonical === 'Release Type' && !validReleaseControl(field, attributes))
+            problems.push({ heading, reason: 'value' });
+        const versionField = kind === 'release' && canonical === 'Release Version' || kind === 'hotfix' && ['Base Version', 'Hotfix Version'].includes(canonical);
+        if (versionField && (!validVersionControl(field, attributes)
+            || object(field.validations)?.required !== true && !(0, issue_workflow_profile_1.isAutomaticOrVersion)(formDefault(attributes))))
+            problems.push({ heading, reason: 'value' });
+    }
+    for (const field of fields) {
+        if (['markdown', 'checkboxes'].includes(String(field.type)))
+            continue;
+        const label = object(field.attributes)?.label;
+        if (!['input', 'textarea', 'dropdown'].includes(String(field.type)) || typeof label !== 'string') {
+            problems.push({ heading: '', reason: 'shape' });
+            continue;
+        }
+        if (object(field.validations)?.required === true && !expected.some(item => item.heading.toLowerCase() === label.toLowerCase()))
+            problems.push({ heading: '', reason: 'unsupported' });
+    }
+    return problems;
+}
+function formDefault(attributes) {
+    if (typeof attributes.value === 'string')
+        return attributes.value.trim();
+    if (!Array.isArray(attributes.options) || typeof attributes.default !== 'number' || !Number.isSafeInteger(attributes.default) || attributes.default < 0)
+        return '';
+    const value = attributes.options[attributes.default];
+    return typeof value === 'string' ? value.trim() : '';
+}
+function validReleaseControl(field, attributes) {
+    if (field.type !== 'dropdown' || attributes.multiple === true || !Array.isArray(attributes.options))
+        return false;
+    const options = attributes.options.map(option => typeof option === 'string' ? (0, issue_workflow_profile_1.parseIssueWorkflowReleaseType)(option) : undefined);
+    return options.length === issue_workflow_profile_1.ISSUE_WORKFLOW_RELEASE_TYPES.length && issue_workflow_profile_1.ISSUE_WORKFLOW_RELEASE_TYPES.every(type => options.includes(type));
+}
+function validVersionControl(field, attributes) {
+    if (field.type === 'textarea' && attributes.render !== undefined)
+        return false;
+    if (field.type !== 'dropdown')
+        return true;
+    return attributes.multiple !== true && Array.isArray(attributes.options) && attributes.options.length > 0
+        && attributes.options.every(option => typeof option === 'string' && (0, issue_workflow_profile_1.isAutomaticOrVersion)(option.trim()));
+}
+
+
+/***/ }),
+
+/***/ 26744:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ALL_ISSUE_WORKFLOWS = exports.ISSUE_WORKFLOW_CATALOG = exports.ISSUE_WORKFLOW_RELEASE_TYPES = exports.ISSUE_WORKFLOW_KINDS = void 0;
+exports.parseIssueWorkflowReleaseType = parseIssueWorkflowReleaseType;
 exports.createIssueWorkflowProfile = createIssueWorkflowProfile;
 exports.parseIssueWorkflowProfile = parseIssueWorkflowProfile;
 exports.serializeIssueWorkflowProfile = serializeIssueWorkflowProfile;
 exports.classifyIssueWorkflow = classifyIssueWorkflow;
 exports.hasMarkdownHeading = hasMarkdownHeading;
 exports.issueWorkflowFormFiles = issueWorkflowFormFiles;
+exports.isAutomaticOrVersion = isAutomaticOrVersion;
+exports.issueWorkflowHeading = issueWorkflowHeading;
+exports.issueWorkflowRequiredHeadings = issueWorkflowRequiredHeadings;
+const issue_workflow_body_1 = __nccwpck_require__(99376);
+const issue_workflow_field_mapping_1 = __nccwpck_require__(14945);
+const strict_json_keys_1 = __nccwpck_require__(95768);
 exports.ISSUE_WORKFLOW_KINDS = [
     'feature', 'bugfix', 'documentation', 'chore', 'help', 'hotfix', 'release',
 ];
+/** Canonical values shared by admission, form inspection and deterministic readers. */
+exports.ISSUE_WORKFLOW_RELEASE_TYPES = Object.freeze(['Patch', 'Minor', 'Major']);
+function parseIssueWorkflowReleaseType(value) {
+    return exports.ISSUE_WORKFLOW_RELEASE_TYPES.find(type => type.toLowerCase() === value.trim().toLowerCase());
+}
 exports.ISSUE_WORKFLOW_CATALOG = {
     feature: {
         id: 'feature', label: 'Feature', formFile: 'feature_request.yml', nativeIssueType: 'Feature', labels: ['feature', 'enhancement'], branchManaged: true,
@@ -83829,20 +84162,23 @@ exports.ISSUE_WORKFLOW_CATALOG = {
     release: {
         id: 'release', label: 'Release', formFile: 'release.yml', nativeIssueType: 'Release', labels: ['release'], branchManaged: true,
         requiredHeadings: ['Release Type', 'Release Version', 'Changelog', 'Additional Context'],
-        requiredValueHeadings: ['Changelog'],
+        requiredValueHeadings: ['Release Type', 'Changelog'],
     },
 };
 const ISSUE_WORKFLOW_PROFILE_MAX_BYTES = 4096;
-const ISSUE_WORKFLOW_PROFILE_KEYS = new Set(['schemaVersion', 'enabled']);
+const ISSUE_WORKFLOW_PROFILE_KEYS = new Set(['schemaVersion', 'enabled', 'fieldMappings']);
 exports.ALL_ISSUE_WORKFLOWS = Object.freeze({
     schemaVersion: 1,
     enabled: Object.freeze([...exports.ISSUE_WORKFLOW_KINDS]),
 });
-function createIssueWorkflowProfile(enabled) {
+function createIssueWorkflowProfile(enabled, fieldMappings) {
     const selected = new Set(enabled);
+    const ordered = exports.ISSUE_WORKFLOW_KINDS.filter(kind => selected.has(kind));
+    const mappings = (0, issue_workflow_field_mapping_1.normalizeWorkflowFieldMappings)(fieldMappings, exports.ISSUE_WORKFLOW_CATALOG, ordered);
     return Object.freeze({
-        schemaVersion: 1,
-        enabled: Object.freeze(exports.ISSUE_WORKFLOW_KINDS.filter(kind => selected.has(kind))),
+        schemaVersion: mappings ? 2 : 1,
+        enabled: Object.freeze(ordered),
+        ...(mappings ? { fieldMappings: mappings } : {}),
     });
 }
 /** Empty input selects all workflows with the same admission checks as an explicit profile. */
@@ -83859,14 +84195,20 @@ function parseIssueWorkflowProfile(raw) {
     catch {
         return { error: 'Issue workflow profile must be valid JSON.' };
     }
+    if ((0, strict_json_keys_1.hasDuplicateJsonObjectKeys)(raw))
+        return { error: 'Issue workflow profile cannot contain duplicate JSON keys.' };
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
         return { error: 'Issue workflow profile must be an object.' };
     const value = parsed;
     const unknownKeys = Object.keys(value).filter(key => !ISSUE_WORKFLOW_PROFILE_KEYS.has(key));
     if (unknownKeys.length > 0)
         return { error: `Unknown issue workflow profile field(s): ${unknownKeys.join(', ')}.` };
-    if (value.schemaVersion !== 1)
-        return { error: 'Issue workflow profile schemaVersion must be 1.' };
+    if (value.schemaVersion !== 1 && value.schemaVersion !== 2)
+        return { error: 'Issue workflow profile schemaVersion must be 1 or 2.' };
+    if (value.schemaVersion === 1 && value.fieldMappings !== undefined)
+        return { error: 'Issue field mappings require profile schemaVersion 2.' };
+    if (value.schemaVersion === 2 && value.fieldMappings === undefined)
+        return { error: 'Profile schemaVersion 2 requires explicit fieldMappings.' };
     if (!Array.isArray(value.enabled) || value.enabled.some(item => typeof item !== 'string')) {
         return { error: 'Issue workflow profile enabled must be an array of workflow IDs.' };
     }
@@ -83876,10 +84218,18 @@ function parseIssueWorkflowProfile(raw) {
         return { error: `Unknown issue workflow(s): ${unknown.join(', ')}.` };
     if (new Set(enabled).size !== enabled.length)
         return { error: 'Issue workflow profile cannot contain duplicate workflow IDs.' };
-    return { profile: createIssueWorkflowProfile(enabled) };
+    try {
+        const profile = createIssueWorkflowProfile(enabled, value.fieldMappings);
+        if (value.schemaVersion === 2 && profile.schemaVersion !== 2)
+            return { error: 'Profile schemaVersion 2 requires nonempty fieldMappings.' };
+        return { profile };
+    }
+    catch (cause) {
+        return { error: cause.message };
+    }
 }
 function serializeIssueWorkflowProfile(profile) {
-    return JSON.stringify({ schemaVersion: 1, enabled: exports.ISSUE_WORKFLOW_KINDS.filter(kind => profile.enabled.includes(kind)) });
+    return JSON.stringify(createIssueWorkflowProfile(profile.enabled, profile.fieldMappings));
 }
 function classifyIssueWorkflow(labels, profile = exports.ALL_ISSUE_WORKFLOWS, labelConfiguration = {}, body, validateBody = true) {
     const normalized = new Set(labels.map(label => label.trim().toLowerCase()).filter(Boolean));
@@ -83898,67 +84248,63 @@ function classifyIssueWorkflow(labels, profile = exports.ALL_ISSUE_WORKFLOWS, la
     if (!validateBody)
         return { status: 'eligible', kind };
     const issueBody = body ?? '';
-    const requiredHeadings = exports.ISSUE_WORKFLOW_CATALOG[kind].requiredHeadings;
-    const duplicateHeadings = requiredHeadings.filter(heading => markdownHeadingCount(issueBody, heading) > 1);
+    const requiredHeadings = issueWorkflowRequiredHeadings(profile, kind);
+    const sections = (0, issue_workflow_body_1.readIssueWorkflowFields)(issueBody, requiredHeadings);
+    const duplicateHeadings = sections.filter(field => field.count > 1).map(field => field.heading);
     if (duplicateHeadings.length > 0) {
         return { status: 'invalid', kind, missingHeadings: [], invalidFields: duplicateHeadings.map(heading => `${heading} (duplicate)`) };
     }
-    const missingHeadings = requiredHeadings.filter(heading => !hasMarkdownHeading(issueBody, heading));
+    const missingHeadings = sections.filter(field => field.count === 0).map(field => field.heading);
     if (missingHeadings.length > 0)
         return { status: 'invalid', kind, missingHeadings };
-    const invalidFields = invalidIssueWorkflowFields(kind, issueBody);
+    const invalidFields = invalidIssueWorkflowFields(kind, new Map(sections.map(field => [field.heading, field.value])), profile);
     if (invalidFields.length > 0)
         return { status: 'invalid', kind, missingHeadings: [], invalidFields };
     return { status: 'eligible', kind };
 }
 function hasMarkdownHeading(body, heading) {
-    return markdownHeadingCount(body, heading) > 0;
+    return (0, issue_workflow_body_1.readIssueWorkflowFields)(body, [heading])[0].count > 0;
 }
 function issueWorkflowFormFiles(profile) {
     return exports.ISSUE_WORKFLOW_KINDS.filter(kind => profile.enabled.includes(kind)).map(kind => exports.ISSUE_WORKFLOW_CATALOG[kind].formFile);
 }
-function invalidIssueWorkflowFields(kind, body) {
-    const value = (heading) => markdownSectionValue(body, heading);
+function invalidIssueWorkflowFields(kind, fields, profile) {
+    const mapped = (heading) => issueWorkflowHeading(profile, kind, heading);
+    // Classification already proved every required heading is present and unique.
+    const value = (heading) => fields.get(mapped(heading));
     const invalid = [];
     if (kind === 'release') {
-        if (!/^(patch|minor|major)$/iu.test(value('Release Type')))
-            invalid.push('Release Type');
+        if (!parseIssueWorkflowReleaseType(value('Release Type')))
+            invalid.push(mapped('Release Type'));
         if (!value('Changelog'))
-            invalid.push('Changelog');
+            invalid.push(mapped('Changelog'));
         if (!isAutomaticOrVersion(value('Release Version')))
-            invalid.push('Release Version');
+            invalid.push(mapped('Release Version'));
     }
     if (kind === 'hotfix') {
         if (!isAutomaticOrVersion(value('Base Version')))
-            invalid.push('Base Version');
+            invalid.push(mapped('Base Version'));
         if (!isAutomaticOrVersion(value('Hotfix Version')))
-            invalid.push('Hotfix Version');
+            invalid.push(mapped('Hotfix Version'));
         if (!value('Issue Description'))
-            invalid.push('Issue Description');
+            invalid.push(mapped('Issue Description'));
         if (!value('Hotfix Solution'))
-            invalid.push('Hotfix Solution');
+            invalid.push(mapped('Hotfix Solution'));
     }
     for (const heading of exports.ISSUE_WORKFLOW_CATALOG[kind].requiredValueHeadings) {
-        if (!value(heading) && !invalid.includes(heading))
-            invalid.push(heading);
+        if (!value(heading) && !invalid.includes(mapped(heading)))
+            invalid.push(mapped(heading));
     }
     return invalid;
 }
-function markdownHeadingCount(body, heading) {
-    const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return [...body.matchAll(new RegExp(`^#{1,6}\\s+${escaped}\\s*$`, 'gmi'))].length;
-}
-function markdownSectionValue(body, heading) {
-    const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const headingMatch = new RegExp(`^#{1,6}\\s+${escaped}\\s*$`, 'im').exec(body);
-    const sectionStart = headingMatch.index + headingMatch[0].length;
-    const remainder = body.slice(sectionStart);
-    const nextHeading = /^#{1,6}\s+/im.exec(remainder);
-    const section = nextHeading?.index === undefined ? remainder : remainder.slice(0, nextHeading.index);
-    return section.replace(/<!--[\s\S]*?-->/g, '').trim();
-}
 function isAutomaticOrVersion(value) {
     return /^automatic$/iu.test(value) || /^v?\d+\.\d+\.\d+$/u.test(value);
+}
+function issueWorkflowHeading(profile, kind, canonical) {
+    return profile.fieldMappings?.[kind]?.[canonical] ?? canonical;
+}
+function issueWorkflowRequiredHeadings(profile, kind) {
+    return Object.freeze(exports.ISSUE_WORKFLOW_CATALOG[kind].requiredHeadings.map(heading => issueWorkflowHeading(profile, kind, heading)));
 }
 
 
@@ -86208,6 +86554,43 @@ function isSetupWorkflowEnabled(file, features) {
 function featureEnabled(feature, features) {
     const candidates = Array.isArray(feature) ? feature : [feature];
     return candidates.some((candidate) => features[candidate] !== false);
+}
+
+
+/***/ }),
+
+/***/ 95768:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.hasDuplicateJsonObjectKeys = hasDuplicateJsonObjectKeys;
+/** Call after JSON syntax validation; detects duplicate decoded object keys without evaluating values. */
+function hasDuplicateJsonObjectKeys(raw) {
+    const stack = [];
+    for (const match of raw.matchAll(/"(?:\\.|[^"\\])*"|[{}[\]:,]/gu)) {
+        const token = match[0];
+        if (token === '{')
+            stack.push({ keys: new Set(), keyExpected: true });
+        else if (token === '[')
+            stack.push(null);
+        else if (token === '}' || token === ']')
+            stack.pop();
+        else {
+            const current = stack[stack.length - 1];
+            if (current && token === ',')
+                current.keyExpected = true;
+            else if (current && token.startsWith('"') && current.keyExpected) {
+                const key = JSON.parse(token);
+                if (current.keys.has(key))
+                    return true;
+                current.keys.add(key);
+                current.keyExpected = false;
+            }
+        }
+    }
+    return false;
 }
 
 
@@ -92130,6 +92513,7 @@ function writeStarterInPinnedDirectory(root, content) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupReconcileWorkspaceAdapter = exports.SetupDoctorWorkspaceQueryAdapter = exports.SetupWorkspaceMutationAdapter = void 0;
+const setup_issue_form_review_1 = __nccwpck_require__(84266);
 const setup_files_1 = __nccwpck_require__(59126);
 const cli_context_1 = __nccwpck_require__(21307);
 const repository_agent_guidance_1 = __nccwpck_require__(38445);
@@ -92181,6 +92565,9 @@ class SetupDoctorWorkspaceQueryAdapter {
     compareWorkflows(features, configuration) {
         return (0, setup_files_1.compareSetupWorkflows)(process.cwd(), features, undefined, configuration);
     }
+    inspectIssueForms(configuration) {
+        return (0, setup_issue_form_review_1.inspectSetupIssueForms)(process.cwd(), configuration);
+    }
     inspectAgentGuidance(configuration) {
         return (0, repository_agent_guidance_1.inspectRepositoryAgentGuidance)(process.cwd(), configuration);
     }
@@ -92206,6 +92593,9 @@ class SetupReconcileWorkspaceAdapter {
     }
     compareWorkflows(features, configuration) {
         return this.query.compareWorkflows(features, configuration);
+    }
+    inspectIssueForms(configuration) {
+        return this.query.inspectIssueForms(configuration);
     }
     inspectAgentGuidance(configuration) {
         return this.query.inspectAgentGuidance(configuration);
@@ -94971,12 +95361,13 @@ exports.copySetupFiles = copySetupFiles;
 exports.compareSetupWorkflows = compareSetupWorkflows;
 exports.getSetupToken = getSetupToken;
 exports.hasValidSetupToken = hasValidSetupToken;
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
 const fs = __importStar(__nccwpck_require__(57147));
 const path = __importStar(__nccwpck_require__(71017));
 const setup_file_copy_1 = __nccwpck_require__(90102);
 const logger_1 = __nccwpck_require__(91151);
 const setup_workflow_catalog_1 = __nccwpck_require__(24596);
-const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const issue_workflow_profile_2 = __nccwpck_require__(26744);
 const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
 const repository_agent_guidance_1 = __nccwpck_require__(38445);
 const setup_approval_workflow_1 = __nccwpck_require__(9512);
@@ -95032,7 +95423,7 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
         ? (0, setup_issue_workflow_policy_1.effectiveIssueWorkflowFeatures)(options.setupConfiguration)
         : features;
     const selectedIssueTemplateFiles = options.setupConfiguration
-        ? new Set(['config.yml', ...(0, issue_workflow_profile_1.issueWorkflowFormFiles)((0, setup_issue_workflow_policy_1.effectiveIssueWorkflowProfile)(options.setupConfiguration))])
+        ? new Set(['config.yml', ...(0, issue_workflow_profile_2.issueWorkflowFormFiles)((0, setup_issue_workflow_policy_1.effectiveIssueWorkflowProfile)(options.setupConfiguration))])
         : undefined;
     const backupDirectory = options.updateExistingWorkflows ? path.join(cwd, '.copilot', 'setup-backups', new Date().toISOString().replace(/[:.]/g, '-')) : undefined;
     const retired = options.setupConfiguration
@@ -95134,23 +95525,32 @@ function copySelectedIssueForms(cwd, setupDir, configuration) {
     };
     const configSource = path.join(sourceDirectory, 'config.yml');
     copyContent('config.yml', fs.readFileSync(configSource, 'utf8'));
-    for (const kind of issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS.filter(candidate => profile.enabled.includes(candidate))) {
-        const fileName = issue_workflow_profile_1.ISSUE_WORKFLOW_CATALOG[kind].formFile;
+    for (const kind of issue_workflow_profile_2.ISSUE_WORKFLOW_KINDS.filter(candidate => profile.enabled.includes(candidate))) {
+        const fileName = issue_workflow_profile_2.ISSUE_WORKFLOW_CATALOG[kind].formFile;
         const source = path.join(sourceDirectory, fileName);
         const raw = fs.readFileSync(source, 'utf8');
         const rendered = raw.replace(/^labels:\s*.*$/mu, `labels: ${JSON.stringify(formLabels[kind])}`);
-        copyContent(fileName, rendered, raw);
+        if (fs.existsSync(path.join(destinationDirectory, fileName)) && profile.fieldMappings) {
+            skipped++;
+            continue;
+        }
+        const mapped = rendered.replace(/^(\s*label:\s*)(.+)$/gmu, (line, prefix, label) => {
+            const canonical = label.replace(/^['"]|['"]$/gu, '');
+            const heading = (0, issue_workflow_profile_1.issueWorkflowHeading)(profile, kind, canonical);
+            return heading === canonical ? line : `${prefix}${JSON.stringify(heading)}`;
+        });
+        copyContent(fileName, mapped, raw);
     }
     return { copied, skipped };
 }
 function retireDeselectedSetupAssets(cwd, setupDir, configuration) {
     const profile = (0, setup_issue_workflow_policy_1.effectiveIssueWorkflowProfile)(configuration);
     const selectedForms = new Set(configuration.features.issues !== false && configuration.features.issueTemplates !== false
-        ? ['config.yml', ...(0, issue_workflow_profile_1.issueWorkflowFormFiles)(profile)]
+        ? ['config.yml', ...(0, issue_workflow_profile_2.issueWorkflowFormFiles)(profile)]
         : []);
     const selectedWorkflows = new Set((0, setup_workflow_catalog_1.enabledSetupWorkflowFiles)((0, setup_issue_workflow_policy_1.effectiveIssueWorkflowFeatures)(configuration)));
     const candidates = [
-        ...['config.yml', ...issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS.map(kind => issue_workflow_profile_1.ISSUE_WORKFLOW_CATALOG[kind].formFile)]
+        ...['config.yml', ...issue_workflow_profile_2.ISSUE_WORKFLOW_KINDS.map(kind => issue_workflow_profile_2.ISSUE_WORKFLOW_CATALOG[kind].formFile)]
             .filter(file => !selectedForms.has(file))
             .map(file => ({ source: path.join(setupDir, 'ISSUE_TEMPLATE', file), relative: `.github/ISSUE_TEMPLATE/${file}`, form: true })),
         ...['release_workflow.yml', 'hotfix_workflow.yml', 'copilot_deployment_orchestration.yml']
@@ -95280,6 +95680,7 @@ exports.SETUP_RUNNER_SNAPSHOT = void 0;
 exports.renderSetupRunnerSnapshot = renderSetupRunnerSnapshot;
 exports.compatibleSetupRunnerSnapshot = compatibleSetupRunnerSnapshot;
 exports.inspectSetupInstallation = inspectSetupInstallation;
+const setup_issue_form_review_1 = __nccwpck_require__(84266);
 const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
 const js_yaml_1 = __nccwpck_require__(783);
@@ -95349,6 +95750,7 @@ function inspectSetupInstallation(root, configuration, setup = (0, node_path_1.j
         status: action === 'create' ? 'missing' : action === 'preserve' ? 'customized' : 'incompatible' });
     if (action === 'blocked')
         return { assets, jobs, changes, blockers, verificationSetup };
+    blockers.push(...(0, setup_issue_form_review_1.inspectSetupIssueForms)(root, configuration).filter(form => form.status === 'fail' && !form.missing).map(form => form.summary));
     if (action === 'create')
         changes.push({ path: setup_verification_action_1.SETUP_VERIFICATION_ACTION_PATH, before: null, after: (0, setup_verification_action_2.readSetupVerificationActionStarter)() });
     const addJobs = (file, content, retained) => {
@@ -95448,6 +95850,64 @@ function inspectSetupInstallation(root, configuration, setup = (0, node_path_1.j
     if (after !== undefined && before !== undefined && !compatibleSetupRunnerSnapshot(before))
         blockers.push('Runner snapshot is incompatible. Retain it or restore a supported version before replacing routing.');
     return { assets, jobs, changes, blockers, verificationSetup };
+}
+
+
+/***/ }),
+
+/***/ 84266:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.inspectSetupIssueForms = inspectSetupIssueForms;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const js_yaml_1 = __nccwpck_require__(783);
+const issue_workflow_profile_1 = __nccwpck_require__(26744);
+const issue_workflow_form_1 = __nccwpck_require__(39098);
+const setup_issue_workflow_policy_1 = __nccwpck_require__(81182);
+/** Fixed paths, no network or mutation; parser failures never become public diagnostics. */
+function inspectSetupIssueForms(root, configuration) {
+    if (configuration.features.issues === false || configuration.features.issueTemplates === false)
+        return [];
+    const profile = (0, setup_issue_workflow_policy_1.effectiveIssueWorkflowProfile)(configuration);
+    return profile.enabled.map(kind => {
+        const path = `.github/ISSUE_TEMPLATE/${issue_workflow_profile_1.ISSUE_WORKFLOW_CATALOG[kind].formFile}`;
+        const base = { id: `issue-form.${kind}`, path };
+        const remedy = 'Preserve the form; review issueWorkflows.fieldMappings or repair its governed fields, then rerun setup/doctor.';
+        try {
+            for (const segment of ['.github', '.github/ISSUE_TEMPLATE', path]) {
+                const full = (0, node_path_1.join)(root, segment);
+                if (!(0, node_fs_1.existsSync)(full)) {
+                    // A dangling link is not a missing file that setup may replace.
+                    try {
+                        (0, node_fs_1.lstatSync)(full);
+                        throw new Error('unsafe');
+                    }
+                    catch (error) {
+                        if (error.code !== 'ENOENT')
+                            throw error;
+                    }
+                    return { ...base, status: 'fail', summary: `${path}: form missing. ${remedy}`, missing: true };
+                }
+                if ((0, node_fs_1.lstatSync)(full).isSymbolicLink())
+                    throw new Error('unsafe');
+            }
+            const full = (0, node_path_1.join)(root, path);
+            const stat = (0, node_fs_1.lstatSync)(full);
+            const resolved = (0, node_path_1.relative)((0, node_fs_1.realpathSync)(root), (0, node_fs_1.realpathSync)(full));
+            if (!stat.isFile() || stat.size > 65536 || resolved === '..' || resolved.startsWith(`..${node_path_1.sep}`))
+                throw new Error('unsafe');
+            const problems = (0, issue_workflow_form_1.compareIssueFormSchema)((0, js_yaml_1.load)((0, node_fs_1.readFileSync)(full, 'utf8'), { schema: js_yaml_1.JSON_SCHEMA }), profile, kind);
+            return { ...base, status: problems.length ? 'fail' : 'pass', missing: false,
+                summary: problems.length ? `${path}: admission schema drift (${problems.map(problem => `${problem.reason}${problem.heading ? `: ${JSON.stringify(problem.heading)}` : ''}`).join('; ')}). ${remedy}` : `${path}: form fields match the effective admission schema.` };
+        }
+        catch {
+            return { ...base, status: 'fail', missing: false, summary: `${path}: form cannot be safely inspected (regular local file, single valid YAML document, <=64 KiB and <=100 elements required). ${remedy}` };
+        }
+    });
 }
 
 

@@ -1,3 +1,4 @@
+import { issueWorkflowHeading } from '../domain/issue_workflow_profile';
 import * as fs from 'fs';
 import * as path from 'path';
 import { copySetupDirectory, copySetupFile } from './setup_file_copy';
@@ -209,7 +210,13 @@ function copySelectedIssueForms(
     const source = path.join(sourceDirectory, fileName);
     const raw = fs.readFileSync(source, 'utf8');
     const rendered = raw.replace(/^labels:\s*.*$/mu, `labels: ${JSON.stringify(formLabels[kind])}`);
-    copyContent(fileName, rendered, raw);
+    if (fs.existsSync(path.join(destinationDirectory, fileName)) && profile.fieldMappings) { skipped++; continue; }
+    const mapped = rendered.replace(/^(\s*label:\s*)(.+)$/gmu, (line, prefix: string, label: string) => {
+      const canonical = label.replace(/^['"]|['"]$/gu, '');
+      const heading = issueWorkflowHeading(profile, kind, canonical);
+      return heading === canonical ? line : `${prefix}${JSON.stringify(heading)}`;
+    });
+    copyContent(fileName, mapped, raw);
   }
   return { copied, skipped };
 }

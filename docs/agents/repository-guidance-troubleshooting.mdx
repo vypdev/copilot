@@ -75,3 +75,22 @@ whole-file digest.
 
 For workflow linter errors about `concurrency.queue`, see
 [validating `queue: max`](/issues/deployment-orchestration#validating-queue-max).
+
+
+## Consumer form heading disagrees with admission
+
+`issue-form.<kind>` checks compare local governed field labels and required-value
+settings with the same profile used by runtime admission. For example, an existing
+`VaultStadio Version` field needs the explicit mapping from canonical
+`copilot Version` in `issueWorkflows.fieldMappings.bugfix`. Doctor names the
+expected heading and `.github/ISSUE_TEMPLATE/bug_report.yml`; it does not change
+the form. Setup blocks inconsistent generated guidance before writing it.
+
+Review the [mapping configuration](/issues/configurable-workflows#preserved-application-specific-headings),
+upgrade the effective CLI/Action pair, and rerun doctor/setup with that same file.
+Never add a meaningless compatibility field or edit the generated profile/hash to
+hide the mismatch. Malformed/multi-document/duplicate-key YAML, symlinks, files
+larger than 64 KiB and forms with more than 100 elements require local repair.
+For an already submitted issue, inspect the blocked run's Job Summary, correct the
+exact visible heading/value, and rerun. Rejected admission leaves the issue's
+configuration and branches unchanged; it does not create a diagnostic comment.

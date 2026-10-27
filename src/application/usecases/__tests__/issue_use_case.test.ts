@@ -776,4 +776,13 @@ describe("IssueUseCase", () => {
     expect(mockListIssueComments).not.toHaveBeenCalled();
     expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(false);
   });
+  it('retains exact mapped field recovery before issue workflow enrichment',async()=>{
+    const [result]=await createUseCase().invoke(minimalExecution({issueWorkflowAdmission:{status:'invalid',kind:'bugfix',missingHeadings:['VaultStadio Version']}}));
+    expect(result.success).toBe(false);expect(result.errors[0]).toMatchObject({recovery:{id:'issue-workflow-admission-blocked',variables:{kind:'bugfix',fields:'["VaultStadio Version"]'}}});expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();expect(mockRecommendStepsInvoke).not.toHaveBeenCalled();
+  });
+  it('keeps legacy incomplete field evidence blocking without serializing invented facts',async()=>{
+    const [result]=await createUseCase().invoke(minimalExecution({issueWorkflowAdmission:{status:'invalid',kind:'bugfix',missingHeadings:[]}}));
+    expect(result.success).toBe(false);expect(result.errors[0]).toMatchObject({code:'configuration.invalid',recovery:undefined});expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
+  });
+
 });

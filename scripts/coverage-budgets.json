@@ -442,7 +442,12 @@
             "src/domain/issue_workflow_runtime_policy.ts",
             "src/application/policies/repository_agent_guidance_policy.ts",
             "src/application/policies/setup_issue_resource_policy.ts",
-            "src/application/policies/setup_issue_workflow_policy.ts"
+            "src/application/policies/setup_issue_workflow_policy.ts",
+            "src/domain/issue_workflow_body.ts",
+            "src/domain/issue_workflow_field_mapping.ts",
+            "src/domain/issue_workflow_form.ts",
+            "src/domain/issue_workflow_diagnostic.ts",
+            "src/domain/strict_json_keys.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"

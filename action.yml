@@ -57,7 +57,7 @@ inputs:
     description: "Run the trusted repository composite action before repository verification in generated workflows. Disabled by default."
     default: "false"
   issue-workflow-profile:
-    description: "JSON profile of enabled issue workflows."
+    description: "JSON profile of enabled issue workflows: schema 1 canonical fields, or schema 2 with explicit fieldMappings."
     default: ""
   branch-management-emoji:
     description: "Emoji to indicate branched issues. It will be ignored if emoji-labeled-title is false."

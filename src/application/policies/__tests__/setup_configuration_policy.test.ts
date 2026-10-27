@@ -1,3 +1,4 @@
+import { ISSUE_WORKFLOW_KINDS, ISSUE_WORKFLOW_CATALOG } from '../../../domain/issue_workflow_profile';
 import {
     buildSetupActionInputs,
     buildSetupCredentialRequirements,
@@ -598,3 +599,16 @@ describe('setup configuration policy', () => {
         ]));
     });
 });
+
+describe('explicit consumer form mappings',()=>{
+  const mapping={bugfix:{'copilot Version':'VaultStadio Version'}};
+  it('retains mappings through setup merging and runtime variable rendering',()=>{const value=mergeSetupConfiguration(createDefaultSetupConfiguration(),{issueWorkflows:{enabled:['bugfix'],fieldMappings:mapping}});expect(validateSetupConfiguration(value)).toEqual([]);expect(JSON.parse(buildSetupActionInputs(value)['issue-workflow-profile'])).toMatchObject({schemaVersion:2,fieldMappings:mapping});});
+  it('copies nested mappings when cloning a reviewed configuration',()=>{const value=createDefaultSetupConfiguration();value.issueWorkflows.fieldMappings=mapping;const clone=cloneSetupConfiguration(value);expect(clone.issueWorkflows.fieldMappings).toEqual(mapping);expect(clone.issueWorkflows.fieldMappings?.bugfix).not.toBe(mapping.bugfix);});
+  it('isolates merged mapping values from caller mutations',()=>{const value=mergeSetupConfiguration(createDefaultSetupConfiguration(),{issueWorkflows:{enabled:['bugfix'],fieldMappings:mapping}});expect(value.issueWorkflows.fieldMappings?.bugfix).not.toBe(mapping.bugfix);});
+  it('rejects a mapping for a disabled kind without enabling it',()=>{const value=createDefaultSetupConfiguration();value.issueWorkflows={enabled:['help'],fieldMappings:mapping};expect(validateSetupConfiguration(value).join(' ')).toContain('enabled');});
+  it('rejects a profile whose combined mapped labels exceed the existing byte budget',()=>{const value=createDefaultSetupConfiguration();value.issueWorkflows.fieldMappings={bugfix:{'copilot Version':'x'.repeat(129)}};expect(validateSetupConfiguration(value).join(' ')).toContain('128');});
+  it('keeps an unmapped setup on the compatible version-one runtime profile',()=>expect(JSON.parse(buildSetupActionInputs(createDefaultSetupConfiguration())['issue-workflow-profile']).schemaVersion).toBe(1));
+});
+
+it('retains and isolates existing mappings when merging unrelated overrides',()=>{const config=createDefaultSetupConfiguration();config.issueWorkflows.fieldMappings={bugfix:{'copilot Version':'VaultStadio Version'}};const merged=mergeSetupConfiguration(config,{repository:{repositoryLocale:'es-ES'}});expect(merged.issueWorkflows.fieldMappings).toEqual(config.issueWorkflows.fieldMappings);expect(merged.issueWorkflows.fieldMappings).not.toBe(config.issueWorkflows.fieldMappings);});
+it('blocks a complete profile that exceeds 4096 bytes despite valid individual targets',()=>{const config=createDefaultSetupConfiguration();config.issueWorkflows.fieldMappings=Object.fromEntries(ISSUE_WORKFLOW_KINDS.map(kind=>[kind,Object.fromEntries(ISSUE_WORKFLOW_CATALOG[kind].requiredHeadings.map((heading,index)=>[heading,'\\'.repeat(127)+index]))]));expect(validateSetupConfiguration(config)).toContain('Issue workflow profile must not exceed 4096 bytes.');});

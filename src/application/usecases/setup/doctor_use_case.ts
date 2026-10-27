@@ -88,6 +88,7 @@ export class SetupDoctorUseCase {
       ...sddPrerequisiteChecks(request.configuration, this.dependencies.workspace, catalog),
       ...workflowChecks(request.configuration, configurationErrors, this.dependencies.workspace, catalog),
       ...agentGuidanceChecks(request.configuration, this.dependencies.workspace),
+      ...(configurationErrors.length ? [] : this.dependencies.workspace.inspectIssueForms?.(request.configuration) ?? []).map(form => doctorCheck({ ...form, action: form.status === 'fail' ? 'Review the exact form heading and explicit issueWorkflows.fieldMappings; rerun doctor before setup.' : undefined })),
     ];
 
     const pat = await this.validatePat(request, catalog);

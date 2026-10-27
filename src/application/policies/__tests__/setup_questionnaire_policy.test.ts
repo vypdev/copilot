@@ -702,3 +702,20 @@ function deepFreeze<T>(value: T): T {
   }
   return value;
 }
+
+
+it('retains reviewed mappings when the operator keeps the workflow selection',()=>{
+  const config=createDefaultSetupConfiguration();config.issueWorkflows.fieldMappings={bugfix:{'copilot Version':'VaultStadio Version'}};
+  const state=advanceTo(createSetupQuestionnaire(config),'issueWorkflows.enabled');
+  expect(transitionSetupQuestionnaire(state,{kind:'answer',value:''}).draft.issueWorkflows.fieldMappings).toEqual(config.issueWorkflows.fieldMappings);
+});
+it('retains mappings for kinds explicitly kept in the wizard selection',()=>{
+  const config=createDefaultSetupConfiguration();config.issueWorkflows.fieldMappings={bugfix:{'copilot Version':'VaultStadio Version'}};
+  const state=advanceTo(createSetupQuestionnaire(config),'issueWorkflows.enabled');
+  expect(transitionSetupQuestionnaire(state,{kind:'answer',value:'bugfix'}).draft.issueWorkflows.fieldMappings).toEqual(config.issueWorkflows.fieldMappings);
+});
+it('drops only mappings for explicitly deselected kinds without enabling them again',()=>{
+  const config=createDefaultSetupConfiguration();config.issueWorkflows.fieldMappings={bugfix:{'copilot Version':'VaultStadio Version'}};
+  const state=advanceTo(createSetupQuestionnaire(config),'issueWorkflows.enabled');
+  expect(transitionSetupQuestionnaire(state,{kind:'answer',value:'feature'}).draft.issueWorkflows).toEqual({enabled:['feature']});expect(config.issueWorkflows.fieldMappings).toBeDefined();
+});

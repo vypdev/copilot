@@ -709,7 +709,9 @@ function applyAnswer(
   }
   if (question.id === 'issueWorkflows.enabled') {
     const selected = String(value).split(',').map(item => item.trim()).filter(Boolean) as IssueWorkflowKind[];
-    draft.issueWorkflows = createIssueWorkflowProfile(selected);
+    const mappings = draft.issueWorkflows.fieldMappings;
+    const retained = mappings && Object.fromEntries(Object.entries(mappings).filter(([kind]) => selected.includes(kind as IssueWorkflowKind)));
+    draft.issueWorkflows = { enabled: selected, ...(retained && Object.keys(retained).length ? { fieldMappings: retained } : {}) };
     draft.features.release = selected.includes('release');
     draft.features.hotfix = selected.includes('hotfix');
     return draft;

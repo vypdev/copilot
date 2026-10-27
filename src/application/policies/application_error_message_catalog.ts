@@ -233,6 +233,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Inspect the closed-issue or merged-PR run and current native state. Retry cleanup only if the issue is still closed with the intended reason; leave reopened work open. Resolve the named failure before retrying.',
     retainedState: 'Native state was preserved. Confirmed changes: {changed}; remaining required changes in the last verified plan: {remaining}. Unavailable reads do not establish completion.',
   }),
+  'issue-workflow-admission-blocked': Object.freeze({
+    impact: 'Issue workflow {kind} was not admitted ({reason}). Fields or labels needing attention: {fields}.',
+    action: 'Correct the exact headings and populated values using the installed Issue Form, or remove conflicting workflow labels. If form and profile disagree, run copilot doctor and review issueWorkflows.fieldMappings. Rerun the workflow after repair.',
+    retainedState: 'No branch or planner was started. Issue configuration is unchanged; this run only reports the admission diagnostic.',
+  }),
   'change-size-reconciliation-failed': Object.freeze({
     impact: 'Size reconciliation stopped at {operation} for target #{targetNumber} (issue #{issueNumber}, configured Project position {projectIndex}; 0 means no Project). Provider: {providerStatus}; request: {providerReference}.',
     action: 'Correct the named authorization, resource or contract error before rerunning the same workflow. For transient failures, wait for provider recovery or rate-limit reset. Reread the target: the failed operation may have applied remotely.',
@@ -367,6 +372,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'La limpieza de la issue sigue sin verificarse: {resultId}, fase {phase}; estado nativo {state}, motivo {reason}.',
     action: 'Revisa la ejecución de cierre o de la PR fusionada y el estado nativo actual. Reintenta la limpieza solo si la issue sigue cerrada con el motivo previsto; conserva abierto el trabajo reabierto. Resuelve el fallo indicado antes de reintentar.',
     retainedState: 'Se conservó el estado nativo. Cambios confirmados: {changed}; cambios pendientes en el último plan verificado: {remaining}. Una lectura no disponible no demuestra que haya finalizado.',
+  }),
+  'issue-workflow-admission-blocked': Object.freeze({
+    impact: 'La issue no fue admitida en el flujo {kind} ({reason}). Campos o etiquetas que requieren atención: {fields}.',
+    action: 'Corrige los encabezados exactos y sus valores con el formulario instalado, o elimina las etiquetas de flujo incompatibles. Si formulario y perfil discrepan, ejecuta copilot doctor y revisa issueWorkflows.fieldMappings. Vuelve a ejecutar el workflow tras la corrección.',
+    retainedState: 'No se inició ninguna rama ni planificador. La configuración de la issue permanece igual; esta ejecución solo informa del diagnóstico de admisión.',
   }),
   'change-size-reconciliation-failed': Object.freeze({
     impact: 'La reconciliación de tamaño se detuvo en {operation} para el destino #{targetNumber} (issue #{issueNumber}, posición del Project configurado {projectIndex}; 0 indica sin Project). Proveedor: {providerStatus}; petición: {providerReference}.',

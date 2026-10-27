@@ -129,4 +129,23 @@ describe('setup configuration file loader', () => {
 
         expect(() => loadSetupConfigurationOverrides(file)).toThrow(error);
     });
+    it('loads explicit product mappings from reviewed YAML',()=>{
+      const file=join(directory,'mapping.yml');writeFileSync(file,'issueWorkflows:\n  enabled: [bugfix]\n  fieldMappings:\n    bugfix:\n      copilot Version: VaultStadio Version\n');
+      expect(loadSetupConfigurationOverrides(file).issueWorkflows?.fieldMappings).toEqual({bugfix:{'copilot Version':'VaultStadio Version'}});
+    });
+    it('rejects duplicate JSON mapping keys without accepting the last target',()=>{
+      const file=join(directory,'mapping.json');writeFileSync(file,'{"issueWorkflows":{"enabled":["bugfix"],"fieldMappings":{"bugfix":{"copilot Version":"One","copilot Version":"Two"}}}}');
+      expect(()=>loadSetupConfigurationOverrides(file)).toThrow();
+    });
+    it('rejects mapping fields for workflows outside the reviewed selection',()=>{
+      const file=join(directory,'mapping.json');writeFileSync(file,JSON.stringify({issueWorkflows:{enabled:['help'],fieldMappings:{bugfix:{'copilot Version':'Version'}}}}));
+      expect(()=>loadSetupConfigurationOverrides(file)).toThrow('enabled');
+    });
+    it('rejects mapping targets that collide with canonical required fields',()=>{
+      const file=join(directory,'mapping.json');writeFileSync(file,JSON.stringify({issueWorkflows:{enabled:['bugfix'],fieldMappings:{bugfix:{'copilot Version':'Description'}}}}));
+      expect(()=>loadSetupConfigurationOverrides(file)).toThrow('share a heading');
+    });
+
+    it('rejects timestamp-shaped YAML scalars instead of silently discarding their mapping intent',()=>{const file=join(directory,'date.yml');writeFileSync(file,'issueWorkflows:\n  enabled: [bugfix]\n  fieldMappings: 2026-10-27\n');expect(()=>loadSetupConfigurationOverrides(file)).toThrow('object');});
+
 });
