@@ -5,6 +5,8 @@ import type { Execution } from '../../../../data/model/execution';
 import { partitionProgressDiff, progressEvidenceTooLarge, type ProgressDiffChange } from '../../../policies/progress_diff_partition_policy';
 import { progressPartitionFactLimit } from '../../../policies/progress_partition_response_policy';
 import { AGENT_PROMPT_MAX_BYTES } from '../../../../domain/agent_execution_plan';
+import { progressScopeSourceLines } from '../../../policies/progress_scope_policy';
+import { getProgressScopePrompt } from '../../../../prompts/progress_scope';
 import type { ProgressDiffEvidence } from '../../../ports/progress_diff_query_ports';
 import { ApplicationError } from '../../../errors/application_error';
 import { resolveStaticApplicationErrorCatalog } from '../../../policies/application_error_message_catalog';
@@ -59,6 +61,28 @@ describe('atomic complete multipart progress', () => {
         f.getDiff.mockResolvedValue({ kind: 'single', baseSha: base, headSha: head, evidence: (`${'x'.repeat(1100)}\n`).repeat(480) });
         expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'validation.evidence-too-large', retryable: false });
         expect(f.query).not.toHaveBeenCalled(); expect(f.setProgressLabel).not.toHaveBeenCalled();
+    });
+    it('rejects classification when complete framed source fits but its trusted prompt envelope does not', async () => {
+        const f = fixture();
+        const description = (`${'x'.repeat(1100)}\n`).repeat(464);
+        const source = JSON.stringify(progressScopeSourceLines(description));
+        expect(Buffer.byteLength(source)).toBeLessThanOrEqual(AGENT_PROMPT_MAX_BYTES);
+        expect(Buffer.byteLength(getProgressScopePrompt(source, 'en-US'))).toBeGreaterThan(AGENT_PROMPT_MAX_BYTES);
+        f.getDescription.mockResolvedValue(description);
+        expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'validation.evidence-too-large', retryable: false });
+        expect(f.query).not.toHaveBeenCalled(); expect(f.setProgressLabel).not.toHaveBeenCalled(); expect(f.setLabels).not.toHaveBeenCalled();
+    });
+    it('rejects a valid single comparison when issue and evidence fit separately but their reserved final prompt does not', async () => {
+        const f = fixture();
+        const description = (`${'x'.repeat(1100)}\n`).repeat(230);
+        const diff = partitionProgressDiff(base, head, [{ path: 'large.ts', status: 'modified', additions: 1, deletions: 0, patch: 'x'.repeat(250_000) }]);
+        expect(diff.kind).toBe('single');
+        if (diff.kind === 'partitioned') throw new Error('Expected an admitted single comparison');
+        expect(Buffer.byteLength(diff.evidence)).toBeLessThanOrEqual(256_000);
+        expect(Buffer.byteLength(getProgressScopePrompt(JSON.stringify(progressScopeSourceLines(description)), 'en-US'))).toBeLessThanOrEqual(AGENT_PROMPT_MAX_BYTES);
+        f.getDescription.mockResolvedValue(description); f.getDiff.mockResolvedValue(diff);
+        expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'validation.evidence-too-large', retryable: false });
+        expect(f.query).not.toHaveBeenCalled(); expect(f.setProgressLabel).not.toHaveBeenCalled(); expect(f.setLabels).not.toHaveBeenCalled();
     });
     it('assesses a complete 299-file aggregate larger than 256 kB without dropping paths or publishing per-part progress', async () => {
         const paths = Array.from({ length: 299 }, (_, i) => `src/${i}.ts`);

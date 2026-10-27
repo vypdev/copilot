@@ -2205,15 +2205,15 @@ from nondeterministic model behavior and actual execution.
 
 ### Verification, documentation and acceptance
 
-Minimum **58 new distinct cases**: 28 pure complete-source/identity/status/evidence/bounds
-cases, ten orchestration/single/multipart/failure/race/retry cases, twelve prompt
+Minimum **60 new distinct cases**: 28 pure complete-source/identity/status/evidence/bounds
+cases, twelve orchestration/single/multipart/failure/race/retry cases, twelve prompt
 and trust/locale cases, and eight strict-schema/security/regression compositions.
 The eight trust-boundary additions cover exact Unicode/delimiter preservation,
 UTF-8 rather than UTF-16 limits, complete long source inventory, oversized
 classification rejection, isolated final issue/scope/model fields, exact/oversized
 scope bounds, and adversarial single/multipart request compositions. Four of the
 final/pipeline regressions fail against the pre-fix sources; passing protocol
-replays do not claim deterministic resistance by a live model.
+replays do not claim deterministic resistance by a live model. Two further retained-state composition cases keep individual inputs admitted while rejecting an oversized complete classifier prompt and an oversized single-comparison final prompt; no provider or label call is allowed.
 Parameterized rows count separately only for distinct behavior; the existing
 135-case communication baseline is not replaced. New pure policy MUST reach
 100% in all four coverage metrics; existing full-suite/module budgets remain.

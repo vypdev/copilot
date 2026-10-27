@@ -7,7 +7,7 @@
       "id": "semantic-github-publication",
       "spec": "specs/semantic-github-publication-and-notification.md",
       "requiredCases": 135,
-      "allocatedCases": 384,
+      "allocatedCases": 386,
       "files": [
         {
           "path": "src/domain/__tests__/github_publication.test.ts",
@@ -143,7 +143,7 @@
         },
         {
           "path": "src/application/usecases/actions/__tests__/progress_multipart.integration.test.ts",
-          "qualifyingCases": 10
+          "qualifyingCases": 12
         },
         {
           "path": "src/application/policies/__tests__/progress_scope_policy.test.ts",
