@@ -1,6 +1,6 @@
 import { createNativeStatusReadPort } from './issue_completion_composition_root';
 import { ProgressDiffRepository } from '../../data/repository/progress_diff_repository';
-import { createBranchClient, createBranchComparisonClient } from './github_branch_client_factory';
+import { createBranchClient, createBranchComparisonClient, createProgressObjectClient } from './github_branch_client_factory';
 import { createIssueContentClient, createIssueLabelsClient } from './github_issue_client_factory';
 import { createPullRequestLifecycleClient } from './github_pull_request_client_factory';
 import { CheckProgressUseCase } from "../../application/usecases/actions/check_progress_use_case";
@@ -20,7 +20,7 @@ import { bindBranchListQuery, bindIssueProgress, bindPullRequestBranchQuery } fr
 export function createCheckProgressCompositionRoot(binding: RepositoryCredentialBinding): CheckProgressUseCase {
     const labels = new IssueLabelRepository(createIssueLabelsClient());
     const content = new IssueContentRepository(createIssueContentClient());
-    const diff = new ProgressDiffRepository(createBranchComparisonClient());
+    const diff = new ProgressDiffRepository(createBranchComparisonClient(), createProgressObjectClient());
     return new CheckProgressUseCase(
         bindIssueDescriptionQuery(content, binding),
         bindIssueLabels(labels, binding),

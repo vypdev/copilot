@@ -837,7 +837,9 @@
             "src/application/policies/progress_diff_partition_policy.ts",
             "src/application/policies/progress_partition_response_policy.ts",
             "src/application/policies/progress_scope_policy.ts",
-            "src/prompts/progress_scope.ts"
+            "src/prompts/progress_scope.ts",
+            "src/application/policies/progress_content_evidence_policy.ts",
+            "src/application/policies/progress_patch_completeness_policy.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"
@@ -848,6 +850,13 @@
           ],
           "mode": "each",
           "thresholdProfile": "default"
+        },
+        {
+          "files": [
+            "src/data/repository/immutable_progress_content_repository.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
         }
       ],
       "successMessage": "complete multipart progress coverage: PASS (pure policies 100%; bounded orchestration 95% lines/statements, 90% branches/functions)"

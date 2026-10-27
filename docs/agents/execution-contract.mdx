@@ -100,22 +100,34 @@ Ubuntu; they do not certify a Windows service sandbox.
 
 Progress assessments receive a complete comparison pinned to the repository's
 base and source commits. Generated `build/` outputs and the exact generated
-`specs/CATALOG.md` index contribute file facts only; the editable catalog JSON
-still contributes its full source patch. These generated facts never certify a
-build or test. Complete comparisons are assessed in whole-file partitions of at
-most 256,000 UTF-8 bytes each, with at most 16 partitions and one final assessment.
-An individual oversized file or an exhausted partition budget is nonretryable
-`validation.evidence-too-large`; existing progress remains unchanged.
+`specs/CATALOG.md` index contribute file facts only; editable catalogs, lockfiles
+and specifications require complete source evidence. These facts never certify
+a build or test. Complete patches and identified recovered-content units are
+assessed in at most 16 parts of 256,000 UTF-8 bytes each, then one final assessment.
 
-If GitHub omits any required source patch, progress is **not assessed** and the
-result is nonretryable `validation.evidence-unavailable`. This includes pnpm
-lockfiles and binary or zero-line changed files whose contents cannot be proven.
-Lockfiles are not generated-metadata exceptions. Only explicitly unchanged paths
-with zero changed lines may carry empty source evidence. No workspace fallback,
-partial review, or automatic completion is claimed. Inspect the exact base/head
-comparison manually, or split the work into smaller reviewed changes that expose
-complete patches before requesting a fresh assessment. Manual inspection does
-not update Copilot's progress; rerunning the same commits cannot recover an
-omitted patch. A genuine provider outage remains retryable. These conditions do
-not imply that the branch changed during the invocation. See the
-[error reference](/security-operations/operations/error-reference).
+Omitted, structurally truncated or individually oversized text patches trigger
+bounded immutable commit/tree/blob recovery. The comparison merge base pins the
+preimage; the source head pins the target. Complete directories prove path
+presence and regular modes. Canonical bytes, size and recomputed Git blob hash
+must agree; UTF-8 text is preserved without normalization. An identical rename
+requires both old/new path identities and a matching blob, not zero line counts.
+Added/removed empty files require proven presence/absence. Binary/non-UTF8
+contents, symlinks and submodules remain unsupported.
+
+Recovery is read-only with no checkout, shell, mutable ref or provider URL
+fallback. Its fixed per-invocation bounds are 64 files, 1,048,576 bytes per blob,
+4,194,304 represented side bytes, 256 requests, 50,000 directory entries and 512
+units. Contiguous text slices have a 120,000-byte JSON text ceiling; the source,
+manifest, final-fact and runtime budgets remain unchanged. Every required unit
+and every complete prompt is admitted before the first model request. Exact
+unit/partition/path/locale responses must all validate before final assessment;
+there is no partial percentage or durable partial-analysis reuse.
+
+Unverifiable contents report nonretryable `validation.evidence-unavailable` with
+bounded unreviewed paths; exhausted resource/analysis limits report nonretryable
+`validation.evidence-too-large`. Existing progress remains unchanged. Inspect
+the pinned comparison or split the work into smaller reviewed changes. Manual
+inspection does not update Copilot progress. A genuine provider outage keeps
+its existing retryability; changed source/body/native-open status still blocks
+publication. See [progress evidence](/issues/branch-management#progress-evidence)
+and the [error reference](/security-operations/operations/error-reference).

@@ -1978,6 +1978,64 @@ function neutralizeGithubControls(value) {
 
 /***/ }),
 
+/***/ 6471:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MAX_PROGRESS_EVIDENCE_UNITS = exports.MAX_PROGRESS_TREE_ENTRIES = exports.MAX_PROGRESS_OBJECT_REQUESTS = exports.MAX_PROGRESS_RECOVERED_FILES = exports.MAX_PROGRESS_RECOVERED_BYTES = exports.MAX_PROGRESS_RECOVERED_FILE_BYTES = void 0;
+exports.progressRecoveryError = progressRecoveryError;
+exports.progressContentUnits = progressContentUnits;
+const application_error_1 = __nccwpck_require__(5999);
+exports.MAX_PROGRESS_RECOVERED_FILE_BYTES = 1048576;
+exports.MAX_PROGRESS_RECOVERED_BYTES = 4194304;
+exports.MAX_PROGRESS_RECOVERED_FILES = 64;
+exports.MAX_PROGRESS_OBJECT_REQUESTS = 256;
+exports.MAX_PROGRESS_TREE_ENTRIES = 50000;
+exports.MAX_PROGRESS_EVIDENCE_UNITS = 512;
+const UNIT_TEXT_JSON_BYTES = 120000;
+/** Bounded operator diagnostic; paths are data, never provider URLs, tokens or blob contents. */
+function progressRecoveryError(reason, paths, tooLarge = false) {
+    return new application_error_1.ApplicationError(tooLarge ? 'validation.evidence-too-large' : 'validation.evidence-unavailable', `Progress was not assessed: ${reason}. Unreviewed paths (${paths.length}): ${paths.slice(0, 8).map(path => JSON.stringify(path)).join(', ')}${paths.length > 8 ? ', …' : ''}. Existing progress was retained.`);
+}
+/** Complete UTF-8, JSON-budgeted slices. No normalization, truncation or duplicated boundary bytes. */
+function progressContentUnits(change, content, fileId) {
+    const { base, head } = content;
+    const identical = Boolean(base && head && base.sha === head.sha);
+    const snapshots = identical ? [{ side: 'both', snapshot: head }] : [
+        ...(base ? [{ side: 'base', snapshot: base }] : []), ...(head ? [{ side: 'head', snapshot: head }] : []),
+    ];
+    const identity = { comparisonBaseSha: content.comparisonBaseSha,
+        base: base ? Object.freeze({ path: base.path, sha: base.sha, mode: base.mode, bytes: Buffer.byteLength(base.text, 'utf8') }) : null,
+        head: head ? Object.freeze({ path: head.path, sha: head.sha, mode: head.mode, bytes: Buffer.byteLength(head.text, 'utf8') }) : null };
+    return snapshots.flatMap(({ side, snapshot }) => {
+        const chunks = [];
+        let text = '', cost = 2;
+        for (const point of snapshot.text) {
+            const size = Buffer.byteLength(JSON.stringify(point), 'utf8') - 2;
+            if (cost + size > UNIT_TEXT_JSON_BYTES) {
+                chunks.push(text);
+                text = '';
+                cost = 2;
+            }
+            text += point;
+            cost += size;
+        }
+        chunks.push(text);
+        let offset = 0;
+        return chunks.map((chunk, index) => {
+            const bytes = Buffer.byteLength(chunk, 'utf8');
+            const unit = Object.freeze({ ...change, unitId: `${fileId}-${side}-${index + 1}-of-${chunks.length}`,
+                recoveredContent: Object.freeze({ ...identity, side, byteOffset: offset, byteLength: bytes, text: chunk }) });
+            offset += bytes;
+            return unit;
+        });
+    });
+}
+
+
+/***/ }),
+
 /***/ 628:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -1985,16 +2043,26 @@ function neutralizeGithubControls(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MAX_PROGRESS_PARTITIONS = exports.MAX_PROGRESS_EVIDENCE_BYTES = void 0;
 exports.progressEvidenceTooLarge = progressEvidenceTooLarge;
+exports.serializeProgressDiff = serializeProgressDiff;
 exports.partitionProgressDiff = partitionProgressDiff;
+const progress_content_evidence_policy_1 = __nccwpck_require__(6471);
 const application_error_1 = __nccwpck_require__(5999);
 exports.MAX_PROGRESS_EVIDENCE_BYTES = 256000;
 exports.MAX_PROGRESS_PARTITIONS = 16;
 function progressEvidenceTooLarge() {
     return new application_error_1.ApplicationError('validation.evidence-too-large', 'Progress evidence exceeds a fixed analysis budget. Existing progress was retained; retrying the same comparison cannot resolve this limit.');
 }
+function serializeProgressDiff(baseSha, headSha, changes) {
+    return JSON.stringify({ kind: 'pinned-branch-comparison', baseSha, headSha, changes });
+}
 /** Losslessly partitions complete, adapter-validated file facts. No source file is omitted. */
 function partitionProgressDiff(baseSha, headSha, changes) {
-    const serialize = (files) => JSON.stringify({ kind: 'pinned-branch-comparison', baseSha, headSha, changes: files });
+    const serialize = (files) => serializeProgressDiff(baseSha, headSha, files);
+    const unitMode = changes.some(change => change.unitId !== undefined);
+    if (unitMode && (changes.length > progress_content_evidence_policy_1.MAX_PROGRESS_EVIDENCE_UNITS || changes.some(change => !change.unitId)
+        || new Set(changes.map(change => change.unitId)).size !== changes.length)) {
+        throw (0, progress_content_evidence_policy_1.progressRecoveryError)('complete evidence unit inventory exceeds its budget or is ambiguous', changes.map(change => change.path), true);
+    }
     const groups = [];
     let current = [];
     for (const change of changes) {
@@ -2009,15 +2077,21 @@ function partitionProgressDiff(baseSha, headSha, changes) {
         current.push(change);
     }
     groups.push(current);
-    if (groups.length === 1)
+    if (groups.length === 1 && !unitMode)
         return Object.freeze({ kind: 'single', baseSha, headSha, evidence: serialize(current) });
     const partitions = Object.freeze(groups.map((files, index) => Object.freeze({
         id: `progress-${index + 1}-of-${groups.length}`,
-        paths: Object.freeze(files.map(file => file.path)),
+        paths: Object.freeze([...new Set(files.map(file => file.path))]),
+        ...(unitMode ? { units: Object.freeze(files.map(file => {
+                const content = file.recoveredContent
+                    ? Object.freeze(Object.fromEntries(Object.entries(file.recoveredContent).filter(([key]) => key !== 'text')))
+                    : undefined;
+                return Object.freeze({ id: file.unitId, path: file.path, ...(content ? { content } : {}) });
+            })) } : {}),
         evidence: serialize(files),
     })));
     const manifest = JSON.stringify({ kind: 'partitioned-branch-comparison', baseSha, headSha,
-        partitions: partitions.map(part => ({ id: part.id, paths: part.paths })) });
+        partitions: partitions.map(part => ({ id: part.id, paths: part.paths, ...(part.units ? { units: part.units } : {}) })) });
     if (Buffer.byteLength(manifest, 'utf8') > exports.MAX_PROGRESS_EVIDENCE_BYTES)
         throw progressEvidenceTooLarge();
     return Object.freeze({ kind: 'partitioned', baseSha, headSha, evidence: manifest, partitions });
@@ -5652,8 +5726,8 @@ exports.APPLICATION_ERROR_METADATA = {
     },
     'validation.evidence-unavailable': {
         kind: 'validation', retryable: false,
-        impact: 'Progress was not assessed because GitHub omitted a required file patch.',
-        action: 'Inspect the exact base/head comparison manually or split the work into smaller reviewed changes with complete patches before a new assessment. Retrying the same commits cannot restore omitted evidence.',
+        impact: 'Progress was not assessed because a required patch and its complete immutable contents were unavailable.',
+        action: 'Inspect the unreviewed paths in the exact base/head comparison manually or split the work into smaller reviewed changes with complete patches before a new assessment. Retrying the same commits cannot restore unavailable immutable evidence.',
         retainedState: 'Existing progress labels and published assessments were preserved; no model assessment was made.',
     },
     'validation.evidence-too-large': {

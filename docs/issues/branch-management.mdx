@@ -46,7 +46,40 @@ Automatic title formatting keeps the boundaries between hyphenated words. A titl
 
 Progress assessments use an immutable GitHub comparison of the development base and the managed branch head. The agent receives the source patches directly and does not need shell commands. Generated build files contribute metadata only; a percentage does not certify CI or a build.
 
-Copilot first classifies every nonempty line of the full issue body by source identifier as required, excluded, context or uncertain, before it analyzes patches. The scope request, comparison parts and final assessment keep complete issue text, extracted scope and model facts inside explicit untrusted-data blocks. Embedded instructions cannot grant workflow authority. Inputs that exceed the fixed UTF-8 budgets are rejected with retained progress rather than shortened to fit. Small comparisons then use one assessment. Larger complete comparisons are reviewed in up to 16 parts, each containing whole files within the unchanged 256,000-byte UTF-8 evidence limit. Every part must return bounded facts for every assigned file before one final assessment can update progress. These facts preserve uncertainty and do not certify CI. Their final combined summary has a maximum 384,000-byte budget. Copilot reserves every admitted path and the issue/prompt envelope inside the unchanged 512 KiB runtime ceiling, then requests concise facts using the same calculated limit in the schema and parser. No returned facts are silently shortened. Source parts and the manifest retain the 256,000-byte limit.
+Copilot first classifies every nonempty line of the full issue body by source identifier as required, excluded, context or uncertain, before it analyzes patches. The scope request, comparison parts and final assessment keep complete issue text, extracted scope and model facts inside explicit untrusted-data blocks. Embedded instructions cannot grant workflow authority. Inputs that exceed the fixed UTF-8 budgets are rejected with retained progress rather than shortened to fit. Small comparisons then use one assessment. Larger complete comparisons are reviewed in up to 16 parts, each containing complete patches or identified content slices within the unchanged 256,000-byte UTF-8 evidence limit. Every part must return bounded facts for every assigned file or content unit before one final assessment can update progress. These facts preserve uncertainty and do not certify CI. Their final combined summary has a maximum 384,000-byte budget. Copilot reserves every admitted path and the issue/prompt envelope inside the unchanged 512 KiB runtime ceiling, then requests concise facts using the same calculated limit in the schema and parser. No returned facts are silently shortened. Source parts and the manifest retain the 256,000-byte limit.
+
+### Omitted or incomplete patches
+
+Copilot checks unified hunks and changed-line totals before using a patch. For
+omitted, truncated or oversized text patches it reads exact Git commit, tree and
+blob objects using the same repository credential. The preimage is the pinned
+comparison merge base; the target is the pinned branch head. Complete directories
+prove paths and presence; blob size, canonical base64 and recomputed Git hash
+prove bytes. This does not inspect a checkout or execute commands.
+
+Regular UTF-8 text, empty additions/removals and verified renames/copies are
+supported. Identical renames require independently resolved old and new paths
+with the same blob; zero statistics alone never prove equality. BOM, CRLF and
+Unicode bytes are preserved. Binary/non-UTF8 files, symlinks and submodules remain
+unsupported recovery inputs. Lockfiles and specification registries receive
+complete content, rather than a metadata exemption.
+
+Recovery admits at most 64 files, 1,048,576 bytes per blob, 4,194,304 represented
+side bytes in total, 256 Git object requests and 50,000 visited directory entries.
+It divides recovered text into contiguous slices of at most 120,000 serialized
+JSON text bytes and admits at most 512 exact evidence units. All slices, sides,
+paths, offsets and immutable identities must be covered exactly once. These
+retrieval limits do not enlarge the existing 16-part, 256,000-byte evidence,
+384,000-byte facts or 512 KiB prompt budgets. Every source and prompt budget is
+checked before any model call; no content or facts are shortened to fit.
+
+If full recovery is unavailable, the run reports `validation.evidence-unavailable`
+and names up to eight unreviewed paths plus their total count. An exhausted work
+or analysis budget reports `validation.evidence-too-large`. Both are terminal
+for that deterministic input and preserve progress. Inspect the pinned revision
+or split reviewed work; a genuine provider outage keeps its normal retryability.
+A failed middle part never publishes partial progress or requests a final
+percentage. Replay reloads exact evidence and does not reuse partial facts.
 
 ### Scope and verification
 

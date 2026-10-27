@@ -160,8 +160,8 @@ const SPANISH_CONTENT: ErrorContent = Object.freeze({
     retainedState: UNCHANGED_STATE_ES,
   }),
   'validation.evidence-unavailable': Object.freeze({
-    impact: 'No se evaluó el progreso porque GitHub omitió un patch necesario.',
-    action: 'Inspecciona manualmente la comparación entre los commits base y head exactos o divide el trabajo en cambios revisados más pequeños con patches completos antes de otra evaluación. Reintentar los mismos commits no recuperará la evidencia omitida.',
+    impact: 'No se evaluó el progreso porque no se pudieron verificar un patch necesario ni sus contenidos inmutables completos.',
+    action: 'Inspecciona las rutas sin revisar en la comparación entre los commits base y head exactos o divide el trabajo en cambios revisados más pequeños con patches completos antes de otra evaluación. Reintentar los mismos commits no recuperará la evidencia inmutable no disponible.',
     retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas; no se realizó ninguna evaluación del modelo.',
   }),
   'validation.evidence-too-large': Object.freeze({

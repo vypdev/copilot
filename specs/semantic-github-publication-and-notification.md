@@ -2256,3 +2256,15 @@ The communication ledger records the new repair tests and incremental observer/
 closure cases as evidence; it does not create a second allocation of the owning
 SDD's acceptance cases. Current card/transition behavior and all merge/verification
 gates remain in force. No consumer migration or runtime promotion is implied.
+
+
+## Complete immutable progress recovery — #726 (2026-10-27)
+
+[Immutable progress content recovery](./immutable-progress-content-recovery.md)
+extends the whole-file #547 contract and supersedes the no-fallback limitation
+of #611 when complete regular text can be verified from pinned Git objects. It
+keeps terminal retention when recovery is incomplete, all existing source/model
+bounds and freshness gates, and semantic publication ownership. Its 104-case
+regression floor owns recovery, units and exact aggregation; it adds no card or
+notification route. The communication ledger uses conservative declaration
+counts independently of that scenario floor.
