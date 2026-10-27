@@ -40287,6 +40287,9 @@ exports.BRANCH_SYNC_MESSAGE_IDS = Object.freeze([
     'branchSync.aligned.heading',
     'branchSync.aligned.status',
     'branchSync.aligned.resolved',
+    'branchSync.relationship.heading',
+    'branchSync.relationship.current',
+    'branchSync.relationship.history',
     'branchSync.closed.heading',
     'branchSync.closed.status',
     'branchSync.closed.history',
@@ -40311,6 +40314,9 @@ const ENGLISH_MESSAGES = Object.freeze({
     'branchSync.aligned.heading': 'Branch synchronized',
     'branchSync.aligned.status': '{workingBranch} now contains the current history of its parent branch {parentBranch}.',
     'branchSync.aligned.resolved': 'The previous synchronization recommendation has been resolved.',
+    'branchSync.relationship.heading': 'Previous branch advisory retired',
+    'branchSync.relationship.current': 'The current relationship for issue #{issueNumber} is {workingBranch}, with parent {parentBranch}.',
+    'branchSync.relationship.history': 'This previous card concerns a different relationship and no longer provides instructions for this issue. Retirement does not certify synchronization of either branch.',
     'branchSync.closed.heading': 'Issue closed: synchronization recommendation retired',
     'branchSync.closed.status': 'No branch synchronization is required for this closed issue.',
     'branchSync.closed.history': 'The previous recommendation is historical. Issue closure does not certify that the branches are synchronized.',
@@ -40337,6 +40343,9 @@ const SPANISH_MESSAGES = Object.freeze({
     'branchSync.aligned.heading': 'Rama sincronizada',
     'branchSync.aligned.status': '{workingBranch} ya contiene el historial actual de su rama padre {parentBranch}.',
     'branchSync.aligned.resolved': 'La recomendación de sincronización anterior está resuelta.',
+    'branchSync.relationship.heading': 'Aviso anterior de rama retirado',
+    'branchSync.relationship.current': 'La relación actual de la issue #{issueNumber} es {workingBranch}, con la rama padre {parentBranch}.',
+    'branchSync.relationship.history': 'Esta tarjeta anterior corresponde a otra relación y ya no contiene instrucciones para esta issue. Su retirada no certifica la sincronización de ninguna rama.',
     'branchSync.closed.heading': 'Issue cerrada: recomendación de sincronización retirada',
     'branchSync.closed.status': 'Esta issue cerrada no requiere sincronizar su rama.',
     'branchSync.closed.history': 'La recomendación anterior es histórica. El cierre de la issue no certifica que las ramas estén sincronizadas.',
@@ -40389,6 +40398,7 @@ exports.isStaleBranchSyncComment = isStaleBranchSyncComment;
 exports.buildStaleBranchSyncComment = buildStaleBranchSyncComment;
 exports.buildAlignedBranchSyncComment = buildAlignedBranchSyncComment;
 exports.buildRetiredBranchSyncComment = buildRetiredBranchSyncComment;
+exports.buildUnrelatedBranchSyncComment = buildUnrelatedBranchSyncComment;
 const github_user_policy_1 = __nccwpck_require__(84403);
 const git_object_id_1 = __nccwpck_require__(88623);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
@@ -40538,6 +40548,47 @@ function buildRetiredBranchSyncComment(identity, messages) {
 ${messages.message('branchSync.closed.status')}
 
 ${messages.message('branchSync.closed.history')}`;
+}
+/** Keep the historical key, explicitly retire its advice, and name only the verified current relationship. */
+function buildUnrelatedBranchSyncComment(identity, current, messages) {
+    return `${(0, publication_identity_policy_1.buildPublicationMarker)({ identity, sourceVersion: `relationship-retired:${(0, publication_identity_policy_1.createSemanticDigest)(current)}`,
+        digest: (0, publication_identity_policy_1.createSemanticDigest)({ state: 'relationship-retired', identity, current }) })}
+
+## ${messages.message('branchSync.relationship.heading')}
+
+${messages.message('branchSync.relationship.current', { issueNumber: current.issueNumber,
+        workingBranch: inlineRef(current.workingBranch), parentBranch: inlineRef(current.parentBranch) })}
+
+${messages.message('branchSync.relationship.history')}`;
+}
+
+
+/***/ }),
+
+/***/ 14791:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.unrelatedBranchSyncCards = unrelatedBranchSyncCards;
+const github_user_policy_1 = __nccwpck_require__(84403);
+const branch_sync_notification_policy_1 = __nccwpck_require__(79895);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+/** Only verified bot-owned status cards for another pair on this exact issue. */
+function unrelatedBranchSyncCards(comments, current, trustedBotLogin) {
+    if (!trustedBotLogin)
+        return [];
+    const identity = (0, branch_sync_notification_policy_1.branchSyncPublicationIdentity)(current);
+    return comments.filter(comment => {
+        const marker = (0, publication_identity_policy_1.parsePublicationMarker)(comment.body);
+        return marker?.identity.topic === 'branch-sync' && marker.identity.target.kind === 'issue'
+            && marker.identity.target.number === current.issueNumber && marker.identity.key !== identity.key
+            && /^dependency:[a-f0-9]{16}$/u.test(marker.identity.key)
+            && /^(?:(?:comparison|aligned|relationship-retired):[a-f0-9]{16}|closed:issue)$/u.test(marker.sourceVersion)
+            && Number.isSafeInteger(comment.id) && comment.id > 0
+            && Boolean(comment.user?.login && (0, github_user_policy_1.githubUsersMatch)(trustedBotLogin, comment.user.login));
+    });
 }
 
 
@@ -57038,6 +57089,7 @@ function projectEvidence(source) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ObserveBranchSyncUseCase = void 0;
+const retire_unrelated_branch_sync_cards_1 = __nccwpck_require__(18600);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
 const result_1 = __nccwpck_require__(73817);
 const branch_sync_notification_policy_1 = __nccwpck_require__(79895);
@@ -57053,13 +57105,14 @@ const TASK_ID = "ObserveBranchSyncUseCase";
  * and maintains one stateful notification per issue; no agent is reachable.
  */
 class ObserveBranchSyncUseCase {
-    constructor(dependencies, comparisons, notifications, catalogResolver, nativeIssues, retirement) {
+    constructor(dependencies, comparisons, notifications, catalogResolver, nativeIssues, retirement, cardFreshness) {
         this.dependencies = dependencies;
         this.comparisons = comparisons;
         this.notifications = notifications;
         this.catalogResolver = catalogResolver;
         this.nativeIssues = nativeIssues;
         this.retirement = retirement;
+        this.cardFreshness = cardFreshness;
         this.taskId = TASK_ID;
     }
     async invoke(context) {
@@ -57085,13 +57138,11 @@ class ObserveBranchSyncUseCase {
             return [failure("Unable to inspect branch synchronization safely.", cause)];
         }
     }
-    openNotifications(issueNumber) {
+    openNotifications(dependency) {
         const assertOpen = async (number) => {
-            if (number !== issueNumber || !this.nativeIssues)
+            if (number !== dependency.issueNumber || !this.nativeIssues)
                 throw new application_error_2.ApplicationError('workflow.stale', 'Native issue state is unavailable.');
-            const current = await this.nativeIssues.readIssue(number);
-            if (current.number !== number || current.state !== 'open')
-                throw new application_error_2.ApplicationError('workflow.stale', 'The issue is no longer open.');
+            await this.assertCurrent(dependency);
         };
         return Object.freeze({
             listIssueComments: (number) => this.notifications.listIssueComments(number),
@@ -57110,6 +57161,7 @@ class ObserveBranchSyncUseCase {
         });
     }
     async reconcileDependency(context, dependency, getMessages) {
+        let retiredCards = 0;
         try {
             if (!this.nativeIssues)
                 throw new application_error_2.ApplicationError('workflow.stale', 'Native issue state is unavailable.');
@@ -57137,9 +57189,14 @@ class ObserveBranchSyncUseCase {
                 });
                 return result;
             }
-            const notifications = this.openNotifications(dependency.issueNumber);
+            await this.assertRelationship(dependency);
+            const notifications = this.openNotifications(dependency);
             const comparison = await this.comparisons.compare(dependency.parentBranch, dependency.workingBranch);
             const comments = await notifications.listIssueComments(dependency.issueNumber);
+            await this.assertCurrent(dependency);
+            await (0, retire_unrelated_branch_sync_cards_1.retireUnrelatedBranchSyncCards)({ comments, current: dependency, botLogin: context.trustedBotLogin, messages,
+                freshness: this.cardFreshness, updates: notifications, onUpdated: () => { retiredCards++; },
+                assertCurrent: () => this.assertCurrent(dependency) });
             const latest = (0, branch_sync_notification_policy_1.findLatestBranchSyncComment)(comments, context.trustedBotLogin, dependency);
             if (comparison.behindBy > 0) {
                 const comment = (0, branch_sync_notification_policy_1.buildStaleBranchSyncComment)({
@@ -57151,14 +57208,15 @@ class ObserveBranchSyncUseCase {
                 });
                 if (!latest) {
                     await notifications.addComment(dependency.issueNumber, comment);
-                    return success(dependency, comparison.behindBy, "stale");
+                    return success(dependency, comparison.behindBy, "stale", { retiredCards });
                 }
-                const transitionedFromAligned = !(0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body);
+                const transitionedFromAligned = !(0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body)
+                    && !(0, publication_identity_policy_1.parsePublicationMarker)(latest.body).sourceVersion.startsWith('relationship-retired:');
                 if (latest.body !== comment) {
                     await notifications.updateComment(dependency.issueNumber, latest.id, comment);
                 }
                 if (!transitionedFromAligned || !context.sourceHeadSha || !context.trustedBotLogin) {
-                    return success(dependency, comparison.behindBy, "stale");
+                    return success(dependency, comparison.behindBy, "stale", { retiredCards });
                 }
                 const intent = (0, branch_sync_notification_policy_1.buildBranchSyncTransitionIntent)(dependency, context.sourceHeadSha, context.locale);
                 try {
@@ -57171,25 +57229,40 @@ class ObserveBranchSyncUseCase {
                         duplicatePointer: canonicalUrl => (0, branch_sync_notification_policy_1.buildBranchSyncDuplicatePointer)(messages, canonicalUrl),
                     }, notifications);
                     const cleanup = (0, publication_outcome_policy_1.buildDuplicateCompactionPublicationPayload)(transition.compactedCommentIds);
-                    return success(dependency, comparison.behindBy, "stale", {
+                    return success(dependency, comparison.behindBy, "stale", { retiredCards,
                         ...(0, publication_outcome_policy_1.buildTransitionPublicationPayload)(intent, transition.effect),
                         ...(cleanup ?? {}),
                     });
                 }
                 catch (cause) {
-                    return failure(`Branch status was updated for issue #${dependency.issueNumber}, but its action notification could not be published.`, cause, { ...dependency, behindBy: comparison.behindBy, state: 'stale', statusUpdated: true });
+                    return failure(`Branch status was updated for issue #${dependency.issueNumber}, but its action notification could not be published.`, cause, { ...dependency, behindBy: comparison.behindBy, state: 'stale', statusUpdated: true, retiredCards });
                 }
             }
-            if (latest && ((0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body) || (0, publication_identity_policy_1.parsePublicationMarker)(latest.body)?.sourceVersion === 'closed:issue')) {
+            if (latest && ((0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body) || (0, publication_identity_policy_1.parsePublicationMarker)(latest.body)?.sourceVersion === 'closed:issue'
+                || (0, publication_identity_policy_1.parsePublicationMarker)(latest.body)?.sourceVersion.startsWith('relationship-retired:'))) {
                 await notifications.updateComment(dependency.issueNumber, latest.id, (0, branch_sync_notification_policy_1.buildAlignedBranchSyncComment)(dependency, messages));
             }
-            return success(dependency, 0, "aligned");
+            await this.assertCurrent(dependency);
+            return success(dependency, 0, "aligned", { retiredCards });
         }
         catch (cause) {
             (0, logging_ports_1.logError)("Branch synchronization dependency reconciliation failed.", {
                 issueNumber: dependency.issueNumber,
             });
-            return failure(`Unable to inspect branch synchronization for issue #${dependency.issueNumber}.`, cause);
+            return failure(`Unable to inspect branch synchronization for issue #${dependency.issueNumber}.`, cause, { ...dependency, retiredCards, reconciliationComplete: false });
+        }
+    }
+    async assertCurrent(dependency) {
+        const current = await this.nativeIssues.readIssue(dependency.issueNumber);
+        if (current.number !== dependency.issueNumber || current.state !== 'open')
+            throw new application_error_2.ApplicationError('workflow.stale', 'The issue is no longer open.');
+        await this.assertRelationship(dependency);
+    }
+    async assertRelationship(dependency) {
+        const current = await this.dependencies.resolveTarget(dependency.issueNumber);
+        if (!current || current.issueNumber !== dependency.issueNumber || current.conversationNumber !== dependency.issueNumber
+            || current.parentBranch !== dependency.parentBranch || current.workingBranch !== dependency.workingBranch) {
+            throw new application_error_2.ApplicationError('workflow.stale', 'The issue branch relationship changed or is unavailable.');
         }
     }
 }
@@ -58045,7 +58118,7 @@ class RetireBranchSyncUseCase {
                 const marker = (0, publication_identity_policy_1.parsePublicationMarker)(comment.body);
                 return marker?.identity.topic === 'branch-sync' && marker.identity.target.kind === 'issue'
                     && marker.identity.target.number === context.issueNumber && /^dependency:[a-f0-9]{16}$/u.test(marker.identity.key)
-                    && (marker.sourceVersion.startsWith('comparison:') || marker.sourceVersion.startsWith('aligned:') || marker.sourceVersion === 'closed:issue')
+                    && (marker.sourceVersion.startsWith('comparison:') || marker.sourceVersion.startsWith('aligned:') || marker.sourceVersion === 'closed:issue' || /^relationship-retired:[a-f0-9]{16}$/u.test(marker.sourceVersion))
                     && Number.isSafeInteger(comment.id) && comment.id > 0
                     && Boolean(comment.user?.login && (0, github_user_policy_1.githubUsersMatch)(context.trustedBotLogin, comment.user.login));
             });
@@ -58214,6 +58287,53 @@ class RetireProgressUseCase {
 exports.RetireProgressUseCase = RetireProgressUseCase;
 function stale() {
     return new application_error_1.ApplicationError('workflow.stale', 'The native issue state or owned progress card changed or is unavailable.');
+}
+
+
+/***/ }),
+
+/***/ 18600:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.retireUnrelatedBranchSyncCards = retireUnrelatedBranchSyncCards;
+const branch_sync_relationship_retirement_policy_1 = __nccwpck_require__(14791);
+const branch_sync_notification_policy_1 = __nccwpck_require__(79895);
+const publication_identity_policy_1 = __nccwpck_require__(45403);
+const reply_request_digest_1 = __nccwpck_require__(47971);
+const application_error_1 = __nccwpck_require__(75999);
+/** Bounded in-place repair; no create/delete, command, Git, label or agent capability. */
+async function retireUnrelatedBranchSyncCards(input) {
+    const cards = (0, branch_sync_relationship_retirement_policy_1.unrelatedBranchSyncCards)(input.comments, input.current, input.botLogin);
+    if (!cards.length)
+        return;
+    if (cards.length > 20 || !input.freshness)
+        throw stale();
+    const freshness = input.freshness;
+    for (const card of cards) {
+        const finalBody = (0, branch_sync_notification_policy_1.buildUnrelatedBranchSyncComment)((0, publication_identity_policy_1.parsePublicationMarker)(card.body).identity, input.current, input.messages);
+        const witness = (body) => ({ surface: 'issue-comment', commentId: card.id,
+            author: input.botLogin, target: { kind: 'issue', number: input.current.issueNumber }, bodyDigest: (0, reply_request_digest_1.replyRequestBodyDigest)(body) });
+        let failedWrite;
+        if (card.body !== finalBody && await freshness.matches(witness(card.body))) {
+            await input.assertCurrent();
+            try {
+                await input.updates.updateComment(input.current.issueNumber, card.id, finalBody);
+                input.onUpdated();
+            }
+            catch (cause) {
+                failedWrite = cause;
+            }
+        }
+        if (!await freshness.matches(witness(finalBody)))
+            throw failedWrite ?? stale();
+        await input.assertCurrent();
+    }
+}
+function stale() {
+    return new application_error_1.ApplicationError('workflow.stale', 'The current issue relationship or owned historical advisory could not be verified.');
 }
 
 
@@ -83702,77 +83822,83 @@ exports.BranchNameRepository = BranchNameRepository;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveOpenBranchDependencies = resolveOpenBranchDependencies;
+exports.configuredBranchDependency = configuredBranchDependency;
 exports.dependencyFromPullRequest = dependencyFromPullRequest;
 const config_1 = __nccwpck_require__(90450);
-const CONFIGURATION = /<!--\s*copilot-configuration-start\s*\n([\s\S]*?)\n\s*copilot-configuration-end\s*-->/iu;
-function resolveOpenBranchDependencies(issues, pullRequests) {
-    const candidates = [];
+const CONFIGURATION = /<!--\s*copilot-configuration-start\s*\n([\s\S]*?)\n\s*copilot-configuration-end\s*-->/giu;
+/** One primary relationship per issue; prose never establishes ownership. */
+function resolveOpenBranchDependencies(issues, pullRequests, repositoryFullName) {
+    const dependencies = [];
     for (const issue of issues) {
-        const configured = dependencyFromConfiguration(issue);
-        if (configured)
-            candidates.push(configured);
-        const linkedBranches = new Set((issue.linkedBranches?.nodes ?? [])
-            .map((node) => normalizeBranch(node?.ref?.name))
-            .filter((branch) => Boolean(branch)));
-        for (const pullRequest of pullRequests) {
-            if (linkedBranches.has(pullRequest.headRefName) || pullRequestReferencesIssue(pullRequest, issue.number)) {
-                candidates.push({
-                    issueNumber: issue.number,
-                    parentBranch: pullRequest.baseRefName,
-                    workingBranch: pullRequest.headRefName,
-                });
-            }
+        if (!Number.isSafeInteger(issue.number) || issue.number < 1)
+            continue;
+        const configured = configuredBranchDependency(issue);
+        if (configured.kind === 'configured') {
+            dependencies.push(configured.dependency);
+            continue;
         }
+        if (configured.kind === 'invalid')
+            continue;
+        // Incomplete inventories cannot prove that a fallback relationship is unique.
+        if (!Array.isArray(issue.linkedBranches?.nodes) || issue.linkedBranches?.pageInfo?.hasNextPage !== false
+            || pullRequests.some(pr => sameRepository(pr.headRepository?.nameWithOwner, repositoryFullName)
+                && (!Array.isArray(pr.closingIssuesReferences?.nodes) || pr.closingIssuesReferences?.pageInfo?.hasNextPage !== false)))
+            continue;
+        const linkedBranches = new Set(issue.linkedBranches.nodes
+            .filter(node => sameRepository(node?.ref?.repository?.nameWithOwner, repositoryFullName))
+            .map(node => normalizeBranch(node?.ref?.name)));
+        const candidates = new Map();
+        for (const pr of pullRequests) {
+            if (!sameRepository(pr.headRepository?.nameWithOwner, repositoryFullName))
+                continue;
+            const closesIssue = pr.closingIssuesReferences.nodes.some(node => node?.number === issue.number && sameRepository(node.repository?.nameWithOwner, repositoryFullName));
+            const parentBranch = normalizeBranch(pr.baseRefName);
+            const workingBranch = normalizeBranch(pr.headRefName);
+            if ((!closesIssue && !linkedBranches.has(workingBranch)) || !parentBranch || !workingBranch || parentBranch === workingBranch)
+                continue;
+            candidates.set(`${parentBranch}:${workingBranch}`, { issueNumber: issue.number, parentBranch, workingBranch });
+        }
+        if (candidates.size === 1)
+            dependencies.push([...candidates.values()][0]);
     }
-    return uniqueValidDependencies(candidates);
+    return dependencies;
 }
-function dependencyFromPullRequest(pullRequest, conversationNumber = pullRequest.number) {
-    return {
-        issueNumber: conversationNumber,
-        parentBranch: pullRequest.baseRefName,
-        workingBranch: pullRequest.headRefName,
-    };
-}
-function dependencyFromConfiguration(issue) {
-    const serialized = issue.body?.match(CONFIGURATION)?.[1];
-    if (!serialized)
-        return undefined;
+/** Invalid/partial declarations block fallback; a valid unbranched config does not. */
+function configuredBranchDependency(issue) {
+    const body = issue.body ?? '';
+    const markerText = body.toLowerCase();
+    if (!markerText.includes('copilot-configuration-start') && !markerText.includes('copilot-configuration-end'))
+        return { kind: 'absent' };
+    const matches = [...body.matchAll(CONFIGURATION)];
+    if (matches.length !== 1 || markerText.split('copilot-configuration-start').length !== 2 || markerText.split('copilot-configuration-end').length !== 2)
+        return { kind: 'invalid' };
     try {
-        const configuration = new config_1.Config((0, config_1.requireCurrentConfigurationPayload)(JSON.parse(serialized)));
-        if (!configuration.parentBranch || !configuration.workingBranch)
-            return undefined;
-        return {
-            issueNumber: issue.number,
-            parentBranch: configuration.parentBranch,
-            workingBranch: configuration.workingBranch,
-        };
+        const input = (0, config_1.requireCurrentConfigurationPayload)(JSON.parse(matches[0][1]));
+        const configuration = new config_1.Config(input);
+        if (input.parentBranch === undefined && input.workingBranch === undefined)
+            return { kind: 'absent' };
+        const parentBranch = normalizeBranch(configuration.parentBranch);
+        const workingBranch = normalizeBranch(configuration.workingBranch);
+        if (!parentBranch || !workingBranch || parentBranch === workingBranch)
+            return { kind: 'invalid' };
+        return { kind: 'configured', dependency: { issueNumber: issue.number, parentBranch, workingBranch } };
     }
     catch {
-        return undefined;
+        return { kind: 'invalid' };
     }
 }
-function pullRequestReferencesIssue(pullRequest, issueNumber) {
-    if ((pullRequest.closingIssuesReferences?.nodes ?? []).some((issue) => issue?.number === issueNumber)) {
-        return true;
-    }
-    const escaped = String(issueNumber).replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
-    return new RegExp(`(?:^|[^\\w])#${escaped}(?!\\d)`, "u").test(pullRequest.body ?? "");
+function dependencyFromPullRequest(pr, conversationNumber = pr.number) {
+    return { issueNumber: conversationNumber, parentBranch: pr.baseRefName, workingBranch: pr.headRefName };
 }
-function normalizeBranch(branch) {
-    const normalized = branch?.replace(/^refs\/heads\//u, "").replace(/^\/+/, "").trim();
-    return normalized || undefined;
+function normalizeBranch(value) {
+    const branch = value?.trim().replace(/^refs\/heads\//u, '');
+    // Git ref syntax, with a fixed metadata ceiling; never repair an invalid ref into a different branch.
+    return branch && branch.length <= 1024
+        && !/^(?:[-/.]|@$)|[\p{Cc}\s~^:?*[\\]|\.\.|@\{|\/\/|[/.]$|(?:^|\/)\.|\.lock(?:\/|$)/u.test(branch)
+        ? branch : undefined;
 }
-function uniqueValidDependencies(candidates) {
-    const unique = new Map();
-    for (const candidate of candidates) {
-        const parentBranch = normalizeBranch(candidate.parentBranch);
-        const workingBranch = normalizeBranch(candidate.workingBranch);
-        if (!parentBranch || !workingBranch || parentBranch === workingBranch || candidate.issueNumber < 1)
-            continue;
-        const dependency = { ...candidate, parentBranch, workingBranch };
-        unique.set(`${candidate.issueNumber}:${parentBranch}:${workingBranch}`, dependency);
-    }
-    return [...unique.values()];
+function sameRepository(actual, expected) {
+    return actual?.toLowerCase() === expected.toLowerCase();
 }
 
 
@@ -83793,7 +83919,8 @@ const OPEN_DEPENDENCIES_QUERY = `
         nodes {
           number
           body
-          linkedBranches(first: 100) { nodes { ref { name } } }
+          state
+          linkedBranches(first: 100) { nodes { ref { name repository { nameWithOwner } } } pageInfo { hasNextPage } }
         }
         pageInfo { hasNextPage endCursor }
       }
@@ -83803,7 +83930,8 @@ const OPEN_DEPENDENCIES_QUERY = `
           body
           baseRefName
           headRefName
-          closingIssuesReferences(first: 20) { nodes { number } }
+          headRepository { nameWithOwner }
+          closingIssuesReferences(first: 100) { nodes { number repository { nameWithOwner } } pageInfo { hasNextPage } }
         }
         pageInfo { hasNextPage endCursor }
       }
@@ -83818,14 +83946,16 @@ const CONVERSATION_QUERY = `
         ... on Issue {
           number
           body
-          linkedBranches(first: 100) { nodes { ref { name } } }
+          state
+          linkedBranches(first: 100) { nodes { ref { name repository { nameWithOwner } } } pageInfo { hasNextPage } }
         }
         ... on PullRequest {
           number
           body
           baseRefName
           headRefName
-          closingIssuesReferences(first: 20) { nodes { number } }
+          headRepository { nameWithOwner }
+          closingIssuesReferences(first: 100) { nodes { number repository { nameWithOwner } } pageInfo { hasNextPage } }
         }
       }
     }
@@ -83843,6 +83973,8 @@ class BranchDependencyRepository {
             const pullRequests = [];
             let issuesCursor;
             let pullsCursor;
+            const issueCursors = new Set();
+            const pullCursors = new Set();
             let loadIssues = true;
             let loadPulls = true;
             do {
@@ -83860,12 +83992,16 @@ class BranchDependencyRepository {
                     pullRequests.push(...compact(response.repository.pullRequests?.nodes));
                 const issuePage = response.repository.issues?.pageInfo;
                 const pullPage = response.repository.pullRequests?.pageInfo;
-                loadIssues = Boolean(issuePage?.hasNextPage && issuePage.endCursor);
-                loadPulls = Boolean(pullPage?.hasNextPage && pullPage.endCursor);
-                issuesCursor = loadIssues ? issuePage?.endCursor ?? undefined : undefined;
-                pullsCursor = loadPulls ? pullPage?.endCursor ?? undefined : undefined;
+                if (loadIssues)
+                    requireCompletePage(issuePage, issueCursors);
+                if (loadPulls)
+                    requireCompletePage(pullPage, pullCursors);
+                loadIssues = loadIssues && issuePage.hasNextPage;
+                loadPulls = loadPulls && pullPage.hasNextPage;
+                issuesCursor = loadIssues ? issuePage.endCursor : undefined;
+                pullsCursor = loadPulls ? pullPage.endCursor : undefined;
             } while (loadIssues || loadPulls);
-            return (0, branch_dependency_policy_1.resolveOpenBranchDependencies)(issues, pullRequests);
+            return (0, branch_dependency_policy_1.resolveOpenBranchDependencies)(issues, pullRequests, `${owner}/${repository}`);
         }
         catch (cause) {
             throw withCause("Unable to discover open branch dependencies from GitHub.", cause);
@@ -83882,6 +84018,13 @@ class BranchDependencyRepository {
             if (conversation.__typename === "PullRequest") {
                 return { ...(0, branch_dependency_policy_1.dependencyFromPullRequest)(conversation, conversationNumber), conversationNumber };
             }
+            if (conversation.number !== conversationNumber || conversation.state !== 'OPEN')
+                return undefined;
+            const configured = (0, branch_dependency_policy_1.configuredBranchDependency)(conversation);
+            if (configured.kind === 'invalid')
+                return undefined;
+            if (configured.kind === 'configured')
+                return { ...configured.dependency, conversationNumber };
             const dependency = (await this.listOpenDependencies(owner, repository, token))
                 .find((candidate) => candidate.issueNumber === conversationNumber);
             return dependency ? { ...dependency, conversationNumber } : undefined;
@@ -83899,6 +84042,15 @@ function withCause(message, cause) {
     const error = new Error(message);
     error.cause = cause;
     return error;
+}
+function requireCompletePage(page, seen) {
+    if (!page || typeof page.hasNextPage !== 'boolean')
+        throw new Error('Branch relationship inventory is incomplete.');
+    if (page.hasNextPage) {
+        if (!page.endCursor || seen.has(page.endCursor))
+            throw new Error('Branch relationship pagination did not advance.');
+        seen.add(page.endCursor);
+    }
 }
 
 
@@ -98375,7 +98527,7 @@ function createSingleActionUseCaseCompositionRoot(surface, binding, setupProgres
         : undefined;
     return new single_action_use_case_1.SingleActionUseCase(repositoryTagPort && repositoryReleasePort
         ? new publish_github_action_use_case_1.PublishGithubActionUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding), (0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding))
-        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding, setupProgress), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding, catalogResolver), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding), catalogResolver, (0, issue_completion_composition_root_2.createNativeStatusReadPort)(binding), createClosedIssueRetirementUseCase(binding)), deploymentOrchestration);
+        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryRelease)(repositoryReleasePort, binding)) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase((0, push_single_action_capability_port_binding_1.bindRepositoryTag)(repositoryTagPort, binding)) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(binding, setupProgress), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(binding), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(binding, catalogResolver), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding)), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase((0, push_single_action_capability_port_binding_1.bindBranchDependencies)(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), binding), (0, push_single_action_capability_port_binding_1.bindBranchComparison)(new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), binding), (0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(issueDescriptionQueryPort, binding), catalogResolver, (0, issue_completion_composition_root_2.createNativeStatusReadPort)(binding), createClosedIssueRetirementUseCase(binding), (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding)), deploymentOrchestration);
 }
 function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication, binding, catalogResolver) {
     const deploymentClient = new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter();

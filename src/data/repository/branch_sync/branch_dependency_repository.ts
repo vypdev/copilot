@@ -12,6 +12,7 @@ import type {
   GithubOpenBranchSyncResponse,
 } from "../../../infrastructure/github/ports/github_branch_sync_protocol";
 import {
+  configuredBranchDependency,
   dependencyFromPullRequest,
   resolveOpenBranchDependencies,
 } from "./branch_dependency_policy";
@@ -23,7 +24,8 @@ const OPEN_DEPENDENCIES_QUERY = `
         nodes {
           number
           body
-          linkedBranches(first: 100) { nodes { ref { name } } }
+          state
+          linkedBranches(first: 100) { nodes { ref { name repository { nameWithOwner } } } pageInfo { hasNextPage } }
         }
         pageInfo { hasNextPage endCursor }
       }
@@ -33,7 +35,8 @@ const OPEN_DEPENDENCIES_QUERY = `
           body
           baseRefName
           headRefName
-          closingIssuesReferences(first: 20) { nodes { number } }
+          headRepository { nameWithOwner }
+          closingIssuesReferences(first: 100) { nodes { number repository { nameWithOwner } } pageInfo { hasNextPage } }
         }
         pageInfo { hasNextPage endCursor }
       }
@@ -49,14 +52,16 @@ const CONVERSATION_QUERY = `
         ... on Issue {
           number
           body
-          linkedBranches(first: 100) { nodes { ref { name } } }
+          state
+          linkedBranches(first: 100) { nodes { ref { name repository { nameWithOwner } } } pageInfo { hasNextPage } }
         }
         ... on PullRequest {
           number
           body
           baseRefName
           headRefName
-          closingIssuesReferences(first: 20) { nodes { number } }
+          headRepository { nameWithOwner }
+          closingIssuesReferences(first: 100) { nodes { number repository { nameWithOwner } } pageInfo { hasNextPage } }
         }
       }
     }
@@ -74,6 +79,8 @@ export class BranchDependencyRepository implements BranchDependencyQueryPort {
       const pullRequests: GithubBranchSyncPullRequestNode[] = [];
       let issuesCursor: string | undefined;
       let pullsCursor: string | undefined;
+      const issueCursors = new Set<string>();
+      const pullCursors = new Set<string>();
       let loadIssues = true;
       let loadPulls = true;
 
@@ -90,13 +97,15 @@ export class BranchDependencyRepository implements BranchDependencyQueryPort {
 
         const issuePage = response.repository.issues?.pageInfo;
         const pullPage = response.repository.pullRequests?.pageInfo;
-        loadIssues = Boolean(issuePage?.hasNextPage && issuePage.endCursor);
-        loadPulls = Boolean(pullPage?.hasNextPage && pullPage.endCursor);
-        issuesCursor = loadIssues ? issuePage?.endCursor ?? undefined : undefined;
-        pullsCursor = loadPulls ? pullPage?.endCursor ?? undefined : undefined;
+        if (loadIssues) requireCompletePage(issuePage, issueCursors);
+        if (loadPulls) requireCompletePage(pullPage, pullCursors);
+        loadIssues = loadIssues && issuePage!.hasNextPage;
+        loadPulls = loadPulls && pullPage!.hasNextPage;
+        issuesCursor = loadIssues ? issuePage!.endCursor! : undefined;
+        pullsCursor = loadPulls ? pullPage!.endCursor! : undefined;
       } while (loadIssues || loadPulls);
 
-      return resolveOpenBranchDependencies(issues, pullRequests);
+      return resolveOpenBranchDependencies(issues, pullRequests, `${owner}/${repository}`);
     } catch (cause) {
       throw withCause("Unable to discover open branch dependencies from GitHub.", cause);
     }
@@ -119,6 +128,10 @@ export class BranchDependencyRepository implements BranchDependencyQueryPort {
       if (conversation.__typename === "PullRequest") {
         return { ...dependencyFromPullRequest(conversation, conversationNumber), conversationNumber };
       }
+      if (conversation.number !== conversationNumber || conversation.state !== 'OPEN') return undefined;
+      const configured = configuredBranchDependency(conversation);
+      if (configured.kind === 'invalid') return undefined;
+      if (configured.kind === 'configured') return { ...configured.dependency, conversationNumber };
       const dependency = (await this.listOpenDependencies(owner, repository, token))
         .find((candidate) => candidate.issueNumber === conversationNumber);
       return dependency ? { ...dependency, conversationNumber } : undefined;
@@ -136,4 +149,12 @@ function withCause(message: string, cause: unknown): Error {
   const error = new Error(message);
   (error as Error & { cause?: unknown }).cause = cause;
   return error;
+}
+
+function requireCompletePage(page: { hasNextPage: boolean; endCursor?: string | null } | undefined, seen: Set<string>): void {
+  if (!page || typeof page.hasNextPage !== 'boolean') throw new Error('Branch relationship inventory is incomplete.');
+  if (page.hasNextPage) {
+    if (!page.endCursor || seen.has(page.endCursor)) throw new Error('Branch relationship pagination did not advance.');
+    seen.add(page.endCursor);
+  }
 }

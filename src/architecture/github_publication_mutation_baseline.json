@@ -19,6 +19,21 @@
       "reason": "Executes the explicitly requested caller-supplied comment mutation."
     },
     {
+      "file": "src/application/usecases/actions/retire_branch_sync_use_case.ts",
+      "updateComment": 1,
+      "reason": "Retires only existing exact bot-owned branch-sync status cards after fresh native closure and unchanged-card checks; has no create/delete, Git, label or agent authority."
+    },
+    {
+      "file": "src/application/usecases/actions/retire_progress_use_case.ts",
+      "updateComment": 1,
+      "reason": "Retires only existing exact bot-owned progress cards after fresh native closure and unchanged-card checks, retaining the last estimate as inert history; no create/delete, labels, Git or model authority."
+    },
+    {
+      "file": "src/application/usecases/actions/retire_unrelated_branch_sync_cards.ts",
+      "updateComment": 1,
+      "reason": "Retires at most twenty verified bot-owned historical branch-sync status cards for other pairs on the same issue, preserving their keys after live issue/relationship and exact original-body fences with final readback; no create/delete, Git, label or model authority."
+    },
+    {
       "file": "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts",
       "addComment": 2,
       "updateComment": 2,
@@ -69,16 +84,6 @@
       "file": "src/application/usecases/steps/common/transition_notification_workflow.ts",
       "addComment": 1,
       "reason": "Creates one fingerprinted action notification and selects exact bot-owned duplicates for cleanup."
-    },
-    {
-      "file": "src/application/usecases/actions/retire_branch_sync_use_case.ts",
-      "updateComment": 1,
-      "reason": "Retires only existing exact bot-owned branch-sync status cards after fresh native closure and unchanged-card checks; has no create/delete, Git, label or agent authority."
-    },
-    {
-      "file": "src/application/usecases/actions/retire_progress_use_case.ts",
-      "updateComment": 1,
-      "reason": "Retires only existing exact bot-owned progress cards after fresh native closure and unchanged-card checks, retaining the last estimate as inert history; no create/delete, labels, Git or model authority."
     }
   ]
 }

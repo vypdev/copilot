@@ -2238,3 +2238,21 @@ all traceability rows, the risk budget, Graphify update, specs/docs/build/type/
 lint/package validation, truthful evidence limitations and a normal verified-head
 merge after any specific human protected-path decision. A fabricated 100% or
 accepted unverified execution is never an acceptable fix.
+
+
+## Branch advisory relationship authority — #723
+
+The [branch synchronization SDD](./branch-synchronization-and-conflict-recovery.md#authoritative-relationships-and-historical-advisory-repair--issue-723)
+owns the primary 56-case discovery/repair contract. Semantic publication keeps
+one authoritative current pair; contextual issue mentions cannot publish another
+pair's status. At a verified eligible observation, historical bot-owned cards for
+other pairs are updated in place to neutral relationship-retired copy, preserving
+their old identity and comment URL. This is distinct from alignment and native
+issue closure: neither current nor historical synchronization is certified by
+retirement. Original-body freshness, current issue/relationship fences, verified
+readback, fixed 20-card bound, partial-effect reporting, forged-card rejection,
+English/Spanish rendering, replay, reopening and closure convergence are mandatory.
+The communication ledger records the new repair tests and incremental observer/
+closure cases as evidence; it does not create a second allocation of the owning
+SDD's acceptance cases. Current card/transition behavior and all merge/verification
+gates remain in force. No consumer migration or runtime promotion is implied.

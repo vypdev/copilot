@@ -58,7 +58,7 @@ export class RetireBranchSyncUseCase implements ParamUseCase<RetireBranchSyncCon
         const marker = parsePublicationMarker(comment.body);
         return marker?.identity.topic === 'branch-sync' && marker.identity.target.kind === 'issue'
           && marker.identity.target.number === context.issueNumber && /^dependency:[a-f0-9]{16}$/u.test(marker.identity.key)
-          && (marker.sourceVersion.startsWith('comparison:') || marker.sourceVersion.startsWith('aligned:') || marker.sourceVersion === 'closed:issue')
+          && (marker.sourceVersion.startsWith('comparison:') || marker.sourceVersion.startsWith('aligned:') || marker.sourceVersion === 'closed:issue' || /^relationship-retired:[a-f0-9]{16}$/u.test(marker.sourceVersion))
           && Number.isSafeInteger(comment.id) && comment.id > 0
           && Boolean(comment.user?.login && githubUsersMatch(context.trustedBotLogin!, comment.user.login));
       });

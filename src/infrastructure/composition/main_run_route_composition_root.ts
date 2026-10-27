@@ -172,6 +172,7 @@ export function createSingleActionUseCaseCompositionRoot(
       catalogResolver,
       createNativeStatusReadPort(binding),
       createClosedIssueRetirementUseCase(binding),
+      createReplyRequestReadPort(binding),
     ),
     deploymentOrchestration,
   );

@@ -1,4 +1,4 @@
-import { buildRetiredBranchSyncComment } from '../../../policies/branch_sync_notification_policy';
+import { buildRetiredBranchSyncComment, buildUnrelatedBranchSyncComment, branchSyncPublicationIdentity } from '../../../policies/branch_sync_notification_policy';
 import { replyRequestBodyDigest } from '../../../../domain/reply_request_digest';
 import type { ReplyRequestSnapshot } from '../../../ports/reply_request_read_ports';
 import { RetireBranchSyncUseCase } from '../retire_branch_sync_use_case';
@@ -205,4 +205,10 @@ it('bounds diagnostics for an oversized owned-card inventory without mutating it
   const [result] = await f.useCase.invoke(context);
   expect(result).toMatchObject({ success: false, errors: [{ recovery: { variables: { phase: 'card-inventory', remaining: 3000 } } }] });
   expect(f.comments.updateComment).not.toHaveBeenCalled();
+});
+
+it('converges a relationship-retired historical card to native issue closure', async () => {
+  const f=fixture(buildUnrelatedBranchSyncComment(branchSyncPublicationIdentity(dependency),{...dependency,workingBranch:'new'},catalog));
+  const [result]=await f.useCase.invoke(context); expect(result.success).toBe(true);
+  expect(parsePublicationMarker(f.stored[0].body)?.sourceVersion).toBe('closed:issue');
 });

@@ -1,8 +1,10 @@
 export interface GithubBranchSyncIssueNode {
   readonly number: number;
   readonly body?: string | null;
+  readonly state?: "OPEN" | "CLOSED";
   readonly linkedBranches?: {
-    readonly nodes?: Array<{ readonly ref?: { readonly name?: string | null } | null } | null> | null;
+    readonly pageInfo?: { readonly hasNextPage: boolean };
+    readonly nodes?: Array<{ readonly ref?: { readonly name?: string | null; readonly repository?: { readonly nameWithOwner: string } | null } | null } | null> | null;
   } | null;
 }
 
@@ -11,8 +13,10 @@ export interface GithubBranchSyncPullRequestNode {
   readonly body?: string | null;
   readonly baseRefName: string;
   readonly headRefName: string;
+  readonly headRepository?: { readonly nameWithOwner: string } | null;
   readonly closingIssuesReferences?: {
-    readonly nodes?: Array<{ readonly number: number } | null> | null;
+    readonly pageInfo?: { readonly hasNextPage: boolean };
+    readonly nodes?: Array<{ readonly number: number; readonly repository?: { readonly nameWithOwner: string } | null } | null> | null;
   } | null;
 }
 

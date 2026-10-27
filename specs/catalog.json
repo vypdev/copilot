@@ -171,7 +171,9 @@
         "src/application/policies/sdd_preparation_status_policy.ts",
         "src/application/policies/progress_scope_policy.ts",
         "src/prompts/progress_scope.ts",
-        "src/prompts/check_progress.ts"
+        "src/prompts/check_progress.ts",
+        "src/application/policies/branch_sync_relationship_retirement_policy.ts",
+        "src/application/usecases/actions/retire_unrelated_branch_sync_cards.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -282,7 +284,8 @@
         "src/application/usecases/actions/__tests__/progress_scope.integration.test.ts",
         "src/application/usecases/actions/__tests__/progress_response.test.ts",
         "src/prompts/__tests__/check_progress.test.ts",
-        "src/prompts/__tests__/progress_scope.test.ts"
+        "src/prompts/__tests__/progress_scope.test.ts",
+        "src/application/usecases/actions/__tests__/retire_unrelated_branch_sync_cards.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -2158,7 +2161,9 @@
         "scripts/validate-comment-workflows.cjs",
         "src/domain/verification_failure.ts",
         "src/application/policies/source_verification_dependency_policy.ts",
-        "src/infrastructure/source_verification_dependencies.ts"
+        "src/infrastructure/source_verification_dependencies.ts",
+        "src/application/policies/branch_sync_relationship_retirement_policy.ts",
+        "src/application/usecases/actions/retire_unrelated_branch_sync_cards.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -2209,7 +2214,8 @@
         "src/infrastructure/__tests__/native_verification_source_runtime.test.ts",
         "src/domain/__tests__/copilot_comment_workflow.test.ts",
         "src/domain/__tests__/verification_failure.test.ts",
-        "src/infrastructure/__tests__/source_verification_dependencies.test.ts"
+        "src/infrastructure/__tests__/source_verification_dependencies.test.ts",
+        "src/application/usecases/actions/__tests__/retire_unrelated_branch_sync_cards.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",
