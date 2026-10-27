@@ -25,6 +25,7 @@ import {
   unavailableBranchSyncResult,
 } from "./branch_sync_execution_policy";
 import type { ApplicationErrorRecovery } from '../../errors/application_error';
+import type { VerificationFailure } from '../../../domain/verification_failure';
 
 export interface SyncBranchRequest {
   readonly context: BranchSyncContext;
@@ -81,7 +82,16 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
     if (conflictResolution.failure) return [await this.abortFailure(conflictResolution.failure.reason, conflictResolution.failure.recovery)];
 
     const verification = await this.verifyPreparedMerge(context, preparation);
-    if (verification.failure) return [await this.abortFailure(verification.failure, verification.recovery)];
+    if (verification.failure) {
+      if (verification.diagnostic) {
+        const restored = await this.safeAbort();
+        const childSha = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u.test(preparation.childSha) ? preparation.childSha : 'unavailable';
+        return [failedBranchSyncResult(verification.safeError ?? 'Branch synchronization verification failed; no synchronization commit or push was attempted.', undefined, {
+          id: 'branch-sync-verification-failed', variables: { ...verification.diagnostic, childSha, restoration: restored ? 'restored' : 'unverified' },
+        })];
+      }
+      return [await this.abortFailure(verification.failure, verification.recovery)];
+    }
 
     const author = await this.authenticatedUser.getUserDetails();
     const remoteValidation = await this.workspace.assertRemoteHeadsUnchanged(
@@ -140,7 +150,7 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
   private async verifyPreparedMerge(
     context: BranchSyncContext,
     preparation: BranchMergePreparation,
-  ): Promise<{ readonly commandCount: number; readonly failure?: string; readonly recovery?: ApplicationErrorRecovery }> {
+  ): Promise<{ readonly commandCount: number; readonly failure?: string; readonly diagnostic?: VerificationFailure; readonly safeError?: string; readonly recovery?: ApplicationErrorRecovery }> {
     const commands = limitVerifyCommands([...context.verifyCommands]);
     if (commands.length === MAX_VERIFY_COMMANDS) logInfo(`Branch sync verification is capped at ${MAX_VERIFY_COMMANDS} commands.`);
     const verification = await runVerifyCommands(
@@ -151,6 +161,8 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
       return {
         commandCount: commands.length,
         failure: verification.error ?? `Verification failed: ${verification.failedCommand ?? "unknown command"}.`,
+        diagnostic: verification.failure,
+        safeError: verification.safeError,
       };
     }
     const conflictPaths = preparation.kind === "conflicted" ? preparation.conflictPaths : [];
@@ -186,11 +198,13 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
     return failedBranchSyncResult(reason, undefined, recovery);
   }
 
-  private async safeAbort(): Promise<void> {
+  private async safeAbort(): Promise<boolean> {
     try {
       await this.workspace.abort();
+      return true;
     } catch {
       logError("Unable to abort the in-progress branch merge cleanly.");
+      return false;
     }
   }
 }

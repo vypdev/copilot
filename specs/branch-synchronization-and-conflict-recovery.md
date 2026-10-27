@@ -723,3 +723,154 @@ counted only in the lifecycle extension's budget.
 ## Repository setup amendment — issue #647
 
 The [repository-owned setup contract](./repository-verification-setup-hooks.md) prepares the actual temporary merge immediately before each verification command when explicitly enabled. Composition captures immutable helper bytes from trusted main before workspace mutation; candidate edits never replace them. Setup and runtime preflight share the command's private environment. Setup failure follows existing abort behavior and withholds commit/push. Read-only status, dry run, aligned branches and empty command lists never execute the helper. The companion owns its incremental budget and local same-managed-ref acceptance; no release is included.
+
+## Candidate dependency readiness and failure facts — #746 (2026-10-27)
+
+### Evidence, scope, and invariants
+
+[#746](https://github.com/vypdev/copilot/issues/746) records source runs
+`40482795753` (#743, clean merge) and `40483017730` (#745, resolved conflicts).
+Both installed the default `master` graph before preparing a different candidate;
+`build` passed and extension typecheck could not resolve workspace dev tools.
+Run `40482493129` (#741) independently reproduced the same sequence. Node/pnpm
+were present; this was not a runner shortage or a need to weaken verification.
+The root pnpm workspace already includes `extension`; a second hardcoded member
+install is not the remedy. Commands after the failing typecheck were not reached.
+
+The source coordinator MUST provision Node 24/pnpm 10.12.4 before the Action,
+and MAY retain a frozen script/hook-free default-checkout install solely to seed trusted build tools for the fixer. It MUST NOT treat that seed as candidate dependency readiness. Removing the seed would regress the existing requirement to regenerate admitted conflicting bundles with the offline build before trusted staging. The existing
+`prepare-source-verification` opt-in and `COPILOT_PREPARE_VERIFICATION` admission
+hint authorize only the fixed source preparation described here: exact repository
+`vypdev/copilot`, GitHub Actions, and a supported Linux, macOS or Windows source runner. The default source route remains Linux; configurable supported runner routes MUST retain dependency preparation. They do
+not grant command/mutation authority. Consumer repositories, direct CLI calls,
+read-only operations, aligned/dry-run branches and empty verification lists retain
+their existing behavior and MUST NOT acquire an inferred installer. Optional
+consumer `verification-setup` remains disabled by default and unchanged.
+
+```text
+trusted source runtime capture -> admitted candidate merge/fixer
+ -> optional trusted native setup -> isolated runtime prerequisites
+ -> current candidate frozen pnpm preparation -> configured verifier
+ -> existing workspace and fresh remote-head guards -> commit/push
+```
+
+Text equivalent: prepare dependencies at each actual verifier boundary, after
+candidate changes and in that verifier's private credential-free environment.
+A previous install or successful application CI is never a readiness witness.
+
+### Architecture, bounded configuration, and security
+
+`GitCommitAdapter` captures a source-only dependency preparer before mutation.
+The infrastructure adapter resolves the provisioned external `pnpm.cjs` once, including the reviewed pnpm/action-setup package layout behind its PNPM_HOME .bin shim; that shim is never executed;
+it rejects candidate-local tools, Corepack/arbitrary shell wrappers and unsupported source
+platforms. Its fixed version probe MUST run in the trusted tool directory:
+pnpm 10.12.4 can load candidate hooks for `--version` even with
+`--ignore-pnpmfile`. The install runs at the current candidate root, with fixed
+argv: frozen lockfile, dev dependencies included, lifecycle scripts and pnpmfile
+hooks disabled, manager auto-switching disabled, silent bounded output, and an
+ignored `.tmp/copilot-verification-store` shared only as a package cache across
+fresh verifier profiles. Cache symlinks, including dangling links, are rejected with no-follow entry metadata checks; absence is accepted only for ENOENT and metadata access errors fail closed. The same presence rule rejects dangling source npmrc entries; cached packages never
+substitute for installing/revalidating the current graph. Existing runner checkout
+cleanup owns ignored dependencies/cache; private HOME cleanup runs on success and
+failure. This is not an OS sandbox against same-user hostile processes.
+
+Supported source metadata is deliberately closed: root name `@vypdev/copilot`,
+`packageManager: pnpm@10.12.4`, root `pnpm.overrides`, and workspace `packages`/
+`overrides`. At most 32 member paths of 200 ASCII characters use literal relative
+segments (no globs, parent traversal or absolute paths). Package/workspace
+manifests are regular single-link contained files, at most 128 KiB each; the
+frozen lock is at most 4 MiB. Descriptor identity uses exact BigInt device/inode
+facts and bounded reads. Member pnpm configuration, `.npmrc`, plugins and unknown
+workspace settings fail closed with `unsupported-graph`; they need a reviewed
+policy change, not execution of candidate bootstrap. Candidate Git identity is
+bound before/after preparation; tracked/index/publishable changes withhold the
+verifier. Each child process is capped at five minutes and 64 KiB captured output;
+the existing 20-command and 120-minute job budgets remain. Cancellation retains
+ordinary runner cleanup semantics; no application-finally guarantee is claimed
+for a force-killed process.
+
+Closed domain facts own diagnostic validation. The existing shared command runner
+classifies dependency/setup/runtime/command failure, preserves its one-based
+command ordinal, and exposes only an allowlisted pnpm script label or
+`configured-command`. Application sync owns abort and a nonretryable verification
+result. The workspace adapter verifies the original head after abort; an abort
+failure MUST yield `unverified`, never a restoration claim. Remote-head, protected
+path, hook-isolated commit and guarded reset rules remain authoritative. No new
+provider permissions, model calls, automatic retries, comment streams, labels,
+configuration files or release operations are introduced. Existing architecture,
+workflow mutation and semantic error validators enforce these boundaries.
+
+### Product states, UI, and recovery
+
+| State | User/operator view | Next action |
+|---|---|---|
+| Preparing | Run log: “Preparing candidate workspace dependencies…” | Wait; no action |
+| Blocked graph/tool | Verification command 2, `pnpm run typecheck`, stage `dependencies`, reason `unsupported-graph`/`tool-unavailable` | Repair frozen candidate metadata or same-job source provisioning |
+| Setup/runtime blocked | Distinct `repository-setup`/`runtime` stage | Repair reviewed same-job prerequisites |
+| Command failed | `command` stage and bounded label/ordinal | Correct the configured verifier/code |
+| Failed, restored | No sync commit/push attempted; original SHA and `restored` | Repair cause, then retry original command |
+| Failed, uncertain cleanup | Original SHA and `unverified` | Inspect runner before retrying; do not reset moved work |
+| Complete | Existing verified merge result and commit SHA | Observer converges normally |
+
+Representative existing result-card body (the surrounding card retains its
+native issue/PR/run links, correlation UUID and Check/Job Summary renderer):
+
+```markdown
+Impact: Branch synchronization stopped at verification command 2
+(pnpm run typecheck): stage dependencies, reason unsupported-graph.
+Action: Repair the frozen candidate workspace graph, then retry /copilot sync-branch.
+Retained state: No synchronization commit or push was attempted.
+Original head: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa. Local rollback: restored.
+Retryable: No
+```
+
+English/Spanish catalogs provide complete impact/action/retained-state copy;
+existing locale fallback and semantic text/Markdown rendering remain. Closed
+technical codes are textual, not color-only. No raw argv, subprocess output,
+provider body, credential, private path or arbitrary URL reaches this recovery.
+`Retryable: No` means blind repetition is not a repair; it does not prove a failed
+package fetch was permanent. Operators inspect provisioning/graph and retry once
+corrected. No blanket transient classification is inferred from exit 1. A later
+reporting failure cannot undo or mislabel an already completed push.
+
+### Test budget, documentation, acceptance, and rollout
+
+Incremental floor: **76 distinct cases**, counted only here: 56 source adapter/
+security/real-Git cases (including clean and fixed-conflict workspace transitions,
+version-probe directory, bounded descriptor changes, cache/path rejection and
+credential-free ordering); 13 closed diagnostic validation cases; 4 sync failure/
+rollback/localization cases; 1 workspace restoration guard; 1 workflow mutation;
+1 additional complete bilingual recovery catalog fixture. Existing verifier,
+consumer setup, credential, dry-run/race/publication suites remain required and
+are not recounted. New pure diagnostic policy MUST have 100% branch coverage;
+all modified coverable lines MUST be covered without partial lines in Codecov
+against the actual PR base. Repository global/module budgets remain unchanged.
+Real pnpm 10.12.4 replay supplements deterministic test doubles: it proves the
+old graph misses a member dependency, candidate install resolves it, install/
+pnpmfile hooks do not run, and Git restores the original head. Record actual host
+and any source-platform test override; this is not native Linux job acceptance.
+Remote Linux/macOS/Windows CI and complete final-head review remain merge gates.
+
+Documentation changes: verification reference (ordering, limits, source versus
+consumer setup), branch synchronization guide (safe failure/rollback/retry),
+troubleshooting (default-versus-candidate graph), this SDD and companion
+cross-references. Catalog evidence and generated index MUST stay current.
+Acceptance requires: current graph on clean/fixer paths; no readiness cache;
+unsafe/missing metadata/tool/process/candidate failure withholding verifier and
+push; exact restored/unverified semantics; unchanged consumers and native setup;
+closed bilingual copy; workflow distinguishing the fixed trusted tool seed from mandatory candidate readiness; full tests,
+coverage, build/package, docs/spec/workflow validators and Graphify update.
+
+Rollout is deliberately separate: merging this change to `develop` alone does
+not update the `master` runtime used by comment events. A separately authorized,
+reviewed promotion must include both runtime bundles and coordinator before
+retrying affected PR sync commands. Do not retry an old installed runtime and
+claim acceptance of this fix. No release/tag/deployment is authorized here.
+Rollback uses the prior complete runtime/workflow pair and preserves remote work.
+Implementation order is contracts/regressions, adapter and UI, workflow/docs/
+catalog/bundles, full final-head checks, then separately approved adoption.
+DoD: all acceptance above, no findings, strict Codecov, explicit protected-path
+human decision where required; native rollout evidence remains pending until the
+new runtime actually runs in the comment job.
+
+Primary operational references: [pnpm 10 frozen workspace installation](https://pnpm.io/10.x/cli/install), [pnpm hook behavior](https://pnpm.io/10.x/pnpmfile), and [pnpm/action-setup v5 installed package/bin layout](https://github.com/pnpm/action-setup/blob/v5/src/install-pnpm/run.ts). The candidate version-probe hook behavior above is separately established by the real 10.12.4 replay, not inferred from later pnpm versions.

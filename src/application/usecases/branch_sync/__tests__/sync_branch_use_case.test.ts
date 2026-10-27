@@ -5,6 +5,8 @@ import { projectBranchSyncContext } from '../../push_single_action_contexts';
 import { renderApplicationErrorMarkdown } from '../../../policies/application_error_presentation_policy';
 import { resolveStaticApplicationErrorCatalog } from '../../../policies/application_error_message_catalog';
 import { BRANCH_SYNC_VALIDATION_CODES } from '../../../../domain/branch_sync_validation';
+import { SourceDependencyError } from '../../../policies/source_verification_dependency_policy';
+import { VerificationSetupError } from '../../../policies/verification_setup_policy';
 import { VerificationPrerequisiteError } from '../../../policies/verification_runtime_policy';
 
 const target = {
@@ -58,6 +60,39 @@ function setup(preparation: BranchMergePreparation) {
 const options = { dryRun: false, useAgent: true };
 
 describe("SyncBranchUseCase", () => {
+  it.each(['clean', 'conflicted'] as const)('reports candidate dependency failure after %s preparation without commit, push, author read or blind retry', async kind => {
+    const context = setup(kind === 'clean' ? {kind,parentSha:'b'.repeat(40),childSha:'a'.repeat(40)} : {kind,parentSha:'b'.repeat(40),childSha:'a'.repeat(40),conflictPaths:['src/a.ts']});
+    context.git.execute.mockRejectedValue(new SourceDependencyError('unsupported-graph'));
+    const [result] = await context.useCase.invoke({context:execution(),options});
+    expect(result.errors[0].recovery).toEqual({id:'branch-sync-verification-failed',variables:{stage:'dependencies',reason:'unsupported-graph',command:'configured-command',commandIndex:1,childSha:'a'.repeat(40),restoration:'restored'}});
+    expect(result.errors[0].retryable).toBe(false);
+    expect(context.workspace.abort).toHaveBeenCalledTimes(1);
+    expect(context.workspace.commitAndPush).not.toHaveBeenCalled();
+    expect(context.authenticatedUser.getUserDetails).not.toHaveBeenCalled();
+    expect(context.workspace.assertRemoteHeadsUnchanged).not.toHaveBeenCalled();
+    for (const locale of ['en-US','es-ES']) {
+      const view = renderApplicationErrorMarkdown(result.errors[0],resolveStaticApplicationErrorCatalog(locale).message);
+      expect(view).toContain('unsupported-graph'); expect(view).toContain('a'.repeat(40)); expect(view).toContain('/copilot sync-branch');
+      expect(view).not.toContain('Retryable: Yes');
+    }
+  });
+  it('never claims a successful rollback after abort failure and exposes only a command ordinal for private argv', async () => {
+    const context = setup({kind:'clean',parentSha:'b'.repeat(40),childSha:'a'.repeat(40)});
+    context.workspace.abort.mockRejectedValue(new Error('private runner path'));
+    context.git.execute.mockResolvedValueOnce(0).mockRejectedValueOnce(new Error('provider secret'));
+    const executionContext = {...execution(),verifyCommands:['pnpm run build','tool https://private/token']};
+    const [result] = await context.useCase.invoke({context:executionContext,options});
+    expect(result.errors[0].recovery).toMatchObject({variables:{stage:'command',command:'configured-command',commandIndex:2,restoration:'unverified'}});
+    expect(JSON.stringify(result)).not.toMatch(/private|provider secret/u);
+    expect(context.workspace.commitAndPush).not.toHaveBeenCalled();
+  });
+  it('distinguishes optional native setup failure and source dependency failure', async () => {
+    const context = setup({kind:'clean',parentSha:'parent',childSha:'child'});
+    context.git.execute.mockRejectedValue(new VerificationSetupError('process-failed'));
+    const [result] = await context.useCase.invoke({context:execution(),options});
+    expect(result.errors[0].recovery).toMatchObject({variables:{stage:'repository-setup',reason:'setup-blocked',childSha:'unavailable'}});
+  });
+
   it.each(BRANCH_SYNC_VALIDATION_CODES)('publishes only the closed workspace validation code %s in both locales', async code => {
     const context = setup({ kind: 'conflicted', parentSha: 'parent', childSha: 'child', conflictPaths: ['specs/CATALOG.md'] });
     context.workspace.validatePreparedMerge.mockResolvedValue({ valid: false, code, reason: 'private/path TOKEN=secret provider-output' });
@@ -214,7 +249,7 @@ describe("SyncBranchUseCase", () => {
     context.git.execute.mockRejectedValue(new VerificationPrerequisiteError('version-mismatch', { runtime: 'java', version: '17' }, '21.0.1'));
     const [result] = await context.useCase.invoke({ context: execution(), options });
     expect(result.success).toBe(false);
-    expect(result.errors[0].message).toContain('Java 17 is required; observed 21.0.1');
+    expect(result.errors[0].recovery).toMatchObject({id: 'branch-sync-verification-failed', variables: {stage: 'runtime', reason: 'runtime-blocked', restoration: 'restored'}});
     expect(context.workspace.abort).toHaveBeenCalledTimes(1);
     expect(context.authenticatedUser.getUserDetails).not.toHaveBeenCalled();
     expect(context.workspace.assertRemoteHeadsUnchanged).not.toHaveBeenCalled();

@@ -9,6 +9,9 @@ describe('versioned Bugbot benchmark', () => {
   it.each([
     'py-coverage-config-branch', 'py-http10-reconnect', 'docs-correct-regression-total',
     'py-short-circuit-unhashable', 'py-helper-retry-validation', 'ts-exclusive-render-branches',
+    'android-listed-minor-platform', 'external-package-unverified-inventory', 'android-stale-inventory-current-install',
+
+    'kt-compose-preferred-width-narrow', 'kt-compose-cap-before-fill', 'kt-compose-padded-preferred-width',
     'kt-compose-owned-loader', 'kt-compose-failed-startup-error',
   ])('treats a reported source/verdict mismatch as a false positive: %s', async (id) => {
     const corpus = await loadBugbotBenchmark(join(root, 'quality/bugbot/corpus.v1.json'));
@@ -23,6 +26,9 @@ describe('versioned Bugbot benchmark', () => {
 
   it.each([
     'py-short-circuit-unsafe-order', 'ts-composed-duplicate-ids',
+    'android-absent-platform-package', 'android-unrelated-green-job',
+
+    'kt-compose-required-width-overflow', 'kt-compose-fill-before-cap',
     'kt-compose-external-loader', 'kt-compose-failed-startup-stuck', 'ts-viewport-version-without-cleanup',
   ])(
     'still requires the positive control with a reachable defect: %s', async (id) => {

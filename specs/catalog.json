@@ -570,7 +570,7 @@
       "status": "implemented",
       "scope": "Shared GitHub Action lifecycle with pinned native resource/lane coordination proof, conservative predecessor fencing, routing and durable user-facing results",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-26",
+      "lastVerified": "2026-10-27",
       "specs": [
         "specs/execution-admission-queue-and-publication.md",
         "specs/execution-error-and-context-hardening.md",
@@ -650,7 +650,13 @@
         "src/application/errors/comment_command_validation_error.ts",
         "src/application/policies/comment_command_validation_message_catalog.ts",
         "src/application/policies/comment_command_validation_presentation_policy.ts",
-        "src/domain/copilot_command_vocabulary.ts"
+        "src/domain/copilot_command_vocabulary.ts",
+        "src/domain/change_size_reconciliation.ts",
+        "src/application/ports/change_size_provider_error.ts",
+        "src/data/repository/github/change_size_provider_failure.ts",
+        "src/application/usecases/steps/commit/change_size_reconciliation.ts",
+        "src/infrastructure/composition/change_size_diagnostics_composition_root.ts",
+        "src/data/repository/issue/issue_label_repository.ts"
       ],
       "tests": [
         "src/tooling/__tests__/coverage_budget_validator.test.ts",
@@ -698,7 +704,11 @@
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/domain/__tests__/copilot_command_validation.test.ts",
         "src/application/policies/__tests__/comment_command_validation_presentation.test.ts",
-        "src/application/usecases/__tests__/command_validation_diagnostics.test.ts"
+        "src/application/usecases/__tests__/command_validation_diagnostics.test.ts",
+        "src/domain/__tests__/change_size_reconciliation.test.ts",
+        "src/data/repository/github/__tests__/change_size_provider_failure.test.ts",
+        "src/application/usecases/steps/commit/__tests__/change_size_reconciliation.test.ts",
+        "src/data/repository/issue/__tests__/issue_label_repository.test.ts"
       ],
       "documentation": [
         "docs/overview.mdx",
@@ -1993,6 +2003,7 @@
         "quality/bugbot/corpus.v1.json",
         "quality/bugbot/reference-predictions.v1.json",
         "src/tooling/bugbot_benchmark_runner.ts",
+        "quality/bugbot/compose-720-observations.v1.json",
         "quality/bugbot/evidence/issue-722.json"
       ],
       "tests": [
@@ -2038,7 +2049,8 @@
         "src/application/usecases/__tests__/autofix_conversation_branch_authority.test.ts",
         "src/tooling/__tests__/bugbot_benchmark.test.ts",
         "src/tooling/__tests__/bugbot_benchmark_runner.test.ts",
-        "src/prompts/__tests__/bugbot.test.ts"
+        "src/prompts/__tests__/bugbot.test.ts",
+        "src/prompts/__tests__/bugbot_framework_semantics.test.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
@@ -2060,7 +2072,7 @@
       "status": "implemented",
       "scope": "Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-22",
+      "lastVerified": "2026-10-27",
       "specs": [
         "specs/branch-synchronization-and-conflict-recovery.md",
         "specs/repository-verification-runtime-prerequisites.md",
@@ -2142,7 +2154,10 @@
         "scripts/prepare-native-source-action.cjs",
         "src/domain/copilot_comment_workflow.ts",
         "src/infrastructure/copilot_comment_inputs.json",
-        "scripts/validate-comment-workflows.cjs"
+        "scripts/validate-comment-workflows.cjs",
+        "src/domain/verification_failure.ts",
+        "src/application/policies/source_verification_dependency_policy.ts",
+        "src/infrastructure/source_verification_dependencies.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -2191,7 +2206,9 @@
         "src/infrastructure/__tests__/verification_executable.test.ts",
         "src/infrastructure/__tests__/native_verification_post.test.ts",
         "src/infrastructure/__tests__/native_verification_source_runtime.test.ts",
-        "src/domain/__tests__/copilot_comment_workflow.test.ts"
+        "src/domain/__tests__/copilot_comment_workflow.test.ts",
+        "src/domain/__tests__/verification_failure.test.ts",
+        "src/infrastructure/__tests__/source_verification_dependencies.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",

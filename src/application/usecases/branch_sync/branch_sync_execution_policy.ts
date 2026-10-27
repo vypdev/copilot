@@ -90,7 +90,7 @@ export function failedBranchSyncResult(reason: string, cause?: unknown, recovery
     executed: true,
     steps: [reason],
     errors: [cause === undefined
-      ? new ApplicationError('workflow.failed', reason, { recovery })
+      ? new ApplicationError('workflow.failed', reason, { recovery, ...(recovery?.id === 'branch-sync-verification-failed' ? { retryable: false } : {}) })
       : toApplicationError(cause, 'workflow.failed', reason, { recovery })],
   });
 }

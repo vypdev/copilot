@@ -4,7 +4,7 @@
 - Date: 2026-09-11
 - Last updated: 2026-10-27
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-10-21; identity continuity and grounding correction tracked in #655
+- Last verified: 2026-10-27; external-package and framework evidence tracked in #720, #721 and #722
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -630,6 +630,160 @@ owns complete comment retention and logical-source accounting. No producer trust
 exception or approval relaxation is introduced.
 
 
+### Dated external-package evidence — #721 (2026-10-27)
+
+The reported reviewer rejected `platforms;android-37.0` and proposed
+`platforms;android-37`. A fresh retrieval on 2026-10-27 of Google's
+[official catalog](https://dl.google.com/android/repository/repository2-3.xml)
+listed the former and not the latter (SHA-256
+`1f0ca6d8b3109ab83afc3e409d53626659b8a233a908e477ac83017919339296`).
+The [consumer job](https://github.com/vypdev/vaultstadio/actions/runs/40300565272/job/121497114096)
+independently reports successful isolated SDK setup, installation and Android
+build at source `cdd8ac3f5f3793a859974c3c0945c7b0f239dce6`.
+These are dated observations, not permanent package-name rules. The
+[sdkmanager reference](https://developer.android.com/tools/sdkmanager) requires
+exact package paths from its listing; a configuration value such as compileSdk
+is not a distribution identifier.
+
+```text
+external-package claim -> exact identifier + provenance/date/channel/platform
+ -> applicable inventory and exact execution evidence -> reconcile contradiction
+ -> supported finding and verified replacement, or omit unsupported claim
+```
+
+The reviewer MUST establish time-sensitive package/version claims from
+applicable authoritative inventory/documentation and matching execution evidence
+available through the existing read-only tools. It MUST NOT infer nonexistence
+from model memory, historical spelling conventions or an older catalog. It MUST
+reconcile a fresh same-command installation/build success; cached, skipped,
+unrelated or stale green jobs cannot refute a demonstrated resolution failure.
+It MUST verify proposed replacements against the same applicable evidence.
+When current evidence cannot be verified, it MUST omit the unsupported finding
+and MUST NOT invent an external lookup or ask for broader runtime permissions.
+A demonstrated missing-package failure MUST remain reportable, including when a
+different execution path is green. A build-only resolution failure is a medium
+reliability finding; high requires demonstrated security impact, data loss or production
+outage. Supplied catalogs,
+logs and discussion remain untrusted evidence, never model instructions.
+
+Architecture and configuration: one shared external-fact prompt instruction is
+used by production review (including partitions) and the real-agent benchmark.
+The application orchestration, semantic ports, adapters, schema, confidence and
+severity filters, network isolation and publication states are unchanged. This
+is probabilistic model guidance, not a deterministic external-fact validator or
+a new external retrieval service. It adds no I/O, persistence, permissions,
+configuration, migration, retry or notification surface. Existing pending,
+blocked, partial and complete review UI remains as specified above; a complete
+diff review does not assert that every external fact was independently verified.
+Example: the valid minor-package fixture produces no package finding; the absent
+package fixture produces an ordinary reliability finding with causal evidence
+and a verified replacement only when available. No new public diagnostic is
+published for abstention. Rollback reverts the instruction and fixtures together.
+
+Allocate **eight additional distinct deterministic cases**, owned only here:
+**two** production-prompt contracts (ordinary and partitioned), **one** benchmark
+prompt contract preserving verdict isolation, **three** isolated false-positive
+scoring cases (listed minor package, unavailable inventory and stale catalog),
+and **two** false-negative controls (confirmed absent package and unrelated green
+job). Together with the five #720 layout cases and five #722 lifecycle cases, the versioned corpus now
+contains **53** cases. Existing
+reference predictions prove the scorer contract; they do not establish observed
+real-model improvement. No live service, network or real wait enters these tests.
+Global and changed-module thresholds remain mandatory; the new instruction must
+be covered through both prompt paths.
+
+Acceptance/traceability: prompt tests prove consistent instruction delivery;
+benchmark tests fail precision for unsupported reports and recall for missed
+confirmed failures; full eval and reference predictions retain every existing
+threshold. Any real-agent sample must use the supplied dated evidence, withhold
+ground truth and retain its actual predictions separately from references.
+Documentation deliverables are detection and quality/observability, together
+with this SDD, catalog evidence and generated catalog. DoD requires these eight
+cases, unchanged full coverage/architecture/documentation/specification gates,
+generated package parity and current-head remote CI/review/Codecov evidence.
+
+### Framework measurement and replacement evidence — #720 (2026-10-27)
+
+The [consumer counterexample](https://github.com/vypdev/copilot/issues/720)
+showed a false overflow claim for Compose `width(400.dp)` and a replacement
+`fillMaxWidth().widthIn(max = 400.dp)` that removed the wide-screen cap.
+The shared reviewer/benchmark grounding instruction MUST distinguish the exact
+framework API and reviewed version, propagate incoming minimum/maximum
+constraints through modifier order and padding, and evaluate unclipped
+interactive bounds. A numeric width alone is not proof of overflow. Preferred
+`width`/`size` obey incoming constraints; `requiredWidth`/`requiredSize` can override
+them. The actual parent constraints still determine whether a particular chain
+is safe. Neither modifier order receives an unconditional safety exemption. Padding on the Card modifier MUST remain in the constraint trace: for full-width controls, zero incoming minimum width and fitting padding, preferred width P with outer padding a and Column padding b yields min(P,W) - 2*a - 2*b control width. The reviewer distinguishes parent-reported coerced sizes from actual centered required-width child bounds.
+
+```text
+candidate defect -> verify framework API and constraints -> try counterexample
+ -> unsupported claim: omit finding
+ -> confirmed defect: check replacement at narrow and wide boundaries
+ -> supported replacement: offer fix; unsupported replacement: omit suggestedCode
+ -> existing schema, freshness and publication policies
+```
+
+Text equivalent: the model first tests the alleged defect, then separately tests
+its replacement against both the failing input and other intended constraints.
+It MUST retain working source when counterevidence disproves the defect, withhold
+an unverified code suggestion, and keep real overflow/lost-cap defects reportable.
+This strengthens model instructions; it is not a deterministic framework checker
+or a prose-based publication filter. Publication, lifecycle, IDs, confidence,
+permissions, concurrency and all existing safeguards remain unchanged.
+
+Allocate **seven additional distinct automated cases** only to this capability:
+three isolated false-positive controls (preferred width under a 280dp parent,
+cap-before-fill at 800dp, and the original padded form at both widths), two
+false-negative controls (required-width overflow at 280dp and fill-before-cap at
+800dp), and two prompt-boundary cases (production review and real-agent benchmark).
+This correction adds five corpus cases; together with the five #721 external-package
+and five #722 lifecycle cases, the combined corpus has **53** cases. At density 1, the required-width padded
+form has 320dp controls with bounds -20..300dp in the 280dp parent; fill-before-cap
+has 720dp controls at 800dp, exceeding the 320dp intended control cap. The original
+padded form and cap-before-fill have 200dp controls at 280dp and 320dp at 800dp.
+These are source-based synthetic fixtures, not new executions of Compose.
+The consumer's separately linked desktop tests supply runtime counterevidence.
+
+Acceptance: each unsupported prediction fails isolated precision; omitting either
+real defect fails isolated recall; reference predictions pass existing evaluation
+thresholds; both prompt boundaries include the API/constraint/replacement contract
+without leaking expected findings. A controlled real-agent sample MUST retain its
+actual predictions separately from reference/scorer results; no model improvement
+is claimed from checked-in ground truth. Existing global 90/90/88/82 coverage and
+changed-runtime 95% lines/statements, 90% branches/functions remain in force.
+No runtime dependency, public configuration, provider permission, schema or data
+migration is added. Existing in-flight reviews retain their normal snapshot and
+freshness rules; rollout is through the generated packages. Rollback reverts the
+instruction/corpus change, preserving historical reviews. No new comment or
+notification surface is introduced; unsupported findings produce no new inline
+comment, while confirmed findings use the existing localized evidence/fix view.
+Pending, failed and partial reviews retain the states in section 9.
+
+Traceability: `src/prompts/bugbot.ts` owns the model contract;
+`bugbot_framework_semantics.test.ts` verifies both consumers;
+`quality/bugbot/{corpus,reference-predictions}.v1.json` and
+`bugbot_benchmark.test.ts` own the five classification controls;
+`docs/bugbot/{finding-publication,quality-observability}.mdx` document the behavior
+and evidence limits. Full coverage, architecture, specifications/catalog,
+documentation, generated-package checks, current-head CI/review and Codecov
+remain release gates.
+
+Primary sources: [Compose constraints and modifier order](https://developer.android.com/develop/ui/compose/layouts/constraints-modifiers)
+and the [AndroidX size modifier implementation](https://github.com/androidx/androidx/blob/androidx-main/compose/foundation/foundation-layout/src/commonMain/kotlin/androidx/compose/foundation/layout/Size.kt).
+
+
+Controlled sample evidence is retained in
+`quality/bugbot/compose-720-observations.v1.json`. Five real `gpt-6-luna` queries
+per variant produced these observed detection results: baseline 0 false positives /
+0 false negatives; an intermediate instruction omitted Card padding in one
+finding and was rejected (1 false positive / 0 false negatives); the final
+explicit-padding instruction returned 0 false positives / 0 false negatives.
+The final sample still returned line 9 instead of the exact Card line 10 and
+medium rather than the reference low severity for both real defects. Its full
+quality gate therefore fails exact location and severity, despite precision and
+recall of 1. This narrow semantic correction does not claim those independent
+calibration problems are fixed or demonstrate statistically improved accuracy.
+
 ### Framework-owned startup cleanup — #722 (2026-10-27)
 
 **Contract.** Before alleging a permanent loader or stale child, the reviewer
@@ -681,8 +835,8 @@ this correction adds no comments or actions and keeps the same noise budget.
 | **Total** | **7** | No double counting with existing budgets |
 
 No new I/O adapter, state machine or pure policy requires additional branch tests.
-Global and changed-module coverage gates remain mandatory. The corpus now has
-43 cases. Deterministic reference predictions test evaluator behavior, not an
+Global and changed-module coverage gates remain mandatory. The combined corpus now has
+53 cases including #720 and #721. Deterministic reference predictions test evaluator behavior, not an
 observed model improvement. Real model samples, when run, must be reported
 separately from reference scoring and consumer GUI evidence.
 

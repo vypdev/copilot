@@ -21,12 +21,12 @@ describe('verify command runner', () => {
 
     it('returns the failed command and supports executor errors', async () => {
         const result = await runVerifyCommands(['pnpm test'], async () => 1);
-        expect(result).toEqual({ success: false, failedCommand: 'pnpm test' });
+        expect(result).toEqual({ success: false, failedCommand: 'pnpm test', failure: {stage: 'command', reason: 'command-failed', command: 'configured-command', commandIndex: 1} });
 
         const error = await runVerifyCommands(['pnpm test'], async () => {
             throw new Error('runner unavailable');
         });
-        expect(error).toEqual({ success: false, failedCommand: 'pnpm test' });
+        expect(error).toEqual({ success: false, failedCommand: 'pnpm test', failure: {stage: 'command', reason: 'command-failed', command: 'configured-command', commandIndex: 1} });
     });
 
     it('redacts sensitive command arguments from diagnostics while preserving execution arguments', async () => {
@@ -34,7 +34,7 @@ describe('verify command runner', () => {
         const result = await runVerifyCommands(['pnpm test --token top-secret'], execute);
 
         expect(execute).toHaveBeenCalledWith('pnpm', ['test', '--token', 'top-secret']);
-        expect(result).toEqual({ success: false, failedCommand: 'pnpm test --token [REDACTED]' });
+        expect(result).toEqual({ success: false, failedCommand: 'pnpm test --token [REDACTED]', failure: {stage: 'command', reason: 'command-failed', command: 'configured-command', commandIndex: 1} });
     });
 
     it('does not echo invalid command text into the returned error', async () => {
@@ -43,6 +43,7 @@ describe('verify command runner', () => {
         expect(result).toEqual({
             success: false,
             error: 'Invalid verify command (use no shell operators; quotes allowed).',
+            failure: {stage: 'command', reason: 'command-invalid', command: 'configured-command', commandIndex: 1},
         });
         expect(JSON.stringify(result)).not.toContain('top-secret');
     });

@@ -1,3 +1,4 @@
+import { ChangeSizeReconciliation } from './change_size_reconciliation';
 import { Result } from '../../../../data/model/result';
 import type { BoundBranchChangeSizePort } from '../../../ports/branch_change_ports';
 import type { BoundProjectBoardCommandPort } from '../../../ports/project_board_command_ports';
@@ -18,6 +19,7 @@ export interface CheckChangesIssueSizeDependencies {
 }
 
 export async function runCheckChangesIssueSize(param: ChangeSizeContext, taskId: string, dependencies: CheckChangesIssueSizeDependencies): Promise<Result[]> {
+    const reconciliation = new ChangeSizeReconciliation(param.issueNumber);
     try {
         const baseBranch = param.baseBranch;
         if (!baseBranch) {
@@ -25,9 +27,9 @@ export async function runCheckChangesIssueSize(param: ChangeSizeContext, taskId:
             return [];
         }
         const headBranch = param.headBranch;
-        const size = await dependencies.branchChangeSizePort.getSizeCategoryAndReason(
+        const size = await reconciliation.run('calculate-size', param.issueNumber, 0, () => dependencies.branchChangeSizePort.getSizeCategoryAndReason(
             headBranch, baseBranch, param.thresholds, param.labels,
-        );
+        ));
         logSize(size.size, size.githubSize, size.reason, param.currentSize);
         const update = await updateIssueAndRelatedPullRequests({
             issueNumber: param.issueNumber,
@@ -42,7 +44,7 @@ export async function runCheckChangesIssueSize(param: ChangeSizeContext, taskId:
             projectBoardCommandPort: dependencies.projectBoardCommandPort,
             pullRequestBranchQueryPort: dependencies.pullRequestRepository,
             projectMembershipQueryPort: dependencies.projectMembershipQueryPort,
-        });
+        }, reconciliation);
         logDebugInfo(`Updated labels on issue #${param.issueNumber}:`);
         logDebugInfo(`Labels: ${update.issueLabelNames}`);
         return [new Result({
@@ -59,13 +61,14 @@ export async function runCheckChangesIssueSize(param: ChangeSizeContext, taskId:
             payload: { changeSize: { pendingProjectSizes: update.pendingProjectSizes } },
         })];
     } catch (error) {
-        const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to check the size of the changes.');
+        const semanticError = toApplicationError(error, 'unexpected', 'Unable to reconcile the size of the changes.');
         logError(semanticError);
         return [new Result({
             id: taskId,
             success: false,
             executed: true,
-            steps: ['Tried to check the size of the changes, but there was a problem.'],
+            steps: ['Size reconciliation stopped; completed effects were retained. Inspect the failed operation before retrying.'],
+            payload: { changeSize: { reconciliation: semanticError.recovery } },
             errors: [semanticError],
         })];
     }

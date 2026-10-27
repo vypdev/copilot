@@ -50,3 +50,22 @@ describe('getBugbotPrompt', () => {
         expect(prompt).toContain('omit the speculative claim rather than inventing framework behavior');
     });
 });
+
+describe('external-fact evidence in review prompts', () => {
+    it.each([false, true])('requires current evidence with partitioned=%s', (partitioned) => {
+        const prompt = getBugbotPrompt({
+            projectContextInstruction: '', owner: 'org', repo: 'repo',
+            headBranch: 'bugfix/721', baseBranch: 'develop', issueNumber: '721',
+            changeScopeInstruction: 'Inspect the supplied diff.', ignoreBlock: '',
+            previousBlock: '', coverageBlock: '', targetLocale: 'en-US',
+            ...(partitioned ? { partitionBlock: 'Review only partition 1/2.', outputContractBlock: 'Return partition attestation.' } : {}),
+        });
+        expect(prompt).toContain('historical naming conventions and model memory do not prove absence');
+        expect(prompt).toContain('do not establish that the reviewed command succeeds');
+        expect(prompt).toContain('omit that unsupported finding');
+        expect(prompt).toContain('Verify a proposed replacement');
+        expect(prompt).toContain('still report a demonstrated package-resolution failure');
+        expect(prompt).toContain('evaluate each execution path independently');
+        expect(prompt).toContain('only blocks a build is a medium-severity reliability finding');
+    });
+});

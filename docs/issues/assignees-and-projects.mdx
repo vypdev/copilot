@@ -155,3 +155,30 @@ rewriting them. Missing membership and unreadable evidence are different states:
 a denied or malformed Project read still fails and requires checking access or
 the workflow run. This recovery does not reset Project Status or create another
 Project item.
+
+
+## Diagnose a failed size reconciliation
+
+A failed size step names the operation and issue or PR target. Its structured
+`change-size-reconciliation-failed` record also gives the one-based position of
+the configured Project (`0` when no Project is involved), the number of verified
+operations, any PR Project sizes already observed awaiting lifecycle linkage,
+and an HTTP status and sanitized GitHub request reference when available.
+Verified operations include reads and already-correct updates; they are not a
+count of mutations. Missing provider evidence is reported as unavailable.
+
+For example, `pr-project-size`, target `#99`, Project position `1`, and
+`http-403` means the size workflow stopped while sizing that PR in the first
+configured Project. Issue labels and earlier completed updates remain. Correct
+permission or resource errors before rerunning the same workflow; wait for
+provider recovery or rate-limit reset for a transient failure. An unclassified
+error requires investigation using its correlation reference, rather than blind
+retries.
+
+The failed operation may have applied remotely. A retry rereads current facts,
+skips already-correct labels, and reconciles Project Size without creating
+another Project item or resetting Status. The failed operation and all later
+operations remain unverified until that retry succeeds. A missing Project link
+is pending only when its absence was verified; a denied or malformed read still
+fails. An optional Check Run publication warning is a separate stage and does
+not replace the required size failure in the final workflow result.

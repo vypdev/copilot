@@ -1,9 +1,11 @@
+import { isChangeSizeReconciliationFacts, type ChangeSizeReconciliationFacts } from '../../domain/change_size_reconciliation';
 import { COPILOT_COMMAND_VALIDATION_REASONS, isCopilotCommandValidationReason, isValidCopilotCommandValidation, type CopilotCommandValidationReason } from '../../domain/copilot_command_validation';
 import type { CopilotCommandName } from '../../domain/copilot_command';
 import { CLOSED_ISSUE_RESULTS, CLOSED_ISSUE_PHASES, CLOSED_ISSUE_REASONS, type ClosedIssueReconciliationFacts } from '../../domain/closed_issue_reconciliation';
 import { APPROVAL_EVIDENCE_PERMISSIONS, APPROVAL_EVIDENCE_REASONS, type ApprovalEvidenceDiagnostic } from '../../domain/approval_evidence_diagnostic';
 
 import { BRANCH_SYNC_VALIDATION_CODES, type BranchSyncValidationCode } from '../../domain/branch_sync_validation';
+import { isBranchSyncVerificationFailure, type BranchSyncVerificationFailure } from '../../domain/verification_failure';
 
 export type ApplicationErrorKind =
     | 'configuration'
@@ -51,6 +53,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-agent-disabled',
     'branch-sync-fixer-unavailable',
     'branch-sync-resolution-invalid',
+    'branch-sync-verification-failed',
     'sdd-draft-size-exceeded',
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
@@ -63,6 +66,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'workspace-changes-rejected',
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
+    'change-size-reconciliation-failed',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -77,6 +81,7 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'stored-configuration-invalid': Readonly<{ issueNumber: number; expectedVersion: number }>;
     readonly 'closed-issue-reconciliation-failed': ClosedIssueReconciliationFacts;
     readonly 'approval-evidence-read-failed': ApprovalEvidenceDiagnostic;
+    readonly 'change-size-reconciliation-failed': ChangeSizeReconciliationFacts;
 
     readonly 'pull-request-link-restored': Readonly<Record<string, never>>;
     readonly 'pull-request-link-base-retained': Readonly<Record<string, never>>;
@@ -88,6 +93,7 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'branch-sync-agent-disabled': Readonly<{ command: '/copilot sync-branch' }>;
     readonly 'branch-sync-fixer-unavailable': Readonly<{ command: '/copilot sync-branch' }>;
     readonly 'branch-sync-resolution-invalid': Readonly<{ validationCode: BranchSyncValidationCode; command: '/copilot sync-branch' }>;
+    readonly 'branch-sync-verification-failed': BranchSyncVerificationFailure;
     readonly 'sdd-draft-size-exceeded': Readonly<Record<string, never>>;
     readonly 'sdd-catalog-unsupported-profile': Readonly<Record<string, never>>;
     readonly 'sdd-catalog-format-invalid': Readonly<Record<string, never>>;
@@ -316,7 +322,9 @@ export class ApplicationError extends Error {
         this.retryable = options.retryable ?? metadata.retryable;
         this.impact = metadata.impact;
         this.action = metadata.action;
-        this.retainedState = metadata.retainedState;
+        this.retainedState = options.recovery?.id === 'change-size-reconciliation-failed'
+            ? 'Completed effects were retained; the failed and later size operations remain unverified.'
+            : metadata.retainedState;
         this.correlationId = correlationId;
         this.recovery = normalizeApplicationErrorRecovery(options.recovery);
         this.#cause = options.cause;
@@ -357,6 +365,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'stored-configuration-invalid': Object.freeze(['issueNumber', 'expectedVersion']),
     'closed-issue-reconciliation-failed': Object.freeze(['resultId', 'phase', 'state', 'reason', 'changed', 'remaining']),
     'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
+    'change-size-reconciliation-failed': Object.freeze(['operation', 'issueNumber', 'targetNumber', 'projectIndex', 'verifiedOperations', 'pendingProjectSizes', 'providerStatus', 'providerReference']),
 
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
@@ -368,6 +377,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'branch-sync-agent-disabled': Object.freeze(['command']),
     'branch-sync-fixer-unavailable': Object.freeze(['command']),
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
+    'branch-sync-verification-failed': Object.freeze(['stage', 'reason', 'command', 'commandIndex', 'childSha', 'restoration']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
@@ -431,6 +441,9 @@ function normalizeApplicationErrorRecovery(
         && !BRANCH_SYNC_VALIDATION_CODES.some(code => code === variables.validationCode)) {
         throw new TypeError('Application error recovery synchronization validation code is invalid.');
     }
+    if (recovery.id === 'branch-sync-verification-failed' && !isBranchSyncVerificationFailure(variables)) {
+        throw new TypeError('Branch synchronization verification diagnostic is invalid.');
+    }
     if (recovery.id === 'closed-issue-reconciliation-failed'
         && (!CLOSED_ISSUE_RESULTS.some(value => value === variables.resultId)
             || !CLOSED_ISSUE_PHASES.some(value => value === variables.phase)
@@ -444,6 +457,9 @@ function normalizeApplicationErrorRecovery(
             || !APPROVAL_EVIDENCE_REASONS.some(reason => reason === variables.reason)
             || APPROVAL_EVIDENCE_PERMISSIONS[variables.operation as keyof typeof APPROVAL_EVIDENCE_PERMISSIONS] !== variables.permission)) {
         throw new TypeError('Approval evidence diagnostic is invalid.');
+    }
+    if (recovery.id === 'change-size-reconciliation-failed' && !isChangeSizeReconciliationFacts(variables)) {
+        throw new TypeError('Change size reconciliation diagnostic is invalid.');
     }
     return Object.freeze({
         id: recovery.id,

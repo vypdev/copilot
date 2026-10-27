@@ -681,6 +681,30 @@ describe('finishGithubAction', () => {
         expect(core.setFailed).not.toHaveBeenCalled();
     });
 
+    it('keeps a required size reconciliation failure distinct from optional Check publication failure', async () => {
+        mockEvidencePublish.mockRejectedValueOnce(new Error('checks unavailable'));
+        const action = Object.assign(execution(), {
+            eventName: 'push', isIssue: false, isPullRequest: false, isPush: true,
+            pullRequest: { number: 99, action: 'synchronize' },
+            inputs: { pull_request: { head: { sha: 'a'.repeat(40) } } },
+        });
+        const error = new ApplicationError('authorization.denied', 'Size reconciliation stopped before completion.', {
+            recovery: { id: 'change-size-reconciliation-failed', variables: {
+                operation: 'pr-project-size', issueNumber: 42, targetNumber: 99, projectIndex: 1,
+                verifiedOperations: 7, pendingProjectSizes: 0, providerStatus: 'http-403', providerReference: 'ABCD:1234',
+            } },
+        });
+        const results = [new Result({ id: 'CheckChangesIssueSizeUseCase', success: false, executed: true, errors: [error] })];
+        await finishGithubAction(action, results, {} as never, {} as never,
+            { publish: mockEvidencePublish }, { publish: mockSummaryPublish });
+        expect(mockEvidencePublish).toHaveBeenCalledTimes(1);
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('pr-project-size'));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining(error.correlationId));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('authorization.denied'));
+        expect(results[0].errors[0]).toBe(error);
+        expect(results[0].success).toBe(false);
+    });
+
     it('keeps metadata-only PR completion out of the stable Review Check', async () => {
         const action = Object.assign(execution(), {
             owner: 'test-owner',

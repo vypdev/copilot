@@ -99,6 +99,6 @@ describe('concurrent PR creation and replay', () => {
       if (number === 99) throw new Error('item disappeared');
       return false;
     });
-    await expect(h.update()).rejects.toThrow('item disappeared');
+    await expect(h.update()).rejects.toMatchObject({ code: 'unexpected', recovery: { variables: { operation: 'pr-project-size', targetNumber: 99 } } });
   });
 });

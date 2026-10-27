@@ -20,6 +20,11 @@ const RECOVERY_CASES: readonly Readonly<{
     english: string;
     spanish: string;
 }>[] = [
+    {
+        recovery: {id: 'branch-sync-verification-failed', variables: {stage: 'dependencies', reason: 'unsupported-graph', command: 'pnpm run typecheck', commandIndex: 2, childSha: 'a'.repeat(40), restoration: 'restored'}},
+        english: `No synchronization commit or push was attempted. Original head: ${'a'.repeat(40)}. Local rollback: restored; restored means the original head was verified, unverified requires operator inspection before retrying.`,
+        spanish: `No se intentó crear ni subir un commit de sincronización. Head original: ${'a'.repeat(40)}. Rollback local: restored; restored confirma el head original, unverified requiere inspección del operador antes de reintentar.`,
+    },
     ...COPILOT_COMMAND_VALIDATION_REASONS.map(id => ({
         recovery: { id, variables: { command: id.startsWith('comment-command-review-') ? 'review' as const
             : id.startsWith('comment-command-sync-') ? 'sync-branch' as const
@@ -44,6 +49,14 @@ const RECOVERY_CASES: readonly Readonly<{
         recovery: { id: 'closed-issue-reconciliation-failed', variables: { resultId: 'RetireProgressUseCase', phase: 'card-verification', state: 'closed', reason: 'completed', changed: 1, remaining: 1 } },
         english: 'Native state was preserved. Confirmed changes: 1; remaining required changes in the last verified plan: 1. Unavailable reads do not establish completion.',
         spanish: 'Se conservó el estado nativo. Cambios confirmados: 1; cambios pendientes en el último plan verificado: 1. Una lectura no disponible no demuestra que haya finalizado.',
+    },
+    {
+        recovery: { id: 'change-size-reconciliation-failed', variables: {
+            operation: 'pr-project-size', issueNumber: 42, targetNumber: 99, projectIndex: 1,
+            verifiedOperations: 7, pendingProjectSizes: 0, providerStatus: 'http-403', providerReference: 'ABCD:1234',
+        } },
+        english: 'Completed effects were retained. Verified operations: 7; PR Project sizes awaiting lifecycle linkage: 0. The failed and later operations remain unverified; an optional Check Run warning is a separate publication stage.',
+        spanish: 'Se conservaron los efectos completados. Operaciones verificadas: 7; tamaños de PR en Projects pendientes de vinculación: 0. La operación fallida y las posteriores siguen sin verificar; un aviso del Check Run opcional corresponde a otra etapa de publicación.',
     },
     {
         recovery: { id: 'approval-evidence-read-failed', variables: { operation: 'jobs', reason: 'http-403', permission: 'actions-read' } },
