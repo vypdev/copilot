@@ -109,3 +109,20 @@ paths and candidate are not public evidence. Diagnostics do not establish
 readiness or implementation acceptance. See [blocked preparation recovery](/issues/pre-branch-sdds#when-specification-preparation-is-blocked)
 for limits, locale fallback, retention and retry behavior. Contributors should
 add deterministic rejection/retry/privacy cases when extending these checks.
+
+
+### Catalog compatibility fixtures
+
+The automatic SDD writer recognizes the SDK version-1 publication profile before
+model analysis. A repository-owned primary-SDD schema can be valid and still
+require a reviewed compatible adapter; the Action preserves that schema and its
+readiness instead of synthesizing SDK fields. See
+[publication profiles](/issues/pre-branch-sdds#catalog-publication-profiles).
+
+Regression fixtures for this boundary include the actual pinned catalog and
+schema from `vypdev/symphonia`, with source revision, blob and SHA-256 provenance
+in `src/testing/fixtures/sdd-native-catalog`. They exercise explicit unsupported
+recovery and zero premature model/branch work. Separate real SDK scratch writes
+prove decoded metadata preservation. Native structural fixture validation,
+complete consumer readiness and live workflow acceptance are separate claims.
+Production validation continues to use the bundled policy.

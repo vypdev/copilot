@@ -1,3 +1,4 @@
+import { SddCatalogCompatibilityFailure, SDD_CATALOG_COMPATIBILITY_REASONS } from '../../../../../domain/sdd_catalog_compatibility';
 import { readSddGateRecord, SddDraftFormatFailure } from '../../../../../domain/pre_branch_sdd';
 import { PreBranchSddGateUseCase, type PreBranchSddContext } from '../../../sdd/pre_branch_sdd_gate_use_case';
 import type { SddCatalogSnapshot, SddPreparedDraft } from '../../../../ports/pre_branch_sdd_ports';
@@ -27,11 +28,12 @@ function context(): PreBranchSddContext {
   };
 }
 
-function harness(presentation?: ConstructorParameters<typeof PreBranchSddGateUseCase>[8]) {
+function harness(presentation?: ConstructorParameters<typeof PreBranchSddGateUseCase>[8], revisionReader = false) {
   let labels = ['feature', 'in-progress'];
   const comments: { id: number; body: string; user: { login: string } }[] = [];
   const query = jest.fn();
   const loadSnapshot = jest.fn().mockResolvedValue(snapshot);
+  const readSourceRevision = jest.fn(async (branch: string) => (await loadSnapshot(branch)).baseSha as string);
   const isAncestor = jest.fn().mockResolvedValue(true);
   const readSdd = jest.fn().mockResolvedValue('# Existing SDD');
   const validateDraft = jest.fn().mockResolvedValue(prepared);
@@ -51,7 +53,7 @@ function harness(presentation?: ConstructorParameters<typeof PreBranchSddGateUse
   const getLinkedBranch = jest.fn().mockResolvedValue({ name: 'feature/42-change', headSha: baseSha });
   const useCase = new PreBranchSddGateUseCase(
     { query },
-    { loadSnapshot, isAncestor, readSdd, validateDraft, publish, recoverPublished, verifyPublication },
+    { loadSnapshot, isAncestor, readSdd, validateDraft, publish, recoverPublished, verifyPublication, ...(revisionReader ? { readSourceRevision } : {}) },
     { listIssueComments: jest.fn(async () => comments), addComment, updateComment },
     { getLabels: jest.fn(async () => labels), setLabels },
     { isActorAllowedToModifyFiles, isActorAllowedToUseMemberOnlyAutomation },
@@ -60,7 +62,7 @@ function harness(presentation?: ConstructorParameters<typeof PreBranchSddGateUse
     { getLinkedBranch },
     presentation,
   );
-  return { useCase, comments, query, loadSnapshot, isAncestor, readSdd, validateDraft, publish, recoverPublished, verifyPublication, addComment, updateComment, setLabels, isActorAllowedToModifyFiles, getDescription, getTitle, getLinkedBranch, labels: () => labels };
+  return { useCase, comments, query, loadSnapshot, readSourceRevision, isAncestor, readSdd, validateDraft, publish, recoverPublished, verifyPublication, addComment, updateComment, setLabels, isActorAllowedToModifyFiles, getDescription, getTitle, getLinkedBranch, labels: () => labels };
 }
 
 describe('PreBranchSddGateUseCase', () => {
@@ -1058,5 +1060,87 @@ describe('SDD diagnostic retention and recovery (#714)', () => {
     expect(h.comments[0].body).toContain('Specification preparation is blocked');
     expect(h.comments[0].body).not.toContain('FR ');
     expect(resolver.resolve).toHaveBeenCalledTimes(2);
+  });
+});
+
+
+describe('catalog profile preflight and recovery (#716)', () => {
+  it.each(SDD_CATALOG_COMPATIBILITY_REASONS)('publishes a bounded %s compatibility card before model operations', async reason => {
+    const h = harness(undefined, true); h.readSourceRevision.mockResolvedValue(baseSha);
+    h.loadSnapshot.mockRejectedValue(new SddCatalogCompatibilityFailure(reason, baseSha));
+    for (let replay = 0; replay < 2; replay++) {
+      const result = await h.useCase.begin(context()); expect(result.status).toBe('blocked');
+      expect(result.results[0].errors[0]).toMatchObject({ code: 'configuration.unsupported', recovery: {
+        id: reason === 'unsupported-profile' ? 'sdd-catalog-unsupported-profile' : 'sdd-catalog-format-invalid', variables: {},
+      } });
+    }
+    expect(h.comments).toHaveLength(1); expect(h.comments[0].body).toContain('Catalog compatibility');
+    expect(h.comments[0].body).toContain(reason); expect(h.comments[0].body).toContain('readiness');
+    expect(h.comments[0].body).not.toMatch(/PRIVATE|99 shape errors|Cannot read properties/u);
+    expect(h.query).not.toHaveBeenCalled(); expect(h.validateDraft).not.toHaveBeenCalled(); expect(h.publish).not.toHaveBeenCalled();
+    expect(h.readSourceRevision).toHaveBeenCalledWith('develop'); expect(h.labels()).not.toContain('branched');
+  });
+
+  it.each(['base', 'issue'] as const)('withholds an obsolete catalog diagnostic after a %s race', async race => {
+    const h = harness(undefined, true);
+    h.loadSnapshot.mockRejectedValue(new SddCatalogCompatibilityFailure('unsupported-profile', baseSha));
+    h.readSourceRevision.mockResolvedValue(race === 'base' ? commitSha : baseSha);
+    if (race === 'issue') h.getDescription.mockResolvedValue('Newer human request');
+    const current = '<!-- copilot:sdd-analysis-status:v1 issue="42" --> Current source';
+    h.comments.push({ id: 900, body: current, user: { login: 'copilot[bot]' } });
+    const result = await h.useCase.begin(context()); expect(result.status).toBe('blocked');
+    expect(result.results.flatMap(result => result.errors)).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'workflow.stale' })]));
+    expect(h.comments[0].body).toBe(current); expect(h.addComment).not.toHaveBeenCalled(); expect(h.updateComment).not.toHaveBeenCalled();
+    expect(h.query).not.toHaveBeenCalled(); expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it('fails closed if the catalog failure has no immutable source provenance', async () => {
+    const h = harness(undefined, true); h.loadSnapshot.mockRejectedValue(new SddCatalogCompatibilityFailure('unsupported-profile'));
+    const result = await h.useCase.begin(context()); expect(result.status).toBe('blocked'); expect(result.results).toHaveLength(2);
+    expect(h.comments).toHaveLength(0); expect(h.query).not.toHaveBeenCalled(); expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it('fails closed on a legacy workspace that cannot read freshness without loading the rejected catalog', async () => {
+    const h = harness(); h.loadSnapshot.mockRejectedValue(new SddCatalogCompatibilityFailure('unsupported-profile', baseSha));
+    const result = await h.useCase.begin(context()); expect(result.status).toBe('blocked'); expect(result.results).toHaveLength(2);
+    expect(h.loadSnapshot).toHaveBeenCalledTimes(2); expect(h.comments).toHaveLength(0); expect(h.query).not.toHaveBeenCalled();
+  });
+
+  it('recovers on the same issue after a compatible SDK snapshot becomes available', async () => {
+    const h = harness(undefined, true); h.readSourceRevision.mockResolvedValue(baseSha);
+    h.loadSnapshot.mockRejectedValueOnce(new SddCatalogCompatibilityFailure('unsupported-profile', baseSha));
+    expect((await h.useCase.begin(context())).status).toBe('blocked'); expect(h.query).not.toHaveBeenCalled();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    const draft = await h.useCase.begin(context()); expect(draft.status).toBe('drafted');
+    if (draft.status !== 'drafted') throw new Error('Expected validated SDK draft');
+    expect((await h.useCase.publish(context(), draft, 'feature/42-change')).status).toBe('published');
+    expect(h.comments.filter(comment => comment.body.includes('copilot:sdd-analysis-status:v1'))).toHaveLength(1);
+    expect(h.comments.find(comment => comment.body.includes('copilot:sdd-analysis-status:v1'))?.body).toContain('publication was verified');
+    expect(h.publish).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains a foreign marker and localizes the catalog-specific recovery in Spanish', async () => {
+    const h = harness(undefined, true); h.readSourceRevision.mockResolvedValue(baseSha);
+    h.loadSnapshot.mockRejectedValue(new SddCatalogCompatibilityFailure('unsupported-profile', baseSha));
+    const human = '<!-- copilot:sdd-analysis-status:v1 issue="42" --> PRIVATE_HUMAN_TEXT';
+    h.comments.push({ id: 90, body: human, user: { login: 'alice' } });
+    expect((await h.useCase.begin({ ...context(), issueLocale: 'es-MX' })).status).toBe('blocked');
+    expect(h.comments[0].body).toBe(human); expect(h.comments[1].body).toContain('Compatibilidad del catálogo');
+    expect(h.comments[1].body).toContain('Conserva el esquema nativo'); expect(h.comments[1].body).not.toContain('PRIVATE_HUMAN_TEXT');
+    expect(h.updateComment).not.toHaveBeenCalled(); expect(h.query).not.toHaveBeenCalled();
+  });
+
+  it('checks the retained linked branch rather than develop when catalog compatibility changes', async () => {
+    const h = harness(undefined, true); h.readSourceRevision.mockResolvedValue(baseSha);
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    const draft = await h.useCase.begin(context()); if (draft.status !== 'drafted') throw new Error('Expected draft');
+    await h.useCase.publish(context(), draft, 'feature/42-change');
+    const record = h.comments.find(comment => readSddGateRecord(comment.body, 42))!.body;
+    h.loadSnapshot.mockRejectedValue(new SddCatalogCompatibilityFailure('unsupported-profile', commitSha));
+    h.readSourceRevision.mockResolvedValue(commitSha); h.readSourceRevision.mockClear(); h.query.mockClear();
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.readSourceRevision).toHaveBeenCalledWith('feature/42-change'); expect(h.query).not.toHaveBeenCalled();
+    expect(h.comments.find(comment => readSddGateRecord(comment.body, 42))!.body).toBe(record);
+    expect(h.publish).toHaveBeenCalledTimes(1);
   });
 });

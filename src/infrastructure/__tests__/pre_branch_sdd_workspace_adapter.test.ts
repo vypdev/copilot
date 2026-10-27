@@ -114,6 +114,41 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(git(repo, 'worktree', 'list', '--porcelain').match(/^worktree /gm)).toHaveLength(1);
   });
 
+  it('rejects the actual native profile at its immutable revision without changing its catalog or creating a branch', async () => {
+    const source = fs.readFileSync(path.join(__dirname, '../../testing/fixtures/sdd-native-catalog/catalog.json'), 'utf8');
+    fs.writeFileSync(path.join(repo, 'specs/catalog.json'), source); git(repo, 'add', '.'); git(repo, 'commit', '-m', 'native catalog'); git(repo, 'push', 'origin', 'develop');
+    const sha = git(repo, 'rev-parse', 'HEAD'); const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    await expect(workspace.loadSnapshot('develop')).rejects.toMatchObject({ name: 'SddCatalogCompatibilityFailure', reason: 'unsupported-profile', sourceCommit: sha });
+    expect(await workspace.readSourceRevision('develop')).toBe(sha);
+    expect(fs.readFileSync(path.join(repo, 'specs/catalog.json'), 'utf8')).toBe(source);
+    expect(git(repo, 'status', '--porcelain')).toBe(''); expect(git(repo, 'ls-remote', '--heads', 'origin', 'feature/42-change')).toBe('');
+    expect(git(repo, 'worktree', 'list', '--porcelain').match(/^worktree /gm)).toHaveLength(1);
+  });
+
+  it.each(['companion', 'new'] as const)('preserves supported raw catalog metadata during a %s round trip', async action => {
+    const file = path.join(repo, 'specs/catalog.json'); const source = JSON.parse(fs.readFileSync(file, 'utf8'));
+    source.projectReview = { ready: false, reviewedBy: ['maintainer'], evidence: null };
+    Object.assign(source.capabilities[0], { requirements: ['REQ-001'], evidence: ['docs/payments.mdx'], blockers: ['Owner approval pending'], implementationEvidence: { code: [], tests: [], documentation: [] } });
+    fs.writeFileSync(file, JSON.stringify(source)); git(repo, 'add', '.'); git(repo, 'commit', '-m', 'retain extension metadata'); git(repo, 'push', 'origin', 'develop');
+    const workspace = new PreBranchSddWorkspaceAdapter(repo); const snapshot = await workspace.loadSnapshot('develop');
+    const selected = { ...plan, action, path: 'specs/additional.md', capabilityId: action === 'new' ? 'additional' : plan.capabilityId };
+    const additional = action === 'new' ? { ...snapshot.capabilities[0], id: 'additional', title: 'Additional', specs: [selected.path] } : undefined;
+    const prepared = await workspace.validateDraft(snapshot, selected, draft(selected.path, selected.action), additional);
+    const roundTrip = JSON.parse(prepared.catalogJson!); expect(roundTrip.projectReview).toEqual(source.projectReview);
+    expect(roundTrip.capabilities[0]).toEqual({ ...source.capabilities[0], specs: action === 'companion' ? [...source.capabilities[0].specs, selected.path] : source.capabilities[0].specs });
+    if (action === 'new') expect(roundTrip.capabilities[1].status).toBe('proposed');
+    expect(fs.readFileSync(file, 'utf8')).toBe(JSON.stringify(source));
+    expect(git(repo, 'status', '--porcelain')).toBe(''); expect(git(repo, 'worktree', 'list', '--porcelain').match(/^worktree /gm)).toHaveLength(1);
+  });
+
+  it('preserves an unexpected validator failure rather than inventing a compatibility verdict', async () => {
+    const policy = require('../../domain/specification_catalog_path_policy.cjs'); const failure = new Error('OPAQUE_VALIDATOR_FAILURE');
+    const spy = jest.spyOn(policy, 'isSafeRelativePath').mockImplementationOnce(() => { throw failure; });
+    try { await expect(new PreBranchSddWorkspaceAdapter(repo).loadSnapshot('develop')).rejects.toBe(failure); }
+    finally { spy.mockRestore(); }
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+  });
+
   it('does not recover an Action-looking commit that replaced the immutable owner', async () => {
     const workspace = new PreBranchSddWorkspaceAdapter(repo);
     const snapshot = await workspace.loadSnapshot('develop');
@@ -233,7 +268,7 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     git(repo, 'add', 'specs/catalog.json');
     git(repo, 'commit', '-m', 'invalid catalog');
     git(repo, 'push', 'origin', 'develop');
-    await expect(new PreBranchSddWorkspaceAdapter(repo).loadSnapshot('develop')).rejects.toThrow('no valid SDD catalog');
+    await expect(new PreBranchSddWorkspaceAdapter(repo).loadSnapshot('develop')).rejects.toMatchObject({ name: 'SddCatalogCompatibilityFailure', reason: 'invalid-document', sourceCommit: expect.stringMatching(/^[a-f0-9]{40}$/u) });
   });
 
   it('validates before branch creation and makes the SDD the only first branch change', async () => {

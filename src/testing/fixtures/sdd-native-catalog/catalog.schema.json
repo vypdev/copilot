@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://symphonia.local/specs/catalog.schema.json",
+  "title": "Symphonia SDD capability catalog",
+  "description": "Structural shape only. Validation with tools/validate_specs.py is required for cross-entry capability-ID uniqueness, repository paths, requirements and SDD/catalog consistency; this schema alone does not establish catalog validity.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "capabilities"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "const": 1
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": { "enum": ["ready-for-implementation", "implemented"] }
+              },
+              "required": ["status"]
+            },
+            "then": {
+              "properties": { "blockers": { "maxItems": 0 } }
+            }
+          },
+          {
+            "if": {
+              "properties": { "status": { "const": "implemented" } },
+              "required": ["status"]
+            },
+            "then": {
+              "properties": {
+                "implementationEvidence": {
+                  "properties": {
+                    "code": { "minItems": 1 },
+                    "tests": { "minItems": 1 },
+                    "documentation": { "minItems": 1 }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "required": [
+          "id",
+          "title",
+          "status",
+          "scope",
+          "owner",
+          "specification",
+          "requirements",
+          "evidence",
+          "implementationEvidence",
+          "blockers"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "ready-for-review",
+              "ready-for-implementation",
+              "implemented",
+              "superseded"
+            ]
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "specification": {
+            "type": "string",
+            "pattern": "^specs/.+\\.md$"
+          },
+          "requirements": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^SYM-[A-Z]+-[0-9]{3}$", "minLength": 1 },
+            "uniqueItems": true
+          },
+          "evidence": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          },
+          "implementationEvidence": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "tests", "documentation"],
+            "properties": {
+              "code": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 },
+                "uniqueItems": true
+              },
+              "tests": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 },
+                "uniqueItems": true
+              },
+              "documentation": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 },
+                "uniqueItems": true
+              }
+            }
+          },
+          "blockers": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          }
+        }
+      }
+    }
+  }
+}

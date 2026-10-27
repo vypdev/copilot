@@ -1,3 +1,4 @@
+import { SDD_CATALOG_COMPATIBILITY_REASONS, type SddCatalogCompatibilityReason } from '../../domain/sdd_catalog_compatibility';
 import { APPLICATION_ERROR_METADATA, APPLICATION_ERROR_RECOVERY_IDS, isApplicationErrorCorrelationId } from '../../data/model/application_error';
 import { normalizeSddValidationDiagnostic, type SddValidationDiagnostic } from '../../domain/sdd_validation_diagnostic';
 import { resolveStaticApplicationErrorCatalog, type ApplicationErrorMessageReader } from './application_error_message_catalog';
@@ -31,6 +32,7 @@ export function renderSddPreparationFailure(options: Readonly<{
   locale?: string;
   error: ApplicationErrorPresentationSource;
   diagnostic?: SddValidationDiagnostic;
+  catalogReason?: SddCatalogCompatibilityReason;
   attempts?: 1 | 2;
   publicationPending?: boolean;
   run?: SddWorkflowRunFacts;
@@ -40,12 +42,15 @@ export function renderSddPreparationFailure(options: Readonly<{
     || typeof options.error.retryable !== 'boolean' || !isApplicationErrorCorrelationId(options.error.correlationId)) {
     throw new TypeError('Invalid SDD status identity or semantic error facts.');
   }
+  if (options.catalogReason !== undefined && (!SDD_CATALOG_COMPATIBILITY_REASONS.includes(options.catalogReason) || options.diagnostic)) {
+    throw new TypeError('Invalid exclusive catalog compatibility facts.');
+  }
   const diagnostic = options.diagnostic ? normalizeSddValidationDiagnostic(options.diagnostic) : undefined;
   if (options.attempts !== undefined && options.attempts !== 1 && options.attempts !== 2) throw new TypeError('Invalid SDD diagnostic attempt count.');
   const message = (key: SddPreparationMessageId) => catalog.message(key);
   const recovery = options.error.recovery;
   const source = { code: options.error.code, retryable: options.error.retryable, correlationId: options.error.correlationId,
-    ...(recovery && APPLICATION_ERROR_RECOVERY_IDS.includes(recovery.id) && recovery.id.startsWith('sdd-draft-')
+    ...(recovery && APPLICATION_ERROR_RECOVERY_IDS.includes(recovery.id) && (recovery.id.startsWith('sdd-draft-') || recovery.id.startsWith('sdd-catalog-'))
       && recovery.variables && Object.keys(recovery.variables).length === 0 ? { recovery } : {}) };
   const view = buildApplicationErrorPresentation(source, errorMessage ?? resolveStaticApplicationErrorCatalog(catalog.locale).message);
   const runUrl = sddWorkflowRunUrl(options.run);
@@ -61,7 +66,10 @@ export function renderSddPreparationFailure(options: Readonly<{
     `**${message('sddPreparation.code')}:** \`${view.code}\``,
     `**${message('sddPreparation.reference')}:** \`${view.reference}\``,
   ];
-  if (diagnostic) {
+  if (options.catalogReason) {
+    lines.push(`**${message('sddPreparation.catalogCompatibility')}:** \`${options.catalogReason}\``,
+      '', message('sddPreparation.catalogProfile'), '', message('sddPreparation.catalogRetained'));
+  } else if (diagnostic) {
     lines.push(`**${message('sddPreparation.reason')}:** \`${diagnostic.reason}\``,
       `**${message('sddPreparation.phase')}:** \`${diagnostic.phase}\``);
     if (options.attempts !== undefined) lines.push(`**${message('sddPreparation.attempts')}:** ${options.attempts}`);

@@ -1,3 +1,4 @@
+import { SddCatalogCompatibilityFailure, isSddCatalogOwnerPath } from './sdd_catalog_compatibility';
 import { normalizeSddValidationDiagnostic, type SddDraftFormatReason, type SddValidationDiagnostic } from './sdd_validation_diagnostic';
 /** Pure, bounded contracts for clarification before an Action-owned issue branch exists. */
 export type SddOwnerAction = 'update' | 'companion' | 'new';
@@ -87,6 +88,16 @@ export class SddOwnershipFailure extends Error {
 
 /** The agent may propose ownership but cannot invent a catalogued owner or arbitrary path. */
 export function parseSddPlan(value: unknown, catalog: ReadonlyMap<string, readonly string[]>): SddPlan {
+  const registeredPaths = new Set<string>();
+  for (const paths of catalog.values()) {
+    if (!Array.isArray(paths) || paths.length === 0) throw new SddCatalogCompatibilityFailure('owner-paths-invalid');
+    for (const ownerPath of paths) {
+      if (typeof ownerPath !== 'string' || !isSddCatalogOwnerPath(ownerPath) || registeredPaths.has(ownerPath)) {
+        throw new SddCatalogCompatibilityFailure('owner-paths-invalid');
+      }
+      registeredPaths.add(ownerPath);
+    }
+  }
   if (!isRecord(value)) throw new Error('The SDD analysis must be an object.');
   const action = value.action;
   const path = value.path;
@@ -99,7 +110,7 @@ export function parseSddPlan(value: unknown, catalog: ReadonlyMap<string, readon
     throw new Error('The SDD analysis has an invalid owner, path, or reason.');
   }
   const ownerPaths = catalog.get(capabilityId);
-  const registered = [...catalog.values()].some(paths => paths.includes(path));
+  const registered = registeredPaths.has(path);
   if (action === 'update' && (!ownerPaths?.includes(path) || !registered)) {
     throw new SddOwnershipFailure('update-owner-mismatch');
   }

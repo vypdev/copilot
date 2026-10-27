@@ -1,3 +1,4 @@
+import { readSupportedSddCatalog, SddCatalogCompatibilityFailure } from '../domain/sdd_catalog_compatibility';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -32,11 +33,15 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
   constructor(private readonly repositoryRoot: string = process.cwd(), private readonly token: string = '') {}
 
   async loadSnapshot(baseBranch: string): Promise<SddCatalogSnapshot> {
+    return this.readSnapshotAtSha(await this.readSourceRevision(baseBranch));
+  }
+
+  async readSourceRevision(baseBranch: string): Promise<string> {
     assertBranch(baseBranch);
     await this.git(['fetch', 'origin', baseBranch], this.repositoryRoot, this.token);
     const baseSha = (await this.git(['rev-parse', 'FETCH_HEAD'])).trim();
     assertSha(baseSha);
-    return this.readSnapshotAtSha(baseSha);
+    return baseSha;
   }
 
   async loadSnapshotAtCommit(commitSha: string): Promise<SddCatalogSnapshot> {
@@ -46,9 +51,11 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
 
   private async readSnapshotAtSha(baseSha: string): Promise<SddCatalogSnapshot> {
     const raw = await this.git(['show', `${baseSha}:specs/catalog.json`]);
-    const catalog = JSON.parse(raw) as Catalog;
-    if (catalog.version !== 1 || !Array.isArray(catalog.capabilities)) {
-      throw new Error('The repository has no valid SDD catalog. Run setup for specifications before enabling pre-branch-sdd.');
+    let catalog;
+    try { catalog = readSupportedSddCatalog(raw); }
+    catch (error) {
+      if (error instanceof SddCatalogCompatibilityFailure) throw new SddCatalogCompatibilityFailure(error.reason, baseSha);
+      throw error;
     }
     const [template, standard] = await Promise.all([
       this.git(['show', `${baseSha}:specs/_template.md`]),
@@ -111,10 +118,7 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
       }
       else if (pathExists(target)) throw new Error('The new SDD path is already occupied.');
       writeSpecFile(target, markdown, plan.action === 'update');
-      const catalog: Catalog = {
-        version: 1,
-        capabilities: snapshot.capabilities.map(capability => ({ ...capability, specs: [...capability.specs] })),
-      };
+      const catalog = readSupportedSddCatalog(await this.git(['show', `${snapshot.baseSha}:specs/catalog.json`])).document;
       let catalogJson: string | undefined;
       let catalogMarkdown: string | undefined;
       if (plan.action === 'companion') {
@@ -123,14 +127,14 @@ export class PreBranchSddWorkspaceAdapter implements PreBranchSddWorkspacePort {
         const updated = catalog.capabilities.map(capability => capability.id === owner.id
           ? { ...capability, specs: [...capability.specs, plan.path] }
           : capability);
-        catalogJson = `${JSON.stringify({ version: 1, capabilities: updated }, null, 2)}\n`;
+        catalogJson = `${JSON.stringify({ ...catalog, capabilities: updated }, null, 2)}\n`;
       } else if (plan.action === 'new') {
         if (!newCapability || newCapability.id !== plan.capabilityId
           || newCapability.status !== 'proposed'
           || newCapability.specs.length !== 1 || newCapability.specs[0] !== plan.path) {
           throw new Error('A new SDD needs one proposed catalog capability with the exact owner path.');
         }
-        catalogJson = `${JSON.stringify({ version: 1, capabilities: [...catalog.capabilities, newCapability] }, null, 2)}\n`;
+        catalogJson = `${JSON.stringify({ ...catalog, capabilities: [...catalog.capabilities, newCapability] }, null, 2)}\n`;
       }
       if (catalogJson) {
         assertRegularSpecFile(path.join(root, 'specs/catalog.json'));

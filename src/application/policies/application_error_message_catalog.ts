@@ -264,6 +264,16 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Review the safe validation diagnostics in the issue status card; correct existing paths or explicitly declare intended new files. Retry the same issue workflow.',
     retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
   }),
+  'sdd-catalog-unsupported-profile': Object.freeze({
+    impact: 'SDD preparation stopped before model analysis because the repository selected a catalog profile unsupported by the installed publication adapter.',
+    action: 'Review catalog profile support in the SDD guide. Preserve the native schema, readiness, requirements, evidence and blockers; have a maintainer provide a reviewed compatible adapter, then retry this same issue.',
+    retainedState: 'The repository catalog, answers and published SDDs remain unchanged; no specification or branch was published by this attempt.',
+  }),
+  'sdd-catalog-format-invalid': Object.freeze({
+    impact: 'SDD preparation stopped before ownership operations because the catalog cannot establish one valid supported profile and unique owner paths.',
+    action: 'Validate the catalog JSON, supported profile, required metadata and normalized unique owner-path arrays. Preserve repository-owned readiness rules and retry the same issue after maintainer review.',
+    retainedState: 'The source catalog, answers and published SDDs remain unchanged; no automatic catalog conversion was attempted.',
+  }),
   'sdd-draft-format-invalid': Object.freeze({
     impact: 'SDD preparation stopped because the draft still lacked required headings or a numeric test budget after one automatic repair.',
     action: 'Retry SDD preparation with the canonical specification template and the explicit acceptance requirements.',
@@ -378,6 +388,16 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: no se pueden verificar las rutas citadas en la revisión base inmutable.',
     action: 'Revisa los diagnósticos seguros de validación de la tarjeta de estado; corrige las rutas existentes o declara explícitamente los archivos nuevos previstos. Reintenta el workflow de la misma incidencia.',
     retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
+  }),
+  'sdd-catalog-unsupported-profile': Object.freeze({
+    impact: 'La preparación del SDD se detuvo antes del análisis del modelo porque el repositorio seleccionó un perfil de catálogo que el adaptador de publicación instalado no admite.',
+    action: 'Revisa los perfiles admitidos en la guía de SDD. Conserva el esquema nativo, los estados, requisitos, evidencias y bloqueos; pide a un mantenedor un adaptador compatible revisado y reintenta esta misma incidencia.',
+    retainedState: 'El catálogo, las respuestas y los SDD publicados permanecen intactos; este intento no publicó ninguna especificación ni rama.',
+  }),
+  'sdd-catalog-format-invalid': Object.freeze({
+    impact: 'La preparación del SDD se detuvo antes de las operaciones de propiedad porque el catálogo no permite establecer un único perfil admitido con rutas de propiedad válidas y únicas.',
+    action: 'Valida el JSON del catálogo, el perfil admitido, los metadatos obligatorios y las listas de rutas de propiedad normalizadas y únicas. Conserva las reglas de preparación del repositorio y reintenta la misma incidencia tras la revisión de un mantenedor.',
+    retainedState: 'El catálogo de origen, las respuestas y los SDD publicados permanecen intactos; no se intentó convertir el catálogo automáticamente.',
   }),
   'sdd-draft-format-invalid': Object.freeze({
     impact: 'La preparación del SDD se detuvo porque seguían faltando secciones obligatorias o un presupuesto numérico de pruebas tras un intento automático de corrección.',

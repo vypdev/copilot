@@ -52,6 +52,8 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-fixer-unavailable',
     'branch-sync-resolution-invalid',
     'sdd-draft-size-exceeded',
+    'sdd-catalog-unsupported-profile',
+    'sdd-catalog-format-invalid',
     'sdd-draft-format-invalid',
     'sdd-draft-case-identity-invalid',
     'sdd-draft-case-budget-invalid',
@@ -87,6 +89,8 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'branch-sync-fixer-unavailable': Readonly<{ command: '/copilot sync-branch' }>;
     readonly 'branch-sync-resolution-invalid': Readonly<{ validationCode: BranchSyncValidationCode; command: '/copilot sync-branch' }>;
     readonly 'sdd-draft-size-exceeded': Readonly<Record<string, never>>;
+    readonly 'sdd-catalog-unsupported-profile': Readonly<Record<string, never>>;
+    readonly 'sdd-catalog-format-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-draft-format-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-draft-case-identity-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-draft-case-budget-invalid': Readonly<Record<string, never>>;
@@ -365,6 +369,8 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'branch-sync-fixer-unavailable': Object.freeze(['command']),
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'sdd-draft-size-exceeded': Object.freeze([]),
+    'sdd-catalog-unsupported-profile': Object.freeze([]),
+    'sdd-catalog-format-invalid': Object.freeze([]),
     'sdd-draft-format-invalid': Object.freeze([]),
     'sdd-draft-case-identity-invalid': Object.freeze([]),
     'sdd-draft-case-budget-invalid': Object.freeze([]),

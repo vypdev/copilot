@@ -72,3 +72,11 @@ Open its safe validation details and inspect the exact check and available
 section/row/count evidence before retrying. An unavailable diagnostic is not
 proof that the candidate or validator is correct. Existing specifications and
 answers remain; see [blocked preparation recovery](/issues/pre-branch-sdds#when-specification-preparation-is-blocked).
+
+
+Catalog profile failures use `configuration.unsupported` with the closed
+`sdd-catalog-unsupported-profile` or `sdd-catalog-format-invalid` recovery.
+Review [SDD publication profiles](/issues/pre-branch-sdds#catalog-publication-profiles)
+before retrying the same issue. The diagnostic preserves repository-native
+schema/readiness, answers and historical publication; a rejected profile does
+not publish a branch or start the model.

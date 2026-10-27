@@ -1568,3 +1568,163 @@ checks, type/lint, docs/spec/catalog validation, regenerated bundles and
 Graphify, complete remote review without open findings, and Codecov covering
 every modified coverable line against the exact current base. Protected-path
 human approval remains an independent gate.
+
+### Catalog publication-profile compatibility — #716 (2026-10-27)
+
+**Problem and selected boundary.** Consumer issue
+[vypdev/symphonia#32](https://github.com/vypdev/symphonia/issues/32) exposed a
+repository-native version-1 catalog whose selected schema uses `specification`,
+requirements, evidence, blockers and repository-owned readiness. The old loader
+cast those records to SDK capabilities. Ownership then called `includes` on
+undefined path arrays before any useful question or diagnostic appeared.
+Version equality alone is insufficient to establish publication compatibility.
+
+The installed automated publication profile is **`sdk-v1`**: `specs[]` plus the
+six existing SDK metadata fields and evidence arrays, with unchanged SDK
+statuses (`as-built-baseline`, `implemented`, `proposed`, `deprecated`). A
+repository-selected schema or primary-`specification` dialect requires a reviewed
+compatible publication adapter. This amendment provides an explicit unsupported
+result for those profiles; it does not certify their native validator or add a
+native publication adapter. Preserving a consumer's readiness/blocker model has
+priority over manufacturing SDK defaults or migrating its catalog to pass a gate.
+The existing prohibition on executing consumer validators in production remains.
+
+**Requirements and state.** `sdd-catalog-compatibility-R01` validates the profile
+and required metadata before model/ownership operations. Null/invalid JSON,
+empty/oversized inventories, invalid metadata, unsafe/duplicate owner paths and
+mixed `specs`/`specification` profiles produce a closed typed compatibility
+failure. SDK arrays use the same pure path boundaries as the bundled validator.
+Full file/inventory, SDD consistency and publication validation remain separate
+mandatory checks; profile recognition does not prove readiness.
+
+`sdd-catalog-compatibility-R02` returns a copied, frozen SDK capability view for
+analysis. SDK publication rereads the original catalog at its immutable base and
+preserves its decoded root and entry extension metadata when replacing only the
+selected `specs` array or appending a proposed SDK entry. Existing statuses,
+requirements, design/implementation evidence and blockers remain unchanged.
+Unsupported native catalogs remain byte-for-byte unchanged because publication
+never begins. New SDK capabilities still require `proposed`; profile recognition
+cannot promote them to implementation acceptance.
+
+`sdd-catalog-compatibility-R03` carries only a closed reason and optional verified
+source commit, frozen on the typed error. Reasons are `invalid-json`,
+`invalid-document`, `unsupported-profile`, `ambiguous-profile`,
+`invalid-metadata`, `owner-paths-invalid`. No candidate/catalog text, schema URL,
+requirement ID, path list, validator dump or provider exception becomes a
+localized recovery operand.
+
+`sdd-catalog-compatibility-R04` publishes one actionable owned compatibility
+card before model analysis or branch publication when source freshness is
+verified. The adapter exposes a read-only source-revision query independent of
+catalog loading: a rejected profile must not prevent checking its own source.
+The issue body/title and exact source SHA are fenced after localization. An
+unavailable revision, moved source or legacy adapter that can only reload the
+rejected catalog fails closed without overwriting a newer status. A typed error
+without provenance cannot establish diagnostic freshness. Retained linked
+branches use their own source reference, not a guessed development head.
+
+`sdd-catalog-compatibility-R05` keeps issue answers, historical publication and
+native schema/readiness untouched. Retrying the same issue after a compatible
+snapshot/adapter becomes available repeats the normal gate; no automatic
+regeneration, schema migration, branch workaround or approval is introduced.
+
+```mermaid
+flowchart TD
+    A[Immutable catalog] --> P{Installed profile and metadata}
+    P -->|SDK v1| V[Frozen owner view]
+    V --> M[Normal model and SDD validation]
+    M --> W[Original catalog metadata plus allowed SDD changes]
+    W --> B[Unchanged Action publication proof]
+    P -->|Unsupported or invalid| E[Closed compatibility failure plus source SHA]
+    E --> F{Issue and raw source still current}
+    F -->|Yes| C[One owned compatibility card]
+    F -->|No or unavailable| S[Blocked; current status retained]
+```
+
+Text equivalent: immutable profile validation precedes model work. Supported
+SDK views proceed through all existing checks and retain original catalog
+metadata. Compatibility failures publish a closed recovery card only after
+independent issue/source freshness proof; obsolete or unavailable sources retain
+the current status. Neither diagnostic path creates a branch.
+
+**Architecture and fixed bounds.** Pure profile/owner facts belong in
+`src/domain/sdd_catalog_compatibility.ts`; application ports keep their existing
+SDK type import path and add an optional read-only source-revision capability.
+The Git adapter binds that revision to its actual immutable read. Application
+orchestration maps failures to `configuration.unsupported` and the closed,
+operand-free recovery IDs `sdd-catalog-unsupported-profile` and
+`sdd-catalog-format-invalid`. The existing feature-owned status upsert is reused;
+no publication mutation seam, GitHub permission or credential binding is added.
+The renderer validates the reason and rejects simultaneous catalog/table facts.
+
+The profile reader has fixed limits of **2,097,152 source characters**, **1,000
+capabilities** and **20 nested object/array levels** for extension metadata.
+There are no configuration knobs, schema downloads or executable validator
+hooks. The existing 16,000-character card bound, complete localization fallback,
+source/runtime-only workflow link, SDD bounds and repair budget remain unchanged.
+These limits concern compatibility metadata and do not expand model context.
+
+**Representative GitHub UI and recovery.**
+
+> ## Specification preparation is blocked
+>
+> No new specification or branch was published by this preparation attempt.
+>
+> **Impact:** SDD preparation stopped before model analysis because the repository
+> selected a catalog profile unsupported by the installed publication adapter.
+>
+> **Action:** Review catalog profile support. Preserve the native schema,
+> readiness, requirements, evidence and blockers; obtain a reviewed compatible
+> adapter and retry this same issue.
+>
+> **Retained state:** Catalog, answers and published SDDs remain unchanged.
+>
+> **Technical details:** `configuration.unsupported`; correlation reference;
+> catalog compatibility `unsupported-profile`; the originating workflow link.
+
+The card retains the existing primary-message priority over optional welcome.
+English/Spanish are reviewed static copy; aliases, validated dynamic catalogs
+and whole-card English fallback use the existing locale resolution. Technical
+reason IDs remain stable and untranslated. Failed publication keeps the blocked
+outcome and original semantic error; unavailable source evidence never becomes
+an inferred success.
+
+**Test budget and executable acceptance.** Minimum **22 distinct new cases**,
+with locale/boundary matrices additional and no reuse of older SDD cases:
+
+| Area | Minimum distinct cases | Behaviors and risks |
+|---|---:|---|
+| Supported SDK ownership/profile views | 4 | Four statuses/ownership routes, copied frozen path arrays |
+| Invalid, unsupported and ambiguous profiles | 6 | Actual native data, JSON/root shape, metadata, mixed dialects, unsafe and duplicate owners |
+| Metadata round trips | 2 | Real companion/new scratch writes preserve decoded root and entry fields; proposed status retained |
+| Source provenance and freshness | 4 | Moved base/body, missing source and incompatible legacy revision reader |
+| Retry and publication guards | 3 | Native rejection creates no branch; corrected same-issue retry; retained branch source |
+| Card/privacy/localization | 3 | Closed diagnostic, forged facts, bounded/Spanish/fallback recovery |
+| **Total** | **22** | Ordinary tests remain deterministic and credential-free |
+
+The native fixture is copied from consumer commit
+`dac42ef2f29afc755a232f0ee5d4700d14921692`; provenance records both blob identities
+and SHA-256. Its actual pinned structural validator function accepted ten entries
+with zero errors during fixture preparation. The retained native schema is data;
+this upstream check does not claim complete consumer repository validation, live
+OAuth acceptance or native publication support.
+
+Acceptance traceability: R01/R02 -> `sdd_catalog_compatibility.test.ts` and real
+`pre_branch_sdd_workspace_adapter.test.ts` scratch writes; R03 -> constructor,
+renderer and forged-fact cases; R04 -> raw revision and gate race regressions;
+R05 -> same-issue and retained-answer/branch tests. All modified coverable lines,
+including branch-partial lines, require **100% Codecov diff coverage** against
+the actual base; ordinary suite, architecture, package, docs/spec/catalog,
+Graphify and platform gates remain required.
+
+**Documentation, migration and limits.** The issue guide documents supported
+profiles, fixed bounds, preservation and recovery; contributor guidance explains
+fixture provenance and the separation between metadata and native readiness.
+The error reference links catalog recovery to that guide. Catalog evidence and
+localized communication contracts are updated together. Existing SDK catalogs
+need no version/configuration migration; extension metadata remains intact.
+Repository-selected schemas are explicitly unsupported by this installed writer
+and remain blocked pending a reviewed compatible adapter. The disabled-by-default
+opt-in, no-deployment policy, remote branch ownership and human approval gates
+are unchanged. Rollback restores the prior visibility/compatibility defect;
+retained data and historical publication are never rewritten by this fix.

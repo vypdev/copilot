@@ -7,7 +7,7 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-26",
+      "lastVerified": "2026-10-27",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md",
@@ -1636,7 +1636,8 @@
         "src/domain/sdd_validation_diagnostic.ts",
         "src/application/errors/sdd_draft_preparation_failure.ts",
         "src/application/policies/sdd_preparation_message_catalog.ts",
-        "src/application/policies/sdd_preparation_status_policy.ts"
+        "src/application/policies/sdd_preparation_status_policy.ts",
+        "src/domain/sdd_catalog_compatibility.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1683,7 +1684,11 @@
         "src/domain/__tests__/sdd_draft_consistency.test.ts",
         "src/domain/__tests__/sdd_derived_tables.test.ts",
         "src/domain/__tests__/sdd_validation_diagnostic.test.ts",
-        "src/application/policies/__tests__/sdd_preparation_status_policy.test.ts"
+        "src/application/policies/__tests__/sdd_preparation_status_policy.test.ts",
+        "src/domain/__tests__/sdd_catalog_compatibility.test.ts",
+        "src/testing/fixtures/sdd-native-catalog/catalog.json",
+        "src/testing/fixtures/sdd-native-catalog/catalog.schema.json",
+        "src/testing/fixtures/sdd-native-catalog/provenance.json"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

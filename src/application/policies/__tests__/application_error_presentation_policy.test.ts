@@ -56,6 +56,16 @@ const RECOVERY_CASES: readonly Readonly<{
         spanish: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',
     },
     {
+        recovery: { id: 'sdd-catalog-unsupported-profile', variables: {} },
+        english: 'The repository catalog, answers and published SDDs remain unchanged; no specification or branch was published by this attempt.',
+        spanish: 'El catálogo, las respuestas y los SDD publicados permanecen intactos; este intento no publicó ninguna especificación ni rama.',
+    },
+    {
+        recovery: { id: 'sdd-catalog-format-invalid', variables: {} },
+        english: 'The source catalog, answers and published SDDs remain unchanged; no automatic catalog conversion was attempted.',
+        spanish: 'El catálogo de origen, las respuestas y los SDD publicados permanecen intactos; no se intentó convertir el catálogo automáticamente.',
+    },
+    {
         recovery: { id: 'sdd-draft-format-invalid', variables: {} },
         english: 'Existing answers and published SDDs were preserved; no draft was published.',
         spanish: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',

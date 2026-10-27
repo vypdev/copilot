@@ -1,3 +1,4 @@
+import { SDD_CATALOG_COMPATIBILITY_REASONS } from '../../../domain/sdd_catalog_compatibility';
 import { ApplicationError } from '../../errors/application_error';
 import { SddDraftPreparationFailure } from '../../errors/sdd_draft_preparation_failure';
 import { SDD_DRAFT_FORMAT_REASONS, type SddValidationDiagnostic } from '../../../domain/sdd_validation_diagnostic';
@@ -154,5 +155,37 @@ describe('runtime-owned workflow destinations', () => {
     { ...run, serverOrigin: 'https://' + 'x'.repeat(2048) }, { ...run, serverOrigin: 'https://github.com\nPRIVATE' },
   ])('withholds invalid or credential-bearing runtime links: %j', facts => {
     expect(sddWorkflowRunUrl(facts)).toBeUndefined();
+  });
+});
+
+
+describe('closed catalog compatibility presentation (#716)', () => {
+  it.each(SDD_CATALOG_COMPATIBILITY_REASONS)('shows only the closed %s profile fact and preserves native readiness', catalogReason => {
+    const error = new ApplicationError('configuration.unsupported', 'PRIVATE_CATALOG', { recovery: {
+      id: catalogReason === 'unsupported-profile' ? 'sdd-catalog-unsupported-profile' : 'sdd-catalog-format-invalid', variables: {},
+    } });
+    const body = renderSddPreparationFailure({ issueNumber: 42, error, catalogReason, run });
+    expect(body).toContain('Catalog compatibility'); expect(body).toContain(catalogReason);
+    expect(body).toContain('Native schema, readiness, requirements'); expect(body).toContain('reviewed compatible adapter');
+    expect(body).not.toMatch(/PRIVATE_CATALOG|Specific table facts/u); expect(body.length).toBeLessThan(16000);
+  });
+
+  it('rejects forged or contradictory catalog evidence', () => {
+    expect(() => renderSddPreparationFailure({ issueNumber: 42, error: failure(), catalogReason: 'PRIVATE' as never })).toThrow('compatibility facts');
+    expect(() => renderSddPreparationFailure({ issueNumber: 42, error: failure(), catalogReason: 'unsupported-profile', diagnostic: diagnostic() })).toThrow('compatibility facts');
+  });
+
+  it('withholds forged nonempty catalog recovery operands', () => {
+    const original = new ApplicationError('configuration.unsupported', 'PRIVATE');
+    const error = { ...original, recovery: { id: 'sdd-catalog-unsupported-profile', variables: { raw: 'PRIVATE_OPERAND' } } } as never;
+    expect(renderSddPreparationFailure({ issueNumber: 42, error, catalogReason: 'unsupported-profile' })).not.toContain('PRIVATE');
+  });
+
+  it('preserves the catalog reason through a bounded whole-card localization fallback', async () => {
+    const resolver = new ResolveMessageCatalogUseCase({ query: jest.fn().mockResolvedValue({ targetLocale: 'fr-FR',
+      messages: Object.fromEntries(SDD_PREPARATION_MESSAGE_IDS.map(id => [id, 'Long localized text '.repeat(90)])) }) });
+    const catalog = await resolveSddPreparationCatalog('fr-FR', configuration, resolver);
+    const body = renderSddPreparationFailure({ issueNumber: 42, error: failure(), catalogReason: 'unsupported-profile' }, catalog);
+    expect(body.length).toBeLessThan(16000); expect(body).toContain('unsupported-profile'); expect(body).toContain('fell back to English');
   });
 });

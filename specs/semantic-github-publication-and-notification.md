@@ -2036,3 +2036,13 @@ cannot stand in for the blocking outcome. Other generic event errors remain
 operator evidence unless explicitly mapped. The owning pre-branch SDD defines
 bounded typed diagnostics, same-issue replay, partial-publication facts and the
 fourteen-case primary budget; semantic publication does not count them again.
+
+
+Catalog compatibility amendment (#716, 2026-10-27): unsupported/malformed
+publication profiles reuse the existing owned SDD preparation card and primary
+outcome priority. A closed reason and independent immutable-source freshness
+proof precede that publication; the renderer never accepts catalog text or
+validator output as a recovery operand. Catalog/table evidence is exclusive,
+source-unavailable or stale attempts retain the current status, and no additional
+create/update call site or notification authority is introduced. The owning
+pre-branch SDD defines the supported profile and numeric regression budget.
