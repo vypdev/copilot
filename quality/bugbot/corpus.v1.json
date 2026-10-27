@@ -315,6 +315,78 @@
     {"id": "kt-compose-failed-startup-stuck", "language": "kotlin", "category": "correctness", "description": "Review startup with the supplied framework contract. The host starts with a Loading... child inside ComposeTarget. initializeDependencies throws when required saved settings are malformed; there is no global error handler or other loader update. Compose 1.13.0-beta01 official source webMain/androidx/compose/ui/window/ComposeWindow.web.kt:74,80-82,241-246: ComposeViewport clears viewportContainer with replaceChildren() inside onSkikoReady before mounting content.", "file": "frontend/Main.kt", "startLine": 1, "diff": "@@ -0,0 +1,4 @@\n+fun main() {\n+    initializeDependencies()\n+    ComposeViewport(viewportContainerId = \"ComposeTarget\") { App() }\n+}", "expected": [{"id": "startup-loader", "title": "Dependency initialization failure leaves the loading state indefinitely", "file": "frontend/Main.kt", "line": 2, "severity": "medium", "category": "reliability", "symbol": "main", "codeSnippet": "initializeDependencies()"}]},
     {"id": "ts-viewport-version-without-cleanup", "language": "typescript", "category": "correctness", "description": "Review a synthetic viewport package integration. The pinned viewport-framework 1.0 source is supplied. Version 2.0 clears the target before mount, but this repository resolves 1.0. The full caller and loader cleanup are shown. Resolved viewport-framework@1.0 source: export function mount(target, app) { target.appendChild(app); } index.html: <div id=\"target\"><div id=\"loading\">Loading...</div></div>", "file": "src/startup.ts", "startLine": 1, "diff": "@@ -1 +1,2 @@\n+import { mount } from \"viewport-framework\";\n+mount(document.getElementById(\"target\")!, createApp());\n-document.getElementById(\"loading\")!.remove();", "expected": [{"id": "version-loader", "title": "The pinned viewport implementation preserves the loading element", "file": "src/startup.ts", "line": 2, "severity": "medium", "category": "correctness", "codeSnippet": "mount(document.getElementById(\"target\")!, createApp());"}]},
     {
+      "id": "kt-compose-preferred-width-narrow",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Standard Compose foundation-layout and Material3 APIs. The centered Box receives bounded width constraints min=0dp, max=280dp. The form must keep its interactive fields within the 280dp parent.",
+      "file": "ui/AuthForm.kt",
+      "startLine": 1,
+      "diff": "+import androidx.compose.foundation.layout.*\n+import androidx.compose.material3.*\n+import androidx.compose.runtime.Composable\n+import androidx.compose.ui.Alignment\n+import androidx.compose.ui.Modifier\n+import androidx.compose.ui.unit.dp\n+@Composable\n+fun AuthForm(email: String, onEmailChange: (String) -> Unit) {\n+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {\n+        Card(modifier = Modifier.width(400.dp)) {\n+            Column(Modifier.padding(24.dp)) {\n+                OutlinedTextField(email, onEmailChange, modifier = Modifier.fillMaxWidth())\n+                Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text(\"Submit\") }\n+            }\n+        }\n+    }\n+}",
+      "expected": []
+    },
+    {
+      "id": "kt-compose-required-width-overflow",
+      "language": "kotlin",
+      "category": "correctness",
+      "description": "Standard Compose foundation-layout and Material3 APIs. The centered Box receives bounded width constraints min=0dp, max=280dp. All unclipped interactive fields must fit within the 280dp parent. The same form is also used at 800dp, where the controls must remain at most 320dp wide.",
+      "file": "ui/AuthForm.kt",
+      "startLine": 1,
+      "diff": "+import androidx.compose.foundation.layout.*\n+import androidx.compose.material3.*\n+import androidx.compose.runtime.Composable\n+import androidx.compose.ui.Alignment\n+import androidx.compose.ui.Modifier\n+import androidx.compose.ui.unit.dp\n+@Composable\n+fun AuthForm(email: String, onEmailChange: (String) -> Unit) {\n+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {\n+        Card(modifier = Modifier.requiredWidth(400.dp).padding(16.dp)) {\n+            Column(Modifier.padding(24.dp)) {\n+                OutlinedTextField(email, onEmailChange, modifier = Modifier.fillMaxWidth())\n+                Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text(\"Submit\") }\n+            }\n+        }\n+    }\n+}",
+      "expected": [
+        {
+          "id": "kt-compose-required-width-overflow-defect",
+          "title": "Required width makes the padded controls overflow the 280dp parent",
+          "file": "ui/AuthForm.kt",
+          "line": 10,
+          "severity": "low",
+          "category": "correctness",
+          "symbol": "AuthForm",
+          "codeSnippet": "Modifier.requiredWidth(400.dp).padding(16.dp)"
+        }
+      ]
+    },
+    {
+      "id": "kt-compose-fill-before-cap",
+      "language": "kotlin",
+      "category": "correctness",
+      "description": "Standard Compose foundation-layout and Material3 APIs. The centered Box receives bounded width constraints min=0dp, max=800dp; it is also used at 280dp. The form must stay usable at 280dp and keep the interactive fields at most 320dp wide at 800dp.",
+      "file": "ui/AuthForm.kt",
+      "startLine": 1,
+      "diff": "+import androidx.compose.foundation.layout.*\n+import androidx.compose.material3.*\n+import androidx.compose.runtime.Composable\n+import androidx.compose.ui.Alignment\n+import androidx.compose.ui.Modifier\n+import androidx.compose.ui.unit.dp\n+@Composable\n+fun AuthForm(email: String, onEmailChange: (String) -> Unit) {\n+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {\n+        Card(modifier = Modifier.fillMaxWidth().widthIn(max = 400.dp).padding(16.dp)) {\n+            Column(Modifier.padding(24.dp)) {\n+                OutlinedTextField(email, onEmailChange, modifier = Modifier.fillMaxWidth())\n+                Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text(\"Submit\") }\n+            }\n+        }\n+    }\n+}",
+      "expected": [
+        {
+          "id": "kt-compose-fill-before-cap-defect",
+          "title": "Filling before the cap removes the intended wide-screen bound",
+          "file": "ui/AuthForm.kt",
+          "line": 10,
+          "severity": "low",
+          "category": "correctness",
+          "symbol": "AuthForm",
+          "codeSnippet": "Modifier.fillMaxWidth().widthIn(max = 400.dp).padding(16.dp)"
+        }
+      ]
+    },
+    {
+      "id": "kt-compose-cap-before-fill",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Standard Compose foundation-layout and Material3 APIs. The centered Box receives bounded width constraints min=0dp, max=800dp; it is also used at 280dp. The form must stay usable at 280dp and keep the interactive fields at most 320dp wide at 800dp.",
+      "file": "ui/AuthForm.kt",
+      "startLine": 1,
+      "diff": "+import androidx.compose.foundation.layout.*\n+import androidx.compose.material3.*\n+import androidx.compose.runtime.Composable\n+import androidx.compose.ui.Alignment\n+import androidx.compose.ui.Modifier\n+import androidx.compose.ui.unit.dp\n+@Composable\n+fun AuthForm(email: String, onEmailChange: (String) -> Unit) {\n+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {\n+        Card(modifier = Modifier.widthIn(max = 400.dp).fillMaxWidth().padding(16.dp)) {\n+            Column(Modifier.padding(24.dp)) {\n+                OutlinedTextField(email, onEmailChange, modifier = Modifier.fillMaxWidth())\n+                Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text(\"Submit\") }\n+            }\n+        }\n+    }\n+}",
+      "expected": []
+    },
+    {
+      "id": "kt-compose-padded-preferred-width",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Standard Compose foundation-layout and Material3 APIs. The centered Box receives bounded width constraints min=0dp, max=280dp or max=800dp in separate renders. All unclipped interactive fields must fit within the narrow parent and be at most 320dp wide in the wide render.",
+      "file": "ui/AuthForm.kt",
+      "startLine": 1,
+      "diff": "+import androidx.compose.foundation.layout.*\n+import androidx.compose.material3.*\n+import androidx.compose.runtime.Composable\n+import androidx.compose.ui.Alignment\n+import androidx.compose.ui.Modifier\n+import androidx.compose.ui.unit.dp\n+@Composable\n+fun AuthForm(email: String, onEmailChange: (String) -> Unit) {\n+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {\n+        Card(modifier = Modifier.width(400.dp).padding(16.dp)) {\n+            Column(Modifier.padding(24.dp)) {\n+                OutlinedTextField(email, onEmailChange, modifier = Modifier.fillMaxWidth())\n+                Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text(\"Submit\") }\n+            }\n+        }\n+    }\n+}",
+      "expected": []
+    },
+    {
       "language": "yaml",
       "file": ".github/workflows/ci.yml",
       "startLine": 185,
