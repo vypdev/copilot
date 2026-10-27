@@ -1554,7 +1554,7 @@
       "status": "implemented",
       "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-26",
+      "lastVerified": "2026-10-27",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
         "specs/pre-branch-sdd-gate.md",

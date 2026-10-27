@@ -3,7 +3,7 @@
 - Status: Implemented — automated verification complete; live provider UX review pending
 - Date: 2026-09-17
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: 2026-10-26 (actionable blocked preparation and safe diagnostics, #714)
+- Last verified: 2026-10-27 (actionable blocked preparation and safe diagnostics, #714)
 - Owners: Copilot maintainers
 - Scope: clarify, update, validate, and publish the owning SDD before eligible branch-based work
 - Related issues/PRs: none; local design work; companion SDD `issue-start-and-branch-readiness.md`
@@ -578,7 +578,7 @@ ownership/validation.
 | Native schema length rejection recovery | 9 | Actual findings adapter rejection/repair, exhausted schema repair, foreign path/bound and forged diagnostic rejection, short response rejection, mixed writer/schema failures and typed validator metadata |
 | Canonical numeric table budgets | 20 | Three valid table/owner routes, twelve invalid or misplaced table cases, unsafe integer rejection, positive/zero prose compatibility, immutable owner failure identity, actual findings acceptance and real scratch-worktree owner preservation |
 | Compact generation targets | 2 | Update and companion target size, unchanged hard schema bounds, original resolved requirements and shared two-attempt ceiling |
-| Blocked preparation and safe diagnostics (#714) | 21 | Fourteen cause/recovery, publication/idempotency, privacy/ownership and retention cases plus seven publication-freshness race/revision cases; locale matrix is additional |
+| Blocked preparation and safe diagnostics (#714) | 25 | Fourteen cause/recovery, publication/idempotency, privacy/ownership and retention cases, seven publication-freshness cases and four existing-question recovery/race cases; locale and diagnostic boundary matrices are additional |
 | **Total** | **165** | No case counted twice |
 
 The Windows adapter fixture MUST inject a destination creation immediately
@@ -1462,7 +1462,12 @@ same branch. A verified publication remains `published` even if refreshing a
 prior diagnostic card fails; that UI failure is returned separately for ordinary
 reconciliation. A successful replay of verified publication clears the prior
 blocked view without regenerating the SDD. Waiting for answers replaces the old
-failure view with the question-card next action. A stale issue/title/base MUST
+failure view with the question-card next action, including early replay with
+existing incomplete questions after a transient answer-permission failure. This
+recovery preserves the question record and answer comments, neither drafts nor
+publishes, and performs no duplicate update on an unchanged replay. Recovery
+checks source freshness after localization and never recreates a status card
+removed while that copy was resolving. A stale issue/title/base MUST
 not publish outdated candidate diagnostics or overwrite the current recovery
 record. A publication already classified `workflow.stale` MUST perform no
 recovery-card mutation. Other publication failures MUST recheck the exact source
@@ -1527,7 +1532,7 @@ schema migration, new public command or automatic background regeneration.
 Rollback restores the former visibility gap without changing retained answers,
 owner documents or publication proof.
 
-**Acceptance, documentation and risk budget.** The twenty-one minimum distinct
+**Acceptance, documentation and risk budget.** The twenty-five minimum distinct
 cases in section 14 are new. Fourteen cover: five cause/recovery behavior groups (identities,
 budgets, reciprocal mappings, repository paths and size/format); three primary
 outcome/replay/owned-marker cases; three evidence privacy/bound/access cases;
@@ -1535,6 +1540,13 @@ three same-issue retry, retained-answer/owner and no-premature-branch cases.
 Seven publication-freshness regressions additionally preserve current cards for
 stale body/title/base, issue changes during a failed push, changes during
 localization, the exact returned revision commit and a foreign revision advance.
+Four existing-question cases cover failed permission lookup then one/two
+incomplete questions, deletion during localization and stale recovery during
+localization. Additional boundary cases cover normalized destination length,
+malformed second-attempt output, each required heading, omitted runtime
+coordinates, empty budget allocations, out-of-bound sums and orphan requirements.
+Coverage acceptance includes branch-partial modified lines; executing a line
+with an untested branch does not satisfy the 100% diff requirement.
 Additional cases cover stale sources, unavailable diagnostics, UI publication
 failure, partial commit recovery and verified-publication preservation. The
 locale matrix is additional: en-US/es-ES, en-AU/es-MX, representative dynamic

@@ -59946,7 +59946,7 @@ class PreBranchSddGateUseCase {
             if (card?.record.phase === 'published' && card.record.issueDigest === digest) {
                 const revisionVerified = !card.record.revisionSha || await this.workspace.verifyPublication(card.record.branchName, card.record.revisionBaseSha, card.record.revisionSha, card.record.plan.path);
                 if (revisionVerified) {
-                    const restored = await this.clearPreparationFailure(context);
+                    const restored = await this.clearPreparationFailure(context, failureSource);
                     return {
                         status: 'published', branchName: card.record.branchName, commitSha: card.record.revisionSha ?? card.record.commitSha,
                         results: [this.result(true, false, `The published SDD commit ${card.record.revisionSha ?? card.record.commitSha} remains verified.`), ...restored],
@@ -59959,6 +59959,7 @@ class PreBranchSddGateUseCase {
                 const currentAnswers = card.record.plan.questions.length === 0 ? []
                     : await this.collectAnswers(card.record, card.id, allComments, context);
                 if (currentAnswers.length < card.record.plan.questions.length) {
+                    await this.writePreparationRecovered(context, 'waiting', failureSource);
                     return { status: 'waiting', results: [this.result(true, true, 'Waiting for the numbered SDD answers; no draft or branch was created.')] };
                 }
                 answers = (0, pre_branch_sdd_1.retainSddAnswers)(card.record.answers ?? [], currentAnswers);
@@ -60004,7 +60005,7 @@ class PreBranchSddGateUseCase {
             };
             if (plan.questions.length > 0) {
                 await this.writeCard(context.issueNumber, card?.id, record, context.issueLocale, context.issueUrl);
-                await this.writePreparationRecovered(context, 'waiting');
+                await this.writePreparationRecovered(context, 'waiting', failureSource);
                 return { status: 'waiting', results: [this.result(true, true, `Asked ${plan.questions.length} blocking SDD question(s); no draft or branch was created.`)] };
             }
             const currentSdd = plan.action === 'update' ? await this.workspace.readSdd(snapshot.baseSha, plan.path) : undefined;
@@ -60071,7 +60072,7 @@ class PreBranchSddGateUseCase {
                 ...(revision ? { revisionSha: commitSha, revisionBaseSha: draft.prepared.baseSha } : {}),
             };
             await this.writeCard(context.issueNumber, draft.cardId, published, context.issueLocale, context.issueUrl);
-            const restored = await this.clearPreparationFailure(context);
+            const restored = await this.clearPreparationFailure(context, failureSource);
             return {
                 status: 'published', branchName, commitSha,
                 results: [this.result(true, true, `Published and verified ${revision ? 'the SDD revision' : 'the first SDD commit'} ${commitSha} on ${branchName}.`), ...restored],
@@ -60157,18 +60158,19 @@ class PreBranchSddGateUseCase {
             await this.assertFresh(context, source.sha, source.branch);
         await this.upsertPreparationStatus(context, comments, body, true);
     }
-    async writePreparationRecovered(context, phase) {
+    async writePreparationRecovered(context, phase, source) {
         const comments = await this.comments.listIssueComments(context.issueNumber);
         if (!comments.some(comment => comment.user?.login?.toLowerCase() === context.tokenUser.toLowerCase()
             && comment.body?.includes((0, sdd_analysis_status_policy_1.sddAnalysisStatusMarker)(context.issueNumber))))
             return;
         const catalog = await (0, sdd_preparation_message_catalog_1.resolveSddPreparationCatalog)(context.issueLocale ?? 'en-US', context.agentConfiguration, this.presentation.catalogResolver);
         const body = (0, sdd_preparation_status_policy_1.renderSddPreparationRecovered)(context.issueNumber, phase, context.issueLocale, catalog);
+        await this.assertFresh(context, source.sha, source.branch);
         await this.upsertPreparationStatus(context, comments, body, false);
     }
-    async clearPreparationFailure(context) {
+    async clearPreparationFailure(context, source) {
         try {
-            await this.writePreparationRecovered(context, 'published');
+            await this.writePreparationRecovered(context, 'published', source);
             return [];
         }
         catch (error) {
@@ -84943,7 +84945,7 @@ function section(source, number, reason) {
     const sections = [...source.matchAll(/^## (\d+)\. [^\n]*$/gmu)];
     const matches = sections.filter(heading => Number(heading[1]) === number);
     if (matches.length !== 1)
-        return fail(reason, { detail: 'section-count', section: diagnosticSection(number), expected: 1, observed: matches.length });
+        return fail(reason, { detail: 'section-count', section: number, expected: 1, observed: matches.length });
     const start = matches[0];
     const end = sections.find(heading => heading.index > start.index)?.index ?? source.length;
     return source.slice(start.index + start[0].length, end);
@@ -84960,21 +84962,21 @@ function table(source, number, headers, reason) {
             continue;
         const separator = cells(lines[++index] ?? '');
         if (separator.length !== headers.length || !separator.every(cell => /^:?-{3,}:?$/u.test(cell)))
-            return fail(reason, { detail: 'table-separator', section: diagnosticSection(number), row: index + 1 });
+            return fail(reason, { detail: 'table-separator', section: number, row: index + 1 });
         const rows = [];
         while (++index < lines.length && /^\s*\|/u.test(lines[index])) {
             const row = cells(lines[index]);
             if (row.length !== headers.length)
-                return fail(reason, { detail: 'table-columns', section: diagnosticSection(number), row: rows.length + 1, expected: headers.length, observed: row.length });
+                return fail(reason, { detail: 'table-columns', section: number, row: rows.length + 1, expected: headers.length, observed: row.length });
             if (row.some(cell => !cell))
-                return fail(reason, { detail: 'table-empty-cell', section: diagnosticSection(number), row: rows.length + 1 });
+                return fail(reason, { detail: 'table-empty-cell', section: number, row: rows.length + 1 });
             rows.push(row);
         }
         if (!rows.length)
-            return fail(reason, { detail: 'table-empty', section: diagnosticSection(number), observed: 0 });
+            return fail(reason, { detail: 'table-empty', section: number, observed: 0 });
         found.push(rows);
     }
-    return found.length === 1 ? found[0] : fail(reason, { detail: 'table-count', section: diagnosticSection(number), expected: 1, observed: found.length });
+    return found.length === 1 ? found[0] : fail(reason, { detail: 'table-count', section: number, expected: 1, observed: found.length });
 }
 function ids(value, pattern, reason, section) {
     const values = value.split(/\s*,\s*/u);
@@ -85102,6 +85104,8 @@ function validateSddDraftConsistency(markdown, owners, inventory, sddPath) {
             linked.add(id);
         }
     }
+    if ([...edges.values()].some(links => links.size === 0))
+        fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: 0, observed: [...edges.values()].filter(links => links.size === 0).length });
     const traceability = table(source, 17, ['Requirement', 'Cases'], 'requirement-mapping');
     const seen = new Set();
     for (const [requirement, links] of traceability) {
@@ -85118,8 +85122,6 @@ function validateSddDraftConsistency(markdown, owners, inventory, sddPath) {
     }
     if (seen.size !== edges.size)
         fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: edges.size, observed: seen.size });
-    if ([...edges.values()].some(links => links.size === 0))
-        fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: 0, observed: [...edges.values()].filter(links => links.size === 0).length });
     validatePaths(source, inventory, sddPath);
 }
 function safePath(value) {
@@ -85186,9 +85188,6 @@ function validatePaths(source, inventory, sddPath) {
     const prose = source.replace(/\]\([^\s)]+\)/gu, ']()').replace(/[a-z][a-z0-9+.-]*:\/\/[^\s)>]+/giu, '');
     for (const match of prose.matchAll(/(?<![\w./:-])([A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+\.[A-Za-z0-9]+)(?![\w/-])/gu))
         check(match[1]);
-}
-function diagnosticSection(value) {
-    return value === 4 || value === 14 || value === 15 || value === 17 ? value : 0;
 }
 function uniqueIdentifiers(values, pattern, reason, section) {
     const distinct = new Set(values).size;

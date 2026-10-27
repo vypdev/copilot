@@ -139,6 +139,12 @@ describe('runtime-owned workflow destinations', () => {
     expect(sddWorkflowRunUrl(run)).toBe('https://github.example.test/acme/repo/actions/runs/123');
     expect(sddWorkflowRunUrl({ ...run, serverOrigin: 'https://github.com' })).toBe('https://github.com/acme/repo/actions/runs/123');
   });
+  it('withholds a link whose normalized IDNA origin exceeds the destination bound', () => {
+    const serverOrigin = 'https://' + Array(600).fill('ü').join('.');
+    expect(serverOrigin.length).toBeLessThan(2048);
+    expect(new URL(serverOrigin).origin.length).toBeGreaterThan(4096);
+    expect(sddWorkflowRunUrl({ ...run, serverOrigin })).toBeUndefined();
+  });
   it.each([
     undefined, { ...run, owner: '../PRIVATE' }, { ...run, repository: 'repo?PRIVATE' },
     { ...run, runId: '0' }, { ...run, runId: 'PRIVATE' }, { ...run, serverOrigin: 'not-a-url' },

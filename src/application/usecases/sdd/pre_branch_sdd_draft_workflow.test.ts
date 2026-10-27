@@ -13,6 +13,16 @@ describe('draftSddMarkdown', () => {
     .replace(/\| Area \| Minimum distinct cases[\s\S]*?(?=\| Case ID)/u, '{{SDD_CASE_BUDGET}}\n\n')
     .replace(/\| Requirement \| Cases \|[\s\S]*$/u, '{{SDD_REQUIREMENT_CASES}}\n');
 
+  it('reports malformed output on the sole repair as two attempts without another generation', async () => {
+    const query = jest.fn().mockRejectedValueOnce(new AgentResponseLengthFailure('$.markdown', 18000)).mockResolvedValueOnce({ private: 'PRIVATE_OUTPUT' });
+    const validate = jest.fn();
+    await expect(draftSddMarkdown({ query }, configuration, plan, 'Resolved requirements', validate)).rejects.toMatchObject({
+      attempts: 2, diagnostic: { reason: 'response-shape', phase: 'response', facts: [{ detail: 'response-shape', section: 0 }] },
+    });
+    expect(query).toHaveBeenCalledTimes(2); expect(validate).not.toHaveBeenCalled();
+    expect(JSON.stringify(query.mock.calls)).not.toContain('PRIVATE_OUTPUT');
+  });
+
   it('assembles the native findings response before the unchanged publication checks run', async () => {
     const execute = jest.fn().mockResolvedValue(JSON.stringify({ markdown: assemblyDraft() }));
     const adapter = new FindingsAgentAdapter({ cli: { execute } });

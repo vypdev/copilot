@@ -142,3 +142,18 @@ it('binds current-run facts without adding credentials to SDD presentation', () 
     if (priorId === undefined) delete process.env.GITHUB_RUN_ID; else process.env.GITHUB_RUN_ID = priorId;
   }
 });
+
+
+it.each(['origin-only', 'run-only', 'neither'])('withholds run facts when runtime coordinates are incomplete: %s', shape => {
+  const priorOrigin = process.env.GITHUB_SERVER_URL; const priorId = process.env.GITHUB_RUN_ID;
+  try {
+    delete process.env.GITHUB_SERVER_URL; delete process.env.GITHUB_RUN_ID;
+    if (shape === 'origin-only') process.env.GITHUB_SERVER_URL = 'https://github.example.test';
+    if (shape === 'run-only') process.env.GITHUB_RUN_ID = '123';
+    createIssueUseCaseCompositionRoot({ owner: 'owner', repository: 'repo', token: 'PRIVATE_TOKEN' });
+    expect((composeIssueUseCase.mock.calls.at(-1)?.[5] as unknown as { presentation: object }).presentation).not.toHaveProperty('run');
+  } finally {
+    if (priorOrigin === undefined) delete process.env.GITHUB_SERVER_URL; else process.env.GITHUB_SERVER_URL = priorOrigin;
+    if (priorId === undefined) delete process.env.GITHUB_RUN_ID; else process.env.GITHUB_RUN_ID = priorId;
+  }
+});

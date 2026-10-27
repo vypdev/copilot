@@ -966,6 +966,55 @@ describe('SDD diagnostic retention and recovery (#714)', () => {
     }
   });
 
+  it.each([1, 2])('clears a failed answer check when %i existing question(s) remain incomplete', async count => {
+    const h = harness();
+    const questions = Array.from({ length: count }, (_, index) => ({ ...question, id: `Q${index + 1}` }));
+    h.query.mockResolvedValueOnce({ ...plan, questions, newCapability: null });
+    const first = await h.useCase.begin(context());
+    expect(first.status).toBe('waiting');
+    const original = h.comments[0].body;
+    h.comments.push({ id: 101, body: 'SDD Q1: Preserve current behavior.', user: { login: 'bob' } });
+    h.isActorAllowedToModifyFiles.mockRejectedValueOnce(new Error('Permission query unavailable'));
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.comments.find(comment => comment.body.includes('copilot:sdd-analysis-status:v1'))?.body).toContain('is blocked');
+    h.isActorAllowedToModifyFiles.mockResolvedValue(count === 2);
+    h.query.mockClear(); h.addComment.mockClear(); h.updateComment.mockClear();
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    expect(h.comments.find(comment => comment.body.includes('copilot:sdd-analysis-status:v1'))?.body).toContain('Waiting for the numbered answers');
+    expect(h.comments[0].body).toBe(original);
+    expect(h.comments[1].body).toBe('SDD Q1: Preserve current behavior.');
+    expect(h.query).not.toHaveBeenCalled(); expect(h.publish).not.toHaveBeenCalled();
+    expect(h.updateComment).toHaveBeenCalledTimes(1); expect(h.addComment).not.toHaveBeenCalled();
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    expect(h.updateComment).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['deleted', 'stale'] as const)('does not recreate or overwrite a %s recovery view during localization', async race => {
+    const resolve = jest.fn(); const h = harness({ catalogResolver: { resolve } });
+    const ctx = { ...context(), issueLocale: 'fr-FR' };
+    h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });
+    await h.useCase.begin(ctx);
+    const current = '<!-- copilot:sdd-analysis-status:v1 issue="42" --> Current run';
+    h.comments.push({ id: 900, body: current, user: { login: 'copilot[bot]' } });
+    resolve.mockImplementation(async request => {
+      if (race === 'deleted') h.comments.splice(h.comments.findIndex(comment => comment.id === 900), 1);
+      else h.getDescription.mockResolvedValue('Newer issue request');
+      return { requestedLocale: 'fr-FR', resolvedLocale: 'en-US', source: 'fallback',
+        fallbackReason: 'dynamic-response-invalid', messages: request.sourceCatalog.messages };
+    });
+    h.addComment.mockClear(); h.updateComment.mockClear();
+    const result = await h.useCase.begin(ctx);
+    expect(resolve).toHaveBeenCalledTimes(1);
+    expect(h.addComment).not.toHaveBeenCalled(); expect(h.updateComment).not.toHaveBeenCalled();
+    if (race === 'deleted') {
+      expect(result.status).toBe('waiting'); expect(h.comments).toHaveLength(1);
+    } else {
+      expect(result.status).toBe('blocked'); expect(h.comments[1].body).toBe(current);
+      expect(result.results[0].errors[0].code).toBe('workflow.stale');
+    }
+    expect(h.query).toHaveBeenCalledTimes(1); expect(h.publish).not.toHaveBeenCalled();
+  });
+
   it('does not overwrite a human-owned forged draft diagnostic marker', async () => {
     const h = harness(); failDraft(h);
     const forged = '<!-- copilot:sdd-analysis-status:v1 issue="42" --> PRIVATE_HUMAN_TEXT';

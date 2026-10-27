@@ -1,5 +1,5 @@
 import { normalizeSddValidationDiagnostic, type SddValidationDiagnostic } from '../sdd_validation_diagnostic';
-import { SddDraftFormatFailure } from '../pre_branch_sdd';
+import { SddDraftFormatFailure, SDD_REQUIRED_HEADINGS, validateSddMarkdown } from '../pre_branch_sdd';
 import { validateSddDraftConsistency } from '../sdd_draft_consistency';
 import { sddConsistencyFixture } from '../../testing/sdd_consistency_fixture';
 
@@ -7,6 +7,16 @@ const valid = (): SddValidationDiagnostic => ({ reason: 'requirement-mapping', p
   facts: [{ detail: 'traceability-links', section: 17, row: 1, expected: 2, observed: 1 }] });
 
 describe('bounded public SDD diagnostics', () => {
+  it.each(SDD_REQUIRED_HEADINGS)('reports the actual missing canonical heading ordinal: %s', heading => {
+    const markdown = SDD_REQUIRED_HEADINGS.filter(value => value !== heading).join('\n') + '\n3 distinct cases\n' + 'Scope. '.repeat(400);
+    try { validateSddMarkdown(markdown); throw new Error('Expected rejection'); }
+    catch (error) {
+      expect(error).toBeInstanceOf(SddDraftFormatFailure);
+      expect((error as SddDraftFormatFailure).diagnostic).toEqual({ reason: 'required-heading', phase: 'validation',
+        facts: [{ detail: 'required-heading', section: 0, row: SDD_REQUIRED_HEADINGS.indexOf(heading) + 1 }] });
+    }
+  });
+
   it('copies and freezes the exact allowed structure', () => {
     const input = valid();
     const result = normalizeSddValidationDiagnostic(input);
@@ -67,6 +77,9 @@ describe('bounded public SDD diagnostics', () => {
 
 describe('precise failing SDD facts (#714)', () => {
   it.each([
+    ['budget without area allocations', (s: string) => s.replace('| Policy | 2 | Authentication |\n', '').replace('| Adapter | 1 | Publication |\n', ''), { detail: 'budget-total', section: 14, expected: 1, observed: 0 }],
+    ['sum beyond diagnostic count bound', (s: string) => s.replace('| Policy | 2 |', '| Policy | 100001 |'), { detail: 'budget-total', section: 14, expected: 3 }],
+    ['requirement with no inventory case', (s: string) => s.replace('C03 | Adapter | G-02 |', 'C03 | Adapter | G-01 |'), { detail: 'requirement-coverage', section: 17, expected: 0, observed: 1 }],
     ['invalid case identity', (s: string) => s.replace(/payments-change-C01/gu, 'PRIVATE_CASE'), { detail: 'identifier-list', section: 14, row: 1, expected: 0, observed: 1 }],
     ['invalid requirement identity', (s: string) => s.replace(/G-01/gu, 'PRIVATE_REQ'), { detail: 'identifier-list', section: 4, row: 1, expected: 0, observed: 1 }],
     ['duplicate requirement', (s: string) => s.replace(/G-02/gu, 'G-01'), { detail: 'requirement-identity', section: 4, expected: 2, observed: 1 }],
@@ -91,6 +104,7 @@ describe('precise failing SDD facts (#714)', () => {
       expect(error).toBeInstanceOf(SddDraftFormatFailure);
       expect((error as SddDraftFormatFailure).diagnostic.facts).toContainEqual(expect.objectContaining(fact));
       expect(JSON.stringify((error as SddDraftFormatFailure).diagnostic)).not.toContain('PRIVATE');
+      if (_label === 'sum beyond diagnostic count bound') expect((error as SddDraftFormatFailure).diagnostic.facts[0]).not.toHaveProperty('observed');
     }
   });
 });

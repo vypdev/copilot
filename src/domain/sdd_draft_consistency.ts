@@ -58,16 +58,16 @@ function visible(source: string): string {
 
 function clean(value: string): string { return value.trim().replace(/^(?:\*\*|__|`)(.*?)(?:\*\*|__|`)$/u, '$1').trim(); }
 
-function section(source: string, number: number, reason: SddConsistencyReason): string {
+function section(source: string, number: Exclude<SddValidationFact['section'], 0>, reason: SddConsistencyReason): string {
   const sections = [...source.matchAll(/^## (\d+)\. [^\n]*$/gmu)];
   const matches = sections.filter(heading => Number(heading[1]) === number);
-  if (matches.length !== 1) return fail(reason, { detail: 'section-count', section: diagnosticSection(number), expected: 1, observed: matches.length });
+  if (matches.length !== 1) return fail(reason, { detail: 'section-count', section: number, expected: 1, observed: matches.length });
   const start = matches[0];
   const end = sections.find(heading => heading.index > start.index)?.index ?? source.length;
   return source.slice(start.index + start[0].length, end);
 }
 
-function table(source: string, number: number, headers: readonly string[], reason: SddConsistencyReason): string[][] {
+function table(source: string, number: Exclude<SddValidationFact['section'], 0>, headers: readonly string[], reason: SddConsistencyReason): string[][] {
   const lines = section(source, number, reason).split('\n');
   const found: string[][][] = [];
   for (let index = 0; index < lines.length; index++) {
@@ -76,18 +76,18 @@ function table(source: string, number: number, headers: readonly string[], reaso
     const header = cells(lines[index]);
     if (!headers.every((value, position) => header[position] === value) || header.length !== headers.length) continue;
     const separator = cells(lines[++index] ?? '');
-    if (separator.length !== headers.length || !separator.every(cell => /^:?-{3,}:?$/u.test(cell))) return fail(reason, { detail: 'table-separator', section: diagnosticSection(number), row: index + 1 });
+    if (separator.length !== headers.length || !separator.every(cell => /^:?-{3,}:?$/u.test(cell))) return fail(reason, { detail: 'table-separator', section: number, row: index + 1 });
     const rows: string[][] = [];
     while (++index < lines.length && /^\s*\|/u.test(lines[index])) {
       const row = cells(lines[index]);
-      if (row.length !== headers.length) return fail(reason, { detail: 'table-columns', section: diagnosticSection(number), row: rows.length + 1, expected: headers.length, observed: row.length });
-      if (row.some(cell => !cell)) return fail(reason, { detail: 'table-empty-cell', section: diagnosticSection(number), row: rows.length + 1 });
+      if (row.length !== headers.length) return fail(reason, { detail: 'table-columns', section: number, row: rows.length + 1, expected: headers.length, observed: row.length });
+      if (row.some(cell => !cell)) return fail(reason, { detail: 'table-empty-cell', section: number, row: rows.length + 1 });
       rows.push(row);
     }
-    if (!rows.length) return fail(reason, { detail: 'table-empty', section: diagnosticSection(number), observed: 0 });
+    if (!rows.length) return fail(reason, { detail: 'table-empty', section: number, observed: 0 });
     found.push(rows);
   }
-  return found.length === 1 ? found[0] : fail(reason, { detail: 'table-count', section: diagnosticSection(number), expected: 1, observed: found.length });
+  return found.length === 1 ? found[0] : fail(reason, { detail: 'table-count', section: number, expected: 1, observed: found.length });
 }
 
 function ids(value: string, pattern: RegExp, reason: SddConsistencyReason, section: SddValidationFact['section']): string[] {
@@ -203,6 +203,7 @@ export function validateSddDraftConsistency(
       linked.add(id);
     }
   }
+  if ([...edges.values()].some(links => links.size === 0)) fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: 0, observed: [...edges.values()].filter(links => links.size === 0).length });
   const traceability = table(source, 17, ['Requirement', 'Cases'], 'requirement-mapping');
   const seen = new Set<string>();
   for (const [requirement, links] of traceability) {
@@ -215,7 +216,6 @@ export function validateSddDraftConsistency(
     seen.add(requirement);
   }
   if (seen.size !== edges.size) fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: edges.size, observed: seen.size });
-  if ([...edges.values()].some(links => links.size === 0)) fail('requirement-mapping', { detail: 'requirement-coverage', section: 17, expected: 0, observed: [...edges.values()].filter(links => links.size === 0).length });
   validatePaths(source, inventory, sddPath);
 }
 
@@ -263,10 +263,6 @@ function validatePaths(source: string, inventory: SddRepositoryInventory, sddPat
   }
   const prose = source.replace(/\]\([^\s)]+\)/gu, ']()').replace(/[a-z][a-z0-9+.-]*:\/\/[^\s)>]+/giu, '');
   for (const match of prose.matchAll(/(?<![\w./:-])([A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+\.[A-Za-z0-9]+)(?![\w/-])/gu)) check(match[1]);
-}
-
-function diagnosticSection(value: number): SddValidationFact['section'] {
-  return value === 4 || value === 14 || value === 15 || value === 17 ? value : 0;
 }
 
 function uniqueIdentifiers(values: readonly string[], pattern: RegExp, reason: 'case-identity' | 'requirement-mapping', section: 4 | 14): void {

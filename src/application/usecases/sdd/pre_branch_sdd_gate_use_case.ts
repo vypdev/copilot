@@ -157,7 +157,7 @@ export class PreBranchSddGateUseCase {
           card.record.branchName!, card.record.revisionBaseSha!, card.record.revisionSha, card.record.plan.path,
         );
         if (revisionVerified) {
-          const restored = await this.clearPreparationFailure(context);
+          const restored = await this.clearPreparationFailure(context, failureSource);
           return {
             status: 'published', branchName: card.record.branchName!, commitSha: card.record.revisionSha ?? card.record.commitSha!,
             results: [this.result(true, false, `The published SDD commit ${card.record.revisionSha ?? card.record.commitSha} remains verified.`), ...restored],
@@ -171,6 +171,7 @@ export class PreBranchSddGateUseCase {
         const currentAnswers = card.record.plan.questions.length === 0 ? []
           : await this.collectAnswers(card.record, card.id, allComments, context);
         if (currentAnswers.length < card.record.plan.questions.length) {
+          await this.writePreparationRecovered(context, 'waiting', failureSource);
           return { status: 'waiting', results: [this.result(true, true, 'Waiting for the numbered SDD answers; no draft or branch was created.')] };
         }
         answers = retainSddAnswers(card.record.answers ?? [], currentAnswers);
@@ -214,7 +215,7 @@ export class PreBranchSddGateUseCase {
       };
       if (plan.questions.length > 0) {
         await this.writeCard(context.issueNumber, card?.id, record, context.issueLocale, context.issueUrl);
-        await this.writePreparationRecovered(context, 'waiting');
+        await this.writePreparationRecovered(context, 'waiting', failureSource);
         return { status: 'waiting', results: [this.result(true, true, `Asked ${plan.questions.length} blocking SDD question(s); no draft or branch was created.`)] };
       }
 
@@ -272,7 +273,7 @@ export class PreBranchSddGateUseCase {
         ...(revision ? { revisionSha: commitSha, revisionBaseSha: draft.prepared.baseSha } : {}),
       };
       await this.writeCard(context.issueNumber, draft.cardId, published, context.issueLocale, context.issueUrl);
-      const restored = await this.clearPreparationFailure(context);
+      const restored = await this.clearPreparationFailure(context, failureSource);
       return {
         status: 'published', branchName, commitSha,
         results: [this.result(true, true, `Published and verified ${revision ? 'the SDD revision' : 'the first SDD commit'} ${commitSha} on ${branchName}.`), ...restored],
@@ -355,17 +356,18 @@ export class PreBranchSddGateUseCase {
     await this.upsertPreparationStatus(context, comments, body, true);
   }
 
-  private async writePreparationRecovered(context: PreBranchSddContext, phase: 'waiting' | 'published'): Promise<void> {
+  private async writePreparationRecovered(context: PreBranchSddContext, phase: 'waiting' | 'published', source: Readonly<{ branch: string; sha: string }>): Promise<void> {
     const comments = await this.comments.listIssueComments(context.issueNumber);
     if (!comments.some(comment => comment.user?.login?.toLowerCase() === context.tokenUser.toLowerCase()
       && comment.body?.includes(sddAnalysisStatusMarker(context.issueNumber)))) return;
     const catalog = await resolveSddPreparationCatalog(context.issueLocale ?? 'en-US', context.agentConfiguration, this.presentation.catalogResolver);
     const body = renderSddPreparationRecovered(context.issueNumber, phase, context.issueLocale, catalog);
+    await this.assertFresh(context, source.sha, source.branch);
     await this.upsertPreparationStatus(context, comments, body, false);
   }
 
-  private async clearPreparationFailure(context: PreBranchSddContext): Promise<readonly Result[]> {
-    try { await this.writePreparationRecovered(context, 'published'); return []; }
+  private async clearPreparationFailure(context: PreBranchSddContext, source: Readonly<{ branch: string; sha: string }>): Promise<readonly Result[]> {
+    try { await this.writePreparationRecovered(context, 'published', source); return []; }
     catch (error) {
       // Verified publication remains a fact if refreshing its separate diagnostic card fails.
       return [this.failure(toApplicationError(error, 'provider.unavailable', 'The SDD publication is verified; its diagnostic status card still needs refresh.'))];

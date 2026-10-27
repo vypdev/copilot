@@ -127,7 +127,10 @@ failure to refresh the diagnostic card does not erase a verified publication.
 Stale issue/title/base evidence cannot overwrite the current status or recovery
 record. Recovery rechecks that evidence before retaining a pending record and
 after diagnostic localization. A revision may retain its own returned commit;
-an unrelated branch advance requires a new analysis on the same issue.
+an unrelated branch advance requires a new analysis on the same issue. If an
+answer-permission lookup temporarily fails, retrying returns the status to
+waiting when existing questions are still incomplete. The Action keeps the
+original question record and answers and does not start drafting.
 
 ## Repository layouts and support limits
 
