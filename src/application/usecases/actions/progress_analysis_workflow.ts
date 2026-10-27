@@ -11,17 +11,17 @@ import type { BoundProgressDiffQueryPort } from '../../ports/progress_diff_query
 import { findIssueBranch } from './find_issue_branch';
 import { validateProgressPrerequisites } from './progress_prerequisite_policy';
 import {
-    parseProgressResponse,
-    PROGRESS_RESPONSE_SCHEMA,
-    type ProgressAttemptResult,
+    parseProgressResponse, progressResponseSchema, type ProgressAttemptResult,
 } from './progress_response';
 import { ApplicationError, type ApplicationErrorCode } from '../../errors/application_error';
 import { productFacingAgentQueryOptions } from '../../policies/agent_output_locale_policy';
 import type { BoundPublicationSourceQueryPort } from '../../ports/publication_freshness_ports';
-import { summarizeProgressDiff } from './summarize_progress_diff_workflow';
+import { planProgressDiffPrompts, summarizeProgressDiff } from './summarize_progress_diff_workflow';
 import { AGENT_PROMPT_MAX_BYTES } from '../../../domain/agent_execution_plan';
 import { MAX_PROGRESS_AGGREGATE_BYTES } from '../../policies/progress_partition_response_policy';
 import { progressEvidenceTooLarge } from '../../policies/progress_diff_partition_policy';
+import { MAX_PROGRESS_SCOPE_BYTES, PROGRESS_SCOPE_SCHEMA, parseProgressScope } from '../../policies/progress_scope_policy';
+import { getProgressScopePrompt } from '../../../prompts/progress_scope';
 
 export interface ProgressAnalysisDependencies {
     issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
@@ -37,6 +37,7 @@ export type ProgressAnalysis =
     | {
         kind: 'ready';
         issueNumber: number;
+        issueDescription: string;
         branch: string;
         developmentBranch: string;
         baseSha: string;
@@ -114,11 +115,22 @@ export async function analyzeProgress(
         currentBranch: resolvedBranch,
         targetLocale: param.targetLocale,
         diffEvidence: '',
+        acceptanceScope: ' '.repeat(MAX_PROGRESS_SCOPE_BYTES),
     };
+    const scopePrompt = getProgressScopePrompt(issueDescription, param.targetLocale);
+    if (Buffer.byteLength(scopePrompt, 'utf8') > AGENT_PROMPT_MAX_BYTES) throw progressEvidenceTooLarge();
     const aggregateBudget = Math.min(MAX_PROGRESS_AGGREGATE_BYTES,
         AGENT_PROMPT_MAX_BYTES - Buffer.byteLength(getCheckProgressPrompt(promptParameters), 'utf8'));
-    const diffEvidence = await summarizeProgressDiff(diff, param, issueDescription, dependencies.aiRepository, aggregateBudget);
-    const prompt = getCheckProgressPrompt({ ...promptParameters, diffEvidence });
+    if (aggregateBudget < 1) throw progressEvidenceTooLarge();
+    planProgressDiffPrompts(diff, param, issueDescription, aggregateBudget, promptParameters.acceptanceScope);
+    if (diff.kind !== 'partitioned' && Buffer.byteLength(getCheckProgressPrompt({ ...promptParameters, diffEvidence: diff.evidence }), 'utf8') > AGENT_PROMPT_MAX_BYTES) throw progressEvidenceTooLarge();
+    const scope = parseProgressScope(await dependencies.aiRepository.query({
+        configuration: param.agentConfiguration, agentId: AGENT_PLAN, prompt: scopePrompt,
+        options: { ...productFacingAgentQueryOptions('progress-scope', PROGRESS_SCOPE_SCHEMA), includeReasoning: param.includeReasoning },
+    }), issueDescription, param.targetLocale);
+    const acceptanceScope = JSON.stringify(scope);
+    const diffEvidence = await summarizeProgressDiff(diff, param, issueDescription, dependencies.aiRepository, aggregateBudget, acceptanceScope);
+    const prompt = getCheckProgressPrompt({ ...promptParameters, acceptanceScope, diffEvidence });
     if (Buffer.byteLength(prompt, 'utf8') > AGENT_PROMPT_MAX_BYTES) throw progressEvidenceTooLarge();
     logDebugInfo(
         `CheckProgress: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`,
@@ -130,16 +142,18 @@ export async function analyzeProgress(
             agentId: AGENT_PLAN,
             prompt,
             options: {
-                ...productFacingAgentQueryOptions('progress', PROGRESS_RESPONSE_SCHEMA),
+                ...productFacingAgentQueryOptions('progress', progressResponseSchema(scope)),
                 includeReasoning: param.includeReasoning,
             },
         }),
         param.targetLocale,
+        scope,
     );
 
     return {
         kind: 'ready',
         issueNumber,
+        issueDescription,
         branch: resolvedBranch,
         developmentBranch,
         baseSha,

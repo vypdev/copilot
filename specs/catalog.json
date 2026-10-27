@@ -168,7 +168,10 @@
         "src/domain/sdd_validation_diagnostic.ts",
         "src/application/errors/sdd_draft_preparation_failure.ts",
         "src/application/policies/sdd_preparation_message_catalog.ts",
-        "src/application/policies/sdd_preparation_status_policy.ts"
+        "src/application/policies/sdd_preparation_status_policy.ts",
+        "src/application/policies/progress_scope_policy.ts",
+        "src/prompts/progress_scope.ts",
+        "src/prompts/check_progress.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -274,7 +277,11 @@
         "src/application/policies/__tests__/comment_command_validation_presentation.test.ts",
         "src/application/usecases/__tests__/command_validation_diagnostics.test.ts",
         "src/domain/__tests__/sdd_validation_diagnostic.test.ts",
-        "src/application/policies/__tests__/sdd_preparation_status_policy.test.ts"
+        "src/application/policies/__tests__/sdd_preparation_status_policy.test.ts",
+        "src/application/policies/__tests__/progress_scope_policy.test.ts",
+        "src/application/usecases/actions/__tests__/progress_scope.integration.test.ts",
+        "src/application/usecases/actions/__tests__/progress_response.test.ts",
+        "src/prompts/__tests__/check_progress.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",

@@ -34,10 +34,20 @@ const NEWER_HEAD = 'b'.repeat(40);
 
 
 const mockAskAgent = jest.fn();
-async function localizedProgress(request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }): Promise<AgentQueryResult> {
+async function localizedProgress(request: { configuration: unknown; agentId: string; prompt: string; options?: { schemaName?: string } }): Promise<AgentQueryResult> {
+  if (request.options?.schemaName === 'progress_scope') {
+    const issue = await mockGetDescription.mock.results[mockGetDescription.mock.results.length - 1].value;
+    return { outputLocale: 'en-US', requirements: [issue.trim()], exclusions: [] };
+  }
   const response = await mockAskAgent(request.configuration, request.agentId, request.prompt, request.options);
   return response && typeof response === 'object' && !Array.isArray(response)
-    ? { outputLocale: 'en-US', ...response as Record<string, unknown> }
+    ? (() => {
+      const value = response as Record<string, unknown>;
+      return { outputLocale: value.outputLocale ?? 'en-US', progress: value.progress,
+        requirements: [{ id: 'R1', status: value.progress === 100 ? 'supported' : 'verification-unknown',
+          evidence: value.progress === 100 ? 'source-only' : 'external-unverified', summary: value.summary,
+          remaining: value.progress === 100 ? null : value.remaining ?? 'Verification unknown.' }] };
+    })()
     : response;
 }
 function baseParam(overrides: Record<string, unknown> = {}): Execution {

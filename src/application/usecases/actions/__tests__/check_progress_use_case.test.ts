@@ -34,10 +34,20 @@ const NEWER_HEAD = 'b'.repeat(40);
 
 
 const mockAskAgent = jest.fn();
-async function localizedProgress(request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }): Promise<AgentQueryResult> {
+async function localizedProgress(request: { configuration: unknown; agentId: string; prompt: string; options?: { schemaName?: string } }): Promise<AgentQueryResult> {
+  if (request.options?.schemaName === 'progress_scope') {
+    const issue = await mockGetDescription.mock.results[mockGetDescription.mock.results.length - 1].value;
+    return { outputLocale: 'en-US', requirements: [issue.trim()], exclusions: [] };
+  }
   const response = await mockAskAgent(request.configuration, request.agentId, request.prompt, request.options);
   return response && typeof response === 'object' && !Array.isArray(response)
-    ? { outputLocale: 'en-US', ...response as Record<string, unknown> }
+    ? (() => {
+      const value = response as Record<string, unknown>;
+      return { outputLocale: value.outputLocale ?? 'en-US', progress: value.progress,
+        requirements: [{ id: 'R1', status: value.progress === 100 ? 'supported' : 'verification-unknown',
+          evidence: value.progress === 100 ? 'source-only' : 'external-unverified', summary: value.summary,
+          remaining: value.progress === 100 ? null : value.remaining ?? 'Verification unknown.' }] };
+    })()
     : response;
 }
 function baseParam(overrides: Record<string, unknown> = {}): Execution {
@@ -224,7 +234,7 @@ describe('CheckProgressUseCase', () => {
     expect(mockSetProgressLabel).not.toHaveBeenCalled();
   });
 
-  it('treats negative progress as 0% and returns failure (no label set)', async () => {
+  it('rejects negative progress without changing labels', async () => {
     mockGetDescription.mockResolvedValue('Issue body');
     mockAskAgent.mockResolvedValue({ progress: -10, summary: 'Invalid' });
     mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([]);
@@ -232,23 +242,20 @@ describe('CheckProgressUseCase', () => {
     const results = await invoke(baseParam());
 
     expect(results[0].success).toBe(false);
-    expect(results[0].payload).toMatchObject({ progress: 0 });
+    expect(results[0].errors[0]).toMatchObject({ code: 'agent.failed' });
     expect(mockSetProgressLabel).not.toHaveBeenCalled();
   });
 
-  it('clamps progress to 100 when AI returns over 100', async () => {
+  it('rejects an out-of-range completion estimate', async () => {
     mockGetDescription.mockResolvedValue('Issue body');
     mockAskAgent.mockResolvedValue({ progress: 150, summary: 'Over' });
     mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([]);
 
     const results = await invoke(baseParam());
 
-    expect(results[0].success).toBe(true);
-    expect(results[0].payload).toMatchObject({ progress: 100 });
-    expect(mockSetProgressLabel).toHaveBeenCalledWith(
-      123,
-      100,
-    );
+    expect(results[0].success).toBe(false);
+    expect(results[0].errors[0]).toMatchObject({ code: 'agent.failed' });
+    expect(mockSetProgressLabel).not.toHaveBeenCalled();
   });
 
   it('success path: sets progress label on issue and on open PRs', async () => {
@@ -364,17 +371,15 @@ describe('CheckProgressUseCase', () => {
     expect(mockSetProgressLabel).not.toHaveBeenCalled();
   });
 
-  it('uses default summary when AI response has no summary', async () => {
+  it('retains progress when a required assessment summary is missing', async () => {
     mockGetDescription.mockResolvedValue('Issue body');
     mockAskAgent.mockResolvedValue({ progress: 30 });
     mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([]);
 
     const results = await invoke(baseParam());
 
-    expect(results[0].success).toBe(true);
-    expect(results[0].payload).toMatchObject({
-      progress: 30,
-      summary: 'Unable to determine progress.',
-    });
+    expect(results[0].success).toBe(false);
+    expect(results[0].errors[0]).toMatchObject({ code: 'agent.failed' });
+    expect(mockSetProgressLabel).not.toHaveBeenCalled();
   });
 });

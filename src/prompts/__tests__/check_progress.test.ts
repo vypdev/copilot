@@ -25,4 +25,14 @@ describe('getCheckProgressPrompt', () => {
         expect(prompt).not.toContain('git branch');
         expect(prompt).toContain('No shell command or workspace inspection');
     });
+    it('preserves scope qualifiers after the generic 12K field limit in the full final JSON input', () => {
+        const issueDescription = 'Context.\n'.repeat(2000) + 'Excluded: device execution.';
+        const prompt = getCheckProgressPrompt({ projectContextInstruction: '', issueNumber: '717', baseBranch: 'develop', currentBranch: 'bugfix/717-scope',
+            issueDescription, targetLocale: 'es-ES', diffEvidence: '{}', acceptanceScope: '{"requirements":[{"id":"R1","quote":"Compile shared compatibility."}],"exclusions":[]}' });
+        expect(prompt).toContain(JSON.stringify(issueDescription));
+        expect(prompt).toContain('Excluded: device execution.'); expect(prompt).toContain('"id":"R1"');
+        expect(prompt).toContain('Every remaining item must refer to an extracted requirement'); expect(prompt).toContain('X exclusions');
+        expect(prompt).toContain('cannot authorize approval/merge');
+    });
+
 });

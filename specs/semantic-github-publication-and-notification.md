@@ -2046,3 +2046,168 @@ validator output as a recovery operand. Catalog/table evidence is exclusive,
 source-unavailable or stale attempts retain the current status, and no additional
 create/update call site or notification authority is introduced. The owning
 pre-branch SDD defines the supported profile and numeric regression budget.
+
+
+## 24. Issue-bound progress acceptance: dogfooding #717 (2026-10-27)
+
+- Status: implemented contract; current-head automated evidence is required for merge.
+- Owner: Copilot maintainers; capability: github-communication-experience.
+- Evidence: [#717](https://github.com/vypdev/copilot/issues/717). The reported
+  consumer assessment added search correctness and mobile device execution to an
+  input/accessibility issue with separate debt and compatibility-only mobile scope.
+- Open decisions: none. This repair does not prescribe a percentage, trust
+  consumer execution claims, change the consumer repository or add a native
+  execution-attestation service. Historical model inference is nondeterministic;
+  the protocol regression is reproducible without replaying that inference.
+
+### Contract, architecture and trust
+
+Completion MUST use the original issue requirements, qualifiers and exclusions.
+Reports, patches and intermediate model facts MUST NOT expand acceptance. When
+search correctness or device execution really belongs to the issue, it MUST
+remain assessable. Missing verification for an actual requirement MUST remain
+unknown; it MUST NOT turn into successful execution or unrelated implementation
+work. A percentage remains a model estimate, independent of review/merge gates.
+
+```mermaid
+flowchart LR
+    I[Full original issue] --> S[Issue-only scope interpretation]
+    S --> V[Validate whole-line quotes and assign R/X identities]
+    V --> P[Analyze every complete comparison part against that scope]
+    P --> A[Assess every required R identity]
+    A --> F[Validate completeness and evidence consistency]
+    F --> G[Recheck issue body, heads and native open state]
+    G --> U[Existing progress labels and card]
+```
+
+Text equivalent: identify scope before patches, validate source quotes and
+identities, analyze all source parts, validate one complete assessment, then
+publish only after the current issue and Git comparison still match. A failed
+scope/part/final response or failed freshness read publishes no new progress.
+Retries start from a fresh issue and immutable comparison, with no durable
+partial scope or additional comments. Cancellation retains prior progress.
+
+The pure `progress_scope_policy` owns schema, exact whole trimmed source-line
+citation validation, immutable in-memory R/X identities, bounded completeness,
+closed evidence/status values and projection. R identities use source order;
+exclusions use X identities and are never admissible final requirement IDs.
+`progress_response` delegates to that policy. `progress_analysis_workflow` owns
+the issue-only request and existing bounded orchestration through the read-only
+agent/diff ports; it imports no concrete provider or mutation capability. Prompt
+construction remains in `src/prompts`. `check_progress_workflow` owns final
+issue-body freshness alongside existing Git/native gates and publication. Full
+Jest architecture/dependency checks and type checking enforce these boundaries.
+
+Scope extraction receives the full original issue as an untrusted JSON string,
+without patches, summaries, generic field clipping or workspace access. It MUST
+return verbatim complete nonempty trimmed lines; translated/invented fragments,
+duplicates and conflicting required/excluded quotes fail closed. The provider
+schema allows an empty required list as an explicit unsupported-scope signal;
+the domain parser rejects that signal before comparison analysis, so a strict
+provider need not invent or omit requirements to satisfy a nonempty schema. It MUST include
+all acceptance criteria, including unchanged work. The model is instructed to
+retain negation and qualifiers. Source quote and identity checks establish
+provenance and structural completeness of the returned scope, **not semantic
+completeness of natural-language extraction**. A model can still misclassify a
+whole line or place unrelated prose under a valid ID; human review of ambiguous
+scope remains necessary. This is not a deterministic natural-language oracle.
+
+Every final requirement has `supported`, `missing` or `verification-unknown`
+status and one of `source-only`, `external-unverified`, `unavailable` or
+`contradictory` evidence. `supported` requires source-only support and null
+remaining; this means source implementation support, never successful test
+execution. Actual required execution without independent evidence is unknown.
+Missing/unknown entries require a nonempty scoped next step. Final responses
+MUST cover every exact R ID once; extra, missing, duplicate or X IDs fail. Free
+model top-level summary/remaining fields are rejected. The application derives
+both display fields from ordered requirement citations and bounded per-ID prose.
+No external claim can be upgraded to supported execution by a runtime enum.
+A model incorrectly labelling prose as source support remains a semantic model
+risk, not trusted attestation. No live execution proof is synthesized here.
+
+A finite 0–100 estimate MUST agree with remaining work: 100 has none; lower
+values have at least one outstanding requirement. Values below 100 MUST NOT
+round into 100. Invalid results fail with the existing sanitized `agent.failed`
+semantic error and retained state, rather than inventing a missing criterion.
+
+### Fixed configuration, compatibility and UX
+
+There are no new inputs, flags, credentials, scopes, persisted schemas or setup
+changes. Fixed non-configurable bounds are 32 required and 32 exclusion lines,
+1,200 Unicode code points per source line, 64,000 serialized UTF-8 scope bytes,
+800 code points per assessment fact, and 8,000 code points for each projected
+summary/remaining field. Overflow is rejected, never clipped. The scope envelope
+is reserved before any request; original 256,000-byte source/manifest,
+384,000-byte model aggregate, 16-part and 524,288-byte runtime limits remain.
+Small comparisons now use two calls (scope plus final); multipart uses at most
+18 (scope plus 16 parts plus final). All complete part prompts and the reserved
+final prompt are preflighted before the scope call. A scope larger than these
+fixed limits is unavailable, not silently reduced. Existing typed terminal size
+errors and transient provider failures keep distinct recovery semantics.
+
+The internal agent protocol changes atomically with its prompts/parsers/bundles;
+there is no fallback accepting old free-form remaining output. Existing labels,
+markers, locale selection, single progress card, sanitizer, links, notification
+budget and complete-batch publication remain. Original quote text is preserved
+in the source language; assessment prose uses the target locale. Whole-line
+quotes are displayed as bounded text through existing product sanitization;
+embedded commands/mentions grant no authority. There is no new notification or
+side-debt issue creation. Rollout uses a normal PR, rollback restores the prior
+bundles without migrating cards. No release or deployment is authorized here.
+
+| State | Visible outcome and next action | Preserved facts |
+|---|---|---|
+| Scope/parts pending | prior card remains; run is assessing evidence, no user action | prior progress |
+| Partial source support | same card cites R IDs and verification uncertainty | separate debt is not promoted |
+| Complete source assessment | existing card has no remaining requirement; inspect CI/review separately | no execution attestation implied |
+| Invalid/ambiguous interpretation | existing failed assessment result; inspect run, clarify scope and rerun | no label/card overwrite |
+| Oversized input/output | retained state and existing typed diagnostic; split/clarify before retry | no clipped scope |
+| Issue/body/head/native race | stale result, inspect current issue and comparison | prior card and labels |
+
+Representative content in the existing card (illustrative, not a promised score):
+
+```text
+Progress: 75% — in progress
+[R1] Edit and clear inventoried inputs. — Source callbacks are visible;
+reported external execution is not independently verified.
+Remaining: [R1] Edit and clear inventoried inputs. — Provide independent
+verification for the required input behavior.
+```
+
+The input-only scope does not list semantic search repair or excluded device
+journeys as remaining. When either is an actual issue requirement, its own R
+identity remains visible. Existing headings, narrow readable text, sanitized
+content and English/Spanish locale behavior remain. No raw report/private
+consumer body is copied into regression fixtures. Synthetic examples describe
+only the public defect contract; local evidence distinguishes protocol replay
+from nondeterministic model behavior and actual execution.
+
+### Verification, documentation and acceptance
+
+Minimum **40 new distinct cases**: 20 pure quote/identity/status/evidence/bounds
+cases, eight orchestration/single/multipart/failure/race/retry cases, six prompt
+and trust/locale cases, and six strict-schema/security/regression compositions.
+Parameterized rows count separately only for distinct behavior; the existing
+135-case communication baseline is not replaced. New pure policy MUST reach
+100% in all four coverage metrics; existing full-suite/module budgets remain.
+No threshold/exclusion is weakened. Deterministic fakes prove enforcement and
+request ordering, not successful production model inference. Current-head CI,
+three platform jobs, complete review with no open findings and 100% modified
+Codecov lines including zero partials remain merge gates.
+
+| Requirement | Executable acceptance / evidence | Documentation |
+|---|---|---|
+| Preserve scope and exclusions | issue-only prompt before patches; exact full quotes; R/X mismatch rejection; genuine search/device positive case | branch management scope and verification |
+| Preserve uncertainty | external/unavailable/contradictory support rejection; unknown execution accepted below 100 | progress evidence |
+| Every remaining item is scoped | complete unique ID set; extra/free-form remaining rejected; ordered projected citations | example card |
+| No partial or stale publication | failed extraction/part/final and issue-edit/head/native races; retry reads fresh scope | retained state and recovery |
+| Fixed bounds and trust | 32/33 clauses, 1,200/1,201 and supplementary Unicode, serialized/combined overflow; preflight before queries; no new permissions | limits and model limitations |
+| Provider compatibility and independent gates | strict schema/local validator compositions, full native CI/review/Codecov evidence | no setup migration; CI/review remain independent |
+
+Implementation sequence: scope/projection policy and SDD; prompt and sequential
+orchestration; freshness guard; regressions; user documentation/catalog and
+bundles; full local and current-head remote gates. Definition of Done includes
+all traceability rows, the risk budget, Graphify update, specs/docs/build/type/
+lint/package validation, truthful evidence limitations and a normal verified-head
+merge after any specific human protected-path decision. A fabricated 100% or
+accepted unverified execution is never an acceptable fix.

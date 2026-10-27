@@ -46,13 +46,44 @@ Automatic title formatting keeps the boundaries between hyphenated words. A titl
 
 Progress assessments use an immutable GitHub comparison of the development base and the managed branch head. The agent receives the source patches directly and does not need shell commands. Generated build files contribute metadata only; a percentage does not certify CI or a build.
 
-Small comparisons use one assessment. Larger complete comparisons are reviewed in up to 16 parts, each containing whole files within the unchanged 256,000-byte UTF-8 evidence limit. Every part must return bounded facts for every assigned file before one final assessment can update progress. These facts preserve uncertainty and do not certify CI. Their final combined summary has a maximum 384,000-byte budget. Copilot reserves every admitted path and the issue/prompt envelope inside the unchanged 512 KiB runtime ceiling, then requests concise facts using the same calculated limit in the schema and parser. No returned facts are silently shortened. Source parts and the manifest retain the 256,000-byte limit.
+Copilot first identifies requirements and exclusions from the full issue body, before it analyzes patches. Small comparisons then use one assessment. Larger complete comparisons are reviewed in up to 16 parts, each containing whole files within the unchanged 256,000-byte UTF-8 evidence limit. Every part must return bounded facts for every assigned file before one final assessment can update progress. These facts preserve uncertainty and do not certify CI. Their final combined summary has a maximum 384,000-byte budget. Copilot reserves every admitted path and the issue/prompt envelope inside the unchanged 512 KiB runtime ceiling, then requests concise facts using the same calculated limit in the schema and parser. No returned facts are silently shortened. Source parts and the manifest retain the 256,000-byte limit.
+
+### Scope and verification
+
+Only the original issue defines completion requirements. Each assessment cites a
+requirement such as `[R1] Edit and clear inventoried inputs` and explains its
+source support or verification uncertainty. Reports and patches can reveal
+separate product debt; that debt does not automatically become work required to
+finish this issue. Compatibility-only mobile scope does not require device
+execution. If search correctness or device journeys are actually required by the
+issue, they remain required.
+
+Source changes, reported execution and independently verified execution are
+different facts. Repository reports and model summaries are not trusted test
+attestations. An execution requirement without independent evidence remains
+unverified, rather than becoming a successful test claim. A percentage is an
+estimate; it does not replace review, CI, coverage or approval gates.
+
+The issue-only interpretation has at most 32 required lines and 32 exclusion
+lines, each a complete trimmed source line of at most 1,200 Unicode code points.
+Its serialized form is limited to 64,000 UTF-8 bytes, reserved before the first
+request within the existing runtime ceiling. Nothing is silently shortened to
+fit. One scope request precedes the existing complete evidence and final
+assessment requests. An invalid quote, extra/missing requirement identity,
+contradictory result, oversized output or changed issue body retains existing
+progress. Inspect the run, clarify ambiguous acceptance scope when needed and
+rerun against current evidence. Existing head and native-open checks still apply.
+
+Scope interpretation and assessment prose are model-derived. Exact citations and
+identity validation cannot prove that natural language was interpreted correctly
+or that an execution report is true. Review ambiguous scope; neither unknown
+verification nor a newly disclosed defect justifies inventing a requirement.
 
 Fact lengths use Unicode code points consistently in the provider schema, local
 response validation and progress parser, so supplementary characters share the
 same boundary. The evidence and runtime ceilings still count UTF-8 bytes.
 
-If source evidence is missing or any part fails, the Action retains the current progress and reports that it could not assess the revision. A single file, the final aggregate or a comparison exceeding the fixed part budget reports `validation.evidence-too-large` with Retryable: No; reduce the comparison or split the work into smaller reviewed changes before another assessment. Retrying identical oversized evidence cannot resolve that limit. It also retains state if either head changes while the assessment is running. Inspect the run before retrying; an unavailable assessment is not proof of 0% completion.
+If source evidence is missing or any part fails, the Action retains the current progress and reports that it could not assess the revision. A single file, the final aggregate or a comparison exceeding the fixed part budget reports `validation.evidence-too-large` with Retryable: No; reduce the comparison or split the work into smaller reviewed changes before another assessment. Retrying identical oversized evidence cannot resolve that limit. It also retains state if either head or the issue body changes while the assessment is running. Inspect the run before retrying; an unavailable assessment is not proof of 0% completion.
 
 ## Completion after a PR merge
 
