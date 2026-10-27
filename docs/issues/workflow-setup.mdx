@@ -78,6 +78,12 @@ type labels is not converted into a Feature; the Action reports a no-op or a
 configuration block. Release and hotfix issues are admitted only when the
 required form headings and values are present.
 
+If a preserved application form uses a different governed heading, declare an
+explicit `issueWorkflows.fieldMappings` in the setup config and run doctor before
+applying it. See [consumer field mapping and recovery](/issues/configurable-workflows#preserved-application-specific-headings).
+Use the same effective schema-2 profile in every issue-bound workflow and upgrade
+the CLI/Action together; setup does not silently rename consumer fields.
+
 Add other inputs as needed: `issue-managed-branches`, `pre-branch-sdd`, `desired-assignees-count`, `main-branch`, `development-branch`, etc. See [Configuration](/issues/configuration) and [Examples](/issues/examples).
 
 Pass the same branch and SDD settings to issue, issue-comment, pull-request,

@@ -172,7 +172,7 @@ export type SetupConfigurationOverrides = {
         secrets?: Partial<SetupResourceStoragePolicy>;
         variables?: Partial<SetupResourceStoragePolicy>;
     };
-    issueWorkflows?: { enabled?: readonly IssueWorkflowKind[] };
+    issueWorkflows?: { enabled?: readonly IssueWorkflowKind[]; fieldMappings?: SetupConfiguration['issueWorkflows']['fieldMappings'] };
     repositoryAgentGuidance?: Partial<SetupConfiguration['repositoryAgentGuidance']>;
 };
 
@@ -239,6 +239,8 @@ export function mergeSetupConfiguration(
         },
         issueWorkflows: {
             enabled: enabledIssueWorkflows,
+            ...((overrides.issueWorkflows?.fieldMappings ?? base.issueWorkflows.fieldMappings)
+                ? { fieldMappings: structuredClone(overrides.issueWorkflows?.fieldMappings ?? base.issueWorkflows.fieldMappings) } : {}),
         },
         repositoryAgentGuidance: {
             ...base.repositoryAgentGuidance,

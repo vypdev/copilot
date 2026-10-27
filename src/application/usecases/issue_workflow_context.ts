@@ -113,6 +113,7 @@ export interface BranchPreparationContext extends IssueNumberContext {
 }
 
 export interface DeployAddedContext {
+  readonly issueWorkflowProfile?: import('../../domain/issue_workflow_profile').IssueWorkflowProfile;
   readonly issue: {
     readonly labeled: boolean;
     readonly labelAdded: string;
@@ -153,6 +154,7 @@ interface ProjectSource extends ProjectReference {
 }
 
 export interface IssueWorkflowContextSource {
+  readonly issueWorkflowProfile?: import('../../domain/issue_workflow_profile').IssueWorkflowProfile;
   readonly owner: string;
   readonly repo: string;
   readonly issueNumber: number;
@@ -166,6 +168,7 @@ export interface IssueWorkflowContextSource {
     readonly number: number;
     readonly title: string;
     readonly body: string;
+    readonly liveBody?: string;
     readonly creator: string;
     readonly opened: boolean;
     readonly labeled: boolean;
@@ -313,12 +316,13 @@ export function projectIssueWorkflowStepContexts(source: IssueWorkflowContextSou
       managedBranchTypes,
     }),
     deployAdded: Object.freeze({
+      issueWorkflowProfile: source.issueWorkflowProfile,
       issue: Object.freeze({
         labeled: source.issue.labeled,
         labelAdded: source.issue.labelAdded,
         number: source.issue.number,
         title: source.issue.title,
-        body: source.issue.body,
+        body: source.issue.liveBody ?? source.issue.body,
       }),
       deployLabel: source.labels.deploy,
       release: Object.freeze({ ...source.release }),

@@ -21,6 +21,12 @@ const RECOVERY_CASES: readonly Readonly<{
     spanish: string;
 }>[] = [
     {
+        recovery: { id:'issue-workflow-admission-blocked', variables:{kind:'bugfix',reason:'missing-fields',fields:'["VaultStadio Version"]'} },
+        english: 'No branch or planner was started. Issue configuration is unchanged; this run only reports the admission diagnostic.',
+        spanish: 'No se inició ninguna rama ni planificador. La configuración de la issue permanece igual; esta ejecución solo informa del diagnóstico de admisión.',
+    },
+
+    {
         recovery: {id: 'branch-sync-verification-failed', variables: {stage: 'dependencies', reason: 'unsupported-graph', command: 'pnpm run typecheck', commandIndex: 2, childSha: 'a'.repeat(40), restoration: 'restored'}},
         english: `No synchronization commit or push was attempted. Original head: ${'a'.repeat(40)}. Local rollback: restored; restored means the original head was verified, unverified requires operator inspection before retrying.`,
         spanish: `No se intentó crear ni subir un commit de sincronización. Head original: ${'a'.repeat(40)}. Rollback local: restored; restored confirma el head original, unverified requiere inspección del operador antes de reintentar.`,

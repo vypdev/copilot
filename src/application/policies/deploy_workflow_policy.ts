@@ -1,6 +1,9 @@
+import { issueWorkflowHeading, type IssueWorkflowProfile, type IssueWorkflowKind } from '../../domain/issue_workflow_profile';
+import { readIssueWorkflowFields } from '../../domain/issue_workflow_body';
 import { extractChangelogUpToAdditionalContext } from "../../utils/content_utils";
 
 export interface DeployWorkflowExecutionContext {
+  readonly issueWorkflowProfile?: IssueWorkflowProfile;
   readonly issue: {
     readonly labeled: boolean;
     readonly labelAdded: string;
@@ -34,7 +37,7 @@ export function resolveDeployWorkflowPlan(param: DeployWorkflowExecutionContext)
       workflow: param.workflows.release,
       version: param.release.version ?? "",
       title: sanitizeTitle(param.issue.title),
-      changelog: extractChangelogUpToAdditionalContext(param.issue.body, "Changelog"),
+      changelog: workflowChangelog(param, 'release', 'Changelog'),
       issue: param.issue.number,
     };
   }
@@ -45,7 +48,7 @@ export function resolveDeployWorkflowPlan(param: DeployWorkflowExecutionContext)
       workflow: param.workflows.hotfix,
       version: param.hotfix.version ?? "",
       title: sanitizeTitle(param.issue.title),
-      changelog: extractChangelogUpToAdditionalContext(param.issue.body, "Hotfix Solution"),
+      changelog: workflowChangelog(param, 'hotfix', 'Hotfix Solution'),
       issue: param.issue.number,
     };
   }
@@ -64,4 +67,9 @@ function sanitizeTitle(title: string): string {
     .trim()
     .replace(/-+/g, "-")
     .trim();
+}
+
+function workflowChangelog(param: DeployWorkflowExecutionContext, kind: IssueWorkflowKind, canonical: string): string {
+  if (!param.issueWorkflowProfile) return extractChangelogUpToAdditionalContext(param.issue.body, canonical);
+  return readIssueWorkflowFields(param.issue.body, [issueWorkflowHeading(param.issueWorkflowProfile, kind, canonical)])[0].value || 'No changelog provided';
 }

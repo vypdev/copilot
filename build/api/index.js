@@ -5526,6 +5526,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const issue_workflow_diagnostic_1 = __nccwpck_require__(4347);
 const change_size_reconciliation_1 = __nccwpck_require__(5304);
 const copilot_command_validation_1 = __nccwpck_require__(4237);
 const closed_issue_reconciliation_1 = __nccwpck_require__(1565);
@@ -5557,6 +5558,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
     'change-size-reconciliation-failed',
+    'issue-workflow-admission-blocked',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -5771,6 +5773,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'stored-configuration-invalid': Object.freeze(['issueNumber', 'expectedVersion']),
     'closed-issue-reconciliation-failed': Object.freeze(['resultId', 'phase', 'state', 'reason', 'changed', 'remaining']),
     'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
+    'issue-workflow-admission-blocked': Object.freeze(['kind', 'reason', 'fields']),
     'change-size-reconciliation-failed': Object.freeze(['operation', 'issueNumber', 'targetNumber', 'projectIndex', 'verifiedOperations', 'pendingProjectSizes', 'providerStatus', 'providerReference']),
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
@@ -5859,6 +5862,8 @@ function normalizeApplicationErrorRecovery(recovery) {
             || approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_PERMISSIONS[variables.operation] !== variables.permission)) {
         throw new TypeError('Approval evidence diagnostic is invalid.');
     }
+    if (recovery.id === 'issue-workflow-admission-blocked' && !(0, issue_workflow_diagnostic_1.isIssueWorkflowDiagnostic)(variables))
+        throw new TypeError('Issue admission diagnostic is invalid.');
     if (recovery.id === 'change-size-reconciliation-failed' && !(0, change_size_reconciliation_1.isChangeSizeReconciliationFacts)(variables)) {
         throw new TypeError('Change size reconciliation diagnostic is invalid.');
     }
@@ -6621,6 +6626,394 @@ function githubUsersMatch(left, right) {
 
 /***/ }),
 
+/***/ 9376:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readIssueWorkflowFields = readIssueWorkflowFields;
+/** Source positions stay unchanged: examples/comments cannot introduce structural form headings. */
+function readIssueWorkflowFields(body, headings) {
+    const structural = maskIssueWorkflowExamples(body);
+    return Object.freeze(headings.map(heading => {
+        const escaped = heading.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+        const matches = [...structural.matchAll(new RegExp(`^#{1,6}[ \t]+${escaped}[ \t]*$`, 'gmi'))];
+        if (matches.length !== 1)
+            return Object.freeze({ heading, count: matches.length, value: '' });
+        const start = matches[0].index + matches[0][0].length;
+        const next = /^#{1,6}[ \t]+/mu.exec(structural.slice(start));
+        const end = next ? start + next.index : body.length;
+        const value = body.slice(start, end).replace(/<!--[\s\S]*?(?:-->|$)/gu, '').trim();
+        return Object.freeze({ heading, count: 1, value: /^_No response_$/iu.test(value) ? '' : value });
+    }));
+}
+function maskIssueWorkflowExamples(body) {
+    let fence;
+    let comment = false;
+    const blank = (value) => value.replace(/[^\r\n]/g, ' ');
+    return Array.from(body.matchAll(/[^\n]*(?:\n|$)/gu), match => match[0]).map(line => {
+        const plain = line.replace(/\r?\n$/u, '');
+        if (fence) {
+            if (new RegExp(`^ {0,3}${fence.char}{${fence.length},}\\s*$`, 'u').test(plain))
+                fence = undefined;
+            return blank(line);
+        }
+        // A comment marker inside a fenced example must not hide later real fields.
+        const opening = !comment && /^ {0,3}(`{3,}|~{3,})/u.exec(plain);
+        if (opening) {
+            fence = { char: opening[1][0], length: opening[1].length };
+            return blank(line);
+        }
+        let structural = '';
+        let offset = 0;
+        while (offset < line.length) {
+            if (comment) {
+                const end = line.indexOf('-->', offset);
+                const stop = end < 0 ? line.length : end + 3;
+                structural += blank(line.slice(offset, stop));
+                offset = stop;
+                comment = end < 0;
+            }
+            else {
+                const start = line.indexOf('<!--', offset);
+                if (start < 0) {
+                    structural += line.slice(offset);
+                    break;
+                }
+                structural += line.slice(offset, start);
+                offset = start;
+                comment = true;
+            }
+        }
+        return structural;
+    }).join('');
+}
+
+
+/***/ }),
+
+/***/ 4347:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.issueWorkflowDiagnostic = issueWorkflowDiagnostic;
+exports.isIssueWorkflowDiagnostic = isIssueWorkflowDiagnostic;
+exports.issueWorkflowDiagnosticPresentation = issueWorkflowDiagnosticPresentation;
+const issue_workflow_profile_1 = __nccwpck_require__(6744);
+const issue_workflow_field_mapping_1 = __nccwpck_require__(4945);
+function issueWorkflowDiagnostic(admission) {
+    if (!admission || admission.status === 'eligible')
+        return undefined;
+    if (admission.status === 'invalid') {
+        if (!admission.missingHeadings.length && !admission.invalidFields?.length)
+            return undefined;
+        return Object.freeze({ kind: admission.kind,
+            reason: admission.missingHeadings.length ? 'missing-fields' : 'invalid-fields',
+            fields: JSON.stringify(admission.missingHeadings.length ? admission.missingHeadings : admission.invalidFields) });
+    }
+    return Object.freeze({ kind: admission.status === 'conflict' ? 'conflict' : admission.status === 'unmanaged' ? 'unmanaged' : admission.kind,
+        reason: admission.status === 'conflict' ? 'conflicting-kinds' : admission.status === 'disabled' ? 'disabled-kind' : 'unmanaged',
+        fields: JSON.stringify(admission.status === 'conflict' ? admission.kinds : []) });
+}
+function isIssueWorkflowDiagnostic(value) {
+    if (typeof value.kind !== 'string' || typeof value.fields !== 'string' || value.fields.length > 1500)
+        return false;
+    let fields;
+    try {
+        fields = JSON.parse(value.fields);
+    }
+    catch {
+        return false;
+    }
+    if (!Array.isArray(fields) || fields.length > 7 || fields.some(field => typeof field !== 'string'))
+        return false;
+    if (value.reason === 'conflicting-kinds')
+        return value.kind === 'conflict' && fields.length > 1 && new Set(fields).size === fields.length && fields.every(field => issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS.includes(field));
+    if (value.reason === 'unmanaged')
+        return value.kind === 'unmanaged' && fields.length === 0;
+    if (!issue_workflow_profile_1.ISSUE_WORKFLOW_KINDS.some(kind => kind === value.kind))
+        return false;
+    if (value.reason === 'disabled-kind')
+        return fields.length === 0;
+    if (value.reason !== 'missing-fields' && value.reason !== 'invalid-fields')
+        return false;
+    return fields.length > 0 && fields.length <= 5 && fields.every(field => (0, issue_workflow_field_mapping_1.isIssueFieldHeading)(field.replace(/ \(duplicate\)$/u, '')));
+}
+/** Bound heading data stays inert in Markdown tables, HTML, mentions and code spans. */
+function issueWorkflowDiagnosticPresentation(facts) {
+    const fields = JSON.parse(facts.fields).map(issue_workflow_field_mapping_1.escapeIssueFieldHeadingMarkdown);
+    return { kind: facts.kind, reason: facts.reason, fields: fields.length ? fields.join('; ') : '—' };
+}
+
+
+/***/ }),
+
+/***/ 4945:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ISSUE_FIELD_HEADING_MAX_BYTES = void 0;
+exports.normalizeWorkflowFieldMappings = normalizeWorkflowFieldMappings;
+exports.isIssueFieldHeading = isIssueFieldHeading;
+exports.escapeIssueFieldHeadingMarkdown = escapeIssueFieldHeadingMarkdown;
+exports.ISSUE_FIELD_HEADING_MAX_BYTES = 128;
+/** One explicit replacement per canonical semantic field; never guesses an alias from an issue body. */
+function normalizeWorkflowFieldMappings(value, definitions, enabled) {
+    if (value === undefined)
+        return undefined;
+    if (!isRecord(value))
+        throw new Error('Issue field mappings must be an object.');
+    const mappings = {};
+    for (const kind of Object.keys(value)) {
+        if (!Object.prototype.hasOwnProperty.call(definitions, kind) || !enabled.includes(kind)) {
+            throw new Error('Issue field mappings must refer only to known enabled workflows.');
+        }
+        const fields = value[kind];
+        if (!isRecord(fields))
+            throw new Error('Each issue field mapping must be an object.');
+        const headings = definitions[kind].requiredHeadings;
+        if (Object.keys(fields).some(key => !headings.includes(key)))
+            throw new Error('Issue field mapping contains an unknown canonical field.');
+        const entries = headings.filter(heading => Object.prototype.hasOwnProperty.call(fields, heading)).map(heading => {
+            const target = fields[heading];
+            if (!isIssueFieldHeading(target))
+                throw new Error('Mapped issue headings must be nonempty single-line text of at most 128 UTF-8 bytes.');
+            return [heading, target];
+        });
+        const mapped = Object.fromEntries(entries);
+        const effective = headings.map(heading => (mapped[heading] ?? heading).toLowerCase());
+        if (new Set(effective).size !== effective.length)
+            throw new Error('Issue field mappings cannot make two semantic fields share a heading.');
+        if (entries.length)
+            mappings[kind] = Object.freeze(mapped);
+    }
+    return Object.keys(mappings).length ? Object.freeze(Object.fromEntries(Object.keys(definitions)
+        .filter(kind => Object.prototype.hasOwnProperty.call(mappings, kind)).map(kind => [kind, mappings[kind]]))) : undefined;
+}
+function isIssueFieldHeading(value) {
+    return typeof value === 'string' && value.length > 0 && value.trim() === value
+        && new TextEncoder().encode(value).length <= exports.ISSUE_FIELD_HEADING_MAX_BYTES
+        && !/[\p{Cc}\p{Zl}\p{Zp}]/u.test(value);
+}
+function isRecord(value) {
+    if (value === null || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const prototype = Object.getPrototypeOf(value);
+    // Native structuredClone and plain maps from another realm remain dictionaries.
+    return prototype === null || Object.getPrototypeOf(prototype) === null;
+}
+function escapeIssueFieldHeadingMarkdown(field) {
+    return field.replace(/[&<>|`\\*_[\]{}!#]/gu, char => `&#${char.codePointAt(0)};`).replace(/@/gu, '&#64;');
+}
+
+
+/***/ }),
+
+/***/ 6744:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ALL_ISSUE_WORKFLOWS = exports.ISSUE_WORKFLOW_CATALOG = exports.ISSUE_WORKFLOW_KINDS = void 0;
+exports.createIssueWorkflowProfile = createIssueWorkflowProfile;
+exports.parseIssueWorkflowProfile = parseIssueWorkflowProfile;
+exports.serializeIssueWorkflowProfile = serializeIssueWorkflowProfile;
+exports.classifyIssueWorkflow = classifyIssueWorkflow;
+exports.hasMarkdownHeading = hasMarkdownHeading;
+exports.issueWorkflowFormFiles = issueWorkflowFormFiles;
+exports.isAutomaticOrVersion = isAutomaticOrVersion;
+exports.issueWorkflowHeading = issueWorkflowHeading;
+exports.issueWorkflowRequiredHeadings = issueWorkflowRequiredHeadings;
+const issue_workflow_body_1 = __nccwpck_require__(9376);
+const issue_workflow_field_mapping_1 = __nccwpck_require__(4945);
+const strict_json_keys_1 = __nccwpck_require__(5768);
+exports.ISSUE_WORKFLOW_KINDS = [
+    'feature', 'bugfix', 'documentation', 'chore', 'help', 'hotfix', 'release',
+];
+exports.ISSUE_WORKFLOW_CATALOG = {
+    feature: {
+        id: 'feature', label: 'Feature', formFile: 'feature_request.yml', nativeIssueType: 'Feature', labels: ['feature', 'enhancement'], branchManaged: true,
+        requiredHeadings: ['Description of the idea or improvement', 'Current limitations or challenges', 'Expected impact'],
+        requiredValueHeadings: ['Description of the idea or improvement', 'Current limitations or challenges', 'Expected impact'],
+    },
+    bugfix: {
+        id: 'bugfix', label: 'Bug fix', formFile: 'bug_report.yml', nativeIssueType: 'Bug', labels: ['bugfix', 'bug'], branchManaged: true,
+        requiredHeadings: ['Description', 'Reproducing the issue', 'copilot Version'],
+        requiredValueHeadings: ['Description', 'Reproducing the issue', 'copilot Version'],
+    },
+    documentation: {
+        id: 'documentation', label: 'Documentation', formFile: 'doc_update.yml', nativeIssueType: 'Documentation', labels: ['documentation', 'docs'], branchManaged: true,
+        requiredHeadings: ['Describe the documentation update', 'Why is this update needed?'],
+        requiredValueHeadings: ['Describe the documentation update', 'Why is this update needed?'],
+    },
+    chore: {
+        id: 'chore', label: 'Chore / maintenance', formFile: 'chore_task.yml', nativeIssueType: 'Maintenance', labels: ['chore', 'maintenance'], branchManaged: true,
+        requiredHeadings: ['Task description', 'Current issues or inefficiencies', 'Expected impact'],
+        requiredValueHeadings: ['Task description', 'Current issues or inefficiencies', 'Expected impact'],
+    },
+    help: {
+        id: 'help', label: 'Help / question', formFile: 'help_request.yml', nativeIssueType: 'Help', labels: ['help', 'question'], branchManaged: false,
+        requiredHeadings: ['Describe your problem or question'],
+        requiredValueHeadings: ['Describe your problem or question'],
+    },
+    hotfix: {
+        id: 'hotfix', label: 'Hotfix', formFile: 'hotfix.yml', nativeIssueType: 'Hotfix', labels: ['hotfix'], branchManaged: true,
+        requiredHeadings: ['Base Version', 'Hotfix Version', 'Issue Description', 'Hotfix Solution', 'Additional Context'],
+        requiredValueHeadings: ['Issue Description', 'Hotfix Solution'],
+    },
+    release: {
+        id: 'release', label: 'Release', formFile: 'release.yml', nativeIssueType: 'Release', labels: ['release'], branchManaged: true,
+        requiredHeadings: ['Release Type', 'Release Version', 'Changelog', 'Additional Context'],
+        requiredValueHeadings: ['Release Type', 'Changelog'],
+    },
+};
+const ISSUE_WORKFLOW_PROFILE_MAX_BYTES = 4096;
+const ISSUE_WORKFLOW_PROFILE_KEYS = new Set(['schemaVersion', 'enabled', 'fieldMappings']);
+exports.ALL_ISSUE_WORKFLOWS = Object.freeze({
+    schemaVersion: 1,
+    enabled: Object.freeze([...exports.ISSUE_WORKFLOW_KINDS]),
+});
+function createIssueWorkflowProfile(enabled, fieldMappings) {
+    const selected = new Set(enabled);
+    const ordered = exports.ISSUE_WORKFLOW_KINDS.filter(kind => selected.has(kind));
+    const mappings = (0, issue_workflow_field_mapping_1.normalizeWorkflowFieldMappings)(fieldMappings, exports.ISSUE_WORKFLOW_CATALOG, ordered);
+    return Object.freeze({
+        schemaVersion: mappings ? 2 : 1,
+        enabled: Object.freeze(ordered),
+        ...(mappings ? { fieldMappings: mappings } : {}),
+    });
+}
+/** Empty input selects all workflows with the same admission checks as an explicit profile. */
+function parseIssueWorkflowProfile(raw) {
+    if (!raw?.trim())
+        return { profile: exports.ALL_ISSUE_WORKFLOWS };
+    if (Buffer.byteLength(raw, 'utf8') > ISSUE_WORKFLOW_PROFILE_MAX_BYTES) {
+        return { error: `Issue workflow profile must not exceed ${ISSUE_WORKFLOW_PROFILE_MAX_BYTES} bytes.` };
+    }
+    let parsed;
+    try {
+        parsed = JSON.parse(raw);
+    }
+    catch {
+        return { error: 'Issue workflow profile must be valid JSON.' };
+    }
+    if ((0, strict_json_keys_1.hasDuplicateJsonObjectKeys)(raw))
+        return { error: 'Issue workflow profile cannot contain duplicate JSON keys.' };
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+        return { error: 'Issue workflow profile must be an object.' };
+    const value = parsed;
+    const unknownKeys = Object.keys(value).filter(key => !ISSUE_WORKFLOW_PROFILE_KEYS.has(key));
+    if (unknownKeys.length > 0)
+        return { error: `Unknown issue workflow profile field(s): ${unknownKeys.join(', ')}.` };
+    if (value.schemaVersion !== 1 && value.schemaVersion !== 2)
+        return { error: 'Issue workflow profile schemaVersion must be 1 or 2.' };
+    if (value.schemaVersion === 1 && value.fieldMappings !== undefined)
+        return { error: 'Issue field mappings require profile schemaVersion 2.' };
+    if (value.schemaVersion === 2 && value.fieldMappings === undefined)
+        return { error: 'Profile schemaVersion 2 requires explicit fieldMappings.' };
+    if (!Array.isArray(value.enabled) || value.enabled.some(item => typeof item !== 'string')) {
+        return { error: 'Issue workflow profile enabled must be an array of workflow IDs.' };
+    }
+    const enabled = value.enabled;
+    const unknown = enabled.filter(kind => !exports.ISSUE_WORKFLOW_KINDS.includes(kind));
+    if (unknown.length > 0)
+        return { error: `Unknown issue workflow(s): ${unknown.join(', ')}.` };
+    if (new Set(enabled).size !== enabled.length)
+        return { error: 'Issue workflow profile cannot contain duplicate workflow IDs.' };
+    try {
+        const profile = createIssueWorkflowProfile(enabled, value.fieldMappings);
+        if (value.schemaVersion === 2 && profile.schemaVersion !== 2)
+            return { error: 'Profile schemaVersion 2 requires nonempty fieldMappings.' };
+        return { profile };
+    }
+    catch (cause) {
+        return { error: cause.message };
+    }
+}
+function serializeIssueWorkflowProfile(profile) {
+    return JSON.stringify(createIssueWorkflowProfile(profile.enabled, profile.fieldMappings));
+}
+function classifyIssueWorkflow(labels, profile = exports.ALL_ISSUE_WORKFLOWS, labelConfiguration = {}, body, validateBody = true) {
+    const normalized = new Set(labels.map(label => label.trim().toLowerCase()).filter(Boolean));
+    const kinds = exports.ISSUE_WORKFLOW_KINDS.filter(kind => {
+        const configured = (labelConfiguration[kind] ?? []).filter(label => label.trim().length > 0);
+        const candidates = configured.length > 0 ? configured : exports.ISSUE_WORKFLOW_CATALOG[kind].labels;
+        return candidates.some(label => normalized.has(label.trim().toLowerCase()));
+    });
+    if (kinds.length === 0)
+        return { status: 'unmanaged', reason: 'no-recognized-kind' };
+    if (kinds.length > 1)
+        return { status: 'conflict', kinds };
+    const kind = kinds[0];
+    if (!profile.enabled.includes(kind))
+        return { status: 'disabled', kind };
+    if (!validateBody)
+        return { status: 'eligible', kind };
+    const issueBody = body ?? '';
+    const requiredHeadings = issueWorkflowRequiredHeadings(profile, kind);
+    const sections = (0, issue_workflow_body_1.readIssueWorkflowFields)(issueBody, requiredHeadings);
+    const duplicateHeadings = sections.filter(field => field.count > 1).map(field => field.heading);
+    if (duplicateHeadings.length > 0) {
+        return { status: 'invalid', kind, missingHeadings: [], invalidFields: duplicateHeadings.map(heading => `${heading} (duplicate)`) };
+    }
+    const missingHeadings = sections.filter(field => field.count === 0).map(field => field.heading);
+    if (missingHeadings.length > 0)
+        return { status: 'invalid', kind, missingHeadings };
+    const invalidFields = invalidIssueWorkflowFields(kind, new Map(sections.map(field => [field.heading, field.value])), profile);
+    if (invalidFields.length > 0)
+        return { status: 'invalid', kind, missingHeadings: [], invalidFields };
+    return { status: 'eligible', kind };
+}
+function hasMarkdownHeading(body, heading) {
+    return (0, issue_workflow_body_1.readIssueWorkflowFields)(body, [heading])[0].count > 0;
+}
+function issueWorkflowFormFiles(profile) {
+    return exports.ISSUE_WORKFLOW_KINDS.filter(kind => profile.enabled.includes(kind)).map(kind => exports.ISSUE_WORKFLOW_CATALOG[kind].formFile);
+}
+function invalidIssueWorkflowFields(kind, fields, profile) {
+    const mapped = (heading) => issueWorkflowHeading(profile, kind, heading);
+    // Classification already proved every required heading is present and unique.
+    const value = (heading) => fields.get(mapped(heading));
+    const invalid = [];
+    if (kind === 'release') {
+        if (!/^(patch|minor|major)$/iu.test(value('Release Type')))
+            invalid.push(mapped('Release Type'));
+        if (!value('Changelog'))
+            invalid.push(mapped('Changelog'));
+        if (!isAutomaticOrVersion(value('Release Version')))
+            invalid.push(mapped('Release Version'));
+    }
+    if (kind === 'hotfix') {
+        if (!isAutomaticOrVersion(value('Base Version')))
+            invalid.push(mapped('Base Version'));
+        if (!isAutomaticOrVersion(value('Hotfix Version')))
+            invalid.push(mapped('Hotfix Version'));
+        if (!value('Issue Description'))
+            invalid.push(mapped('Issue Description'));
+        if (!value('Hotfix Solution'))
+            invalid.push(mapped('Hotfix Solution'));
+    }
+    for (const heading of exports.ISSUE_WORKFLOW_CATALOG[kind].requiredValueHeadings) {
+        if (!value(heading) && !invalid.includes(mapped(heading)))
+            invalid.push(mapped(heading));
+    }
+    return invalid;
+}
+function isAutomaticOrVersion(value) {
+    return /^automatic$/iu.test(value) || /^v?\d+\.\d+\.\d+$/u.test(value);
+}
+function issueWorkflowHeading(profile, kind, canonical) {
+    return profile.fieldMappings?.[kind]?.[canonical] ?? canonical;
+}
+function issueWorkflowRequiredHeadings(profile, kind) {
+    return Object.freeze(exports.ISSUE_WORKFLOW_CATALOG[kind].requiredHeadings.map(heading => issueWorkflowHeading(profile, kind, heading)));
+}
+
+
+/***/ }),
+
 /***/ 5386:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -7049,6 +7442,42 @@ function isUnsafePromptCharacter(character) {
 function normalizeOrigin(origin) {
     const normalized = origin.trim().replace(/[^a-zA-Z0-9._:-]/g, '_');
     return normalized || 'unknown';
+}
+
+
+/***/ }),
+
+/***/ 5768:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.hasDuplicateJsonObjectKeys = hasDuplicateJsonObjectKeys;
+/** Call after JSON syntax validation; detects duplicate decoded object keys without evaluating values. */
+function hasDuplicateJsonObjectKeys(raw) {
+    const stack = [];
+    for (const match of raw.matchAll(/"(?:\\.|[^"\\])*"|[{}[\]:,]/gu)) {
+        const token = match[0];
+        if (token === '{')
+            stack.push({ keys: new Set(), keyExpected: true });
+        else if (token === '[')
+            stack.push(null);
+        else if (token === '}' || token === ']')
+            stack.pop();
+        else {
+            const current = stack[stack.length - 1];
+            if (current && token === ',')
+                current.keyExpected = true;
+            else if (current && token.startsWith('"') && current.keyExpected) {
+                const key = JSON.parse(token);
+                if (current.keys.has(key))
+                    return true;
+                current.keys.add(key);
+                current.keyExpected = false;
+            }
+        }
+    }
+    return false;
 }
 
 

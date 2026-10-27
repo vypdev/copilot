@@ -1,3 +1,4 @@
+import { issueWorkflowDiagnostic } from '../../domain/issue_workflow_diagnostic';
 import type { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
 import { ApplicationError } from '../errors/application_error';
@@ -104,12 +105,13 @@ function buildIssueWorkflowAdmissionResult(
           ? `missing headings: ${admission.missingHeadings.join(', ')}`
           : `invalid fields: ${admission.invalidFields?.join(', ') ?? 'unknown'}`}.`
         : 'Issue workflow admission failed.';
+  const diagnostic = issueWorkflowDiagnostic(admission);
   return new Result({
     id: taskId,
     success: false,
     executed: true,
     steps: [`🛑 ${message}`],
-    errors: [new ApplicationError('configuration.invalid', message)],
+    errors: [new ApplicationError('configuration.invalid', message, diagnostic ? { recovery: { id: 'issue-workflow-admission-blocked', variables: diagnostic } } : {})],
   });
 }
 

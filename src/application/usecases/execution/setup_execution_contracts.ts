@@ -141,5 +141,7 @@ export type SetupExecutionResult =
     });
 
 export interface VersionDescriptionContext {
+    readonly body?: string;
+    readonly issueWorkflowProfile?: import('../../../domain/issue_workflow_profile').IssueWorkflowProfile;
     readonly issueNumber: number;
 }

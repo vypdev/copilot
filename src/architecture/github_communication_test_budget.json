@@ -7,7 +7,7 @@
       "id": "semantic-github-publication",
       "spec": "specs/semantic-github-publication-and-notification.md",
       "requiredCases": 135,
-      "allocatedCases": 418,
+      "allocatedCases": 442,
       "files": [
         {
           "path": "src/domain/__tests__/github_publication.test.ts",
@@ -164,6 +164,14 @@
         {
           "path": "src/application/usecases/actions/__tests__/retire_unrelated_branch_sync_cards.test.ts",
           "qualifyingCases": 23
+        },
+        {
+          "path": "src/actions/__tests__/github_action_completion.test.ts",
+          "qualifyingCases": 14
+        },
+        {
+          "path": "src/domain/__tests__/issue_workflow_diagnostic.test.ts",
+          "qualifyingCases": 10
         }
       ]
     },

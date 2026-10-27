@@ -1,3 +1,5 @@
+import { ALL_ISSUE_WORKFLOWS, issueWorkflowHeading } from '../../../../domain/issue_workflow_profile';
+import { readIssueWorkflowFields } from '../../../../domain/issue_workflow_body';
 import { Result } from "../../../../data/model/result";
 import { extractVersion } from "../../../../utils/content_utils";
 import { logError, logInfo } from "../../../ports/logging_ports";
@@ -30,7 +32,7 @@ export class GetHotfixVersionUseCase implements ParamUseCase<VersionDescriptionC
                 return result;
             }
 
-            const description = await this.issueRepository.getDescription(param.issueNumber)
+            const description = param.body ?? await this.issueRepository.getDescription(param.issueNumber)
 
             if (description === undefined) {
                 result.push(
@@ -44,8 +46,8 @@ export class GetHotfixVersionUseCase implements ParamUseCase<VersionDescriptionC
                 return result;
             }
 
-            const baseVersion = extractVersion('Base Version', description)
-            const hotfixVersion = extractVersion('Hotfix Version', description)
+            const baseVersion = param.body === undefined && !param.issueWorkflowProfile ? extractVersion('Base Version', description) : extractVersion('Base Version', `### Base Version\n${readIssueWorkflowFields(description, [issueWorkflowHeading(param.issueWorkflowProfile ?? ALL_ISSUE_WORKFLOWS, 'hotfix', 'Base Version')])[0].value.replace(/^v(?=\d)/u, '')}`)
+            const hotfixVersion = param.body === undefined && !param.issueWorkflowProfile ? extractVersion('Hotfix Version', description) : extractVersion('Hotfix Version', `### Hotfix Version\n${readIssueWorkflowFields(description, [issueWorkflowHeading(param.issueWorkflowProfile ?? ALL_ISSUE_WORKFLOWS, 'hotfix', 'Hotfix Version')])[0].value.replace(/^v(?=\d)/u, '')}`)
 
             if (baseVersion === undefined) {
                 result.push(

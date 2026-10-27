@@ -432,3 +432,15 @@ describe('SetupDoctorUseCase', () => {
 function request(configuration: SetupConfiguration) {
   return { owner: 'owner', repository: 'repo', setupToken: 'token', configuration };
 }
+
+
+it('includes exact local form drift and recovery in read-only doctor results',async()=>{
+  const configuration=createDefaultSetupConfiguration();const deps=dependencies(configuration);const inspectIssueForms=jest.fn(()=>[{id:'issue-form.bugfix',status:'fail' as const,summary:'Missing heading VaultStadio Version. Review issueWorkflows.fieldMappings.',path:'.github/ISSUE_TEMPLATE/bug_report.yml',missing:false}]);
+  const {report}=await new SetupDoctorUseCase({...deps,workspace:{...deps.workspace,inspectIssueForms}}).execute({...request(configuration),readOnly:true});expect(report.checks).toContainEqual(expect.objectContaining({id:'issue-form.bugfix',status:'fail',summary:expect.stringContaining('VaultStadio Version')}));expect(inspectIssueForms).toHaveBeenCalledWith(configuration);expect(deps.remoteHealth.validateExisting).not.toHaveBeenCalled();
+});
+it('does not inspect forms through an invalid configured mapping',async()=>{
+  const configuration=createDefaultSetupConfiguration();const deps=dependencies(configuration);configuration.issueWorkflows={enabled:['help'],fieldMappings:{bugfix:{'copilot Version':'Version'}}};const inspectIssueForms=jest.fn(()=>[]);
+  const {report}=await new SetupDoctorUseCase({...deps,workspace:{...deps.workspace,inspectIssueForms}}).execute({...request(configuration),readOnly:true});expect(inspectIssueForms).not.toHaveBeenCalled();expect(report.checks.find(check=>check.id==='configuration.valid')?.status).toBe('fail');
+});
+
+it('includes matching form evidence as a pass without an unnecessary repair action',async()=>{const config=createDefaultSetupConfiguration();const deps=dependencies(config);const {report}=await new SetupDoctorUseCase({...deps,workspace:{...deps.workspace,inspectIssueForms:()=>[{id:'issue-form.bugfix',status:'pass',summary:'Matches.',path:'.github/ISSUE_TEMPLATE/bug_report.yml',missing:false}]}}).execute({...request(config),readOnly:true});expect(report.checks).toContainEqual(expect.objectContaining({id:'issue-form.bugfix',status:'pass',summary:'Matches.'}));});

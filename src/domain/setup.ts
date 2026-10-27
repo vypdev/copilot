@@ -12,7 +12,7 @@ import type {
     ReconciliationPullRequestMode,
     ReconciliationStrategy,
 } from './deployment_configuration';
-import type { IssueWorkflowKind } from './issue_workflow_profile';
+import type { IssueWorkflowFieldMappings, IssueWorkflowKind } from './issue_workflow_profile';
 import type { PullRequestApprovalPolicy } from './pull_request_approval_policy';
 import type { SetupRunnerConfiguration, SetupInstallationReview } from './setup_runner';
 
@@ -128,6 +128,7 @@ export interface SetupConfiguration {
     /** Issue Forms/workflows that the action is allowed to process. */
     issueWorkflows: {
         enabled: readonly IssueWorkflowKind[];
+        fieldMappings?: IssueWorkflowFieldMappings;
     };
     /** Generated repository guidance for human and agent collaborators. */
     repositoryAgentGuidance: {

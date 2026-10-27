@@ -2515,9 +2515,9 @@
       "id": "configurable-issue-workflows",
       "title": "Configurable issue workflows and fail-closed admission",
       "status": "implemented",
-      "scope": "Select one canonical set of issue workflows and enforce its forms, dependencies, branch policy, runtime admission, migration, and diagnosis",
+      "scope": "Select canonical issue workflows and explicit consumer field mappings; preserve forms, compare setup/doctor schemas, and report actionable fail-closed admission without state writes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-13",
+      "lastVerified": "2026-10-27",
       "specs": [
         "specs/configurable-issue-workflows-and-admission.md"
       ],
@@ -2576,7 +2576,23 @@
         "src/utils/setup_files.ts",
         "scripts/coverage-budgets.json",
         "scripts/validate-workflow-contract.cjs",
-        "scripts/validate-npm-package.cjs"
+        "scripts/validate-npm-package.cjs",
+        "src/domain/issue_workflow_body.ts",
+        "src/domain/issue_workflow_field_mapping.ts",
+        "src/domain/issue_workflow_form.ts",
+        "src/domain/issue_workflow_diagnostic.ts",
+        "src/domain/strict_json_keys.ts",
+        "src/utils/setup_issue_form_review.ts",
+        "src/actions/github_action_completion.ts",
+        "src/application/policies/configuration_persistence_policy.ts",
+        "src/application/policies/application_error_presentation_policy.ts",
+        "src/application/usecases/execution/execution_branch_version_resolver.ts",
+        "src/application/policies/deploy_workflow_policy.ts",
+        "src/application/usecases/steps/common/get_release_version_use_case.ts",
+        "src/application/usecases/steps/common/get_release_type_use_case.ts",
+        "src/application/usecases/steps/common/get_hotfix_version_use_case.ts",
+        "src/application/policies/setup_configuration_clone_policy.ts",
+        "src/cli/setup_config_file.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_configuration_policy.test.ts",
@@ -2599,7 +2615,20 @@
         "src/cli/__tests__/setup_prompt_rendering.test.ts",
         "src/infrastructure/__tests__/setup_workspace_adapter.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
-        "src/utils/__tests__/setup_files.test.ts"
+        "src/utils/__tests__/setup_files.test.ts",
+        "src/domain/__tests__/issue_workflow_field_mappings.test.ts",
+        "src/domain/__tests__/issue_workflow_body.test.ts",
+        "src/domain/__tests__/issue_workflow_form.test.ts",
+        "src/domain/__tests__/issue_workflow_diagnostic.test.ts",
+        "src/domain/__tests__/strict_json_keys.test.ts",
+        "src/utils/__tests__/setup_issue_form_review.test.ts",
+        "src/application/usecases/steps/common/__tests__/mapped_workflow_versions.test.ts",
+        "src/actions/__tests__/github_action_completion.test.ts",
+        "src/application/policies/__tests__/mapped_deploy_workflow_policy.test.ts",
+        "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
+        "src/cli/__tests__/setup_config_file.test.ts",
+        "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
+        "src/infrastructure/__tests__/setup_verification_action.test.ts"
       ],
       "documentation": [
         "docs/how-to-use.mdx",
@@ -2618,7 +2647,8 @@
         "docs/issues/type/release.mdx",
         "docs/issues/deployment-orchestration.mdx",
         "docs/development/architecture.mdx",
-        "docs/issues/workflow-setup.mdx"
+        "docs/issues/workflow-setup.mdx",
+        "docs/agents/repository-guidance-troubleshooting.mdx"
       ]
     },
     {

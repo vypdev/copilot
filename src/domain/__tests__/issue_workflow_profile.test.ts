@@ -26,7 +26,7 @@ describe('issue workflow profile', () => {
   it('uses all workflows by default with standard admission and rejects malformed profiles', () => {
     expect(parseIssueWorkflowProfile(undefined)).toEqual({ profile: ALL_ISSUE_WORKFLOWS });
     expect(parseIssueWorkflowProfile('{"schemaVersion":2,"enabled":[]}')).toEqual({
-      error: 'Issue workflow profile schemaVersion must be 1.',
+      error: 'Profile schemaVersion 2 requires explicit fieldMappings.',
     });
     expect(parseIssueWorkflowProfile('{"schemaVersion":1,"enabled":["feature","feature"]}')).toEqual({
       error: 'Issue workflow profile cannot contain duplicate workflow IDs.',

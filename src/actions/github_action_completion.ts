@@ -18,7 +18,7 @@ import {
     type LocalizationSummaryLabels,
 } from '../application/policies/action_summary_policy';
 import type { CatalogResolutionObservation } from '../domain/message_catalog';
-import { resolveActionSummaryCatalog } from '../application/policies/action_summary_message_catalog';
+import { resolveActionSummaryCatalog, resolveStaticActionSummaryCatalog } from '../application/policies/action_summary_message_catalog';
 import { lifecycleStateFromLabels } from '../domain/copilot_lifecycle';
 import type { CopilotEvidencePort } from '../application/ports/copilot_evidence_ports';
 import { buildCopilotEvidence } from '../application/policies/copilot_evidence_policy';
@@ -51,8 +51,9 @@ export async function finishGithubAction(
     execution.currentConfiguration.results = results;
     core.setOutput('bugbot-telemetry', JSON.stringify(extractBugbotTelemetry(results)));
     const dryRun = results.some((result) => getResultPayload(result.payload)?.dryRun === true);
+    const admissionStopped = execution.issueWorkflowRuntimeMode === 'block' || execution.issueWorkflowRuntimeMode === 'noop';
     const ownsDeploymentPresentation = execution.singleAction.isDeploymentOrchestrationAction;
-    if (!dryRun && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
+    if (!dryRun && !admissionStopped && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
         const publicationContext = projectPublishResultContext(execution);
         const requestRead = publicationContext.requestSource ? createReplyRequestReadPort({
             owner: execution.owner, repository: execution.repo, token: execution.tokens.token,
@@ -64,6 +65,8 @@ export async function finishGithubAction(
             requestRead,
         ).invoke(publicationContext);
         if (publicationOutcome) results.push(publicationOutcome);
+    } else if (admissionStopped) {
+        logInfo('Issue admission stopped: exact recovery is reported only in the Job Summary.');
     } else if (execution.singleAction.isPublishIssueCommentAction || ownsDeploymentPresentation) {
         logInfo('Generic result publication skipped: this single action owns its user-facing presentation.');
     } else {
@@ -140,16 +143,17 @@ async function writeActionSummary(
     summaryPort?: ActionSummaryPort,
     catalogResolver?: MessageCatalogResolutionPort,
 ): Promise<WrittenActionSummary> {
+    const admissionStopped = execution.issueWorkflowRuntimeMode === 'block' || execution.issueWorkflowRuntimeMode === 'noop';
     const operation = execution.currentConfiguration.deploymentOrchestration;
     const locale = execution.locale;
-    const summaryLocale = execution.singleAction.isDeploymentOrchestrationAction && operation
+    const summaryLocale = !admissionStopped && execution.singleAction.isDeploymentOrchestrationAction && operation
         ? operation.locale
         : locale;
     let body: string;
     let localizationLabels: LocalizationSummaryLabels | undefined;
     let appendLocalizationEvidence = false;
     let errorMessage: ApplicationErrorMessageReader;
-    if (execution.singleAction.isDeploymentOrchestrationAction && operation) {
+    if (!admissionStopped && execution.singleAction.isDeploymentOrchestrationAction && operation) {
         const effectiveLocale = operation.locale;
         const catalog = await resolveDeploymentCatalog(
             effectiveLocale.repository,
@@ -183,7 +187,9 @@ async function writeActionSummary(
                 : undefined,
         }, operation.phase === 'blocked' ? requiredDeploymentFailure(operation).previousPhase : undefined, catalog);
     } else {
-        const catalog = await resolveActionSummaryCatalog(
+        const catalog = admissionStopped
+            ? resolveStaticActionSummaryCatalog(locale.repository)
+            : await resolveActionSummaryCatalog(
             locale.repository,
             execution.ai.getAgentConfiguration('planner'),
             catalogResolver,

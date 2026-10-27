@@ -62,7 +62,53 @@ disabled until the post-admission lookup authorizes them.
 
 ## Migration and diagnosis
 
-Every setup writes an explicit schema-1 profile, including an all-kinds selection. Run `copilot doctor --config <setup.yml>` to detect profile, form, workflow, generated-guide, and manifest drift without changing files.
+Setup without field mappings writes an explicit schema-1 profile, including an all-kinds selection. Explicit mappings opt into schema 2. Run `copilot doctor --config <setup.yml>` to detect profile, form, workflow, generated-guide, and manifest drift without changing files.
 An omitted profile in a manually wired workflow selects all seven kinds and
 still applies the same required body checks. Malformed profile JSON blocks.
 When admission blocks, correct the selected setup kind, conflicting live labels, or required issue body. Do not work around admission by inventing a branch or changing the generated profile manually.
+
+
+## Preserved application-specific headings
+
+A consumer form may call its application version `VaultStadio Version` instead
+of `copilot Version`. Declare that relationship in the reviewed setup file;
+Copilot never guesses version fields from their suffix or rewrites a customized
+form to fit an upstream product name.
+
+```yaml
+issueWorkflows:
+  enabled: [feature, bugfix, documentation, chore, help, hotfix, release]
+  fieldMappings:
+    bugfix:
+      copilot Version: VaultStadio Version
+```
+
+Run `copilot doctor --config copilot.setup.yml`, then apply setup using the same
+configuration. Setup compares the selected existing forms before writing guide/
+profile facts. A missing or duplicate governed label, an unsupported required
+scalar, or a required-value mismatch blocks that local apply and names the form
+and expected field. Existing compatible consumer forms keep their bytes. New
+forms, guide facts and the runtime Variable use the same mapped headings.
+Checkbox acknowledgements and optional contextual fields remain native form UI.
+
+Mappings are one-to-one replacements for catalogued headings in enabled kinds,
+including release/hotfix headings. They change names, not `Automatic`, semantic
+version or release-type meanings. A target must be trimmed single-line text of
+at most 128 UTF-8 bytes; two roles cannot share a case-insensitive target. Unknown
+roles/kinds, mappings for disabled kinds, duplicate JSON keys and malformed input
+are rejected. The complete runtime profile remains limited to 4096 UTF-8 bytes.
+Schema 1 rejects mappings; schema 2 requires a nonempty explicit map. Upgrade both
+the setup CLI and every effective Action runtime to a version supporting schema 2
+before adopting the new profile. A merge into develop does not upgrade a runtime
+pinned to master or a released tag.
+
+For a blocked run, open its GitHub Actions Job Summary. It names the exact missing
+or invalid heading, its workflow kind and the recovery action. Correct the body
+using the installed form, or review the mapping if form and profile disagree,
+then rerun. An unrelated upstream compatibility heading cannot replace the mapped
+field. Fenced examples and hidden HTML comments do not supply required fields.
+No planner or branch starts, no conversation diagnostic is posted and no minimal
+hidden configuration is saved for blocked/no-op admission. Existing configuration
+stays intact. The previous summary records that attempt; a repaired fresh run uses
+its own live issue body and labels and resumes the normal Action-owned lifecycle.
+Bundled English/Spanish diagnostics and complete English fallback require no agent.

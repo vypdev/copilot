@@ -1,3 +1,4 @@
+import { inspectSetupIssueForms } from './setup_issue_form_review';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadAll } from 'js-yaml';
@@ -62,6 +63,7 @@ export function inspectSetupInstallation(root: string, configuration: SetupConfi
   assets.push({ path: SETUP_VERIFICATION_ACTION_PATH, enabled: verificationSetup.enabled,
     status: action === 'create' ? 'missing' : action === 'preserve' ? 'customized' : 'incompatible' });
   if (action === 'blocked') return { assets, jobs, changes, blockers, verificationSetup };
+  blockers.push(...inspectSetupIssueForms(root, configuration).filter(form => form.status === 'fail' && !form.missing).map(form => form.summary));
   if (action === 'create') changes.push({ path: SETUP_VERIFICATION_ACTION_PATH, before: null, after: readSetupVerificationActionStarter() });
   const addJobs = (file: string, content: string, retained: boolean) => {
     const documents = loadAll(content);

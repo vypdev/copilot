@@ -1135,4 +1135,10 @@ describe('terminal issue lifecycle route', () => {
     await runMain(mockExecution({ eventName: 'issues', isIssue: true, inputs: { action: 'closed', issue: { number: 42, state: 'closed' } }, locale: { issue: 'en-US' } }));
     expect(mockClosedIssueRetireInvoke).toHaveBeenCalledTimes(1); expect(mockIssueInvoke).not.toHaveBeenCalled();
   });
+  it('blocks incomplete legacy admission facts without inventing a recovery field or starting a route',async()=>{
+    mockSetupExecutionInvoke.mockImplementation(async context=>configuredSetupResult(context,{status:'invalid',kind:'bugfix',missingHeadings:[]}));
+    const results=await runMain(mockExecution({eventName:'issues',isIssue:true,issue:{labeled:true,labelAdded:'in-progress'}}));
+    expect(results[0].success).toBe(false);expect(results[0].errors[0]).toMatchObject({code:'configuration.invalid',recovery:undefined});expect(mockIssueInvoke).not.toHaveBeenCalled();
+  });
+
 });

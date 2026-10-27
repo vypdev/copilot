@@ -1,3 +1,5 @@
+import { issueWorkflowDiagnostic } from '../domain/issue_workflow_diagnostic';
+import type { IssueWorkflowAdmission } from '../domain/issue_workflow_profile';
 import { Execution } from '../data/model/execution';
 import { Result } from '../data/model/result';
 import { ProjectBoardCommandPort } from '../application/ports/project_board_command_ports';
@@ -99,7 +101,7 @@ export async function mainRun(
     });
     execution.issueWorkflowRuntimeMode = runtimeDecision.mode;
     if (runtimeDecision.mode === 'noop' || runtimeDecision.mode === 'block') {
-        return [issueWorkflowAdmissionResult(runtimeDecision.mode, runtimeDecision.message)];
+        return [issueWorkflowAdmissionResult(runtimeDecision.mode, runtimeDecision.message, execution.currentIssueWorkflowAdmission)];
     }
     await prepareRuntime?.(execution);
 
@@ -160,7 +162,7 @@ function hasManagedIssueWorkflowState(execution: Execution): boolean {
     ].some(value => typeof value === 'string' && value.length > 0);
 }
 
-function issueWorkflowAdmissionResult(mode: 'noop' | 'block', message = 'Issue workflow admission stopped this run.'): Result {
+function issueWorkflowAdmissionResult(mode: 'noop' | 'block', message = 'Issue workflow admission stopped this run.', admission?: IssueWorkflowAdmission): Result {
     if (mode === 'noop') {
         return new Result({
             id: 'IssueWorkflowAdmission',
@@ -169,12 +171,13 @@ function issueWorkflowAdmissionResult(mode: 'noop' | 'block', message = 'Issue w
             steps: [`⏭️ ${message}`],
         });
     }
+    const diagnostic = issueWorkflowDiagnostic(admission);
     return new Result({
         id: 'IssueWorkflowAdmission',
         success: false,
         executed: false,
         steps: [`🛑 ${message}`],
-        errors: [new ApplicationError('configuration.invalid', message)],
+        errors: [new ApplicationError('configuration.invalid', message, diagnostic ? { recovery: { id: 'issue-workflow-admission-blocked', variables: diagnostic } } : {})],
     });
 }
 

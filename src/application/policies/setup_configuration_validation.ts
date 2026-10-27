@@ -5,8 +5,7 @@ import { validateStorageConfiguration } from './setup_configuration_storage_poli
 import { MAX_INACTIVITY_THRESHOLD_HOURS } from '../../domain/issue_inactivity';
 import { validateDeploymentConfiguration } from '../../domain/deployment_configuration';
 import { canonicalizeLocaleTag } from '../../domain/locale';
-import { ISSUE_WORKFLOW_KINDS } from '../../domain/issue_workflow_profile';
-import { effectiveIssueWorkflowProfile } from './setup_issue_workflow_policy';
+import { createIssueWorkflowProfile, serializeIssueWorkflowProfile, parseIssueWorkflowProfile, ISSUE_WORKFLOW_KINDS } from '../../domain/issue_workflow_profile';
 import { validatePullRequestApprovalPolicy } from '../../domain/pull_request_approval_policy';
 import { parseSetupProjectSelection } from './setup_project_selection_policy';
 import { validateSetupRunners } from './setup_runner_policy';
@@ -54,6 +53,11 @@ export function validateSetupConfiguration(configuration: SetupConfiguration, op
         }
     }
     const enabledWorkflows = configuration.issueWorkflows?.enabled ?? ISSUE_WORKFLOW_KINDS;
+    try {
+        const profile = createIssueWorkflowProfile(enabledWorkflows, configuration.issueWorkflows?.fieldMappings);
+        const parsed = parseIssueWorkflowProfile(serializeIssueWorkflowProfile(profile));
+        if ('error' in parsed) errors.push(parsed.error);
+    } catch (cause) { errors.push((cause as Error).message); }
     if (!configuration.repository.issueManagedBranches
         && enabledWorkflows.some(kind => kind === 'release' || kind === 'hotfix')) {
         errors.push('release and hotfix issue workflows require issue-managed-branches.');
@@ -66,7 +70,7 @@ export function validateSetupConfiguration(configuration: SetupConfiguration, op
             errors.push(`features.${kind} must match issueWorkflows.enabled; use the issue workflow selector as the source of truth.`);
         }
     }
-    if (configuration.features.issues !== false && effectiveIssueWorkflowProfile(configuration).enabled.length === 0) {
+    if (configuration.features.issues !== false && enabledWorkflows.length === 0) {
         errors.push('At least one issue workflow must be enabled when issue automation is enabled.');
     }
     if (!configuration.repositoryAgentGuidance || !['prompt', 'create-if-missing', 'disabled'].includes(configuration.repositoryAgentGuidance.agentsPointer)) {

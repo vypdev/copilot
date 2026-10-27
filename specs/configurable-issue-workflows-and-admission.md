@@ -953,3 +953,202 @@ read-only and immutable-evidence guards remain in force. Recovery is to restore
 consistent workflow inputs or rerun setup; never forge SDD records or change the
 installed profile merely to hide workflow drift. Operator instructions are in
 `docs/issues/workflow-setup.mdx`.
+
+## Consumer field mappings and actionable admission recovery — issue #725
+
+### Decision and evidence
+
+[Issue #725](https://github.com/vypdev/copilot/issues/725) demonstrates an installed
+consumer form requiring `VaultStadio Version`, while the generated guide/profile
+and runtime require `copilot Version`. The preserved consumer form has no stable
+ID for this input, so inferring its meaning from an ID or any `* Version` heading
+would be unjustified. The first three executable regressions reject the proposed
+mapped profile before the fix. The current blocked Action path also suppresses
+semantic conversation publication and later stores minimal configuration, while
+its generic error says no effect occurred. These are separate contract/UX defects.
+No consumer branch-routing corruption or lost work has been established.
+
+Choose an **explicit, one-to-one heading mapping**, not body heuristics or silent
+form replacement. One effective schema MUST drive runtime classification, version
+extraction, new-form rendering, generated guide/profile facts and local setup/
+doctor comparison for all seven kinds. Existing source templates and profile-v1
+installations keep their default canonical headings.
+
+### Configuration and compatibility
+
+Advanced reviewed setup configuration MAY contain:
+
+```yaml
+issueWorkflows:
+  enabled: [feature, bugfix, documentation, chore, help, hotfix, release]
+  fieldMappings:
+    bugfix:
+      copilot Version: VaultStadio Version
+```
+
+Setup derives the runtime Variable `COPILOT_ISSUE_WORKFLOW_PROFILE`:
+
+```json
+{"schemaVersion":2,"enabled":["bugfix"],"fieldMappings":{"bugfix":{"copilot Version":"VaultStadio Version"}}}
+```
+
+The abbreviated runtime example enables only bugfix; the setup example enables
+all kinds. Mapping keys are existing canonical semantic headings, never new roles.
+All keys MUST belong to known enabled kinds and their catalogued required fields.
+Each value is one exact nonempty single-line label, at most 128 UTF-8 bytes, without
+control/line-separator characters or surrounding whitespace. Effective headings
+MUST remain unique ignoring case; collisions with an unmapped canonical heading
+are invalid. JSON duplicate object keys (including escaped equivalent keys),
+unknown keys/versions/kinds/fields, arrays, null, malformed/oversized input and
+ambiguous maps fail closed. The complete runtime profile remains bounded to 4096
+UTF-8 bytes. No fuzzy matching, alias list, wildcard, model inference or fallback
+to the old heading is allowed. Body headings use the existing case-insensitive
+matching contract; extra informational headings do not satisfy a missing mapped
+field. An old integration-version compatibility section may remain as ordinary
+context without replacing the mapped application-version field.
+
+Schema 1 remains accepted unchanged and MUST reject mapping fields. Empty/absent
+input still selects all kinds with canonical validation. Schema 2 requires a
+nonempty explicit mapping; setup without mappings continues to emit schema 1.
+Serialization orders kinds and canonical fields deterministically and freezes
+snapshots. Profile fingerprints include mappings. Interactive deselection removes
+maps for explicitly deselected kinds; otherwise reviewed config survives wizard
+round-trips. Headless contradictory configuration is rejected, never enabled by
+its mapping. The advanced config file is the mapping surface; no speculative
+product-name guessing or additional wizard question is needed.
+
+A mapped profile requires a runtime supporting schema 2. Upgrade the coherent
+CLI/Action pair before adopting it; an old runtime must reject it rather than
+silently use canonical fields. Merging to develop alone does not promote a
+master-pinned comment runtime. No release/tag/runtime promotion or consumer edit
+is included here. Rollback removes explicit mappings only after retaining a
+compatible form/body contract, or restores the prior complete runtime/profile
+pair. Never repair this by weakening admission or overwriting preserved forms.
+
+### Admission, setup and recovery flow
+
+```mermaid
+flowchart TD
+  C[Reviewed configuration] --> E[One effective heading schema]
+  E --> S[Render missing forms and guide/profile facts]
+  E --> D[Compare preserved forms in setup and doctor]
+  E --> A[Classify live issue and validate exact fields]
+  D -->|drift| R[Report exact mismatch and preserve consumer bytes]
+  A -->|invalid| B[Block branch, planner and configuration persistence]
+  B --> J[Exact bounded diagnostic in Job Summary]
+  A -->|valid after repair| W[Normal Action-owned lifecycle]
+```
+
+Setup/doctor MUST compare the governed semantic fields in each selected installed
+form against the effective schema, including duplicate labels, missing fields,
+required-value declarations and unsupported required scalar fields. Native UI-only
+checkbox acknowledgements and optional contextual fields do not become new runtime
+semantic roles. Required version/enum semantics for release/hotfix remain fixed:
+map headings, not meanings, and never treat missing/empty/duplicate/invalid input
+as `Automatic`. Their version-reading use cases MUST use the same mapped snapshot.
+
+Existing consumer form bytes MUST remain unchanged. New files MAY render explicit
+mapped labels from bundled templates. Setup MUST report incompatible preserved
+forms before writing contradictory guide/profile facts; no hidden form migration.
+Doctor is read-only, names the affected path/field and explains the mapping or
+reviewed schema repair. Shared bounded YAML inspection rejects malformed or
+multi-document input, duplicate keys, unsupported shapes, ambiguous labels,
+non-regular/external files and more than 100 form elements/64 KiB. Parser/provider
+error prose and field values remain private. No YAML code/custom tag execution,
+new dependency bootstrap or remote consumer mutation is authorized.
+
+Runtime validates labels/enablement first. Missing mapped headings, duplicate or
+empty values remain blockers. Heading-like examples inside fenced code/HTML
+comments MUST NOT supply or duplicate structural form fields. Visible values are
+preserved for semantic validation; a missing-response placeholder does not count
+as a supplied required value. No truncation or body rewriting is allowed.
+
+Blocked/no-op admission MUST NOT persist execution configuration. Existing hidden
+configuration remains unchanged, including when it is absent; no minimal empty
+branch type is written. This changes the defective completion path while preserving
+normal admitted, continuation and durable-operation persistence semantics. Failed
+admission reaches no planner (including locale planners), branch preparation,
+member assignment or unrelated lifecycle mutation. Bundled English/Spanish error
+copy and atomic English fallback remain available without agent preparation.
+
+### Conversation, summary and effects contract
+
+All blocked/no-op admission events use the existing check/Job Summary. This
+fulfills the issue's conversation-or-summary recovery requirement without a new
+comment or status-card lifecycle. Skip generic conversation publication for these
+runs: no stale diagnostic reply, duplicate card, ownership cleanup, issue-body
+race or extra publication capability is introduced. Repair followed by a fresh
+run validates the current native body/labels and resumes the normal lifecycle;
+the prior run's summary remains immutable evidence of that attempt. The new run
+must not imply issue completion, synchronization or deployment merely from admission.
+No branch or label write capability belongs to diagnostic presentation. Summary
+failure must preserve the original admission error and never claim execution ran.
+
+Representative English Job Summary error:
+
+```markdown
+## Issue form needs attention
+
+The bugfix workflow could not start. Missing required field: `VaultStadio Version`.
+
+Add a populated `### VaultStadio Version` section using the installed form, then
+rerun the failed workflow. If the form and profile disagree, run `copilot doctor`
+and review the explicit field mapping before changing the form.
+
+No branch or planner was started. Issue configuration is unchanged.
+```
+
+A form mismatch names its path, expected heading and next configuration action,
+retaining the original file. Spanish uses complete equivalent copy; other locales
+fall back atomically without calling a planner before admission. Render field
+names as bounded escaped data, never commands, Markdown control, mentions,
+credentials, raw body values or parser text. Historical summaries never turn into
+current approval evidence; the repaired invocation has its own result.
+
+### Architecture, acceptance and numeric budget
+
+Keep schema/mapping/section/diagnostic validation pure in domain/application
+policies; use cases own admission/completion sequencing, existing setup reads own
+the native issue snapshot, and adapters own bounded YAML/filesystem work. No new
+provider capability or diagnostic conversation projection is introduced.
+Error recovery uses a closed typed descriptor; JSON/text/Markdown/Summary share
+its facts and safe rendering. Existing ownership, source freshness, no-model,
+profile parsing, setup/doctor query-only, mutation inventory and communication
+budget checks MUST remain executable; no second classification table is introduced.
+
+Incremental floor **92 distinct cases**:40 pure schema/mapping/JSON/Markdown/
+diagnostic cases;18 setup/doctor/rendering/storage cases;20 runtime/version/
+completion/gate cases;14 summary/locale/replay/repair cases. Reused assertions
+are not recounted. Include the exact consumer field, all seven kinds, missing/
+empty/duplicate/colliding/escaped-key/oversized/unknown inputs, v 1/v 2 migration,
+release/hotfix values, preserved form bytes, unsupported/symlink/YAML evidence,
+no planner/branch/configuration writes, exact EN/ES/fallback diagnostics, replay,
+immutable historical summaries, failed summary publication and repaired admission.
+New pure mapping/section/diagnostic policies MUST reach 100% of four metrics;
+changed-module/global budgets remain unchanged. Codecov must cover every changed
+executable line with zero patch misses/partials on the actual final head. Full
+Jest, extension, hooks/build, types/lint, package, documentation/workflow/spec and
+Graphify checks remain required; partial filtered coverage is diagnostic only.
+
+Update configurable-workflow/configuration/setup/recovery docs, generated guidance
+contract, owning catalog and communication ledger evidence together. Traceability:
+map/default/bounds→profile policy/tests→config reference; preserved-form agreement→
+inspection/setup/doctor tests→setup recovery; exact blocked fields/effects→closed
+error + completion tests→issue troubleshooting; replay/repair→
+summary and runtime tests→run recovery. Implement regressions, pure contract,
+setup/doctor and semantic version readers, recovery/completion and presentation,
+then docs/catalog/bundles and full current-head checks. DoD requires every scenario,
+no findings and complete Codecov; live consumer/runtime adoption remains explicitly
+unverified until separately authorized rollout.
+
+
+Local acceptance inventory for #725 allocates **148** conservative new physical
+Jest declarations: 71 pure schema/mapping/JSON/Markdown/diagnostic cases, 37 setup/
+doctor/rendering/storage cases, 26 runtime/version/gate/projection cases and 14
+completion/summary/locale/replay/repair cases. Parameterized rows and the new
+closed-recovery fixture entry are not inflated into additional declarations.
+The comparison checks governed admission fields and their supported defaults;
+GitHub remains responsible for its complete native form-schema validation.
+Legacy standalone version readers without a supplied profile or admitted body
+retain their prior extractor contract. Runtime always passes its validated live
+snapshot; explicit profiles/snapshots use structural mapped fields.
