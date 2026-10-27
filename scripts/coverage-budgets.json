@@ -830,7 +830,9 @@
         {
           "files": [
             "src/application/policies/progress_diff_partition_policy.ts",
-            "src/application/policies/progress_partition_response_policy.ts"
+            "src/application/policies/progress_partition_response_policy.ts",
+            "src/application/policies/progress_scope_policy.ts",
+            "src/prompts/progress_scope.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"

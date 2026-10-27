@@ -5,7 +5,8 @@ import {
     THINK_RESPONSE_SCHEMA,
 } from '../agent_response_schemas';
 import { assertStrictOutputSchema } from '../agent_execution/strict_output_schema_policy';
-import { PROGRESS_RESPONSE_SCHEMA } from '../../usecases/actions/progress_response';
+import { progressResponseSchema } from '../../usecases/actions/progress_response';
+const PROGRESS_RESPONSE_SCHEMA = progressResponseSchema({ requirements: [{ id: 'R1', quote: 'Implement behavior.' }], exclusions: [] });
 import { BUGBOT_RESPONSE_SCHEMA } from '../../usecases/steps/commit/bugbot/schema';
 
 describe('production agent response schemas', () => {

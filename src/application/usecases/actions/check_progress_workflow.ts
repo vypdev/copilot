@@ -37,7 +37,7 @@ export async function runCheckProgressWorkflow(
             return [buildStaleSourceResult(taskId, analysis.branch, analysis.sourceHeadSha)];
         }
 
-        const { attemptResult, issueNumber, branch, developmentBranch, baseSha, sourceHeadSha } = analysis;
+        const { attemptResult, issueNumber, issueDescription, branch, developmentBranch, baseSha, sourceHeadSha } = analysis;
         const { progress, summary, reasoning, remaining } = attemptResult;
         logProgressAssessment(progress, summary, reasoning, remaining);
 
@@ -45,6 +45,10 @@ export async function runCheckProgressWorkflow(
           || await dependencies.publicationSourceQuery.isIssueOpen(issueNumber) !== true) {
             logInfo(`Progress mutation omitted: ${branch} no longer points at the analyzed source.`);
             return [buildStaleSourceResult(taskId, branch, sourceHeadSha)];
+        }
+
+        if (await dependencies.issueDescriptionQueryPort.getDescription(issueNumber) !== issueDescription) {
+            throw new ApplicationError('workflow.stale', 'Issue acceptance scope changed during progress assessment. Existing progress was retained.');
         }
 
         if (progress === 0) {

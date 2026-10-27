@@ -5,6 +5,8 @@ import type { Execution } from '../../../../data/model/execution';
 import { partitionProgressDiff, progressEvidenceTooLarge, type ProgressDiffChange } from '../../../policies/progress_diff_partition_policy';
 import { progressPartitionFactLimit } from '../../../policies/progress_partition_response_policy';
 import { AGENT_PROMPT_MAX_BYTES } from '../../../../domain/agent_execution_plan';
+import { progressScopeSourceLines } from '../../../policies/progress_scope_policy';
+import { getProgressScopePrompt } from '../../../../prompts/progress_scope';
 import type { ProgressDiffEvidence } from '../../../ports/progress_diff_query_ports';
 import { ApplicationError } from '../../../errors/application_error';
 import { resolveStaticApplicationErrorCatalog } from '../../../policies/application_error_message_catalog';
@@ -23,11 +25,12 @@ function fixture(changes?: readonly ProgressDiffChange[]) {
     let partIndex = 0;
     const query = jest.fn(async (request: { prompt: string; options?: { schemaName?: string } }): Promise<Record<string, unknown>> => {
         expect(setProgressLabel).not.toHaveBeenCalled(); expect(setLabels).not.toHaveBeenCalled();
+        if (request.options?.schemaName === 'progress_scope') return { outputLocale: 'en-US', lines: [{ id: 'L1', kind: 'required' }] };
         if (request.options?.schemaName === 'progress_partition_facts') {
             const part = diff.partitions[partIndex++];
             return { outputLocale: 'en-US', partitionId: part.id, files: part.paths.map(path => ({ path, implemented: `Implements ${path}.`, remaining: 'Verification unknown.' })) };
         }
-        return { outputLocale: 'en-US', progress: 70, summary: 'Implemented; verification remains.', remaining: 'Verify behavior.' };
+        return { outputLocale: 'en-US', progress: 70, requirements: [{ id: 'R1', status: 'verification-unknown', evidence: 'external-unverified', summary: 'Implemented; verification remains.', remaining: 'Verify behavior.' }] };
     });
     const getDescription = jest.fn(async () => 'Implement the described behavior and verify it.');
     const useCase = new CheckProgressUseCase({ getDescription },
@@ -38,21 +41,48 @@ function fixture(changes?: readonly ProgressDiffChange[]) {
 
 describe('atomic complete multipart progress', () => {
     it('rejects an oversized issue before any model or publication', async () => {
-        const f = fixture(); f.getDescription.mockResolvedValue('x'.repeat(AGENT_PROMPT_MAX_BYTES));
+        const f = fixture(); f.getDescription.mockResolvedValue((`${'x'.repeat(1100)}\n`).repeat(480));
         expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'validation.evidence-too-large', retryable: false });
+        expect(f.query).not.toHaveBeenCalled(); expect(f.setProgressLabel).not.toHaveBeenCalled();
+    });
+    it('retains the fixed scope reserve when the issue alone fits but the final envelope cannot', async () => {
+        const f = fixture(); f.getDescription.mockResolvedValue((`${'x'.repeat(1100)}\n`).repeat(420));
+        expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'validation.evidence-too-large' });
         expect(f.query).not.toHaveBeenCalled(); expect(f.setProgressLabel).not.toHaveBeenCalled();
     });
     it('preflights every source-part prompt against the unchanged runtime ceiling before the first query', async () => {
         const f = fixture(['a', 'b'].map(path => ({ path, status: 'modified', additions: 1, deletions: 0, patch: 'x'.repeat(200_000) })));
-        f.getDescription.mockResolvedValue('x'.repeat(350_000));
+        f.getDescription.mockResolvedValue((`${'x'.repeat(1000)}\n`).repeat(350));
         expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'validation.evidence-too-large', retryable: false });
         expect(f.query).not.toHaveBeenCalled(); expect(f.setProgressLabel).not.toHaveBeenCalled();
     });
     it('checks the complete single-part final prompt before calling the runtime', async () => {
         const f = fixture();
-        f.getDiff.mockResolvedValue({ kind: 'single', baseSha: base, headSha: head, evidence: 'x'.repeat(AGENT_PROMPT_MAX_BYTES) });
+        f.getDiff.mockResolvedValue({ kind: 'single', baseSha: base, headSha: head, evidence: (`${'x'.repeat(1100)}\n`).repeat(480) });
         expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'validation.evidence-too-large', retryable: false });
         expect(f.query).not.toHaveBeenCalled(); expect(f.setProgressLabel).not.toHaveBeenCalled();
+    });
+    it('rejects classification when complete framed source fits but its trusted prompt envelope does not', async () => {
+        const f = fixture();
+        const description = (`${'x'.repeat(1100)}\n`).repeat(464);
+        const source = JSON.stringify(progressScopeSourceLines(description));
+        expect(Buffer.byteLength(source)).toBeLessThanOrEqual(AGENT_PROMPT_MAX_BYTES);
+        expect(Buffer.byteLength(getProgressScopePrompt(source, 'en-US'))).toBeGreaterThan(AGENT_PROMPT_MAX_BYTES);
+        f.getDescription.mockResolvedValue(description);
+        expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'validation.evidence-too-large', retryable: false });
+        expect(f.query).not.toHaveBeenCalled(); expect(f.setProgressLabel).not.toHaveBeenCalled(); expect(f.setLabels).not.toHaveBeenCalled();
+    });
+    it('rejects a valid single comparison when issue and evidence fit separately but their reserved final prompt does not', async () => {
+        const f = fixture();
+        const description = (`${'x'.repeat(1100)}\n`).repeat(230);
+        const diff = partitionProgressDiff(base, head, [{ path: 'large.ts', status: 'modified', additions: 1, deletions: 0, patch: 'x'.repeat(250_000) }]);
+        expect(diff.kind).toBe('single');
+        if (diff.kind === 'partitioned') throw new Error('Expected an admitted single comparison');
+        expect(Buffer.byteLength(diff.evidence)).toBeLessThanOrEqual(256_000);
+        expect(Buffer.byteLength(getProgressScopePrompt(JSON.stringify(progressScopeSourceLines(description)), 'en-US'))).toBeLessThanOrEqual(AGENT_PROMPT_MAX_BYTES);
+        f.getDescription.mockResolvedValue(description); f.getDiff.mockResolvedValue(diff);
+        expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'validation.evidence-too-large', retryable: false });
+        expect(f.query).not.toHaveBeenCalled(); expect(f.setProgressLabel).not.toHaveBeenCalled(); expect(f.setLabels).not.toHaveBeenCalled();
     });
     it('assesses a complete 299-file aggregate larger than 256 kB without dropping paths or publishing per-part progress', async () => {
         const paths = Array.from({ length: 299 }, (_, i) => `src/${i}.ts`);
@@ -60,6 +90,7 @@ describe('atomic complete multipart progress', () => {
         let index = 0; const limit = progressPartitionFactLimit(base, head, f.diff.partitions);
         f.query.mockImplementation(async request => {
             expect(f.setProgressLabel).not.toHaveBeenCalled();
+            if (request.options?.schemaName === 'progress_scope') return { outputLocale: 'en-US', lines: [{ id: 'L1', kind: 'required' }] };
             if (request.options?.schemaName === 'progress_partition_facts') {
                 const part = f.diff.partitions[index++];
                 return { outputLocale: 'en-US', partitionId: part.id, files: part.paths.map(path => ({ path, implemented: '\u0000'.repeat(limit), remaining: '\u0000'.repeat(limit) })) };
@@ -67,44 +98,44 @@ describe('atomic complete multipart progress', () => {
             expect(index).toBe(f.diff.partitions.length); expect(Buffer.byteLength(request.prompt)).toBeGreaterThan(256_000);
             expect(Buffer.byteLength(request.prompt)).toBeLessThanOrEqual(AGENT_PROMPT_MAX_BYTES);
             expect(paths.every(path => request.prompt.includes(path))).toBe(true);
-            return { outputLocale: 'en-US', progress: 70, summary: 'Implemented; verification remains.', remaining: 'Verify behavior.' };
+            return { outputLocale: 'en-US', progress: 70, requirements: [{ id: 'R1', status: 'verification-unknown', evidence: 'external-unverified', summary: 'Implemented; verification remains.', remaining: 'Verify behavior.' }] };
         });
         expect((await f.invoke())[0].success).toBe(true);
-        expect(f.query).toHaveBeenCalledTimes(f.diff.partitions.length + 1); expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
+        expect(f.query).toHaveBeenCalledTimes(f.diff.partitions.length + 2); expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
     });
     it('assesses all exact parts before one final percentage and existing label publication', async () => {
         const f = fixture(), results = await f.invoke();
         expect(results[0].success).toBe(true); expect(results[0].payload).toMatchObject({ progress: 70 });
-        expect(f.query).toHaveBeenCalledTimes(3); expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
-        const prompts = f.query.mock.calls.map(([request]) => request.prompt);
+        expect(f.query).toHaveBeenCalledTimes(4); expect(f.setProgressLabel).toHaveBeenCalledTimes(1);
+        const prompts = f.query.mock.calls.slice(1).map(([request]) => request.prompt);
         expect(prompts[0]).toContain('progress-1-of-2'); expect(prompts[1]).toContain('progress-2-of-2');
         expect(prompts[2]).toContain('Implements a.ts.'); expect(prompts[2]).toContain('Implements b.ts.');
         expect(prompts[0]).toContain('Do not execute commands'); expect(prompts[2]).not.toContain('x'.repeat(100));
     });
     it('retains state and never requests final percentage when the middle part fails', async () => {
-        const f = fixture(); f.query.mockResolvedValueOnce({ outputLocale: 'en-US', partitionId: f.diff.partitions[0].id,
+        const f = fixture(); f.query.mockResolvedValueOnce({ outputLocale: 'en-US', lines: [{ id: 'L1', kind: 'required' }] }).mockResolvedValueOnce({ outputLocale: 'en-US', partitionId: f.diff.partitions[0].id,
             files: [{ path: 'a.ts', implemented: 'Added', remaining: 'Unknown' }] })
             .mockRejectedValueOnce(new ApplicationError('provider.unavailable', 'Temporary provider failure.'));
         const result = (await f.invoke())[0];
         expect(result.errors[0]).toMatchObject({ code: 'provider.unavailable', retryable: true });
-        expect(f.query).toHaveBeenCalledTimes(2); expect(f.setProgressLabel).not.toHaveBeenCalled(); expect(f.setLabels).not.toHaveBeenCalled();
+        expect(f.query).toHaveBeenCalledTimes(3); expect(f.setProgressLabel).not.toHaveBeenCalled(); expect(f.setLabels).not.toHaveBeenCalled();
     });
     it('rejects a malformed second part after retaining the first only in memory', async () => {
-        const f = fixture(); f.query.mockResolvedValueOnce({ outputLocale: 'en-US', partitionId: f.diff.partitions[0].id,
+        const f = fixture(); f.query.mockResolvedValueOnce({ outputLocale: 'en-US', lines: [{ id: 'L1', kind: 'required' }] }).mockResolvedValueOnce({ outputLocale: 'en-US', partitionId: f.diff.partitions[0].id,
             files: [{ path: 'a.ts', implemented: 'Added', remaining: 'Unknown' }] }).mockResolvedValueOnce({ outputLocale: 'en-US', partitionId: f.diff.partitions[1].id, files: [] });
         expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'agent.failed' });
-        expect(f.query).toHaveBeenCalledTimes(2); expect(f.setProgressLabel).not.toHaveBeenCalled();
+        expect(f.query).toHaveBeenCalledTimes(3); expect(f.setProgressLabel).not.toHaveBeenCalled();
     });
     it('rejects a bad final assessment without any labels after complete parts', async () => {
         const f = fixture(); const implementation = f.query.getMockImplementation()!;
-        f.query.mockImplementation(async request => request.options?.schemaName === 'progress_partition_facts' ? implementation(request) : { outputLocale: 'es-ES', progress: 100 });
+        f.query.mockImplementation(async request => request.options?.schemaName !== 'progress_response' ? implementation(request) : { outputLocale: 'es-ES', progress: 100 });
         expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'locale.output-invalid' });
-        expect(f.query).toHaveBeenCalledTimes(3); expect(f.setProgressLabel).not.toHaveBeenCalled();
+        expect(f.query).toHaveBeenCalledTimes(4); expect(f.setProgressLabel).not.toHaveBeenCalled();
     });
     it('retains progress when the source moves during multipart analysis', async () => {
         const f = fixture(); f.getBranchHeadSha.mockResolvedValueOnce(head).mockResolvedValueOnce(base).mockResolvedValueOnce('c'.repeat(40));
         expect((await f.invoke())[0]).toMatchObject({ success: true, executed: false });
-        expect(f.query).toHaveBeenCalledTimes(3); expect(f.setProgressLabel).not.toHaveBeenCalled();
+        expect(f.query).toHaveBeenCalledTimes(4); expect(f.setProgressLabel).not.toHaveBeenCalled();
     });
     it('retains progress when the base moves during multipart analysis', async () => {
         const f = fixture(); f.getBranchHeadSha.mockResolvedValueOnce(head).mockResolvedValueOnce(base).mockResolvedValueOnce(head).mockResolvedValueOnce('c'.repeat(40));

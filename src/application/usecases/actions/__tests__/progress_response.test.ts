@@ -1,19 +1,12 @@
 import { parseProgressResponse } from '../progress_response';
-
+const scope = { requirements: [{ id: 'R1', quote: 'Implement behavior.' }], exclusions: [] };
 describe('parseProgressResponse', () => {
-    it('clamps and rounds progress while trimming optional text', () => {
-        expect(parseProgressResponse({
-            outputLocale: 'en-US',
-            progress: 101.6,
-            summary: ' done ',
-            reasoning: ' why ',
-            remaining: ' next ',
-        }, 'en-US')).toEqual({ progress: 100, summary: ' done ', reasoning: 'why', remaining: 'next' });
+    it('projects only complete requirement-bound facts', () => {
+        expect(parseProgressResponse({ outputLocale: 'en-US', progress: 100, requirements: [{ id: 'R1', status: 'supported', evidence: 'source-only', summary: 'Implemented.', remaining: null }] }, 'en-US', scope))
+            .toEqual({ progress: 100, summary: '[R1] Implement behavior. — Implemented.', reasoning: '', remaining: '' });
     });
-
     it('rejects malformed or mismatched locale metadata', () => {
-        expect(() => parseProgressResponse(null, 'en-US')).toThrow('response-not-object');
-        expect(() => parseProgressResponse({ outputLocale: 'es-ES', progress: 1 }, 'en-US'))
-            .toThrow('output-locale-mismatch');
+        expect(() => parseProgressResponse(null, 'en-US', scope)).toThrow('response-not-object');
+        expect(() => parseProgressResponse({ outputLocale: 'es-ES', progress: 1 }, 'en-US', scope)).toThrow('output-locale-mismatch');
     });
 });
