@@ -1,24 +1,32 @@
 import { ApplicationError } from '../errors/application_error';
+import { progressEvidenceTooLarge } from './progress_diff_partition_policy';
 import { AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY, agentOutputLocaleFailureMessage, validateAgentOutputLocale } from './agent_output_locale_policy';
 
 export const MAX_PROGRESS_SCOPE_BYTES = 64_000;
 const MAX_CLAUSES = 32;
 const MAX_QUOTE = 1_200;
 const MAX_FACT = 800;
-export interface ProgressScopeClause { readonly id: string; readonly quote: string }
+export interface ProgressScopeClause { readonly id: string; readonly quote: string; readonly uncertain?: true }
 export interface ProgressScope { readonly requirements: readonly ProgressScopeClause[]; readonly exclusions: readonly ProgressScopeClause[] }
 
-const quotesSchema = { type: 'array', maxItems: MAX_CLAUSES, items: { type: 'string', minLength: 1, maxLength: MAX_QUOTE } };
-export const PROGRESS_SCOPE_SCHEMA = {
-    type: 'object', additionalProperties: false,
-    properties: { outputLocale: AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
-        requirements: { ...quotesSchema, minItems: 0 }, exclusions: quotesSchema },
-    required: ['outputLocale', 'requirements', 'exclusions'],
-} as const;
+export interface ProgressScopeSourceLine { readonly id: string; readonly quote: string }
+export function progressScopeSourceLines(issue: string): readonly ProgressScopeSourceLine[] {
+    const lines = issue.split(/\r?\n/).map((line, index) => ({ id: `L${index + 1}`, quote: line.trim() })).filter(line => line.quote);
+    if (lines.length === 0 || lines.length > 1_024 || lines.some(line => [...line.quote].length > MAX_QUOTE)) throw progressEvidenceTooLarge();
+    return Object.freeze(lines.map(line => Object.freeze(line)));
+}
+export function progressScopeResponseSchema(lines: readonly ProgressScopeSourceLine[]) {
+    return { type: 'object', additionalProperties: false,
+        properties: { outputLocale: AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY,
+            lines: { type: 'array', minItems: lines.length, maxItems: lines.length,
+                items: { type: 'object', additionalProperties: false,
+                    properties: { id: { type: 'string', enum: lines.map(line => line.id) },
+                        kind: { type: 'string', enum: ['required', 'excluded', 'context', 'uncertain'] } },
+                    required: ['id', 'kind'] } } }, required: ['outputLocale', 'lines'] } as const;
+}
 
-
-function invalid(): never {
-    throw new ApplicationError('agent.failed', 'Progress scope or requirement evidence was incomplete, contradictory or unsupported. Existing progress was retained.');
+function invalid(reason = 'assessment-invalid'): never {
+    throw new ApplicationError('agent.failed', `Progress scope or requirement evidence was rejected (${reason}). Existing progress was retained.`);
 }
 function payloadFor(response: unknown, locale: string): Readonly<Record<string, unknown>> {
     const result = validateAgentOutputLocale(response, locale);
@@ -30,20 +38,27 @@ function exactKeys(value: Record<string, unknown>, keys: readonly string[]): boo
 }
 export function parseProgressScope(response: unknown, issue: string, locale: string): ProgressScope {
     const payload = payloadFor(response, locale);
-    if (!exactKeys(payload, ['outputLocale', 'requirements', 'exclusions'])) invalid();
-    const lines = issue.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    const source = progressScopeSourceLines(issue);
+    if (!exactKeys(payload, ['outputLocale', 'lines']) || !Array.isArray(payload.lines) || payload.lines.length !== source.length) invalid('scope-incomplete');
     const seen = new Set<string>();
-    function clauses(value: unknown, prefix: string, minimum: number): readonly ProgressScopeClause[] {
-        if (!Array.isArray(value) || value.length < minimum || value.length > MAX_CLAUSES) invalid();
-        const quotes = value.map((quote: unknown) => {
-            if (typeof quote !== 'string' || !quote || [...quote].length > MAX_QUOTE || !lines.includes(quote) || seen.has(quote)) invalid();
-            seen.add(quote);
-            return quote;
-        }).sort((a, b) => lines.indexOf(a) - lines.indexOf(b));
-        return Object.freeze(quotes.map((quote, index) => Object.freeze({ id: `${prefix}${index + 1}`, quote })));
+    const classified = payload.lines.map((entry: unknown) => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) invalid('scope-entry-invalid');
+        const item = entry as Record<string, unknown>;
+        if (!exactKeys(item, ['id', 'kind']) || typeof item.id !== 'string' || !source.some(line => line.id === item.id)) invalid('scope-source-id-invalid');
+        if (seen.has(item.id)) invalid('scope-source-id-duplicate');
+        seen.add(item.id);
+        if (!['required', 'excluded', 'context', 'uncertain'].includes(item.kind as string)) invalid('scope-classification-invalid');
+        return { id: item.id, kind: item.kind };
+    });
+    function clauses(kinds: readonly string[], prefix: string): readonly ProgressScopeClause[] {
+        const selected = source.filter(line => kinds.includes(classified.find(item => item.id === line.id)!.kind as string));
+        if (selected.length > MAX_CLAUSES) invalid('scope-clause-limit');
+        return Object.freeze(selected.map((line, index) => Object.freeze({ id: `${prefix}${index + 1}`, quote: line.quote,
+            ...(classified.find(item => item.id === line.id)!.kind === 'uncertain' ? { uncertain: true as const } : {}) })));
     }
-    const result = Object.freeze({ requirements: clauses(payload.requirements, 'R', 1), exclusions: clauses(payload.exclusions, 'X', 0) });
-    if (Buffer.byteLength(JSON.stringify(result), 'utf8') > MAX_PROGRESS_SCOPE_BYTES) invalid();
+    const result = Object.freeze({ requirements: clauses(['required', 'uncertain'], 'R'), exclusions: clauses(['excluded'], 'X') });
+    if (result.requirements.length === 0) invalid('scope-no-requirements');
+    if (Buffer.byteLength(JSON.stringify(result), 'utf8') > MAX_PROGRESS_SCOPE_BYTES) invalid('scope-budget');
     return result;
 }
 
@@ -77,6 +92,7 @@ export function parseScopedProgressResponse(response: unknown, locale: string, s
         if (!exactKeys(fact, ['id', 'status', 'evidence', 'summary', 'remaining']) || typeof fact.id !== 'string'
             || !scope.requirements.some(requirement => requirement.id === fact.id) || seen.has(fact.id)) invalid();
         seen.add(fact.id);
+        if (scope.requirements.find(requirement => requirement.id === fact.id)!.uncertain && fact.status !== 'verification-unknown') invalid('scope-uncertain');
         if (!['supported', 'missing', 'verification-unknown'].includes(fact.status as string)
             || !['source-only', 'external-unverified', 'unavailable', 'contradictory'].includes(fact.evidence as string)) invalid();
         function text(value: unknown): value is string { return typeof value === 'string' && value.trim().length > 0 && [...value].length <= MAX_FACT; }

@@ -36,8 +36,7 @@ const NEWER_HEAD = 'b'.repeat(40);
 const mockAskAgent = jest.fn();
 async function localizedProgress(request: { configuration: unknown; agentId: string; prompt: string; options?: { schemaName?: string } }): Promise<AgentQueryResult> {
   if (request.options?.schemaName === 'progress_scope') {
-    const issue = await mockGetDescription.mock.results[mockGetDescription.mock.results.length - 1].value;
-    return { outputLocale: 'en-US', requirements: [issue.trim()], exclusions: [] };
+    return { outputLocale: 'en-US', lines: [{ id: 'L1', kind: 'required' }] };
   }
   const response = await mockAskAgent(request.configuration, request.agentId, request.prompt, request.options);
   return response && typeof response === 'object' && !Array.isArray(response)

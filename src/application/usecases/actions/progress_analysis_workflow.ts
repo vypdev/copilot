@@ -20,7 +20,7 @@ import { planProgressDiffPrompts, summarizeProgressDiff } from './summarize_prog
 import { AGENT_PROMPT_MAX_BYTES } from '../../../domain/agent_execution_plan';
 import { MAX_PROGRESS_AGGREGATE_BYTES } from '../../policies/progress_partition_response_policy';
 import { progressEvidenceTooLarge } from '../../policies/progress_diff_partition_policy';
-import { MAX_PROGRESS_SCOPE_BYTES, PROGRESS_SCOPE_SCHEMA, parseProgressScope } from '../../policies/progress_scope_policy';
+import { MAX_PROGRESS_SCOPE_BYTES, progressScopeSourceLines, progressScopeResponseSchema, parseProgressScope } from '../../policies/progress_scope_policy';
 import { getProgressScopePrompt } from '../../../prompts/progress_scope';
 
 export interface ProgressAnalysisDependencies {
@@ -117,7 +117,8 @@ export async function analyzeProgress(
         diffEvidence: '',
         acceptanceScope: ' '.repeat(MAX_PROGRESS_SCOPE_BYTES),
     };
-    const scopePrompt = getProgressScopePrompt(issueDescription, param.targetLocale);
+    const sourceLines = progressScopeSourceLines(issueDescription);
+    const scopePrompt = getProgressScopePrompt(JSON.stringify(sourceLines), param.targetLocale);
     if (Buffer.byteLength(scopePrompt, 'utf8') > AGENT_PROMPT_MAX_BYTES) throw progressEvidenceTooLarge();
     const aggregateBudget = Math.min(MAX_PROGRESS_AGGREGATE_BYTES,
         AGENT_PROMPT_MAX_BYTES - Buffer.byteLength(getCheckProgressPrompt(promptParameters), 'utf8'));
@@ -126,7 +127,7 @@ export async function analyzeProgress(
     if (diff.kind !== 'partitioned' && Buffer.byteLength(getCheckProgressPrompt({ ...promptParameters, diffEvidence: diff.evidence }), 'utf8') > AGENT_PROMPT_MAX_BYTES) throw progressEvidenceTooLarge();
     const scope = parseProgressScope(await dependencies.aiRepository.query({
         configuration: param.agentConfiguration, agentId: AGENT_PLAN, prompt: scopePrompt,
-        options: { ...productFacingAgentQueryOptions('progress-scope', PROGRESS_SCOPE_SCHEMA), includeReasoning: param.includeReasoning },
+        options: { ...productFacingAgentQueryOptions('progress-scope', progressScopeResponseSchema(sourceLines)), includeReasoning: param.includeReasoning },
     }), issueDescription, param.targetLocale);
     const acceptanceScope = JSON.stringify(scope);
     const diffEvidence = await summarizeProgressDiff(diff, param, issueDescription, dependencies.aiRepository, aggregateBudget, acceptanceScope);

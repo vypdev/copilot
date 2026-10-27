@@ -2072,7 +2072,7 @@ work. A percentage remains a model estimate, independent of review/merge gates.
 ```mermaid
 flowchart LR
     I[Full original issue] --> S[Issue-only scope interpretation]
-    S --> V[Validate whole-line quotes and assign R/X identities]
+    S --> V[Classify every source line and assign R/X identities]
     V --> P[Analyze every complete comparison part against that scope]
     P --> A[Assess every required R identity]
     A --> F[Validate completeness and evidence consistency]
@@ -2080,7 +2080,7 @@ flowchart LR
     G --> U[Existing progress labels and card]
 ```
 
-Text equivalent: identify scope before patches, validate source quotes and
+Text equivalent: identify scope before patches, validate exhaustive source-line classification and
 identities, analyze all source parts, validate one complete assessment, then
 publish only after the current issue and Git comparison still match. A failed
 scope/part/final response or failed freshness read publishes no new progress.
@@ -2098,19 +2098,29 @@ construction remains in `src/prompts`. `check_progress_workflow` owns final
 issue-body freshness alongside existing Git/native gates and publication. Full
 Jest architecture/dependency checks and type checking enforce these boundaries.
 
-Scope extraction receives the full original issue as an untrusted JSON string,
-without patches, summaries, generic field clipping or workspace access. It MUST
-return verbatim complete nonempty trimmed lines; translated/invented fragments,
-duplicates and conflicting required/excluded quotes fail closed. The provider
-schema allows an empty required list as an explicit unsupported-scope signal;
-the domain parser rejects that signal before comparison analysis, so a strict
-provider need not invent or omit requirements to satisfy a nonempty schema. It MUST include
-all acceptance criteria, including unchanged work. The model is instructed to
-retain negation and qualifiers. Source quote and identity checks establish
-provenance and structural completeness of the returned scope, **not semantic
-completeness of natural-language extraction**. A model can still misclassify a
-whole line or place unrelated prose under a valid ID; human review of ambiguous
-scope remains necessary. This is not a deterministic natural-language oracle.
+Scope extraction receives the complete nonempty source-line inventory as untrusted
+JSON, with immutable physical-line IDs and full trimmed line text. No patches,
+model summaries, generic field clipping or workspace access participate. The
+native strict schema enumerates exact source IDs and requires one result for
+EVERY source line. Runtime validation rejects missing/extra/unknown/duplicate
+IDs, incorrect counts, invalid roles and extra fields. The response classifies
+each line as `required`, `excluded`, `context` or `uncertain`; no unverified
+subset may define the final assessment schema. Source order assigns R/X display
+identities and quote text comes from the captured issue, never a free model quote.
+Repeated text at different physical lines retains independent source identities.
+
+Required and uncertain lines both enter the final assessment. An uncertain line
+MUST remain `verification-unknown` and request scope clarification; it cannot be
+supported or turned into missing implementation. Every original line is thus
+accounted for before comparison analysis, including unchanged acceptance sections.
+Exact source coverage proves no structural omission; it does **not prove semantic
+classification**. A model can still misclassify a requirement as context or attach
+unrelated prose to a valid R identity. Prompts preserve qualifiers/non-goals,
+classify ambiguity conservatively and prohibit such behavior; human review remains
+necessary for semantic ambiguity. No deterministic natural-language oracle or
+trusted execution proof is claimed. Closed failure reasons identify the rejected
+stage without logging raw issue/model content. A failure retains progress and
+must be corrected before a fresh full assessment.
 
 Every final requirement has `supported`, `missing` or `verification-unknown`
 status and one of `source-only`, `external-unverified`, `unavailable` or
@@ -2133,8 +2143,8 @@ semantic error and retained state, rather than inventing a missing criterion.
 ### Fixed configuration, compatibility and UX
 
 There are no new inputs, flags, credentials, scopes, persisted schemas or setup
-changes. Fixed non-configurable bounds are 32 required and 32 exclusion lines,
-1,200 Unicode code points per source line, 64,000 serialized UTF-8 scope bytes,
+changes. Fixed non-configurable bounds are 1,024 nonempty source lines, 32 required/uncertain and 32 exclusion lines,
+1,200 Unicode code points per complete source line (overlong context also fails closed rather than being silently excluded), 64,000 serialized UTF-8 scope bytes,
 800 code points per assessment fact, and 8,000 code points for each projected
 summary/remaining field. Overflow is rejected, never clipped. The scope envelope
 is reserved before any request; original 256,000-byte source/manifest,
@@ -2184,8 +2194,8 @@ from nondeterministic model behavior and actual execution.
 
 ### Verification, documentation and acceptance
 
-Minimum **40 new distinct cases**: 20 pure quote/identity/status/evidence/bounds
-cases, eight orchestration/single/multipart/failure/race/retry cases, six prompt
+Minimum **50 new distinct cases**: 28 pure complete-source/identity/status/evidence/bounds
+cases, ten orchestration/single/multipart/failure/race/retry cases, six prompt
 and trust/locale cases, and six strict-schema/security/regression compositions.
 Parameterized rows count separately only for distinct behavior; the existing
 135-case communication baseline is not replaced. New pure policy MUST reach
@@ -2197,11 +2207,11 @@ Codecov lines including zero partials remain merge gates.
 
 | Requirement | Executable acceptance / evidence | Documentation |
 |---|---|---|
-| Preserve scope and exclusions | issue-only prompt before patches; exact full quotes; R/X mismatch rejection; genuine search/device positive case | branch management scope and verification |
+| Preserve scope and exclusions | issue-only prompt before patches; complete source-ID coverage; derived full quotes; R/X mismatch rejection; genuine search/device positive case | branch management scope and verification |
 | Preserve uncertainty | external/unavailable/contradictory support rejection; unknown execution accepted below 100 | progress evidence |
 | Every remaining item is scoped | complete unique ID set; extra/free-form remaining rejected; ordered projected citations | example card |
 | No partial or stale publication | failed extraction/part/final and issue-edit/head/native races; retry reads fresh scope | retained state and recovery |
-| Fixed bounds and trust | 32/33 clauses, 1,200/1,201 and supplementary Unicode, serialized/combined overflow; preflight before queries; no new permissions | limits and model limitations |
+| Fixed bounds and trust | 1,024/1,025 source lines, 32/33 clauses, 1,200/1,201 and supplementary Unicode, serialized/combined overflow; preflight before queries; no new permissions | limits and model limitations |
 | Provider compatibility and independent gates | strict schema/local validator compositions, full native CI/review/Codecov evidence | no setup migration; CI/review remain independent |
 
 Implementation sequence: scope/projection policy and SDD; prompt and sequential

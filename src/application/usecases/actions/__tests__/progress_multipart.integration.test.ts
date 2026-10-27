@@ -23,7 +23,7 @@ function fixture(changes?: readonly ProgressDiffChange[]) {
     let partIndex = 0;
     const query = jest.fn(async (request: { prompt: string; options?: { schemaName?: string } }): Promise<Record<string, unknown>> => {
         expect(setProgressLabel).not.toHaveBeenCalled(); expect(setLabels).not.toHaveBeenCalled();
-        if (request.options?.schemaName === 'progress_scope') return { outputLocale: 'en-US', requirements: ['Implement the described behavior and verify it.'], exclusions: [] };
+        if (request.options?.schemaName === 'progress_scope') return { outputLocale: 'en-US', lines: [{ id: 'L1', kind: 'required' }] };
         if (request.options?.schemaName === 'progress_partition_facts') {
             const part = diff.partitions[partIndex++];
             return { outputLocale: 'en-US', partitionId: part.id, files: part.paths.map(path => ({ path, implemented: `Implements ${path}.`, remaining: 'Verification unknown.' })) };
@@ -39,24 +39,24 @@ function fixture(changes?: readonly ProgressDiffChange[]) {
 
 describe('atomic complete multipart progress', () => {
     it('rejects an oversized issue before any model or publication', async () => {
-        const f = fixture(); f.getDescription.mockResolvedValue('x'.repeat(AGENT_PROMPT_MAX_BYTES));
+        const f = fixture(); f.getDescription.mockResolvedValue((`${'x'.repeat(1100)}\n`).repeat(480));
         expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'validation.evidence-too-large', retryable: false });
         expect(f.query).not.toHaveBeenCalled(); expect(f.setProgressLabel).not.toHaveBeenCalled();
     });
     it('retains the fixed scope reserve when the issue alone fits but the final envelope cannot', async () => {
-        const f = fixture(); f.getDescription.mockResolvedValue('x'.repeat(460_000));
+        const f = fixture(); f.getDescription.mockResolvedValue((`${'x'.repeat(1100)}\n`).repeat(420));
         expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'validation.evidence-too-large' });
         expect(f.query).not.toHaveBeenCalled(); expect(f.setProgressLabel).not.toHaveBeenCalled();
     });
     it('preflights every source-part prompt against the unchanged runtime ceiling before the first query', async () => {
         const f = fixture(['a', 'b'].map(path => ({ path, status: 'modified', additions: 1, deletions: 0, patch: 'x'.repeat(200_000) })));
-        f.getDescription.mockResolvedValue('x'.repeat(350_000));
+        f.getDescription.mockResolvedValue((`${'x'.repeat(1000)}\n`).repeat(350));
         expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'validation.evidence-too-large', retryable: false });
         expect(f.query).not.toHaveBeenCalled(); expect(f.setProgressLabel).not.toHaveBeenCalled();
     });
     it('checks the complete single-part final prompt before calling the runtime', async () => {
         const f = fixture();
-        f.getDiff.mockResolvedValue({ kind: 'single', baseSha: base, headSha: head, evidence: 'x'.repeat(AGENT_PROMPT_MAX_BYTES) });
+        f.getDiff.mockResolvedValue({ kind: 'single', baseSha: base, headSha: head, evidence: (`${'x'.repeat(1100)}\n`).repeat(480) });
         expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'validation.evidence-too-large', retryable: false });
         expect(f.query).not.toHaveBeenCalled(); expect(f.setProgressLabel).not.toHaveBeenCalled();
     });
@@ -66,7 +66,7 @@ describe('atomic complete multipart progress', () => {
         let index = 0; const limit = progressPartitionFactLimit(base, head, f.diff.partitions);
         f.query.mockImplementation(async request => {
             expect(f.setProgressLabel).not.toHaveBeenCalled();
-            if (request.options?.schemaName === 'progress_scope') return { outputLocale: 'en-US', requirements: ['Implement the described behavior and verify it.'], exclusions: [] };
+            if (request.options?.schemaName === 'progress_scope') return { outputLocale: 'en-US', lines: [{ id: 'L1', kind: 'required' }] };
             if (request.options?.schemaName === 'progress_partition_facts') {
                 const part = f.diff.partitions[index++];
                 return { outputLocale: 'en-US', partitionId: part.id, files: part.paths.map(path => ({ path, implemented: '\u0000'.repeat(limit), remaining: '\u0000'.repeat(limit) })) };
@@ -89,7 +89,7 @@ describe('atomic complete multipart progress', () => {
         expect(prompts[0]).toContain('Do not execute commands'); expect(prompts[2]).not.toContain('x'.repeat(100));
     });
     it('retains state and never requests final percentage when the middle part fails', async () => {
-        const f = fixture(); f.query.mockResolvedValueOnce({ outputLocale: 'en-US', requirements: ['Implement the described behavior and verify it.'], exclusions: [] }).mockResolvedValueOnce({ outputLocale: 'en-US', partitionId: f.diff.partitions[0].id,
+        const f = fixture(); f.query.mockResolvedValueOnce({ outputLocale: 'en-US', lines: [{ id: 'L1', kind: 'required' }] }).mockResolvedValueOnce({ outputLocale: 'en-US', partitionId: f.diff.partitions[0].id,
             files: [{ path: 'a.ts', implemented: 'Added', remaining: 'Unknown' }] })
             .mockRejectedValueOnce(new ApplicationError('provider.unavailable', 'Temporary provider failure.'));
         const result = (await f.invoke())[0];
@@ -97,7 +97,7 @@ describe('atomic complete multipart progress', () => {
         expect(f.query).toHaveBeenCalledTimes(3); expect(f.setProgressLabel).not.toHaveBeenCalled(); expect(f.setLabels).not.toHaveBeenCalled();
     });
     it('rejects a malformed second part after retaining the first only in memory', async () => {
-        const f = fixture(); f.query.mockResolvedValueOnce({ outputLocale: 'en-US', requirements: ['Implement the described behavior and verify it.'], exclusions: [] }).mockResolvedValueOnce({ outputLocale: 'en-US', partitionId: f.diff.partitions[0].id,
+        const f = fixture(); f.query.mockResolvedValueOnce({ outputLocale: 'en-US', lines: [{ id: 'L1', kind: 'required' }] }).mockResolvedValueOnce({ outputLocale: 'en-US', partitionId: f.diff.partitions[0].id,
             files: [{ path: 'a.ts', implemented: 'Added', remaining: 'Unknown' }] }).mockResolvedValueOnce({ outputLocale: 'en-US', partitionId: f.diff.partitions[1].id, files: [] });
         expect((await f.invoke())[0].errors[0]).toMatchObject({ code: 'agent.failed' });
         expect(f.query).toHaveBeenCalledTimes(3); expect(f.setProgressLabel).not.toHaveBeenCalled();
