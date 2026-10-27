@@ -2,9 +2,9 @@
 
 - Status: As-built baseline
 - Date: 2026-09-11
-- Last updated: 2026-10-21
+- Last updated: 2026-10-27
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-10-21; identity continuity and grounding correction tracked in #655
+- Last verified: 2026-10-27; framework measurement and replacement evidence tracked in #720
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -628,3 +628,85 @@ source and runs; these fixtures do not claim to replay that external runtime.
 The [lossless conversation companion](./bugbot-lossless-conversation-context.md)
 owns complete comment retention and logical-source accounting. No producer trust
 exception or approval relaxation is introduced.
+
+
+### Framework measurement and replacement evidence — #720 (2026-10-27)
+
+The [consumer counterexample](https://github.com/vypdev/copilot/issues/720)
+showed a false overflow claim for Compose `width(400.dp)` and a replacement
+`fillMaxWidth().widthIn(max = 400.dp)` that removed the wide-screen cap.
+The shared reviewer/benchmark grounding instruction MUST distinguish the exact
+framework API and reviewed version, propagate incoming minimum/maximum
+constraints through modifier order and padding, and evaluate unclipped
+interactive bounds. A numeric width alone is not proof of overflow. Preferred
+`width`/`size` obey incoming constraints; `requiredWidth`/`requiredSize` can override
+them. The actual parent constraints still determine whether a particular chain
+is safe. Neither modifier order receives an unconditional safety exemption. Padding on the Card modifier MUST remain in the constraint trace: for full-width controls, zero incoming minimum width and fitting padding, preferred width P with outer padding a and Column padding b yields min(P,W) - 2*a - 2*b control width. The reviewer distinguishes parent-reported coerced sizes from actual centered required-width child bounds.
+
+```text
+candidate defect -> verify framework API and constraints -> try counterexample
+ -> unsupported claim: omit finding
+ -> confirmed defect: check replacement at narrow and wide boundaries
+ -> supported replacement: offer fix; unsupported replacement: omit suggestedCode
+ -> existing schema, freshness and publication policies
+```
+
+Text equivalent: the model first tests the alleged defect, then separately tests
+its replacement against both the failing input and other intended constraints.
+It MUST retain working source when counterevidence disproves the defect, withhold
+an unverified code suggestion, and keep real overflow/lost-cap defects reportable.
+This strengthens model instructions; it is not a deterministic framework checker
+or a prose-based publication filter. Publication, lifecycle, IDs, confidence,
+permissions, concurrency and all existing safeguards remain unchanged.
+
+Allocate **seven additional distinct automated cases** only to this capability:
+three isolated false-positive controls (preferred width under a 280dp parent,
+cap-before-fill at 800dp, and the original padded form at both widths), two
+false-negative controls (required-width overflow at 280dp and fill-before-cap at
+800dp), and two prompt-boundary cases (production review and real-agent benchmark).
+The corpus grows from 38 to **43** cases. At density 1, the required-width padded
+form has 320dp controls with bounds -20..300dp in the 280dp parent; fill-before-cap
+has 720dp controls at 800dp, exceeding the 320dp intended control cap. The original
+padded form and cap-before-fill have 200dp controls at 280dp and 320dp at 800dp.
+These are source-based synthetic fixtures, not new executions of Compose.
+The consumer's separately linked desktop tests supply runtime counterevidence.
+
+Acceptance: each unsupported prediction fails isolated precision; omitting either
+real defect fails isolated recall; reference predictions pass existing evaluation
+thresholds; both prompt boundaries include the API/constraint/replacement contract
+without leaking expected findings. A controlled real-agent sample MUST retain its
+actual predictions separately from reference/scorer results; no model improvement
+is claimed from checked-in ground truth. Existing global 90/90/88/82 coverage and
+changed-runtime 95% lines/statements, 90% branches/functions remain in force.
+No runtime dependency, public configuration, provider permission, schema or data
+migration is added. Existing in-flight reviews retain their normal snapshot and
+freshness rules; rollout is through the generated packages. Rollback reverts the
+instruction/corpus change, preserving historical reviews. No new comment or
+notification surface is introduced; unsupported findings produce no new inline
+comment, while confirmed findings use the existing localized evidence/fix view.
+Pending, failed and partial reviews retain the states in section 9.
+
+Traceability: `src/prompts/bugbot.ts` owns the model contract;
+`bugbot_framework_semantics.test.ts` verifies both consumers;
+`quality/bugbot/{corpus,reference-predictions}.v1.json` and
+`bugbot_benchmark.test.ts` own the five classification controls;
+`docs/bugbot/{finding-publication,quality-observability}.mdx` document the behavior
+and evidence limits. Full coverage, architecture, specifications/catalog,
+documentation, generated-package checks, current-head CI/review and Codecov
+remain release gates.
+
+Primary sources: [Compose constraints and modifier order](https://developer.android.com/develop/ui/compose/layouts/constraints-modifiers)
+and the [AndroidX size modifier implementation](https://github.com/androidx/androidx/blob/androidx-main/compose/foundation/foundation-layout/src/commonMain/kotlin/androidx/compose/foundation/layout/Size.kt).
+
+
+Controlled sample evidence is retained in
+`quality/bugbot/compose-720-observations.v1.json`. Five real `gpt-6-luna` queries
+per variant produced these observed detection results: baseline 0 false positives /
+0 false negatives; an intermediate instruction omitted Card padding in one
+finding and was rejected (1 false positive / 0 false negatives); the final
+explicit-padding instruction returned 0 false positives / 0 false negatives.
+The final sample still returned line 9 instead of the exact Card line 10 and
+medium rather than the reference low severity for both real defects. Its full
+quality gate therefore fails exact location and severity, despite precision and
+recall of 1. This narrow semantic correction does not claim those independent
+calibration problems are fixed or demonstrate statistically improved accuracy.

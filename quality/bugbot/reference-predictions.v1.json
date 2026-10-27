@@ -38,6 +38,11 @@
     "py-helper-retry-validation": [],
     "ts-exclusive-render-branches": [],
     "py-short-circuit-unsafe-order": [{"id": "unhashable-membership", "title": "Unhashable steps reach set membership before validation", "file": "src/checkpoint.py", "line": 2, "severity": "low", "category": "correctness", "symbol": "valid_steps", "codeSnippet": "step in writable_ids", "confidence": 0.98}],
-    "ts-composed-duplicate-ids": [{"id": "composed-duplicate-id", "title": "Composed actions render duplicate reason IDs", "file": "ui/views.ts", "line": 2, "severity": "low", "category": "correctness", "symbol": "overview", "codeSnippet": "${unavailableAction()}${unavailableAction()}", "confidence": 0.98}]
+    "ts-composed-duplicate-ids": [{"id": "composed-duplicate-id", "title": "Composed actions render duplicate reason IDs", "file": "ui/views.ts", "line": 2, "severity": "low", "category": "correctness", "symbol": "overview", "codeSnippet": "${unavailableAction()}${unavailableAction()}", "confidence": 0.98}],
+    "kt-compose-preferred-width-narrow": [],
+    "kt-compose-required-width-overflow": [{"id": "kt-compose-required-width-overflow-defect", "title": "Required width makes the padded controls overflow the 280dp parent", "file": "ui/AuthForm.kt", "line": 10, "severity": "low", "category": "correctness", "symbol": "AuthForm", "codeSnippet": "Modifier.requiredWidth(400.dp).padding(16.dp)", "confidence": 0.95}],
+    "kt-compose-fill-before-cap": [{"id": "kt-compose-fill-before-cap-defect", "title": "Filling before the cap removes the intended wide-screen bound", "file": "ui/AuthForm.kt", "line": 10, "severity": "low", "category": "correctness", "symbol": "AuthForm", "codeSnippet": "Modifier.fillMaxWidth().widthIn(max = 400.dp).padding(16.dp)", "confidence": 0.95}],
+    "kt-compose-cap-before-fill": [],
+    "kt-compose-padded-preferred-width": []
   }
 }

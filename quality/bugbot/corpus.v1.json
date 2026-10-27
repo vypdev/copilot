@@ -308,6 +308,78 @@
     {"id": "py-helper-retry-validation", "language": "python", "category": "negative", "description": "A copy entrypoint loads persisted retry_attempts through a validation helper before constructing provider work.", "file": "src/copy.py", "startLine": 1, "diff": "+def parse_progress(raw):\n+    value = raw[\"retry_attempts\"]\n+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:\n+        raise ValueError(\"invalid_copy_checkpoint\")\n+    return value\n+\n+def run_copy(raw, provider):\n+    attempts = parse_progress(raw)\n+    return provider.create(attempts)", "expected": []},
     {"id": "ts-exclusive-render-branches", "language": "typescript", "category": "negative", "description": "A selected UI section is rendered through a map of view functions.", "file": "ui/views.ts", "startLine": 1, "diff": "+const unavailableAction = () => html`<span id=\"action-reason\">Unavailable</span>`;\n+const overview = () => html`<p>Overview</p>`;\n+const copy = () => html`<section>${unavailableAction()}</section>`;\n+const library = () => html`<section>${unavailableAction()}</section>`;\n+const viewFor = (section: \"overview\" | \"copy\" | \"library\") => ({ overview, copy, library })[section]();\n+const render = (section: \"overview\" | \"copy\" | \"library\") => html`${viewFor(section)}`;", "expected": []},
     {"id": "py-short-circuit-unsafe-order", "language": "python", "category": "correctness", "description": "A checkpoint validator checks issue steps supplied as arbitrary persisted JSON values.", "file": "src/checkpoint.py", "startLine": 1, "diff": "+def valid_steps(issue_steps, writable_ids):\n+    return all(step in writable_ids and isinstance(step, str) for step in issue_steps)", "expected": [{"id": "unhashable-membership", "title": "Unhashable steps reach set membership before validation", "file": "src/checkpoint.py", "line": 2, "severity": "low", "category": "correctness", "symbol": "valid_steps", "codeSnippet": "step in writable_ids"}]},
-    {"id": "ts-composed-duplicate-ids", "language": "typescript", "category": "correctness", "description": "A UI helper supplies a reason label to actions composed in one overview.", "file": "ui/views.ts", "startLine": 1, "diff": "+const unavailableAction = () => html`<span id=\"action-reason\">Unavailable</span>`;\n+const overview = () => html`<section>${unavailableAction()}${unavailableAction()}</section>`;", "expected": [{"id": "composed-duplicate-id", "title": "Composed actions render duplicate reason IDs", "file": "ui/views.ts", "line": 2, "severity": "low", "category": "correctness", "symbol": "overview", "codeSnippet": "${unavailableAction()}${unavailableAction()}"}]}
+    {"id": "ts-composed-duplicate-ids", "language": "typescript", "category": "correctness", "description": "A UI helper supplies a reason label to actions composed in one overview.", "file": "ui/views.ts", "startLine": 1, "diff": "+const unavailableAction = () => html`<span id=\"action-reason\">Unavailable</span>`;\n+const overview = () => html`<section>${unavailableAction()}${unavailableAction()}</section>`;", "expected": [{"id": "composed-duplicate-id", "title": "Composed actions render duplicate reason IDs", "file": "ui/views.ts", "line": 2, "severity": "low", "category": "correctness", "symbol": "overview", "codeSnippet": "${unavailableAction()}${unavailableAction()}"}]},
+    {
+      "id": "kt-compose-preferred-width-narrow",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Standard Compose foundation-layout and Material3 APIs. The centered Box receives bounded width constraints min=0dp, max=280dp. The form must keep its interactive fields within the 280dp parent.",
+      "file": "ui/AuthForm.kt",
+      "startLine": 1,
+      "diff": "+import androidx.compose.foundation.layout.*\n+import androidx.compose.material3.*\n+import androidx.compose.runtime.Composable\n+import androidx.compose.ui.Alignment\n+import androidx.compose.ui.Modifier\n+import androidx.compose.ui.unit.dp\n+@Composable\n+fun AuthForm(email: String, onEmailChange: (String) -> Unit) {\n+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {\n+        Card(modifier = Modifier.width(400.dp)) {\n+            Column(Modifier.padding(24.dp)) {\n+                OutlinedTextField(email, onEmailChange, modifier = Modifier.fillMaxWidth())\n+                Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text(\"Submit\") }\n+            }\n+        }\n+    }\n+}",
+      "expected": []
+    },
+    {
+      "id": "kt-compose-required-width-overflow",
+      "language": "kotlin",
+      "category": "correctness",
+      "description": "Standard Compose foundation-layout and Material3 APIs. The centered Box receives bounded width constraints min=0dp, max=280dp. All unclipped interactive fields must fit within the 280dp parent. The same form is also used at 800dp, where the controls must remain at most 320dp wide.",
+      "file": "ui/AuthForm.kt",
+      "startLine": 1,
+      "diff": "+import androidx.compose.foundation.layout.*\n+import androidx.compose.material3.*\n+import androidx.compose.runtime.Composable\n+import androidx.compose.ui.Alignment\n+import androidx.compose.ui.Modifier\n+import androidx.compose.ui.unit.dp\n+@Composable\n+fun AuthForm(email: String, onEmailChange: (String) -> Unit) {\n+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {\n+        Card(modifier = Modifier.requiredWidth(400.dp).padding(16.dp)) {\n+            Column(Modifier.padding(24.dp)) {\n+                OutlinedTextField(email, onEmailChange, modifier = Modifier.fillMaxWidth())\n+                Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text(\"Submit\") }\n+            }\n+        }\n+    }\n+}",
+      "expected": [
+        {
+          "id": "kt-compose-required-width-overflow-defect",
+          "title": "Required width makes the padded controls overflow the 280dp parent",
+          "file": "ui/AuthForm.kt",
+          "line": 10,
+          "severity": "low",
+          "category": "correctness",
+          "symbol": "AuthForm",
+          "codeSnippet": "Modifier.requiredWidth(400.dp).padding(16.dp)"
+        }
+      ]
+    },
+    {
+      "id": "kt-compose-fill-before-cap",
+      "language": "kotlin",
+      "category": "correctness",
+      "description": "Standard Compose foundation-layout and Material3 APIs. The centered Box receives bounded width constraints min=0dp, max=800dp; it is also used at 280dp. The form must stay usable at 280dp and keep the interactive fields at most 320dp wide at 800dp.",
+      "file": "ui/AuthForm.kt",
+      "startLine": 1,
+      "diff": "+import androidx.compose.foundation.layout.*\n+import androidx.compose.material3.*\n+import androidx.compose.runtime.Composable\n+import androidx.compose.ui.Alignment\n+import androidx.compose.ui.Modifier\n+import androidx.compose.ui.unit.dp\n+@Composable\n+fun AuthForm(email: String, onEmailChange: (String) -> Unit) {\n+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {\n+        Card(modifier = Modifier.fillMaxWidth().widthIn(max = 400.dp).padding(16.dp)) {\n+            Column(Modifier.padding(24.dp)) {\n+                OutlinedTextField(email, onEmailChange, modifier = Modifier.fillMaxWidth())\n+                Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text(\"Submit\") }\n+            }\n+        }\n+    }\n+}",
+      "expected": [
+        {
+          "id": "kt-compose-fill-before-cap-defect",
+          "title": "Filling before the cap removes the intended wide-screen bound",
+          "file": "ui/AuthForm.kt",
+          "line": 10,
+          "severity": "low",
+          "category": "correctness",
+          "symbol": "AuthForm",
+          "codeSnippet": "Modifier.fillMaxWidth().widthIn(max = 400.dp).padding(16.dp)"
+        }
+      ]
+    },
+    {
+      "id": "kt-compose-cap-before-fill",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Standard Compose foundation-layout and Material3 APIs. The centered Box receives bounded width constraints min=0dp, max=800dp; it is also used at 280dp. The form must stay usable at 280dp and keep the interactive fields at most 320dp wide at 800dp.",
+      "file": "ui/AuthForm.kt",
+      "startLine": 1,
+      "diff": "+import androidx.compose.foundation.layout.*\n+import androidx.compose.material3.*\n+import androidx.compose.runtime.Composable\n+import androidx.compose.ui.Alignment\n+import androidx.compose.ui.Modifier\n+import androidx.compose.ui.unit.dp\n+@Composable\n+fun AuthForm(email: String, onEmailChange: (String) -> Unit) {\n+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {\n+        Card(modifier = Modifier.widthIn(max = 400.dp).fillMaxWidth().padding(16.dp)) {\n+            Column(Modifier.padding(24.dp)) {\n+                OutlinedTextField(email, onEmailChange, modifier = Modifier.fillMaxWidth())\n+                Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text(\"Submit\") }\n+            }\n+        }\n+    }\n+}",
+      "expected": []
+    },
+    {
+      "id": "kt-compose-padded-preferred-width",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Standard Compose foundation-layout and Material3 APIs. The centered Box receives bounded width constraints min=0dp, max=280dp or max=800dp in separate renders. All unclipped interactive fields must fit within the narrow parent and be at most 320dp wide in the wide render.",
+      "file": "ui/AuthForm.kt",
+      "startLine": 1,
+      "diff": "+import androidx.compose.foundation.layout.*\n+import androidx.compose.material3.*\n+import androidx.compose.runtime.Composable\n+import androidx.compose.ui.Alignment\n+import androidx.compose.ui.Modifier\n+import androidx.compose.ui.unit.dp\n+@Composable\n+fun AuthForm(email: String, onEmailChange: (String) -> Unit) {\n+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {\n+        Card(modifier = Modifier.width(400.dp).padding(16.dp)) {\n+            Column(Modifier.padding(24.dp)) {\n+                OutlinedTextField(email, onEmailChange, modifier = Modifier.fillMaxWidth())\n+                Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text(\"Submit\") }\n+            }\n+        }\n+    }\n+}",
+      "expected": []
+    }
   ]
 }
