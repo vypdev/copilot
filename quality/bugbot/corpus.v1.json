@@ -308,6 +308,76 @@
     {"id": "py-helper-retry-validation", "language": "python", "category": "negative", "description": "A copy entrypoint loads persisted retry_attempts through a validation helper before constructing provider work.", "file": "src/copy.py", "startLine": 1, "diff": "+def parse_progress(raw):\n+    value = raw[\"retry_attempts\"]\n+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:\n+        raise ValueError(\"invalid_copy_checkpoint\")\n+    return value\n+\n+def run_copy(raw, provider):\n+    attempts = parse_progress(raw)\n+    return provider.create(attempts)", "expected": []},
     {"id": "ts-exclusive-render-branches", "language": "typescript", "category": "negative", "description": "A selected UI section is rendered through a map of view functions.", "file": "ui/views.ts", "startLine": 1, "diff": "+const unavailableAction = () => html`<span id=\"action-reason\">Unavailable</span>`;\n+const overview = () => html`<p>Overview</p>`;\n+const copy = () => html`<section>${unavailableAction()}</section>`;\n+const library = () => html`<section>${unavailableAction()}</section>`;\n+const viewFor = (section: \"overview\" | \"copy\" | \"library\") => ({ overview, copy, library })[section]();\n+const render = (section: \"overview\" | \"copy\" | \"library\") => html`${viewFor(section)}`;", "expected": []},
     {"id": "py-short-circuit-unsafe-order", "language": "python", "category": "correctness", "description": "A checkpoint validator checks issue steps supplied as arbitrary persisted JSON values.", "file": "src/checkpoint.py", "startLine": 1, "diff": "+def valid_steps(issue_steps, writable_ids):\n+    return all(step in writable_ids and isinstance(step, str) for step in issue_steps)", "expected": [{"id": "unhashable-membership", "title": "Unhashable steps reach set membership before validation", "file": "src/checkpoint.py", "line": 2, "severity": "low", "category": "correctness", "symbol": "valid_steps", "codeSnippet": "step in writable_ids"}]},
-    {"id": "ts-composed-duplicate-ids", "language": "typescript", "category": "correctness", "description": "A UI helper supplies a reason label to actions composed in one overview.", "file": "ui/views.ts", "startLine": 1, "diff": "+const unavailableAction = () => html`<span id=\"action-reason\">Unavailable</span>`;\n+const overview = () => html`<section>${unavailableAction()}${unavailableAction()}</section>`;", "expected": [{"id": "composed-duplicate-id", "title": "Composed actions render duplicate reason IDs", "file": "ui/views.ts", "line": 2, "severity": "low", "category": "correctness", "symbol": "overview", "codeSnippet": "${unavailableAction()}${unavailableAction()}"}]}
+    {"id": "ts-composed-duplicate-ids", "language": "typescript", "category": "correctness", "description": "A UI helper supplies a reason label to actions composed in one overview.", "file": "ui/views.ts", "startLine": 1, "diff": "+const unavailableAction = () => html`<span id=\"action-reason\">Unavailable</span>`;\n+const overview = () => html`<section>${unavailableAction()}${unavailableAction()}</section>`;", "expected": [{"id": "composed-duplicate-id", "title": "Composed actions render duplicate reason IDs", "file": "ui/views.ts", "line": 2, "severity": "low", "category": "correctness", "symbol": "overview", "codeSnippet": "${unavailableAction()}${unavailableAction()}"}]},
+    {
+      "language": "yaml",
+      "file": ".github/workflows/ci.yml",
+      "startLine": 185,
+      "id": "android-listed-minor-platform",
+      "category": "negative",
+      "description": "Dated synthetic complete catalog snapshot for stable channel, host macOS, 2026-10-26: <remotePackage path=\"platforms;android-37.0\"/><remotePackage path=\"platforms;android-37.1\"/><remotePackage path=\"platforms;android-37.2\"/>. Source identity: https://dl.google.com/android/repository/repository2-3.xml. Configuration: compileSdk=37. Execution receipt for this exact workflow revision and command: fresh job-owned SDK root, no preinstalled platform or restored cache; exit=0, installed package.xml localPackage path=\"platforms;android-37.0\"; Android build with compileSdk=37 succeeded.",
+      "diff": "+sdkmanager --install \"platforms;android-37.0\"",
+      "expected": []
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/ci.yml",
+      "startLine": 185,
+      "id": "android-absent-platform-package",
+      "category": "reliability",
+      "description": "Dated synthetic complete catalog snapshot for stable channel, host macOS, 2026-10-26: <remotePackage path=\"platforms;android-37.0\"/><remotePackage path=\"platforms;android-37.1\"/><remotePackage path=\"platforms;android-37.2\"/>. Source identity: https://dl.google.com/android/repository/repository2-3.xml. Configuration: compileSdk=37. Fresh installation on this exact workflow revision using the default stable channel exits 1: Failed to find package platforms;android-37. No mirror or local override is configured.",
+      "diff": "+sdkmanager --install \"platforms;android-37\"",
+      "expected": [
+        {
+          "id": "absent-sdk-package",
+          "title": "Requested SDK package is absent from the applicable inventory",
+          "file": ".github/workflows/ci.yml",
+          "line": 185,
+          "severity": "medium",
+          "category": "reliability",
+          "codeSnippet": "sdkmanager --install \"platforms;android-37\""
+        }
+      ]
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/ci.yml",
+      "startLine": 185,
+      "id": "external-package-unverified-inventory",
+      "category": "negative",
+      "description": "A workflow requests an SDK package with a minor suffix. No applicable inventory, documentation, installation attempt or execution receipt is available. External lookup is unavailable in the read-only reviewer.",
+      "diff": "+sdkmanager --install \"platforms;android-38.0\"",
+      "expected": []
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/ci.yml",
+      "startLine": 185,
+      "id": "android-stale-inventory-current-install",
+      "category": "negative",
+      "description": "A retained 2025-10-01 catalog snapshot predates this package and does not list it. A 2026-10-26 receipt at this exact workflow revision records a fresh job-owned SDK root, no restored cache, exit=0 for the exact command, localPackage path=\"platforms;android-37.0\", and a successful compileSdk=37 Android build. No current inventory is retained.",
+      "diff": "+sdkmanager --install \"platforms;android-37.0\"",
+      "expected": []
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/ci.yml",
+      "startLine": 185,
+      "id": "android-unrelated-green-job",
+      "category": "reliability",
+      "description": "Dated synthetic complete catalog snapshot for stable channel, host macOS, 2026-10-26: <remotePackage path=\"platforms;android-37.0\"/><remotePackage path=\"platforms;android-37.1\"/><remotePackage path=\"platforms;android-37.2\"/>. Source identity: https://dl.google.com/android/repository/repository2-3.xml. Configuration: compileSdk=37. This exact workflow revision fails its fresh install command with exit 1: Failed to find package platforms;android-37. Another green desktop-only job skipped SDK installation and used cached artifacts from a different revision.",
+      "diff": "+sdkmanager --install \"platforms;android-37\"",
+      "expected": [
+        {
+          "id": "absent-sdk-package",
+          "title": "Requested SDK package is absent from the applicable inventory",
+          "file": ".github/workflows/ci.yml",
+          "line": 185,
+          "severity": "medium",
+          "category": "reliability",
+          "codeSnippet": "sdkmanager --install \"platforms;android-37\""
+        }
+      ]
+    }
   ]
 }

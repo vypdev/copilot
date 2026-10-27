@@ -47,3 +47,13 @@ describe('Bugbot benchmark runner', () => {
         expect(result.predictions['case-1']).toEqual([expect.objectContaining({ id: 'valid' })]);
     });
 });
+
+it('uses the production external-fact evidence contract without leaking verdicts', () => {
+    const prompt = buildBugbotBenchmarkPrompt({
+        ...testCase, diff: '+sdkmanager --install "platforms;android-37.0"',
+        description: 'A dated package-catalog and fresh installation receipt accompany this change.',
+    });
+    expect(prompt).toContain('historical naming conventions and model memory do not prove absence');
+    expect(prompt).toContain('platforms;android-37.0');
+    expect(prompt).not.toContain('Hidden ground truth title');
+});

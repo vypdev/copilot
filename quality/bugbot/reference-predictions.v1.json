@@ -38,6 +38,11 @@
     "py-helper-retry-validation": [],
     "ts-exclusive-render-branches": [],
     "py-short-circuit-unsafe-order": [{"id": "unhashable-membership", "title": "Unhashable steps reach set membership before validation", "file": "src/checkpoint.py", "line": 2, "severity": "low", "category": "correctness", "symbol": "valid_steps", "codeSnippet": "step in writable_ids", "confidence": 0.98}],
-    "ts-composed-duplicate-ids": [{"id": "composed-duplicate-id", "title": "Composed actions render duplicate reason IDs", "file": "ui/views.ts", "line": 2, "severity": "low", "category": "correctness", "symbol": "overview", "codeSnippet": "${unavailableAction()}${unavailableAction()}", "confidence": 0.98}]
+    "ts-composed-duplicate-ids": [{"id": "composed-duplicate-id", "title": "Composed actions render duplicate reason IDs", "file": "ui/views.ts", "line": 2, "severity": "low", "category": "correctness", "symbol": "overview", "codeSnippet": "${unavailableAction()}${unavailableAction()}", "confidence": 0.98}],
+    "android-listed-minor-platform": [],
+    "android-absent-platform-package": [{"id": "absent-sdk-package", "title": "Requested SDK package is absent from the applicable inventory", "file": ".github/workflows/ci.yml", "line": 185, "severity": "medium", "category": "reliability", "codeSnippet": "sdkmanager --install \"platforms;android-37\"", "confidence": 0.98}],
+    "external-package-unverified-inventory": [],
+    "android-stale-inventory-current-install": [],
+    "android-unrelated-green-job": [{"id": "absent-sdk-package", "title": "Requested SDK package is absent from the applicable inventory", "file": ".github/workflows/ci.yml", "line": 185, "severity": "medium", "category": "reliability", "codeSnippet": "sdkmanager --install \"platforms;android-37\"", "confidence": 0.98}]
   }
 }
