@@ -41077,6 +41077,16 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Review the safe validation diagnostics in the issue status card; correct existing paths or explicitly declare intended new files. Retry the same issue workflow.',
         retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
     }),
+    'sdd-catalog-unsupported-profile': Object.freeze({
+        impact: 'SDD preparation stopped before model analysis because the repository selected a catalog profile unsupported by the installed publication adapter.',
+        action: 'Review catalog profile support in the SDD guide. Preserve the native schema, readiness, requirements, evidence and blockers; have a maintainer provide a reviewed compatible adapter, then retry this same issue.',
+        retainedState: 'The repository catalog, answers and published SDDs remain unchanged; no specification or branch was published by this attempt.',
+    }),
+    'sdd-catalog-format-invalid': Object.freeze({
+        impact: 'SDD preparation stopped before ownership operations because the catalog cannot establish one valid supported profile and unique owner paths.',
+        action: 'Validate the catalog JSON, supported profile, required metadata and normalized unique owner-path arrays. Preserve repository-owned readiness rules and retry the same issue after maintainer review.',
+        retainedState: 'The source catalog, answers and published SDDs remain unchanged; no automatic catalog conversion was attempted.',
+    }),
     'sdd-draft-format-invalid': Object.freeze({
         impact: 'SDD preparation stopped because the draft still lacked required headings or a numeric test budget after one automatic repair.',
         action: 'Retry SDD preparation with the canonical specification template and the explicit acceptance requirements.',
@@ -41189,6 +41199,16 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: no se pueden verificar las rutas citadas en la revisión base inmutable.',
         action: 'Revisa los diagnósticos seguros de validación de la tarjeta de estado; corrige las rutas existentes o declara explícitamente los archivos nuevos previstos. Reintenta el workflow de la misma incidencia.',
         retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
+    }),
+    'sdd-catalog-unsupported-profile': Object.freeze({
+        impact: 'La preparación del SDD se detuvo antes del análisis del modelo porque el repositorio seleccionó un perfil de catálogo que el adaptador de publicación instalado no admite.',
+        action: 'Revisa los perfiles admitidos en la guía de SDD. Conserva el esquema nativo, los estados, requisitos, evidencias y bloqueos; pide a un mantenedor un adaptador compatible revisado y reintenta esta misma incidencia.',
+        retainedState: 'El catálogo, las respuestas y los SDD publicados permanecen intactos; este intento no publicó ninguna especificación ni rama.',
+    }),
+    'sdd-catalog-format-invalid': Object.freeze({
+        impact: 'La preparación del SDD se detuvo antes de las operaciones de propiedad porque el catálogo no permite establecer un único perfil admitido con rutas de propiedad válidas y únicas.',
+        action: 'Valida el JSON del catálogo, el perfil admitido, los metadatos obligatorios y las listas de rutas de propiedad normalizadas y únicas. Conserva las reglas de preparación del repositorio y reintenta la misma incidencia tras la revisión de un mantenedor.',
+        retainedState: 'El catálogo de origen, las respuestas y los SDD publicados permanecen intactos; no se intentó convertir el catálogo automáticamente.',
     }),
     'sdd-draft-format-invalid': Object.freeze({
         impact: 'La preparación del SDD se detuvo porque seguían faltando secciones obligatorias o un presupuesto numérico de pruebas tras un intento automático de corrección.',
@@ -48992,6 +49012,9 @@ const sdd_validation_diagnostic_1 = __nccwpck_require__(34211);
 const message_catalog_1 = __nccwpck_require__(27097);
 const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
 const UI = Object.freeze({
+    catalogCompatibility: ['Catalog compatibility', 'Compatibilidad del catálogo'],
+    catalogProfile: ['The installed automated writer supports the SDK version-1 profile with specs arrays. A repository-selected schema requires a reviewed compatible adapter.', 'El publicador automático instalado admite el perfil SDK de versión 1 con listas specs. Un esquema seleccionado por el repositorio requiere un adaptador compatible revisado.'],
+    catalogRetained: ['Native schema, readiness, requirements, design and implementation evidence, and blockers remain unchanged. Review the supported-profile boundary before retrying this same issue.', 'El esquema nativo, los estados, requisitos, evidencias de diseño e implementación y bloqueos permanecen intactos. Revisa los perfiles admitidos antes de reintentar esta misma incidencia.'],
     fallbackSize: ['Diagnostic copy fell back to English because the localized card exceeded its fixed size bound.', 'El texto del diagnóstico pasó a inglés porque la tarjeta localizada superó su límite fijo.'],
     fallbackSlices: ['Diagnostic copy fell back to English because its required catalog slices did not resolve to one language.', 'El texto del diagnóstico pasó a inglés porque sus catálogos obligatorios no se resolvieron en un mismo idioma.'],
     "heading": ["Specification preparation is blocked", "La preparación de la especificación está bloqueada"],
@@ -49091,6 +49114,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.sddWorkflowRunUrl = sddWorkflowRunUrl;
 exports.renderSddPreparationFailure = renderSddPreparationFailure;
 exports.renderSddPreparationRecovered = renderSddPreparationRecovered;
+const sdd_catalog_compatibility_1 = __nccwpck_require__(95312);
 const application_error_1 = __nccwpck_require__(97790);
 const sdd_validation_diagnostic_1 = __nccwpck_require__(34211);
 const application_error_message_catalog_1 = __nccwpck_require__(64809);
@@ -49120,13 +49144,16 @@ function renderSddPreparationFailure(options, catalog = (0, sdd_preparation_mess
         || typeof options.error.retryable !== 'boolean' || !(0, application_error_1.isApplicationErrorCorrelationId)(options.error.correlationId)) {
         throw new TypeError('Invalid SDD status identity or semantic error facts.');
     }
+    if (options.catalogReason !== undefined && (!sdd_catalog_compatibility_1.SDD_CATALOG_COMPATIBILITY_REASONS.includes(options.catalogReason) || options.diagnostic)) {
+        throw new TypeError('Invalid exclusive catalog compatibility facts.');
+    }
     const diagnostic = options.diagnostic ? (0, sdd_validation_diagnostic_1.normalizeSddValidationDiagnostic)(options.diagnostic) : undefined;
     if (options.attempts !== undefined && options.attempts !== 1 && options.attempts !== 2)
         throw new TypeError('Invalid SDD diagnostic attempt count.');
     const message = (key) => catalog.message(key);
     const recovery = options.error.recovery;
     const source = { code: options.error.code, retryable: options.error.retryable, correlationId: options.error.correlationId,
-        ...(recovery && application_error_1.APPLICATION_ERROR_RECOVERY_IDS.includes(recovery.id) && recovery.id.startsWith('sdd-draft-')
+        ...(recovery && application_error_1.APPLICATION_ERROR_RECOVERY_IDS.includes(recovery.id) && (recovery.id.startsWith('sdd-draft-') || recovery.id.startsWith('sdd-catalog-'))
             && recovery.variables && Object.keys(recovery.variables).length === 0 ? { recovery } : {}) };
     const view = (0, application_error_presentation_policy_1.buildApplicationErrorPresentation)(source, errorMessage ?? (0, application_error_message_catalog_1.resolveStaticApplicationErrorCatalog)(catalog.locale).message);
     const runUrl = sddWorkflowRunUrl(options.run);
@@ -49142,7 +49169,10 @@ function renderSddPreparationFailure(options, catalog = (0, sdd_preparation_mess
         `**${message('sddPreparation.code')}:** \`${view.code}\``,
         `**${message('sddPreparation.reference')}:** \`${view.reference}\``,
     ];
-    if (diagnostic) {
+    if (options.catalogReason) {
+        lines.push(`**${message('sddPreparation.catalogCompatibility')}:** \`${options.catalogReason}\``, '', message('sddPreparation.catalogProfile'), '', message('sddPreparation.catalogRetained'));
+    }
+    else if (diagnostic) {
         lines.push(`**${message('sddPreparation.reason')}:** \`${diagnostic.reason}\``, `**${message('sddPreparation.phase')}:** \`${diagnostic.phase}\``);
         if (options.attempts !== undefined)
             lines.push(`**${message('sddPreparation.attempts')}:** ${options.attempts}`);
@@ -59835,6 +59865,7 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PreBranchSddGateUseCase = void 0;
+const sdd_catalog_compatibility_1 = __nccwpck_require__(95312);
 const sdd_draft_preparation_failure_1 = __nccwpck_require__(12321);
 const sdd_preparation_status_policy_1 = __nccwpck_require__(78345);
 const sdd_preparation_message_catalog_1 = __nccwpck_require__(88171);
@@ -59899,6 +59930,7 @@ class PreBranchSddGateUseCase {
     }
     async begin(context) {
         let ownershipStatusWritten = false;
+        let failureBranch = context.workingBranch ?? context.baseBranch;
         let failureSource;
         try {
             await this.ensureSddLabel(context.issueNumber);
@@ -59910,6 +59942,7 @@ class PreBranchSddGateUseCase {
             const card = latestOwnedCard(allComments, context.issueNumber, context.tokenUser);
             const retainedBranch = card?.record.branchName ?? context.workingBranch;
             const sourceBranch = retainedBranch ?? context.baseBranch;
+            failureBranch = sourceBranch;
             if (retainedBranch && !await this.linkedBranch.getLinkedBranch(context.issueNumber, retainedBranch)) {
                 throw new Error('The retained SDD branch is no longer linked to this issue.');
             }
@@ -60032,6 +60065,9 @@ class PreBranchSddGateUseCase {
             return { status: 'drafted', prepared, record, ...(card ? { cardId: card.id } : {}), results: [this.result(true, true, `Validated ${plan.path} before branch publication.`)] };
         }
         catch (error) {
+            if (error instanceof sdd_catalog_compatibility_1.SddCatalogCompatibilityFailure && error.sourceCommit) {
+                failureSource = { branch: failureBranch, sha: error.sourceCommit };
+            }
             const failure = this.failure(error);
             if (!ownershipStatusWritten && failure.errors[0].code !== 'workflow.stale') {
                 try {
@@ -60143,6 +60179,8 @@ class PreBranchSddGateUseCase {
     async writePreparationFailure(context, error, cause, publicationPending, source) {
         if (!context.tokenUser.trim())
             throw new application_error_1.ApplicationError('configuration.unsupported', 'The SDD diagnostic card requires a trusted bot identity.');
+        if (cause instanceof sdd_catalog_compatibility_1.SddCatalogCompatibilityFailure && !source)
+            throw new application_error_1.ApplicationError('configuration.unsupported', 'The catalog compatibility diagnostic requires a verified source revision.');
         const comments = await this.comments.listIssueComments(context.issueNumber);
         const [catalog, errorCatalog] = await Promise.all([
             (0, sdd_preparation_message_catalog_1.resolveSddPreparationCatalog)(context.issueLocale ?? 'en-US', context.agentConfiguration, this.presentation.catalogResolver),
@@ -60152,6 +60190,7 @@ class PreBranchSddGateUseCase {
         const body = (0, sdd_preparation_status_policy_1.renderSddPreparationFailure)({ issueNumber: context.issueNumber, locale: context.issueLocale,
             error, publicationPending, run: this.presentation.run,
             ...(cause instanceof sdd_draft_preparation_failure_1.SddDraftPreparationFailure ? { diagnostic: cause.diagnostic, attempts: cause.attempts } : {}),
+            ...(cause instanceof sdd_catalog_compatibility_1.SddCatalogCompatibilityFailure ? { catalogReason: cause.reason } : {}),
         }, aligned ? catalog : (0, sdd_preparation_message_catalog_1.resolveStaticSddPreparationCatalog)('en-US'), aligned ? errorCatalog.message : (0, application_error_message_catalog_1.resolveStaticApplicationErrorCatalog)('en-US').message)
             + (aligned ? '' : '\n\n' + (0, sdd_preparation_message_catalog_1.resolveStaticSddPreparationCatalog)('en-US').message('sddPreparation.fallbackSlices'));
         if (source)
@@ -60190,12 +60229,13 @@ class PreBranchSddGateUseCase {
             await this.comments.addComment(context.issueNumber, body);
     }
     async assertFresh(context, expectedBaseSha, sourceBranch) {
-        const [liveBody, liveTitle, snapshot] = await Promise.all([
+        const [liveBody, liveTitle, sourceRevision] = await Promise.all([
             this.descriptions.getDescription(context.issueNumber),
             this.titles.getTitle(context.issueNumber),
-            this.workspace.loadSnapshot(sourceBranch),
+            this.workspace.readSourceRevision ? this.workspace.readSourceRevision(sourceBranch)
+                : this.workspace.loadSnapshot(sourceBranch).then(snapshot => snapshot.baseSha),
         ]);
-        if (snapshot.baseSha !== expectedBaseSha
+        if (sourceRevision !== expectedBaseSha
             || (0, recommendation_policy_1.getVisibleIssueDescription)(liveBody ?? '') !== (0, recommendation_policy_1.getVisibleIssueDescription)(context.issueBody)
             || (0, pre_branch_sdd_1.normalizeSddIssueTitle)(liveTitle ?? '') !== (0, pre_branch_sdd_1.normalizeSddIssueTitle)(context.issueTitle)) {
             throw new application_error_1.ApplicationError('workflow.stale', 'The issue or development base changed during SDD preparation; rerun analysis before publishing.');
@@ -60207,7 +60247,10 @@ class PreBranchSddGateUseCase {
     failure(error) {
         // The runtime logger redacts credentials and makes workflow-command text inert.
         (0, logging_ports_1.logError)(`Pre-branch SDD gate failed: ${error instanceof Error ? error.message : 'unknown failure'}`);
-        const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'The pre-branch SDD gate is blocked.');
+        const semanticError = error instanceof sdd_catalog_compatibility_1.SddCatalogCompatibilityFailure
+            ? new application_error_1.ApplicationError('configuration.unsupported', error.message, { recovery: {
+                    id: error.reason === 'unsupported-profile' ? 'sdd-catalog-unsupported-profile' : 'sdd-catalog-format-invalid', variables: {},
+                } }) : (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'The pre-branch SDD gate is blocked.');
         return new result_1.Result({ id: this.taskId, success: false, executed: true, steps: [semanticError.message], errors: [semanticError],
             ...(error instanceof sdd_draft_preparation_failure_1.SddDraftPreparationFailure ? { payload: { sddDiagnostic: error.diagnostic, attempts: error.attempts } } : {}) });
     }
@@ -70055,6 +70098,8 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-fixer-unavailable',
     'branch-sync-resolution-invalid',
     'sdd-draft-size-exceeded',
+    'sdd-catalog-unsupported-profile',
+    'sdd-catalog-format-invalid',
     'sdd-draft-format-invalid',
     'sdd-draft-case-identity-invalid',
     'sdd-draft-case-budget-invalid',
@@ -70286,6 +70331,8 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'branch-sync-fixer-unavailable': Object.freeze(['command']),
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'sdd-draft-size-exceeded': Object.freeze([]),
+    'sdd-catalog-unsupported-profile': Object.freeze([]),
+    'sdd-catalog-format-invalid': Object.freeze([]),
     'sdd-draft-format-invalid': Object.freeze([]),
     'sdd-draft-case-identity-invalid': Object.freeze([]),
     'sdd-draft-case-budget-invalid': Object.freeze([]),
@@ -83941,6 +83988,7 @@ exports.parseSddAnswer = parseSddAnswer;
 exports.validateSddMarkdown = validateSddMarkdown;
 exports.composeSddUpdate = composeSddUpdate;
 exports.recoverSddUpdate = recoverSddUpdate;
+const sdd_catalog_compatibility_1 = __nccwpck_require__(95312);
 const sdd_validation_diagnostic_1 = __nccwpck_require__(34211);
 exports.SDD_GATE_MARKER = 'copilot:sdd-gate:v1';
 exports.SDD_MIN_DRAFT_CHARACTERS = 1800;
@@ -83980,6 +84028,17 @@ class SddOwnershipFailure extends Error {
 exports.SddOwnershipFailure = SddOwnershipFailure;
 /** The agent may propose ownership but cannot invent a catalogued owner or arbitrary path. */
 function parseSddPlan(value, catalog) {
+    const registeredPaths = new Set();
+    for (const paths of catalog.values()) {
+        if (!Array.isArray(paths) || paths.length === 0)
+            throw new sdd_catalog_compatibility_1.SddCatalogCompatibilityFailure('owner-paths-invalid');
+        for (const ownerPath of paths) {
+            if (typeof ownerPath !== 'string' || !(0, sdd_catalog_compatibility_1.isSddCatalogOwnerPath)(ownerPath) || registeredPaths.has(ownerPath)) {
+                throw new sdd_catalog_compatibility_1.SddCatalogCompatibilityFailure('owner-paths-invalid');
+            }
+            registeredPaths.add(ownerPath);
+        }
+    }
     if (!isRecord(value))
         throw new Error('The SDD analysis must be an object.');
     const action = value.action;
@@ -83993,7 +84052,7 @@ function parseSddPlan(value, catalog) {
         throw new Error('The SDD analysis has an invalid owner, path, or reason.');
     }
     const ownerPaths = catalog.get(capabilityId);
-    const registered = [...catalog.values()].some(paths => paths.includes(path));
+    const registered = registeredPaths.has(path);
     if (action === 'update' && (!ownerPaths?.includes(path) || !registered)) {
         throw new SddOwnershipFailure('update-owner-mismatch');
     }
@@ -84873,6 +84932,123 @@ const node_crypto_1 = __nccwpck_require__(6005);
 /** Private complete request witness; public reply-marker identities stay unchanged. */
 function replyRequestBodyDigest(body) {
     return (0, node_crypto_1.createHash)('sha256').update(body, 'utf8').digest('hex');
+}
+
+
+/***/ }),
+
+/***/ 95312:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SddCatalogCompatibilityFailure = exports.SDD_CATALOG_COMPATIBILITY_REASONS = void 0;
+exports.isSddCatalogOwnerPath = isSddCatalogOwnerPath;
+exports.readSupportedSddCatalog = readSupportedSddCatalog;
+/** Closed compatibility facts; repository/model content never becomes recovery prose. */
+exports.SDD_CATALOG_COMPATIBILITY_REASONS = Object.freeze([
+    'invalid-json', 'invalid-document', 'unsupported-profile', 'ambiguous-profile', 'invalid-metadata', 'owner-paths-invalid',
+]);
+class SddCatalogCompatibilityFailure extends Error {
+    constructor(reason, sourceCommit) {
+        if (!exports.SDD_CATALOG_COMPATIBILITY_REASONS.includes(reason))
+            throw new TypeError('Invalid closed SDD catalog compatibility reason.');
+        if (sourceCommit !== undefined && !/^[a-f0-9]{40}$/u.test(sourceCommit))
+            throw new TypeError('Invalid SDD catalog source revision.');
+        super(`The SDD catalog is incompatible with the installed publication profile (${reason}).`);
+        this.reason = reason;
+        this.sourceCommit = sourceCommit;
+        this.name = 'SddCatalogCompatibilityFailure';
+        Object.freeze(this);
+    }
+}
+exports.SddCatalogCompatibilityFailure = SddCatalogCompatibilityFailure;
+const PATH_FIELDS = ['specs', 'workflows', 'entrypoints', 'code', 'tests', 'documentation'];
+const SDK_STATUSES = ['as-built-baseline', 'implemented', 'proposed', 'deprecated'];
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pathPolicy = __nccwpck_require__(66014);
+/** Existing owner paths keep the shared SDK catalog boundary, independent of proposed-path grammar. */
+function isSddCatalogOwnerPath(path) {
+    return pathPolicy.matchesFieldBoundary('specs', path);
+}
+/** Recognizes the installed publication dialect before any model or ownership operation. */
+function readSupportedSddCatalog(source) {
+    if (source.length > 2097152)
+        throw new SddCatalogCompatibilityFailure('invalid-document');
+    let value;
+    try {
+        value = JSON.parse(source);
+    }
+    catch {
+        throw new SddCatalogCompatibilityFailure('invalid-json');
+    }
+    if (!record(value) || value.version !== 1 || !Array.isArray(value.capabilities)
+        || value.capabilities.length === 0 || value.capabilities.length > 1000
+        || value.capabilities.some(entry => !record(entry))) {
+        throw new SddCatalogCompatibilityFailure('invalid-document');
+    }
+    const capabilities = value.capabilities;
+    const sdk = capabilities.some(entry => Object.prototype.hasOwnProperty.call(entry, 'specs'));
+    const native = capabilities.some(entry => Object.prototype.hasOwnProperty.call(entry, 'specification'));
+    if (sdk && native)
+        throw new SddCatalogCompatibilityFailure('ambiguous-profile');
+    // The installed writer cannot certify a repository-selected schema/validator.
+    // Reject before rewriting its fields, statuses, evidence or readiness rules.
+    if (native || Object.prototype.hasOwnProperty.call(value, '$schema'))
+        throw new SddCatalogCompatibilityFailure('unsupported-profile');
+    if (!sdk)
+        throw new SddCatalogCompatibilityFailure('invalid-document');
+    const ids = new Set();
+    const titles = new Set();
+    const owners = new Set();
+    const normalized = capabilities.map(entry => {
+        if (!['id', 'title', 'status', 'scope', 'owner', 'lastVerified'].every(key => typeof entry[key] === 'string' && String(entry[key]).trim())
+            || !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/u.test(String(entry.id)) || ids.has(String(entry.id)) || titles.has(String(entry.title))
+            || !SDK_STATUSES.includes(String(entry.status)) || !isoDate(String(entry.lastVerified))) {
+            throw new SddCatalogCompatibilityFailure('invalid-metadata');
+        }
+        ids.add(String(entry.id));
+        titles.add(String(entry.title));
+        for (const field of PATH_FIELDS) {
+            const paths = entry[field];
+            if (!Array.isArray(paths) || (field !== 'workflows' && paths.length === 0)
+                || new Set(paths).size !== paths.length
+                || paths.some(path => typeof path !== 'string' || !pathPolicy.isSafeRelativePath(path) || !pathPolicy.matchesFieldBoundary(field, path))) {
+                throw new SddCatalogCompatibilityFailure('owner-paths-invalid');
+            }
+        }
+        for (const path of entry.specs) {
+            if (owners.has(path))
+                throw new SddCatalogCompatibilityFailure('owner-paths-invalid');
+            owners.add(path);
+        }
+        return Object.freeze({
+            id: entry.id, title: entry.title, status: entry.status,
+            scope: entry.scope, owner: entry.owner, lastVerified: entry.lastVerified,
+            ...Object.fromEntries(PATH_FIELDS.map(field => [field, Object.freeze([...entry[field]])])),
+        });
+    });
+    freezeDocument(value, 0);
+    return Object.freeze({ profile: 'sdk-v1', document: value, capabilities: Object.freeze(normalized) });
+}
+function record(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function isoDate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/u.test(value))
+        return false;
+    const date = new Date(value);
+    return Number.isFinite(date.valueOf()) && date.toISOString().slice(0, 10) === value;
+}
+function freezeDocument(value, depth) {
+    if (value !== null && typeof value === 'object') {
+        if (depth > 20)
+            throw new SddCatalogCompatibilityFailure('invalid-metadata');
+        for (const item of Object.values(value))
+            freezeDocument(item, depth + 1);
+        Object.freeze(value);
+    }
 }
 
 
@@ -90744,6 +90920,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PreBranchSddWorkspaceAdapter = void 0;
+const sdd_catalog_compatibility_1 = __nccwpck_require__(95312);
 const fs = __importStar(__nccwpck_require__(87561));
 const os = __importStar(__nccwpck_require__(70612));
 const path = __importStar(__nccwpck_require__(49411));
@@ -90767,11 +90944,14 @@ class PreBranchSddWorkspaceAdapter {
         this.token = token;
     }
     async loadSnapshot(baseBranch) {
+        return this.readSnapshotAtSha(await this.readSourceRevision(baseBranch));
+    }
+    async readSourceRevision(baseBranch) {
         assertBranch(baseBranch);
         await this.git(['fetch', 'origin', baseBranch], this.repositoryRoot, this.token);
         const baseSha = (await this.git(['rev-parse', 'FETCH_HEAD'])).trim();
         assertSha(baseSha);
-        return this.readSnapshotAtSha(baseSha);
+        return baseSha;
     }
     async loadSnapshotAtCommit(commitSha) {
         assertSha(commitSha);
@@ -90779,9 +90959,14 @@ class PreBranchSddWorkspaceAdapter {
     }
     async readSnapshotAtSha(baseSha) {
         const raw = await this.git(['show', `${baseSha}:specs/catalog.json`]);
-        const catalog = JSON.parse(raw);
-        if (catalog.version !== 1 || !Array.isArray(catalog.capabilities)) {
-            throw new Error('The repository has no valid SDD catalog. Run setup for specifications before enabling pre-branch-sdd.');
+        let catalog;
+        try {
+            catalog = (0, sdd_catalog_compatibility_1.readSupportedSddCatalog)(raw);
+        }
+        catch (error) {
+            if (error instanceof sdd_catalog_compatibility_1.SddCatalogCompatibilityFailure)
+                throw new sdd_catalog_compatibility_1.SddCatalogCompatibilityFailure(error.reason, baseSha);
+            throw error;
         }
         const [template, standard] = await Promise.all([
             this.git(['show', `${baseSha}:specs/_template.md`]),
@@ -90844,10 +91029,7 @@ class PreBranchSddWorkspaceAdapter {
             else if (pathExists(target))
                 throw new Error('The new SDD path is already occupied.');
             writeSpecFile(target, markdown, plan.action === 'update');
-            const catalog = {
-                version: 1,
-                capabilities: snapshot.capabilities.map(capability => ({ ...capability, specs: [...capability.specs] })),
-            };
+            const catalog = (0, sdd_catalog_compatibility_1.readSupportedSddCatalog)(await this.git(['show', `${snapshot.baseSha}:specs/catalog.json`])).document;
             let catalogJson;
             let catalogMarkdown;
             if (plan.action === 'companion') {
@@ -90857,7 +91039,7 @@ class PreBranchSddWorkspaceAdapter {
                 const updated = catalog.capabilities.map(capability => capability.id === owner.id
                     ? { ...capability, specs: [...capability.specs, plan.path] }
                     : capability);
-                catalogJson = `${JSON.stringify({ version: 1, capabilities: updated }, null, 2)}\n`;
+                catalogJson = `${JSON.stringify({ ...catalog, capabilities: updated }, null, 2)}\n`;
             }
             else if (plan.action === 'new') {
                 if (!newCapability || newCapability.id !== plan.capabilityId
@@ -90865,7 +91047,7 @@ class PreBranchSddWorkspaceAdapter {
                     || newCapability.specs.length !== 1 || newCapability.specs[0] !== plan.path) {
                     throw new Error('A new SDD needs one proposed catalog capability with the exact owner path.');
                 }
-                catalogJson = `${JSON.stringify({ version: 1, capabilities: [...catalog.capabilities, newCapability] }, null, 2)}\n`;
+                catalogJson = `${JSON.stringify({ ...catalog, capabilities: [...catalog.capabilities, newCapability] }, null, 2)}\n`;
             }
             if (catalogJson) {
                 assertRegularSpecFile(path.join(root, 'specs/catalog.json'));

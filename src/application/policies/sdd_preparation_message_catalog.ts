@@ -5,6 +5,9 @@ import type { MessageCatalogResolutionPort } from '../ports/message_catalog_port
 import { resolveMessageCatalogView, resolveStaticMessageCatalogView } from './resolved_message_catalog_policy';
 
 const UI = Object.freeze({
+  catalogCompatibility: ['Catalog compatibility', 'Compatibilidad del catálogo'] as const,
+  catalogProfile: ['The installed automated writer supports the SDK version-1 profile with specs arrays. A repository-selected schema requires a reviewed compatible adapter.', 'El publicador automático instalado admite el perfil SDK de versión 1 con listas specs. Un esquema seleccionado por el repositorio requiere un adaptador compatible revisado.'] as const,
+  catalogRetained: ['Native schema, readiness, requirements, design and implementation evidence, and blockers remain unchanged. Review the supported-profile boundary before retrying this same issue.', 'El esquema nativo, los estados, requisitos, evidencias de diseño e implementación y bloqueos permanecen intactos. Revisa los perfiles admitidos antes de reintentar esta misma incidencia.'] as const,
   fallbackSize: ['Diagnostic copy fell back to English because the localized card exceeded its fixed size bound.', 'El texto del diagnóstico pasó a inglés porque la tarjeta localizada superó su límite fijo.'] as const,
   fallbackSlices: ['Diagnostic copy fell back to English because its required catalog slices did not resolve to one language.', 'El texto del diagnóstico pasó a inglés porque sus catálogos obligatorios no se resolvieron en un mismo idioma.'] as const,
   "heading": ["Specification preparation is blocked", "La preparación de la especificación está bloqueada"] as const,

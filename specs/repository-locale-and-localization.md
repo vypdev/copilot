@@ -1416,3 +1416,11 @@ translation variable. A 16,000-character card bound falls back to reviewed
 English with an explicit note rather than dropping facts. The owning pre-branch
 SDD defines its additional locale matrix and primary acceptance budget; no
 locale configuration or persistence migration is introduced.
+
+
+Catalog compatibility copy (#716, 2026-10-27) extends the existing SDD preparation
+and semantic-error catalogs with reviewed English/Spanish profile impact,
+recovery and retained-state text. Closed technical reason IDs remain untranslated;
+no catalog path, schema URL, requirement or blocker text is a translation operand.
+Existing aliases, validated dynamic catalogs, whole-card fallback and size bounds
+apply to the complete artifact. The new recovery descriptors have no variables.

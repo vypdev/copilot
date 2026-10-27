@@ -132,6 +132,35 @@ answer-permission lookup temporarily fails, retrying returns the status to
 waiting when existing questions are still incomplete. The Action keeps the
 original question record and answers and does not start drafting.
 
+## Catalog publication profiles
+
+The installed automatic writer supports the **SDK version-1** catalog profile:
+`specs` arrays, the existing required metadata/evidence arrays, and SDK statuses
+`as-built-baseline`, `implemented`, `proposed` and `deprecated`. The reader checks
+that profile and unique, normalized owner paths before asking the model for a
+plan. Full file, SDD and publication checks still run independently.
+
+A repository-native catalog can be valid under its own selected schema and
+readiness rules while requiring a different publication adapter. Catalogs using
+`specification`, a repository-selected `$schema`, or mixed dialects receive an
+explicit compatibility result before model work or branch publication. Preserve
+the native schema, requirements, evidence, blockers and readiness; obtain a
+reviewed compatible adapter and retry the same issue. Changing statuses or
+replacing native standards merely to pass this gate cannot establish readiness.
+
+Compatibility diagnostics show a closed reason and the current workflow, with
+retained state and the next action. The Action checks the issue and raw source
+revision independently of loading that rejected catalog. Stale or unavailable
+source facts keep the workflow blocked and preserve the current status. A custom
+older workspace adapter that cannot read this revision remains unverified.
+
+The fixed profile limits are 2,097,152 catalog source characters, 1,000 capability
+entries and 20 nested object/array levels for extension metadata. These are not
+configuration options. Supported SDK companion/new writes preserve decoded
+extension metadata from the immutable original catalog; existing statuses,
+requirements, evidence and blockers remain. New SDK entries stay `proposed`.
+Profile recognition and diagnostics never establish implementation acceptance.
+
 ## Repository layouts and support limits
 
 Catalog version 1 accepts source, entrypoint, test and documentation evidence
