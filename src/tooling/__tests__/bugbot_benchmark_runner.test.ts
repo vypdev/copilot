@@ -1,3 +1,4 @@
+import { BUGBOT_FINDING_GROUNDING_INSTRUCTION } from '../../prompts/bugbot';
 import { buildBugbotBenchmarkPrompt, runBugbotBenchmarkAgent } from '../bugbot_benchmark_runner';
 import type { BugbotBenchmarkCase } from '../bugbot_benchmark';
 
@@ -11,6 +12,17 @@ describe('Bugbot benchmark runner', () => {
         const prompt = buildBugbotBenchmarkPrompt(testCase);
         expect(prompt).toContain('src/example.ts');
         expect(prompt).toContain('[BEGIN_UNTRUSTED_DATA');
+        expect(prompt).not.toContain('Hidden ground truth title');
+    });
+
+    it('uses the production lifecycle-grounding contract without exposing the expected verdict', () => {
+        const prompt = buildBugbotBenchmarkPrompt({
+            ...testCase, description: 'Framework viewport initialization',
+            diff: '+ComposeViewport(viewportContainerId = "ComposeTarget") { App() }',
+        });
+        expect(prompt).toContain(BUGBOT_FINDING_GROUNDING_INSTRUCTION);
+        expect(prompt).toContain('verify the exact resolved dependency version');
+        expect(prompt).toContain('owned container boundary and success/failure paths');
         expect(prompt).not.toContain('Hidden ground truth title');
     });
 

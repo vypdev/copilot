@@ -1985,7 +1985,8 @@
         "src/application/usecases/steps/commit/bugbot/commit_and_push_workflow.ts",
         "quality/bugbot/corpus.v1.json",
         "quality/bugbot/reference-predictions.v1.json",
-        "src/tooling/bugbot_benchmark_runner.ts"
+        "src/tooling/bugbot_benchmark_runner.ts",
+        "quality/bugbot/evidence/issue-722.json"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",

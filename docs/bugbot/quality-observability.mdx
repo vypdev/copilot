@@ -5,7 +5,7 @@ description: Measure Bugbot accuracy, latency, outcomes, feedback, and regressio
 
 # Bugbot quality and observability
 
-Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 43 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
+Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 48 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
 
 The #655 cases cover branch coverage enabled through repository configuration,
 inherited HTTP/1.0 connection behavior, correct arithmetic, short-circuit guards,
@@ -24,6 +24,20 @@ job. The applicable catalog and execution details travel with each synthetic
 case; the expected verdict never enters the prompt. These cases do not freeze
 the live Android catalog or replay the consumer runner. Both production review
 and the real-agent benchmark use the same external-fact evidence instruction.
+
+The five #722 lifecycle cases cover Compose-owned cleanup, a loader outside the
+owned container, a failed startup with explicit error UI, a failed initializer
+that leaves loading stuck, and a synthetic pinned version without cleanup.
+The source archive for Compose 1.13.0-beta01 was verified with SHA256
+`ceca9e3c187427f6c63593d5d80dc6c10a03ef0b45f1d96e6c453a3300aeccd6`.
+These are controlled source-evidence scenarios, not a replay of the consumer GUI.
+Two cases require no finding; three positive controls require an actionable
+finding. Reference predictions validate scoring and never prove model accuracy.
+The live Codex sample in `quality/bugbot/evidence/issue-722.json` retains the
+initial failed scorer result, fixture refinements and the final five-case run.
+The final run passes all default thresholds with zero false positives or
+negatives. It is a small sample using the corrected prompt, not an old-versus-new
+prompt comparison or a guarantee of general model quality.
 
 ## Quality gates
 
