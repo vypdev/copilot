@@ -38,6 +38,8 @@ export function buildApplicationErrorPresentation(
         : `error.${error.code}` as const;
     const variables = error.recovery && isCopilotCommandValidationReason(error.recovery.id)
         ? commandValidationPresentationVariables(error.recovery.id, (error.recovery.variables as Readonly<Record<string, unknown>>).command)
+        : error.recovery?.id === 'branch-sync-verification-failed'
+        ? { ...error.recovery.variables, syncCommand: '/copilot sync-branch' }
         : error.recovery?.id.startsWith('stored-configuration-')
         ? { ...error.recovery.variables, recoveryGuide: STORED_CONFIGURATION_RECOVERY_URL }
         : error.recovery?.variables;

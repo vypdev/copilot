@@ -4,6 +4,7 @@ import { CLOSED_ISSUE_RESULTS, CLOSED_ISSUE_PHASES, CLOSED_ISSUE_REASONS, type C
 import { APPROVAL_EVIDENCE_PERMISSIONS, APPROVAL_EVIDENCE_REASONS, type ApprovalEvidenceDiagnostic } from '../../domain/approval_evidence_diagnostic';
 
 import { BRANCH_SYNC_VALIDATION_CODES, type BranchSyncValidationCode } from '../../domain/branch_sync_validation';
+import { isBranchSyncVerificationFailure, type BranchSyncVerificationFailure } from '../../domain/verification_failure';
 
 export type ApplicationErrorKind =
     | 'configuration'
@@ -51,6 +52,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-agent-disabled',
     'branch-sync-fixer-unavailable',
     'branch-sync-resolution-invalid',
+    'branch-sync-verification-failed',
     'sdd-draft-size-exceeded',
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
@@ -88,6 +90,7 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'branch-sync-agent-disabled': Readonly<{ command: '/copilot sync-branch' }>;
     readonly 'branch-sync-fixer-unavailable': Readonly<{ command: '/copilot sync-branch' }>;
     readonly 'branch-sync-resolution-invalid': Readonly<{ validationCode: BranchSyncValidationCode; command: '/copilot sync-branch' }>;
+    readonly 'branch-sync-verification-failed': BranchSyncVerificationFailure;
     readonly 'sdd-draft-size-exceeded': Readonly<Record<string, never>>;
     readonly 'sdd-catalog-unsupported-profile': Readonly<Record<string, never>>;
     readonly 'sdd-catalog-format-invalid': Readonly<Record<string, never>>;
@@ -368,6 +371,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'branch-sync-agent-disabled': Object.freeze(['command']),
     'branch-sync-fixer-unavailable': Object.freeze(['command']),
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
+    'branch-sync-verification-failed': Object.freeze(['stage', 'reason', 'command', 'commandIndex', 'childSha', 'restoration']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
@@ -430,6 +434,9 @@ function normalizeApplicationErrorRecovery(
     if (recovery.id === 'branch-sync-resolution-invalid'
         && !BRANCH_SYNC_VALIDATION_CODES.some(code => code === variables.validationCode)) {
         throw new TypeError('Application error recovery synchronization validation code is invalid.');
+    }
+    if (recovery.id === 'branch-sync-verification-failed' && !isBranchSyncVerificationFailure(variables)) {
+        throw new TypeError('Branch synchronization verification diagnostic is invalid.');
     }
     if (recovery.id === 'closed-issue-reconciliation-failed'
         && (!CLOSED_ISSUE_RESULTS.some(value => value === variables.resultId)

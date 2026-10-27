@@ -53,6 +53,13 @@ async function prepareCleanAdapter(overrides: Record<string, Reply[]> = {}) {
 }
 
 describe("BranchSyncWorkspaceAdapter", () => {
+  it('does not report restoration when merge abort leaves a moved original head', async () => {
+    const context = await prepareCleanAdapter({'rev-parse HEAD':['child','moved']});
+    await expect(context.adapter.abort()).rejects.toThrow('restoration could not be verified');
+    expect(context.git.push).not.toHaveBeenCalled();
+    expect(context.execute).not.toHaveBeenCalledWith('git',['reset','--hard','child']);
+  });
+
   it.each(['generated bundle added', 'protected path disappeared', 'verification path added'] as const)(
     'reports only closed phase and counts for %s', async scenario => {
       const report = jest.spyOn(logging, 'logInfo').mockImplementation(() => undefined);
@@ -329,7 +336,7 @@ describe("BranchSyncWorkspaceAdapter", () => {
   it("aborts a failed merge without conflicts and detects remote races", async () => {
     const failed = createGit({
       [STATUS]: [""],
-      "rev-parse HEAD": ["child\n"],
+      "rev-parse HEAD": ["child\n", "child\n"],
       "rev-parse FETCH_HEAD": ["parent\n"],
       "merge-base --is-ancestor parent child": [new Error("not ancestor")],
       [MERGE]: [new Error("failed")],
@@ -341,7 +348,7 @@ describe("BranchSyncWorkspaceAdapter", () => {
 
     const raced = createGit({
       [STATUS]: ["", "M  src/a.ts\n"],
-      "rev-parse HEAD": ["child\n"],
+      "rev-parse HEAD": ["child\n", "child\n"],
       "rev-parse FETCH_HEAD": ["parent\n", "new-parent\n"],
       "merge-base --is-ancestor parent child": [new Error("not ancestor")],
       [UNRESOLVED]: [""],

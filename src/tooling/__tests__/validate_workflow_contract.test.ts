@@ -153,6 +153,16 @@ describe('workflow contract validator', () => {
     }
   });
 
+
+  it('provisions source runtimes without installing the default checkout dependency graph', () => {
+    const {file, workflow} = loadMutationWorkflow('.github/workflows', 'copilot_comment_runtime.yml');
+    const steps = workflow.jobs.copilot.steps;
+    expect(steps.some((step: {run?:string}) => /pnpm install/u.test(step.run ?? ''))).toBe(false);
+    expect(steps.find((step: {name?:string}) => step.name === 'Prepare repository pnpm')?.if).toBe("env.COPILOT_PREPARE_VERIFICATION == 'true'");
+    expect(() => validateWorkflow(file, workflow)).not.toThrow();
+    steps.splice(3,0,{name:'Install repository verification dependencies',if:"env.COPILOT_PREPARE_VERIFICATION == 'true'",run:'pnpm install --frozen-lockfile --ignore-scripts',shell:'bash'});
+    expect(() => validateWorkflow(file, workflow)).toThrow();
+  });
   it.each(['issue-managed-branches', 'pre-branch-sdd', 'verification-setup'])(
     'rejects a comment coordinator that omits or disables the installed %s policy', input => {
       const { file, workflow } = loadMutationWorkflow('.github/workflows', 'copilot_comment_runtime.yml');

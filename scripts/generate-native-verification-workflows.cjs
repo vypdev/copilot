@@ -77,7 +77,6 @@ function runtimeWorkflow() {
     { name: 'Checkout Repository', uses: 'actions/checkout@v5', with: { 'persist-credentials': false, 'fetch-depth': 0 } },
     { name: 'Prepare repository pnpm', if: preparation, uses: 'pnpm/action-setup@v5', with: { version: '10.12.4', standalone: false, dest: expr('runner.temp') + '/setup-pnpm-' + expr('github.run_id') + '-' + expr('github.run_attempt') + '-' + expr('github.job') } },
     { name: 'Prepare repository Node', if: preparation, uses: 'actions/setup-node@v7', with: { 'node-version': '24.x' } },
-    { name: 'Install repository verification dependencies', if: preparation, run: 'pnpm install --frozen-lockfile --ignore-scripts', shell: 'bash' },
     initial,
     ...phaseSteps(SELF_ACTION).map(step => ({ ...step, ...(step.with ? { with: inputs } : {}) })),
   ];
