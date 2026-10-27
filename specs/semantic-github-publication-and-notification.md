@@ -2243,7 +2243,7 @@ accepted unverified execution is never an acceptable fix.
 ## Branch advisory relationship authority — #723
 
 The [branch synchronization SDD](./branch-synchronization-and-conflict-recovery.md#authoritative-relationships-and-historical-advisory-repair--issue-723)
-owns the primary 56-case discovery/repair contract. Semantic publication keeps
+owns the primary 59-case discovery/repair contract. Semantic publication keeps
 one authoritative current pair; contextual issue mentions cannot publish another
 pair's status. At a verified eligible observation, historical bot-owned cards for
 other pairs are updated in place to neutral relationship-retired copy, preserving

@@ -36,7 +36,7 @@ describe('branch dependency authority (#723)', () => {
     expect(resolveOpenBranchDependencies([issue()], [pr()], 'ORG/REPO')).toHaveLength(1);
   });
   it('retains an explicitly linked repository branch with an open PR', () => {
-    expect(resolve([issue({linkedBranches:{nodes:[null,{ref:null},{ref:{name:'refs/heads/feature/one',repository:repo}}],pageInfo}})],
+    expect(resolve([issue({linkedBranches:{nodes:[null,{ref:null},{ref:{repository:repo}},{ref:{name:'feature/one',repository:repo}}],pageInfo}})],
       [pr({headRefName:'feature/one',closingIssuesReferences:{nodes:[null],pageInfo}})]))
       .toEqual([{...current,workingBranch:'feature/one'}]);
   });
@@ -106,4 +106,18 @@ describe('branch dependency authority (#723)', () => {
     expect(dependencyFromPullRequest(pr())).toEqual({issueNumber:81,parentBranch:'develop',workingBranch:'bugfix/80-input'});
     expect(dependencyFromPullRequest(pr(),90).issueNumber).toBe(90);
   });
+});
+
+
+it('withholds ambiguity between distinct native short names including a literal refs/heads prefix', () => {
+  expect(resolve([issue()], [pr({headRefName:'topic'}),pr({number:82,headRefName:'refs/heads/topic'})])).toEqual([]);
+});
+it('preserves a literal refs/heads prefix in a natively linked branch name', () => {
+  expect(resolve([issue({linkedBranches:{nodes:[{ref:{name:'refs/heads/topic',repository:repo}}],pageInfo}})], [
+    pr({headRefName:'topic',closingIssuesReferences:{nodes:[],pageInfo}}),
+    pr({number:82,headRefName:'refs/heads/topic',closingIssuesReferences:{nodes:[],pageInfo}}),
+  ])).toEqual([{...current,workingBranch:'refs/heads/topic'}]);
+});
+it('rejects the colon-bearing pairs from review instead of admitting them as Git branches', () => {
+  expect(resolve([issue()], [pr({baseRefName:'parent',headRefName:'child:topic'}),pr({number:82,baseRefName:'parent:child',headRefName:'topic'})])).toEqual([]);
 });

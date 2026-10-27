@@ -907,8 +907,11 @@ The observer MUST resolve at most one primary parent/working pair per issue:
    mentions, and textual closing keywords without a native link MUST NOT count.
 4. Malformed, unsupported, duplicate, partial or invalid durable declarations
    MUST withhold fallback, rather than let weaker evidence override authority.
-   Full `refs/heads/` names and surrounding whitespace are normalized; invalid
-   refs are rejected rather than repaired into another branch.
+   Full `refs/heads/` configuration values and surrounding whitespace are normalized;
+   native GitHub `name`/`headRefName`/`baseRefName` values remain exact short names,
+   including a literal `refs/heads/` prefix. Distinct native pairs MUST NOT collapse
+   after prefix removal or delimiter concatenation; pair keys serialize a tuple.
+   Invalid refs are rejected rather than repaired into another branch.
 5. Outer issue/PR inventories MUST be complete. Missing or repeated continuation
    cursors fail discovery before writes. A completed stream MUST stay completed
    while later pages of the other stream are fetched; re-querying its first page
@@ -1016,8 +1019,8 @@ command authorization, verification, branch protection, merge preparation and
 trusted publication remain unchanged. No consumer edits, repository variables,
 credentials, new flags, release, or default-runtime promotion are part of #723.
 
-Incremental floor: **56 distinct new cases**, conservatively counted by new test
-declarations rather than parameter rows: 17 dependency-policy cases beyond the
+Incremental floor: **59 distinct new cases**, conservatively counted by new test
+declarations rather than parameter rows: 20 dependency-policy cases beyond the
 six-case baseline; six repository/freshness cases; nine observer race/lifecycle
 cases; 23 historical repair/ownership/bounds/readback/partial/locale cases; one
 native closed-lifecycle convergence case. The modified existing adapter cases
@@ -1033,10 +1036,21 @@ workflow/spec/documentation, build/package checks and Graphify update are requir
 
 Update the branch-sync user guide and semantic-publication companion; catalog
 and communication-ledger evidence MUST remain current and nonduplicated. The
-56-case primary allocation belongs here; the communication ledger references
+59-case primary allocation belongs here; the communication ledger references
 its presentation subset rather than counting a second independent acceptance
 budget. Rollout occurs only when the consuming workflow actually uses the fixed
 runtime; merging to `develop` alone does not promote a `master`-pinned comment
 runtime. Rollback restores the prior coherent runtime but cannot restore retired
 wrong advice as current fact. Acceptance requires successful current-head remote
 review, all applicable checks and explicit complete Codecov patch coverage.
+
+
+Review follow-up (#748): the reported colon-bearing pair is invalid under
+[Git's ref rules](https://git-scm.com/docs/git-check-ref-format) and was already
+rejected by the branch validator. Three additional cases distinguish that premise
+from a reproduced native-name collision: `topic` and `refs/heads/topic` are distinct
+valid short names, but unconditional prefix removal had deduplicated them and
+could select the wrong linked branch. Both native-name regressions failed before
+the correction. Only durable configuration accepts full-ref notation; provider
+short names stay unchanged, and pair keys use JSON tuple serialization. Existing
+positive identical-pair deduplication and strict ambiguity tests remain required.

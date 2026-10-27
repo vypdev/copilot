@@ -74336,7 +74336,7 @@ function resolveOpenBranchDependencies(issues, pullRequests, repositoryFullName)
             const workingBranch = normalizeBranch(pr.headRefName);
             if ((!closesIssue && !linkedBranches.has(workingBranch)) || !parentBranch || !workingBranch || parentBranch === workingBranch)
                 continue;
-            candidates.set(`${parentBranch}:${workingBranch}`, { issueNumber: issue.number, parentBranch, workingBranch });
+            candidates.set(JSON.stringify([parentBranch, workingBranch]), { issueNumber: issue.number, parentBranch, workingBranch });
         }
         if (candidates.size === 1)
             dependencies.push([...candidates.values()][0]);
@@ -74357,8 +74357,8 @@ function configuredBranchDependency(issue) {
         const configuration = new config_1.Config(input);
         if (input.parentBranch === undefined && input.workingBranch === undefined)
             return { kind: 'absent' };
-        const parentBranch = normalizeBranch(configuration.parentBranch);
-        const workingBranch = normalizeBranch(configuration.workingBranch);
+        const parentBranch = normalizeBranch(configuration.parentBranch, true);
+        const workingBranch = normalizeBranch(configuration.workingBranch, true);
         if (!parentBranch || !workingBranch || parentBranch === workingBranch)
             return { kind: 'invalid' };
         return { kind: 'configured', dependency: { issueNumber: issue.number, parentBranch, workingBranch } };
@@ -74370,8 +74370,10 @@ function configuredBranchDependency(issue) {
 function dependencyFromPullRequest(pr, conversationNumber = pr.number) {
     return { issueNumber: conversationNumber, parentBranch: pr.baseRefName, workingBranch: pr.headRefName };
 }
-function normalizeBranch(value) {
-    const branch = value?.trim().replace(/^refs\/heads\//u, '');
+function normalizeBranch(value, fullRef = false) {
+    const raw = value?.trim();
+    // GitHub name/headRefName/baseRefName are already short names, even when they literally start with refs/heads/.
+    const branch = fullRef ? raw?.replace(/^refs\/heads\//u, '') : raw;
     // Git ref syntax, with a fixed metadata ceiling; never repair an invalid ref into a different branch.
     return branch && branch.length <= 1024
         && !/^(?:[-/.]|@$)|[\p{Cc}\s~^:?*[\\]|\.\.|@\{|\/\/|[/.]$|(?:^|\/)\.|\.lock(?:\/|$)/u.test(branch)
