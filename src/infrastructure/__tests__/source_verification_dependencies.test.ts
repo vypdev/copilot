@@ -44,7 +44,7 @@ it.each(['unavailable', 'corepack', 'candidate', 'platform'])('fails closed for 
     if (scenario === 'corepack') {writeFileSync(join(tool,'pnpm.js'),''); jest.mocked(executable.verificationExecutable).mockReturnValue(join(tool,'pnpm.js'));}
     if (scenario === 'candidate') {write('pnpm.cjs',''); jest.mocked(executable.verificationExecutable).mockReturnValue(join(root,'pnpm.cjs'));}
     const execute = jest.fn();
-    const preparation = captureSourceDependencyPreparation(metadata,root,execute,scenario === 'platform' ? 'win32' : 'linux');
+    const preparation = captureSourceDependencyPreparation(metadata,root,execute,scenario === 'platform' ? 'aix' : 'linux');
     await expect(preparation(env())).rejects.toMatchObject({reason:'tool-unavailable'});
     expect(execute).not.toHaveBeenCalled();
 });
@@ -107,9 +107,9 @@ it.each(['version', 'process', 'changed', 'cwd'])('withholds verification after 
 });
 
 it('runs the fixed child process with bounded suppressed output and handles a real failure', async () => {
-    await prepare()(env());
+    await captureSourceDependencyPreparation(metadata,root)(env());
     writeFileSync(join(tool,'pnpm.cjs'),'process.stderr.write("private registry secret"); process.exit(1)');
-    await expect(prepare()(env())).rejects.toMatchObject({reason:'install-failed'});
+    await expect(captureSourceDependencyPreparation(metadata,root)(env())).rejects.toMatchObject({reason:'install-failed'});
 });
 
 it.each(['clean','conflicted'])('reproduces default-root readiness versus a real %s candidate workspace', async scenario => {
@@ -194,4 +194,11 @@ it('rejects a provisioned package entry that resolves to a different wrapper typ
     symlinkSync(join(tool,'pnpm.js'),join(tool,'node_modules/pnpm/bin/pnpm.cjs'));
     jest.mocked(executable.verificationExecutable).mockReturnValue(join(home,'pnpm'));
     await expect(captureSourceDependencyPreparation({...metadata,PNPM_HOME:home},root,jest.fn(),'linux')(env())).rejects.toMatchObject({reason:'tool-unavailable'});
+});
+
+it.each(['linux','darwin','win32'] as const)('prepares the provisioned source tool on supported %s runners', async platform => {
+    const execute=jest.fn().mockResolvedValue('10.12.4');
+    await captureSourceDependencyPreparation(metadata,root,execute,platform)(env());
+    expect(execute).toHaveBeenCalledTimes(2);
+    expect(execute.mock.calls[1][1]).toContain('install');
 });

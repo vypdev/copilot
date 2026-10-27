@@ -741,7 +741,7 @@ The source coordinator MUST provision Node 24/pnpm 10.12.4 before the Action,
 and MAY retain a frozen script/hook-free default-checkout install solely to seed trusted build tools for the fixer. It MUST NOT treat that seed as candidate dependency readiness. Removing the seed would regress the existing requirement to regenerate admitted conflicting bundles with the offline build before trusted staging. The existing
 `prepare-source-verification` opt-in and `COPILOT_PREPARE_VERIFICATION` admission
 hint authorize only the fixed source preparation described here: exact repository
-`vypdev/copilot`, GitHub Actions, and its configured Linux source runner. They do
+`vypdev/copilot`, GitHub Actions, and a supported Linux, macOS or Windows source runner. The default source route remains Linux; configurable supported runner routes MUST retain dependency preparation. They do
 not grant command/mutation authority. Consumer repositories, direct CLI calls,
 read-only operations, aligned/dry-run branches and empty verification lists retain
 their existing behavior and MUST NOT acquire an inferred installer. Optional
@@ -835,7 +835,7 @@ reporting failure cannot undo or mislabel an already completed push.
 
 ### Test budget, documentation, acceptance, and rollout
 
-Incremental floor: **67 distinct cases**, counted only here: 47 source adapter/
+Incremental floor: **71 distinct cases**, counted only here: 51 source adapter/
 security/real-Git cases (including clean and fixed-conflict workspace transitions,
 version-probe directory, bounded descriptor changes, cache/path rejection and
 credential-free ordering); 13 closed diagnostic validation cases; 4 sync failure/

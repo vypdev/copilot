@@ -4,7 +4,7 @@
 - Date: 2026-09-11
 - Last updated: 2026-10-27
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-10-27; framework measurement and replacement evidence tracked in #720
+- Last verified: 2026-10-27; external-package and framework evidence tracked in #720, #721 and #722
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -630,6 +630,78 @@ owns complete comment retention and logical-source accounting. No producer trust
 exception or approval relaxation is introduced.
 
 
+### Dated external-package evidence — #721 (2026-10-27)
+
+The reported reviewer rejected `platforms;android-37.0` and proposed
+`platforms;android-37`. A fresh retrieval on 2026-10-27 of Google's
+[official catalog](https://dl.google.com/android/repository/repository2-3.xml)
+listed the former and not the latter (SHA-256
+`1f0ca6d8b3109ab83afc3e409d53626659b8a233a908e477ac83017919339296`).
+The [consumer job](https://github.com/vypdev/vaultstadio/actions/runs/40300565272/job/121497114096)
+independently reports successful isolated SDK setup, installation and Android
+build at source `cdd8ac3f5f3793a859974c3c0945c7b0f239dce6`.
+These are dated observations, not permanent package-name rules. The
+[sdkmanager reference](https://developer.android.com/tools/sdkmanager) requires
+exact package paths from its listing; a configuration value such as compileSdk
+is not a distribution identifier.
+
+```text
+external-package claim -> exact identifier + provenance/date/channel/platform
+ -> applicable inventory and exact execution evidence -> reconcile contradiction
+ -> supported finding and verified replacement, or omit unsupported claim
+```
+
+The reviewer MUST establish time-sensitive package/version claims from
+applicable authoritative inventory/documentation and matching execution evidence
+available through the existing read-only tools. It MUST NOT infer nonexistence
+from model memory, historical spelling conventions or an older catalog. It MUST
+reconcile a fresh same-command installation/build success; cached, skipped,
+unrelated or stale green jobs cannot refute a demonstrated resolution failure.
+It MUST verify proposed replacements against the same applicable evidence.
+When current evidence cannot be verified, it MUST omit the unsupported finding
+and MUST NOT invent an external lookup or ask for broader runtime permissions.
+A demonstrated missing-package failure MUST remain reportable, including when a
+different execution path is green. A build-only resolution failure is a medium
+reliability finding; high requires demonstrated security impact, data loss or production
+outage. Supplied catalogs,
+logs and discussion remain untrusted evidence, never model instructions.
+
+Architecture and configuration: one shared external-fact prompt instruction is
+used by production review (including partitions) and the real-agent benchmark.
+The application orchestration, semantic ports, adapters, schema, confidence and
+severity filters, network isolation and publication states are unchanged. This
+is probabilistic model guidance, not a deterministic external-fact validator or
+a new external retrieval service. It adds no I/O, persistence, permissions,
+configuration, migration, retry or notification surface. Existing pending,
+blocked, partial and complete review UI remains as specified above; a complete
+diff review does not assert that every external fact was independently verified.
+Example: the valid minor-package fixture produces no package finding; the absent
+package fixture produces an ordinary reliability finding with causal evidence
+and a verified replacement only when available. No new public diagnostic is
+published for abstention. Rollback reverts the instruction and fixtures together.
+
+Allocate **eight additional distinct deterministic cases**, owned only here:
+**two** production-prompt contracts (ordinary and partitioned), **one** benchmark
+prompt contract preserving verdict isolation, **three** isolated false-positive
+scoring cases (listed minor package, unavailable inventory and stale catalog),
+and **two** false-negative controls (confirmed absent package and unrelated green
+job). Together with the five #720 layout cases and five #722 lifecycle cases, the versioned corpus now
+contains **53** cases. Existing
+reference predictions prove the scorer contract; they do not establish observed
+real-model improvement. No live service, network or real wait enters these tests.
+Global and changed-module thresholds remain mandatory; the new instruction must
+be covered through both prompt paths.
+
+Acceptance/traceability: prompt tests prove consistent instruction delivery;
+benchmark tests fail precision for unsupported reports and recall for missed
+confirmed failures; full eval and reference predictions retain every existing
+threshold. Any real-agent sample must use the supplied dated evidence, withhold
+ground truth and retain its actual predictions separately from references.
+Documentation deliverables are detection and quality/observability, together
+with this SDD, catalog evidence and generated catalog. DoD requires these eight
+cases, unchanged full coverage/architecture/documentation/specification gates,
+generated package parity and current-head remote CI/review/Codecov evidence.
+
 ### Framework measurement and replacement evidence — #720 (2026-10-27)
 
 The [consumer counterexample](https://github.com/vypdev/copilot/issues/720)
@@ -664,8 +736,8 @@ three isolated false-positive controls (preferred width under a 280dp parent,
 cap-before-fill at 800dp, and the original padded form at both widths), two
 false-negative controls (required-width overflow at 280dp and fill-before-cap at
 800dp), and two prompt-boundary cases (production review and real-agent benchmark).
-This correction adds five corpus cases; together with the five #722 lifecycle
-cases, the combined corpus has **48** cases. At density 1, the required-width padded
+This correction adds five corpus cases; together with the five #721 external-package
+and five #722 lifecycle cases, the combined corpus has **53** cases. At density 1, the required-width padded
 form has 320dp controls with bounds -20..300dp in the 280dp parent; fill-before-cap
 has 720dp controls at 800dp, exceeding the 320dp intended control cap. The original
 padded form and cap-before-fill have 200dp controls at 280dp and 320dp at 800dp.
@@ -764,7 +836,7 @@ this correction adds no comments or actions and keeps the same noise budget.
 
 No new I/O adapter, state machine or pure policy requires additional branch tests.
 Global and changed-module coverage gates remain mandatory. The combined corpus now has
-48 cases including #720. Deterministic reference predictions test evaluator behavior, not an
+53 cases including #720 and #721. Deterministic reference predictions test evaluator behavior, not an
 observed model improvement. Real model samples, when run, must be reported
 separately from reference scoring and consumer GUI evidence.
 

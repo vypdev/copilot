@@ -41,9 +41,9 @@ export function captureSourceDependencyPreparation(
         } else {
             pnpm = realpathSync(verificationExecutable('pnpm', metadata as Record<string, string>));
         }
-        // Source callers provision pnpm/action-setup on Linux. No Corepack download,
+        // Source callers provision pnpm/action-setup on Linux, macOS or Windows. No Corepack download,
         // candidate node_modules tool, arbitrary shell wrapper or inferred consumer installer.
-        if (platform !== 'linux' || basename(pnpm) !== 'pnpm.cjs' || inside(root, pnpm)) throw new Error('unavailable');
+        if (!['linux', 'darwin', 'win32'].includes(platform) || basename(pnpm) !== 'pnpm.cjs' || inside(root, pnpm)) throw new Error('unavailable');
     } catch { return async () => { throw new SourceDependencyError('tool-unavailable'); }; }
     return async environment => {
         if (realpathSync(process.cwd()) !== root) throw new SourceDependencyError('candidate-changed');
