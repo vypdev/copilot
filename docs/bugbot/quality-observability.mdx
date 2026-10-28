@@ -214,8 +214,11 @@ The six #749 validation cases preserve the exact U+200B witness and supported
 plus-tag control, a complete caller guard and normalization-before-validation,
 paired with existential/ignored-result/late-normalization defects. One test
 symbolically traces the inert Kotlin source's empty-label rejection. Five controls
-execute statically authored TypeScript and assert actual persistence counts,
+execute five self-contained, statically declared TypeScript functions and record
+fake-save callback counts,
 including leading/trailing empty-label guards and unchanged supported values.
+The normalization control also reapplies the existing at-sign/whitespace guards
+to the transformed value; compatibility characters must not bypass them.
 Exact identity/text checks reject altered or executable-looking corpus data before
 selecting a native control. These are not consumer Kotlin, JVM, HTTP or database
 executions. All 71 earlier cases and their expected values remain unchanged.
@@ -228,3 +231,11 @@ precision/recall. No external-model measurement was performed for #749. The
 separates exact source, supplied external receipts, compiled local controls and
 those measurement limits. No statistical improvement or accuracy guarantee is
 claimed; genuine admitted-invalid-input defects remain required findings.
+
+The checked corpus source is transpiled only to compare it to the actual compiled
+function's source; the resulting string is never executed or imported. A mismatched
+native function rejects before invocation. Exact identity/text matching also binds
+the witness comments, whose Unicode values are passed verbatim to that function.
+This closes the initial candidate's separate kind-based modeling gap. The real
+static executor and comparison-only parser remain distinct from consumer runtime
+execution and actual model measurement.

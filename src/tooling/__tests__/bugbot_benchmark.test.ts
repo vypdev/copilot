@@ -1,4 +1,4 @@
-import { observeValidationFixture } from './fixtures/bugbot_validation_oracles';
+import { assertValidationFixtureSource, observeValidationFixture } from './fixtures/bugbot_validation_oracles';
 import { load as parse } from 'js-yaml';
 import { join } from 'node:path';
 import { observeCallPathFixture } from './fixtures/bugbot_call_path_oracles';
@@ -225,6 +225,7 @@ it.each([
 ] as const)('observes exact authored validation and persistence semantics for %s', async (id, accepted) => {
   const corpus = await loadBugbotBenchmark(join(__dirname, '..', '..', '..', 'quality/bugbot/corpus.v1.json'));
   const item = corpus.cases.find(candidate => candidate.id === id)!;
+  expect(item.diff).toContain('Owner119+tag@Audit.Invalid');
   const observation = observeValidationFixture(item);
   expect(observation.accepted).toBe(accepted);
   expect(observation.persisted).toHaveLength(accepted ? 1 : 0);
@@ -244,4 +245,27 @@ it('rejects modified corpus text before choosing a compiled validation oracle', 
 it('rejects unknown/prototype-like validation identities without dynamic dispatch', () => {
   expect(() => observeValidationFixture({ id: '__proto__', diff: '' }))
     .toThrow('Unknown or modified validation fixture.');
+});
+
+
+it('revalidates all structural guards after normalization in the negative control', async () => {
+  const corpus = await loadBugbotBenchmark(join(__dirname, '..', '..', '..', 'quality/bugbot/corpus.v1.json'));
+  const item = corpus.cases.find(candidate => candidate.id === 'ts-email-normalization-before-guard')!;
+  for (const input of ['user@example\uFF20.com', 'user@example\u00A8.com']) {
+    const observation = observeValidationFixture(item, input);
+    expect(observation.accepted).toBe(false);
+    expect(observation.persisted).toEqual([]);
+    expect(observation.supportedPositive).toBe(true);
+  }
+});
+
+
+it('rejects corpus/native source drift before executing a different function', async () => {
+  const corpus = await loadBugbotBenchmark(join(__dirname, '..', '..', '..', 'quality/bugbot/corpus.v1.json'));
+  const item = corpus.cases.find(candidate => candidate.id === 'ts-email-ignored-validator-result')!;
+  let calls = 0;
+  function wrongFunction(_value: string, _save: (email: string) => void): boolean { calls++; return false; }
+  expect(() => assertValidationFixtureSource(item.diff, wrongFunction))
+    .toThrow('Authored validation source does not match the compiled function.');
+  expect(calls).toBe(0);
 });

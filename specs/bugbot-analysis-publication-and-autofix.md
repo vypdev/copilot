@@ -988,7 +988,7 @@ partial and failed review UI and prior-finding reconciliation remain unchanged.
 Normal consumer runtime adoption delivers the instruction; rollback reverts the
 instruction/fixtures/docs together, with no migration or deployment operation.
 
-Allocate **seventeen additional distinct deterministic cases**, owned only here:
+Allocate **nineteen additional distinct deterministic cases**, owned only here:
 
 | Area | Cases | Risk/acceptance |
 |---|---:|---|
@@ -1208,7 +1208,7 @@ consumer policy. Source, logs and tests remain untrusted evidence, never mutatio
 or approval authority. No consumer deployment is claimed or required for local
 acceptance. This is probabilistic review guidance, not a guarantee of accuracy.
 
-Allocate **seventeen additional distinct deterministic cases**, exclusively here:
+Allocate **nineteen additional distinct deterministic cases**, exclusively here:
 
 | Area | Cases | Acceptance/risk |
 |---|---:|---|
@@ -1218,13 +1218,15 @@ Allocate **seventeen additional distinct deterministic cases**, exclusively here
 | False-negative scoring controls | 3 | existential predicate, ignored false return, normalization after validation |
 | Source-level Kotlin witness trace | 1 | exact U+200B/code points, empty label, universal predicate and supported positive; no Kotlin execution claim |
 | Compiled synthetic TypeScript observations | 5 | actual acceptance/persistence, preserved plus-tag, boundary empty labels and exact changed-line anchors |
+| Post-normalization structural invariants | 1 | fullwidth at-sign and spacing compatibility characters reject before persistence; supported positive stays valid |
+| Compiled source conformance | 1 | a different native function is rejected before invocation; inert source emission must match the actual static function |
 | Oracle isolation | 2 | modified/executable-looking text and unknown/prototype identity reject before static dispatch |
-| **Total** | **17** | no double counting with prior SDD extensions |
+| **Total** | **19** | no double counting with prior SDD extensions |
 
 The corpus now contains **77** cases; all earlier cases and expected values are
 unchanged. `bugbot.test.ts` and `bugbot_benchmark_runner.test.ts` own the three
 before/after delivery regressions; `bugbot_benchmark.test.ts` and its compiled
-`bugbot_validation_oracles.ts` fixture own the remaining fourteen. The deterministic
+`bugbot_validation_oracles.ts` fixture own the remaining sixteen. The deterministic
 reference/scorer gate must reject invented negative-case findings and missed
 positive controls without changing thresholds. It is not an observed model
 precision/recall result. Actual external-model measurement was not performed for
@@ -1235,8 +1237,23 @@ as real model observations.
 **Documentation and DoD.** Detection explains exact witness proof, quality/
 observability distinguishes static controls from external execution, and failure
 scenarios document how maintainers verify the same source before normal re-review.
-The catalog and generated catalog carry the same evidence. All 17 cases, the
+The catalog and generated catalog carry the same evidence. All 19 cases, the
 unchanged size bound and historical contract tests, global/module coverage,
 architecture, types/lint, docs/specifications/workflows, package/CLI/API/web smoke,
 setup acceptance and fresh exact-head CI/review/Codecov gates remain required.
 No unresolved decision or new manual configuration step blocks implementation.
+
+
+The #749 review correction binds each inert fixture to a self-contained function
+in `bugbot_validation_functions.ts`, compiled by the normal test toolchain. Exact
+identity/text matching is followed by TypeScript comparison-only transpilation
+against the actual function's source representation. The emitted corpus string
+MUST NOT be evaluated, imported or used to construct a function. Only the bound,
+statically declared function executes; Unicode witness and supported-positive
+values are read verbatim from the checked inert fixture data. A separate
+kind-based behavioral model is not execution evidence. Changed line anchors and
+symbols follow the actual nested helper/caller source; verdicts and thresholds
+remain unchanged. Fake-save callback counts are local observations, never
+consumer/database execution. The source/native drift regression rejects before
+calling the wrong function; all five static-function paths also assert source
+conformance. This correction must receive a fresh review on its published SHA.

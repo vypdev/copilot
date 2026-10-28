@@ -80,7 +80,7 @@
         "id": "ts-email-existential-label-defect-fault",
         "title": "An existential predicate admits an empty domain label",
         "file": "auth/register.ts",
-        "line": 4,
+        "line": 5,
         "severity": "low",
         "category": "correctness",
         "symbol": "valid",
@@ -96,7 +96,7 @@
         "line": 11,
         "severity": "medium",
         "category": "correctness",
-        "symbol": "register",
+        "symbol": "registerIgnoredResult",
         "codeSnippet": "valid(checked);",
         "confidence": 0.98
       }
@@ -109,7 +109,7 @@
         "line": 12,
         "severity": "medium",
         "category": "correctness",
-        "symbol": "register",
+        "symbol": "registerNormalizedLate",
         "codeSnippet": "const stored = domain.normalize('NFKC');",
         "confidence": 0.98
       }

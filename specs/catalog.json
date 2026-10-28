@@ -2134,7 +2134,8 @@
         "src/tooling/__tests__/bugbot_benchmark_runner.test.ts",
         "src/prompts/__tests__/bugbot.test.ts",
         "src/prompts/__tests__/bugbot_framework_semantics.test.ts",
-        "src/tooling/__tests__/fixtures/bugbot_validation_oracles.ts"
+        "src/tooling/__tests__/fixtures/bugbot_validation_oracles.ts",
+        "src/tooling/__tests__/fixtures/bugbot_validation_functions.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
