@@ -69,3 +69,15 @@ it('uses the production external-fact evidence contract without leaking verdicts
     expect(prompt).toContain('platforms;android-37.0');
     expect(prompt).not.toContain('Hidden ground truth title');
 });
+
+
+it('delivers the production dependency-type contract without exposing a verdict', () => {
+    const prompt = buildBugbotBenchmarkPrompt({ ...testCase, language: 'kotlin',
+        description: 'An exact resolved artifact and SQL fault receipt accompany the typed error handler.',
+        diff: '+catch (failure: SQLException) { return Left(DatabaseException(failure)); }',
+    });
+    expect(prompt).toContain('exact imported type, resolved coordinate/version and reviewed platform');
+    expect(prompt).toContain('cause containment is not inheritance');
+    expect(prompt).toContain('Preserve genuine uncaught-wrapper and swallowed-cancellation defects');
+    expect(prompt).not.toContain('Hidden ground truth title');
+});

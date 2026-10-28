@@ -2002,9 +2002,9 @@
       "id": "bugbot-analysis-and-autofix",
       "title": "Bugbot analysis, finding publication, and autofix",
       "status": "implemented",
-      "scope": "Select one canonical PR, exhaustively analyze its bounded diff partitions, publish stable findings atomically, and apply authorized verified fixes",
+      "scope": "Select one canonical PR, exhaustively analyze its bounded diff partitions with source/version-grounded dependency premises, publish stable findings atomically, and apply authorized verified fixes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-27",
+      "lastVerified": "2026-10-28",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md",
@@ -2080,7 +2080,8 @@
         "quality/bugbot/reference-predictions.v1.json",
         "src/tooling/bugbot_benchmark_runner.ts",
         "quality/bugbot/compose-720-observations.v1.json",
-        "quality/bugbot/evidence/issue-722.json"
+        "quality/bugbot/evidence/issue-722.json",
+        "quality/bugbot/evidence/issue-736.json"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",

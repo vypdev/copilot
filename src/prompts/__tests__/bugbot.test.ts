@@ -69,3 +69,22 @@ describe('external-fact evidence in review prompts', () => {
         expect(prompt).toContain('only blocks a build is a medium-severity reliability finding');
     });
 });
+
+
+describe('resolved dependency type evidence', () => {
+    it.each([false, true])('requires exact type and fault evidence with partitioned=%s', partitioned => {
+        const prompt = getBugbotPrompt({
+            projectContextInstruction: '', owner: 'org', repo: 'repo', headBranch: 'bugfix/736',
+            baseBranch: 'develop', issueNumber: '736', changeScopeInstruction: 'Inspect the changed error handler.',
+            ignoreBlock: '', previousBlock: '', coverageBlock: '', targetLocale: 'en-US',
+            ...(partitioned ? { partitionBlock: 'Review partition 1/2.', outputContractBlock: 'Return partition attestation.' } : {}),
+        });
+        expect(prompt).toContain('exact imported type, resolved coordinate/version and reviewed platform');
+        expect(prompt).toContain('version-matched source or actual artifact class hierarchy');
+        expect(prompt).toContain('cause containment is not inheritance');
+        expect(prompt).toContain('reconcile the actual fault path and its asserted result');
+        expect(prompt).toContain('A green mock, skipped test or another artifact is not counterevidence');
+        expect(prompt).toContain('Preserve genuine uncaught-wrapper and swallowed-cancellation defects');
+        expect(prompt).toContain('omit an unsupported inheritance finding');
+    });
+});

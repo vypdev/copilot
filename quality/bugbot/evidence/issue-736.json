@@ -1,0 +1,305 @@
+{
+  "schemaVersion": 1,
+  "issue": "https://github.com/vypdev/copilot/issues/736",
+  "date": "2026-10-28",
+  "sourceBase": "cc8b5cc0cc39c99e8046d53660772b1a83eaeb71",
+  "runtime": {
+    "provider": "codex",
+    "modelProvider": "openai",
+    "model": "gpt-6-luna",
+    "cli": "0.164.0-alpha.11.1",
+    "node": "v24.20.0",
+    "configuration": "Product default findings configuration; no environment, model or effort overrides."
+  },
+  "isolation": "Existing product benchmark FindingsQueryPort in an empty local Git fixture. Expected arrays are excluded by the prompt builder; no corpus, ground-truth or source files were copied into that workspace. Workspace remained .git only. No consumer or database was executed.",
+  "command": "node <compiled-cli> bugbot-benchmark --corpus <selected-six-cases.json> --predictions <observed-predictions.json>",
+  "corpus": {
+    "schemaVersion": 1,
+    "cases": [
+      {
+        "language": "kotlin",
+        "file": "storage/ReadRows.kt",
+        "startLine": 1,
+        "id": "kt-resolved-sql-subclass",
+        "category": "negative",
+        "description": "Controlled source-evidence fixture, not a live consumer execution. Resolved coordinate org.jetbrains.exposed:exposed-core:1.0.0, imported org.jetbrains.exposed.v1.exceptions.ExposedSQLException. Version-matched official source https://github.com/JetBrains/Exposed/blob/395c3b9b39814faa6faccf9b7a63305ed8ef5f25/exposed-core/src/main/kotlin/org/jetbrains/exposed/v1/core/Exceptions.kt declares ExposedSQLException : java.sql.SQLException(cause). The reported resolved JAR SHA256 is 4e6b44f76b5dc69bb611d64474f2a34ac444e4ec156a96ac8cdcccda3b2a0b7a; a supplied same-artifact javap signature states extends java.sql.SQLException. driver.selectRows uses that exact JDBC dependency. A synthetic matching real-database fault receipt for this function returns Left(DatabaseException) retaining the actual wrapper/cause; cancellation propagates. The diff preserves the typed SQL catch. Do not infer guarantees about other versions or similarly named types.",
+        "diff": " import java.sql.SQLException\n+suspend fun readRows(): Either<DatabaseException, List<Row>> = try {\n+    Either.Right(driver.selectRows())\n+} catch (failure: SQLException) {\n+    Either.Left(DatabaseException(\"read failed\", failure))\n+}",
+        "expected": []
+      },
+      {
+        "language": "kotlin",
+        "file": "storage/ReadRows.kt",
+        "startLine": 1,
+        "id": "jvm-type-hierarchy-unavailable",
+        "category": "negative",
+        "description": "The application maps actual SQLExceptions to DatabaseException. A report alleges that the driver wrapper is not a SQLException, but there is no resolved dependency/version, wrapper source or bytecode, failed execution or authoritative inheritance evidence available in the allowed read-only context. The driver may use a subtype; its hierarchy is unknown. There is no demonstrated uncaught error. Review the changed SQL mapping without inventing a lookup, class relationship or executed test.",
+        "diff": " import java.sql.SQLException\n+suspend fun readRows(): Either<DatabaseException, List<Row>> = try {\n+    Either.Right(driver.selectRows())\n+} catch (failure: SQLException) {\n+    Either.Left(DatabaseException(\"read failed\", failure))\n+}",
+        "expected": []
+      },
+      {
+        "language": "kotlin",
+        "file": "storage/ReadRows.kt",
+        "startLine": 1,
+        "id": "jvm-current-contract-over-stale-docs",
+        "category": "negative",
+        "description": "Synthetic dependency example.db:jdbc:2.4.0 is resolved for this exact JVM target. Its current source and bytecode declare example.db.SqlFailure extends java.sql.SQLException. driver.selectRows uses that exact type for SQL failures. An older 2.3.0 document described a RuntimeException wrapper; it is not the reviewed artifact. A matching current-version fault receipt invokes this function and returns Left(DatabaseException) with the wrapper/cause retained. Cancellation is not caught.",
+        "diff": " import java.sql.SQLException\n+suspend fun readRows(): Either<DatabaseException, List<Row>> = try {\n+    Either.Right(driver.selectRows())\n+} catch (failure: SQLException) {\n+    Either.Left(DatabaseException(\"read failed\", failure))\n+}",
+        "expected": []
+      },
+      {
+        "language": "kotlin",
+        "file": "storage/ReadRows.kt",
+        "startLine": 1,
+        "id": "jvm-unrelated-runtime-wrapper",
+        "category": "correctness",
+        "description": "Synthetic resolved dependency example.db:jdbc:3.0.0 declares example.db.SqlFailure extends java.lang.RuntimeException and wraps a SQLException as its cause. It has no SQLException superclass. driver.selectRows actually throws SqlFailure on a reachable duplicate-key database fault. This public API promises Either.Left(DatabaseException) on that fault; its caller does not catch an escaping wrapper. A cause relationship does not make the outer exception assignable to SQLException.",
+        "diff": " import java.sql.SQLException\n+suspend fun readRows(): Either<DatabaseException, List<Row>> = try {\n+    Either.Right(driver.selectRows())\n+} catch (failure: SQLException) {\n+    Either.Left(DatabaseException(\"read failed\", failure))\n+}",
+        "expected": [
+          {
+            "id": "uncaught-driver-wrapper",
+            "title": "The resolved driver wrapper escapes the typed SQL mapping",
+            "file": "storage/ReadRows.kt",
+            "line": 4,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "} catch (failure: SQLException) {"
+          }
+        ]
+      },
+      {
+        "language": "kotlin",
+        "file": "storage/ReadRows.kt",
+        "startLine": 1,
+        "id": "jvm-passing-mock-not-counterevidence",
+        "category": "correctness",
+        "description": "Synthetic resolved dependency example.db:jdbc:3.0.0 declares example.db.SqlFailure extends java.lang.RuntimeException, not SQLException. The real driver.selectRows throws that wrapper on SQL failure, and callers require Either.Left rather than an exception. A passing unit test mocks driver.selectRows to throw a plain SQLException instead; no test executed the production wrapper path. The green mock test does not contradict the actual uncaught runtime type.",
+        "diff": " import java.sql.SQLException\n+suspend fun readRows(): Either<DatabaseException, List<Row>> = try {\n+    Either.Right(driver.selectRows())\n+} catch (failure: SQLException) {\n+    Either.Left(DatabaseException(\"read failed\", failure))\n+}",
+        "expected": [
+          {
+            "id": "uncaught-driver-wrapper",
+            "title": "The production wrapper is not handled by the mock-covered catch",
+            "file": "storage/ReadRows.kt",
+            "line": 4,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "} catch (failure: SQLException) {"
+          }
+        ]
+      },
+      {
+        "language": "kotlin",
+        "file": "storage/ReadRows.kt",
+        "startLine": 1,
+        "id": "kt-broad-catch-swallows-cancellation",
+        "category": "correctness",
+        "description": "The resolved JDBC driver uses a SQLException subtype, which the original narrow catch already maps. This suspend function may receive kotlin.coroutines.cancellation.CancellationException while waiting in selectRows, and callers require that cancellation propagate. No other cancellation guard exists. The change broadens the catch to Throwable solely to catch the SQL wrapper, so the added broad branch now converts cancellation into an ordinary DatabaseException result.",
+        "diff": " import java.sql.SQLException\n suspend fun readRows(): Either<DatabaseException, List<Row>> = try {\n     Either.Right(driver.selectRows())\n-} catch (failure: SQLException) {\n+} catch (failure: Throwable) {\n     Either.Left(DatabaseException(\"read failed\", failure))\n }",
+        "expected": [
+          {
+            "id": "swallowed-cancellation",
+            "title": "The broader catch converts cancellation to a database failure",
+            "file": "storage/ReadRows.kt",
+            "line": 4,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "} catch (failure: Throwable) {"
+          }
+        ]
+      }
+    ]
+  },
+  "corpusSha256": "1091852b02f406426de932eda0386b35c9ad73107184ce20c10eacbdf9d4af7c",
+  "identities": {
+    "oldBundleSha256": "5718c90e58d9846aa1c00bedd0e59ad98059b8163beb798daf75118c91a021db",
+    "newBundleSha256": "9b42e1ca6bb48865e6914a697c5f5d1c91e8a7ac61e4d655df66b44347e23333",
+    "oldPromptSourceSha256": "f5edcccc6d77299dd2e7651c1fbbac2bb380e47b0c0292b772e105b47c913960",
+    "newPromptSourceSha256": "72bff0942c8384f827e6defabba3c5777c7e439ee4820718d64bb8f22ae8d060"
+  },
+  "observations": [
+    {
+      "id": "before",
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "kt-resolved-sql-subclass": [],
+          "jvm-type-hierarchy-unavailable": [],
+          "jvm-current-contract-over-stale-docs": [],
+          "jvm-unrelated-runtime-wrapper": [
+            {
+              "id": "storage/ReadRows.kt:2:uncaught-sqlfailure",
+              "title": "The database wrapper exception escapes the API",
+              "description": "The driver throws `SqlFailure` for the described duplicate-key fault. Because `SqlFailure` extends `RuntimeException` and only wraps a `SQLException` as its cause, it is not caught by `catch (failure: SQLException)`. The wrapper therefore escapes instead of returning `Either.Left(DatabaseException)` as promised.",
+              "file": "storage/ReadRows.kt",
+              "line": 2,
+              "endLine": 2,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The changed handler catches `SQLException`, while the scenario states that `driver.selectRows()` throws `example.db.SqlFailure`, which has no `SQLException` superclass.",
+              "suggestion": "Catch the driver's `SqlFailure` type and use it as the cause when constructing `DatabaseException`.",
+              "symbol": "readRows",
+              "codeSnippet": "} catch (failure: SQLException) {\n    Either.Left(DatabaseException(\"read failed\", failure))\n}",
+              "suggestedCode": "} catch (failure: SqlFailure) {\n    Either.Left(DatabaseException(\"read failed\", failure))\n}",
+              "fingerprint": "fp-7bd916c0",
+              "semanticFingerprint": "sf-8bb76a11"
+            }
+          ],
+          "jvm-passing-mock-not-counterevidence": [
+            {
+              "id": "storage/ReadRows.kt:4:uncaught-driver-failure",
+              "title": "Driver wrapper failures escape the Either result",
+              "description": "The catch handles only `SQLException`, but the resolved driver declares and throws `example.db.SqlFailure`, which extends `RuntimeException`. When `selectRows()` fails through the production path, that exception bypasses the catch and `readRows()` throws instead of returning `Either.Left`.",
+              "file": "storage/ReadRows.kt",
+              "line": 4,
+              "endLine": 4,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The scenario specifies that `driver.selectRows()` throws `SqlFailure`, a `RuntimeException`, on SQL failure. The catch clause catches only `SQLException`; the passing mock test throws a different exception type and does not exercise this path.",
+              "suggestion": "Catch the driver's `SqlFailure` type (or another appropriate common type that covers its documented failures) and convert it to `Either.Left`.",
+              "symbol": "readRows",
+              "codeSnippet": "} catch (failure: SQLException) {",
+              "fingerprint": "fp-e3bedd17",
+              "semanticFingerprint": "sf-90ad1723"
+            }
+          ],
+          "kt-broad-catch-swallows-cancellation": [
+            {
+              "id": "storage/ReadRows.kt:4:catches-cancellation",
+              "title": "Broad catch converts coroutine cancellation into a database error",
+              "description": "`selectRows()` may throw `CancellationException` while suspended. Catching `Throwable` wraps it in `DatabaseException` and returns `Either.Left`, so callers cannot observe cancellation and may continue work after cancellation was requested. The prior `SQLException` catch already covers the described SQL wrapper.",
+              "file": "storage/ReadRows.kt",
+              "line": 4,
+              "endLine": 4,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The changed catch handles every `Throwable`, and the scenario states that `selectRows()` may receive `CancellationException` and that no other cancellation guard exists.",
+              "suggestion": "Catch the SQL exception type needed for the wrapper, or rethrow `CancellationException` before mapping other failures.",
+              "symbol": "readRows",
+              "codeSnippet": "} catch (failure: Throwable) {",
+              "suggestedCode": "} catch (failure: CancellationException) {\n    throw failure\n} catch (failure: Throwable) {",
+              "fingerprint": "fp-3b0e253d",
+              "semanticFingerprint": "sf-fd174c48"
+            }
+          ]
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 3,
+          "actual": 3,
+          "matched": 3,
+          "precision": 1,
+          "recall": 1,
+          "locationAccuracy": 0.6666666666666666,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "meanLineDistance": 0.6666666666666666,
+          "confidenceBrierScore": 6.666666666666679e-05
+        },
+        "violations": [
+          "locationAccuracy 0.667 is below 0.800"
+        ],
+        "missingCases": []
+      }
+    },
+    {
+      "id": "after",
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "kt-resolved-sql-subclass": [],
+          "jvm-type-hierarchy-unavailable": [],
+          "jvm-current-contract-over-stale-docs": [],
+          "jvm-unrelated-runtime-wrapper": [
+            {
+              "id": "storage/ReadRows.kt:4:wrong-exception-caught",
+              "title": "Catch the exception the driver actually throws",
+              "description": "On the reachable duplicate-key fault, `driver.selectRows()` throws `example.db.SqlFailure`, which extends `RuntimeException` and wraps a `SQLException` as its cause. Catching `SQLException` does not catch that wrapper, so it escapes this public API instead of producing the promised `Either.Left(DatabaseException)`.",
+              "file": "storage/ReadRows.kt",
+              "line": 4,
+              "endLine": 4,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The supplied scenario states that the resolved `example.db:jdbc:3.0.0` artifact throws `SqlFailure` on this fault and that the caller does not catch it. The catch clause tests the outer exception type, not its cause.",
+              "suggestion": "Catch `example.db.SqlFailure` (or an appropriate common type that includes it) and wrap it in `DatabaseException`.",
+              "symbol": "readRows",
+              "codeSnippet": "} catch (failure: SQLException) {",
+              "fingerprint": "fp-798d5b9b",
+              "semanticFingerprint": "sf-90ad1723"
+            }
+          ],
+          "jvm-passing-mock-not-counterevidence": [
+            {
+              "id": "storage/ReadRows.kt:4:sqlfailure-uncaught",
+              "title": "Driver SQL failures bypass the catch",
+              "description": "The resolved JDBC driver throws `example.db.SqlFailure` on SQL failure, and that type extends `RuntimeException`, not `SQLException`. As a result, this catch does not handle the production failure path, so `readRows()` throws instead of returning `Either.Left` as callers require. The passing mock test throws a plain `SQLException` and does not exercise this wrapper.",
+              "file": "storage/ReadRows.kt",
+              "line": 4,
+              "endLine": 4,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The supplied scenario states that `driver.selectRows()` throws `example.db.SqlFailure`, which extends `RuntimeException` rather than `SQLException`; the changed catch handles only `SQLException`.",
+              "suggestion": "Catch the driver's actual failure type and convert it to `Either.Left`, while preserving cancellation and unexpected failures if applicable.",
+              "symbol": "readRows",
+              "codeSnippet": "} catch (failure: SQLException) {",
+              "fingerprint": "fp-498f5402",
+              "semanticFingerprint": "sf-90ad1723"
+            }
+          ],
+          "kt-broad-catch-swallows-cancellation": [
+            {
+              "id": "storage/ReadRows.kt:4:catch-swallows-cancellation",
+              "title": "Broad catch converts cancellation into a database error",
+              "description": "The broadened `catch (failure: Throwable)` also catches `CancellationException` thrown while `driver.selectRows()` is suspended. Returning `Either.Left` makes cancellation an ordinary result, so callers cannot observe or propagate cancellation as required.",
+              "file": "storage/ReadRows.kt",
+              "line": 4,
+              "endLine": 4,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The changed catch handles every `Throwable`, and the scenario states that `selectRows` may throw `CancellationException` while waiting and that callers require it to propagate.",
+              "suggestion": "Rethrow cancellation before mapping other failures to `DatabaseException`.",
+              "symbol": "readRows",
+              "codeSnippet": "} catch (failure: Throwable) {\n    Either.Left(DatabaseException(\"read failed\", failure))",
+              "suggestedCode": "} catch (failure: CancellationException) {\n    throw failure\n} catch (failure: Throwable) {\n    Either.Left(DatabaseException(\"read failed\", failure))",
+              "fingerprint": "fp-2f008abb",
+              "semanticFingerprint": "sf-63e6ea8b"
+            }
+          ]
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 3,
+          "actual": 3,
+          "matched": 3,
+          "precision": 1,
+          "recall": 1,
+          "locationAccuracy": 1,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "meanLineDistance": 0,
+          "confidenceBrierScore": 3.3333333333333396e-05
+        },
+        "violations": [],
+        "missingCases": []
+      }
+    }
+  ],
+  "limits": [
+    "The reported consumer false positive was not reproduced by this small baseline sample: both runs classified all six scenarios correctly.",
+    "The baseline missed the strict exact-location threshold for one positive control; the corrected sample passed every default threshold. Ground truth and scoring rules were unchanged between runs.",
+    "These are single runs, not a statistical experiment or a guarantee about future reviews. The failing-before deterministic tests prove the earlier prompt lacked this explicit type contract.",
+    "Official version-matched source corroborates the issue; the issue retains separate JAR and PostgreSQL receipts that were not rerun here. Checked-in reference predictions remain distinct from observed model outputs."
+  ]
+}

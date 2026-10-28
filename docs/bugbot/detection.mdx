@@ -331,3 +331,18 @@ section exhaustion still makes the overall review partial, even when the diff
 analysis completed with no findings. Inspect **Incomplete coverage** before
 calling that review complete. Approval and protected-path requirements remain
 unchanged; retaining a report does not authorize a merge.
+
+
+## Dependency types and error handlers
+
+Before claiming that a dependency exception escapes a typed catch, Bugbot checks
+the exact imported type, resolved coordinate/version and platform against
+version-matched source or actual artifact hierarchy. A wrapped cause is not the
+same as inheritance. It reconciles the actual fault path and asserted result;
+a green mock, skipped test or another artifact is not proof that the production
+wrapper is handled. An already caught subtype does not justify a broader catch.
+Genuine uncaught wrappers and cancellation swallowed by a broad catch remain
+reportable. If the type premise cannot be verified with existing read-only tools,
+the reviewer omits that unsupported claim. This is model guidance, with no new
+permissions, resolver service, project exception or guarantee of accuracy. See
+[quality and observability](/bugbot/quality-observability) for the paired controls.
