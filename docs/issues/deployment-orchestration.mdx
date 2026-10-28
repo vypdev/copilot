@@ -631,7 +631,12 @@ candidate was prepared. Ordinary `prepare` still rejects a moved source SHA.
 3. Install compatible workflows and runtime first. In a generated consumer
    workflow, configure `Complete fresh replacement verification` to execute all
    project version/build/test/coverage/package/smoke checks and registry-vacancy
-   checks. Its supplied failing placeholder blocks replacement until configured.
+   checks. Generated templates initially omit `replace` from the mode choices and
+   set the workflow-owned validation literal `REPLACEMENT_ENABLED: 'false'`.
+   After replacing the failing verifier with the complete project checks, set that
+   literal to `'true'` and add `replace` to the mode choices in the reviewed
+   workflow. These are workflow edits, not dispatch/issue inputs or a repository
+   Variable. Invalid activation still cannot bypass the verifier or identity proof.
    Keep the named guard/verification/identity steps and their direct dependencies;
    the native adapter verifies those steps in this exact run attempt.
 4. Dispatch the installed release/hotfix workflow on the reviewed managed ref,
@@ -645,7 +650,11 @@ gh workflow run release_workflow.yml --ref release/1.5.2 \
   -f source-sha=<full-reviewed-corrected-sha> -f confirm-unpublished=true
 ```
 
-The fixed hosted read-only preflight validates native launcher/closed PR/ref/run
+The fixed hosted read-only preflight loads this repository's helper from
+`github.workflow_sha`, the GitHub-provided workflow commit. The supplied
+`source-sha` is inspection data; it never selects code receiving the product token.
+Consumer templates use the released standalone subaction independently of their
+candidate checkout. Preflight validates native launcher/closed PR/ref/run
 identity, bounded state and version vacancy **before** project preparation can
 change files. The automatic token has only read permissions in that job. The
 existing product token supplies native reads, with no agent/planner or state-save
@@ -658,6 +667,8 @@ predecessor. A proof is emitted only for a clean local commit matching the nativ
 managed branch after its normal push. The final promotion job verifies successful
 native preflight and producer steps from the exact run/attempt, then rereads source,
 production base, old promotion and durable revision before saving a new operation.
+Each path performs one complete native inspection. After inventory/producer reads,
+the adapter rechecks the two pinned refs; drift blocks before persistence.
 The version, origin, branch, locale and policy remain the same.
 
 ```text

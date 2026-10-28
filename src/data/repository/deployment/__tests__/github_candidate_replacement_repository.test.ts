@@ -290,3 +290,15 @@ it('reads hotfix ownership and literal native labels through the same strict sna
 it('refuses missing native PR body without inventing a managed marker', async () => {
   const value = harness(); (value.pr as any).body = undefined; await expect(value.repository.inspect(command)).rejects.toMatchObject({ code: 'provider.contract-invalid' });
 });
+
+it.each(['source', 'production'])('rejects %s ref movement during the bounded inventory before returning authority', async side => {
+  const value = harness(); const original = value.request.getMockImplementation()!; let reads = 0;
+  value.request.mockImplementation(async (route, parameters) => {
+    const response = await original(route, parameters);
+    const target = side === 'source' ? `heads/${command.sourceBranch}` : `heads/${command.productionBranch}`;
+    if (route.endsWith('/git/ref/{ref}') && parameters.ref === target && ++reads === 2) return { data: { object: { type: 'commit', sha: 'f'.repeat(40) } } };
+    return response;
+  });
+  await expect(value.repository.inspect(command)).rejects.toMatchObject({ code: 'workflow.stale' });
+  expect(reads).toBe(2);
+});

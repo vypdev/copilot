@@ -9,9 +9,10 @@ function assertReplacementContract(file, workflow) {
   const fail = message => { throw new Error(`${file} candidate replacement ${message}.`); };
   const jobs = workflow.jobs; const compiled = !!jobs['prepare-compiled-files']; const setup = file.startsWith('setup/');
   const inputs = workflow.on.workflow_dispatch.inputs;
-  if (JSON.stringify(inputs.mode?.options) !== JSON.stringify(['prepare', 'replace', 'publish', 'resume'])
+  if (JSON.stringify(inputs.mode?.options) !== JSON.stringify(setup ? ['prepare', 'publish', 'resume'] : ['prepare', 'replace', 'publish', 'resume'])
     || inputs['confirm-unpublished']?.type !== 'boolean' || inputs['confirm-unpublished']?.default !== false
-    || !inputs['expected-revision'] || !inputs['source-sha']) fail('requires explicit bounded workflow inputs');
+    || !inputs['expected-revision'] || !inputs['source-sha']
+    || jobs.validate.steps[0].env.REPLACEMENT_ENABLED !== (setup ? 'false' : 'true')) fail('requires explicit bounded workflow inputs');
   const preflight = jobs['candidate-preflight'];
   if (!preflight || preflight.name !== 'Inspect unpublished candidate replacement' || preflight.if !== "${{ inputs.mode == 'replace' }}"
     || preflight.needs !== 'validate' || preflight['runs-on'] !== 'ubuntu-latest' || preflight['timeout-minutes'] !== 5
@@ -26,7 +27,7 @@ function assertReplacementContract(file, workflow) {
     || inspect.uses !== (setup ? 'vypdev/copilot/deployment-recovery@v3' : './deployment-recovery')
     || JSON.stringify(inspect.with) !== JSON.stringify(expectedInputs)
     || steps.some(step => step.if !== undefined || step.run !== undefined || step.env !== undefined || Object.hasOwn(step, 'continue-on-error'))
-    || (!setup && (steps[0].uses !== 'actions/checkout@v5' || steps[0].with?.ref !== '${{ inputs.source-sha }}' || steps[0].with?.['persist-credentials'] !== false))) fail('must bind the standalone read-only entrypoint to native intent');
+    || (!setup && (steps[0].uses !== 'actions/checkout@v5' || steps[0].with?.ref !== '${{ github.workflow_sha }}' || steps[0].with?.['persist-credentials'] !== false))) fail('must bind the standalone read-only entrypoint to native intent');
   const outputKeys = ['mode', 'source-branch', 'candidate-sha', 'production-base-sha', 'operation-id', 'expected-revision'];
   if (Object.keys(preflight.outputs ?? {}).length !== outputKeys.length || outputKeys.some(key => preflight.outputs[key] !== '${{ steps.inspect.outputs.' + key + ' }}')) fail('must expose only native preflight proofs');
   const last = compiled ? 'prepare-compiled-files' : 'prepare-version-files';

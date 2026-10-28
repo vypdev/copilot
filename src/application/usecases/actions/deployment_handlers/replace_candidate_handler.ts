@@ -40,8 +40,8 @@ export class ReplaceCandidateHandler {
     }
     const stateProblem = assessDeploymentCandidateReplacementState(previous, request);
     if (stateProblem) return blocked(stateProblem);
-    await this.requireNativeAuthority(context, previous, request);
-    // Reread native source/base/PR/effects immediately before the revision-fenced write.
+    // Full authority is inspected once after preparation; the adapter rechecks refs
+    // after its inventory reads, immediately before this revision-fenced write.
     await this.requireNativeAuthority(context, previous, request);
     const current = buildReplacementDeploymentCandidate(previous, request, this.runtime.dependencies.operationId());
     try {

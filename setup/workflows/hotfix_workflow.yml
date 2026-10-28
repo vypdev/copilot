@@ -8,7 +8,8 @@ on:
         required: true
         default: prepare
         type: choice
-        options: [prepare, replace, publish, resume]
+        # Add replace only after configuring the complete project verifier and enabling it below.
+        options: [prepare, publish, resume]
       operation-id:
         description: 'Internal durable operation identifier'
         required: false
@@ -66,6 +67,8 @@ jobs:
           EXPECTED_REVISION: ${{ inputs.expected-revision }}
           SOURCE_SHA: ${{ inputs.source-sha }}
           CONFIRM_UNPUBLISHED: ${{ inputs.confirm-unpublished }}
+          # Workflow-owned opt-in; never supplied by an issue or dispatch input.
+          REPLACEMENT_ENABLED: 'false'
         with:
           script: |
             const mode = process.env.MODE;
@@ -87,6 +90,7 @@ jobs:
               if (!title || title.length > 1000) errors.push('Title must contain 1-1000 characters.');
               if (!changelog || changelog.length > 50000) errors.push('Changelog must contain 1-50000 characters.');
             } else if (mode === 'replace') {
+              if (process.env.REPLACEMENT_ENABLED !== 'true') errors.push('Candidate replacement is disabled. Configure the complete project verifier, enable it in this workflow and then add replace to the choices.');
               if (!/^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(operationId)) errors.push('Operation ID is invalid.');
               if (!/^[1-9][0-9]*$/.test(revisionText) || !Number.isSafeInteger(revision) || revision < 1 || revision >= Number.MAX_SAFE_INTEGER) errors.push('Replacement revision is invalid.');
               if (!/^[a-f0-9]{40}$/.test(sourceSha)) errors.push('Replacement source must be a full reviewed SHA.');

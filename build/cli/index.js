@@ -56946,8 +56946,8 @@ class ReplaceCandidateHandler {
         const stateProblem = (0, deployment_candidate_replacement_1.assessDeploymentCandidateReplacementState)(previous, request);
         if (stateProblem)
             return blocked(stateProblem);
-        await this.requireNativeAuthority(context, previous, request);
-        // Reread native source/base/PR/effects immediately before the revision-fenced write.
+        // Full authority is inspected once after preparation; the adapter rechecks refs
+        // after its inventory reads, immediately before this revision-fenced write.
         await this.requireNativeAuthority(context, previous, request);
         const current = (0, deployment_candidate_replacement_1.buildReplacementDeploymentCandidate)(previous, request, this.runtime.dependencies.operationId());
         try {
@@ -84759,6 +84759,15 @@ class GithubCandidateReplacementRepository {
                 publicationVacant(client, parameters, `v${command.version}`),
                 queuedPromotion(client, promotion.nodeId),
             ]);
+            // Inventory and producer reads may take time. Recheck only the pinned refs,
+            // rather than repeating the complete inspection and publication inventory.
+            const [finalSourceSha, finalProductionSha] = await Promise.all([
+                branchSha(client, parameters, command.sourceBranch),
+                branchSha(client, parameters, command.productionBranch),
+            ]);
+            if (finalSourceSha !== sourceSha || finalProductionSha !== productionSha) {
+                throw new application_error_1.ApplicationError('workflow.stale', 'Native source or production changed during candidate inspection. Existing deployment state was retained.');
+            }
             return Object.freeze({ launcher: Object.freeze({ open: launcher.open, operationId: launcher.operation.operationId,
                     revision: launcher.operation.revision, kind: launcher.kind, sourceBranch: launcher.sourceBranch }), sourceSha, productionSha, oldSourceReachable, reviewedSourceReachable, oldSourceInProduction,
                 closedPromotionHeadReachable, conflictingOpenPromotion, nativePublicationVacant,

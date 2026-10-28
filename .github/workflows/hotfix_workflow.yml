@@ -70,6 +70,8 @@ jobs:
           EXPECTED_REVISION: ${{ inputs.expected-revision }}
           SOURCE_SHA: ${{ inputs.source-sha }}
           CONFIRM_UNPUBLISHED: ${{ inputs.confirm-unpublished }}
+          # Workflow-owned opt-in; never supplied by an issue or dispatch input.
+          REPLACEMENT_ENABLED: 'true'
         with:
           script: |
             const mode = process.env.MODE;
@@ -91,6 +93,7 @@ jobs:
               if (!title || title.length > 1000) errors.push('Title must contain 1-1000 characters.');
               if (!changelog || changelog.length > 50000) errors.push('Changelog must contain 1-50000 characters.');
             } else if (mode === 'replace') {
+              if (process.env.REPLACEMENT_ENABLED !== 'true') errors.push('Candidate replacement is disabled. Configure the complete project verifier, enable it in this workflow and then add replace to the choices.');
               if (!/^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(operationId)) errors.push('Operation ID is invalid.');
               if (!/^[1-9][0-9]*$/.test(revisionText) || !Number.isSafeInteger(revision) || revision < 1 || revision >= Number.MAX_SAFE_INTEGER) errors.push('Replacement revision is invalid.');
               if (!/^[a-f0-9]{40}$/.test(sourceSha)) errors.push('Replacement source must be a full reviewed SHA.');
@@ -125,7 +128,8 @@ jobs:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
-          ref: ${{ inputs.source-sha }}
+          # Runtime is selected by GitHub workflow metadata, never by dispatch data.
+          ref: ${{ github.workflow_sha }}
       - name: Read native candidate authority
         id: inspect
         uses: ./deployment-recovery

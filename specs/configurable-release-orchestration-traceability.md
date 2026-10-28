@@ -162,3 +162,9 @@ second time through integration totals. Sources are the dedicated
 bootstrap tests, composition binding tests and existing state-fence/schema tests.
 Actual local/global and exact-head remote results belong in the implementation
 PR; a source-level ledger does not establish live consumer readiness.
+
+Review hardening additionally assigns actual-script/YAML cases to trusted runtime
+selection and disabled-by-default consumer replacement. Native adapter cases
+exercise source/base drift after inventory without duplicating whole inspections.
+Current-head PR evidence supersedes earlier local baseline counts; no unsafe ACL
+or verification exception is introduced to make platform CI green.

@@ -1143,7 +1143,7 @@ function assertDeploymentValidationJob(relativeFile, workflow) {
     || validationStep.uses !== 'actions/github-script@v9'
     || validationStep.run !== undefined
     || Object.keys(stepInputs).join(',') !== 'script'
-    || Object.keys(stepEnvironment).sort().join(',') !== 'CHANGELOG,CONFIRM_UNPUBLISHED,EXPECTED_REVISION,ISSUE,MODE,OPERATION_ID,SOURCE_SHA,TITLE,VERSION'
+    || Object.keys(stepEnvironment).sort().join(',') !== 'CHANGELOG,CONFIRM_UNPUBLISHED,EXPECTED_REVISION,ISSUE,MODE,OPERATION_ID,REPLACEMENT_ENABLED,SOURCE_SHA,TITLE,VERSION'
     || Object.entries(stepEnvironment).some(([key, value]) => /token|secret|pat/i.test(key)
       || /secrets\.|github\.token/i.test(String(value)))
     || !script.includes('Number.isSafeInteger(issue)')

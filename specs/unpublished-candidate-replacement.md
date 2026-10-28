@@ -3,7 +3,7 @@
 - Status: Implemented; local validation complete, exact-head remote merge gates required
 - Date: 2026-10-28
 - Catalog capability ID: release-orchestration
-- Last verified: 2026-10-28; 772 root suites / 14,078 tests, all budgets/setup acceptance, 267 extension tests at 100%; remote gates recorded in the implementation PR
+- Last verified: 2026-10-28; review-hardened candidate passed 772 root suites / 14,088 tests, all budgets/setup acceptance and 267 extension tests at 100%; exact published-head and remote results are recorded in the implementation PR
 - Owners: Copilot maintainers
 - Scope: explicit replacement of one closed, unmerged, unpublished candidate on its existing managed branch
 - Related issues/PRs: [#732](https://github.com/vypdev/copilot/issues/732)
@@ -141,7 +141,10 @@ Text equivalent: close and inspect -> preflight -> fresh preparation -> recheck
 2. Dispatch the installed compatible release/hotfix workflow on that reviewed
    managed ref in replace mode. Supply old operation ID/revision, source SHA,
    exact version/issue, and confirm-unpublished. Leave title/changelog empty.
-3. A read-only preflight verifies the durable and native facts before any
+3. A read-only preflight executes only the runtime selected by the trusted
+   workflow revision (`github.workflow_sha` in source workflows; the released
+   standalone action in consumer workflows). A supplied SHA is data and MUST NOT
+   select code receiving credentials. It verifies the durable and native facts before any
    version/build commit. It snapshots production base and old revision.
 4. The ordinary project version/build/test/smoke jobs run again. Each dependent
    checkout must match its successful predecessor's source output; normal
@@ -165,8 +168,11 @@ Text equivalent: close and inspect -> preflight -> fresh preparation -> recheck
 The readonly `deployment-recovery` subaction has its own Node24 bundle and no
 main-run, agent or completion persistence entrypoint. Active/source workflows and
 consumer templates use it before any preparation mutation. Templates ship a
-failing complete-verification placeholder: projects must configure all native
-build/test/coverage/smoke/package and registry-vacancy validators before use.
+failing complete-verification placeholder and keep replacement disabled both in
+mode choices and the permissionless validator. Projects configure all native
+build/test/coverage/smoke/package and registry-vacancy validators, set the reviewed
+workflow-owned `REPLACEMENT_ENABLED` literal to `'true'`, and then add `replace`
+to mode choices. Dispatch/issue data cannot change this activation.
 Named proof steps and dependency roles are part of the supported workflow contract.
 
 ### 6.2 Alternatives
@@ -203,10 +209,11 @@ publication callbacks MUST fail before mutating the successor.
 
 | Input | Type | Default | Allowed values/scope |
 |---|---|---|---|
-| mode | workflow choice | prepare | prepare, replace, publish, resume |
+| mode | workflow choice | prepare | prepare, publish, resume; replace only after reviewed project-verifier activation |
 | operation-id | identifier | empty | existing bounded ID required in replace/publish/resume |
 | expected-revision | workflow string | empty | positive safe integer only in replace |
 | source-sha | workflow string | empty | canonical full reviewed commit SHA only in replace |
+| REPLACEMENT_ENABLED | workflow-owned validation literal | false in consumer templates, true in configured source workflows | exactly `'true'` enables replacement after project verification is configured; not an Action input, dispatch field or Repository Variable |
 | confirm-unpublished | workflow boolean | false | explicit maintainer registry-vacancy attestation, required true only in replace |
 
 Version and positive issue remain required. Replace reuses persisted title and
@@ -458,7 +465,7 @@ most ten pages of 100 jobs, rejects duplicate/foreign identities and never repla
 missing proof with a run-level green conclusion. The invocation scope is captured
 from native GitHub context, outside generic configuration.
 
-### Final local verification receipt (2026-10-28)
+### Baseline local verification receipt (published head `43a1b70`, 2026-10-28)
 
 The complete final coverage campaign passed 772 root Jest suites, 14,078 tests
 and the 35 existing skips, every repository/module budget and setup acceptance.
@@ -470,3 +477,21 @@ full build and real package validation (87 shipped files) passed. CLI, typed API
 local web and three actual standalone-bundle HTTP fixture scenarios passed.
 Normal commit hooks and exact-head remote CI, review and Codecov remain the
 publication/merge gates; their receipts are recorded in the implementation PR.
+
+### Review hardening and current-head evidence
+
+The follow-up removes complete-inspection duplication from both fresh and recorded
+paths. One full inspection still verifies every native fact; two cheap final ref
+reads, separated by the bounded inventory/producer work, reject intervening source
+or production movement. Revision fencing remains unchanged. Dedicated regressions
+cover each late ref change, unavailable authority in both paths and exactly one
+semantic inspection. Security regressions pin preflight code to workflow metadata,
+keep the source SHA as data, and reject unconfigured consumer activation before
+credentialed jobs. The initial source-runtime/default-mode/duplicate regressions
+fail before their fixes. Exact latest counts, coverage and remote findings belong
+to the current implementation PR, not to the historical baseline above.
+
+GitHub [workflow context](https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#github-context)
+provides the workflow file commit separately from dispatch inputs. The trusted
+workflow revision is an operator-reviewed prerequisite; arbitrary dispatch values
+cannot replace that runtime checkout.

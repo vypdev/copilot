@@ -34247,6 +34247,15 @@ class GithubCandidateReplacementRepository {
                 publicationVacant(client, parameters, `v${command.version}`),
                 queuedPromotion(client, promotion.nodeId),
             ]);
+            // Inventory and producer reads may take time. Recheck only the pinned refs,
+            // rather than repeating the complete inspection and publication inventory.
+            const [finalSourceSha, finalProductionSha] = await Promise.all([
+                branchSha(client, parameters, command.sourceBranch),
+                branchSha(client, parameters, command.productionBranch),
+            ]);
+            if (finalSourceSha !== sourceSha || finalProductionSha !== productionSha) {
+                throw new application_error_1.ApplicationError('workflow.stale', 'Native source or production changed during candidate inspection. Existing deployment state was retained.');
+            }
             return Object.freeze({ launcher: Object.freeze({ open: launcher.open, operationId: launcher.operation.operationId,
                     revision: launcher.operation.revision, kind: launcher.kind, sourceBranch: launcher.sourceBranch }), sourceSha, productionSha, oldSourceReachable, reviewedSourceReachable, oldSourceInProduction,
                 closedPromotionHeadReachable, conflictingOpenPromotion, nativePublicationVacant,

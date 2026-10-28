@@ -91,7 +91,7 @@ it('replaces a corrected unpublished candidate only after fresh native authority
       replacementSourceSha: reviewedSha, replacementBaseSha: baseSha }],
   });
   expect(value.store.save.mock.calls[0][0].expected).toEqual({ kind: 'replacement', fence: { operationId: oldId, phase: previous.phase, revision: 3 } });
-  expect(value.dependencies.replacementInspection!.inspect).toHaveBeenCalledTimes(2);
+  expect(value.dependencies.replacementInspection!.inspect).toHaveBeenCalledTimes(1);
   expect(value.dependencies.pullRequests.createManagedPullRequest).toHaveBeenCalledTimes(1);
   expect(value.dependencies.pullRequests.enableAutoMerge).not.toHaveBeenCalled();
   expect(value.dependencies.git.mergeCommitIntoBranch).not.toHaveBeenCalled(); expect(value.dependencies.git.deleteBranch).not.toHaveBeenCalled();
@@ -139,16 +139,18 @@ it('rejects absence of a previous operation or its native promotion identity', a
 it.each(['sourceSha', 'productionSha', 'nativePublicationVacant', 'conflictingOpenPromotion'] as const)('revalidates %s immediately before replacement persistence', async field => {
   const value = harness(); const facts = nativeEvidence(); const changed = { ...facts, [field]:
     field === 'nativePublicationVacant' ? false : field === 'conflictingOpenPromotion' ? true : 'f'.repeat(40) };
-  mock(value.dependencies.replacementInspection!.inspect).mockResolvedValueOnce(facts).mockResolvedValueOnce(changed);
+  mock(value.dependencies.replacementInspection!.inspect).mockResolvedValueOnce(changed);
   const result = await value.useCase.invoke(input(oldCandidate())); expect(result[0].success).toBe(false);
   expect(value.store.save).not.toHaveBeenCalled(); expect(value.dependencies.operationId).not.toHaveBeenCalled();
 });
-it.each(['first', 'second'])('retains old durable state when the %s native inspection is unknown', async when => {
-  const value = harness(); const inspect = mock(value.dependencies.replacementInspection!.inspect);
-  if (when === 'second') inspect.mockResolvedValueOnce(nativeEvidence());
+it.each(['fresh', 'recorded'])('retains durable state when the %s native inspection is unknown', async when => {
+  const value = harness();
+  if (when === 'recorded') await value.useCase.invoke(input(oldCandidate()));
+  const current = value.current(); value.store.save.mockClear(); mock(value.dependencies.presentation.createDashboard).mockClear();
+  const inspect = mock(value.dependencies.replacementInspection!.inspect); inspect.mockClear();
   inspect.mockRejectedValueOnce(new Error('PRIVATE_PROVIDER_DETAIL'));
-  const result = await value.useCase.invoke(input(oldCandidate())); expect(result[0].success).toBe(false);
-  expect(value.store.save).not.toHaveBeenCalled(); expect(value.current().operationId).toBe(oldId);
+  const result = await value.useCase.invoke(input(current)); expect(result[0].success).toBe(false);
+  expect(inspect).toHaveBeenCalledTimes(1); expect(value.store.save).not.toHaveBeenCalled(); expect(value.current().operationId).toBe(current.operationId);
   expect(value.dependencies.presentation.createDashboard).not.toHaveBeenCalled();
 });
 it('leaves a concurrent replacement owner intact when the native revision fence changes', async () => {
