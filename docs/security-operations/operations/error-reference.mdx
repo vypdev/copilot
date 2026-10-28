@@ -120,3 +120,19 @@ bodies, authentication headers, URLs and raw exception messages are omitted.
 The primary warning is in the log and a Summary appendix; if the appendix fails,
 a localized note points back to the retained log. For credential selection and
 the supported default, see [workflow setup](/issues/workflow-setup).
+
+
+## Missing publication context
+
+If `create_release` cannot load its durable deployment operation, it reports
+`configuration.invalid` and stops before creating a GitHub release. Missing
+context does not mean a newer state superseded the run. Persisted state and
+completed external effects, including any previously published packages, remain
+preserved; the message makes no claim that a release is absent remotely.
+
+Verify `single-action-issue` selects the existing launcher issue and restore its
+verified operation context. Only then retry the supported release/hotfix workflow
+with the same `single-action-operation-id` and `single-action-version`. Do not
+create a new operation, publish packages again, or bypass the stored ID, version,
+phase and accepted production SHA checks to clear this error. See
+[single-action configuration](/single-actions/configuration#internal-operation-identity).

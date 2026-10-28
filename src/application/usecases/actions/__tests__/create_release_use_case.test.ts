@@ -133,3 +133,14 @@ describe('CreateReleaseUseCase', () => {
     expect(results[0].errors?.length).toBeGreaterThan(0);
   });
 });
+
+
+it('SA740 keeps the accepted-production SHA guard before release mutation', async () => {
+  mockCreateRelease.mockReset();
+  const results = await new CreateReleaseUseCase({ createRelease: mockCreateRelease } as never).invoke(baseParam({
+    currentConfiguration: { deploymentOrchestration: { operationId: 'operation-12345678', version: '1.0.0',
+      title: 'Release', changelog: 'Changes', phase: 'publishing' } },
+  }));
+  expect(results[0].success).toBe(false); expect(results[0].errors[0].message).toContain('accepted production SHA');
+  expect(mockCreateRelease).not.toHaveBeenCalled();
+});

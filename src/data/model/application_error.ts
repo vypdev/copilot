@@ -65,6 +65,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'sdd-draft-requirement-mapping-invalid',
     'sdd-draft-repository-path-invalid',
 
+    'deployment-publication-context-missing',
     'workspace-changes-rejected',
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
@@ -109,6 +110,7 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'sdd-draft-requirement-mapping-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-draft-repository-path-invalid': Readonly<Record<string, never>>;
 
+    readonly 'deployment-publication-context-missing': Readonly<Record<string, never>>;
     readonly 'workspace-changes-rejected': Readonly<Record<string, never>>;
 }
 
@@ -330,6 +332,8 @@ export class ApplicationError extends Error {
         this.action = metadata.action;
         this.retainedState = options.recovery?.id === 'change-size-reconciliation-failed'
             ? 'Completed effects were retained; the failed and later size operations remain unverified.'
+            : options.recovery?.id === 'deployment-publication-context-missing'
+            ? PRESERVED_STATE
             : metadata.retainedState;
         this.correlationId = correlationId;
         this.recovery = normalizeApplicationErrorRecovery(options.recovery);
@@ -395,6 +399,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'sdd-draft-repository-path-invalid': Object.freeze([]),
 
     'progress-binary-evidence-unavailable': Object.freeze(['paths', 'pathCount']),
+    'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
 

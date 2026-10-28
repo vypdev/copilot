@@ -88,6 +88,9 @@ describe('setup execution live issue admission', () => {
 
   it('classifies an issue-bound single action and blocks a disabled kind before routing', async () => {
     const ports = dependencies(['bug'], '## Description\nBad');
+    // The explicit target is a real issue; admission policy still rejects its disabled kind.
+    ports.issueSetupPort.isPullRequest.mockResolvedValue(false);
+    ports.issueSetupPort.isIssue.mockResolvedValue(true);
     const result = await runSetupExecution(context({
       isSingleAction: true,
       configuredSingleActionIssue: 42,

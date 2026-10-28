@@ -455,7 +455,8 @@
         "src/actions/__tests__/deployment_candidate_recovery_bootstrap.test.ts",
         "src/actions/__tests__/deployment_candidate_declared_inputs.test.ts",
         "src/actions/__tests__/deployment_candidate_preflight_action.test.ts",
-        "src/tooling/__tests__/deployment_replacement_workflows.test.ts"
+        "src/tooling/__tests__/deployment_replacement_workflows.test.ts",
+        "src/application/usecases/execution/__tests__/single_action_target_restore.integration.test.ts"
       ],
       "documentation": [
         "docs/issues/deployment-orchestration.mdx",
@@ -783,7 +784,8 @@
         "src/actions/__tests__/issue_event_admission_action.test.ts",
         "src/manager/description/base/__tests__/issue_content_interface.test.ts",
         "src/application/usecases/__tests__/issue_use_case.test.ts",
-        "src/utils/__tests__/setup_runner_installation.test.ts"
+        "src/utils/__tests__/setup_runner_installation.test.ts",
+        "src/application/usecases/execution/__tests__/single_action_target_restore.integration.test.ts"
       ],
       "documentation": [
         "docs/overview.mdx",
@@ -2529,7 +2531,7 @@
       "status": "as-built-baseline",
       "scope": "Expose bounded local commands and workflow-dispatched operations through the shared application core",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-19",
+      "lastVerified": "2026-10-28",
       "specs": [
         "specs/cli-and-single-action-execution.md"
       ],
@@ -2558,7 +2560,10 @@
         "src/application/policies/application_error_message_catalog.ts",
         "src/application/policies/application_error_presentation_policy.ts",
         "src/actions/local_action_output.ts",
-        "src/infrastructure/composition/local_action_composition_root.ts"
+        "src/infrastructure/composition/local_action_composition_root.ts",
+        "src/application/usecases/execution/execution_issue_number_policy.ts",
+        "src/application/usecases/actions/create_release_workflow.ts",
+        "src/data/model/application_error.ts"
       ],
       "tests": [
         "src/cli/__tests__/cli_program.test.ts",
@@ -2575,7 +2580,10 @@
         "src/application/usecases/steps/common/__tests__/think_request_policy.test.ts",
         "src/application/usecases/steps/common/__tests__/think_use_case.test.ts",
         "src/infrastructure/composition/__tests__/local_action_composition_root.test.ts",
-        "src/application/usecases/__tests__/single_action_use_case.test.ts"
+        "src/application/usecases/__tests__/single_action_use_case.test.ts",
+        "src/application/usecases/execution/__tests__/execution_issue_number_policy.test.ts",
+        "src/application/usecases/execution/__tests__/single_action_target_restore.integration.test.ts",
+        "src/application/usecases/actions/__tests__/create_release_use_case.test.ts"
       ],
       "documentation": [
         "docs/single-actions/available-actions.mdx",
@@ -2584,7 +2592,8 @@
         "docs/single-actions/workflow-and-cli.mdx",
         "docs/single-actions/examples.mdx",
         "docs/single-actions/configuration.mdx",
-        "docs/agents/cli-commands.mdx"
+        "docs/agents/cli-commands.mdx",
+        "docs/security-operations/operations/error-reference.mdx"
       ]
     },
     {

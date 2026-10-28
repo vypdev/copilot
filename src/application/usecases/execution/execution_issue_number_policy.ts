@@ -39,6 +39,9 @@ export async function resolveSingleActionIssueNumber(
     if (context.singleAction.currentAction === ACTIONS.INITIAL_SETUP) {
         return { singleAction: { issue: 0, isIssue: false, isPullRequest: false, isPush: false } };
     }
+    // The validated Action target is independent of surrounding event/ref hints.
+    // Keep repository-only/optional-context sentinels on their existing paths.
+    if (context.singleAction.issue > 0) return resolveConfiguredSingleAction(context, issueRepository);
     const configuredIssue = context.configuredSingleActionIssue;
     if (configuredIssue !== undefined && String(configuredIssue).trim() !== '') {
         const issueNumber = parsePositiveSafeInteger(configuredIssue);

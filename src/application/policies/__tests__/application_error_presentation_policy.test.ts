@@ -21,6 +21,11 @@ const RECOVERY_CASES: readonly Readonly<{
     spanish: string;
 }>[] = [
     {
+        recovery: { id: 'deployment-publication-context-missing', variables: {} },
+        english: 'Existing persisted state and completed external effects were preserved; this attempt did not create a GitHub release.',
+        spanish: 'Se conservaron el estado persistido y los efectos externos completados; este intento no creó una release de GitHub.',
+    },
+    {
         recovery: { id: 'progress-binary-evidence-unavailable', variables: { paths: '["lib/a.dll"]', pathCount: 1 } },
         english: 'Existing progress labels and assessments were preserved; no model assessment was made. Project verification remains a separate result.',
         spanish: 'Se conservaron las etiquetas de progreso y las evaluaciones; no se realizó ninguna evaluación del modelo. La verificación del proyecto sigue siendo un resultado independiente.',

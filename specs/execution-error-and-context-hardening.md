@@ -961,3 +961,21 @@ existing protected-data, architecture and locale catalog checks remain required;
 #701's pure/domain, presentation and actual command/replay suites establish the
 new cases without duplicating their primary numeric budget here. No storage
 migration, timeout, retry or authorization change is required.
+
+
+### Publication context absence — #740 (2026-10-28)
+
+Missing durable context in `create_release` MUST use nonretryable
+`configuration.invalid` with closed, empty-variable recovery
+`deployment-publication-context-missing`. It does not prove supersession, so it
+MUST NOT use the generic `workflow.stale` explanation. Its reviewed EN/ES and
+English fallback guidance identifies `single-action-issue`, restoring verified
+context, and the same stored operation ID/version through the supported workflow.
+The public model and localized view retain persisted state and completed external
+effects, and state only that this attempt did not create a release. Known
+identity/version/phase mismatches and the accepted-production-SHA fence keep
+their prior semantics. No provider detail or input value is interpolated. The
+32-case allocation, entrypoint-to-handler acceptance and architecture boundaries
+are owned by [CLI and single-action execution](./cli-and-single-action-execution.md#explicit-action-target-restoration--740-2026-10-28),
+not counted again here. Configuration and error-reference documentation are
+updated with the same change.

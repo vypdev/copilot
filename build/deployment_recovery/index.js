@@ -32566,6 +32566,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect {permission} access for the runtime credential and the named evidence response. Correct authorization, missing-resource or schema errors before rerunning; retry transient failures only after provider recovery or rate-limit reset.',
         retainedState: 'No approval is authorized by this failed read. Existing PRs, reviews and completed external effects were preserved.',
     }),
+    'deployment-publication-context-missing': Object.freeze({
+        impact: 'GitHub release creation stopped because its durable deployment operation was not available.',
+        action: 'Verify single-action-issue selects the existing launcher issue and restore its verified operation context. Retry the supported workflow with the same single-action-operation-id and single-action-version only after that state is available.',
+        retainedState: 'Existing persisted state and completed external effects were preserved; this attempt did not create a GitHub release.',
+    }),
     'workspace-changes-rejected': Object.freeze({
         impact: 'The changes were rejected during workspace verification.',
         action: 'Inspect the rejected paths in the workflow and correct the workspace before retrying.',
@@ -32708,6 +32713,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'No se pudo verificar la evidencia de aprobación: {operation} ({reason}).',
         action: 'Comprueba el acceso {permission} de la credencial de ejecución y la respuesta indicada. Corrige los errores de autorización, recurso o esquema antes de reejecutar; reintenta los fallos transitorios solo tras recuperarse el proveedor o restablecerse el límite.',
         retainedState: 'Esta lectura fallida no autoriza ninguna aprobación. Se conservaron las PRs, revisiones y efectos externos completados.',
+    }),
+    'deployment-publication-context-missing': Object.freeze({
+        impact: 'La creación de la release de GitHub se detuvo porque no estaba disponible su operación de despliegue persistida.',
+        action: 'Comprueba que single-action-issue apunta a la issue existente y restaura el contexto verificado de su operación. Reintenta el workflow compatible con el mismo single-action-operation-id y single-action-version solo cuando ese estado esté disponible.',
+        retainedState: 'Se conservaron el estado persistido y los efectos externos completados; este intento no creó una release de GitHub.',
     }),
     'workspace-changes-rejected': Object.freeze({
         impact: 'Los cambios se rechazaron durante la verificación del espacio de trabajo.',
@@ -33675,6 +33685,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'sdd-draft-case-budget-invalid',
     'sdd-draft-requirement-mapping-invalid',
     'sdd-draft-repository-path-invalid',
+    'deployment-publication-context-missing',
     'workspace-changes-rejected',
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
@@ -33854,7 +33865,9 @@ class ApplicationError extends Error {
         this.action = metadata.action;
         this.retainedState = options.recovery?.id === 'change-size-reconciliation-failed'
             ? 'Completed effects were retained; the failed and later size operations remain unverified.'
-            : metadata.retainedState;
+            : options.recovery?.id === 'deployment-publication-context-missing'
+                ? PRESERVED_STATE
+                : metadata.retainedState;
         this.correlationId = correlationId;
         this.recovery = normalizeApplicationErrorRecovery(options.recovery);
         __classPrivateFieldSet(this, _ApplicationError_cause, options.cause, "f");
@@ -33917,6 +33930,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'sdd-draft-requirement-mapping-invalid': Object.freeze([]),
     'sdd-draft-repository-path-invalid': Object.freeze([]),
     'progress-binary-evidence-unavailable': Object.freeze(['paths', 'pathCount']),
+    'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
 function normalizeApplicationErrorRecovery(recovery) {
