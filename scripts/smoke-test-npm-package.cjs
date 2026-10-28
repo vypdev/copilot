@@ -37,6 +37,15 @@ try {
   });
 
   const packageRoot = path.join(extractedDirectory, 'package');
+  const admissionManifest = fs.readFileSync(path.join(packageRoot, 'issue-admission/action.yml'), 'utf8');
+  if (!admissionManifest.includes('using: node24') || !admissionManifest.includes('main: index.cjs')
+    || !admissionManifest.includes('issue-event-admission-mode:')) {
+    throw new Error('Packaged issue admission subaction must resolve the shipped Node runtime.');
+  }
+  const admissionBootstrap = fs.readFileSync(path.join(packageRoot, 'issue-admission/index.cjs'), 'utf8');
+  if (!admissionBootstrap.includes("require('../build/github_action/index.js')") || !admissionBootstrap.includes('COPILOT_ISSUE_ADMISSION_BOOTSTRAP')) {
+    throw new Error('Packaged issue admission must use its fail-closed bootstrap.');
+  }
   const packageJson = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
   const cliPath = path.join(packageRoot, 'build', 'cli', 'index.js');
   const webIndexPath = path.join(packageRoot, 'build', 'web', 'index.html');

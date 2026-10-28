@@ -7,7 +7,7 @@
       "id": "semantic-github-publication",
       "spec": "specs/semantic-github-publication-and-notification.md",
       "requiredCases": 135,
-      "allocatedCases": 577,
+      "allocatedCases": 880,
       "files": [
         {
           "path": "src/domain/__tests__/github_publication.test.ts",
@@ -31,7 +31,7 @@
         },
         {
           "path": "src/application/policies/__tests__/semantic_result_publication_policy.test.ts",
-          "qualifyingCases": 33
+          "qualifyingCases": 37
         },
         {
           "path": "src/application/usecases/steps/common/__tests__/status_card_publication_workflow.test.ts",
@@ -59,11 +59,11 @@
         },
         {
           "path": "src/application/usecases/actions/__tests__/observe_branch_sync_use_case.test.ts",
-          "qualifyingCases": 16
+          "qualifyingCases": 28
         },
         {
           "path": "src/application/usecases/actions/__tests__/check_progress_use_case.test.ts",
-          "qualifyingCases": 7
+          "qualifyingCases": 11
         },
         {
           "path": "src/application/usecases/actions/__tests__/close_inactive_issues_use_case.test.ts",
@@ -71,7 +71,7 @@
         },
         {
           "path": "src/application/usecases/__tests__/issue_use_case.test.ts",
-          "qualifyingCases": 8
+          "qualifyingCases": 30
         },
         {
           "path": "src/architecture/__tests__/github_publication_boundaries.test.ts",
@@ -79,7 +79,7 @@
         },
         {
           "path": "src/application/policies/__tests__/action_summary_policy.test.ts",
-          "qualifyingCases": 4
+          "qualifyingCases": 15
         },
         {
           "path": "src/domain/__tests__/copilot_operation.test.ts",
@@ -91,7 +91,7 @@
         },
         {
           "path": "src/application/policies/__tests__/copilot_history_presentation_policy.test.ts",
-          "qualifyingCases": 13
+          "qualifyingCases": 16
         },
         {
           "path": "src/application/policies/__tests__/copilot_operation_publication.test.ts",
@@ -99,7 +99,7 @@
         },
         {
           "path": "src/application/usecases/__tests__/copilot_history_route.test.ts",
-          "qualifyingCases": 5
+          "qualifyingCases": 8
         },
         {
           "path": "src/application/usecases/__tests__/copilot_history_workflow.test.ts",
@@ -111,7 +111,7 @@
         },
         {
           "path": "src/data/repository/__tests__/progress_diff_repository.test.ts",
-          "qualifyingCases": 12
+          "qualifyingCases": 16
         },
         {
           "path": "src/application/policies/__tests__/retired_progress_presentation_policy.test.ts",
@@ -119,7 +119,7 @@
         },
         {
           "path": "src/application/usecases/actions/__tests__/retire_progress_use_case.test.ts",
-          "qualifyingCases": 22
+          "qualifyingCases": 29
         },
         {
           "path": "src/application/usecases/actions/__tests__/retire_closed_issue_cards_use_case.test.ts",
@@ -139,11 +139,11 @@
         },
         {
           "path": "src/application/policies/__tests__/progress_partition_response_policy.test.ts",
-          "qualifyingCases": 15
+          "qualifyingCases": 23
         },
         {
           "path": "src/application/usecases/actions/__tests__/progress_multipart.integration.test.ts",
-          "qualifyingCases": 12
+          "qualifyingCases": 22
         },
         {
           "path": "src/application/policies/__tests__/progress_scope_policy.test.ts",
@@ -155,7 +155,7 @@
         },
         {
           "path": "src/prompts/__tests__/check_progress.test.ts",
-          "qualifyingCases": 2
+          "qualifyingCases": 5
         },
         {
           "path": "src/prompts/__tests__/progress_scope.test.ts",
@@ -167,11 +167,11 @@
         },
         {
           "path": "src/actions/__tests__/github_action_completion.test.ts",
-          "qualifyingCases": 14
+          "qualifyingCases": 32
         },
         {
           "path": "src/domain/__tests__/issue_workflow_diagnostic.test.ts",
-          "qualifyingCases": 10
+          "qualifyingCases": 11
         },
         {
           "path": "src/application/policies/__tests__/progress_patch_completeness_policy.test.ts",
@@ -187,11 +187,11 @@
         },
         {
           "path": "src/data/repository/__tests__/progress_diff_recovery.test.ts",
-          "qualifyingCases": 11
+          "qualifyingCases": 13
         },
         {
           "path": "src/infrastructure/composition/__tests__/progress_recovery_contract.test.ts",
-          "qualifyingCases": 2
+          "qualifyingCases": 3
         },
         {
           "path": "src/application/policies/__tests__/progress_comparison_source_policy.test.ts",
@@ -203,7 +203,7 @@
         },
         {
           "path": "src/application/usecases/actions/__tests__/progress_comparison_source.integration.test.ts",
-          "qualifyingCases": 9
+          "qualifyingCases": 11
         },
         {
           "path": "src/domain/__tests__/progress_binary_evidence_diagnostic.test.ts",
@@ -231,10 +231,42 @@
         },
         {
           "path": "src/tooling/__tests__/validate_workflow_contract.test.ts",
-          "qualifyingCases": 3
+          "qualifyingCases": 85
         },
         {
           "path": "src/architecture/__tests__/raw_error_logging_boundaries.test.ts",
+          "qualifyingCases": 2
+        },
+        {
+          "path": "src/application/usecases/execution/__tests__/issue_event_admission_workflow.test.ts",
+          "qualifyingCases": 21
+        },
+        {
+          "path": "src/data/repository/workflow/__tests__/issue_event_admission_repository.test.ts",
+          "qualifyingCases": 10
+        },
+        {
+          "path": "src/actions/__tests__/issue_event_admission_action.test.ts",
+          "qualifyingCases": 12
+        },
+        {
+          "path": "src/infrastructure/composition/__tests__/issue_event_admission_composition_root.test.ts",
+          "qualifyingCases": 1
+        },
+        {
+          "path": "src/actions/__tests__/github_action.test.ts",
+          "qualifyingCases": 23
+        },
+        {
+          "path": "src/application/policies/__tests__/native_workflow_coordination_policy.test.ts",
+          "qualifyingCases": 7
+        },
+        {
+          "path": "src/application/policies/__tests__/setup_runner_policy.test.ts",
+          "qualifyingCases": 30
+        },
+        {
+          "path": "src/manager/description/base/__tests__/issue_content_interface.test.ts",
           "qualifyingCases": 1
         }
       ]
@@ -243,7 +275,7 @@
       "id": "repository-locale-localization",
       "spec": "specs/repository-locale-and-localization.md",
       "requiredCases": 146,
-      "allocatedCases": 153,
+      "allocatedCases": 183,
       "files": [
         {
           "path": "src/actions/__tests__/github_action_locale_inputs.test.ts",
@@ -287,7 +319,7 @@
         },
         {
           "path": "src/application/policies/__tests__/resolved_message_catalog_policy.test.ts",
-          "qualifyingCases": 2
+          "qualifyingCases": 6
         },
         {
           "path": "src/application/policies/__tests__/setup_doctor_message_catalog.test.ts",
@@ -307,7 +339,7 @@
         },
         {
           "path": "src/application/usecases/setup/__tests__/doctor_use_case.test.ts",
-          "qualifyingCases": 4
+          "qualifyingCases": 11
         },
         {
           "path": "src/application/usecases/setup/__tests__/merge_queue_readiness_use_case.test.ts",
@@ -323,7 +355,7 @@
         },
         {
           "path": "src/cli/__tests__/setup_prompt_rendering.test.ts",
-          "qualifyingCases": 2
+          "qualifyingCases": 4
         },
         {
           "path": "src/domain/__tests__/locale.test.ts",
@@ -335,7 +367,7 @@
         },
         {
           "path": "src/application/usecases/__tests__/comment_automation_use_case.test.ts",
-          "qualifyingCases": 3
+          "qualifyingCases": 20
         }
       ]
     }

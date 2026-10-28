@@ -36828,6 +36828,7 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, c
         await (0, main_run_lifecycle_1.waitForPreviousWorkflowRuns)(execution.tokens.token, repository, {
             isSingleAction: execution.isSingleAction,
             pullRequestNumber: execution.inputs?.pull_request?.number,
+            issueNumber: execution.inputs?.issue?.number,
         });
     }
     const setupExecution = (0, execution_setup_composition_root_1.createSetupExecutionUseCase)(latestTagQueryPort, {
@@ -37691,6 +37692,7 @@ function buildPreviousWorkflowRunsQuery(repository, event) {
                 eventName: process.env.GITHUB_EVENT_NAME ?? '',
                 ref: process.env.GITHUB_REF,
                 pullRequestNumber: event.pullRequestNumber,
+                issueNumber: event.issueNumber,
             }),
         } : {}),
     };
@@ -45168,6 +45170,7 @@ function mergeSetupOverrides(fileOverrides, flagOverrides) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.expectedNativeWorkflowGroup = expectedNativeWorkflowGroup;
 exports.hasNativeWorkflowCoordination = hasNativeWorkflowCoordination;
+const ISSUE_GROUP = 'copilot-issue-${{ github.repository }}-${{ github.event.issue.number }}';
 const PUSH_GROUP = 'copilot-push-${{ github.repository }}-${{ github.ref_name }}';
 const PR_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.number }}';
 /** Closed recognition of the installed contract, without evaluating expressions. */
@@ -45183,6 +45186,9 @@ function expectedNativeWorkflowGroup(query) {
     if (native.eventName === 'push' && native.ref?.startsWith('refs/heads/')
         && native.ref.length > 'refs/heads/'.length)
         return PUSH_GROUP;
+    if (native.eventName === 'issues')
+        return typeof native.issueNumber === 'number'
+            && Number.isSafeInteger(native.issueNumber) && native.issueNumber > 0 ? ISSUE_GROUP : undefined;
     const pullRequestNumber = native.pullRequestNumber;
     if (typeof pullRequestNumber !== 'number' || !Number.isSafeInteger(pullRequestNumber) || pullRequestNumber <= 0)
         return undefined;
@@ -45197,6 +45203,11 @@ function hasNativeWorkflowCoordination(workflow, jobId, expectedGroup) {
     const jobs = record(definition?.jobs);
     const job = record(jobs?.[jobId]);
     const concurrency = record(job?.concurrency);
+    if (expectedGroup === ISSUE_GROUP) {
+        const outer = record(definition?.concurrency);
+        return Array.isArray(job?.steps) && job?.uses === undefined && job?.concurrency === undefined
+            && outer?.group === ISSUE_GROUP && outer?.['cancel-in-progress'] === false && outer?.queue === 'max';
+    }
     // Custom/reusable/workflow-level contracts retain conservative polling.
     // A single direct job also avoids confusing a reusable callee's job ID
     // with a different protected job in its caller's workflow context.
@@ -53949,6 +53960,8 @@ function setupRunnerRole(file, job) {
         'copilot_pull_request.yml': 'copilot-pull-requests', 'copilot_pull_request_comment.yml': 'copilot-pull-requests',
         'copilot_commit.yml': 'copilot-commits', 'agent-cli-provisioning.yml': 'verify-agent-clis',
     };
+    if (file === 'copilot_issue.yml' && job === 'issue-admission')
+        return 'isolated';
     if (agentJobs[file] === job)
         return 'agent';
     if (file === 'copilot_pull_request_approval.yml' && job === 'observe-approval')
@@ -107417,6 +107430,9 @@ class IssueContentInterface extends content_interface_1.ContentInterface {
                 if (updated === undefined) {
                     throw new Error('Issue content markers are missing or inconsistent.');
                 }
+                // Byte-identical state must not emit another native issue edit event.
+                if (updated === description)
+                    return updated;
                 await this.issueDescriptionPort.updateDescription(query.owner, query.repository, query.issueNumber, updated, query.token);
                 return updated;
             }

@@ -23,6 +23,8 @@ it('bexh1-foundation-C25 preserves root npm file selection and excludes extensio
     expect(files.some(file => file.startsWith('extension/'))).toBe(false);
     expect(files.some(file => file.startsWith('src/domain/browser_extension_contract/'))).toBe(false);
     expect(files).toContain('build/github_action/index.js');
+    expect(files).toContain('issue-admission/action.yml');
+    expect(files).toContain('issue-admission/index.cjs');
 });
 it('bexh1-foundation-C28 parses root commands and CI gates; contributor guidance matches target claims and navigation', () => {
     expect(() => validatePackageContract(pkg(), extension(), workspace(), ci())).not.toThrow();

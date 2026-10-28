@@ -4,9 +4,45 @@ on:
   issues:
     types: [opened, reopened, closed, edited, labeled, unlabeled, assigned, unassigned]
 
+# Keep every pending lifecycle event; never replace a start/reopen with a label event.
+# GitHub bounds this queue at 100 pending runs. Independent issues use different groups.
+concurrency:
+  group: copilot-issue-${{ github.repository }}-${{ github.event.issue.number }}
+  cancel-in-progress: false
+  queue: max
+
 jobs:
+  issue-admission:
+    name: Admit issue event
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      execute: ${{ steps.inspect.outputs.execute }}
+      receipt-key: ${{ steps.inspect.outputs.receipt-key }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Inspect native issue event
+        id: inspect
+        uses: ./issue-admission
+        with:
+          repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
+          issue-event-admission-mode: inspect
+          token: ${{ secrets.PAT }}
+          configuration: ${{ format('[{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15},{16},{17},{18},{19},{20},{21},{22},{23},{24},{25},{26},{27},{28},{29},{30},{31},{32},{33},{34},{35},{36},{37},{38},{39}]', toJSON(vars.AGENT_ALLOWED_MODELS), toJSON(vars.AGENT_ALLOWED_MODEL_PROVIDERS), toJSON(vars.AGENT_EFFORT), toJSON(vars.AGENT_EXECUTABLE), toJSON(vars.AGENT_MODEL), toJSON(vars.AGENT_MODEL_PROVIDER), toJSON(vars.AGENT_PROVIDER), toJSON(vars.BUGBOT_DRY_RUN), toJSON(vars.BUGBOT_EFFORT), toJSON(vars.BUGBOT_FAIL_ON_UNRESOLVED), toJSON(vars.BUGBOT_ORGANIZATION_RULES), toJSON(vars.BUGBOT_REVIEW_DRAFTS), toJSON(vars.BUGBOT_SUGGESTED_CHANGES), toJSON(vars.BUGBOT_TELEMETRY), toJSON(vars.BUGBOT_TRACE_RULES), toJSON(vars.COPILOT_ISSUE_WORKFLOW_PROFILE), toJSON(vars.DEBUG), toJSON(vars.DEPLOY_LABEL), toJSON(vars.FINDINGS_EFFORT), toJSON(vars.FINDINGS_EXECUTABLE), toJSON(vars.FINDINGS_MODEL), toJSON(vars.FINDINGS_MODEL_PROVIDER), toJSON(vars.FINDINGS_PROVIDER), toJSON(vars.FIXER_EFFORT), toJSON(vars.FIXER_EXECUTABLE), toJSON(vars.FIXER_MODEL), toJSON(vars.FIXER_MODEL_PROVIDER), toJSON(vars.FIXER_PROVIDER), toJSON(vars.ISSUES_LOCALE), toJSON(vars.PLANNER_EFFORT), toJSON(vars.PLANNER_EXECUTABLE), toJSON(vars.PLANNER_MODEL), toJSON(vars.PLANNER_MODEL_PROVIDER), toJSON(vars.PLANNER_PROVIDER), toJSON(vars.PROJECT_IDS), toJSON(vars.PULL_REQUESTS_LOCALE), toJSON(vars.REPOSITORY_LOCALE), toJSON(vars.REVIEWER_PROVIDER), toJSON(vars.TESTER_PROVIDER), toJSON(vars.VERIFICATION_SETUP)) }}
+          deploy-label: ${{ vars.DEPLOY_LABEL || 'deploy' }}
+        env:
+          COPILOT_ISSUE_ADMISSION_TOKEN: ${{ github.token }}
+
   copilot-issues:
-    if: ${{ (github.event.action == 'closed' && github.event.issue.state == 'closed') || vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}
+    needs: issue-admission
+    if: ${{ needs.issue-admission.outputs.execute == 'true' }}
     name: Copilot - Issue
     runs-on: [self-hosted, codex, Linux]
     timeout-minutes: 120
@@ -19,7 +55,9 @@ jobs:
           persist-credentials: false
 
       - uses: ./
+        id: copilot
         with:
+          deploy-label: ${{ vars.DEPLOY_LABEL || 'deploy' }}
           repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
           issues-locale: ${{ vars.ISSUES_LOCALE || '' }}
           pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || '' }}
@@ -74,3 +112,26 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           CURSOR_API_KEY: ${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || '' }}
           CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
+
+      - name: Record unchanged successful reconciliation
+        id: receipt
+        if: ${{ success() && steps.copilot.outcome == 'success' && needs.issue-admission.outputs.receipt-key != '' }}
+        continue-on-error: true
+        uses: ./issue-admission
+        with:
+          repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
+          issue-event-admission-mode: record
+          token: ${{ secrets.PAT }}
+          configuration: ${{ format('[{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15},{16},{17},{18},{19},{20},{21},{22},{23},{24},{25},{26},{27},{28},{29},{30},{31},{32},{33},{34},{35},{36},{37},{38},{39}]', toJSON(vars.AGENT_ALLOWED_MODELS), toJSON(vars.AGENT_ALLOWED_MODEL_PROVIDERS), toJSON(vars.AGENT_EFFORT), toJSON(vars.AGENT_EXECUTABLE), toJSON(vars.AGENT_MODEL), toJSON(vars.AGENT_MODEL_PROVIDER), toJSON(vars.AGENT_PROVIDER), toJSON(vars.BUGBOT_DRY_RUN), toJSON(vars.BUGBOT_EFFORT), toJSON(vars.BUGBOT_FAIL_ON_UNRESOLVED), toJSON(vars.BUGBOT_ORGANIZATION_RULES), toJSON(vars.BUGBOT_REVIEW_DRAFTS), toJSON(vars.BUGBOT_SUGGESTED_CHANGES), toJSON(vars.BUGBOT_TELEMETRY), toJSON(vars.BUGBOT_TRACE_RULES), toJSON(vars.COPILOT_ISSUE_WORKFLOW_PROFILE), toJSON(vars.DEBUG), toJSON(vars.DEPLOY_LABEL), toJSON(vars.FINDINGS_EFFORT), toJSON(vars.FINDINGS_EXECUTABLE), toJSON(vars.FINDINGS_MODEL), toJSON(vars.FINDINGS_MODEL_PROVIDER), toJSON(vars.FINDINGS_PROVIDER), toJSON(vars.FIXER_EFFORT), toJSON(vars.FIXER_EXECUTABLE), toJSON(vars.FIXER_MODEL), toJSON(vars.FIXER_MODEL_PROVIDER), toJSON(vars.FIXER_PROVIDER), toJSON(vars.ISSUES_LOCALE), toJSON(vars.PLANNER_EFFORT), toJSON(vars.PLANNER_EXECUTABLE), toJSON(vars.PLANNER_MODEL), toJSON(vars.PLANNER_MODEL_PROVIDER), toJSON(vars.PLANNER_PROVIDER), toJSON(vars.PROJECT_IDS), toJSON(vars.PULL_REQUESTS_LOCALE), toJSON(vars.REPOSITORY_LOCALE), toJSON(vars.REVIEWER_PROVIDER), toJSON(vars.TESTER_PROVIDER), toJSON(vars.VERIFICATION_SETUP)) }}
+          deploy-label: ${{ vars.DEPLOY_LABEL || 'deploy' }}
+          receipt-key: ${{ needs.issue-admission.outputs.receipt-key }}
+
+      - name: Retain successful reconciliation receipt
+        if: ${{ steps.receipt.outputs.receipt-path != '' }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ steps.receipt.outputs.receipt-name }}
+          path: ${{ steps.receipt.outputs.receipt-path }}
+          retention-days: 1
+          if-no-files-found: error

@@ -475,3 +475,14 @@ and tests do not complete inventory functions, the 96 full core scenarios or the
 803-case product floor. The implementation PR records exact browser/source/
 container receipts and failures separately; no compatibility, signed distribution
 or complete local-center/setup availability is inferred from build success.
+
+
+### Root package allowlist maintenance — issue #730 (2026-10-28)
+
+The exact root npm allowlist now additionally ships `issue-admission/action.yml` and its fail-closed `index.cjs` bootstrap
+for the upstream isolated issue-admission subaction. C25 MUST verify that file is
+present while retaining the exclusion of `extension/`, generated extension
+artifacts and browser-contract development sources. Package identity, private
+extension version, target receipts, clean-build comparisons, workspace overrides
+and every verification gate remain unchanged. This is root package maintenance,
+not a browser product, permission, store or loading claim.

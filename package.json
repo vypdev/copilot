@@ -34,6 +34,7 @@
   },
   "files": [
     "action.yml",
+    "issue-admission/",
     "build/cli/index.js",
     "build/web/",
     "build/github_action/index.js",

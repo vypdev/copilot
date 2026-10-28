@@ -105,6 +105,7 @@ export function setupRunnerRole(file: string, job: string): SetupRunnerRole | un
     'copilot_pull_request.yml': 'copilot-pull-requests', 'copilot_pull_request_comment.yml': 'copilot-pull-requests',
     'copilot_commit.yml': 'copilot-commits', 'agent-cli-provisioning.yml': 'verify-agent-clis',
   };
+  if (file === 'copilot_issue.yml' && job === 'issue-admission') return 'isolated';
   if (agentJobs[file] === job) return 'agent';
   if (file === 'copilot_pull_request_approval.yml' && job === 'observe-approval') return 'observer';
   if (file === 'copilot_pull_request_merge_queue.yml' && job === 'copilot-pull-request-required-check') return 'isolated';

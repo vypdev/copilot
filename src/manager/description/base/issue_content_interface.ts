@@ -39,6 +39,9 @@ export abstract class IssueContentInterface extends ContentInterface {
                 throw new Error('Issue content markers are missing or inconsistent.');
             }
 
+            // Byte-identical state must not emit another native issue edit event.
+            if (updated === description) return updated;
+
             await this.issueDescriptionPort.updateDescription(
                 query.owner,
                 query.repository,

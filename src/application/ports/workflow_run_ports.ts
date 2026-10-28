@@ -15,6 +15,7 @@ export interface NativeWorkflowCoordinationContext {
     readonly eventName: string;
     readonly ref?: string;
     readonly pullRequestNumber?: number;
+    readonly issueNumber?: number;
 }
 
 export interface NativeWorkflowCoordinationQueryPort {

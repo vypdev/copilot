@@ -59,3 +59,29 @@ describe('native workflow coordination policy', () => {
     expect(hasNativeWorkflowCoordination(workflow({ group, 'cancel-in-progress': true, queue: 'single' }), 'review', group)).toBe(true);
   });
 });
+
+
+describe('native issue lifecycle serialization', () => {
+  const issueGroup = 'copilot-issue-${{ github.repository }}-${{ github.event.issue.number }}';
+  const issueQuery = { ...query, nativeCoordination: { ...native, eventName: 'issues', issueNumber: 21 } };
+  const definition = { concurrency: { group: issueGroup, 'cancel-in-progress': false, queue: 'max' }, jobs: {
+    admission: { steps: [] }, work: { steps: [], needs: 'admission' },
+  } };
+  it('recognizes outer per-issue coordination covering admission and work before runner acquisition', () => {
+    expect(expectedNativeWorkflowGroup(issueQuery)).toBe(issueGroup);
+    expect(hasNativeWorkflowCoordination(definition, 'work', issueGroup)).toBe(true);
+  });
+  it.each([0, -1, 1.5, undefined, Number.MAX_SAFE_INTEGER + 1])('retains the conservative fence for invalid native issue %s', issueNumber => {
+    expect(expectedNativeWorkflowGroup({ ...issueQuery, nativeCoordination: { ...issueQuery.nativeCoordination, issueNumber } })).toBeUndefined();
+  });
+  it.each([
+    { ...definition, concurrency: { ...definition.concurrency, queue: 'single' } },
+    { ...definition, concurrency: { ...definition.concurrency, 'cancel-in-progress': true } },
+    { ...definition, concurrency: { ...definition.concurrency, group: 'global' } },
+    { ...definition, jobs: { work: { uses: 'org/repo/callee.yml@v3' } } },
+    { ...definition, jobs: { work: { steps: [], concurrency: { group: 'nested' } } } },
+    { ...definition, jobs: {} },
+  ])('never substitutes a canceling, replacing, reusable or unrelated contract %j', workflow => {
+    expect(hasNativeWorkflowCoordination(workflow, 'work', issueGroup)).toBe(false);
+  });
+});
