@@ -139,13 +139,60 @@ Duplicate confirmations MUST be idempotent; stale previews MUST be invalidated w
 | Input | Type | Recommended default | Allowed values/range | Scope/persistence |
 |---|---|---|---|---|
 | Active profile | Stable local profile ID | Personal default, clearly labeled | Existing profile ID or explicit create | Local persistent |
-| Profile scope | Enum | Personal | Personal, current repository | Local persistent; repository identity validated |
+| Profile scope | Closed discriminated record | Global personal preference | Global, github.com host, verified numeric account, organization or repository | Local persistent; account-qualified numeric identities |
 | Appearance | Enum | System | System, light, dark | Local persistent |
 | Locale | Enum | Browser locale when supported | en, es, fr, pt; fallback en | Local persistent |
 | Favorites | Bounded ID list | Empty | Registered inventory IDs, bounded by schema | Local persistent |
 | Backup schema | Versioned structured document | Current supported version | Current known version only for restore | Export file; import preview |
 
-Validation rejects unknown profile references, malformed repository identity, duplicate IDs, out-of-range collections and incompatible schema versions. Precedence is feature default → personal profile → repository profile; the effective-state view names the winning layer and any unavailable dependency. A preview snapshots source revision and proposed values; confirmation rereads revision and requires a new preview if state changed. Missing values use documented defaults; retired values migrate explicitly; unknown/future values are preserved only when safe and otherwise rejected without destructive downgrade. Recommended configuration is system appearance with personal defaults; a meaningful alternative is a repository profile overriding one preference while retaining personal values elsewhere. Permission boundaries, privacy exclusions and explicit confirmation are not configurable.
+Validation rejects unknown profile references, malformed repository identity, duplicate IDs, out-of-range collections and incompatible schema versions. The complete owning contract's precedence remains feature default → global preference/profile → host → account → organization → repository → current session. The effective-state view names the winning layer and any unavailable dependency. A preview snapshots source revision and proposed values; confirmation rereads revision and requires a new preview if state changed. Missing values use documented defaults; retired values migrate explicitly; unknown/future values are preserved inert and exportable without destructive downgrade. Recommended configuration is system appearance with personal defaults; a meaningful alternative is a repository profile overriding one preference while retaining personal values elsewhere. Permission boundaries, privacy exclusions and explicit confirmation are not configurable.
+
+### 7.1 Concrete profile, navigation and session contract
+
+The profile collection contains at most ten complete records and ten selected
+IDs. Each record has a unique lowercase local ID of at most 48 ASCII characters,
+a user-authored name of 1–60 characters without controls or bidi-formatting
+characters, one closed scope, and known feature booleans/density/shortcuts/pause
+preferences. Exactly one profile may be selected per exact scope; selected IDs
+must exist. Scope identities use positive decimal strings of at most twenty
+digits, never mutable repository/account names. Account, organization and
+repository scopes carry the github.com account identity; they cannot inherit
+another account's private context. The encoded settings/import limit remains
+64 KiB. No connection, permission, credential, command or approval field is a
+profile preference.
+
+Session overrides are separate transient records bound to the current verified
+account, numeric repository and credential epoch. A changed or unavailable
+identity/epoch makes the old override inapplicable. A session override is never
+persisted through profile selection, import or rollback. Pause is monotonic
+across inherited scopes: a more specific false value cannot clear an active
+inherited pause. Emergency and tab pauses take priority and expose their own
+provenance. Explicit resumption edits the owning pause scope.
+
+Navigation accepts only packaged hash routes from a fixed route inventory.
+Feature details use known catalog IDs; profile details use bounded local IDs.
+Queries, encoded paths, arbitrary return URLs, commands, secrets, extra fields
+and other route parameters are rejected. Unknown routes show a safe local
+recovery destination without forwarding or logging the rejected value.
+
+These contracts are exercised by
+`extension/test/contracts/center_routes.test.ts`,
+`extension/test/contracts/center_profiles.test.ts` and
+`extension/test/contracts/profile_resolution.test.ts`. Their isolated policy
+evidence does not establish a working center, browser journey or completion of
+an entire catalog case before application/presentation integration.
+
+Profile operations are closed save/select/deselect/remove intents. Saving a
+profile plans creation or an edit; selection replaces only the selected profile
+at the same exact scope. Removing a profile also removes its selection, while
+deselection retains the authored profile. Moving a selected profile into a scope
+with another selected profile is invalid until the user reviews a nonconflicting
+choice. Every preview enumerates the complete semantic delta, including removed
+overrides returning to inheritance and explicit false values. Repeating a
+semantically unchanged choice produces no write. Planning copies validated input
+and never mutates storage; application confirmation must still bind the plan to
+the current revision. `extension/test/contracts/profile_change.test.ts` exercises
+these preview and preservation boundaries.
 
 ## 8. Clean Architecture
 
@@ -267,6 +314,21 @@ Errors follow impact → cause → action → retained state. They never claim a
 ## 13. Compatibility, migration, rollout, and rollback
 
 - Existing in-flight H2 runtime/session/settings behavior remains governed by its owners; H3 must integrate without claiming that prior receipts establish H3 acceptance.
+- H3 advances the complete personal settings record to schema 2, with a closed
+  schema-1 `center` record inside the same atomic current/previous envelope and
+  existing settings key. Exact H2 schema-1 records migrate with their revision,
+  preferences and numeric repository mappings preserved, plus safe center
+  defaults. The prior complete current record is retained as rollback, not a
+  nested copy of its entire old envelope. Schema-0 compact migration remains
+  supported. New readers never silently downgrade future root or center schemas.
+- Migration expansion must still fit the total 64 KiB bound. Capacity or storage
+  failure retains the exact original envelope and gives recovery; no trimming
+  of authored preferences establishes success. A legacy rollback restores
+  compatible preferences into the current schema rather than reinstalling an
+  older schema. Import cannot remove a selected scoped profile pause, including
+  by changing IDs/scopes, and retains repository pauses omitted from an import.
+  If these protections exceed capacity, the complete import fails without a
+  partial write. Explicit scoped reset/resumption is a different reviewed action.
 - Migrate versioned center settings transactionally where possible; retain original data until the new schema is verified. Future-schema data is not downgraded or overwritten automatically.
 - Deprecated keys have an explicit mapping and removal policy in implementation documentation; unknown values cannot silently become permissive settings.
 - Roll out as a packaged extension increment, with per-target source-bound receipts; no remote SPA, release, deploy or store submission is implied.
@@ -364,9 +426,10 @@ Repository-wide existing gates remain in force. New pure evidence/eligibility/in
 | `specs/_template.md` | reference |
 | `specs/catalog.json` | update |
 | `specs/CATALOG.md` | update |
-| `docs/browser-extension/control-center.mdx` | create |
-| `docs/browser-extension/configuration-and-profiles.mdx` | create |
-| `docs/browser-extension/permissions-and-privacy.mdx` | create |
+| `docs/browser-extension/features.mdx` | create |
+| `docs/browser-extension/configuration.mdx` | create |
+| `docs/browser-extension/permissions.mdx` | create |
+| `docs/browser-extension/privacy.mdx` | create |
 | `docs/browser-extension/troubleshooting.mdx` | create |
 | `docs/development/browser-extension.mdx` | update |
 | `extension/README.md` | update |
@@ -438,3 +501,14 @@ H4–H12 remain separate required implementations. H10/H11 own shared setup extr
 - Related specs/ADRs/issues/PRs: `specs/github-browser-extension.md`; `specs/github-browser-extension-functional-catalog.md`; `specs/github-browser-extension-platforms-and-delivery.md`; `specs/github-browser-extension-action-integration.md`; `specs/github-browser-extension-control-center-and-setup.md`; `specs/github-browser-extension-foundation.md`; `specs/github-browser-extension-runtime.md`; issue #704; issue #703; merged PR #719.
 - Decisions: use a companion refinement for the existing `github-browser-extension` capability; preserve all existing owning SDDs and full product baseline by reference; add H3-specific cases only in the fresh `bexh3-center-*` namespace.
 - Follow-up work outside this spec: H4–H12 implementations, full product/core acceptance across 150 functions and three targets, signed delivery, release/deploy and store submission.
+
+Implementation research on 2026-10-28 verified the installed Svelte 5.57.1,
+Vite 8.3.1 and Svelte Vite plugin 7.3.1. A typed Svelte component's modern AST
+exposes its original script range and compiles to the packaged client runtime;
+the build/architecture gates must inspect component scripts and markup as well
+as TypeScript, and include all packaged component/style inputs in source hashes.
+The [Svelte imperative component API](https://svelte.dev/docs/svelte/imperative-component-api)
+and [testing guidance](https://svelte.dev/docs/svelte/testing) guide mount/dispose
+and component tests. [Chrome options](https://developer.chrome.com/docs/extensions/develop/ui/options-page)
+and [Mozilla options](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/user_interface/Options_pages)
+describe native entrypoints; actual target receipts remain independently required.

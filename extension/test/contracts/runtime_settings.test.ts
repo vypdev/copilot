@@ -26,7 +26,7 @@ it('github-browser-extension-runtime-C24 atomically migrates retired compact val
 });
 it('github-browser-extension-runtime-C03 rejects malformed, secret-bearing, oversized and unsupported settings without partial normalization', () => {
     const base = clone();
-    for (const value of [null, [], { ...base, extra: true }, { ...base, schemaVersion: 2 }, { ...base, revision: -1 },
+    for (const value of [null, [], { ...base, extra: true }, { ...base, schemaVersion: 3 }, { ...base, revision: -1 },
         { ...base, features: null }, { ...base, features: { unknown: true } }, { ...base, features: { 'BEX-NAV-01': 'yes' } },
         { ...base, density: false }, { ...base, density: 'giant' }, { ...base, shortcuts: 1 }, { ...base, paused: null },
         { ...base, locale: 'xx' }, { ...base, theme: 'remote' }, { ...base, repositories: [] },

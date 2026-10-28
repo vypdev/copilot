@@ -287,6 +287,31 @@ independent local and session storage areas: integration tests assert that only
 nonsecret preferences reach local storage and only protected session storage
 holds connection/scheduler state.
 
+## H3 configuration work
+
+The H3 branch adds closed center routes, bounded account-qualified profiles,
+effective-setting provenance and complete profile-change previews. These core
+policies are implementation building blocks; they do not establish that the
+full control-center UI or its native-browser acceptance has completed.
+
+Personal settings use schema 2 with a separate schema-1 center record inside
+the existing atomic settings envelope. Exact H2 settings migrate with their
+revision and preferences preserved. Migration keeps the prior current record
+as a compatible rollback; quota or the 64 KiB total limit leaves the original
+envelope intact. Unknown newer root/center schemas remain read-only. No session
+credential or private repository evidence belongs to this persistent record.
+
+Profiles cannot grant connections or permissions. Imported settings preserve
+current repository pauses even when the imported record omits that repository,
+and cannot remove an active selected profile pause by deleting or renaming the
+profile. A complete semantic preview includes removed overrides returning to
+inheritance and explicit false values. Session overrides are bound to verified
+account/repository identity and credential epoch before applying them.
+
+See the [H3 companion](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-control-center-h3.md)
+for the complete fourteen-capability scope and acceptance gates. Its tests and
+browser receipts remain distinct from H2's engineering evidence.
+
 Post-Connect preference changes use the serialized settings update port and
 retain the initiating operation/session fence. An older failed settings commit
 cannot disconnect a newer account, and a newer update reads the latest complete

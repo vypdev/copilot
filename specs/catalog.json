@@ -3005,7 +3005,13 @@
         "extension/tooling/safari_container.mts",
         "extension/tooling/static_assets.mts",
         "extension/tooling/webdriver.mts",
-        "extension/src/application/shared_read_cancellation.ts"
+        "extension/src/application/shared_read_cancellation.ts",
+        "extension/src/domain/center_routes.ts",
+        "extension/src/domain/center_profiles.ts",
+        "extension/src/domain/profile_resolution.ts",
+        "extension/src/domain/profile_change.ts",
+        "extension/src/domain/preferences.ts",
+        "extension/src/domain/center_settings.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3039,7 +3045,13 @@
         "extension/test/integration/webdriver.test.ts",
         "extension/test/integration/session_races.test.ts",
         "extension/test/integration/shared_reads.test.ts",
-        "extension/test/integration/runtime_settings_navigation.test.ts"
+        "extension/test/integration/runtime_settings_navigation.test.ts",
+        "extension/test/contracts/center_routes.test.ts",
+        "extension/test/contracts/center_profiles.test.ts",
+        "extension/test/contracts/profile_resolution.test.ts",
+        "extension/test/contracts/profile_change.test.ts",
+        "extension/test/contracts/center_settings.test.ts",
+        "extension/test/contracts/settings_v2.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

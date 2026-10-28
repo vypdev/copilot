@@ -38,7 +38,8 @@ export class SettingsRepository {
         const operation = this.queue.then(async () => {
             const loaded = await this.read();
             if (loaded.state === 'ready' && loaded.migrated) {
-                const previous = await this.storage.get(SETTINGS_KEY);
+                const stored = await this.storage.get(SETTINGS_KEY);
+                const previous = record(stored) && Object.hasOwn(stored, 'current') ? stored.current : stored;
                 await this.storage.set(SETTINGS_KEY, { current: loaded.settings, previous });
             }
             return loaded;
