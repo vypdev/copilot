@@ -27,7 +27,7 @@ it('github-browser-extension-runtime-C25/github-browser-extension-runtime-C26 re
     expect(h.reader.read).not.toHaveBeenCalled(); expect(h.local.port.get).not.toHaveBeenCalled();
 });
 it('github-browser-extension-runtime-C17 manages only exact extension connection/settings/disconnect methods with no secret in returned values', async () => {
-    const h = harness(); expect(await h.gateway.handle({ version: 1, method: 'settings.read' }, sender)).toMatchObject({ state: 'ready' });
+    const h = harness(); expect(await h.gateway.handle({ version: 1, method: 'settings.read' }, extension)).toMatchObject({ state: 'ready' });
     expect(await h.connect()).toMatchObject({ state: 'connected' });
     expect(JSON.stringify(h.local.values.get(SETTINGS_KEY))).not.toContain(CONNECTED.secret);
     expect(await h.gateway.handle({ version: 1, method: 'session.status' }, extension)).toMatchObject({ state: 'connected' });
@@ -71,7 +71,7 @@ it('github-browser-extension-runtime-C18 future settings or persistence failure 
         expect(h.service.status().state).toBe('disconnected');
     }
     const h = harness(); vi.mocked(h.local.port.get).mockRejectedValue(new Error('private'));
-    expect(await h.gateway.handle({ version: 1, method: 'settings.read' }, sender)).toMatchObject({ state: 'unavailable' });
+    expect(await h.gateway.handle({ version: 1, method: 'settings.read' }, extension)).toMatchObject({ state: 'unavailable' });
 });
 it('github-browser-extension-runtime-C23 bounds per-tab leases and refuses unbounded sender fanout', async () => {
     const h = harness();

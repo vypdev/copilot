@@ -530,7 +530,8 @@ options view. New connections use the named-session controller, epoch and
 revision checks; preference changes use retained previews and confirmation.
 This prevents an old view from creating a serving identity absent from the
 manager or bypassing its current editor. Legacy read/status methods remain
-available. An explicit old `session.disconnect` is an absolute safety action:
+available to packaged pages; page status is local-only and cannot start HTTP.
+An explicit old `session.disconnect` is an absolute safety action:
 it fences work and clears all protected connection keys, preserving authored
 preferences. It cannot grant authority or select another identity. Old views
 must reopen the current options application to connect or edit.
@@ -565,7 +566,7 @@ the read credential. Resuming this scope cannot release global or inherited
 pause. Duplicate saved sessions for one physical repository share its numeric
 preference row. An unrelated unfinished connection form disables repository
 preference reviews so saving one cannot discard the other's draft. Full bounded
-workspaces, rename recovery, content-runtime resolver integration and remaining
+workspaces, rename recovery and remaining
 CENTER workflows are still required before H3 acceptance.
 
 Current evidence: `profile_context.test.ts`, `repository_owner.test.ts`,
@@ -574,6 +575,67 @@ Current evidence: `profile_context.test.ts`, `repository_owner.test.ts`,
 These are deterministic policy/mounted integration tests; native browser and
 human acceptance still require new source-bound receipts. The 160 distinct risk
 floor and the complete 56+56 CENTER case obligations are unchanged.
+
+### 8.9 Live profile configuration and read admission
+
+The content runtime consumes a closed effective-configuration projection, rather
+than the complete personal settings/profile collections. `page.configuration`
+is a content-only, exact native-route/generation/repository/viewer request. Its
+reply includes the immutable source digest, matched operands, credential epoch
+and seven rendering fields (revision, locale, theme, density, shortcuts, feature
+booleans and pause). Unknown fields, wrong source/identity, impossible paused
+connection grants, missing/unknown features and malformed enums are rejected.
+Raw `settings.read` is now packaged-page-only; old content must reload the new
+package. Page-script messages cannot obtain the profile names or credential.
+
+```text
+Eligible native page → local/global/host and restriction-only pause checks
+ → retained identity may only restrict → eligible restoration if needed
+ → verified account/canonical repository + current owner → effective projection
+ → current source/scope receipt → runtime and separately admitted object GET
+```
+
+The background owns both projection and actual GET admission through the same
+resolver. Global/host preferences work without credentials. A verified viewer
+may supply account scope when its login agrees with the observed page; org/repo
+scope additionally requires both numeric repository ID and canonical route.
+DOM observations only veto verified identity; they never manufacture authority.
+A different repository cannot inherit the selected repository's preferences.
+Density changes the extension-owned panel spacing; no GitHub editor or native
+page preference is rewritten. Feature booleans/shortcuts are configuration for
+their implementations, not evidence that later-milestone features exist.
+
+Before any restoration HTTP, global/host pause and numeric repository pause
+restrict the request. A protected retained identity may additionally enforce
+an inherited account/org/repository profile pause, but cannot grant positive
+preferences or connection until reverified. This conservative pause can be
+reviewed from the local center, including after repository ownership changed.
+Unpaused restoration requires matching retained repository/viewer, connected
+preference, visible/active/online eligible context and current native lease.
+Fresh provider owner facts replace retained org context before the object GET;
+a newly matched pause stops that GET. Permission/storage failures never enable
+connection. No extra provider endpoint or host permission is introduced.
+
+Hidden pages, native tab activation/navigation, settings invalidation, source
+change, observed account/repository/object change and teardown retire old
+effects and cancel their page lease. Restoration releases its scoped abort
+listeners and keeps the credential when the page merely departs. A fresh
+eligible request can retry within the existing scheduler cooldown/budget;
+there is no automatic regeneration/retry loop. Current settings revision,
+credential epoch and native tab are checked again before publication. Invalid
+receipts retain only a disabled local health/recovery surface. A root replacement
+queued during asynchronous mounting is reconciled once after mount, bounded by
+the existing refresh-storm policy.
+
+The native activation event is cancellation-only: its URL may be unavailable,
+so it cannot authorize a new context ([Mozilla tabs.onActivated](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/onActivated),
+[Chrome tabs](https://developer.chrome.com/docs/extensions/reference/api/tabs#event-onActivated)).
+Deterministic evidence: `runtime_configuration.test.ts` (closed policy/protocol),
+`page_configuration.test.ts` (real gateway/session/read admission and races),
+`content_configuration.test.ts` (actual background/center/content composition),
+and the retained runtime lifecycle/DOM contracts. They refine H3-R03/R04/R05/R11;
+native H3 receipts, transient-session/tab/emergency controls, per-feature
+provenance and the remaining full H3 scope still require acceptance.
 
 ## 9. UI/UX and content contract
 

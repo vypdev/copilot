@@ -1,7 +1,6 @@
 import { allowedMessage, extensionSender, parseMessage, type Message, type Sender } from '../domain/protocol.ts';
 import { parseCenterMessage } from '../domain/center_protocol.ts';
 import { currentFence, type PageFence } from '../domain/session.ts';
-import { effectiveSettings } from '../domain/settings.ts';
 import { natural } from '../domain/value.ts';
 import type { CancellationOwner } from './read_ports.ts';
 import { ProtectedSessionService } from './protected_session.ts';
@@ -10,6 +9,7 @@ import type { CenterGateway } from './center_gateway.ts';
 import { sameSettingsContent } from '../domain/settings_operation.ts';
 import { record } from '../domain/value.ts';
 import type { NamedSessions } from './named_sessions.ts';
+import { PageConfigurationService } from './page_configuration.ts';
 
 interface PageLease { readonly fence: PageFence; readonly cancel: CancellationOwner }
 export interface GatewayPorts {
@@ -79,7 +79,11 @@ export class MessageGateway {
                 return this.sessions.status();
             }
             if (message.method === 'session.connect') return await this.connect(message);
-            if (message.method === 'session.status') { await this.sessions.start(); return this.sessions.status(); }
+            if (message.method === 'session.status') {
+                // Legacy page status cannot start restoration outside the page/profile admission path.
+                if (extensionSender(sender, this.id, this.origin)) await this.sessions.start();
+                return this.sessions.status();
+            }
             const id = sender.tab!.id!;
             if (message.method === 'page.release') {
                 if (this.pages.get(id)?.fence.generation === message.generation) this.invalidate(id);
@@ -100,10 +104,16 @@ export class MessageGateway {
                 if (!previous && this.pages.size >= 128) return { state: 'busy' };
                 lease = { fence, cancel: this.ports.cancellation() }; this.pages.set(id, lease);
             }
-            const loaded = await this.settings.read();
-            if (loaded.state !== 'ready' || !effectiveSettings(loaded.settings, message.repositoryId, false, false).connected) return { state: 'paused' };
+            const online = this.ports.online();
+            const currentPage = () => !lease.cancel.aborted && this.pages.get(id) === lease && (!online || this.ports.online());
+            const configuration = await new PageConfigurationService(this.settings, this.sessions)
+                .resolve(message, lease.cancel, currentPage, current.active === true, online);
+            if (!currentPage()) return { state: 'stale' };
+            if (!configuration) return { state: message.method === 'page.snapshot' ? 'paused' : 'unavailable' };
             const epoch = this.sessions.status().epoch;
-            const result = await this.sessions.snapshot(message, current.active === true, this.ports.online(), lease.cancel);
+            const result = message.method === 'page.configuration' ? configuration
+                : !configuration.connected ? { state: 'paused' }
+                    : await this.sessions.snapshot(message, current.active === true, this.ports.online(), lease.cancel);
             const final = await this.ports.currentTab(id);
             if (epoch !== this.sessions.status().epoch || lease.cancel.aborted || this.pages.get(id) !== lease || final.url !== message.route || final.incognito !== false || final.active !== true) return { state: 'stale' };
             return result;

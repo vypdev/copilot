@@ -70,10 +70,25 @@ labelled as a saved scope; editing it preserves that scope.
 **Effective saved preferences** shows density, shortcuts and pause with the
 winning default, global, repository or named-profile source. Only the currently
 connected selected identity contributes account/organization/repository scope.
-Without it, personal and github.com preferences remain available. This preview
-is being integrated with GitHub runtime features; individual tab, emergency and
-transient-session overrides and per-feature provenance remain part of H3.
+Without it, personal and github.com preferences remain available. The GitHub
+runtime now uses the same resolver. It checks the current account and both the
+canonical repository route and numeric repository identity before applying a
+repository profile. A different repository keeps its own preferences. Density
+changes the extension panel's spacing; later feature switches do not claim that
+their implementations are already available. Individual tab, emergency and
+transient-session controls and per-feature provenance remain part of H3.
 Profiles never connect an account or authorize an Action command.
+
+A pause stops runtime effects and API reads, including session restoration.
+If it hides the runtime section, open the local center from the extension toolbar.
+After a background restart, a retained matching identity can conservatively
+keep its scoped pause; it cannot enable other preferences until reverified.
+Use the local center to review that pause, including after an ownership change.
+Unpaused restoration occurs only for the matching connected repository on an
+active, visible, online page. Leaving the page cancels its work and retains the
+credential; return and observe the existing cooldown before retrying. Invalid
+or incompatible configuration leaves a disabled recovery panel. Reload old
+GitHub tabs after updating the development package.
 
 ## Connect a selected repository
 
@@ -119,7 +134,7 @@ preferences need recovery. The development **Repositories** route also offers **
 Each uses the normal complete preview and confirmation. Reset preserves the
 read credential; removing a repository pause cannot release an inherited global
 pause. These actions wait while a separate connection form has an unfinished
-draft. Full workspaces, rename recovery and runtime profile integration remain
+draft. Full workspaces and rename recovery remain
 in progress.
 
 ## Export, import, reset and rollback

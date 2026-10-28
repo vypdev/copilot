@@ -34,7 +34,10 @@ export class FeatureRuntime {
             try {
                 const controller = await feature.mount(context, scope);
                 scope.own(() => controller.dispose());
-                if (scope.current()) item.controller = controller;
+                if (scope.current()) {
+                    item.controller = controller;
+                    if (item.again) { item.again = false; await this.refresh(feature.id, item); }
+                }
             } catch { this.ports.diagnostic(feature.id, 'mount-failed'); this.release(feature.id, item); }
         }));
     }
@@ -45,7 +48,7 @@ export class FeatureRuntime {
     dispose(): void { this.generation++; this.context = undefined; this.releaseAll(); }
     private async refresh(id: string, item: Mounted): Promise<void> {
         if (item.refreshing) { item.again = true; return; }
-        if (!item.controller) return;
+        if (!item.controller) { item.again = true; return; }
         item.refreshing = true;
         try {
             // At most two passes; a storm cannot keep a feature alive indefinitely.

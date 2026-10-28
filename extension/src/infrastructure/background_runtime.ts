@@ -48,6 +48,8 @@ export function startBackground(api: BrowserApi): () => void {
         if (changes.url || changes.status === 'loading') gateway.invalidate(id);
         if (changes.status === 'loading' || (changes.url && !extensionSender({ id: api.runtime.id, url: changes.url }, api.runtime.id, api.runtime.getURL('')))) gateway.releaseCenterTab(id);
     };
+    // An activated tab's URL may still be unavailable; use this only to cancel, never to authorize.
+    const activated = () => { gateway.invalidate(); };
     const permission = (value: { origins?: string[] }) => {
         if (value.origins?.some(origin => origin === 'https://api.github.com/*' || origin === '<all_urls>')) {
             gateway.invalidate(undefined, false); void connections.revokeAll().catch(() => undefined);
@@ -60,11 +62,13 @@ export function startBackground(api: BrowserApi): () => void {
     // Register all wake listeners synchronously, before any asynchronous initialization.
     api.runtime.onMessage.addListener(message); api.tabs.onRemoved.addListener(removed);
     api.tabs.onUpdated.addListener(updated); api.permissions.onRemoved.addListener(permission);
+    api.tabs.onActivated.addListener(activated);
     api.storage.onChanged.addListener(storage); api.action.onClicked.addListener(open);
     return () => {
         gateway.shutdown(); void sessions.revoke();
         api.runtime.onMessage.removeListener(message); api.tabs.onRemoved.removeListener(removed);
         api.tabs.onUpdated.removeListener(updated); api.permissions.onRemoved.removeListener(permission);
+        api.tabs.onActivated.removeListener(activated);
         api.storage.onChanged.removeListener(storage); api.action.onClicked.removeListener(open);
     };
 }

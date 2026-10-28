@@ -8,6 +8,7 @@ import { DEFAULT_SETTINGS } from '../../src/domain/settings.ts';
 import { context, deferred } from '../fixtures/runtime.ts';
 import { browserFixture } from '../fixtures/browser.ts';
 import { githubDom } from '../fixtures/dom.ts';
+import { configurationReply } from '../fixtures/page_configuration.ts';
 
 const cleanups: (() => void)[] = [];
 afterEach(() => { for (const stop of cleanups.splice(0).reverse()) stop(); vi.unstubAllGlobals(); });
@@ -19,7 +20,7 @@ function panel(valid = () => true, route?: string) {
 }
 function content() {
     const dom = githubDom(); cleanups.push(() => dom.dom.window.close()); const h = browserFixture();
-    vi.mocked(h.api.runtime.sendMessage).mockResolvedValue({ state: 'ready', settings: DEFAULT_SETTINGS });
+    vi.mocked(h.api.runtime.sendMessage).mockImplementation(async request => configurationReply(request));
     const stop = startContent(h.api, dom.window, dom.document)!; cleanups.push(stop); return { ...dom, ...h, stop };
 }
 it('github-browser-extension-runtime-C13/github-browser-extension-runtime-C27 preserves native draft bytes, selection and focus while safely rendering issue/PR context', async () => {
@@ -98,7 +99,7 @@ it('github-browser-extension-runtime-C09 invalidates settings/credential epochs,
         vi.mocked(h.api.runtime.sendMessage).mockResolvedValue(response); invalidate(); await vi.waitFor(() => expect(h.document.querySelector<HTMLElement>('[data-copilot-runtime]')!.dataset.copilotSettings).toBe('unavailable'));
     }
     vi.mocked(h.api.runtime.sendMessage).mockRejectedValue(new Error('private')); invalidate(); await Promise.resolve(); await Promise.resolve();
-    vi.mocked(h.api.runtime.sendMessage).mockResolvedValue({ state: 'ready', settings: { ...DEFAULT_SETTINGS, locale: 'es' } }); invalidate();
+    vi.mocked(h.api.runtime.sendMessage).mockImplementation(async request => configurationReply(request, { ...DEFAULT_SETTINGS, locale: 'es' })); invalidate();
     await vi.waitFor(() => expect(h.document.querySelector('section')!.textContent).toContain('Runtime de Copilot'));
     Object.defineProperty(h.document, 'visibilityState', { configurable: true, value: 'hidden' }); h.document.dispatchEvent(new h.dom.window.Event('visibilitychange'));
     expect(h.document.querySelector('[data-copilot-runtime]')).toBe(null); h.window.dispatchEvent(new h.dom.window.Event('hashchange'));
@@ -166,7 +167,7 @@ it('panel epoch loss blocks queued clicks and rejects old failed reads without e
 it('queued native page hints after teardown and obsolete failed settings reads cannot revive an old scope', async () => {
     const h = githubDom(); cleanups.push(() => h.dom.window.close()); const b = browserFixture(); const old = deferred<unknown>();
     const event = vi.spyOn(h.window, 'addEventListener'); vi.mocked(b.api.runtime.sendMessage).mockReturnValueOnce(old.promise)
-        .mockResolvedValue({ state: 'ready', settings: DEFAULT_SETTINGS });
+        .mockImplementation(async request => configurationReply(request));
     const stop = startContent(b.api, h.window, h.document)!; cleanups.push(stop);
     h.document.querySelector('meta[name="octolytics-dimension-issue_id"]')!.remove();
     h.document.dispatchEvent(new h.dom.window.Event('visibilitychange'));

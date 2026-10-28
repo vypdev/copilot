@@ -60,10 +60,15 @@ Hidden/inactive/offline pages cannot read.
 
 Versioned preferences remain in browser-local nonsecret storage. The core
 supports global/numeric-repository overrides, immutable revisions, pause,
-atomic migration and one previous nonsecret rollback. Full feature/profile/
-import/export/rollback editing belongs to the upcoming local center. H2's
-packaged page exposes the read-session journey; developer configuration uses
-the tested repository port, not arbitrary page scripts.
+atomic migration and one previous nonsecret rollback. The H3 development
+[local center](/browser-extension/configuration) now supplies reviewed profile,
+appearance, import/export and reset/rollback journeys. Its complete milestone
+acceptance is still pending. Content receives only effective rendering settings,
+with source and page identity checked before application, never the complete
+personal profile or session collections. Density affects the owned runtime
+panel; a selected profile pause stops effects and actual reads. A background
+restart checks inherited pauses before restoration HTTP; positive scoped
+preferences require reverified identity on an active, visible, online page.
 
 Settings are limited to 64 KiB, 100 repository overrides and 20 saved views per
 repository (2,000 characters each). Unknown features/enums/authority fields are

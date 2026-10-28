@@ -1,10 +1,10 @@
 import type { Epochs, PageIdentity } from '../domain/page.ts';
-import type { Settings } from '../domain/settings.ts';
+import type { RuntimeSettings } from '../domain/runtime_configuration.ts';
 
 export interface RuntimeContext {
     readonly page: PageIdentity;
     readonly epochs: Epochs;
-    readonly settings: Settings;
+    readonly settings: RuntimeSettings;
     readonly paused: boolean;
     readonly repositoryId: string;
 }

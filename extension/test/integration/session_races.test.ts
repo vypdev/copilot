@@ -92,3 +92,21 @@ it('an obsolete failed revoke cannot overwrite a newer Connect state while its i
     identity.resolve({ state: 'ok', data: { id: '1', login: 'octo' }, bytes: 1, etag: '' });
     expect(await newer).toMatchObject({ state: 'connected' });
 });
+
+it('a restoration requested from an already canceled scope performs no permission, storage or provider work', async () => {
+    const h = sessionHarness(); const cancellation = new BrowserCancellation(); cancellation.abort();
+    await h.service.start({ cancellation, current: () => true });
+    expect(h.ports.protected).not.toHaveBeenCalled(); expect(h.port.get).not.toHaveBeenCalled(); expect(h.reader.read).not.toHaveBeenCalled();
+});
+it('a page departure while restoration checks native protection retains the credential without starting HTTP', async () => {
+    const h = sessionHarness(); h.values.set(SESSION_KEY, CONNECTED); const permission = deferred<boolean>(); h.ports.permitted.mockReturnValueOnce(permission.promise);
+    const cancellation = new BrowserCancellation(); const restore = h.service.start({ cancellation, current: () => true });
+    await vi.waitFor(() => expect(h.ports.permitted).toHaveBeenCalledTimes(1)); cancellation.abort(); permission.resolve(true); await restore;
+    expect(h.reader.read).not.toHaveBeenCalled(); expect(h.values.get(SESSION_KEY)).toEqual(CONNECTED); expect(h.service.status().state).toBe('disconnected');
+});
+it('an obsolete rejected Connect transport cannot change the state after an independent revocation', async () => {
+    const h = sessionHarness(); await h.service.start(); const pending = deferred<ScheduledRead>(); const run = vi.spyOn(h.scheduler, 'run').mockReturnValueOnce(pending.promise);
+    const connect = h.service.connect(CONNECTED.secret, CONNECTED.repository); await vi.waitFor(() => expect(run).toHaveBeenCalled());
+    await h.service.revoke(); pending.reject(new Error('private adapter failure')); await connect;
+    expect(h.service.status().state).toBe('disconnected'); expect(h.values.has(SESSION_KEY)).toBe(false);
+});

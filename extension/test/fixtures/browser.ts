@@ -17,6 +17,7 @@ export function browserFixture() {
     const onMessage = event<Parameters<BrowserApi['runtime']['onMessage']['addListener']>[0]>();
     const onUpdated = event<Parameters<BrowserApi['tabs']['onUpdated']['addListener']>[0]>();
     const onRemoved = event<(id: number) => void>();
+    const onActivated = event<(active: { tabId: number; windowId: number }) => void>();
     const permissionRemoved = event<(value: { origins?: string[] }) => void>();
     const changed = event<(value: Record<string, unknown>, area: string) => void>();
     const clicked = event<() => void>();
@@ -25,7 +26,7 @@ export function browserFixture() {
     storage: { local: local.area, session: session.area, onChanged: changed },
     permissions: { contains: vi.fn(async () => true), request: vi.fn(async () => true), onRemoved: permissionRemoved },
     tabs: { get: vi.fn(async () => ({ url: 'https://github.com/octo/example/issues/42', active: true, incognito: false, windowId: 1 })),
-        query: vi.fn(async () => []), sendMessage: vi.fn(async () => undefined), create: vi.fn(async () => undefined), onUpdated, onRemoved },
+        query: vi.fn(async () => []), sendMessage: vi.fn(async () => undefined), create: vi.fn(async () => undefined), onUpdated, onRemoved, onActivated },
     action: { onClicked: clicked }, extension: { inIncognitoContext: false } };
-    return { api, localArea: local.area, localValues: local.values, sessionArea: session.area, sessionValues: session.values, onMessage, onUpdated, onRemoved, permissionRemoved, changed, clicked };
+    return { api, localArea: local.area, localValues: local.values, sessionArea: session.area, sessionValues: session.values, onMessage, onUpdated, onRemoved, onActivated, permissionRemoved, changed, clicked };
 }

@@ -10,6 +10,9 @@ export function mountRuntimePanel(context: RuntimeContext, scope: ResourceScope,
     const existing = document.querySelector('[data-copilot-runtime]');
     if (!anchor || existing) return { refresh() {}, dispose() {} };
     const panel = document.createElement('section'); panel.dataset.copilotRuntime = '1'; panel.dataset.copilotSettings = copy.ready === false ? 'unavailable' : 'ready'; panel.dataset.copilotSourceTree = copy.sourceTree ?? 'unbundled';
+    panel.dataset.copilotDensity = context.settings.density;
+    panel.style.padding = context.settings.density === 'compact' ? '0.5rem' : '1rem';
+    panel.style.colorScheme = context.settings.theme === 'github' ? 'normal' : context.settings.theme;
     panel.setAttribute('aria-label', copy.title);
     const heading = document.createElement('h2'); heading.textContent = copy.title;
     const status = document.createElement('p'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');

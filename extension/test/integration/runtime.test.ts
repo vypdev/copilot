@@ -61,10 +61,11 @@ it('isolates mounting/refresh/cleanup exceptions and always releases the remaini
     expect(() => scope.dispose()).toThrow('cleanup-failed'); expect(releases).toEqual([2, 1]);
     scope.dispose(); scope.own(() => releases.push(3)); expect(releases).toEqual([2, 1, 3]);
 });
-it('coalesces refresh storms to bounded passes and ignores refresh until asynchronous mount is complete', async () => {
+it('coalesces refresh storms and reconciles a root replacement queued during asynchronous mount', async () => {
     const h = harness(); const mount = deferred<FeatureController>(); const refresh = deferred<void>();
     const feature = { ...h.feature, mount: () => mount.promise }; const runtime = new FeatureRuntime([feature], h.ports);
     const loading = runtime.update(context()); await runtime.update(context()); mount.resolve(h.controller); await loading;
+    expect(h.controller.refresh).toHaveBeenCalledTimes(1); h.controller.refresh.mockClear();
     h.controller.refresh.mockReturnValue(refresh.promise); const first = runtime.update(context()); await runtime.update(context());
     refresh.resolve(); await first; expect(h.controller.refresh).toHaveBeenCalledTimes(2);
 });

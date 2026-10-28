@@ -1,5 +1,5 @@
 import { pageIdentity } from '../domain/page.ts';
-import { validSession, type ProtectedSession } from '../domain/session.ts';
+import { validSession, type ProtectedSession, type SessionIdentity } from '../domain/session.ts';
 import type { NativeObject, Repository, Viewer } from '../domain/read.ts';
 import type { Message } from '../domain/protocol.ts';
 import type { StoragePort } from './runtime_ports.ts';
@@ -8,6 +8,7 @@ import { ReadScheduler, type ScheduledRead } from './read_scheduler.ts';
 
 export const SESSION_KEY = 'copilot.connection.v1';
 export type SessionStatus = { readonly state: 'disconnected' | 'connected' | 'unavailable' | 'revalidating' | 'limited' | 'cooldown' | 'budget'; readonly epoch: number; readonly retryAt?: number };
+export interface RestorationScope { readonly cancellation: ReadCancellation; current(): boolean }
 export class ProtectedSessionService {
     private epoch = 0;
     private retryAt: number | undefined;
@@ -30,20 +31,42 @@ export class ProtectedSessionService {
         return { ...identity };
     }
     status(): SessionStatus { return { state: this.state, epoch: this.epoch, ...(this.retryAt === undefined ? {} : { retryAt: this.retryAt }) }; }
-    async start(): Promise<void> {
-        this.initialization ??= this.restore();
-        await this.initialization;
+    /** Retained identity is restriction-only until start() has verified it again. */
+    async retainedIdentity(): Promise<SessionIdentity | null> {
+        if (!await this.ports.protected() || !await this.ports.permitted()) { await this.revoke(); return null; }
+        if (this.connection) return this.verifiedIdentity();
+        const value = await this.store.get(SESSION_KEY);
+        if (!validSession(value)) return null;
+        const { schemaVersion: _schema, secret: _secret, ...identity } = value; return identity;
     }
-    private async restore(): Promise<void> {
+    async start(scope?: RestorationScope): Promise<void> {
+        this.initialization ??= this.restore(scope);
+        const pending = this.initialization;
+        await pending;
+        // A fresh eligible request may retry; the scheduler retains cooldown/budget and no loop is started here.
+        if (scope && this.initialization === pending && !this.connection) this.initialization = undefined;
+    }
+    private async restore(scope?: RestorationScope): Promise<void> {
         const epoch = this.epoch;
+        const current = () => epoch === this.epoch && (!scope || !scope.cancellation.aborted && scope.current());
+        if (!current()) return;
         this.state = 'revalidating';
+        const cancellation = this.ports.cancellation();
+        const releases = [this.cancellation.onAbort(() => cancellation.abort())];
+        if (scope) releases.push(scope.cancellation.onAbort(() => cancellation.abort()));
         try {
-            if (!await this.ports.protected() || !await this.ports.permitted()) { await this.revoke(); return; }
+            const ready = await this.ports.protected() && await this.ports.permitted();
+            if (!current()) return;
+            if (!ready) { await this.revoke(); return; }
             const stored = await this.store.get(SESSION_KEY);
-            if (epoch !== this.epoch) return;
+            if (!current()) return;
             if (!validSession(stored)) { await this.revoke(); return; }
-            await this.establish(stored.secret, stored.repository, epoch, stored);
-        } catch { if (epoch === this.epoch) { await this.revoke(); this.state = 'unavailable'; } }
+            await this.establish(stored.secret, stored.repository, epoch, stored, current, cancellation);
+        } catch { if (current()) { await this.revoke(); this.state = 'unavailable'; } }
+        finally {
+            for (const release of releases) release();
+            if (epoch === this.epoch && !current() && !this.connection) this.state = 'disconnected';
+        }
     }
     async connect(secret: string, repository: string, expected?: ProtectedSession, current: () => boolean = () => true): Promise<SessionStatus> {
         await this.start();
@@ -59,18 +82,21 @@ export class ProtectedSessionService {
         } catch { if (epoch === this.epoch) { await this.revoke(); this.state = 'unavailable'; } }
         return this.status();
     }
-    private async establish(secret: string, repository: string, epoch: number, expected?: ProtectedSession, current: () => boolean = () => true): Promise<void> {
+    private async establish(secret: string, repository: string, epoch: number, expected: ProtectedSession | undefined, current: () => boolean,
+        cancellation: ReadCancellation = this.cancellation): Promise<void> {
+        // Both callers admit the current scope synchronously; asynchronous completions are fenced below.
         const activity = { visible: true, active: true, online: true, pending: false, manual: true };
-        const identity = await this.scheduler.run(`connect/${epoch}/viewer`, 'connection', { type: 'viewer' }, secret, this.cancellation, activity);
-        if (epoch !== this.epoch || !current()) return;
-        if (this.defer(identity, epoch)) return;
+        const identity = await this.scheduler.run(`connect/${epoch}/viewer`, 'connection', { type: 'viewer' }, secret, cancellation, activity);
+        if (epoch !== this.epoch || !current() || cancellation.aborted) return;
+        if (this.defer(identity)) return;
         if (identity.state !== 'ok' || !('login' in identity.data)) throw new Error('identity-unavailable');
         const viewer = identity.data as Viewer;
-        const target = await this.scheduler.run(`connect/${epoch}/repository`, 'connection', { type: 'repository', name: repository }, secret, this.cancellation, activity);
-        if (this.defer(target, epoch)) return;
+        const target = await this.scheduler.run(`connect/${epoch}/repository`, 'connection', { type: 'repository', name: repository }, secret, cancellation, activity);
+        if (epoch !== this.epoch || !current() || cancellation.aborted) return;
+        if (this.defer(target)) return;
         if (target.state !== 'ok' || !('name' in target.data)) throw new Error('repository-unavailable');
         const repo = target.data as Repository;
-        if (identity.bytes + target.bytes > 1024 * 1024 || epoch !== this.epoch || this.cancellation.aborted || !current()) return;
+        if (identity.bytes + target.bytes > 1024 * 1024) return;
         if (expected && (expected.viewerId !== viewer.id || expected.repositoryId !== repo.id)) throw new Error('identity-changed');
         const connection: ProtectedSession = { schemaVersion: 1, secret, viewerId: viewer.id, viewerLogin: viewer.login,
             repositoryId: repo.id, repository: repo.name, ...(repo.organizationId === undefined ? {} : { organizationId: repo.organizationId }) };
@@ -80,9 +106,9 @@ export class ProtectedSessionService {
         if (!permitted || !current()) { await this.revoke(); return; }
         this.connection = connection; this.state = 'connected';
     }
-    private defer(result: ScheduledRead, epoch: number): boolean {
+    private defer(result: ScheduledRead): boolean {
         if (result.state !== 'limited' && result.state !== 'cooldown' && result.state !== 'budget') return false;
-        if (epoch === this.epoch) { this.state = result.state; this.retryAt = result.retryAt; }
+        this.state = result.state; this.retryAt = result.retryAt;
         return true;
     }
     /** Fence and abort synchronously, before the first storage await. */

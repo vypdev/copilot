@@ -3069,7 +3069,9 @@
         "extension/src/domain/profile_context_copy.ts",
         "extension/src/presentation/ProfileEffectiveState.svelte",
         "extension/src/presentation/RepositoryPreferencesPanel.svelte",
-        "extension/src/presentation/ScopeIdentitySelect.svelte"
+        "extension/src/presentation/ScopeIdentitySelect.svelte",
+        "extension/src/domain/runtime_configuration.ts",
+        "extension/src/application/page_configuration.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3157,7 +3159,10 @@
         "extension/test/contracts/repository_owner.test.ts",
         "extension/test/integration/scoped_profiles.test.ts",
         "extension/test/integration/session_owner_projection.test.ts",
-        "extension/test/integration/legacy_center_upgrade.test.ts"
+        "extension/test/integration/legacy_center_upgrade.test.ts",
+        "extension/test/contracts/runtime_configuration.test.ts",
+        "extension/test/integration/page_configuration.test.ts",
+        "extension/test/integration/content_configuration.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

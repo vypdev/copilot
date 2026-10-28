@@ -26,6 +26,7 @@ export interface BrowserApi {
         create(value: { url: string; windowId?: number }): Promise<unknown>;
         onRemoved: BrowserEvent<(id: number) => void>;
         onUpdated: BrowserEvent<(id: number, changes: { url?: string; status?: string }) => void>;
+        onActivated: BrowserEvent<(active: { tabId: number; windowId: number }) => void>;
     };
     action: { onClicked: BrowserEvent<() => void> };
     extension?: { inIncognitoContext?: boolean };
