@@ -522,6 +522,59 @@ the existing runtime/browser contracts. They refine H3-R05/R09 and CENTER04/05
 boundaries without completing those entire capabilities or replacing the
 required source-bound Chrome, Firefox, Safari and human acceptance.
 
+### 8.9 Upgrade authority and identity-backed preference preview
+
+Once the center composition is installed, legacy `session.connect` and
+`settings.write` requests are rejected even from an otherwise admitted old
+options view. New connections use the named-session controller, epoch and
+revision checks; preference changes use retained previews and confirmation.
+This prevents an old view from creating a serving identity absent from the
+manager or bypassing its current editor. Legacy read/status methods remain
+available. An explicit old `session.disconnect` is an absolute safety action:
+it fences work and clears all protected connection keys, preserving authored
+preferences. It cannot grant authority or select another identity. Old views
+must reopen the current options application to connect or edit.
+
+Profile scope controls choose numeric identities from protected saved read
+sessions. No newly typed account/repository name becomes authority. Changing
+account clears dependent repository/organization choices. An authored scope
+absent from current sessions remains explicitly unavailable and editable without
+silently deleting it. Choosing or saving a profile never connects an account.
+For an optional organization scope, the closed GET decoder verifies owner
+ID/type/login and its relationship to the requested repository. A missing legacy
+owner field leaves organization identity unknown; a malformed supplied owner
+is rejected. User owners produce no organization scope. Unrelated provider
+fields, including temporary clone credentials, are not copied to records/views.
+This uses the existing [Get a repository](https://docs.github.com/en/rest/repos/repos#get-a-repository)
+operation; no new endpoint, permission or network authority is introduced.
+
+The current selected-session view projects freshly verified canonical/owner
+facts after restoration. It cannot apply an old organization's profile from
+stale vault metadata; unknown fresh ownership removes the old organization from
+effective context. Reading does not rewrite inactive entries or authored scopes.
+The saved-preference preview shows density, shortcuts and pause plus their
+default/global/repository/profile source. It uses only the connected selected
+identity for account/organization/repository matching. Without it, personal and
+host preferences still resolve. Tab/emergency/transient-session overrides and
+per-feature provenance remain separate work; this view does not claim that all
+GitHub runtime features already consume the resolver.
+
+Repositories offers reviewed per-repository pause, removal of that local pause
+and preference reset against numeric IDs from saved sessions. Reset preserves
+the read credential. Resuming this scope cannot release global or inherited
+pause. Duplicate saved sessions for one physical repository share its numeric
+preference row. An unrelated unfinished connection form disables repository
+preference reviews so saving one cannot discard the other's draft. Full bounded
+workspaces, rename recovery, content-runtime resolver integration and remaining
+CENTER workflows are still required before H3 acceptance.
+
+Current evidence: `profile_context.test.ts`, `repository_owner.test.ts`,
+`scoped_profiles.test.ts`, `session_owner_projection.test.ts`,
+`legacy_center_upgrade.test.ts` and the real background composition contract.
+These are deterministic policy/mounted integration tests; native browser and
+human acceptance still require new source-bound receipts. The 160 distinct risk
+floor and the complete 56+56 CENTER case obligations are unchanged.
+
 ## 9. UI/UX and content contract
 
 The center puts current state first, then completed facts, next action, required human action, impact and inspectable details. Feature detail and risky-action preview use plain language before technical diagnostics.

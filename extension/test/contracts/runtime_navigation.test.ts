@@ -5,6 +5,7 @@ import { SETTINGS_KEY } from '../../src/application/settings_repository.ts';
 import { browserFixture } from '../fixtures/browser.ts';
 import type { Sender } from '../../src/domain/protocol.ts';
 import { PAGE } from '../fixtures/runtime.ts';
+import { connectReadThroughCenter } from '../fixtures/background_center.ts';
 
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 function background() {
@@ -33,7 +34,7 @@ it.each([
 ])('github-browser-extension-runtime-C08/C14 native tab %s cancels the background owner before any late response', async (_name, changes) => {
     const h = background();
     try {
-        expect(await h.call({ version: 1, method: 'session.connect', secret: 'synthetic_marker', repository: 'octo/example' })).toMatchObject({ state: 'connected' });
+        expect(await connectReadThroughCenter(h.call, 'synthetic_marker', 'octo/example')).toMatchObject({ state: 'connected' });
         const read = h.call(PAGE, { id: 'test', url: PAGE.route, frameId: 0, tab: { id: 1, url: PAGE.route, incognito: false } });
         await vi.waitFor(() => expect(h.pending()).toBeDefined());
         for (const update of h.onUpdated.listeners) update(2, changes);
@@ -48,7 +49,7 @@ it('github-browser-extension-runtime-C19/C31 real composition confines the synth
     const h = background();
     try {
         expect(h.localArea).not.toBe(h.sessionArea); expect(h.localValues).not.toBe(h.sessionValues);
-        expect(await h.call({ version: 1, method: 'session.connect', secret: 'synthetic_marker', repository: 'octo/example' })).toMatchObject({ state: 'connected' });
+        expect(await connectReadThroughCenter(h.call, 'synthetic_marker', 'octo/example')).toMatchObject({ state: 'connected' });
         expect(h.sessionArea.setAccessLevel).toHaveBeenCalledWith({ accessLevel: 'TRUSTED_CONTEXTS' });
         expect(h.localArea.setAccessLevel).not.toHaveBeenCalled();
         expect(h.sessionValues.get(SESSION_KEY)).toMatchObject({ secret: 'synthetic_marker' });

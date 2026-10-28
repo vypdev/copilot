@@ -7,10 +7,10 @@ import { CENTER_SENDER as sender, centerFixture } from '../fixtures/center.ts';
 import { deferred, sessionHarness } from '../fixtures/runtime.ts';
 
 const intent = { type: 'preferences', values: { density: 'compact' } };
-function fixture() {
+function fixture(withCenter = true) {
     const h = centerFixture(); const sessions = sessionHarness();
     const gateway = new MessageGateway('test', 'chrome-extension://test/', h.repository, sessions.service,
-        { currentTab: vi.fn(), openSettings: vi.fn(), cancellation: () => new BrowserCancellation(), online: () => true, notify: vi.fn() }, h.gateway);
+        { currentTab: vi.fn(), openSettings: vi.fn(), cancellation: () => new BrowserCancellation(), online: () => true, notify: vi.fn() }, withCenter ? h.gateway : undefined);
     return { ...h, sessions, call: (value: unknown, source = sender) => gateway.handle({ version: 1, ...value as object }, source), main: gateway };
 }
 it('routes admitted native center requests through the real gateway and saves only a retained preview', async () => {
@@ -90,13 +90,15 @@ it('an overlarge or unserializable internal preview fails at the bounded respons
     vi.spyOn(h.operations, 'preview').mockRejectedValueOnce(new Error('private provider payload'));
     expect(await h.call(request)).toEqual({ state: 'unavailable' }); expect(h.port.set).not.toHaveBeenCalled();
 });
-it('legacy raw settings writes cannot bypass center confirmation while ordinary H2 preferences remain compatible', async () => {
+it('center composition rejects every direct legacy settings write while standalone H2 retains its original revision-bound preferences', async () => {
     const h = fixture();
     expect(await h.call({ method: 'settings.write', expectedRevision: 0, settings: { ...DEFAULT_SETTINGS,
-        center: { ...DEFAULT_SETTINGS.center, favorites: ['BEX-CENTER-01'] } } })).toEqual({ state: 'unavailable' });
-    expect(await h.call({ method: 'settings.write', expectedRevision: 0, settings: null })).toEqual({ state: 'unavailable' });
+        center: { ...DEFAULT_SETTINGS.center, favorites: ['BEX-CENTER-01'] } } })).toEqual({ state: 'rejected' });
+    expect(await h.call({ method: 'settings.write', expectedRevision: 0, settings: null })).toEqual({ state: 'rejected' });
+    expect(await h.call({ method: 'settings.write', expectedRevision: 0, settings: { ...DEFAULT_SETTINGS, paused: true } })).toEqual({ state: 'rejected' });
     expect(h.port.set).not.toHaveBeenCalled();
-    expect(await h.call({ method: 'settings.write', expectedRevision: 0, settings: { ...DEFAULT_SETTINGS, paused: true } })).toMatchObject({ state: 'ready' });
-    expect(await h.call({ method: 'settings.write', expectedRevision: 0, settings: DEFAULT_SETTINGS })).toEqual({ state: 'unavailable' });
-    expect(h.port.set).toHaveBeenCalledTimes(1);
+    const legacy = fixture(false);
+    expect(await legacy.call({ method: 'settings.write', expectedRevision: 0, settings: { ...DEFAULT_SETTINGS, paused: true } })).toMatchObject({ state: 'ready' });
+    expect(await legacy.call({ method: 'settings.write', expectedRevision: 0, settings: DEFAULT_SETTINGS })).toEqual({ state: 'unavailable' });
+    expect(legacy.port.set).toHaveBeenCalledTimes(1);
 });

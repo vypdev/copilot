@@ -14,6 +14,7 @@ export interface SessionVault {
 export interface ConnectionSummary {
     readonly id: string; readonly name: string; readonly host: 'github.com'; readonly role: 'repository-read';
     readonly viewerId: string; readonly viewerLogin: string; readonly repositoryId: string; readonly repository: string;
+    readonly organizationId?: string | null;
 }
 export interface ConnectionsView {
     readonly state: 'ready'; readonly revision: number; readonly selected: string | null;
@@ -49,7 +50,8 @@ export function validVault(value: unknown): value is SessionVault {
 export function connectionsView(vault: SessionVault, connected: boolean): ConnectionsView {
     return deepFreeze({ state: 'ready', revision: vault.revision, selected: vault.selected, connected,
         entries: vault.entries.map(({ connection, ...entry }) => ({ ...entry, viewerId: connection.viewerId, viewerLogin: connection.viewerLogin,
-            repositoryId: connection.repositoryId, repository: connection.repository })) });
+            repositoryId: connection.repositoryId, repository: connection.repository,
+            ...(connection.organizationId === undefined ? {} : { organizationId: connection.organizationId }) })) });
 }
 export function decodeConnections(value: unknown): ConnectionOutcome | null {
     if (!record(value)) return null;
@@ -61,7 +63,8 @@ export function decodeConnections(value: unknown): ConnectionOutcome | null {
         || Object.keys(value.entries).length !== value.entries.length) return null;
     const ids = new Set<string>(); const names = new Set<string>();
     for (const entry of value.entries) {
-        if (!record(entry) || !keys(entry, ['id', 'name', 'host', 'role', 'viewerId', 'viewerLogin', 'repositoryId', 'repository']) || Object.keys(entry).length !== 8
+        if (!record(entry) || !keys(entry, ['id', 'name', 'host', 'role', 'viewerId', 'viewerLogin', 'repositoryId', 'repository', 'organizationId'])
+            || Object.keys(entry).length !== (Object.hasOwn(entry, 'organizationId') ? 9 : 8)
             || !localIdentifier(entry.id) || !sessionName(entry.name) || entry.host !== 'github.com' || entry.role !== 'repository-read'
             || !validSessionIdentity(entry) || ids.has(entry.id) || names.has(entry.name.toLowerCase())) return null;
         ids.add(entry.id); names.add(entry.name.toLowerCase());

@@ -38,7 +38,7 @@ export function startBackground(api: BrowserApi): () => void {
     const gateway = new MessageGateway(api.runtime.id, api.runtime.getURL(''), settings, sessions,
         { currentTab: id => api.tabs.get(id), openSettings: windowId => api.tabs.create({ url: api.runtime.getURL('runtime.html'), windowId }),
             cancellation: () => new BrowserCancellation(),
-            online: () => globalThis.navigator?.onLine !== false, notify }, createCenter(api, settings, sessions, notify, connections));
+            online: () => globalThis.navigator?.onLine !== false, notify }, createCenter(api, settings, sessions, notify, connections), connections);
     const message: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender, respond) => {
         void gateway.handle(value, sender).then(result => respond({ ...(record(result) ? result : { state: 'unavailable' }), sourceTree: buildSourceIdentity() })); return true;
     };

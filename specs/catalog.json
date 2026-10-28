@@ -3064,7 +3064,12 @@
         "extension/src/domain/connection_ui.ts",
         "extension/src/infrastructure/center_connections.ts",
         "extension/src/presentation/ConnectionForm.svelte",
-        "extension/src/presentation/ConnectionsPanel.svelte"
+        "extension/src/presentation/ConnectionsPanel.svelte",
+        "extension/src/domain/profile_context.ts",
+        "extension/src/domain/profile_context_copy.ts",
+        "extension/src/presentation/ProfileEffectiveState.svelte",
+        "extension/src/presentation/RepositoryPreferencesPanel.svelte",
+        "extension/src/presentation/ScopeIdentitySelect.svelte"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3147,7 +3152,12 @@
         "extension/test/integration/named_sessions.test.ts",
         "extension/test/integration/center_connections.test.ts",
         "extension/test/integration/center_connection_authority.test.ts",
-        "extension/test/integration/center_connection_actions.test.ts"
+        "extension/test/integration/center_connection_actions.test.ts",
+        "extension/test/contracts/profile_context.test.ts",
+        "extension/test/contracts/repository_owner.test.ts",
+        "extension/test/integration/scoped_profiles.test.ts",
+        "extension/test/integration/session_owner_projection.test.ts",
+        "extension/test/integration/legacy_center_upgrade.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

@@ -73,7 +73,7 @@ export class ProtectedSessionService {
         if (identity.bytes + target.bytes > 1024 * 1024 || epoch !== this.epoch || this.cancellation.aborted || !current()) return;
         if (expected && (expected.viewerId !== viewer.id || expected.repositoryId !== repo.id)) throw new Error('identity-changed');
         const connection: ProtectedSession = { schemaVersion: 1, secret, viewerId: viewer.id, viewerLogin: viewer.login,
-            repositoryId: repo.id, repository: repo.name };
+            repositoryId: repo.id, repository: repo.name, ...(repo.organizationId === undefined ? {} : { organizationId: repo.organizationId }) };
         await this.persist(async () => { if (epoch === this.epoch && current()) await this.store.set(SESSION_KEY, connection); });
         const permitted = await this.ports.permitted();
         if (epoch !== this.epoch) return;

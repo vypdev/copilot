@@ -27,7 +27,7 @@
             <label for="profile-id">{m.identifier}</label><input id="profile-id" type="text" required maxlength="48" pattern={'[a-z][a-z0-9\\-]{0,47}'} aria-describedby="profile-id-hint" title={m.identifierHint} readonly={!!previous} bind:value={draft.id}>
             <p id="profile-id-hint">{m.identifierHint}</p>
             <label for="profile-name">{m.name}</label><input id="profile-name" type="text" required maxlength="60" bind:value={draft.name}>
-            <ProfileScopeFields {draft} copy={context.copy}/>
+            <ProfileScopeFields {draft} copy={context.copy} connections={context.connections}/>
             <button type="submit" disabled={!dirty}>{m.preview}</button>
         </fieldset>
     </form>

@@ -6,6 +6,7 @@
     import { reviewCopy } from '../domain/review_copy.ts';
     import SettingsReview from './SettingsReview.svelte';
     import ConnectionsPanel from './ConnectionsPanel.svelte';
+    import RepositoryPreferencesPanel from './RepositoryPreferencesPanel.svelte';
     let { surface }: { surface: CenterSurface } = $props();
     let frame = $state.raw(untrack(() => surface.initial));
     let Page = $state.raw<Component<CenterRouteProps> | null>(null);
@@ -52,13 +53,17 @@
             {#if frame.client.issue}<p role="alert" class="notice">{copy.issues[frame.client.issue]}</p>{/if}
             {#if frame.review}<SettingsReview view={frame.review} copy={reviewCopy(copy.locale)} actions={surface.actions}/>{/if}
             {#if route === 'connections' || route === 'repositories'}
+                {#if route === 'repositories' && data?.settings && data.state === 'ready'}
+                    <RepositoryPreferencesPanel context={{ settings: data.settings, copy, editable: editable && !frame.hasDraft,
+                        location: frame.location, rollbackAvailable: data.rollbackAvailable, connections: frame.client.connections }} actions={surface.actions}/>
+                {/if}
                 <ConnectionsPanel view={frame.client.connections ?? null} locale={copy.locale} {busy}
                     editable={!busy && frame.client.role === 'editor' && !frame.client.review} actions={surface.actions.connections}/>
             {:else if data?.settings && data.state === 'ready'}
                 {#if loadFailed}<p role="alert">{copy.messages.unavailable}</p>
                 {:else if Page}
                     {#key `${route}/${frame.location.detail ?? ''}/${frame.draftEpoch}`}
-                        <Page context={{ settings: data.settings, copy, editable, location: frame.location, rollbackAvailable: data.rollbackAvailable }} actions={surface.actions}/>
+                        <Page context={{ settings: data.settings, copy, editable, location: frame.location, rollbackAvailable: data.rollbackAvailable, connections: frame.client.connections }} actions={surface.actions}/>
                     {/key}
                 {:else}<p role="status">{copy.messages.loading}</p>{/if}
             {:else if data}

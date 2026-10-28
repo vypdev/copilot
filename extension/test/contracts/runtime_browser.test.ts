@@ -8,6 +8,7 @@ import { SETTINGS_KEY } from '../../src/application/settings_repository.ts';
 import { DEFAULT_SETTINGS } from '../../src/domain/settings.ts';
 import { NAMED_SESSIONS_KEY } from '../../src/application/named_sessions.ts';
 import { SESSION_KEY } from '../../src/application/protected_session.ts';
+import { connectReadThroughCenter } from '../fixtures/background_center.ts';
 
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 it('composes named read sessions through native background messages and preserves repository pause while saving only nonsecret preference grants', async () => {
@@ -100,7 +101,7 @@ it('background composition executes the real settings/session/read ports with a 
     vi.stubGlobal('fetch', fetch); vi.stubGlobal('navigator', { onLine: false });
     const stop = startBackground(h.api); const listener = [...h.onMessage.listeners][0];
     const call = (value: unknown, sender = { id: 'test', url: 'chrome-extension://test/runtime.html' }) => new Promise<unknown>(resolve => listener(value, sender, resolve));
-    expect(await call({ version: 1, method: 'session.connect', secret: 'synthetic_credential', repository: 'octo/example' })).toMatchObject({ state: 'connected' });
+    expect(await connectReadThroughCenter(call, 'synthetic_credential', 'octo/example')).toMatchObject({ state: 'connected' });
     const page = { version: 1, method: 'page.snapshot', route: 'https://github.com/octo/example/issues/42', generation: 1,
         repositoryId: '7', viewer: 'octo', visible: true, manual: true };
     const sender = { id: 'test', url: page.route, frameId: 0, tab: { id: 1, url: page.route, incognito: false } };
@@ -122,11 +123,11 @@ it('background provider limits return only a jittered nonsecret deadline through
     const h = browserFixture(); vi.stubGlobal('fetch', vi.fn(async (url: string) => {
         const reply = new Response(null, { status: 429, headers: { 'retry-after': '120' } }); Object.defineProperty(reply, 'url', { value: url }); return reply;
     }));
-    const stop = startBackground(h.api); const respond = vi.fn();
-    [...h.onMessage.listeners][0]({ version: 1, method: 'session.connect', secret: 'synthetic_marker', repository: 'octo/example' },
-        { id: 'test', url: 'chrome-extension://test/runtime.html' }, respond);
-    await vi.waitFor(() => expect(respond).toHaveBeenCalledWith(expect.objectContaining({ state: 'limited', retryAt: 220500 })));
-    expect(JSON.stringify(respond.mock.calls)).not.toContain('synthetic_marker'); stop();
+    const stop = startBackground(h.api); const listener = [...h.onMessage.listeners][0];
+    const call = (value: unknown) => new Promise<unknown>(resolve => listener(value, { id: 'test', url: 'chrome-extension://test/runtime.html' }, resolve));
+    const result = await connectReadThroughCenter(call, 'synthetic_marker', 'octo/example');
+    expect(result).toMatchObject({ state: 'limited', retryAt: 220500 });
+    expect(JSON.stringify(result)).not.toContain('synthetic_marker'); stop();
 });
 
 it('settings navigation opens the fixed private runtime page in the verified originating window', async () => {

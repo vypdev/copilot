@@ -4,6 +4,7 @@ import { expect, it, vi } from 'vitest';
 import { flushSync } from 'svelte';
 import { ready, render, button, change, save } from '../fixtures/center_app_dom.ts';
 import { DEFAULT_SETTINGS } from '../../src/domain/settings.ts';
+import { scopedCenterFixture } from '../fixtures/scoped_center.ts';
 
 it('reviews all appearance preferences and cancels without persisting or erasing the form', async () => {
     const h = await render('appearance'); await ready(() => !!document.querySelector('#center-motion'));
@@ -14,8 +15,9 @@ it('reviews all appearance preferences and cancels without persisting or erasing
     button('Cerrar revisión').click(); await ready(() => !document.querySelector('#settings-review-heading'));
     expect(h.native.port.set).not.toHaveBeenCalled(); expect((document.querySelector('#center-motion') as HTMLSelectElement).value).toBe('reduced');
 });
-it.each(['account', 'organization', 'repository'] as const)('edits a %s preference profile with bounded numeric fields and explicit false overrides', async kind => {
-    const h = await render('profiles'); await ready(() => !!document.querySelector('#profile-id'));
+it.each(['account', 'organization', 'repository'] as const)('edits a %s preference profile with saved provider identities and explicit false overrides', async kind => {
+    const scoped = await scopedCenterFixture('7', '8', '8');
+    const h = await render('profiles', false, undefined, true, scoped.application); await ready(() => !!document.querySelector('#profile-id'));
     change('profile-id', 'work'); change('profile-name', 'Work'); change('profile-scope', kind);
     change('profile-account', '7'); if (kind !== 'account') change(`profile-${kind}`, '8');
     change('profile-density', 'compact'); change('profile-paused', 'no'); change('profile-shortcuts', 'yes');

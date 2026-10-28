@@ -9,6 +9,7 @@ import { SettingsRepository } from './settings_repository.ts';
 import type { CenterGateway } from './center_gateway.ts';
 import { sameSettingsContent } from '../domain/settings_operation.ts';
 import { record } from '../domain/value.ts';
+import type { NamedSessions } from './named_sessions.ts';
 
 interface PageLease { readonly fence: PageFence; readonly cancel: CancellationOwner }
 export interface GatewayPorts {
@@ -22,7 +23,8 @@ export class MessageGateway {
     private readonly pages = new Map<number, PageLease>();
     private connectionOperation = 0;
     constructor(private readonly id: string, private readonly origin: string, private readonly settings: SettingsRepository,
-        private readonly sessions: ProtectedSessionService, private readonly ports: GatewayPorts, private readonly center?: CenterGateway) {}
+        private readonly sessions: ProtectedSessionService, private readonly ports: GatewayPorts, private readonly center?: CenterGateway,
+        private readonly connections?: NamedSessions) {}
     releaseCenterTab(id: number): void { this.center?.releaseTab(id); }
     shutdown(): void { this.invalidate(); this.center?.shutdown(); }
     invalidate(tabId?: number, notify = true): void {
@@ -58,6 +60,8 @@ export class MessageGateway {
             ? this.center.handle(center, sender) : { state: 'rejected' };
         const message = parseMessage(value);
         if (!message || !allowedMessage(message, sender, this.id, this.origin)) return { state: 'rejected' };
+        // Retained H2 tabs cannot bypass H3's review, controller or named-selection authority.
+        if (this.center && (message.method === 'settings.write' || message.method === 'session.connect')) return { state: 'rejected' };
         try {
             if (message.method === 'settings.read') return await this.settings.initialize();
             if (message.method === 'settings.write') {
@@ -70,7 +74,9 @@ export class MessageGateway {
                 this.invalidate(); return { state: 'ready', settings };
             }
             if (message.method === 'session.disconnect') {
-                this.connectionOperation++; this.invalidate(); await this.sessions.revoke(); return this.sessions.status();
+                this.connectionOperation++; this.invalidate();
+                if (this.connections) await this.connections.revokeAll(); else await this.sessions.revoke();
+                return this.sessions.status();
             }
             if (message.method === 'session.connect') return await this.connect(message);
             if (message.method === 'session.status') { await this.sessions.start(); return this.sessions.status(); }

@@ -106,10 +106,11 @@ it('keeps emergency forgetting explicit and available when the named-session sch
 it('switches the selected verified session from the actual list and refreshes its unchanged identities without changing purpose', async () => {
     const h = namedSessionsFixture(); await h.connections.change(CONNECTION_INPUT, 0, h.current);
     await h.connections.change({ ...CONNECTION_INPUT, name: 'Personal', secret: 'synthetic_personal_credential' }, 1, h.current);
-    await render('repositories', false, undefined, true, centerClientFixture(h.center)); await ready(() => document.querySelectorAll('.cards h3').length === 2);
+    await render('repositories', false, undefined, true, centerClientFixture(h.center)); await ready(() => document.querySelectorAll('#connections-heading + p').length === 1
+        && document.querySelectorAll('section[aria-labelledby=connections-heading] .cards h3').length === 2);
     button('Verificar y seleccionar').click(); await ready(() => (h.values.get(NAMED_SESSIONS_KEY) as { selected: string }).selected === 'session-1');
     await ready(() => !button('Leer sesiones actuales').disabled); button('Leer sesiones actuales').click();
-    await ready(() => !button('Leer sesiones actuales').disabled); expect(document.querySelectorAll('.cards li')).toHaveLength(2);
+    await ready(() => !button('Leer sesiones actuales').disabled); expect(document.querySelectorAll('section[aria-labelledby=connections-heading] .cards li')).toHaveLength(2);
     expect(document.body.textContent).not.toContain('synthetic_personal_credential');
 });
 it('loads the session manager after an explicitly discarded preference draft enters Connections without a second hash event', async () => {

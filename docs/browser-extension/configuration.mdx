@@ -55,17 +55,25 @@ up to 48 lowercase letters, digits or hyphens. Names contain up to 60 characters
 Creating a profile with an existing identifier is rejected; open that profile
 to edit it instead. You can retain up to ten profiles.
 
-**Inherit** leaves that value to the surrounding preferences. A selected profile
-applies only in its matching context; creating one does not select it. Selecting
+**Inherit** leaves that value to the surrounding preferences. The saved-preference preview resolves a selected profile only in its matching
+context; creating one does not select it. Selecting
 another profile for the same scope replaces that selection. A pause remains
 stronger than an enabled preference. Removing a selected profile is also a
 reviewed change, and the preview includes the preferences it stops supplying.
 
-The complete H3 scope includes verified account and repository context selection
-and visible effective-state provenance. Their manager and context journeys are
-still under implementation; numeric fields alone are not proof of a verified
-GitHub identity or permission. Profiles never connect an account or authorize
-an Action command.
+Choose account, organization and repository scopes from identities in your
+saved read sessions. Changing account clears dependent choices. Organization
+scope is offered only when the repository response supplies a validated
+organization owner. An existing profile whose identity is unavailable remains
+labelled as a saved scope; editing it preserves that scope.
+
+**Effective saved preferences** shows density, shortcuts and pause with the
+winning default, global, repository or named-profile source. Only the currently
+connected selected identity contributes account/organization/repository scope.
+Without it, personal and github.com preferences remain available. This preview
+is being integrated with GitHub runtime features; individual tab, emergency and
+transient-session overrides and per-feature provenance remain part of H3.
+Profiles never connect an account or authorize an Action command.
 
 ## Connect a selected repository
 
@@ -106,8 +114,13 @@ If a response is uncertain, select **Read current sessions** to inspect the
 actual result. Do not repeat Connect automatically. Permission denial, changed
 editing ownership and unavailable protected storage leave an explicit recovery
 message. Session inspection and disconnect remain available even when saved
-preferences need recovery. The development **Repositories** route shares this
-surface; full workspace, pause and profile-provenance workflows remain in progress.
+preferences need recovery. The development **Repositories** route also offers **Pause this repository**,
+**Remove this repository’s pause** and **Review repository preference reset**.
+Each uses the normal complete preview and confirmation. Reset preserves the
+read credential; removing a repository pause cannot release an inherited global
+pause. These actions wait while a separate connection form has an unfinished
+draft. Full workspaces, rename recovery and runtime profile integration remain
+in progress.
 
 ## Export, import, reset and rollback
 
@@ -127,6 +140,14 @@ Reset offers global preferences, profiles, appearance or all local preferences.
 **Review previous preferences** offers the retained prior configuration when
 available. Both require the same explicit confirmation. Rollback is a new
 reviewed change; it does not restore a credential or a connection grant.
+
+## Reopen an older options window
+
+After the center upgrade, an old options window cannot connect or write
+preferences through the former direct commands. Reopen options from the
+extension toolbar and use the current reviewed flow. An explicit Disconnect
+from an old window still clears all local protected connection sessions; your
+profiles and preferences remain intact. It does not revoke credentials at GitHub.
 
 ## Recover safely
 

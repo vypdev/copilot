@@ -10,6 +10,7 @@ export class CenterNavigation {
     constructor(hash: string, private readonly port: CenterNavigationPort) { this.value = parseCenterLocation(hash) ?? { route: 'recovery' }; }
     get location(): CenterLocation { return this.value; }
     get pendingLocation(): CenterLocation | null { return this.pending; }
+    get hasDraft(): boolean { return this.draft; }
     get guarded(): boolean { return this.draft || this.review || this.committing; }
     dirty(value: boolean): void { this.draft = value; }
     protect(review: boolean, committing: boolean): void { this.review = review; this.committing = committing; }

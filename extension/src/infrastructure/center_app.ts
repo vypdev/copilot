@@ -32,18 +32,18 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
         replace: hash => { window.history.replaceState(null, '', `${canonical}${hash}`); },
         changed: () => { publish(); focus(navigation.pendingLocation ? '[role=alert] button' : 'main h1'); readConnections(); },
     });
-    const frame = () => centerFrame(client.view, navigation.location, navigation.pendingLocation, nativeLanguage, draftEpoch);
+    const frame = () => centerFrame(client.view, navigation.location, navigation.pendingLocation, nativeLanguage, draftEpoch, navigation.hasDraft);
     function publish(): void {
         if (stopped) return;
         const value = frame(); document.documentElement.lang = value.copy.locale; document.title = value.copy.messages.title;
         for (const listener of listeners) listener(value);
     }
     const actions: CenterActions = {
-        connections: connectionActions(api, document, client, () => !stopped && ['connections', 'repositories'].includes(navigation.location.route), value => navigation.dirty(value)),
+        connections: connectionActions(api, document, client, () => !stopped && ['connections', 'repositories'].includes(navigation.location.route), value => { navigation.dirty(value); publish(); }),
         preview: (intent, revision) => { void client.preview(intent, revision); },
         confirm: () => { void client.confirm(); }, cancel: () => { void client.cancel(); },
         dismiss: () => { void client.dismiss(); }, reload: () => { void client.refresh(); },
-        takeControl: () => { void client.takeControl(); }, dirty: value => navigation.dirty(value),
+        takeControl: () => { void client.takeControl(); }, dirty: value => { navigation.dirty(value); publish(); },
         stay: () => navigation.stay(), leave: () => {
             if (client.view.phase !== 'committing') void client.dismiss().then(() => { if (!stopped) navigation.leave(); });
         },
@@ -68,7 +68,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     const surface: CenterSurface = { initial: frame(), actions, load: loadCenterPage,
         subscribe: listener => { listeners.add(listener); listener(frame()); return () => { listeners.delete(listener); }; } };
     const host = mount(CenterHost, { target: document.body, props: { surface } }); flushSync();
-    function readConnections(): void { if (navigation.location.route === 'connections' || navigation.location.route === 'repositories') void client.connections(); }
+    function readConnections(): void { if (['connections', 'repositories', 'profiles'].includes(navigation.location.route)) void client.connections(); }
     const hash = () => navigation.navigate(window.location.hash);
     const visible = () => { if (document.visibilityState !== 'hidden') void client.refresh(); };
     const changed = (changes: Record<string, unknown>, area: string) => { if (area === 'local' && Object.hasOwn(changes, SETTINGS_KEY)) visible(); };

@@ -20,7 +20,7 @@ export async function render(route = 'overview', observer = false, initial?: unk
     vi.stubGlobal('__COPILOT_SOURCE_TREE__', native.port.sourceTree);
     browser.api.runtime.sendMessage = vi.fn(message => native.port.send(message as Parameters<typeof native.port.send>[0]));
     const stop = startCenter(browser.api, document, 'es-ES'); stops.push(stop);
-    await ready(() => document.querySelector('h1') !== null && (hasSettings ? !!document.querySelector('main .revision') : document.querySelector('main')?.getAttribute('aria-busy') === 'false'));
+    await ready(() => document.querySelector('h1') !== null && document.querySelector('main')?.getAttribute('aria-busy') === 'false' && (!hasSettings || !!document.querySelector('main .revision')));
     return { ...native, browser, stop };
 }
 export function button(label: string): HTMLButtonElement {

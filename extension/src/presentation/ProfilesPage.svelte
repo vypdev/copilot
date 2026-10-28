@@ -3,12 +3,14 @@
     import { centerLocationHash } from '../domain/center_routes.ts';
     import { profileScopeKey } from '../domain/center_profiles.ts';
     import ProfileEditor from './ProfileEditor.svelte';
+    import ProfileEffectiveState from './ProfileEffectiveState.svelte';
     let { context, actions }: CenterRouteProps = $props();
     const m = $derived(context.copy.messages);
     let editingDraft = $state(false);
     const editorActions = $derived({ ...actions, dirty: (value: boolean) => { editingDraft = value; actions.dirty(value); } });
 </script>
 <p>{m.profileLimit}</p><p>{m.precedence}</p>
+<ProfileEffectiveState {context}/>
 {#if !context.location.detail}
     <ul class="cards">
         {#each context.settings.center.profiles as profile (profile.id)}

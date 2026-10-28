@@ -7,7 +7,7 @@ import { deepFreeze, record } from './value.ts';
 
 export interface CenterFrame {
     readonly client: CenterClientView; readonly location: CenterLocation; readonly pendingLocation: CenterLocation | null;
-    readonly copy: CenterCopy; readonly review: CenterReview | null; readonly draftEpoch: number;
+    readonly copy: CenterCopy; readonly review: CenterReview | null; readonly draftEpoch: number; readonly hasDraft: boolean;
 }
 /** Complete local preference delta, including removals. Input is validated credential-free Settings. */
 export function settingsReviewChanges(before: unknown, after: unknown, copy: CenterCopy): readonly ReviewChange[] {
@@ -33,12 +33,12 @@ export function settingsReviewChanges(before: unknown, after: unknown, copy: Cen
     }
     walk(before, after, []); return deepFreeze(changes);
 }
-export function centerFrame(client: CenterClientView, location: CenterLocation, pendingLocation: CenterLocation | null, nativeLanguage: string, draftEpoch = 0): CenterFrame {
+export function centerFrame(client: CenterClientView, location: CenterLocation, pendingLocation: CenterLocation | null, nativeLanguage: string, draftEpoch = 0, hasDraft = false): CenterFrame {
     const copy = centerCopy(client.data?.settings?.locale ?? 'auto', nativeLanguage);
     const plan = client.review;
     const review: CenterReview | null = plan ? { state: plan.state, title: copy.messages.reviewTitle,
         summary: copy.messages.reviewSummary, revision: plan.revision,
         editable: client.data?.role === 'editor' && client.issue === null,
         changes: settingsReviewChanges(plan.before, plan.after, copy) } : null;
-    return deepFreeze({ client, location, pendingLocation, copy, review, draftEpoch });
+    return deepFreeze({ client, location, pendingLocation, copy, review, draftEpoch, hasDraft });
 }
