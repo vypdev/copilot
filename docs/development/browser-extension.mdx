@@ -151,6 +151,8 @@ If cleanup fails after replacement, the command explicitly reports that the new 
 after recovery; do not treat retained old output as the latest build.
 
 Generated extension outputs are ignored and excluded from the root npm package.
+The root allowlist separately includes the isolated Issue Action descriptor
+`issue-admission/action.yml`; this does not ship extension runtime or artifacts.
 Reverting H1 requires no user-data migration or external rollback. Keep root
 verification gates when reverting the extension orchestration.
 

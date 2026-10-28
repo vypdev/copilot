@@ -785,4 +785,20 @@ describe("IssueUseCase", () => {
     expect(result.success).toBe(false);expect(result.errors[0]).toMatchObject({code:'configuration.invalid',recovery:undefined});expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
   });
 
+  it.each(['bug', 'bugfix', 'priority: high'].flatMap(label => ['labeled', 'unlabeled'].map(action => [label, action])))(
+    'reconciles the same backlog state without event-specific branch/model effects for %s/%s', async (label, action) => {
+      const results = await createUseCase().invoke(minimalExecution({
+        actor: 'maintainer', eventName: 'issues', inputs: { action },
+        issueStartDecision: { started: false, branchRequired: true, sddRequired: false, helpRequired: false },
+        issue: { labeled: action === 'labeled', labelAdded: label, opened: false }, labels: { isBug: true, isBugfix: true },
+      }));
+      expect(results.every(result => result.success)).toBe(true);
+      expect(mockAssignMemberInvoke).toHaveBeenCalledTimes(1); expect(mockUpdateIssueTypeInvoke).toHaveBeenCalledTimes(1);
+      expect(mockLinkIssueProjectInvoke).toHaveBeenCalledTimes(1); expect(mockCheckPriorityInvoke).toHaveBeenCalledTimes(1);
+      expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled(); expect(mockRemoveIssueBranchesInvoke).not.toHaveBeenCalled();
+      expect(mockRemoveNotNeededInvoke).not.toHaveBeenCalled(); expect(mockDeployAddedInvoke).not.toHaveBeenCalled();
+      expect(mockRecommendStepsInvoke).not.toHaveBeenCalled(); expect(mockAnswerIssueHelpInvoke).not.toHaveBeenCalled();
+      expect(mockListIssueComments).not.toHaveBeenCalled();
+    });
+
 });

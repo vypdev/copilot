@@ -529,3 +529,18 @@ read permissions, shared-runner recovery and unchanged safety guards.
   lifecycle/debug-only summaries into the durable conversation because the
   native workflow and Job Summary already retain that evidence.
 - Follow-up outside scope: durable event storage beyond issue configuration markers.
+
+
+## Early issue admission — issue #730
+
+The generated Issue workflow now uses a fixed hosted preflight before the
+selected work runner and a non-canceling, multi-pending native per-issue queue.
+The isolated subaction authenticates the actual product identity and may reuse
+only a successful unchanged-state receipt covering an event already in queue.
+All substantive intent and unproven/partial work retains the normal runtime.
+The exact contract, provider queue limit, matching runtime adoption requirement,
+privacy model and numeric test budget are in
+[early issue admission](./early-issue-event-admission.md). This extends §6.4:
+issues use workflow-level `queue: max` and `cancel-in-progress: false`; the three
+existing PR/push lanes keep their original contracts. Unsupported/custom proof
+continues through the predecessor fence. No consumer rollout is implied.

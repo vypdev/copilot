@@ -2,7 +2,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { DEVELOPMENT_VERSION } from '../src/infrastructure/target_manifests.ts';
 import { FoundationGateError } from './gate_error.mts';
 
-export const ROOT_PACKAGE_FILES = ['action.yml', 'build/cli/index.js', 'build/web/', 'build/github_action/index.js',
+export const ROOT_PACKAGE_FILES = ['action.yml', 'issue-admission/', 'build/cli/index.js', 'build/web/', 'build/github_action/index.js',
     'build/api/index.js', 'build/api/src/', 'setup/ISSUE_TEMPLATE/', 'setup/actions/', 'setup/workflows/',
     'setup/source-workflows/', 'setup/pull_request_template.md', 'scripts/install-git-hooks.cjs', 'README.md', 'LICENSE'];
 

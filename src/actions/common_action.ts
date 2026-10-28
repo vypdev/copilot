@@ -66,6 +66,7 @@ export async function mainRun(
         await waitForPreviousWorkflowRuns(execution.tokens.token, repository, {
             isSingleAction: execution.isSingleAction,
             pullRequestNumber: execution.inputs?.pull_request?.number,
+            issueNumber: execution.inputs?.issue?.number,
         });
     }
 

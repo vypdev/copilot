@@ -1,5 +1,6 @@
 import type { PreviousWorkflowRunsQuery } from '../ports/workflow_run_ports';
 
+const ISSUE_GROUP = 'copilot-issue-${{ github.repository }}-${{ github.event.issue.number }}';
 const PUSH_GROUP = 'copilot-push-${{ github.repository }}-${{ github.ref_name }}';
 const PR_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.number }}';
 
@@ -15,6 +16,8 @@ export function expectedNativeWorkflowGroup(query: PreviousWorkflowRunsQuery): s
 
     if (native.eventName === 'push' && native.ref?.startsWith('refs/heads/')
         && native.ref.length > 'refs/heads/'.length) return PUSH_GROUP;
+    if (native.eventName === 'issues') return typeof native.issueNumber === 'number'
+        && Number.isSafeInteger(native.issueNumber) && native.issueNumber > 0 ? ISSUE_GROUP : undefined;
     const pullRequestNumber = native.pullRequestNumber;
     if (typeof pullRequestNumber !== 'number' || !Number.isSafeInteger(pullRequestNumber) || pullRequestNumber <= 0) return undefined;
     if (native.eventName === 'pull_request') return `${PR_GROUP}-analysis`;
@@ -27,6 +30,11 @@ export function hasNativeWorkflowCoordination(workflow: unknown, jobId: string, 
     const jobs = record(definition?.jobs);
     const job = record(jobs?.[jobId]);
     const concurrency = record(job?.concurrency);
+    if (expectedGroup === ISSUE_GROUP) {
+        const outer = record(definition?.concurrency);
+        return Array.isArray(job?.steps) && job?.uses === undefined && job?.concurrency === undefined
+            && outer?.group === ISSUE_GROUP && outer?.['cancel-in-progress'] === false && outer?.queue === 'max';
+    }
     // Custom/reusable/workflow-level contracts retain conservative polling.
     // A single direct job also avoids confusing a reusable callee's job ID
     // with a different protected job in its caller's workflow context.

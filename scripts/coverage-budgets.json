@@ -1086,6 +1086,31 @@
         }
       ],
       "successMessage": "optional Check Run diagnostics: PASS (closed boundary/presentation/adapter100%; completion95/90)"
+    },
+    {
+      "name": "Early issue event admission",
+      "missingEntryLabel": "early issue admission",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/issue_event_admission_policy.ts",
+            "issue-admission/index.cjs"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/execution/issue_event_admission_workflow.ts",
+            "src/data/repository/workflow/issue_event_admission_repository.ts",
+            "src/actions/issue_event_admission_action.ts",
+            "src/infrastructure/composition/issue_event_admission_composition_root.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "early issue admission coverage: PASS (pure policy 100%; each boundary 95/90)"
     }
   ]
 }

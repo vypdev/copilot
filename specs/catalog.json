@@ -603,12 +603,13 @@
       "status": "implemented",
       "scope": "Shared GitHub Action lifecycle with pinned native resource/lane coordination proof, conservative predecessor fencing, routing and durable user-facing results",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-27",
+      "lastVerified": "2026-10-28",
       "specs": [
         "specs/execution-admission-queue-and-publication.md",
         "specs/execution-error-and-context-hardening.md",
         "specs/execution-boundary-closure-audit.md",
-        "specs/push-and-single-action-context-hardening.md"
+        "specs/push-and-single-action-context-hardening.md",
+        "specs/early-issue-event-admission.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -619,7 +620,8 @@
       ],
       "entrypoints": [
         "src/actions/github_action.ts",
-        "src/actions/common_action.ts"
+        "src/actions/common_action.ts",
+        "issue-admission/action.yml"
       ],
       "code": [
         "scripts/coverage-budgets.json",
@@ -689,7 +691,15 @@
         "src/data/repository/github/change_size_provider_failure.ts",
         "src/application/usecases/steps/commit/change_size_reconciliation.ts",
         "src/infrastructure/composition/change_size_diagnostics_composition_root.ts",
-        "src/data/repository/issue/issue_label_repository.ts"
+        "src/data/repository/issue/issue_label_repository.ts",
+        "src/actions/issue_event_admission_action.ts",
+        "src/data/repository/workflow/issue_event_admission_repository.ts",
+        "src/infrastructure/composition/issue_event_admission_composition_root.ts",
+        "src/application/policies/issue_event_admission_policy.ts",
+        "src/application/ports/issue_event_admission_ports.ts",
+        "src/application/usecases/execution/issue_event_admission_workflow.ts",
+        "src/application/policies/setup_runner_policy.ts",
+        "src/manager/description/base/issue_content_interface.ts"
       ],
       "tests": [
         "src/tooling/__tests__/coverage_budget_validator.test.ts",
@@ -741,7 +751,13 @@
         "src/domain/__tests__/change_size_reconciliation.test.ts",
         "src/data/repository/github/__tests__/change_size_provider_failure.test.ts",
         "src/application/usecases/steps/commit/__tests__/change_size_reconciliation.test.ts",
-        "src/data/repository/issue/__tests__/issue_label_repository.test.ts"
+        "src/data/repository/issue/__tests__/issue_label_repository.test.ts",
+        "src/data/repository/workflow/__tests__/issue_event_admission_repository.test.ts",
+        "src/application/usecases/execution/__tests__/issue_event_admission_workflow.test.ts",
+        "src/actions/__tests__/issue_event_admission_action.test.ts",
+        "src/manager/description/base/__tests__/issue_content_interface.test.ts",
+        "src/application/usecases/__tests__/issue_use_case.test.ts",
+        "src/utils/__tests__/setup_runner_installation.test.ts"
       ],
       "documentation": [
         "docs/overview.mdx",
@@ -756,7 +772,8 @@
         "README.md",
         "docs/features.mdx",
         "docs/pull-requests/workflow-setup.mdx",
-        "docs/issues/comment-commands.mdx"
+        "docs/issues/comment-commands.mdx",
+        "docs/issues/workflow-setup.mdx"
       ]
     },
     {
@@ -2870,7 +2887,7 @@
       "status": "proposed",
       "scope": "Complete proposed desktop product: 150 required functions, local center, Action integration, shared setup and 803 product cases. H1 establishes builds; H2 implements shared runtime/session/settings/GET services and exact native-browser harnesses. Full product/core acceptance and signed delivery remain separate gates.",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-26",
+      "lastVerified": "2026-10-28",
       "specs": [
         "specs/github-browser-extension.md",
         "specs/github-browser-extension-action-integration.md",

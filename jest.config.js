@@ -7,6 +7,7 @@ module.exports = {
   collectCoverageFrom: [
     'src/**/*.ts',
     'scripts/git-hooks/verification-environment.cjs',
+    'issue-admission/index.cjs',
     'web/src/**/*.ts',
     '!web/src/main.ts',
     '!src/**/*.d.ts',

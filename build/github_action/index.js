@@ -36813,6 +36813,7 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, c
         await (0, main_run_lifecycle_1.waitForPreviousWorkflowRuns)(execution.tokens.token, repository, {
             isSingleAction: execution.isSingleAction,
             pullRequestNumber: execution.inputs?.pull_request?.number,
+            issueNumber: execution.inputs?.issue?.number,
         });
     }
     const setupExecution = (0, execution_setup_composition_root_1.createSetupExecutionUseCase)(latestTagQueryPort, {
@@ -37137,6 +37138,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runGitHubAction = runGitHubAction;
 exports.runGitHubActionEntry = runGitHubActionEntry;
+const issue_event_admission_action_1 = __nccwpck_require__(38016);
 const native_verification_controller_1 = __nccwpck_require__(71046);
 const issue_completion_composition_root_1 = __nccwpck_require__(63719);
 const core = __importStar(__nccwpck_require__(75855));
@@ -37178,6 +37180,12 @@ const pull_request_approval_action_1 = __nccwpck_require__(56480);
 const bot_pull_request_analysis_policy_1 = __nccwpck_require__(52801);
 const pull_request_use_case_composition_root_1 = __nccwpck_require__(70636);
 async function runGitHubAction() {
+    if (process.env.COPILOT_ISSUE_ADMISSION_BOOTSTRAP === '1') {
+        // Only the isolated bootstrap owns this input; ordinary JSON input maps
+        // must not redirect the mutation entry into a successful read-only no-op.
+        await (0, issue_event_admission_action_1.runIssueEventAdmissionAction)(core.getInput('issue-event-admission-mode', { required: true }));
+        return;
+    }
     if ((0, input_boolean_policy_1.isEnabledInput)((0, github_action_input_1.getGithubActionInput)('pr-approval-observer'))) {
         await (0, pull_request_approval_action_1.runPullRequestApprovalAction)((0, github_action_input_1.getGithubActionInput)(input_keys_1.INPUT_KEYS.TOKEN, { required: true }));
         return;
@@ -37346,7 +37354,7 @@ function earlyGithubActionErrorMessage() {
 }
 // Only auto-run when executed as the action entry (not when imported by tests)
 /* istanbul ignore next -- the bundled production entry is covered by the Action smoke path. */
-if (typeof process.env.JEST_WORKER_ID === 'undefined') {
+if (typeof process.env.JEST_WORKER_ID === 'undefined' && process.env.COPILOT_ISSUE_ADMISSION_BOOTSTRAP !== '1') {
     void runGitHubActionEntry(() => (0, native_verification_controller_1.runNativeVerificationEntry)(runGitHubActionEntry));
 }
 
@@ -38202,6 +38210,101 @@ Object.defineProperty(exports, "parseDelimitedValues", ({ enumerable: true, get:
 
 /***/ }),
 
+/***/ 38016:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.runIssueEventAdmissionAction = runIssueEventAdmissionAction;
+const core = __importStar(__nccwpck_require__(75855));
+const github = __importStar(__nccwpck_require__(78227));
+const node_crypto_1 = __nccwpck_require__(6005);
+const node_fs_1 = __nccwpck_require__(87561);
+const node_path_1 = __nccwpck_require__(49411);
+const application_error_1 = __nccwpck_require__(75999);
+const issue_event_admission_policy_1 = __nccwpck_require__(83146);
+const issue_event_admission_workflow_1 = __nccwpck_require__(83323);
+const issue_event_admission_composition_root_1 = __nccwpck_require__(261);
+/** Isolated read-only entry. Never prepares agents, mainRun, completion, or conversation writes. */
+async function runIssueEventAdmissionAction(mode) {
+    if (mode !== 'inspect' && mode !== 'record')
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Unknown issue event admission mode.');
+    const token = core.getInput('token', { required: true });
+    const evidenceToken = process.env.COPILOT_ISSUE_ADMISSION_TOKEN?.trim();
+    const context = {
+        owner: github.context.repo.owner, repository: github.context.repo.repo,
+        eventName: github.context.eventName, action: github.context.payload.action ?? '', actor: github.context.actor,
+        issueNumber: github.context.payload.issue?.number ?? 0, runId: github.context.runId,
+        workflowRevision: process.env.GITHUB_WORKFLOW_SHA ?? '', runtimeRevision: digest(Buffer.concat([runtimeFile(__filename), runtimeFile((0, node_path_1.join)(__dirname, '../../action.yml')),
+            runtimeFile((0, node_path_1.join)(__dirname, '../../issue-admission/action.yml')), runtimeFile((0, node_path_1.join)(__dirname, '../../issue-admission/index.cjs'))])),
+        configuration: core.getInput('configuration'), deployLabel: core.getInput('deploy-label') || 'deploy',
+        releaseLabel: core.getInput('release-label') || 'release', hotfixLabel: core.getInput('hotfix-label') || 'hotfix',
+        changedLabel: typeof github.context.payload.label?.name === 'string' ? github.context.payload.label.name : '',
+    };
+    const port = (0, issue_event_admission_composition_root_1.createIssueEventAdmissionPort)(context.owner, context.repository, token, evidenceToken || token);
+    if (mode === 'inspect') {
+        const decision = await (0, issue_event_admission_workflow_1.inspectIssueEvent)(context, port, digest);
+        core.setOutput('execute', String(decision.execute));
+        core.setOutput('reason', decision.reason);
+        core.setOutput('receipt-key', decision.receiptKey ?? '');
+        core.info(`Issue event admission: ${decision.reason}.`);
+        await core.summary.addRaw((0, issue_event_admission_policy_1.issueEventAdmissionSummary)(decision, core.getInput('repository-locale'))).write();
+        return;
+    }
+    const receipt = await (0, issue_event_admission_workflow_1.recordIssueEvent)(context, core.getInput('receipt-key'), port, digest);
+    if (!receipt) {
+        core.info('Issue state changed or is not coalescible; no reconciliation receipt was recorded.');
+        return;
+    }
+    const temporary = process.env.RUNNER_TEMP;
+    if (!temporary)
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Issue admission receipt requires the native runner temporary directory.');
+    const file = (0, node_path_1.join)((0, node_fs_1.mkdtempSync)((0, node_path_1.join)(temporary, 'copilot-issue-receipt-')), 'receipt.json');
+    (0, node_fs_1.writeFileSync)(file, JSON.stringify({ schema: 1, receipt }), { mode: 0o600 });
+    core.setOutput('receipt-name', receipt);
+    core.setOutput('receipt-path', file);
+}
+function digest(value) { return (0, node_crypto_1.createHash)('sha256').update(value).digest('hex'); }
+/** Dynamic reads keep ncc from relocating the manifests away from the shipped action tree. */
+function runtimeFile(file) { return (0, node_fs_1.readFileSync)(file); }
+
+
+/***/ }),
+
 /***/ 28586:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -38290,6 +38393,7 @@ function buildPreviousWorkflowRunsQuery(repository, event) {
                 eventName: process.env.GITHUB_EVENT_NAME ?? '',
                 ref: process.env.GITHUB_REF,
                 pullRequestNumber: event.pullRequestNumber,
+                issueNumber: event.issueNumber,
             }),
         } : {}),
     };
@@ -46410,6 +46514,64 @@ function resolveMode(mode, commentId) {
 
 /***/ }),
 
+/***/ 83146:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isIssueReconciliationEvent = isIssueReconciliationEvent;
+exports.coalescibleIssueReconciliation = coalescibleIssueReconciliation;
+exports.discardIssueSelfEvent = discardIssueSelfEvent;
+exports.issueReconciliationIdentity = issueReconciliationIdentity;
+exports.issueAdmissionReceiptName = issueAdmissionReceiptName;
+exports.issueEventAdmissionSummary = issueEventAdmissionSummary;
+const issue_start_policy_1 = __nccwpck_require__(90332);
+const github_user_policy_1 = __nccwpck_require__(84403);
+function isIssueReconciliationEvent(context) {
+    return ['labeled', 'unlabeled'].includes(context.action) && context.changedLabel.length > 0
+        && ![issue_start_policy_1.ISSUE_START_LABEL, context.deployLabel].map(label => label.toLowerCase()).includes(context.changedLabel.toLowerCase());
+}
+/** Initial routing labels have no event-specific effects in an unstarted issue. */
+function coalescibleIssueReconciliation(context, issue) {
+    return isIssueReconciliationEvent(context) && issue.state === 'open'
+        && !issue.labels.some(label => [issue_start_policy_1.ISSUE_START_LABEL, context.releaseLabel, context.hotfixLabel].map(name => name.toLowerCase()).includes(label.toLowerCase()));
+}
+function discardIssueSelfEvent(context, tokenUser) {
+    // Native closure cleanup deliberately remains runnable for the product account.
+    return context.action !== 'closed' && (0, github_user_policy_1.githubUsersMatch)(context.actor, tokenUser);
+}
+/** Every input that can change the meaning of a backlog reconciliation invalidates its receipt. */
+function issueReconciliationIdentity(context, issue, productAccount) {
+    return JSON.stringify({
+        schema: 1, productAccount: productAccount.toLowerCase(), repository: `${context.owner}/${context.repository}`, actor: context.actor.toLowerCase(),
+        workflow: context.workflowRevision, runtime: context.runtimeRevision, configuration: context.configuration,
+        deployLabel: context.deployLabel, releaseLabel: context.releaseLabel, hotfixLabel: context.hotfixLabel,
+        issue: { ...issue, labels: [...issue.labels].sort(), assignees: [...issue.assignees].sort() },
+    });
+}
+function issueAdmissionReceiptName(issueNumber, key) {
+    return `copilot-issue-reconciliation-v1-${issueNumber}-${key}`;
+}
+function issueEventAdmissionSummary(decision, locale) {
+    const spanish = /^es(?:-|$)/iu.test(locale);
+    const states = spanish ? {
+        'self-event': 'Evento interno omitido: lo generó la cuenta del producto. No se asignó el runner de trabajo.',
+        'lifecycle-event': 'Evento admitido. El flujo normal verificará permisos y reconciliará la issue.',
+        'reconciliation-needed': 'Reconciliación admitida: no se ha verificado una ejecución correcta que cubra este estado.',
+        'already-reconciled': 'Estado ya reconciliado por una ejecución correcta del mismo flujo. Se omitió el runner de trabajo.',
+    } : {
+        'self-event': 'Internal event skipped: the product account generated it. No work runner was allocated.',
+        'lifecycle-event': 'Event admitted. The normal pipeline will verify permissions and reconcile the issue.',
+        'reconciliation-needed': 'Reconciliation admitted: no successful execution has been verified for this state.',
+        'already-reconciled': 'State already reconciled by a successful execution of this workflow. The work runner was skipped.',
+    };
+    return `## ${spanish ? 'Admisión de la issue' : 'Issue event admission'}\n\n${states[decision.reason]}\n\n${spanish ? 'No se requiere intervención. Los fallos y efectos parciales conservan el flujo normal y no generan un recibo reutilizable.' : 'No action is required. Failed or partial work retains the normal pipeline and cannot produce a reusable receipt.'}\n`;
+}
+
+
+/***/ }),
+
 /***/ 34026:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -46780,6 +46942,7 @@ function boundedMergeQueueDiagnostic(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.expectedNativeWorkflowGroup = expectedNativeWorkflowGroup;
 exports.hasNativeWorkflowCoordination = hasNativeWorkflowCoordination;
+const ISSUE_GROUP = 'copilot-issue-${{ github.repository }}-${{ github.event.issue.number }}';
 const PUSH_GROUP = 'copilot-push-${{ github.repository }}-${{ github.ref_name }}';
 const PR_GROUP = 'copilot-pr-${{ github.repository }}-${{ github.event.pull_request.number }}';
 /** Closed recognition of the installed contract, without evaluating expressions. */
@@ -46795,6 +46958,9 @@ function expectedNativeWorkflowGroup(query) {
     if (native.eventName === 'push' && native.ref?.startsWith('refs/heads/')
         && native.ref.length > 'refs/heads/'.length)
         return PUSH_GROUP;
+    if (native.eventName === 'issues')
+        return typeof native.issueNumber === 'number'
+            && Number.isSafeInteger(native.issueNumber) && native.issueNumber > 0 ? ISSUE_GROUP : undefined;
     const pullRequestNumber = native.pullRequestNumber;
     if (typeof pullRequestNumber !== 'number' || !Number.isSafeInteger(pullRequestNumber) || pullRequestNumber <= 0)
         return undefined;
@@ -46809,6 +46975,11 @@ function hasNativeWorkflowCoordination(workflow, jobId, expectedGroup) {
     const jobs = record(definition?.jobs);
     const job = record(jobs?.[jobId]);
     const concurrency = record(job?.concurrency);
+    if (expectedGroup === ISSUE_GROUP) {
+        const outer = record(definition?.concurrency);
+        return Array.isArray(job?.steps) && job?.uses === undefined && job?.concurrency === undefined
+            && outer?.group === ISSUE_GROUP && outer?.['cancel-in-progress'] === false && outer?.queue === 'max';
+    }
     // Custom/reusable/workflow-level contracts retain conservative polling.
     // A single direct job also avoids confusing a reusable callee's job ID
     // with a different protected job in its caller's workflow context.
@@ -52348,6 +52519,8 @@ function setupRunnerRole(file, job) {
         'copilot_pull_request.yml': 'copilot-pull-requests', 'copilot_pull_request_comment.yml': 'copilot-pull-requests',
         'copilot_commit.yml': 'copilot-commits', 'agent-cli-provisioning.yml': 'verify-agent-clis',
     };
+    if (file === 'copilot_issue.yml' && job === 'issue-admission')
+        return 'isolated';
     if (agentJobs[file] === job)
         return 'agent';
     if (file === 'copilot_pull_request_approval.yml' && job === 'observe-approval')
@@ -58329,6 +58502,70 @@ function currentSingleAction(context) {
         isPullRequest: context.singleAction.isPullRequest,
         isPush: context.singleAction.isPush,
     };
+}
+
+
+/***/ }),
+
+/***/ 83323:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.inspectIssueEvent = inspectIssueEvent;
+exports.recordIssueEvent = recordIssueEvent;
+const application_error_1 = __nccwpck_require__(75999);
+const issue_event_admission_policy_1 = __nccwpck_require__(83146);
+async function inspectIssueEvent(context, port, digest) {
+    validateContext(context);
+    const login = await port.authenticatedLogin();
+    if (!login.trim())
+        throw new application_error_1.ApplicationError('authorization.credential-invalid', 'Issue event admission could not verify the product account.');
+    if ((0, issue_event_admission_policy_1.discardIssueSelfEvent)(context, login))
+        return { execute: false, reason: 'self-event' };
+    if (!(0, issue_event_admission_policy_1.isIssueReconciliationEvent)(context))
+        return { execute: true, reason: 'lifecycle-event' };
+    let issue;
+    try {
+        issue = await port.readIssue(context.issueNumber);
+    }
+    catch {
+        return { execute: true, reason: 'reconciliation-needed' };
+    }
+    if (!(0, issue_event_admission_policy_1.coalescibleIssueReconciliation)(context, issue))
+        return { execute: true, reason: 'lifecycle-event' };
+    const receiptKey = digest((0, issue_event_admission_policy_1.issueReconciliationIdentity)(context, issue, login));
+    let completed = false;
+    try {
+        completed = await port.hasSuccessfulReceipt((0, issue_event_admission_policy_1.issueAdmissionReceiptName)(context.issueNumber, receiptKey), context);
+    }
+    catch { /* Optimization unavailable: retain the full guarded pipeline. */ }
+    return { execute: !completed, reason: completed ? 'already-reconciled' : 'reconciliation-needed', receiptKey };
+}
+async function recordIssueEvent(context, expectedKey, port, digest) {
+    validateContext(context);
+    if (!/^[a-f0-9]{64}$/u.test(expectedKey))
+        return undefined;
+    const login = await port.authenticatedLogin();
+    if (!login.trim() || (0, issue_event_admission_policy_1.discardIssueSelfEvent)(context, login))
+        return undefined;
+    const issue = await port.readIssue(context.issueNumber);
+    if (!(0, issue_event_admission_policy_1.coalescibleIssueReconciliation)(context, issue))
+        return undefined;
+    const currentKey = digest((0, issue_event_admission_policy_1.issueReconciliationIdentity)(context, issue, login));
+    return currentKey === expectedKey ? (0, issue_event_admission_policy_1.issueAdmissionReceiptName)(context.issueNumber, currentKey) : undefined;
+}
+function validateContext(context) {
+    if (context.eventName !== 'issues' || !['opened', 'reopened', 'closed', 'edited', 'labeled', 'unlabeled', 'assigned', 'unassigned'].includes(context.action)
+        || !/^[\w.-]+$/u.test(context.owner) || !/^[\w.-]+$/u.test(context.repository)
+        || !/^[a-z0-9][a-z0-9-]*(?:\[bot\])?$/iu.test(context.actor)
+        || !Number.isSafeInteger(context.issueNumber) || context.issueNumber <= 0
+        || !Number.isSafeInteger(context.runId) || context.runId <= 0
+        || !/^[a-f0-9]{40}$/u.test(context.workflowRevision) || !/^[a-f0-9]{64}$/u.test(context.runtimeRevision)
+        || Buffer.byteLength(context.configuration, 'utf8') > 1048576) {
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Issue event admission requires a valid native issue, workflow revision, and bounded configuration.');
+    }
 }
 
 
@@ -82052,6 +82289,113 @@ function isActivePreviousRun(run, query) {
 
 /***/ }),
 
+/***/ 43302:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.IssueEventAdmissionRepository = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+/** Repository-bound queries. No write permission or provider exception leaves this boundary. */
+class IssueEventAdmissionRepository {
+    constructor(product, evidence, owner, repository) {
+        this.product = product;
+        this.evidence = evidence;
+        this.owner = owner;
+        this.repository = repository;
+    }
+    async authenticatedLogin() {
+        try {
+            const user = record((await this.product.rest.users.getAuthenticated()).data);
+            if (typeof user?.login !== 'string' || !user.login.trim())
+                throw new Error();
+            return user.login;
+        }
+        catch {
+            throw new application_error_1.ApplicationError('authorization.credential-invalid', 'Issue event admission could not verify the product account.');
+        }
+    }
+    async readIssue(issueNumber) {
+        try {
+            const issue = record((await this.product.rest.issues.get({ owner: this.owner, repo: this.repository, issue_number: issueNumber })).data);
+            const author = record(issue?.user);
+            const milestone = issue?.milestone === null ? null : record(issue?.milestone)?.id;
+            const type = issue?.type === null || issue?.type === undefined ? null : record(issue.type)?.name;
+            if (!issue || issue.pull_request !== undefined || issue.number !== issueNumber
+                || !positive(issue.id) || typeof issue.title !== 'string' || !(issue.body === null || typeof issue.body === 'string')
+                || !['open', 'closed'].includes(String(issue.state)) || typeof issue.updated_at !== 'string'
+                || !timestamp(issue.updated_at) || typeof author?.login !== 'string' || !author.login.trim()
+                || typeof issue.locked !== 'boolean' || !(milestone === null || positive(milestone))
+                || !(type === null || typeof type === 'string')
+                || issue.repository_url !== `${issueRepositoryApiPrefix(issue.repository_url)}/repos/${this.owner}/${this.repository}`)
+                throw new Error();
+            return Object.freeze({ id: issue.id, number: issueNumber, title: issue.title, body: issue.body ?? '',
+                state: issue.state, updatedAt: issue.updated_at, author: author.login,
+                labels: Object.freeze(strings(issue.labels, 'name')), assignees: Object.freeze(strings(issue.assignees, 'login')),
+                milestone: milestone, issueType: type, locked: issue.locked });
+        }
+        catch {
+            throw new application_error_1.ApplicationError('provider.contract-invalid', 'Native issue state could not be verified before admission.');
+        }
+    }
+    async hasSuccessfulReceipt(name, context) {
+        const binding = { owner: this.owner, repo: this.repository };
+        const current = record((await this.evidence.rest.actions.getWorkflowRun({ ...binding, run_id: context.runId })).data);
+        if (!current || current.id !== context.runId || current.event !== 'issues' || current.head_sha !== context.workflowRevision
+            || !actorMatches(current.actor, context.actor) || current.run_attempt !== 1 || !timestamp(current.created_at) || !positive(current.workflow_id) || typeof current.path !== 'string' || !/^\.github\/workflows\/[\w.-]+\.ya?ml$/u.test(current.path))
+            return false;
+        const response = record((await this.evidence.rest.actions.listArtifactsForRepo({ ...binding, name, per_page: 100 })).data);
+        if (!Array.isArray(response?.artifacts))
+            return false;
+        // Bounded optimization. Ambiguous, absent, failed or canceled evidence never skips work.
+        for (const raw of response.artifacts.slice(0, 3)) {
+            const artifact = record(raw);
+            const source = record(artifact?.workflow_run);
+            if (artifact?.name !== name || artifact.expired !== false || !positive(source?.id)
+                || source.id >= context.runId || !timestamp(artifact.created_at)
+                || Date.parse(artifact.created_at) <= Date.parse(current.created_at) || !positive(artifact.size_in_bytes) || artifact.size_in_bytes > 4096)
+                continue;
+            const run = record((await this.evidence.rest.actions.getWorkflowRun({ ...binding, run_id: source.id })).data);
+            if (run?.id === source.id && run.workflow_id === current.workflow_id && run.path === current.path
+                && run.head_sha === context.workflowRevision && run.event === 'issues' && run.status === 'completed' && run.conclusion === 'success'
+                && actorMatches(run.actor, context.actor))
+                return true;
+        }
+        return false;
+    }
+}
+exports.IssueEventAdmissionRepository = IssueEventAdmissionRepository;
+function record(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : undefined;
+}
+function positive(value) { return typeof value === 'number' && Number.isSafeInteger(value) && value > 0; }
+function strings(value, key) {
+    if (!Array.isArray(value) || value.length > 100)
+        throw new Error();
+    return value.map(item => { const field = record(item)?.[key]; if (typeof field !== 'string' || !field)
+        throw new Error(); return field; });
+}
+function issueRepositoryApiPrefix(value) {
+    if (typeof value !== 'string')
+        throw new Error();
+    const url = new URL(value);
+    if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash)
+        throw new Error();
+    return value.slice(0, value.indexOf('/repos/'));
+}
+function timestamp(value) {
+    return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/u.test(value)
+        && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 19) === value.slice(0, 19);
+}
+function actorMatches(value, expected) {
+    const login = record(value)?.login;
+    return typeof login === 'string' && login.toLowerCase() === expected.toLowerCase();
+}
+
+
+/***/ }),
+
 /***/ 74039:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -89689,6 +90033,22 @@ function createIssueContentCompositionRoot() {
 
 /***/ }),
 
+/***/ 261:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createIssueEventAdmissionPort = createIssueEventAdmissionPort;
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
+const issue_event_admission_repository_1 = __nccwpck_require__(43302);
+function createIssueEventAdmissionPort(owner, repository, token, evidenceToken) {
+    return new issue_event_admission_repository_1.IssueEventAdmissionRepository((0, octokit_client_resolver_1.getOctokitClient)(token), (0, octokit_client_resolver_1.getOctokitClient)(evidenceToken), owner, repository);
+}
+
+
+/***/ }),
+
 /***/ 74914:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -94182,6 +94542,9 @@ class IssueContentInterface extends content_interface_1.ContentInterface {
                 if (updated === undefined) {
                     throw new Error('Issue content markers are missing or inconsistent.');
                 }
+                // Byte-identical state must not emit another native issue edit event.
+                if (updated === description)
+                    return updated;
                 await this.issueDescriptionPort.updateDescription(query.owner, query.repository, query.issueNumber, updated, query.token);
                 return updated;
             }

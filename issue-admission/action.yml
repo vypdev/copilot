@@ -1,0 +1,41 @@
+name: Copilot issue event admission
+description: Read-only issue admission and successful-reconciliation receipts, without agent setup.
+inputs:
+  issue-event-admission-mode:
+    description: Isolated mode, inspect before work or record after successful work.
+    required: true
+  token:
+    description: Existing product credential for native identity and issue reads.
+    required: true
+  configuration:
+    description: Repository Variables snapshot used only in a credential-free state digest.
+    default: ''
+  repository-locale:
+    description: Job Summary locale, English or Spanish with regional and English fallback.
+    default: en-US
+  deploy-label:
+    description: Deployment intent label; it must never be coalesced.
+    default: deploy
+  release-label:
+    description: Release intent label; must match the normal Action.
+    default: release
+  hotfix-label:
+    description: Hotfix intent label; must match the normal Action.
+    default: hotfix
+  receipt-key:
+    description: Exact digest returned by this run's successful inspect step.
+    default: ''
+outputs:
+  execute:
+    description: True only when the normal guarded issue pipeline should run.
+  reason:
+    description: Closed admission reason; no issue text or credentials.
+  receipt-key:
+    description: Opaque native state, workflow and runtime digest.
+  receipt-name:
+    description: Artifact name after an unchanged successful reconciliation.
+  receipt-path:
+    description: Private temporary receipt file for native artifact upload.
+runs:
+  using: node24
+  main: index.cjs

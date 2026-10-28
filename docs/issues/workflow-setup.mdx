@@ -180,3 +180,43 @@ If publication is unconfirmed, inspect the exact check/head and safe provider
 cause in the run log and Job Summary. Permission rejection, rate limiting,
 invalid target and transport failures have distinct guidance. Unknown causes
 remain unknown. The optional warning never replaces the actual workflow result.
+
+
+## Early issue admission and shared runner capacity
+
+The generated Issue workflow inspects events on a small fixed GitHub-hosted
+`Admit issue event` job before allocating your selected work runner. It verifies
+the actual product account, so internal title/label updates do not occupy the
+work pool even when `COPILOT_BOT_LOGIN` is absent. Native bot-authored closure
+cleanup still runs. Inspection receives no agent API keys.
+
+```text
+Per-issue queue → hosted inspection → full work only when required
+```
+
+Opened/start/close/reopen/body/title/assignment intent remains executable. Only
+an equivalent, unstarted label reconciliation already queued during successful
+work may reuse an opaque one-day artifact receipt. It must match the current
+issue state, actor/account, effective work-step Variables, workflow and runtime.
+Only Variables referenced by the full step are serialized; unrelated repository
+Variables are not forwarded into admission. Missing evidence,
+provider uncertainty, later requests and manual retries use the normal pipeline.
+A state change during work prevents receipt recording. Byte-identical description
+persistence also omits the native update, so a configuration no-op does not
+generate another internal edit. Job Summaries explain
+intentional skips in English/Spanish with English fallback; no new issue card
+or conversation is created.
+
+The queue keeps running work and up to 100 pending runs per issue using GitHub's
+`queue: max`; it does not cancel active work or replace pending start events.
+Independent issues have separate groups. Hosted inspection still consumes
+hosted capacity: fewer full work allocations does not mean zero workflow runs.
+
+**Upgrade the runtime first**, ensuring it contains the `issue-admission`
+subaction, and then review/apply the matching generated workflow through setup. Custom workflows must pass matching
+deploy/release/hotfix label names to inspection/record and the full Action.
+Do not point this new workflow at an older release missing that path. Enterprise
+operators must confirm support for `queue: max`. Inspection uses only automatic
+`contents: read`/`actions: read`; the full job keeps its existing permissions and
+product PAT. Your runner selection applies to full work, not inspection. No
+consumer adoption is performed by an upstream code merge.

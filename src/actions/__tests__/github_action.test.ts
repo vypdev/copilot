@@ -14,6 +14,9 @@ import { ACTIONS } from '../../data/model/action_types';
 import { INPUT_KEYS } from '../../application/contracts/input_keys';
 import { ApplicationError } from '../../application/errors/application_error';
 
+const mockIssueAdmission = jest.fn();
+jest.mock('../issue_event_admission_action', () => ({ runIssueEventAdmissionAction: (...args: unknown[]) => mockIssueAdmission(...args) }));
+
 jest.mock('@actions/github', () => ({
   context: {
     payload: {},
@@ -768,4 +771,38 @@ describe('runGitHubActionEntry', () => {
     expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('Impacto:'));
     expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('entry failed'));
   });
+});
+
+
+it('routes the isolated issue subaction before identity setup, agents, mainRun or completion', async () => {
+  mockMainRun.mockClear(); mockExecutionAdmissionInvoke.mockClear(); mockProvision.mockClear();
+  jest.mocked(core.getInput).mockImplementation(name => name === 'issue-event-admission-mode' ? 'inspect' : '');
+  mockIssueAdmission.mockResolvedValue(undefined);
+  const before = process.env.COPILOT_ISSUE_ADMISSION_BOOTSTRAP;
+  process.env.COPILOT_ISSUE_ADMISSION_BOOTSTRAP = '1';
+  try {
+    await runGitHubAction();
+    expect(mockIssueAdmission).toHaveBeenCalledWith('inspect');
+    expect(mockMainRun).not.toHaveBeenCalled(); expect(mockExecutionAdmissionInvoke).not.toHaveBeenCalled(); expect(mockProvision).not.toHaveBeenCalled();
+  } finally {
+    if (before === undefined) delete process.env.COPILOT_ISSUE_ADMISSION_BOOTSTRAP;
+    else process.env.COPILOT_ISSUE_ADMISSION_BOOTSTRAP = before;
+  }
+});
+
+
+it('keeps private admission-mode keys out of ordinary root input maps', async () => {
+  const beforeFlag = process.env.COPILOT_ISSUE_ADMISSION_BOOTSTRAP; const beforeJson = process.env.INPUT_VARS_JSON;
+  delete process.env.COPILOT_ISSUE_ADMISSION_BOOTSTRAP;
+  process.env.INPUT_VARS_JSON = '{"issue-event-admission-mode":"inspect"}';
+  mockIssueAdmission.mockClear(); mockExecutionAdmissionInvoke.mockClear();
+  jest.mocked(core.getInput).mockImplementation(name => name === 'token' ? 'product' : name === 'issue-event-admission-mode' ? 'inspect' : '');
+  mockExecutionAdmissionInvoke.mockRejectedValueOnce(new Error('NORMAL_ENTRY_REACHED'));
+  try {
+    await expect(runGitHubAction()).rejects.toThrow('NORMAL_ENTRY_REACHED');
+    expect(mockIssueAdmission).not.toHaveBeenCalled(); expect(mockExecutionAdmissionInvoke).toHaveBeenCalledTimes(1);
+  } finally {
+    if (beforeFlag === undefined) delete process.env.COPILOT_ISSUE_ADMISSION_BOOTSTRAP; else process.env.COPILOT_ISSUE_ADMISSION_BOOTSTRAP = beforeFlag;
+    if (beforeJson === undefined) delete process.env.INPUT_VARS_JSON; else process.env.INPUT_VARS_JSON = beforeJson;
+  }
 });

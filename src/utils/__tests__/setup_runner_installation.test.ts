@@ -115,10 +115,12 @@ describe('installation parity and reviewed migration', () => {
     write('.github/workflows/copilot_issue.yml', single('[self-hosted, old, Linux]'));
     const review = inspectSetupInstallation(root, config);
     expect(review.assets.find(asset => asset.path === '.github/workflows/copilot_issue.yml')?.status).toBe('customized');
-    expect(review.jobs.find(job => job.file === 'copilot_issue.yml')?.runsOn).toEqual({ group: 'vypdev', labels: config.runners.labels });
+    expect(review.jobs.find(job => job.file === 'copilot_issue.yml' && job.job === 'copilot-issues')?.runsOn).toEqual({ group: 'vypdev', labels: config.runners.labels });
+    expect(review.jobs.find(job => job.file === 'copilot_issue.yml' && job.job === 'issue-admission')).toMatchObject({ role: 'isolated', runsOn: 'ubuntu-latest' });
     expect(compareSetupWorkflows(root, config.features, undefined, config).find(workflow => workflow.file === 'copilot_issue.yml')?.status).toBe('changed');
     copySetupFiles(root, undefined, config.features, { setupConfiguration: config, updateExistingWorkflows: true, approvedWorkflowFiles: ['copilot_issue.yml'] });
     expect(parsed(readFileSync(join(root, '.github/workflows/copilot_issue.yml'), 'utf8')).jobs['copilot-issues']['runs-on']).toEqual({ group: 'vypdev', labels: config.runners.labels });
+    expect(parsed(readFileSync(join(root, '.github/workflows/copilot_issue.yml'), 'utf8')).jobs['issue-admission']['runs-on']).toBe('ubuntu-latest');
     expect(readFileSync(join(root, '.github/workflows/build.yml'), 'utf8')).toContain('uses: "./"');
   });
   test('clean preview includes every optional asset and separates roles', () => {

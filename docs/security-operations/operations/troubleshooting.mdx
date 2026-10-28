@@ -624,3 +624,27 @@ for native Python/pnpm examples, profile lifetime, trust boundaries and migratio
 If root build passes but a workspace typecheck reports missing tools, compare the installed graph with the actual merged candidate. In the source incidents tracked by [#746](https://github.com/vypdev/copilot/issues/746), Node/pnpm were present, but installation ran on `master` before the extension workspace existed. Commands after typecheck were not executed. Installing one extra member or disabling verification does not fix the sequencing error.
 
 The corrected source coordinator provisions runtimes first and prepares the frozen candidate graph immediately before every verifier. Its sync result distinguishes dependency, native setup, runtime and command failures, and reports whether the original head was restored. Repair the reported prerequisite and inspect an unverified rollback before retrying. Confirm the corrected runtime and workflow are adopted on the default branch used by comment events: `develop` checks alone do not update a running `master` Action. Read [verification](./verification) for source limits and consumer setup alternatives.
+
+
+### Issue work was skipped after early admission
+
+Open **Admit issue event** in the native workflow Summary. `self-event` identifies
+an internal product-account transition. `already-reconciled` means a completed
+successful run from the same workflow covered this exact queued reconciliation;
+it does not claim a new branch build or review. The normal issue/run links in
+Actions remain the navigation surface. No conversation comment is added.
+
+No receipt, an expired artifact, state/configuration/code changes, a failed or
+canceled source run, a later deliberate request or a manual rerun all preserve
+full runtime authorization and reconciliation. Optional artifact lookup/upload
+failure never establishes permission to skip work. Partial effects retain their
+normal recovery state. If authentication fails, repair the existing product
+credential and rerun; do not broaden its scopes to enable receipt storage.
+
+A pending issue workflow may be waiting for its own earlier run, without holding
+a work runner. GitHub limits each multi-pending queue to 100; inspect native
+canceled runs after saturation and rerun the needed intent when capacity returns.
+Do not enable active cancellation or single-pending replacement as a workaround.
+Older runtime references missing `issue-admission` require the matching runtime
+upgrade before installing the new generated workflow. This upstream change does
+not itself prove a consumer's queue improved.

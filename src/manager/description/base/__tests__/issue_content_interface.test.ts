@@ -103,6 +103,12 @@ describe('IssueContentInterface', () => {
   });
 
   describe('internalUpdate', () => {
+    it('does not produce a native edit event when the complete rendered description is unchanged', async () => {
+      const before = descriptionWithBlock('same'); mockGetDescription.mockResolvedValue(before);
+      expect(await handler.internalUpdate(configurationQuery(), 'same')).toBe(before);
+      expect(mockUpdateDescription).not.toHaveBeenCalled();
+    });
+
     it('fetches description, updates content and calls updateDescription when isIssue', async () => {
       const desc = descriptionWithBlock('old');
       mockGetDescription.mockResolvedValue(desc);

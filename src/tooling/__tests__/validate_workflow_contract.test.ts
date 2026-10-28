@@ -10,6 +10,7 @@ import { selectedSetupRunsOn } from '../../application/policies/setup_runner_pol
 const CRLF_WHITESPACE = 'core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol';
 
 interface ContractModule {
+  issueAdmissionConfigurationExpression(workflow: Record<string, unknown>): string;
   assertQueueWorkflow(file: string, workflow: Record<string, unknown>): void;
   assertDirectEventTriggers(file: string, workflow: Record<string, unknown>): void;
   assertRunner(file: string, workflow: Record<string, unknown>): void;
@@ -37,6 +38,7 @@ interface ContractModule {
 }
 
 const {
+  issueAdmissionConfigurationExpression,
   assertQueueWorkflow,
   assertDirectEventTriggers,
   assertRunner,
@@ -91,18 +93,7 @@ function expectMutationRejected(
   expect(() => validateWorkflow(file, workflow)).toThrow(expectedMessage);
 }
 
-const validWorkflow = {
-  on: { issues: { types: ['opened', 'closed'] } },
-  name: 'Copilot - Issue',
-  jobs: {
-    'copilot-issues': {
-      if: "${{ (github.event.action == 'closed' && github.event.issue.state == 'closed') || vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}",
-      'runs-on': ['self-hosted', 'codex'],
-      'timeout-minutes': MIN_QUEUE_JOB_TIMEOUT_MINUTES,
-      steps: [{ uses: './', with: {} }],
-    },
-  },
-};
+const validWorkflow = yaml.load(readFileSync(queueFile, 'utf8')) as MutationWorkflow;
 
 describe('workflow contract validator', () => {
   it.each(['.github/workflows', 'setup/workflows'].flatMap(directory =>
@@ -254,7 +245,9 @@ describe('workflow contract validator', () => {
         const workflow = yaml.load(readFileSync(file, 'utf8')) as Record<string, unknown> & {
           jobs: Record<string, { concurrency?: unknown }>;
         };
-        expect(workflow.concurrency).toBeUndefined();
+        if (manifest.file === 'copilot_issue.yml') {
+          expect(workflow.concurrency).toEqual({ group: 'copilot-issue-${{ github.repository }}-${{ github.event.issue.number }}', 'cancel-in-progress': false, queue: 'max' });
+        } else expect(workflow.concurrency).toBeUndefined();
         if (['copilot_commit.yml', 'copilot_pull_request.yml', 'copilot_pull_request_review_state.yml'].includes(manifest.file)) {
           const expectedGroup = manifest.file === 'copilot_commit.yml'
             ? 'copilot-push-${{ github.repository }}-${{ github.ref_name }}'
@@ -342,10 +335,10 @@ describe('workflow contract validator', () => {
     },
   );
 
-  it('rejects an event workflow that removes the generic bot actor gate', () => {
+  it('rejects an event workflow that bypasses native issue admission', () => {
     const workflow = JSON.parse(JSON.stringify(validWorkflow));
     delete workflow.jobs['copilot-issues'].if;
-    expect(() => assertQueueWorkflow(queueFile, workflow)).toThrow('required bot actor gate');
+    expect(() => assertQueueWorkflow(queueFile, workflow)).toThrow('isolated native issue admission');
   });
 
   it.each(['.github/workflows', 'setup/workflows'])(
@@ -1780,4 +1773,52 @@ describe('optional commit Check Run credential route', () => {
     if (route === 'product PAT') action.env.COPILOT_EVIDENCE_TOKEN = '${{ secrets.PAT }}';
     expect(() => assertAgentWorkflowPermissions(file, workflow)).toThrow('must scope COPILOT_EVIDENCE_TOKEN');
   });
+});
+
+
+describe('early issue event allocation contract', () => {
+  it.each(['.github/workflows', 'setup/workflows'])('admits before allocating the selected work runner in %s', directory => {
+    const { file, workflow } = loadMutationWorkflow(directory, 'copilot_issue.yml');
+    expect(() => validateWorkflow(file, workflow)).not.toThrow();
+    expect(workflow.jobs['copilot-issues'].needs).toBe('issue-admission');
+    expect(workflow.jobs['issue-admission']['runs-on']).toBe('ubuntu-latest');
+    expect(workflow.concurrency).toMatchObject({ queue: 'max', 'cancel-in-progress': false });
+  });
+  it.each([
+    ['cancel active work', (w: MutationWorkflow) => { w.concurrency['cancel-in-progress'] = true; }],
+    ['replace pending events', (w: MutationWorkflow) => { w.concurrency.queue = 'single'; }],
+    ['global mutex', (w: MutationWorkflow) => { w.concurrency.group = 'all-issues'; }],
+    ['bypass inspection', (w: MutationWorkflow) => { w.jobs['copilot-issues'].needs = []; }],
+    ['fail-open inspection', (w: MutationWorkflow) => { w.jobs['issue-admission'].steps[1]['continue-on-error'] = true; }],
+    ['hide closure events', (w: MutationWorkflow) => { w.jobs['issue-admission'].if = "github.actor != vars.COPILOT_BOT_LOGIN"; }],
+    ['inspection mutations', (w: MutationWorkflow) => { w.jobs['issue-admission'].permissions.issues = 'write'; }],
+    ['single action outside the normal issue contract', (w: MutationWorkflow) => { w.jobs['copilot-issues'].steps.find((s: any) => s.id === 'copilot').with['single-action'] = 'recommend_steps'; }],
+    ['mismatched release alias', (w: MutationWorkflow) => { w.jobs['copilot-issues'].steps.find((s: any) => s.id === 'copilot').with['release-label'] = 'ship-release'; }],
+    ['mismatched hotfix alias', (w: MutationWorkflow) => { w.jobs['copilot-issues'].steps.find((s: any) => s.id === 'copilot').with['hotfix-label'] = 'urgent'; }],
+    ['ignore failed product work', (w: MutationWorkflow) => { w.jobs['copilot-issues'].steps.find((s: any) => s.id === 'copilot')['continue-on-error'] = true; }],
+    ['skip product work', (w: MutationWorkflow) => { w.jobs['copilot-issues'].steps.find((s: any) => s.id === 'copilot').if = 'false'; }],
+    ['record failed work', (w: MutationWorkflow) => { w.jobs['copilot-issues'].steps.find((s: any) => s.id === 'receipt').if = '${{ always() }}'; }],
+    ['unbound receipt', (w: MutationWorkflow) => { w.jobs['copilot-issues'].steps.find((s: any) => s.id === 'receipt').with['receipt-key'] = 'arbitrary'; }],
+    ['product token for artifact reads', (w: MutationWorkflow) => { w.jobs['issue-admission'].steps[1].env.COPILOT_ISSUE_ADMISSION_TOKEN = '${{ secrets.PAT }}'; }],
+    ['agent work in preflight', (w: MutationWorkflow) => { w.jobs['issue-admission'].steps.push({ uses: './' }); }],
+  ])('rejects %s', (_name, mutate) => {
+    const { file, workflow } = loadMutationWorkflow('.github/workflows', 'copilot_issue.yml'); mutate(workflow);
+    expect(() => validateWorkflow(file, workflow)).toThrow();
+  });
+});
+
+
+it('snapshots only effective issue-step Variables, including job environment, with unambiguous JSON boundaries', () => {
+  const workflow = { jobs: { 'copilot-issues': { env: { MODE: '${{ vars.MODE }}' }, steps: [{ uses: './', with: {
+    first: '${{ vars.FIRST }}', duplicate: '${{ vars.FIRST }}', second: '${{ vars.SECOND }}', token: '${{ secrets.PAT }}',
+  } }] } }, unrelated: { UNUSED: 'PRIVATE_UNUSED_VALUE' } };
+  const expression = issueAdmissionConfigurationExpression(workflow);
+  expect(expression).toBe("${{ format('[{0},{1},{2}]', toJSON(vars.FIRST), toJSON(vars.MODE), toJSON(vars.SECOND)) }}");
+  const values = ['quotes " and braces {1}', 'mode', 'comma, and newline\ncontent'];
+  const rendered = '[{0},{1},{2}]'.replace(/\{(\d+)\}/gu, (_match, index) => JSON.stringify(values[Number(index)]));
+  expect(JSON.parse(rendered)).toEqual(values); expect(expression).not.toMatch(/PRIVATE|UNUSED|secrets/);
+});
+it('retains an explicit empty snapshot and refuses dynamic Variable lookup without proof', () => {
+  expect(issueAdmissionConfigurationExpression({})).toBe("${{ '[]' }}");
+  expect(() => issueAdmissionConfigurationExpression({ jobs: { 'copilot-issues': { steps: [{ uses: './', with: { value: '${{ vars[inputs.name] }}' } }] } } })).toThrow('explicit literal Variable');
 });

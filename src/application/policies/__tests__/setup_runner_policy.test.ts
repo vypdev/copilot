@@ -158,3 +158,9 @@ test.each([manual, { ...manual, validation: 'agent' as const }, selected, select
   expect(selectedSetupRunsOn(config, 'credential-health')).toBe('ubuntu-latest');
   expect(selectedSetupRunsOn(DEFAULT_SETUP_RUNNERS, 'credential-health')).toBeUndefined();
 });
+
+
+test('keeps issue inspection on its fixed hosted route even with an organization self-hosted profile', () => {
+  expect(setupRunnerRole('copilot_issue.yml', 'issue-admission')).toBe('isolated');
+  expect(selectedSetupRunsOn(manual, setupRunnerRole('copilot_issue.yml', 'issue-admission'))).toBeUndefined();
+});

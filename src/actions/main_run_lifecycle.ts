@@ -28,7 +28,7 @@ export class WorkflowQueueFailureError extends Error {
 
 export function buildPreviousWorkflowRunsQuery(
     repository: RepositoryCoordinates,
-    event?: { readonly isSingleAction: boolean; readonly pullRequestNumber?: number },
+    event?: { readonly isSingleAction: boolean; readonly pullRequestNumber?: number; readonly issueNumber?: number },
 ): PreviousWorkflowRunsQuery {
     const workflowIdentifier = resolveWorkflowIdentifier(process.env.GITHUB_WORKFLOW_REF);
     const query: PreviousWorkflowRunsQuery = {
@@ -44,6 +44,7 @@ export function buildPreviousWorkflowRunsQuery(
                 eventName: process.env.GITHUB_EVENT_NAME ?? '',
                 ref: process.env.GITHUB_REF,
                 pullRequestNumber: event.pullRequestNumber,
+                issueNumber: event.issueNumber,
             }),
         } : {}),
     };
@@ -53,7 +54,7 @@ export function buildPreviousWorkflowRunsQuery(
 export async function waitForPreviousWorkflowRuns(
     token: string,
     repository: RepositoryCoordinates,
-    event?: { readonly isSingleAction: boolean; readonly pullRequestNumber?: number },
+    event?: { readonly isSingleAction: boolean; readonly pullRequestNumber?: number; readonly issueNumber?: number },
 ): Promise<void> {
     const query = buildPreviousWorkflowRunsQuery(repository, event);
     if (process.env.GITHUB_ACTIONS === 'true' && (!Number.isSafeInteger(query.currentRunId) || query.currentRunId <= 0)) {

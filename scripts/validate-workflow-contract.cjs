@@ -84,7 +84,6 @@ const BOT_GATED_WORKFLOW_FILES = new Set([
   'copilot_pull_request_review_state.yml',
   'copilot_pull_request_comment.yml',
 ]);
-const CLOSED_ISSUE_BOT_GATE_EXPRESSION = "${{ (github.event.action == 'closed' && github.event.issue.state == 'closed') || vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}";
 const BOT_GATE_EXPRESSION = "${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}";
 const FORK_SAFE_BOT_GATE_EXPRESSION = "${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}";
 const BOT_PR_ANALYSIS_GATE_EXPRESSION = "${{ github.event.pull_request.head.repo.full_name == github.repository && (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN || ((github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'synchronize') && github.event.pull_request.user.login == github.actor)) }}";
@@ -473,7 +472,8 @@ function assertRunner(file, workflow) {
       continue;
     }
     let expected = ['self-hosted', 'codex'];
-    if (relativeFile.startsWith('setup/workflows/')
+    if ((path.basename(file) === 'copilot_issue.yml' && jobId === 'issue-admission')
+      || relativeFile.startsWith('setup/workflows/')
       || relativeFile === '.github/workflows/copilot_credential_health.yml'
       || (/^\.github\/workflows\/(?:release|hotfix)_workflow\.yml$/.test(relativeFile) && jobId === 'publish-npm')) {
       expected = ['ubuntu-latest'];
@@ -603,10 +603,12 @@ function assertAgentWorkflowPermissions(file, workflow) {
   if (!WORKFLOW_AGENT_ROLES[path.basename(file)]) return;
   const nativeEvidenceWorkflow = ['copilot_commit.yml', 'copilot_pull_request.yml', 'copilot_pull_request_review_state.yml',
     'copilot_issue_comment.yml', 'copilot_pull_request_comment.yml', 'copilot_comment_runtime.yml'].includes(path.basename(file));
-  const expectedPermissions = nativeEvidenceWorkflow
+  const ordinaryPermissions = nativeEvidenceWorkflow
     ? { checks: 'write', contents: 'read' }
     : { contents: 'read' };
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    const expectedPermissions = path.basename(file) === 'copilot_issue.yml' && jobId === 'issue-admission'
+      ? { actions: 'read', contents: 'read' } : ordinaryPermissions;
     const permissions = job.permissions ?? {};
     const permissionKeys = Object.keys(permissions).sort();
     const expectedKeys = Object.keys(expectedPermissions).sort();
@@ -685,6 +687,14 @@ function assertNoConcurrency(relativeFile, workflow) {
 }
 
 function assertReviewConcurrency(relativeFile, workflow) {
+  if (path.basename(relativeFile) === 'copilot_issue.yml') {
+    if (workflow.concurrency?.group !== 'copilot-issue-${{ github.repository }}-${{ github.event.issue.number }}'
+      || workflow.concurrency?.['cancel-in-progress'] !== false || workflow.concurrency?.queue !== 'max'
+      || Object.values(workflow.jobs ?? {}).some(job => job.concurrency !== undefined)) {
+      throw new Error(`${relativeFile} must retain every pending issue event without canceling active work.`);
+    }
+    return;
+  }
   const contract = BUGBOT_CONCURRENCY_JOBS[path.basename(relativeFile)];
   if (!contract) {
     assertNoConcurrency(relativeFile, workflow);
@@ -1283,6 +1293,66 @@ function assertMergeQueueWorkflowSupport(file, workflow) {
   }
 }
 
+
+// Keep unrelated repository Variables out of the admission transport and logs.
+// The executed workflow SHA binds this ordered list of effective input names.
+function issueAdmissionConfigurationExpression(workflow) {
+  const job = workflow.jobs?.['copilot-issues'];
+  const steps = (job?.steps ?? []).filter(isCopilotAction);
+  const source = JSON.stringify({ steps, runsOn: job?.['runs-on'], environment: job?.env });
+  if (/\bvars\s*\[/u.test(source)) throw new Error('Issue admission requires explicit literal Variable references.');
+  const names = [...new Set([...source.matchAll(/\bvars\.([A-Za-z_][A-Za-z0-9_]*)/gu)].map(match => match[1]))].sort();
+  if (!names.length) return "${{ '[]' }}";
+  return "${{ format('[" + names.map((_, index) => '{' + index + '}').join(',') + "]', "
+    + names.map(name => 'toJSON(vars.' + name + ')').join(', ') + ') }}';
+}
+
+function assertIssueAdmissionWorkflow(relativeFile, workflow) {
+  const admission = workflow.jobs?.['issue-admission'];
+  const work = workflow.jobs?.['copilot-issues'];
+  const distributed = relativeFile.startsWith('setup/');
+  const action = distributed ? 'vypdev/copilot/issue-admission@v3' : './issue-admission';
+  const inspect = admission?.steps?.find(step => step.id === 'inspect');
+  const product = work?.steps?.find(isCopilotAction);
+  const record = work?.steps?.find(step => step.id === 'receipt');
+  const upload = work?.steps?.find(step => step.name === 'Retain successful reconciliation receipt');
+  const variables = issueAdmissionConfigurationExpression(workflow);
+  const deploy = "${{ vars.DEPLOY_LABEL || 'deploy' }}";
+  if (Object.keys(workflow.jobs ?? {}).sort().join(',') !== 'copilot-issues,issue-admission'
+    || admission?.['runs-on'] !== 'ubuntu-latest' || admission['timeout-minutes'] !== 5
+    || admission.if !== undefined || admission.needs !== undefined || admission.env !== undefined
+    || Object.keys(admission.permissions ?? {}).sort().join(',') !== 'actions,contents'
+    || admission.permissions.actions !== 'read' || admission.permissions.contents !== 'read'
+    || admission.outputs?.execute !== '${{ steps.inspect.outputs.execute }}'
+    || admission.outputs?.['receipt-key'] !== '${{ steps.inspect.outputs.receipt-key }}'
+    || (admission.steps ?? []).some(step => step !== inspect && !(step.uses === CHECKOUT_ACTION && !distributed && step.with?.['persist-credentials'] === false))
+    || inspect?.uses !== action || inspect.with?.['issue-event-admission-mode'] !== 'inspect'
+    || inspect.with?.token !== '${{ secrets.PAT }}' || inspect.with.configuration !== variables || inspect.with['deploy-label'] !== deploy
+    || JSON.stringify(inspect.env) !== JSON.stringify({ COPILOT_ISSUE_ADMISSION_TOKEN: '${{ github.token }}' })
+    || Object.keys(inspect.with).sort().join(',') !== 'configuration,deploy-label,issue-event-admission-mode,repository-locale,token'
+    || inspect.with['repository-locale'] !== REPOSITORY_LOCALE_INPUTS['repository-locale']
+    || inspect.if !== undefined || inspect['continue-on-error'] !== undefined
+    || (work?.steps ?? []).filter(isCopilotAction).length !== 1 || product?.with?.['single-action'] !== undefined
+    || (product?.with?.['release-label'] ?? 'release') !== (inspect?.with?.['release-label'] ?? 'release')
+    || (product?.with?.['hotfix-label'] ?? 'hotfix') !== (inspect?.with?.['hotfix-label'] ?? 'hotfix')
+    || product?.id !== 'copilot' || product.if !== undefined || product['continue-on-error'] !== undefined
+    || work?.needs !== 'issue-admission' || work.if !== "${{ needs.issue-admission.outputs.execute == 'true' }}"
+    || record?.uses !== action || record.with?.['issue-event-admission-mode'] !== 'record'
+    || record.with?.token !== '${{ secrets.PAT }}' || record.with.configuration !== variables || record.with['deploy-label'] !== deploy
+    || record.with['receipt-key'] !== '${{ needs.issue-admission.outputs.receipt-key }}'
+    || record.if !== "${{ success() && steps.copilot.outcome == 'success' && needs.issue-admission.outputs.receipt-key != '' }}" || record['continue-on-error'] !== true
+    || Object.keys(record.with).sort().join(',') !== 'configuration,deploy-label,issue-event-admission-mode,receipt-key,repository-locale,token'
+    || record.with['repository-locale'] !== REPOSITORY_LOCALE_INPUTS['repository-locale'] || record.env !== undefined
+    || upload?.uses !== 'actions/upload-artifact@v5' || upload.if !== "${{ steps.receipt.outputs.receipt-path != '' }}"
+    || upload['continue-on-error'] !== true || upload.with?.name !== '${{ steps.receipt.outputs.receipt-name }}'
+    || upload.with.path !== '${{ steps.receipt.outputs.receipt-path }}' || upload.with['retention-days'] !== 1
+    || upload.with['if-no-files-found'] !== 'error'
+    || work.steps.indexOf(record) <= work.steps.findIndex(isCopilotAction) || work.steps.indexOf(upload) <= work.steps.indexOf(record)
+    || !(work.steps ?? []).some(step => isCopilotAction(step) && step.with?.['deploy-label'] === deploy)) {
+    throw new Error(`${relativeFile} must retain isolated native issue admission and success-only unchanged-state receipts.`);
+  }
+}
+
 function assertQueueWorkflow(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   const manifest = QUEUE_WORKFLOW_MANIFEST.find(entry => relativeFile.endsWith(`/${entry.file}`));
@@ -1307,7 +1377,8 @@ function assertQueueWorkflow(file, workflow) {
   if (manifest.file === 'copilot_issue.yml' && !workflow.on?.issues?.types?.includes('closed')) {
     throw new Error(`${relativeFile} must subscribe to native closed issue events.`);
   }
-  const expectedBotGate = manifest.file === 'copilot_issue.yml' ? CLOSED_ISSUE_BOT_GATE_EXPRESSION
+  if (manifest.file === 'copilot_issue.yml') assertIssueAdmissionWorkflow(relativeFile, workflow);
+  const expectedBotGate = manifest.file === 'copilot_issue.yml' ? "${{ needs.issue-admission.outputs.execute == 'true' }}"
     : manifest.file === 'copilot_pull_request.yml' && relativeFile.startsWith('setup/')
     ? BOT_PR_ANALYSIS_GATE_EXPRESSION
     : FORK_GATED_WORKFLOW_FILES.has(manifest.file)
@@ -1489,6 +1560,7 @@ function main() {
 if (require.main === module) main();
 
 module.exports = {
+  issueAdmissionConfigurationExpression,
   assertNativeVerificationWorkflow,
   QUEUE_WAIT_MINUTES,
   MIN_QUEUE_JOB_TIMEOUT_MINUTES,
