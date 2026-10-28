@@ -100,7 +100,10 @@ it('replaces a corrected unpublished candidate only after fresh native authority
 });
 it('recovers an exact persisted successor without allocating another operation or PR', async () => {
   const value = harness(); await value.useCase.invoke(input(oldCandidate())); const persisted = value.current();
+  mock(value.dependencies.replacementInspection!.inspect).mockClear();
   const result = await value.useCase.invoke(input(persisted));
+  expect(value.dependencies.replacementInspection!.inspect).toHaveBeenCalledTimes(1);
+  expect(value.dependencies.replacementInspection!.inspect).toHaveBeenCalledWith(expect.objectContaining({ preparation: { kind: 'recorded', candidateSha } }));
   expect(result.every(item => item.success)).toBe(true); expect(value.current().operationId).toBe(newId);
   expect(value.dependencies.operationId).toHaveBeenCalledTimes(1);
   expect(value.dependencies.pullRequests.createManagedPullRequest).toHaveBeenCalledTimes(1);

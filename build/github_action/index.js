@@ -54984,7 +54984,6 @@ class ReplaceCandidateHandler {
             }
             const predecessor = previous.supersededCandidates.at(-1);
             await this.requireNativeAuthority(context, previous, request, predecessor);
-            await this.requireNativeAuthority(context, previous, request, predecessor);
             await this.runtime.publishSupersededCandidate(context, previous);
             return await this.prepare.invoke(context);
         }
