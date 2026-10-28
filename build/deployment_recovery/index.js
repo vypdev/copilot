@@ -33016,9 +33016,10 @@ function renderCandidatePreflightSummary(value, locale, repositoryFullName) {
     const outcome = value.outcome;
     const notice = outcome.mode === 'prepare' ? messages.replacementPrepareNotice
         : outcome.mode === 'recover' ? messages.replacementRecoverNotice : messages.replacementRecordedNotice;
+    const sourceLabel = outcome.mode === 'prepare' ? messages.reviewedSource : messages.preparedSource;
     const repository = repositoryFullName.split('/').map(encodeURIComponent).join('/');
     const root = `https://github.com/${repository}`;
-    lines.push(`> **${messages.currentStatus}:** ${notice}`, '', `[${messages.controlCenter}](${root}/issues/${outcome.issue}) · [${messages.previousCandidate}](${root}/pull/${outcome.previousPromotion}) · [${messages.preparedSource}](${root}/commit/${outcome.candidateSha})`, '', '<details>', `<summary>${messages.technical}</summary>`, '', `- ${messages.operation}: ${inline(outcome.currentOperationId)} (revision ${outcome.currentRevision})`, `- ${messages.sourceSha}: ${inline(outcome.candidateSha)}`, `- ${messages.productionSha}: ${inline(outcome.productionBaseSha)}`, '</details>');
+    lines.push(`> **${messages.currentStatus}:** ${notice}`, '', `[${messages.controlCenter}](${root}/issues/${outcome.issue}) · [${messages.previousCandidate}](${root}/pull/${outcome.previousPromotion}) · [${sourceLabel}](${root}/commit/${outcome.candidateSha})`, '', '<details>', `<summary>${messages.technical}</summary>`, '', `- ${messages.operation}: ${inline(outcome.currentOperationId)} (revision ${outcome.currentRevision})`, `- ${messages.sourceSha}: ${inline(outcome.candidateSha)}`, `- ${messages.productionSha}: ${inline(outcome.productionBaseSha)}`, '</details>');
     return lines.join('\n');
 }
 function inline(value) {
@@ -33050,7 +33051,7 @@ const SIMPLE_MESSAGE_KEYS = Object.freeze([
     'from', 'to', 'state', 'compare', 'controlCenter', 'purpose', 'afterMerge',
     'purposePromotion', 'promotionOverview',
     'reconciliationOverview', 'afterPromotion', 'noRepublish', 'origin',
-    'preparedSource', 'destination', 'publication', 'productionFact',
+    'preparedSource', 'reviewedSource', 'destination', 'publication', 'productionFact',
     'developmentTarget', 'completionEffect', 'closeIssue', 'keepIssue',
     'readyBeforeReview', 'buildValidation', 'packageSmoke', 'protectedChecks',
     'syncReason', 'protectedFacts', 'cut', 'promotion', 'reconciliation', 'cleanup',
@@ -33111,7 +33112,7 @@ const ENGLISH_SIMPLE = Object.freeze({
     promotionOverview: 'Production promotion', reconciliationOverview: 'Development reconciliation',
     afterPromotion: 'After merge, Copilot will tag and publish the accepted production commit.',
     noRepublish: 'Merging or closing this PR cannot publish the package again.',
-    origin: 'Origin', preparedSource: 'Prepared source', destination: 'Destination', publication: 'Publication',
+    origin: 'Origin', preparedSource: 'Prepared source', reviewedSource: 'Reviewed source', destination: 'Destination', publication: 'Publication',
     productionFact: 'Production fact', developmentTarget: 'Development target', completionEffect: 'Completion effect',
     closeIssue: 'Close issue after all targets', keepIssue: 'Keep issue open', readyBeforeReview: 'Ready before review',
     buildValidation: 'Build and release validation', packageSmoke: 'Package smoke test',
@@ -33153,7 +33154,7 @@ const SPANISH_SIMPLE = Object.freeze({
     promotionOverview: 'Promoción a producción', reconciliationOverview: 'Reconciliación con desarrollo',
     afterPromotion: 'Tras el merge, Copilot etiquetará y publicará el commit aceptado en producción.',
     noRepublish: 'Mergear o cerrar esta PR no puede volver a publicar el paquete.',
-    origin: 'Origen', preparedSource: 'Fuente preparada', destination: 'Destino', publication: 'Publicación',
+    origin: 'Origen', preparedSource: 'Fuente preparada', reviewedSource: 'Fuente revisada', destination: 'Destino', publication: 'Publicación',
     productionFact: 'Estado de producción', developmentTarget: 'Destino de desarrollo', completionEffect: 'Efecto al completar',
     closeIssue: 'Cerrar la issue tras todos los destinos', keepIssue: 'Mantener la issue abierta', readyBeforeReview: 'Listo antes de revisar',
     buildValidation: 'Build y validación de release', packageSmoke: 'Smoke test del paquete',

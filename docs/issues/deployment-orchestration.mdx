@@ -661,6 +661,10 @@ existing product token supplies native reads, with no agent/planner or state-sav
 capability in the `deployment-recovery` entrypoint. Blocked preflight writes only
 an English/Spanish/static fallback Job Summary with a closed reason code.
 
+The preflight Summary labels the initial commit **Reviewed source** while full
+preparation is pending. Recovery summaries use **Prepared source** for the
+already recorded final candidate; these labels do not certify pending PR checks.
+
 Complete fresh preparation may commit generated files, producing a final SHA
 different from the reviewed input. Each checkout is checked against its successful
 predecessor. A proof is emitted only for a clean local commit matching the native

@@ -4,6 +4,8 @@ import {
   type DeploymentPresentationContext,
 } from '../deployment_presentation_policy';
 import { resolveStaticDeploymentCatalog } from '../deployment_message_catalog';
+import { renderCandidatePreflightSummary } from '../deployment_candidate_preflight_presentation';
+import type { DeploymentCandidatePreflightOutcome } from '../../usecases/execution/deployment_candidate_preflight_workflow';
 import type { DeploymentOperationSnapshot, SupersededDeploymentCandidate } from '../../../domain/deployment_operation';
 
 const previous: SupersededDeploymentCandidate = { operationId: 'operation-previous', revision: 3, sourceSha: 'a'.repeat(40),
@@ -55,4 +57,32 @@ it('sanitizes technical identifiers and URL segments without executable Markdown
   const text = renderSupersededDeploymentCandidate({ ...previous, operationId: '<!-- @team `unsafe` -->' },
     { ...current, operationId: ':: @team `unsafe`' }, { ...context('en-US'), owner: 'evil](javascript:alert(1))' });
   expect(text).not.toContain('](javascript:'); expect(text).not.toContain('@team'); expect(text).not.toContain('<!-- @team');
+});
+
+
+it.each([
+  ['en-US', 'Reviewed source', 'Prepared source'],
+  ['es-ES', 'Fuente revisada', 'Fuente preparada'],
+  ['fr-FR', 'Reviewed source', 'Prepared source'],
+])('distinguishes reviewed input from a recorded prepared candidate in %s/fallback', (locale, reviewedLabel, preparedLabel) => {
+  const outcome: DeploymentCandidatePreflightOutcome = {
+    mode: 'prepare', issue: 170, version: '1.5.2', previousPromotion: 173,
+    sourceBranch: current.sourceBranch, candidateSha: previous.replacementSourceSha,
+    reviewedSourceSha: previous.replacementSourceSha, productionBaseSha: previous.replacementBaseSha,
+    operationId: previous.operationId, expectedRevision: previous.revision,
+    currentOperationId: previous.operationId, currentRevision: previous.revision,
+  };
+  const beforePreparation = renderCandidatePreflightSummary({ kind: 'success', outcome }, locale, 'owner/project');
+  expect(beforePreparation).toContain(`[${reviewedLabel}](https://github.com/owner/project/commit/${outcome.reviewedSourceSha})`);
+  expect(beforePreparation).not.toContain(`[${preparedLabel}]`);
+  expect(beforePreparation).toContain(locale === 'es-ES' ? 'aún no se ha guardado la sustitución' : 'no replacement has been recorded yet');
+  for (const mode of ['recover', 'recorded'] as const) {
+    const afterPreparation = renderCandidatePreflightSummary({ kind: 'success', outcome: {
+      ...outcome, mode, candidateSha: current.sourceSha,
+      currentOperationId: current.operationId, currentRevision: current.revision,
+    } }, locale, 'owner/project');
+    expect(afterPreparation).toContain(`[${preparedLabel}](https://github.com/owner/project/commit/${current.sourceSha})`);
+    expect(afterPreparation).not.toContain(`[${reviewedLabel}]`);
+    expect(afterPreparation).not.toContain(`/commit/${outcome.reviewedSourceSha}`);
+  }
 });

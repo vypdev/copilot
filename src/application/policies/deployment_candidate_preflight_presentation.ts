@@ -19,10 +19,11 @@ export function renderCandidatePreflightSummary(
   const outcome = value.outcome;
   const notice = outcome.mode === 'prepare' ? messages.replacementPrepareNotice
     : outcome.mode === 'recover' ? messages.replacementRecoverNotice : messages.replacementRecordedNotice;
+  const sourceLabel = outcome.mode === 'prepare' ? messages.reviewedSource : messages.preparedSource;
   const repository = repositoryFullName.split('/').map(encodeURIComponent).join('/');
   const root = `https://github.com/${repository}`;
   lines.push(`> **${messages.currentStatus}:** ${notice}`, '',
-    `[${messages.controlCenter}](${root}/issues/${outcome.issue}) · [${messages.previousCandidate}](${root}/pull/${outcome.previousPromotion}) · [${messages.preparedSource}](${root}/commit/${outcome.candidateSha})`, '',
+    `[${messages.controlCenter}](${root}/issues/${outcome.issue}) · [${messages.previousCandidate}](${root}/pull/${outcome.previousPromotion}) · [${sourceLabel}](${root}/commit/${outcome.candidateSha})`, '',
     '<details>', `<summary>${messages.technical}</summary>`, '',
     `- ${messages.operation}: ${inline(outcome.currentOperationId)} (revision ${outcome.currentRevision})`,
     `- ${messages.sourceSha}: ${inline(outcome.candidateSha)}`,

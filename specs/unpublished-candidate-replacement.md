@@ -3,7 +3,7 @@
 - Status: Implemented; local validation complete, exact-head remote merge gates required
 - Date: 2026-10-28
 - Catalog capability ID: release-orchestration
-- Last verified: 2026-10-28; review-hardened candidate passed 772 root suites / 14,088 tests, all budgets/setup acceptance and 267 extension tests at 100%; exact published-head and remote results are recorded in the implementation PR
+- Last verified: 2026-10-28; local verification receipts and exact published-head remote results are recorded in the implementation PR; historical baseline counts below are not approval of later heads
 - Owners: Copilot maintainers
 - Scope: explicit replacement of one closed, unmerged, unpublished candidate on its existing managed branch
 - Related issues/PRs: [#732](https://github.com/vypdev/copilot/issues/732)
@@ -311,6 +311,14 @@ recorded successor.” Complete preparation: normal pending-promotion view, with
 predecessor history available in details. Acceptance/publication remains pending
 until the existing workflow confirms it.
 
+The preflight commit link MUST say “Reviewed source” (“Fuente revisada”) in
+`prepare`: only native prerequisites have been inspected and full preparation
+is still pending. In `recover` and `recorded`, it MUST say “Prepared source”
+(“Fuente preparada”) and link the durable final candidate, which may differ from
+the initial reviewed SHA. English static fallback follows the same phase rule.
+Three additional localized/fallback regressions cover all three outcomes without
+changing workflow outputs, preparation or publication authority.
+
 ### 9.3 Publication behavior
 
 One dashboard per operation; update the old dashboard as superseded and reuse
@@ -375,9 +383,9 @@ rewrite or publish it. No downgrade conversion or audit deletion is provided.
 | Application/state/replay/races | 28 | new operation, exact replay, changed facts, failure boundaries |
 | Provider adapters | 16 | native PR/ref/publication facts and unknown/absent classification |
 | Workflow/setup/input contracts | 20 | read preflight, full fresh validators, exact outputs and mode gates |
-| Presentation/localization/security | 12 | superseded/current/partial content and safe links |
+| Presentation/localization/security | 15 | superseded/current/partial content and safe links |
 | Integration/compatibility | 12 | real entry projections, callbacks, old snapshots and native linkage |
-| **Total** | **112** | No double-counted declarations |
+| **Total** | **115** | No double-counted declarations |
 
 New pure policy requires 100% statements/branches/functions/lines. Changed modules
 retain all repository budgets. Add a failing-before regression for the exact
