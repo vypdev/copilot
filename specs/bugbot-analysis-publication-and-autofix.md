@@ -2,9 +2,9 @@
 
 - Status: As-built baseline
 - Date: 2026-09-11
-- Last updated: 2026-10-27
+- Last updated: 2026-10-28
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-10-27; external-package and framework evidence tracked in #720, #721 and #722
+- Last verified: 2026-10-28; resolved-type grounding tracked in #736 alongside the dated package/framework evidence in #720, #721 and #722
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -606,7 +606,7 @@ reported configuration, HTTP/1.0, arithmetic, short-circuit, helper-validation a
 exclusive-render concerns, plus two positive controls for unsafe membership order
 and simultaneous duplicate IDs. Existing prompt tests enforce the shared review
 contract; benchmark tests classify each negative as a false positive and each
-missed positive as a false negative. The corpus now has 38 cases. Ground-truth
+missed positive as a false negative. That extension established a historical 38-case corpus. Ground-truth
 arrays never enter the model prompt. Checked-in reference predictions test the
 scorer contract and MUST NOT be claimed as an observed real-model improvement.
 
@@ -685,8 +685,7 @@ Allocate **eight additional distinct deterministic cases**, owned only here:
 prompt contract preserving verdict isolation, **three** isolated false-positive
 scoring cases (listed minor package, unavailable inventory and stale catalog),
 and **two** false-negative controls (confirmed absent package and unrelated green
-job). Together with the five #720 layout cases and five #722 lifecycle cases, the versioned corpus now
-contains **53** cases. Existing
+job). Together with the five #720 layout cases and five #722 lifecycle cases, that combined baseline contained **53** cases before #736. Existing
 reference predictions prove the scorer contract; they do not establish observed
 real-model improvement. No live service, network or real wait enters these tests.
 Global and changed-module thresholds remain mandatory; the new instruction must
@@ -737,7 +736,7 @@ cap-before-fill at 800dp, and the original padded form at both widths), two
 false-negative controls (required-width overflow at 280dp and fill-before-cap at
 800dp), and two prompt-boundary cases (production review and real-agent benchmark).
 This correction adds five corpus cases; together with the five #721 external-package
-and five #722 lifecycle cases, the combined corpus has **53** cases. At density 1, the required-width padded
+and five #722 lifecycle cases, that combined baseline had **53** cases before #736. At density 1, the required-width padded
 form has 320dp controls with bounds -20..300dp in the 280dp parent; fill-before-cap
 has 720dp controls at 800dp, exceeding the 320dp intended control cap. The original
 padded form and cap-before-fill have 200dp controls at 280dp and 320dp at 800dp.
@@ -835,8 +834,7 @@ this correction adds no comments or actions and keeps the same noise budget.
 | **Total** | **7** | No double counting with existing budgets |
 
 No new I/O adapter, state machine or pure policy requires additional branch tests.
-Global and changed-module coverage gates remain mandatory. The combined corpus now has
-53 cases including #720 and #721. Deterministic reference predictions test evaluator behavior, not an
+Global and changed-module coverage gates remain mandatory. That combined baseline had 53 cases including #720 and #721, before #736. Deterministic reference predictions test evaluator behavior, not an
 observed model improvement. Real model samples, when run, must be reported
 separately from reference scoring and consumer GUI evidence.
 
@@ -857,3 +855,84 @@ five-case run passes every default threshold (precision/recall/F1 and exact
 location/severity/category accuracy all 1.0; zero false positives/negatives).
 The first failed score remains visible. No old-prompt comparison or broader
 model-quality claim is made.
+
+
+### Resolved dependency type and fault evidence — #736 (2026-10-28)
+
+The [reported reviews](https://github.com/vypdev/copilot/issues/736) repeatedly
+claimed that ExposedSQLException was not caught by SQLException. The exact
+Exposed 1.0.0 [official source](https://github.com/JetBrains/Exposed/blob/395c3b9b39814faa6faccf9b7a63305ed8ef5f25/exposed-core/src/main/kotlin/org/jetbrains/exposed/v1/core/Exceptions.kt)
+declares the opposite relation. Its declared Kotlin package differs from its
+source-directory name, so the real import/type identity matters. The issue
+retains separate resolved-JAR and real PostgreSQL fault receipts; this correction
+does not claim to rerun that consumer or independently execute those receipts.
+Their later obsolescence is not represented as an upstream source fix.
+
+The reviewer MUST establish the exact imported type, resolved coordinate/version
+and platform before a dependency inheritance or catch-assignability finding.
+Version-matched source or actual artifact hierarchy, including transitive bases,
+MUST govern that premise. A cause is not a superclass; wrapper names, model
+memory, source directories and another version cannot prove assignability.
+It MUST reconcile applicable artifact evidence with the actual fault path and
+asserted result. A green mock, skipped test or different artifact does not refute
+a reachable production failure. If the actual exception is caught already, the
+reviewer MUST omit that false premise rather than broaden the catch; genuine
+uncaught wrappers, swallowed cancellation, unexpected failures and lost cause
+identity remain reportable. Unavailable type evidence requires abstaining from
+that unsupported claim, not inventing a lookup or execution result.
+
+```text
+exact type/version/platform -> source or artifact hierarchy -> actual fault path
+ -> reconcile applicable counterevidence -> supported finding or omit false premise
+ -> unchanged current-head publication and independent resolution guards
+```
+
+Architecture: a shared pure instruction in `src/prompts/bugbot.ts` reaches normal
+and partitioned production review and `bugbot_benchmark_runner.ts`. No adapter,
+semantic port, schema, I/O, permission, retry, persistence or configuration surface
+is added. This is model guidance, not a deterministic JVM resolver or a project
+whitelist. Existing bounded read-only tools, confidence/severity gates, untrusted
+content fences, whole-PR coverage and protected approval requirements remain.
+No model assertion or supplied artifact/log grants mutation or dismissal authority.
+
+UI and recovery: an unsupported caught-wrapper claim produces no new finding or
+abstention notification. A demonstrated uncaught runtime wrapper produces the
+ordinary actionable finding at its catch, with the exact resolved type and causal
+failure. Existing complete/partial/failed summaries keep their current semantics;
+none claims that all external evidence was independently executed. Prior findings
+still require the ordinary fresh independent review and native reconciliation.
+New code reaches consumers only through their normal runtime adoption. Rollback
+reverts this instruction, fixtures and documentation together; no state migration
+or registry/release operation is involved.
+
+Allocate **nine additional distinct deterministic cases**, owned only here:
+
+| Area | Cases | Risk/acceptance |
+|---|---:|---|
+| Production prompt delivery | 2 | normal and partitioned reviews receive the same exact-type/fault contract |
+| Benchmark prompt isolation | 1 | same contract, expected verdict excluded |
+| False-positive controls | 3 | resolved SQL subclass, unavailable hierarchy, current artifact over stale docs |
+| False-negative controls | 3 | unrelated runtime wrapper, misleading passing mock, swallowed cancellation |
+| **Total** | **9** | no cases allocated again to other SDDs |
+
+The corpus now has **59** cases. The three delivery/isolation regressions fail
+before the instruction is installed. Scorer tests penalize each invented defect
+and every missed real control; checked-in reference predictions prove only that
+scoring contract. Any optional actual-model observations MUST retain the exact
+fixture/prompt/runtime identities and all results separately, including failures;
+small samples do not prove statistical or universal accuracy. No live service or
+wait is introduced into ordinary tests. All global/changed-module coverage,
+architecture, full build/package, lint/types, specifications/catalog, docs and
+exact-head remote review/CI/Codecov gates remain required. Documentation owners
+are detection and quality/observability, with this SDD and generated catalog.
+
+
+The controlled product-runtime observations in
+`quality/bugbot/evidence/issue-736.json` retain the same six inputs, both prompts'
+source/bundle hashes and both prediction/score sets. Baseline and corrected runs
+both have zero false positives/negatives; the baseline fails exact-location
+accuracy (2/3), while the corrected run passes every default threshold. This does
+not reproduce the historical type false positive or establish a statistical gain.
+No source, fixture or expected-verdict file was copied into the empty benchmark
+workspace. The tests establish instruction delivery and scorer controls; the
+actual sample establishes only its recorded observations.

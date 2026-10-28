@@ -455,6 +455,96 @@
           "codeSnippet": "sdkmanager --install \"platforms;android-37\""
         }
       ]
+    },
+    {
+      "language": "kotlin",
+      "file": "storage/ReadRows.kt",
+      "startLine": 1,
+      "id": "kt-resolved-sql-subclass",
+      "category": "negative",
+      "description": "Controlled source-evidence fixture, not a live consumer execution. Resolved coordinate org.jetbrains.exposed:exposed-core:1.0.0, imported org.jetbrains.exposed.v1.exceptions.ExposedSQLException. Version-matched official source https://github.com/JetBrains/Exposed/blob/395c3b9b39814faa6faccf9b7a63305ed8ef5f25/exposed-core/src/main/kotlin/org/jetbrains/exposed/v1/core/Exceptions.kt declares ExposedSQLException : java.sql.SQLException(cause). The reported resolved JAR SHA256 is 4e6b44f76b5dc69bb611d64474f2a34ac444e4ec156a96ac8cdcccda3b2a0b7a; a supplied same-artifact javap signature states extends java.sql.SQLException. driver.selectRows uses that exact JDBC dependency. A synthetic matching real-database fault receipt for this function returns Left(DatabaseException) retaining the actual wrapper/cause; cancellation propagates. The diff preserves the typed SQL catch. Do not infer guarantees about other versions or similarly named types.",
+      "diff": " import java.sql.SQLException\n+suspend fun readRows(): Either<DatabaseException, List<Row>> = try {\n+    Either.Right(driver.selectRows())\n+} catch (failure: SQLException) {\n+    Either.Left(DatabaseException(\"read failed\", failure))\n+}",
+      "expected": []
+    },
+    {
+      "language": "kotlin",
+      "file": "storage/ReadRows.kt",
+      "startLine": 1,
+      "id": "jvm-type-hierarchy-unavailable",
+      "category": "negative",
+      "description": "The application maps actual SQLExceptions to DatabaseException. A report alleges that the driver wrapper is not a SQLException, but there is no resolved dependency/version, wrapper source or bytecode, failed execution or authoritative inheritance evidence available in the allowed read-only context. The driver may use a subtype; its hierarchy is unknown. There is no demonstrated uncaught error. Review the changed SQL mapping without inventing a lookup, class relationship or executed test.",
+      "diff": " import java.sql.SQLException\n+suspend fun readRows(): Either<DatabaseException, List<Row>> = try {\n+    Either.Right(driver.selectRows())\n+} catch (failure: SQLException) {\n+    Either.Left(DatabaseException(\"read failed\", failure))\n+}",
+      "expected": []
+    },
+    {
+      "language": "kotlin",
+      "file": "storage/ReadRows.kt",
+      "startLine": 1,
+      "id": "jvm-current-contract-over-stale-docs",
+      "category": "negative",
+      "description": "Synthetic dependency example.db:jdbc:2.4.0 is resolved for this exact JVM target. Its current source and bytecode declare example.db.SqlFailure extends java.sql.SQLException. driver.selectRows uses that exact type for SQL failures. An older 2.3.0 document described a RuntimeException wrapper; it is not the reviewed artifact. A matching current-version fault receipt invokes this function and returns Left(DatabaseException) with the wrapper/cause retained. Cancellation is not caught.",
+      "diff": " import java.sql.SQLException\n+suspend fun readRows(): Either<DatabaseException, List<Row>> = try {\n+    Either.Right(driver.selectRows())\n+} catch (failure: SQLException) {\n+    Either.Left(DatabaseException(\"read failed\", failure))\n+}",
+      "expected": []
+    },
+    {
+      "language": "kotlin",
+      "file": "storage/ReadRows.kt",
+      "startLine": 1,
+      "id": "jvm-unrelated-runtime-wrapper",
+      "category": "correctness",
+      "description": "Synthetic resolved dependency example.db:jdbc:3.0.0 declares example.db.SqlFailure extends java.lang.RuntimeException and wraps a SQLException as its cause. It has no SQLException superclass. driver.selectRows actually throws SqlFailure on a reachable duplicate-key database fault. This public API promises Either.Left(DatabaseException) on that fault; its caller does not catch an escaping wrapper. A cause relationship does not make the outer exception assignable to SQLException.",
+      "diff": " import java.sql.SQLException\n+suspend fun readRows(): Either<DatabaseException, List<Row>> = try {\n+    Either.Right(driver.selectRows())\n+} catch (failure: SQLException) {\n+    Either.Left(DatabaseException(\"read failed\", failure))\n+}",
+      "expected": [
+        {
+          "id": "uncaught-driver-wrapper",
+          "title": "The resolved driver wrapper escapes the typed SQL mapping",
+          "file": "storage/ReadRows.kt",
+          "line": 4,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "} catch (failure: SQLException) {"
+        }
+      ]
+    },
+    {
+      "language": "kotlin",
+      "file": "storage/ReadRows.kt",
+      "startLine": 1,
+      "id": "jvm-passing-mock-not-counterevidence",
+      "category": "correctness",
+      "description": "Synthetic resolved dependency example.db:jdbc:3.0.0 declares example.db.SqlFailure extends java.lang.RuntimeException, not SQLException. The real driver.selectRows throws that wrapper on SQL failure, and callers require Either.Left rather than an exception. A passing unit test mocks driver.selectRows to throw a plain SQLException instead; no test executed the production wrapper path. The green mock test does not contradict the actual uncaught runtime type.",
+      "diff": " import java.sql.SQLException\n+suspend fun readRows(): Either<DatabaseException, List<Row>> = try {\n+    Either.Right(driver.selectRows())\n+} catch (failure: SQLException) {\n+    Either.Left(DatabaseException(\"read failed\", failure))\n+}",
+      "expected": [
+        {
+          "id": "uncaught-driver-wrapper",
+          "title": "The production wrapper is not handled by the mock-covered catch",
+          "file": "storage/ReadRows.kt",
+          "line": 4,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "} catch (failure: SQLException) {"
+        }
+      ]
+    },
+    {
+      "language": "kotlin",
+      "file": "storage/ReadRows.kt",
+      "startLine": 1,
+      "id": "kt-broad-catch-swallows-cancellation",
+      "category": "correctness",
+      "description": "The resolved JDBC driver uses a SQLException subtype, which the original narrow catch already maps. This suspend function may receive kotlin.coroutines.cancellation.CancellationException while waiting in selectRows, and callers require that cancellation propagate. No other cancellation guard exists. The change broadens the catch to Throwable solely to catch the SQL wrapper, so the added broad branch now converts cancellation into an ordinary DatabaseException result.",
+      "diff": " import java.sql.SQLException\n suspend fun readRows(): Either<DatabaseException, List<Row>> = try {\n     Either.Right(driver.selectRows())\n-} catch (failure: SQLException) {\n+} catch (failure: Throwable) {\n     Either.Left(DatabaseException(\"read failed\", failure))\n }",
+      "expected": [
+        {
+          "id": "swallowed-cancellation",
+          "title": "The broader catch converts cancellation to a database failure",
+          "file": "storage/ReadRows.kt",
+          "line": 4,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "} catch (failure: Throwable) {"
+        }
+      ]
     }
   ]
 }

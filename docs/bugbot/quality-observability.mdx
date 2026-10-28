@@ -5,7 +5,7 @@ description: Measure Bugbot accuracy, latency, outcomes, feedback, and regressio
 
 # Bugbot quality and observability
 
-Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 53 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
+Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 59 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
 
 The #655 cases cover branch coverage enabled through repository configuration,
 inherited HTTP/1.0 connection behavior, correct arithmetic, short-circuit guards,
@@ -55,6 +55,21 @@ initial failed scorer result, fixture refinements and the final five-case run.
 The final run passes all default thresholds with zero false positives or
 negatives. It is a small sample using the corrected prompt, not an old-versus-new
 prompt comparison or a guarantee of general model quality.
+
+The six #736 dependency-type cases cover an actual-version SQL subclass,
+unavailable hierarchy and stale-documentation counterexamples, plus real
+uncaught-wrapper, misleading green mock and swallowed-cancellation controls.
+The reviewer verifies the imported type, resolved version/platform and applicable
+source or artifact hierarchy before alleging that a catch misses it. Matching
+fault evidence matters; a passing mock or another version cannot dismiss a real
+production error. These are synthetic evidence/scorer fixtures, not execution of
+the consumer's database or a deterministic JVM type resolver. Reference verdicts
+remain separate from observed predictions in `quality/bugbot/evidence/issue-736.json`.
+Both six-case product-runtime samples classified all cases correctly. The baseline
+missed one exact location; the corrected sample passed all default thresholds,
+including exact locations. The inputs and scoring rules were unchanged. This is
+a small controlled observation, not a reproduction of the historical false
+positive, a statistical improvement claim or a guarantee of future accuracy.
 
 ## Quality gates
 
