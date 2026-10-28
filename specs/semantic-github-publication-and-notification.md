@@ -2279,3 +2279,14 @@ complete-evidence and source-freshness gates and reports actually unsupported
 binary paths through the existing localized error surface. Its additional
 90-case budget owns source identity, binary retention and diagnostic boundaries;
 no semantic publication identity, card or notification budget is added.
+
+
+## Optional native evidence diagnostics — #728 (2026-10-28)
+
+[Optional Check Run diagnostics](./optional-check-run-diagnostics.md) closes the
+opaque completion warning without changing required-stage outcomes or adding a
+conversation route. It owns a 72-case regression floor, closed provider facts,
+localized log/Summary fallback and the scoped native-token route in commit
+workflows. Unknown provider failures remain unknown; unconfirmed writes are not
+claimed absent or retried automatically. Existing stable check name/head identity
+and source-eligibility policy remain unchanged.

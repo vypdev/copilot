@@ -161,15 +161,19 @@ function loggingAnalysisContext(
     const errorMapperSource = program.getSourceFile(
         resolve(repositoryRoot, 'src/application/errors/application_error.ts'),
     );
+    const optionalDiagnosticSource = program.getSourceFile(
+        resolve(repositoryRoot, 'src/application/policies/optional_check_diagnostic_policy.ts'),
+    );
     return {
         checker,
         loggingSymbols,
         repositoryRoot,
-        sanitizerSymbols: functionSymbols(
-            errorMapperSource,
-            checker,
-            name => name === 'toApplicationError',
-        ),
+        // Trust exact production symbols only. The optional formatter accepts
+        // closed immutable facts and discards all unadapted error text.
+        sanitizerSymbols: new Set([
+            ...functionSymbols(errorMapperSource, checker, name => name === 'toApplicationError'),
+            ...functionSymbols(optionalDiagnosticSource, checker, name => name === 'optionalCheckDiagnostic'),
+        ]),
     };
 }
 
@@ -222,8 +226,10 @@ describe('raw error logging boundaries', () => {
         ['declared alias', 'const message = error instanceof Error ? error.message : String(error); logError(message);'],
         ['assigned alias', "let message = 'fixed'; message = String(error); logError(message);"],
         ['console alias', 'const message = String(error); console.error(message);'],
+        ['shadowed closed formatter', "function optionalCheckDiagnostic(_target: unknown, _route: unknown, value: unknown, _catalog: unknown): string { return String(value); } logError(optionalCheckDiagnostic({}, 'action-token-fallback', error, {}));"],
     ];
     const mappedStatement = "const semanticError = toApplicationError(error, 'unexpected', 'Operation failed.'); logError(semanticError);";
+    const closedStatement = "const diagnostic = optionalCheckDiagnostic({ name: 'Copilot / Verification', headSha: 'a'.repeat(40), conclusion: 'success', title: '', summary: '' }, 'action-token-fallback', error, resolveStaticActionSummaryCatalog('en-US')); logError(diagnostic);";
     const fixturePaths = new Map<string, string>();
     let fixtureDirectory: string;
     let program: ts.Program;
@@ -232,11 +238,15 @@ describe('raw error logging boundaries', () => {
         fixtureDirectory = mkdtempSync(join(tmpdir(), 'copilot-error-taint-'));
         const loggingModule = resolve(repositoryRoot, 'src/application/ports/logging_ports').replace(/\\/g, '/');
         const errorModule = resolve(repositoryRoot, 'src/application/errors/application_error').replace(/\\/g, '/');
-        [...unsafeCases.map(([, statement]) => statement), mappedStatement].forEach((statement, index) => {
+        const diagnosticModule = resolve(repositoryRoot, 'src/application/policies/optional_check_diagnostic_policy').replace(/\\/g, '/');
+        const catalogModule = resolve(repositoryRoot, 'src/application/policies/action_summary_message_catalog').replace(/\\/g, '/');
+        [...unsafeCases.map(([, statement]) => statement), mappedStatement, closedStatement].forEach((statement, index) => {
             const fixtureFile = join(fixtureDirectory, `raw_error_fixture_${index}.ts`);
             writeFileSync(fixtureFile, [
                 `import { logError } from '${loggingModule}';`,
                 `import { toApplicationError } from '${errorModule}';`,
+                `import { optionalCheckDiagnostic } from '${diagnosticModule}';`,
+                `import { resolveStaticActionSummaryCatalog } from '${catalogModule}';`,
                 'export function fixture(): void {',
                 '  try { throw new Error("secret"); } catch (error) {',
                 `    ${statement}`,
@@ -246,7 +256,7 @@ describe('raw error logging boundaries', () => {
             fixturePaths.set(statement, fixtureFile);
         });
         // Share one real compiler/checker graph across the unchanged repository
-        // scan and all six fixtures. Imports still resolve to production symbols.
+        // scan and all fixtures. Imports still resolve to production symbols.
         program = ts.createProgram([...parsed.fileNames, ...fixturePaths.values()], parsed.options);
     });
 
@@ -268,6 +278,11 @@ describe('raw error logging boundaries', () => {
 
     it('allows a caught value only after semantic error mapping', () => {
         expect(analyzeFixture(mappedStatement)).toEqual([]);
+    });
+
+    it('allows the actual closed optional diagnostic formatter, while rejecting a same-named local function', () => {
+        expect(analyzeFixture(closedStatement)).toEqual([]);
+        expect(analyzeFixture(unsafeCases.find(([name]) => name === 'shadowed closed formatter')![1])).toHaveLength(1);
     });
 
     function analyzeFixture(statement: string): string[] {

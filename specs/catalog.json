@@ -7,13 +7,14 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-27",
+      "lastVerified": "2026-10-28",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md",
         "specs/copilot-history.md",
         "specs/pull-request-title-compatibility.md",
-        "specs/immutable-progress-content-recovery.md"
+        "specs/immutable-progress-content-recovery.md",
+        "specs/optional-check-run-diagnostics.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -184,7 +185,10 @@
         "src/data/repository/progress_comparison_source_repository.ts",
         "src/domain/progress_binary_evidence_diagnostic.ts",
         "src/domain/progress_evidence_path.ts",
-        "src/infrastructure/github/ports/github_progress_comparison_provider_port.ts"
+        "src/infrastructure/github/ports/github_progress_comparison_provider_port.ts",
+        "src/application/ports/copilot_evidence_error.ts",
+        "src/application/policies/optional_check_diagnostic_policy.ts",
+        "src/data/repository/github/copilot_evidence_provider_failure.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -306,7 +310,11 @@
         "src/application/usecases/actions/__tests__/progress_comparison_source.integration.test.ts",
         "src/domain/__tests__/progress_binary_evidence_diagnostic.test.ts",
         "src/data/repository/__tests__/progress_binary_evidence.test.ts",
-        "src/infrastructure/composition/__tests__/progress_comparison_binding.test.ts"
+        "src/infrastructure/composition/__tests__/progress_comparison_binding.test.ts",
+        "src/application/policies/__tests__/optional_check_diagnostic_policy.test.ts",
+        "src/data/repository/__tests__/copilot_evidence_failure.test.ts",
+        "src/actions/__tests__/optional_check_completion.test.ts",
+        "src/architecture/__tests__/raw_error_logging_boundaries.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",

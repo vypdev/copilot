@@ -1,3 +1,4 @@
+import { optionalCheckDiagnostic } from '../application/policies/optional_check_diagnostic_policy';
 import { createReplyRequestReadPort } from '../infrastructure/composition/reply_request_composition_root';
 import * as core from '@actions/core';
 import type { Execution } from '../data/model/execution';
@@ -85,13 +86,17 @@ export async function finishGithubAction(
         logInfo('Configuration persistence skipped: this single action does not modify execution configuration.');
     }
     const summary = await writeActionSummary(execution, summaryPort, catalogResolver);
-    if (!dryRun) await publishCopilotEvidence(
+    const optionalEvidenceDiagnostic = !dryRun ? await publishCopilotEvidence(
         execution,
         results,
         summary.text,
         evidencePort,
         catalogResolver,
-    );
+    ) : undefined;
+    if (optionalEvidenceDiagnostic && summaryPort) {
+        try { await summaryPort.publish(optionalEvidenceDiagnostic.text); }
+        catch { logInfo(optionalEvidenceDiagnostic.summaryAppendFailure); }
+    }
     const completionError = firstApplicationError(results)
         ?? bugbotCompletionError(execution, results, dryRun);
     if (completionError) core.setFailed(renderApplicationErrorText(completionError, summary.errorMessage));
@@ -217,13 +222,15 @@ async function writeActionSummary(
     return { text: summaryText, errorMessage };
 }
 
+interface OptionalEvidenceDiagnostic { readonly text: string; readonly summaryAppendFailure: string }
+
 async function publishCopilotEvidence(
     execution: Execution,
     results: Result[],
     summary: string,
     evidencePort: CopilotEvidencePort | undefined,
     catalogResolver?: MessageCatalogResolutionPort,
-): Promise<void> {
+): Promise<OptionalEvidenceDiagnostic | undefined> {
     if (!evidencePort) return;
     const headSha = execution.inputs?.pull_request?.head?.sha
         || (execution.isPush ? process.env.GITHUB_SHA : undefined);
@@ -257,12 +264,15 @@ async function publishCopilotEvidence(
         catalog,
     });
     if (!evidence) return;
+    const dedicatedToken = process.env.COPILOT_EVIDENCE_TOKEN?.trim();
+    const evidenceToken = dedicatedToken || execution.tokens.token;
     try {
-        const evidenceToken = process.env.COPILOT_EVIDENCE_TOKEN?.trim() || execution.tokens.token;
         await evidencePort.publish(evidence, execution.owner, execution.repo, evidenceToken);
         logInfo(`Published ${evidence.name} Check Run for ${evidence.headSha}.`);
     } catch (error) {
-        logInfo(toApplicationError(error, 'provider.unavailable', 'Could not publish the optional GitHub Check Run.').message);
+        const diagnostic = optionalCheckDiagnostic(evidence, dedicatedToken ? 'dedicated-evidence-token' : 'action-token-fallback', error, catalog);
+        logInfo(diagnostic);
+        return { text: diagnostic, summaryAppendFailure: catalog.message('summary.optionalEvidenceSummaryUnavailable') };
     }
 }
 
