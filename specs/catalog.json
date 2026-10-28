@@ -2126,6 +2126,7 @@
         "src/application/usecases/steps/commit/bugbot/__tests__/commit_verification_workspace.test.ts",
         "src/application/usecases/__tests__/autofix_conversation_branch_authority.test.ts",
         "src/tooling/__tests__/bugbot_benchmark.test.ts",
+        "src/tooling/__tests__/fixtures/bugbot_call_path_oracles.ts",
         "src/tooling/__tests__/bugbot_benchmark_runner.test.ts",
         "src/prompts/__tests__/bugbot.test.ts",
         "src/prompts/__tests__/bugbot_framework_semantics.test.ts"

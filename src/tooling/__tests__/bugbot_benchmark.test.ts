@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { runInNewContext } from 'node:vm';
+import { observeCallPathFixture } from './fixtures/bugbot_call_path_oracles';
 import { tmpdir } from 'node:os';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { evaluateBugbotBenchmark, loadBugbotBenchmark, loadBugbotPredictions } from '../bugbot_benchmark';
@@ -145,8 +145,18 @@ it.each([
 ] as const)('executes the authored fixture oracle for %s without a model or real wait', async (id, calls) => {
   const corpus = await loadBugbotBenchmark(join(__dirname, '..', '..', '..', 'quality/bugbot/corpus.v1.json'));
   const item = corpus.cases.find(item => item.id === id)!;
-  const source = item.diff.split('\n').filter(line => !line.startsWith('-')).map(line => line.slice(1)).join('\n');
-  // A bounded oracle for these six authored JS-subset examples, never a production evaluator or security sandbox.
-  const observation = JSON.parse(runInNewContext(`${source}\nJSON.stringify(observe());`, {}, { timeout: 1000 }));
+  const observation = observeCallPathFixture(item);
   expect(observation).toEqual({ passes: item.expected.length === 0, calls });
+});
+
+
+it('rejects executable-looking corpus text as inert data before selecting an oracle', () => {
+  const payload = 'throw new Error("corpus execution must never occur");';
+  expect(() => observeCallPathFixture({ id: 'test-indirect-binding-propagates', diff: payload }))
+    .toThrow('Unknown or modified call-path fixture.');
+});
+
+it('rejects an unknown or prototype-like fixture identity without dynamic dispatch', () => {
+  expect(() => observeCallPathFixture({ id: '__proto__', diff: '' }))
+    .toThrow('Unknown or modified call-path fixture.');
 });

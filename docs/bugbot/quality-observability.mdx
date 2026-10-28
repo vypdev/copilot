@@ -73,8 +73,10 @@ positive, a statistical improvement claim or a guarantee of future accuracy.
 
 The six #738 delegated-test cases cover multi-hop binding, a parameterized
 fallback and a bound callback, paired with bypassed, empty-loop and recovered-error
-controls. Ordinary tests execute every authored JS-subset fixture and check both
-the assertion result and exact collaborator count. They are not consumer Kotlin
+controls. Ordinary tests run statically compiled factories for each scenario, compare
+the exact corpus text as inert data, and check the assertion result and exact
+collaborator count. Altered text or an unknown fixture identity rejects before
+selecting an oracle; corpus strings are never executed. They are not consumer Kotlin
 or database executions. Review selects the actual test row, checks guards and
 composition order, and follows the error through helpers to its assertion before
 claiming the test necessarily fails. A called stub does not prove a fault survived;

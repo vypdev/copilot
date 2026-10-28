@@ -116,7 +116,7 @@
     "newPromptSourceSha256": "a97cd91f74523449698a1d3d28878effef8ffafdf33efcbdfc3d66125753af5f"
   },
   "nativeFixtureOracles": {
-    "execution": "Ordinary tests execute the six authored JS-subset examples in fresh VM contexts, timeout1000ms; this is not a production evaluator or a security sandbox.",
+    "execution": "Ordinary tests run statically compiled TypeScript factories, bound to a known identity and byte-exact inert corpus diff. Corpus text is never evaluated. Tests verify the assertion predicate and collaborator count; unknown or altered data rejects. No production evaluator, interpreter, I/O or real wait.",
     "observations": [
       {
         "case": "test-indirect-binding-propagates",
@@ -148,7 +148,13 @@
         "testPasses": false,
         "collaboratorCalls": 1
       }
-    ]
+    ],
+    "securityCorrection": {
+      "review": "https://github.com/vypdev/copilot/pull/757#discussion_r4398624639",
+      "originalHead": "d7d541c81361f3e7f1ee775b3b04c62fdc9727f9",
+      "change": "Replaced original data-to-VM route with compiled factories and inert text comparison.",
+      "modelInputsAndPredictionsUnchanged": true
+    }
   },
   "observations": [
     {

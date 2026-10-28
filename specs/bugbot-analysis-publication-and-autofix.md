@@ -988,7 +988,7 @@ partial and failed review UI and prior-finding reconciliation remain unchanged.
 Normal consumer runtime adoption delivers the instruction; rollback reverts the
 instruction/fixtures/docs together, with no migration or deployment operation.
 
-Allocate **fifteen additional distinct deterministic cases**, owned only here:
+Allocate **seventeen additional distinct deterministic cases**, owned only here:
 
 | Area | Cases | Risk/acceptance |
 |---|---:|---|
@@ -996,15 +996,19 @@ Allocate **fifteen additional distinct deterministic cases**, owned only here:
 | Benchmark verdict isolation | 1 | shared contract without expected findings |
 | False-positive controls | 3 | multi-hop binding, parameterized fallback, bound callback |
 | False-negative controls | 3 | bypassed delegate, empty participant loop, recovered fault |
-| Native authored-fixture oracles | 6 | actually execute each fixed JS-subset example and verify assertion result plus collaborator call count |
-| **Total** | **15** | no double counting with #736 or another SDD |
+| Native authored-fixture oracles | 6 | run compiled test factories bound to exact inert corpus text; verify assertion result plus collaborator call count |
+| Inert data boundary | 2 | altered code-like text and unknown/prototype-like identity reject before selecting a compiled oracle |
+| **Total** | **17** | no double counting with #736 or another SDD |
 
 The corpus now has **65** cases. The three instruction-delivery regressions fail
 before the fix. Each new fixture has executable ordinary-test ground truth,
 independent of model predictions: three assertions pass and three fail, with the
-expected zero/one collaborator invocation. These six authored examples execute
-in fresh VM contexts under a fixed resource cap, with no external I/O or real
-waits; the test oracle is not a production evaluator or a security sandbox.
+expected zero/one collaborator invocation. These six authored examples run as
+statically compiled TypeScript factories, with no external I/O or real waits.
+The corpus diff is inert data: its known identity and exact rendered text MUST
+match before a factory is selected. Corpus-derived text MUST NOT be evaluated
+through VM, eval, Function or a process command. Unknown or modified data rejects;
+the oracle is test-only and is not a new production interpreter.
 References penalize invented defects and omitted real faults under unchanged
 quality thresholds. Actual model observations must retain inputs, prompt/bundle
 identities and every outcome separately, never substitute references or imply a
@@ -1023,3 +1027,13 @@ no finding on the three valid indirect paths. Inputs, expectations and threshold
 are unchanged. This is not reproduction of the historical false positive or a
 statistical improvement claim. The existing location-calibration limitation is
 retained explicitly rather than hidden by a reference-prediction or scorer change.
+
+
+Review hardening in [PR #757](https://github.com/vypdev/copilot/pull/757#discussion_r4398624639)
+removed the original data-to-VM execution route. Node documents that
+[`node:vm` is not a security mechanism](https://nodejs.org/api/vm.html).
+The fixed test helper is
+`src/tooling/__tests__/fixtures/bugbot_call_path_oracles.ts`: only compiled,
+authored factories execute; input text is compared, never interpreted. The six
+benchmark inputs and actual model observations remain byte-identical, so this
+security correction does not replace or rerun the recorded model scores.
