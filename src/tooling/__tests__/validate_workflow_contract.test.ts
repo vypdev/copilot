@@ -589,7 +589,7 @@ describe('workflow contract validator', () => {
     const action = report.steps[2];
     const expectedToken = '${{ secrets.PAT }}';
 
-    expect(report.if).toBe("${{ failure() && needs.validate.result == 'success' }}");
+    expect(report.if).toBe("${{ failure() && needs.validate.result == 'success' && inputs.mode != 'replace' }}");
     expect(report.permissions).toEqual({ contents: 'read', issues: 'write' });
     expect(report.steps[0]).toEqual(expect.objectContaining({
       uses: 'actions/checkout@v5',
@@ -887,13 +887,13 @@ describe('workflow contract validator', () => {
   it.each([
     ['direct pre-validation mutation', (workflow: MutationWorkflow) => {
       workflow.jobs['prepare-version-files'].needs = [];
-    }, 'job prepare-version-files must need exactly validate'],
+    }, 'job prepare-version-files must need exactly validate, candidate-preflight'],
     ['broken transitive edge', (workflow: MutationWorkflow) => {
       workflow.jobs.promote.needs = ['validate'];
-    }, 'job promote must need exactly prepare-compiled-files'],
+    }, 'job promote must need exactly validate, candidate-preflight, prepare-compiled-files'],
     ['always bypass', (workflow: MutationWorkflow) => {
       workflow.jobs['prepare-version-files'].if = '${{ always() }}';
-    }, 'must run only in prepare mode'],
+    }, 'must run only in the validated preparation phase'],
     ['validation write permission', (workflow: MutationWorkflow) => {
       workflow.jobs.validate.permissions = { contents: 'write' };
     }, 'validate must have no repository permissions'],

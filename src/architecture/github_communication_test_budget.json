@@ -7,7 +7,7 @@
       "id": "semantic-github-publication",
       "spec": "specs/semantic-github-publication-and-notification.md",
       "requiredCases": 135,
-      "allocatedCases": 880,
+      "allocatedCases": 885,
       "files": [
         {
           "path": "src/domain/__tests__/github_publication.test.ts",
@@ -268,6 +268,10 @@
         {
           "path": "src/manager/description/base/__tests__/issue_content_interface.test.ts",
           "qualifyingCases": 1
+        },
+        {
+          "path": "src/application/policies/__tests__/deployment_candidate_replacement_presentation.test.ts",
+          "qualifyingCases": 5
         }
       ]
     },

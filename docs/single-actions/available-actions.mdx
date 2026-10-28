@@ -40,6 +40,7 @@ accepted SHA that apply to them.
 | **`create_release`** | `single-action-issue`, `single-action-operation-id`, `single-action-version` | Release/hotfix `publish` mode | Create or verify the exact GitHub Release and operation/SHA receipt using durable title and changelog. |
 | **`publish_github_action`** | `single-action-issue`, `single-action-operation-id`, `single-action-version` | This repository's serialized `publish` mode | Verify/update the moving major Action tag and release alias from the immutable version tag. |
 | **`prepare_deployment_action`** | `single-action-issue`, `single-action-version`, `single-action-title`, `single-action-changelog` | Release/hotfix `prepare` mode | Snapshot configuration, create durable state, and create or reuse the production promotion PR. |
+| **`replace_deployment_action`** | Issue/version, old operation ID/revision, reviewed source/final candidate/production-base SHAs, confirmed unpublished | Release/hotfix `replace` mode only | Supersede a closed unmerged unpublished candidate after native preflight and complete fresh validation; exact recorded replay only recovers the successor. |
 | **`continue_deployment_action`** | `single-action-issue`, `single-action-operation-id` | `copilot_deployment_orchestration.yml` | Verify the managed PR marker, repository, branches, stored SHA, and phase before advancing. |
 | **`published_deployment_action`** | `single-action-issue`, `single-action-operation-id`, matching `single-action-version` | Release/hotfix `publish` mode | Record verified publication, project the `deployed` fact, and create reconciliation PRs. |
 | **`failed_deployment_action`** | `single-action-issue`, `single-action-operation-id`; matching version/message when provided | Release/hotfix failure job | Record the phase failure as retryable while preserving tags, packages, releases, PRs, and SHAs already accepted. |
@@ -58,6 +59,7 @@ These single actions **throw an error** if their last step fails, so the **workf
 - **`close_inactive_issues_action`**
 - **`publish_issue_comment`**
 - **`prepare_deployment_action`**
+- **`replace_deployment_action`**
 - **`continue_deployment_action`**
 - **`published_deployment_action`**
 - **`failed_deployment_action`**
@@ -84,6 +86,7 @@ The **`copilot do`** CLI command (for example, `copilot do -p "..."`) uses the c
 | `check_branch_sync_action` | — | — | — | — |
 | `publish_issue_comment` | ✅ | — | — | — |
 | `prepare_deployment_action` | ✅ | ✅ | ✅ | ✅ |
+| `replace_deployment_action` | ✅ | ✅ | empty | empty |
 | `continue_deployment_action` | ✅ | — | — | — |
 | `published_deployment_action` | ✅ | ✅ | — | — |
 | `failed_deployment_action` | ✅ | optional match | — | — |

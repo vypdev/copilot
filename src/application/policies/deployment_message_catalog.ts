@@ -44,7 +44,9 @@ const SIMPLE_MESSAGE_KEYS = Object.freeze([
   'sourceSha', 'productionSha', 'pending', 'publicationReceipt', 'absent',
   'localization', 'property', 'value', 'repositoryLocaleLabel',
   'issueLocaleLabel', 'pullRequestLocaleLabel', 'catalogResolution',
-  'descriptors', 'reason',
+  'descriptors', 'reason', 'candidateReplaced', 'replacementNotice', 'replacementAction',
+  'candidateHistory', 'previousCandidate', 'currentCandidate', 'replacementPrepareNotice', 'replacementRecoverNotice',
+  'replacementRecordedNotice', 'replacementBlockedNotice', 'replacementPreflightAction',
 ] as const);
 
 const DIAGRAM_KEYS = Object.freeze([
@@ -138,6 +140,15 @@ const ENGLISH_SIMPLE: Readonly<Record<SimpleMessageKey, string>> = Object.freeze
   repositoryLocaleLabel: 'Repository locale', issueLocaleLabel: 'Issue locale',
   pullRequestLocaleLabel: 'Pull-request locale', catalogResolution: 'Catalog resolution',
   descriptors: 'descriptors', reason: 'reason',
+  candidateReplaced: 'Candidate replaced',
+  replacementNotice: 'This candidate was superseded before production acceptance by a newly validated candidate.',
+  replacementAction: 'Do not reopen or merge its previous promotion PR. Follow the current candidate in the launcher.',
+  candidateHistory: 'Candidate history', previousCandidate: 'Previous candidate', currentCandidate: 'Current candidate',
+  replacementPrepareNotice: 'Native prerequisites are confirmed. Complete project preparation must now validate the corrected source; no replacement has been recorded yet.',
+  replacementRecoverNotice: 'The validated successor is already recorded. Recover its promotion without changing source or reusing old candidate evidence.',
+  replacementRecordedNotice: 'This replacement was already recorded and its current operation is beyond preparation. No preparation or publication will be repeated.',
+  replacementBlockedNotice: 'Candidate replacement preflight is blocked. This inspection did not change a branch or deployment state.',
+  replacementPreflightAction: 'Review the launcher, close the previous promotion unmerged, confirm the exact version is unpublished in every project registry, and use the current operation, revision and reviewed source.',
 });
 
 const SPANISH_SIMPLE: Readonly<Record<SimpleMessageKey, string>> = Object.freeze({
@@ -172,6 +183,15 @@ const SPANISH_SIMPLE: Readonly<Record<SimpleMessageKey, string>> = Object.freeze
   repositoryLocaleLabel: 'Locale del repositorio', issueLocaleLabel: 'Locale de la issue',
   pullRequestLocaleLabel: 'Locale de la pull request', catalogResolution: 'Resolución del catálogo',
   descriptors: 'descriptores', reason: 'motivo',
+  candidateReplaced: 'Candidato sustituido',
+  replacementNotice: 'Este candidato fue sustituido antes de su aceptación en producción por un candidato con validación nueva.',
+  replacementAction: 'No reabras ni mergees su PR de promoción anterior. Sigue el candidato actual en la issue de inicio.',
+  candidateHistory: 'Historial de candidatos', previousCandidate: 'Candidato anterior', currentCandidate: 'Candidato actual',
+  replacementPrepareNotice: 'Los requisitos nativos están confirmados. La preparación completa del proyecto debe validar ahora la fuente corregida; aún no se ha guardado la sustitución.',
+  replacementRecoverNotice: 'El sucesor validado ya está guardado. Recupera su promoción sin cambiar la fuente ni reutilizar evidencias del candidato anterior.',
+  replacementRecordedNotice: 'Esta sustitución ya está guardada y su operación actual ha superado la preparación. No se repetirá la preparación ni la publicación.',
+  replacementBlockedNotice: 'La comprobación previa de la sustitución está bloqueada. Esta inspección no ha cambiado ninguna rama ni estado de despliegue.',
+  replacementPreflightAction: 'Revisa la issue de inicio, cierra la promoción anterior sin merge, confirma que la versión exacta no está publicada en ningún registro del proyecto y usa la operación, revisión y fuente revisada actuales.',
 });
 
 const ENGLISH_PHASES: Readonly<Record<DeploymentPhase, string>> = Object.freeze({

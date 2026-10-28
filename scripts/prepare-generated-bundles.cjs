@@ -11,7 +11,7 @@ const {
 const { dirname, isAbsolute, join, relative, resolve, sep } = require('node:path');
 
 const repositoryRoot = resolve(__dirname, '..');
-const bundlePaths = ['github_action', 'cli', 'api']
+const bundlePaths = ['github_action', 'deployment_recovery', 'cli', 'api']
   .map(bundle => join(repositoryRoot, 'build', bundle, 'index.js'));
 
 for (const bundlePath of bundlePaths) {
@@ -24,7 +24,7 @@ for (const bundlePath of bundlePaths) {
 // emits declaration trees for them, but those trees are neither part of the npm
 // package nor stable across cold and warm compiler runs. Keeping them in git
 // makes an otherwise identical build fail validation on a clean CI runner.
-for (const bundle of ['github_action', 'cli']) {
+for (const bundle of ['github_action', 'deployment_recovery', 'cli']) {
   const bundleRoot = join(repositoryRoot, 'build', bundle);
   for (const entry of readdirSync(bundleRoot, { withFileTypes: true })) {
     if (entry.name === 'index.js') continue;

@@ -60,6 +60,18 @@ export interface DeploymentPublicationReceipt {
   readonly releaseUrl: string;
 }
 
+/** Immutable provenance of a closed, unaccepted candidate; never publication authority. */
+export interface SupersededDeploymentCandidate {
+  readonly operationId: string;
+  readonly revision: number;
+  readonly sourceSha: string;
+  readonly promotionPullRequest: number;
+  readonly replacementSourceSha: string;
+  readonly replacementBaseSha: string;
+}
+
+export const MAX_SUPERSEDED_DEPLOYMENT_CANDIDATES = 8;
+
 export interface DeploymentOperationSnapshot {
   readonly stateVersion: typeof DEPLOYMENT_STATE_VERSION;
   readonly revision: number;
@@ -96,6 +108,7 @@ export interface DeploymentOperationSnapshot {
   readonly publicationReceipt?: DeploymentPublicationReceipt;
   readonly reconciliationTargets: readonly ReconciliationTargetState[];
   readonly lastFailure: DeploymentFailure | null;
+  readonly supersededCandidates?: readonly SupersededDeploymentCandidate[];
 }
 
 const NORMAL_TRANSITIONS: Readonly<Record<Exclude<DeploymentPhase, "blocked">, readonly DeploymentPhase[]>> = {
@@ -193,7 +206,7 @@ export function isDeploymentOperationSnapshot(value: unknown): value is Deployme
     'cleanup', 'issueCompletion', 'presentationMode', 'diagrams', 'commentMode', 'sourceBranch',
     'sourceSha', 'originBranch', 'originSha', 'productionBranch', 'developmentBranch',
     'reconciliationTree', 'promotionPullRequest', 'productionSha', 'tag', 'publicationWorkflow',
-    'publicationVerified', 'publicationReceipt', 'reconciliationTargets', 'lastFailure',
+    'publicationVerified', 'publicationReceipt', 'reconciliationTargets', 'lastFailure', 'supersededCandidates',
   ])) return false;
   const operation = value as Partial<DeploymentOperationSnapshot>;
   return operation.stateVersion === DEPLOYMENT_STATE_VERSION
@@ -233,6 +246,7 @@ export function isDeploymentOperationSnapshot(value: unknown): value is Deployme
     && (operation.productionSha === undefined || isFullSha(operation.productionSha))
     && typeof operation.publicationVerified === "boolean"
     && isPublicationReceiptConsistent(operation)
+    && isSupersededCandidateHistory(operation.supersededCandidates, operation.operationId)
     && Array.isArray(operation.reconciliationTargets)
     && operation.reconciliationTargets.every(isReconciliationTarget)
     && (operation.phase === "blocked"
@@ -313,4 +327,21 @@ function isDeploymentFailure(value: unknown): value is DeploymentFailure {
 function hasOnlyKeys(value: unknown, allowed: readonly string[]): value is Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   return Object.keys(value).every(key => allowed.includes(key));
+}
+
+function isSupersededCandidateHistory(value: unknown, currentId: unknown): boolean {
+  if (value === undefined) return true;
+  if (!Array.isArray(value) || value.length > MAX_SUPERSEDED_DEPLOYMENT_CANDIDATES) return false;
+  const identifiers = new Set<unknown>();
+  return value.every(candidate => {
+    if (!hasOnlyKeys(candidate, ['operationId', 'revision', 'sourceSha', 'promotionPullRequest', 'replacementSourceSha', 'replacementBaseSha'])) return false;
+    const record = candidate as Partial<SupersededDeploymentCandidate>;
+    if (typeof record.operationId !== 'string'
+      || !/^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(record.operationId)
+      || record.operationId === currentId || identifiers.has(record.operationId)) return false;
+    identifiers.add(record.operationId);
+    return isPositiveInteger(record.revision) && isFullSha(record.sourceSha)
+      && isPositiveInteger(record.promotionPullRequest) && isFullSha(record.replacementSourceSha)
+      && isFullSha(record.replacementBaseSha);
+  });
 }

@@ -1,3 +1,6 @@
+import * as core from '@actions/core';
+import { ACTIONS } from '../data/model/action_types';
+import { ApplicationError } from '../application/errors/application_error';
 import { Ai } from '../data/model/ai';
 import { Hotfix } from '../data/model/hotfix';
 import { Release } from '../data/model/release';
@@ -155,16 +158,29 @@ function disableAgentTasks(tasks: AgentTaskConfiguration): AgentTaskConfiguratio
 }
 
 export function readGithubActionSingleAction(getInput: typeof getGithubActionInput): SingleAction {
+    const declared = core.getInput(INPUT_KEYS.SINGLE_ACTION, { trimWhitespace: false });
+    const configured = getInput(INPUT_KEYS.SINGLE_ACTION);
+    if (configured === ACTIONS.REPLACE_DEPLOYMENT && declared !== ACTIONS.REPLACE_DEPLOYMENT) {
+        throw new ApplicationError('workflow.invalid-event', 'Candidate replacement requires explicit declared workflow inputs.');
+    }
+    // Generic JSON configuration cannot synthesize, redirect or rewrite a replacement proof.
+    const read = declared === ACTIONS.REPLACE_DEPLOYMENT
+        ? (key: string) => core.getInput(key, { trimWhitespace: false }) : getInput;
     return new SingleAction(
-        getInput(INPUT_KEYS.SINGLE_ACTION),
-        getInput(INPUT_KEYS.SINGLE_ACTION_ISSUE),
-        getInput(INPUT_KEYS.SINGLE_ACTION_VERSION),
-        getInput(INPUT_KEYS.SINGLE_ACTION_TITLE),
-        getInput(INPUT_KEYS.SINGLE_ACTION_CHANGELOG),
-        getInput(INPUT_KEYS.SINGLE_ACTION_MESSAGE),
-        getInput(INPUT_KEYS.SINGLE_ACTION_COMMENT_ID),
-        getInput(INPUT_KEYS.SINGLE_ACTION_COMMENT_MODE),
-        getInput(INPUT_KEYS.SINGLE_ACTION_OPERATION_ID),
+        read(INPUT_KEYS.SINGLE_ACTION),
+        read(INPUT_KEYS.SINGLE_ACTION_ISSUE),
+        read(INPUT_KEYS.SINGLE_ACTION_VERSION),
+        read(INPUT_KEYS.SINGLE_ACTION_TITLE),
+        read(INPUT_KEYS.SINGLE_ACTION_CHANGELOG),
+        read(INPUT_KEYS.SINGLE_ACTION_MESSAGE),
+        read(INPUT_KEYS.SINGLE_ACTION_COMMENT_ID),
+        read(INPUT_KEYS.SINGLE_ACTION_COMMENT_MODE),
+        read(INPUT_KEYS.SINGLE_ACTION_OPERATION_ID),
+        read(INPUT_KEYS.SINGLE_ACTION_EXPECTED_REVISION),
+        read(INPUT_KEYS.SINGLE_ACTION_CANDIDATE_SHA),
+        read(INPUT_KEYS.SINGLE_ACTION_PRODUCTION_BASE_SHA),
+        read(INPUT_KEYS.SINGLE_ACTION_CONFIRM_UNPUBLISHED),
+        read(INPUT_KEYS.SINGLE_ACTION_REVIEWED_SOURCE_SHA),
     );
 }
 

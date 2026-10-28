@@ -13,6 +13,7 @@ import {
 import {
   deploymentDashboardMarker,
   renderDeploymentDashboard,
+  renderSupersededDeploymentCandidate,
   renderDeploymentMilestone,
   renderPromotionPullRequest,
   renderReconciliationPullRequest,
@@ -106,6 +107,20 @@ export class DeploymentOrchestrationRuntime {
       context.singleAction.issue,
       body,
     );
+  }
+
+  async publishSupersededCandidate(
+    context: DeploymentOrchestrationContext,
+    current: DeploymentOperationSnapshot,
+  ): Promise<void> {
+    const previous = current.supersededCandidates?.at(-1);
+    if (!previous) throw new ApplicationError('workflow.invalid-event', 'Replacement provenance is missing.');
+    const marker = deploymentDashboardMarker(previous.operationId, context.singleAction.issue);
+    const catalog = await this.presentationCatalog('issue', context, current);
+    const body = renderSupersededDeploymentCandidate(previous, current, presentationContext(context, current), catalog);
+    const existing = await this.dependencies.presentation.findDashboard(context.singleAction.issue, marker);
+    if (existing) await this.dependencies.presentation.updateDashboard(context.singleAction.issue, existing.id, body);
+    else await this.dependencies.presentation.createDashboard(context.singleAction.issue, body);
   }
 
   async publishMilestone(

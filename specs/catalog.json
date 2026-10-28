@@ -362,13 +362,14 @@
       "id": "release-orchestration",
       "title": "Configurable production-first release orchestration",
       "status": "implemented",
-      "scope": "Release and hotfix promotion, publication, bounded merge readiness recovery, and receipt-verified reconciliation without republication",
+      "scope": "Release and hotfix promotion, publication, bounded merge readiness recovery, and receipt-verified reconciliation without republication; explicit native-guarded replacement of closed unpublished candidates with complete fresh validation and bounded audit history",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-16",
+      "lastVerified": "2026-10-28",
       "specs": [
         "specs/configurable-release-orchestration.md",
         "specs/configurable-release-orchestration-traceability.md",
-        "specs/deployment-concurrency-and-state-fencing.md"
+        "specs/deployment-concurrency-and-state-fencing.md",
+        "specs/unpublished-candidate-replacement.md"
       ],
       "workflows": [
         ".github/workflows/release_workflow.yml",
@@ -379,7 +380,8 @@
         "setup/workflows/copilot_deployment_orchestration.yml"
       ],
       "entrypoints": [
-        "src/application/usecases/actions/deployment_orchestration_use_case.ts"
+        "src/application/usecases/actions/deployment_orchestration_use_case.ts",
+        "src/actions/deployment_candidate_preflight_action.ts"
       ],
       "code": [
         "src/domain/deployment_configuration.ts",
@@ -411,7 +413,18 @@
         "src/infrastructure/github/octokit_deployment_adapter.ts",
         "src/application/errors/deployment_merge_effect_error.ts",
         "src/application/services/deployment_merge_effects.ts",
-        "src/data/repository/deployment/github_deployment_merge_error.ts"
+        "src/data/repository/deployment/github_deployment_merge_error.ts",
+        "src/domain/deployment_candidate_replacement.ts",
+        "src/application/usecases/actions/deployment_handlers/replace_candidate_handler.ts",
+        "src/application/usecases/execution/deployment_candidate_preflight_workflow.ts",
+        "src/application/ports/deployment_candidate_inspection_ports.ts",
+        "src/data/repository/deployment/github_candidate_replacement_repository.ts",
+        "src/data/repository/deployment/native_candidate_preparation.ts",
+        "src/infrastructure/composition/deployment_candidate_replacement_composition_root.ts",
+        "src/application/policies/deployment_candidate_preflight_presentation.ts",
+        "deployment-recovery/action.yml",
+        "deployment-recovery/index.cjs",
+        "scripts/deployment-replacement-contract.cjs"
       ],
       "tests": [
         "src/domain/__tests__/deployment_operation.test.ts",
@@ -431,13 +444,26 @@
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/infrastructure/composition/__tests__/push_single_action_capability_port_binding.test.ts",
         "src/application/services/__tests__/deployment_merge_effects.test.ts",
-        "src/data/repository/deployment/__tests__/github_deployment_merge_error.test.ts"
+        "src/data/repository/deployment/__tests__/github_deployment_merge_error.test.ts",
+        "src/domain/__tests__/deployment_candidate_replacement.test.ts",
+        "src/data/repository/deployment/__tests__/native_candidate_preparation.test.ts",
+        "src/data/repository/deployment/__tests__/github_candidate_replacement_repository.test.ts",
+        "src/infrastructure/composition/__tests__/deployment_candidate_replacement_composition_root.test.ts",
+        "src/application/usecases/actions/__tests__/deployment_candidate_replacement.integration.test.ts",
+        "src/application/usecases/execution/__tests__/deployment_candidate_preflight_workflow.test.ts",
+        "src/application/policies/__tests__/deployment_candidate_replacement_presentation.test.ts",
+        "src/actions/__tests__/deployment_candidate_recovery_bootstrap.test.ts",
+        "src/actions/__tests__/deployment_candidate_declared_inputs.test.ts",
+        "src/actions/__tests__/deployment_candidate_preflight_action.test.ts",
+        "src/tooling/__tests__/deployment_replacement_workflows.test.ts"
       ],
       "documentation": [
         "docs/issues/deployment-orchestration.mdx",
         "docs/issues/type/release.mdx",
         "docs/issues/type/hotfix.mdx",
-        "docs/development/release-process.mdx"
+        "docs/development/release-process.mdx",
+        "docs/single-actions/configuration.mdx",
+        "docs/single-actions/available-actions.mdx"
       ]
     },
     {

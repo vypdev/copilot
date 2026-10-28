@@ -253,6 +253,12 @@ export function projectDeploymentOrchestrationContext(
       operationId: source.singleAction.operationId,
       message: source.singleAction.message,
       isPrepareDeploymentAction: source.singleAction.isPrepareDeploymentAction,
+      isReplaceDeploymentAction: source.singleAction.isReplaceDeploymentAction === true,
+      replacementRevision: source.singleAction.replacementRevision ?? -1,
+      candidateSha: source.singleAction.candidateSha ?? '',
+      reviewedSourceSha: source.singleAction.reviewedSourceSha ?? '',
+      productionBaseSha: source.singleAction.productionBaseSha ?? '',
+      confirmedUnpublished: source.singleAction.confirmedUnpublished === true,
       isContinueDeploymentAction: source.singleAction.isContinueDeploymentAction,
       isPublishedDeploymentAction: source.singleAction.isPublishedDeploymentAction,
       isFailedDeploymentAction: source.singleAction.isFailedDeploymentAction,
@@ -439,6 +445,9 @@ function copyDeploymentOperation(operation: DeploymentOperationSnapshot): Deploy
   return Object.freeze({
     ...operation,
     locale: Object.freeze({ ...operation.locale }),
+    ...(operation.supersededCandidates ? { supersededCandidates: Object.freeze(
+      operation.supersededCandidates.map(candidate => Object.freeze({ ...candidate })),
+    ) } : {}),
     reconciliationTargets: Object.freeze((operation.reconciliationTargets ?? []).map(target => Object.freeze({ ...target }))),
     ...(operation.publicationReceipt ? { publicationReceipt: Object.freeze({ ...operation.publicationReceipt }) } : {}),
     lastFailure: operation.lastFailure ? Object.freeze({ ...operation.lastFailure }) : null,

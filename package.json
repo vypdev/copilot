@@ -35,9 +35,11 @@
   "files": [
     "action.yml",
     "issue-admission/",
+    "deployment-recovery/",
     "build/cli/index.js",
     "build/web/",
     "build/github_action/index.js",
+    "build/deployment_recovery/index.js",
     "build/api/index.js",
     "build/api/src/",
     "setup/ISSUE_TEMPLATE/",
@@ -56,7 +58,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "node scripts/clean-generated-bundles.cjs && pnpm run build:web && ncc build src/actions/github_action.ts -o build/github_action && ncc build src/cli.ts -o build/cli && ncc build src/api.ts -o build/api && node scripts/prepare-generated-bundles.cjs && node scripts/set-cli-executable.cjs && pnpm run build:extension",
+    "build": "node scripts/clean-generated-bundles.cjs && pnpm run build:web && ncc build src/actions/github_action.ts -o build/github_action && ncc build src/actions/deployment_candidate_preflight_action.ts -o build/deployment_recovery && ncc build src/cli.ts -o build/cli && ncc build src/api.ts -o build/api && node scripts/prepare-generated-bundles.cjs && node scripts/set-cli-executable.cjs && pnpm run build:extension",
     "build:web": "vite build --config web/vite.config.mts",
     "check:web": "svelte-check --tsconfig web/tsconfig.json && vite build --config web/vite.config.mts",
     "validate:build": "node scripts/validate-build.cjs",

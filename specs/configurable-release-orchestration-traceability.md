@@ -147,3 +147,18 @@ The minimum 60-case ledger in section 11 is covered by 39 provider mapping rows,
 30 merge-effects service cases, two coordinator integration cases, and native
 acknowledgement/REST receipt/binding contracts. Cases count once. Live recovery
 is distinct from a future fresh unattended-release acceptance test.
+
+## Unpublished candidate replacement ledger — #732
+
+The companion SDD allocates 112 distinct risk cases: 24 domain/schema, 28
+application/state/replay, 16 native provider, 20 workflows/setup/inputs, 12
+presentation/security/locales and 12 compatibility/integration. Parameter rows
+are distinct only when they exercise independent guards; they are not added a
+second time through integration totals. Sources are the dedicated
+`deployment_candidate_replacement.test.ts`, `.integration.test.ts`,
+`github_candidate_replacement_repository.test.ts`,
+`native_candidate_preparation.test.ts`, `deployment_replacement_workflows.test.ts`,
+`deployment_candidate_preflight_workflow.test.ts`, action entry/declared-input/
+bootstrap tests, composition binding tests and existing state-fence/schema tests.
+Actual local/global and exact-head remote results belong in the implementation
+PR; a source-level ledger does not establish live consumer readiness.

@@ -5,7 +5,7 @@
       "missingEntryLabel": "deployment handler",
       "rules": [
         {
-          "expectedFileCount": 6,
+          "expectedFileCount": 7,
           "fileKind": "deployment handler files",
           "mode": "aggregate",
           "pathIncludes": "src/application/usecases/actions/deployment_handlers/",
@@ -1111,6 +1111,28 @@
         }
       ],
       "successMessage": "early issue admission coverage: PASS (pure policy 100%; each boundary 95/90)"
+    },
+    {
+      "name": "Unpublished candidate replacement",
+      "missingEntryLabel": "unpublished candidate replacement",
+      "rules": [
+        {
+          "files": [
+            "src/domain/deployment_candidate_replacement.ts",
+            "src/application/usecases/actions/deployment_handlers/replace_candidate_handler.ts",
+            "src/application/usecases/execution/deployment_candidate_preflight_workflow.ts",
+            "src/data/repository/deployment/github_candidate_replacement_repository.ts",
+            "src/data/repository/deployment/native_candidate_preparation.ts",
+            "src/infrastructure/composition/deployment_candidate_replacement_composition_root.ts",
+            "src/application/policies/deployment_candidate_preflight_presentation.ts",
+            "src/actions/deployment_candidate_preflight_action.ts",
+            "deployment-recovery/index.cjs"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "unpublished candidate replacement coverage: PASS (100% lines/statements/branches/functions)"
     }
   ]
 }

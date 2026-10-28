@@ -153,3 +153,11 @@ Invoked when:
 - **Bugbot autofix / Do user request**: require a configured execution role, `ActorAuthorizationPort.isActorAllowedToModifyFiles` (organization member or repository owner/write collaborator), and on `issue_comment` a branch resolved from an open linked PR.
 - **Think**: used in IssueComment and PullRequestReviewComment when neither autofix nor do user request runs (by intent or by permission).
 - **CommitUseCase**: NotifyNewCommitOnIssue, CheckChangesIssueSize, CheckProgress, DetectPotentialProblems (bugbot) always run in that order on every push with commits.
+
+### Unpublished candidate replacement (`replace_deployment_action`)
+
+Workflow-only, explicit `replace` dispatch: read-only native preflight -> complete
+fresh preparation -> exact source/base/run/producer/revision guards -> new fenced
+operation -> superseded audit and ordinary promotion. Declared proof inputs cannot
+be supplied by generic JSON overlays. Same recorded intent recovers only the
+validated successor; old continuations remain stale. Local execution is rejected.

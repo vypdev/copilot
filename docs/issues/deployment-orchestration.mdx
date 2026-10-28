@@ -559,7 +559,8 @@ Start with the phase shown at the top of the issue control center:
 ```text
 promotion_pr_pending
   open PR -> let GitHub finish checks/reviews
-  closed unmerged -> reopen/correct the PR, then rerun prepare
+  closed unmerged, unchanged source -> reopen the PR, then rerun prepare
+  source correction, still unpublished -> use explicit replace mode after complete fresh validation
 
 publishing
   tag exists at stored production SHA -> rerun publish mode; tag is reused
@@ -613,6 +614,75 @@ An issue without a current schema-v3 orchestration block is not resumable. Start
 a fresh deployment operation after confirming that no version tag, npm package,
 or GitHub Release was published manually. Copilot never guesses state from
 labels or branches and never delegates to a second deployment implementation.
+
+## Replace an unpublished candidate
+
+Use this route when promotion-only CI requires a source correction after the
+candidate was prepared. Ordinary `prepare` still rejects a moved source SHA.
+`publish` and `resume` never replace a candidate.
+
+1. Inspect the control center and record its exact operation ID, current revision,
+   version and managed source branch. Disable auto-merge/queue and close the old
+   promotion **unmerged**. Preserve its marker and evidence.
+2. Fix that same branch with a normal commit. Verify that the exact version is
+   absent from **every project registry**. Copilot checks native GitHub tags and
+   Releases, including drafts with proven visibility; it does not query arbitrary
+   external registries. Any recorded or native publication fact blocks replacement.
+3. Install compatible workflows and runtime first. In a generated consumer
+   workflow, configure `Complete fresh replacement verification` to execute all
+   project version/build/test/coverage/package/smoke checks and registry-vacancy
+   checks. Its supplied failing placeholder blocks replacement until configured.
+   Keep the named guard/verification/identity steps and their direct dependencies;
+   the native adapter verifies those steps in this exact run attempt.
+4. Dispatch the installed release/hotfix workflow on the reviewed managed ref,
+   supplying its **initial corrected commit**, not an old candidate hash. Leave
+   title and changelog empty; both are preserved.
+
+```bash
+gh workflow run release_workflow.yml --ref release/1.5.2 \
+  -f mode=replace -f issue=170 -f version=1.5.2 \
+  -f operation-id=<current-operation-id> -f expected-revision=<current-revision> \
+  -f source-sha=<full-reviewed-corrected-sha> -f confirm-unpublished=true
+```
+
+The fixed hosted read-only preflight validates native launcher/closed PR/ref/run
+identity, bounded state and version vacancy **before** project preparation can
+change files. The automatic token has only read permissions in that job. The
+existing product token supplies native reads, with no agent/planner or state-save
+capability in the `deployment-recovery` entrypoint. Blocked preflight writes only
+an English/Spanish/static fallback Job Summary with a closed reason code.
+
+Complete fresh preparation may commit generated files, producing a final SHA
+different from the reviewed input. Each checkout is checked against its successful
+predecessor. A proof is emitted only for a clean local commit matching the native
+managed branch after its normal push. The final promotion job verifies successful
+native preflight and producer steps from the exact run/attempt, then rereads source,
+production base, old promotion and durable revision before saving a new operation.
+The version, origin, branch, locale and policy remain the same.
+
+```text
+Old candidate superseded; its evidence remains historical
+Previous promotion -> closed, unmerged, never reassigned
+Current candidate -> full new validation, new operation and ordinary promotion PR
+Next action -> let normal protected PR checks and reviews finish
+```
+
+The technical history records at most eight predecessors without truncation.
+Old acceptance/publication/failure callbacks cannot advance the successor. A moved
+source/base/revision, foreign/open/queued promotion, unreadable authority, tag,
+Release or publication receipt blocks without replacing the current state. A deploy
+label alone cannot reset the operation or prove branch readiness after its old PR
+closes; the explicit workflow uses the stored operation and exact closed native PR.
+
+If saving or opening the new PR succeeded but its response was lost, inspect the
+launcher and rerun the same replacement intent. An exact recorded successor takes
+the recovery-only path: no version/build/push, no new operation and no duplicate
+promotion. Native identity is rechecked. After acceptance the exact replay is a
+no-op; continue ordinary publication/reconciliation using the **new** operation ID.
+If cancellation occurred before a successor was recorded and preparation moved the
+branch, review the current corrected SHA and start complete replacement preparation
+again against the still-current old operation/revision. Never edit hidden JSON,
+move a tag, force-push or reuse evidence from an earlier candidate.
 
 ## External platform references
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const replacementContract = require('./deployment-replacement-contract.cjs');
 
 const { readFileSync, readdirSync } = require('node:fs');
 const path = require('node:path');
@@ -20,7 +21,7 @@ const NPM_PUBLISH_TIMEOUT_MINUTES = 20;
 const FINALIZE_RELEASE_TIMEOUT_MINUTES = 15;
 const FAILURE_REPORT_TIMEOUT_MINUTES = 5;
 const MIN_QUEUE_JOB_TIMEOUT_MINUTES = 120;
-const FAILURE_REPORT_CONDITION = "${{ failure() && needs.validate.result == 'success' }}";
+const FAILURE_REPORT_CONDITION = "${{ failure() && needs.validate.result == 'success' && inputs.mode != 'replace' }}";
 const DEPLOYMENT_CONCURRENCY_GROUP = 'copilot-deployment-${{ github.repository_id }}-${{ inputs.issue }}';
 const DEPLOYMENT_CONTINUATION_CONCURRENCY_GROUP = 'copilot-deployment-${{ github.repository_id }}-${{ needs.resolve-operation.outputs.issue }}';
 const DISTRIBUTED_COPILOT_ACTION = 'vypdev/copilot@v3';
@@ -487,6 +488,7 @@ function assertRunner(file, workflow) {
     } else if (relativeFile === '.github/workflows/ci_check.yml') {
       expected = [QUALITY_RUNNER_BY_TRUST];
     }
+    if (jobId === 'candidate-preflight' && MUTATION_WORKFLOW_MANIFEST.some(entry => relativeFile.endsWith(`/${entry.file}`))) expected = ['ubuntu-latest'];
     const labels = runnerLabels(job['runs-on']);
     const linuxOnly = JSON.stringify(expected) === JSON.stringify(['self-hosted', 'codex'])
       && JSON.stringify(labels) === JSON.stringify(['self-hosted', 'codex', 'Linux']);
@@ -665,7 +667,10 @@ function needsFor(job) {
 }
 
 function assertNoUnsafeCondition(relativeFile, jobId, job) {
-  if (typeof job.if === 'string' && /\b(always|failure|cancelled)\s*\(/i.test(job.if)) {
+  if (typeof job.if === 'string' && /\b(always|failure|cancelled)\s*\(/i.test(
+    MUTATION_WORKFLOW_MANIFEST.some(entry => relativeFile.endsWith(`/${entry.file}`))
+      && ['prepare-version-files', 'prepare-compiled-files', 'promote'].includes(jobId)
+      ? job.if.replace('!cancelled()', '') : job.if)) {
     throw new Error(`${relativeFile} job ${jobId} has a bypass-capable if condition.`);
   }
   for (const [stepIndex, step] of (job.steps ?? []).entries()) {
@@ -1056,8 +1061,8 @@ function assertMutationWorkflow(file, workflow) {
   const setup = relativeFile.startsWith('setup/workflows/');
   const finalJob = manifest.file === 'release_workflow.yml' ? 'finalize-release' : 'finalize-hotfix';
   const expectedJobs = setup
-    ? ['validate', 'prepare-version-files', 'promote', 'publish', 'resume-reconciliation', 'report-failure']
-    : ['validate', 'prepare-version-files', 'prepare-compiled-files', 'promote', 'tag', 'publish-npm', finalJob, 'resume-reconciliation', 'report-failure'];
+    ? ['validate', 'candidate-preflight', 'prepare-version-files', 'promote', 'publish', 'resume-reconciliation', 'report-failure']
+    : ['validate', 'candidate-preflight', 'prepare-version-files', 'prepare-compiled-files', 'promote', 'tag', 'publish-npm', finalJob, 'resume-reconciliation', 'report-failure'];
   const actualJobs = Object.keys(workflow.jobs ?? {});
   if (actualJobs.length !== expectedJobs.length || expectedJobs.some(jobId => !actualJobs.includes(jobId))) {
     throw new Error(`${relativeFile} must define the exact validation-first job graph.`);
@@ -1065,24 +1070,24 @@ function assertMutationWorkflow(file, workflow) {
   assertDeploymentWorkflowConcurrency(relativeFile, workflow);
   assertDeploymentValidationJob(relativeFile, workflow);
   assertResumeReconciliationJob(relativeFile, workflow.jobs['resume-reconciliation'], setup);
-  assertExactNeeds(relativeFile, 'prepare-version-files', workflow.jobs['prepare-version-files'], ['validate']);
+  assertExactNeeds(relativeFile, 'prepare-version-files', workflow.jobs['prepare-version-files'], ['validate', 'candidate-preflight']);
   if (setup) {
     assertExactTimeout(relativeFile, 'prepare-version-files', workflow.jobs['prepare-version-files'], 30);
-    assertExactNeeds(relativeFile, 'promote', workflow.jobs.promote, ['prepare-version-files']);
+    assertExactNeeds(relativeFile, 'promote', workflow.jobs.promote, ['validate', 'candidate-preflight', 'prepare-version-files']);
     assertExactNeeds(relativeFile, 'publish', workflow.jobs.publish, ['validate']);
     assertPhaseConditions(relativeFile, workflow.jobs, 'publish');
     assertFailureReportingJob(
       relativeFile,
       workflow.jobs['report-failure'],
-      ['validate', 'prepare-version-files', 'promote', 'publish', 'resume-reconciliation'],
+      ['validate', 'candidate-preflight', 'prepare-version-files', 'promote', 'publish', 'resume-reconciliation'],
       manifest.file.startsWith('release') ? 'release' : 'hotfix',
     );
   } else {
     assertExactTimeout(relativeFile, 'prepare-version-files', workflow.jobs['prepare-version-files'], PREPARE_VERSION_TIMEOUT_MINUTES);
     assertExactTimeout(relativeFile, 'prepare-compiled-files', workflow.jobs['prepare-compiled-files'], PREPARE_COMPILED_TIMEOUT_MINUTES);
     assertExactTimeout(relativeFile, 'tag', workflow.jobs.tag, TAG_TIMEOUT_MINUTES);
-    assertExactNeeds(relativeFile, 'prepare-compiled-files', workflow.jobs['prepare-compiled-files'], ['prepare-version-files']);
-    assertExactNeeds(relativeFile, 'promote', workflow.jobs.promote, ['prepare-compiled-files']);
+    assertExactNeeds(relativeFile, 'prepare-compiled-files', workflow.jobs['prepare-compiled-files'], ['validate', 'candidate-preflight', 'prepare-version-files']);
+    assertExactNeeds(relativeFile, 'promote', workflow.jobs.promote, ['validate', 'candidate-preflight', 'prepare-compiled-files']);
     assertExactNeeds(relativeFile, 'tag', workflow.jobs.tag, ['validate']);
     assertNpmPublishJob(relativeFile, workflow.jobs['publish-npm']);
     assertPublishedFinalizeJob(relativeFile, workflow.jobs[finalJob], finalJob);
@@ -1090,10 +1095,11 @@ function assertMutationWorkflow(file, workflow) {
     assertFailureReportingJob(
       relativeFile,
       workflow.jobs['report-failure'],
-      ['validate', 'prepare-version-files', 'prepare-compiled-files', 'promote', 'tag', 'publish-npm', finalJob, 'resume-reconciliation'],
+      ['validate', 'candidate-preflight', 'prepare-version-files', 'prepare-compiled-files', 'promote', 'tag', 'publish-npm', finalJob, 'resume-reconciliation'],
       manifest.file.startsWith('release') ? 'release' : 'hotfix',
     );
   }
+  replacementContract.assertReplacementContract(relativeFile, workflow);
   assertTransitiveValidationAncestry(file, workflow, 'validate', new Set(['report-failure']));
   return true;
 }
@@ -1137,7 +1143,7 @@ function assertDeploymentValidationJob(relativeFile, workflow) {
     || validationStep.uses !== 'actions/github-script@v9'
     || validationStep.run !== undefined
     || Object.keys(stepInputs).join(',') !== 'script'
-    || Object.keys(stepEnvironment).sort().join(',') !== 'CHANGELOG,ISSUE,MODE,OPERATION_ID,TITLE,VERSION'
+    || Object.keys(stepEnvironment).sort().join(',') !== 'CHANGELOG,CONFIRM_UNPUBLISHED,EXPECTED_REVISION,ISSUE,MODE,OPERATION_ID,SOURCE_SHA,TITLE,VERSION'
     || Object.entries(stepEnvironment).some(([key, value]) => /token|secret|pat/i.test(key)
       || /secrets\.|github\.token/i.test(String(value)))
     || !script.includes('Number.isSafeInteger(issue)')
@@ -1152,8 +1158,8 @@ function assertDeploymentValidationJob(relativeFile, workflow) {
 
 function assertPhaseConditions(relativeFile, jobs, finalJob) {
   for (const jobId of ['prepare-version-files', 'prepare-compiled-files', 'promote'].filter(id => jobs[id])) {
-    if (jobs[jobId].if !== "${{ inputs.mode == 'prepare' }}") {
-      throw new Error(`${relativeFile} job ${jobId} must run only in prepare mode.`);
+    if (jobs[jobId].if !== replacementContract.phaseCondition(jobId, !!jobs['prepare-compiled-files'])) {
+      throw new Error(`${relativeFile} job ${jobId} must run only in the validated preparation phase.`);
     }
   }
   for (const jobId of ['tag', 'publish-npm', 'publish', finalJob].filter(id => jobs[id])) {

@@ -110,6 +110,7 @@ export function setupRunnerRole(file: string, job: string): SetupRunnerRole | un
   if (file === 'copilot_pull_request_approval.yml' && job === 'observe-approval') return 'observer';
   if (file === 'copilot_pull_request_merge_queue.yml' && job === 'copilot-pull-request-required-check') return 'isolated';
   if (['release_workflow.yml', 'hotfix_workflow.yml'].includes(file)) {
+    if (job === 'candidate-preflight') return 'isolated';
     if (['publish', 'publish-npm'].includes(job)) return 'publication';
     if (['validate', 'prepare-version-files', 'promote', 'resume-reconciliation', 'report-failure'].includes(job)) return 'validation';
   }

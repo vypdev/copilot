@@ -46,6 +46,13 @@ try {
   if (!admissionBootstrap.includes("require('../build/github_action/index.js')") || !admissionBootstrap.includes('COPILOT_ISSUE_ADMISSION_BOOTSTRAP')) {
     throw new Error('Packaged issue admission must use its fail-closed bootstrap.');
   }
+  const recoveryManifest = fs.readFileSync(path.join(packageRoot, 'deployment-recovery/action.yml'), 'utf8');
+  const recoveryBootstrap = fs.readFileSync(path.join(packageRoot, 'deployment-recovery/index.cjs'), 'utf8');
+  if (!recoveryManifest.includes('using: node24') || !recoveryManifest.includes('main: index.cjs')
+    || !recoveryBootstrap.includes("require('../build/deployment_recovery/index.js').runDeploymentCandidatePreflightAction()")
+    || typeof require(path.join(packageRoot, 'build/deployment_recovery/index.js')).runDeploymentCandidatePreflightAction !== 'function') {
+    throw new Error('Packaged candidate recovery must resolve its standalone read-only Node entrypoint.');
+  }
   const packageJson = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
   const cliPath = path.join(packageRoot, 'build', 'cli', 'index.js');
   const webIndexPath = path.join(packageRoot, 'build', 'web', 'index.html');
