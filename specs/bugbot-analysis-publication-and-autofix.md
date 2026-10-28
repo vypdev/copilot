@@ -4,7 +4,7 @@
 - Date: 2026-09-11
 - Last updated: 2026-10-28
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-10-28; resolved-type grounding #736, delegated test-path evidence #738 and versioned Action input contracts #739 alongside the dated package/framework evidence in #720, #721 and #722
+- Last verified: 2026-10-28; resolved-type grounding #736, delegated test-path evidence #738 versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -1148,3 +1148,95 @@ reference. No inputs, expectations or thresholds were changed to obtain a pass.
 This is not an all-thresholds-passed, statistical improvement or guaranteed future
 accuracy claim. Deterministic CI reference/scorer checks remain distinct from
 these actual optional model observations.
+
+
+### Exact validation counterexamples — #749 (2026-10-28)
+
+**Observed problem and evidence.** The [reported review](https://github.com/vypdev/copilot/issues/749)
+claimed that `user@\u200Bexample..com` passed a predicate requiring every domain
+label to be nonblank. The immutable [consumer source](https://github.com/vypdev/vaultstadio/blob/3d6741cfcd6d53b01e38075e90cdc2caede4e58a/backend/core/auth/src/main/kotlin/com/vaultstadio/core/domain/service/UserInputValidation.kt)
+contains `labels.all { it.isNotBlank() }`. Splitting the exact domain preserves
+U+200B in the first label and an empty middle label: the empty label cannot pass
+that universal predicate, regardless of the invisible character's classification.
+Earlier guards may also reject, but cannot make that path accept. The issue's
+compiled-class, Java 17 and HTTP/PostgreSQL receipts are external corroboration;
+this change does not execute the consumer's Kotlin, JVM, route or database.
+The supported plus-tag example remains allowed; no RFC, deliverability or stricter
+Unicode policy is introduced.
+
+**Intentional contract.** Before alleging that a concrete invalid value is
+accepted, the shared model instruction MUST preserve its exact Unicode code
+points and separators through transforms, early returns, helper/caller boundaries
+and universal/existential collection predicates to the relevant effect. A
+rejecting check disproves that witness. A genuinely different accepted invalid
+value remains actionable only with its own causal proof. Supported positives
+MUST remain supported, and optional stricter-character policy MUST NOT substitute
+for the claimed defect. Source reasoning, supplied same-revision observations and
+actual new execution remain distinct; the reviewer MUST NOT invent execution.
+
+```text
+exact witness -> actual caller/transforms -> each rejection/predicate -> effect
+             -> rejected witness: omit that unsupported acceptance claim
+             -> admitted invalid value: report the proved failure
+```
+
+Text equivalent: follow the concrete value without normalizing evidence away,
+check every relevant rejection and the eventual effect, then publish only the
+supported defect. Unusual Unicode alone does not establish an empty-label bypass.
+An unrelated green test is not proof of safety; a witnessed ignored return,
+existential predicate or post-validation transform can still create a defect.
+
+**Architecture, bounds and delivery.** The existing pure
+`BUGBOT_FINDING_GROUNDING_INSTRUCTION` remains shared by ordinary/partitioned
+production review and the benchmark. Redundant prompt prose is compacted while
+retaining prior framework, dependency-type, test-path, Action-input and replacement
+safeguards. The original 15,000-character long-ignore-list regression limit is
+unchanged. No deterministic finding filter, allowlist, consumer-specific exception,
+configuration, state, response schema, dependency, port, permission, threshold,
+retry or publication lifecycle is added. Native controls execute statically
+authored TypeScript, never arbitrary corpus strings or imported consumer code.
+
+**Product UX, operations and compatibility.** A rejected witness produces no new
+inline finding or abstention card. A supported finding uses the existing localized
+review surface, for example “The validation result is ignored, so this input
+reaches persistence with an empty domain label.” Pending/incomplete/failed/complete
+states, existing-finding verification and user commands remain unchanged. Existing
+findings are not silently dismissed by text matching; their exact current source
+must be verified. Adoption requires the updated normal runtime/bundle; rollback
+reverts guidance/fixtures/docs together without changing persisted reviews or
+consumer policy. Source, logs and tests remain untrusted evidence, never mutation
+or approval authority. No consumer deployment is claimed or required for local
+acceptance. This is probabilistic review guidance, not a guarantee of accuracy.
+
+Allocate **seventeen additional distinct deterministic cases**, exclusively here:
+
+| Area | Cases | Acceptance/risk |
+|---|---:|---|
+| Ordinary and partitioned production delivery | 2 | exact witness, guards, retained positives and no invented policy/execution |
+| Shared benchmark delivery | 1 | same guidance, private expected verdict omitted |
+| False-positive scoring controls | 3 | exact Kotlin Unicode/all predicate, complete caller guard, normalization before validation |
+| False-negative scoring controls | 3 | existential predicate, ignored false return, normalization after validation |
+| Source-level Kotlin witness trace | 1 | exact U+200B/code points, empty label, universal predicate and supported positive; no Kotlin execution claim |
+| Compiled synthetic TypeScript observations | 5 | actual acceptance/persistence, preserved plus-tag, boundary empty labels and exact changed-line anchors |
+| Oracle isolation | 2 | modified/executable-looking text and unknown/prototype identity reject before static dispatch |
+| **Total** | **17** | no double counting with prior SDD extensions |
+
+The corpus now contains **77** cases; all earlier cases and expected values are
+unchanged. `bugbot.test.ts` and `bugbot_benchmark_runner.test.ts` own the three
+before/after delivery regressions; `bugbot_benchmark.test.ts` and its compiled
+`bugbot_validation_oracles.ts` fixture own the remaining fourteen. The deterministic
+reference/scorer gate must reject invented negative-case findings and missed
+positive controls without changing thresholds. It is not an observed model
+precision/recall result. Actual external-model measurement was not performed for
+this change; `quality/bugbot/evidence/issue-749.json` records source identities,
+fixed inputs and local assertion limits without presenting reference predictions
+as real model observations.
+
+**Documentation and DoD.** Detection explains exact witness proof, quality/
+observability distinguishes static controls from external execution, and failure
+scenarios document how maintainers verify the same source before normal re-review.
+The catalog and generated catalog carry the same evidence. All 17 cases, the
+unchanged size bound and historical contract tests, global/module coverage,
+architecture, types/lint, docs/specifications/workflows, package/CLI/API/web smoke,
+setup acceptance and fresh exact-head CI/review/Codecov gates remain required.
+No unresolved decision or new manual configuration step blocks implementation.

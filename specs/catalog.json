@@ -2085,7 +2085,8 @@
         "quality/bugbot/evidence/issue-722.json",
         "quality/bugbot/evidence/issue-736.json",
         "quality/bugbot/evidence/issue-738.json",
-        "quality/bugbot/evidence/issue-739.json"
+        "quality/bugbot/evidence/issue-739.json",
+        "quality/bugbot/evidence/issue-749.json"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
@@ -2132,7 +2133,8 @@
         "src/tooling/__tests__/fixtures/bugbot_call_path_oracles.ts",
         "src/tooling/__tests__/bugbot_benchmark_runner.test.ts",
         "src/prompts/__tests__/bugbot.test.ts",
-        "src/prompts/__tests__/bugbot_framework_semantics.test.ts"
+        "src/prompts/__tests__/bugbot_framework_semantics.test.ts",
+        "src/tooling/__tests__/fixtures/bugbot_validation_oracles.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",

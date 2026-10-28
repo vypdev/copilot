@@ -1,3 +1,4 @@
+import { observeValidationFixture } from './fixtures/bugbot_validation_oracles';
 import { load as parse } from 'js-yaml';
 import { join } from 'node:path';
 import { observeCallPathFixture } from './fixtures/bugbot_call_path_oracles';
@@ -9,6 +10,7 @@ describe('versioned Bugbot benchmark', () => {
   const root = join(__dirname, '..', '..', '..');
 
   it.each([
+    'kt-email-unicode-empty-label-guard', 'ts-email-caller-empty-label-guard', 'ts-email-normalization-before-guard',
     'py-coverage-config-branch', 'py-http10-reconnect', 'docs-correct-regression-total',
     'py-short-circuit-unhashable', 'py-helper-retry-validation', 'ts-exclusive-render-branches',
     'android-listed-minor-platform', 'external-package-unverified-inventory', 'android-stale-inventory-current-install',
@@ -30,6 +32,7 @@ describe('versioned Bugbot benchmark', () => {
   });
 
   it.each([
+    'ts-email-existential-label-defect', 'ts-email-ignored-validator-result', 'ts-email-normalization-after-guard',
     'py-short-circuit-unsafe-order', 'ts-composed-duplicate-ids',
     'android-absent-platform-package', 'android-unrelated-green-job',
     'jvm-unrelated-runtime-wrapper', 'jvm-passing-mock-not-counterevidence', 'kt-broad-catch-swallows-cancellation',
@@ -201,4 +204,44 @@ it.each([
     expect(item.expected[0].line).toBe(item.startLine + 7);
     expect(added[0].slice(1).trim()).toBe(item.expected[0].codeSnippet);
   }
+});
+
+
+it('preserves the exact Kotlin witness and traces its rejecting empty-label guard without claiming Kotlin execution', async () => {
+  const corpus = await loadBugbotBenchmark(join(__dirname, '..', '..', '..', 'quality/bugbot/corpus.v1.json'));
+  const item = corpus.cases.find(candidate => candidate.id === 'kt-email-unicode-empty-label-guard')!;
+  const witness = 'user@\u200Bexample..com';
+  expect(item.diff).toContain(witness);
+  expect([...witness].map(value => value.codePointAt(0))).toContain(0x200B);
+  expect(witness.split('@')[1].split('.')).toEqual(['\u200Bexample', '', 'com']);
+  expect(item.diff).toContain('labels.all { it.isNotBlank() }');
+  expect(item.diff).toContain('Owner119+tag@Audit.Invalid');
+  expect(item.expected).toEqual([]);
+});
+it.each([
+  ['ts-email-caller-empty-label-guard', false], ['ts-email-normalization-before-guard', false],
+  ['ts-email-existential-label-defect', true], ['ts-email-ignored-validator-result', true],
+  ['ts-email-normalization-after-guard', true],
+] as const)('observes exact authored validation and persistence semantics for %s', async (id, accepted) => {
+  const corpus = await loadBugbotBenchmark(join(__dirname, '..', '..', '..', 'quality/bugbot/corpus.v1.json'));
+  const item = corpus.cases.find(candidate => candidate.id === id)!;
+  const observation = observeValidationFixture(item);
+  expect(observation.accepted).toBe(accepted);
+  expect(observation.persisted).toHaveLength(accepted ? 1 : 0);
+  expect(observation.supportedPositive).toBe(true);
+  if (id === 'ts-email-caller-empty-label-guard') expect(observation.boundaryRejected).toBe(true);
+  expect(item.expected.length).toBe(accepted ? 1 : 0);
+  if (accepted) {
+    expect(observation.persisted[0].split('@')[1].split('.')).toContain('');
+    const expected = item.expected[0];
+    expect(item.diff.split('\n')[expected.line! - item.startLine].slice(1).trim()).toBe(expected.codeSnippet);
+  }
+});
+it('rejects modified corpus text before choosing a compiled validation oracle', () => {
+  expect(() => observeValidationFixture({ id: 'ts-email-caller-empty-label-guard', diff: 'process.exit(1)' }))
+    .toThrow('Unknown or modified validation fixture.');
+});
+it('rejects unknown/prototype-like validation identities without dynamic dispatch', () => {
+  expect(() => observeValidationFixture({ id: '__proto__', diff: '' }))
+    .toThrow('Unknown or modified validation fixture.');
 });

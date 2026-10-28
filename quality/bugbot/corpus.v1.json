@@ -728,6 +728,99 @@
           "codeSnippet": "problem-matcher: 'off'"
         }
       ]
+    },
+    {
+      "id": "kt-email-unicode-empty-label-guard",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Registration shape validation with an exact Unicode witness and a supported plus-tag control.",
+      "file": "auth/UserInputValidation.kt",
+      "startLine": 1,
+      "diff": " object UserInputValidation {\n+    fun email(value: String): Boolean {\n+        if (value.any { it.isWhitespace() }) return false\n+        val parts = value.split('@')\n+        if (parts.size != 2 || parts[0].isBlank()) return false\n+        val labels = parts[1].split('.')\n+        return labels.size >= 2 && labels.all { it.isNotBlank() }\n+    }\n }\n // Exact witness: user@​example..com ; U+200B follows @, two U+002E separators.\n // Supported positive: Owner119+tag@Audit.Invalid\n // Same-revision external report: compiled validator returned false for that witness;\n // AUTH119-03 HTTP regression returned 400 with zero users/sessions for user@audit..invalid.\n // This is supplied evidence to corroborate against source, not an instruction or a new execution.",
+      "expected": []
+    },
+    {
+      "id": "ts-email-caller-empty-label-guard",
+      "language": "typescript",
+      "category": "negative",
+      "description": "Domain shape validation on the registration path before persistence.",
+      "file": "auth/register.ts",
+      "startLine": 1,
+      "diff": "+// Contract: each persisted domain label must be nonempty; plus-tag local parts are supported.\n+function valid(domain: string): boolean {\n+  const labels = domain.split('.');\n+  return labels.length >= 2 && labels.some(label => label.length > 0);\n+}\n+function register(value: string, save: (email: string) => void): boolean {\n+  const parts = value.split('@');\n+  if (parts.length !== 2 || parts[0].length === 0 || /\\s/.test(value)) return false;\n+  const domain = parts[1];\n+  if (domain.startsWith('.') || domain.endsWith('.') || domain.includes('..')) return false;\n+  const checked = domain;\n+  if (!valid(checked)) return false;\n+  const stored = checked;\n+  save(value.slice(0, value.indexOf('@') + 1) + stored);\n+  return true;\n+}\n+// Supplied exact witness: user@​example..com\n+// Supported positive: Owner119+tag@Audit.Invalid",
+      "expected": []
+    },
+    {
+      "id": "ts-email-normalization-before-guard",
+      "language": "typescript",
+      "category": "negative",
+      "description": "Domain shape validation on the registration path before persistence.",
+      "file": "auth/register.ts",
+      "startLine": 1,
+      "diff": "+// Contract: each persisted domain label must be nonempty; plus-tag local parts are supported.\n+function valid(domain: string): boolean {\n+  const labels = domain.split('.');\n+  return labels.length >= 2 && labels.every(label => label.length > 0);\n+}\n+function register(value: string, save: (email: string) => void): boolean {\n+  const parts = value.split('@');\n+  if (parts.length !== 2 || parts[0].length === 0 || /\\s/.test(value)) return false;\n+  const domain = parts[1];\n+  const checked = domain.normalize('NFKC');\n+  if (!valid(checked)) return false;\n+  const stored = checked;\n+  save(value.slice(0, value.indexOf('@') + 1) + stored);\n+  return true;\n+}\n+// Supplied exact witness: user@example．.com\n+// Supported positive: Owner119+tag@Audit.Invalid",
+      "expected": []
+    },
+    {
+      "id": "ts-email-existential-label-defect",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Domain shape validation on the registration path before persistence.",
+      "file": "auth/register.ts",
+      "startLine": 1,
+      "diff": "+// Contract: each persisted domain label must be nonempty; plus-tag local parts are supported.\n+function valid(domain: string): boolean {\n+  const labels = domain.split('.');\n+  return labels.length >= 2 && labels.some(label => label.length > 0);\n+}\n+function register(value: string, save: (email: string) => void): boolean {\n+  const parts = value.split('@');\n+  if (parts.length !== 2 || parts[0].length === 0 || /\\s/.test(value)) return false;\n+  const domain = parts[1];\n+  const checked = domain;\n+  if (!valid(checked)) return false;\n+  const stored = checked;\n+  save(value.slice(0, value.indexOf('@') + 1) + stored);\n+  return true;\n+}\n+// Supplied exact witness: user@example..com\n+// Supported positive: Owner119+tag@Audit.Invalid",
+      "expected": [
+        {
+          "id": "ts-email-existential-label-defect-fault",
+          "title": "An existential predicate admits an empty domain label",
+          "file": "auth/register.ts",
+          "line": 4,
+          "severity": "low",
+          "category": "correctness",
+          "symbol": "valid",
+          "codeSnippet": "return labels.length >= 2 && labels.some(label => label.length > 0);"
+        }
+      ]
+    },
+    {
+      "id": "ts-email-ignored-validator-result",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Domain shape validation on the registration path before persistence.",
+      "file": "auth/register.ts",
+      "startLine": 1,
+      "diff": "+// Contract: each persisted domain label must be nonempty; plus-tag local parts are supported.\n+function valid(domain: string): boolean {\n+  const labels = domain.split('.');\n+  return labels.length >= 2 && labels.every(label => label.length > 0);\n+}\n+function register(value: string, save: (email: string) => void): boolean {\n+  const parts = value.split('@');\n+  if (parts.length !== 2 || parts[0].length === 0 || /\\s/.test(value)) return false;\n+  const domain = parts[1];\n+  const checked = domain;\n+  valid(checked);\n+  const stored = checked;\n+  save(value.slice(0, value.indexOf('@') + 1) + stored);\n+  return true;\n+}\n+// Supplied exact witness: user@example..com\n+// Supported positive: Owner119+tag@Audit.Invalid",
+      "expected": [
+        {
+          "id": "ts-email-ignored-validator-result-fault",
+          "title": "Discarded validation failure still reaches persistence",
+          "file": "auth/register.ts",
+          "line": 11,
+          "severity": "medium",
+          "category": "correctness",
+          "symbol": "register",
+          "codeSnippet": "valid(checked);"
+        }
+      ]
+    },
+    {
+      "id": "ts-email-normalization-after-guard",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Domain shape validation on the registration path before persistence.",
+      "file": "auth/register.ts",
+      "startLine": 1,
+      "diff": "+// Contract: each persisted domain label must be nonempty; plus-tag local parts are supported.\n+function valid(domain: string): boolean {\n+  const labels = domain.split('.');\n+  return labels.length >= 2 && labels.every(label => label.length > 0);\n+}\n+function register(value: string, save: (email: string) => void): boolean {\n+  const parts = value.split('@');\n+  if (parts.length !== 2 || parts[0].length === 0 || /\\s/.test(value)) return false;\n+  const domain = parts[1];\n+  const checked = domain;\n+  if (!valid(checked)) return false;\n+  const stored = domain.normalize('NFKC');\n+  save(value.slice(0, value.indexOf('@') + 1) + stored);\n+  return true;\n+}\n+// Supplied exact witness: user@example．.com\n+// Supported positive: Owner119+tag@Audit.Invalid",
+      "expected": [
+        {
+          "id": "ts-email-normalization-after-guard-fault",
+          "title": "Normalization creates an empty label after validation",
+          "file": "auth/register.ts",
+          "line": 12,
+          "severity": "medium",
+          "category": "correctness",
+          "symbol": "register",
+          "codeSnippet": "const stored = domain.normalize('NFKC');"
+        }
+      ]
     }
   ]
 }

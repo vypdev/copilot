@@ -109,3 +109,16 @@ it('shares exact-version Action input evidence without exposing reference verdic
   expect(prompt).not.toContain('Private Action verdict');
   expect(prompt).not.toContain('do-not-leak-this-replacement');
 });
+
+
+it('delivers exact-witness grounding without exposing private verdicts', () => {
+  const prompt = buildBugbotBenchmarkPrompt({ ...testCase,
+    diff: '+return labels.all { it.isNotBlank() }', language: 'kotlin',
+    description: 'A Unicode validation counterexample accompanies the changed predicate.',
+  });
+  expect(prompt).toContain('exact Unicode code points and separators');
+  expect(prompt).toContain('transforms, early returns and all/any predicates');
+  expect(prompt).toContain('A rejecting guard disproves that witness');
+  expect(prompt).toContain('no stricter character policy or execution evidence');
+  expect(prompt).not.toContain('Hidden ground truth title');
+});
