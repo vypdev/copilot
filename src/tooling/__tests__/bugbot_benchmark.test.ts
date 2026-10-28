@@ -1,3 +1,4 @@
+import { load as parse } from 'js-yaml';
 import { join } from 'node:path';
 import { observeCallPathFixture } from './fixtures/bugbot_call_path_oracles';
 import { tmpdir } from 'node:os';
@@ -12,6 +13,7 @@ describe('versioned Bugbot benchmark', () => {
     'py-short-circuit-unhashable', 'py-helper-retry-validation', 'ts-exclusive-render-branches',
     'android-listed-minor-platform', 'external-package-unverified-inventory', 'android-stale-inventory-current-install',
     'kt-resolved-sql-subclass', 'jvm-type-hierarchy-unavailable', 'jvm-current-contract-over-stale-docs',
+    'action-declared-matcher-input', 'action-renamed-input-current-version', 'action-input-contract-unavailable',
     'test-indirect-binding-propagates', 'test-parameterized-fallback-reaches-stub', 'test-bound-callback-reaches-stub',
 
     'kt-compose-preferred-width-narrow', 'kt-compose-cap-before-fill', 'kt-compose-padded-preferred-width',
@@ -31,6 +33,7 @@ describe('versioned Bugbot benchmark', () => {
     'py-short-circuit-unsafe-order', 'ts-composed-duplicate-ids',
     'android-absent-platform-package', 'android-unrelated-green-job',
     'jvm-unrelated-runtime-wrapper', 'jvm-passing-mock-not-counterevidence', 'kt-broad-catch-swallows-cancellation',
+    'action-undeclared-matcher-alias', 'action-old-input-on-new-version', 'action-declared-input-wrong-value',
     'test-delegate-bypasses-stub', 'test-empty-participants-skip-stub', 'test-recovery-swallows-bound-failure',
 
     'kt-compose-required-width-overflow', 'kt-compose-fill-before-cap',
@@ -159,4 +162,43 @@ it('rejects executable-looking corpus text as inert data before selecting an ora
 it('rejects an unknown or prototype-like fixture identity without dynamic dispatch', () => {
   expect(() => observeCallPathFixture({ id: '__proto__', diff: '' }))
     .toThrow('Unknown or modified call-path fixture.');
+});
+
+
+it.each([
+  ['action-declared-matcher-input', 'problem-matcher', true, false],
+  ['action-renamed-input-current-version', 'enable-problem-matcher', true, false],
+  ['action-input-contract-unavailable', undefined, undefined, undefined],
+  ['action-undeclared-matcher-alias', 'problem-matcher', false, true],
+  ['action-old-input-on-new-version', 'enable-problem-matcher', false, true],
+  ['action-declared-input-wrong-value', 'problem-matcher', true, true],
+] as const)('checks inert YAML and compiled contract semantics for %s', async (id, getter, declared, registers) => {
+  const corpus = await loadBugbotBenchmark(join(__dirname, '..', '..', '..', 'quality/bugbot/corpus.v1.json'));
+  const item = corpus.cases.find(candidate => candidate.id === id)!;
+  // Only parse YAML data; neither corpus text nor an external module is executed.
+  const yaml = item.diff.split('\n').slice(0, 8).map(line => line.slice(1)).join('\n');
+  const candidate = parse(yaml) as { runs: { steps: { uses: string; with: Record<string, unknown> }[] } };
+  const step = candidate.runs.steps[0];
+  const added = item.diff.split('\n').filter(line => line.startsWith('+'));
+  expect(added).toHaveLength(1);
+  if (!getter) {
+    expect(step.uses).toBe('fixture-org/setup-tool@v7');
+    expect(item.diff).toContain('No applicable manifest, runtime getter or execution observation is available.');
+    expect(item.expected).toEqual([]);
+    return;
+  }
+  expect(step.uses).toBe(getter === 'problem-matcher'
+    ? 'dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d'
+    : 'fixture-org/setup-sdk@2222222222222222222222222222222222222222');
+  const manifest = parse(`inputs:\n  sdk: { default: stable }\n  ${getter}: { default: 'true' }`) as { inputs: Record<string, { default: string }> };
+  const key = Object.keys(step.with).find(name => name !== 'sdk')!;
+  expect(Object.prototype.hasOwnProperty.call(manifest.inputs, key)).toBe(declared);
+  const effective = String(step.with[getter] ?? manifest.inputs[getter].default);
+  // Authored, statically compiled equivalent of the supplied getter condition.
+  expect(effective !== 'false').toBe(registers);
+  expect(item.expected.length).toBe(registers ? 1 : 0);
+  if (registers) {
+    expect(item.expected[0].line).toBe(item.startLine + 7);
+    expect(added[0].slice(1).trim()).toBe(item.expected[0].codeSnippet);
+  }
 });

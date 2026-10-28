@@ -65,6 +65,12 @@
     "test-bound-callback-reaches-stub": [],
     "test-delegate-bypasses-stub": [{"id": "test-delegate-bypasses-stub-defect", "title": "The assertion expects a fault from a bypassed projection", "file": "test/SessionReturnedState.test.ts", "line": 22, "severity": "medium", "category": "correctness", "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }", "confidence": 0.98}],
     "test-empty-participants-skip-stub": [{"id": "test-empty-participants-skip-stub-defect", "title": "The empty fixture never reaches the arranged fault", "file": "test/SessionReturnedState.test.ts", "line": 22, "severity": "medium", "category": "correctness", "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }", "confidence": 0.98}],
-    "test-recovery-swallows-bound-failure": [{"id": "test-recovery-swallows-bound-failure-defect", "title": "The reader replaces the bound fault with success", "file": "test/SessionReturnedState.test.ts", "line": 25, "severity": "medium", "category": "correctness", "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }", "confidence": 0.98}]
+    "test-recovery-swallows-bound-failure": [{"id": "test-recovery-swallows-bound-failure-defect", "title": "The reader replaces the bound fault with success", "file": "test/SessionReturnedState.test.ts", "line": 25, "severity": "medium", "category": "correctness", "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }", "confidence": 0.98}],
+    "action-declared-matcher-input": [],
+    "action-renamed-input-current-version": [],
+    "action-input-contract-unavailable": [],
+    "action-undeclared-matcher-alias": [{"id": "action-undeclared-matcher-alias-fault", "title": "Undeclared alias leaves the failing matcher enabled", "file": ".github/actions/publish-package/action.yml", "line": 22, "severity": "medium", "category": "reliability", "symbol": "Publish package", "codeSnippet": "enable-problem-matcher: false", "confidence": 0.98}],
+    "action-old-input-on-new-version": [{"id": "action-old-input-on-new-version-fault", "title": "Old-version input does not disable the selected revision matcher", "file": ".github/actions/publish-package/action.yml", "line": 22, "severity": "medium", "category": "reliability", "symbol": "Publish package", "codeSnippet": "problem-matcher: false", "confidence": 0.98}],
+    "action-declared-input-wrong-value": [{"id": "action-declared-input-wrong-value-fault", "title": "Off is not the runtime disabling value", "file": ".github/actions/publish-package/action.yml", "line": 22, "severity": "medium", "category": "reliability", "symbol": "Publish package", "codeSnippet": "problem-matcher: 'off'", "confidence": 0.98}]
   }
 }

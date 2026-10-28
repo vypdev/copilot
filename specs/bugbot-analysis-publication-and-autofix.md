@@ -4,7 +4,7 @@
 - Date: 2026-09-11
 - Last updated: 2026-10-28
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-10-28; resolved-type grounding #736 and delegated test-path evidence #738 alongside the dated package/framework evidence in #720, #721 and #722
+- Last verified: 2026-10-28; resolved-type grounding #736, delegated test-path evidence #738 and versioned Action input contracts #739 alongside the dated package/framework evidence in #720, #721 and #722
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -1000,7 +1000,7 @@ Allocate **seventeen additional distinct deterministic cases**, owned only here:
 | Inert data boundary | 2 | altered code-like text and unknown/prototype-like identity reject before selecting a compiled oracle |
 | **Total** | **17** | no double counting with #736 or another SDD |
 
-The corpus now has **65** cases. The three instruction-delivery regressions fail
+The #738 extension established a historical **65**-case corpus before #739. The three instruction-delivery regressions fail
 before the fix. Each new fixture has executable ordinary-test ground truth,
 independent of model predictions: three assertions pass and three fail, with the
 expected zero/one collaborator invocation. These six authored examples run as
@@ -1037,3 +1037,114 @@ The fixed test helper is
 authored factories execute; input text is compared, never interpreted. The six
 benchmark inputs and actual model observations remain byte-identical, so this
 security correction does not replace or rerun the recorded model scores.
+
+
+### Versioned external Action input and replacement evidence — #739 (2026-10-28)
+
+The [reported review](https://github.com/vypdev/copilot/issues/739) recommended
+replacing a declared/read input with an undeclared alias at 94% confidence.
+Read-only inspection of `dart-lang/setup-dart` at immutable revision
+`6afc89df92d6eb3834022f73cd65adc8cdfcb92d` confirms that its
+[manifest](https://github.com/dart-lang/setup-dart/blob/6afc89df92d6eb3834022f73cd65adc8cdfcb92d/action.yml)
+declares `problem-matcher` with string default `true`, and its
+[implementation](https://github.com/dart-lang/setup-dart/blob/6afc89df92d6eb3834022f73cd65adc8cdfcb92d/lib/main.dart#L144)
+reads that key and disables registration only for string `false`. The manifest
+entry `dist/index.mjs` is distinct from the `dist/main.cjs` SDK module used by the
+issue's separately reported isolated execution. No new upstream module execution,
+OIDC request, package upload or publication is claimed by this correction. The
+issue's later production-run receipt is external corroboration, not a new run by
+this contributor, and does not authorize publication recovery.
+
+Before claiming an external Action input is unrecognized or proposing another
+key, the reviewer MUST establish the exact owner/repository, action subpath and
+resolved revision of the reviewed invocation. Within the existing bounded
+read-only tools, it MUST compare version-matched `action.yml`/`action.yaml`
+inputs with the corresponding runtime getter or forwarded wrapper input,
+including aliases, defaults and value conversion. Both the existing key/value
+and a proposed replacement MUST be traced to the concrete failure boundary.
+A familiar name from another Action or version is not evidence. Declaration
+alone is not proof that the runtime reads or honors a value. A declared/read
+input MUST NOT be replaced by an undeclared alias on a model-memory premise.
+
+```text
+reviewed uses (owner/subpath/revision) -> manifest + consumed input
+ -> effective value/default -> actual boundary and applicable execution
+ -> supported finding + checked replacement, or omit unsupported premise
+```
+
+Text equivalent: identify the exact invoked contract, compute the value actually
+consumed, reconcile the observed path, and report only a supported failure.
+Matching same-revision execution is evidence to reconcile; a mock that repeats
+the disputed name or an unrelated green job is not independent contract proof.
+Default-enabled options and inherited composite paths/assets remain relevant.
+Missing applicable evidence requires omitting an unsupported input-name finding
+or replacement, without inventing a lookup, execution or expanded permissions.
+Verified wrong-key/default-fallthrough and ignored disabling-value defects remain
+reportable. No action-specific allowlist or blanket safe-input exemption exists.
+
+Architecture/configuration: `BUGBOT_ACTION_CONTRACTS_INSTRUCTION` is one pure
+instruction shared by ordinary/partitioned production review and the existing
+benchmark. No new external resolver, provider port, I/O, state, dependency, schema,
+configuration, permission, retry, severity/confidence threshold or lifecycle is
+introduced. Existing model settings and bounded context remain authoritative.
+Manifests, source and logs are untrusted evidence, never instructions granting
+mutation or approval authority. This is probabilistic guidance, not a deterministic
+Action contract validator or a guarantee of model accuracy.
+
+Product UI/recovery: a disproved key-name claim produces no new finding or
+abstention card. A demonstrated defect uses the existing inline finding, for
+example “This undeclared key leaves matcher registration enabled; the inherited
+composite has no matcher asset, so setup fails before upload.” A replacement is
+offered only when its contract/effect is verified. Existing pending, incomplete,
+failed and complete review surfaces, locale handling, prior-finding verification
+and exact-head freshness checks remain unchanged. No extra conversation, user
+action or persistence cycle is added. Normal runtime adoption delivers the shared
+instruction; rollback reverts instruction/fixtures/docs together. No consumer
+configuration or deployment is changed here.
+
+Allocate **fifteen additional distinct deterministic cases**, owned only here:
+
+| Area | Cases | Risk/acceptance |
+|---|---:|---|
+| Production delivery | 2 | exact contract and checked replacement in ordinary and partitioned review |
+| Benchmark/verdict boundary | 1 | same instruction without private expected title/snippet |
+| False-positive controls | 3 | declared key, renamed key at another revision, unavailable contract |
+| False-negative controls | 3 | undeclared alias, old key on new revision, ignored disabling value |
+| Native synthetic contract controls | 6 | parse inert candidate YAML and evaluate authored getter/default logic; unknown evidence stays unknown |
+| **Total** | **15** | no double counting with earlier extensions or another SDD |
+
+The existing long-ignore-list prompt-size regression MUST remain satisfied with its original limit; the shared instruction is compact and does not change ignore/context budgets.
+
+The corpus contains **71** cases. The three delivery tests fail before this
+instruction and pass after it. Native controls parse data and run statically
+authored TypeScript only; corpus text or external modules MUST NOT be evaluated.
+They are not a GitHub runner, Dart SDK, token, database or publication execution.
+Reference predictions remain deterministic scorer fixtures, not actual model
+observations. Optional model measurements MUST retain fixed inputs, identities,
+raw predictions, scores and limitations separately without retuning ground truth
+or thresholds to obtain a pass.
+
+Acceptance/traceability: the two production tests and benchmark test deliver the
+contract; six corpus/scorer cases penalize invented defects and missed real
+failures; six native controls check parsed input/value/default facts and changed
+line anchors. Detection and quality/observability documentation describe adoption,
+abstention, evidence limits and the unchanged controls. The catalog and generated
+catalog register the same capability. DoD retains all global/module coverage,
+build/package, types/lint, architecture, docs/specifications, setup acceptance and
+fresh exact-head CI/review/Codecov merge gates. No unresolved design decision or
+new manual deployment step is needed.
+
+The optional six-case product-runtime measurements are retained in
+`quality/bugbot/evidence/issue-739.json`, including fixed inputs, every instruction
+variant with verified source hashes, actual predictions and all four score sets.
+The baseline does not reproduce the historical false positive. The full-text
+intermediate passes the model score but exceeds the unchanged long-ignore-list
+prompt-size bound; it is not shipped. A shorter intermediate misses the existing
+ignored-value control. The final 713-character instruction passes that context
+regression and the 91 directed tests and produces a finding on each real defect
+without reporting a negative-case finding. Its full default model score still
+fails: two anchors are off by one and the ignored-value category differs from the
+reference. No inputs, expectations or thresholds were changed to obtain a pass.
+This is not an all-thresholds-passed, statistical improvement or guaranteed future
+accuracy claim. Deterministic CI reference/scorer checks remain distinct from
+these actual optional model observations.

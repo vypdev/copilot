@@ -93,3 +93,19 @@ it('delivers the production delegated-test-path contract without exposing expect
   expect(prompt).toContain('unreached stub, empty loop or swallowed fault');
   expect(prompt).not.toContain('Hidden ground truth title');
 });
+
+
+it('shares exact-version Action input evidence without exposing reference verdicts', () => {
+  const prompt = buildBugbotBenchmarkPrompt({
+    id: 'action-input', language: 'yaml', category: 'reliability',
+    description: 'An external Action invocation.', file: '.github/actions/publish/action.yml',
+    startLine: 1, diff: '+with: { option: false }',
+    expected: [{ title: 'Private Action verdict', codeSnippet: 'do-not-leak-this-replacement' }],
+  });
+  expect(prompt).toContain('exact owner/repo/subpath/resolved revision');
+  expect(prompt).toContain('current AND replacement keys, aliases, defaults and converted values');
+  expect(prompt).toContain('omit unsupported findings/suggestions');
+  expect(prompt).toContain('invent no lookup/execution/permissions');
+  expect(prompt).not.toContain('Private Action verdict');
+  expect(prompt).not.toContain('do-not-leak-this-replacement');
+});

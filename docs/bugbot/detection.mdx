@@ -7,6 +7,32 @@ description: When Bugbot runs, where findings appear, severity, comment limit, a
 
 This page describes **when** Bugbot runs, **where** findings are published, and how **severity**, **comment limit**, and **resolved findings** work.
 
+## External Action input evidence
+
+Before calling a GitHub Action input unrecognized or suggesting another key,
+Bugbot must identify the exact owner/repository, action subpath and resolved
+revision. The matching `action.yml`/`action.yaml` and consumed runtime or wrapper
+input establish names, aliases, defaults and value conversion. Both the current
+key/value and a suggested replacement need evidence of their actual effect.
+Names remembered from another Action or version are insufficient.
+
+For example, the
+[setup-dart manifest at this immutable revision](https://github.com/dart-lang/setup-dart/blob/6afc89df92d6eb3834022f73cd65adc8cdfcb92d/action.yml)
+declares `problem-matcher`; its
+[runtime getter](https://github.com/dart-lang/setup-dart/blob/6afc89df92d6eb3834022f73cd65adc8cdfcb92d/lib/main.dart#L144)
+reads that key and disables registration for `false`. This does not establish the
+contract of another revision or Action. The rule is generic and adds no Dart
+exception, new configuration or external lookup permission.
+
+A mock repeating the disputed key is not independent proof. Matching real
+execution, source and defaults must be reconciled; an unrelated passing job is
+not a counterexample to a real failure. A declared name can still have an ignored
+value or a broken implementation. Verified wrong keys and default-fallthrough
+remain actionable. When the applicable contract is unavailable, Bugbot omits an
+unsupported claim or replacement rather than inventing a lookup. This strengthens
+model guidance and does not guarantee future accuracy or automatically dismiss
+an existing finding.
+
 ## Framework lifecycle evidence
 
 Before reporting that a loader or stale DOM child remains, Bugbot must trace the
