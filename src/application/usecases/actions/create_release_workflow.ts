@@ -4,7 +4,7 @@ import type { DeploymentPublicationContext } from '../push_single_action_context
 import { logError, logWarn } from '../../ports/logging_ports';
 import { validateReleaseInput, versionForRelease } from './create_release_policy';
 import { validateDeploymentContinuation } from '../../policies/deployment_continuation_guard';
-import { ApplicationError, toApplicationError } from '../../errors/application_error';
+import { ApplicationError, toApplicationError, type ApplicationErrorOptions } from '../../errors/application_error';
 
 export async function runCreateRelease(
     param: DeploymentPublicationContext,
@@ -13,7 +13,12 @@ export async function runCreateRelease(
 ): Promise<Result[]> {
     const operation = param.operation;
     const continuationError = validateDeploymentContinuation(operation, param.requestedOperationId, ["publishing"], param.requestedVersion);
-    if (continuationError) return [failureResult(taskId, continuationError, 'workflow.stale')];
+    if (continuationError) {
+        if (!operation) return [failureResult(taskId, continuationError, 'configuration.invalid', {
+            recovery: { id: 'deployment-publication-context-missing', variables: {} },
+        })];
+        return [failureResult(taskId, continuationError, 'workflow.stale')];
+    }
     if (!operation?.productionSha) return [failureResult(taskId, 'The deployment operation has no accepted production SHA.', 'workflow.stale')];
     const input = {
         version: operation.version,
@@ -58,6 +63,6 @@ export async function runCreateRelease(
     }
 }
 
-function failureResult(taskId: string, message: string, code: ConstructorParameters<typeof ApplicationError>[0]): Result {
-    return new Result({ id: taskId, success: false, executed: true, errors: [new ApplicationError(code, message)] });
+function failureResult(taskId: string, message: string, code: ConstructorParameters<typeof ApplicationError>[0], options: ApplicationErrorOptions = {}): Result {
+    return new Result({ id: taskId, success: false, executed: true, errors: [new ApplicationError(code, message, options)] });
 }

@@ -350,7 +350,8 @@ default.
 | Text/JSON UX/sanitization | 14 | help, parity, ANSI, secrets, wrapping |
 | Integration/security/migration | 14 | installed smoke, forged IDs, compatibility |
 | Active-installation upgrade | 29 | 20 adapter/discovery/version/platform cases, 5 CLI presentation cases, 2 use-case cases, 2 composition cases; includes real temporary npm/pnpm process fixtures |
-| **Total** | **139** | no double counting; upgrade cases reserved exclusively in their row |
+| Explicit Action target and publication restoration (#740) | 32 | 14 precedence/authority/compatibility, 12 input-setup-dispatch integration, 3 localization/fallback, 2 closed diagnostic model, 1 production-SHA fence |
+| **Total** | **171** | no double counting; upgrade and #740 cases reserved exclusively in their rows |
 
 Global thresholds remain; action/input/command policies SHOULD reach 100% branch
 coverage. Tests use fake GitHub/agents/processes and temporary worktrees, with no
@@ -444,3 +445,63 @@ Global coverage thresholds remain in force for the changed adapter and presenter
 - Rejected: arbitrary string dispatch, duplicate business logic, legacy action aliases.
 - Follow-up: versioned uniform JSON output and shell completion are outside this baseline.
 - Upgrade provider contracts: [npm global layout](https://docs.npmjs.com/cli/v11/configuring-npm/folders/), [npm install](https://docs.npmjs.com/cli/v11/commands/npm-install/), [pnpm root](https://pnpm.io/cli/root), [pnpm add](https://pnpm.io/cli/add).
+
+
+### Explicit Action target restoration — #740 (2026-10-28)
+
+**Observed defect.** A valid `single-action-issue` parsed into `SingleAction.issue`
+was discarded on tag push because setup prioritized the event/ref. Release
+creation therefore lacked its stored operation after packages could already
+have published, and mislabeled unavailable context as `workflow.stale`.
+
+**Intentional contract.** After the repository-only initial-setup exception, a
+positive validated Action target MUST precede raw event metadata, branch and tag
+inference. The existing native issue/PR classifier MUST verify that exact target;
+a PR target keeps the existing managed-head-to-issue translation. An unavailable
+native target or authority error MUST NOT fall back to unrelated event work.
+Safe-integer validation, optional Think context and zero/absent sentinels retain
+their existing contracts. No new input, scope, permission, persistence schema,
+planner call or arbitrary-ref checkout is introduced.
+
+```text
+Declared Action inputs -> validated positive target -> native issue/PR lookup
+ -> restore that issue's configuration -> dispatch one publication handler
+ -> verify operation ID/version/phase/production SHA -> release port
+```
+
+Text equivalent: setup selects and verifies the explicit target, restores its
+configuration, and only then allows the existing publication fences to decide
+whether a release effect is permitted. The narrow setup-query port, immutable
+setup projection, bound release port and shared error presenter retain their
+existing boundaries; architecture/import and workflow checks remain required.
+Missing operation stops with nonretryable `configuration.invalid` and the closed
+empty-variable `deployment-publication-context-missing` recovery descriptor.
+Identity/version/nonretryable/phase mismatches remain stale; a missing accepted
+production SHA still blocks. No package, release, tag, state or deployment is
+created by recovery guidance itself.
+
+| State | User-visible result | Next action |
+|---|---|---|
+| Resolving | Verify explicit launcher issue and load its operation | Wait for setup |
+| Valid publication | Existing ID/version/phase/SHA fences allow release creation | Existing workflow continues |
+| Context missing after possible earlier effects | “GitHub release creation stopped because its durable deployment operation was not available.” | Verify `single-action-issue`, restore verified context, retry the supported workflow with the same operation ID/version |
+| Known mismatch/stale | Existing stale result; no release effect | Inspect current durable operation |
+| Complete | Existing created-release result | No new recovery step |
+
+English, Spanish and atomic English fallback MUST preserve existing effects,
+omit credentials/provider prose and avoid claiming supersession from absence.
+No new comments/cards/cadence or locale configuration is added. Rollout needs a
+compatible Action bundle; no consumer deployment or publication is established
+by local tests. Rollback preserves already completed effects and stored state.
+
+**Acceptance and evidence.** The 32 additional distinct cases in section 14
+belong only to this SDD. `execution_issue_number_policy.test.ts` owns 14 policy
+cases; `single_action_target_restore.integration.test.ts` owns 12 actual-input,
+setup, configuration-restore and single-dispatch cases, 3 localized presentations
+and 2 closed descriptor cases; `create_release_use_case.test.ts` owns the
+production-SHA guard. Synthetic query/release ports verify zero writes on every
+blocked path and unchanged source state. The complete global coverage campaign,
+unchanged coverage budgets, types/lint, package/CLI/API/web smoke, workflow,
+architecture and specification gates are required. Public configuration and
+error-reference pages carry the supported recovery flow; the release and error
+SDDs cross-reference this allocation rather than double count it.

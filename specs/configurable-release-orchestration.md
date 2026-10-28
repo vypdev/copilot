@@ -1890,3 +1890,18 @@ replays recover only the durable validated successor; old callbacks are stale.
 Up to eight six-field predecessor records are optional on existing v1 state;
 malformed/duplicate histories and unknown versions still block. This adds no
 alternate writer, manual state reset or live deployment acceptance claim.
+
+
+### Publication launcher restoration — #740 (2026-10-28)
+
+Tag-push publication MUST restore the explicit validated launcher issue before
+resolving its stored operation, regardless of incidental event/ref metadata.
+The existing operation ID, version, publication-phase and accepted-production-SHA
+checks remain mandatory before creating a GitHub release. Missing context is a
+configuration block, not evidence of supersession or remote publication absence.
+Completed package effects and durable state are preserved; operators restore
+verified context before retrying the supported workflow with the same identity.
+No deployment, package retry, manual release or new permission is authorized by
+this diagnostic. The complete flow, compatibility, recovery UI and exclusive
+32-case budget are specified in
+[CLI and single-action execution](./cli-and-single-action-execution.md#explicit-action-target-restoration--740-2026-10-28).
