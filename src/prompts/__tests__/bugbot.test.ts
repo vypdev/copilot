@@ -88,3 +88,21 @@ describe('resolved dependency type evidence', () => {
         expect(prompt).toContain('omit an unsupported inheritance finding');
     });
 });
+
+
+it.each([false, true])('requires actual parameterized call-path evidence with partitioned=%s', partitioned => {
+  const prompt = getBugbotPrompt({
+    projectContextInstruction: '', owner: 'org', repo: 'repo', headBranch: 'bugfix/738',
+    baseBranch: 'develop', issueNumber: '738', changeScopeInstruction: 'Review this fault assertion.',
+    ignoreBlock: '', previousBlock: '', coverageBlock: '', targetLocale: 'en-US',
+    ...(partitioned ? { partitionBlock: 'Review partition 1/2.', outputContractBlock: 'Return partition attestation.' } : {}),
+  });
+  expect(prompt).toContain('select the exact parameterized case');
+  expect(prompt).toContain('follow the full delegated call chain');
+  expect(prompt).toContain('propagate or transform typed failures through map/flatMap and recovery');
+  expect(prompt).toContain('direct method-body text is not proof a collaborator is unreachable');
+  expect(prompt).toContain('unreached stub, empty loop or swallowed fault');
+  expect(prompt).toContain('Never replace the tested operation merely to match a stub');
+  expect(prompt).toContain('omit unsupported always-fails claims');
+  expect(prompt).toContain('anchor it to the changed test or changed statement that exposes the fault');
+});

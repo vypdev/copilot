@@ -5,7 +5,7 @@ import type { BugbotBenchmarkCorpus, BugbotBenchmarkPredictions, BugbotBenchmark
 import type { BugbotEvalFinding } from './bugbot_quality_eval';
 import { renderUntrustedField, UNTRUSTED_CONTENT_POLICY } from '../domain/security/untrusted_content';
 import { normalizeBugbotResponse } from '../application/usecases/steps/commit/bugbot/prepare_bugbot_findings_policy';
-import { BUGBOT_DEPENDENCY_TYPES_INSTRUCTION, BUGBOT_EXTERNAL_FACTS_INSTRUCTION, BUGBOT_FINDING_GROUNDING_INSTRUCTION } from '../prompts/bugbot';
+import { BUGBOT_TEST_PATHS_INSTRUCTION, BUGBOT_DEPENDENCY_TYPES_INSTRUCTION, BUGBOT_EXTERNAL_FACTS_INSTRUCTION, BUGBOT_FINDING_GROUNDING_INSTRUCTION } from '../prompts/bugbot';
 
 const MAX_BENCHMARK_CASES = 200;
 
@@ -44,6 +44,8 @@ ${BUGBOT_FINDING_GROUNDING_INSTRUCTION}
 ${BUGBOT_EXTERNAL_FACTS_INSTRUCTION}
 
 ${BUGBOT_DEPENDENCY_TYPES_INSTRUCTION}
+
+${BUGBOT_TEST_PATHS_INSTRUCTION}
 
 Language: ${testCase.language}
 Repository-relative file: ${testCase.file}

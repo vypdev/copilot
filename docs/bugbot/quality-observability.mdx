@@ -5,7 +5,7 @@ description: Measure Bugbot accuracy, latency, outcomes, feedback, and regressio
 
 # Bugbot quality and observability
 
-Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 59 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
+Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 65 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
 
 The #655 cases cover branch coverage enabled through repository configuration,
 inherited HTTP/1.0 connection behavior, correct arithmetic, short-circuit guards,
@@ -70,6 +70,23 @@ missed one exact location; the corrected sample passed all default thresholds,
 including exact locations. The inputs and scoring rules were unchanged. This is
 a small controlled observation, not a reproduction of the historical false
 positive, a statistical improvement claim or a guarantee of future accuracy.
+
+The six #738 delegated-test cases cover multi-hop binding, a parameterized
+fallback and a bound callback, paired with bypassed, empty-loop and recovered-error
+controls. Ordinary tests execute every authored JS-subset fixture and check both
+the assertion result and exact collaborator count. They are not consumer Kotlin
+or database executions. Review selects the actual test row, checks guards and
+composition order, and follows the error through helpers to its assertion before
+claiming the test necessarily fails. A called stub does not prove a fault survived;
+a missing direct call does not prove the stub was skipped.
+The actual product-runtime comparison is retained in
+`quality/bugbot/evidence/issue-738.json`. Both model runs fail the full default
+score. The corrected run distinguishes every valid/invalid fault assertion, but
+two exact locations are off by one; location accuracy is 1/3. The baseline also
+reports no defect on the three valid indirect paths. No fixture, expected verdict
+or threshold was changed to improve those scores. The historical false positive
+was not reproduced in this small sample, and no statistical or all-gates-passed
+model-quality claim is made.
 
 ## Quality gates
 

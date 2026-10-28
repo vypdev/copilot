@@ -59,6 +59,12 @@
     "jvm-current-contract-over-stale-docs": [],
     "jvm-unrelated-runtime-wrapper": [{"id": "uncaught-driver-wrapper", "title": "The resolved driver wrapper escapes the typed SQL mapping", "file": "storage/ReadRows.kt", "line": 4, "severity": "medium", "category": "correctness", "codeSnippet": "} catch (failure: SQLException) {", "confidence": 0.98}],
     "jvm-passing-mock-not-counterevidence": [{"id": "uncaught-driver-wrapper", "title": "The production wrapper is not handled by the mock-covered catch", "file": "storage/ReadRows.kt", "line": 4, "severity": "medium", "category": "correctness", "codeSnippet": "} catch (failure: SQLException) {", "confidence": 0.98}],
-    "kt-broad-catch-swallows-cancellation": [{"id": "swallowed-cancellation", "title": "The broader catch converts cancellation to a database failure", "file": "storage/ReadRows.kt", "line": 4, "severity": "medium", "category": "correctness", "codeSnippet": "} catch (failure: Throwable) {", "confidence": 0.98}]
+    "kt-broad-catch-swallows-cancellation": [{"id": "swallowed-cancellation", "title": "The broader catch converts cancellation to a database failure", "file": "storage/ReadRows.kt", "line": 4, "severity": "medium", "category": "correctness", "codeSnippet": "} catch (failure: Throwable) {", "confidence": 0.98}],
+    "test-indirect-binding-propagates": [],
+    "test-parameterized-fallback-reaches-stub": [],
+    "test-bound-callback-reaches-stub": [],
+    "test-delegate-bypasses-stub": [{"id": "test-delegate-bypasses-stub-defect", "title": "The assertion expects a fault from a bypassed projection", "file": "test/SessionReturnedState.test.ts", "line": 22, "severity": "medium", "category": "correctness", "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }", "confidence": 0.98}],
+    "test-empty-participants-skip-stub": [{"id": "test-empty-participants-skip-stub-defect", "title": "The empty fixture never reaches the arranged fault", "file": "test/SessionReturnedState.test.ts", "line": 22, "severity": "medium", "category": "correctness", "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }", "confidence": 0.98}],
+    "test-recovery-swallows-bound-failure": [{"id": "test-recovery-swallows-bound-failure-defect", "title": "The reader replaces the bound fault with success", "file": "test/SessionReturnedState.test.ts", "line": 25, "severity": "medium", "category": "correctness", "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }", "confidence": 0.98}]
   }
 }

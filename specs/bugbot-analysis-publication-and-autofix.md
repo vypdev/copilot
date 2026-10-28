@@ -4,7 +4,7 @@
 - Date: 2026-09-11
 - Last updated: 2026-10-28
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-10-28; resolved-type grounding tracked in #736 alongside the dated package/framework evidence in #720, #721 and #722
+- Last verified: 2026-10-28; resolved-type grounding #736 and delegated test-path evidence #738 alongside the dated package/framework evidence in #720, #721 and #722
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -915,7 +915,7 @@ Allocate **nine additional distinct deterministic cases**, owned only here:
 | False-negative controls | 3 | unrelated runtime wrapper, misleading passing mock, swallowed cancellation |
 | **Total** | **9** | no cases allocated again to other SDDs |
 
-The corpus now has **59** cases. The three delivery/isolation regressions fail
+The #736 extension established a historical **59**-case corpus before #738. The three delivery/isolation regressions fail
 before the instruction is installed. Scorer tests penalize each invented defect
 and every missed real control; checked-in reference predictions prove only that
 scoring contract. Any optional actual-model observations MUST retain the exact
@@ -936,3 +936,90 @@ not reproduce the historical type false positive or establish a statistical gain
 No source, fixture or expected-verdict file was copied into the empty benchmark
 workspace. The tests establish instruction delivery and scorer controls; the
 actual sample establishes only its recorded observations.
+
+
+### Delegated test-path and fault-assertion evidence — #738 (2026-10-28)
+
+The [reported finding](https://github.com/vypdev/copilot/issues/738) asserted that
+a parameterized test always fails because `getSession` does not directly call
+the arranged participant projection. Independent read-only inspection at consumer
+`bfdfb95c77453559e9da73c3cddce62886fc55a1` traces the actual path:
+
+```text
+selected participant-scope-failure row -> invoke fallback -> getSession
+ -> access.session -> readSession -> bindSession -> participantSession
+ -> Left(DatabaseException) -> flatMap/map propagation -> original assertion
+```
+
+The [test](https://github.com/vypdev/vaultstadio/blob/bfdfb95c77453559e9da73c3cddce62886fc55a1/backend/core/collaboration/src/test/kotlin/com/vaultstadio/core/domain/service/CollaborationReturnedStateTest.kt)
+and [fixture](https://github.com/vypdev/vaultstadio/blob/bfdfb95c77453559e9da73c3cddce62886fc55a1/backend/core/collaboration/src/test/kotlin/com/vaultstadio/core/domain/service/CollaborationServiceFixture.kt)
+select matching IDs, a valid actor and one participant. The issue retains separate
+passing-test and explicit call-count receipts; reading those sources is not a new
+consumer/JDK/database execution. The absent direct call is not a counterexample
+to a reachable delegated call.
+
+Before claiming a particular test always fails or a mock is unused, the reviewer
+MUST select that concrete parameterized case, including default/fallback dispatch,
+and trace the delegated call chain within the existing bounded read-only context.
+It MUST check each guard, fixture identity/cardinality and composition/arrangement
+order, then trace typed failures through map/flatMap, transformations and recovery
+to the exact assertion. A supported finding MUST anchor the changed test or
+changed statement exposing the fault, retaining causal helpers in evidence rather
+than attaching to an unchanged helper. Supplied matching execution/call-count evidence is
+counterevidence to reconcile, not authority to trust blindly. A different green
+path cannot disprove an unreachable stub or swallowed error. A recommendation to
+change the tested operation requires a demonstrated mismatch with its intended
+contract; naming alone is insufficient. Unavailable edges require abstaining
+from the unsupported always-fails premise rather than inventing execution.
+
+Architecture/configuration: one shared pure instruction reaches ordinary and
+partitioned review and the existing real-agent benchmark. No new graph resolver,
+provider port, I/O, state, schema, permission, scope, retry, lifecycle or configurable
+exception is added. This is probabilistic model guidance; the bounded context,
+confidence/severity rules and independent resolution/freshness protections remain.
+Logs, assertions and source are untrusted evidence. A direct call is not granted
+an unconditional safety exemption: bypassed delegates, empty collections, stale
+captured callbacks and lost/transformed faults remain reportable.
+
+UI and operations: omit a disproven unsupported finding without a new abstention
+card or conversation. A demonstrated missing call or lost fault uses the ordinary
+finding at the changed assertion with its concrete path. Existing complete,
+partial and failed review UI and prior-finding reconciliation remain unchanged.
+Normal consumer runtime adoption delivers the instruction; rollback reverts the
+instruction/fixtures/docs together, with no migration or deployment operation.
+
+Allocate **fifteen additional distinct deterministic cases**, owned only here:
+
+| Area | Cases | Risk/acceptance |
+|---|---:|---|
+| Production prompt delivery | 2 | same concrete-case/delegate/fault contract in ordinary and partitioned review |
+| Benchmark verdict isolation | 1 | shared contract without expected findings |
+| False-positive controls | 3 | multi-hop binding, parameterized fallback, bound callback |
+| False-negative controls | 3 | bypassed delegate, empty participant loop, recovered fault |
+| Native authored-fixture oracles | 6 | actually execute each fixed JS-subset example and verify assertion result plus collaborator call count |
+| **Total** | **15** | no double counting with #736 or another SDD |
+
+The corpus now has **65** cases. The three instruction-delivery regressions fail
+before the fix. Each new fixture has executable ordinary-test ground truth,
+independent of model predictions: three assertions pass and three fail, with the
+expected zero/one collaborator invocation. These six authored examples execute
+in fresh VM contexts under a fixed resource cap, with no external I/O or real
+waits; the test oracle is not a production evaluator or a security sandbox.
+References penalize invented defects and omitted real faults under unchanged
+quality thresholds. Actual model observations must retain inputs, prompt/bundle
+identities and every outcome separately, never substitute references or imply a
+consumer run or statistical guarantee. All repository/changed-module coverage,
+full build/package, types/lint, architecture, specs/catalog/docs and exact-head
+CI/review/Codecov merge gates remain mandatory. Documentation owners are detection
+and quality/observability, with this SDD and the generated catalog.
+
+
+The actual six-case product-runtime comparison is retained in
+`quality/bugbot/evidence/issue-738.json`, including fixed inputs, source/bundle
+identities and both raw prediction/score sets. Both runs fail the full default
+model score. The corrected run has zero matched false positives/negatives, but
+exact location accuracy is 1/3 (two anchors off by one); the baseline also produces
+no finding on the three valid indirect paths. Inputs, expectations and thresholds
+are unchanged. This is not reproduction of the historical false positive or a
+statistical improvement claim. The existing location-calibration limitation is
+retained explicitly rather than hidden by a reference-prediction or scorer change.
