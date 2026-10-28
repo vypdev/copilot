@@ -37469,6 +37469,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.finishGithubAction = finishGithubAction;
+const optional_check_diagnostic_policy_1 = __nccwpck_require__(57922);
 const reply_request_composition_root_1 = __nccwpck_require__(99065);
 const core = __importStar(__nccwpck_require__(75855));
 const application_error_presentation_policy_1 = __nccwpck_require__(95067);
@@ -37532,8 +37533,15 @@ async function finishGithubAction(execution, results, issueNotificationPort, con
         (0, logger_1.logInfo)('Configuration persistence skipped: this single action does not modify execution configuration.');
     }
     const summary = await writeActionSummary(execution, summaryPort, catalogResolver);
-    if (!dryRun)
-        await publishCopilotEvidence(execution, results, summary.text, evidencePort, catalogResolver);
+    const optionalEvidenceDiagnostic = !dryRun ? await publishCopilotEvidence(execution, results, summary.text, evidencePort, catalogResolver) : undefined;
+    if (optionalEvidenceDiagnostic && summaryPort) {
+        try {
+            await summaryPort.publish(optionalEvidenceDiagnostic.text);
+        }
+        catch {
+            (0, logger_1.logInfo)(optionalEvidenceDiagnostic.summaryAppendFailure);
+        }
+    }
     const completionError = firstApplicationError(results)
         ?? bugbotCompletionError(execution, results, dryRun);
     if (completionError)
@@ -37663,13 +37671,16 @@ async function publishCopilotEvidence(execution, results, summary, evidencePort,
     });
     if (!evidence)
         return;
+    const dedicatedToken = process.env.COPILOT_EVIDENCE_TOKEN?.trim();
+    const evidenceToken = dedicatedToken || execution.tokens.token;
     try {
-        const evidenceToken = process.env.COPILOT_EVIDENCE_TOKEN?.trim() || execution.tokens.token;
         await evidencePort.publish(evidence, execution.owner, execution.repo, evidenceToken);
         (0, logger_1.logInfo)(`Published ${evidence.name} Check Run for ${evidence.headSha}.`);
     }
     catch (error) {
-        (0, logger_1.logInfo)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Could not publish the optional GitHub Check Run.').message);
+        const diagnostic = (0, optional_check_diagnostic_policy_1.optionalCheckDiagnostic)(evidence, dedicatedToken ? 'dedicated-evidence-token' : 'action-token-fallback', error, catalog);
+        (0, logger_1.logInfo)(diagnostic);
+        return { text: diagnostic, summaryAppendFailure: catalog.message('summary.optionalEvidenceSummaryUnavailable') };
     }
 }
 function bugbotCompletionError(execution, results, dryRun) {
@@ -39288,6 +39299,23 @@ const SIMPLE_MESSAGE_KEYS = Object.freeze([
     'evidenceActionableFindings', 'evidenceActionableFailures',
     'evidencePartialCoverage', 'evidenceSuperseded', 'evidenceSkipped',
     'evidenceNoActionableResult', 'evidenceCompleted',
+    'optionalEvidenceHeading',
+    'optionalEvidenceImpact',
+    'optionalEvidenceRetained',
+    'optionalEvidenceTechnical',
+    'optionalEvidenceSummaryUnavailable',
+    'optionalEvidenceCredentialInvalid',
+    'optionalEvidenceDenied',
+    'optionalEvidenceRateLimited',
+    'optionalEvidenceNotFound',
+    'optionalEvidenceInvalidTarget',
+    'optionalEvidenceConflict',
+    'optionalEvidenceUnavailable',
+    'optionalEvidenceUnknown',
+    'optionalEvidenceCredentialAction',
+    'optionalEvidenceRateAction',
+    'optionalEvidenceTargetAction',
+    'optionalEvidenceInspectAction',
 ]);
 const TEMPLATE_MESSAGE_IDS = Object.freeze([
     'summary.target.pullRequest',
@@ -39360,6 +39388,23 @@ const ENGLISH_SIMPLE = Object.freeze({
     evidenceSkipped: 'Copilot review was skipped',
     evidenceNoActionableResult: 'Copilot review produced no actionable result',
     evidenceCompleted: 'Copilot completed successfully',
+    optionalEvidenceHeading: "Optional Check Run publication not confirmed",
+    optionalEvidenceImpact: "Impact: Native check status is not confirmed. The workflow result and existing Job Summary remain authoritative.",
+    optionalEvidenceRetained: "Retained state: Required-stage results and completed external effects were preserved. This optional diagnostic does not change workflow success or failure.",
+    optionalEvidenceTechnical: "Check publication details",
+    optionalEvidenceCredentialInvalid: "Cause: GitHub rejected the publication credential.",
+    optionalEvidenceDenied: "Cause: GitHub denied the check publication request. The credential type and exact policy cause are not inferred.",
+    optionalEvidenceRateLimited: "Cause: GitHub reported rate limiting for check publication.",
+    optionalEvidenceNotFound: "Cause: The check target or repository visibility was not available.",
+    optionalEvidenceInvalidTarget: "Cause: The Check Run request or provider response was invalid.",
+    optionalEvidenceConflict: "Cause: GitHub reported a conflict while publishing the check.",
+    optionalEvidenceUnavailable: "Cause: The provider or transport did not confirm check publication. A check may already exist at this head.",
+    optionalEvidenceUnknown: "Cause: No safe provider diagnostic was available. The underlying cause is not established.",
+    optionalEvidenceCredentialAction: "Action: Verify repository access and Checks write permission on the dedicated evidence credential. Generated commit workflows use the step-scoped github.token; keep the product Action token separate. Inspect the exact head before retrying.",
+    optionalEvidenceRateAction: "Action: Follow the provider rate-limit guidance, inspect checks at the exact head, and retry only after the limit clears. No automatic retry was made.",
+    optionalEvidenceTargetAction: "Action: Verify the immutable head, repository access and Check Run request. Inspect existing checks before retrying.",
+    optionalEvidenceInspectAction: "Action: Inspect checks at the exact head and the safe provider reference before retrying. Do not infer an outage or widen product credentials from this warning alone.",
+    optionalEvidenceSummaryUnavailable: "The optional Check Run diagnostic remains in the run log; its Job Summary appendix was not confirmed.",
 });
 const SPANISH_SIMPLE = Object.freeze({
     heading: 'Ejecución de Copilot',
@@ -39410,6 +39455,23 @@ const SPANISH_SIMPLE = Object.freeze({
     evidenceSkipped: 'La revisión de Copilot fue omitida',
     evidenceNoActionableResult: 'La revisión de Copilot no produjo resultados que requieran atención',
     evidenceCompleted: 'Copilot terminó correctamente',
+    optionalEvidenceHeading: "Publicación del Check Run opcional no confirmada",
+    optionalEvidenceImpact: "Impacto: El estado del check nativo no está confirmado. Se conservan el resultado del workflow y el Job Summary existente.",
+    optionalEvidenceRetained: "Estado conservado: Se preservan los resultados de las etapas requeridas y los efectos externos completados. Este diagnóstico opcional no cambia el éxito o fallo del workflow.",
+    optionalEvidenceTechnical: "Detalles de la publicación del check",
+    optionalEvidenceCredentialInvalid: "Causa: GitHub rechazó la credencial de publicación.",
+    optionalEvidenceDenied: "Causa: GitHub denegó la publicación del check. No se infieren el tipo de credencial ni la política concreta que la denegó.",
+    optionalEvidenceRateLimited: "Causa: GitHub notificó un límite de peticiones para la publicación del check.",
+    optionalEvidenceNotFound: "Causa: El destino del check o la visibilidad del repositorio no estaba disponible.",
+    optionalEvidenceInvalidTarget: "Causa: La petición del Check Run o la respuesta del proveedor no era válida.",
+    optionalEvidenceConflict: "Causa: GitHub notificó un conflicto al publicar el check.",
+    optionalEvidenceUnavailable: "Causa: El proveedor o el transporte no confirmó la publicación del check. Puede que ya exista un check para este head.",
+    optionalEvidenceUnknown: "Causa: No hay un diagnóstico seguro del proveedor. La causa subyacente no está demostrada.",
+    optionalEvidenceCredentialAction: "Acción: Comprueba el acceso al repositorio y el permiso Checks write de la credencial de evidencia dedicada. Los workflows de commits generados usan github.token limitado al paso; conserva separado el token de las operaciones de la Action. Inspecciona el head exacto antes de reintentar.",
+    optionalEvidenceRateAction: "Acción: Sigue las indicaciones del límite del proveedor, inspecciona los checks del head exacto y reintenta cuando termine el límite. No se ha reintentado automáticamente.",
+    optionalEvidenceTargetAction: "Acción: Verifica el head inmutable, el acceso al repositorio y la petición del Check Run. Inspecciona los checks existentes antes de reintentar.",
+    optionalEvidenceInspectAction: "Acción: Inspecciona los checks del head exacto y la referencia segura del proveedor antes de reintentar. Este aviso por sí solo no demuestra una caída ni justifica ampliar las credenciales de las operaciones.",
+    optionalEvidenceSummaryUnavailable: "El diagnóstico del Check Run opcional se conserva en el log; no se confirmó su anexo al Job Summary.",
 });
 const ENGLISH_TEMPLATES = Object.freeze({
     'summary.target.pullRequest': 'PR #{number}',
@@ -46764,6 +46826,45 @@ function record(value) {
 
 /***/ }),
 
+/***/ 57922:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.optionalCheckDiagnostic = optionalCheckDiagnostic;
+const git_object_id_1 = __nccwpck_require__(88623);
+const copilot_evidence_error_1 = __nccwpck_require__(10127);
+const CAUSES = Object.freeze({
+    'authorization.credential-invalid': 'optionalEvidenceCredentialInvalid',
+    'authorization.denied': 'optionalEvidenceDenied',
+    'provider.rate-limited': 'optionalEvidenceRateLimited',
+    'provider.not-found': 'optionalEvidenceNotFound',
+    'provider.contract-invalid': 'optionalEvidenceInvalidTarget',
+    'provider.conflict': 'optionalEvidenceConflict',
+    'provider.unavailable': 'optionalEvidenceUnavailable',
+    unexpected: 'optionalEvidenceUnknown',
+});
+/** No raw exception text is inspected here. An unadapted failure stays explicitly unknown. */
+function optionalCheckDiagnostic(evidence, route, error, catalog) {
+    const failure = error instanceof copilot_evidence_error_1.CopilotEvidencePublicationError ? error : new copilot_evidence_error_1.CopilotEvidencePublicationError('unexpected');
+    const name = ['Copilot / Plan', 'Copilot / Review', 'Copilot / Verification'].includes(evidence.name) ? evidence.name : catalog.message('summary.unavailable');
+    const head = (0, git_object_id_1.canonicalGitObjectId)(evidence.headSha) ?? catalog.message('summary.unavailable');
+    const action = failure.code.startsWith('authorization.') ? 'optionalEvidenceCredentialAction'
+        : failure.code === 'provider.rate-limited' ? 'optionalEvidenceRateAction'
+            : failure.code === 'provider.not-found' || failure.code === 'provider.contract-invalid' ? 'optionalEvidenceTargetAction' : 'optionalEvidenceInspectAction';
+    const message = (key) => catalog.message(`summary.${key}`);
+    const technical = `operation=checks.create; check=${name}; head=${head}; credential-route=${route}; error=${failure.code}; status=${failure.status ?? 'unavailable'}; request=${failure.providerReference ?? 'unavailable'}`;
+    return [
+        `### ${message('optionalEvidenceHeading')}`,
+        message('optionalEvidenceImpact'), message(CAUSES[failure.code]), message(action), message('optionalEvidenceRetained'),
+        `<details><summary>${message('optionalEvidenceTechnical')}</summary>`, '', `\`${technical}\``, '', '</details>',
+    ].join('\n\n');
+}
+
+
+/***/ }),
+
 /***/ 33167:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -52665,6 +52766,34 @@ class ChangeSizeProviderError extends application_error_1.ApplicationError {
     }
 }
 exports.ChangeSizeProviderError = ChangeSizeProviderError;
+
+
+/***/ }),
+
+/***/ 10127:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CopilotEvidencePublicationError = exports.COPILOT_EVIDENCE_FAILURE_CODES = void 0;
+exports.COPILOT_EVIDENCE_FAILURE_CODES = Object.freeze([
+    'authorization.credential-invalid', 'authorization.denied', 'provider.rate-limited',
+    'provider.not-found', 'provider.contract-invalid', 'provider.conflict', 'provider.unavailable', 'unexpected',
+]);
+/** Closed provider facts. Neither SDK bodies, credentials nor the original exception cross this port. */
+class CopilotEvidencePublicationError extends Error {
+    constructor(code, status, providerReference) {
+        super('Optional Check Run publication was not confirmed.');
+        this.name = 'CopilotEvidencePublicationError';
+        this.code = exports.COPILOT_EVIDENCE_FAILURE_CODES.includes(code) ? code : 'unexpected';
+        this.status = typeof status === 'number' && Number.isInteger(status) && status >= 100 && status <= 599 ? status : undefined;
+        this.providerReference = typeof providerReference === 'string' && providerReference.length <= 64
+            && /^[a-f0-9]+(?::[a-f0-9]+){1,7}$/iu.test(providerReference) ? providerReference : undefined;
+        Object.freeze(this);
+    }
+}
+exports.CopilotEvidencePublicationError = CopilotEvidencePublicationError;
 
 
 /***/ }),
@@ -74826,30 +74955,37 @@ function requireCompletePage(page, seen) {
 /***/ }),
 
 /***/ 92351:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CopilotEvidenceRepository = void 0;
-/** GitHub adapter for native Check Runs. Failures are surfaced to the caller for safe fallback handling. */
+const copilot_evidence_error_1 = __nccwpck_require__(10127);
+const copilot_evidence_provider_failure_1 = __nccwpck_require__(55920);
+/** Native Check Runs with a closed, credential-free failure boundary. No automatic write retry. */
 class CopilotEvidenceRepository {
     constructor(client) {
         this.client = client;
     }
     async publish(evidence, owner, repository, token) {
-        await this.client.getClient(token).rest.checks.create({
-            owner,
-            repo: repository,
-            name: evidence.name,
-            head_sha: evidence.headSha,
-            status: 'completed',
-            conclusion: evidence.conclusion,
-            output: {
-                title: evidence.title,
-                summary: evidence.summary,
-            },
-        });
+        try {
+            const response = await this.client.getClient(token).rest.checks.create({
+                owner,
+                repo: repository,
+                name: evidence.name,
+                head_sha: evidence.headSha,
+                status: 'completed',
+                conclusion: evidence.conclusion,
+                output: { title: evidence.title, summary: evidence.summary },
+            });
+            if (!Number.isSafeInteger(response?.data?.id) || response.data.id <= 0) {
+                throw new copilot_evidence_error_1.CopilotEvidencePublicationError('provider.contract-invalid');
+            }
+        }
+        catch (error) {
+            throw (0, copilot_evidence_provider_failure_1.copilotEvidenceProviderFailure)(error, token);
+        }
     }
 }
 exports.CopilotEvidenceRepository = CopilotEvidenceRepository;
@@ -76129,6 +76265,42 @@ async function withChangeSizeProviderFailure(perform) {
     }
 }
 function object(value) {
+    return typeof value === 'object' && value !== null && !Array.isArray(value) ? value : {};
+}
+
+
+/***/ }),
+
+/***/ 55920:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.copilotEvidenceProviderFailure = copilotEvidenceProviderFailure;
+const copilot_evidence_error_1 = __nccwpck_require__(10127);
+const github_error_policy_1 = __nccwpck_require__(58791);
+/** Read selected SDK metadata once; discard the provider exception instead of retaining a private cause. */
+function copilotEvidenceProviderFailure(cause, credential) {
+    if (cause instanceof copilot_evidence_error_1.CopilotEvidencePublicationError)
+        return cause;
+    const error = record(cause), response = record(error.response), headers = record(response.headers ?? error.headers);
+    const status = [error.status, response.status].find(value => typeof value === 'number' && Number.isInteger(value) && value >= 100 && value <= 599);
+    const key = Object.keys(headers).find(name => name.toLowerCase() === 'x-github-request-id');
+    const reference = key ? headers[key] : undefined;
+    const safeReference = typeof reference === 'string' && credential.length > 0 && reference.includes(credential) ? undefined : reference;
+    const code = (0, github_error_policy_1.isGithubRateLimited)({ status, response: { headers }, message: error.message }) ? 'provider.rate-limited'
+        : status === 401 ? 'authorization.credential-invalid'
+            : status === 403 ? 'authorization.denied'
+                : status === 404 ? 'provider.not-found'
+                    : status === 400 || status === 422 ? 'provider.contract-invalid'
+                        : status === 409 || status === 412 ? 'provider.conflict'
+                            : status === 408 || typeof status === 'number' && status >= 500
+                                || ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'EAI_AGAIN'].includes(error.code)
+                                ? 'provider.unavailable' : 'unexpected';
+    return new copilot_evidence_error_1.CopilotEvidencePublicationError(code, status, safeReference);
+}
+function record(value) {
     return typeof value === 'object' && value !== null && !Array.isArray(value) ? value : {};
 }
 

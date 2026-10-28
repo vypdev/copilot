@@ -1062,6 +1062,30 @@
         }
       ],
       "successMessage": "authoritative branch advisory relationships: PASS (100% lines/statements/functions/branches)"
+    },
+    {
+      "name": "Optional Check Run publication diagnostics",
+      "missingEntryLabel": "optional Check Run publication diagnostics",
+      "rules": [
+        {
+          "files": [
+            "src/application/ports/copilot_evidence_error.ts",
+            "src/application/policies/optional_check_diagnostic_policy.ts",
+            "src/data/repository/github/copilot_evidence_provider_failure.ts",
+            "src/data/repository/copilot_evidence_repository.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/actions/github_action_completion.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "optional Check Run diagnostics: PASS (closed boundary/presentation/adapter100%; completion95/90)"
     }
   ]
 }

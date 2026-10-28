@@ -142,3 +142,41 @@ inputs.
 - **[Assignees and projects](/issues/assignees-and-projects)** — Member assignment and project linking.
 - **[Branch management](/issues/branch-management)** — When and how branches are created.
 - **[Examples](/issues/examples)** — Full workflow YAML examples.
+
+
+## Credential for optional native Checks
+
+Keep the product Action token separate from optional Check Run publication.
+Generated commit workflows use the short-lived native token only on the step
+that consumes it:
+
+```yaml
+jobs:
+  copilot-commits:
+    permissions:
+      checks: write
+      contents: read
+    steps:
+      - uses: vypdev/copilot@v3
+        with:
+          token: ${{ secrets.PAT }}
+        env:
+          COPILOT_EVIDENCE_TOKEN: ${{ github.token }}
+```
+
+The Action trims a nonempty `COPILOT_EVIDENCE_TOKEN` and uses it only for native
+Check Runs. An absent/blank value preserves the configured Action token fallback.
+The fallback route does not reveal whether that credential supports Checks.
+Use the supported GitHub App/native Actions token route with Checks write and
+repository access; do not assume a generic PAT works or broaden the product
+token based on a warning. See [GitHub's current Checks credential contract](https://docs.github.com/en/rest/checks/runs?apiVersion=2026-03-10).
+
+Existing preserved consumer workflows require their normal reviewed maintenance
+update to adopt the mapping; this fix does not edit consumer repositories or
+promote a runtime release. Other jobs are not granted additional permissions
+without a need. Events without a verified eligible head still publish no check.
+
+If publication is unconfirmed, inspect the exact check/head and safe provider
+cause in the run log and Job Summary. Permission rejection, rate limiting,
+invalid target and transport failures have distinct guidance. Unknown causes
+remain unknown. The optional warning never replaces the actual workflow result.

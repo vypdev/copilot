@@ -677,7 +677,9 @@ describe('finishGithubAction', () => {
             { publish: mockSummaryPublish },
         )).resolves.toBeUndefined();
 
-        expect(mockSummaryPublish).toHaveBeenCalledTimes(1);
+        expect(mockSummaryPublish).toHaveBeenCalledTimes(2);
+        expect(mockSummaryPublish.mock.calls[1][0]).toContain('operation=checks.create');
+        expect(mockSummaryPublish.mock.calls[1][0]).toContain('underlying cause is not established');
         expect(mockEvidencePublish).toHaveBeenCalledTimes(1);
         expect(core.setFailed).not.toHaveBeenCalled();
     });

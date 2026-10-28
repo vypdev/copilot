@@ -1142,7 +1142,7 @@ numeric fallback and instructs the operator to inspect the producing run.
 | Human unresolves resolved thread | Aggregate awaits verification | Native thread is open | Mark verification-required next run | `/copilot recheck` | Agent verifies |
 | Review status block update fails | Old review looks stale | Finding/thread and final projection retained | Continue status-card/check publication | `/copilot recheck` | Idempotent block replacement |
 | Status card update fails | Primary PR view stale/missing | Findings and review blocks retained | Check and Job Summary fail as partial | Correct permission/rate limit, rerun | Upsert same marker |
-| Check publication fails | PR comments may be correct | Final projection retained | Existing optional-check behavior logs failure; Job Summary remains | Inspect token if Check is required | Retry run |
+| Check publication unconfirmed | PR comments may be correct | Required result, final projection and completed effects retained | Closed localized diagnostic in log and Summary appendix; no automatic retry | Inspect exact head and named safe cause/credential route | Check whether the native write already exists before replay |
 | Secondary rate limit | Some presentation updates pending | Completed provider writes retained | Honor `Retry-After`, bounded retry, then partial | Rerun after advised time | Continue from digest mismatch |
 | Duplicate status cards | Confusing duplicate current views | All comments retained | Select oldest trusted canonical; rewrite extras as redirects | None unless ownership ambiguous | Never delete automatically |
 | Token identity changed | Old bot content cannot be trusted/mutated | Historical GitHub record retained | Create new current card under new identity; report orphaned projections | Operator reviews migration | No implicit cross-author adoption |
@@ -1925,3 +1925,9 @@ fixture as one inert code span. Add **six distinct cases** to this SDD's budget:
 four domain collision/order/replay/reservation cases, one publication-to-projection
 two-thread replay and one Markdown-injection case. Existing coverage thresholds
 and all publication, identity and recovery rules remain required.
+
+
+Optional Check Run failures use the shared [#728 diagnostic contract](./optional-check-run-diagnostics.md).
+This does not alter review findings, protected-path approval, check identity or
+completion authority. A failed optional projection never masks an earlier
+required error or turns required success into failure.

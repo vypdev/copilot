@@ -601,9 +601,9 @@ function assertNoJobLevelSecrets(file, workflow) {
 function assertAgentWorkflowPermissions(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (!WORKFLOW_AGENT_ROLES[path.basename(file)]) return;
-  const reviewEvidenceWorkflow = ['copilot_pull_request.yml', 'copilot_pull_request_review_state.yml',
+  const nativeEvidenceWorkflow = ['copilot_commit.yml', 'copilot_pull_request.yml', 'copilot_pull_request_review_state.yml',
     'copilot_issue_comment.yml', 'copilot_pull_request_comment.yml', 'copilot_comment_runtime.yml'].includes(path.basename(file));
-  const expectedPermissions = reviewEvidenceWorkflow
+  const expectedPermissions = nativeEvidenceWorkflow
     ? { checks: 'write', contents: 'read' }
     : { contents: 'read' };
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
@@ -619,9 +619,9 @@ function assertAgentWorkflowPermissions(file, workflow) {
       assertCommentWorkflowCaller(file, workflow);
       continue;
     }
-    if (reviewEvidenceWorkflow && !(job.steps ?? []).some(step =>
+    if (nativeEvidenceWorkflow && !(job.steps ?? []).some(step =>
       isCopilotAction(step) && step?.env?.COPILOT_EVIDENCE_TOKEN === '${{ github.token }}')) {
-      throw new Error(`${relativeFile} job ${jobId} must scope COPILOT_EVIDENCE_TOKEN to the Action step for exact-head review Checks.`);
+      throw new Error(`${relativeFile} job ${jobId} must scope COPILOT_EVIDENCE_TOKEN to the Action step for exact-head native Checks.`);
     }
   }
 }

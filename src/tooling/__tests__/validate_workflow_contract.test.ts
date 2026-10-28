@@ -1753,3 +1753,31 @@ describe('closed issue workflow admission contract', () => {
     expect(() => assertQueueWorkflow(file, workflow)).toThrow('required bot actor');
   });
 });
+
+
+describe('optional commit Check Run credential route', () => {
+  it.each(['.github/workflows', 'setup/workflows'])('pins the short-lived evidence credential only to the consuming step in %s', directory => {
+    const { file, workflow } = loadMutationWorkflow(directory, 'copilot_commit.yml');
+    expect(() => assertAgentWorkflowPermissions(file, workflow)).not.toThrow();
+    const job = workflow.jobs['copilot-commits'];
+    expect(job.permissions).toEqual({ checks: 'write', contents: 'read' });
+    expect(job.env?.COPILOT_EVIDENCE_TOKEN).toBeUndefined();
+    const action = job.steps.find((step: any) => step.env?.COPILOT_EVIDENCE_TOKEN);
+    expect(action.env.COPILOT_EVIDENCE_TOKEN).toBe('${{ github.token }}');
+    expect(action.with.token).toBe('${{ secrets.PAT }}');
+    expect(job.steps.filter((step: any) => step.env?.COPILOT_EVIDENCE_TOKEN)).toHaveLength(1);
+  });
+  it.each([{ contents: 'read' }, { contents: 'write', checks: 'write' }, { contents: 'read', checks: 'write', issues: 'write' }])('rejects absent or overbroad native token permissions %#', permissions => {
+    const { file, workflow } = loadMutationWorkflow('setup/workflows', 'copilot_commit.yml');
+    workflow.jobs['copilot-commits'].permissions = permissions;
+    expect(() => assertAgentWorkflowPermissions(file, workflow)).toThrow('must grant GITHUB_TOKEN exactly');
+  });
+  it.each(['absent', 'other step', 'product PAT'])('rejects a %s evidence-token mapping', route => {
+    const { file, workflow } = loadMutationWorkflow('setup/workflows', 'copilot_commit.yml');
+    const job = workflow.jobs['copilot-commits'], action = job.steps.find((step: any) => step.env?.COPILOT_EVIDENCE_TOKEN);
+    delete action.env.COPILOT_EVIDENCE_TOKEN;
+    if (route === 'other step') job.steps.push({ run: 'true', env: { COPILOT_EVIDENCE_TOKEN: '${{ github.token }}' } });
+    if (route === 'product PAT') action.env.COPILOT_EVIDENCE_TOKEN = '${{ secrets.PAT }}';
+    expect(() => assertAgentWorkflowPermissions(file, workflow)).toThrow('must scope COPILOT_EVIDENCE_TOKEN');
+  });
+});

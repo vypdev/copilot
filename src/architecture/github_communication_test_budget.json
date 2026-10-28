@@ -7,7 +7,7 @@
       "id": "semantic-github-publication",
       "spec": "specs/semantic-github-publication-and-notification.md",
       "requiredCases": 135,
-      "allocatedCases": 543,
+      "allocatedCases": 577,
       "files": [
         {
           "path": "src/domain/__tests__/github_publication.test.ts",
@@ -215,6 +215,26 @@
         },
         {
           "path": "src/infrastructure/composition/__tests__/progress_comparison_binding.test.ts",
+          "qualifyingCases": 1
+        },
+        {
+          "path": "src/application/policies/__tests__/optional_check_diagnostic_policy.test.ts",
+          "qualifyingCases": 10
+        },
+        {
+          "path": "src/data/repository/__tests__/copilot_evidence_failure.test.ts",
+          "qualifyingCases": 11
+        },
+        {
+          "path": "src/actions/__tests__/optional_check_completion.test.ts",
+          "qualifyingCases": 9
+        },
+        {
+          "path": "src/tooling/__tests__/validate_workflow_contract.test.ts",
+          "qualifyingCases": 3
+        },
+        {
+          "path": "src/architecture/__tests__/raw_error_logging_boundaries.test.ts",
           "qualifyingCases": 1
         }
       ]
