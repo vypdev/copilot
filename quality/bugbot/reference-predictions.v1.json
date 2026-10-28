@@ -71,6 +71,48 @@
     "action-input-contract-unavailable": [],
     "action-undeclared-matcher-alias": [{"id": "action-undeclared-matcher-alias-fault", "title": "Undeclared alias leaves the failing matcher enabled", "file": ".github/actions/publish-package/action.yml", "line": 22, "severity": "medium", "category": "reliability", "symbol": "Publish package", "codeSnippet": "enable-problem-matcher: false", "confidence": 0.98}],
     "action-old-input-on-new-version": [{"id": "action-old-input-on-new-version-fault", "title": "Old-version input does not disable the selected revision matcher", "file": ".github/actions/publish-package/action.yml", "line": 22, "severity": "medium", "category": "reliability", "symbol": "Publish package", "codeSnippet": "problem-matcher: false", "confidence": 0.98}],
-    "action-declared-input-wrong-value": [{"id": "action-declared-input-wrong-value-fault", "title": "Off is not the runtime disabling value", "file": ".github/actions/publish-package/action.yml", "line": 22, "severity": "medium", "category": "reliability", "symbol": "Publish package", "codeSnippet": "problem-matcher: 'off'", "confidence": 0.98}]
+    "action-declared-input-wrong-value": [{"id": "action-declared-input-wrong-value-fault", "title": "Off is not the runtime disabling value", "file": ".github/actions/publish-package/action.yml", "line": 22, "severity": "medium", "category": "reliability", "symbol": "Publish package", "codeSnippet": "problem-matcher: 'off'", "confidence": 0.98}],
+    "kt-email-unicode-empty-label-guard": [],
+    "ts-email-caller-empty-label-guard": [],
+    "ts-email-normalization-before-guard": [],
+    "ts-email-existential-label-defect": [
+      {
+        "id": "ts-email-existential-label-defect-fault",
+        "title": "An existential predicate admits an empty domain label",
+        "file": "auth/register.ts",
+        "line": 5,
+        "severity": "low",
+        "category": "correctness",
+        "symbol": "valid",
+        "codeSnippet": "return labels.length >= 2 && labels.some(label => label.length > 0);",
+        "confidence": 0.98
+      }
+    ],
+    "ts-email-ignored-validator-result": [
+      {
+        "id": "ts-email-ignored-validator-result-fault",
+        "title": "Discarded validation failure still reaches persistence",
+        "file": "auth/register.ts",
+        "line": 11,
+        "severity": "medium",
+        "category": "correctness",
+        "symbol": "registerIgnoredResult",
+        "codeSnippet": "valid(checked);",
+        "confidence": 0.98
+      }
+    ],
+    "ts-email-normalization-after-guard": [
+      {
+        "id": "ts-email-normalization-after-guard-fault",
+        "title": "Normalization creates an empty label after validation",
+        "file": "auth/register.ts",
+        "line": 12,
+        "severity": "medium",
+        "category": "correctness",
+        "symbol": "registerNormalizedLate",
+        "codeSnippet": "const stored = domain.normalize('NFKC');",
+        "confidence": 0.98
+      }
+    ]
   }
 }

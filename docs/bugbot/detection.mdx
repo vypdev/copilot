@@ -7,6 +7,26 @@ description: When Bugbot runs, where findings appear, severity, comment limit, a
 
 This page describes **when** Bugbot runs, **where** findings are published, and how **severity**, **comment limit**, and **resolved findings** work.
 
+## Exact validation witnesses
+
+Before reporting that a validator accepts an invalid value, Bugbot must trace
+that exact value through the caller, transformations, early returns and every
+relevant predicate to its effect. Unicode code points and separators remain
+exact. An empty domain label rejected by `all { it.isNotBlank() }` cannot become
+an accepted value merely because another label contains an invisible character.
+
+A rejected witness disproves that acceptance claim. A different input that
+actually reaches an unsafe effect still needs its own proof. Supported inputs,
+such as plus-tag email addresses, must not be rejected to satisfy an invented
+stricter-character or deliverability policy. Source reasoning and actual matching
+execution are different evidence; neither a fabricated run nor an unrelated green
+test establishes the path. Ignored validation returns, permissive predicates and
+normalization after validation remain actionable when they demonstrate a failure.
+
+This generic guidance adds no character whitelist or automatic finding filter.
+Existing findings need normal verification against current source; no claim of
+guaranteed model accuracy or consumer runtime adoption follows from these tests.
+
 ## External Action input evidence
 
 Before calling a GitHub Action input unrecognized or suggesting another key,

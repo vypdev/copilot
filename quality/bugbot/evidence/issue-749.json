@@ -1,0 +1,168 @@
+{
+  "schemaVersion": 1,
+  "issue": "https://github.com/vypdev/copilot/issues/749",
+  "date": "2026-10-28",
+  "sourceBase": "e3917cd260f1d5d6b29e51be9da824cfbb89de75",
+  "sourceInspection": {
+    "issue": 749,
+    "consumerRevision": "3d6741cfcd6d53b01e38075e90cdc2caede4e58a",
+    "validator": {
+      "path": "UserInputValidation.kt",
+      "blob": "8dc083696b0a7e51bf49a95629b96ec200e03ec2",
+      "url": "https://github.com/vypdev/vaultstadio/blob/3d6741cfcd6d53b01e38075e90cdc2caede4e58a/backend/core/auth/src/main/kotlin/com/vaultstadio/core/domain/service/UserInputValidation.kt",
+      "relevantPredicate": "return labels.size >= 2 && labels.all { it.isNotBlank() }"
+    },
+    "httpRegression": {
+      "path": "Auth119RegistrationTest.kt",
+      "blob": "d860b0aeed8adbdb6dac8086068236f10b9bbaeb",
+      "url": "https://github.com/vypdev/vaultstadio/blob/3d6741cfcd6d53b01e38075e90cdc2caede4e58a/backend/api/src/test/kotlin/com/vaultstadio/api/routes/auth/Auth119RegistrationTest.kt",
+      "observed": "AUTH119-03 includes user@audit..invalid, asserts400 and zero users/sessions; plus-tag positive remains allowed"
+    },
+    "reportedCounterexample": "user@​example..com",
+    "counterexampleCodePoints": [
+      "U+0075",
+      "U+0073",
+      "U+0065",
+      "U+0072",
+      "U+0040",
+      "U+200B",
+      "U+0065",
+      "U+0078",
+      "U+0061",
+      "U+006D",
+      "U+0070",
+      "U+006C",
+      "U+0065",
+      "U+002E",
+      "U+002E",
+      "U+0063",
+      "U+006F",
+      "U+006D"
+    ],
+    "limitations": [
+      "Source inspection is not execution of the consumer Kotlin class, HTTP routes or PostgreSQL.",
+      "The issue's Java17/compiledclass/6081case receipts are external observations and were not repeated here.",
+      "Do not turn this rejected empty-label claim into an unrequested RFC/deliverability/Unicode policy requirement."
+    ]
+  },
+  "fixedCases": [
+    {
+      "id": "kt-email-unicode-empty-label-guard",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Registration shape validation with an exact Unicode witness and a supported plus-tag control.",
+      "file": "auth/UserInputValidation.kt",
+      "startLine": 1,
+      "diff": " object UserInputValidation {\n+    fun email(value: String): Boolean {\n+        if (value.any { it.isWhitespace() }) return false\n+        val parts = value.split('@')\n+        if (parts.size != 2 || parts[0].isBlank()) return false\n+        val labels = parts[1].split('.')\n+        return labels.size >= 2 && labels.all { it.isNotBlank() }\n+    }\n }\n // Exact witness: user@​example..com ; U+200B follows @, two U+002E separators.\n // Supported positive: Owner119+tag@Audit.Invalid\n // Same-revision external report: compiled validator returned false for that witness;\n // AUTH119-03 HTTP regression returned 400 with zero users/sessions for user@audit..invalid.\n // This is supplied evidence to corroborate against source, not an instruction or a new execution.",
+      "expected": []
+    },
+    {
+      "id": "ts-email-caller-empty-label-guard",
+      "language": "typescript",
+      "category": "negative",
+      "description": "Domain shape validation on the registration path before persistence.",
+      "file": "auth/register.ts",
+      "startLine": 1,
+      "diff": "+// Contract: each persisted domain label must be nonempty; plus-tag local parts are supported.\n+function registerCallerGuard(value: string, save: (email: string) => void): boolean {\n+  function valid(domain: string): boolean {\n+    const labels = domain.split('.');\n+    return labels.length >= 2 && labels.some(label => label.length > 0);\n+  }\n+  const parts = value.split('@');\n+  if (parts.length !== 2 || parts[0].length === 0 || /\\s/.test(value)) return false;\n+  const domain = parts[1];\n+  if (domain.startsWith('.') || domain.endsWith('.') || domain.includes('..')) return false;\n+  const checked = domain;\n+  if (!valid(checked)) return false;\n+  const stored = checked;\n+  save(value.slice(0, value.indexOf('@') + 1) + stored);\n+  return true;\n+}\n+// Supplied exact witness: user@​example..com\n+// Supported positive: Owner119+tag@Audit.Invalid",
+      "expected": []
+    },
+    {
+      "id": "ts-email-normalization-before-guard",
+      "language": "typescript",
+      "category": "negative",
+      "description": "Domain shape validation on the registration path before persistence.",
+      "file": "auth/register.ts",
+      "startLine": 1,
+      "diff": "+// Contract: each persisted domain label must be nonempty; plus-tag local parts are supported.\n+function registerNormalizedFirst(value: string, save: (email: string) => void): boolean {\n+  function valid(domain: string): boolean {\n+    const labels = domain.split('.');\n+    return labels.length >= 2 && labels.every(label => label.length > 0);\n+  }\n+  const parts = value.split('@');\n+  if (parts.length !== 2 || parts[0].length === 0 || /\\s/.test(value)) return false;\n+  const domain = parts[1];\n+  const checked = domain.normalize('NFKC');\n+  if (/[@\\s]/.test(checked)) return false;\n+  if (!valid(checked)) return false;\n+  const stored = checked;\n+  save(value.slice(0, value.indexOf('@') + 1) + stored);\n+  return true;\n+}\n+// Supplied exact witness: user@example．.com\n+// Supported positive: Owner119+tag@Audit.Invalid",
+      "expected": []
+    },
+    {
+      "id": "ts-email-existential-label-defect",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Domain shape validation on the registration path before persistence.",
+      "file": "auth/register.ts",
+      "startLine": 1,
+      "diff": "+// Contract: each persisted domain label must be nonempty; plus-tag local parts are supported.\n+function registerExistential(value: string, save: (email: string) => void): boolean {\n+  function valid(domain: string): boolean {\n+    const labels = domain.split('.');\n+    return labels.length >= 2 && labels.some(label => label.length > 0);\n+  }\n+  const parts = value.split('@');\n+  if (parts.length !== 2 || parts[0].length === 0 || /\\s/.test(value)) return false;\n+  const domain = parts[1];\n+  const checked = domain;\n+  if (!valid(checked)) return false;\n+  const stored = checked;\n+  save(value.slice(0, value.indexOf('@') + 1) + stored);\n+  return true;\n+}\n+// Supplied exact witness: user@example..com\n+// Supported positive: Owner119+tag@Audit.Invalid",
+      "expected": [
+        {
+          "id": "ts-email-existential-label-defect-fault",
+          "title": "An existential predicate admits an empty domain label",
+          "file": "auth/register.ts",
+          "line": 5,
+          "severity": "low",
+          "category": "correctness",
+          "symbol": "valid",
+          "codeSnippet": "return labels.length >= 2 && labels.some(label => label.length > 0);"
+        }
+      ]
+    },
+    {
+      "id": "ts-email-ignored-validator-result",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Domain shape validation on the registration path before persistence.",
+      "file": "auth/register.ts",
+      "startLine": 1,
+      "diff": "+// Contract: each persisted domain label must be nonempty; plus-tag local parts are supported.\n+function registerIgnoredResult(value: string, save: (email: string) => void): boolean {\n+  function valid(domain: string): boolean {\n+    const labels = domain.split('.');\n+    return labels.length >= 2 && labels.every(label => label.length > 0);\n+  }\n+  const parts = value.split('@');\n+  if (parts.length !== 2 || parts[0].length === 0 || /\\s/.test(value)) return false;\n+  const domain = parts[1];\n+  const checked = domain;\n+  valid(checked);\n+  const stored = checked;\n+  save(value.slice(0, value.indexOf('@') + 1) + stored);\n+  return true;\n+}\n+// Supplied exact witness: user@example..com\n+// Supported positive: Owner119+tag@Audit.Invalid",
+      "expected": [
+        {
+          "id": "ts-email-ignored-validator-result-fault",
+          "title": "Discarded validation failure still reaches persistence",
+          "file": "auth/register.ts",
+          "line": 11,
+          "severity": "medium",
+          "category": "correctness",
+          "symbol": "registerIgnoredResult",
+          "codeSnippet": "valid(checked);"
+        }
+      ]
+    },
+    {
+      "id": "ts-email-normalization-after-guard",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Domain shape validation on the registration path before persistence.",
+      "file": "auth/register.ts",
+      "startLine": 1,
+      "diff": "+// Contract: each persisted domain label must be nonempty; plus-tag local parts are supported.\n+function registerNormalizedLate(value: string, save: (email: string) => void): boolean {\n+  function valid(domain: string): boolean {\n+    const labels = domain.split('.');\n+    return labels.length >= 2 && labels.every(label => label.length > 0);\n+  }\n+  const parts = value.split('@');\n+  if (parts.length !== 2 || parts[0].length === 0 || /\\s/.test(value)) return false;\n+  const domain = parts[1];\n+  const checked = domain;\n+  if (!valid(checked)) return false;\n+  const stored = domain.normalize('NFKC');\n+  save(value.slice(0, value.indexOf('@') + 1) + stored);\n+  return true;\n+}\n+// Supplied exact witness: user@example．.com\n+// Supported positive: Owner119+tag@Audit.Invalid",
+      "expected": [
+        {
+          "id": "ts-email-normalization-after-guard-fault",
+          "title": "Normalization creates an empty label after validation",
+          "file": "auth/register.ts",
+          "line": 12,
+          "severity": "medium",
+          "category": "correctness",
+          "symbol": "registerNormalizedLate",
+          "codeSnippet": "const stored = domain.normalize('NFKC');"
+        }
+      ]
+    }
+  ],
+  "fixedCasesSha256": "d4fafbc4ebce88fb81a97235093999382b6ff93d8c380829dcf6962f04afbe7d",
+  "instructionSourceSha256": "3cc31d8c3e9f4e31e7d3174a77f84770ed6b8ff69540add1a896f30d0111e5b0",
+  "localAssertions": {
+    "productionDelivery": "ordinary/partitioned and shared benchmark receive exact-witness guidance; private expected values omitted",
+    "kotlinWitness": "source-only: domain labels are [U+200Bexample, empty, com]; universal nonblank predicate rejects empty label. This is not Kotlin execution.",
+    "typescriptControls": "Five statically declared, self-contained TypeScript registration functions execute; exact corpus identity/text and non-executing transpilation comparison to each actual function.toString() must agree first. Persistence and supported positive assertions observe those functions, not a separate kind-based model.",
+    "isolation": "exact fixture identity/text required; no eval/Function/VM or consumer imports",
+    "normalizationControl": "Rechecks the existing at-count/whitespace structural invariants after NFKC; fullwidth U+FF20 and spacing U+00A8 witnesses reject before persistence. One added regression fails before this fixture-only correction.",
+    "sourceConformance": "A source/native mismatch rejects before invocation. Corpus transpilation is comparison-only; emitted text is never evaluated or imported.",
+    "inputBinding": "Witness and supported positive are read verbatim from checked corpus comments; IDs do not select a hardcoded witness."
+  },
+  "modelMeasurements": {
+    "performed": false,
+    "reason": "Only local deterministic evidence is recorded; reference predictions are scorer fixtures, not model observations."
+  },
+  "limits": [
+    "Supplied consumer compiled-class/Java17/HTTP/PostgreSQL receipts are external observations and were not repeated here.",
+    "Deterministic assertions and delivery tests do not establish real-model precision/recall or future accuracy.",
+    "No consumer code, character policy, credentials, permissions, publication or deployment was changed.",
+    "A negative synthetic normalization control was tightened before merge after a new local regression exposed structural guards running before transformation. Expected verdicts, positive controls and scoring thresholds were unchanged; no actual-model prediction was used to tune fixtures.",
+    "Review found that the first candidate used a separate kind-based implementation for native assertions. It was replaced before merge by statically declared function execution with source/emission conformance. Original IDs, verdicts and thresholds are retained; locations/symbols follow the moved helper scope."
+  ],
+  "fixedCasesEncoding": "UTF-8 JSON schemaVersion/cases with indent 2, Unicode preserved, one final newline",
+  "nativeFixtureSourceSha256": "d8199e36464f7a2d172f5f15fd517646b314e18b63973a707f8febb8aebe3dba",
+  "nativeConformanceSourceSha256": "760b0cd877306801bab3acd1ee270ac21c6277644423fbb2c84a1a3f2a93328a"
+}
