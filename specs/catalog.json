@@ -2937,7 +2937,8 @@
         "specs/github-browser-extension-functional-catalog.md",
         "specs/github-browser-extension-control-center-and-setup.md",
         "specs/github-browser-extension-foundation.md",
-        "specs/github-browser-extension-runtime.md"
+        "specs/github-browser-extension-runtime.md",
+        "specs/github-browser-extension-control-center-h3.md"
       ],
       "workflows": [
         ".github/workflows/ci_check.yml",
