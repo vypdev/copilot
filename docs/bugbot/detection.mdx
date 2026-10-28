@@ -346,3 +346,19 @@ reportable. If the type premise cannot be verified with existing read-only tools
 the reviewer omits that unsupported claim. This is model guidance, with no new
 permissions, resolver service, project exception or guarantee of accuracy. See
 [quality and observability](/bugbot/quality-observability) for the paired controls.
+
+
+## Delegated test paths
+
+Before claiming a parameterized test always fails or its stub is unused, Bugbot
+selects that row, follows its actual invocation through delegates and callbacks,
+and checks fixture identity, guards, collection size and arrangement order. It
+traces how map/flatMap and recovery preserve or change the error before the exact
+assertion. Looking only at the public method body can miss an indirect binding
+call. Matching test/call-count evidence must agree with that path; an unrelated
+green test or a called stub alone is insufficient. Real bypassed calls, empty
+loops and swallowed errors remain reportable. Review does not change a tested
+operation just to reach a mock without first establishing the intended contract.
+Unverifiable always-fails claims are omitted. This uses existing bounded read-only
+context and review policies, with no new permission or deterministic call-graph
+service. See [quality and observability](/bugbot/quality-observability).

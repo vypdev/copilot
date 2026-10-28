@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { observeCallPathFixture } from './fixtures/bugbot_call_path_oracles';
 import { tmpdir } from 'node:os';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { evaluateBugbotBenchmark, loadBugbotBenchmark, loadBugbotPredictions } from '../bugbot_benchmark';
@@ -11,6 +12,7 @@ describe('versioned Bugbot benchmark', () => {
     'py-short-circuit-unhashable', 'py-helper-retry-validation', 'ts-exclusive-render-branches',
     'android-listed-minor-platform', 'external-package-unverified-inventory', 'android-stale-inventory-current-install',
     'kt-resolved-sql-subclass', 'jvm-type-hierarchy-unavailable', 'jvm-current-contract-over-stale-docs',
+    'test-indirect-binding-propagates', 'test-parameterized-fallback-reaches-stub', 'test-bound-callback-reaches-stub',
 
     'kt-compose-preferred-width-narrow', 'kt-compose-cap-before-fill', 'kt-compose-padded-preferred-width',
     'kt-compose-owned-loader', 'kt-compose-failed-startup-error',
@@ -29,6 +31,7 @@ describe('versioned Bugbot benchmark', () => {
     'py-short-circuit-unsafe-order', 'ts-composed-duplicate-ids',
     'android-absent-platform-package', 'android-unrelated-green-job',
     'jvm-unrelated-runtime-wrapper', 'jvm-passing-mock-not-counterevidence', 'kt-broad-catch-swallows-cancellation',
+    'test-delegate-bypasses-stub', 'test-empty-participants-skip-stub', 'test-recovery-swallows-bound-failure',
 
     'kt-compose-required-width-overflow', 'kt-compose-fill-before-cap',
     'kt-compose-external-loader', 'kt-compose-failed-startup-stuck', 'ts-viewport-version-without-cleanup',
@@ -129,4 +132,31 @@ describe('versioned Bugbot benchmark', () => {
       await rm(directory, { recursive: true, force: true });
     }
   });
+});
+
+
+it.each([
+  ['test-indirect-binding-propagates', 1],
+  ['test-parameterized-fallback-reaches-stub', 1],
+  ['test-bound-callback-reaches-stub', 1],
+  ['test-delegate-bypasses-stub', 0],
+  ['test-empty-participants-skip-stub', 0],
+  ['test-recovery-swallows-bound-failure', 1],
+] as const)('executes the authored fixture oracle for %s without a model or real wait', async (id, calls) => {
+  const corpus = await loadBugbotBenchmark(join(__dirname, '..', '..', '..', 'quality/bugbot/corpus.v1.json'));
+  const item = corpus.cases.find(item => item.id === id)!;
+  const observation = observeCallPathFixture(item);
+  expect(observation).toEqual({ passes: item.expected.length === 0, calls });
+});
+
+
+it('rejects executable-looking corpus text as inert data before selecting an oracle', () => {
+  const payload = 'throw new Error("corpus execution must never occur");';
+  expect(() => observeCallPathFixture({ id: 'test-indirect-binding-propagates', diff: payload }))
+    .toThrow('Unknown or modified call-path fixture.');
+});
+
+it('rejects an unknown or prototype-like fixture identity without dynamic dispatch', () => {
+  expect(() => observeCallPathFixture({ id: '__proto__', diff: '' }))
+    .toThrow('Unknown or modified call-path fixture.');
 });

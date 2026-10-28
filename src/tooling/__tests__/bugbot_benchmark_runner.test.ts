@@ -81,3 +81,15 @@ it('delivers the production dependency-type contract without exposing a verdict'
     expect(prompt).toContain('Preserve genuine uncaught-wrapper and swallowed-cancellation defects');
     expect(prompt).not.toContain('Hidden ground truth title');
 });
+
+
+it('delivers the production delegated-test-path contract without exposing expected findings', () => {
+  const prompt = buildBugbotBenchmarkPrompt({ ...testCase,
+    description: 'A parameterized fault case delegates through a binder.',
+    diff: '+assertDatabaseFailure(service.getSession());',
+  });
+  expect(prompt).toContain('select the exact parameterized case');
+  expect(prompt).toContain('follow the full delegated call chain');
+  expect(prompt).toContain('unreached stub, empty loop or swallowed fault');
+  expect(prompt).not.toContain('Hidden ground truth title');
+});

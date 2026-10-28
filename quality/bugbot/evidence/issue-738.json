@@ -1,0 +1,351 @@
+{
+  "schemaVersion": 1,
+  "issue": "https://github.com/vypdev/copilot/issues/738",
+  "date": "2026-10-28",
+  "sourceBase": "b33e841b1e4b8721ec76ca6268d1200798df1e22",
+  "runtime": {
+    "provider": "codex",
+    "modelProvider": "openai",
+    "model": "gpt-6-luna",
+    "cli": "0.164.0-alpha.11.1",
+    "node": "v24.20.0",
+    "configuration": "Product default findings configuration, no environment/model/effort overrides."
+  },
+  "isolation": "Existing read-only FindingsQueryPort in an empty local Git fixture. Expected arrays are omitted from the prompt, and no corpus/groundtruth/source file was copied into the workspace. Workspace remained .git only.",
+  "command": "node <compiled-cli> bugbot-benchmark --corpus <six-fixed-cases.json> --predictions <observed-predictions.json>",
+  "corpus": {
+    "schemaVersion": 1,
+    "cases": [
+      {
+        "id": "test-indirect-binding-propagates",
+        "language": "typescript",
+        "category": "negative",
+        "description": "Controlled executable JavaScript-subset fixture; no consumer Kotlin or database execution is claimed. A new fault assertion follows a composed getSession/access/readSession/bindSession path. The fixture has one participant and the same database error object must be preserved. All helper code and the selected invocation are supplied.",
+        "file": "test/SessionReturnedState.test.ts",
+        "startLine": 1,
+        "diff": " const failure = {kind: \"DatabaseException\", cause: \"participant projection\"};\n let calls = 0;\n const left = value => ({tag: \"left\", value});\n const right = value => ({tag: \"right\", value});\n const map = (result, f) => result.tag === \"left\" ? result : right(f(result.value));\n const flatMap = (result, f) => result.tag === \"left\" ? result : f(result.value);\n const row = {id: \"s1\", participants: [{id: \"p1\"}]};\n const scopes = {session: () => right({id: \"s1\"}), participantSession: id => { calls++; return left(failure); }};\n function bindSession(session) {\n   for (const participant of session.participants) {\n     const result = scopes.participantSession(participant.id);\n     if (result.tag === \"left\") return result;\n   }\n   return right(session);\n }\n function readSession() { return flatMap(right(row), bindSession); }\n const access = {session: () => flatMap(scopes.session(), readSession)};\n const service = {getSession: () => map(access.session(), bound => bound)};\n function assertDatabaseFailure(result) {\n   if (result.tag !== \"left\" || result.value !== failure) throw new Error(\"Expected same database failure\");\n }\n+function test() { assertDatabaseFailure(service.getSession()); }\n function observe() { try { test(); return {passes: true, calls}; } catch { return {passes: false, calls}; } }",
+        "expected": []
+      },
+      {
+        "id": "test-parameterized-fallback-reaches-stub",
+        "language": "typescript",
+        "category": "negative",
+        "description": "Controlled executable JavaScript-subset fixture; no consumer Kotlin or database execution is claimed. The concrete parameterized row is participant-scope-failure. Select that row in invoke; it reaches the getSession fallback through unchanged helpers. Do not infer reachability from another row or only the direct method body.",
+        "file": "test/SessionReturnedState.test.ts",
+        "startLine": 1,
+        "diff": " const failure = {kind: \"DatabaseException\", cause: \"participant projection\"};\n let calls = 0;\n const left = value => ({tag: \"left\", value});\n const right = value => ({tag: \"right\", value});\n const map = (result, f) => result.tag === \"left\" ? result : right(f(result.value));\n const flatMap = (result, f) => result.tag === \"left\" ? result : f(result.value);\n const row = {id: \"s1\", participants: [{id: \"p1\"}]};\n const scopes = {session: () => right({id: \"s1\"}), participantSession: id => { calls++; return left(failure); }};\n function bindSession(session) {\n   for (const participant of session.participants) {\n     const result = scopes.participantSession(participant.id);\n     if (result.tag === \"left\") return result;\n   }\n   return right(session);\n }\n function readSession() { return flatMap(right(row), bindSession); }\n const access = {session: () => flatMap(scopes.session(), readSession)};\n const service = {getSession: () => map(access.session(), bound => bound)};\n const selectedCase = \"participant-scope-failure\";\n function invoke(caseName) { return caseName === \"maintenance\" ? right(null) : service.getSession(); }\n function assertDatabaseFailure(result) {\n   if (result.tag !== \"left\" || result.value !== failure) throw new Error(\"Expected same database failure\");\n }\n+function test() { assertDatabaseFailure(invoke(selectedCase)); }\n function observe() { try { test(); return {passes: true, calls}; } catch { return {passes: false, calls}; } }",
+        "expected": []
+      },
+      {
+        "id": "test-bound-callback-reaches-stub",
+        "language": "typescript",
+        "category": "negative",
+        "description": "Controlled executable JavaScript-subset fixture; no consumer Kotlin or database execution is claimed. Composition captures the arranged participant projection as a bound callback. The fixture and composition order are supplied; follow that callback through the delegate before alleging that the stub is unused.",
+        "file": "test/SessionReturnedState.test.ts",
+        "startLine": 1,
+        "diff": " const failure = {kind: \"DatabaseException\", cause: \"participant projection\"};\n let calls = 0;\n const left = value => ({tag: \"left\", value});\n const right = value => ({tag: \"right\", value});\n const map = (result, f) => result.tag === \"left\" ? result : right(f(result.value));\n const flatMap = (result, f) => result.tag === \"left\" ? result : f(result.value);\n const row = {id: \"s1\", participants: [{id: \"p1\"}]};\n const scopes = {session: () => right({id: \"s1\"}), participantSession: id => { calls++; return left(failure); }};\n const boundProjection = scopes.participantSession.bind(scopes);\n function bindSession(session) {\n   for (const participant of session.participants) {\n     const result = boundProjection(participant.id);\n     if (result.tag === \"left\") return result;\n   }\n   return right(session);\n }\n function readSession() { return flatMap(right(row), bindSession); }\n const access = {session: () => flatMap(scopes.session(), readSession)};\n const service = {getSession: () => map(access.session(), bound => bound)};\n function assertDatabaseFailure(result) {\n   if (result.tag !== \"left\" || result.value !== failure) throw new Error(\"Expected same database failure\");\n }\n+function test() { assertDatabaseFailure(service.getSession()); }\n function observe() { try { test(); return {passes: true, calls}; } catch { return {passes: false, calls}; } }",
+        "expected": []
+      },
+      {
+        "id": "test-delegate-bypasses-stub",
+        "language": "typescript",
+        "category": "correctness",
+        "description": "Controlled executable JavaScript-subset fixture; no consumer Kotlin or database execution is claimed. The public entry point delegates to a reader that returns the row without participant binding. The new assertion expects the arranged projection error; trace the actual reader rather than assuming another unused helper is invoked.",
+        "file": "test/SessionReturnedState.test.ts",
+        "startLine": 1,
+        "diff": " const failure = {kind: \"DatabaseException\", cause: \"participant projection\"};\n let calls = 0;\n const left = value => ({tag: \"left\", value});\n const right = value => ({tag: \"right\", value});\n const map = (result, f) => result.tag === \"left\" ? result : right(f(result.value));\n const flatMap = (result, f) => result.tag === \"left\" ? result : f(result.value);\n const row = {id: \"s1\", participants: [{id: \"p1\"}]};\n const scopes = {session: () => right({id: \"s1\"}), participantSession: id => { calls++; return left(failure); }};\n function bindSession(session) {\n   for (const participant of session.participants) {\n     const result = scopes.participantSession(participant.id);\n     if (result.tag === \"left\") return result;\n   }\n   return right(session);\n }\n function readSession() { return right(row); }\n const access = {session: () => flatMap(scopes.session(), readSession)};\n const service = {getSession: () => map(access.session(), bound => bound)};\n function assertDatabaseFailure(result) {\n   if (result.tag !== \"left\" || result.value !== failure) throw new Error(\"Expected same database failure\");\n }\n+function test() { assertDatabaseFailure(service.getSession()); }\n function observe() { try { test(); return {passes: true, calls}; } catch { return {passes: false, calls}; } }",
+        "expected": [
+          {
+            "id": "test-delegate-bypasses-stub-defect",
+            "title": "The assertion expects a fault from a bypassed projection",
+            "file": "test/SessionReturnedState.test.ts",
+            "line": 22,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }"
+          }
+        ]
+      },
+      {
+        "id": "test-empty-participants-skip-stub",
+        "language": "typescript",
+        "category": "correctness",
+        "description": "Controlled executable JavaScript-subset fixture; no consumer Kotlin or database execution is claimed. The fixture has no participants. The binder iterates that list before returning the row; the new assertion expects the projection error even though no participant projection is invoked.",
+        "file": "test/SessionReturnedState.test.ts",
+        "startLine": 1,
+        "diff": " const failure = {kind: \"DatabaseException\", cause: \"participant projection\"};\n let calls = 0;\n const left = value => ({tag: \"left\", value});\n const right = value => ({tag: \"right\", value});\n const map = (result, f) => result.tag === \"left\" ? result : right(f(result.value));\n const flatMap = (result, f) => result.tag === \"left\" ? result : f(result.value);\n const row = {id: \"s1\", participants: []};\n const scopes = {session: () => right({id: \"s1\"}), participantSession: id => { calls++; return left(failure); }};\n function bindSession(session) {\n   for (const participant of session.participants) {\n     const result = scopes.participantSession(participant.id);\n     if (result.tag === \"left\") return result;\n   }\n   return right(session);\n }\n function readSession() { return flatMap(right(row), bindSession); }\n const access = {session: () => flatMap(scopes.session(), readSession)};\n const service = {getSession: () => map(access.session(), bound => bound)};\n function assertDatabaseFailure(result) {\n   if (result.tag !== \"left\" || result.value !== failure) throw new Error(\"Expected same database failure\");\n }\n+function test() { assertDatabaseFailure(service.getSession()); }\n function observe() { try { test(); return {passes: true, calls}; } catch { return {passes: false, calls}; } }",
+        "expected": [
+          {
+            "id": "test-empty-participants-skip-stub-defect",
+            "title": "The empty fixture never reaches the arranged fault",
+            "file": "test/SessionReturnedState.test.ts",
+            "line": 22,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }"
+          }
+        ]
+      },
+      {
+        "id": "test-recovery-swallows-bound-failure",
+        "language": "typescript",
+        "category": "correctness",
+        "description": "Controlled executable JavaScript-subset fixture; no consumer Kotlin or database execution is claimed. The public contract requires the projection database failure to propagate. Binding reaches the arranged error, but the reader converts it into a successful row before the new assertion. A called stub alone does not prove the asserted error survives.",
+        "file": "test/SessionReturnedState.test.ts",
+        "startLine": 1,
+        "diff": " const failure = {kind: \"DatabaseException\", cause: \"participant projection\"};\n let calls = 0;\n const left = value => ({tag: \"left\", value});\n const right = value => ({tag: \"right\", value});\n const map = (result, f) => result.tag === \"left\" ? result : right(f(result.value));\n const flatMap = (result, f) => result.tag === \"left\" ? result : f(result.value);\n const row = {id: \"s1\", participants: [{id: \"p1\"}]};\n const scopes = {session: () => right({id: \"s1\"}), participantSession: id => { calls++; return left(failure); }};\n function bindSession(session) {\n   for (const participant of session.participants) {\n     const result = scopes.participantSession(participant.id);\n     if (result.tag === \"left\") return result;\n   }\n   return right(session);\n }\n function readSession() {\n   const result = flatMap(right(row), bindSession);\n   return result.tag === \"left\" ? right(row) : result;\n }\n const access = {session: () => flatMap(scopes.session(), readSession)};\n const service = {getSession: () => map(access.session(), bound => bound)};\n function assertDatabaseFailure(result) {\n   if (result.tag !== \"left\" || result.value !== failure) throw new Error(\"Expected same database failure\");\n }\n+function test() { assertDatabaseFailure(service.getSession()); }\n function observe() { try { test(); return {passes: true, calls}; } catch { return {passes: false, calls}; } }",
+        "expected": [
+          {
+            "id": "test-recovery-swallows-bound-failure-defect",
+            "title": "The reader replaces the bound fault with success",
+            "file": "test/SessionReturnedState.test.ts",
+            "line": 25,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }"
+          }
+        ]
+      }
+    ]
+  },
+  "corpusSha256": "4d3bc9f10b4298e59099638939d12ea329c2e1aa3e2531cb1a73bd90316256ba",
+  "identities": {
+    "oldBundleSha256": "9b42e1ca6bb48865e6914a697c5f5d1c91e8a7ac61e4d655df66b44347e23333",
+    "newBundleSha256": "435eec8a30e0dc5b3670c4cff0aa5408c9dcd8b6f2a2a00be89e36ee5543cbda",
+    "oldPromptSourceSha256": "72bff0942c8384f827e6defabba3c5777c7e439ee4820718d64bb8f22ae8d060",
+    "newPromptSourceSha256": "a97cd91f74523449698a1d3d28878effef8ffafdf33efcbdfc3d66125753af5f"
+  },
+  "nativeFixtureOracles": {
+    "execution": "Ordinary tests run statically compiled TypeScript factories, bound to a known identity and byte-exact inert corpus diff. Corpus text is never evaluated. Tests verify the assertion predicate and collaborator count; unknown or altered data rejects. No production evaluator, interpreter, I/O or real wait.",
+    "observations": [
+      {
+        "case": "test-indirect-binding-propagates",
+        "testPasses": true,
+        "collaboratorCalls": 1
+      },
+      {
+        "case": "test-parameterized-fallback-reaches-stub",
+        "testPasses": true,
+        "collaboratorCalls": 1
+      },
+      {
+        "case": "test-bound-callback-reaches-stub",
+        "testPasses": true,
+        "collaboratorCalls": 1
+      },
+      {
+        "case": "test-delegate-bypasses-stub",
+        "testPasses": false,
+        "collaboratorCalls": 0
+      },
+      {
+        "case": "test-empty-participants-skip-stub",
+        "testPasses": false,
+        "collaboratorCalls": 0
+      },
+      {
+        "case": "test-recovery-swallows-bound-failure",
+        "testPasses": false,
+        "collaboratorCalls": 1
+      }
+    ],
+    "securityCorrection": {
+      "review": "https://github.com/vypdev/copilot/pull/757#discussion_r4398624639",
+      "originalHead": "d7d541c81361f3e7f1ee775b3b04c62fdc9727f9",
+      "change": "Replaced original data-to-VM route with compiled factories and inert text comparison.",
+      "modelInputsAndPredictionsUnchanged": true
+    }
+  },
+  "observations": [
+    {
+      "id": "before",
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "test-indirect-binding-propagates": [],
+          "test-parameterized-fallback-reaches-stub": [],
+          "test-bound-callback-reaches-stub": [],
+          "test-delegate-bypasses-stub": [
+            {
+              "id": "test/SessionReturnedState.test.ts:22:assertion-fails-on-successful-read",
+              "title": "The new assertion fails because the reader bypasses participant binding",
+              "description": "`service.getSession()` reaches `readSession()`, which returns `right(row)` without calling `bindSession` or `scopes.participantSession`. The result is therefore not the arranged database failure, so `assertDatabaseFailure` throws and this test fails. The participant projection failure is unreachable through this call path.",
+              "file": "test/SessionReturnedState.test.ts",
+              "line": 22,
+              "endLine": 22,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "`access.session` uses `flatMap(scopes.session(), readSession)`, and `readSession` returns `right(row)`. `bindSession` is defined but never called; consequently `service.getSession()` returns a right result and `assertDatabaseFailure` rejects it.",
+              "suggestion": "If the test is meant to verify participant projection failures, make the reader bind the session participants before returning the session. Otherwise, change the assertion to match the successful result this call path produces.",
+              "symbol": "test",
+              "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }",
+              "fingerprint": "fp-b638cb8d",
+              "semanticFingerprint": "sf-efea4a32"
+            }
+          ],
+          "test-empty-participants-skip-stub": [
+            {
+              "id": "test/SessionReturnedState.test.ts:1:assertion-expects-skipped-projection",
+              "title": "Assertion expects an error from an empty participant list",
+              "description": "`row.participants` is empty, so `bindSession` never calls `scopes.participantSession` and returns the session successfully. Consequently `service.getSession()` produces a right result and `assertDatabaseFailure` throws; the new test fails instead of exercising the claimed projection error.",
+              "file": "test/SessionReturnedState.test.ts",
+              "line": 1,
+              "endLine": 1,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The loop iterates `session.participants`, which is `[]`; the only call producing `left(failure)` is inside that loop. The assertion then requires the result to be that left value.",
+              "suggestion": "Make the fixture include a participant if the intent is to test propagation of a participant projection failure, or assert success for the empty-participants case.",
+              "symbol": "test",
+              "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }",
+              "fingerprint": "fp-8160ea4b",
+              "semanticFingerprint": "sf-efea4a32"
+            }
+          ],
+          "test-recovery-swallows-bound-failure": [
+            {
+              "id": "test/SessionReturnedState.test.ts:17:database-failure-swallowed",
+              "title": "Projection database failure is converted into success",
+              "description": "When participant binding returns the arranged database failure, `readSession` replaces the left result with `right(row)`. The service therefore returns a successful session instead of propagating the failure, so the new assertion fails despite the participant lookup being called.",
+              "file": "test/SessionReturnedState.test.ts",
+              "line": 17,
+              "endLine": 17,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "`bindSession` returns `left(failure)` for the participant lookup, but this branch returns `right(row)`. The assertion requires the original failure object to remain the result.",
+              "suggestion": "Propagate the left result from `flatMap` instead of converting it to a successful row.",
+              "symbol": "readSession",
+              "codeSnippet": "return result.tag === \"left\" ? right(row) : result;",
+              "suggestedCode": "return result;",
+              "fingerprint": "fp-fe0f59e9",
+              "semanticFingerprint": "sf-01cf6a69"
+            }
+          ]
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 3,
+          "actual": 3,
+          "matched": 2,
+          "precision": 0.6666666666666666,
+          "recall": 0.6666666666666666,
+          "locationAccuracy": 0.5,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 0.6666666666666666,
+          "falsePositives": 1,
+          "falseNegatives": 1,
+          "meanLineDistance": 10.5,
+          "confidenceBrierScore": 0.3333333333333333
+        },
+        "violations": [
+          "precision 0.667 is below 0.900",
+          "recall 0.667 is below 0.850",
+          "f1 0.667 is below 0.870",
+          "locationAccuracy 0.500 is below 0.800",
+          "confidenceBrierScore 0.333 exceeds 0.160"
+        ],
+        "missingCases": []
+      }
+    },
+    {
+      "id": "after",
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "test-indirect-binding-propagates": [],
+          "test-parameterized-fallback-reaches-stub": [],
+          "test-bound-callback-reaches-stub": [],
+          "test-delegate-bypasses-stub": [
+            {
+              "id": "test/SessionReturnedState.test.ts:21:assertion-expects-unreached-projection-error",
+              "title": "Test expects a projection error the public path never reaches",
+              "description": "The new test calls `service.getSession()`, which delegates to `access.session()`. That path reads the session with `readSession`, which returns `right(row)` directly; it never calls `bindSession` or `scopes.participantSession`. Consequently the result is a right value, and `assertDatabaseFailure` throws instead of observing the arranged projection error.",
+              "file": "test/SessionReturnedState.test.ts",
+              "line": 21,
+              "endLine": 21,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "`readSession` returns `right(row)` without binding participants, and `access.session` passes that reader to `flatMap`. `service.getSession()` therefore returns `right(row)` and leaves `calls` at zero; the assertion on this line requires a left result containing `failure`.",
+              "suggestion": "If the test is meant to verify participant projection failure, make the public read path bind participants before asserting that failure.",
+              "symbol": "test",
+              "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }",
+              "fingerprint": "fp-a3276441",
+              "semanticFingerprint": "sf-efea4a32"
+            }
+          ],
+          "test-empty-participants-skip-stub": [
+            {
+              "id": "test/SessionReturnedState.test.ts:21:assertion-expects-unreached-projection-error",
+              "title": "Test expects an error from an empty participant list",
+              "description": "The fixture sets `participants` to an empty array, so `bindSession` never calls `scopes.participantSession` and returns the session successfully. Consequently, `service.getSession()` is a `right` result and `assertDatabaseFailure` throws; this test fails instead of verifying the expected projection error.",
+              "file": "test/SessionReturnedState.test.ts",
+              "line": 21,
+              "endLine": 21,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "`bindSession` only invokes `scopes.participantSession` inside `for (const participant of session.participants)`, while the fixture defines `participants: []`. The new test calls `assertDatabaseFailure(service.getSession())`, which requires a `left` result.",
+              "suggestion": "Use a fixture with a participant so the binder invokes `participantSession`, or change the assertion to match the successful result for an empty list.",
+              "symbol": "test",
+              "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }",
+              "fingerprint": "fp-85b52a41",
+              "semanticFingerprint": "sf-efea4a32"
+            }
+          ],
+          "test-recovery-swallows-bound-failure": [
+            {
+              "id": "test/SessionReturnedState.test.ts:25:reader-swallows-projection-failure",
+              "title": "Test fails because the projection failure is swallowed",
+              "description": "The participant binding returns the arranged database failure, but `readSession` converts that failure into `right(row)`. Consequently, `service.getSession()` returns a successful result and this assertion throws instead of passing.",
+              "file": "test/SessionReturnedState.test.ts",
+              "line": 25,
+              "endLine": 25,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "`bindSession` returns the `left(failure)` from `participantSession`; `readSession` then returns `right(row)` for any left result. `assertDatabaseFailure` therefore receives a right result at the new test call.",
+              "suggestion": "Preserve the left result from `bindSession` through `readSession` so the database failure reaches the assertion.",
+              "symbol": "test",
+              "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }",
+              "fingerprint": "fp-c194b8e7",
+              "semanticFingerprint": "sf-efea4a32"
+            }
+          ]
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 3,
+          "actual": 3,
+          "matched": 3,
+          "precision": 1,
+          "recall": 1,
+          "locationAccuracy": 0.3333333333333333,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "meanLineDistance": 0.6666666666666666,
+          "confidenceBrierScore": 3.3333333333333396e-05
+        },
+        "violations": [
+          "locationAccuracy 0.333 is below 0.800"
+        ],
+        "missingCases": []
+      }
+    }
+  ],
+  "limits": [
+    "Both real-model runs fail the full default score; no all-thresholds-passed claim is made.",
+    "The corrected run has zero matched false positives/negatives, but only one of three exact locations is right; two are off by one. Location calibration remains a visible limitation.",
+    "The baseline also produces no finding on the three valid indirect paths. This controlled sample does not reproduce the historical false positive or establish a statistical gain.",
+    "Inputs, expected findings and default scoring thresholds were unchanged between model runs. Native fixture oracles are separate from model outputs and consumer Kotlin/JDK/database execution.",
+    "The failing-before deterministic tests establish that the earlier prompt lacked the explicit concrete-case/call-path contract. Model guidance is probabilistic; normal publication/freshness/protection gates are unchanged."
+  ]
+}
