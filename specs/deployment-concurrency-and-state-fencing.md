@@ -542,3 +542,17 @@ remain mandatory. A PR merge event waits for this same mutex and then accepts th
 stored target and completes cleanup; no alternate local state writer is added.
 See the #520 regression and test budget in
 [release orchestration](configurable-release-orchestration.md#1801-recorded-reconciliation-recovery-regression-520).
+
+### Unpublished candidate replacement — issue #732
+
+The companion [unpublished-candidate replacement SDD](unpublished-candidate-replacement.md)
+owns explicit workflow `replace` mode, its 112-case risk floor, native readonly
+preflight, complete fresh producer proof and immutable successor history. It
+preserves this specification's publication/acceptance and issue-scoped mutex.
+An explicit replacement save expectation alone may advance the operation ID; its
+proposal must equal the canonical successor preserving every frozen origin,
+version, locale and policy field. Ordinary saves cannot change identity. Exact
+replays recover only the durable validated successor; old callbacks are stale.
+Up to eight six-field predecessor records are optional on existing v1 state;
+malformed/duplicate histories and unknown versions still block. This adds no
+alternate writer, manual state reset or live deployment acceptance claim.

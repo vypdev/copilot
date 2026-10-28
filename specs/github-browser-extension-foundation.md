@@ -486,3 +486,13 @@ artifacts and browser-contract development sources. Package identity, private
 extension version, target receipts, clean-build comparisons, workspace overrides
 and every verification gate remain unchanged. This is root package maintenance,
 not a browser product, permission, store or loading claim.
+
+### Root package allowlist maintenance — issue #732 (2026-10-28)
+
+The exact root file list additionally ships `deployment-recovery/action.yml`, its
+`index.cjs` bootstrap and `build/deployment_recovery/index.js`, a standalone native
+read-only Node preflight for unpublished candidate recovery. C25 includes those
+files while preserving every existing root export and exclusion of extension
+runtime/generated development assets. Browser permissions, identity, workspace
+overrides and acceptance requirements do not change. This is upstream package
+maintenance and does not establish consumer adoption or browser loading.

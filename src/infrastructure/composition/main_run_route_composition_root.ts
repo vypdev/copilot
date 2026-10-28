@@ -1,3 +1,4 @@
+import { createDeploymentCandidateInspection } from './deployment_candidate_replacement_composition_root';
 import { withChangeSizeDiagnostics } from './change_size_diagnostics_composition_root';
 import { createSddDiffQueryPort } from './sdd_diff_composition_root';
 import { createPullRequestStatusReadPorts } from './pull_request_status_composition_root';
@@ -197,6 +198,7 @@ function createDeploymentOrchestrationUseCase(
     state: bindDeploymentState(new DeploymentStateRepositoryFactory(issueDescriptionQueryPort), binding),
     labels: bindDeploymentLabels(createIssueLabelRepository(), binding),
     issues: bindDeploymentIssues(createIssueClosureRepository(), binding),
+    replacementInspection: createDeploymentCandidateInspection(binding),
     operationId: randomUUID,
     catalogResolver,
   });

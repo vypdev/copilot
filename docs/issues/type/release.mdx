@@ -208,3 +208,15 @@ body:
       description: Add any additional details or context about this release request.
       placeholder: "Anything else to note?"
 ```
+
+## Correct a prepared unpublished candidate
+
+If promotion-only CI needs a source fix, keep the version and managed branch and
+use the explicit [replace workflow](/issues/deployment-orchestration#replace-an-unpublished-candidate).
+Close the old promotion unmerged, confirm vacancy in every project registry and
+repeat all project validation for the corrected source. Ordinary prepare cannot
+reassign the old evidence, and published/accepted versions cannot be replaced.
+Compatible runtime/workflows and configured complete project verification are
+required. Generated templates keep replacement disabled: configure the complete
+verifier, change the workflow-owned `REPLACEMENT_ENABLED` literal to `'true'`
+and add `replace` to its mode choices before dispatch.

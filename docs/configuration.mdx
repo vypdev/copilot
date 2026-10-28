@@ -259,6 +259,11 @@ may be forwarded through Repository Variables instead.
 | `single-action-changelog` | empty | Markdown changelog snapshotted by `prepare_deployment_action`. |
 | `single-action-message` | empty | Markdown body published by `publish_issue_comment`. |
 | `single-action-operation-id` | empty | Internal durable deployment identity. Continuation workflows must pass the exact ID parsed or dispatched by Copilot; do not set it for ordinary actions. |
+| `single-action-expected-revision` | empty | Exact previous durable revision, required only for workflow-owned candidate replacement. |
+| `single-action-reviewed-source-sha` | empty | Full reviewed corrected source before complete replacement preparation. |
+| `single-action-candidate-sha` | empty | Final validated and normally pushed replacement SHA, or exact recorded successor during recovery. |
+| `single-action-production-base-sha` | empty | Native production base fixed by replacement preflight. |
+| `single-action-confirm-unpublished` | `false` | Maintainer confirmation of exact-version vacancy in every project registry; never overrides known effects. |
 | `single-action-comment-id` | empty | Existing issue comment ID to replace or append to. |
 | `single-action-comment-mode` | empty | `create`, `replace`, or `append`; inferred from whether a comment ID is present when omitted. |
 | `inactivity-threshold-hours` | `168` | Hours without activity before the scheduled action closes an eligible waiting issue. |

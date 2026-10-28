@@ -49,3 +49,15 @@ A merged production PR, closed issue, created tag or successful preparation job 
 For a hotfix, use the installed **Hotfix** form with an existing Base Version tag and the new Hotfix Version, description and solution. Start with `in-progress`, wait for readiness, then explicitly launch with `deploy`. Its origin is the selected production tag; reconciliation follows the configured development/active-release policy.
 
 When an operation pauses or fails, reuse its existing issue and control-center recovery action. Inspect the visible phase and retained commits/PRs/publication receipts; do not create replacement managed branches, tags, releases or duplicate dispatches. Checks and reviews may be an external wait rather than a failed workflow. Use the [phase-specific recovery reference](/issues/deployment-orchestration#recovery-by-visible-phase) for the correct next action.
+
+## Correct a prepared unpublished candidate
+
+If promotion-only CI needs a source fix, keep the version and managed branch and
+use the explicit [replace workflow](/issues/deployment-orchestration#replace-an-unpublished-candidate).
+Close the old promotion unmerged, confirm vacancy in every project registry and
+repeat all project validation for the corrected source. Ordinary prepare cannot
+reassign the old evidence, and published/accepted versions cannot be replaced.
+Compatible runtime/workflows and configured complete project verification are
+required. Generated templates keep replacement disabled: configure the complete
+verifier, change the workflow-owned `REPLACEMENT_ENABLED` literal to `'true'`
+and add `replace` to its mode choices before dispatch.

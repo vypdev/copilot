@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 
 function productionTypeScriptFiles(directory: string): string[] {
     return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -183,10 +183,14 @@ describe('application architecture boundaries', () => {
             'utf8',
         );
 
-        expect(handlers.map(({ file }) => file)).toHaveLength(6);
+        expect(handlers.map(({ file }) => basename(file)).sort()).toEqual([
+            'accept_promotion_handler.ts', 'confirm_publication_handler.ts', 'continue_deployment_handler.ts',
+            'prepare_promotion_handler.ts', 'reconciliation_handler.ts', 'record_failure_handler.ts', 'replace_candidate_handler.ts',
+        ]);
         expect(handlers.filter(({ source }) => source.includes('data/model/execution'))).toEqual([]);
         expect(coordinator.split(/\r?\n/).length).toBeLessThanOrEqual(100);
         expect(coordinator).toContain('PreparePromotionHandler');
+        expect(coordinator).toContain('ReplaceCandidateHandler');
         expect(coordinator).toContain('ContinueDeploymentHandler');
         expect(coordinator).toContain('ConfirmPublicationHandler');
         expect(coordinator).toContain('RecordFailureHandler');

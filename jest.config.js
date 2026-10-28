@@ -8,6 +8,7 @@ module.exports = {
     'src/**/*.ts',
     'scripts/git-hooks/verification-environment.cjs',
     'issue-admission/index.cjs',
+    'deployment-recovery/index.cjs',
     'web/src/**/*.ts',
     '!web/src/main.ts',
     '!src/**/*.d.ts',

@@ -159,3 +159,23 @@ describe('SingleAction', () => {
     });
   });
 });
+
+
+it('keeps candidate replacement explicit, issue-bound and part of the deployment-only surface', () => {
+  const action = new SingleAction('replace_deployment_action', '170', '1.5.2', '', '', '', '', '', 'operation-previous',
+    '3', 'b'.repeat(40), 'c'.repeat(40), 'true', 'e'.repeat(40));
+  expect(action.validSingleAction).toBe(true); expect(action.isReplaceDeploymentAction).toBe(true);
+  expect(action.isPrepareDeploymentAction).toBe(false); expect(action.isDeploymentOrchestrationAction).toBe(true); expect(action.throwError).toBe(true);
+  expect(action.replacementRevision).toBe(3); expect(action.candidateSha).toBe('b'.repeat(40));
+  expect(action.reviewedSourceSha).toBe('e'.repeat(40)); expect(action.productionBaseSha).toBe('c'.repeat(40));
+  expect(action.confirmedUnpublished).toBe(true);
+});
+it.each(['', '0', '-1', '1.5', '9007199254740992'])('rejects invalid replacement revision %s without inventing a default', revision => {
+  const action = new SingleAction('replace_deployment_action', '170', '1.5.2', '', '', '', '', '', 'operation-previous', revision);
+  expect(action.replacementRevision).toBe(-1); expect(action.confirmedUnpublished).toBe(false);
+});
+it.each(['TRUE', '1', 'yes', ' true ', 'false', ''])('does not interpret %p as explicit vacancy confirmation', confirmation => {
+  const action = new SingleAction('replace_deployment_action', '170', '1.5.2', '', '', '', '', '', 'operation-previous',
+    '3', 'b'.repeat(40), 'c'.repeat(40), confirmation);
+  expect(action.confirmedUnpublished).toBe(false);
+});

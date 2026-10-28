@@ -2,6 +2,7 @@ import type {
   DeploymentOperationSnapshot,
   DeploymentPhase,
   ReconciliationTargetState,
+  SupersededDeploymentCandidate,
 } from '../../domain/deployment_operation';
 import { requiredDeploymentFailure } from '../../domain/deployment_operation';
 import { buildManagedPullRequestMarker } from '../../domain/managed_pull_request';
@@ -89,9 +90,36 @@ export function renderDeploymentDashboard(
     `- ${messages.pullRequestMode}: ${inline(operation.selectedPrMode ?? operation.prMode)}`,
     `- ${messages.sourceSha}: ${inline(operation.sourceSha)}`,
     `- ${messages.productionSha}: ${inline(operation.productionSha ?? messages.pending)}`,
+    ...(operation.supersededCandidates?.map(previous =>
+      `- ${messages.previousCandidate}: [${inline(previous.operationId)}](${pullRequestUrl(context, previous.promotionPullRequest)}) @ ${inline(previous.sourceSha)} (revision ${previous.revision})`) ?? []),
     '</details>',
   );
   return lines.join('\n');
+}
+
+export function renderSupersededDeploymentCandidate(
+  previous: SupersededDeploymentCandidate,
+  current: DeploymentOperationSnapshot,
+  context: DeploymentPresentationContext,
+  catalog: DeploymentMessageCatalog = resolveStaticDeploymentCatalog(context.issueLocale),
+): string {
+  const messages = deploymentCopy(catalog);
+  return [
+    buildPublicationMarker({ identity: { topic: 'release', target: { kind: 'issue', number: context.issue },
+      key: `operation:${createSemanticDigest(previous.operationId)}` },
+      sourceVersion: `superseded:${createSemanticDigest(current.operationId)}`,
+      digest: createSemanticDigest({ previous, operationId: current.operationId, sourceSha: current.sourceSha, locale: catalog.locale }),
+    }),
+    deploymentDashboardMarker(previous.operationId, context.issue), '',
+    `## ${messages.candidateReplaced}`, '',
+    `> **${messages.currentStatus}:** ${messages.replacementNotice}`, '',
+    `**${messages.actionRequired}:** ${messages.replacementAction}`, '',
+    `[${messages.controlCenter}](${issueUrl(context)}) · [${messages.previousCandidate}](${pullRequestUrl(context, previous.promotionPullRequest)}) · [${messages.currentCandidate}](${commitUrl(context, current.sourceSha)})`, '',
+    '<details>', `<summary>${messages.candidateHistory}</summary>`, '',
+    `- ${messages.previousCandidate}: ${inline(previous.operationId)} @ ${inline(previous.sourceSha)} (revision ${previous.revision})`,
+    `- ${messages.currentCandidate}: ${inline(current.operationId)} @ ${inline(current.sourceSha)}`,
+    '</details>',
+  ].join('\n');
 }
 
 export function renderPromotionPullRequest(

@@ -38057,6 +38057,11 @@ exports.INPUT_KEYS = {
     SINGLE_ACTION_CHANGELOG: 'single-action-changelog',
     SINGLE_ACTION_MESSAGE: 'single-action-message',
     SINGLE_ACTION_OPERATION_ID: 'single-action-operation-id',
+    SINGLE_ACTION_EXPECTED_REVISION: 'single-action-expected-revision',
+    SINGLE_ACTION_CANDIDATE_SHA: 'single-action-candidate-sha',
+    SINGLE_ACTION_REVIEWED_SOURCE_SHA: 'single-action-reviewed-source-sha',
+    SINGLE_ACTION_PRODUCTION_BASE_SHA: 'single-action-production-base-sha',
+    SINGLE_ACTION_CONFIRM_UNPUBLISHED: 'single-action-confirm-unpublished',
     SINGLE_ACTION_COMMENT_ID: 'single-action-comment-id',
     SINGLE_ACTION_COMMENT_MODE: 'single-action-comment-mode',
     INACTIVITY_THRESHOLD_HOURS: 'inactivity-threshold-hours',
@@ -43215,7 +43220,7 @@ const SIMPLE_MESSAGE_KEYS = Object.freeze([
     'from', 'to', 'state', 'compare', 'controlCenter', 'purpose', 'afterMerge',
     'purposePromotion', 'promotionOverview',
     'reconciliationOverview', 'afterPromotion', 'noRepublish', 'origin',
-    'preparedSource', 'destination', 'publication', 'productionFact',
+    'preparedSource', 'reviewedSource', 'destination', 'publication', 'productionFact',
     'developmentTarget', 'completionEffect', 'closeIssue', 'keepIssue',
     'readyBeforeReview', 'buildValidation', 'packageSmoke', 'protectedChecks',
     'syncReason', 'protectedFacts', 'cut', 'promotion', 'reconciliation', 'cleanup',
@@ -43225,7 +43230,9 @@ const SIMPLE_MESSAGE_KEYS = Object.freeze([
     'sourceSha', 'productionSha', 'pending', 'publicationReceipt', 'absent',
     'localization', 'property', 'value', 'repositoryLocaleLabel',
     'issueLocaleLabel', 'pullRequestLocaleLabel', 'catalogResolution',
-    'descriptors', 'reason',
+    'descriptors', 'reason', 'candidateReplaced', 'replacementNotice', 'replacementAction',
+    'candidateHistory', 'previousCandidate', 'currentCandidate', 'replacementPrepareNotice', 'replacementRecoverNotice',
+    'replacementRecordedNotice', 'replacementBlockedNotice', 'replacementPreflightAction',
 ]);
 const DIAGRAM_KEYS = Object.freeze([
     'source', 'prepared', 'production', 'accepted', 'publication',
@@ -43274,7 +43281,7 @@ const ENGLISH_SIMPLE = Object.freeze({
     promotionOverview: 'Production promotion', reconciliationOverview: 'Development reconciliation',
     afterPromotion: 'After merge, Copilot will tag and publish the accepted production commit.',
     noRepublish: 'Merging or closing this PR cannot publish the package again.',
-    origin: 'Origin', preparedSource: 'Prepared source', destination: 'Destination', publication: 'Publication',
+    origin: 'Origin', preparedSource: 'Prepared source', reviewedSource: 'Reviewed source', destination: 'Destination', publication: 'Publication',
     productionFact: 'Production fact', developmentTarget: 'Development target', completionEffect: 'Completion effect',
     closeIssue: 'Close issue after all targets', keepIssue: 'Keep issue open', readyBeforeReview: 'Ready before review',
     buildValidation: 'Build and release validation', packageSmoke: 'Package smoke test',
@@ -43294,6 +43301,15 @@ const ENGLISH_SIMPLE = Object.freeze({
     repositoryLocaleLabel: 'Repository locale', issueLocaleLabel: 'Issue locale',
     pullRequestLocaleLabel: 'Pull-request locale', catalogResolution: 'Catalog resolution',
     descriptors: 'descriptors', reason: 'reason',
+    candidateReplaced: 'Candidate replaced',
+    replacementNotice: 'This candidate was superseded before production acceptance by a newly validated candidate.',
+    replacementAction: 'Do not reopen or merge its previous promotion PR. Follow the current candidate in the launcher.',
+    candidateHistory: 'Candidate history', previousCandidate: 'Previous candidate', currentCandidate: 'Current candidate',
+    replacementPrepareNotice: 'Native prerequisites are confirmed. Complete project preparation must now validate the corrected source; no replacement has been recorded yet.',
+    replacementRecoverNotice: 'The validated successor is already recorded. Recover its promotion without changing source or reusing old candidate evidence.',
+    replacementRecordedNotice: 'This replacement was already recorded and its current operation is beyond preparation. No preparation or publication will be repeated.',
+    replacementBlockedNotice: 'Candidate replacement preflight is blocked. This inspection did not change a branch or deployment state.',
+    replacementPreflightAction: 'Review the launcher, close the previous promotion unmerged, confirm the exact version is unpublished in every project registry, and use the current operation, revision and reviewed source.',
 });
 const SPANISH_SIMPLE = Object.freeze({
     release: 'Release', hotfix: 'Hotfix', currentStatus: 'Estado actual',
@@ -43307,7 +43323,7 @@ const SPANISH_SIMPLE = Object.freeze({
     promotionOverview: 'Promoción a producción', reconciliationOverview: 'Reconciliación con desarrollo',
     afterPromotion: 'Tras el merge, Copilot etiquetará y publicará el commit aceptado en producción.',
     noRepublish: 'Mergear o cerrar esta PR no puede volver a publicar el paquete.',
-    origin: 'Origen', preparedSource: 'Fuente preparada', destination: 'Destino', publication: 'Publicación',
+    origin: 'Origen', preparedSource: 'Fuente preparada', reviewedSource: 'Fuente revisada', destination: 'Destino', publication: 'Publicación',
     productionFact: 'Estado de producción', developmentTarget: 'Destino de desarrollo', completionEffect: 'Efecto al completar',
     closeIssue: 'Cerrar la issue tras todos los destinos', keepIssue: 'Mantener la issue abierta', readyBeforeReview: 'Listo antes de revisar',
     buildValidation: 'Build y validación de release', packageSmoke: 'Smoke test del paquete',
@@ -43327,6 +43343,15 @@ const SPANISH_SIMPLE = Object.freeze({
     repositoryLocaleLabel: 'Locale del repositorio', issueLocaleLabel: 'Locale de la issue',
     pullRequestLocaleLabel: 'Locale de la pull request', catalogResolution: 'Resolución del catálogo',
     descriptors: 'descriptores', reason: 'motivo',
+    candidateReplaced: 'Candidato sustituido',
+    replacementNotice: 'Este candidato fue sustituido antes de su aceptación en producción por un candidato con validación nueva.',
+    replacementAction: 'No reabras ni mergees su PR de promoción anterior. Sigue el candidato actual en la issue de inicio.',
+    candidateHistory: 'Historial de candidatos', previousCandidate: 'Candidato anterior', currentCandidate: 'Candidato actual',
+    replacementPrepareNotice: 'Los requisitos nativos están confirmados. La preparación completa del proyecto debe validar ahora la fuente corregida; aún no se ha guardado la sustitución.',
+    replacementRecoverNotice: 'El sucesor validado ya está guardado. Recupera su promoción sin cambiar la fuente ni reutilizar evidencias del candidato anterior.',
+    replacementRecordedNotice: 'Esta sustitución ya está guardada y su operación actual ha superado la preparación. No se repetirá la preparación ni la publicación.',
+    replacementBlockedNotice: 'La comprobación previa de la sustitución está bloqueada. Esta inspección no ha cambiado ninguna rama ni estado de despliegue.',
+    replacementPreflightAction: 'Revisa la issue de inicio, cierra la promoción anterior sin merge, confirma que la versión exacta no está publicada en ningún registro del proyecto y usa la operación, revisión y fuente revisada actuales.',
 });
 const ENGLISH_PHASES = Object.freeze({
     preparing: 'preparing the version', promotion_pr_pending: 'waiting for production approval',
@@ -43628,6 +43653,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DEPLOYMENT_DASHBOARD_MARKER = void 0;
 exports.deploymentDashboardMarker = deploymentDashboardMarker;
 exports.renderDeploymentDashboard = renderDeploymentDashboard;
+exports.renderSupersededDeploymentCandidate = renderSupersededDeploymentCandidate;
 exports.renderPromotionPullRequest = renderPromotionPullRequest;
 exports.renderReconciliationPullRequest = renderReconciliationPullRequest;
 exports.renderDeploymentJobSummary = renderDeploymentJobSummary;
@@ -43683,8 +43709,27 @@ function renderDeploymentDashboard(operation, context, catalog = (0, deployment_
         }
         lines.push(`### ${messages.links}`, '', deploymentLinks(operation, context, messages, catalog).join(' · '), '');
     }
-    lines.push('<details>', `<summary>${messages.technical}</summary>`, '', `- ${messages.operation}: ${inline(operation.operationId)}`, `- ${messages.strategy}: ${inline(operation.strategy)}`, `- ${messages.pullRequestMode}: ${inline(operation.selectedPrMode ?? operation.prMode)}`, `- ${messages.sourceSha}: ${inline(operation.sourceSha)}`, `- ${messages.productionSha}: ${inline(operation.productionSha ?? messages.pending)}`, '</details>');
+    lines.push('<details>', `<summary>${messages.technical}</summary>`, '', `- ${messages.operation}: ${inline(operation.operationId)}`, `- ${messages.strategy}: ${inline(operation.strategy)}`, `- ${messages.pullRequestMode}: ${inline(operation.selectedPrMode ?? operation.prMode)}`, `- ${messages.sourceSha}: ${inline(operation.sourceSha)}`, `- ${messages.productionSha}: ${inline(operation.productionSha ?? messages.pending)}`, ...(operation.supersededCandidates?.map(previous => `- ${messages.previousCandidate}: [${inline(previous.operationId)}](${pullRequestUrl(context, previous.promotionPullRequest)}) @ ${inline(previous.sourceSha)} (revision ${previous.revision})`) ?? []), '</details>');
     return lines.join('\n');
+}
+function renderSupersededDeploymentCandidate(previous, current, context, catalog = (0, deployment_message_catalog_1.resolveStaticDeploymentCatalog)(context.issueLocale)) {
+    const messages = (0, deployment_message_catalog_1.deploymentCopy)(catalog);
+    return [
+        (0, publication_identity_policy_1.buildPublicationMarker)({ identity: { topic: 'release', target: { kind: 'issue', number: context.issue },
+                key: `operation:${(0, publication_identity_policy_1.createSemanticDigest)(previous.operationId)}` },
+            sourceVersion: `superseded:${(0, publication_identity_policy_1.createSemanticDigest)(current.operationId)}`,
+            digest: (0, publication_identity_policy_1.createSemanticDigest)({ previous, operationId: current.operationId, sourceSha: current.sourceSha, locale: catalog.locale }),
+        }),
+        deploymentDashboardMarker(previous.operationId, context.issue), '',
+        `## ${messages.candidateReplaced}`, '',
+        `> **${messages.currentStatus}:** ${messages.replacementNotice}`, '',
+        `**${messages.actionRequired}:** ${messages.replacementAction}`, '',
+        `[${messages.controlCenter}](${issueUrl(context)}) · [${messages.previousCandidate}](${pullRequestUrl(context, previous.promotionPullRequest)}) · [${messages.currentCandidate}](${commitUrl(context, current.sourceSha)})`, '',
+        '<details>', `<summary>${messages.candidateHistory}</summary>`, '',
+        `- ${messages.previousCandidate}: ${inline(previous.operationId)} @ ${inline(previous.sourceSha)} (revision ${previous.revision})`,
+        `- ${messages.currentCandidate}: ${inline(current.operationId)} @ ${inline(current.sourceSha)}`,
+        '</details>',
+    ].join('\n');
 }
 function renderPromotionPullRequest(operation, context, catalog = (0, deployment_message_catalog_1.resolveStaticDeploymentCatalog)(context.pullRequestLocale)) {
     const messages = (0, deployment_message_catalog_1.deploymentCopy)(catalog);
@@ -44917,6 +44962,7 @@ const GITHUB_WORKFLOW_ONLY_ACTIONS = [
     action_types_1.ACTIONS.CREATE_RELEASE,
     action_types_1.ACTIONS.PUBLISH_GITHUB_ACTION,
     action_types_1.ACTIONS.PREPARE_DEPLOYMENT,
+    action_types_1.ACTIONS.REPLACE_DEPLOYMENT,
     action_types_1.ACTIONS.CONTINUE_DEPLOYMENT,
     action_types_1.ACTIONS.PUBLISHED_DEPLOYMENT,
     action_types_1.ACTIONS.FAILED_DEPLOYMENT,
@@ -53969,6 +54015,8 @@ function setupRunnerRole(file, job) {
     if (file === 'copilot_pull_request_merge_queue.yml' && job === 'copilot-pull-request-required-check')
         return 'isolated';
     if (['release_workflow.yml', 'hotfix_workflow.yml'].includes(file)) {
+        if (job === 'candidate-preflight')
+            return 'isolated';
         if (['publish', 'publish-npm'].includes(job))
             return 'publication';
         if (['validate', 'prepare-version-files', 'promote', 'resume-reconciliation', 'report-failure'].includes(job))
@@ -55292,6 +55340,19 @@ class DeploymentOrchestrationRuntime {
         }
         await this.dependencies.presentation.createDashboard(context.singleAction.issue, body);
     }
+    async publishSupersededCandidate(context, current) {
+        const previous = current.supersededCandidates?.at(-1);
+        if (!previous)
+            throw new application_error_1.ApplicationError('workflow.invalid-event', 'Replacement provenance is missing.');
+        const marker = (0, deployment_presentation_policy_1.deploymentDashboardMarker)(previous.operationId, context.singleAction.issue);
+        const catalog = await this.presentationCatalog('issue', context, current);
+        const body = (0, deployment_presentation_policy_1.renderSupersededDeploymentCandidate)(previous, current, presentationContext(context, current), catalog);
+        const existing = await this.dependencies.presentation.findDashboard(context.singleAction.issue, marker);
+        if (existing)
+            await this.dependencies.presentation.updateDashboard(context.singleAction.issue, existing.id, body);
+        else
+            await this.dependencies.presentation.createDashboard(context.singleAction.issue, body);
+    }
     async publishMilestone(context, operation, milestone) {
         if (operation.commentMode !== "milestones")
             return;
@@ -55574,8 +55635,11 @@ class DeploymentStateBoundary {
         }
         const proposed = { ...operation, stateVersion: 1, revision };
         execution.currentConfiguration.deploymentOrchestration = proposed;
+        const writeExpected = execution.singleAction.isReplaceDeploymentAction
+            && expected.kind === 'current' && proposed.operationId !== expected.fence.operationId
+            ? { kind: 'replacement', fence: expected.fence } : expected;
         const outcome = await store.save({
-            expected,
+            expected: writeExpected,
             state: { ...execution.currentConfiguration, deploymentOrchestration: proposed },
         });
         if (outcome.kind === "saved" || outcome.kind === "already-applied") {
@@ -55587,6 +55651,8 @@ class DeploymentStateBoundary {
         if (outcome.kind === "stale")
             throw new SupersededDeploymentInvocationError(outcome.operation);
         if (outcome.kind === "conflict") {
+            if (execution.singleAction.isReplaceDeploymentAction)
+                throw new SupersededDeploymentInvocationError(outcome.operation);
             throw new application_error_1.ApplicationError("provider.conflict", `Launcher issue is owned by deployment ${outcome.operation.operationId}.`);
         }
         if (outcome.kind === "missing") {
@@ -56839,6 +56905,99 @@ function failureCategory(phase) {
 
 /***/ }),
 
+/***/ 83696:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ReplaceCandidateHandler = void 0;
+const deployment_state_boundary_1 = __nccwpck_require__(27827);
+const application_error_1 = __nccwpck_require__(75999);
+const deployment_candidate_replacement_1 = __nccwpck_require__(38447);
+const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
+class ReplaceCandidateHandler {
+    constructor(runtime, prepare) {
+        this.runtime = runtime;
+        this.prepare = prepare;
+    }
+    async invoke(context) {
+        const previous = context.currentConfiguration.deploymentOrchestration;
+        if (!previous)
+            return blocked('missing-operation');
+        const input = context.singleAction;
+        if (input.title || input.changelog || input.isPrepareDeploymentAction || input.isContinueDeploymentAction
+            || input.isPublishedDeploymentAction || input.isFailedDeploymentAction)
+            return blocked('ambiguous-command');
+        const request = {
+            operationId: input.operationId, expectedRevision: input.replacementRevision ?? -1,
+            version: input.version, candidateSha: input.candidateSha ?? '', reviewedSourceSha: input.reviewedSourceSha ?? '', productionBaseSha: input.productionBaseSha ?? '',
+            confirmedUnpublished: input.confirmedUnpublished === true,
+        };
+        if ((0, deployment_candidate_replacement_1.isRecordedCandidateReplacement)(previous, request)) {
+            if (!(0, deployment_candidate_replacement_1.isCandidateReplacementPreparationPhase)(previous)) {
+                return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Replacement was already recorded; the current operation is ${previous.phase}. No preparation or publication was repeated.`);
+            }
+            const predecessor = previous.supersededCandidates.at(-1);
+            await this.requireNativeAuthority(context, previous, request, predecessor);
+            await this.runtime.publishSupersededCandidate(context, previous);
+            return await this.prepare.invoke(context);
+        }
+        const stateProblem = (0, deployment_candidate_replacement_1.assessDeploymentCandidateReplacementState)(previous, request);
+        if (stateProblem)
+            return blocked(stateProblem);
+        // Full authority is inspected once after preparation; the adapter rechecks refs
+        // after its inventory reads, immediately before this revision-fenced write.
+        await this.requireNativeAuthority(context, previous, request);
+        const current = (0, deployment_candidate_replacement_1.buildReplacementDeploymentCandidate)(previous, request, this.runtime.dependencies.operationId());
+        try {
+            await this.runtime.persist(context, current);
+        }
+        catch (error) {
+            if (error instanceof deployment_state_boundary_1.SupersededDeploymentInvocationError)
+                throw error;
+            context.currentConfiguration.deploymentOrchestration = previous;
+            if (error instanceof application_error_1.ApplicationError)
+                throw error;
+            throw new application_error_1.ApplicationError('provider.unavailable', 'Replacement persistence was not confirmed. Reinspect the launcher before replaying; publication was not started.', { retryable: true });
+        }
+        const persisted = context.currentConfiguration.deploymentOrchestration;
+        await this.runtime.publishSupersededCandidate(context, persisted);
+        await this.runtime.publishDashboard(context, persisted);
+        return await this.prepare.invoke(context);
+    }
+    async requireNativeAuthority(context, previous, request, predecessor) {
+        const inspection = this.runtime.dependencies.replacementInspection;
+        const promotionPullRequest = predecessor?.promotionPullRequest ?? previous.promotionPullRequest;
+        if (!inspection || promotionPullRequest === undefined)
+            return blocked('missing-native-inspection');
+        const kind = (0, deployment_orchestration_runtime_1.deploymentKind)(context);
+        const facts = await inspection.inspect({ issue: context.singleAction.issue,
+            sourceBranch: previous.sourceBranch, sourceSha: predecessor?.sourceSha ?? previous.sourceSha, reviewedSourceSha: request.reviewedSourceSha,
+            productionBranch: previous.productionBranch, promotionPullRequest,
+            version: previous.version,
+            preparation: { kind: predecessor ? 'recorded' : 'fresh', candidateSha: request.candidateSha },
+            ...(predecessor ? { allowedCurrentPromotion: { operationId: previous.operationId,
+                    sourceSha: previous.sourceSha, pullRequest: previous.promotionPullRequest } } : {}),
+        });
+        const assessment = predecessor ? deployment_candidate_replacement_1.assessRecordedCandidateReplacementRecovery : deployment_candidate_replacement_1.assessDeploymentCandidateReplacement;
+        const decision = assessment(previous, request, {
+            repositoryFullName: `${context.owner}/${context.repo}`, issue: context.singleAction.issue, kind,
+            sourceBranch: (kind === 'release' ? context.currentConfiguration.releaseBranch : context.currentConfiguration.hotfixBranch) ?? '',
+            productionBranch: context.branches.defaultBranch,
+        }, facts);
+        if (decision.kind === 'blocked')
+            return blocked(decision.reason);
+    }
+}
+exports.ReplaceCandidateHandler = ReplaceCandidateHandler;
+function blocked(reason) {
+    throw new application_error_1.ApplicationError('workflow.stale', `The unpublished candidate was not replaced (${reason}). Review the current operation, closed promotion, source and production base, then start complete fresh validation. Existing candidate identities and evidence were retained.`);
+}
+
+
+/***/ }),
+
 /***/ 36850:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -56846,6 +57005,7 @@ function failureCategory(phase) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DeploymentOrchestrationUseCase = void 0;
+const replace_candidate_handler_1 = __nccwpck_require__(83696);
 const application_error_1 = __nccwpck_require__(75999);
 const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
 const deployment_state_boundary_1 = __nccwpck_require__(27827);
@@ -56864,6 +57024,7 @@ class DeploymentOrchestrationUseCase {
         const acceptPromotion = new accept_promotion_handler_1.AcceptPromotionHandler(this.runtime);
         const reconciliation = new reconciliation_handler_1.ReconciliationHandler(this.runtime);
         this.preparePromotion = new prepare_promotion_handler_1.PreparePromotionHandler(this.runtime, acceptPromotion);
+        this.replaceCandidate = new replace_candidate_handler_1.ReplaceCandidateHandler(this.runtime, this.preparePromotion);
         this.continueDeployment = new continue_deployment_handler_1.ContinueDeploymentHandler(this.runtime, acceptPromotion, reconciliation);
         this.confirmPublication = new confirm_publication_handler_1.ConfirmPublicationHandler(this.runtime, reconciliation);
         this.recordFailure = new record_failure_handler_1.RecordFailureHandler(this.runtime);
@@ -56879,6 +57040,8 @@ class DeploymentOrchestrationUseCase {
         }
     }
     async invokeSelectedHandler(context) {
+        if (context.singleAction.isReplaceDeploymentAction)
+            return await this.replaceCandidate.invoke(context);
         if (context.singleAction.isPrepareDeploymentAction)
             return await this.preparePromotion.invoke(context);
         if (context.singleAction.isContinueDeploymentAction)
@@ -56895,7 +57058,9 @@ class DeploymentOrchestrationUseCase {
             await this.runtime.publishDashboard(context, error.current).catch(() => undefined);
             return [(0, deployment_orchestration_runtime_1.deploymentSuccess)(`Deployment invocation was superseded by revision ${error.current.revision}; no stale state was written.`)];
         }
-        if ((0, deployment_orchestration_runtime_1.shouldRecordUnexpectedFailure)(error)) {
+        // Inspection/preparation failure must not rewrite the old immutable candidate.
+        // A successor already persisted before a lost response remains recoverable by exact replay.
+        if (!context.singleAction.isReplaceDeploymentAction && (0, deployment_orchestration_runtime_1.shouldRecordUnexpectedFailure)(error)) {
             await this.runtime.recordUnexpectedFailure(context, error);
         }
         return [new result_1.Result({
@@ -61781,6 +61946,12 @@ function projectDeploymentOrchestrationContext(source) {
             operationId: source.singleAction.operationId,
             message: source.singleAction.message,
             isPrepareDeploymentAction: source.singleAction.isPrepareDeploymentAction,
+            isReplaceDeploymentAction: source.singleAction.isReplaceDeploymentAction === true,
+            replacementRevision: source.singleAction.replacementRevision ?? -1,
+            candidateSha: source.singleAction.candidateSha ?? '',
+            reviewedSourceSha: source.singleAction.reviewedSourceSha ?? '',
+            productionBaseSha: source.singleAction.productionBaseSha ?? '',
+            confirmedUnpublished: source.singleAction.confirmedUnpublished === true,
             isContinueDeploymentAction: source.singleAction.isContinueDeploymentAction,
             isPublishedDeploymentAction: source.singleAction.isPublishedDeploymentAction,
             isFailedDeploymentAction: source.singleAction.isFailedDeploymentAction,
@@ -61954,6 +62125,7 @@ function copyDeploymentOperation(operation) {
     return Object.freeze({
         ...operation,
         locale: Object.freeze({ ...operation.locale }),
+        ...(operation.supersededCandidates ? { supersededCandidates: Object.freeze(operation.supersededCandidates.map(candidate => Object.freeze({ ...candidate }))) } : {}),
         reconciliationTargets: Object.freeze((operation.reconciliationTargets ?? []).map(target => Object.freeze({ ...target }))),
         ...(operation.publicationReceipt ? { publicationReceipt: Object.freeze({ ...operation.publicationReceipt }) } : {}),
         lastFailure: operation.lastFailure ? Object.freeze({ ...operation.lastFailure }) : null,
@@ -80288,6 +80460,7 @@ exports.ACTIONS = {
     PUBLISH_ISSUE_COMMENT: 'publish_issue_comment',
     CHECK_BRANCH_SYNC: 'check_branch_sync_action',
     PREPARE_DEPLOYMENT: 'prepare_deployment_action',
+    REPLACE_DEPLOYMENT: 'replace_deployment_action',
     CONTINUE_DEPLOYMENT: 'continue_deployment_action',
     PUBLISHED_DEPLOYMENT: 'published_deployment_action',
     FAILED_DEPLOYMENT: 'failed_deployment_action',
@@ -81915,6 +82088,9 @@ class SingleAction {
     get isPrepareDeploymentAction() {
         return this.currentSingleAction === action_types_1.ACTIONS.PREPARE_DEPLOYMENT;
     }
+    get isReplaceDeploymentAction() {
+        return this.currentSingleAction === action_types_1.ACTIONS.REPLACE_DEPLOYMENT;
+    }
     get isContinueDeploymentAction() {
         return this.currentSingleAction === action_types_1.ACTIONS.CONTINUE_DEPLOYMENT;
     }
@@ -81926,6 +82102,7 @@ class SingleAction {
     }
     get isDeploymentOrchestrationAction() {
         return this.isPrepareDeploymentAction
+            || this.isReplaceDeploymentAction
             || this.isContinueDeploymentAction
             || this.isPublishedDeploymentAction
             || this.isFailedDeploymentAction;
@@ -81944,7 +82121,7 @@ class SingleAction {
     get throwError() {
         return this.actionsThrowError.indexOf(this.currentSingleAction) > -1;
     }
-    constructor(currentSingleAction, issue, version, title, changelog, message = '', commentId = '', commentMode = '', operationId = '') {
+    constructor(currentSingleAction, issue, version, title, changelog, message = '', commentId = '', commentMode = '', operationId = '', replacementRevision = '', candidateSha = '', productionBaseSha = '', confirmedUnpublished = '', reviewedSourceSha = '') {
         this.actions = [
             action_types_1.ACTIONS.PUBLISH_GITHUB_ACTION,
             action_types_1.ACTIONS.CREATE_TAG,
@@ -81958,6 +82135,7 @@ class SingleAction {
             action_types_1.ACTIONS.PUBLISH_ISSUE_COMMENT,
             action_types_1.ACTIONS.CHECK_BRANCH_SYNC,
             action_types_1.ACTIONS.PREPARE_DEPLOYMENT,
+            action_types_1.ACTIONS.REPLACE_DEPLOYMENT,
             action_types_1.ACTIONS.CONTINUE_DEPLOYMENT,
             action_types_1.ACTIONS.PUBLISHED_DEPLOYMENT,
             action_types_1.ACTIONS.FAILED_DEPLOYMENT,
@@ -81972,6 +82150,7 @@ class SingleAction {
             action_types_1.ACTIONS.CLOSE_INACTIVE_ISSUES,
             action_types_1.ACTIONS.PUBLISH_ISSUE_COMMENT,
             action_types_1.ACTIONS.PREPARE_DEPLOYMENT,
+            action_types_1.ACTIONS.REPLACE_DEPLOYMENT,
             action_types_1.ACTIONS.CONTINUE_DEPLOYMENT,
             action_types_1.ACTIONS.PUBLISHED_DEPLOYMENT,
             action_types_1.ACTIONS.FAILED_DEPLOYMENT,
@@ -81997,6 +82176,11 @@ class SingleAction {
         this.changelog = '';
         this.message = '';
         this.operationId = '';
+        this.replacementRevision = -1;
+        this.candidateSha = '';
+        this.reviewedSourceSha = '';
+        this.productionBaseSha = '';
+        this.confirmedUnpublished = false;
         this.commentId = -1;
         this.commentIdInput = '';
         this.commentMode = '';
@@ -82008,6 +82192,11 @@ class SingleAction {
         this.commentId = (0, positive_integer_policy_1.parsePositiveSafeInteger)(this.commentIdInput) ?? -1;
         this.commentMode = commentMode.trim().toLowerCase();
         this.operationId = operationId.trim();
+        this.replacementRevision = (0, positive_integer_policy_1.parsePositiveSafeInteger)(replacementRevision) ?? -1;
+        this.candidateSha = candidateSha.trim();
+        this.reviewedSourceSha = reviewedSourceSha.trim();
+        this.productionBaseSha = productionBaseSha.trim();
+        this.confirmedUnpublished = confirmedUnpublished === 'true';
         this.currentSingleAction = currentSingleAction;
         if (!this.isSingleActionWithoutIssue) {
             this.issue = (0, positive_integer_policy_1.parsePositiveSafeInteger)(issue) ?? -1;
@@ -84495,6 +84684,265 @@ function isRecord(value) {
 
 /***/ }),
 
+/***/ 64483:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GithubCandidateReplacementRepository = void 0;
+const strict_json_keys_1 = __nccwpck_require__(95768);
+const configuration_markers_1 = __nccwpck_require__(4586);
+const config_1 = __nccwpck_require__(90450);
+const deployment_state_fence_1 = __nccwpck_require__(72369);
+const application_error_1 = __nccwpck_require__(75999);
+const managed_pull_request_1 = __nccwpck_require__(95914);
+const native_candidate_preparation_1 = __nccwpck_require__(88245);
+const github_error_policy_1 = __nccwpck_require__(58791);
+const MAX_RELEASE_PAGES = 10;
+/** Native reads only; neither an API error nor a missing DTO certifies vacancy. */
+class GithubCandidateReplacementRepository {
+    constructor(clientProvider, preparationScope) {
+        this.clientProvider = clientProvider;
+        this.preparationScope = preparationScope;
+    }
+    async readLauncher(command) {
+        try {
+            return await readLauncher(this.clientProvider.getClient(command.token), { owner: command.owner, repo: command.repository }, command.issue);
+        }
+        catch (error) {
+            if (error instanceof application_error_1.ApplicationError)
+                throw error;
+            throw new application_error_1.ApplicationError('provider.unavailable', 'Native candidate launcher could not be confirmed.', { retryable: true });
+        }
+    }
+    async readWorkflowRun(command) {
+        try {
+            const { data } = await this.clientProvider.getClient(command.token).request('GET /repos/{owner}/{repo}/actions/runs/{run_id}', { owner: command.owner, repo: command.repository, run_id: command.runId });
+            const native = record(data);
+            const repository = record(native.repository);
+            const headRepository = record(native.head_repository);
+            if (native.id !== command.runId || !Number.isSafeInteger(native.run_attempt) || Number(native.run_attempt) < 1
+                || typeof repository.full_name !== 'string' || typeof headRepository.full_name !== 'string'
+                || typeof native.head_branch !== 'string' || typeof native.event !== 'string'
+                || typeof native.path !== 'string' || typeof native.status !== 'string')
+                return invalid('Native preparation run identity is incomplete.');
+            return Object.freeze({ id: command.runId, attempt: native.run_attempt, repositoryFullName: repository.full_name,
+                headRepositoryFullName: headRepository.full_name, headBranch: native.head_branch, headSha: sha(native.head_sha),
+                event: native.event, path: native.path, status: native.status });
+        }
+        catch (error) {
+            if (error instanceof application_error_1.ApplicationError)
+                throw error;
+            throw new application_error_1.ApplicationError('provider.unavailable', 'Native preparation run could not be confirmed.', { retryable: true });
+        }
+    }
+    async inspect(command) {
+        try {
+            const client = this.clientProvider.getClient(command.token);
+            const parameters = { owner: command.owner, repo: command.repository };
+            const [sourceSha, productionSha, promotion, launcher] = await Promise.all([
+                branchSha(client, parameters, command.sourceBranch),
+                branchSha(client, parameters, command.productionBranch),
+                readPromotion(client, parameters, command.promotionPullRequest),
+                readLauncher(client, parameters, command.issue),
+            ]);
+            if (command.preparation) {
+                await (0, native_candidate_preparation_1.requireNativeCandidatePreparation)(client, parameters, command, launcher, sourceSha, this.preparationScope);
+            }
+            const [oldSourceReachable, reviewedSourceReachable, oldSourceInProduction, closedPromotionHeadReachable, conflictingOpenPromotion, nativePublicationVacant, queued] = await Promise.all([
+                reachable(client, parameters, command.sourceSha, sourceSha),
+                reachable(client, parameters, command.reviewedSourceSha, sourceSha),
+                reachable(client, parameters, command.sourceSha, productionSha),
+                reachable(client, parameters, promotion.headSha, sourceSha),
+                hasOpenPromotion(client, parameters, command),
+                publicationVacant(client, parameters, `v${command.version}`),
+                queuedPromotion(client, promotion.nodeId),
+            ]);
+            // Inventory and producer reads may take time. Recheck only the pinned refs,
+            // rather than repeating the complete inspection and publication inventory.
+            const [finalSourceSha, finalProductionSha] = await Promise.all([
+                branchSha(client, parameters, command.sourceBranch),
+                branchSha(client, parameters, command.productionBranch),
+            ]);
+            if (finalSourceSha !== sourceSha || finalProductionSha !== productionSha) {
+                throw new application_error_1.ApplicationError('workflow.stale', 'Native source or production changed during candidate inspection. Existing deployment state was retained.');
+            }
+            return Object.freeze({ launcher: Object.freeze({ open: launcher.open, operationId: launcher.operation.operationId,
+                    revision: launcher.operation.revision, kind: launcher.kind, sourceBranch: launcher.sourceBranch }), sourceSha, productionSha, oldSourceReachable, reviewedSourceReachable, oldSourceInProduction,
+                closedPromotionHeadReachable, conflictingOpenPromotion, nativePublicationVacant,
+                promotion: Object.freeze({ ...promotion.record, queued }),
+            });
+        }
+        catch (error) {
+            if (error instanceof application_error_1.ApplicationError)
+                throw error;
+            // No private SDK message, headers, URL, credential or response body crosses the port.
+            throw new application_error_1.ApplicationError('provider.unavailable', 'Native unpublished-candidate inspection could not be confirmed.', { retryable: true });
+        }
+    }
+}
+exports.GithubCandidateReplacementRepository = GithubCandidateReplacementRepository;
+async function readLauncher(client, parameters, issue) {
+    const { data } = await client.request('GET /repos/{owner}/{repo}/issues/{issue_number}', { ...parameters, issue_number: issue });
+    const native = record(data);
+    if (native.number !== issue || !Number.isSafeInteger(native.id) || Number(native.id) < 1
+        || Object.prototype.hasOwnProperty.call(native, 'pull_request')
+        || (native.state !== 'open' && native.state !== 'closed') || typeof native.body !== 'string'
+        || Buffer.byteLength(native.body, 'utf8') > 1048576)
+        return invalid('Native candidate launcher is incomplete.');
+    const block = (0, configuration_markers_1.readConfigurationBlock)(native.body);
+    if (block.kind !== 'present' || (0, strict_json_keys_1.hasDuplicateJsonObjectKeys)(block.content))
+        return invalid('Candidate launcher configuration is missing or ambiguous.');
+    const configuration = (0, config_1.requireCurrentConfigurationPayload)(JSON.parse(block.content));
+    const loaded = (0, deployment_state_fence_1.readDeploymentOperationState)(configuration.deploymentOrchestration);
+    if (loaded.kind !== 'current' || configuration.branchType !== loaded.operation.kind) {
+        return invalid('Candidate launcher has no matching current deployment identity.');
+    }
+    const sourceBranch = loaded.operation.kind === 'release' ? configuration.releaseBranch : configuration.hotfixBranch;
+    if (sourceBranch !== loaded.operation.sourceBranch)
+        return invalid('Candidate launcher branch ownership is inconsistent.');
+    if (!Array.isArray(native.labels))
+        return invalid('Native issue workflow labels are unavailable.');
+    const labels = native.labels.map(value => {
+        const name = typeof value === 'string' ? value : record(value).name;
+        if (typeof name !== 'string' || !name)
+            return invalid('Native issue workflow label is incomplete.');
+        return name;
+    });
+    return Object.freeze({ issue, open: native.state === 'open', operation: loaded.operation, kind: loaded.operation.kind, sourceBranch,
+        admission: Object.freeze({ labels: Object.freeze(labels), body: native.body }),
+    });
+}
+async function branchSha(client, parameters, branch) {
+    const { data } = await client.request('GET /repos/{owner}/{repo}/git/ref/{ref}', { ...parameters, ref: `heads/${branch}` });
+    const object = record(record(data).object);
+    if (object.type !== 'commit')
+        return invalid('Branch authority is not a native commit.');
+    return sha(object.sha);
+}
+async function reachable(client, parameters, base, head) {
+    if (base === head)
+        return true;
+    const { data } = await client.request('GET /repos/{owner}/{repo}/compare/{basehead}', { ...parameters, basehead: `${base}...${head}` });
+    const status = record(data).status;
+    if (typeof status !== 'string' || !['ahead', 'behind', 'diverged', 'identical'].includes(status))
+        return invalid('Native ancestry could not be confirmed.');
+    return status === 'ahead' || status === 'identical';
+}
+async function readPromotion(client, parameters, expectedNumber) {
+    const { data } = await client.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', { ...parameters, pull_number: expectedNumber });
+    const pr = record(data);
+    const head = record(pr.head);
+    const base = record(pr.base);
+    const expectedRepository = `${parameters.owner}/${parameters.repo}`.toLowerCase();
+    const headRepository = record(head.repo).full_name;
+    const baseRepository = record(base.repo).full_name;
+    if (typeof headRepository !== 'string' || typeof baseRepository !== 'string'
+        || headRepository.toLowerCase() !== expectedRepository || baseRepository.toLowerCase() !== expectedRepository) {
+        return invalid('Candidate promotion repository could not be confirmed.');
+    }
+    const marker = typeof pr.body === 'string' ? (0, managed_pull_request_1.parseManagedPullRequestMarker)(pr.body) : undefined;
+    if (!marker || pr.body.length > 65536
+        || Array.from(pr.body.matchAll(/<!-- copilot-deployment operation-id=/g)).length !== 1
+        || pr.number !== expectedNumber || typeof pr.node_id !== 'string' || !pr.node_id
+        || (typeof pr.state !== 'string' || !['open', 'closed'].includes(pr.state)) || typeof pr.merged !== 'boolean'
+        || !(pr.merged_at === null || typeof pr.merged_at === 'string')
+        || !(pr.auto_merge === null || !!pr.auto_merge && typeof pr.auto_merge === 'object')
+        || typeof head.ref !== 'string' || !head.ref || typeof base.ref !== 'string' || !base.ref) {
+        return invalid('Candidate promotion identity is incomplete or ambiguous.');
+    }
+    const headSha = sha(head.sha);
+    return { nodeId: pr.node_id, headSha, record: {
+            number: expectedNumber, repositoryFullName: headRepository,
+            operationId: marker.operationId, issue: marker.issue, phase: marker.phase,
+            sourceBranch: head.ref, headSha, productionBranch: base.ref, closed: pr.state === 'closed',
+            merged: pr.merged || pr.merged_at !== null, autoMergeEnabled: pr.auto_merge !== null,
+        } };
+}
+async function queuedPromotion(client, nodeId) {
+    const response = record(await client.graphql(`
+    query CandidateReplacementQueue($id: ID!) {
+      node(id: $id) { ... on PullRequest { id mergeQueueEntry { id } } }
+    }
+  `, { id: nodeId }));
+    const node = record(response.node);
+    if (node.id !== nodeId || !Object.prototype.hasOwnProperty.call(node, 'mergeQueueEntry'))
+        return invalid('Native merge-queue membership is unavailable.');
+    if (node.mergeQueueEntry === null)
+        return false;
+    const entry = record(node.mergeQueueEntry);
+    if (typeof entry.id !== 'string' || !entry.id)
+        return invalid('Native merge-queue entry is incomplete.');
+    return true;
+}
+async function hasOpenPromotion(client, parameters, command) {
+    const { data } = await client.request('GET /repos/{owner}/{repo}/pulls', {
+        ...parameters, state: 'open', head: `${parameters.owner}:${command.sourceBranch}`, base: command.productionBranch, per_page: 2,
+    });
+    if (!Array.isArray(data))
+        return invalid('Open promotion inventory is unavailable.');
+    if (data.length === 0)
+        return false;
+    const allowed = command.allowedCurrentPromotion;
+    if (!allowed || data.length !== 1)
+        return true;
+    const number = record(data[0]).number;
+    if (typeof number !== 'number' || !Number.isSafeInteger(number) || number < 1)
+        return invalid('Open promotion identity is unavailable.');
+    const current = (await readPromotion(client, parameters, number)).record;
+    return current.operationId !== allowed.operationId || current.issue !== command.issue || current.phase !== 'promotion'
+        || current.sourceBranch !== command.sourceBranch || current.productionBranch !== command.productionBranch
+        || current.headSha !== allowed.sourceSha || current.closed || current.merged
+        || (allowed.pullRequest !== undefined && current.number !== allowed.pullRequest);
+}
+async function publicationVacant(client, parameters, tag) {
+    try {
+        await client.request('GET /repos/{owner}/{repo}/git/ref/{ref}', { ...parameters, ref: `tags/${tag}` });
+        return false;
+    }
+    catch (error) {
+        if (!(0, github_error_policy_1.isGithubNotFound)(error))
+            throw error;
+    }
+    // Only a native principal with push access can see draft releases. An empty
+    // public/read-only listing must never certify vacancy.
+    const repository = record((await client.request('GET /repos/{owner}/{repo}', parameters)).data);
+    const permissions = record(repository.permissions);
+    if (typeof repository.full_name !== 'string'
+        || repository.full_name.toLowerCase() !== `${parameters.owner}/${parameters.repo}`.toLowerCase()
+        || permissions.push !== true)
+        return invalid('Native authority cannot confirm draft-release visibility.');
+    // Inspect every bounded page, including drafts.
+    for (let page = 1; page <= MAX_RELEASE_PAGES; page++) {
+        const { data } = await client.request('GET /repos/{owner}/{repo}/releases', { ...parameters, per_page: 100, page });
+        if (!Array.isArray(data) || data.some(value => typeof record(value).tag_name !== 'string')) {
+            return invalid('Native release inventory is unavailable.');
+        }
+        if (data.some(value => record(value).tag_name === tag))
+            return false;
+        if (data.length < 100)
+            return true;
+    }
+    return invalid('Native release inventory exceeded the bounded inspection.');
+}
+function record(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return invalid('Native candidate authority is incomplete.');
+    return value;
+}
+function sha(value) {
+    if (typeof value !== 'string' || !/^[a-f0-9]{40}$/i.test(value))
+        return invalid('Native candidate commit identity is unavailable.');
+    return value.toLowerCase();
+}
+function invalid(message) {
+    throw new application_error_1.ApplicationError('provider.contract-invalid', message);
+}
+
+
+/***/ }),
+
 /***/ 85886:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -85437,6 +85885,97 @@ function safeProviderError(error) {
 }
 function isNotFound(error) {
     return typeof error === "object" && error !== null && "status" in error && error.status === 404;
+}
+
+
+/***/ }),
+
+/***/ 88245:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.requireNativeCandidatePreparation = requireNativeCandidatePreparation;
+const application_error_1 = __nccwpck_require__(75999);
+/** Authorizes only the serialized promotion job after native prerequisites for this attempt. */
+async function requireNativeCandidatePreparation(client, parameters, command, launcher, sourceSha, scope) {
+    if (!scope || scope.repositoryFullName.toLowerCase() !== `${parameters.owner}/${parameters.repo}`.toLowerCase()
+        || scope.eventName !== 'workflow_dispatch' || scope.eventMode !== 'replace' || scope.job !== 'promote'
+        || !Number.isSafeInteger(scope.runId) || scope.runId < 1 || !Number.isSafeInteger(scope.runAttempt) || scope.runAttempt < 1
+        || command.preparation?.candidateSha !== sourceSha
+        || (scope.headSha !== command.reviewedSourceSha && (command.preparation.kind !== 'recorded' || scope.headSha !== sourceSha)))
+        return invalid();
+    const run = native((await client.request('GET /repos/{owner}/{repo}/actions/runs/{run_id}', { ...parameters, run_id: scope.runId })).data);
+    const workflow = launcher.operation.publicationWorkflow;
+    const expectedPath = workflow.startsWith('.github/workflows/') ? workflow : `.github/workflows/${workflow}`;
+    if (run.id !== scope.runId || run.run_attempt !== scope.runAttempt || run.event !== 'workflow_dispatch'
+        || run.status !== 'in_progress' || run.head_sha !== scope.headSha || run.head_branch !== launcher.sourceBranch
+        || typeof run.path !== 'string' || run.path.split('@', 1)[0] !== expectedPath
+        || native(run.repository).full_name !== scope.repositoryFullName
+        || native(run.head_repository).full_name !== scope.repositoryFullName)
+        return invalid();
+    const jobs = await readJobs(client, parameters, scope);
+    successful(jobs, 'Inspect unpublished candidate replacement', ['Read native candidate authority']);
+    if (command.preparation.kind === 'recorded')
+        return;
+    const kind = launcher.kind;
+    const prepared = `Prepare and validate ${kind}`;
+    const compiled = `Build and validate prepared ${kind}`;
+    const producers = jobs.filter(job => job.name === prepared || job.name === compiled);
+    if (producers.length !== 1)
+        return invalid();
+    const steps = ['Verify reviewed replacement source', 'Complete fresh replacement verification', 'Confirm prepared replacement identity'];
+    successful(jobs, producers[0].name, steps);
+    if (producers[0].name === compiled) {
+        successful(jobs, `Prepare files for ${kind}`, [steps[0], steps[2]]);
+    }
+}
+async function readJobs(client, parameters, scope) {
+    const jobs = [];
+    const ids = new Set();
+    let total;
+    for (let page = 1; page <= 10; page++) {
+        const response = native((await client.request('GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}/jobs', { ...parameters, run_id: scope.runId, attempt_number: scope.runAttempt, per_page: 100, page })).data);
+        if (!Number.isSafeInteger(response.total_count) || Number(response.total_count) < 0 || !Array.isArray(response.jobs)
+            || response.jobs.length > 100 || (total !== undefined && total !== response.total_count))
+            return invalid();
+        total = response.total_count;
+        for (const value of response.jobs) {
+            const job = native(value);
+            if (!Number.isSafeInteger(job.id) || Number(job.id) < 1 || ids.has(job.id)
+                || job.run_id !== scope.runId || job.head_sha !== scope.headSha || typeof job.name !== 'string')
+                return invalid();
+            ids.add(job.id);
+            jobs.push(job);
+        }
+        if (jobs.length === total)
+            return jobs;
+        if (response.jobs.length < 100 || jobs.length > total)
+            return invalid();
+    }
+    return invalid();
+}
+function successful(jobs, name, requiredSteps) {
+    const matching = jobs.filter(job => job.name === name);
+    if (matching.length !== 1)
+        return invalid();
+    const job = matching[0];
+    if (job.status !== 'completed' || job.conclusion !== 'success' || !Array.isArray(job.steps))
+        return invalid();
+    for (const name of requiredSteps) {
+        const steps = job.steps.map(native).filter(step => step.name === name);
+        if (steps.length !== 1 || steps[0].status !== 'completed' || steps[0].conclusion !== 'success')
+            return invalid();
+    }
+}
+function native(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        return invalid();
+    return value;
+}
+function invalid() {
+    throw new application_error_1.ApplicationError('workflow.stale', 'Native fresh candidate preparation was not confirmed for this workflow attempt. Existing deployment state was retained.');
 }
 
 
@@ -92975,6 +93514,165 @@ function validIdentity(value, pattern) {
 
 /***/ }),
 
+/***/ 38447:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.validateDeploymentCandidateReplacementIntent = validateDeploymentCandidateReplacementIntent;
+exports.validateDeploymentCandidateReplacementRequest = validateDeploymentCandidateReplacementRequest;
+exports.assessDeploymentCandidateReplacementState = assessDeploymentCandidateReplacementState;
+exports.isCandidateReplacementPreparationPhase = isCandidateReplacementPreparationPhase;
+exports.assessDeploymentCandidateReplacement = assessDeploymentCandidateReplacement;
+exports.assessRecordedCandidateReplacementRecovery = assessRecordedCandidateReplacementRecovery;
+exports.isRecordedCandidateReplacement = isRecordedCandidateReplacement;
+exports.buildReplacementDeploymentCandidate = buildReplacementDeploymentCandidate;
+exports.buildReplacementCandidateSnapshot = buildReplacementCandidateSnapshot;
+const deployment_operation_1 = __nccwpck_require__(92730);
+const managed_pull_request_1 = __nccwpck_require__(95914);
+const fullSha = (value) => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value);
+const safeOperationId = (value) => typeof value === 'string' && (0, managed_pull_request_1.isSafeOperationId)(value);
+function validateDeploymentCandidateReplacementIntent(request) {
+    if (!safeOperationId(request.operationId) || !Number.isSafeInteger(request.expectedRevision)
+        || request.expectedRevision < 1 || request.expectedRevision >= Number.MAX_SAFE_INTEGER
+        || typeof request.version !== 'string' || request.version.length > 64 || !/^[0-9]+\.[0-9]+\.[0-9]+$/.test(request.version)
+        || !fullSha(request.reviewedSourceSha))
+        return 'invalid-request';
+    return request.confirmedUnpublished === true ? undefined : 'unconfirmed-publication-vacancy';
+}
+function validateDeploymentCandidateReplacementRequest(request) {
+    const invalid = validateDeploymentCandidateReplacementIntent(request);
+    if (invalid)
+        return invalid;
+    return fullSha(request.candidateSha) && fullSha(request.productionBaseSha) ? undefined : 'invalid-request';
+}
+function assessDeploymentCandidateReplacementState(operation, request) {
+    const invalid = validateDeploymentCandidateReplacementRequest(request);
+    if (invalid)
+        return invalid;
+    const guards = [
+        [operation.operationId === request.operationId, 'stale-operation'],
+        [operation.revision === request.expectedRevision, 'stale-revision'],
+        [operation.version === request.version, 'different-version'],
+    ];
+    const identityProblem = guards.find(([valid]) => !valid)?.[1];
+    if (identityProblem)
+        return identityProblem;
+    return replacementSnapshotProblem(operation)
+        ?? (operation.sourceSha === request.candidateSha || operation.sourceSha === request.reviewedSourceSha ? 'unchanged-source' : undefined);
+}
+function replacementSnapshotProblem(operation) {
+    if (!isCandidateReplacementPreparationPhase(operation))
+        return 'ineligible-phase';
+    if (operation.productionSha !== undefined || operation.publicationVerified !== false
+        || operation.publicationReceipt !== undefined || operation.reconciliationTargets.length !== 0)
+        return 'publication-effects';
+    return (operation.supersededCandidates?.length ?? 0) >= deployment_operation_1.MAX_SUPERSEDED_DEPLOYMENT_CANDIDATES ? 'history-limit' : undefined;
+}
+function isCandidateReplacementPreparationPhase(operation) {
+    if (operation.phase === 'preparing' || operation.phase === 'promotion_pr_pending')
+        return true;
+    return operation.phase === 'blocked' && operation.lastFailure?.category === 'promotion'
+        && (operation.lastFailure.previousPhase === 'preparing' || operation.lastFailure.previousPhase === 'promotion_pr_pending');
+}
+function assessDeploymentCandidateReplacement(operation, request, context, evidence) {
+    const invalid = assessDeploymentCandidateReplacementState(operation, request);
+    if (invalid)
+        return { kind: 'blocked', reason: invalid };
+    const reason = nativeAuthorityProblem(operation, operation, request, context, evidence);
+    return reason ? { kind: 'blocked', reason } : { kind: 'allowed' };
+}
+function assessRecordedCandidateReplacementRecovery(operation, request, context, evidence) {
+    if (!isRecordedCandidateReplacement(operation, request))
+        return { kind: 'blocked', reason: 'stale-operation' };
+    if (!isCandidateReplacementPreparationPhase(operation))
+        return { kind: 'blocked', reason: 'ineligible-phase' };
+    if (operation.productionSha !== undefined || operation.publicationVerified || operation.publicationReceipt !== undefined
+        || operation.reconciliationTargets.length !== 0)
+        return { kind: 'blocked', reason: 'publication-effects' };
+    const previous = operation.supersededCandidates.at(-1);
+    const reason = nativeAuthorityProblem(operation, { operationId: previous.operationId,
+        promotionPullRequest: previous.promotionPullRequest, sourceBranch: operation.sourceBranch,
+        productionBranch: operation.productionBranch,
+    }, request, context, evidence);
+    return reason ? { kind: 'blocked', reason } : { kind: 'allowed' };
+}
+function nativeAuthorityProblem(operation, promotionOwner, request, context, evidence) {
+    const oldPr = evidence.promotion;
+    const guards = [
+        [evidence.launcher.open && evidence.launcher.operationId === operation.operationId
+                && evidence.launcher.revision === operation.revision && evidence.launcher.kind === operation.kind
+                && evidence.launcher.sourceBranch === operation.sourceBranch, 'changed-launcher'],
+        [operation.kind === context.kind && operation.sourceBranch === context.sourceBranch
+                && operation.productionBranch === context.productionBranch, 'changed-ownership'],
+        [evidence.sourceSha === request.candidateSha, 'changed-source'],
+        [evidence.productionSha === request.productionBaseSha, 'changed-production-base'],
+        [evidence.oldSourceReachable && evidence.reviewedSourceReachable && !evidence.oldSourceInProduction
+                && evidence.closedPromotionHeadReachable, 'changed-lineage'],
+        [oldPr.number === promotionOwner.promotionPullRequest && oldPr.operationId === promotionOwner.operationId
+                && oldPr.issue === context.issue && oldPr.phase === 'promotion'
+                && oldPr.repositoryFullName.toLowerCase() === context.repositoryFullName.toLowerCase()
+                && oldPr.sourceBranch === promotionOwner.sourceBranch && oldPr.productionBranch === promotionOwner.productionBranch
+                && fullSha(oldPr.headSha), 'invalid-promotion'],
+        [oldPr.closed && !oldPr.merged && !oldPr.autoMergeEnabled && !oldPr.queued
+                && !evidence.conflictingOpenPromotion, 'active-promotion'],
+        [evidence.nativePublicationVacant, 'native-publication-effects'],
+    ];
+    const reason = guards.find(([valid]) => !valid)?.[1];
+    return reason;
+}
+function isRecordedCandidateReplacement(operation, request) {
+    if (validateDeploymentCandidateReplacementRequest(request))
+        return false;
+    const previous = operation.supersededCandidates?.at(-1);
+    return previous?.operationId === request.operationId && previous.revision === request.expectedRevision
+        && previous.replacementSourceSha === request.reviewedSourceSha && previous.replacementBaseSha === request.productionBaseSha
+        && operation.version === request.version && operation.sourceSha === request.candidateSha;
+}
+/** Call only after current native authority and eligibility have been verified. */
+function buildReplacementDeploymentCandidate(previous, request, operationId) {
+    if (assessDeploymentCandidateReplacementState(previous, request))
+        throw new Error('Candidate replacement identity is invalid.');
+    return buildReplacementCandidateSnapshot(previous, request.candidateSha, operationId, request.reviewedSourceSha, request.productionBaseSha);
+}
+/** State-shape constructor only; a caller still needs native authority and explicit replacement intent. */
+function buildReplacementCandidateSnapshot(previous, candidateSha, operationId, reviewedSourceSha, productionBaseSha) {
+    const history = previous.supersededCandidates ?? [];
+    if (replacementSnapshotProblem(previous) || !fullSha(candidateSha) || !fullSha(reviewedSourceSha)
+        || !fullSha(productionBaseSha) || candidateSha === previous.sourceSha || reviewedSourceSha === previous.sourceSha
+        || previous.revision >= Number.MAX_SAFE_INTEGER
+        || !safeOperationId(operationId) || operationId === previous.operationId
+        || history.some(candidate => candidate.operationId === operationId)
+        || previous.promotionPullRequest === undefined)
+        throw new Error('Candidate replacement identity is invalid.');
+    return {
+        ...previous,
+        operationId,
+        revision: previous.revision + 1,
+        sourceSha: candidateSha,
+        phase: 'preparing',
+        selectedPrMode: undefined,
+        promotionPullRequest: undefined,
+        productionSha: undefined,
+        publicationVerified: false,
+        publicationReceipt: undefined,
+        reconciliationTargets: [],
+        lastFailure: null,
+        supersededCandidates: [...history, {
+                operationId: previous.operationId,
+                revision: previous.revision,
+                sourceSha: previous.sourceSha,
+                promotionPullRequest: previous.promotionPullRequest,
+                replacementSourceSha: reviewedSourceSha,
+                replacementBaseSha: productionBaseSha,
+            }],
+    };
+}
+
+
+/***/ }),
+
 /***/ 22495:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -93103,7 +93801,7 @@ const merge_queue_readiness_1 = __nccwpck_require__(12515);
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DEPLOYMENT_STATE_VERSION = exports.DEPLOYMENT_PHASES = void 0;
+exports.MAX_SUPERSEDED_DEPLOYMENT_CANDIDATES = exports.DEPLOYMENT_STATE_VERSION = exports.DEPLOYMENT_PHASES = void 0;
 exports.transitionDeploymentOperation = transitionDeploymentOperation;
 exports.blockDeploymentOperation = blockDeploymentOperation;
 exports.resumeBlockedDeployment = resumeBlockedDeployment;
@@ -93124,6 +93822,7 @@ exports.DEPLOYMENT_PHASES = [
     "blocked",
 ];
 exports.DEPLOYMENT_STATE_VERSION = 1;
+exports.MAX_SUPERSEDED_DEPLOYMENT_CANDIDATES = 8;
 const NORMAL_TRANSITIONS = {
     preparing: ["promotion_pr_pending"],
     promotion_pr_pending: ["promoted"],
@@ -93197,7 +93896,7 @@ function isDeploymentOperationSnapshot(value) {
         'cleanup', 'issueCompletion', 'presentationMode', 'diagrams', 'commentMode', 'sourceBranch',
         'sourceSha', 'originBranch', 'originSha', 'productionBranch', 'developmentBranch',
         'reconciliationTree', 'promotionPullRequest', 'productionSha', 'tag', 'publicationWorkflow',
-        'publicationVerified', 'publicationReceipt', 'reconciliationTargets', 'lastFailure',
+        'publicationVerified', 'publicationReceipt', 'reconciliationTargets', 'lastFailure', 'supersededCandidates',
     ]))
         return false;
     const operation = value;
@@ -93238,6 +93937,7 @@ function isDeploymentOperationSnapshot(value) {
         && (operation.productionSha === undefined || isFullSha(operation.productionSha))
         && typeof operation.publicationVerified === "boolean"
         && isPublicationReceiptConsistent(operation)
+        && isSupersededCandidateHistory(operation.supersededCandidates, operation.operationId)
         && Array.isArray(operation.reconciliationTargets)
         && operation.reconciliationTargets.every(isReconciliationTarget)
         && (operation.phase === "blocked"
@@ -93316,6 +94016,26 @@ function hasOnlyKeys(value, allowed) {
         return false;
     return Object.keys(value).every(key => allowed.includes(key));
 }
+function isSupersededCandidateHistory(value, currentId) {
+    if (value === undefined)
+        return true;
+    if (!Array.isArray(value) || value.length > exports.MAX_SUPERSEDED_DEPLOYMENT_CANDIDATES)
+        return false;
+    const identifiers = new Set();
+    return value.every(candidate => {
+        if (!hasOnlyKeys(candidate, ['operationId', 'revision', 'sourceSha', 'promotionPullRequest', 'replacementSourceSha', 'replacementBaseSha']))
+            return false;
+        const record = candidate;
+        if (typeof record.operationId !== 'string'
+            || !/^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(record.operationId)
+            || record.operationId === currentId || identifiers.has(record.operationId))
+            return false;
+        identifiers.add(record.operationId);
+        return isPositiveInteger(record.revision) && isFullSha(record.sourceSha)
+            && isPositiveInteger(record.promotionPullRequest) && isFullSha(record.replacementSourceSha)
+            && isFullSha(record.replacementBaseSha);
+    });
+}
 
 
 /***/ }),
@@ -93363,6 +94083,7 @@ exports.readDeploymentOperationState = readDeploymentOperationState;
 exports.deploymentStateFence = deploymentStateFence;
 exports.nextDeploymentRevision = nextDeploymentRevision;
 exports.decideDeploymentStateSave = decideDeploymentStateSave;
+const deployment_candidate_replacement_1 = __nccwpck_require__(38447);
 const deployment_operation_1 = __nccwpck_require__(92730);
 function readDeploymentOperationState(value) {
     if (value === undefined || value === null)
@@ -93414,7 +94135,7 @@ function decideDeploymentStateSave(actual, expected, proposed) {
     if (sameSemanticState(actual.operation, proposed)) {
         return { kind: "already-applied", operation: actual.operation };
     }
-    const expectedOperationId = expected.kind === "current" ? expected.fence.operationId : undefined;
+    const expectedOperationId = expected.kind !== "absent" ? expected.fence.operationId : undefined;
     if (actual.operation.operationId !== (expectedOperationId ?? proposed.operationId)) {
         return { kind: "conflict", operation: actual.operation };
     }
@@ -93425,7 +94146,27 @@ function decideDeploymentStateSave(actual, expected, proposed) {
         || actual.operation.phase !== expected.fence.phase) {
         return { kind: "stale", operation: actual.operation };
     }
+    if (expected.kind === 'replacement') {
+        if (!isExactReplacementSuccessor(actual.operation, proposed)) {
+            return { kind: 'invalid', reason: 'Replacement must preserve the exact predecessor and immutable operation facts.' };
+        }
+    }
+    else if (proposed.operationId !== actual.operation.operationId) {
+        return { kind: 'invalid', reason: 'Changing a deployment operation ID requires explicit replacement intent.' };
+    }
     return { kind: "write" };
+}
+function isExactReplacementSuccessor(previous, proposed) {
+    try {
+        const provenance = proposed.supersededCandidates?.at(-1);
+        if (!provenance)
+            return false;
+        const expected = (0, deployment_candidate_replacement_1.buildReplacementCandidateSnapshot)(previous, proposed.sourceSha, proposed.operationId, provenance.replacementSourceSha, provenance.replacementBaseSha);
+        return sameSemanticState(expected, proposed);
+    }
+    catch {
+        return false;
+    }
 }
 function sameSemanticState(left, right) {
     return canonicalJson(left) === canonicalJson(right);
@@ -94370,7 +95111,7 @@ function decideIssueWorkflowRuntime(context) {
         ? `Issue workflow "${context.admission.kind}" is disabled in the repository profile.`
         : 'Issue is unmanaged because no recognized issue workflow label was found.';
     if (context.hasDurableOperation) {
-        if (context.singleAction === 'prepare_deployment_action') {
+        if (['prepare_deployment_action', 'replace_deployment_action'].includes(context.singleAction ?? '')) {
             return { mode: 'block', message: `${identity} A new deployment cannot start from disabled work.` };
         }
         if (context.route === 'single-action' && !DURABLE_CONTINUATION_ACTIONS.has(context.singleAction ?? '')) {
@@ -98642,6 +99383,75 @@ function createCopilotHistoryReadPort(source, serverOrigin = 'https://github.com
 
 /***/ }),
 
+/***/ 95402:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createDeploymentCandidateInspection = createDeploymentCandidateInspection;
+exports.createDeploymentCandidatePreflightPorts = createDeploymentCandidatePreflightPorts;
+const github = __importStar(__nccwpck_require__(78227));
+const github_candidate_replacement_repository_1 = __nccwpck_require__(64483);
+const octokit_deployment_adapter_1 = __nccwpck_require__(46819);
+/** Only composed by the serialized GitHub workflow surface. */
+function createDeploymentCandidateInspection(binding) {
+    const repository = new github_candidate_replacement_repository_1.GithubCandidateReplacementRepository(new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter(), Object.freeze({
+        repositoryFullName: `${github.context.repo.owner}/${github.context.repo.repo}`,
+        eventName: github.context.eventName, eventMode: String(github.context.payload.inputs?.mode ?? ''),
+        job: process.env.GITHUB_JOB ?? '', runId: github.context.runId,
+        runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT), headSha: github.context.sha,
+    }));
+    return Object.freeze({ inspect: command => repository.inspect({
+            ...command, owner: binding.owner, repository: binding.repository, token: binding.token,
+        }) });
+}
+/** This object has no state-save, PR-write, publication or agent capability. */
+function createDeploymentCandidatePreflightPorts(binding) {
+    const repository = new github_candidate_replacement_repository_1.GithubCandidateReplacementRepository(new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter());
+    return Object.freeze({
+        inspect: command => repository.inspect({ ...command, owner: binding.owner, repository: binding.repository, token: binding.token }),
+        readLauncher: issue => repository.readLauncher({ ...binding, issue }),
+        readWorkflowRun: runId => repository.readWorkflowRun({ ...binding, runId }),
+    });
+}
+
+
+/***/ }),
+
 /***/ 98313:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -99344,6 +100154,7 @@ exports.createPullRequestReviewCommentUseCaseCompositionRoot = createPullRequest
 exports.createCommitUseCaseCompositionRoot = createCommitUseCaseCompositionRoot;
 exports.createMainRunRouteCompositionRoot = createMainRunRouteCompositionRoot;
 exports.createClosedIssueRetirementUseCase = createClosedIssueRetirementUseCase;
+const deployment_candidate_replacement_composition_root_1 = __nccwpck_require__(95402);
 const change_size_diagnostics_composition_root_1 = __nccwpck_require__(80230);
 const sdd_diff_composition_root_1 = __nccwpck_require__(83434);
 const pull_request_status_composition_root_1 = __nccwpck_require__(49891);
@@ -99457,6 +100268,7 @@ function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publica
         state: (0, push_single_action_capability_port_binding_1.bindDeploymentState)(new deployment_state_repository_1.DeploymentStateRepositoryFactory(issueDescriptionQueryPort), binding),
         labels: (0, push_single_action_capability_port_binding_1.bindDeploymentLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding),
         issues: (0, push_single_action_capability_port_binding_1.bindDeploymentIssues)((0, issue_interaction_composition_root_1.createIssueClosureRepository)(), binding),
+        replacementInspection: (0, deployment_candidate_replacement_composition_root_1.createDeploymentCandidateInspection)(binding),
         operationId: node_crypto_1.randomUUID,
         catalogResolver,
     });

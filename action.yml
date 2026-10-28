@@ -35,6 +35,21 @@ inputs:
   single-action-operation-id:
     description: "Expected durable deployment operation ID for trusted continuation actions."
     default: ""
+  single-action-expected-revision:
+    description: "Exact current durable revision for replace_deployment_action."
+    default: ""
+  single-action-candidate-sha:
+    description: "Freshly validated full candidate SHA for replace_deployment_action."
+    default: ""
+  single-action-reviewed-source-sha:
+    description: "Exact corrected source reviewed before fresh replacement preparation. Separate from generated validated candidate SHA."
+    default: ""
+  single-action-production-base-sha:
+    description: "Native production base captured by replacement preflight."
+    default: ""
+  single-action-confirm-unpublished:
+    description: "Explicit maintainer confirmation that the exact replacement version is unpublished in every project registry."
+    default: "false"
   single-action-comment-id:
     description: "Optional issue comment ID to replace or append to."
     default: ""

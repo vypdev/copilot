@@ -1,3 +1,4 @@
+import { ReplaceCandidateHandler } from './deployment_handlers/replace_candidate_handler';
 import { ApplicationError, toApplicationError } from "../../errors/application_error";
 import type { DeploymentOrchestrationContext } from "../../ports/deployment_orchestration_ports";
 import type { DeploymentOrchestrationDependencies } from "../../services/deployment_orchestration_dependencies";
@@ -25,6 +26,7 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
   private readonly stateBoundary: DeploymentStateBoundary;
   private readonly runtime: DeploymentOrchestrationRuntime;
   private readonly preparePromotion: PreparePromotionHandler;
+  private readonly replaceCandidate: ReplaceCandidateHandler;
   private readonly continueDeployment: ContinueDeploymentHandler;
   private readonly confirmPublication: ConfirmPublicationHandler;
   private readonly recordFailure: RecordFailureHandler;
@@ -35,6 +37,7 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
     const acceptPromotion = new AcceptPromotionHandler(this.runtime);
     const reconciliation = new ReconciliationHandler(this.runtime);
     this.preparePromotion = new PreparePromotionHandler(this.runtime, acceptPromotion);
+    this.replaceCandidate = new ReplaceCandidateHandler(this.runtime, this.preparePromotion);
     this.continueDeployment = new ContinueDeploymentHandler(this.runtime, acceptPromotion, reconciliation);
     this.confirmPublication = new ConfirmPublicationHandler(this.runtime, reconciliation);
     this.recordFailure = new RecordFailureHandler(this.runtime);
@@ -53,6 +56,7 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
   private async invokeSelectedHandler(
     context: DeploymentOrchestrationContext,
   ): Promise<Result | undefined> {
+    if (context.singleAction.isReplaceDeploymentAction) return await this.replaceCandidate.invoke(context);
     if (context.singleAction.isPrepareDeploymentAction) return await this.preparePromotion.invoke(context);
     if (context.singleAction.isContinueDeploymentAction) return await this.continueDeployment.invoke(context);
     if (context.singleAction.isPublishedDeploymentAction) return await this.confirmPublication.invoke(context);
@@ -71,7 +75,9 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
         `Deployment invocation was superseded by revision ${error.current.revision}; no stale state was written.`,
       )];
     }
-    if (shouldRecordUnexpectedFailure(error)) {
+    // Inspection/preparation failure must not rewrite the old immutable candidate.
+    // A successor already persisted before a lost response remains recoverable by exact replay.
+    if (!context.singleAction.isReplaceDeploymentAction && shouldRecordUnexpectedFailure(error)) {
       await this.runtime.recordUnexpectedFailure(context, error);
     }
     return [new Result({

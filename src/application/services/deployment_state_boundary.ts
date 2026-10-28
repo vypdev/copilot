@@ -58,8 +58,11 @@ export class DeploymentStateBoundary {
     }
     const proposed: DeploymentOperationSnapshot = { ...operation, stateVersion: 1, revision };
     execution.currentConfiguration.deploymentOrchestration = proposed;
+    const writeExpected: ExpectedDeploymentState = execution.singleAction.isReplaceDeploymentAction
+      && expected.kind === 'current' && proposed.operationId !== expected.fence.operationId
+      ? { kind: 'replacement', fence: expected.fence } : expected;
     const outcome = await store.save({
-      expected,
+      expected: writeExpected,
       state: { ...execution.currentConfiguration, deploymentOrchestration: proposed },
     });
     if (outcome.kind === "saved" || outcome.kind === "already-applied") {
@@ -70,6 +73,7 @@ export class DeploymentStateBoundary {
     }
     if (outcome.kind === "stale") throw new SupersededDeploymentInvocationError(outcome.operation);
     if (outcome.kind === "conflict") {
+      if (execution.singleAction.isReplaceDeploymentAction) throw new SupersededDeploymentInvocationError(outcome.operation);
       throw new ApplicationError("provider.conflict", `Launcher issue is owned by deployment ${outcome.operation.operationId}.`);
     }
     if (outcome.kind === "missing") {
