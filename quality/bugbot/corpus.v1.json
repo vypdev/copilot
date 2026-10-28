@@ -635,6 +635,99 @@
           "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }"
         }
       ]
+    },
+    {
+      "id": "action-declared-matcher-input",
+      "language": "yaml",
+      "category": "negative",
+      "description": "A composite passes an explicit matcher option; exact upstream evidence follows the candidate.",
+      "file": ".github/actions/publish-package/action.yml",
+      "startLine": 15,
+      "diff": " name: Publish package\n runs:\n   using: composite\n   steps:\n     - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d\n       with:\n         sdk: stable\n+        problem-matcher: false\n # Supplied read-only contract evidence for the exact uses revision:\n # Manifest inputs: sdk (default stable), architecture, flavor, problem-matcher (default true).\n # Runtime reads getInput('problem-matcher'); only string 'false' disables matcher registration.\n # The parent composite has no matcher asset; registering it fails before upload.\n # Upstream action.yml blob eadbfde8d51d64b3d3060258f76b5929753752d0 at 6afc89df92d6eb3834022f73cd65adc8cdfcb92d.\n # lib/main.dart blob 80399c93965c53f61f9d90ec04e0de2afe7c8fc3, lines 144-151.",
+      "expected": []
+    },
+    {
+      "id": "action-renamed-input-current-version",
+      "language": "yaml",
+      "category": "negative",
+      "description": "The consumer moves to a different immutable revision whose input contract is supplied.",
+      "file": ".github/actions/publish-package/action.yml",
+      "startLine": 15,
+      "diff": " name: Publish package\n runs:\n   using: composite\n   steps:\n     - uses: fixture-org/setup-sdk@2222222222222222222222222222222222222222\n       with:\n         sdk: stable\n+        enable-problem-matcher: false\n # Supplied read-only contract evidence for the exact uses revision:\n # Manifest inputs: sdk (default stable), enable-problem-matcher (default true).\n # Runtime reads getInput('enable-problem-matcher'); only string 'false' disables matcher registration.\n # The parent composite has no matcher asset; registering it fails before upload.\n # This is a synthetic immutable upstream contract, not a live Action execution.\n # Older revision 1111111111111111111111111111111111111111 declared/read problem-matcher.",
+      "expected": []
+    },
+    {
+      "id": "action-input-contract-unavailable",
+      "language": "yaml",
+      "category": "negative",
+      "description": "An external input is supplied, but applicable upstream contract and execution evidence are unavailable.",
+      "file": ".github/actions/publish-package/action.yml",
+      "startLine": 15,
+      "diff": " name: Publish package\n runs:\n   using: composite\n   steps:\n     - uses: fixture-org/setup-tool@v7\n       with:\n         sdk: stable\n+        scan-annotations: false\n # Supplied read-only contract evidence for the exact uses revision:\n # No applicable manifest, runtime getter or execution observation is available.",
+      "expected": []
+    },
+    {
+      "id": "action-undeclared-matcher-alias",
+      "language": "yaml",
+      "category": "reliability",
+      "description": "The publication composite changes its matcher input; exact upstream contract and asset boundary are supplied.",
+      "file": ".github/actions/publish-package/action.yml",
+      "startLine": 15,
+      "diff": " name: Publish package\n runs:\n   using: composite\n   steps:\n     - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d\n       with:\n         sdk: stable\n+        enable-problem-matcher: false\n # Supplied read-only contract evidence for the exact uses revision:\n # Manifest inputs: sdk (default stable), architecture, flavor, problem-matcher (default true).\n # Runtime reads getInput('problem-matcher'); only string 'false' disables matcher registration.\n # The parent composite has no matcher asset; registering it fails before upload.\n # Upstream action.yml blob eadbfde8d51d64b3d3060258f76b5929753752d0 at 6afc89df92d6eb3834022f73cd65adc8cdfcb92d.\n # lib/main.dart blob 80399c93965c53f61f9d90ec04e0de2afe7c8fc3, lines 144-151.",
+      "expected": [
+        {
+          "id": "action-undeclared-matcher-alias-fault",
+          "title": "Undeclared alias leaves the failing matcher enabled",
+          "file": ".github/actions/publish-package/action.yml",
+          "line": 22,
+          "severity": "medium",
+          "category": "reliability",
+          "symbol": "Publish package",
+          "codeSnippet": "enable-problem-matcher: false"
+        }
+      ]
+    },
+    {
+      "id": "action-old-input-on-new-version",
+      "language": "yaml",
+      "category": "reliability",
+      "description": "The selected upstream revision differs from the older input contract also included as context.",
+      "file": ".github/actions/publish-package/action.yml",
+      "startLine": 15,
+      "diff": " name: Publish package\n runs:\n   using: composite\n   steps:\n     - uses: fixture-org/setup-sdk@2222222222222222222222222222222222222222\n       with:\n         sdk: stable\n+        problem-matcher: false\n # Supplied read-only contract evidence for the exact uses revision:\n # Manifest inputs: sdk (default stable), enable-problem-matcher (default true).\n # Runtime reads getInput('enable-problem-matcher'); only string 'false' disables matcher registration.\n # The parent composite has no matcher asset; registering it fails before upload.\n # This is a synthetic immutable upstream contract, not a live Action execution.\n # Older revision 1111111111111111111111111111111111111111 declared/read problem-matcher.",
+      "expected": [
+        {
+          "id": "action-old-input-on-new-version-fault",
+          "title": "Old-version input does not disable the selected revision matcher",
+          "file": ".github/actions/publish-package/action.yml",
+          "line": 22,
+          "severity": "medium",
+          "category": "reliability",
+          "symbol": "Publish package",
+          "codeSnippet": "problem-matcher: false"
+        }
+      ]
+    },
+    {
+      "id": "action-declared-input-wrong-value",
+      "language": "yaml",
+      "category": "reliability",
+      "description": "An explicit input value reaches the exact upstream getter and a composite without the matcher asset.",
+      "file": ".github/actions/publish-package/action.yml",
+      "startLine": 15,
+      "diff": " name: Publish package\n runs:\n   using: composite\n   steps:\n     - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d\n       with:\n         sdk: stable\n+        problem-matcher: 'off'\n # Supplied read-only contract evidence for the exact uses revision:\n # Manifest inputs: sdk (default stable), architecture, flavor, problem-matcher (default true).\n # Runtime reads getInput('problem-matcher'); only string 'false' disables matcher registration.\n # The parent composite has no matcher asset; registering it fails before upload.\n # Upstream action.yml blob eadbfde8d51d64b3d3060258f76b5929753752d0 at 6afc89df92d6eb3834022f73cd65adc8cdfcb92d.\n # lib/main.dart blob 80399c93965c53f61f9d90ec04e0de2afe7c8fc3, lines 144-151.",
+      "expected": [
+        {
+          "id": "action-declared-input-wrong-value-fault",
+          "title": "Off is not the runtime disabling value",
+          "file": ".github/actions/publish-package/action.yml",
+          "line": 22,
+          "severity": "medium",
+          "category": "reliability",
+          "symbol": "Publish package",
+          "codeSnippet": "problem-matcher: 'off'"
+        }
+      ]
     }
   ]
 }

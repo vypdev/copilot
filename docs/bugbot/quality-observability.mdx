@@ -5,7 +5,7 @@ description: Measure Bugbot accuracy, latency, outcomes, feedback, and regressio
 
 # Bugbot quality and observability
 
-Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 65 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
+Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 71 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
 
 The #655 cases cover branch coverage enabled through repository configuration,
 inherited HTTP/1.0 connection behavior, correct arithmetic, short-circuit guards,
@@ -89,6 +89,25 @@ reports no defect on the three valid indirect paths. No fixture, expected verdic
 or threshold was changed to improve those scores. The historical false positive
 was not reproduced in this small sample, and no statistical or all-gates-passed
 model-quality claim is made.
+
+The six #739 external Action cases pair declared inputs, version-specific renamed
+inputs and unavailable contracts with undeclared aliases, old-version keys and
+ignored disabling values. Native controls parse candidate YAML as inert data and
+evaluate statically authored getter/default logic; neither corpus strings nor
+external modules execute. These are synthetic contract controls, not a new Dart
+SDK, GitHub runner, OIDC or publication run. Review and benchmark share the same
+exact-version input/replacement evidence instruction. Private reference verdicts
+never enter the model prompt.
+All four actual measurements in `quality/bugbot/evidence/issue-739.json` retain
+identical inputs and scoring rules. The baseline does not reproduce the historical
+false positive. The full-text intermediate passes model scoring but fails the
+existing prompt-size test; a compact intermediate misses the ignored-value
+control. The shipped instruction fits that unchanged size bound and reports the
+three real defects without negative-case findings. Its full default model score
+still fails: two anchors are off by one and a category differs from the reference.
+These limitations are retained rather than hidden by a reference prediction,
+threshold change or repeated identical sample. No statistical improvement or
+future accuracy guarantee is claimed.
 
 ## Quality gates
 
