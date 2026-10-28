@@ -14,6 +14,7 @@ import CenterHost from '../presentation/CenterHost.svelte';
 import { loadCenterPage } from './center_pages.ts';
 import { downloadCenterSettings, readCenterImport } from './center_files.ts';
 import { buildSourceIdentity } from './build_identity.ts';
+import { connectionActions } from './center_connections.ts';
 
 /** Native options-page composition. The UI receives preferences and callbacks, never reusable authority. */
 export function startCenter(api: BrowserApi, document: Document, nativeLanguage: string): () => void {
@@ -29,7 +30,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     const focus = (selector: string) => { void tick().then(() => { if (!stopped) document.querySelector<HTMLElement>(selector)?.focus(); }); };
     const navigation = new CenterNavigation(window.location.hash, {
         replace: hash => { window.history.replaceState(null, '', `${canonical}${hash}`); },
-        changed: () => { publish(); focus(navigation.pendingLocation ? '[role=alert] button' : 'main h1'); },
+        changed: () => { publish(); focus(navigation.pendingLocation ? '[role=alert] button' : 'main h1'); readConnections(); },
     });
     const frame = () => centerFrame(client.view, navigation.location, navigation.pendingLocation, nativeLanguage, draftEpoch);
     function publish(): void {
@@ -38,6 +39,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
         for (const listener of listeners) listener(value);
     }
     const actions: CenterActions = {
+        connections: connectionActions(api, document, client, () => !stopped && ['connections', 'repositories'].includes(navigation.location.route), value => navigation.dirty(value)),
         preview: (intent, revision) => { void client.preview(intent, revision); },
         confirm: () => { void client.confirm(); }, cancel: () => { void client.cancel(); },
         dismiss: () => { void client.dismiss(); }, reload: () => { void client.refresh(); },
@@ -66,6 +68,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     const surface: CenterSurface = { initial: frame(), actions, load: loadCenterPage,
         subscribe: listener => { listeners.add(listener); listener(frame()); return () => { listeners.delete(listener); }; } };
     const host = mount(CenterHost, { target: document.body, props: { surface } }); flushSync();
+    function readConnections(): void { if (navigation.location.route === 'connections' || navigation.location.route === 'repositories') void client.connections(); }
     const hash = () => navigation.navigate(window.location.hash);
     const visible = () => { if (document.visibilityState !== 'hidden') void client.refresh(); };
     const changed = (changes: Record<string, unknown>, area: string) => { if (area === 'local' && Object.hasOwn(changes, SETTINGS_KEY)) visible(); };
@@ -84,5 +87,5 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     window.addEventListener('hashchange', hash); document.addEventListener('visibilitychange', visible);
     window.addEventListener('beforeunload', beforeUnload); window.addEventListener('pagehide', stop);
     api.storage.onChanged.addListener(changed); api.runtime.onMessage.addListener(invalidated);
-    void client.start(); return stop;
+    void client.start().then(readConnections); return stop;
 }

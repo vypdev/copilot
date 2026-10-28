@@ -1,4 +1,5 @@
-import { MAX_CENTER_RESPONSE_BYTES, type CenterMessage } from '../domain/center_protocol.ts';
+import { MAX_CENTER_RESPONSE_BYTES, type CenterMessage, type ConnectionMessage } from '../domain/center_protocol.ts';
+import type { NamedSessions } from './named_sessions.ts';
 import type { Sender } from '../domain/protocol.ts';
 import { jsonBytesWithin } from '../domain/value.ts';
 import { centerBinding, CenterController } from './center_controller.ts';
@@ -8,24 +9,32 @@ import { SettingsRepository, SettingsMigrationError } from './settings_repositor
 /** Called only after native extension-origin admission by MessageGateway. */
 export class CenterGateway {
     constructor(private readonly controller: CenterController, private readonly operations: SettingsOperations,
-        private readonly settings: SettingsRepository) {}
+        private readonly settings: SettingsRepository, private readonly connections?: NamedSessions) {}
     releaseTab(id: number): void { this.controller.releaseTab(id); }
     shutdown(): void { this.controller.shutdown(); }
-    async handle(message: CenterMessage, sender: Sender): Promise<unknown> {
+    async handle(message: CenterMessage | ConnectionMessage, sender: Sender): Promise<unknown> {
         try {
             const result = await this.dispatch(message, sender);
             return jsonBytesWithin(result, MAX_CENTER_RESPONSE_BYTES) ? result : { state: 'unavailable' };
         } catch { return { state: 'unavailable' }; }
     }
-    private async dispatch(message: CenterMessage, sender: Sender): Promise<unknown> {
+    private async dispatch(message: CenterMessage | ConnectionMessage, sender: Sender): Promise<unknown> {
         const binding = centerBinding(sender);
         if (!binding) return { state: 'rejected' };
         if (message.method === 'center.open') return this.controller.open(binding);
         if (message.method === 'center.claim') return this.controller.claim(message.clientId, binding, message.controllerEpoch);
         if (message.method === 'center.close') return this.controller.close(message.clientId, binding, message.controllerEpoch);
-        const epoch = message.method === 'center.read' ? undefined : message.controllerEpoch;
+        const epoch = message.method === 'center.read' || message.method === 'center.connections.read' ? undefined : message.controllerEpoch;
         const client = this.controller.authorize(message.clientId, binding, epoch);
         if (!client) return { state: 'stale' };
+        if (message.method === 'center.connections.read') return this.connections?.read(() =>
+            this.controller.authorize(message.clientId, binding, client.controllerEpoch) !== null) ?? { state: 'unavailable' };
+        if (message.method === 'center.connections.change') {
+            if (client.role !== 'editor') return { state: 'denied' };
+            if (client.credentialEpoch !== message.credentialEpoch) return { state: 'stale' };
+            return this.connections?.change(message.intent, message.expectedRevision, () =>
+                this.controller.authorize(message.clientId, binding, client.controllerEpoch)?.role === 'editor') ?? { state: 'unavailable' };
+        }
         if (message.method === 'center.read') {
             // A failed migration acknowledgement is not proof that storage is unavailable.
             // Read back once: preserve an unmigrated record as read-only, or report observed current data.

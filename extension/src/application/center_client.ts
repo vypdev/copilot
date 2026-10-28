@@ -1,11 +1,12 @@
 import { centerPayload, decodeCenterDocument, decodeCenterIdentity, decodeCenterOutcome, decodeCenterPreview, type CenterIdentity, type CenterPlan } from '../domain/center_reply.ts';
-import type { CenterMessage } from '../domain/center_protocol.ts';
+import type { CenterMessage, ConnectionMessage } from '../domain/center_protocol.ts';
+import { connectionIntent, decodeConnections, type ConnectionIntent } from '../domain/named_sessions.ts';
 import type { CenterClientView, ClientReview } from '../domain/center_client_view.ts';
 import { sameSettingsContent } from '../domain/settings_operation.ts';
 import { deepFreeze, record } from '../domain/value.ts';
 import type { SettingsOperationOutcome } from '../domain/settings_result.ts';
 
-export interface CenterClientPort { readonly sourceTree: string; send(message: CenterMessage): Promise<unknown> }
+export interface CenterClientPort { readonly sourceTree: string; send(message: CenterMessage | ConnectionMessage): Promise<unknown> }
 const uncertain = (): SettingsOperationOutcome => ({ state: 'unknown', acknowledgement: 'unknown', observedRevision: null, observation: 'unavailable' });
 const publicReview = (plan: CenterPlan, state: ClientReview['state'], outcome?: SettingsOperationOutcome): ClientReview => {
     const { operationId: _id, state: _state, ...view } = plan;
@@ -34,13 +35,13 @@ export class CenterClient {
         for (const listener of this.listeners) { try { listener(this.value); } catch { /* One renderer cannot erase saved facts. */ } }
     }
     private current(generation: number): boolean { return !this.stopped && this.generation === generation; }
-    private async request(message: CenterMessage): Promise<Record<string, unknown> | null> {
+    private async request(message: CenterMessage | ConnectionMessage): Promise<Record<string, unknown> | null> {
         try {
             const response = await this.port.send(message);
             const payload = centerPayload(response, this.port.sourceTree);
             if (!payload && !this.stopped) {
                 const mismatch = record(response) && response.sourceTree !== this.port.sourceTree;
-                if (mismatch) { this.owner = null; this.pending = null; }
+                if (mismatch) { this.owner = null; this.pending = null; this.update({ role: null, connections: null }); }
                 this.update({ issue: mismatch ? 'incompatible' : 'unavailable',
                     review: mismatch && this.value.review ? { ...this.value.review, state: 'stale' } : this.value.review });
             }
@@ -50,20 +51,21 @@ export class CenterClient {
     private async finish(generation: number): Promise<void> {
         if (!this.current(generation)) return;
         this.busy = false; this.update({ phase: 'ready' });
-        if (this.queuedRead) { this.queuedRead = false; await this.refresh(); }
+        const read = this.queuedRead; this.queuedRead = false;
+        if (read && this.value.issue !== 'incompatible') await this.refresh();
     }
     async start(): Promise<void> {
         if (this.stopped || this.busy) return;
         this.busy = true; const generation = ++this.generation;
         this.pending = null; this.attempted = null; this.owner = null;
-        this.update({ phase: 'loading', issue: null, review: null });
+        this.update({ phase: 'loading', issue: null, review: null, role: null, connections: null });
         if (!this.current(generation)) return;
         const owner = decodeCenterIdentity(await this.request({ version: 1, method: 'center.open' }));
         if (!this.current(generation)) {
             if (owner) await this.request({ version: 1, method: 'center.close', clientId: owner.clientId, controllerEpoch: owner.controllerEpoch });
             return;
         }
-        if (owner) { this.owner = owner; await this.load(generation); }
+        if (owner) { this.owner = owner; this.update({ role: owner.role }); await this.load(generation); }
         else if (!this.value.issue) this.update({ issue: 'unavailable' });
         await this.finish(generation);
     }
@@ -83,7 +85,7 @@ export class CenterClient {
         if (!document || document.identity.clientId !== owner.clientId) {
             if (body?.state === 'stale') {
                 const review = this.pending ? publicReview(this.pending, 'stale') : this.value.review;
-                this.owner = null; this.pending = null; this.update({ issue: 'stale', review });
+                this.owner = null; this.pending = null; this.update({ issue: 'stale', review, role: null, connections: null });
             }
             else if (!this.value.issue) this.update({ issue: 'unavailable' });
             return;
@@ -102,7 +104,7 @@ export class CenterClient {
                 acknowledgement: 'unknown', current: identity.controllerEpoch === owner.controllerEpoch && identity.credentialEpoch === owner.credentialEpoch });
             this.attempted = null;
         }
-        this.update({ data: { ...data, role: identity.role }, review, issue: null });
+        this.update({ data: { ...data, role: identity.role }, role: identity.role, review, issue: null });
     }
     async takeControl(): Promise<void> {
         if (this.stopped || this.busy || !this.owner) return;
@@ -141,6 +143,25 @@ export class CenterClient {
     }
     async confirm(): Promise<void> { await this.complete('center.confirm'); }
     async cancel(): Promise<void> { await this.complete('center.cancel'); }
+    async connections(input: ConnectionIntent | null | (() => Promise<ConnectionIntent | null>) = null, expectedRevision = 0): Promise<void> {
+        if (this.stopped || this.busy || !this.owner || this.value.review) return;
+        const owner = this.owner; const generation = this.generation;
+        if (input && owner.role !== 'editor') { this.update({ connections: { state: 'denied' } }); return; }
+        this.busy = true; this.update({ phase: input ? 'committing' : 'reading' });
+        let intent: ConnectionIntent | null;
+        try { intent = typeof input === 'function' ? await input() : input; }
+        catch { if (this.current(generation)) this.update({ connections: { state: 'unavailable' } }); await this.finish(generation); return; }
+        if (!this.current(generation)) return;
+        if (input && !intent) { this.update({ connections: { state: 'denied' } }); await this.finish(generation); return; }
+        if (intent && !connectionIntent(intent)) { this.update({ connections: { state: 'invalid' } }); await this.finish(generation); return; }
+        const response = decodeConnections(await this.request(intent ? { version: 1, method: 'center.connections.change',
+            clientId: owner.clientId, controllerEpoch: owner.controllerEpoch, credentialEpoch: owner.credentialEpoch, expectedRevision, intent }
+            : { version: 1, method: 'center.connections.read', clientId: owner.clientId }));
+        if (!this.current(generation)) return;
+        this.update({ connections: response ?? { state: intent ? 'unknown' : 'unavailable' } });
+        this.queuedRead = true;
+        await this.finish(generation);
+    }
     private async complete(method: 'center.confirm' | 'center.cancel'): Promise<void> {
         if (this.stopped || this.busy || !this.owner || !this.pending) return;
         if (method === 'center.confirm' && this.value.issue !== null) return;

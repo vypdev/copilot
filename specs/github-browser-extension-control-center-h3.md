@@ -457,9 +457,70 @@ native ports. Its nonopaque jsdom origin is a test requirement, not native proof
 `center_client.test.ts`, `center_frame.test.ts`, `center_files.test.ts` and
 `center_assets.test.ts` cover the client, drafts/locales, data and asset boundary.
 The development build labels unfinished sections; placeholders are not accepted
-workflows. Five named protected sessions, repositories, full inventory/provenance,
+workflows. Complete repository management, full inventory/provenance,
 remaining routes, native/human evidence and final full coverage/review remain
 required. Numeric budgets, traceability and Definition of Done are unchanged.
+
+### 8.8 Named read-session boundary
+
+Connections and Repositories share the native protected read-session surface.
+Each of at most five entries has a unique case-insensitive local name (1–64
+UTF-16 code units, trimmed, no control/format characters), an opaque local ID,
+the fixed `github.com` host and the closed `repository-read` purpose. GitHub
+verifies the numeric account/repository identities before selection. Selecting
+an existing entry rereads both identities: a rename with the same numeric IDs
+updates its display, while a different account or repository is rejected. One
+identity is selected for a read. This does not implement optional write roles,
+repository workspaces, scoped pause controls or effective-profile provenance.
+
+```text
+Named draft → explicit browser permission → verified account and repository
+→ protected session record → redacted selected-session view
+Uncertain response → read current sessions; never repeat Connect automatically
+```
+
+Text equivalent: explicit authorization precedes identity verification and the
+protected save. An uncertain result requires a read, not another mutation.
+The unbound native password field clears before awaiting permission, including
+denial or native API failure. Svelte receives semantic callbacks and validated
+nonsecret summaries; it never receives credential values. Permission request is
+the first browser API call in the submit gesture. Observer, controller, native
+document, credential-epoch and vault-revision checks remain independent.
+
+The session vault is separate from preference/rollback/export state. A valid
+existing H2 connection is presented as `GitHub`/`previous-session` at vault
+revision zero; an explicit mutation materializes the named vault. No new grant
+is inferred. Missing data is empty; damaged/future vaults remain unavailable
+without a destructive downgrade. Explicit **Forget all protected sessions**
+requires its own visible confirmation and clears the fixed protected keys even
+when the vault schema cannot be read. It never resets preferences or revokes a
+GitHub credential. Confirmed forgetting also clears an unsubmitted password
+field; opening and canceling that confirmation does not discard it. A failed
+native credential deletion remains unavailable,
+rather than being treated as proof that all credentials were removed.
+Session-storage or permission unavailability
+cannot trigger fallback into persistent local storage.
+
+Switching fences the prior active session and invalidates its private evidence
+before verifying the candidate; failure leaves the candidate disconnected.
+Disconnect removes the selected local credential and entry. Inactive-entry
+removal retains the selected identity; selected-entry removal disconnects it.
+Removal requires a visible exact-entry confirmation. These operations do not
+revoke a credential at GitHub. Browser API permission removal fences in-flight
+work and serializes deletion after any admitted vault write, preventing a late
+write from resurrecting credentials. A failed write acknowledgement is inspected
+once; an exactly observed save is accepted, otherwise the result stays unknown
+and the candidate is disconnected. No automatic second write occurs.
+
+The authenticated session read/disconnect path works independently of corrupt or
+future preference schemas; it never invents default settings to mount a page.
+Ordinary lifecycle updates are coalesced; a user mutation emits at most two
+invalidation notifications (initial fencing and final observed outcome).
+Current deterministic evidence lives in `named_sessions.test.ts` (domain and
+integration), `center_connections.test.ts` (actual mounted form/gateway) and
+the existing runtime/browser contracts. They refine H3-R05/R09 and CENTER04/05
+boundaries without completing those entire capabilities or replacing the
+required source-bound Chrome, Firefox, Safari and human acceptance.
 
 ## 9. UI/UX and content contract
 

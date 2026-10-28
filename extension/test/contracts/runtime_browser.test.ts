@@ -5,8 +5,42 @@ import { browserFixture } from '../fixtures/browser.ts';
 import { startBackground } from '../../src/infrastructure/background_runtime.ts';
 import { MessageGateway } from '../../src/application/message_gateway.ts';
 import { SETTINGS_KEY } from '../../src/application/settings_repository.ts';
+import { DEFAULT_SETTINGS } from '../../src/domain/settings.ts';
+import { NAMED_SESSIONS_KEY } from '../../src/application/named_sessions.ts';
+import { SESSION_KEY } from '../../src/application/protected_session.ts';
 
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+it('composes named read sessions through native background messages and preserves repository pause while saving only nonsecret preference grants', async () => {
+    const h = browserFixture(); h.localValues.set(SETTINGS_KEY, { ...DEFAULT_SETTINGS, revision: 3, repositories: { '7': { paused: true } } });
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+        const data = url.endsWith('/user') ? { id: 1, login: 'octo' }
+            : url.endsWith('/repos/octo/other') ? { id: 8, full_name: 'octo/other' } : { id: 7, full_name: 'octo/example' };
+        const response = new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json' } });
+        Object.defineProperty(response, 'url', { value: url }); return response;
+    }));
+    const stop = startBackground(h.api); const listener = [...h.onMessage.listeners][0];
+    const sender = { id: 'test', url: 'chrome-extension://test/runtime.html#/connections', documentId: 'native-center', tab: { id: 1, incognito: false } };
+    const call = (value: unknown) => new Promise<Record<string, unknown>>(resolve => listener(value, sender, value => resolve(value as Record<string, unknown>)));
+    try {
+        const owner = await call({ version: 1, method: 'center.open' });
+        await call({ version: 1, method: 'center.connections.read', clientId: owner.clientId });
+        let current = await call({ version: 1, method: 'center.read', clientId: owner.clientId });
+        const connect = (name: string, repository: string, revision: number) => call({ version: 1, method: 'center.connections.change', clientId: owner.clientId,
+            controllerEpoch: current.controllerEpoch, credentialEpoch: current.credentialEpoch, expectedRevision: revision,
+            intent: { type: 'connect', name, repository, secret: 'synthetic_native_read_credential' } });
+        expect(await connect('Work', 'octo/example', 0)).toMatchObject({ state: 'ready', connected: true, revision: 1 });
+        expect(h.localValues.get(SETTINGS_KEY)).toMatchObject({ current: { revision: 4, repositories: { '7': { paused: true, connected: true } } } });
+        current = await call({ version: 1, method: 'center.read', clientId: owner.clientId });
+        const second = await connect('Personal', 'octo/other', 1);
+        expect(second).toMatchObject({ state: 'ready', connected: true, revision: 2, entries: [{ repositoryId: '7' }, { repositoryId: '8' }] });
+        expect(JSON.stringify(second)).not.toContain('synthetic_native_read_credential');
+        expect(JSON.stringify(h.localValues.get(SETTINGS_KEY))).not.toContain('synthetic_native_read_credential');
+        expect(h.localValues.get(SETTINGS_KEY)).toMatchObject({ current: { repositories: { '7': { paused: true }, '8': { connected: true } } } });
+        expect(h.sessionValues.has(NAMED_SESSIONS_KEY)).toBe(true);
+        [...h.permissionRemoved.listeners][0]({ origins: ['https://api.github.com/*'] });
+        await vi.waitFor(() => { expect(h.sessionValues.has(NAMED_SESSIONS_KEY)).toBe(false); expect(h.sessionValues.has(SESSION_KEY)).toBe(false); });
+    } finally { stop(); }
+});
 it('github-browser-extension-runtime-C19/github-browser-extension-runtime-C22 protects session access where supported and works with Firefox/Safari restricted defaults without newer APIs', async () => {
     const h = browserFixture(); const storage = new BrowserStorage(h.sessionArea);
     expect(await storage.protect()).toBe(true); expect(h.sessionArea.setAccessLevel).toHaveBeenCalledWith({ accessLevel: 'TRUSTED_CONTEXTS' });

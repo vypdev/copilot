@@ -10,9 +10,9 @@ const stops: (() => void)[] = [];
 afterEach(async () => { for (const stop of stops.splice(0)) stop(); await tick(); document.body.replaceChildren();
     window.history.replaceState(null, '', 'https://extension.test/runtime.html'); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 export async function ready(predicate: () => boolean): Promise<void> { await vi.waitFor(() => { flushSync(); expect(predicate()).toBe(true); }, { timeout: 5000 }); }
-export async function render(route = 'overview', observer = false, initial?: unknown, hasSettings = true) {
+export async function render(route = 'overview', observer = false, initial?: unknown, hasSettings = true, native = centerClientFixture()) {
     window.history.replaceState(null, '', `https://extension.test/runtime.html#/${route}`);
-    const native = centerClientFixture(); const browser = browserFixture();
+    const browser = browserFixture();
     if (initial !== undefined) native.native.values.set(SETTINGS_KEY, structuredClone(initial));
     // jsdom requires a nonopaque origin; the actual native gateway keeps its extension sender fixture.
     browser.api.runtime.getURL = path => `https://extension.test/${path}`;

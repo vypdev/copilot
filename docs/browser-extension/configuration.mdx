@@ -10,7 +10,7 @@ the browser's extension options, or the runtime settings button on an eligible
 GitHub page. Preferences stay in this browser. No GitHub write, Action run or
 model request is started by opening the center.
 
-H3 is still in progress. Appearance, language, profiles and preference data flows
+H3 is still in progress. Appearance, language, profiles, read sessions and preference data flows
 are being implemented and tested. Sections marked as unfinished do not offer
 their advertised workflow yet. The full product, remaining CENTER acceptance
 cases and new native-browser and accessibility evidence remain required.
@@ -66,6 +66,48 @@ and visible effective-state provenance. Their manager and context journeys are
 still under implementation; numeric fields alone are not proof of a verified
 GitHub identity or permission. Profiles never connect an account or authorize
 an Action command.
+
+## Connect a selected repository
+
+Open **Connections** and read the current sessions. Local enhancements work
+without a connection. For an optional read session:
+
+1. Supply a unique session name, a repository as `owner/name`, and an appropriate
+   repository read credential in the password field.
+2. Select **Authorize and connect** and decide whether to grant the browser's
+   optional GitHub API permission. The password field clears immediately.
+3. Review the verified GitHub account and repository. Names are display labels;
+   the connection uses the verified numeric identities.
+
+Keep up to five named sessions, for example **Work** and **Personal**. Only one
+is selected for an operation. **Verify and select** rereads an existing entry's
+identities before switching. If verification fails, the candidate remains
+disconnected. The previous connection does not continue silently.
+
+Credentials and private identities remain in protected session storage, separate
+from preferences, profiles, exports and rollback. The browser may clear that
+storage when its session ends. An existing H2 connection appears as **GitHub**;
+it gains no new permission by appearing in the manager. This connection reads
+one selected repository; it does not authorize GitHub writes or setup operations.
+
+**Remove session** asks for confirmation before deleting that local protected
+credential. **Disconnect selected session** removes the selected local entry and
+its credential. Neither action revokes the credential at GitHub. Removing an
+inactive entry keeps the currently selected session. Revoking the browser's API
+permission clears all protected sessions and cancels their outstanding work.
+
+**Forget all protected sessions** offers a separate confirmation to remove all
+local protected sessions, including an unreadable record. It preserves your
+preferences and does not revoke credentials at GitHub. If the browser cannot
+establish that deletion succeeded, keep the error visible and read the current
+state before deciding how to recover.
+
+If a response is uncertain, select **Read current sessions** to inspect the
+actual result. Do not repeat Connect automatically. Permission denial, changed
+editing ownership and unavailable protected storage leave an explicit recovery
+message. Session inspection and disconnect remain available even when saved
+preferences need recovery. The development **Repositories** route shares this
+surface; full workspace, pause and profile-provenance workflows remain in progress.
 
 ## Export, import, reset and rollback
 

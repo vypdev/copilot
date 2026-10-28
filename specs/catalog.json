@@ -3057,7 +3057,14 @@
         "extension/src/presentation/ProfilesPage.svelte",
         "extension/src/presentation/center.css",
         "extension/src/presentation/center_surface.ts",
-        "extension/tooling/javascript_validation.mts"
+        "extension/tooling/javascript_validation.mts",
+        "extension/src/application/named_sessions.ts",
+        "extension/src/domain/named_sessions.ts",
+        "extension/src/domain/connection_copy.ts",
+        "extension/src/domain/connection_ui.ts",
+        "extension/src/infrastructure/center_connections.ts",
+        "extension/src/presentation/ConnectionForm.svelte",
+        "extension/src/presentation/ConnectionsPanel.svelte"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3135,7 +3142,12 @@
         "extension/test/integration/center_pages.test.ts",
         "extension/test/integration/center_foreground.test.ts",
         "extension/test/integration/center_identifier.test.ts",
-        "extension/test/integration/center_import_scope.test.ts"
+        "extension/test/integration/center_import_scope.test.ts",
+        "extension/test/contracts/named_sessions.test.ts",
+        "extension/test/integration/named_sessions.test.ts",
+        "extension/test/integration/center_connections.test.ts",
+        "extension/test/integration/center_connection_authority.test.ts",
+        "extension/test/integration/center_connection_actions.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

@@ -25,12 +25,12 @@ export class MessageGateway {
         private readonly sessions: ProtectedSessionService, private readonly ports: GatewayPorts, private readonly center?: CenterGateway) {}
     releaseCenterTab(id: number): void { this.center?.releaseTab(id); }
     shutdown(): void { this.invalidate(); this.center?.shutdown(); }
-    invalidate(tabId?: number): void {
+    invalidate(tabId?: number, notify = true): void {
         if (tabId !== undefined) {
             this.pages.get(tabId)?.cancel.abort(); this.pages.delete(tabId); return;
         }
         for (const lease of this.pages.values()) lease.cancel.abort();
-        this.pages.clear(); this.ports.notify();
+        this.pages.clear(); if (notify) this.ports.notify();
     }
     private async connect(message: Extract<Message, { method: 'session.connect' }>): Promise<unknown> {
         const operation = ++this.connectionOperation;

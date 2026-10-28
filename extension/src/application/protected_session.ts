@@ -20,6 +20,15 @@ export class ProtectedSessionService {
         this.cancellation = ports.cancellation();
     }
     selectedRepositoryId(): string { return this.connection?.repositoryId ?? ''; }
+    matches(expected: ProtectedSession): boolean {
+        return this.state === 'connected' && this.connection?.secret === expected.secret
+            && this.connection.viewerId === expected.viewerId && this.connection.repositoryId === expected.repositoryId;
+    }
+    verifiedIdentity(): Omit<ProtectedSession, 'schemaVersion' | 'secret'> | null {
+        if (!this.connection || this.state !== 'connected') return null;
+        const { schemaVersion: _schema, secret: _secret, ...identity } = this.connection;
+        return { ...identity };
+    }
     status(): SessionStatus { return { state: this.state, epoch: this.epoch, ...(this.retryAt === undefined ? {} : { retryAt: this.retryAt }) }; }
     async start(): Promise<void> {
         this.initialization ??= this.restore();
@@ -36,22 +45,24 @@ export class ProtectedSessionService {
             await this.establish(stored.secret, stored.repository, epoch, stored);
         } catch { if (epoch === this.epoch) { await this.revoke(); this.state = 'unavailable'; } }
     }
-    async connect(secret: string, repository: string): Promise<SessionStatus> {
+    async connect(secret: string, repository: string, expected?: ProtectedSession, current: () => boolean = () => true): Promise<SessionStatus> {
         await this.start();
+        if (!current()) return this.status();
         const removal = this.revoke(); const epoch = this.epoch;
         await removal;
         try {
-            if (epoch !== this.epoch) return this.status();
+            if (epoch !== this.epoch || !current()) return this.status();
             const ready = await this.ports.protected() && await this.ports.permitted();
-            if (epoch !== this.epoch) return this.status();
+            if (epoch !== this.epoch || !current()) return this.status();
             if (!ready) { this.state = 'unavailable'; return this.status(); }
-            await this.establish(secret, repository, epoch);
+            await this.establish(secret, repository, epoch, expected, current);
         } catch { if (epoch === this.epoch) { await this.revoke(); this.state = 'unavailable'; } }
         return this.status();
     }
-    private async establish(secret: string, repository: string, epoch: number, expected?: ProtectedSession): Promise<void> {
+    private async establish(secret: string, repository: string, epoch: number, expected?: ProtectedSession, current: () => boolean = () => true): Promise<void> {
         const activity = { visible: true, active: true, online: true, pending: false, manual: true };
         const identity = await this.scheduler.run(`connect/${epoch}/viewer`, 'connection', { type: 'viewer' }, secret, this.cancellation, activity);
+        if (epoch !== this.epoch || !current()) return;
         if (this.defer(identity, epoch)) return;
         if (identity.state !== 'ok' || !('login' in identity.data)) throw new Error('identity-unavailable');
         const viewer = identity.data as Viewer;
@@ -59,14 +70,14 @@ export class ProtectedSessionService {
         if (this.defer(target, epoch)) return;
         if (target.state !== 'ok' || !('name' in target.data)) throw new Error('repository-unavailable');
         const repo = target.data as Repository;
-        if (identity.bytes + target.bytes > 1024 * 1024 || epoch !== this.epoch || this.cancellation.aborted) return;
+        if (identity.bytes + target.bytes > 1024 * 1024 || epoch !== this.epoch || this.cancellation.aborted || !current()) return;
         if (expected && (expected.viewerId !== viewer.id || expected.repositoryId !== repo.id)) throw new Error('identity-changed');
         const connection: ProtectedSession = { schemaVersion: 1, secret, viewerId: viewer.id, viewerLogin: viewer.login,
             repositoryId: repo.id, repository: repo.name };
-        await this.persist(async () => { if (epoch === this.epoch) await this.store.set(SESSION_KEY, connection); });
+        await this.persist(async () => { if (epoch === this.epoch && current()) await this.store.set(SESSION_KEY, connection); });
         const permitted = await this.ports.permitted();
         if (epoch !== this.epoch) return;
-        if (!permitted) { await this.revoke(); return; }
+        if (!permitted || !current()) { await this.revoke(); return; }
         this.connection = connection; this.state = 'connected';
     }
     private defer(result: ScheduledRead, epoch: number): boolean {

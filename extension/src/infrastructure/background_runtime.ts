@@ -9,7 +9,8 @@ import { ReadScheduler } from '../application/read_scheduler.ts';
 import { SettingsRepository, SETTINGS_KEY } from '../application/settings_repository.ts';
 import { ProtectedSessionService } from '../application/protected_session.ts';
 import { MessageGateway } from '../application/message_gateway.ts';
-import { createCenter } from './center_runtime.ts';
+import { createCenter, centerIdentifier } from './center_runtime.ts';
+import { NamedSessions } from '../application/named_sessions.ts';
 
 export function startBackground(api: BrowserApi): () => void {
     const local = new BrowserStorage(api.storage.local);
@@ -30,10 +31,14 @@ export function startBackground(api: BrowserApi): () => void {
         }).catch(() => undefined);
     };
     const settings = new SettingsRepository(local);
+    const connections = new NamedSessions(session, sessions, { protected: () => session.protect(), identifier: () => `s-${centerIdentifier()}`,
+        changed: notify, connected: async (id, current) => {
+            await settings.update(value => ({ ...value, repositories: { ...value.repositories, [id]: { ...value.repositories[id], connected: true } } }), current);
+        } });
     const gateway = new MessageGateway(api.runtime.id, api.runtime.getURL(''), settings, sessions,
         { currentTab: id => api.tabs.get(id), openSettings: windowId => api.tabs.create({ url: api.runtime.getURL('runtime.html'), windowId }),
             cancellation: () => new BrowserCancellation(),
-            online: () => globalThis.navigator?.onLine !== false, notify }, createCenter(api, settings, sessions, notify));
+            online: () => globalThis.navigator?.onLine !== false, notify }, createCenter(api, settings, sessions, notify, connections));
     const message: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender, respond) => {
         void gateway.handle(value, sender).then(result => respond({ ...(record(result) ? result : { state: 'unavailable' }), sourceTree: buildSourceIdentity() })); return true;
     };
@@ -45,7 +50,7 @@ export function startBackground(api: BrowserApi): () => void {
     };
     const permission = (value: { origins?: string[] }) => {
         if (value.origins?.some(origin => origin === 'https://api.github.com/*' || origin === '<all_urls>')) {
-            gateway.invalidate(); void sessions.revoke();
+            gateway.invalidate(undefined, false); void connections.revokeAll().catch(() => undefined);
         }
     };
     const storage = (changes: Record<string, unknown>, area: string) => {

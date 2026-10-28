@@ -5,6 +5,7 @@
     import { CENTER_ROUTES, centerLocationHash } from '../domain/center_routes.ts';
     import { reviewCopy } from '../domain/review_copy.ts';
     import SettingsReview from './SettingsReview.svelte';
+    import ConnectionsPanel from './ConnectionsPanel.svelte';
     let { surface }: { surface: CenterSurface } = $props();
     let frame = $state.raw(untrack(() => surface.initial));
     let Page = $state.raw<Component<CenterRouteProps> | null>(null);
@@ -12,6 +13,7 @@
     const route = $derived(frame.location.route);
     const copy = $derived(frame.copy);
     const data = $derived(frame.client.data);
+    const role = $derived(frame.client.role === undefined ? data?.role : frame.client.role);
     const busy = $derived(frame.client.phase !== 'ready');
     const editable = $derived(!busy && data?.role === 'editor' && !frame.client.review
         && (frame.client.issue === null || frame.client.issue === 'invalid' || frame.client.issue === 'unchanged') && data.state === 'ready');
@@ -36,9 +38,9 @@
         <main id="center-main" tabindex="-1" aria-busy={busy}>
             <h1 tabindex="-1">{copy.routes[route]}</h1>
             <div class="toolbar">
-                <span role="status">{data?.state === 'ready' && data.role === 'editor' ? copy.messages.editor
-                    : data ? copy.messages.observer : busy ? copy.messages.loading : copy.routes.recovery}</span>
-                {#if data?.role === 'observer'}<button type="button" disabled={busy} onclick={() => surface.actions.takeControl()}>{copy.messages.takeControl}</button>{/if}
+                <span role="status">{role === 'editor' ? copy.messages.editor
+                    : role === 'observer' ? copy.messages.observer : busy ? copy.messages.loading : copy.routes.recovery}</span>
+                {#if role === 'observer'}<button type="button" disabled={busy} onclick={() => surface.actions.takeControl()}>{copy.messages.takeControl}</button>{/if}
                 <button type="button" disabled={busy} onclick={() => surface.actions.reload()}>{copy.messages.refresh}</button>
             </div>
             {#if frame.pendingLocation}
@@ -49,7 +51,10 @@
             {/if}
             {#if frame.client.issue}<p role="alert" class="notice">{copy.issues[frame.client.issue]}</p>{/if}
             {#if frame.review}<SettingsReview view={frame.review} copy={reviewCopy(copy.locale)} actions={surface.actions}/>{/if}
-            {#if data?.settings && data.state === 'ready'}
+            {#if route === 'connections' || route === 'repositories'}
+                <ConnectionsPanel view={frame.client.connections ?? null} locale={copy.locale} {busy}
+                    editable={!busy && frame.client.role === 'editor' && !frame.client.review} actions={surface.actions.connections}/>
+            {:else if data?.settings && data.state === 'ready'}
                 {#if loadFailed}<p role="alert">{copy.messages.unavailable}</p>
                 {:else if Page}
                     {#key `${route}/${frame.location.detail ?? ''}/${frame.draftEpoch}`}

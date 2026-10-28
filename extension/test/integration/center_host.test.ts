@@ -19,7 +19,7 @@ async function ready(predicate: () => boolean): Promise<void> { await vi.waitFor
 async function client() { const h = centerClientFixture(); clients.push(h); await h.client.start(); return h; }
 function render(view: CenterClientView, load: CenterSurface['load'] = async () => InformationPage) {
     const listeners = new Set<(frame: CenterFrame) => void>(); let frame = centerFrame(view, { route: 'help' }, null, 'en');
-    const actions: CenterActions = { preview: vi.fn(), dirty: vi.fn(), takeControl: vi.fn(), stay: vi.fn(), leave: vi.fn(), confirm: vi.fn(), cancel: vi.fn(), dismiss: vi.fn(),
+    const actions: CenterActions = { connections: { connect: vi.fn(), change: vi.fn(), refresh: vi.fn(), dirty: vi.fn() }, preview: vi.fn(), dirty: vi.fn(), takeControl: vi.fn(), stay: vi.fn(), leave: vi.fn(), confirm: vi.fn(), cancel: vi.fn(), dismiss: vi.fn(),
         reload: vi.fn(), focusContent: vi.fn(), exportSettings: vi.fn(async () => false), importSettings: vi.fn(async () => false) };
     const unsubscribe = vi.fn(); const surface: CenterSurface = { initial: frame, actions, load,
         subscribe: listener => { listeners.add(listener); listener(frame); return () => { listeners.delete(listener); unsubscribe(); }; } };
@@ -44,13 +44,13 @@ it('disposing a view retires its subscription and ignores an eventual packaged m
     await unmount(view.host); mounts.splice(mounts.indexOf(view.host), 1); wait.resolve(InformationPage); await tick();
     expect(view.unsubscribe).toHaveBeenCalledOnce(); expect(document.body.textContent).toBe('');
 });
-it('migration blocked by storage failure remains read-only with its actual migration explanation', async () => {
+it('migration blocked by storage failure keeps preferences read-only and preserves the independent native editing role', async () => {
     const h = centerClientFixture(); clients.push(h); const { center: _center, ...legacy } = DEFAULT_SETTINGS;
     h.native.values.set(SETTINGS_KEY, { ...legacy, schemaVersion: 1 });
     vi.mocked(h.native.port.set).mockRejectedValueOnce(new Error('quota')); await h.client.start();
     expect(h.client.view.data?.state).toBe('migration-required'); render(h.client.view);
     await ready(() => document.body.textContent?.includes('need migration') === true);
-    expect(document.querySelector('form')).toBeNull(); expect(document.querySelector('.toolbar [role=status]')?.textContent).toBe('Read-only window');
+    expect(document.querySelector('form')).toBeNull(); expect(document.querySelector('.toolbar [role=status]')?.textContent).toBe('Editing in this window');
 });
 it.each([{ type: 'preferences', values: {} }, { type: 'unsupported' }])('invalid and unchanged drafts can be corrected without pretending a write succeeded', async intent => {
     const h = await client(); await h.client.preview(intent, 0); expect(['invalid', 'unchanged']).toContain(h.client.view.issue);

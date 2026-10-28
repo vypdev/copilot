@@ -2,8 +2,10 @@ import type { Settings } from './settings.ts';
 import type { CenterCopy } from './center_copy_types.ts';
 import type { CenterLocation } from './center_routes.ts';
 import type { ReviewActions } from './center_review.ts';
+import type { ConnectionActions } from './connection_ui.ts';
 
 export interface CenterActions extends ReviewActions {
+    readonly connections: ConnectionActions;
     preview(intent: unknown, revision: number): void;
     dirty(value: boolean): void;
     takeControl(): void;

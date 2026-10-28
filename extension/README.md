@@ -32,5 +32,6 @@ acceptance are separate facts.
 
 H3 mounts a local Svelte center over revision-bound previews. Its current
 appearance, language, profile and data routes are development work; unfinished
-sections are labelled explicitly. The full inventory, session/repository flows,
+sections are labelled explicitly. The named read-session manager now uses protected storage and verified numeric
+identities. Complete inventory and repository/workspace/profile flows,
 all CENTER cases and new native/human evidence remain required before H3 closes.
