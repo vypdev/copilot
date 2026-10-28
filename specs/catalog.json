@@ -3011,7 +3011,15 @@
         "extension/src/domain/profile_resolution.ts",
         "extension/src/domain/profile_change.ts",
         "extension/src/domain/preferences.ts",
-        "extension/src/domain/center_settings.ts"
+        "extension/src/domain/center_settings.ts",
+        "extension/src/domain/settings_operation.ts",
+        "extension/src/domain/settings_change.ts",
+        "extension/src/application/settings_transaction_ports.ts",
+        "extension/src/application/settings_operations.ts",
+        "extension/src/domain/center_protocol.ts",
+        "extension/src/application/center_controller.ts",
+        "extension/src/application/center_gateway.ts",
+        "extension/src/infrastructure/center_runtime.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3051,7 +3059,21 @@
         "extension/test/contracts/profile_resolution.test.ts",
         "extension/test/contracts/profile_change.test.ts",
         "extension/test/contracts/center_settings.test.ts",
-        "extension/test/contracts/settings_v2.test.ts"
+        "extension/test/contracts/settings_v2.test.ts",
+        "extension/test/contracts/settings_operation.test.ts",
+        "extension/test/contracts/settings_change.test.ts",
+        "extension/test/contracts/settings_recovery_plans.test.ts",
+        "extension/test/integration/settings_transactions.test.ts",
+        "extension/test/integration/settings_transaction_outcomes.test.ts",
+        "extension/test/integration/settings_operations.test.ts",
+        "extension/test/integration/settings_operation_fences.test.ts",
+        "extension/test/fixtures/settings_operations.ts",
+        "extension/test/fixtures/center.ts",
+        "extension/test/contracts/center_protocol.test.ts",
+        "extension/test/integration/center_controller.test.ts",
+        "extension/test/integration/center_gateway.test.ts",
+        "extension/test/integration/center_persistence_fences.test.ts",
+        "extension/test/integration/center_native.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

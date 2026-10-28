@@ -308,6 +308,33 @@ profile. A complete semantic preview includes removed overrides returning to
 inheritance and explicit false values. Session overrides are bound to verified
 account/repository identity and credential epoch before applying them.
 
+The H3 background now owns immutable settings previews and confirms only the
+retained operation ID/revision. Cancellation before confirmation writes nothing.
+Current settings, their previous rollback and the operation receipt share one
+atomic storage operation. A readback must confirm that exact complete record
+before the application reports saved state. A lost acknowledgement and an
+unavailable/changed readback are distinct outcomes; uncertain persistence is
+never retried automatically. Settings reset does not revoke a credential;
+disconnect is a separate explicit operation, and rollback cannot restore grants.
+
+Only the packaged runtime page can use the closed center protocol. One native
+window edits while the others observe; explicit takeover increments the
+controller epoch and retires old previews. Native document/tab bindings, an
+eight-client limit and thirty-minute foreground idle checks bound those worker
+clients without a background timer. Settings previews last at most five minutes.
+Known packaged hash navigation retains its client; reload, departure, close and
+tab removal retire it. Worker restart requires a fresh handshake and preview.
+Saved receipts remain inspectable facts rather than reusable approval.
+
+The dedicated settings preview is bounded to 68 KiB of request data and 132 KiB
+of complete before/after response, while each settings record remains at most
+64 KiB and other center methods at most 8 KiB. These transport bounds do not
+change setup-broker limits, add permissions or enable arbitrary commands.
+`center_native.test.ts` verifies the native background composition with fake
+browser ports; it is not a loaded Chrome/Firefox/Safari receipt. The full Svelte
+center, all fourteen workflows and source-bound native/human acceptance remain
+in progress on H3.
+
 See the [H3 companion](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-control-center-h3.md)
 for the complete fourteen-capability scope and acceptance gates. Its tests and
 browser receipts remain distinct from H2's engineering evidence.

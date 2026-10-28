@@ -1,10 +1,14 @@
-import { allowedMessage, parseMessage, type Message, type Sender } from '../domain/protocol.ts';
+import { allowedMessage, extensionSender, parseMessage, type Message, type Sender } from '../domain/protocol.ts';
+import { parseCenterMessage } from '../domain/center_protocol.ts';
 import { currentFence, type PageFence } from '../domain/session.ts';
 import { effectiveSettings } from '../domain/settings.ts';
 import { natural } from '../domain/value.ts';
 import type { CancellationOwner } from './read_ports.ts';
 import { ProtectedSessionService } from './protected_session.ts';
 import { SettingsRepository } from './settings_repository.ts';
+import type { CenterGateway } from './center_gateway.ts';
+import { sameSettingsContent } from '../domain/settings_operation.ts';
+import { record } from '../domain/value.ts';
 
 interface PageLease { readonly fence: PageFence; readonly cancel: CancellationOwner }
 export interface GatewayPorts {
@@ -18,7 +22,9 @@ export class MessageGateway {
     private readonly pages = new Map<number, PageLease>();
     private connectionOperation = 0;
     constructor(private readonly id: string, private readonly origin: string, private readonly settings: SettingsRepository,
-        private readonly sessions: ProtectedSessionService, private readonly ports: GatewayPorts) {}
+        private readonly sessions: ProtectedSessionService, private readonly ports: GatewayPorts, private readonly center?: CenterGateway) {}
+    releaseCenterTab(id: number): void { this.center?.releaseTab(id); }
+    shutdown(): void { this.invalidate(); this.center?.shutdown(); }
     invalidate(tabId?: number): void {
         if (tabId !== undefined) {
             this.pages.get(tabId)?.cancel.abort(); this.pages.delete(tabId); return;
@@ -47,12 +53,20 @@ export class MessageGateway {
         }
     }
     async handle(value: unknown, sender: Sender): Promise<unknown> {
+        const center = parseCenterMessage(value);
+        if (center) return extensionSender(sender, this.id, this.origin) && this.center
+            ? this.center.handle(center, sender) : { state: 'rejected' };
         const message = parseMessage(value);
         if (!message || !allowedMessage(message, sender, this.id, this.origin)) return { state: 'rejected' };
         try {
             if (message.method === 'settings.read') return await this.settings.initialize();
             if (message.method === 'settings.write') {
-                const settings = await this.settings.write(message.settings, message.expectedRevision);
+                const settings = await this.settings.update(current => {
+                    // The legacy H2 editor cannot bypass retained H3 previews for center changes.
+                    if (current.revision !== message.expectedRevision || !record(message.settings)
+                        || !sameSettingsContent({ ...current, center: message.settings.center }, current)) throw new Error('settings-conflict-or-invalid');
+                    return message.settings;
+                });
                 this.invalidate(); return { state: 'ready', settings };
             }
             if (message.method === 'session.disconnect') {

@@ -1,5 +1,6 @@
 import { isEligibleGitHubUrl } from './eligibility.ts';
 import { pageIdentity } from './page.ts';
+import { parseCenterLocation } from './center_routes.ts';
 import { keys, natural, record, utf8Bytes } from './value.ts';
 
 export interface Sender {
@@ -25,7 +26,9 @@ function extensionLocation(value: unknown): string | null {
 }
 export function extensionSender(sender: Sender, id: string, origin: string): boolean {
     const root = extensionLocation(origin);
-    return root !== null && sender.id === id && extensionLocation(sender.url) === `${root}runtime.html`
+    const parts = typeof sender.url === 'string' ? sender.url.split('#') : [];
+    return root !== null && sender.id === id && parts.length <= 2 && extensionLocation(parts[0]) === `${root}runtime.html`
+        && (parts.length === 1 || parseCenterLocation(`#${parts[1]}`) !== null)
         && (sender.origin === undefined || extensionLocation(`${sender.origin}/`) === root)
         && (sender.frameId === undefined || sender.frameId === 0) && sender.tab?.incognito !== true;
 }

@@ -233,6 +233,111 @@ Text equivalent: entrypoints call application use cases; domain policies decide;
 
 Architecture validation MUST reject imports from domain/application into browser APIs, Svelte or concrete storage adapters; verify route composition and semantic-port adapters; detect cycles; validate schema fixtures; and ensure every manifest inventory item has exactly one displayable metadata record. Existing repository conventions and package layout remain authoritative; no `src/` root or `.test.ts` suffix is required.
 
+### 8.4 Settings preview and confirmed transaction contract
+
+The background owns complete immutable previews for closed profile, personal,
+center and repository preference changes, import, scoped reset and rollback.
+The browser view cannot supply a replacement after-state when confirming an
+operation. Pure planning preserves unchanged fields, reports inherited feature
+values explicitly and treats a semantically unchanged choice as no write.
+
+Each preview binds an opaque 128-bit operation ID, exact settings revision,
+current local controller identity/epoch and credential epoch. A preview lasts
+at most five minutes. There are at most sixteen pending/in-flight operations;
+completion replay retains only bounded nonsecret outcome metadata for at most
+thirty-two operations/five minutes. Maps are checked on foreground operations;
+there is no timer or background keepalive. Expiry, clock rollback, takeover,
+disconnect, restart or changed source revision cannot revive approval. A worker
+restart requires a fresh preview; reading a prior receipt is not approval.
+
+Preview construction is read-only, including on legacy records. Startup owns
+the existing atomic migration; if it has not completed, preview reports that
+prerequisite rather than writing during a cancelable review. Confirmations
+serialize with all existing preference updates. Duplicate confirmation reuses
+its result, and cancellation during persistence says that the operation is
+already in progress instead of claiming an undo.
+
+The complete current record, prior rollback record and operation ID/before
+revision receipt share one storage set. Confirmation then rereads storage and
+checks the exact receipt, revision and complete content before reporting saved
+state. An acknowledgement by itself is insufficient. If acknowledgement fails
+but that exact committed record is observed, preserve both facts. If readback
+is partial, changed or unavailable, report an unknown outcome with the bounded
+observed revision/facts and do not retry a write automatically. A later context
+change cannot erase a confirmed completed effect or expose its settings into a
+different current context. Provider exception text never reaches a view.
+
+Settings-only reset and rollback never pretend to disconnect or restore a
+credential. Current connection opt-ins are retained where that reset scope
+preserves them; credential removal is a separately explicit session operation.
+Import/rollback cannot grant a new connection, restore a credential or import a
+permission/approval. The final preview must disclose each retained session and
+the exact settings scope so that “reset settings” is not confused with “erase
+all data”. Authored notes and private evidence are separate stores.
+
+The dedicated settings-preview route accepts at most 68 KiB UTF-8 of closed
+intent/envelope data, accommodating the existing 64 KiB settings import limit.
+Its full before/after preview is at most 132 KiB including bounded metadata;
+both records remain individually limited to 64 KiB. Other center privilege
+routes remain at most 8 KiB. These settings transport bounds do not change
+setup-broker request/view limits or authorize arbitrary payloads or operations.
+
+Current transaction evidence is
+`extension/test/integration/settings_transactions.test.ts`,
+`extension/test/integration/settings_transaction_outcomes.test.ts`,
+`extension/test/integration/settings_operations.test.ts` and
+`extension/test/integration/settings_operation_fences.test.ts`, together with
+`extension/test/contracts/settings_operation.test.ts`,
+`extension/test/contracts/settings_change.test.ts` and
+`extension/test/contracts/settings_recovery_plans.test.ts`. Policy/application
+tests do not substitute for the complete center UI or native-browser journeys.
+
+### 8.5 Packaged center controller and native message contract
+
+The native background accepts only closed `center.open/read/claim/close` and
+`center.preview/confirm/cancel` messages from its own packaged runtime page.
+Known local hash routes are allowed; query strings, extra fields, foreign
+origins, child frames, private contexts and content-page center messages are
+rejected before settings or connection access. The legacy H2 raw-settings
+method cannot change center state to bypass its retained preview contract.
+
+Opening a center obtains a background-generated cryptographic 128-bit client
+handle. Native document/tab identity binds it when available; optional sender
+fields are not assumed to exist across vendors. A tab ID without a document ID
+does not deduplicate a reload into an older client. Native reload, departure
+and tab-removal events release matching clients. Navigation between known
+packaged hash routes retains the current document's controller. No new
+permission, keepalive, alarm or persistent authority field is introduced.
+
+| Transition | User meaning | Authority and retained facts |
+|---|---|---|
+| First open | This window can edit settings. | One editor; at most eight worker-local clients. |
+| Another open | Settings are viewable; another window is editing. | Observer cannot preview, confirm or cancel a mutation. |
+| Explicit takeover | This window now controls editing. | Expected controller epoch must match; increment it before invalidating prior previews. |
+| Changed revision or owner | Review the latest settings again. | Stale approval cannot replace newer content. |
+| Close, restart or thirty minutes idle | Reopen or take control before editing. | Client authority expires; saved operation receipts remain inspectable facts. |
+| Context changes during persistence | The change was saved; this window is no longer current. | Exact observed persistence is retained and is not automatically retried. |
+
+Text equivalent: open as editor or observer, explicitly take control if needed,
+request a revision-bound preview, then confirm that exact plan. Losing control
+requires a fresh review; a completed saved effect remains a completed fact.
+Each foreground interaction checks the idle lease and clock without timers.
+The thirty-minute/eight-client/five-minute-preview limits are fixed safety
+bounds. The current credential epoch fences preview/confirmation and any
+asynchronous settings view; no credential or provider exception is returned.
+
+Native sender fields and tab-event semantics follow the primary
+[Chrome sender contract](https://developer.chrome.com/docs/extensions/reference/api/runtime#type-MessageSender),
+[Mozilla sender contract](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/runtime/MessageSender)
+and [tab-update contract](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/onUpdated).
+Current executable evidence is `extension/test/contracts/center_protocol.test.ts`,
+`extension/test/integration/center_controller.test.ts`,
+`extension/test/integration/center_gateway.test.ts`,
+`extension/test/integration/center_persistence_fences.test.ts` and
+`extension/test/integration/center_native.test.ts`. The last file exercises real
+background composition with deterministic browser ports; actual loaded-browser
+and presentation evidence remains required separately.
+
 ## 9. UI/UX and content contract
 
 The center puts current state first, then completed facts, next action, required human action, impact and inspectable details. Feature detail and risky-action preview use plain language before technical diagnostics.

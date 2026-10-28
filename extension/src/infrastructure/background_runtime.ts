@@ -1,5 +1,6 @@
 import { buildSourceIdentity } from './build_identity.ts';
 import { record } from '../domain/value.ts';
+import { extensionSender } from '../domain/protocol.ts';
 import type { BrowserApi } from '../adapters/browser/api.ts';
 import { BrowserStorage } from '../adapters/browser/storage.ts';
 import { BrowserCancellation } from '../adapters/browser/cancellation.ts';
@@ -8,6 +9,7 @@ import { ReadScheduler } from '../application/read_scheduler.ts';
 import { SettingsRepository, SETTINGS_KEY } from '../application/settings_repository.ts';
 import { ProtectedSessionService } from '../application/protected_session.ts';
 import { MessageGateway } from '../application/message_gateway.ts';
+import { createCenter } from './center_runtime.ts';
 
 export function startBackground(api: BrowserApi): () => void {
     const local = new BrowserStorage(api.storage.local);
@@ -26,17 +28,19 @@ export function startBackground(api: BrowserApi): () => void {
             }
         }).catch(() => undefined);
     };
-    const gateway = new MessageGateway(api.runtime.id, api.runtime.getURL(''), new SettingsRepository(local), sessions,
+    const settings = new SettingsRepository(local);
+    const gateway = new MessageGateway(api.runtime.id, api.runtime.getURL(''), settings, sessions,
         { currentTab: id => api.tabs.get(id), openSettings: windowId => api.tabs.create({ url: api.runtime.getURL('runtime.html'), windowId }),
             cancellation: () => new BrowserCancellation(),
-            online: () => globalThis.navigator?.onLine !== false, notify });
+            online: () => globalThis.navigator?.onLine !== false, notify }, createCenter(api, settings, sessions, notify));
     const message: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender, respond) => {
         void gateway.handle(value, sender).then(result => respond({ ...(record(result) ? result : { state: 'unavailable' }), sourceTree: buildSourceIdentity() })); return true;
     };
-    const removed = (id: number) => gateway.invalidate(id);
+    const removed = (id: number) => { gateway.invalidate(id); gateway.releaseCenterTab(id); };
     // Native tab events cancel the owning lease even on protected routes and same-URL reloads.
     const updated = (id: number, changes: { url?: string; status?: string }) => {
         if (changes.url || changes.status === 'loading') gateway.invalidate(id);
+        if (changes.status === 'loading' || (changes.url && !extensionSender({ id: api.runtime.id, url: changes.url }, api.runtime.id, api.runtime.getURL('')))) gateway.releaseCenterTab(id);
     };
     const permission = (value: { origins?: string[] }) => {
         if (value.origins?.some(origin => origin === 'https://api.github.com/*' || origin === '<all_urls>')) {
@@ -52,7 +56,7 @@ export function startBackground(api: BrowserApi): () => void {
     api.tabs.onUpdated.addListener(updated); api.permissions.onRemoved.addListener(permission);
     api.storage.onChanged.addListener(storage); api.action.onClicked.addListener(open);
     return () => {
-        gateway.invalidate(); void sessions.revoke();
+        gateway.shutdown(); void sessions.revoke();
         api.runtime.onMessage.removeListener(message); api.tabs.onRemoved.removeListener(removed);
         api.tabs.onUpdated.removeListener(updated); api.permissions.onRemoved.removeListener(permission);
         api.storage.onChanged.removeListener(storage); api.action.onClicked.removeListener(open);
