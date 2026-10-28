@@ -7,8 +7,8 @@ const client = { version: 1, clientId: 'a'.repeat(32), controllerEpoch: 1 };
 it('admits only exact local center methods and their complete operands', () => {
     const messages = [{ version: 1, method: 'center.open' }, { version: 1, method: 'center.read', clientId: client.clientId },
         ...['center.claim', 'center.close'].map(method => ({ ...client, method })),
-        { ...client, method: 'center.preview', intent: { type: 'preferences', values: { paused: true } } },
-        ...['center.confirm', 'center.cancel'].map(method => ({ ...client, method, operationId: 'b'.repeat(32), expectedRevision: 0 }))];
+        { ...client, method: 'center.preview', credentialEpoch: 0, expectedRevision: 0, intent: { type: 'preferences', values: { paused: true } } },
+        ...['center.confirm', 'center.cancel'].map(method => ({ ...client, method, credentialEpoch: 0, operationId: 'b'.repeat(32), expectedRevision: 0 }))];
     for (const value of messages) {
         expect(parseCenterMessage(value)).toEqual(value);
         expect(parseCenterMessage({ ...value, url: 'https://example.invalid' })).toBe(null);
@@ -16,13 +16,13 @@ it('admits only exact local center methods and their complete operands', () => {
     }
 });
 it('rejects versions, unknown methods, authority identifiers and unsafe revisions before dispatch', () => {
-    const valid = { ...client, method: 'center.confirm', operationId: 'b'.repeat(32), expectedRevision: 0 };
+    const valid = { ...client, method: 'center.confirm', credentialEpoch: 0, operationId: 'b'.repeat(32), expectedRevision: 0 };
     for (const value of [null, [], {}, { ...valid, version: 2 }, { ...valid, method: 1 }, { ...valid, method: 'fetch' },
         { ...valid, clientId: 1 }, { ...valid, clientId: 'A'.repeat(32) }, { ...valid, controllerEpoch: -1 },
         { ...valid, operationId: 'short' }, { ...valid, expectedRevision: Number.MAX_SAFE_INTEGER + 1 }]) expect(parseCenterMessage(value)).toBe(null);
 });
 it('bounds the dedicated preview request by UTF-8 bytes and refuses cyclic intent data', () => {
-    const base = { ...client, method: 'center.preview', intent: '' };
+    const base = { ...client, method: 'center.preview', credentialEpoch: 0, expectedRevision: 0, intent: '' };
     const overhead = JSON.stringify(base).length;
     expect(parseCenterMessage({ ...base, intent: 'x'.repeat(MAX_CENTER_REQUEST_BYTES - overhead) })).not.toBe(null);
     expect(parseCenterMessage({ ...base, intent: 'x'.repeat(MAX_CENTER_REQUEST_BYTES - overhead + 1) })).toBe(null);

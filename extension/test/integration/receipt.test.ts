@@ -63,6 +63,11 @@ it('rejects noncanonical and duplicate-key receipts', async () => {
         } finally { await writeFile(path.join(output, 'receipt.json'), receipt); }
     }
 });
+it('binds source-tagged chunk names to the complete receipt source and rejects oversized receipt data before trusting asset metadata', async () => {
+    const valid = JSON.parse(receipt);
+    await rejectReceipt({ ...valid, sourceTreeSha256: '1'.repeat(64) }, 'chrome: chunk-source-mismatch');
+    await rejectReceipt({ ...valid, targets: { ...valid.targets, chrome: { ...valid.targets.chrome, oversized: 'x'.repeat(128 * 1024 + 1) } } }, 'receipt: invalid closed metadata');
+});
 it('rejects missing, added, mistyped and altered asset hashes for every target', async () => {
     const valid = JSON.parse(receipt);
     for (const target of ['chrome', 'firefox', 'safari']) {

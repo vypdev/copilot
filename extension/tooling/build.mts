@@ -1,4 +1,5 @@
 import { build as viteBuild } from 'vite';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { mkdir, mkdtemp, readFile, rename, rm, writeFile, lstat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -30,8 +31,8 @@ export interface BuildReceipt {
 }
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 
-export async function bundleTarget(packageRoot: string, target: BrowserTarget, output: string, sourceTree = 'unbundled'): Promise<void> {
-    for (const entry of ['background', 'content', 'runtime'] as const) {
+export async function bundleTarget(packageRoot: string, target: BrowserTarget, output: string, sourceTree: string): Promise<void> {
+    for (const entry of ['background', 'content'] as const) {
         await viteBuild({ configFile: false, root: packageRoot, publicDir: false, logLevel: 'silent',
             define: { __COPILOT_SOURCE_TREE__: JSON.stringify(sourceTree) },
             build: { outDir: output, emptyOutDir: false, copyPublicDir: false, minify: false,
@@ -43,6 +44,14 @@ export async function bundleTarget(packageRoot: string, target: BrowserTarget, o
             },
         });
     }
+    await viteBuild({ configFile: false, root: packageRoot, publicDir: false, logLevel: 'silent',
+        plugins: [svelte({ configFile: false, compilerOptions: { dev: false } })],
+        define: { __COPILOT_SOURCE_TREE__: JSON.stringify(sourceTree) },
+        build: { outDir: output, emptyOutDir: false, copyPublicDir: false, minify: false, cssCodeSplit: false,
+            target: TARGET_POLICY[target].syntax, sourcemap: false,
+            lib: { entry: path.join(packageRoot, 'src/infrastructure/runtime_entry.ts'), formats: ['es'], fileName: () => 'runtime.js', cssFileName: 'runtime' },
+            rolldownOptions: { output: { chunkFileNames: `center-[name]-${sourceTree.slice(0, 16)}.js` } },
+        } });
     await writeFile(path.join(output, 'runtime.html'), RUNTIME_HTML);
 }
 

@@ -391,6 +391,76 @@ Compiler and test usage follows the primary
 [TypeScript](https://svelte.dev/docs/svelte/typescript) and
 [component testing](https://svelte.dev/docs/svelte/testing) documentation.
 
+### 8.7 Foreground application, draft context and packaged modules
+
+The production options entry mounts the Svelte center. Its foreground client
+keeps native client and unconsumed preview handles private. Presentation receives
+validated preferences, nonsecret outcomes and semantic callbacks. Each mutation
+echoes controller/credential epochs and the draft's original revision; stale
+forms are never silently rebased. Unknown persistence permits reading, never
+automatic writing. Invalid or unchanged values allow local correction.
+
+```mermaid
+sequenceDiagram
+    participant U as User and route
+    participant C as Foreground client
+    participant B as Native background
+    U->>C: Review draft at revision R
+    C->>B: Preview with R and controller/credential context
+    B-->>C: Immutable before/after plan
+    C-->>U: Complete escaped preference delta
+    U->>C: Confirm this review
+    C->>B: Consume retained handle once
+    B-->>C: Observed saved fact or explicit uncertainty
+    C->>B: Read current preferences when appropriate
+    C-->>U: Saved values, retained draft or recovery action
+```
+
+Text equivalent: draft, context-bound preview, explicit confirmation, observed
+outcome and a fresh read. A lost response is reconciled only through the exact
+saved receipt and complete expected values. A draft resets only after the saved
+revision is observed. Unsaved drafts and reviews guard hash navigation; keeping
+a draft restores the local route, and leaving requires explicit discard.
+Navigation cannot undo an in-flight write. Options URLs containing queries or
+invalid initial routes reload the fixed recovery URL before registration.
+
+Appearance is one atomic intent covering theme, density, text size, motion and
+contrast. Profile create/edit/select/remove, language, import/reset/rollback use
+the same retained review protocol. Import reads at most 64 KiB, requires valid
+UTF-8 and a supported closed schema, clears its native input and never renders
+an unvalidated document. Native file-read completions remain bound to their
+original route, draft epoch and latest request; discarding or superseding that
+draft retires a late completion before it can create another preview.
+Export serializes portable preferences only, omitting
+connection grants and native session state. Permission/secret-entry flows stay
+separate. No new permission or configurable safety override is introduced.
+
+If disposal races with a completed native takeover, close the returned handle
+with its returned controller epoch, only when it identifies this same client.
+Late read/render responses cannot resurrect a retired view. A migration-write
+failure has a fixed semantic error; inspect storage once to distinguish a
+retained read-only migration from an actually persisted result with a lost
+acknowledgement. Ordinary read failures remain unavailable, without a hidden
+read retry. Never repeat a confirmed preference write automatically.
+
+Artifacts contain six fixed files (manifest, background, content, runtime HTML,
+JavaScript and CSS) plus reachable packaged center chunks. Each chunk has a
+closed name with the input digest prefix. Static/lazy imports must name declared
+local runtime/chunk assets; arbitrary operands, import options, paths, queries
+and remote destinations fail. Orphan/mixed-source chunks fail. Receipts hash all
+UTF-8 assets: at most 96 files/8 MiB per target and a 128 KiB receipt. Background
+and content remain self-contained. Atomic publication, rollback, resource-free
+CSS and reproducibility gates continue to apply.
+
+`center_app.test.ts` mounts the application through the gateway with deterministic
+native ports. Its nonopaque jsdom origin is a test requirement, not native proof.
+`center_client.test.ts`, `center_frame.test.ts`, `center_files.test.ts` and
+`center_assets.test.ts` cover the client, drafts/locales, data and asset boundary.
+The development build labels unfinished sections; placeholders are not accepted
+workflows. Five named protected sessions, repositories, full inventory/provenance,
+remaining routes, native/human evidence and final full coverage/review remain
+required. Numeric budgets, traceability and Definition of Done are unchanged.
+
 ## 9. UI/UX and content contract
 
 The center puts current state first, then completed facts, next action, required human action, impact and inspectable details. Feature detail and risky-action preview use plain language before technical diagnostics.

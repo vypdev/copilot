@@ -2948,7 +2948,8 @@
         "src/actions/github_action.ts",
         "extension/src/infrastructure/content_entry.ts",
         "extension/src/infrastructure/background_entry.ts",
-        "extension/tooling/cli.mts"
+        "extension/tooling/cli.mts",
+        "extension/src/infrastructure/runtime_entry.ts"
       ],
       "code": [
         "src/application/usecases/read_copilot_status_workflow.ts",
@@ -3026,7 +3027,37 @@
         "extension/tooling/component_validation.mts",
         "extension/tooling/style_validation.mts",
         "extension/tooling/test_configuration.mts",
-        "extension/tsconfig.svelte.json"
+        "extension/tsconfig.svelte.json",
+        "extension/src/application/center_client.ts",
+        "extension/src/application/center_navigation.ts",
+        "extension/src/domain/center_client_view.ts",
+        "extension/src/domain/center_copy.ts",
+        "extension/src/domain/center_copy_en.ts",
+        "extension/src/domain/center_copy_es.ts",
+        "extension/src/domain/center_copy_fr.ts",
+        "extension/src/domain/center_copy_pt.ts",
+        "extension/src/domain/center_copy_types.ts",
+        "extension/src/domain/center_frame.ts",
+        "extension/src/domain/center_reply.ts",
+        "extension/src/domain/center_ui.ts",
+        "extension/src/domain/portable_settings.ts",
+        "extension/src/domain/profile_draft.ts",
+        "extension/src/domain/settings_result.ts",
+        "extension/src/infrastructure/center_app.ts",
+        "extension/src/infrastructure/center_files.ts",
+        "extension/src/infrastructure/center_pages.ts",
+        "extension/src/presentation/AppearancePage.svelte",
+        "extension/src/presentation/CenterHost.svelte",
+        "extension/src/presentation/DataPage.svelte",
+        "extension/src/presentation/InformationPage.svelte",
+        "extension/src/presentation/LanguagePage.svelte",
+        "extension/src/presentation/OverviewPage.svelte",
+        "extension/src/presentation/ProfileEditor.svelte",
+        "extension/src/presentation/ProfileScopeFields.svelte",
+        "extension/src/presentation/ProfilesPage.svelte",
+        "extension/src/presentation/center.css",
+        "extension/src/presentation/center_surface.ts",
+        "extension/tooling/javascript_validation.mts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3085,7 +3116,26 @@
         "extension/test/contracts/component_markup.test.ts",
         "extension/test/contracts/component_styles.test.ts",
         "extension/test/contracts/review_copy.test.ts",
-        "extension/test/integration/settings_review.test.ts"
+        "extension/test/integration/settings_review.test.ts",
+        "extension/test/contracts/center_assets.test.ts",
+        "extension/test/contracts/center_frame.test.ts",
+        "extension/test/fixtures/center_client.ts",
+        "extension/test/fixtures/legacy_options.ts",
+        "extension/test/integration/center_app.test.ts",
+        "extension/test/integration/center_client.test.ts",
+        "extension/test/integration/center_files.test.ts",
+        "extension/test/contracts/center_reply.test.ts",
+        "extension/test/fixtures/center_app_dom.ts",
+        "extension/test/integration/center_client_failures.test.ts",
+        "extension/test/integration/center_client_lifecycle.test.ts",
+        "extension/test/integration/center_drafts.test.ts",
+        "extension/test/integration/center_entry_recovery.test.ts",
+        "extension/test/integration/center_host.test.ts",
+        "extension/test/integration/center_migration.test.ts",
+        "extension/test/integration/center_pages.test.ts",
+        "extension/test/integration/center_foreground.test.ts",
+        "extension/test/integration/center_identifier.test.ts",
+        "extension/test/integration/center_import_scope.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",
@@ -3115,7 +3165,8 @@
         "specs/browser-extension/features/SETUP.v1.json",
         "docs/development/browser-extension.mdx",
         "extension/README.md",
-        "docs/browser-extension/runtime.mdx"
+        "docs/browser-extension/runtime.mdx",
+        "docs/browser-extension/configuration.mdx"
       ]
     }
   ]

@@ -32,7 +32,7 @@ function validBase(value: Record<string, unknown>): boolean {
     return Object.entries(value.repositories).every(([id, preference]) => /^[1-9]\d{0,19}$(?![\s\S])/u.test(id)
         && record(preference) && keys(preference, ['features', 'density', 'shortcuts', 'paused', 'connected', 'savedViews'])
         && preferences(preference) && (preference.savedViews === undefined || (Array.isArray(preference.savedViews)
-            && preference.savedViews.length <= 20 && preference.savedViews.every(query => typeof query === 'string'
+            && preference.savedViews.length <= 20 && [...preference.savedViews].every(query => typeof query === 'string'
                 && query.length <= 2000 && !/[\p{Cc}]/u.test(query)))));
 }
 export function validSettings(value: unknown): value is Settings {

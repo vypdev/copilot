@@ -5,12 +5,13 @@ import { jsonBytesWithin, keys, natural, record } from './value.ts';
 interface Version { readonly version: 1 }
 interface Client extends Version { readonly clientId: string }
 interface Editor extends Client { readonly controllerEpoch: number }
-interface Confirmation extends Editor { readonly operationId: string; readonly expectedRevision: number }
+interface Mutation extends Editor { readonly credentialEpoch: number; readonly expectedRevision: number }
+interface Confirmation extends Mutation { readonly operationId: string }
 export type CenterMessage = Version & { readonly method: 'center.open' }
     | Client & { readonly method: 'center.read' }
     | Editor & { readonly method: 'center.claim' }
     | Editor & { readonly method: 'center.close' }
-    | Editor & { readonly method: 'center.preview'; readonly intent: unknown }
+    | Mutation & { readonly method: 'center.preview'; readonly intent: unknown }
     | Confirmation & { readonly method: 'center.confirm' }
     | Confirmation & { readonly method: 'center.cancel' };
 export const MAX_CENTER_RESPONSE_BYTES = 132 * 1024;
@@ -27,10 +28,14 @@ export function parseCenterMessage(value: unknown): CenterMessage | null {
         if (!natural(value.controllerEpoch)) return null;
         fields.push('controllerEpoch');
     }
+    if (['center.preview', 'center.confirm', 'center.cancel'].includes(value.method)) {
+        if (!natural(value.credentialEpoch) || !natural(value.expectedRevision)) return null;
+        fields.push('credentialEpoch', 'expectedRevision');
+    }
     if (value.method === 'center.preview') fields.push('intent');
     if (value.method === 'center.confirm' || value.method === 'center.cancel') {
         if (!settingsOperationId(value.operationId) || !natural(value.expectedRevision)) return null;
-        fields.push('operationId', 'expectedRevision');
+        fields.push('operationId');
     }
     return keys(value, fields) && Object.keys(value).length === fields.length
         && jsonBytesWithin(value, value.method === 'center.preview' ? MAX_CENTER_REQUEST_BYTES : 8192)

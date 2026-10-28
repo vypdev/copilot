@@ -69,7 +69,7 @@ it('H3 migration quota failure retains the entire original H2 envelope for an ex
     const envelope = { current: { ...base, schemaVersion: 1, revision: 8 }, previous: { historic: true } };
     const h = memoryStore(); h.values.set(SETTINGS_KEY, envelope); const repository = new SettingsRepository(h.port);
     vi.mocked(h.port.set).mockRejectedValueOnce(new Error('quota'));
-    await expect(repository.initialize()).rejects.toThrow('quota'); expect(h.values.get(SETTINGS_KEY)).toEqual(envelope);
+    await expect(repository.initialize()).rejects.toThrow('settings-migration-unavailable'); expect(h.values.get(SETTINGS_KEY)).toEqual(envelope);
     expect(await repository.initialize()).toMatchObject({ state: 'ready', migrated: true });
     expect(h.values.get(SETTINGS_KEY)).toMatchObject({ previous: envelope.current });
 });

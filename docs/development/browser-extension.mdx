@@ -58,8 +58,9 @@ arbitrary output-path or partial-target CLI override.
 ## Target artifacts and compatibility
 
 Generated outputs are under `extension/dist/chrome`, `extension/dist/firefox`
-and `extension/dist/safari`. Each contains exactly `manifest.json`, `background.js`, `content.js`,
-`runtime.html` and `runtime.js`. `extension/dist/receipt.json` records
+and `extension/dist/safari`. Each contains `manifest.json`, `background.js`, `content.js`,
+`runtime.html`, `runtime.js`, `runtime.css` and declared packaged center chunks.
+`extension/dist/receipt.json` records
 `development-build-only`, the Git revision, an input-tree SHA-256 and asset hashes.
 The tree hash distinguishes pending source edits from the committed revision.
 Validation reads the bounded closed receipt and recomputes each declared asset
@@ -354,9 +355,39 @@ read-only view, saving state and honest completed/uncertain/conflicting outcomes
 Its en/es/fr/pt messages are complete resources; untrusted authored text is
 escaped. Unknown persistence offers a current-state read instead of repeating
 a write. Its DOM tests select only Svelte's public browser export, preserving
-native Node exports for build/driver tests. This is component evidence; complete
-route wiring, lazy packaged assets and actual H3 browser/human journeys still
-remain to be implemented and verified.
+native Node exports for build/driver tests. This is component evidence; actual
+H3 browser/human journeys remain required.
+
+The options entry now mounts the Svelte center with packaged lazy routes.
+Overview, appearance, language, profiles and local data operations use the
+background review contract. The foreground keeps reusable native handles private
+and sends each draft's original revision and credential context. Saved values
+never silently replace an unsaved draft. Leaving requires an explicit decision;
+drafts reset only after the exact saved revision is observed. A lost response
+offers a read, never an automatic write. These routes have complete en/es/fr/pt
+resources. Appearance saves its five preferences in one atomic review.
+
+Import validates at most 64 KiB of UTF-8 JSON before preview. Export contains
+closed portable preferences without connection grants or native session state.
+Future/invalid data remains inert. Query-bearing or invalid initial options
+destinations reload the fixed recovery URL before native registration.
+
+Center JavaScript uses packaged ES modules and CSS. Static/lazy dependencies
+must name declared local assets. Source-tagged chunks are bounded, reachable
+and individually hashed; CSS cannot fetch resources. Safari-resource and
+reproducibility checks include every chunk. Mounted tests use deterministic
+native ports and a nonopaque jsdom URL, not a loaded extension.
+
+Unfinished development sections do not satisfy CENTER acceptance. Five named
+protected sessions, repository management, full searchable inventory/provenance,
+remaining routes and all source-bound Chrome/Firefox/Safari and human
+accessibility journeys still belong to H3.
+
+Profile identifiers provide visible localized guidance and native validation.
+Escape literal hyphens in HTML character classes: current input constraints use
+Unicode Sets semantics, as described in the [HTML pattern reference](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/pattern).
+Test actual input validity as well as domain admission; an invalid HTML pattern
+can be ignored by the browser even when the background still rejects the value.
 
 Post-Connect preference changes use the serialized settings update port and
 retain the initiating operation/session fence. An older failed settings commit

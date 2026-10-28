@@ -340,6 +340,11 @@
           "icon": "code"
         },
         {
+          "title": "Local control center",
+          "href": "/browser-extension/configuration",
+          "icon": "code"
+        },
+        {
           "title": "Testing",
           "href": "/development/testing",
           "icon": "vial"

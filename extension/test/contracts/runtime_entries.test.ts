@@ -1,6 +1,9 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { browserFixture } from '../fixtures/browser.ts';
 
+// Entry composition is tested independently; browser-only components execute in their actual DOM suites.
+vi.mock('../../src/infrastructure/center_app.ts', () => ({ startCenter: vi.fn(() => () => undefined) }));
+
 afterEach(() => { vi.unstubAllGlobals(); vi.resetModules(); vi.restoreAllMocks(); });
 it('entrypoints tolerate absent vendor API and protected content exits before looking up the API', async () => {
     vi.stubGlobal('browser', undefined); vi.stubGlobal('chrome', undefined);
@@ -16,7 +19,7 @@ it('real composition entries pass native APIs to their tested runtime coordinato
     const document = { documentElement: { dataset: {} } }; const window = {}; vi.stubGlobal('document', document); vi.stubGlobal('window', window);
     vi.stubGlobal('location', { href: 'https://github.com/octo/example' }); await import('../../src/infrastructure/content_entry.ts');
     expect(startContent).toHaveBeenCalledWith(h.api, window, document);
-    const options = await import('../../src/infrastructure/options_runtime.ts'); const startOptions = vi.spyOn(options, 'startOptions').mockReturnValue(() => undefined);
+    const options = await import('../../src/infrastructure/center_app.ts'); const startOptions = vi.spyOn(options, 'startCenter').mockReturnValue(() => undefined);
     vi.stubGlobal('navigator', { language: 'es-ES' }); await import('../../src/infrastructure/runtime_entry.ts');
     expect(startOptions).toHaveBeenCalledWith(h.api, document, 'es-ES');
 });

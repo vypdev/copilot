@@ -17,9 +17,9 @@ it('routes admitted native center requests through the real gateway and saves on
     const h = fixture(); const client = h.open(); const editor = { clientId: client.clientId, controllerEpoch: client.controllerEpoch };
     expect(await h.call({ method: 'center.open' })).toEqual(client); expect(h.port.get).not.toHaveBeenCalled();
     expect(await h.call({ method: 'center.read', clientId: client.clientId })).toMatchObject({ role: 'editor', loaded: { state: 'ready' }, rollbackAvailable: false });
-    const preview = await h.call({ method: 'center.preview', ...editor, intent }) as { state: string; operationId: string; revision: number };
+    const preview = await h.call({ method: 'center.preview', credentialEpoch: 0, expectedRevision: 0, ...editor, intent }) as { state: string; operationId: string; revision: number };
     expect(preview.state).toBe('preview'); expect(h.port.set).not.toHaveBeenCalled();
-    const confirmation = { method: 'center.confirm', ...editor, operationId: preview.operationId, expectedRevision: preview.revision };
+    const confirmation = { method: 'center.confirm', credentialEpoch: 0, ...editor, operationId: preview.operationId, expectedRevision: preview.revision };
     expect(await h.call(confirmation)).toMatchObject({ state: 'committed', revision: 1, current: true });
     expect(await h.call(confirmation)).toMatchObject({ state: 'committed', revision: 1 });
     expect(h.port.set).toHaveBeenCalledTimes(1);
@@ -48,20 +48,20 @@ it('observers cannot mutate; explicit takeover invalidates old previews and stal
     const preview = await h.operations.preview(intent, editor.clientId);
     if (preview.state !== 'preview') throw new Error('expected preview');
     const observerArgs = { clientId: observer.clientId, controllerEpoch: observer.controllerEpoch };
-    for (const request of [{ method: 'center.preview', intent }, ...['center.confirm', 'center.cancel'].map(method =>
-        ({ method, operationId: preview.operationId, expectedRevision: 0 }))]) {
+    for (const request of [{ method: 'center.preview', credentialEpoch: 0, expectedRevision: 0, intent }, ...['center.confirm', 'center.cancel'].map(method =>
+        ({ method, credentialEpoch: 0, operationId: preview.operationId, expectedRevision: 0 }))]) {
         expect(await h.call({ ...observerArgs, ...request }, observerSource)).toEqual({ state: 'denied' });
     }
     expect(await h.call({ ...observerArgs, method: 'center.claim' }, observerSource)).toMatchObject({ role: 'editor', controllerEpoch: 2 });
-    expect(await h.call({ method: 'center.preview', clientId: editor.clientId, controllerEpoch: 1, intent })).toEqual({ state: 'stale' });
-    expect(await h.call({ ...observerArgs, controllerEpoch: 2, method: 'center.confirm', operationId: preview.operationId, expectedRevision: 0 }, observerSource)).toEqual({ state: 'expired' });
+    expect(await h.call({ method: 'center.preview', credentialEpoch: 0, expectedRevision: 0, clientId: editor.clientId, controllerEpoch: 1, intent })).toEqual({ state: 'stale' });
+    expect(await h.call({ ...observerArgs, controllerEpoch: 2, method: 'center.confirm', credentialEpoch: 0, operationId: preview.operationId, expectedRevision: 0 }, observerSource)).toEqual({ state: 'expired' });
     expect(await h.call({ ...observerArgs, controllerEpoch: 2, method: 'center.close' }, observerSource)).toEqual({ state: 'closed' });
     expect(h.port.set).not.toHaveBeenCalled();
 });
 it('cancel and native tab release retire previews without claiming a saved effect', async () => {
     const h = fixture(); const client = h.open();
     const preview = await h.operations.preview(intent, client.clientId); if (preview.state !== 'preview') throw new Error('expected preview');
-    expect(await h.call({ method: 'center.cancel', clientId: client.clientId, controllerEpoch: 1, operationId: preview.operationId, expectedRevision: 0 })).toEqual({ state: 'cancelled' });
+    expect(await h.call({ method: 'center.cancel', credentialEpoch: 0, clientId: client.clientId, controllerEpoch: 1, operationId: preview.operationId, expectedRevision: 0 })).toEqual({ state: 'cancelled' });
     h.main.releaseCenterTab(1);
     expect(await h.call({ method: 'center.read', clientId: client.clientId })).toEqual({ state: 'stale' });
     h.open(); h.main.shutdown(); expect(h.controller.fence(client.clientId)).toBe(null); expect(h.port.set).not.toHaveBeenCalled();
@@ -84,7 +84,7 @@ it('migrates only at explicit center startup and keeps future data inert, with s
     expect(await h.call(request)).toEqual({ state: 'unavailable' }); expect(h.port.set).toHaveBeenCalledTimes(writes);
 });
 it('an overlarge or unserializable internal preview fails at the bounded response boundary', async () => {
-    const h = fixture(); const client = h.open(); const request = { method: 'center.preview', clientId: client.clientId, controllerEpoch: 1, intent };
+    const h = fixture(); const client = h.open(); const request = { method: 'center.preview', credentialEpoch: 0, expectedRevision: 0, clientId: client.clientId, controllerEpoch: 1, intent };
     vi.spyOn(h.operations, 'preview').mockResolvedValueOnce({ state: 'preview', after: 'x'.repeat(133 * 1024) } as never);
     expect(await h.call(request)).toEqual({ state: 'unavailable' });
     vi.spyOn(h.operations, 'preview').mockRejectedValueOnce(new Error('private provider payload'));

@@ -18,10 +18,10 @@ it('native background composition owns cryptographic client/operation IDs and pe
     const client = await h.call({ method: 'center.open' }); expect(client).toMatchObject({ role: 'editor', state: 'ready', sourceTree: 'unbundled' });
     expect(client.clientId).toMatch(/^[0-9a-f]{32}$/u);
     expect(await h.call({ method: 'center.read', clientId: client.clientId })).toMatchObject({ loaded: { state: 'ready' } });
-    const preview = await h.call({ method: 'center.preview', clientId: client.clientId, controllerEpoch: client.controllerEpoch,
+    const preview = await h.call({ method: 'center.preview', credentialEpoch: 0, expectedRevision: 0, clientId: client.clientId, controllerEpoch: client.controllerEpoch,
         intent: { type: 'preferences', values: { locale: 'es' } } });
     expect(preview.operationId).toMatch(/^[0-9a-f]{32}$/u); expect(preview.operationId).not.toBe(client.clientId);
-    expect(await h.call({ method: 'center.confirm', clientId: client.clientId, controllerEpoch: client.controllerEpoch,
+    expect(await h.call({ method: 'center.confirm', credentialEpoch: 0, clientId: client.clientId, controllerEpoch: client.controllerEpoch,
         operationId: preview.operationId, expectedRevision: preview.revision })).toMatchObject({ state: 'committed', current: true });
     expect(h.localValues.get(SETTINGS_KEY)).toMatchObject({ current: { locale: 'es', revision: 1 }, operation: { id: preview.operationId } });
     expect(h.api.permissions.request).not.toHaveBeenCalled(); expect(h.sessionArea.get).not.toHaveBeenCalled(); h.stop();
@@ -38,10 +38,10 @@ it('safe packaged hash navigation retains ownership, while reload, departure and
 });
 it('credential permission revocation fences an outstanding center preview without granting or writing settings', async () => {
     const h = fixture(); const client = await h.call({ method: 'center.open' });
-    const preview = await h.call({ method: 'center.preview', clientId: client.clientId, controllerEpoch: client.controllerEpoch,
+    const preview = await h.call({ method: 'center.preview', credentialEpoch: 0, expectedRevision: 0, clientId: client.clientId, controllerEpoch: client.controllerEpoch,
         intent: { type: 'preferences', values: { paused: true } } });
     [...h.permissionRemoved.listeners][0]({ origins: ['https://api.github.com/*'] });
-    expect(await h.call({ method: 'center.confirm', clientId: client.clientId, controllerEpoch: client.controllerEpoch,
+    expect(await h.call({ method: 'center.confirm', credentialEpoch: 0, clientId: client.clientId, controllerEpoch: client.controllerEpoch,
         operationId: preview.operationId, expectedRevision: preview.revision })).toMatchObject({ state: 'stale' });
     expect(h.localArea.set).not.toHaveBeenCalled(); h.stop();
 });
@@ -55,4 +55,9 @@ it('authority identifier encoding retains leading zeroes and uses native random 
     const random = vi.fn((value: Uint8Array) => { value.set([0, 1, 10, 15, 16, 255]); return value; });
     vi.stubGlobal('crypto', { getRandomValues: random });
     const id = centerIdentifier(); expect(id).toBe(`00010a0f10ff${'00'.repeat(10)}`); expect(id).toHaveLength(32); expect(random).toHaveBeenCalledTimes(1);
+});
+it('missing foreground receivers cannot reject a native ownership transition or leak a notification error', async () => {
+    const h = fixture(); vi.mocked(h.api.runtime.sendMessage).mockRejectedValue(new Error('no-receiver'));
+    expect(await h.call({ method: 'center.open' })).toMatchObject({ state: 'ready', role: 'editor' });
+    await Promise.resolve(); expect(h.api.runtime.sendMessage).toHaveBeenCalledWith({ version: 1, method: 'center.invalidated' }); h.stop();
 });

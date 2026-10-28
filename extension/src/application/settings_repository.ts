@@ -10,6 +10,10 @@ function isEnvelope(value: unknown): value is Record<string, unknown> {
     return record(value) && Object.hasOwn(value, 'current') && keys(value, ['current', 'previous', 'operation']);
 }
 const continueAfterFailure = () => undefined;
+/** The migration write was attempted; callers may inspect its observed result without retrying it. */
+export class SettingsMigrationError extends Error {
+    constructor() { super('settings-migration-unavailable'); }
+}
 export class SettingsRepository {
     private queue: Promise<unknown> = Promise.resolve();
     constructor(private readonly storage: StoragePort) {}
@@ -95,7 +99,8 @@ export class SettingsRepository {
             if (loaded.state === 'ready' && loaded.migrated) {
                 const stored = await this.storage.get(SETTINGS_KEY);
                 const previous = isEnvelope(stored) ? stored.current : stored;
-                await this.storage.set(SETTINGS_KEY, { current: loaded.settings, previous });
+                try { await this.storage.set(SETTINGS_KEY, { current: loaded.settings, previous }); }
+                catch { throw new SettingsMigrationError(); }
             }
             return loaded;
         });

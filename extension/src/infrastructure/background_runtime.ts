@@ -22,6 +22,7 @@ export function startBackground(api: BrowserApi): () => void {
         protected: () => session.protect(),
     });
     const notify = () => {
+        void api.runtime.sendMessage({ version: 1, method: 'center.invalidated' }).catch(() => undefined);
         void api.tabs.query({ url: 'https://github.com/*' }).then(tabs => {
             for (const tab of tabs.slice(0, 128)) if (tab.id !== undefined) {
                 void api.tabs.sendMessage(tab.id, { version: 1, method: 'runtime.invalidated' }).catch(() => undefined);

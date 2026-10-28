@@ -1,0 +1,108 @@
+---
+title: Local control center
+description: Review local preferences, keep drafts safe and manage profile and backup changes in the development extension.
+---
+
+# Local control center
+
+The H3 development build opens a local control center from the extension toolbar,
+the browser's extension options, or the runtime settings button on an eligible
+GitHub page. Preferences stay in this browser. No GitHub write, Action run or
+model request is started by opening the center.
+
+H3 is still in progress. Appearance, language, profiles and preference data flows
+are being implemented and tested. Sections marked as unfinished do not offer
+their advertised workflow yet. The full product, remaining CENTER acceptance
+cases and new native-browser and accessibility evidence remain required.
+
+## Change a preference
+
+1. Open **Appearance** or **Language**.
+2. Choose your values. The interface continues using the saved values while
+   you edit the draft.
+3. Select **Review change**. Read the complete before-and-after comparison.
+4. Select **Confirm change** to save, or **Cancel change** to retain the saved
+   configuration. Canceling a review keeps your local form draft for editing.
+5. The completed review confirms the saved result. Close it to keep working.
+
+Appearance reviews theme, density, text size, motion and contrast together in
+one change. **Follow browser** selects one complete language resource from
+English, Spanish, French or Portuguese, falling back to English for other
+languages. A language change takes effect after confirmation.
+
+## Keep control of your draft
+
+One open window edits; other windows show **Read-only window**. Select **Take
+control of editing** deliberately when you want to move editing to another
+window. Old previews then require a fresh review. Taking control does not grant
+an account connection or browser permission.
+
+Leaving a page with an unsaved draft offers **Keep editing** or **Discard draft
+and leave**. Reading the current settings retains your draft. If another window
+has saved a newer revision, compare its saved values with your draft before
+discarding or starting a new review; an older draft cannot overwrite that
+revision silently.
+
+While a confirmed write is in progress, navigation cannot undo it. If the
+result is uncertain, select **Read current settings**. The center reconciles an
+exact saved result when it can; it never repeats the write automatically.
+
+## Use profiles
+
+Open **Profiles**, supply a local identifier and name, choose a scope and review
+the preferences. A local identifier starts with a lowercase letter and contains
+up to 48 lowercase letters, digits or hyphens. Names contain up to 60 characters.
+Creating a profile with an existing identifier is rejected; open that profile
+to edit it instead. You can retain up to ten profiles.
+
+**Inherit** leaves that value to the surrounding preferences. A selected profile
+applies only in its matching context; creating one does not select it. Selecting
+another profile for the same scope replaces that selection. A pause remains
+stronger than an enabled preference. Removing a selected profile is also a
+reviewed change, and the preview includes the preferences it stops supplying.
+
+The complete H3 scope includes verified account and repository context selection
+and visible effective-state provenance. Their manager and context journeys are
+still under implementation; numeric fields alone are not proof of a verified
+GitHub identity or permission. Profiles never connect an account or authorize
+an Action command.
+
+## Export, import, reset and rollback
+
+In **Your data**, **Export local preferences** downloads
+`copilot-preferences.json`. It includes your preference values, authored profile
+names and selections. Keep the file somewhere appropriate for those personal
+labels. Connection grants, credentials and private runtime/session data are
+excluded; it is not an account or session backup.
+
+Import accepts one supported UTF-8 JSON preference file of at most 64 KiB.
+Select **Review imported preferences**, inspect the comparison, then confirm or
+cancel. A malformed or newer unsupported file is rejected without changing the
+saved settings. Imported preferences cannot grant a connection or release an
+existing pause. The original file remains yours to keep or remove.
+
+Reset offers global preferences, profiles, appearance or all local preferences.
+**Review previous preferences** offers the retained prior configuration when
+available. Both require the same explicit confirmation. Rollback is a new
+reviewed change; it does not restore a credential or a connection grant.
+
+## Recover safely
+
+| Message or state | Next action |
+|---|---|
+| Another window saved changes | Read current settings and compare with the retained draft. |
+| Preview or editing session expired | Read current settings, then prepare a fresh review. |
+| Could not confirm whether saving succeeded | Read current settings; do not assume either success or cancellation. |
+| Page and background belong to different builds | Reload the extension and reopen its options. |
+| Saved settings require a newer extension | Update to a compatible build. The stored data is preserved. |
+| Saved settings still need migration | Keep the stored data. Resolve the storage problem, then read current settings to check or retry the supported migration. Editing remains disabled until it succeeds. |
+| Saved settings cannot be read safely | Preserve the stored data and consult troubleshooting before resetting anything. |
+
+Full replacement of a query-bearing or unknown initial options destination opens
+the fixed local recovery page before creating an editing session. Rejected URL
+contents are not forwarded to the background.
+
+See the [runtime privacy and recovery guide](/browser-extension/runtime) and
+the [contributor verification guide](/development/browser-extension). Build or
+mounted-DOM test success alone is not evidence that the extension has passed
+its real Chrome, Firefox or Safari journeys.

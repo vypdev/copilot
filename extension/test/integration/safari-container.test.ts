@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
-import { mkdtemp, mkdir, readFile, writeFile, rm, copyFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile, rm, copyFile, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,7 +12,7 @@ beforeAll(async () => {
     temporary = await mkdtemp(path.join(tmpdir(), 'copilot-h2-safari-container-unit-'));
     await buildDevelopmentSet(root, path.join(temporary, 'extension/dist')); app = path.join(temporary, 'CopilotH2.app');
     const resources = path.join(app, 'Contents/PlugIns/CopilotH2 Extension.appex/Contents/Resources'); await mkdir(resources, { recursive: true });
-    for (const file of ['background.js', 'content.js', 'manifest.json', 'runtime.html', 'runtime.js']) await copyFile(path.join(temporary, 'extension/dist/safari', file), path.join(resources, file));
+    for (const file of await readdir(path.join(temporary, 'extension/dist/safari'))) await copyFile(path.join(temporary, 'extension/dist/safari', file), path.join(resources, file));
 });
 afterAll(async () => { await rm(temporary, { recursive: true, force: true }); });
 function commands(): ContainerCommand {
@@ -51,7 +51,7 @@ it('github-browser-extension-runtime-C35 builds the real converter/Xcode command
             const project = path.join(temporary, '.tmp/safari-h2/project/CopilotH2/CopilotH2.xcodeproj'); await mkdir(project, { recursive: true });
             await writeFile(path.join(project, 'project.pbxproj'), 'invalid.extensions.copilot.CopilotH2 MARKETING_VERSION = 1.0;');
             const resources = path.join(target, 'Contents/PlugIns/CopilotH2 Extension.appex/Contents/Resources'); await mkdir(resources, { recursive: true });
-            for (const asset of ['background.js', 'content.js', 'manifest.json', 'runtime.html', 'runtime.js']) await copyFile(path.join(temporary, 'extension/dist/safari', asset), path.join(resources, asset));
+            for (const asset of await readdir(path.join(temporary, 'extension/dist/safari'))) await copyFile(path.join(temporary, 'extension/dist/safari', asset), path.join(resources, asset));
         }
         if (file.endsWith('pluginkit')) return `${CONTAINER_ID}.Extension ${target}`;
         return commands()(file, args);

@@ -9,7 +9,7 @@ it.each(['takeover', 'close', 'tab-removal'])('a %s during persistence preserves
     if (preview.state !== 'preview') throw new Error('expected preview');
     const started = deferred<void>(); const persisted = deferred<void>();
     vi.mocked(h.port.set).mockImplementationOnce(async (key, value) => { started.resolve(); await persisted.promise; h.values.set(key, value); });
-    const confirming = h.gateway.handle({ version: 1, method: 'center.confirm', clientId: editor.clientId, controllerEpoch: editor.controllerEpoch,
+    const confirming = h.gateway.handle({ version: 1, method: 'center.confirm', credentialEpoch: 0, clientId: editor.clientId, controllerEpoch: editor.controllerEpoch,
         operationId: preview.operationId, expectedRevision: preview.revision }, { documentId: CENTER_BINDING.documentId!, tab: { id: 1 } });
     await started.promise;
     if (transition === 'takeover') { const binding = { documentId: 'two', tabId: 2 }; const other = h.open(binding); h.controller.claim(other.clientId, binding, other.controllerEpoch); }
@@ -23,7 +23,7 @@ it('a changed settings record conflicts with a live editor preview instead of re
     const h = centerFixture(); const editor = h.open(); const preview = await h.operations.preview(intent, editor.clientId);
     if (preview.state !== 'preview') throw new Error('expected preview');
     await h.repository.update(settings => ({ ...settings, theme: 'dark' }));
-    expect(await h.gateway.handle({ version: 1, method: 'center.confirm', clientId: editor.clientId, controllerEpoch: editor.controllerEpoch,
+    expect(await h.gateway.handle({ version: 1, method: 'center.confirm', credentialEpoch: 0, clientId: editor.clientId, controllerEpoch: editor.controllerEpoch,
         operationId: preview.operationId, expectedRevision: preview.revision }, { documentId: CENTER_BINDING.documentId!, tab: { id: 1 } })).toEqual({ state: 'conflict' });
     expect(h.values.get(SETTINGS_KEY)).toMatchObject({ current: { revision: 1, theme: 'dark', density: 'comfortable' } });
     expect(h.port.set).toHaveBeenCalledTimes(1);

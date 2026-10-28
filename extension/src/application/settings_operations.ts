@@ -41,7 +41,8 @@ export class SettingsOperations {
             if (now < record.createdAt || now >= record.expiresAt) map.delete(id);
         }
     }
-    async preview(intent: unknown, owner: string): Promise<SettingsPreview> {
+    async preview(intent: unknown, owner: string, expectedRevision?: number): Promise<SettingsPreview> {
+        if (expectedRevision !== undefined && !natural(expectedRevision)) return { state: 'invalid', reason: 'invalid-input' };
         const now = this.time(); const fence = this.fence(owner);
         if (!fence) return { state: 'denied' };
         if (now === null || !natural(now + PREVIEW_TTL)) return { state: 'unavailable' };
@@ -57,6 +58,7 @@ export class SettingsOperations {
             if (inspected.loaded.state !== 'ready') return { state: inspected.loaded.state === 'future' ? 'future' : 'corrupt' };
             if (inspected.loaded.migrated) return { state: 'migration-required' };
             const before = inspected.loaded.settings;
+            if (expectedRevision !== undefined && before.revision !== expectedRevision) return { state: 'conflict' };
             const plan = planSettingsChange(before, input, inspected.rollback);
             if (plan.state !== 'ready') return plan;
             const id = this.ports.identifier();

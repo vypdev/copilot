@@ -3,7 +3,7 @@ import type { Sender } from '../domain/protocol.ts';
 import { jsonBytesWithin } from '../domain/value.ts';
 import { centerBinding, CenterController } from './center_controller.ts';
 import { SettingsOperations } from './settings_operations.ts';
-import { SettingsRepository } from './settings_repository.ts';
+import { SettingsRepository, SettingsMigrationError } from './settings_repository.ts';
 
 /** Called only after native extension-origin admission by MessageGateway. */
 export class CenterGateway {
@@ -27,14 +27,18 @@ export class CenterGateway {
         const client = this.controller.authorize(message.clientId, binding, epoch);
         if (!client) return { state: 'stale' };
         if (message.method === 'center.read') {
-            await this.settings.initialize();
+            // A failed migration acknowledgement is not proof that storage is unavailable.
+            // Read back once: preserve an unmigrated record as read-only, or report observed current data.
+            try { await this.settings.initialize(); }
+            catch (error) { if (!(error instanceof SettingsMigrationError)) return { state: 'unavailable' }; }
             const inspection = await this.settings.inspect();
             const current = this.controller.authorize(message.clientId, binding, client.controllerEpoch);
             if (!current || current.credentialEpoch !== client.credentialEpoch) return { state: 'stale' };
             return { ...current, loaded: inspection.loaded, rollbackAvailable: inspection.loaded.state === 'ready' && inspection.rollback !== null, lastOperation: inspection.operation };
         }
         if (client.role !== 'editor') return { state: 'denied' };
-        if (message.method === 'center.preview') return this.operations.preview(message.intent, message.clientId);
+        if (message.credentialEpoch !== client.credentialEpoch) return { state: 'stale' };
+        if (message.method === 'center.preview') return this.operations.preview(message.intent, message.clientId, message.expectedRevision);
         if (message.method === 'center.confirm') return this.operations.confirm(message.operationId, message.expectedRevision, message.clientId);
         return this.operations.cancel(message.operationId, message.expectedRevision, message.clientId);
     }

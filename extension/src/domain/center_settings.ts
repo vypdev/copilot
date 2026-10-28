@@ -37,7 +37,7 @@ export function validCenterSettings(value: unknown): value is CenterSettings {
         'onboarding', 'recents', 'diagnostics', 'notes']) || Object.keys(value).length !== 10 || value.schemaVersion !== 1
         || !jsonBytesWithin(value, 65536) || !validProfileSelection({ profiles: value.profiles, selected: value.selected })
         || !Array.isArray(value.favorites) || value.favorites.length > 20
-        || !value.favorites.every(id => typeof id === 'string' && Object.hasOwn(FEATURE_DEFAULTS, id))
+        || ![...value.favorites].every(id => typeof id === 'string' && Object.hasOwn(FEATURE_DEFAULTS, id))
         || new Set(value.favorites).size !== value.favorites.length || !validBindings(value.bindings)
         || !record(value.appearance) || !keys(value.appearance, ['text', 'motion', 'contrast'])
         || Object.keys(value.appearance).length !== 3 || !['standard', 'large'].includes(value.appearance.text as string)
