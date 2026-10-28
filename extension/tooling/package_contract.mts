@@ -6,7 +6,7 @@ export const ROOT_PACKAGE_FILES = ['action.yml', 'issue-admission/', 'deployment
     'build/api/index.js', 'build/api/src/', 'setup/ISSUE_TEMPLATE/', 'setup/actions/', 'setup/workflows/',
     'setup/source-workflows/', 'setup/pull_request_template.md', 'scripts/install-git-hooks.cjs', 'README.md', 'LICENSE'];
 
-interface Package { files?: string[]; private?: boolean; version?: string; scripts?: Record<string, string> }
+interface Package { files?: string[]; private?: boolean; version?: string; scripts?: Record<string, string>; devDependencies?: Record<string, string> }
 interface Workspace { packages?: string[]; overrides?: Record<string, string> }
 interface Workflow { jobs?: Record<string, { steps?: { run?: string }[] }> }
 
@@ -14,6 +14,9 @@ export function validatePackageContract(root: Package, extension: Package, works
     const fail = (rule: string): never => { throw new FoundationGateError(`package-contract: ${rule}`); };
     if (!isDeepStrictEqual(root.files, ROOT_PACKAGE_FILES)) fail('root npm file selection changed');
     if (extension.private !== true || extension.version !== DEVELOPMENT_VERSION) fail('private development identity required');
+    if (extension.devDependencies?.svelte !== '5.57.1' || extension.devDependencies?.['@sveltejs/vite-plugin-svelte'] !== '7.3.1'
+        || extension.devDependencies?.['svelte-check'] !== '4.7.6'
+        || extension.scripts?.typecheck !== 'tsc --noEmit && svelte-check --tsconfig tsconfig.svelte.json --fail-on-warnings') fail('reviewed Svelte pins and warning/type gates required');
     if (!workspace.packages?.includes('extension') || workspace.overrides?.undici !== '6.28.0'
         || workspace.overrides?.uuid !== '11.1.1') fail('workspace selection or retained overrides changed');
     for (const operation of ['build', 'typecheck', 'test', 'validate']) {

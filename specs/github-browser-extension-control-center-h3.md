@@ -338,6 +338,59 @@ Current executable evidence is `extension/test/contracts/center_protocol.test.ts
 background composition with deterministic browser ports; actual loaded-browser
 and presentation evidence remains required separately.
 
+### 8.6 Authored Svelte and packaged style boundary
+
+The private extension pins Svelte 5.57.1, its Vite plugin 7.3.1 and svelte-check
+4.7.6. Both TypeScript and Svelte type checking remain mandatory, with compiler
+warnings treated as failures. Compiler configuration is explicit; an unrelated
+local Svelte config must not silently alter the accepted view. The existing
+Node build/driver tests retain native package resolution; only Svelte's public
+browser export is selected for mounted DOM component tests.
+Executable test configuration lives in the covered tooling module; the Vitest
+entrypoint only re-exports it. A green empty report for an automatically excluded
+configuration file does not establish coverage of its logic.
+
+Architecture validation inspects the original typed instance/module scripts,
+markup and styles before compilation. Erased type-only imports still obey layer
+boundaries. Components stay in presentation and at most ninety lines; domain
+and application acquire no Svelte/browser authority. Only presentation and
+composition may import the public Svelte runtime. Literal packaged lazy imports
+belong to composition; nonliteral, remote, option-bearing or unresolved imports
+are rejected. Original `.svelte`/`.css` inputs and the Svelte check configuration
+participate in the source fingerprint.
+
+Markup must preserve text escaping and cannot acquire native globals, raw HTML,
+DOM bindings, arbitrary actions/attachments, resource attributes or hidden
+anchor telemetry. Password entry remains native and unbound to presentation
+state. Local links use the reviewed closed route policy; static help links have
+fixed documentation destinations. Scope bindings cannot shadow that navigation
+policy. SVG resource attributes, inline styles and styles capable of fetching
+resources cannot bypass the same boundary. Static packaged theme/layout styles
+remain available, including responsive, focus, contrast and reduced-motion rules.
+There is no warning-suppression escape hatch.
+
+`SettingsReview.svelte` renders immutable, nonsecret review data and narrow
+confirm/cancel/read/dismiss callbacks. Preview shows complete supplied before
+and after values; observation-only views disable mutation. Saving exposes no
+control that claims an in-flight write can be undone. Unknown, conflicting,
+stale or unavailable outcomes offer a current-state read, never an automatic
+repeat write. Plain outcomes and technical revision details remain distinct.
+Review messages are complete immutable en/es/fr/pt resources, selected as a
+whole; authored names and values remain escaped text.
+
+Current evidence is `extension/test/contracts/component_architecture.test.ts`,
+`extension/test/contracts/component_markup.test.ts`,
+`extension/test/contracts/component_styles.test.ts`,
+`extension/test/contracts/review_copy.test.ts` and the actual mounted component
+in `extension/test/integration/settings_review.test.ts`. This establishes a
+review component and its source boundaries, not the complete center journey.
+The full route application, packaged lazy-asset contract and actual loaded
+Chrome/Firefox/Safari/human acceptance remain required before completing H3.
+Compiler and test usage follows the primary
+[compiler](https://svelte.dev/docs/svelte/svelte-compiler),
+[TypeScript](https://svelte.dev/docs/svelte/typescript) and
+[component testing](https://svelte.dev/docs/svelte/testing) documentation.
+
 ## 9. UI/UX and content contract
 
 The center puts current state first, then completed facts, next action, required human action, impact and inspectable details. Feature detail and risky-action preview use plain language before technical diagnostics.

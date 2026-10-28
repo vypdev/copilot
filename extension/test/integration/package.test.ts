@@ -39,7 +39,8 @@ it('bexh1-foundation-C28 parses root commands and CI gates; contributor guidance
     const upload = workflow.jobs['ci-check'].steps.find(step => step.name === 'Upload coverage to Codecov');
     expect(upload?.with?.files?.split(',')).toEqual(['./coverage/lcov.info', './extension/coverage/lcov.info']);
     expect(vitestConfig.test?.coverage).toMatchObject({ allowExternal: true,
-        reporter: expect.arrayContaining([['lcovonly', { projectRoot: root }]]) });
+        reporter: expect.arrayContaining([['lcovonly', { projectRoot: root }]]),
+        include: expect.arrayContaining(['src/**/*.svelte', 'tooling/*.mts']) });
 });
 it('rejects package publication drift and verifies meaningful missing orchestration/CI failures', () => {
     for (const mutate of [
@@ -58,4 +59,18 @@ it('rejects package publication drift and verifies meaningful missing orchestrat
     expect(() => validatePackageContract(pkg(), extension(), workspace(), {})).toThrow('CI gate');
     expect(() => validatePackageContract(pkg(), extension(), workspace(), { jobs: { missingSteps: {} } })).toThrow('CI gate');
     expect(() => validatePackageContract({}, extension(), workspace(), ci())).toThrow('file selection');
+});
+it('keeps reviewed rendering pins and both TypeScript/Svelte warning gates mandatory for extension acceptance', () => {
+    for (const key of ['svelte', '@sveltejs/vite-plugin-svelte', 'svelte-check']) {
+        const value = extension(); value.devDependencies[key] = 'latest';
+        expect(() => validatePackageContract(pkg(), value, workspace(), ci())).toThrow('reviewed Svelte pins');
+    }
+    for (const script of ['tsc --noEmit', 'svelte-check --tsconfig tsconfig.svelte.json', 'true']) {
+        const value = extension(); value.scripts.typecheck = script;
+        expect(() => validatePackageContract(pkg(), value, workspace(), ci())).toThrow('warning/type gates');
+    }
+    const value = extension(); delete value.devDependencies;
+    expect(() => validatePackageContract(pkg(), value, workspace(), ci())).toThrow('reviewed Svelte pins');
+    const noScript = extension(); delete noScript.scripts;
+    expect(() => validatePackageContract(pkg(), noScript, workspace(), ci())).toThrow('warning/type gates');
 });

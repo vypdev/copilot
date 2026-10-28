@@ -339,6 +339,25 @@ See the [H3 companion](https://github.com/vypdev/copilot/blob/develop/specs/gith
 for the complete fourteen-capability scope and acceptance gates. Its tests and
 browser receipts remain distinct from H2's engineering evidence.
 
+H3 pins Svelte 5.57.1, its Vite plugin 7.3.1 and svelte-check 4.7.6 in the
+private package. `typecheck:extension` runs TypeScript and Svelte checks with
+zero warnings required. The source gate inspects original typed scripts,
+templates and styles; a compiler-erased import cannot bypass layer rules.
+Components stay within ninety lines. Original Svelte/CSS and check configuration
+are source-fingerprinted. Native globals, raw HTML, bound password values,
+unreviewed destinations, resource-bearing markup/styles and warning suppression
+are rejected. Static local layout/theme/contrast/reduced-motion styles remain
+valid. Literal local lazy imports are composition-owned.
+
+The first mounted Svelte review component presents before/after values, a
+read-only view, saving state and honest completed/uncertain/conflicting outcomes.
+Its en/es/fr/pt messages are complete resources; untrusted authored text is
+escaped. Unknown persistence offers a current-state read instead of repeating
+a write. Its DOM tests select only Svelte's public browser export, preserving
+native Node exports for build/driver tests. This is component evidence; complete
+route wiring, lazy packaged assets and actual H3 browser/human journeys still
+remain to be implemented and verified.
+
 Post-Connect preference changes use the serialized settings update port and
 retain the initiating operation/session fence. An older failed settings commit
 cannot disconnect a newer account, and a newer update reads the latest complete

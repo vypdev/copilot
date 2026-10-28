@@ -59,7 +59,7 @@ export async function buildDevelopmentSet(root: string, output: string, bundle: 
         validateArchitecture(root, sources);
         const metadata = [...sources.entries()];
         for (const file of ['package.json', 'pnpm-workspace.yaml', 'pnpm-lock.yaml', 'extension/package.json',
-            'extension/tsconfig.json']) metadata.push([file, await readFile(path.join(root, file), 'utf8')]);
+            'extension/tsconfig.json', 'extension/tsconfig.svelte.json']) metadata.push([file, await readFile(path.join(root, file), 'utf8')]);
         for (const entry of await readSources(root, ['extension/tooling'])) metadata.push(entry);
         const sourceRevision = environment.revision ? environment.revision()
             : execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();

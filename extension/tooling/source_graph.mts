@@ -16,7 +16,7 @@ export async function readSources(root: string, directories = ['extension/src', 
             const absolute = await realpath(path.join(root, name));
             if (entry.isSymbolicLink() || !absolute.startsWith(`${canonicalRoot}${path.sep}`)) throw new Error(`source-boundary: ${name}`);
             if (entry.isDirectory()) await visit(name);
-            else if (/\.(?:ts|mts)$/u.test(name)) sources.set(name, await readFile(absolute, 'utf8'));
+            else if (/\.(?:ts|mts|svelte|css)$/u.test(name)) sources.set(name, await readFile(absolute, 'utf8'));
         }
     }
     for (const directory of directories) await visit(directory);
@@ -27,7 +27,7 @@ export function sourceProgram(root: string, sources: Sources, files: readonly st
     const options: ts.CompilerOptions = {
         target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext,
         moduleResolution: ts.ModuleResolutionKind.Bundler, allowImportingTsExtensions: true,
-        noEmit: true, strict: true, skipLibCheck: true, types: [], lib: ['lib.es2022.d.ts'],
+        noEmit: true, strict: true, skipLibCheck: true, types: [], lib: ['lib.es2022.d.ts'], allowNonTsExtensions: true,
     };
     const host = ts.createCompilerHost(options, true);
     const read = host.readFile.bind(host);
@@ -39,9 +39,23 @@ export function sourceProgram(root: string, sources: Sources, files: readonly st
     const directoryExists = host.directoryExists?.bind(host);
     host.directoryExists = directory => [...sources.keys()].some(file => file.startsWith(`${relative(directory)}/`))
         || Boolean(directoryExists?.(directory));
+    const getSourceFile = host.getSourceFile.bind(host);
+    host.getSourceFile = (file, version, onError, fresh) => {
+        const source = sources.get(relative(file));
+        return source !== undefined && /\.(?:svelte|css)$/u.test(file)
+            ? ts.createSourceFile(file, source, version, true, ts.ScriptKind.TS) : getSourceFile(file, version, onError, fresh);
+    };
+    const resolveModule = (specifier: string, file: string): ts.ResolvedModuleFull | undefined => {
+        const asset = path.resolve(path.dirname(file), specifier);
+        if (specifier.startsWith('.') && /\.(?:svelte|css)$/u.test(specifier) && sources.has(relative(asset))) {
+            return { resolvedFileName: asset, extension: ts.Extension.Ts };
+        }
+        return ts.resolveModuleName(specifier, file, options, host).resolvedModule;
+    };
+    host.resolveModuleNames = (names, file) => names.map(name => resolveModule(name, file));
     const program = ts.createProgram(files.map(file => path.join(root, file)), options, host);
     const resolve = (specifier: string, file: string) => {
-        const found = ts.resolveModuleName(specifier, path.join(root, file), options, host).resolvedModule;
+        const found = resolveModule(specifier, path.join(root, file));
         return found && relative(found.resolvedFileName);
     };
     return { program, resolve };

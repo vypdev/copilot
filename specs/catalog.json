@@ -3019,7 +3019,14 @@
         "extension/src/domain/center_protocol.ts",
         "extension/src/application/center_controller.ts",
         "extension/src/application/center_gateway.ts",
-        "extension/src/infrastructure/center_runtime.ts"
+        "extension/src/infrastructure/center_runtime.ts",
+        "extension/src/domain/center_review.ts",
+        "extension/src/domain/review_copy.ts",
+        "extension/src/presentation/SettingsReview.svelte",
+        "extension/tooling/component_validation.mts",
+        "extension/tooling/style_validation.mts",
+        "extension/tooling/test_configuration.mts",
+        "extension/tsconfig.svelte.json"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3073,7 +3080,12 @@
         "extension/test/integration/center_controller.test.ts",
         "extension/test/integration/center_gateway.test.ts",
         "extension/test/integration/center_persistence_fences.test.ts",
-        "extension/test/integration/center_native.test.ts"
+        "extension/test/integration/center_native.test.ts",
+        "extension/test/contracts/component_architecture.test.ts",
+        "extension/test/contracts/component_markup.test.ts",
+        "extension/test/contracts/component_styles.test.ts",
+        "extension/test/contracts/review_copy.test.ts",
+        "extension/test/integration/settings_review.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",
