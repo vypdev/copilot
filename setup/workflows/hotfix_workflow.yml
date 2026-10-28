@@ -8,11 +8,25 @@ on:
         required: true
         default: prepare
         type: choice
+        # Add replace only after configuring the complete project verifier and enabling it below.
         options: [prepare, publish, resume]
       operation-id:
         description: 'Internal durable operation identifier'
         required: false
         default: ''
+      expected-revision:
+        description: 'Current durable revision; required only for replace'
+        required: false
+        default: ''
+      source-sha:
+        description: 'Reviewed corrected source before complete replacement preparation'
+        required: false
+        default: ''
+      confirm-unpublished:
+        description: 'Confirm the exact version is unpublished in every project registry'
+        type: boolean
+        required: false
+        default: false
       version:
         description: 'Hotfix version (MAJOR.MINOR.PATCH)'
         required: false
@@ -50,6 +64,11 @@ jobs:
           ISSUE: ${{ inputs.issue }}
           TITLE: ${{ inputs.title }}
           CHANGELOG: ${{ inputs.changelog }}
+          EXPECTED_REVISION: ${{ inputs.expected-revision }}
+          SOURCE_SHA: ${{ inputs.source-sha }}
+          CONFIRM_UNPUBLISHED: ${{ inputs.confirm-unpublished }}
+          # Workflow-owned opt-in; never supplied by an issue or dispatch input.
+          REPLACEMENT_ENABLED: 'false'
         with:
           script: |
             const mode = process.env.MODE;
@@ -59,6 +78,10 @@ jobs:
             const issue = Number(issueText);
             const title = process.env.TITLE || '';
             const changelog = process.env.CHANGELOG || '';
+            const revisionText = process.env.EXPECTED_REVISION || '';
+            const revision = Number(revisionText);
+            const sourceSha = process.env.SOURCE_SHA || '';
+            const confirmed = process.env.CONFIRM_UNPUBLISHED || 'false';
             const errors = [];
             if (!/^[1-9][0-9]*$/.test(issueText) || !Number.isSafeInteger(issue) || issue < 1) errors.push('Issue must be a positive safe integer.');
             if (!/^[0-9]+\.[0-9]+\.[0-9]+$/.test(version)) errors.push('Version must use MAJOR.MINOR.PATCH.');
@@ -66,25 +89,89 @@ jobs:
               if (operationId) errors.push('Operation ID must be empty in prepare mode.');
               if (!title || title.length > 1000) errors.push('Title must contain 1-1000 characters.');
               if (!changelog || changelog.length > 50000) errors.push('Changelog must contain 1-50000 characters.');
+            } else if (mode === 'replace') {
+              if (process.env.REPLACEMENT_ENABLED !== 'true') errors.push('Candidate replacement is disabled. Configure the complete project verifier, enable it in this workflow and then add replace to the choices.');
+              if (!/^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(operationId)) errors.push('Operation ID is invalid.');
+              if (!/^[1-9][0-9]*$/.test(revisionText) || !Number.isSafeInteger(revision) || revision < 1 || revision >= Number.MAX_SAFE_INTEGER) errors.push('Replacement revision is invalid.');
+              if (!/^[a-f0-9]{40}$/.test(sourceSha)) errors.push('Replacement source must be a full reviewed SHA.');
+              if (version.length > 64 || confirmed !== 'true') errors.push('Confirm the exact unpublished replacement version.');
+              if (title || changelog) errors.push('Replacement preserves the stored title and changelog.');
             } else if (mode === 'publish' || mode === 'resume') {
               if (!/^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(operationId)) errors.push('Operation ID is invalid.');
               if (title || changelog) errors.push('Title and changelog must be empty in publish or resume mode.');
-            } else errors.push('Mode must be prepare, publish, or resume.');
+            } else errors.push('Mode must be prepare, replace, publish, or resume.');
+            if (mode !== 'replace' && (revisionText || sourceSha || confirmed !== 'false')) errors.push('Replacement proof inputs are allowed only in replace mode.');
             if (errors.length) core.setFailed(errors.join(' '));
+
+  candidate-preflight:
+    name: Inspect unpublished candidate replacement
+    if: ${{ inputs.mode == 'replace' }}
+    runs-on: ubuntu-latest
+    needs: validate
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+      actions: read
+    outputs:
+      mode: ${{ steps.inspect.outputs.mode }}
+      source-branch: ${{ steps.inspect.outputs.source-branch }}
+      candidate-sha: ${{ steps.inspect.outputs.candidate-sha }}
+      production-base-sha: ${{ steps.inspect.outputs.production-base-sha }}
+      operation-id: ${{ steps.inspect.outputs.operation-id }}
+      expected-revision: ${{ steps.inspect.outputs.expected-revision }}
+    steps:
+      - name: Read native candidate authority
+        id: inspect
+        uses: vypdev/copilot/deployment-recovery@v3
+        with:
+          issue: ${{ inputs.issue }}
+          operation-id: ${{ inputs.operation-id }}
+          expected-revision: ${{ inputs.expected-revision }}
+          version: ${{ inputs.version }}
+          source-sha: ${{ inputs.source-sha }}
+          confirm-unpublished: ${{ inputs.confirm-unpublished }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
+          release-label: release
+          hotfix-label: hotfix
+          repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
+          token: ${{ secrets.PAT }}
 
   prepare-version-files:
     name: Prepare and validate hotfix
-    if: ${{ inputs.mode == 'prepare' }}
+    if: ${{ !cancelled() && needs.validate.result == 'success' && (inputs.mode == 'prepare' || (inputs.mode == 'replace' && needs.candidate-preflight.result == 'success' && needs.candidate-preflight.outputs.mode == 'prepare')) }}
     runs-on: ubuntu-latest
-    needs: validate
+    needs: [validate, candidate-preflight]
     timeout-minutes: 30
     permissions:
       contents: write
+    outputs:
+      candidate-sha: ${{ steps.candidate-identity.outputs.candidate-sha }}
     steps:
       - uses: actions/checkout@v5
         with:
           persist-credentials: true
+          ref: ${{ needs.candidate-preflight.outputs.source-branch || github.ref }}
+      - name: Verify reviewed replacement source
+        if: ${{ inputs.mode == 'replace' }}
+        uses: actions/github-script@v9
+        env:
+          EXPECTED_SHA: ${{ inputs.source-sha }}
+        with:
+          script: |
+            const { execFileSync } = require('node:child_process');
+            const current = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+            if (!/^[a-f0-9]{40}$/.test(process.env.EXPECTED_SHA || '') || current !== process.env.EXPECTED_SHA) {
+              core.setFailed('The reviewed replacement source moved before preparation. No new candidate proof is available.');
+            }
       # Add project-specific version, build, validation, smoke-test and generated-file steps here.
+      - name: Complete fresh replacement verification
+        id: replacement-verification
+        if: ${{ inputs.mode == 'replace' }}
+        run: |
+          echo "Configure this step with every required project validator, including registry vacancy, before enabling candidate replacement."
+          exit 1
       - name: Commit prepared hotfix files
         uses: EndBug/add-and-commit@v9
         with:
@@ -93,12 +180,29 @@ jobs:
           committer_email: actions@github.com
           default_author: user_info
           message: 'gh-action: prepare hotfix ${{ inputs.version }}'
+      - name: Confirm prepared replacement identity
+        id: candidate-identity
+        if: ${{ inputs.mode == 'replace' }}
+        uses: actions/github-script@v9
+        env:
+          SOURCE_BRANCH: ${{ needs.candidate-preflight.outputs.source-branch }}
+          VERIFICATION_RESULT: ${{ steps.replacement-verification.outcome }}
+        with:
+          script: |
+            if (process.env.VERIFICATION_RESULT !== 'success') throw new Error('Complete replacement verification was not confirmed.');
+            const { execFileSync } = require('node:child_process');
+            const candidate = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+            const dirty = execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim();
+            if (!/^[a-f0-9]{40}$/.test(candidate) || !process.env.SOURCE_BRANCH || dirty) throw new Error('The prepared candidate is not an exact clean commit.');
+            const response = await github.rest.git.getRef({ ...context.repo, ref: `heads/${process.env.SOURCE_BRANCH}` });
+            if (response.data.object?.type !== 'commit' || response.data.object.sha !== candidate) throw new Error('The prepared source moved before candidate proof was recorded.');
+            core.setOutput('candidate-sha', candidate);
 
   promote:
     name: Open production promotion
-    if: ${{ inputs.mode == 'prepare' }}
+    if: ${{ !cancelled() && needs.validate.result == 'success' && ((inputs.mode == 'prepare' && needs.prepare-version-files.result == 'success') || (inputs.mode == 'replace' && needs.candidate-preflight.result == 'success' && ((needs.candidate-preflight.outputs.mode == 'prepare' && needs.prepare-version-files.result == 'success' && needs.prepare-version-files.outputs.candidate-sha != '') || needs.candidate-preflight.outputs.mode == 'recover'))) }}
     runs-on: ubuntu-latest
-    needs: prepare-version-files
+    needs: [validate, candidate-preflight, prepare-version-files]
     timeout-minutes: 10
     permissions:
       contents: read
@@ -109,10 +213,50 @@ jobs:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+          ref: ${{ inputs.mode == 'replace' && (needs.candidate-preflight.outputs.mode == 'recover' && needs.candidate-preflight.outputs.candidate-sha || needs.prepare-version-files.outputs.candidate-sha) || github.ref }}
       - name: Create or resume promotion PR
+        if: ${{ inputs.mode == 'prepare' }}
         uses: vypdev/copilot@v3
         with:
           single-action: prepare_deployment_action
+          single-action-issue: ${{ inputs.issue }}
+          issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
+          single-action-version: ${{ inputs.version }}
+          single-action-title: ${{ inputs.title }}
+          single-action-changelog: ${{ inputs.changelog }}
+          main-branch: ${{ vars.MAIN_BRANCH || 'master' }}
+          development-branch: ${{ vars.DEVELOPMENT_BRANCH || 'develop' }}
+          release-tree: ${{ vars.RELEASE_TREE || 'release' }}
+          hotfix-tree: ${{ vars.HOTFIX_TREE || 'hotfix' }}
+          release-workflow: ${{ vars.RELEASE_WORKFLOW || 'release_workflow.yml' }}
+          hotfix-workflow: ${{ vars.HOTFIX_WORKFLOW || 'hotfix_workflow.yml' }}
+          release-reconciliation-strategy: ${{ vars.RELEASE_RECONCILIATION_STRATEGY || 'production-lineage' }}
+          hotfix-reconciliation-strategy: ${{ vars.HOTFIX_RECONCILIATION_STRATEGY || 'production-lineage' }}
+          reconciliation-pr-mode: ${{ vars.RECONCILIATION_PR_MODE || 'auto' }}
+          merge-queue-check-attestations: ${{ vars.MERGE_QUEUE_CHECK_ATTESTATIONS || '[]' }}
+          reconciliation-backmerge-mode: ${{ vars.RECONCILIATION_BACKMERGE_MODE || 'auto' }}
+          hotfix-active-release-policy: ${{ vars.HOTFIX_ACTIVE_RELEASE_POLICY || 'prefer-release' }}
+          reconciliation-tree: ${{ vars.RECONCILIATION_TREE || 'sync' }}
+          reconciliation-cleanup: ${{ vars.RECONCILIATION_CLEANUP || 'all' }}
+          reconciliation-issue-completion: ${{ vars.RECONCILIATION_ISSUE_COMPLETION || 'close' }}
+          orchestration-presentation-mode: ${{ vars.ORCHESTRATION_PRESENTATION_MODE || 'guided' }}
+          orchestration-diagrams: ${{ vars.ORCHESTRATION_DIAGRAMS || 'true' }}
+          orchestration-comment-mode: ${{ vars.ORCHESTRATION_COMMENT_MODE || 'update' }}
+          repository-locale: ${{ vars.REPOSITORY_LOCALE || 'en-US' }}
+          issues-locale: ${{ vars.ISSUES_LOCALE || '' }}
+          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || '' }}
+          token: ${{ secrets.PAT }}
+      - name: Replace or recover unpublished candidate
+        if: ${{ inputs.mode == 'replace' }}
+        uses: vypdev/copilot@v3
+        with:
+          single-action: replace_deployment_action
+          single-action-operation-id: ${{ needs.candidate-preflight.outputs.operation-id }}
+          single-action-expected-revision: ${{ needs.candidate-preflight.outputs.expected-revision }}
+          single-action-reviewed-source-sha: ${{ inputs.source-sha }}
+          single-action-candidate-sha: ${{ needs.candidate-preflight.outputs.mode == 'recover' && needs.candidate-preflight.outputs.candidate-sha || needs.prepare-version-files.outputs.candidate-sha }}
+          single-action-production-base-sha: ${{ needs.candidate-preflight.outputs.production-base-sha }}
+          single-action-confirm-unpublished: ${{ inputs.confirm-unpublished }}
           single-action-issue: ${{ inputs.issue }}
           issue-workflow-profile: ${{ vars.COPILOT_ISSUE_WORKFLOW_PROFILE || '' }}
           single-action-version: ${{ inputs.version }}
@@ -239,8 +383,8 @@ jobs:
     name: Report orchestration failure
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [validate, prepare-version-files, promote, publish, resume-reconciliation]
-    if: ${{ failure() && needs.validate.result == 'success' }}
+    needs: [validate, candidate-preflight, prepare-version-files, promote, publish, resume-reconciliation]
+    if: ${{ failure() && needs.validate.result == 'success' && inputs.mode != 'replace' }}
     permissions:
       issues: write
     steps:

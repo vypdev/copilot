@@ -33,9 +33,12 @@ if (packageJson.exports?.['./bugbot']?.default !== './build/api/index.js'
 
 const requiredPackageFiles = [
   'action.yml',
+  'issue-admission/',
+  'deployment-recovery/',
   'build/cli/index.js',
   'build/web/',
   'build/github_action/index.js',
+  'build/deployment_recovery/index.js',
   'build/api/index.js',
   'build/api/src/',
   'setup/ISSUE_TEMPLATE/',
@@ -53,9 +56,14 @@ for (const requiredFile of requiredPackageFiles) {
 
 const requiredRepositoryFiles = [
   'action.yml',
+  'issue-admission/action.yml',
+  'issue-admission/index.cjs',
+  'deployment-recovery/action.yml',
+  'deployment-recovery/index.cjs',
   'build/cli/index.js',
   'build/web/index.html',
   'build/github_action/index.js',
+  'build/deployment_recovery/index.js',
   'build/api/index.js',
   'build/api/src/api.d.ts',
   'setup/workflows/copilot_issue.yml',

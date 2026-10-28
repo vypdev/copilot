@@ -1,7 +1,9 @@
+import { escapeIssueFieldHeadingMarkdown } from '../../domain/issue_workflow_field_mapping';
 import type { SetupConfiguration } from '../../domain/setup';
 import {
   ISSUE_WORKFLOW_CATALOG,
   ISSUE_WORKFLOW_KINDS,
+  issueWorkflowRequiredHeadings,
   type IssueWorkflowKind,
 } from '../../domain/issue_workflow_profile';
 import {
@@ -99,7 +101,7 @@ export function buildRepositoryAgentProfile(configuration: Readonly<SetupConfigu
         nativeIssueType: definition.nativeIssueType,
         createsManagedBranch: definition.branchManaged && configuration.repository.issueManagedBranches,
         branchPrefix: prefix[kind],
-        requiredFields: Object.freeze([...definition.requiredHeadings]),
+        requiredFields: issueWorkflowRequiredHeadings(profile, kind),
         workflow: workflow[kind],
       })];
     }));
@@ -142,7 +144,7 @@ export function renderRepositoryAgentGuide(profile: RepositoryAgentProfile): str
   const rows = profile.issueWorkflows.enabled.map(kind => {
     const fact = profile.issueWorkflows.forms[kind]!;
     const entry = fact.template ? `\`.github/ISSUE_TEMPLATE/${fact.template}\`` : 'maintainer-approved manual issue';
-    const fields = fact.requiredFields.length > 0 ? fact.requiredFields.join('; ') : 'none';
+    const fields = fact.requiredFields.length > 0 ? fact.requiredFields.map(escapeIssueFieldHeadingMarkdown).join('; ') : 'none';
     const branch = fact.createsManagedBranch ? `Action-managed \`${fact.branchPrefix}/…\`` : 'none';
     return `| \`${kind}\` | ${entry} | ${fact.labels.map(label => `\`${label}\``).join(', ')} | ${fields} | ${branch} |`;
   }).join('\n');

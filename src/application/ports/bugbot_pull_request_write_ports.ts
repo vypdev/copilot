@@ -1,4 +1,6 @@
 import type {
+  PullRequestReviewThreadStateQueryPort,
+  BoundPullRequestReviewThreadStateQueryPort,
   PullRequestReviewCommentDraft,
   PullRequestReviewReference,
   PullRequestReviewCommentCommandPort,
@@ -9,9 +11,11 @@ import type {
 export interface BugbotPullRequestWritePort
   extends
     PullRequestReviewCommentCommandPort,
-    Pick<PullRequestReviewThreadCommandPort, "unresolvePullRequestReviewThread"> {}
+    Pick<PullRequestReviewThreadCommandPort, "unresolvePullRequestReviewThread">,
+    Partial<PullRequestReviewThreadStateQueryPort> {}
 
-export interface BoundBugbotPullRequestWritePort {
+/** Re-adjudicating a withdrawn dismissal requires the optional fresh-thread query. */
+export interface BoundBugbotPullRequestWritePort extends Partial<BoundPullRequestReviewThreadStateQueryPort> {
   createReviewWithComments(
     pullRequestNumber: number,
     commitId: string,

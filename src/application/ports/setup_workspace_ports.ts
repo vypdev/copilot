@@ -28,6 +28,7 @@ export interface SetupDoctorWorkspaceQueryPort {
     isRepositoryRoot(): boolean;
     inspectSddPrerequisites?(): 'pass' | 'blocked' | 'unavailable';
     compareWorkflows(features?: SetupFeatures, configuration?: Readonly<SetupConfiguration>): readonly SetupWorkflowComparison[];
+    inspectIssueForms?(configuration: Readonly<SetupConfiguration>): readonly { readonly id: string; readonly status: 'pass' | 'fail'; readonly summary: string; readonly path: string; readonly missing: boolean }[];
     inspectAgentGuidance?(configuration: Readonly<SetupConfiguration>): readonly {
         id: string;
         status: 'pass' | 'warn' | 'fail' | 'skipped';

@@ -1,3 +1,5 @@
+import { ALL_ISSUE_WORKFLOWS, issueWorkflowHeading } from '../../../../domain/issue_workflow_profile';
+import { readIssueWorkflowFields } from '../../../../domain/issue_workflow_body';
 import { Result } from "../../../../data/model/result";
 import { extractVersion } from "../../../../utils/content_utils";
 import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
@@ -30,7 +32,7 @@ export class GetReleaseVersionUseCase implements ParamUseCase<VersionDescription
                 return result;
             }
 
-            const description = await this.issueRepository.getDescription(param.issueNumber)
+            const description = param.body ?? await this.issueRepository.getDescription(param.issueNumber)
 
             if (description === undefined) {
                 logDebugInfo(`GetReleaseVersion: no description for issue ${param.issueNumber}.`);
@@ -45,7 +47,7 @@ export class GetReleaseVersionUseCase implements ParamUseCase<VersionDescription
                 return result;
             }
 
-            const releaseVersion = extractVersion('Release Version', description)
+            const releaseVersion = param.body === undefined && !param.issueWorkflowProfile ? extractVersion('Release Version', description) : extractVersion('Release Version', `### Release Version\n${readIssueWorkflowFields(description, [issueWorkflowHeading(param.issueWorkflowProfile ?? ALL_ISSUE_WORKFLOWS, 'release', 'Release Version')])[0].value.replace(/^v(?=\d)/u, '')}`)
 
             if (releaseVersion === undefined) {
                 logDebugInfo(`GetReleaseVersion: no "Release Version" found in description (issue ${param.issueNumber}).`);

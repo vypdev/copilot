@@ -308,6 +308,519 @@
     {"id": "py-helper-retry-validation", "language": "python", "category": "negative", "description": "A copy entrypoint loads persisted retry_attempts through a validation helper before constructing provider work.", "file": "src/copy.py", "startLine": 1, "diff": "+def parse_progress(raw):\n+    value = raw[\"retry_attempts\"]\n+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:\n+        raise ValueError(\"invalid_copy_checkpoint\")\n+    return value\n+\n+def run_copy(raw, provider):\n+    attempts = parse_progress(raw)\n+    return provider.create(attempts)", "expected": []},
     {"id": "ts-exclusive-render-branches", "language": "typescript", "category": "negative", "description": "A selected UI section is rendered through a map of view functions.", "file": "ui/views.ts", "startLine": 1, "diff": "+const unavailableAction = () => html`<span id=\"action-reason\">Unavailable</span>`;\n+const overview = () => html`<p>Overview</p>`;\n+const copy = () => html`<section>${unavailableAction()}</section>`;\n+const library = () => html`<section>${unavailableAction()}</section>`;\n+const viewFor = (section: \"overview\" | \"copy\" | \"library\") => ({ overview, copy, library })[section]();\n+const render = (section: \"overview\" | \"copy\" | \"library\") => html`${viewFor(section)}`;", "expected": []},
     {"id": "py-short-circuit-unsafe-order", "language": "python", "category": "correctness", "description": "A checkpoint validator checks issue steps supplied as arbitrary persisted JSON values.", "file": "src/checkpoint.py", "startLine": 1, "diff": "+def valid_steps(issue_steps, writable_ids):\n+    return all(step in writable_ids and isinstance(step, str) for step in issue_steps)", "expected": [{"id": "unhashable-membership", "title": "Unhashable steps reach set membership before validation", "file": "src/checkpoint.py", "line": 2, "severity": "low", "category": "correctness", "symbol": "valid_steps", "codeSnippet": "step in writable_ids"}]},
-    {"id": "ts-composed-duplicate-ids", "language": "typescript", "category": "correctness", "description": "A UI helper supplies a reason label to actions composed in one overview.", "file": "ui/views.ts", "startLine": 1, "diff": "+const unavailableAction = () => html`<span id=\"action-reason\">Unavailable</span>`;\n+const overview = () => html`<section>${unavailableAction()}${unavailableAction()}</section>`;", "expected": [{"id": "composed-duplicate-id", "title": "Composed actions render duplicate reason IDs", "file": "ui/views.ts", "line": 2, "severity": "low", "category": "correctness", "symbol": "overview", "codeSnippet": "${unavailableAction()}${unavailableAction()}"}]}
+    {"id": "ts-composed-duplicate-ids", "language": "typescript", "category": "correctness", "description": "A UI helper supplies a reason label to actions composed in one overview.", "file": "ui/views.ts", "startLine": 1, "diff": "+const unavailableAction = () => html`<span id=\"action-reason\">Unavailable</span>`;\n+const overview = () => html`<section>${unavailableAction()}${unavailableAction()}</section>`;", "expected": [{"id": "composed-duplicate-id", "title": "Composed actions render duplicate reason IDs", "file": "ui/views.ts", "line": 2, "severity": "low", "category": "correctness", "symbol": "overview", "codeSnippet": "${unavailableAction()}${unavailableAction()}"}]},
+    {"id": "kt-compose-owned-loader", "language": "kotlin", "category": "negative", "description": "Review removal of the manual host-page load handler. Main.kt calls ComposeViewport(viewportContainerId = \"ComposeTarget\") { App() } successfully. Compose 1.13.0-beta01 official source webMain/androidx/compose/ui/window/ComposeWindow.web.kt:74,80-82,241-246: ComposeViewport clears viewportContainer with replaceChildren() inside onSkikoReady before mounting content. Source: https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui/1.13.0-beta01/ui-1.13.0-beta01-sources.jar", "file": "frontend/index.html", "startLine": 1, "diff": "@@ -1,4 +1,3 @@\n <div id=\"ComposeTarget\">\n   <div id=\"loading\">Loading...</div>\n </div>\n-<script>window.addEventListener(\"load\", () => document.getElementById(\"loading\").remove());</script>", "expected": []},
+    {"id": "kt-compose-external-loader", "language": "html", "category": "correctness", "description": "Review the changed host markup. The entry point calls ComposeViewport(\"ComposeTarget\") successfully; the supplied framework contract and the complete loader cleanup code are shown. Compose 1.13.0-beta01 official source webMain/androidx/compose/ui/window/ComposeWindow.web.kt:74,80-82,241-246: ComposeViewport clears viewportContainer with replaceChildren() inside onSkikoReady before mounting content.", "file": "frontend/index.html", "startLine": 1, "diff": "@@ -1 +1,2 @@\n+<div id=\"ComposeTarget\"></div>\n+<div id=\"loading\" style=\"position:fixed;inset:0;z-index:9999;background:white\">Loading...</div>\n-<script>window.addEventListener(\"load\", () => document.getElementById(\"loading\").remove());</script>", "expected": [{"id": "external-loader", "title": "The external loader covers the initialized app", "file": "frontend/index.html", "line": 2, "severity": "medium", "category": "correctness", "codeSnippet": "<div id=\"loading\" style=\"position:fixed;inset:0;z-index:9999;background:white\">Loading...</div>"}]},
+    {"id": "kt-compose-failed-startup-error", "language": "kotlin", "category": "negative", "description": "Review startup with a failing dependency initializer and the supplied framework contract. The host initially has a Loading... child inside ComposeTarget. Compose 1.13.0-beta01 official source webMain/androidx/compose/ui/window/ComposeWindow.web.kt:74,80-82,241-246: ComposeViewport clears viewportContainer with replaceChildren() inside onSkikoReady before mounting content.", "file": "frontend/Main.kt", "startLine": 1, "diff": "@@ -0,0 +1,8 @@\n+fun main() {\n+    try {\n+        initializeDependencies() // may throw before ComposeViewport is called\n+        ComposeViewport(viewportContainerId = \"ComposeTarget\") { App() }\n+    } catch (error: Exception) {\n+        document.getElementById(\"loading\")!!.textContent = \"Unable to start. Reload to retry.\"\n+    }\n+}", "expected": []},
+    {"id": "kt-compose-failed-startup-stuck", "language": "kotlin", "category": "correctness", "description": "Review startup with the supplied framework contract. The host starts with a Loading... child inside ComposeTarget. initializeDependencies throws when required saved settings are malformed; there is no global error handler or other loader update. Compose 1.13.0-beta01 official source webMain/androidx/compose/ui/window/ComposeWindow.web.kt:74,80-82,241-246: ComposeViewport clears viewportContainer with replaceChildren() inside onSkikoReady before mounting content.", "file": "frontend/Main.kt", "startLine": 1, "diff": "@@ -0,0 +1,4 @@\n+fun main() {\n+    initializeDependencies()\n+    ComposeViewport(viewportContainerId = \"ComposeTarget\") { App() }\n+}", "expected": [{"id": "startup-loader", "title": "Dependency initialization failure leaves the loading state indefinitely", "file": "frontend/Main.kt", "line": 2, "severity": "medium", "category": "reliability", "symbol": "main", "codeSnippet": "initializeDependencies()"}]},
+    {"id": "ts-viewport-version-without-cleanup", "language": "typescript", "category": "correctness", "description": "Review a synthetic viewport package integration. The pinned viewport-framework 1.0 source is supplied. Version 2.0 clears the target before mount, but this repository resolves 1.0. The full caller and loader cleanup are shown. Resolved viewport-framework@1.0 source: export function mount(target, app) { target.appendChild(app); } index.html: <div id=\"target\"><div id=\"loading\">Loading...</div></div>", "file": "src/startup.ts", "startLine": 1, "diff": "@@ -1 +1,2 @@\n+import { mount } from \"viewport-framework\";\n+mount(document.getElementById(\"target\")!, createApp());\n-document.getElementById(\"loading\")!.remove();", "expected": [{"id": "version-loader", "title": "The pinned viewport implementation preserves the loading element", "file": "src/startup.ts", "line": 2, "severity": "medium", "category": "correctness", "codeSnippet": "mount(document.getElementById(\"target\")!, createApp());"}]},
+    {
+      "id": "kt-compose-preferred-width-narrow",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Standard Compose foundation-layout and Material3 APIs. The centered Box receives bounded width constraints min=0dp, max=280dp. The form must keep its interactive fields within the 280dp parent.",
+      "file": "ui/AuthForm.kt",
+      "startLine": 1,
+      "diff": "+import androidx.compose.foundation.layout.*\n+import androidx.compose.material3.*\n+import androidx.compose.runtime.Composable\n+import androidx.compose.ui.Alignment\n+import androidx.compose.ui.Modifier\n+import androidx.compose.ui.unit.dp\n+@Composable\n+fun AuthForm(email: String, onEmailChange: (String) -> Unit) {\n+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {\n+        Card(modifier = Modifier.width(400.dp)) {\n+            Column(Modifier.padding(24.dp)) {\n+                OutlinedTextField(email, onEmailChange, modifier = Modifier.fillMaxWidth())\n+                Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text(\"Submit\") }\n+            }\n+        }\n+    }\n+}",
+      "expected": []
+    },
+    {
+      "id": "kt-compose-required-width-overflow",
+      "language": "kotlin",
+      "category": "correctness",
+      "description": "Standard Compose foundation-layout and Material3 APIs. The centered Box receives bounded width constraints min=0dp, max=280dp. All unclipped interactive fields must fit within the 280dp parent. The same form is also used at 800dp, where the controls must remain at most 320dp wide.",
+      "file": "ui/AuthForm.kt",
+      "startLine": 1,
+      "diff": "+import androidx.compose.foundation.layout.*\n+import androidx.compose.material3.*\n+import androidx.compose.runtime.Composable\n+import androidx.compose.ui.Alignment\n+import androidx.compose.ui.Modifier\n+import androidx.compose.ui.unit.dp\n+@Composable\n+fun AuthForm(email: String, onEmailChange: (String) -> Unit) {\n+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {\n+        Card(modifier = Modifier.requiredWidth(400.dp).padding(16.dp)) {\n+            Column(Modifier.padding(24.dp)) {\n+                OutlinedTextField(email, onEmailChange, modifier = Modifier.fillMaxWidth())\n+                Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text(\"Submit\") }\n+            }\n+        }\n+    }\n+}",
+      "expected": [
+        {
+          "id": "kt-compose-required-width-overflow-defect",
+          "title": "Required width makes the padded controls overflow the 280dp parent",
+          "file": "ui/AuthForm.kt",
+          "line": 10,
+          "severity": "low",
+          "category": "correctness",
+          "symbol": "AuthForm",
+          "codeSnippet": "Modifier.requiredWidth(400.dp).padding(16.dp)"
+        }
+      ]
+    },
+    {
+      "id": "kt-compose-fill-before-cap",
+      "language": "kotlin",
+      "category": "correctness",
+      "description": "Standard Compose foundation-layout and Material3 APIs. The centered Box receives bounded width constraints min=0dp, max=800dp; it is also used at 280dp. The form must stay usable at 280dp and keep the interactive fields at most 320dp wide at 800dp.",
+      "file": "ui/AuthForm.kt",
+      "startLine": 1,
+      "diff": "+import androidx.compose.foundation.layout.*\n+import androidx.compose.material3.*\n+import androidx.compose.runtime.Composable\n+import androidx.compose.ui.Alignment\n+import androidx.compose.ui.Modifier\n+import androidx.compose.ui.unit.dp\n+@Composable\n+fun AuthForm(email: String, onEmailChange: (String) -> Unit) {\n+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {\n+        Card(modifier = Modifier.fillMaxWidth().widthIn(max = 400.dp).padding(16.dp)) {\n+            Column(Modifier.padding(24.dp)) {\n+                OutlinedTextField(email, onEmailChange, modifier = Modifier.fillMaxWidth())\n+                Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text(\"Submit\") }\n+            }\n+        }\n+    }\n+}",
+      "expected": [
+        {
+          "id": "kt-compose-fill-before-cap-defect",
+          "title": "Filling before the cap removes the intended wide-screen bound",
+          "file": "ui/AuthForm.kt",
+          "line": 10,
+          "severity": "low",
+          "category": "correctness",
+          "symbol": "AuthForm",
+          "codeSnippet": "Modifier.fillMaxWidth().widthIn(max = 400.dp).padding(16.dp)"
+        }
+      ]
+    },
+    {
+      "id": "kt-compose-cap-before-fill",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Standard Compose foundation-layout and Material3 APIs. The centered Box receives bounded width constraints min=0dp, max=800dp; it is also used at 280dp. The form must stay usable at 280dp and keep the interactive fields at most 320dp wide at 800dp.",
+      "file": "ui/AuthForm.kt",
+      "startLine": 1,
+      "diff": "+import androidx.compose.foundation.layout.*\n+import androidx.compose.material3.*\n+import androidx.compose.runtime.Composable\n+import androidx.compose.ui.Alignment\n+import androidx.compose.ui.Modifier\n+import androidx.compose.ui.unit.dp\n+@Composable\n+fun AuthForm(email: String, onEmailChange: (String) -> Unit) {\n+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {\n+        Card(modifier = Modifier.widthIn(max = 400.dp).fillMaxWidth().padding(16.dp)) {\n+            Column(Modifier.padding(24.dp)) {\n+                OutlinedTextField(email, onEmailChange, modifier = Modifier.fillMaxWidth())\n+                Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text(\"Submit\") }\n+            }\n+        }\n+    }\n+}",
+      "expected": []
+    },
+    {
+      "id": "kt-compose-padded-preferred-width",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Standard Compose foundation-layout and Material3 APIs. The centered Box receives bounded width constraints min=0dp, max=280dp or max=800dp in separate renders. All unclipped interactive fields must fit within the narrow parent and be at most 320dp wide in the wide render.",
+      "file": "ui/AuthForm.kt",
+      "startLine": 1,
+      "diff": "+import androidx.compose.foundation.layout.*\n+import androidx.compose.material3.*\n+import androidx.compose.runtime.Composable\n+import androidx.compose.ui.Alignment\n+import androidx.compose.ui.Modifier\n+import androidx.compose.ui.unit.dp\n+@Composable\n+fun AuthForm(email: String, onEmailChange: (String) -> Unit) {\n+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {\n+        Card(modifier = Modifier.width(400.dp).padding(16.dp)) {\n+            Column(Modifier.padding(24.dp)) {\n+                OutlinedTextField(email, onEmailChange, modifier = Modifier.fillMaxWidth())\n+                Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text(\"Submit\") }\n+            }\n+        }\n+    }\n+}",
+      "expected": []
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/ci.yml",
+      "startLine": 185,
+      "id": "android-listed-minor-platform",
+      "category": "negative",
+      "description": "Dated synthetic complete catalog snapshot for stable channel, host macOS, 2026-10-26: <remotePackage path=\"platforms;android-37.0\"/><remotePackage path=\"platforms;android-37.1\"/><remotePackage path=\"platforms;android-37.2\"/>. Source identity: https://dl.google.com/android/repository/repository2-3.xml. Configuration: compileSdk=37. Execution receipt for this exact workflow revision and command: fresh job-owned SDK root, no preinstalled platform or restored cache; exit=0, installed package.xml localPackage path=\"platforms;android-37.0\"; Android build with compileSdk=37 succeeded.",
+      "diff": "+sdkmanager --install \"platforms;android-37.0\"",
+      "expected": []
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/ci.yml",
+      "startLine": 185,
+      "id": "android-absent-platform-package",
+      "category": "reliability",
+      "description": "Dated synthetic complete catalog snapshot for stable channel, host macOS, 2026-10-26: <remotePackage path=\"platforms;android-37.0\"/><remotePackage path=\"platforms;android-37.1\"/><remotePackage path=\"platforms;android-37.2\"/>. Source identity: https://dl.google.com/android/repository/repository2-3.xml. Configuration: compileSdk=37. Fresh installation on this exact workflow revision using the default stable channel exits 1: Failed to find package platforms;android-37. No mirror or local override is configured.",
+      "diff": "+sdkmanager --install \"platforms;android-37\"",
+      "expected": [
+        {
+          "id": "absent-sdk-package",
+          "title": "Requested SDK package is absent from the applicable inventory",
+          "file": ".github/workflows/ci.yml",
+          "line": 185,
+          "severity": "medium",
+          "category": "reliability",
+          "codeSnippet": "sdkmanager --install \"platforms;android-37\""
+        }
+      ]
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/ci.yml",
+      "startLine": 185,
+      "id": "external-package-unverified-inventory",
+      "category": "negative",
+      "description": "A workflow requests an SDK package with a minor suffix. No applicable inventory, documentation, installation attempt or execution receipt is available. External lookup is unavailable in the read-only reviewer.",
+      "diff": "+sdkmanager --install \"platforms;android-38.0\"",
+      "expected": []
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/ci.yml",
+      "startLine": 185,
+      "id": "android-stale-inventory-current-install",
+      "category": "negative",
+      "description": "A retained 2025-10-01 catalog snapshot predates this package and does not list it. A 2026-10-26 receipt at this exact workflow revision records a fresh job-owned SDK root, no restored cache, exit=0 for the exact command, localPackage path=\"platforms;android-37.0\", and a successful compileSdk=37 Android build. No current inventory is retained.",
+      "diff": "+sdkmanager --install \"platforms;android-37.0\"",
+      "expected": []
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/ci.yml",
+      "startLine": 185,
+      "id": "android-unrelated-green-job",
+      "category": "reliability",
+      "description": "Dated synthetic complete catalog snapshot for stable channel, host macOS, 2026-10-26: <remotePackage path=\"platforms;android-37.0\"/><remotePackage path=\"platforms;android-37.1\"/><remotePackage path=\"platforms;android-37.2\"/>. Source identity: https://dl.google.com/android/repository/repository2-3.xml. Configuration: compileSdk=37. This exact workflow revision fails its fresh install command with exit 1: Failed to find package platforms;android-37. Another green desktop-only job skipped SDK installation and used cached artifacts from a different revision.",
+      "diff": "+sdkmanager --install \"platforms;android-37\"",
+      "expected": [
+        {
+          "id": "absent-sdk-package",
+          "title": "Requested SDK package is absent from the applicable inventory",
+          "file": ".github/workflows/ci.yml",
+          "line": 185,
+          "severity": "medium",
+          "category": "reliability",
+          "codeSnippet": "sdkmanager --install \"platforms;android-37\""
+        }
+      ]
+    },
+    {
+      "language": "kotlin",
+      "file": "storage/ReadRows.kt",
+      "startLine": 1,
+      "id": "kt-resolved-sql-subclass",
+      "category": "negative",
+      "description": "Controlled source-evidence fixture, not a live consumer execution. Resolved coordinate org.jetbrains.exposed:exposed-core:1.0.0, imported org.jetbrains.exposed.v1.exceptions.ExposedSQLException. Version-matched official source https://github.com/JetBrains/Exposed/blob/395c3b9b39814faa6faccf9b7a63305ed8ef5f25/exposed-core/src/main/kotlin/org/jetbrains/exposed/v1/core/Exceptions.kt declares ExposedSQLException : java.sql.SQLException(cause). The reported resolved JAR SHA256 is 4e6b44f76b5dc69bb611d64474f2a34ac444e4ec156a96ac8cdcccda3b2a0b7a; a supplied same-artifact javap signature states extends java.sql.SQLException. driver.selectRows uses that exact JDBC dependency. A synthetic matching real-database fault receipt for this function returns Left(DatabaseException) retaining the actual wrapper/cause; cancellation propagates. The diff preserves the typed SQL catch. Do not infer guarantees about other versions or similarly named types.",
+      "diff": " import java.sql.SQLException\n+suspend fun readRows(): Either<DatabaseException, List<Row>> = try {\n+    Either.Right(driver.selectRows())\n+} catch (failure: SQLException) {\n+    Either.Left(DatabaseException(\"read failed\", failure))\n+}",
+      "expected": []
+    },
+    {
+      "language": "kotlin",
+      "file": "storage/ReadRows.kt",
+      "startLine": 1,
+      "id": "jvm-type-hierarchy-unavailable",
+      "category": "negative",
+      "description": "The application maps actual SQLExceptions to DatabaseException. A report alleges that the driver wrapper is not a SQLException, but there is no resolved dependency/version, wrapper source or bytecode, failed execution or authoritative inheritance evidence available in the allowed read-only context. The driver may use a subtype; its hierarchy is unknown. There is no demonstrated uncaught error. Review the changed SQL mapping without inventing a lookup, class relationship or executed test.",
+      "diff": " import java.sql.SQLException\n+suspend fun readRows(): Either<DatabaseException, List<Row>> = try {\n+    Either.Right(driver.selectRows())\n+} catch (failure: SQLException) {\n+    Either.Left(DatabaseException(\"read failed\", failure))\n+}",
+      "expected": []
+    },
+    {
+      "language": "kotlin",
+      "file": "storage/ReadRows.kt",
+      "startLine": 1,
+      "id": "jvm-current-contract-over-stale-docs",
+      "category": "negative",
+      "description": "Synthetic dependency example.db:jdbc:2.4.0 is resolved for this exact JVM target. Its current source and bytecode declare example.db.SqlFailure extends java.sql.SQLException. driver.selectRows uses that exact type for SQL failures. An older 2.3.0 document described a RuntimeException wrapper; it is not the reviewed artifact. A matching current-version fault receipt invokes this function and returns Left(DatabaseException) with the wrapper/cause retained. Cancellation is not caught.",
+      "diff": " import java.sql.SQLException\n+suspend fun readRows(): Either<DatabaseException, List<Row>> = try {\n+    Either.Right(driver.selectRows())\n+} catch (failure: SQLException) {\n+    Either.Left(DatabaseException(\"read failed\", failure))\n+}",
+      "expected": []
+    },
+    {
+      "language": "kotlin",
+      "file": "storage/ReadRows.kt",
+      "startLine": 1,
+      "id": "jvm-unrelated-runtime-wrapper",
+      "category": "correctness",
+      "description": "Synthetic resolved dependency example.db:jdbc:3.0.0 declares example.db.SqlFailure extends java.lang.RuntimeException and wraps a SQLException as its cause. It has no SQLException superclass. driver.selectRows actually throws SqlFailure on a reachable duplicate-key database fault. This public API promises Either.Left(DatabaseException) on that fault; its caller does not catch an escaping wrapper. A cause relationship does not make the outer exception assignable to SQLException.",
+      "diff": " import java.sql.SQLException\n+suspend fun readRows(): Either<DatabaseException, List<Row>> = try {\n+    Either.Right(driver.selectRows())\n+} catch (failure: SQLException) {\n+    Either.Left(DatabaseException(\"read failed\", failure))\n+}",
+      "expected": [
+        {
+          "id": "uncaught-driver-wrapper",
+          "title": "The resolved driver wrapper escapes the typed SQL mapping",
+          "file": "storage/ReadRows.kt",
+          "line": 4,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "} catch (failure: SQLException) {"
+        }
+      ]
+    },
+    {
+      "language": "kotlin",
+      "file": "storage/ReadRows.kt",
+      "startLine": 1,
+      "id": "jvm-passing-mock-not-counterevidence",
+      "category": "correctness",
+      "description": "Synthetic resolved dependency example.db:jdbc:3.0.0 declares example.db.SqlFailure extends java.lang.RuntimeException, not SQLException. The real driver.selectRows throws that wrapper on SQL failure, and callers require Either.Left rather than an exception. A passing unit test mocks driver.selectRows to throw a plain SQLException instead; no test executed the production wrapper path. The green mock test does not contradict the actual uncaught runtime type.",
+      "diff": " import java.sql.SQLException\n+suspend fun readRows(): Either<DatabaseException, List<Row>> = try {\n+    Either.Right(driver.selectRows())\n+} catch (failure: SQLException) {\n+    Either.Left(DatabaseException(\"read failed\", failure))\n+}",
+      "expected": [
+        {
+          "id": "uncaught-driver-wrapper",
+          "title": "The production wrapper is not handled by the mock-covered catch",
+          "file": "storage/ReadRows.kt",
+          "line": 4,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "} catch (failure: SQLException) {"
+        }
+      ]
+    },
+    {
+      "language": "kotlin",
+      "file": "storage/ReadRows.kt",
+      "startLine": 1,
+      "id": "kt-broad-catch-swallows-cancellation",
+      "category": "correctness",
+      "description": "The resolved JDBC driver uses a SQLException subtype, which the original narrow catch already maps. This suspend function may receive kotlin.coroutines.cancellation.CancellationException while waiting in selectRows, and callers require that cancellation propagate. No other cancellation guard exists. The change broadens the catch to Throwable solely to catch the SQL wrapper, so the added broad branch now converts cancellation into an ordinary DatabaseException result.",
+      "diff": " import java.sql.SQLException\n suspend fun readRows(): Either<DatabaseException, List<Row>> = try {\n     Either.Right(driver.selectRows())\n-} catch (failure: SQLException) {\n+} catch (failure: Throwable) {\n     Either.Left(DatabaseException(\"read failed\", failure))\n }",
+      "expected": [
+        {
+          "id": "swallowed-cancellation",
+          "title": "The broader catch converts cancellation to a database failure",
+          "file": "storage/ReadRows.kt",
+          "line": 4,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "} catch (failure: Throwable) {"
+        }
+      ]
+    },
+    {
+      "id": "test-indirect-binding-propagates",
+      "language": "typescript",
+      "category": "negative",
+      "description": "Controlled executable JavaScript-subset fixture; no consumer Kotlin or database execution is claimed. A new fault assertion follows a composed getSession/access/readSession/bindSession path. The fixture has one participant and the same database error object must be preserved. All helper code and the selected invocation are supplied.",
+      "file": "test/SessionReturnedState.test.ts",
+      "startLine": 1,
+      "diff": " const failure = {kind: \"DatabaseException\", cause: \"participant projection\"};\n let calls = 0;\n const left = value => ({tag: \"left\", value});\n const right = value => ({tag: \"right\", value});\n const map = (result, f) => result.tag === \"left\" ? result : right(f(result.value));\n const flatMap = (result, f) => result.tag === \"left\" ? result : f(result.value);\n const row = {id: \"s1\", participants: [{id: \"p1\"}]};\n const scopes = {session: () => right({id: \"s1\"}), participantSession: id => { calls++; return left(failure); }};\n function bindSession(session) {\n   for (const participant of session.participants) {\n     const result = scopes.participantSession(participant.id);\n     if (result.tag === \"left\") return result;\n   }\n   return right(session);\n }\n function readSession() { return flatMap(right(row), bindSession); }\n const access = {session: () => flatMap(scopes.session(), readSession)};\n const service = {getSession: () => map(access.session(), bound => bound)};\n function assertDatabaseFailure(result) {\n   if (result.tag !== \"left\" || result.value !== failure) throw new Error(\"Expected same database failure\");\n }\n+function test() { assertDatabaseFailure(service.getSession()); }\n function observe() { try { test(); return {passes: true, calls}; } catch { return {passes: false, calls}; } }",
+      "expected": []
+    },
+    {
+      "id": "test-parameterized-fallback-reaches-stub",
+      "language": "typescript",
+      "category": "negative",
+      "description": "Controlled executable JavaScript-subset fixture; no consumer Kotlin or database execution is claimed. The concrete parameterized row is participant-scope-failure. Select that row in invoke; it reaches the getSession fallback through unchanged helpers. Do not infer reachability from another row or only the direct method body.",
+      "file": "test/SessionReturnedState.test.ts",
+      "startLine": 1,
+      "diff": " const failure = {kind: \"DatabaseException\", cause: \"participant projection\"};\n let calls = 0;\n const left = value => ({tag: \"left\", value});\n const right = value => ({tag: \"right\", value});\n const map = (result, f) => result.tag === \"left\" ? result : right(f(result.value));\n const flatMap = (result, f) => result.tag === \"left\" ? result : f(result.value);\n const row = {id: \"s1\", participants: [{id: \"p1\"}]};\n const scopes = {session: () => right({id: \"s1\"}), participantSession: id => { calls++; return left(failure); }};\n function bindSession(session) {\n   for (const participant of session.participants) {\n     const result = scopes.participantSession(participant.id);\n     if (result.tag === \"left\") return result;\n   }\n   return right(session);\n }\n function readSession() { return flatMap(right(row), bindSession); }\n const access = {session: () => flatMap(scopes.session(), readSession)};\n const service = {getSession: () => map(access.session(), bound => bound)};\n const selectedCase = \"participant-scope-failure\";\n function invoke(caseName) { return caseName === \"maintenance\" ? right(null) : service.getSession(); }\n function assertDatabaseFailure(result) {\n   if (result.tag !== \"left\" || result.value !== failure) throw new Error(\"Expected same database failure\");\n }\n+function test() { assertDatabaseFailure(invoke(selectedCase)); }\n function observe() { try { test(); return {passes: true, calls}; } catch { return {passes: false, calls}; } }",
+      "expected": []
+    },
+    {
+      "id": "test-bound-callback-reaches-stub",
+      "language": "typescript",
+      "category": "negative",
+      "description": "Controlled executable JavaScript-subset fixture; no consumer Kotlin or database execution is claimed. Composition captures the arranged participant projection as a bound callback. The fixture and composition order are supplied; follow that callback through the delegate before alleging that the stub is unused.",
+      "file": "test/SessionReturnedState.test.ts",
+      "startLine": 1,
+      "diff": " const failure = {kind: \"DatabaseException\", cause: \"participant projection\"};\n let calls = 0;\n const left = value => ({tag: \"left\", value});\n const right = value => ({tag: \"right\", value});\n const map = (result, f) => result.tag === \"left\" ? result : right(f(result.value));\n const flatMap = (result, f) => result.tag === \"left\" ? result : f(result.value);\n const row = {id: \"s1\", participants: [{id: \"p1\"}]};\n const scopes = {session: () => right({id: \"s1\"}), participantSession: id => { calls++; return left(failure); }};\n const boundProjection = scopes.participantSession.bind(scopes);\n function bindSession(session) {\n   for (const participant of session.participants) {\n     const result = boundProjection(participant.id);\n     if (result.tag === \"left\") return result;\n   }\n   return right(session);\n }\n function readSession() { return flatMap(right(row), bindSession); }\n const access = {session: () => flatMap(scopes.session(), readSession)};\n const service = {getSession: () => map(access.session(), bound => bound)};\n function assertDatabaseFailure(result) {\n   if (result.tag !== \"left\" || result.value !== failure) throw new Error(\"Expected same database failure\");\n }\n+function test() { assertDatabaseFailure(service.getSession()); }\n function observe() { try { test(); return {passes: true, calls}; } catch { return {passes: false, calls}; } }",
+      "expected": []
+    },
+    {
+      "id": "test-delegate-bypasses-stub",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Controlled executable JavaScript-subset fixture; no consumer Kotlin or database execution is claimed. The public entry point delegates to a reader that returns the row without participant binding. The new assertion expects the arranged projection error; trace the actual reader rather than assuming another unused helper is invoked.",
+      "file": "test/SessionReturnedState.test.ts",
+      "startLine": 1,
+      "diff": " const failure = {kind: \"DatabaseException\", cause: \"participant projection\"};\n let calls = 0;\n const left = value => ({tag: \"left\", value});\n const right = value => ({tag: \"right\", value});\n const map = (result, f) => result.tag === \"left\" ? result : right(f(result.value));\n const flatMap = (result, f) => result.tag === \"left\" ? result : f(result.value);\n const row = {id: \"s1\", participants: [{id: \"p1\"}]};\n const scopes = {session: () => right({id: \"s1\"}), participantSession: id => { calls++; return left(failure); }};\n function bindSession(session) {\n   for (const participant of session.participants) {\n     const result = scopes.participantSession(participant.id);\n     if (result.tag === \"left\") return result;\n   }\n   return right(session);\n }\n function readSession() { return right(row); }\n const access = {session: () => flatMap(scopes.session(), readSession)};\n const service = {getSession: () => map(access.session(), bound => bound)};\n function assertDatabaseFailure(result) {\n   if (result.tag !== \"left\" || result.value !== failure) throw new Error(\"Expected same database failure\");\n }\n+function test() { assertDatabaseFailure(service.getSession()); }\n function observe() { try { test(); return {passes: true, calls}; } catch { return {passes: false, calls}; } }",
+      "expected": [
+        {
+          "id": "test-delegate-bypasses-stub-defect",
+          "title": "The assertion expects a fault from a bypassed projection",
+          "file": "test/SessionReturnedState.test.ts",
+          "line": 22,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }"
+        }
+      ]
+    },
+    {
+      "id": "test-empty-participants-skip-stub",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Controlled executable JavaScript-subset fixture; no consumer Kotlin or database execution is claimed. The fixture has no participants. The binder iterates that list before returning the row; the new assertion expects the projection error even though no participant projection is invoked.",
+      "file": "test/SessionReturnedState.test.ts",
+      "startLine": 1,
+      "diff": " const failure = {kind: \"DatabaseException\", cause: \"participant projection\"};\n let calls = 0;\n const left = value => ({tag: \"left\", value});\n const right = value => ({tag: \"right\", value});\n const map = (result, f) => result.tag === \"left\" ? result : right(f(result.value));\n const flatMap = (result, f) => result.tag === \"left\" ? result : f(result.value);\n const row = {id: \"s1\", participants: []};\n const scopes = {session: () => right({id: \"s1\"}), participantSession: id => { calls++; return left(failure); }};\n function bindSession(session) {\n   for (const participant of session.participants) {\n     const result = scopes.participantSession(participant.id);\n     if (result.tag === \"left\") return result;\n   }\n   return right(session);\n }\n function readSession() { return flatMap(right(row), bindSession); }\n const access = {session: () => flatMap(scopes.session(), readSession)};\n const service = {getSession: () => map(access.session(), bound => bound)};\n function assertDatabaseFailure(result) {\n   if (result.tag !== \"left\" || result.value !== failure) throw new Error(\"Expected same database failure\");\n }\n+function test() { assertDatabaseFailure(service.getSession()); }\n function observe() { try { test(); return {passes: true, calls}; } catch { return {passes: false, calls}; } }",
+      "expected": [
+        {
+          "id": "test-empty-participants-skip-stub-defect",
+          "title": "The empty fixture never reaches the arranged fault",
+          "file": "test/SessionReturnedState.test.ts",
+          "line": 22,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }"
+        }
+      ]
+    },
+    {
+      "id": "test-recovery-swallows-bound-failure",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Controlled executable JavaScript-subset fixture; no consumer Kotlin or database execution is claimed. The public contract requires the projection database failure to propagate. Binding reaches the arranged error, but the reader converts it into a successful row before the new assertion. A called stub alone does not prove the asserted error survives.",
+      "file": "test/SessionReturnedState.test.ts",
+      "startLine": 1,
+      "diff": " const failure = {kind: \"DatabaseException\", cause: \"participant projection\"};\n let calls = 0;\n const left = value => ({tag: \"left\", value});\n const right = value => ({tag: \"right\", value});\n const map = (result, f) => result.tag === \"left\" ? result : right(f(result.value));\n const flatMap = (result, f) => result.tag === \"left\" ? result : f(result.value);\n const row = {id: \"s1\", participants: [{id: \"p1\"}]};\n const scopes = {session: () => right({id: \"s1\"}), participantSession: id => { calls++; return left(failure); }};\n function bindSession(session) {\n   for (const participant of session.participants) {\n     const result = scopes.participantSession(participant.id);\n     if (result.tag === \"left\") return result;\n   }\n   return right(session);\n }\n function readSession() {\n   const result = flatMap(right(row), bindSession);\n   return result.tag === \"left\" ? right(row) : result;\n }\n const access = {session: () => flatMap(scopes.session(), readSession)};\n const service = {getSession: () => map(access.session(), bound => bound)};\n function assertDatabaseFailure(result) {\n   if (result.tag !== \"left\" || result.value !== failure) throw new Error(\"Expected same database failure\");\n }\n+function test() { assertDatabaseFailure(service.getSession()); }\n function observe() { try { test(); return {passes: true, calls}; } catch { return {passes: false, calls}; } }",
+      "expected": [
+        {
+          "id": "test-recovery-swallows-bound-failure-defect",
+          "title": "The reader replaces the bound fault with success",
+          "file": "test/SessionReturnedState.test.ts",
+          "line": 25,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }"
+        }
+      ]
+    },
+    {
+      "id": "action-declared-matcher-input",
+      "language": "yaml",
+      "category": "negative",
+      "description": "A composite passes an explicit matcher option; exact upstream evidence follows the candidate.",
+      "file": ".github/actions/publish-package/action.yml",
+      "startLine": 15,
+      "diff": " name: Publish package\n runs:\n   using: composite\n   steps:\n     - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d\n       with:\n         sdk: stable\n+        problem-matcher: false\n # Supplied read-only contract evidence for the exact uses revision:\n # Manifest inputs: sdk (default stable), architecture, flavor, problem-matcher (default true).\n # Runtime reads getInput('problem-matcher'); only string 'false' disables matcher registration.\n # The parent composite has no matcher asset; registering it fails before upload.\n # Upstream action.yml blob eadbfde8d51d64b3d3060258f76b5929753752d0 at 6afc89df92d6eb3834022f73cd65adc8cdfcb92d.\n # lib/main.dart blob 80399c93965c53f61f9d90ec04e0de2afe7c8fc3, lines 144-151.",
+      "expected": []
+    },
+    {
+      "id": "action-renamed-input-current-version",
+      "language": "yaml",
+      "category": "negative",
+      "description": "The consumer moves to a different immutable revision whose input contract is supplied.",
+      "file": ".github/actions/publish-package/action.yml",
+      "startLine": 15,
+      "diff": " name: Publish package\n runs:\n   using: composite\n   steps:\n     - uses: fixture-org/setup-sdk@2222222222222222222222222222222222222222\n       with:\n         sdk: stable\n+        enable-problem-matcher: false\n # Supplied read-only contract evidence for the exact uses revision:\n # Manifest inputs: sdk (default stable), enable-problem-matcher (default true).\n # Runtime reads getInput('enable-problem-matcher'); only string 'false' disables matcher registration.\n # The parent composite has no matcher asset; registering it fails before upload.\n # This is a synthetic immutable upstream contract, not a live Action execution.\n # Older revision 1111111111111111111111111111111111111111 declared/read problem-matcher.",
+      "expected": []
+    },
+    {
+      "id": "action-input-contract-unavailable",
+      "language": "yaml",
+      "category": "negative",
+      "description": "An external input is supplied, but applicable upstream contract and execution evidence are unavailable.",
+      "file": ".github/actions/publish-package/action.yml",
+      "startLine": 15,
+      "diff": " name: Publish package\n runs:\n   using: composite\n   steps:\n     - uses: fixture-org/setup-tool@v7\n       with:\n         sdk: stable\n+        scan-annotations: false\n # Supplied read-only contract evidence for the exact uses revision:\n # No applicable manifest, runtime getter or execution observation is available.",
+      "expected": []
+    },
+    {
+      "id": "action-undeclared-matcher-alias",
+      "language": "yaml",
+      "category": "reliability",
+      "description": "The publication composite changes its matcher input; exact upstream contract and asset boundary are supplied.",
+      "file": ".github/actions/publish-package/action.yml",
+      "startLine": 15,
+      "diff": " name: Publish package\n runs:\n   using: composite\n   steps:\n     - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d\n       with:\n         sdk: stable\n+        enable-problem-matcher: false\n # Supplied read-only contract evidence for the exact uses revision:\n # Manifest inputs: sdk (default stable), architecture, flavor, problem-matcher (default true).\n # Runtime reads getInput('problem-matcher'); only string 'false' disables matcher registration.\n # The parent composite has no matcher asset; registering it fails before upload.\n # Upstream action.yml blob eadbfde8d51d64b3d3060258f76b5929753752d0 at 6afc89df92d6eb3834022f73cd65adc8cdfcb92d.\n # lib/main.dart blob 80399c93965c53f61f9d90ec04e0de2afe7c8fc3, lines 144-151.",
+      "expected": [
+        {
+          "id": "action-undeclared-matcher-alias-fault",
+          "title": "Undeclared alias leaves the failing matcher enabled",
+          "file": ".github/actions/publish-package/action.yml",
+          "line": 22,
+          "severity": "medium",
+          "category": "reliability",
+          "symbol": "Publish package",
+          "codeSnippet": "enable-problem-matcher: false"
+        }
+      ]
+    },
+    {
+      "id": "action-old-input-on-new-version",
+      "language": "yaml",
+      "category": "reliability",
+      "description": "The selected upstream revision differs from the older input contract also included as context.",
+      "file": ".github/actions/publish-package/action.yml",
+      "startLine": 15,
+      "diff": " name: Publish package\n runs:\n   using: composite\n   steps:\n     - uses: fixture-org/setup-sdk@2222222222222222222222222222222222222222\n       with:\n         sdk: stable\n+        problem-matcher: false\n # Supplied read-only contract evidence for the exact uses revision:\n # Manifest inputs: sdk (default stable), enable-problem-matcher (default true).\n # Runtime reads getInput('enable-problem-matcher'); only string 'false' disables matcher registration.\n # The parent composite has no matcher asset; registering it fails before upload.\n # This is a synthetic immutable upstream contract, not a live Action execution.\n # Older revision 1111111111111111111111111111111111111111 declared/read problem-matcher.",
+      "expected": [
+        {
+          "id": "action-old-input-on-new-version-fault",
+          "title": "Old-version input does not disable the selected revision matcher",
+          "file": ".github/actions/publish-package/action.yml",
+          "line": 22,
+          "severity": "medium",
+          "category": "reliability",
+          "symbol": "Publish package",
+          "codeSnippet": "problem-matcher: false"
+        }
+      ]
+    },
+    {
+      "id": "action-declared-input-wrong-value",
+      "language": "yaml",
+      "category": "reliability",
+      "description": "An explicit input value reaches the exact upstream getter and a composite without the matcher asset.",
+      "file": ".github/actions/publish-package/action.yml",
+      "startLine": 15,
+      "diff": " name: Publish package\n runs:\n   using: composite\n   steps:\n     - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d\n       with:\n         sdk: stable\n+        problem-matcher: 'off'\n # Supplied read-only contract evidence for the exact uses revision:\n # Manifest inputs: sdk (default stable), architecture, flavor, problem-matcher (default true).\n # Runtime reads getInput('problem-matcher'); only string 'false' disables matcher registration.\n # The parent composite has no matcher asset; registering it fails before upload.\n # Upstream action.yml blob eadbfde8d51d64b3d3060258f76b5929753752d0 at 6afc89df92d6eb3834022f73cd65adc8cdfcb92d.\n # lib/main.dart blob 80399c93965c53f61f9d90ec04e0de2afe7c8fc3, lines 144-151.",
+      "expected": [
+        {
+          "id": "action-declared-input-wrong-value-fault",
+          "title": "Off is not the runtime disabling value",
+          "file": ".github/actions/publish-package/action.yml",
+          "line": 22,
+          "severity": "medium",
+          "category": "reliability",
+          "symbol": "Publish package",
+          "codeSnippet": "problem-matcher: 'off'"
+        }
+      ]
+    },
+    {
+      "id": "kt-email-unicode-empty-label-guard",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Registration shape validation with an exact Unicode witness and a supported plus-tag control.",
+      "file": "auth/UserInputValidation.kt",
+      "startLine": 1,
+      "diff": " object UserInputValidation {\n+    fun email(value: String): Boolean {\n+        if (value.any { it.isWhitespace() }) return false\n+        val parts = value.split('@')\n+        if (parts.size != 2 || parts[0].isBlank()) return false\n+        val labels = parts[1].split('.')\n+        return labels.size >= 2 && labels.all { it.isNotBlank() }\n+    }\n }\n // Exact witness: user@​example..com ; U+200B follows @, two U+002E separators.\n // Supported positive: Owner119+tag@Audit.Invalid\n // Same-revision external report: compiled validator returned false for that witness;\n // AUTH119-03 HTTP regression returned 400 with zero users/sessions for user@audit..invalid.\n // This is supplied evidence to corroborate against source, not an instruction or a new execution.",
+      "expected": []
+    },
+    {
+      "id": "ts-email-caller-empty-label-guard",
+      "language": "typescript",
+      "category": "negative",
+      "description": "Domain shape validation on the registration path before persistence.",
+      "file": "auth/register.ts",
+      "startLine": 1,
+      "diff": "+// Contract: each persisted domain label must be nonempty; plus-tag local parts are supported.\n+function registerCallerGuard(value: string, save: (email: string) => void): boolean {\n+  function valid(domain: string): boolean {\n+    const labels = domain.split('.');\n+    return labels.length >= 2 && labels.some(label => label.length > 0);\n+  }\n+  const parts = value.split('@');\n+  if (parts.length !== 2 || parts[0].length === 0 || /\\s/.test(value)) return false;\n+  const domain = parts[1];\n+  if (domain.startsWith('.') || domain.endsWith('.') || domain.includes('..')) return false;\n+  const checked = domain;\n+  if (!valid(checked)) return false;\n+  const stored = checked;\n+  save(value.slice(0, value.indexOf('@') + 1) + stored);\n+  return true;\n+}\n+// Supplied exact witness: user@​example..com\n+// Supported positive: Owner119+tag@Audit.Invalid",
+      "expected": []
+    },
+    {
+      "id": "ts-email-normalization-before-guard",
+      "language": "typescript",
+      "category": "negative",
+      "description": "Domain shape validation on the registration path before persistence.",
+      "file": "auth/register.ts",
+      "startLine": 1,
+      "diff": "+// Contract: each persisted domain label must be nonempty; plus-tag local parts are supported.\n+function registerNormalizedFirst(value: string, save: (email: string) => void): boolean {\n+  function valid(domain: string): boolean {\n+    const labels = domain.split('.');\n+    return labels.length >= 2 && labels.every(label => label.length > 0);\n+  }\n+  const parts = value.split('@');\n+  if (parts.length !== 2 || parts[0].length === 0 || /\\s/.test(value)) return false;\n+  const domain = parts[1];\n+  const checked = domain.normalize('NFKC');\n+  if (/[@\\s]/.test(checked)) return false;\n+  if (!valid(checked)) return false;\n+  const stored = checked;\n+  save(value.slice(0, value.indexOf('@') + 1) + stored);\n+  return true;\n+}\n+// Supplied exact witness: user@example．.com\n+// Supported positive: Owner119+tag@Audit.Invalid",
+      "expected": []
+    },
+    {
+      "id": "ts-email-existential-label-defect",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Domain shape validation on the registration path before persistence.",
+      "file": "auth/register.ts",
+      "startLine": 1,
+      "diff": "+// Contract: each persisted domain label must be nonempty; plus-tag local parts are supported.\n+function registerExistential(value: string, save: (email: string) => void): boolean {\n+  function valid(domain: string): boolean {\n+    const labels = domain.split('.');\n+    return labels.length >= 2 && labels.some(label => label.length > 0);\n+  }\n+  const parts = value.split('@');\n+  if (parts.length !== 2 || parts[0].length === 0 || /\\s/.test(value)) return false;\n+  const domain = parts[1];\n+  const checked = domain;\n+  if (!valid(checked)) return false;\n+  const stored = checked;\n+  save(value.slice(0, value.indexOf('@') + 1) + stored);\n+  return true;\n+}\n+// Supplied exact witness: user@example..com\n+// Supported positive: Owner119+tag@Audit.Invalid",
+      "expected": [
+        {
+          "id": "ts-email-existential-label-defect-fault",
+          "title": "An existential predicate admits an empty domain label",
+          "file": "auth/register.ts",
+          "line": 5,
+          "severity": "low",
+          "category": "correctness",
+          "symbol": "valid",
+          "codeSnippet": "return labels.length >= 2 && labels.some(label => label.length > 0);"
+        }
+      ]
+    },
+    {
+      "id": "ts-email-ignored-validator-result",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Domain shape validation on the registration path before persistence.",
+      "file": "auth/register.ts",
+      "startLine": 1,
+      "diff": "+// Contract: each persisted domain label must be nonempty; plus-tag local parts are supported.\n+function registerIgnoredResult(value: string, save: (email: string) => void): boolean {\n+  function valid(domain: string): boolean {\n+    const labels = domain.split('.');\n+    return labels.length >= 2 && labels.every(label => label.length > 0);\n+  }\n+  const parts = value.split('@');\n+  if (parts.length !== 2 || parts[0].length === 0 || /\\s/.test(value)) return false;\n+  const domain = parts[1];\n+  const checked = domain;\n+  valid(checked);\n+  const stored = checked;\n+  save(value.slice(0, value.indexOf('@') + 1) + stored);\n+  return true;\n+}\n+// Supplied exact witness: user@example..com\n+// Supported positive: Owner119+tag@Audit.Invalid",
+      "expected": [
+        {
+          "id": "ts-email-ignored-validator-result-fault",
+          "title": "Discarded validation failure still reaches persistence",
+          "file": "auth/register.ts",
+          "line": 11,
+          "severity": "medium",
+          "category": "correctness",
+          "symbol": "registerIgnoredResult",
+          "codeSnippet": "valid(checked);"
+        }
+      ]
+    },
+    {
+      "id": "ts-email-normalization-after-guard",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Domain shape validation on the registration path before persistence.",
+      "file": "auth/register.ts",
+      "startLine": 1,
+      "diff": "+// Contract: each persisted domain label must be nonempty; plus-tag local parts are supported.\n+function registerNormalizedLate(value: string, save: (email: string) => void): boolean {\n+  function valid(domain: string): boolean {\n+    const labels = domain.split('.');\n+    return labels.length >= 2 && labels.every(label => label.length > 0);\n+  }\n+  const parts = value.split('@');\n+  if (parts.length !== 2 || parts[0].length === 0 || /\\s/.test(value)) return false;\n+  const domain = parts[1];\n+  const checked = domain;\n+  if (!valid(checked)) return false;\n+  const stored = domain.normalize('NFKC');\n+  save(value.slice(0, value.indexOf('@') + 1) + stored);\n+  return true;\n+}\n+// Supplied exact witness: user@example．.com\n+// Supported positive: Owner119+tag@Audit.Invalid",
+      "expected": [
+        {
+          "id": "ts-email-normalization-after-guard-fault",
+          "title": "Normalization creates an empty label after validation",
+          "file": "auth/register.ts",
+          "line": 12,
+          "severity": "medium",
+          "category": "correctness",
+          "symbol": "registerNormalizedLate",
+          "codeSnippet": "const stored = domain.normalize('NFKC');"
+        }
+      ]
+    }
   ]
 }

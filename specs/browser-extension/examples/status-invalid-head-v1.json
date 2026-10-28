@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "capabilities": [
+    "context.v1",
+    "findings.v1",
+    "command-drafts.v1"
+  ],
+  "identity": {
+    "repositoryId": 1,
+    "kind": "pull-request",
+    "number": 158,
+    "headSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "baseSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "producer": {
+    "actorId": 2,
+    "runId": 300,
+    "attempt": 1,
+    "workflowPath": ".github/workflows/copilot_pull_request.yml",
+    "sourceCommit": "cccccccccccccccccccccccccccccccccccccccc",
+    "actionVersion": "3.0.0",
+    "configurationDigest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  },
+  "publication": {
+    "commentId": 123,
+    "generation": 7,
+    "observedAt": "2026-10-25T10:42:00Z",
+    "outcome": "complete"
+  },
+  "native": {
+    "state": "open",
+    "merged": false
+  },
+  "lifecycle": {
+    "phase": "changes-requested",
+    "activity": "idle",
+    "waitingFor": "pr-author"
+  },
+  "assessment": {
+    "state": "blocked",
+    "policyDigest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "coverage": "complete",
+    "currentFindingCount": 1,
+    "nextAction": "inspect-findings"
+  },
+  "links": [
+    {
+      "kind": "issue",
+      "number": 142
+    },
+    {
+      "kind": "run",
+      "id": 300
+    }
+  ],
+  "branch": {
+    "state": "verified",
+    "repositoryId": 1,
+    "ref": "feature/142-example",
+    "commitSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "sdd": {
+    "state": "ready",
+    "path": "specs/example.md",
+    "commitSha": "ffffffffffffffffffffffffffffffffffffffff",
+    "pendingQuestionIds": []
+  },
+  "findings": {
+    "complete": true,
+    "total": 1,
+    "items": [
+      {
+        "id": "F-1",
+        "reviewCommentId": 456,
+        "reviewId": 789,
+        "path": "src/example.ts",
+        "line": 12,
+        "severity": "high",
+        "state": "open",
+        "headSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "summary": "Validate the input before processing it."
+      }
+    ]
+  },
+  "commands": [
+    {
+      "name": "status",
+      "context": "conversation"
+    },
+    {
+      "name": "analyze",
+      "context": "conversation"
+    },
+    {
+      "name": "fix",
+      "context": "review-thread",
+      "findingId": "F-1",
+      "reviewCommentId": 456
+    }
+  ]
+}

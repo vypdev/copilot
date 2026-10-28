@@ -139,3 +139,14 @@ Tokens must never be placed in action inputs.
 - `hotfix-workflow`: Hotfix workflow for running hotfix deploys (default: "hotfix_workflow.yml")
 - `inactivity-threshold-hours`: Inactivity window for the scheduled waiting-issue cleanup (default: "168" hours)
 - `commit-prefix-transforms`: Transforms for commit prefix from branch name (e.g. "replace-slash", "kebab-case")
+
+
+### Explicit consumer Issue Form headings
+
+The `issue-workflow-profile` input carries the setup-generated
+`COPILOT_ISSUE_WORKFLOW_PROFILE` JSON. Without mappings it remains schema 1.
+Reviewed `issueWorkflows.fieldMappings` in setup opts into schema 2 and replaces
+specific canonical headings with application headings across admission, version
+readers and generated facts. See [mapping limits, migration and recovery](/issues/configurable-workflows#preserved-application-specific-headings).
+The generated repository-agent profile has a separate schema; do not edit it to
+configure runtime field mappings.

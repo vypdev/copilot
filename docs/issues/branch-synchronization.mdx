@@ -14,7 +14,7 @@ This separation keeps pushes to `main`, `master`, `develop`, release branches, a
 On each non-deletion push, the observer:
 
 1. reads open issues and open pull requests;
-2. resolves branch relationships from Copilot's durable issue configuration first, then from GitHub linked branches and PR base/head data;
+2. selects the issue's configured parent and working branch, or one unambiguous relationship proven by native GitHub links when no branch pair has been configured;
 3. selects relationships where the pushed branch is either the parent or the working branch;
 4. compares each working branch with its parent; and
 5. reconciles one bot-authored synchronization status card on the issue.
@@ -24,6 +24,47 @@ The card is stateful. The first stale observation creates only that card. Furthe
 A PAT-authored sync push is observed too, so a chain such as `develop → feature/A → feature/B` can propagate recommendations to the next level.
 
 Notice prose uses the issue locale inherited from the repository locale unless `issues-locale` overrides it. Commands, branch names, comparison URLs, markers, and machine-readable state remain unchanged in every language.
+
+## Relationship ownership and historical notice recovery
+
+A configured `parentBranch` and `workingBranch` identify the issue's current
+relationship. A different PR mentioning `#79`, “depends on #79”, or even a closing
+keyword that GitHub has not linked does not acquire that issue's branch status.
+An explicit native link to another PR does not replace an existing configured
+pair. Without a configured pair, fallback needs one unambiguous local branch/PR
+relationship; fork heads, foreign issues with the same number, incomplete links,
+and conflicting pairs are withheld. Invalid or partial configuration must be
+repaired before weaker evidence can be used.
+
+For example, “Keep #79 disabled; closes #80” in a PR for #80 must not announce
+that #79 is synchronized or ask #79 to synchronize #80's branch. A release issue's
+configured `release/1.5.2` → `develop` pair also takes precedence over a maintenance
+PR targeting `master`.
+
+On a later eligible push to the actual parent or working branch, Copilot can
+retire old bot-owned status cards for other pairs. Their existing comment becomes:
+
+```markdown
+## Previous branch advisory retired
+
+The current relationship for issue #89 is `bugfix/89-authorization`, with parent `develop`.
+
+This previous card concerns a different relationship and no longer provides instructions for this issue. Retirement does not certify synchronization of either branch.
+```
+
+The current issue's own status card remains independent. Retiring old advice
+neither merges branches nor resolves current drift. Copilot checks the live issue,
+relationship, card author and exact body before editing, then verifies the final
+card. Human edits, ambiguous authority or unavailable evidence stop repair. Up to
+20 historical cards are processed per issue/observation; a larger inventory stops
+instead of silently editing a subset. Existing links remain valid and equivalent
+replays stay quiet. Old transition notifications remain historical links to these
+status cards.
+
+Recovery happens on eligible observations after adopting the fixed runtime; it is
+not a repository-wide sweep. An unrelated branch push is insufficient. No new
+configuration is required. A sync command is unnecessary for retiring old advice;
+use the status card for the verified current branch when deciding whether to sync.
 
 ## Status and notification lifecycle
 
@@ -291,3 +332,10 @@ When generated bundles conflict, the fixer must regenerate the admitted bundles
 before returning its resolution. The Action stages that result and verifies it
 again. A rebuild that changes the staged resolution during verification stops
 the synchronization with `unstaged-changes`; no synchronization commit is pushed.
+
+
+### Candidate dependencies and blocked verification
+
+An installation on the default checkout does not prepare a different temporary merge. Copilot's source workflow installs the frozen current workspace at each verification boundary, including after eligible conflict resolution. Consumer projects keep their explicit same-job provisioning or reviewed optional repository setup.
+
+If synchronization stops during verification, its existing result card identifies the phase, safe command label/ordinal, closed cause and original head. `restored` confirms the original local head after abort; `unverified` requires operator inspection before retrying. No sync commit/push is attempted after verifier failure. Repair the reported dependency graph, same-job setup/runtime or verifier, then rerun `/copilot sync-branch`; repeated blind retries do not repair missing workspace packages. See [verification and source readiness](../security-operations/operations/verification).

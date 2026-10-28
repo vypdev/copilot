@@ -1,3 +1,4 @@
+import ts from 'typescript';
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { BugbotFindingPublicationPorts } from "../bugbot_finding_publication_ports";
@@ -29,7 +30,8 @@ type ResolutionKeysAreExact = Assert<
 type PullRequestWriteKeys =
   | "createReviewWithComments"
   | "updatePullRequestReviewComment"
-  | "unresolvePullRequestReviewThread";
+  | "unresolvePullRequestReviewThread"
+  | "listPullRequestReviewThreadStates";
 type PullRequestWriteKeysAreExact = Assert<
   Equal<keyof BugbotPullRequestWritePort, PullRequestWriteKeys>
 >;
@@ -37,9 +39,17 @@ type PullRequestResolutionKeys =
   | "listPullRequestReviewComments"
   | "updatePullRequestReviewComment"
   | "resolvePullRequestReviewThread"
-  | "unresolvePullRequestReviewThread";
+  | "unresolvePullRequestReviewThread"
+  | "listPullRequestReviewThreadStates";
 type PullRequestResolutionKeysAreExact = Assert<
   Equal<keyof BugbotPullRequestResolutionPort, PullRequestResolutionKeys>
+>;
+
+type WriteReverificationQueryIsOptional = Assert<
+  undefined extends BugbotPullRequestWritePort['listPullRequestReviewThreadStates'] ? true : false
+>;
+type ResolutionReverificationQueryIsOptional = Assert<
+  undefined extends BugbotPullRequestResolutionPort['listPullRequestReviewThreadStates'] ? true : false
 >;
 
 describe("Bugbot port boundaries", () => {
@@ -245,4 +255,20 @@ describe("Bugbot port boundaries", () => {
       expect(readFileSync(join(portsDirectory, file), 'utf8')).not.toMatch(/\btoken\s*[?:]/u);
     }
   });
+});
+
+
+it('keeps conversation packing pure and composes it through the existing review-context builder', () => {
+  const policy = readFileSync(join(__dirname, '../../policies/bugbot_conversation_packing_policy.ts'), 'utf8');
+  const parsed = ts.createSourceFile('policy.ts', policy, ts.ScriptTarget.Latest, true);
+  const imports = parsed.statements.filter(ts.isImportDeclaration).map(node => (node.moduleSpecifier as ts.StringLiteral).text);
+  expect(imports.length).toBeGreaterThan(0); expect(imports.every(path => path.startsWith('../../domain/'))).toBe(true);
+  const forbidden = new Set(['fetch', 'require', 'process', 'setTimeout', 'XMLHttpRequest']);
+  const identifiers: string[] = [];
+  const visit = (node: ts.Node) => { if (ts.isIdentifier(node)) identifiers.push(node.text); ts.forEachChild(node, visit); }; visit(parsed);
+  expect(identifiers.some(name => forbidden.has(name))).toBe(false);
+  const builder = ts.createSourceFile('context.ts', readFileSync(join(__dirname, '../../usecases/steps/commit/bugbot/bugbot_review_context.ts'), 'utf8'), ts.ScriptTarget.Latest, true);
+  let wired = false;
+  const calls = (node: ts.Node) => { if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'packReviewConversation') wired = true; ts.forEachChild(node, calls); };
+  calls(builder); expect(wired).toBe(true);
 });

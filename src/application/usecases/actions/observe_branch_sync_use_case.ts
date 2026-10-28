@@ -1,3 +1,5 @@
+import { retireUnrelatedBranchSyncCards } from './retire_unrelated_branch_sync_cards';
+import type { BoundReplyRequestReadPort } from '../../ports/reply_request_read_ports';
 import { parsePublicationMarker } from '../../policies/publication_identity_policy';
 import { Result } from "../../../data/model/result";
 import {
@@ -52,6 +54,7 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
     private readonly catalogResolver?: MessageCatalogResolutionPort,
     private readonly nativeIssues?: BoundIssueCompletionReadPort,
     private readonly retirement?: ParamUseCase<RetireBranchSyncContext, Result[]>,
+    private readonly cardFreshness?: BoundReplyRequestReadPort,
   ) {}
 
   async invoke(context: BranchObservationContext): Promise<Result[]> {
@@ -83,11 +86,10 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
     }
   }
 
-  private openNotifications(issueNumber: number): BoundIssueCommentPublicationPort {
+  private openNotifications(dependency: BranchDependency): BoundIssueCommentPublicationPort {
     const assertOpen = async (number: number) => {
-      if (number !== issueNumber || !this.nativeIssues) throw new ApplicationError('workflow.stale', 'Native issue state is unavailable.');
-      const current = await this.nativeIssues.readIssue(number);
-      if (current.number !== number || current.state !== 'open') throw new ApplicationError('workflow.stale', 'The issue is no longer open.');
+      if (number !== dependency.issueNumber || !this.nativeIssues) throw new ApplicationError('workflow.stale', 'Native issue state is unavailable.');
+      await this.assertCurrent(dependency);
     };
     return Object.freeze({
       listIssueComments: (number: number) => this.notifications.listIssueComments(number),
@@ -111,6 +113,7 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
     dependency: BranchDependency,
     getMessages: () => Promise<BranchSyncMessageCatalog>,
   ): Promise<Result> {
+    let retiredCards = 0;
     try {
       if (!this.nativeIssues) throw new ApplicationError('workflow.stale', 'Native issue state is unavailable.');
       const initial = await this.nativeIssues.readIssue(dependency.issueNumber);
@@ -134,7 +137,8 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
         });
         return result;
       }
-      const notifications = this.openNotifications(dependency.issueNumber);
+      await this.assertRelationship(dependency);
+      const notifications = this.openNotifications(dependency);
       const comparison = await this.comparisons.compare(
         dependency.parentBranch,
         dependency.workingBranch,
@@ -142,6 +146,10 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
       const comments = await notifications.listIssueComments(
         dependency.issueNumber,
       );
+      await this.assertCurrent(dependency);
+      await retireUnrelatedBranchSyncCards({ comments, current: dependency, botLogin: context.trustedBotLogin, messages,
+        freshness: this.cardFreshness, updates: notifications, onUpdated: () => { retiredCards++; },
+        assertCurrent: () => this.assertCurrent(dependency) });
       const latest = findLatestBranchSyncComment(comments, context.trustedBotLogin, dependency);
 
       if (comparison.behindBy > 0) {
@@ -157,10 +165,11 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
             dependency.issueNumber,
             comment,
           );
-          return success(dependency, comparison.behindBy, "stale");
+          return success(dependency, comparison.behindBy, "stale", { retiredCards });
         }
 
-        const transitionedFromAligned = !isStaleBranchSyncComment(latest.body);
+        const transitionedFromAligned = !isStaleBranchSyncComment(latest.body)
+          && !parsePublicationMarker(latest.body)!.sourceVersion.startsWith('relationship-retired:');
         if (latest.body !== comment) {
           await notifications.updateComment(
             dependency.issueNumber,
@@ -169,7 +178,7 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
           );
         }
         if (!transitionedFromAligned || !context.sourceHeadSha || !context.trustedBotLogin) {
-          return success(dependency, comparison.behindBy, "stale");
+          return success(dependency, comparison.behindBy, "stale", { retiredCards });
         }
 
         const intent = buildBranchSyncTransitionIntent(dependency, context.sourceHeadSha, context.locale);
@@ -192,7 +201,7 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
             duplicatePointer: canonicalUrl => buildBranchSyncDuplicatePointer(messages, canonicalUrl),
           }, notifications);
           const cleanup = buildDuplicateCompactionPublicationPayload(transition.compactedCommentIds);
-          return success(dependency, comparison.behindBy, "stale", {
+          return success(dependency, comparison.behindBy, "stale", { retiredCards,
             ...buildTransitionPublicationPayload(intent, transition.effect),
             ...(cleanup ?? {}),
           });
@@ -200,27 +209,43 @@ export class ObserveBranchSyncUseCase implements ParamUseCase<BranchObservationC
           return failure(
             `Branch status was updated for issue #${dependency.issueNumber}, but its action notification could not be published.`,
             cause,
-            { ...dependency, behindBy: comparison.behindBy, state: 'stale', statusUpdated: true },
+            { ...dependency, behindBy: comparison.behindBy, state: 'stale', statusUpdated: true, retiredCards },
           );
         }
       }
 
-      if (latest && (isStaleBranchSyncComment(latest.body) || parsePublicationMarker(latest.body)?.sourceVersion === 'closed:issue')) {
+      if (latest && (isStaleBranchSyncComment(latest.body) || parsePublicationMarker(latest.body)?.sourceVersion === 'closed:issue'
+        || parsePublicationMarker(latest.body)?.sourceVersion.startsWith('relationship-retired:'))) {
         await notifications.updateComment(
           dependency.issueNumber,
           latest.id,
           buildAlignedBranchSyncComment(dependency, messages),
         );
       }
-      return success(dependency, 0, "aligned");
+      await this.assertCurrent(dependency);
+      return success(dependency, 0, "aligned", { retiredCards });
     } catch (cause) {
       logError("Branch synchronization dependency reconciliation failed.", {
         issueNumber: dependency.issueNumber,
       });
       return failure(
         `Unable to inspect branch synchronization for issue #${dependency.issueNumber}.`,
-        cause,
+        cause, { ...dependency, retiredCards, reconciliationComplete: false },
       );
+    }
+  }
+
+  private async assertCurrent(dependency: BranchDependency): Promise<void> {
+    const current = await this.nativeIssues!.readIssue(dependency.issueNumber);
+    if (current.number !== dependency.issueNumber || current.state !== 'open') throw new ApplicationError('workflow.stale', 'The issue is no longer open.');
+    await this.assertRelationship(dependency);
+  }
+
+  private async assertRelationship(dependency: BranchDependency): Promise<void> {
+    const current = await this.dependencies.resolveTarget(dependency.issueNumber);
+    if (!current || current.issueNumber !== dependency.issueNumber || current.conversationNumber !== dependency.issueNumber
+      || current.parentBranch !== dependency.parentBranch || current.workingBranch !== dependency.workingBranch) {
+      throw new ApplicationError('workflow.stale', 'The issue branch relationship changed or is unavailable.');
     }
   }
 }

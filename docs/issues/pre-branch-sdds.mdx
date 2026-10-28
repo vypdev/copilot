@@ -67,6 +67,100 @@ architecture, security, operator review and runtime acceptance remain separate.
 
 The repository must already contain a valid `specs/catalog.json`, `specs/README.md`, and `specs/_template.md`. The catalog identifies the owning SDD. The Action can update that SDD, add a companion SDD to its capability, or create a new proposed capability when the catalog evidence and referenced paths are valid. Drafting receives the selected owner's verified source, test and documentation paths at the immutable base, the canonical issue link and retained authorized answers. A new companion identifies the existing owner; its own new path is proposed evidence. It does not generate PRDs or ADRs in this flow.
 
+## When specification preparation is blocked
+
+A repeated draft validation failure updates one bot-owned **Specification
+preparation is blocked** card in the issue. The card names the cause, explains
+what remains unchanged, links the workflow run when its runtime identity is
+available, and shows a correlation reference. A welcome or recommendation does
+not replace this blocking result. No new branch or specification is published
+by a failed preparation attempt.
+
+Open **Validation diagnostics** in that card. It shows the closed validation
+check and, where available, the affected section, data-row ordinal and expected
+or observed counts. For example, a reverse mapping row may expect two cases
+while naming only one. An owning-case collision reports a reserved-identity
+check and collision count. The card reports the first proven rejection, not an exhaustive audit. Same-size
+mapping sets can still disagree on their members; that check reports mismatched
+links rather than implying equal counts prove correctness. These are observations from the actual validator;
+missing evidence is reported as unavailable rather than guessed.
+
+An illustrative failure view is:
+
+> **Specification preparation is blocked**
+>
+> No new specification or branch was published by this preparation attempt.
+>
+> **Action:** Review the safe validation diagnostics below. Clarify requirements
+> or decisions in this issue if needed, then retry this same issue workflow.
+>
+> **Retained state:** Existing answers and published specifications are retained.
+>
+> **Validation diagnostics:** requirement-mapping; section 17; data row 1;
+> expected count 2; observed count 1. The card also includes its run and reference.
+
+The diagnostic feature retains only fixed checks and bounded numeric facts.
+It does not publish the rejected Markdown, case/requirement identifiers,
+repository paths, scenario prose, source, credentials or raw validator messages.
+There is no downloadable candidate or artifact token to retrieve. The current
+safe card remains available under the issue's normal repository permissions;
+GitHub may retain its prior revisions. A retry replaces its current facts.
+Workflow logs follow the repository's existing retention; if a run has expired,
+retry this same issue to obtain a fresh bounded attempt and safe diagnostics.
+
+The limits are fixed: at most two drafting attempts per invocation (one shared
+eligible size/format repair), eight diagnostic facts, bounded coordinates/counts
+and a 16,000-character diagnostic card. The card never truncates a requirement
+or turns a rejected draft into acceptance. If localized copy exceeds its card
+bound, the complete card falls back to reviewed English with an explicit note.
+English/Spanish, compatible base locales, validated dynamic localization and
+atomic English fallback follow the repository locale policy. There are no new
+configuration options, permissions or artifact scopes.
+
+Retry after correcting the issue's requirements/decisions or the repository
+prerequisites identified by the failure. Existing authorized answers, immutable
+owners, baseline cases and published SDDs remain. A valid retry clears the
+blocked view; branch readiness still requires the independent linked-branch and
+publication checks. If a branch/commit already exists and publication recovery
+is pending, the card says so and recovery reuses that exact branch. A later
+failure to refresh the diagnostic card does not erase a verified publication.
+Stale issue/title/base evidence cannot overwrite the current status or recovery
+record. Recovery rechecks that evidence before retaining a pending record and
+after diagnostic localization. A revision may retain its own returned commit;
+an unrelated branch advance requires a new analysis on the same issue. If an
+answer-permission lookup temporarily fails, retrying returns the status to
+waiting when existing questions are still incomplete. The Action keeps the
+original question record and answers and does not start drafting.
+
+## Catalog publication profiles
+
+The installed automatic writer supports the **SDK version-1** catalog profile:
+`specs` arrays, the existing required metadata/evidence arrays, and SDK statuses
+`as-built-baseline`, `implemented`, `proposed` and `deprecated`. The reader checks
+that profile and unique, normalized owner paths before asking the model for a
+plan. Full file, SDD and publication checks still run independently.
+
+A repository-native catalog can be valid under its own selected schema and
+readiness rules while requiring a different publication adapter. Catalogs using
+`specification`, a repository-selected `$schema`, or mixed dialects receive an
+explicit compatibility result before model work or branch publication. Preserve
+the native schema, requirements, evidence, blockers and readiness; obtain a
+reviewed compatible adapter and retry the same issue. Changing statuses or
+replacing native standards merely to pass this gate cannot establish readiness.
+
+Compatibility diagnostics show a closed reason and the current workflow, with
+retained state and the next action. The Action checks the issue and raw source
+revision independently of loading that rejected catalog. Stale or unavailable
+source facts keep the workflow blocked and preserve the current status. A custom
+older workspace adapter that cannot read this revision remains unverified.
+
+The fixed profile limits are 2,097,152 catalog source characters, 1,000 capability
+entries and 20 nested object/array levels for extension metadata. These are not
+configuration options. Supported SDK companion/new writes preserve decoded
+extension metadata from the immutable original catalog; existing statuses,
+requirements, evidence and blockers remain. New SDK entries stay `proposed`.
+Profile recognition and diagnostics never establish implementation acceptance.
+
 ## Repository layouts and support limits
 
 Catalog version 1 accepts source, entrypoint, test and documentation evidence

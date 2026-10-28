@@ -25,7 +25,9 @@ description: Diagnose terminal failures across detection, publication, autofix, 
     Keep the workspace changes isolated, report the failed command, and do not commit or push.
   </Accordion>
   <Accordion title="The review and its thread disagree" icon="rotate">
-    Bugbot reports `verification-required`, never clean. A retry completes bot-owned partial transitions. If a person reopened a resolved thread, run `/copilot recheck` so the agent can decide whether the finding is active or still fixed.
+    Bugbot reports `verification-required`, never clean. A retry completes bot-owned partial transitions. If a person reopened a resolved thread, run `/copilot recheck` so the agent explicitly verifies whether the finding is active, fixed, or obsolete. This also supports a withdrawn dismissal: the original marker's reason can be refreshed after the native thread is revalidated. Existing finding text, earlier notes, comments and reviews remain audit history; the latest resolution note and canonical status describe the verified current result.
+
+    If the reviewer omits the retained finding or current native facts cannot be read, it stays non-clean. Inspect the exact thread, make its evidence available and recheck after correcting the reported provider failure. Do not delete the review, edit a bot marker, or loosen `allowHumanDismissed` to clear it. A dismissal renewed while analysis runs is preserved. If the marker update succeeded but resolving the native thread failed, the next fresh recheck completes that transition without duplicating the review.
   </Accordion>
   <Accordion title="A historical review still looks stale" icon="clock">
     Use the canonical **Bugbot status** card and `Copilot / Review` Check for the aggregate state. Run `/copilot recheck` to repair the generated status block; the historical snapshot text is intentionally retained.
@@ -72,8 +74,26 @@ description: Diagnose terminal failures across detection, publication, autofix, 
 
     Correct permanent credential/access or contract failures before retrying. For a transient outage or rate limit, restore provider availability first, then run `/copilot recheck` on the same PR. The normal fresh provider read reconciles existing comments and threads rather than recreating completed effects. Do not delete a review or install an application dependency merely to clear an unrelated finding-publication failure.
 
-    **Incomplete coverage** remains separate. `human-conversation` lists retained, omitted and truncated counts plus `truncated-source-ids` for exact retained records, such as `issue:6311517518` (a general issue/PR comment ID) or `review:PRRC_50` (an inline comment node ID). Inspect that source from the linked PR/issue, preserve its substantive decisions and reduce only redundant text before rechecking. Source IDs contain no comment text. A mutation retry never upgrades incomplete conversation evidence to complete.
+    **Incomplete coverage** remains separate. `human-conversation` lists retained, omitted and truncated counts plus `truncated-source-ids` for exact retained records, such as `issue:6311517518` (a general issue/PR comment ID) or `review:PRRC_50` (an inline comment node ID). Complete comments are retained through bounded fragments when the rendered section permits; the 4,000-unit fragment bound alone does not mean truncation. Inspect a genuinely incomplete source from the linked PR/issue, preserve its substantive decisions and reduce only redundant text before rechecking. Malformed Unicode stops a complete result rather than fabricating replacement evidence. Source IDs contain no comment text. A mutation retry never upgrades incomplete conversation evidence to complete.
   </Accordion>
 </AccordionGroup>
 
 See [Verification commands](/bugbot/verification-commands) and [Security & Operations](/security-operations).
+
+
+## A reported invalid input is already rejected
+
+Preserve the exact string, including invisible Unicode and separators, and inspect
+the reviewed source revision. Trace transforms, every rejecting guard, collection
+predicates and the actual caller/effect. For example, consecutive dots produce an
+empty middle domain label; a universal nonblank predicate rejects that label even
+when a different label contains U+200B. A request for a stricter character policy
+is a separate product decision, not proof that this value was accepted.
+
+Attach applicable same-revision source and, when available, matching execution
+evidence to normal finding verification/re-review. Do not invent an execution,
+weaken valid input support or automatically dismiss findings from a prose match.
+A real ignored validation result or transform that creates an invalid value after
+checking remains actionable. Evidence cannot grant new mutation, approval or
+lookup permissions. See [exact validation witnesses](/bugbot/detection#exact-validation-witnesses)
+and [quality evidence limits](/bugbot/quality-observability).

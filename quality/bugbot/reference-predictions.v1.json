@@ -38,6 +38,81 @@
     "py-helper-retry-validation": [],
     "ts-exclusive-render-branches": [],
     "py-short-circuit-unsafe-order": [{"id": "unhashable-membership", "title": "Unhashable steps reach set membership before validation", "file": "src/checkpoint.py", "line": 2, "severity": "low", "category": "correctness", "symbol": "valid_steps", "codeSnippet": "step in writable_ids", "confidence": 0.98}],
-    "ts-composed-duplicate-ids": [{"id": "composed-duplicate-id", "title": "Composed actions render duplicate reason IDs", "file": "ui/views.ts", "line": 2, "severity": "low", "category": "correctness", "symbol": "overview", "codeSnippet": "${unavailableAction()}${unavailableAction()}", "confidence": 0.98}]
+    "ts-composed-duplicate-ids": [{"id": "composed-duplicate-id", "title": "Composed actions render duplicate reason IDs", "file": "ui/views.ts", "line": 2, "severity": "low", "category": "correctness", "symbol": "overview", "codeSnippet": "${unavailableAction()}${unavailableAction()}", "confidence": 0.98}],
+    "kt-compose-owned-loader": [],
+    "kt-compose-external-loader": [{"id": "external-loader", "title": "The external loader covers the initialized app", "file": "frontend/index.html", "line": 2, "severity": "medium", "category": "correctness", "codeSnippet": "<div id=\"loading\" style=\"position:fixed;inset:0;z-index:9999;background:white\">Loading...</div>", "confidence": 0.98}],
+    "kt-compose-failed-startup-error": [],
+    "kt-compose-failed-startup-stuck": [{"id": "startup-loader", "title": "Dependency initialization failure leaves the loading state indefinitely", "file": "frontend/Main.kt", "line": 2, "severity": "medium", "category": "reliability", "symbol": "main", "codeSnippet": "initializeDependencies()", "confidence": 0.98}],
+    "ts-viewport-version-without-cleanup": [{"id": "version-loader", "title": "The pinned viewport implementation preserves the loading element", "file": "src/startup.ts", "line": 2, "severity": "medium", "category": "correctness", "codeSnippet": "mount(document.getElementById(\"target\")!, createApp());", "confidence": 0.98}],
+    "kt-compose-preferred-width-narrow": [],
+    "kt-compose-required-width-overflow": [{"id": "kt-compose-required-width-overflow-defect", "title": "Required width makes the padded controls overflow the 280dp parent", "file": "ui/AuthForm.kt", "line": 10, "severity": "low", "category": "correctness", "symbol": "AuthForm", "codeSnippet": "Modifier.requiredWidth(400.dp).padding(16.dp)", "confidence": 0.95}],
+    "kt-compose-fill-before-cap": [{"id": "kt-compose-fill-before-cap-defect", "title": "Filling before the cap removes the intended wide-screen bound", "file": "ui/AuthForm.kt", "line": 10, "severity": "low", "category": "correctness", "symbol": "AuthForm", "codeSnippet": "Modifier.fillMaxWidth().widthIn(max = 400.dp).padding(16.dp)", "confidence": 0.95}],
+    "kt-compose-cap-before-fill": [],
+    "kt-compose-padded-preferred-width": [],
+    "android-listed-minor-platform": [],
+    "android-absent-platform-package": [{"id": "absent-sdk-package", "title": "Requested SDK package is absent from the applicable inventory", "file": ".github/workflows/ci.yml", "line": 185, "severity": "medium", "category": "reliability", "codeSnippet": "sdkmanager --install \"platforms;android-37\"", "confidence": 0.98}],
+    "external-package-unverified-inventory": [],
+    "android-stale-inventory-current-install": [],
+    "android-unrelated-green-job": [{"id": "absent-sdk-package", "title": "Requested SDK package is absent from the applicable inventory", "file": ".github/workflows/ci.yml", "line": 185, "severity": "medium", "category": "reliability", "codeSnippet": "sdkmanager --install \"platforms;android-37\"", "confidence": 0.98}],
+    "kt-resolved-sql-subclass": [],
+    "jvm-type-hierarchy-unavailable": [],
+    "jvm-current-contract-over-stale-docs": [],
+    "jvm-unrelated-runtime-wrapper": [{"id": "uncaught-driver-wrapper", "title": "The resolved driver wrapper escapes the typed SQL mapping", "file": "storage/ReadRows.kt", "line": 4, "severity": "medium", "category": "correctness", "codeSnippet": "} catch (failure: SQLException) {", "confidence": 0.98}],
+    "jvm-passing-mock-not-counterevidence": [{"id": "uncaught-driver-wrapper", "title": "The production wrapper is not handled by the mock-covered catch", "file": "storage/ReadRows.kt", "line": 4, "severity": "medium", "category": "correctness", "codeSnippet": "} catch (failure: SQLException) {", "confidence": 0.98}],
+    "kt-broad-catch-swallows-cancellation": [{"id": "swallowed-cancellation", "title": "The broader catch converts cancellation to a database failure", "file": "storage/ReadRows.kt", "line": 4, "severity": "medium", "category": "correctness", "codeSnippet": "} catch (failure: Throwable) {", "confidence": 0.98}],
+    "test-indirect-binding-propagates": [],
+    "test-parameterized-fallback-reaches-stub": [],
+    "test-bound-callback-reaches-stub": [],
+    "test-delegate-bypasses-stub": [{"id": "test-delegate-bypasses-stub-defect", "title": "The assertion expects a fault from a bypassed projection", "file": "test/SessionReturnedState.test.ts", "line": 22, "severity": "medium", "category": "correctness", "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }", "confidence": 0.98}],
+    "test-empty-participants-skip-stub": [{"id": "test-empty-participants-skip-stub-defect", "title": "The empty fixture never reaches the arranged fault", "file": "test/SessionReturnedState.test.ts", "line": 22, "severity": "medium", "category": "correctness", "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }", "confidence": 0.98}],
+    "test-recovery-swallows-bound-failure": [{"id": "test-recovery-swallows-bound-failure-defect", "title": "The reader replaces the bound fault with success", "file": "test/SessionReturnedState.test.ts", "line": 25, "severity": "medium", "category": "correctness", "codeSnippet": "function test() { assertDatabaseFailure(service.getSession()); }", "confidence": 0.98}],
+    "action-declared-matcher-input": [],
+    "action-renamed-input-current-version": [],
+    "action-input-contract-unavailable": [],
+    "action-undeclared-matcher-alias": [{"id": "action-undeclared-matcher-alias-fault", "title": "Undeclared alias leaves the failing matcher enabled", "file": ".github/actions/publish-package/action.yml", "line": 22, "severity": "medium", "category": "reliability", "symbol": "Publish package", "codeSnippet": "enable-problem-matcher: false", "confidence": 0.98}],
+    "action-old-input-on-new-version": [{"id": "action-old-input-on-new-version-fault", "title": "Old-version input does not disable the selected revision matcher", "file": ".github/actions/publish-package/action.yml", "line": 22, "severity": "medium", "category": "reliability", "symbol": "Publish package", "codeSnippet": "problem-matcher: false", "confidence": 0.98}],
+    "action-declared-input-wrong-value": [{"id": "action-declared-input-wrong-value-fault", "title": "Off is not the runtime disabling value", "file": ".github/actions/publish-package/action.yml", "line": 22, "severity": "medium", "category": "reliability", "symbol": "Publish package", "codeSnippet": "problem-matcher: 'off'", "confidence": 0.98}],
+    "kt-email-unicode-empty-label-guard": [],
+    "ts-email-caller-empty-label-guard": [],
+    "ts-email-normalization-before-guard": [],
+    "ts-email-existential-label-defect": [
+      {
+        "id": "ts-email-existential-label-defect-fault",
+        "title": "An existential predicate admits an empty domain label",
+        "file": "auth/register.ts",
+        "line": 5,
+        "severity": "low",
+        "category": "correctness",
+        "symbol": "valid",
+        "codeSnippet": "return labels.length >= 2 && labels.some(label => label.length > 0);",
+        "confidence": 0.98
+      }
+    ],
+    "ts-email-ignored-validator-result": [
+      {
+        "id": "ts-email-ignored-validator-result-fault",
+        "title": "Discarded validation failure still reaches persistence",
+        "file": "auth/register.ts",
+        "line": 11,
+        "severity": "medium",
+        "category": "correctness",
+        "symbol": "registerIgnoredResult",
+        "codeSnippet": "valid(checked);",
+        "confidence": 0.98
+      }
+    ],
+    "ts-email-normalization-after-guard": [
+      {
+        "id": "ts-email-normalization-after-guard-fault",
+        "title": "Normalization creates an empty label after validation",
+        "file": "auth/register.ts",
+        "line": 12,
+        "severity": "medium",
+        "category": "correctness",
+        "symbol": "registerNormalizedLate",
+        "codeSnippet": "const stored = domain.normalize('NFKC');",
+        "confidence": 0.98
+      }
+    ]
   }
 }

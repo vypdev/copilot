@@ -65,8 +65,10 @@ Commands are recognized at the beginning of a comment, case-insensitively. The c
 require at least one argument. Give `fix` and `dismiss` one or more finding IDs;
 give `implement` a concrete request and `remember` the rule text. For
 `sync-branch`, `--from` must be followed by a branch name. Arguments are
-whitespace-separated, and commands are limited to 2,000 characters and 20
-arguments. Missing or malformed required arguments produce a validation reply;
+whitespace-separated; quoted finding IDs count as one operand. The complete
+command remains limited to 2,000 characters. Structured commands allow at most
+20 arguments; prose and rule commands listed below retain their existing
+exemption from that argument count. Missing or malformed required arguments produce a validation reply;
 they never mean “all” or authorize a broad change.
 
 `help`, `status`, `sdd-diff`, `doctor`, `history`, `dismiss`, `remember` and
@@ -74,6 +76,47 @@ rejected commands do not run a model or change the temporary agent activity labe
 and `--no-agent` also avoid model activity. Ordinary sync may use the conflict
 fixer, and `findings` runs a fresh review. These distinctions preserve each
 command's existing authorization and repository effects.
+
+### Argument rules and rejected commands
+
+| Commands | Accepted arguments |
+| --- | --- |
+| `status`, `sdd-diff`, `doctor`, `history` | None. Send the command alone. |
+| `analyze`, `review`, `findings`, `recheck` | Optional `key=value` review controls only: `effort=low`, `effort=default`, `effort=high`, `effort=smart`; `dry-run=true/false`, `trace-rules=true/false`, `suggested-changes=true/false`. Each boolean value must be exactly `true` or `false` (case-insensitive). Free prose is not a review option. |
+| `plan`, `clarify`, `estimate`, `test-plan`, `explain`, `diagnose` | Optional prose, bounded by the complete-command character limit. |
+| `implement`, `remember` | Required request/rule prose, bounded by the complete-command character limit. |
+| `fix`, `dismiss` | At least one exact finding ID, at most 20 IDs; JSON double quotes preserve spaces as one ID. Empty IDs, newlines and malformed quoted IDs are rejected. |
+| `sync-branch` | Optional `--dry-run`, `--no-agent`, `--from <parent-branch>` or `--from=<parent-branch>`; the parent value must be nonempty and passes the existing synchronization authorization and branch checks. |
+| `help`, `description` | Prefer the bare command. The current parser tolerates up to 20 extra operands, which these routes ignore; they do not select a model or change the operation. |
+
+If a review request includes explanatory text, send the explanation separately:
+
+```text
+/copilot recheck
+```
+
+A rejected command explains the specific cause, a valid next step, and the
+preserved state. For example, a `recheck` with more than 20 operands returns:
+
+> **Impact:** The command exceeds the limit of 20 arguments.
+>
+> **Action:** Remove extra arguments and send explanations in a separate comment.
+> Finding IDs in valid double quotes count as one argument. Example: `/copilot recheck`.
+> [Command help](https://docs.page/vypdev/copilot/issues/comment-commands).
+>
+> **Retained state:** No command action ran. Existing files, branches and reviews were preserved.
+
+The original command, unknown option values, private explanation and credentials
+are not echoed in this reply or the validation error record. A syntax rejection
+never means “all findings” and never authorizes a command. Correct the input in
+a new comment; rerunning an unchanged invalid comment cannot make it valid.
+A replay reuses the existing correlated reply rather than adding another one.
+
+Messages follow the repository locale: reviewed English and Spanish, compatible
+base-language catalogs, validated dynamic localization for other BCP 47 locales,
+and atomic English fallback when a catalog cannot be resolved. Executable
+examples and documentation destinations remain fixed after localization.
+No new configuration is required; grammar, limits and authorization stay fixed.
 
 ### Where command results persist
 

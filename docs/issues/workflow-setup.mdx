@@ -78,6 +78,12 @@ type labels is not converted into a Feature; the Action reports a no-op or a
 configuration block. Release and hotfix issues are admitted only when the
 required form headings and values are present.
 
+If a preserved application form uses a different governed heading, declare an
+explicit `issueWorkflows.fieldMappings` in the setup config and run doctor before
+applying it. See [consumer field mapping and recovery](/issues/configurable-workflows#preserved-application-specific-headings).
+Use the same effective schema-2 profile in every issue-bound workflow and upgrade
+the CLI/Action together; setup does not silently rename consumer fields.
+
 Add other inputs as needed: `issue-managed-branches`, `pre-branch-sdd`, `desired-assignees-count`, `main-branch`, `development-branch`, etc. See [Configuration](/issues/configuration) and [Examples](/issues/examples).
 
 Pass the same branch and SDD settings to issue, issue-comment, pull-request,
@@ -136,3 +142,81 @@ inputs.
 - **[Assignees and projects](/issues/assignees-and-projects)** — Member assignment and project linking.
 - **[Branch management](/issues/branch-management)** — When and how branches are created.
 - **[Examples](/issues/examples)** — Full workflow YAML examples.
+
+
+## Credential for optional native Checks
+
+Keep the product Action token separate from optional Check Run publication.
+Generated commit workflows use the short-lived native token only on the step
+that consumes it:
+
+```yaml
+jobs:
+  copilot-commits:
+    permissions:
+      checks: write
+      contents: read
+    steps:
+      - uses: vypdev/copilot@v3
+        with:
+          token: ${{ secrets.PAT }}
+        env:
+          COPILOT_EVIDENCE_TOKEN: ${{ github.token }}
+```
+
+The Action trims a nonempty `COPILOT_EVIDENCE_TOKEN` and uses it only for native
+Check Runs. An absent/blank value preserves the configured Action token fallback.
+The fallback route does not reveal whether that credential supports Checks.
+Use the supported GitHub App/native Actions token route with Checks write and
+repository access; do not assume a generic PAT works or broaden the product
+token based on a warning. See [GitHub's current Checks credential contract](https://docs.github.com/en/rest/checks/runs?apiVersion=2026-03-10).
+
+Existing preserved consumer workflows require their normal reviewed maintenance
+update to adopt the mapping; this fix does not edit consumer repositories or
+promote a runtime release. Other jobs are not granted additional permissions
+without a need. Events without a verified eligible head still publish no check.
+
+If publication is unconfirmed, inspect the exact check/head and safe provider
+cause in the run log and Job Summary. Permission rejection, rate limiting,
+invalid target and transport failures have distinct guidance. Unknown causes
+remain unknown. The optional warning never replaces the actual workflow result.
+
+
+## Early issue admission and shared runner capacity
+
+The generated Issue workflow inspects events on a small fixed GitHub-hosted
+`Admit issue event` job before allocating your selected work runner. It verifies
+the actual product account, so internal title/label updates do not occupy the
+work pool even when `COPILOT_BOT_LOGIN` is absent. Native bot-authored closure
+cleanup still runs. Inspection receives no agent API keys.
+
+```text
+Per-issue queue → hosted inspection → full work only when required
+```
+
+Opened/start/close/reopen/body/title/assignment intent remains executable. Only
+an equivalent, unstarted label reconciliation already queued during successful
+work may reuse an opaque one-day artifact receipt. It must match the current
+issue state, actor/account, effective work-step Variables, workflow and runtime.
+Only Variables referenced by the full step are serialized; unrelated repository
+Variables are not forwarded into admission. Missing evidence,
+provider uncertainty, later requests and manual retries use the normal pipeline.
+A state change during work prevents receipt recording. Byte-identical description
+persistence also omits the native update, so a configuration no-op does not
+generate another internal edit. Job Summaries explain
+intentional skips in English/Spanish with English fallback; no new issue card
+or conversation is created.
+
+The queue keeps running work and up to 100 pending runs per issue using GitHub's
+`queue: max`; it does not cancel active work or replace pending start events.
+Independent issues have separate groups. Hosted inspection still consumes
+hosted capacity: fewer full work allocations does not mean zero workflow runs.
+
+**Upgrade the runtime first**, ensuring it contains the `issue-admission`
+subaction, and then review/apply the matching generated workflow through setup. Custom workflows must pass matching
+deploy/release/hotfix label names to inspection/record and the full Action.
+Do not point this new workflow at an older release missing that path. Enterprise
+operators must confirm support for `queue: max`. Inspection uses only automatic
+`contents: read`/`actions: read`; the full job keeps its existing permissions and
+product PAT. Your runner selection applies to full work, not inspection. No
+consumer adoption is performed by an upstream code merge.

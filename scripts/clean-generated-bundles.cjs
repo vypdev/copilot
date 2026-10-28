@@ -5,7 +5,7 @@ const { dirname, join, relative, resolve, sep } = require('node:path');
 
 const repositoryRoot = resolve(__dirname, '..');
 const buildRoot = join(repositoryRoot, 'build');
-const generatedBundles = ['github_action', 'cli', 'api']
+const generatedBundles = ['github_action', 'deployment_recovery', 'cli', 'api']
   .map(bundle => join(buildRoot, bundle));
 
 for (const bundlePath of generatedBundles) {

@@ -1,3 +1,4 @@
+import { buildReplacementCandidateSnapshot } from './deployment_candidate_replacement';
 import {
   DEPLOYMENT_STATE_VERSION,
   isDeploymentOperationSnapshot,
@@ -13,7 +14,8 @@ export interface DeploymentStateFence {
 
 export type ExpectedDeploymentState =
   | { readonly kind: "absent" }
-  | { readonly kind: "current"; readonly fence: DeploymentStateFence };
+  | { readonly kind: "current"; readonly fence: DeploymentStateFence }
+  | { readonly kind: "replacement"; readonly fence: DeploymentStateFence };
 
 export type DeploymentStateLoadOutcome =
   | { readonly kind: "absent" }
@@ -86,7 +88,7 @@ export function decideDeploymentStateSave(
   if (sameSemanticState(actual.operation, proposed)) {
     return { kind: "already-applied", operation: actual.operation };
   }
-  const expectedOperationId = expected.kind === "current" ? expected.fence.operationId : undefined;
+  const expectedOperationId = expected.kind !== "absent" ? expected.fence.operationId : undefined;
   if (actual.operation.operationId !== (expectedOperationId ?? proposed.operationId)) {
     return { kind: "conflict", operation: actual.operation };
   }
@@ -97,7 +99,26 @@ export function decideDeploymentStateSave(
       || actual.operation.phase !== expected.fence.phase) {
     return { kind: "stale", operation: actual.operation };
   }
+  if (expected.kind === 'replacement') {
+    if (!isExactReplacementSuccessor(actual.operation, proposed)) {
+      return { kind: 'invalid', reason: 'Replacement must preserve the exact predecessor and immutable operation facts.' };
+    }
+  } else if (proposed.operationId !== actual.operation.operationId) {
+    return { kind: 'invalid', reason: 'Changing a deployment operation ID requires explicit replacement intent.' };
+  }
   return { kind: "write" };
+}
+
+function isExactReplacementSuccessor(previous: DeploymentOperationSnapshot, proposed: DeploymentOperationSnapshot): boolean {
+  try {
+    const provenance = proposed.supersededCandidates?.at(-1);
+    if (!provenance) return false;
+    const expected = buildReplacementCandidateSnapshot(previous, proposed.sourceSha, proposed.operationId,
+      provenance.replacementSourceSha, provenance.replacementBaseSha);
+    return sameSemanticState(expected, proposed);
+  } catch {
+    return false;
+  }
 }
 
 function sameSemanticState(

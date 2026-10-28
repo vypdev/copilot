@@ -41,7 +41,7 @@ export function cloneSetupConfiguration(configuration: SetupConfiguration): Setu
         overrides: { ...configuration.storage.variables.overrides },
       },
     },
-    issueWorkflows: { enabled: [...configuration.issueWorkflows.enabled] },
+    issueWorkflows: { enabled: [...configuration.issueWorkflows.enabled], ...(configuration.issueWorkflows.fieldMappings ? { fieldMappings: structuredClone(configuration.issueWorkflows.fieldMappings) } : {}) },
     repositoryAgentGuidance: { ...configuration.repositoryAgentGuidance },
   };
 }

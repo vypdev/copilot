@@ -241,6 +241,12 @@ export interface DeploymentOrchestrationContext {
     readonly operationId: string;
     readonly message: string;
     readonly isPrepareDeploymentAction: boolean;
+    readonly isReplaceDeploymentAction?: boolean;
+    readonly replacementRevision?: number;
+    readonly candidateSha?: string;
+    readonly reviewedSourceSha?: string;
+    readonly productionBaseSha?: string;
+    readonly confirmedUnpublished?: boolean;
     readonly isContinueDeploymentAction: boolean;
     readonly isPublishedDeploymentAction: boolean;
     readonly isFailedDeploymentAction: boolean;

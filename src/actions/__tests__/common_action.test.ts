@@ -20,6 +20,13 @@ import type { Execution } from '../../data/model/execution';
 import type { SynchronizeAgentActivityUseCase } from '../../application/usecases/actions/synchronize_agent_activity_use_case';
 import { Result } from '../../data/model/result';
 import { logInfo } from '../../utils/logger';
+import { readFileSync } from 'node:fs';
+import { buildPreviousWorkflowRunsQuery } from '../main_run_lifecycle';
+import * as issueWorkflowRuntimePolicy from '../../domain/issue_workflow_runtime_policy';
+import { WaitForPreviousWorkflowRunsUseCase } from '../../application/usecases/workflow/wait_for_previous_workflow_runs_use_case';
+import { NativeWorkflowCoordinationRepository } from '../../data/repository/workflow/native_workflow_coordination_repository';
+import { ActivePreviousWorkflowRunsRepository } from '../../data/repository/workflow/active_previous_workflow_runs_repository';
+import type { PreviousWorkflowRunsQuery } from '../../application/ports/workflow_run_ports';
 
 jest.mock('@actions/core', () => ({
   setFailed: jest.fn(),
@@ -244,6 +251,8 @@ const originalRunId = process.env.GITHUB_RUN_ID;
 const originalWorkflow = process.env.GITHUB_WORKFLOW;
 const originalWorkflowRef = process.env.GITHUB_WORKFLOW_REF;
 const originalGithubActions = process.env.GITHUB_ACTIONS;
+const nativeEnvironment = ['GITHUB_WORKFLOW_SHA', 'GITHUB_JOB', 'GITHUB_EVENT_NAME', 'GITHUB_REF'] as const;
+const originalNativeEnvironment = nativeEnvironment.map(name => [name, process.env[name]] as const);
 
 function restoreEnvironmentVariable(name: string, value: string | undefined): void {
   if (value === undefined) {
@@ -262,6 +271,7 @@ describe('mainRun', () => {
     delete process.env.GITHUB_WORKFLOW;
     delete process.env.GITHUB_WORKFLOW_REF;
     delete process.env.GITHUB_ACTIONS;
+    for (const name of nativeEnvironment) delete process.env[name];
     mockWaitForPreviousWorkflowRunsInvoke.mockResolvedValue(undefined);
     mockSingleActionInvoke.mockResolvedValue([]);
     mockIssueCommentInvoke.mockResolvedValue([]);
@@ -280,6 +290,7 @@ describe('mainRun', () => {
     restoreEnvironmentVariable('GITHUB_WORKFLOW', originalWorkflow);
     restoreEnvironmentVariable('GITHUB_WORKFLOW_REF', originalWorkflowRef);
     restoreEnvironmentVariable('GITHUB_ACTIONS', originalGithubActions);
+    for (const [name, value] of originalNativeEnvironment) restoreEnvironmentVariable(name, value);
   });
 
   it('delegates setup to the composed use case and clears accumulated logs', async () => {
@@ -324,6 +335,139 @@ describe('mainRun', () => {
       currentRunId: 200,
       workflowIdentifier: 'copilot_issue.yml',
     });
+  });
+
+  function nativeRunEnvironment() {
+    Object.assign(process.env, {
+      GITHUB_ACTIONS: 'true', GITHUB_RUN_ID: '200', GITHUB_EVENT_NAME: 'pull_request',
+      GITHUB_WORKFLOW_REF: 'org/repo/.github/workflows/copilot_pull_request.yml@refs/heads/main',
+      GITHUB_WORKFLOW_SHA: 'a'.repeat(40), GITHUB_JOB: 'copilot-pull-requests',
+    });
+  }
+
+  it.each(['.github/workflows', 'setup/workflows'])(
+    'replays scheduler inversion before setup using the native contract in %s', async directory => {
+      nativeRunEnvironment();
+      const order: string[] = [];
+      const source = readFileSync(`${directory}/copilot_pull_request.yml`, 'utf8');
+      const getContent = jest.fn(async () => {
+        order.push('proof');
+        return { data: { type: 'file', encoding: 'base64', content: Buffer.from(source).toString('base64') } };
+      });
+      // An older PR A is queued and cannot acquire this runner while B holds it.
+      const iterator = jest.fn(async function* () {
+        yield { data: { workflow_runs: [{ id: 199, status: 'queued' }] } };
+      });
+      const delay = { wait: jest.fn() };
+      const clock = { nowMilliseconds: () => 0 };
+      const native = new NativeWorkflowCoordinationRepository({ rest: { repos: { getContent } } }, {
+        delayPort: delay, clock, random: { next: () => 0.5 },
+      });
+      const predecessors = new ActivePreviousWorkflowRunsRepository({
+        rest: { actions: { listWorkflowRuns: jest.fn() } }, paginate: { iterator },
+      });
+      mockWaitForPreviousWorkflowRunsInvoke.mockImplementation((query: PreviousWorkflowRunsQuery) =>
+        new WaitForPreviousWorkflowRunsUseCase(predecessors, delay, {
+          noActivePreviousRuns: jest.fn(), waitingForPreviousRuns: jest.fn(),
+        }, undefined, clock, undefined, native).invoke(query));
+      mockSetupExecutionInvoke.mockImplementation(async context => {
+        order.push('setup'); return unresolvedSetupResult(context);
+      });
+      await runMain(mockExecution({ isPullRequest: true, eventName: 'pull_request', inputs: { pull_request: { number: 22 } } }));
+      expect(order).toEqual(['proof', 'setup']);
+      expect(iterator).not.toHaveBeenCalled();
+      expect(delay.wait).not.toHaveBeenCalled();
+      expect(mockPullRequestInvoke).toHaveBeenCalledTimes(1);
+      expect(getContent).toHaveBeenCalledWith({ owner: 'org', repo: 'repo',
+        path: '.github/workflows/copilot_pull_request.yml', ref: 'a'.repeat(40) });
+    },
+  );
+
+  it('retains the mutation fence before setup for a custom job without native coordination', async () => {
+    nativeRunEnvironment();
+    const order: string[] = [];
+    let predecessorActive = true;
+    const iterator = jest.fn(async function* () {
+      yield { data: { workflow_runs: predecessorActive ? [{ id: 199, status: 'queued' }] : [] } };
+    });
+    const delay = { wait: jest.fn(async () => { order.push('wait'); predecessorActive = false; }) };
+    const clock = { nowMilliseconds: () => 0 };
+    const native = new NativeWorkflowCoordinationRepository({ rest: { repos: {
+      getContent: jest.fn().mockResolvedValue({ data: { type: 'file', encoding: 'base64',
+        content: Buffer.from('jobs: { copilot-pull-requests: { steps: [] } }').toString('base64') } }),
+    } } }, { delayPort: delay, clock, random: { next: () => 0.5 } });
+    const predecessors = new ActivePreviousWorkflowRunsRepository({
+      rest: { actions: { listWorkflowRuns: jest.fn() } }, paginate: { iterator },
+    }, undefined, undefined, clock);
+    mockWaitForPreviousWorkflowRunsInvoke.mockImplementation((query: PreviousWorkflowRunsQuery) =>
+      new WaitForPreviousWorkflowRunsUseCase(predecessors, delay, {
+        noActivePreviousRuns: jest.fn(), waitingForPreviousRuns: jest.fn(),
+      }, undefined, clock, { next: () => 0.5 }, native).invoke(query));
+    mockSetupExecutionInvoke.mockImplementation(async context => {
+      expect(predecessorActive).toBe(false); order.push('setup'); return unresolvedSetupResult(context);
+    });
+    await runMain(mockExecution({ inputs: { pull_request: { number: 21 } } }));
+    expect(order).toEqual(['wait', 'setup']);
+  });
+
+  it('fails before setup with sanitized diagnostics when native proof cannot be read', async () => {
+    nativeRunEnvironment();
+    const native = new NativeWorkflowCoordinationRepository({ rest: { repos: {
+      getContent: jest.fn().mockRejectedValue({ status: 403, message: 'secret-provider-body' }),
+    } } }, { delayPort: { wait: jest.fn() }, clock: { nowMilliseconds: () => 0 }, random: { next: () => 0.5 } });
+    mockWaitForPreviousWorkflowRunsInvoke.mockImplementation((query: PreviousWorkflowRunsQuery) =>
+      new WaitForPreviousWorkflowRunsUseCase({ countActivePreviousRuns: jest.fn() }, { wait: jest.fn() }, {
+        noActivePreviousRuns: jest.fn(), waitingForPreviousRuns: jest.fn(),
+      }, undefined, { nowMilliseconds: () => 0 }, undefined, native).invoke(query));
+    await expect(runMain(mockExecution({ inputs: { pull_request: { number: 21 } } })))
+      .rejects.toThrow('Workflow queue check failed; sequential execution was not bypassed.');
+    expect(mockSetupExecutionInvoke).not.toHaveBeenCalled();
+    expect(mockPullRequestInvoke).not.toHaveBeenCalled();
+    expect(logger.logError).not.toHaveBeenCalledWith(expect.stringContaining('secret-provider-body'));
+  });
+
+  it('projects only GitHub workflow metadata and omits native delegation for single actions', () => {
+    nativeRunEnvironment();
+    const repository = { owner: 'org', repo: 'repo' };
+    const query = buildPreviousWorkflowRunsQuery(repository, { isSingleAction: false, pullRequestNumber: 21 });
+    expect(query.nativeCoordination).toMatchObject({ workflowRevision: 'a'.repeat(40),
+      jobId: 'copilot-pull-requests', eventName: 'pull_request', pullRequestNumber: 21 });
+    expect(Object.isFrozen(query.nativeCoordination)).toBe(true);
+    expect(buildPreviousWorkflowRunsQuery(repository, { isSingleAction: true }).nativeCoordination).toBeUndefined();
+  });
+
+  it('refuses admission before setup when pinned metadata lacks the workflow identity', async () => {
+    nativeRunEnvironment();
+    delete process.env.GITHUB_WORKFLOW_REF;
+    delete process.env.GITHUB_EVENT_NAME;
+
+    const query = buildPreviousWorkflowRunsQuery({ owner: 'org', repo: 'repo' }, { isSingleAction: false });
+    expect(query.nativeCoordination).toMatchObject({ workflowRef: '', eventName: '' });
+    expect(query.workflowIdentifier).toBeUndefined();
+    await expect(runMain(mockExecution())).rejects.toThrow('GitHub workflow identifier is unavailable');
+    expect(createWaitForPreviousWorkflowRunsUseCase).not.toHaveBeenCalled();
+    expect(mockSetupExecutionInvoke).not.toHaveBeenCalled();
+  });
+
+  it('retains the predecessor fence when runner metadata has no event name', async () => {
+    nativeRunEnvironment();
+    delete process.env.GITHUB_EVENT_NAME;
+    const countActivePreviousRuns = jest.fn().mockResolvedValue(0);
+    const getContent = jest.fn();
+    const clock = { nowMilliseconds: () => 0 };
+    const native = new NativeWorkflowCoordinationRepository({ rest: { repos: { getContent } } }, {
+      clock, delayPort: { wait: jest.fn() }, random: { next: () => 0.5 },
+    });
+    mockWaitForPreviousWorkflowRunsInvoke.mockImplementation(query =>
+      new WaitForPreviousWorkflowRunsUseCase({ countActivePreviousRuns }, { wait: jest.fn() }, {
+        noActivePreviousRuns: jest.fn(), waitingForPreviousRuns: jest.fn(), providerRetry: jest.fn(),
+      }, undefined, clock, undefined, native).invoke(query));
+
+    await runMain(mockExecution({ isPullRequest: true, inputs: { pull_request: { number: 21 } } }));
+
+    expect(getContent).not.toHaveBeenCalled();
+    expect(countActivePreviousRuns).toHaveBeenCalledTimes(1);
+    expect(mockSetupExecutionInvoke).toHaveBeenCalledTimes(1);
   });
 
   it('does not queue the issue-comment single action so a failed queue gate can still report', async () => {
@@ -794,6 +938,71 @@ describe('mainRun', () => {
     expect(execution.labels.currentIssueLabels).toEqual(['state:ready']);
   });
 
+  it.each([
+    undefined,
+    { labels: ['state:ready'] },
+    { target: { kind: 'issue', number: 42 } },
+  ])('leaves label caches intact when activity returns no complete patch (%j)', async outcome => {
+    mockAgentActivityStart.mockResolvedValue(outcome);
+    mockAgentActivityFinish.mockResolvedValue(outcome);
+    const execution = mockExecution({
+      eventName: 'push', isPush: true, commit: { commits: [{ id: 'commit-1' }] },
+      ai: {
+        getAgentConfiguration: jest.fn(() => ({ model: 'model' })),
+        getPullRequestDescriptionMode: jest.fn(() => 'disabled'),
+      },
+    });
+
+    await runMainWithActivity(execution);
+
+    expect(mockAgentActivityStart).toHaveBeenCalledTimes(1);
+    expect(mockAgentActivityFinish).toHaveBeenCalledTimes(1);
+    expect(mockCommitInvoke).toHaveBeenCalledWith(execution);
+    expect(execution.labels.currentIssueLabels).toEqual([]);
+    expect(execution.labels.currentPullRequestLabels).toEqual([]);
+  });
+
+  it.each([
+    ['in-progress', false],
+    ['deploy', false],
+    ['unrelated', true],
+  ])('blocks explicit disabled-work intent for %s while leaving unrelated callbacks idle', async (labelAdded, success) => {
+    const execution = mockExecution({
+      eventName: 'issues', isIssue: true,
+      issue: { labeled: true, labelAdded },
+    });
+    execution.labels.deploy = 'deploy';
+    mockSetupExecutionInvoke.mockImplementation(async context => configuredSetupResult(
+      context, { status: 'disabled', kind: 'feature' },
+    ));
+
+    const results = await runMain(execution);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ id: 'IssueWorkflowAdmission', success, executed: false });
+    expect(mockIssueInvoke).not.toHaveBeenCalled();
+  });
+
+  it('renders a bounded fallback when an admission decision has no optional message', async () => {
+    const decision = jest.spyOn(issueWorkflowRuntimePolicy, 'decideIssueWorkflowRuntime')
+      .mockReturnValueOnce({ mode: 'noop' });
+    try {
+      const results = await runMain(mockExecution());
+      expect(results[0].steps).toEqual(['⏭️ Issue workflow admission stopped this run.']);
+      expect(mockIssueInvoke).not.toHaveBeenCalled();
+    } finally {
+      decision.mockRestore();
+    }
+  });
+
+  it('summarizes route results that omit optional step details', async () => {
+    const results = [{ id: 'push', success: true, executed: true }] as Result[];
+    mockCommitInvoke.mockResolvedValue(results);
+
+    expect(await runMain(mockExecution({ isPush: true }))).toEqual(results);
+    expect(logInfo).toHaveBeenCalledWith('Main run finished. Results: 1, total steps: 0.');
+  });
+
   it.each(['help', 'status'])('dispatches deterministic %s without an agent activity mutation', async command => {
     const execution = mockExecution({
       eventName: 'issue_comment', isIssue: true,
@@ -926,4 +1135,10 @@ describe('terminal issue lifecycle route', () => {
     await runMain(mockExecution({ eventName: 'issues', isIssue: true, inputs: { action: 'closed', issue: { number: 42, state: 'closed' } }, locale: { issue: 'en-US' } }));
     expect(mockClosedIssueRetireInvoke).toHaveBeenCalledTimes(1); expect(mockIssueInvoke).not.toHaveBeenCalled();
   });
+  it('blocks incomplete legacy admission facts without inventing a recovery field or starting a route',async()=>{
+    mockSetupExecutionInvoke.mockImplementation(async context=>configuredSetupResult(context,{status:'invalid',kind:'bugfix',missingHeadings:[]}));
+    const results=await runMain(mockExecution({eventName:'issues',isIssue:true,issue:{labeled:true,labelAdded:'in-progress'}}));
+    expect(results[0].success).toBe(false);expect(results[0].errors[0]).toMatchObject({code:'configuration.invalid',recovery:undefined});expect(mockIssueInvoke).not.toHaveBeenCalled();
+  });
+
 });

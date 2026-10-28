@@ -1,3 +1,4 @@
+import { ENGLISH_COMMAND_VALIDATION_CONTENT, SPANISH_COMMAND_VALIDATION_CONTENT } from './comment_command_validation_message_catalog';
 import type {
   ApplicationErrorCode,
   ApplicationErrorRecoveryId,
@@ -159,8 +160,8 @@ const SPANISH_CONTENT: ErrorContent = Object.freeze({
     retainedState: UNCHANGED_STATE_ES,
   }),
   'validation.evidence-unavailable': Object.freeze({
-    impact: 'No se evaluó el progreso porque GitHub omitió un patch necesario.',
-    action: 'Inspecciona manualmente la comparación entre los commits base y head exactos o divide el trabajo en cambios revisados más pequeños con patches completos antes de otra evaluación. Reintentar los mismos commits no recuperará la evidencia omitida.',
+    impact: 'No se evaluó el progreso porque no se pudieron verificar un patch necesario ni sus contenidos inmutables completos.',
+    action: 'Inspecciona las rutas sin revisar y la base prevista de la pull request en la comparación entre los commits base y head exactos. Aporta evidencia completa y revisable antes de otra evaluación. Reintentar los mismos commits no recuperará la evidencia inmutable no disponible.',
     retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas; no se realizó ninguna evaluación del modelo.',
   }),
   'validation.evidence-too-large': Object.freeze({
@@ -211,6 +212,7 @@ const STORED_CONFIGURATION_RETAINED_EN = 'The issue/PR description and stored co
 const STORED_CONFIGURATION_RETAINED_ES = 'Esta lectura no modificó la descripción de la issue/PR ni su configuración almacenada.';
 
 const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  ...ENGLISH_COMMAND_VALIDATION_CONTENT,
   'stored-configuration-schema-missing': Object.freeze({
     impact: 'Automation stopped for issue/PR #{issueNumber}: the stored configuration has no schema version; version {expectedVersion} is required.',
     action: STORED_CONFIGURATION_ACTION_EN,
@@ -231,11 +233,31 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Inspect the closed-issue or merged-PR run and current native state. Retry cleanup only if the issue is still closed with the intended reason; leave reopened work open. Resolve the named failure before retrying.',
     retainedState: 'Native state was preserved. Confirmed changes: {changed}; remaining required changes in the last verified plan: {remaining}. Unavailable reads do not establish completion.',
   }),
+  'progress-binary-evidence-unavailable': Object.freeze({
+    impact: 'Progress was not assessed because required binary or non-text contents cannot be reviewed. Unreviewed paths ({pathCount} total; {shownCount} shown; complete inventory in run details): {paths}.',
+    action: 'Inspect the intended pull request base and the pinned paths. Changed binary contents need reviewable source and provenance; file metadata or a successful build does not establish binary correctness.',
+    retainedState: 'Existing progress labels and assessments were preserved; no model assessment was made. Project verification remains a separate result.',
+  }),
+  'issue-workflow-admission-blocked': Object.freeze({
+    impact: 'Issue workflow {kind} was not admitted ({reason}). Fields or labels needing attention: {fields}.',
+    action: 'Correct the exact headings and populated values using the installed Issue Form, or remove conflicting workflow labels. If form and profile disagree, run copilot doctor and review issueWorkflows.fieldMappings. Rerun the workflow after repair.',
+    retainedState: 'No branch or planner was started. Issue configuration is unchanged; this run only reports the admission diagnostic.',
+  }),
+  'change-size-reconciliation-failed': Object.freeze({
+    impact: 'Size reconciliation stopped at {operation} for target #{targetNumber} (issue #{issueNumber}, configured Project position {projectIndex}; 0 means no Project). Provider: {providerStatus}; request: {providerReference}.',
+    action: 'Correct the named authorization, resource or contract error before rerunning the same workflow. For transient failures, wait for provider recovery or rate-limit reset. Reread the target: the failed operation may have applied remotely.',
+    retainedState: 'Completed effects were retained. Verified operations: {verifiedOperations}; PR Project sizes awaiting lifecycle linkage: {pendingProjectSizes}. The failed and later operations remain unverified; an optional Check Run warning is a separate publication stage.',
+  }),
   'approval-evidence-read-failed': Object.freeze({
     impact: 'Approval evidence could not be verified: {operation} ({reason}).',
     action: 'Inspect {permission} access for the runtime credential and the named evidence response. Correct authorization, missing-resource or schema errors before rerunning; retry transient failures only after provider recovery or rate-limit reset.',
     retainedState: 'No approval is authorized by this failed read. Existing PRs, reviews and completed external effects were preserved.',
 
+  }),
+  'deployment-publication-context-missing': Object.freeze({
+    impact: 'GitHub release creation stopped because its durable deployment operation was not available.',
+    action: 'Verify single-action-issue selects the existing launcher issue and restore its verified operation context. Retry the supported workflow with the same single-action-operation-id and single-action-version only after that state is available.',
+    retainedState: 'Existing persisted state and completed external effects were preserved; this attempt did not create a GitHub release.',
   }),
   'workspace-changes-rejected': Object.freeze({
     impact: 'The changes were rejected during workspace verification.',
@@ -244,23 +266,33 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
   }),
   'sdd-draft-case-identity-invalid': Object.freeze({
     impact: 'SDD publication stopped after one automatic repair: case IDs collide with an owning SDD or are ambiguous.',
-    action: 'Review the draft tables; use distinct fully qualified case IDs and preserve the baseline inventory. Retry the same issue workflow.',
+    action: 'Review the safe validation diagnostics in the issue status card; use distinct fully qualified case IDs and preserve the baseline inventory. Retry the same issue workflow.',
     retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
   }),
   'sdd-draft-case-budget-invalid': Object.freeze({
     impact: 'SDD publication stopped after one automatic repair: per-area allocations disagree with the distinct case inventory.',
-    action: 'Review the draft tables; reconcile each area and the total with the enumerated cases. Retry the same issue workflow.',
+    action: 'Review the safe validation diagnostics in the issue status card; reconcile each area and the total with the enumerated cases. Retry the same issue workflow.',
     retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
   }),
   'sdd-draft-requirement-mapping-invalid': Object.freeze({
     impact: 'SDD publication stopped after one automatic repair: requirements and case mappings are incomplete or inconsistent.',
-    action: 'Review the draft tables; map every requirement to defined cases and match the reverse links. Retry the same issue workflow.',
+    action: 'Review the safe validation diagnostics in the issue status card; map every requirement to defined cases and match the reverse links. Retry the same issue workflow.',
     retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
   }),
   'sdd-draft-repository-path-invalid': Object.freeze({
     impact: 'SDD publication stopped after one automatic repair: cited repository paths cannot be verified at the immutable base.',
-    action: 'Review the draft tables; correct existing paths or explicitly declare intended new files. Retry the same issue workflow.',
+    action: 'Review the safe validation diagnostics in the issue status card; correct existing paths or explicitly declare intended new files. Retry the same issue workflow.',
     retainedState: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
+  }),
+  'sdd-catalog-unsupported-profile': Object.freeze({
+    impact: 'SDD preparation stopped before model analysis because the repository selected a catalog profile unsupported by the installed publication adapter.',
+    action: 'Review catalog profile support in the SDD guide. Preserve the native schema, readiness, requirements, evidence and blockers; have a maintainer provide a reviewed compatible adapter, then retry this same issue.',
+    retainedState: 'The repository catalog, answers and published SDDs remain unchanged; no specification or branch was published by this attempt.',
+  }),
+  'sdd-catalog-format-invalid': Object.freeze({
+    impact: 'SDD preparation stopped before ownership operations because the catalog cannot establish one valid supported profile and unique owner paths.',
+    action: 'Validate the catalog JSON, supported profile, required metadata and normalized unique owner-path arrays. Preserve repository-owned readiness rules and retry the same issue after maintainer review.',
+    retainedState: 'The source catalog, answers and published SDDs remain unchanged; no automatic catalog conversion was attempted.',
   }),
   'sdd-draft-format-invalid': Object.freeze({
     impact: 'SDD preparation stopped because the draft still lacked required headings or a numeric test budget after one automatic repair.',
@@ -271,6 +303,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'SDD preparation stopped because the draft remained too large after one automatic size repair.',
     action: 'Retry SDD preparation with a proportional appendix or an approved companion specification.',
     retainedState: 'Existing answers and published SDDs were preserved; no draft was published.',
+  }),
+  'branch-sync-verification-failed': Object.freeze({
+    impact: 'Branch synchronization stopped at verification command {commandIndex} ({command}): stage {stage}, reason {reason}.',
+    action: 'Inspect the failed stage in the linked workflow logs. For dependencies, provision the source Node/pnpm toolchain and repair the frozen candidate workspace graph; for setup/runtime, repair the same-job prerequisites; for command failures, correct the configured verifier. Then retry {syncCommand}. Blind retries do not repair a graph mismatch.',
+    retainedState: 'No synchronization commit or push was attempted. Original head: {childSha}. Local rollback: {restoration}; restored means the original head was verified, unverified requires operator inspection before retrying.',
   }),
   'branch-sync-resolution-invalid': Object.freeze({
     impact: 'Branch synchronization stopped because workspace validation rejected the resolution ({validationCode}).',
@@ -325,6 +362,7 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
 });
 
 const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
+  ...SPANISH_COMMAND_VALIDATION_CONTENT,
   'stored-configuration-schema-missing': Object.freeze({
     impact: 'La automatización se detuvo para la issue/PR #{issueNumber}: la configuración almacenada no tiene versión de esquema; se requiere la versión {expectedVersion}.',
     action: STORED_CONFIGURATION_ACTION_ES,
@@ -345,11 +383,31 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Revisa la ejecución de cierre o de la PR fusionada y el estado nativo actual. Reintenta la limpieza solo si la issue sigue cerrada con el motivo previsto; conserva abierto el trabajo reabierto. Resuelve el fallo indicado antes de reintentar.',
     retainedState: 'Se conservó el estado nativo. Cambios confirmados: {changed}; cambios pendientes en el último plan verificado: {remaining}. Una lectura no disponible no demuestra que haya finalizado.',
   }),
+  'progress-binary-evidence-unavailable': Object.freeze({
+    impact: 'No se evaluó el progreso porque no se pueden revisar los contenidos binarios o no textuales necesarios. Rutas sin revisar ({pathCount} en total; {shownCount} mostradas; inventario completo en los detalles de ejecución): {paths}.',
+    action: 'Inspecciona la base prevista de la pull request y las rutas fijadas. Los contenidos binarios cambiados necesitan fuentes revisables y procedencia; los metadatos o un build correcto no prueban la corrección del binario.',
+    retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones; no se realizó ninguna evaluación del modelo. La verificación del proyecto sigue siendo un resultado independiente.',
+  }),
+  'issue-workflow-admission-blocked': Object.freeze({
+    impact: 'La issue no fue admitida en el flujo {kind} ({reason}). Campos o etiquetas que requieren atención: {fields}.',
+    action: 'Corrige los encabezados exactos y sus valores con el formulario instalado, o elimina las etiquetas de flujo incompatibles. Si formulario y perfil discrepan, ejecuta copilot doctor y revisa issueWorkflows.fieldMappings. Vuelve a ejecutar el workflow tras la corrección.',
+    retainedState: 'No se inició ninguna rama ni planificador. La configuración de la issue permanece igual; esta ejecución solo informa del diagnóstico de admisión.',
+  }),
+  'change-size-reconciliation-failed': Object.freeze({
+    impact: 'La reconciliación de tamaño se detuvo en {operation} para el destino #{targetNumber} (issue #{issueNumber}, posición del Project configurado {projectIndex}; 0 indica sin Project). Proveedor: {providerStatus}; petición: {providerReference}.',
+    action: 'Corrige el error de autorización, recurso o contrato antes de reejecutar el mismo workflow. Ante fallos transitorios, espera a la recuperación del proveedor o del límite. Relee el destino: la operación fallida puede haberse aplicado remotamente.',
+    retainedState: 'Se conservaron los efectos completados. Operaciones verificadas: {verifiedOperations}; tamaños de PR en Projects pendientes de vinculación: {pendingProjectSizes}. La operación fallida y las posteriores siguen sin verificar; un aviso del Check Run opcional corresponde a otra etapa de publicación.',
+  }),
   'approval-evidence-read-failed': Object.freeze({
     impact: 'No se pudo verificar la evidencia de aprobación: {operation} ({reason}).',
     action: 'Comprueba el acceso {permission} de la credencial de ejecución y la respuesta indicada. Corrige los errores de autorización, recurso o esquema antes de reejecutar; reintenta los fallos transitorios solo tras recuperarse el proveedor o restablecerse el límite.',
     retainedState: 'Esta lectura fallida no autoriza ninguna aprobación. Se conservaron las PRs, revisiones y efectos externos completados.',
 
+  }),
+  'deployment-publication-context-missing': Object.freeze({
+    impact: 'La creación de la release de GitHub se detuvo porque no estaba disponible su operación de despliegue persistida.',
+    action: 'Comprueba que single-action-issue apunta a la issue existente y restaura el contexto verificado de su operación. Reintenta el workflow compatible con el mismo single-action-operation-id y single-action-version solo cuando ese estado esté disponible.',
+    retainedState: 'Se conservaron el estado persistido y los efectos externos completados; este intento no creó una release de GitHub.',
   }),
   'workspace-changes-rejected': Object.freeze({
     impact: 'Los cambios se rechazaron durante la verificación del espacio de trabajo.',
@@ -358,23 +416,33 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
   }),
   'sdd-draft-case-identity-invalid': Object.freeze({
     impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: los identificadores de casos coinciden con un SDD existente o son ambiguos.',
-    action: 'Revisa las tablas del borrador; usa identificadores completos y distintos y conserva el inventario original. Reintenta el workflow de la misma incidencia.',
+    action: 'Revisa los diagnósticos seguros de validación de la tarjeta de estado; usa identificadores completos y distintos y conserva el inventario original. Reintenta el workflow de la misma incidencia.',
     retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
   }),
   'sdd-draft-case-budget-invalid': Object.freeze({
     impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: las asignaciones por área no coinciden con el inventario de casos distintos.',
-    action: 'Revisa las tablas del borrador; reconcilia cada área y el total con los casos enumerados. Reintenta el workflow de la misma incidencia.',
+    action: 'Revisa los diagnósticos seguros de validación de la tarjeta de estado; reconcilia cada área y el total con los casos enumerados. Reintenta el workflow de la misma incidencia.',
     retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
   }),
   'sdd-draft-requirement-mapping-invalid': Object.freeze({
     impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: los requisitos y sus casos están incompletos o son inconsistentes.',
-    action: 'Revisa las tablas del borrador; vincula cada requisito a casos definidos y comprueba los enlaces inversos. Reintenta el workflow de la misma incidencia.',
+    action: 'Revisa los diagnósticos seguros de validación de la tarjeta de estado; vincula cada requisito a casos definidos y comprueba los enlaces inversos. Reintenta el workflow de la misma incidencia.',
     retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
   }),
   'sdd-draft-repository-path-invalid': Object.freeze({
     impact: 'La publicación del SDD se detuvo tras un intento automático de corrección: no se pueden verificar las rutas citadas en la revisión base inmutable.',
-    action: 'Revisa las tablas del borrador; corrige las rutas existentes o declara explícitamente los archivos nuevos previstos. Reintenta el workflow de la misma incidencia.',
+    action: 'Revisa los diagnósticos seguros de validación de la tarjeta de estado; corrige las rutas existentes o declara explícitamente los archivos nuevos previstos. Reintenta el workflow de la misma incidencia.',
     retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador. Estas comprobaciones no demuestran la aceptación en ejecución.',
+  }),
+  'sdd-catalog-unsupported-profile': Object.freeze({
+    impact: 'La preparación del SDD se detuvo antes del análisis del modelo porque el repositorio seleccionó un perfil de catálogo que el adaptador de publicación instalado no admite.',
+    action: 'Revisa los perfiles admitidos en la guía de SDD. Conserva el esquema nativo, los estados, requisitos, evidencias y bloqueos; pide a un mantenedor un adaptador compatible revisado y reintenta esta misma incidencia.',
+    retainedState: 'El catálogo, las respuestas y los SDD publicados permanecen intactos; este intento no publicó ninguna especificación ni rama.',
+  }),
+  'sdd-catalog-format-invalid': Object.freeze({
+    impact: 'La preparación del SDD se detuvo antes de las operaciones de propiedad porque el catálogo no permite establecer un único perfil admitido con rutas de propiedad válidas y únicas.',
+    action: 'Valida el JSON del catálogo, el perfil admitido, los metadatos obligatorios y las listas de rutas de propiedad normalizadas y únicas. Conserva las reglas de preparación del repositorio y reintenta la misma incidencia tras la revisión de un mantenedor.',
+    retainedState: 'El catálogo de origen, las respuestas y los SDD publicados permanecen intactos; no se intentó convertir el catálogo automáticamente.',
   }),
   'sdd-draft-format-invalid': Object.freeze({
     impact: 'La preparación del SDD se detuvo porque seguían faltando secciones obligatorias o un presupuesto numérico de pruebas tras un intento automático de corrección.',
@@ -385,6 +453,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'La preparación del SDD se detuvo porque el borrador seguía siendo demasiado largo tras un intento automático de reducción.',
     action: 'Reintenta la preparación del SDD con un apéndice proporcional o una especificación complementaria aprobada.',
     retainedState: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',
+  }),
+  'branch-sync-verification-failed': Object.freeze({
+    impact: 'La sincronización se detuvo en el comando de verificación {commandIndex} ({command}): fase {stage}, motivo {reason}.',
+    action: 'Revisa la fase fallida en los logs del workflow enlazado. Para dependencias, prepara Node/pnpm del repositorio fuente y corrige el grafo congelado del candidato; para setup/runtime, corrige los requisitos del mismo job; para fallos del comando, corrige el verificador configurado. Después reintenta {syncCommand}. Repetir sin cambios no corrige un grafo incompatible.',
+    retainedState: 'No se intentó crear ni subir un commit de sincronización. Head original: {childSha}. Rollback local: {restoration}; restored confirma el head original, unverified requiere inspección del operador antes de reintentar.',
   }),
   'branch-sync-resolution-invalid': Object.freeze({
     impact: 'La sincronización se detuvo porque la validación del repositorio rechazó la resolución ({validationCode}).',

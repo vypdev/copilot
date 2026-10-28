@@ -1,3 +1,6 @@
+import { readIssueWorkflowFields } from './issue_workflow_body';
+import { normalizeWorkflowFieldMappings, type WorkflowFieldMappings } from './issue_workflow_field_mapping';
+import { hasDuplicateJsonObjectKeys } from './strict_json_keys';
 /** Stable workflow identifiers used by setup, generated guidance, and Actions. */
 export type IssueWorkflowKind =
   | 'feature'
@@ -11,6 +14,12 @@ export type IssueWorkflowKind =
 export const ISSUE_WORKFLOW_KINDS: readonly IssueWorkflowKind[] = [
   'feature', 'bugfix', 'documentation', 'chore', 'help', 'hotfix', 'release',
 ];
+
+/** Canonical values shared by admission, form inspection and deterministic readers. */
+export const ISSUE_WORKFLOW_RELEASE_TYPES = Object.freeze(['Patch', 'Minor', 'Major'] as const);
+export function parseIssueWorkflowReleaseType(value: string): typeof ISSUE_WORKFLOW_RELEASE_TYPES[number] | undefined {
+  return ISSUE_WORKFLOW_RELEASE_TYPES.find(type => type.toLowerCase() === value.trim().toLowerCase());
+}
 
 export interface IssueWorkflowDefinition {
   readonly id: IssueWorkflowKind;
@@ -57,17 +66,18 @@ export const ISSUE_WORKFLOW_CATALOG: Readonly<Record<IssueWorkflowKind, IssueWor
   release: {
     id: 'release', label: 'Release', formFile: 'release.yml', nativeIssueType: 'Release', labels: ['release'], branchManaged: true,
     requiredHeadings: ['Release Type', 'Release Version', 'Changelog', 'Additional Context'],
-    requiredValueHeadings: ['Changelog'],
+    requiredValueHeadings: ['Release Type', 'Changelog'],
   },
 };
 
 export interface IssueWorkflowProfile {
-  readonly schemaVersion: 1;
+  readonly schemaVersion: 1 | 2;
   readonly enabled: readonly IssueWorkflowKind[];
+  readonly fieldMappings?: WorkflowFieldMappings<IssueWorkflowKind>;
 }
 
 const ISSUE_WORKFLOW_PROFILE_MAX_BYTES = 4096;
-const ISSUE_WORKFLOW_PROFILE_KEYS = new Set(['schemaVersion', 'enabled']);
+const ISSUE_WORKFLOW_PROFILE_KEYS = new Set(['schemaVersion', 'enabled', 'fieldMappings']);
 
 export type IssueWorkflowProfileParseResult =
   | { readonly profile: IssueWorkflowProfile }
@@ -100,11 +110,14 @@ export const ALL_ISSUE_WORKFLOWS: IssueWorkflowProfile = Object.freeze({
   enabled: Object.freeze([...ISSUE_WORKFLOW_KINDS]),
 });
 
-export function createIssueWorkflowProfile(enabled: readonly IssueWorkflowKind[]): IssueWorkflowProfile {
+export function createIssueWorkflowProfile(enabled: readonly IssueWorkflowKind[], fieldMappings?: WorkflowFieldMappings<IssueWorkflowKind>): IssueWorkflowProfile {
   const selected = new Set(enabled);
+  const ordered = ISSUE_WORKFLOW_KINDS.filter(kind => selected.has(kind));
+  const mappings = normalizeWorkflowFieldMappings(fieldMappings, ISSUE_WORKFLOW_CATALOG, ordered);
   return Object.freeze({
-    schemaVersion: 1 as const,
-    enabled: Object.freeze(ISSUE_WORKFLOW_KINDS.filter(kind => selected.has(kind))),
+    schemaVersion: mappings ? 2 as const : 1 as const,
+    enabled: Object.freeze(ordered),
+    ...(mappings ? { fieldMappings: mappings } : {}),
   });
 }
 
@@ -116,11 +129,14 @@ export function parseIssueWorkflowProfile(raw: string | undefined): IssueWorkflo
   }
   let parsed: unknown;
   try { parsed = JSON.parse(raw); } catch { return { error: 'Issue workflow profile must be valid JSON.' }; }
+  if (hasDuplicateJsonObjectKeys(raw)) return { error: 'Issue workflow profile cannot contain duplicate JSON keys.' };
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { error: 'Issue workflow profile must be an object.' };
   const value = parsed as Record<string, unknown>;
   const unknownKeys = Object.keys(value).filter(key => !ISSUE_WORKFLOW_PROFILE_KEYS.has(key));
   if (unknownKeys.length > 0) return { error: `Unknown issue workflow profile field(s): ${unknownKeys.join(', ')}.` };
-  if (value.schemaVersion !== 1) return { error: 'Issue workflow profile schemaVersion must be 1.' };
+  if (value.schemaVersion !== 1 && value.schemaVersion !== 2) return { error: 'Issue workflow profile schemaVersion must be 1 or 2.' };
+  if (value.schemaVersion === 1 && value.fieldMappings !== undefined) return { error: 'Issue field mappings require profile schemaVersion 2.' };
+  if (value.schemaVersion === 2 && value.fieldMappings === undefined) return { error: 'Profile schemaVersion 2 requires explicit fieldMappings.' };
   if (!Array.isArray(value.enabled) || value.enabled.some(item => typeof item !== 'string')) {
     return { error: 'Issue workflow profile enabled must be an array of workflow IDs.' };
   }
@@ -128,11 +144,15 @@ export function parseIssueWorkflowProfile(raw: string | undefined): IssueWorkflo
   const unknown = enabled.filter(kind => !ISSUE_WORKFLOW_KINDS.includes(kind as IssueWorkflowKind));
   if (unknown.length > 0) return { error: `Unknown issue workflow(s): ${unknown.join(', ')}.` };
   if (new Set(enabled).size !== enabled.length) return { error: 'Issue workflow profile cannot contain duplicate workflow IDs.' };
-  return { profile: createIssueWorkflowProfile(enabled as IssueWorkflowKind[]) };
+  try {
+    const profile = createIssueWorkflowProfile(enabled as IssueWorkflowKind[], value.fieldMappings as WorkflowFieldMappings<IssueWorkflowKind> | undefined);
+    if (value.schemaVersion === 2 && profile.schemaVersion !== 2) return { error: 'Profile schemaVersion 2 requires nonempty fieldMappings.' };
+    return { profile };
+  } catch (cause) { return { error: (cause as Error).message }; }
 }
 
 export function serializeIssueWorkflowProfile(profile: IssueWorkflowProfile): string {
-  return JSON.stringify({ schemaVersion: 1, enabled: ISSUE_WORKFLOW_KINDS.filter(kind => profile.enabled.includes(kind)) });
+  return JSON.stringify(createIssueWorkflowProfile(profile.enabled, profile.fieldMappings));
 }
 
 export function classifyIssueWorkflow(
@@ -154,61 +174,58 @@ export function classifyIssueWorkflow(
   if (!profile.enabled.includes(kind)) return { status: 'disabled', kind };
   if (!validateBody) return { status: 'eligible', kind };
   const issueBody = body ?? '';
-  const requiredHeadings = ISSUE_WORKFLOW_CATALOG[kind].requiredHeadings;
-  const duplicateHeadings = requiredHeadings.filter(heading => markdownHeadingCount(issueBody, heading) > 1);
+  const requiredHeadings = issueWorkflowRequiredHeadings(profile, kind);
+  const sections = readIssueWorkflowFields(issueBody, requiredHeadings);
+  const duplicateHeadings = sections.filter(field => field.count > 1).map(field => field.heading);
   if (duplicateHeadings.length > 0) {
     return { status: 'invalid', kind, missingHeadings: [], invalidFields: duplicateHeadings.map(heading => `${heading} (duplicate)`) };
   }
-  const missingHeadings = requiredHeadings.filter(heading => !hasMarkdownHeading(issueBody, heading));
+  const missingHeadings = sections.filter(field => field.count === 0).map(field => field.heading);
   if (missingHeadings.length > 0) return { status: 'invalid', kind, missingHeadings };
-  const invalidFields = invalidIssueWorkflowFields(kind, issueBody);
+  const invalidFields = invalidIssueWorkflowFields(kind, new Map(sections.map(field => [field.heading, field.value])), profile);
   if (invalidFields.length > 0) return { status: 'invalid', kind, missingHeadings: [], invalidFields };
   return { status: 'eligible', kind };
 }
 
 export function hasMarkdownHeading(body: string, heading: string): boolean {
-  return markdownHeadingCount(body, heading) > 0;
+  return readIssueWorkflowFields(body, [heading])[0].count > 0;
 }
 
 export function issueWorkflowFormFiles(profile: IssueWorkflowProfile): readonly string[] {
   return ISSUE_WORKFLOW_KINDS.filter(kind => profile.enabled.includes(kind)).map(kind => ISSUE_WORKFLOW_CATALOG[kind].formFile);
 }
 
-function invalidIssueWorkflowFields(kind: IssueWorkflowKind, body: string): readonly string[] {
-  const value = (heading: string) => markdownSectionValue(body, heading);
+function invalidIssueWorkflowFields(kind: IssueWorkflowKind, fields: ReadonlyMap<string, string>, profile: IssueWorkflowProfile): readonly string[] {
+  const mapped = (heading: string) => issueWorkflowHeading(profile, kind, heading);
+  // Classification already proved every required heading is present and unique.
+  const value = (heading: string) => fields.get(mapped(heading))!;
   const invalid: string[] = [];
   if (kind === 'release') {
-    if (!/^(patch|minor|major)$/iu.test(value('Release Type'))) invalid.push('Release Type');
-    if (!value('Changelog')) invalid.push('Changelog');
-    if (!isAutomaticOrVersion(value('Release Version'))) invalid.push('Release Version');
+    if (!parseIssueWorkflowReleaseType(value('Release Type'))) invalid.push(mapped('Release Type'));
+    if (!value('Changelog')) invalid.push(mapped('Changelog'));
+    if (!isAutomaticOrVersion(value('Release Version'))) invalid.push(mapped('Release Version'));
   }
   if (kind === 'hotfix') {
-    if (!isAutomaticOrVersion(value('Base Version'))) invalid.push('Base Version');
-    if (!isAutomaticOrVersion(value('Hotfix Version'))) invalid.push('Hotfix Version');
-    if (!value('Issue Description')) invalid.push('Issue Description');
-    if (!value('Hotfix Solution')) invalid.push('Hotfix Solution');
+    if (!isAutomaticOrVersion(value('Base Version'))) invalid.push(mapped('Base Version'));
+    if (!isAutomaticOrVersion(value('Hotfix Version'))) invalid.push(mapped('Hotfix Version'));
+    if (!value('Issue Description')) invalid.push(mapped('Issue Description'));
+    if (!value('Hotfix Solution')) invalid.push(mapped('Hotfix Solution'));
   }
   for (const heading of ISSUE_WORKFLOW_CATALOG[kind].requiredValueHeadings) {
-    if (!value(heading) && !invalid.includes(heading)) invalid.push(heading);
+    if (!value(heading) && !invalid.includes(mapped(heading))) invalid.push(mapped(heading));
   }
   return invalid;
 }
 
-function markdownHeadingCount(body: string, heading: string): number {
-  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return [...body.matchAll(new RegExp(`^#{1,6}\\s+${escaped}\\s*$`, 'gmi'))].length;
-}
-
-function markdownSectionValue(body: string, heading: string): string {
-  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const headingMatch = new RegExp(`^#{1,6}\\s+${escaped}\\s*$`, 'im').exec(body)!;
-  const sectionStart = headingMatch.index + headingMatch[0].length;
-  const remainder = body.slice(sectionStart);
-  const nextHeading = /^#{1,6}\s+/im.exec(remainder);
-  const section = nextHeading?.index === undefined ? remainder : remainder.slice(0, nextHeading.index);
-  return section.replace(/<!--[\s\S]*?-->/g, '').trim();
-}
-
-function isAutomaticOrVersion(value: string): boolean {
+export function isAutomaticOrVersion(value: string): boolean {
   return /^automatic$/iu.test(value) || /^v?\d+\.\d+\.\d+$/u.test(value);
 }
+
+
+export function issueWorkflowHeading(profile: IssueWorkflowProfile, kind: IssueWorkflowKind, canonical: string): string {
+  return profile.fieldMappings?.[kind]?.[canonical] ?? canonical;
+}
+export function issueWorkflowRequiredHeadings(profile: IssueWorkflowProfile, kind: IssueWorkflowKind): readonly string[] {
+  return Object.freeze(ISSUE_WORKFLOW_CATALOG[kind].requiredHeadings.map(heading => issueWorkflowHeading(profile, kind, heading)));
+}
+export type IssueWorkflowFieldMappings = WorkflowFieldMappings<IssueWorkflowKind>;

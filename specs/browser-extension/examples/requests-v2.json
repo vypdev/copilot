@@ -1,0 +1,220 @@
+{
+  "schemaVersion": 2,
+  "repositoryId": 1,
+  "producerActorId": 2,
+  "commands": [
+    {
+      "name": "help",
+      "contexts": [
+        "conversation"
+      ],
+      "requiresWriteActor": false,
+      "requiresVerifiedBranch": false,
+      "effect": "publication",
+      "agent": "never"
+    },
+    {
+      "name": "plan",
+      "contexts": [
+        "conversation"
+      ],
+      "requiresWriteActor": false,
+      "requiresVerifiedBranch": false,
+      "effect": "publication",
+      "agent": "may-run"
+    },
+    {
+      "name": "clarify",
+      "contexts": [
+        "conversation"
+      ],
+      "requiresWriteActor": false,
+      "requiresVerifiedBranch": false,
+      "effect": "publication",
+      "agent": "may-run"
+    },
+    {
+      "name": "estimate",
+      "contexts": [
+        "conversation"
+      ],
+      "requiresWriteActor": false,
+      "requiresVerifiedBranch": false,
+      "effect": "publication",
+      "agent": "may-run"
+    },
+    {
+      "name": "test-plan",
+      "contexts": [
+        "conversation"
+      ],
+      "requiresWriteActor": false,
+      "requiresVerifiedBranch": false,
+      "effect": "publication",
+      "agent": "may-run"
+    },
+    {
+      "name": "explain",
+      "contexts": [
+        "conversation"
+      ],
+      "requiresWriteActor": false,
+      "requiresVerifiedBranch": false,
+      "effect": "publication",
+      "agent": "may-run"
+    },
+    {
+      "name": "diagnose",
+      "contexts": [
+        "conversation"
+      ],
+      "requiresWriteActor": false,
+      "requiresVerifiedBranch": false,
+      "effect": "publication",
+      "agent": "may-run"
+    },
+    {
+      "name": "analyze",
+      "contexts": [
+        "conversation"
+      ],
+      "requiresWriteActor": false,
+      "requiresVerifiedBranch": false,
+      "effect": "publication",
+      "agent": "may-run"
+    },
+    {
+      "name": "review",
+      "contexts": [
+        "conversation"
+      ],
+      "requiresWriteActor": false,
+      "requiresVerifiedBranch": false,
+      "effect": "publication",
+      "agent": "may-run"
+    },
+    {
+      "name": "findings",
+      "contexts": [
+        "conversation"
+      ],
+      "requiresWriteActor": false,
+      "requiresVerifiedBranch": false,
+      "effect": "publication",
+      "agent": "may-run"
+    },
+    {
+      "name": "recheck",
+      "contexts": [
+        "conversation"
+      ],
+      "requiresWriteActor": false,
+      "requiresVerifiedBranch": false,
+      "effect": "publication",
+      "agent": "may-run"
+    },
+    {
+      "name": "sdd-diff",
+      "contexts": [
+        "conversation"
+      ],
+      "requiresWriteActor": false,
+      "requiresVerifiedBranch": false,
+      "effect": "publication",
+      "agent": "never"
+    },
+    {
+      "name": "status",
+      "contexts": [
+        "conversation"
+      ],
+      "requiresWriteActor": false,
+      "requiresVerifiedBranch": false,
+      "effect": "publication",
+      "agent": "never"
+    },
+    {
+      "name": "doctor",
+      "contexts": [
+        "conversation"
+      ],
+      "requiresWriteActor": false,
+      "requiresVerifiedBranch": false,
+      "effect": "publication",
+      "agent": "never"
+    },
+    {
+      "name": "history",
+      "contexts": [
+        "conversation"
+      ],
+      "requiresWriteActor": false,
+      "requiresVerifiedBranch": false,
+      "effect": "publication",
+      "agent": "never"
+    },
+    {
+      "name": "description",
+      "contexts": [
+        "conversation"
+      ],
+      "requiresWriteActor": false,
+      "requiresVerifiedBranch": false,
+      "effect": "pr-description",
+      "agent": "may-run"
+    },
+    {
+      "name": "fix",
+      "contexts": [
+        "review-thread"
+      ],
+      "requiresWriteActor": true,
+      "requiresVerifiedBranch": true,
+      "effect": "files",
+      "agent": "may-run"
+    },
+    {
+      "name": "dismiss",
+      "contexts": [
+        "conversation",
+        "review-thread"
+      ],
+      "requiresWriteActor": true,
+      "requiresVerifiedBranch": false,
+      "effect": "finding-state",
+      "agent": "never"
+    },
+    {
+      "name": "implement",
+      "contexts": [
+        "review-thread"
+      ],
+      "requiresWriteActor": true,
+      "requiresVerifiedBranch": true,
+      "effect": "files",
+      "agent": "may-run"
+    },
+    {
+      "name": "remember",
+      "contexts": [
+        "conversation",
+        "review-thread"
+      ],
+      "requiresWriteActor": true,
+      "requiresVerifiedBranch": true,
+      "effect": "files",
+      "agent": "never"
+    },
+    {
+      "name": "sync-branch",
+      "contexts": [
+        "conversation",
+        "review-thread"
+      ],
+      "requiresWriteActor": true,
+      "requiresVerifiedBranch": true,
+      "effect": "files",
+      "agent": "conditional"
+    }
+  ]
+}

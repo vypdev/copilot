@@ -1,3 +1,4 @@
+import { runIssueEventAdmissionAction } from './issue_event_admission_action';
 import { runNativeVerificationEntry } from '../infrastructure/native_verification_controller';
 import { createNativeStatusReadPort } from '../infrastructure/composition/issue_completion_composition_root';
 import * as core from '@actions/core';
@@ -43,6 +44,12 @@ import { isBotPullRequestAnalysisEvent } from '../application/policies/bot_pull_
 import { createPullRequestUseCaseCompositionRoot } from '../infrastructure/composition/pull_request_use_case_composition_root';
 
 export async function runGitHubAction(): Promise<void> {
+    if (process.env.COPILOT_ISSUE_ADMISSION_BOOTSTRAP === '1') {
+        // Only the isolated bootstrap owns this input; ordinary JSON input maps
+        // must not redirect the mutation entry into a successful read-only no-op.
+        await runIssueEventAdmissionAction(core.getInput('issue-event-admission-mode', { required: true }));
+        return;
+    }
     if (isEnabledInput(getGithubActionInput('pr-approval-observer'))) {
         await runPullRequestApprovalAction(getGithubActionInput(INPUT_KEYS.TOKEN, { required: true }));
         return;
@@ -255,6 +262,6 @@ function earlyGithubActionErrorMessage(): ApplicationErrorMessageReader {
 
 // Only auto-run when executed as the action entry (not when imported by tests)
 /* istanbul ignore next -- the bundled production entry is covered by the Action smoke path. */
-if (typeof process.env.JEST_WORKER_ID === 'undefined') {
+if (typeof process.env.JEST_WORKER_ID === 'undefined' && process.env.COPILOT_ISSUE_ADMISSION_BOOTSTRAP !== '1') {
     void runGitHubActionEntry(() => runNativeVerificationEntry(runGitHubActionEntry));
 }

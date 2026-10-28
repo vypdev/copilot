@@ -692,3 +692,12 @@ All six configuration callbacks forward the opt-in, while only issue/review-comm
 mutation compositions execute it. Push analysis does not become a verifier.
 Native platform acceptance runs real `uses`/`run` on Linux, Windows and macOS;
 local real-Git integration covers exact managed-ref push and abort behavior.
+
+### Read-only candidate recovery boundary
+
+`deployment-recovery/` ships a separate Node bundle whose only entrypoint is native
+candidate preflight. Its composition exposes launcher, workflow-run and candidate
+inspection reads; no agent, preparation writer or completion persistence is loaded.
+The final serialized promotion handler uses revision-fenced replacement and native
+producer-step proof. Domain policy owns immutable eligibility/history; adapters own
+authenticated GitHub evidence. See the unpublished-candidate replacement SDD.

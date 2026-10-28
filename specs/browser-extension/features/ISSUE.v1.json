@@ -1,0 +1,646 @@
+{
+  "id": "ISSUE",
+  "title": "Issues, discussions and collaboration",
+  "features": [
+    {
+      "id": "BEX-ISSUE-01",
+      "family": "ISSUE",
+      "title": "Issue triage summary",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Issue header and lists",
+      "userOutcome": "Show observed state, ownership, labels, milestone and next human action without inferring priority.",
+      "boundaryAcceptance": "Denied metadata cannot be displayed as unassigned or unlabeled.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-ISSUE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-ISSUE01-C01",
+          "scenario": "Given the eligible issue header and lists and verified input, choosing issue triage summary produces this observable result: Show observed state, ownership, labels, milestone and next human action without inferring priority."
+        },
+        {
+          "id": "bexp-ISSUE01-C02",
+          "scenario": "For issue triage summary, exercise the concrete boundary: Denied metadata cannot be displayed as unassigned or unlabeled."
+        },
+        {
+          "id": "bexp-ISSUE01-C03",
+          "scenario": "A denied, truncated or expired source for issue triage summary shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-ISSUE01-C04",
+          "scenario": "Changing the selected repository/account/revision while issue triage summary is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-ISSUE-02",
+      "family": "ISSUE",
+      "title": "Structured issue drafting",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Native issue forms",
+      "userOutcome": "Prepare an installed issue form with explicit user answers and validation hints.",
+      "boundaryAcceptance": "The extension does not silently replace an enabled form with a blank issue or submit it.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-ISSUE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-ISSUE02-C01",
+          "scenario": "Given the eligible native issue forms and verified input, choosing structured issue drafting produces this observable result: Prepare an installed issue form with explicit user answers and validation hints."
+        },
+        {
+          "id": "bexp-ISSUE02-C02",
+          "scenario": "For structured issue drafting, exercise the concrete boundary: The extension does not silently replace an enabled form with a blank issue or submit it."
+        },
+        {
+          "id": "bexp-ISSUE02-C03",
+          "scenario": "Opening structured issue drafting preserves all existing native form answers and requires human native submission; cancel performs no mutation."
+        },
+        {
+          "id": "bexp-ISSUE02-C04",
+          "scenario": "A changed installed form, target or required field while structured issue drafting is being prepared invalidates that preparation and preserves the existing native answers."
+        },
+        {
+          "id": "bexp-ISSUE02-C05",
+          "scenario": "Keyboard-only use of structured issue drafting announces the exact form, target and effect, restores focus on cancel and submits nothing from the extension."
+        }
+      ],
+      "nativeTarget": "control-handoff"
+    },
+    {
+      "id": "BEX-ISSUE-03",
+      "family": "ISSUE",
+      "title": "Related issue and PR navigation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Issue and PR sidebars",
+      "userOutcome": "Show native parent, sub-issue, dependency and closing-PR relationships when available.",
+      "boundaryAcceptance": "Textual mentions remain suggestions until the canonical relationship is verified.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-ISSUE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-ISSUE03-C01",
+          "scenario": "Given the eligible issue and pr sidebars and verified input, choosing related issue and pr navigation produces this observable result: Show native parent, sub-issue, dependency and closing-PR relationships when available."
+        },
+        {
+          "id": "bexp-ISSUE03-C02",
+          "scenario": "For related issue and pr navigation, exercise the concrete boundary: Textual mentions remain suggestions until the canonical relationship is verified."
+        },
+        {
+          "id": "bexp-ISSUE03-C03",
+          "scenario": "A denied, truncated or expired source for related issue and pr navigation shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-ISSUE03-C04",
+          "scenario": "Changing the selected repository/account/revision while related issue and pr navigation is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-ISSUE-04",
+      "family": "ISSUE",
+      "title": "Label and assignee adjustments",
+      "delivery": "required-for-product-acceptance",
+      "mode": "write",
+      "surface": "Issue and PR triage controls",
+      "userOutcome": "Preview and apply one explicit add/remove label or assignee change with current scope and read-back.",
+      "boundaryAcceptance": "Conflicting changes, missing write access and protected lifecycle labels route to native or Action-owned controls.",
+      "permissionProfile": "explicit-user-write",
+      "dataSource": "canonical target, separately authorized write identity and reviewed intent",
+      "freshnessRule": "final live target/permission/approval fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-ISSUE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-ISSUE04-C01",
+          "scenario": "Given the eligible issue and pr triage controls and verified input, choosing label and assignee adjustments produces this observable result: Preview and apply one explicit add/remove label or assignee change with current scope and read-back."
+        },
+        {
+          "id": "bexp-ISSUE04-C02",
+          "scenario": "For label and assignee adjustments, exercise the concrete boundary: Conflicting changes, missing write access and protected lifecycle labels route to native or Action-owned controls."
+        },
+        {
+          "id": "bexp-ISSUE04-C03",
+          "scenario": "Opening or refreshing label and assignee adjustments performs no write; a denied write grant leaves the repository unchanged."
+        },
+        {
+          "id": "bexp-ISSUE04-C04",
+          "scenario": "A changed target/head/current value after the preview for label and assignee adjustments invalidates approval and requires review again."
+        },
+        {
+          "id": "bexp-ISSUE04-C05",
+          "scenario": "A timeout after submitting label and assignee adjustments is reconciled through canonical state and is never retried blindly."
+        },
+        {
+          "id": "bexp-ISSUE04-C06",
+          "scenario": "A duplicate click or restored tab for label and assignee adjustments cannot reuse a consumed operation intent."
+        },
+        {
+          "id": "bexp-ISSUE04-C07",
+          "scenario": "After the provider acknowledges one label/assignee change, a denied read-back leaves that exact target acknowledged but verification unavailable; the UI cannot claim verified success, invent per-item failures or issue an automatic rollback."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-ISSUE-05",
+      "family": "ISSUE",
+      "title": "Milestone and project handoff",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Issue and PR sidebars",
+      "userOutcome": "Open a verified milestone or project destination and prepare the selected native adjustment.",
+      "boundaryAcceptance": "Unavailable Projects access does not trigger broader credential fallback.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-ISSUE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-ISSUE05-C01",
+          "scenario": "Given the eligible issue and pr sidebars and verified input, choosing milestone and project handoff produces this observable result: Open a verified milestone or project destination and prepare the selected native adjustment."
+        },
+        {
+          "id": "bexp-ISSUE05-C02",
+          "scenario": "For milestone and project handoff, exercise the concrete boundary: Unavailable Projects access does not trigger broader credential fallback."
+        },
+        {
+          "id": "bexp-ISSUE05-C03",
+          "scenario": "Opening milestone and project handoff preserves the current native selection/input and requires the human's native confirmation; cancel performs no mutation."
+        },
+        {
+          "id": "bexp-ISSUE05-C04",
+          "scenario": "A changed target, permission or selection while milestone and project handoff is being prepared invalidates the handoff and refreshes its exact scope."
+        },
+        {
+          "id": "bexp-ISSUE05-C05",
+          "scenario": "Keyboard-only use of milestone and project handoff announces the exact native destination and effect, returns focus on cancel and submits nothing from the extension."
+        }
+      ],
+      "nativeTarget": "control-handoff"
+    },
+    {
+      "id": "BEX-ISSUE-06",
+      "family": "ISSUE",
+      "title": "Duplicate and similarity research",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Issue search and triage",
+      "userOutcome": "Build explicit bounded searches from user-selected text and present source-linked candidate duplicates.",
+      "boundaryAcceptance": "Similarity is advisory and never closes or links an issue automatically.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-ISSUE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-ISSUE06-C01",
+          "scenario": "Given the eligible issue search and triage and verified input, choosing duplicate and similarity research produces this observable result: Build explicit bounded searches from user-selected text and present source-linked candidate duplicates."
+        },
+        {
+          "id": "bexp-ISSUE06-C02",
+          "scenario": "For duplicate and similarity research, exercise the concrete boundary: Similarity is advisory and never closes or links an issue automatically."
+        },
+        {
+          "id": "bexp-ISSUE06-C03",
+          "scenario": "A denied, truncated or expired source for duplicate and similarity research shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-ISSUE06-C04",
+          "scenario": "Changing the selected repository/account/revision while duplicate and similarity research is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-ISSUE-07",
+      "family": "ISSUE",
+      "title": "Conversation content navigation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "Long issues and discussions",
+      "userOutcome": "Navigate headings, decisions and loaded code blocks with source anchors and readable summaries of structure.",
+      "boundaryAcceptance": "Structural navigation never claims an AI interpretation was reviewed by a maintainer.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-ISSUE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-ISSUE07-C01",
+          "scenario": "Given the eligible long issues and discussions and verified input, choosing conversation content navigation produces this observable result: Navigate headings, decisions and loaded code blocks with source anchors and readable summaries of structure."
+        },
+        {
+          "id": "bexp-ISSUE07-C02",
+          "scenario": "For conversation content navigation, exercise the concrete boundary: Structural navigation never claims an AI interpretation was reviewed by a maintainer."
+        },
+        {
+          "id": "bexp-ISSUE07-C03",
+          "scenario": "After conversation content navigation mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-ISSUE-08",
+      "family": "ISSUE",
+      "title": "Personal issue annotations",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Issue and PR context",
+      "userOutcome": "Keep session-first personal notes and reminders with clear local/account ownership.",
+      "boundaryAcceptance": "Persistent local notes require explicit opt-in and are excluded from shared repository state.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-ISSUE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-ISSUE08-C01",
+          "scenario": "Given the eligible issue and pr context and verified input, choosing personal issue annotations produces this observable result: Keep session-first personal notes and reminders with clear local/account ownership."
+        },
+        {
+          "id": "bexp-ISSUE08-C02",
+          "scenario": "For personal issue annotations, exercise the concrete boundary: Persistent local notes require explicit opt-in and are excluded from shared repository state."
+        },
+        {
+          "id": "bexp-ISSUE08-C03",
+          "scenario": "An invalid or future-schema change to personal issue annotations preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-ISSUE08-C04",
+          "scenario": "Personal issue annotations survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-ISSUE-09",
+      "family": "ISSUE",
+      "title": "Cross-reference insertion",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Native editors",
+      "userOutcome": "Prepare canonical selected references as readable Markdown with a preview of the exact targets.",
+      "boundaryAcceptance": "Untrusted text cannot inject an extra bot command, mention or hidden marker.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-ISSUE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-ISSUE09-C01",
+          "scenario": "Given the eligible native editors and verified input, choosing cross-reference insertion produces this observable result: Prepare canonical selected references as readable Markdown with a preview of the exact targets."
+        },
+        {
+          "id": "bexp-ISSUE09-C02",
+          "scenario": "For cross-reference insertion, exercise the concrete boundary: Untrusted text cannot inject an extra bot command, mention or hidden marker."
+        },
+        {
+          "id": "bexp-ISSUE09-C03",
+          "scenario": "Cross-reference insertion with a nonempty native draft offers append/keep/cancel and never submits or overwrites it automatically."
+        },
+        {
+          "id": "bexp-ISSUE09-C04",
+          "scenario": "A changed target or revoked capability before cross-reference insertion prepares text cancels that preparation with a native source link."
+        },
+        {
+          "id": "bexp-ISSUE09-C05",
+          "scenario": "Keyboard-only use of cross-reference insertion announces its exact destination/effect, preserves literal operands and returns focus after cancellation."
+        }
+      ],
+      "nativeTarget": "human-composer"
+    },
+    {
+      "id": "BEX-ISSUE-10",
+      "family": "ISSUE",
+      "title": "Selected bulk triage",
+      "delivery": "required-for-product-acceptance",
+      "mode": "write",
+      "surface": "Issue and PR lists",
+      "userOutcome": "Review an explicit bounded selection and per-item label/assignee changes, then execute with item receipts.",
+      "boundaryAcceptance": "Selection never extends to unloaded pages; partial success and uncertain items remain separate.",
+      "permissionProfile": "explicit-user-write",
+      "dataSource": "canonical target, separately authorized write identity and reviewed intent",
+      "freshnessRule": "final live target/permission/approval fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-ISSUE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-ISSUE10-C01",
+          "scenario": "Given the eligible issue and pr lists and verified input, choosing selected bulk triage produces this observable result: Review an explicit bounded selection and per-item label/assignee changes, then execute with item receipts."
+        },
+        {
+          "id": "bexp-ISSUE10-C02",
+          "scenario": "For selected bulk triage, exercise the concrete boundary: Selection never extends to unloaded pages; partial success and uncertain items remain separate."
+        },
+        {
+          "id": "bexp-ISSUE10-C03",
+          "scenario": "Opening or refreshing selected bulk triage performs no write; a denied write grant leaves the repository unchanged."
+        },
+        {
+          "id": "bexp-ISSUE10-C04",
+          "scenario": "A changed target/head/current value after the preview for selected bulk triage invalidates approval and requires review again."
+        },
+        {
+          "id": "bexp-ISSUE10-C05",
+          "scenario": "A timeout after submitting selected bulk triage is reconciled through canonical state and is never retried blindly."
+        },
+        {
+          "id": "bexp-ISSUE10-C06",
+          "scenario": "A duplicate click or restored tab for selected bulk triage cannot reuse a consumed operation intent."
+        },
+        {
+          "id": "bexp-ISSUE10-C07",
+          "scenario": "A partially completed selection for selected bulk triage separates verified effects, failed items and uncertain items with no automatic rollback."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-ISSUE-11",
+      "family": "ISSUE",
+      "title": "Discussion and answer navigation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "local",
+      "surface": "GitHub Discussions",
+      "userOutcome": "Navigate loaded answers, categories and accepted-answer anchors while leaving moderation native.",
+      "boundaryAcceptance": "An accepted answer is not inferred from reactions or comment ordering.",
+      "permissionProfile": "page-local",
+      "dataSource": "visible DOM/URL and nonsecret preferences",
+      "freshnessRule": "mounted page generation",
+      "default": "available-with-eligible-page",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-ISSUE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-ISSUE11-C01",
+          "scenario": "Given the eligible github discussions and verified input, choosing discussion and answer navigation produces this observable result: Navigate loaded answers, categories and accepted-answer anchors while leaving moderation native."
+        },
+        {
+          "id": "bexp-ISSUE11-C02",
+          "scenario": "For discussion and answer navigation, exercise the concrete boundary: An accepted answer is not inferred from reactions or comment ordering."
+        },
+        {
+          "id": "bexp-ISSUE11-C03",
+          "scenario": "After discussion and answer navigation mounts, a native refresh and then disable restore native focus/content with no duplicate control or leaked resource."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-ISSUE-12",
+      "family": "ISSUE",
+      "title": "Issue activity and dependency views",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Issue overview",
+      "userOutcome": "Show source-linked dependency blockers and chronological milestones from available native evidence.",
+      "boundaryAcceptance": "Circular, incomplete or inaccessible relationships are represented explicitly.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-ISSUE"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-ISSUE12-C01",
+          "scenario": "Given the eligible issue overview and verified input, choosing issue activity and dependency views produces this observable result: Show source-linked dependency blockers and chronological milestones from available native evidence."
+        },
+        {
+          "id": "bexp-ISSUE12-C02",
+          "scenario": "For issue activity and dependency views, exercise the concrete boundary: Circular, incomplete or inaccessible relationships are represented explicitly."
+        },
+        {
+          "id": "bexp-ISSUE12-C03",
+          "scenario": "A denied, truncated or expired source for issue activity and dependency views shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-ISSUE12-C04",
+          "scenario": "Changing the selected repository/account/revision while issue activity and dependency views is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    }
+  ]
+}

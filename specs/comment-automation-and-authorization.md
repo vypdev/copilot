@@ -40,8 +40,10 @@ modify the wrong branch.
 ### 2.2 Current behavior
 
 1. Commands are recognized only at the beginning, case-insensitively, with a
-   2,000-character and 20-argument maximum.
-2. Unknown commands and missing required arguments return validation errors.
+   2,000-character maximum; structured commands allow at most 20 arguments.
+   Established prose/rule commands retain their argument-count exemption.
+2. Invalid commands return `validation.invalid-input` with a closed safe
+   cause and command-specific recovery; raw operands are never echoed.
 3. Explicit read-only tasks use fixed command-specific instructions: explain
    inspects the supplied file/symbol/behavior or states an access limitation;
    diagnose separates evidence from hypotheses; clarify identifies missing
@@ -88,8 +90,7 @@ modify the wrong branch.
 - Intentional contract: explicit commands first, exact mention boundary,
   capability-specific roles, mutation authorization, and safe fallback.
 - Known debt and limitations: natural-language intent and addressed-comment
-  translation depend on a configured agent and can be unavailable; localization of deterministic system errors is
-  incomplete; live comment UX evidence is not stored.
+  translation depend on a configured agent and can be unavailable; arbitrary-language copy depends on a validated catalog with atomic fallback; live comment UX evidence is not stored.
 - Unknown rationale: the historic command vocabulary is accepted as current
   product language, not evidence that every original name is optimal.
 - Proposed improvements: command aliases or richer approval workflows require a
@@ -366,7 +367,8 @@ branch. Finding dismissal and learned rules require explicit follow-up commands.
 | Semantic agent failure preservation | 3 | Timeout, cancellation and agent failure retain their exact code and correlation through the comment route |
 | Untracked-directory mutation boundary | 2 | Real Git reveals nested runtime/sensitive paths and rejects 101 files in one new directory before commit |
 | Bounded prose requests | 10 | Eight established prose/rule commands accept more than twenty words; implement and remember still reject oversized character input |
-| **Total** | **208** | no double counting |
+| Actionable rejected commands (#701) | 12 | Four parser boundaries, five distinct cause/recovery/privacy paths, three effect-free route/replay/corrected-retry cases; additional locale matrix below |
+| **Total** | **220** | no double counting |
 
 The 31 canonical remember/quoted-dismiss cases belong to the companion Bugbot SDD budget and are not counted again here.
 
@@ -548,3 +550,106 @@ they MUST NOT be rejected merely for containing more than twenty words.
 Structured commands retain the twenty-argument limit, including fix/dismiss
 finding identifiers. Parsing this prose does not grant mutation authority or
 change branch, sandbox, verification or publication rules.
+
+
+### Actionable command rejection — #701 (2026-10-26)
+
+**Evidence and decision.** PR #699 comment `6400237990` hid the parser's
+specific cause behind generic input advice. The originating recheck exceeded
+20 operands while remaining under 2,000 characters; a bare recheck succeeded.
+The intentional contract retains the complete grammar, admission, locale
+adaptation, authorizations and limits. This fix changes safe diagnosis and
+recovery only; it does not execute an invalid command or broaden accepted input.
+
+**Contract.** Domain parsing MUST return one closed diagnostic: command length,
+missing name, unknown name, argument count, unexpected arguments, missing
+arguments, finding quoting, review option format, review effort, review boolean,
+unknown review option, unknown synchronization option, or missing synchronization
+parent (13 total). A diagnostic contains only its reason and an admitted command
+name. Global length/name failures use the fixed help command. Reason/command
+pairs MUST be validated against the closed vocabulary; missing/extra variables,
+unknown commands and inconsistent pairs fail closed. Neither parser reasons nor
+serialized validation errors may interpolate the rejected command, option name,
+value, finding ID or explanatory prose.
+
+```mermaid
+flowchart LR
+  C[Addressed comment] --> P[Pure command parser]
+  P -->|invalid| E[Validated semantic recovery]
+  P -->|valid| O[Existing authorization and option parser]
+  O -->|invalid options| E
+  O -->|valid| X[Existing command route]
+  E --> L[Resolved locale and protected example]
+  L --> R[Existing correlated reply]
+```
+
+Text equivalent: an addressed comment is parsed; a syntax failure becomes a
+validated recovery descriptor. Valid command names retain existing authorization
+and option parsing. Invalid options use the same recovery boundary; valid
+requests continue through their existing route. Presentation resolves prose in
+the repository locale and inserts trusted syntax/destinations afterward, then
+uses the existing source-comment reply identity. Domain policy imports no
+application, provider, localization or Markdown code. The application error
+factory and presenter cannot start a review, model, file mutation or sync.
+Existing architecture dependency/AST suites enforce those boundaries.
+
+**UX and lifecycle.** A rejection is terminal for that input: no command action
+ran. It names the cause, shows one concrete recovery example and command-help
+link, retains `validation.invalid-input`, nonretryable status and the existing
+correlation reference. Pending, canceled or partially successful command states
+are not introduced: these belong to admitted operations and remain unchanged.
+A corrected new comment is a new request; replay of an unchanged source reuses
+its semantic reply. An oversized command after existing prose translation also
+uses this descriptor without claiming the language adapter never ran.
+
+Representative reply for the incident:
+
+> **Impact:** The command exceeds the limit of 20 arguments.
+>
+> **Action:** Remove extra arguments and send explanations in a separate comment.
+> Finding IDs in valid double quotes count as one argument. Example: `/copilot recheck`.
+> [Command help](https://docs.page/vypdev/copilot/issues/comment-commands).
+>
+> **Retained state:** No command action ran. Existing files, branches and reviews were preserved.
+
+Missing finding IDs show a replacement placeholder; malformed quoting shows a
+quoted example ID that must be replaced. Review examples use supported key=value
+controls; sync examples preview the configured parent with `--dry-run`, avoiding
+an invented branch. The complete 21-command argument audit is maintained in
+`docs/issues/comment-commands.mdx`. The help surface states the bounds and
+review/prose distinction. Legacy tolerated/ignored operands on help/description
+are documented; they are not silently rejected by this fix.
+
+**Configuration, safety and operations.** There is no new flag, migration,
+persistence schema, provider permission, network operation, automatic retry or
+counter. Limits, command vocabulary, review options, member-only admission and
+mutation authorization are intentionally non-configurable here. Existing
+event/correlation and semantic error records are sufficient for diagnosis; raw
+input is not added to logs. Deployment/rollback follows the normal Action bundle
+update; rollback restores generic diagnosis, without data migration. The helper
+retains generic behavior for callers lacking command-specific evidence.
+
+**Acceptance and risk budget.** Twelve distinct minimum regressions are added
+to section 14: (1–4) exact 2,000/2,001-character boundary, 20/21 structured
+operands, prose exemption, and lossless quoted IDs; (5–9) safe cause/recovery for
+missing/unknown input, no-operand/required-operand contracts, malformed finding
+quoting, review options and synchronization options including absent parent;
+(10–12) rejection before effects, corrected bare recheck, and one-reply replay.
+The implemented matrices additionally audit all 21 commands, every closed
+recovery, forged variables and member authorization. Locale acceptance covers
+reviewed en-US/es-ES, base aliases en-AU/es-MX, representative dynamic fr-FR,
+de-DE, ar-SA and ja-JP, cached resolution and atomic fallback. Arbitrary BCP 47
+support does not imply a human review of every possible translation.
+
+Traceability: parser invariants -> `copilot_command_validation.test.ts`;
+safe/localized copy and exact variables ->
+`comment_command_validation_presentation.test.ts` and shared error presentation
+suites; route/privacy/replay/retry -> `command_validation_diagnostics.test.ts`;
+defensive post-interpretation reparse -> `command_validation_diagnostics.test.ts`;
+production language-adapter rejection remains covered by
+`comment_automation_use_case.test.ts`. Documentation
+and the error reference MUST agree with these assertions. Completion requires
+full Jest/extension coverage and architecture checks, type/lint, generated
+bundles, specification/catalog/documentation validation, Graphify refresh,
+complete remote review and 100% modified coverable lines in Codecov against the
+exact current base. Existing protected-path approval remains independent.

@@ -1,3 +1,4 @@
+import type { BoundDeploymentCandidateInspectionPort } from '../ports/deployment_candidate_inspection_ports';
 import type {
   BoundDeploymentContinuationPort,
   BoundDeploymentGitPort,
@@ -21,6 +22,7 @@ export interface DeploymentOrchestrationDependencies {
   readonly state: BoundDeploymentStateStoreFactoryPort;
   readonly labels: BoundIssueLabelsPort;
   readonly issues: BoundIssueClosurePort;
+  readonly replacementInspection?: BoundDeploymentCandidateInspectionPort;
   readonly operationId: () => string;
   readonly catalogResolver?: MessageCatalogResolutionPort;
 }

@@ -4,6 +4,22 @@ export interface PreviousWorkflowRunsQuery {
     currentRunId: number;
     /** Workflow file name accepted by GitHub to scope the queue query. */
     workflowIdentifier?: string;
+    /** GitHub-provided executing workflow metadata; never an opt-out flag. */
+    nativeCoordination?: NativeWorkflowCoordinationContext;
+}
+
+export interface NativeWorkflowCoordinationContext {
+    readonly workflowRef: string;
+    readonly workflowRevision: string;
+    readonly jobId: string;
+    readonly eventName: string;
+    readonly ref?: string;
+    readonly pullRequestNumber?: number;
+    readonly issueNumber?: number;
+}
+
+export interface NativeWorkflowCoordinationQueryPort {
+    isCoordinated(query: PreviousWorkflowRunsQuery, context: WorkflowQueueRequestContext): Promise<boolean>;
 }
 
 export interface WorkflowQueueRequestContext {
@@ -34,6 +50,7 @@ export interface WorkflowProviderRetryObservation {
 }
 
 export interface WorkflowPollingObserverPort {
+    nativeCoordinationVerified?(): void;
     noActivePreviousRuns(): void;
     waitingForPreviousRuns(activeRunCount: number, delayMilliseconds: number): void;
     providerRetry?(observation: WorkflowProviderRetryObservation): void;

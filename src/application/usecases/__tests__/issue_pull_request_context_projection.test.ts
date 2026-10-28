@@ -226,3 +226,10 @@ it('retires issue cards using the issue locale independently of PR presentation'
   source.locale.issue = 'en-US';
   expect(context.locale).toBe('es-ES'); expect(context.issueNumber).toBe(42);
 });
+
+
+it('projects the admitted native issue body and explicit profile into deployment context',()=>{
+  const source=issueSource();const profile={schemaVersion:2 as const,enabled:['release' as const],fieldMappings:{release:{Changelog:'Release notes'}}};
+  const projected=projectIssueWorkflowStepContexts({...source,issue:{...source.issue,liveBody:'### Release notes\nNative changes'},issueWorkflowProfile:profile} as never);
+  expect(projected.deployAdded.issue.body).toBe('### Release notes\nNative changes');expect(projected.deployAdded.issueWorkflowProfile).toBe(profile);expect(source.issue.body).toBe('Body');
+});

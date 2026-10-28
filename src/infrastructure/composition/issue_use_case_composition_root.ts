@@ -1,3 +1,4 @@
+import { ResolveMessageCatalogUseCase } from '../../application/usecases/localization/resolve_message_catalog_use_case';
 import { createBranchClient } from "./github_branch_client_factory";
 import {
   createIssueAssignmentClient,
@@ -44,7 +45,7 @@ import { IssueTitleRepository } from "../../data/repository/issue/issue_title_re
 import { IssueTypeAssignmentRepository } from "../../data/repository/issue/issue_type_assignment_repository";
 import { WorkflowDispatchRepository } from "../../data/repository/workflow/workflow_dispatch_repository";
 import { TimerBranchPropagationDelayAdapter } from "../time/timer_branch_propagation_delay_adapter";
-import { createFindingsQueryPort } from "./agent_capability_composition_root";
+import { createFindingsQueryPort, createLanguageQueryPort } from "./agent_capability_composition_root";
 import { composeIssueUseCase } from "./issue_use_case_composition";
 import { createOrganizationMembersCompositionRoot } from "./organization_members_composition_root";
 import { createProjectBoardCompositionRoot } from "./project_board_composition_root";
@@ -166,6 +167,11 @@ export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialB
       bindIssueDescriptionQuery(issueContent, binding),
       bindIssueTitle(issueTitle, binding),
       boundLinkedBranchReadiness,
+      { catalogResolver: new ResolveMessageCatalogUseCase(createLanguageQueryPort()),
+        ...(process.env.GITHUB_SERVER_URL && process.env.GITHUB_RUN_ID ? { run: {
+          serverOrigin: process.env.GITHUB_SERVER_URL, runId: process.env.GITHUB_RUN_ID,
+          owner: binding.owner, repository: binding.repository,
+        } } : {}) },
     ),
   );
 }

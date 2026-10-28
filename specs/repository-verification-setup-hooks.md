@@ -309,3 +309,8 @@ same-commit self references, named Secret isolation, unchanged timeout/cleanup
 behavior, safe runner migration, effective configuration inspection, platform
 prerequisites, docs and rollout. This document retains the verifier and trusted
 setup execution contract; no cross-job candidate transport is introduced.
+
+
+### Source candidate dependency correction — #746
+
+The [source candidate readiness amendment](./branch-synchronization-and-conflict-recovery.md#candidate-dependency-readiness-and-failure-facts--746-2026-10-27) owns the incremental source-only frozen-pnpm preparation and closed sync failure facts. Source runtime bootstrap remains before the Action; source dependencies move to each actual candidate verifier boundary after optional native setup and runtime probes. Consumer setup opt-in, runtime-only declarations and generic no-installer behavior remain unchanged. The amendment owns its incremental test budget and separately authorized default-runtime rollout; do not double count it here.

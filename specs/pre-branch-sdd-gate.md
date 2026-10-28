@@ -3,7 +3,7 @@
 - Status: Implemented — automated verification complete; live provider UX review pending
 - Date: 2026-09-17
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: 2026-10-19 (portable catalog evidence and prerequisite diagnostics, #595)
+- Last verified: 2026-10-27 (actionable blocked preparation and safe diagnostics, #714)
 - Owners: Copilot maintainers
 - Scope: clarify, update, validate, and publish the owning SDD before eligible branch-based work
 - Related issues/PRs: none; local design work; companion SDD `issue-start-and-branch-readiness.md`
@@ -578,7 +578,8 @@ ownership/validation.
 | Native schema length rejection recovery | 9 | Actual findings adapter rejection/repair, exhausted schema repair, foreign path/bound and forged diagnostic rejection, short response rejection, mixed writer/schema failures and typed validator metadata |
 | Canonical numeric table budgets | 20 | Three valid table/owner routes, twelve invalid or misplaced table cases, unsafe integer rejection, positive/zero prose compatibility, immutable owner failure identity, actual findings acceptance and real scratch-worktree owner preservation |
 | Compact generation targets | 2 | Update and companion target size, unchanged hard schema bounds, original resolved requirements and shared two-attempt ceiling |
-| **Total** | **151** | No case counted twice |
+| Blocked preparation and safe diagnostics (#714) | 25 | Fourteen cause/recovery, publication/idempotency, privacy/ownership and retention cases, seven publication-freshness cases and four existing-question recovery/race cases; locale and diagnostic boundary matrices are additional |
+| **Total** | **165** | No case counted twice |
 
 The Windows adapter fixture MUST inject a destination creation immediately
 before the no-replace operation, assert that the operation fails with the
@@ -1217,15 +1218,16 @@ Pending: validation runs with answers retained. Action required/blocked: after
 the shared repair, a closed category identifies case identities, allocations,
 requirement mappings or paths. Representative content: "SDD publication stopped
 after one automatic repair: per-area allocations disagree with the distinct
-case inventory. Review the draft tables; reconcile each area and the total with
+case inventory. Review the safe validation diagnostics in the issue status card; reconcile each area and the total with
 the enumerated cases. Retry the same issue workflow." Retained state says
 answers and published SDDs remain and no draft was published. Partial push
 success keeps the exact branch/commit for ordinary replay. Complete means the
 consistent draft was published; runtime acceptance remains open. English and
 Spanish messages use the existing impact/action/retained-state order, textual
 headings, mobile/screen-reader behavior and closed sanitized content. Rejected
-Markdown, case IDs, paths and diagnostic text MUST NOT enter repair instructions
-or public messages. There is no additional card, label, credential or setting.
+Markdown, case IDs, paths and raw diagnostic text MUST NOT enter repair instructions
+or public messages. The #714 amendment extends the existing analysis-status
+identity with safe typed facts; it adds no label, credential or setting.
 
 The amendment has a minimum **126 distinct cases**, separate from earlier floors:
 
@@ -1385,3 +1387,344 @@ attempts without writer acceptance. DoD includes these 40 cases, the unchanged
 broader publication suites, type/lint/architecture, specification/documentation
 validation, rebuilt bundles and package checks. The live #694 workflow is a
 separate post-promotion acceptance check.
+
+
+### Blocked preparation and safe validation evidence — #714 (2026-10-26)
+
+**Evidence and scope.** In #702, runs 40220870653, 40220870768 and 40220870888
+rejected inconsistent requirement/case tables after the bounded repair. The
+conversation had only its welcome; the run said no semantic publication intent
+existed and instructed the maintainer to inspect an unpublished draft. This
+amendment fixes publication and safe diagnosis. It does not infer that a
+rejected candidate proves a validator defect, relax consistency checks, repair
+an immutable owner, add draft retries or authorize a branch prematurely.
+
+**Intentional contract.** The gate MUST publish/update one trusted-bot-owned
+analysis-status card when draft/content or operational preparation is blocked.
+Existing closed ownership-analysis failures retain their separately reviewed
+#636 recovery copy and unchanged-replay behavior, using the same upsert seam. This is a feature-owned
+publication through its existing bound comment upsert capability. Its marker
+remains `copilot:sdd-analysis-status:v1` for that exact issue; it is not an SDD
+readiness record. Generic resume publication continues to admit only explicit
+semantic intents. The issue coordinator MUST omit the optional welcome while
+the SDD gate is waiting or blocked, and MUST withhold recommendation, branch
+preparation and deployment until their existing conditions pass.
+
+```mermaid
+flowchart LR
+  A[Existing authorized issue flow] --> B[Immutable owner and answers]
+  B --> C[Draft and strict validation]
+  C -->|eligible failure| D[One shared repair]
+  D -->|rejected| E[Closed numeric diagnostic]
+  E --> F[One owned blocked card]
+  F -->|same issue retry| B
+  C -->|valid| G[Existing branch and publication proof]
+  D -->|valid| G
+  G --> H[Clear prior blocked view]
+```
+
+Text equivalent: existing admission precedes immutable-owner/answer collection.
+The candidate passes strict checks or consumes the one existing repair. A
+terminal rejection produces bounded typed evidence and updates its owned card.
+A retry uses the same issue and retained evidence. Only validated drafts reach
+ordinary Action-owned branch/publication proof; recovery of the separate status
+card cannot establish readiness or undo a verified commit.
+
+**State and UX.** A preparation-blocked card MUST say no new specification or
+branch was published by that preparation attempt, identify the safe cause and
+one next action, preserve answers/published specifications, and provide the
+current run link when trustworthy runtime coordinates exist. Technical details
+include the error code, correlation, closed reason/phase, attempt count and
+available section/data-row/count observations. A missing run link or specific
+table fact is explicitly unavailable. Unknown/provider failures use reviewed
+operational copy; raw errors do not become a supposed ownership diagnosis.
+
+Representative view (illustrative):
+
+> **Specification preparation is blocked**
+>
+> No new specification or branch was published by this preparation attempt.
+>
+> **Impact:** Requirements and case mappings are incomplete or inconsistent.
+>
+> **Action:** Review the safe validation diagnostics below. Clarify requirements
+> or decisions in this issue if needed, then retry this same issue workflow.
+>
+> **Retained state:** Existing answers and published specifications are retained.
+>
+> **Validation diagnostics:** requirement-mapping, validation, two draft attempts;
+> reverse links in section 17, data row 1, expected count 2, observed count 1.
+> The actual card links its workflow run and shows its correlation reference.
+
+A partial publication MUST use different copy: an exact linked branch or commit
+may already exist, publication is unconfirmed, and recovery inspects/reuses that
+same branch. A verified publication remains `published` even if refreshing a
+prior diagnostic card fails; that UI failure is returned separately for ordinary
+reconciliation. A successful replay of verified publication clears the prior
+blocked view without regenerating the SDD. Waiting for answers replaces the old
+failure view with the question-card next action, including early replay with
+existing incomplete questions after a transient answer-permission failure. This
+recovery preserves the question record and answer comments, neither drafts nor
+publishes, and performs no duplicate update on an unchanged replay. Recovery
+checks source freshness after localization and never recreates a status card
+removed while that copy was resolving. A stale issue/title/base MUST
+not publish outdated candidate diagnostics or overwrite the current recovery
+record. A publication already classified `workflow.stale` MUST perform no
+recovery-card mutation. Other publication failures MUST recheck the exact source
+and issue before retaining a pending record and again after localized diagnostic
+copy resolves. For revisions, the exact returned commit may advance the source
+branch; unrelated head movement remains stale. This does not replace publication
+verification or grant readiness. Existing branch/commit ownership remains in force.
+
+**Architecture and privacy decision.** A new provider artifact is intentionally
+unnecessary: the reviewed evidence is a structured projection, not the candidate
+itself. Domain diagnostics contain only a closed reason, phase and at most
+**eight** facts. Facts contain a closed check ID, section from 0/4/14/15/17
+(0 means unspecified), an optional positive row ordinal (or required-heading
+list position when the check explicitly says so), and optional integer
+expected/observed counts in **0..100,000**. Row ordinals are in 1..100,000.
+Unknown/extra properties, arbitrary text, invalid numbers or oversized lists
+MUST fail closed. The domain error copies/freezes these facts; the application
+maps them to existing semantic recovery IDs and constructs error prose from
+closed reasons. Raw candidate Markdown, requirement/case IDs, areas, paths,
+scenarios, source and validator messages are not diagnostic variables.
+
+Actual table failures supply observations such as missing/duplicate sections,
+wrong table/column counts, absent cells, invalid identities, reserved baseline
+collisions, undefined requirement references, reciprocal-link cardinalities,
+budget disagreement and unverified paths. Only proven facts may be included. The first rejection is not an exhaustive
+audit, and counts identify the failing constraint. Equal-cardinality mapping
+errors report membership differences; malformed identities report invalid
+entries. Unknown citation locations remain unspecified rather than guessed.
+Missing detail stays unavailable. This evidence explains the check and its
+location/count without copying potentially secret table cells or content.
+
+The application use case coordinates failure/recovered publication through
+existing repository-bound comment ports. The renderer and locale catalogs own
+prose/Markdown; domain code imports no I/O, provider or presentation capability.
+Infrastructure supplies optional run coordinates from the current runtime plus
+the bound repository, never from a draft or an error message. HTTPS origin,
+repository components and positive run ID are validated before forming a URL;
+credentials, path/query/fragment injection and invalid coordinates are withheld.
+A language port resolves reviewed copy only and receives no candidate content.
+Existing dependency, cycle, type, exact reviewed publication-mutation inventory
+and composition suites enforce these cuts. The gate retains two create and two
+update call sites; ownership/preparation diagnostics share the same upsert.
+
+**Locale, bounds, access and retention.** EN/ES, compatible base catalogs,
+validated arbitrary BCP 47 localization and whole-artifact English fallback are
+supported. Required SDD/error slices MUST resolve to the same language; a mismatch
+falls back for the complete card. The rendered diagnostic card is bounded to
+**16,000 characters**. Oversized localized copy falls back to reviewed English
+with an explicit technical note, preserving every validated fact rather than
+truncating evidence or requirements.
+
+The card inherits issue/repository visibility and existing trusted Action
+comment-write authority. A human-authored marker is never updated as owned.
+No actions-write scope, artifact upload/download token, signed URL, private
+candidate store or elevated permission is added. The current card is replaced
+on retry/recovery; GitHub may retain safe prior comment revisions. Diagnostic
+facts have no separately expiring artifact. Workflow links follow normal Action
+log retention; an expired run is recovered by retrying the same issue for fresh
+bounded evidence. Raw runtime debug retention remains outside this diagnostic
+feature and is not newly enabled or exposed. There is no configuration, storage
+schema migration, new public command or automatic background regeneration.
+Rollback restores the former visibility gap without changing retained answers,
+owner documents or publication proof.
+
+**Acceptance, documentation and risk budget.** The twenty-five minimum distinct
+cases in section 14 are new. Fourteen cover: five cause/recovery behavior groups (identities,
+budgets, reciprocal mappings, repository paths and size/format); three primary
+outcome/replay/owned-marker cases; three evidence privacy/bound/access cases;
+three same-issue retry, retained-answer/owner and no-premature-branch cases.
+Seven publication-freshness regressions additionally preserve current cards for
+stale body/title/base, issue changes during a failed push, changes during
+localization, the exact returned revision commit and a foreign revision advance.
+Four existing-question cases cover failed permission lookup then one/two
+incomplete questions, deletion during localization and stale recovery during
+localization. Additional boundary cases cover normalized destination length,
+malformed second-attempt output, each required heading, omitted runtime
+coordinates, empty budget allocations, out-of-bound sums and orphan requirements.
+Coverage acceptance includes branch-partial modified lines; executing a line
+with an untested branch does not satisfy the 100% diff requirement.
+Additional cases cover stale sources, unavailable diagnostics, UI publication
+failure, partial commit recovery and verified-publication preservation. The
+locale matrix is additional: en-US/es-ES, en-AU/es-MX, representative dynamic
+fr-FR/de-DE/ar-SA/ja-JP, cache reuse, invalid-slice fallback and oversized-copy
+fallback. These protocol fixtures do not claim human linguistic review for every
+locale or a live consumer recovery.
+
+Traceability: bounded facts and actual check observations ->
+`src/domain/__tests__/sdd_validation_diagnostic.test.ts` and existing consistency
+fixtures; copy/localization/links/card bounds ->
+`src/application/policies/__tests__/sdd_preparation_status_policy.test.ts`;
+answers/retry/partial/ownership/source preservation ->
+`pre_branch_sdd_gate_use_case.test.ts`; welcome priority ->
+`issue_use_case.test.ts`; runtime facts -> composition tests. User recovery and
+retention belong to `docs/issues/pre-branch-sdds.mdx`; contributor guidance and
+error-reference links describe diagnosis without changing acceptance. Completion
+requires full root/extension tests and coverage budgets, preserved pure-policy
+checks, type/lint, docs/spec/catalog validation, regenerated bundles and
+Graphify, complete remote review without open findings, and Codecov covering
+every modified coverable line against the exact current base. Protected-path
+human approval remains an independent gate.
+
+### Catalog publication-profile compatibility — #716 (2026-10-27)
+
+**Problem and selected boundary.** Consumer issue
+[vypdev/symphonia#32](https://github.com/vypdev/symphonia/issues/32) exposed a
+repository-native version-1 catalog whose selected schema uses `specification`,
+requirements, evidence, blockers and repository-owned readiness. The old loader
+cast those records to SDK capabilities. Ownership then called `includes` on
+undefined path arrays before any useful question or diagnostic appeared.
+Version equality alone is insufficient to establish publication compatibility.
+
+The installed automated publication profile is **`sdk-v1`**: `specs[]` plus the
+six existing SDK metadata fields and evidence arrays, with unchanged SDK
+statuses (`as-built-baseline`, `implemented`, `proposed`, `deprecated`). A
+repository-selected schema or primary-`specification` dialect requires a reviewed
+compatible publication adapter. This amendment provides an explicit unsupported
+result for those profiles; it does not certify their native validator or add a
+native publication adapter. Preserving a consumer's readiness/blocker model has
+priority over manufacturing SDK defaults or migrating its catalog to pass a gate.
+The existing prohibition on executing consumer validators in production remains.
+
+**Requirements and state.** `sdd-catalog-compatibility-R01` validates the profile
+and required metadata before model/ownership operations. Null/invalid JSON,
+empty/oversized inventories, invalid metadata, unsafe/duplicate owner paths and
+mixed `specs`/`specification` profiles produce a closed typed compatibility
+failure. SDK arrays use the same pure path boundaries as the bundled validator.
+Full file/inventory, SDD consistency and publication validation remain separate
+mandatory checks; profile recognition does not prove readiness.
+
+`sdd-catalog-compatibility-R02` returns a copied, frozen SDK capability view for
+analysis. SDK publication rereads the original catalog at its immutable base and
+preserves its decoded root and entry extension metadata when replacing only the
+selected `specs` array or appending a proposed SDK entry. Existing statuses,
+requirements, design/implementation evidence and blockers remain unchanged.
+Unsupported native catalogs remain byte-for-byte unchanged because publication
+never begins. New SDK capabilities still require `proposed`; profile recognition
+cannot promote them to implementation acceptance.
+
+`sdd-catalog-compatibility-R03` carries only a closed reason and optional verified
+source commit, frozen on the typed error. Reasons are `invalid-json`,
+`invalid-document`, `unsupported-profile`, `ambiguous-profile`,
+`invalid-metadata`, `owner-paths-invalid`. No candidate/catalog text, schema URL,
+requirement ID, path list, validator dump or provider exception becomes a
+localized recovery operand.
+
+`sdd-catalog-compatibility-R04` publishes one actionable owned compatibility
+card before model analysis or branch publication when source freshness is
+verified. The adapter exposes a read-only source-revision query independent of
+catalog loading: a rejected profile must not prevent checking its own source.
+The issue body/title and exact source SHA are fenced after localization. An
+unavailable revision, moved source or legacy adapter that can only reload the
+rejected catalog fails closed without overwriting a newer status. A typed error
+without provenance cannot establish diagnostic freshness. Retained linked
+branches use their own source reference, not a guessed development head.
+
+`sdd-catalog-compatibility-R05` keeps issue answers, historical publication and
+native schema/readiness untouched. Retrying the same issue after a compatible
+snapshot/adapter becomes available repeats the normal gate; no automatic
+regeneration, schema migration, branch workaround or approval is introduced.
+
+```mermaid
+flowchart TD
+    A[Immutable catalog] --> P{Installed profile and metadata}
+    P -->|SDK v1| V[Frozen owner view]
+    V --> M[Normal model and SDD validation]
+    M --> W[Original catalog metadata plus allowed SDD changes]
+    W --> B[Unchanged Action publication proof]
+    P -->|Unsupported or invalid| E[Closed compatibility failure plus source SHA]
+    E --> F{Issue and raw source still current}
+    F -->|Yes| C[One owned compatibility card]
+    F -->|No or unavailable| S[Blocked; current status retained]
+```
+
+Text equivalent: immutable profile validation precedes model work. Supported
+SDK views proceed through all existing checks and retain original catalog
+metadata. Compatibility failures publish a closed recovery card only after
+independent issue/source freshness proof; obsolete or unavailable sources retain
+the current status. Neither diagnostic path creates a branch.
+
+**Architecture and fixed bounds.** Pure profile/owner facts belong in
+`src/domain/sdd_catalog_compatibility.ts`; application ports keep their existing
+SDK type import path and add an optional read-only source-revision capability.
+The Git adapter binds that revision to its actual immutable read. Application
+orchestration maps failures to `configuration.unsupported` and the closed,
+operand-free recovery IDs `sdd-catalog-unsupported-profile` and
+`sdd-catalog-format-invalid`. The existing feature-owned status upsert is reused;
+no publication mutation seam, GitHub permission or credential binding is added.
+The renderer validates the reason and rejects simultaneous catalog/table facts.
+
+The profile reader has fixed limits of **2,097,152 source characters**, **1,000
+capabilities** and **20 nested object/array levels** for extension metadata.
+There are no configuration knobs, schema downloads or executable validator
+hooks. The existing 16,000-character card bound, complete localization fallback,
+source/runtime-only workflow link, SDD bounds and repair budget remain unchanged.
+These limits concern compatibility metadata and do not expand model context.
+
+**Representative GitHub UI and recovery.**
+
+> ## Specification preparation is blocked
+>
+> No new specification or branch was published by this preparation attempt.
+>
+> **Impact:** SDD preparation stopped before model analysis because the repository
+> selected a catalog profile unsupported by the installed publication adapter.
+>
+> **Action:** Review catalog profile support. Preserve the native schema,
+> readiness, requirements, evidence and blockers; obtain a reviewed compatible
+> adapter and retry this same issue.
+>
+> **Retained state:** Catalog, answers and published SDDs remain unchanged.
+>
+> **Technical details:** `configuration.unsupported`; correlation reference;
+> catalog compatibility `unsupported-profile`; the originating workflow link.
+
+The card retains the existing primary-message priority over optional welcome.
+English/Spanish are reviewed static copy; aliases, validated dynamic catalogs
+and whole-card English fallback use the existing locale resolution. Technical
+reason IDs remain stable and untranslated. Failed publication keeps the blocked
+outcome and original semantic error; unavailable source evidence never becomes
+an inferred success.
+
+**Test budget and executable acceptance.** Minimum **22 distinct new cases**,
+with locale/boundary matrices additional and no reuse of older SDD cases:
+
+| Area | Minimum distinct cases | Behaviors and risks |
+|---|---:|---|
+| Supported SDK ownership/profile views | 4 | Four statuses/ownership routes, copied frozen path arrays |
+| Invalid, unsupported and ambiguous profiles | 6 | Actual native data, JSON/root shape, metadata, mixed dialects, unsafe and duplicate owners |
+| Metadata round trips | 2 | Real companion/new scratch writes preserve decoded root and entry fields; proposed status retained |
+| Source provenance and freshness | 4 | Moved base/body, missing source and incompatible legacy revision reader |
+| Retry and publication guards | 3 | Native rejection creates no branch; corrected same-issue retry; retained branch source |
+| Card/privacy/localization | 3 | Closed diagnostic, forged facts, bounded/Spanish/fallback recovery |
+| **Total** | **22** | Ordinary tests remain deterministic and credential-free |
+
+The native fixture is copied from consumer commit
+`dac42ef2f29afc755a232f0ee5d4700d14921692`; provenance records both blob identities
+and SHA-256. Its actual pinned structural validator function accepted ten entries
+with zero errors during fixture preparation. The retained native schema is data;
+this upstream check does not claim complete consumer repository validation, live
+OAuth acceptance or native publication support.
+
+Acceptance traceability: R01/R02 -> `sdd_catalog_compatibility.test.ts` and real
+`pre_branch_sdd_workspace_adapter.test.ts` scratch writes; R03 -> constructor,
+renderer and forged-fact cases; R04 -> raw revision and gate race regressions;
+R05 -> same-issue and retained-answer/branch tests. All modified coverable lines,
+including branch-partial lines, require **100% Codecov diff coverage** against
+the actual base; ordinary suite, architecture, package, docs/spec/catalog,
+Graphify and platform gates remain required.
+
+**Documentation, migration and limits.** The issue guide documents supported
+profiles, fixed bounds, preservation and recovery; contributor guidance explains
+fixture provenance and the separation between metadata and native readiness.
+The error reference links catalog recovery to that guide. Catalog evidence and
+localized communication contracts are updated together. Existing SDK catalogs
+need no version/configuration migration; extension metadata remains intact.
+Repository-selected schemas are explicitly unsupported by this installed writer
+and remain blocked pending a reviewed compatible adapter. The disabled-by-default
+opt-in, no-deployment policy, remote branch ownership and human approval gates
+are unchanged. Rollback restores the prior visibility/compatibility defect;
+retained data and historical publication are never rewritten by this fix.

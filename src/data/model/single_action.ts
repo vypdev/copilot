@@ -16,6 +16,7 @@ export class SingleAction {
         ACTIONS.PUBLISH_ISSUE_COMMENT,
         ACTIONS.CHECK_BRANCH_SYNC,
         ACTIONS.PREPARE_DEPLOYMENT,
+        ACTIONS.REPLACE_DEPLOYMENT,
         ACTIONS.CONTINUE_DEPLOYMENT,
         ACTIONS.PUBLISHED_DEPLOYMENT,
         ACTIONS.FAILED_DEPLOYMENT,
@@ -30,6 +31,7 @@ export class SingleAction {
        ACTIONS.CLOSE_INACTIVE_ISSUES,
        ACTIONS.PUBLISH_ISSUE_COMMENT,
        ACTIONS.PREPARE_DEPLOYMENT,
+       ACTIONS.REPLACE_DEPLOYMENT,
        ACTIONS.CONTINUE_DEPLOYMENT,
        ACTIONS.PUBLISHED_DEPLOYMENT,
        ACTIONS.FAILED_DEPLOYMENT,
@@ -58,6 +60,11 @@ export class SingleAction {
     changelog: string = '';
     message: string = '';
     operationId: string = '';
+    replacementRevision: number = -1;
+    candidateSha: string = '';
+    reviewedSourceSha: string = '';
+    productionBaseSha: string = '';
+    confirmedUnpublished: boolean = false;
     commentId: number = -1;
     commentIdInput: string = '';
     commentMode: string = '';
@@ -110,6 +117,10 @@ export class SingleAction {
         return this.currentSingleAction === ACTIONS.PREPARE_DEPLOYMENT;
     }
 
+    get isReplaceDeploymentAction(): boolean {
+        return this.currentSingleAction === ACTIONS.REPLACE_DEPLOYMENT;
+    }
+
     get isContinueDeploymentAction(): boolean {
         return this.currentSingleAction === ACTIONS.CONTINUE_DEPLOYMENT;
     }
@@ -124,6 +135,7 @@ export class SingleAction {
 
     get isDeploymentOrchestrationAction(): boolean {
         return this.isPrepareDeploymentAction
+            || this.isReplaceDeploymentAction
             || this.isContinueDeploymentAction
             || this.isPublishedDeploymentAction
             || this.isFailedDeploymentAction;
@@ -157,6 +169,11 @@ export class SingleAction {
         commentId: string = '',
         commentMode: string = '',
         operationId: string = '',
+        replacementRevision: string = '',
+        candidateSha: string = '',
+        productionBaseSha: string = '',
+        confirmedUnpublished: string = '',
+        reviewedSourceSha: string = '',
     ) {
         this.version = version;
         this.title = title;
@@ -166,6 +183,11 @@ export class SingleAction {
         this.commentId = parsePositiveSafeInteger(this.commentIdInput) ?? -1;
         this.commentMode = commentMode.trim().toLowerCase();
         this.operationId = operationId.trim();
+        this.replacementRevision = parsePositiveSafeInteger(replacementRevision) ?? -1;
+        this.candidateSha = candidateSha.trim();
+        this.reviewedSourceSha = reviewedSourceSha.trim();
+        this.productionBaseSha = productionBaseSha.trim();
+        this.confirmedUnpublished = confirmedUnpublished === 'true';
         this.currentSingleAction = currentSingleAction;
         if (!this.isSingleActionWithoutIssue) {
             this.issue = parsePositiveSafeInteger(issue) ?? -1;

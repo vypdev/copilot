@@ -330,6 +330,16 @@
           "icon": "code"
         },
         {
+          "title": "Browser extension runtime",
+          "href": "/development/browser-extension",
+          "icon": "code"
+        },
+        {
+          "title": "Browser runtime preview",
+          "href": "/browser-extension/runtime",
+          "icon": "code"
+        },
+        {
           "title": "Testing",
           "href": "/development/testing",
           "icon": "vial"

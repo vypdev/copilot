@@ -1,0 +1,720 @@
+{
+  "id": "CENTER",
+  "title": "Local configuration and product experience",
+  "features": [
+    {
+      "id": "BEX-CENTER-01",
+      "family": "CENTER",
+      "title": "Full-page local control center",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Packaged extension options page",
+      "userOutcome": "Open a navigable application with overview, features, profiles, repositories, Copilot, setup, activity, privacy and help.",
+      "boundaryAcceptance": "The page loads from the extension package and remains useful offline without a CLI.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "available-on-local-center",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CENTER"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CENTER01-C01",
+          "scenario": "Given the eligible packaged extension options page and verified input, choosing full-page local control center produces this observable result: Open a navigable application with overview, features, profiles, repositories, Copilot, setup, activity, privacy and help."
+        },
+        {
+          "id": "bexp-CENTER01-C02",
+          "scenario": "For full-page local control center, exercise the concrete boundary: The page loads from the extension package and remains useful offline without a CLI."
+        },
+        {
+          "id": "bexp-CENTER01-C03",
+          "scenario": "An invalid or future-schema change to full-page local control center preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-CENTER01-C04",
+          "scenario": "Full-page local control center survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CENTER-02",
+      "family": "CENTER",
+      "title": "Feature catalog and previews",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Features route",
+      "userOutcome": "Search, filter and preview every registered feature by surface, capability, permission, state and profile.",
+      "boundaryAcceptance": "A disabled feature explains its reason and cannot be silently enabled by a remote publication.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "available-on-local-center",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CENTER"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CENTER02-C01",
+          "scenario": "Given the eligible features route and verified input, choosing feature catalog and previews produces this observable result: Search, filter and preview every registered feature by surface, capability, permission, state and profile."
+        },
+        {
+          "id": "bexp-CENTER02-C02",
+          "scenario": "For feature catalog and previews, exercise the concrete boundary: A disabled feature explains its reason and cannot be silently enabled by a remote publication."
+        },
+        {
+          "id": "bexp-CENTER02-C03",
+          "scenario": "An invalid or future-schema change to feature catalog and previews preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-CENTER02-C04",
+          "scenario": "Feature catalog and previews survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CENTER-03",
+      "family": "CENTER",
+      "title": "Profile editor and inheritance",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Profiles route",
+      "userOutcome": "Preview global, host/account, organization, repository and session overrides with provenance and reset.",
+      "boundaryAcceptance": "An unknown imported field or invalid cross-field combination leaves the previous complete profile intact.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "available-on-local-center",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CENTER"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CENTER03-C01",
+          "scenario": "Given the eligible profiles route and verified input, choosing profile editor and inheritance produces this observable result: Preview global, host/account, organization, repository and session overrides with provenance and reset."
+        },
+        {
+          "id": "bexp-CENTER03-C02",
+          "scenario": "For profile editor and inheritance, exercise the concrete boundary: An unknown imported field or invalid cross-field combination leaves the previous complete profile intact."
+        },
+        {
+          "id": "bexp-CENTER03-C03",
+          "scenario": "An invalid or future-schema change to profile editor and inheritance preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-CENTER03-C04",
+          "scenario": "Profile editor and inheritance survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CENTER-04",
+      "family": "CENTER",
+      "title": "Repository connection manager",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Repositories route",
+      "userOutcome": "Connect, pause, switch and remove explicitly selected repositories with account/source identity shown.",
+      "boundaryAcceptance": "A repository rename uses its verified numeric identity and cannot expose a different private repository.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "available-on-local-center",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CENTER"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CENTER04-C01",
+          "scenario": "Given the eligible repositories route and verified input, choosing repository connection manager produces this observable result: Connect, pause, switch and remove explicitly selected repositories with account/source identity shown."
+        },
+        {
+          "id": "bexp-CENTER04-C02",
+          "scenario": "For repository connection manager, exercise the concrete boundary: A repository rename uses its verified numeric identity and cannot expose a different private repository."
+        },
+        {
+          "id": "bexp-CENTER04-C03",
+          "scenario": "An invalid or future-schema change to repository connection manager preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-CENTER04-C04",
+          "scenario": "Repository connection manager survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CENTER-05",
+      "family": "CENTER",
+      "title": "Account and credential roles",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Connections route",
+      "userOutcome": "Manage at most five named session identities with separate selected-repository read and optional write roles.",
+      "boundaryAcceptance": "Switching identity invalidates private evidence and never reuses a token across hosts or purposes.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "available-on-local-center",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CENTER"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CENTER05-C01",
+          "scenario": "Given the eligible connections route and verified input, choosing account and credential roles produces this observable result: Manage at most five named session identities with separate selected-repository read and optional write roles."
+        },
+        {
+          "id": "bexp-CENTER05-C02",
+          "scenario": "For account and credential roles, exercise the concrete boundary: Switching identity invalidates private evidence and never reuses a token across hosts or purposes."
+        },
+        {
+          "id": "bexp-CENTER05-C03",
+          "scenario": "An invalid or future-schema change to account and credential roles preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-CENTER05-C04",
+          "scenario": "Account and credential roles survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CENTER-06",
+      "family": "CENTER",
+      "title": "Permission and privacy inspector",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Privacy route",
+      "userOutcome": "Explain each browser/GitHub/CLI capability, granted scope, retention and revocation path.",
+      "boundaryAcceptance": "Unknown permission is displayed as unknown and optional capabilities stay off until granted.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "available-on-local-center",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CENTER"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CENTER06-C01",
+          "scenario": "Given the eligible privacy route and verified input, choosing permission and privacy inspector produces this observable result: Explain each browser/GitHub/CLI capability, granted scope, retention and revocation path."
+        },
+        {
+          "id": "bexp-CENTER06-C02",
+          "scenario": "For permission and privacy inspector, exercise the concrete boundary: Unknown permission is displayed as unknown and optional capabilities stay off until granted."
+        },
+        {
+          "id": "bexp-CENTER06-C03",
+          "scenario": "An invalid or future-schema change to permission and privacy inspector preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-CENTER06-C04",
+          "scenario": "Permission and privacy inspector survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CENTER-07",
+      "family": "CENTER",
+      "title": "Shortcuts and command customization",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Shortcuts route",
+      "userOutcome": "Configure bounded bindings and favorites with native/OS conflict detection and reset.",
+      "boundaryAcceptance": "Editing shortcuts cannot capture secrets, typing composition or protected login interactions.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "available-on-local-center",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CENTER"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CENTER07-C01",
+          "scenario": "Given the eligible shortcuts route and verified input, choosing shortcuts and command customization produces this observable result: Configure bounded bindings and favorites with native/OS conflict detection and reset."
+        },
+        {
+          "id": "bexp-CENTER07-C02",
+          "scenario": "For shortcuts and command customization, exercise the concrete boundary: Editing shortcuts cannot capture secrets, typing composition or protected login interactions."
+        },
+        {
+          "id": "bexp-CENTER07-C03",
+          "scenario": "An invalid or future-schema change to shortcuts and command customization preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-CENTER07-C04",
+          "scenario": "Shortcuts and command customization survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CENTER-08",
+      "family": "CENTER",
+      "title": "Settings backup and restore",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Data route",
+      "userOutcome": "Preview, validate and atomically import/export versioned nonsecret settings with migration and rollback.",
+      "boundaryAcceptance": "Private evidence, credentials and setup approval receipts are excluded from settings exports.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "available-on-local-center",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CENTER"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CENTER08-C01",
+          "scenario": "Given the eligible data route and verified input, choosing settings backup and restore produces this observable result: Preview, validate and atomically import/export versioned nonsecret settings with migration and rollback."
+        },
+        {
+          "id": "bexp-CENTER08-C02",
+          "scenario": "For settings backup and restore, exercise the concrete boundary: Private evidence, credentials and setup approval receipts are excluded from settings exports."
+        },
+        {
+          "id": "bexp-CENTER08-C03",
+          "scenario": "An invalid or future-schema change to settings backup and restore preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-CENTER08-C04",
+          "scenario": "Settings backup and restore survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CENTER-09",
+      "family": "CENTER",
+      "title": "Local operation activity",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Activity route",
+      "userOutcome": "Inspect redacted operation intent, exact target, acknowledgement and observed completion separately.",
+      "boundaryAcceptance": "A timeout is unknown outcome and cannot be replaced by a fabricated success record.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "available-on-local-center",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CENTER"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CENTER09-C01",
+          "scenario": "Given the eligible activity route and verified input, choosing local operation activity produces this observable result: Inspect redacted operation intent, exact target, acknowledgement and observed completion separately."
+        },
+        {
+          "id": "bexp-CENTER09-C02",
+          "scenario": "For local operation activity, exercise the concrete boundary: A timeout is unknown outcome and cannot be replaced by a fabricated success record."
+        },
+        {
+          "id": "bexp-CENTER09-C03",
+          "scenario": "An invalid or future-schema change to local operation activity preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-CENTER09-C04",
+          "scenario": "Local operation activity survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CENTER-10",
+      "family": "CENTER",
+      "title": "Feature diagnostics and recovery",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Diagnostics route",
+      "userOutcome": "Identify broken adapters, missing permissions and stale versions; disable one feature or reset owned state.",
+      "boundaryAcceptance": "Diagnostics never collect private code, tokens or full browsing history automatically.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "available-on-local-center",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CENTER"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CENTER10-C01",
+          "scenario": "Given the eligible diagnostics route and verified input, choosing feature diagnostics and recovery produces this observable result: Identify broken adapters, missing permissions and stale versions; disable one feature or reset owned state."
+        },
+        {
+          "id": "bexp-CENTER10-C02",
+          "scenario": "For feature diagnostics and recovery, exercise the concrete boundary: Diagnostics never collect private code, tokens or full browsing history automatically."
+        },
+        {
+          "id": "bexp-CENTER10-C03",
+          "scenario": "An invalid or future-schema change to feature diagnostics and recovery preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-CENTER10-C04",
+          "scenario": "Feature diagnostics and recovery survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CENTER-11",
+      "family": "CENTER",
+      "title": "Appearance and accessibility preferences",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Appearance route",
+      "userOutcome": "Configure themes, density, readable text, reduced motion and contrast through accessible bounded controls.",
+      "boundaryAcceptance": "A setting cannot lower required contrast or remove keyboard access to a core action.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "available-on-local-center",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CENTER"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CENTER11-C01",
+          "scenario": "Given the eligible appearance route and verified input, choosing appearance and accessibility preferences produces this observable result: Configure themes, density, readable text, reduced motion and contrast through accessible bounded controls."
+        },
+        {
+          "id": "bexp-CENTER11-C02",
+          "scenario": "For appearance and accessibility preferences, exercise the concrete boundary: A setting cannot lower required contrast or remove keyboard access to a core action."
+        },
+        {
+          "id": "bexp-CENTER11-C03",
+          "scenario": "An invalid or future-schema change to appearance and accessibility preferences preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-CENTER11-C04",
+          "scenario": "Appearance and accessibility preferences survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CENTER-12",
+      "family": "CENTER",
+      "title": "Language and terminology",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Language route",
+      "userOutcome": "Provide complete English, Spanish, French and Portuguese with atomic fallback and separate Action-source language.",
+      "boundaryAcceptance": "A missing message cannot produce a partly translated confirmation or reinterpret command IDs.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "available-on-local-center",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CENTER"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CENTER12-C01",
+          "scenario": "Given the eligible language route and verified input, choosing language and terminology produces this observable result: Provide complete English, Spanish, French and Portuguese with atomic fallback and separate Action-source language."
+        },
+        {
+          "id": "bexp-CENTER12-C02",
+          "scenario": "For language and terminology, exercise the concrete boundary: A missing message cannot produce a partly translated confirmation or reinterpret command IDs."
+        },
+        {
+          "id": "bexp-CENTER12-C03",
+          "scenario": "An invalid or future-schema change to language and terminology preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-CENTER12-C04",
+          "scenario": "Language and terminology survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CENTER-13",
+      "family": "CENTER",
+      "title": "Onboarding, updates and release notes",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Welcome and About routes",
+      "userOutcome": "Explain value, selected profile, permissions and changes with resumable nonsecret onboarding and verified update links.",
+      "boundaryAcceptance": "An update never expands grants or changes a user's selected profile without review.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "available-on-local-center",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CENTER"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CENTER13-C01",
+          "scenario": "Given the eligible welcome and about routes and verified input, choosing onboarding, updates and release notes produces this observable result: Explain value, selected profile, permissions and changes with resumable nonsecret onboarding and verified update links."
+        },
+        {
+          "id": "bexp-CENTER13-C02",
+          "scenario": "For onboarding, updates and release notes, exercise the concrete boundary: An update never expands grants or changes a user's selected profile without review."
+        },
+        {
+          "id": "bexp-CENTER13-C03",
+          "scenario": "An invalid or future-schema change to onboarding, updates and release notes preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-CENTER13-C04",
+          "scenario": "Onboarding, updates and release notes survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CENTER-14",
+      "family": "CENTER",
+      "title": "Privacy controls and reset center",
+      "delivery": "required-for-product-acceptance",
+      "mode": "settings",
+      "surface": "Privacy and recovery routes",
+      "userOutcome": "Pause all features, disconnect credentials, clear caches and reset selected settings with explicit scope.",
+      "boundaryAcceptance": "A data reset preserves unrelated GitHub content and requires review before deleting authored local notes.",
+      "permissionProfile": "personal-settings",
+      "dataSource": "extension-owned personal state",
+      "freshnessRule": "committed settings revision",
+      "default": "available-on-local-center",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CENTER"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CENTER14-C01",
+          "scenario": "Given the eligible privacy and recovery routes and verified input, choosing privacy controls and reset center produces this observable result: Pause all features, disconnect credentials, clear caches and reset selected settings with explicit scope."
+        },
+        {
+          "id": "bexp-CENTER14-C02",
+          "scenario": "For privacy controls and reset center, exercise the concrete boundary: A data reset preserves unrelated GitHub content and requires review before deleting authored local notes."
+        },
+        {
+          "id": "bexp-CENTER14-C03",
+          "scenario": "An invalid or future-schema change to privacy controls and reset center preserves the previous complete settings revision."
+        },
+        {
+          "id": "bexp-CENTER14-C04",
+          "scenario": "Privacy controls and reset center survives a supported settings migration and remains isolated from another account/repository."
+        }
+      ],
+      "nativeTarget": "none"
+    }
+  ]
+}

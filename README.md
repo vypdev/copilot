@@ -31,6 +31,11 @@ flowchart LR
 
 AI capabilities require a configured agent runtime, an allowed model, and working authentication on the selected runner. Code-changing requests require repository write authority and run configured verification before commit/push. Release promotion follows the repository's merge policy. Installing Copilot does not grant permission to merge or deploy.
 
+On shared runners, the runtime verifies the executing workflow's native PR or
+branch concurrency before setup, so unrelated PRs can proceed independently.
+Custom and legacy workflows retain the conservative predecessor queue. See
+[workflow coordination and recovery](https://docs.page/vypdev/copilot/features#workflow-concurrency-and-sequential-execution).
+
 ## Start with the web assistant
 
 Use **Node.js 24 or newer**, `pnpm`, and a working checkout of the repository you want to configure:
@@ -68,6 +73,15 @@ Follow the [web setup tutorial](https://docs.page/vypdev/copilot/setup-web) thro
 Setup installs the selected workflows, Issue Forms, labels, issue types, Variables, credentials, and repository agent guidance. Projects, agent routing, release/hotfix workflows, and other capabilities follow your selections. New setup offers PR approval assessment in `recommend` mode; native bot approval requires explicitly selecting `guarded` and meeting its prerequisites. See [guarded approval](https://docs.page/vypdev/copilot/pull-requests/guarded-approval).
 
 Release templates are registry-neutral. Publishing your application or package requires your own build, validation, and deployment steps. This repository's npm publishing workflow is an example, not something setup installs into every consumer repository.
+
+## Browser extension development
+
+The private browser runtime is being built as a complete Chrome/Firefox/Safari
+product. H2 adds scoped runtime services and protected read sessions; the full
+feature inventory and local setup/control center remain required milestones.
+See the [runtime preview](docs/browser-extension/runtime.mdx) and
+[build, browser evidence and architecture guide](docs/development/browser-extension.mdx).
+No browser-store availability or complete-product acceptance is implied.
 
 ## Advanced integrations and contributing
 

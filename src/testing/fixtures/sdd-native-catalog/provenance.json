@@ -1,0 +1,18 @@
+{
+  "repository": "vypdev/symphonia",
+  "ref": "dac42ef2f29afc755a232f0ee5d4700d14921692",
+  "files": [
+    {
+      "path": "specs/catalog.json",
+      "blob": "1f481eef40049b5d673ba268fade3c5a6d282ee8",
+      "bytes": 35554,
+      "sha256": "bc865f498c2674737463b3816c8841ac19871368adaa0ba571e90746a34e2ea3"
+    },
+    {
+      "path": "specs/catalog.schema.json",
+      "blob": "f62aff19e1e1219f18be72018f35e5f0d383b038",
+      "bytes": 3943,
+      "sha256": "8aafb6c61362bc5ed09ddaa4dc9da7619cc21c8f81abfb3177b9b657ede0f68b"
+    }
+  ]
+}

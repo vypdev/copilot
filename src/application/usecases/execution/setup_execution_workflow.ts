@@ -106,6 +106,8 @@ export async function runSetupExecution(
 
     if (context.isIssue && !context.isSingleAction && issueResolution.issueNumber !== undefined && issueAdmission?.status === 'eligible') {
         const resolution = await dependencies.branchVersionResolver.resolve({
+            body: liveIssueBody,
+            issueWorkflowProfile: context.issueWorkflowProfile,
             issueNumber: issueResolution.issueNumber,
             release,
             hotfix,

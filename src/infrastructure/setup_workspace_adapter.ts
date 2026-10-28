@@ -1,3 +1,4 @@
+import { inspectSetupIssueForms } from '../utils/setup_issue_form_review';
 import { copySetupFiles, ensureGitHubDirs, hasValidSetupToken, compareSetupWorkflows } from '../utils/setup_files';
 import type {
     SetupDoctorWorkspaceQueryPort,
@@ -66,6 +67,10 @@ export class SetupDoctorWorkspaceQueryAdapter implements SetupDoctorWorkspaceQue
         return compareSetupWorkflows(process.cwd(), features, undefined, configuration);
     }
 
+    inspectIssueForms(configuration: Readonly<import('../domain/setup').SetupConfiguration>) {
+        return inspectSetupIssueForms(process.cwd(), configuration);
+    }
+
     inspectAgentGuidance(configuration: Parameters<typeof inspectRepositoryAgentGuidance>[1]): ReturnType<typeof inspectRepositoryAgentGuidance> {
         return inspectRepositoryAgentGuidance(process.cwd(), configuration);
     }
@@ -94,6 +99,10 @@ export class SetupReconcileWorkspaceAdapter implements SetupWorkspacePort, Setup
 
     compareWorkflows(features?: Parameters<typeof compareSetupWorkflows>[1], configuration?: Parameters<typeof compareSetupWorkflows>[3]): ReturnType<typeof compareSetupWorkflows> {
         return this.query.compareWorkflows(features, configuration);
+    }
+
+    inspectIssueForms(configuration: Readonly<import('../domain/setup').SetupConfiguration>) {
+        return this.query.inspectIssueForms(configuration);
     }
 
     inspectAgentGuidance(configuration: Parameters<SetupDoctorWorkspaceQueryAdapter['inspectAgentGuidance']>[0]): ReturnType<SetupDoctorWorkspaceQueryAdapter['inspectAgentGuidance']> {

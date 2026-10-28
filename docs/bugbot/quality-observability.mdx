@@ -5,7 +5,7 @@ description: Measure Bugbot accuracy, latency, outcomes, feedback, and regressio
 
 # Bugbot quality and observability
 
-Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 38 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
+Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 71 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
 
 The #655 cases cover branch coverage enabled through repository configuration,
 inherited HTTP/1.0 connection behavior, correct arithmetic, short-circuit guards,
@@ -15,6 +15,99 @@ duplicate IDs. The reviewer is instructed to check effective settings, defaults,
 call paths and counterevidence before reporting a defect. Passing the checked-in
 predictions proves the evaluator contract; measuring a model's improvement still
 requires running the real-agent benchmark and inspecting its predictions.
+
+The #721 extension adds five dated external-package scenarios: a catalog-listed
+Android minor package with a fresh successful install/build, a confirmed absent
+package, unavailable inventory, an old catalog contradicted by a current fresh
+installation, and a real failed install accompanied by an unrelated cached green
+job. The applicable catalog and execution details travel with each synthetic
+case; the expected verdict never enters the prompt. These cases do not freeze
+the live Android catalog or replay the consumer runner. Both production review
+and the real-agent benchmark use the same external-fact evidence instruction.
+
+The #720 cases check Compose preferred width under narrow constraints, real
+`requiredWidth` overflow, both `widthIn`/`fillMaxWidth` orders on a wide parent,
+and a padded bounded form. The reviewer checks the exact framework API,
+measurement constraints, padding and modifier order before alleging overflow.
+It also checks a proposed replacement against narrow responsiveness and the
+wide-screen cap, and withholds unverified code suggestions. Genuine overflow
+and lost-cap defects remain reportable. These synthetic examples test the
+review/evaluator contract; they do not execute Compose or certify a model's
+accuracy. The [reported desktop counterexample](https://github.com/vypdev/copilot/issues/720)
+retains the separate runtime evidence. The recorded
+`quality/bugbot/compose-720-observations.v1.json` sample distinguishes baseline,
+a rejected intermediate instruction and the final instruction. The final sample
+has zero false positives and zero missed defects across the five cases, but its
+full quality gate still fails exact location and severity calibration. This is
+not a claim that every quality threshold passed or that model accuracy improved
+statistically. Reference predictions remain separate from these observations.
+
+The five #722 lifecycle cases cover Compose-owned cleanup, a loader outside the
+owned container, a failed startup with explicit error UI, a failed initializer
+that leaves loading stuck, and a synthetic pinned version without cleanup.
+The source archive for Compose 1.13.0-beta01 was verified with SHA256
+`ceca9e3c187427f6c63593d5d80dc6c10a03ef0b45f1d96e6c453a3300aeccd6`.
+These are controlled source-evidence scenarios, not a replay of the consumer GUI.
+Two cases require no finding; three positive controls require an actionable
+finding. Reference predictions validate scoring and never prove model accuracy.
+The live Codex sample in `quality/bugbot/evidence/issue-722.json` retains the
+initial failed scorer result, fixture refinements and the final five-case run.
+The final run passes all default thresholds with zero false positives or
+negatives. It is a small sample using the corrected prompt, not an old-versus-new
+prompt comparison or a guarantee of general model quality.
+
+The six #736 dependency-type cases cover an actual-version SQL subclass,
+unavailable hierarchy and stale-documentation counterexamples, plus real
+uncaught-wrapper, misleading green mock and swallowed-cancellation controls.
+The reviewer verifies the imported type, resolved version/platform and applicable
+source or artifact hierarchy before alleging that a catch misses it. Matching
+fault evidence matters; a passing mock or another version cannot dismiss a real
+production error. These are synthetic evidence/scorer fixtures, not execution of
+the consumer's database or a deterministic JVM type resolver. Reference verdicts
+remain separate from observed predictions in `quality/bugbot/evidence/issue-736.json`.
+Both six-case product-runtime samples classified all cases correctly. The baseline
+missed one exact location; the corrected sample passed all default thresholds,
+including exact locations. The inputs and scoring rules were unchanged. This is
+a small controlled observation, not a reproduction of the historical false
+positive, a statistical improvement claim or a guarantee of future accuracy.
+
+The six #738 delegated-test cases cover multi-hop binding, a parameterized
+fallback and a bound callback, paired with bypassed, empty-loop and recovered-error
+controls. Ordinary tests run statically compiled factories for each scenario, compare
+the exact corpus text as inert data, and check the assertion result and exact
+collaborator count. Altered text or an unknown fixture identity rejects before
+selecting an oracle; corpus strings are never executed. They are not consumer Kotlin
+or database executions. Review selects the actual test row, checks guards and
+composition order, and follows the error through helpers to its assertion before
+claiming the test necessarily fails. A called stub does not prove a fault survived;
+a missing direct call does not prove the stub was skipped.
+The actual product-runtime comparison is retained in
+`quality/bugbot/evidence/issue-738.json`. Both model runs fail the full default
+score. The corrected run distinguishes every valid/invalid fault assertion, but
+two exact locations are off by one; location accuracy is 1/3. The baseline also
+reports no defect on the three valid indirect paths. No fixture, expected verdict
+or threshold was changed to improve those scores. The historical false positive
+was not reproduced in this small sample, and no statistical or all-gates-passed
+model-quality claim is made.
+
+The six #739 external Action cases pair declared inputs, version-specific renamed
+inputs and unavailable contracts with undeclared aliases, old-version keys and
+ignored disabling values. Native controls parse candidate YAML as inert data and
+evaluate statically authored getter/default logic; neither corpus strings nor
+external modules execute. These are synthetic contract controls, not a new Dart
+SDK, GitHub runner, OIDC or publication run. Review and benchmark share the same
+exact-version input/replacement evidence instruction. Private reference verdicts
+never enter the model prompt.
+All four actual measurements in `quality/bugbot/evidence/issue-739.json` retain
+identical inputs and scoring rules. The baseline does not reproduce the historical
+false positive. The full-text intermediate passes model scoring but fails the
+existing prompt-size test; a compact intermediate misses the ignored-value
+control. The shipped instruction fits that unchanged size bound and reports the
+three real defects without negative-case findings. Its full default model score
+still fails: two anchors are off by one and a category differs from the reference.
+These limitations are retained rather than hidden by a reference prediction,
+threshold change or repeated identical sample. No statistical improvement or
+future accuracy guarantee is claimed.
 
 ## Quality gates
 
@@ -107,3 +200,42 @@ Enterprise links remain correct and adds a run link only when
 `GITHUB_REPOSITORY` and `GITHUB_RUN_ID` identify the current repository. No
 workflow name or project-specific CI check is part of the generic review
 service.
+
+
+Conversation retained/omitted/truncated counts describe logical source comments,
+not their internal prompt fragments. A fully reconstructed multi-fragment comment
+is one retained item with zero truncation. Complete diff analysis and partial
+conversation coverage remain independent facts. Metadata/wrapper/separator costs
+and omission notices count toward the unchanged 24,000-character section budget;
+no raw comment body or fragment payload enters telemetry.
+
+
+The six #749 validation cases preserve the exact U+200B witness and supported
+plus-tag control, a complete caller guard and normalization-before-validation,
+paired with existential/ignored-result/late-normalization defects. One test
+symbolically traces the inert Kotlin source's empty-label rejection. Five controls
+execute five self-contained, statically declared TypeScript functions and record
+fake-save callback counts,
+including leading/trailing empty-label guards and unchanged supported values.
+The normalization control also reapplies the existing at-sign/whitespace guards
+to the transformed value; compatibility characters must not bypass them.
+Exact identity/text checks reject altered or executable-looking corpus data before
+selecting a native control. These are not consumer Kotlin, JVM, HTTP or database
+executions. All 71 earlier cases and their expected values remain unchanged.
+
+The shared instruction reaches ordinary, partitioned and benchmark prompts; the
+original context-size limit and scoring thresholds remain in force. The 77-case
+reference evaluation checks the deterministic scorer contract, not actual model
+precision/recall. No external-model measurement was performed for #749. The
+[retained evidence](https://github.com/vypdev/copilot/blob/develop/quality/bugbot/evidence/issue-749.json)
+separates exact source, supplied external receipts, compiled local controls and
+those measurement limits. No statistical improvement or accuracy guarantee is
+claimed; genuine admitted-invalid-input defects remain required findings.
+
+The checked corpus source is transpiled only to compare it to the actual compiled
+function's source; the resulting string is never executed or imported. A mismatched
+native function rejects before invocation. Exact identity/text matching also binds
+the witness comments, whose Unicode values are passed verbatim to that function.
+This closes the initial candidate's separate kind-based modeling gap. The real
+static executor and comparison-only parser remain distinct from consumer runtime
+execution and actual model measurement.

@@ -2,7 +2,7 @@
 
 - Status: Implemented
 - Date: 2026-09-11
-- Last verified: 2026-10-18
+- Last verified: 2026-10-27
 - Owners: Copilot maintainers
 - Scope: ordinary-branch drift observation and authorized parent-to-working-branch synchronization
 - Related issues/PRs: [PR #387](https://github.com/vypdev/copilot/pull/387), managed issue lifecycle, semantic GitHub publication, and agent runtime SDDs
@@ -723,3 +723,334 @@ counted only in the lifecycle extension's budget.
 ## Repository setup amendment — issue #647
 
 The [repository-owned setup contract](./repository-verification-setup-hooks.md) prepares the actual temporary merge immediately before each verification command when explicitly enabled. Composition captures immutable helper bytes from trusted main before workspace mutation; candidate edits never replace them. Setup and runtime preflight share the command's private environment. Setup failure follows existing abort behavior and withholds commit/push. Read-only status, dry run, aligned branches and empty command lists never execute the helper. The companion owns its incremental budget and local same-managed-ref acceptance; no release is included.
+
+## Candidate dependency readiness and failure facts — #746 (2026-10-27)
+
+### Evidence, scope, and invariants
+
+[#746](https://github.com/vypdev/copilot/issues/746) records source runs
+`40482795753` (#743, clean merge) and `40483017730` (#745, resolved conflicts).
+Both installed the default `master` graph before preparing a different candidate;
+`build` passed and extension typecheck could not resolve workspace dev tools.
+Run `40482493129` (#741) independently reproduced the same sequence. Node/pnpm
+were present; this was not a runner shortage or a need to weaken verification.
+The root pnpm workspace already includes `extension`; a second hardcoded member
+install is not the remedy. Commands after the failing typecheck were not reached.
+
+The source coordinator MUST provision Node 24/pnpm 10.12.4 before the Action,
+and MAY retain a frozen script/hook-free default-checkout install solely to seed trusted build tools for the fixer. It MUST NOT treat that seed as candidate dependency readiness. Removing the seed would regress the existing requirement to regenerate admitted conflicting bundles with the offline build before trusted staging. The existing
+`prepare-source-verification` opt-in and `COPILOT_PREPARE_VERIFICATION` admission
+hint authorize only the fixed source preparation described here: exact repository
+`vypdev/copilot`, GitHub Actions, and a supported Linux, macOS or Windows source runner. The default source route remains Linux; configurable supported runner routes MUST retain dependency preparation. They do
+not grant command/mutation authority. Consumer repositories, direct CLI calls,
+read-only operations, aligned/dry-run branches and empty verification lists retain
+their existing behavior and MUST NOT acquire an inferred installer. Optional
+consumer `verification-setup` remains disabled by default and unchanged.
+
+```text
+trusted source runtime capture -> admitted candidate merge/fixer
+ -> optional trusted native setup -> isolated runtime prerequisites
+ -> current candidate frozen pnpm preparation -> configured verifier
+ -> existing workspace and fresh remote-head guards -> commit/push
+```
+
+Text equivalent: prepare dependencies at each actual verifier boundary, after
+candidate changes and in that verifier's private credential-free environment.
+A previous install or successful application CI is never a readiness witness.
+
+### Architecture, bounded configuration, and security
+
+`GitCommitAdapter` captures a source-only dependency preparer before mutation.
+The infrastructure adapter resolves the provisioned external `pnpm.cjs` once, including the reviewed pnpm/action-setup package layout behind its PNPM_HOME .bin shim; that shim is never executed;
+it rejects candidate-local tools, Corepack/arbitrary shell wrappers and unsupported source
+platforms. Its fixed version probe MUST run in the trusted tool directory:
+pnpm 10.12.4 can load candidate hooks for `--version` even with
+`--ignore-pnpmfile`. The install runs at the current candidate root, with fixed
+argv: frozen lockfile, dev dependencies included, lifecycle scripts and pnpmfile
+hooks disabled, manager auto-switching disabled, silent bounded output, and an
+ignored `.tmp/copilot-verification-store` shared only as a package cache across
+fresh verifier profiles. Cache symlinks, including dangling links, are rejected with no-follow entry metadata checks; absence is accepted only for ENOENT and metadata access errors fail closed. The same presence rule rejects dangling source npmrc entries; cached packages never
+substitute for installing/revalidating the current graph. Existing runner checkout
+cleanup owns ignored dependencies/cache; private HOME cleanup runs on success and
+failure. This is not an OS sandbox against same-user hostile processes.
+
+Supported source metadata is deliberately closed: root name `@vypdev/copilot`,
+`packageManager: pnpm@10.12.4`, root `pnpm.overrides`, and workspace `packages`/
+`overrides`. At most 32 member paths of 200 ASCII characters use literal relative
+segments (no globs, parent traversal or absolute paths). Package/workspace
+manifests are regular single-link contained files, at most 128 KiB each; the
+frozen lock is at most 4 MiB. Descriptor identity uses exact BigInt device/inode
+facts and bounded reads. Member pnpm configuration, `.npmrc`, plugins and unknown
+workspace settings fail closed with `unsupported-graph`; they need a reviewed
+policy change, not execution of candidate bootstrap. Candidate Git identity is
+bound before/after preparation; tracked/index/publishable changes withhold the
+verifier. Each child process is capped at five minutes and 64 KiB captured output;
+the existing 20-command and 120-minute job budgets remain. Cancellation retains
+ordinary runner cleanup semantics; no application-finally guarantee is claimed
+for a force-killed process.
+
+Closed domain facts own diagnostic validation. The existing shared command runner
+classifies dependency/setup/runtime/command failure, preserves its one-based
+command ordinal, and exposes only an allowlisted pnpm script label or
+`configured-command`. Application sync owns abort and a nonretryable verification
+result. The workspace adapter verifies the original head after abort; an abort
+failure MUST yield `unverified`, never a restoration claim. Remote-head, protected
+path, hook-isolated commit and guarded reset rules remain authoritative. No new
+provider permissions, model calls, automatic retries, comment streams, labels,
+configuration files or release operations are introduced. Existing architecture,
+workflow mutation and semantic error validators enforce these boundaries.
+
+### Product states, UI, and recovery
+
+| State | User/operator view | Next action |
+|---|---|---|
+| Preparing | Run log: “Preparing candidate workspace dependencies…” | Wait; no action |
+| Blocked graph/tool | Verification command 2, `pnpm run typecheck`, stage `dependencies`, reason `unsupported-graph`/`tool-unavailable` | Repair frozen candidate metadata or same-job source provisioning |
+| Setup/runtime blocked | Distinct `repository-setup`/`runtime` stage | Repair reviewed same-job prerequisites |
+| Command failed | `command` stage and bounded label/ordinal | Correct the configured verifier/code |
+| Failed, restored | No sync commit/push attempted; original SHA and `restored` | Repair cause, then retry original command |
+| Failed, uncertain cleanup | Original SHA and `unverified` | Inspect runner before retrying; do not reset moved work |
+| Complete | Existing verified merge result and commit SHA | Observer converges normally |
+
+Representative existing result-card body (the surrounding card retains its
+native issue/PR/run links, correlation UUID and Check/Job Summary renderer):
+
+```markdown
+Impact: Branch synchronization stopped at verification command 2
+(pnpm run typecheck): stage dependencies, reason unsupported-graph.
+Action: Repair the frozen candidate workspace graph, then retry /copilot sync-branch.
+Retained state: No synchronization commit or push was attempted.
+Original head: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa. Local rollback: restored.
+Retryable: No
+```
+
+English/Spanish catalogs provide complete impact/action/retained-state copy;
+existing locale fallback and semantic text/Markdown rendering remain. Closed
+technical codes are textual, not color-only. No raw argv, subprocess output,
+provider body, credential, private path or arbitrary URL reaches this recovery.
+`Retryable: No` means blind repetition is not a repair; it does not prove a failed
+package fetch was permanent. Operators inspect provisioning/graph and retry once
+corrected. No blanket transient classification is inferred from exit 1. A later
+reporting failure cannot undo or mislabel an already completed push.
+
+### Test budget, documentation, acceptance, and rollout
+
+Incremental floor: **76 distinct cases**, counted only here: 56 source adapter/
+security/real-Git cases (including clean and fixed-conflict workspace transitions,
+version-probe directory, bounded descriptor changes, cache/path rejection and
+credential-free ordering); 13 closed diagnostic validation cases; 4 sync failure/
+rollback/localization cases; 1 workspace restoration guard; 1 workflow mutation;
+1 additional complete bilingual recovery catalog fixture. Existing verifier,
+consumer setup, credential, dry-run/race/publication suites remain required and
+are not recounted. New pure diagnostic policy MUST have 100% branch coverage;
+all modified coverable lines MUST be covered without partial lines in Codecov
+against the actual PR base. Repository global/module budgets remain unchanged.
+Real pnpm 10.12.4 replay supplements deterministic test doubles: it proves the
+old graph misses a member dependency, candidate install resolves it, install/
+pnpmfile hooks do not run, and Git restores the original head. Record actual host
+and any source-platform test override; this is not native Linux job acceptance.
+Remote Linux/macOS/Windows CI and complete final-head review remain merge gates.
+
+Documentation changes: verification reference (ordering, limits, source versus
+consumer setup), branch synchronization guide (safe failure/rollback/retry),
+troubleshooting (default-versus-candidate graph), this SDD and companion
+cross-references. Catalog evidence and generated index MUST stay current.
+Acceptance requires: current graph on clean/fixer paths; no readiness cache;
+unsafe/missing metadata/tool/process/candidate failure withholding verifier and
+push; exact restored/unverified semantics; unchanged consumers and native setup;
+closed bilingual copy; workflow distinguishing the fixed trusted tool seed from mandatory candidate readiness; full tests,
+coverage, build/package, docs/spec/workflow validators and Graphify update.
+
+Rollout is deliberately separate: merging this change to `develop` alone does
+not update the `master` runtime used by comment events. A separately authorized,
+reviewed promotion must include both runtime bundles and coordinator before
+retrying affected PR sync commands. Do not retry an old installed runtime and
+claim acceptance of this fix. No release/tag/deployment is authorized here.
+Rollback uses the prior complete runtime/workflow pair and preserves remote work.
+Implementation order is contracts/regressions, adapter and UI, workflow/docs/
+catalog/bundles, full final-head checks, then separately approved adoption.
+DoD: all acceptance above, no findings, strict Codecov, explicit protected-path
+human decision where required; native rollout evidence remains pending until the
+new runtime actually runs in the comment job.
+
+Primary operational references: [pnpm 10 frozen workspace installation](https://pnpm.io/10.x/cli/install), [pnpm hook behavior](https://pnpm.io/10.x/pnpmfile), and [pnpm/action-setup v5 installed package/bin layout](https://github.com/pnpm/action-setup/blob/v5/src/install-pnpm/run.ts). The candidate version-probe hook behavior above is separately established by the real 10.12.4 replay, not inferred from later pnpm versions.
+
+
+## Authoritative relationships and historical advisory repair — issue #723
+
+### Evidence, decision, and acceptance boundary
+
+[Issue #723](https://github.com/vypdev/copilot/issues/723) records three independent
+consumer observations: vaultstadio #79 received a synchronized/resolved card for
+#80; zstandard release #170 received a sync command for maintenance #171 against
+`master`; vaultstadio #89 retained actionable advice for dependency #74 after
+that dependency merged and #89 acquired its own branch. These establish wrong
+relationship discovery and misleading advisory lifecycle. They do not establish
+wrong command routing, unauthorized Git publication, or lost branch contents.
+The executable issue79/PR81 regression failed before this change: it returned
+both contextual PR branches in addition to the configured issue79 branch.
+
+The observer MUST resolve at most one primary parent/working pair per issue:
+
+1. One valid schema-v3 durable issue configuration with distinct valid
+   `parentBranch` and `workingBranch` is authoritative. Other PRs, even natively
+   linked PRs, MUST NOT add or replace a second pair over that declaration.
+2. Missing configuration or a valid v3 configuration with neither branch field
+   MAY fall back to native GitHub evidence: an explicitly linked branch with
+   an open PR, or an open PR's native closing/linked-issue reference. The head
+   repository, linked ref repository, and referenced issue repository MUST match
+   the bound repository for their respective evidence. A fork's same-named head
+   or an identically numbered foreign issue MUST NOT count as local evidence.
+3. Fallback MUST yield exactly one distinct valid parent/working pair after
+   deduplication. Same-head/different-parent pairs are ambiguous. Multiple PRs
+   for the identical pair remain one relationship. Arbitrary `#N`, contextual
+   mentions, and textual closing keywords without a native link MUST NOT count.
+4. Malformed, unsupported, duplicate, partial or invalid durable declarations
+   MUST withhold fallback, rather than let weaker evidence override authority.
+   Full `refs/heads/` configuration values and surrounding whitespace are normalized;
+   native GitHub `name`/`headRefName`/`baseRefName` values remain exact short names,
+   including a literal `refs/heads/` prefix. Distinct native pairs MUST NOT collapse
+   after prefix removal or delimiter concatenation; pair keys serialize a tuple.
+   Invalid refs are rejected rather than repaired into another branch.
+5. Outer issue/PR inventories MUST be complete. Missing or repeated continuation
+   cursors fail discovery before writes. A completed stream MUST stay completed
+   while later pages of the other stream are fetched; re-querying its first page
+   MUST NOT re-enable it. Native fallback requires complete nested
+   linked-branch and closing-reference inventories; truncated/unknown evidence
+   withholds fallback. Durable authority does not depend on those optional lists.
+
+GitHub interprets closing keywords against the default branch and exposes native
+issue links separately; this observer MUST consume the native relation rather
+than emulate GitHub's prose parser. The existing PR-link workflow preserves
+native links for non-default target branches. See the primary
+[GitHub linking contract](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue).
+
+No secondary advisory is retained in this release. A future product requiring
+multiple secondary relationships needs a separate scoped command and UX contract;
+it MUST NOT silently reintroduce unqualified issue synchronization guidance.
+
+### Flow, lifecycle, and race behavior
+
+```mermaid
+flowchart TD
+  P[Parent or current working branch push] --> A{Valid durable pair?}
+  A -->|yes| C[Select only configured pair]
+  A -->|absent| N{Complete unique native pair?}
+  A -->|invalid| X[No comparison or publication]
+  N -->|yes| C
+  N -->|no| X
+  C --> F[Re-read native open issue and current relationship]
+  F --> D[Compare current pair and inventory owned cards]
+  D --> R[Retire verified cards for other pairs in place]
+  R --> S[Reconcile current stale or aligned card]
+```
+
+Every write MUST re-read native open issue identity and resolve the same current
+issue/conversation/parent/working relationship. A configured issue re-read is one
+conversation query; unconfigured native fallback uses the complete inventory.
+Closed issues keep the existing terminal retirement path before locale or
+comparison work. Changes/unavailable reads fail closed with no further writes.
+A post-write failure retains completed effects; no rollback may overwrite a
+subsequent human or concurrent bot edit.
+
+At the next eligible parent/current-branch observation, the observer MUST also
+repair previously published status cards for other pairs on the same issue:
+
+- Accept only a positive safe comment ID, trusted bot author, parsed current
+  publication schema, exact issue target, branch-sync topic, recognized dependency
+  key and recognized comparison/aligned/closed/relationship-retired source.
+- Exclude the current pair's key. Preserve its active card byte-for-byte until
+  normal current-pair reconciliation. Never infer authority from visible prose.
+- Process at most **20** historical cards per issue/invocation. Exceeding the
+  bound or lacking freshness capability fails before historical edits; do not
+  silently truncate the inventory. There is no new user-configurable knob.
+- Require original author/target/body-digest freshness immediately before edit,
+  plus current native issue/relationship fences. Preserve the comment ID and old
+  durable key; replace its body with a neutral historical notice naming the
+  verified current issue, working branch and parent. No create/delete, new action
+  notification, Git, label, command execution, or agent is reachable from repair.
+- Verify final owned body and relationship after every edit. A lost response may
+  converge only when the exact final body is read back; an acknowledged write
+  without matching readback MUST fail. Equivalent concurrent repair can be
+  adopted only after readback and the current-relationship fence.
+- Identical replays perform no update. Native issue closure can subsequently
+  retire the historical notice; if that pair later becomes current again,
+  normal comparison reactivates its status without inventing an aligned-to-stale
+  transition from a relationship-retired state.
+
+This is opportunistic recovery, not a global comment migration: no eligible push,
+no provable primary relationship, unsupported old marker, or more than 20 matching
+historical cards leaves recovery pending. Context-only pushes to an unrelated
+branch do not trigger issue repair. Historical immutable transition notifications
+remain historical pointers; their status-card targets are neutralized. A maintainer
+can trigger the ordinary observer with a legitimate parent/current-branch push
+once current authority is established. Do not repeat a sync command merely to
+retire a wrong advisory.
+
+### Representative UI and diagnostics
+
+```markdown
+## Previous branch advisory retired
+
+The current relationship for issue #89 is `bugfix/89-authorization`, with parent `develop`.
+
+This previous card concerns a different relationship and no longer provides
+instructions for this issue. Retirement does not certify synchronization of
+either branch.
+```
+
+Spanish uses the complete bundled equivalents: “Aviso anterior de rama retirado”,
+“La relación actual de la issue #89 es …”, and an explicit statement that retirement
+does not certify synchronization. Other locales use the existing atomic catalog
+resolution/fallback. Refs retain existing bounded safe rendering. The current
+card alone may say “Action required” or “Branch synchronized” after comparison of
+its actual pair. Retiring another card MUST NOT claim that the current issue's
+recommendation was resolved. Results retain exact issue/parent/working identity
+and acknowledged `retiredCards`; failed reconciliation reports incomplete work
+and preserves those effects without exposing provider error prose or credentials.
+
+### Architecture, tests, documentation, rollout
+
+Discovery stays in the data adapter/pure policy; GraphQL supplies native identity
+and completeness, not product wording. A small pure application selector scopes
+historical cards. Its workflow receives only comment-update, freshness and read
+fences. Composition binds the existing reply-request read capability. Existing
+command authorization, verification, branch protection, merge preparation and
+trusted publication remain unchanged. No consumer edits, repository variables,
+credentials, new flags, release, or default-runtime promotion are part of #723.
+
+Incremental floor: **59 distinct new cases**, conservatively counted by new test
+declarations rather than parameter rows: 20 dependency-policy cases beyond the
+six-case baseline; six repository/freshness cases; nine observer race/lifecycle
+cases; 23 historical repair/ownership/bounds/readback/partial/locale cases; one
+native closed-lifecycle convergence case. The modified existing adapter cases
+also enforce incomplete-page failure without being counted again. Cover issue79,
+release170 and dependency74→issue89, positive native links, fork/foreign identity,
+ambiguous/malformed/partial evidence, unsafe refs, forged cards, 20/21 boundary,
+concurrent edits, lost writes/readback, partial effects, replay, and current-pair
+reactivation. Existing global/module budgets remain; dependency authority and the
+new pure retirement selector and its bounded repair workflow MUST reach **100% lines/statements/functions/branches**.
+Codecov MUST show all changed executable lines covered, with zero changed-line
+misses or partials on the final PR head. Full Jest, extension, types/lint,
+workflow/spec/documentation, build/package checks and Graphify update are required.
+
+Update the branch-sync user guide and semantic-publication companion; catalog
+and communication-ledger evidence MUST remain current and nonduplicated. The
+59-case primary allocation belongs here; the communication ledger references
+its presentation subset rather than counting a second independent acceptance
+budget. Rollout occurs only when the consuming workflow actually uses the fixed
+runtime; merging to `develop` alone does not promote a `master`-pinned comment
+runtime. Rollback restores the prior coherent runtime but cannot restore retired
+wrong advice as current fact. Acceptance requires successful current-head remote
+review, all applicable checks and explicit complete Codecov patch coverage.
+
+
+Review follow-up (#748): the reported colon-bearing pair is invalid under
+[Git's ref rules](https://git-scm.com/docs/git-check-ref-format) and was already
+rejected by the branch validator. Three additional cases distinguish that premise
+from a reproduced native-name collision: `topic` and `refs/heads/topic` are distinct
+valid short names, but unconditional prefix removal had deduplicated them and
+could select the wrong linked branch. Both native-name regressions failed before
+the correction. Only durable configuration accepts full-ref notation; provider
+short names stay unchanged, and pair keys use JSON tuple serialization. Existing
+positive identical-pair deduplication and strict ambiguity tests remain required.

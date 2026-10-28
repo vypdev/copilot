@@ -1,0 +1,929 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "capabilities",
+    "identity",
+    "producer",
+    "publication",
+    "native",
+    "lifecycle",
+    "assessment",
+    "links",
+    "sdd",
+    "findings",
+    "commands",
+    "branch"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 48,
+        "pattern": "^[a-z][a-z0-9-]{0,39}\\.v[1-9][0-9]{0,2}$"
+      },
+      "maxItems": 16,
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repositoryId",
+        "kind",
+        "number"
+      ],
+      "properties": {
+        "repositoryId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "kind": {
+          "enum": [
+            "issue",
+            "pull-request"
+          ]
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "headSha": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "baseSha": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "pattern": "^[a-f0-9]{40}$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "pull-request"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "headSha",
+              "baseSha"
+            ]
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "headSha"
+                  ]
+                },
+                {
+                  "required": [
+                    "baseSha"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actorId",
+        "runId",
+        "attempt",
+        "workflowPath",
+        "sourceCommit",
+        "actionVersion",
+        "configurationDigest"
+      ],
+      "properties": {
+        "actorId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "runId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "workflowPath": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^\\.github/workflows/[A-Za-z0-9_.-]+\\.ya?ml$"
+        },
+        "sourceCommit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "actionVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+        },
+        "configurationDigest": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "commentId",
+        "generation",
+        "observedAt",
+        "outcome"
+      ],
+      "properties": {
+        "commentId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time",
+          "maxLength": 30,
+          "pattern": "Z$"
+        },
+        "outcome": {
+          "enum": [
+            "complete",
+            "partial",
+            "failed",
+            "pending",
+            "canceled"
+          ]
+        }
+      }
+    },
+    "native": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "reason"
+          ],
+          "properties": {
+            "state": {
+              "enum": [
+                "open",
+                "closed"
+              ]
+            },
+            "reason": {
+              "enum": [
+                "completed",
+                "not-planned",
+                "reopened",
+                "duplicate",
+                "unknown",
+                null
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "merged"
+          ],
+          "properties": {
+            "state": {
+              "enum": [
+                "open",
+                "closed"
+              ]
+            },
+            "merged": {
+              "type": "boolean"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "merged": {
+                    "const": true
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "state": {
+                    "const": "closed"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase",
+        "activity",
+        "waitingFor"
+      ],
+      "properties": {
+        "phase": {
+          "enum": [
+            "planned",
+            "specifying",
+            "working",
+            "reviewing",
+            "changes-requested",
+            "ready",
+            "verified",
+            "blocked",
+            "unknown"
+          ]
+        },
+        "activity": {
+          "enum": [
+            "idle",
+            "processing",
+            "unknown"
+          ]
+        },
+        "waitingFor": {
+          "enum": [
+            "none",
+            "maintainer",
+            "issue-author",
+            "pr-author",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "policyDigest",
+        "coverage",
+        "currentFindingCount",
+        "nextAction"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "not-applicable",
+            "unavailable",
+            "pending",
+            "blocked",
+            "satisfied"
+          ]
+        },
+        "policyDigest": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "coverage": {
+          "enum": [
+            "complete",
+            "partial",
+            "unknown"
+          ]
+        },
+        "currentFindingCount": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "nextAction": {
+          "enum": [
+            "none",
+            "inspect-findings",
+            "open-question",
+            "inspect-run",
+            "inspect-blocker",
+            "wait",
+            "select-pr",
+            "open-native",
+            "review-result",
+            "refresh"
+          ]
+        }
+      }
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "number"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "issue",
+                  "pull-request"
+                ]
+              },
+              "number": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "id"
+            ],
+            "properties": {
+              "kind": {
+                "const": "run"
+              },
+              "id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              }
+            }
+          }
+        ]
+      },
+      "maxItems": 12,
+      "minItems": 0
+    },
+    "sdd": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "path",
+            "commitSha",
+            "pendingQuestionIds"
+          ],
+          "properties": {
+            "state": {
+              "enum": [
+                "not-required",
+                "awaiting-answers",
+                "revision-pending",
+                "ready",
+                "invalid",
+                "unavailable"
+              ]
+            },
+            "path": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 300,
+                  "pattern": "^specs/(?!.*(?:^|/)\\.\\.(?:/|$))[^\\x00-\\x1f\\\\]+\\.md$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "commitSha": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40,
+                  "pattern": "^[a-f0-9]{40}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "pendingQuestionIds": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "Q1",
+                  "Q2",
+                  "Q3",
+                  "Q4",
+                  "Q5",
+                  "Q6",
+                  "Q7",
+                  "Q8"
+                ]
+              },
+              "maxItems": 8,
+              "minItems": 0,
+              "uniqueItems": true
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "state": {
+                    "const": "ready"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "commitSha": {
+                    "type": "string"
+                  },
+                  "pendingQuestionIds": {
+                    "maxItems": 0
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "findings": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "complete",
+            "total",
+            "items"
+          ],
+          "properties": {
+            "complete": {
+              "type": "boolean"
+            },
+            "total": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "reviewCommentId",
+                  "reviewId",
+                  "path",
+                  "line",
+                  "severity",
+                  "state",
+                  "headSha",
+                  "summary"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+                  },
+                  "reviewCommentId": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "reviewId": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "path": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300,
+                    "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\x00-\\x1f\\\\]+$"
+                  },
+                  "line": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10000000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "severity": {
+                    "enum": [
+                      "critical",
+                      "high",
+                      "medium",
+                      "low",
+                      "info",
+                      "unknown"
+                    ]
+                  },
+                  "state": {
+                    "enum": [
+                      "open",
+                      "reopened",
+                      "verification-required",
+                      "fixed",
+                      "dismissed",
+                      "obsolete",
+                      "unknown"
+                    ]
+                  },
+                  "headSha": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40,
+                    "pattern": "^[a-f0-9]{40}$"
+                  },
+                  "summary": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  }
+                }
+              },
+              "maxItems": 100,
+              "minItems": 0
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "context"
+        ],
+        "properties": {
+          "name": {
+            "enum": [
+              "status",
+              "analyze",
+              "fix",
+              "dismiss"
+            ]
+          },
+          "context": {
+            "enum": [
+              "conversation",
+              "review-thread"
+            ]
+          },
+          "findingId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "reviewCommentId": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "name": {
+                  "enum": [
+                    "fix",
+                    "dismiss"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "findingId",
+                "reviewCommentId"
+              ],
+              "properties": {
+                "context": {
+                  "const": "review-thread"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "context": {
+                  "const": "conversation"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "findingId"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "reviewCommentId"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "maxItems": 16,
+      "minItems": 0
+    },
+    "branch": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "repositoryId",
+            "ref",
+            "commitSha"
+          ],
+          "properties": {
+            "state": {
+              "enum": [
+                "verified",
+                "pending",
+                "unavailable",
+                "not-applicable"
+              ]
+            },
+            "repositoryId": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "ref": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^(?!/)(?!.*\\.\\.)(?!.*@\\{)(?!.*[~^:?*\\[\\\\\\x00-\\x20])[A-Za-z0-9][^/]*(?:/[^/]+)*$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "commitSha": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{40}$",
+                  "minLength": 40,
+                  "maxLength": 40
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "state": {
+                    "const": "verified"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "ref": {
+                    "type": "string"
+                  },
+                  "commitSha": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "identity": {
+            "properties": {
+              "kind": {
+                "const": "issue"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "native": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "reason"
+            ],
+            "properties": {
+              "state": {
+                "enum": [
+                  "open",
+                  "closed"
+                ]
+              },
+              "reason": {
+                "enum": [
+                  "completed",
+                  "not-planned",
+                  "reopened",
+                  "duplicate",
+                  "unknown",
+                  null
+                ]
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "native": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "merged"
+            ],
+            "properties": {
+              "state": {
+                "enum": [
+                  "open",
+                  "closed"
+                ]
+              },
+              "merged": {
+                "type": "boolean"
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "merged": {
+                      "const": true
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "state": {
+                      "const": "closed"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "identity": {
+            "properties": {
+              "kind": {
+                "const": "pull-request"
+              }
+            }
+          },
+          "assessment": {
+            "properties": {
+              "state": {
+                "const": "satisfied"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "assessment": {
+            "properties": {
+              "policyDigest": {
+                "type": "string"
+              },
+              "coverage": {
+                "const": "complete"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:vypdev:copilot:browser-extension:status:1",
+  "title": "Proposed browser status snapshot v1",
+  "$comment": "Specification artifact only. Byte/UTF-8/duplicate-key/provenance/freshness/semantic checks are additionally required by the integration SDD."
+}

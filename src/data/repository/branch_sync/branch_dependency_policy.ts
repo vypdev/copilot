@@ -1,92 +1,76 @@
 import type { BranchDependency } from "../../../application/ports/branch_sync_ports";
 import { Config, requireCurrentConfigurationPayload } from "../../model/config";
-import type {
-  GithubBranchSyncIssueNode,
-  GithubBranchSyncPullRequestNode,
-} from "../../../infrastructure/github/ports/github_branch_sync_protocol";
+import type { GithubBranchSyncIssueNode, GithubBranchSyncPullRequestNode } from "../../../infrastructure/github/ports/github_branch_sync_protocol";
 
-const CONFIGURATION = /<!--\s*copilot-configuration-start\s*\n([\s\S]*?)\n\s*copilot-configuration-end\s*-->/iu;
+const CONFIGURATION = /<!--\s*copilot-configuration-start\s*\n([\s\S]*?)\n\s*copilot-configuration-end\s*-->/giu;
+type ConfiguredDependency = { kind: 'absent' | 'invalid' } | { kind: 'configured'; dependency: BranchDependency };
 
+/** One primary relationship per issue; prose never establishes ownership. */
 export function resolveOpenBranchDependencies(
   issues: readonly GithubBranchSyncIssueNode[],
   pullRequests: readonly GithubBranchSyncPullRequestNode[],
+  repositoryFullName: string,
 ): BranchDependency[] {
-  const candidates: BranchDependency[] = [];
+  const dependencies: BranchDependency[] = [];
   for (const issue of issues) {
-    const configured = dependencyFromConfiguration(issue);
-    if (configured) candidates.push(configured);
-
-    const linkedBranches = new Set(
-      (issue.linkedBranches?.nodes ?? [])
-        .map((node) => normalizeBranch(node?.ref?.name))
-        .filter((branch): branch is string => Boolean(branch)),
-    );
-    for (const pullRequest of pullRequests) {
-      if (linkedBranches.has(pullRequest.headRefName) || pullRequestReferencesIssue(pullRequest, issue.number)) {
-        candidates.push({
-          issueNumber: issue.number,
-          parentBranch: pullRequest.baseRefName,
-          workingBranch: pullRequest.headRefName,
-        });
-      }
+    if (!Number.isSafeInteger(issue.number) || issue.number < 1) continue;
+    const configured = configuredBranchDependency(issue);
+    if (configured.kind === 'configured') { dependencies.push(configured.dependency); continue; }
+    if (configured.kind === 'invalid') continue;
+    // Incomplete inventories cannot prove that a fallback relationship is unique.
+    if (!Array.isArray(issue.linkedBranches?.nodes) || issue.linkedBranches?.pageInfo?.hasNextPage !== false
+      || pullRequests.some(pr => sameRepository(pr.headRepository?.nameWithOwner, repositoryFullName)
+        && (!Array.isArray(pr.closingIssuesReferences?.nodes) || pr.closingIssuesReferences?.pageInfo?.hasNextPage !== false))) continue;
+    const linkedBranches = new Set(issue.linkedBranches.nodes
+      .filter(node => sameRepository(node?.ref?.repository?.nameWithOwner, repositoryFullName))
+      .map(node => normalizeBranch(node?.ref?.name)));
+    const candidates = new Map<string, BranchDependency>();
+    for (const pr of pullRequests) {
+      if (!sameRepository(pr.headRepository?.nameWithOwner, repositoryFullName)) continue;
+      const closesIssue = pr.closingIssuesReferences!.nodes!.some(node =>
+        node?.number === issue.number && sameRepository(node.repository?.nameWithOwner, repositoryFullName));
+      const parentBranch = normalizeBranch(pr.baseRefName);
+      const workingBranch = normalizeBranch(pr.headRefName);
+      if ((!closesIssue && !linkedBranches.has(workingBranch)) || !parentBranch || !workingBranch || parentBranch === workingBranch) continue;
+      candidates.set(JSON.stringify([parentBranch, workingBranch]), { issueNumber: issue.number, parentBranch, workingBranch });
     }
+    if (candidates.size === 1) dependencies.push([...candidates.values()][0]);
   }
-  return uniqueValidDependencies(candidates);
+  return dependencies;
 }
 
-export function dependencyFromPullRequest(
-  pullRequest: GithubBranchSyncPullRequestNode,
-  conversationNumber = pullRequest.number,
-): BranchDependency {
-  return {
-    issueNumber: conversationNumber,
-    parentBranch: pullRequest.baseRefName,
-    workingBranch: pullRequest.headRefName,
-  };
-}
-
-function dependencyFromConfiguration(
-  issue: GithubBranchSyncIssueNode,
-): BranchDependency | undefined {
-  const serialized = issue.body?.match(CONFIGURATION)?.[1];
-  if (!serialized) return undefined;
+/** Invalid/partial declarations block fallback; a valid unbranched config does not. */
+export function configuredBranchDependency(issue: GithubBranchSyncIssueNode): ConfiguredDependency {
+  const body = issue.body ?? '';
+  const markerText = body.toLowerCase();
+  if (!markerText.includes('copilot-configuration-start') && !markerText.includes('copilot-configuration-end')) return { kind: 'absent' };
+  const matches = [...body.matchAll(CONFIGURATION)];
+  if (matches.length !== 1 || markerText.split('copilot-configuration-start').length !== 2 || markerText.split('copilot-configuration-end').length !== 2) return { kind: 'invalid' };
   try {
-    const configuration = new Config(requireCurrentConfigurationPayload(JSON.parse(serialized)));
-    if (!configuration.parentBranch || !configuration.workingBranch) return undefined;
-    return {
-      issueNumber: issue.number,
-      parentBranch: configuration.parentBranch,
-      workingBranch: configuration.workingBranch,
-    };
-  } catch {
-    return undefined;
-  }
+    const input = requireCurrentConfigurationPayload(JSON.parse(matches[0][1]));
+    const configuration = new Config(input);
+    if (input.parentBranch === undefined && input.workingBranch === undefined) return { kind: 'absent' };
+    const parentBranch = normalizeBranch(configuration.parentBranch, true);
+    const workingBranch = normalizeBranch(configuration.workingBranch, true);
+    if (!parentBranch || !workingBranch || parentBranch === workingBranch) return { kind: 'invalid' };
+    return { kind: 'configured', dependency: { issueNumber: issue.number, parentBranch, workingBranch } };
+  } catch { return { kind: 'invalid' }; }
 }
 
-function pullRequestReferencesIssue(
-  pullRequest: GithubBranchSyncPullRequestNode,
-  issueNumber: number,
-): boolean {
-  if ((pullRequest.closingIssuesReferences?.nodes ?? []).some((issue) => issue?.number === issueNumber)) {
-    return true;
-  }
-  const escaped = String(issueNumber).replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
-  return new RegExp(`(?:^|[^\\w])#${escaped}(?!\\d)`, "u").test(pullRequest.body ?? "");
+export function dependencyFromPullRequest(pr: GithubBranchSyncPullRequestNode, conversationNumber = pr.number): BranchDependency {
+  return { issueNumber: conversationNumber, parentBranch: pr.baseRefName, workingBranch: pr.headRefName };
 }
 
-function normalizeBranch(branch: string | null | undefined): string | undefined {
-  const normalized = branch?.replace(/^refs\/heads\//u, "").replace(/^\/+/, "").trim();
-  return normalized || undefined;
+function normalizeBranch(value: string | null | undefined, fullRef = false): string | undefined {
+  const raw = value?.trim();
+  // GitHub name/headRefName/baseRefName are already short names, even when they literally start with refs/heads/.
+  const branch = fullRef ? raw?.replace(/^refs\/heads\//u, '') : raw;
+  // Git ref syntax, with a fixed metadata ceiling; never repair an invalid ref into a different branch.
+  return branch && branch.length <= 1024
+    && !/^(?:[-/.]|@$)|[\p{Cc}\s~^:?*[\\]|\.\.|@\{|\/\/|[/.]$|(?:^|\/)\.|\.lock(?:\/|$)/u.test(branch)
+    ? branch : undefined;
 }
 
-function uniqueValidDependencies(candidates: readonly BranchDependency[]): BranchDependency[] {
-  const unique = new Map<string, BranchDependency>();
-  for (const candidate of candidates) {
-    const parentBranch = normalizeBranch(candidate.parentBranch);
-    const workingBranch = normalizeBranch(candidate.workingBranch);
-    if (!parentBranch || !workingBranch || parentBranch === workingBranch || candidate.issueNumber < 1) continue;
-    const dependency = { ...candidate, parentBranch, workingBranch };
-    unique.set(`${candidate.issueNumber}:${parentBranch}:${workingBranch}`, dependency);
-  }
-  return [...unique.values()];
+function sameRepository(actual: string | undefined, expected: string): boolean {
+  return actual?.toLowerCase() === expected.toLowerCase();
 }

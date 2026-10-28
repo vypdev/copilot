@@ -1,3 +1,4 @@
+import { issueWorkflowDiagnostic } from '../../domain/issue_workflow_diagnostic';
 import { closedIssueReconciliationError } from '../../application/errors/closed_issue_reconciliation_error';
 import type { Execution } from '../../data/model/execution';
 import { Ai } from '../../data/model/ai';
@@ -676,9 +677,35 @@ describe('finishGithubAction', () => {
             { publish: mockSummaryPublish },
         )).resolves.toBeUndefined();
 
-        expect(mockSummaryPublish).toHaveBeenCalledTimes(1);
+        expect(mockSummaryPublish).toHaveBeenCalledTimes(2);
+        expect(mockSummaryPublish.mock.calls[1][0]).toContain('operation=checks.create');
+        expect(mockSummaryPublish.mock.calls[1][0]).toContain('underlying cause is not established');
         expect(mockEvidencePublish).toHaveBeenCalledTimes(1);
         expect(core.setFailed).not.toHaveBeenCalled();
+    });
+
+    it('keeps a required size reconciliation failure distinct from optional Check publication failure', async () => {
+        mockEvidencePublish.mockRejectedValueOnce(new Error('checks unavailable'));
+        const action = Object.assign(execution(), {
+            eventName: 'push', isIssue: false, isPullRequest: false, isPush: true,
+            pullRequest: { number: 99, action: 'synchronize' },
+            inputs: { pull_request: { head: { sha: 'a'.repeat(40) } } },
+        });
+        const error = new ApplicationError('authorization.denied', 'Size reconciliation stopped before completion.', {
+            recovery: { id: 'change-size-reconciliation-failed', variables: {
+                operation: 'pr-project-size', issueNumber: 42, targetNumber: 99, projectIndex: 1,
+                verifiedOperations: 7, pendingProjectSizes: 0, providerStatus: 'http-403', providerReference: 'ABCD:1234',
+            } },
+        });
+        const results = [new Result({ id: 'CheckChangesIssueSizeUseCase', success: false, executed: true, errors: [error] })];
+        await finishGithubAction(action, results, {} as never, {} as never,
+            { publish: mockEvidencePublish }, { publish: mockSummaryPublish });
+        expect(mockEvidencePublish).toHaveBeenCalledTimes(1);
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('pr-project-size'));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining(error.correlationId));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('authorization.denied'));
+        expect(results[0].errors[0]).toBe(error);
+        expect(results[0].success).toBe(false);
     });
 
     it('keeps metadata-only PR completion out of the stable Review Check', async () => {
@@ -960,3 +987,28 @@ function completeFindingStates(overrides: Record<string, number> = {}): Record<s
         ...overrides,
     };
 }
+
+
+describe('admission recovery stays in the immutable run summary (#725)',()=>{
+    beforeEach(()=>{jest.clearAllMocks();mockSummaryPublish.mockResolvedValue(undefined);mockStoreInvoke.mockResolvedValue(undefined);mockPublishInvoke.mockResolvedValue(undefined);});
+    function blocked(locale='en-US', fields=['VaultStadio Version']) {
+        const action=execution();action.issueWorkflowRuntimeMode='block';Object.assign(action,{locale:{...action.locale,repository:locale}});
+        const error=new ApplicationError('configuration.invalid','private source value',{recovery:{id:'issue-workflow-admission-blocked',variables:issueWorkflowDiagnostic({status:'invalid',kind:'bugfix',missingHeadings:fields})!}});
+        return {action, result:new Result({id:'IssueWorkflowAdmission',success:false,executed:false,errors:[error]})};
+    }
+    async function finish(value:ReturnType<typeof blocked>,resolver?:never) {await finishGithubAction(value.action,[value.result],{} as never,{} as never,undefined,{publish:mockSummaryPublish},resolver);return mockSummaryPublish.mock.calls.at(-1)?.[0] as string;}
+    it('names the exact configured missing field in the Job Summary',async()=>expect(await finish(blocked())).toContain('VaultStadio Version'));
+    it('does not persist a minimal configuration after rejected admission',async()=>{await finish(blocked());expect(mockStoreInvoke).not.toHaveBeenCalled();});
+    it('does not publish a diagnostic conversation card or reply',async()=>{await finish(blocked());expect(mockPublishInvoke).not.toHaveBeenCalled();});
+    it('does not call the planner to localize a blocked diagnostic',async()=>{for(const durable of [false,true]){const value=blocked('fr-FR');if(durable){Object.assign(value.action.singleAction,{isDeploymentOrchestrationAction:true});value.action.currentConfiguration.deploymentOrchestration=deploymentOperation();}jest.spyOn(value.action.ai,'getAgentConfiguration').mockImplementation(()=>{throw Error('planner must not start');});await finish(value);expect(value.action.ai.getAgentConfiguration).not.toHaveBeenCalled();}});
+    it('does not consult the dynamic catalog resolver before admission',async()=>{const resolver={resolve:jest.fn(()=>{throw Error('no translation');})};await finish(blocked('fr-FR'),resolver as never);expect(resolver.resolve).not.toHaveBeenCalled();});
+    it('renders a complete Spanish diagnostic from the bundled catalog',async()=>{const text=await finish(blocked('es-ES'));expect(text).toContain('VaultStadio Version');expect(text).toContain('No se inició ninguna rama');});
+    it('uses complete English fallback for a non-bundled locale',async()=>expect(await finish(blocked('ja-JP'))).toContain('Correct the exact headings'));
+    it('does not expose issue body or provider prose through the new diagnostic',async()=>expect(await finish(blocked())).not.toContain('private source value'));
+    it('keeps mapped heading Markdown and mentions inert in the summary',async()=>{const text=await finish(blocked('en-US',['<script>|`@team']));expect(text).not.toContain('<script>');expect(text).not.toContain('@team');expect(text).toContain('&#64;team');});
+    it('retains the original error even when summary publication fails',async()=>{mockSummaryPublish.mockRejectedValueOnce(new Error('private summary failure'));await finish(blocked());expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('VaultStadio Version'));expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('private summary failure'));});
+    it('keeps admission failure non-retryable until its fields are repaired',async()=>{await finish(blocked());expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Retryable: No'));});
+    it('leaves previous configuration unchanged on repeated rejected events',async()=>{const value=blocked();value.action.currentConfiguration.workingBranch='bugfix/42-owned';await finish(value);await finish(value);expect(value.action.currentConfiguration.workingBranch).toBe('bugfix/42-owned');expect(mockStoreInvoke).not.toHaveBeenCalled();expect(mockPublishInvoke).not.toHaveBeenCalled();});
+    it('also keeps passive no-op admission free of conversation and config writes',async()=>{const value=blocked();value.action.issueWorkflowRuntimeMode='noop';value.result=new Result({id:'IssueWorkflowAdmission',success:true,executed:false});await finish(value);expect(mockStoreInvoke).not.toHaveBeenCalled();expect(mockPublishInvoke).not.toHaveBeenCalled();expect(core.setFailed).not.toHaveBeenCalled();});
+    it('returns repaired admitted executions to normal publication and persistence',async()=>{const value=blocked();value.action.issueWorkflowRuntimeMode='execute';value.result=new Result({id:'repaired',success:true,executed:true});await finish(value);expect(mockPublishInvoke).toHaveBeenCalledTimes(1);expect(mockStoreInvoke).toHaveBeenCalledTimes(1);expect(core.setFailed).not.toHaveBeenCalled();});
+});

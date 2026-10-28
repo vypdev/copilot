@@ -321,3 +321,8 @@ this change adds no stateful retry or remote race boundary.
 ## Optional repository setup amendment — issue #647
 
 The [repository-owned setup contract](./repository-verification-setup-hooks.md) adds an explicit disabled-default `verification-setup` boolean. When enabled, a trusted main-branch Node helper prepares each candidate command environment before these existing fixed runtime probes. The runtime declaration remains a version-only policy and never supplies script paths, commands, credentials or installer arguments. With setup disabled, prerequisite behavior is unchanged. The companion owns its incremental tests and bounded setup limits; all existing no-push, isolation and preflight constraints remain required.
+
+
+### Source candidate dependency correction — #746
+
+The [source candidate readiness amendment](./branch-synchronization-and-conflict-recovery.md#candidate-dependency-readiness-and-failure-facts--746-2026-10-27) owns the incremental source-only frozen-pnpm preparation and closed sync failure facts. Source runtime bootstrap remains before the Action; source dependencies move to each actual candidate verifier boundary after optional native setup and runtime probes. Consumer setup opt-in, runtime-only declarations and generic no-installer behavior remain unchanged. The amendment owns its incremental test budget and separately authorized default-runtime rollout; do not double count it here.

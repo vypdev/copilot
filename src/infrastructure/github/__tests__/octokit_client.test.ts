@@ -2,6 +2,8 @@ import * as github from "@actions/github";
 import {
   OctokitBranchClientAdapter,
   OctokitBranchComparisonClientAdapter,
+  OctokitProgressObjectClientAdapter,
+  OctokitProgressComparisonClientAdapter,
 } from "../octokit_branch_adapters";
 import { OctokitGraphqlTransportClientAdapter } from "../octokit_project_adapters";
 import {
@@ -41,6 +43,8 @@ describe("Octokit client adapters contract", () => {
   const adapters: Array<[string, new () => Adapter]> = [
     ["branch", OctokitBranchClientAdapter],
     ["branch comparison", OctokitBranchComparisonClientAdapter],
+    ["immutable progress objects", OctokitProgressObjectClientAdapter],
+    ["native progress comparison", OctokitProgressComparisonClientAdapter],
     ["GraphQL", OctokitGraphqlTransportClientAdapter],
     ["issue assignment", OctokitIssueAssignmentClientAdapter],
     ["issue content", OctokitIssueContentClientAdapter],

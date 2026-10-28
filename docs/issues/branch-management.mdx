@@ -44,15 +44,115 @@ Automatic title formatting keeps the boundaries between hyphenated words. A titl
 
 ## Progress evidence
 
-Progress assessments use an immutable GitHub comparison of the development base and the managed branch head. The agent receives the source patches directly and does not need shell commands. Generated build files contribute metadata only; a percentage does not certify CI or a build.
+Progress assessments use an immutable GitHub comparison of the actual native PR target and the managed branch head. If no open PR owns that exact head branch, they use the configured development base. The agent receives the source patches directly and does not need shell commands. Generated build files contribute metadata only; a percentage does not certify CI or a build.
 
-Small comparisons use one assessment. Larger complete comparisons are reviewed in up to 16 parts, each containing whole files within the unchanged 256,000-byte UTF-8 evidence limit. Every part must return bounded facts for every assigned file before one final assessment can update progress. These facts preserve uncertainty and do not certify CI. Their final combined summary has a maximum 384,000-byte budget. Copilot reserves every admitted path and the issue/prompt envelope inside the unchanged 512 KiB runtime ceiling, then requests concise facts using the same calculated limit in the schema and parser. No returned facts are silently shortened. Source parts and the manifest retain the 256,000-byte limit.
+Copilot first classifies every nonempty line of the full issue body by source identifier as required, excluded, context or uncertain, before it analyzes patches. The scope request, comparison parts and final assessment keep complete issue text, extracted scope and model facts inside explicit untrusted-data blocks. Embedded instructions cannot grant workflow authority. Inputs that exceed the fixed UTF-8 budgets are rejected with retained progress rather than shortened to fit. Small comparisons then use one assessment. Larger complete comparisons are reviewed in up to 16 parts, each containing complete patches or identified content slices within the unchanged 256,000-byte UTF-8 evidence limit. Every part must return bounded facts for every assigned file or content unit before one final assessment can update progress. These facts preserve uncertainty and do not certify CI. Their final combined summary has a maximum 384,000-byte budget. Copilot reserves every admitted path and the issue/prompt envelope inside the unchanged 512 KiB runtime ceiling, then requests concise facts using the same calculated limit in the schema and parser. No returned facts are silently shortened. Source parts and the manifest retain the 256,000-byte limit.
+
+### Which comparison is assessed
+
+One native open PR in the same repository selects its actual base branch, including
+production or release targets. Copilot verifies the exact head, reads the native
+base ref and pins both SHAs. It does not trust a possibly historical PR `base.sha`,
+a target named in issue prose, local checkout state or model output. Two matching
+PRs, foreign/fork identities, unavailable reads or an invalid head fail closed;
+Copilot does not guess a target or silently fall back. A runtime missing this
+read capability reports an unsupported configuration.
+
+Before publishing, Copilot rereads the acceptance body, PR ownership and native
+refs. A PR closing, appearing, changing target or being replaced, or a source/base
+moving, retains the prior progress. Branch names are untrusted data in prompts
+and escaped metadata in run logs. The result keeps the configured
+`developmentBranch` and separately records `comparisonBaseBranch`,
+`comparisonSource` and the actual `baseSha`.
+
+This matters for inherited production binaries. A maintenance PR against master
+may have only text changes even though comparing it against develop includes
+already-produced libraries. Copilot assesses the complete native-target delta;
+it does not filter those libraries or call their metadata a content review.
+Standalone work without a PR still uses development. Binary changes genuinely
+remaining in the selected comparison require adequate reviewable evidence and
+remain unassessed when that evidence is unavailable.
+
+### Omitted or incomplete patches
+
+Copilot checks unified hunks and changed-line totals before using a patch. For
+omitted, truncated or oversized text patches it reads exact Git commit, tree and
+blob objects using the same repository credential. The preimage is the pinned
+comparison merge base; the target is the pinned branch head. Complete directories
+prove paths and presence; blob size, canonical base64 and recomputed Git hash
+prove bytes. This does not inspect a checkout or execute commands.
+
+Regular UTF-8 text, empty additions/removals and verified renames/copies are
+supported. Identical renames require independently resolved old and new paths
+with the same blob; zero statistics alone never prove equality. BOM, CRLF and
+Unicode bytes are preserved. Binary/non-UTF8 files, symlinks and submodules remain
+unsupported recovery inputs. Lockfiles and specification registries receive
+complete content, rather than a metadata exemption.
+
+Recovery admits at most 64 files, 1,048,576 bytes per blob, 4,194,304 represented
+side bytes in total, 256 Git object requests and 50,000 visited directory entries.
+It divides recovered text into contiguous slices of at most 120,000 serialized
+JSON text bytes and admits at most 512 exact evidence units. All slices, sides,
+paths, offsets and immutable identities must be covered exactly once. These
+retrieval limits do not enlarge the existing 16-part, 256,000-byte evidence,
+384,000-byte facts or 512 KiB prompt budgets. Every source and prompt budget is
+checked before any model call; no content or facts are shortened to fit.
+
+If full recovery is unavailable, the run reports `validation.evidence-unavailable`
+and names up to eight unreviewed paths plus their total count. An exhausted work
+or analysis budget reports `validation.evidence-too-large`. Both are terminal
+for that deterministic input and preserve progress. Inspect the pinned revision
+or split reviewed work; a genuine provider outage keeps its normal retryability.
+For unsupported binary/non-text contents, the shared CLI/Job Summary reports
+exact unreviewed paths and distinguishes unavailable progress from project
+verification. It shows up to eight complete names within an 8,192-byte diagnostic
+budget, with total/shown counts; the complete pinned inventory appears in at most
+299 numbered run-log records. Names remain reversible JSON literals, with control,
+HTML, mention and Markdown characters kept inert. No source or binary bytes are
+logged. Inspect the intended PR base and pinned paths. Actually changed binaries
+need reviewable source and provenance; zero counters or a successful compile do
+not establish binary correctness. Do not retarget a legitimate PR to hide changes
+or split production libraries merely to manufacture textual patches.
+
+A failed middle part never publishes partial progress or requests a final
+percentage. Replay reloads exact evidence and does not reuse partial facts.
+
+### Scope and verification
+
+Only the original issue defines completion requirements. Each assessment cites a
+requirement such as `[R1] Edit and clear inventoried inputs` and explains its
+source support or verification uncertainty. Reports and patches can reveal
+separate product debt; that debt does not automatically become work required to
+finish this issue. Compatibility-only mobile scope does not require device
+execution. If search correctness or device journeys are actually required by the
+issue, they remain required.
+
+Source changes, reported execution and independently verified execution are
+different facts. Repository reports and model summaries are not trusted test
+attestations. An execution requirement without independent evidence remains
+unverified, rather than becoming a successful test claim. A percentage is an
+estimate; it does not replace review, CI, coverage or approval gates.
+
+Every source line must be accounted for exactly once, including unchanged acceptance criteria; an omitted or duplicated source identifier rejects the entire interpretation. Ambiguous lines remain required verification uncertainty and cannot be marked complete. The issue-only interpretation admits at most 1,024 nonempty source lines, with at most 32 required/uncertain lines and 32 exclusion
+lines, each a complete trimmed source line of at most 1,200 Unicode code points.
+Its serialized form is limited to 64,000 UTF-8 bytes, reserved before the first
+request within the existing runtime ceiling. Nothing is silently shortened to
+fit. One scope request precedes the existing complete evidence and final
+assessment requests. An invalid source identifier, incomplete classification, extra/missing requirement identity,
+contradictory result, oversized output or changed issue body retains existing
+progress. Inspect the run, clarify ambiguous acceptance scope when needed and
+rerun against current evidence. Existing head and native-open checks still apply.
+
+Scope interpretation and assessment prose are model-derived. Exhaustive source classification, exact citations and
+identity validation cannot prove that natural language was interpreted correctly
+or that an execution report is true. Review ambiguous scope; neither unknown
+verification nor a newly disclosed defect justifies inventing a requirement.
 
 Fact lengths use Unicode code points consistently in the provider schema, local
 response validation and progress parser, so supplementary characters share the
 same boundary. The evidence and runtime ceilings still count UTF-8 bytes.
 
-If source evidence is missing or any part fails, the Action retains the current progress and reports that it could not assess the revision. A single file, the final aggregate or a comparison exceeding the fixed part budget reports `validation.evidence-too-large` with Retryable: No; reduce the comparison or split the work into smaller reviewed changes before another assessment. Retrying identical oversized evidence cannot resolve that limit. It also retains state if either head changes while the assessment is running. Inspect the run before retrying; an unavailable assessment is not proof of 0% completion.
+If source evidence is missing or any part fails, the Action retains the current progress and reports that it could not assess the revision. A single file, the final aggregate or a comparison exceeding the fixed part budget reports `validation.evidence-too-large` with Retryable: No; reduce the comparison or split the work into smaller reviewed changes before another assessment. Retrying identical oversized evidence cannot resolve that limit. It also retains state if either head or the issue body changes while the assessment is running. Inspect the run before retrying; an unavailable assessment is not proof of 0% completion.
 
 ## Completion after a PR merge
 

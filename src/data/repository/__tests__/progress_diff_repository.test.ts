@@ -4,8 +4,8 @@ import type { GithubBranchComparisonClient } from '../../../infrastructure/githu
 const base = 'a'.repeat(40), head = 'b'.repeat(40);
 function fixture() {
     const file = { filename: 'src/feature.ts', status: 'modified', additions: 1, deletions: 1, changes: 2,
-        blob_url: 'PRIVATE_BLOB_URL', raw_url: 'PRIVATE_RAW_URL', contents_url: 'PRIVATE_CONTENTS_URL', patch: '-old\n+implemented' };
-    const data = { ahead_by: 1, behind_by: 0, total_commits: 1, files: [file], commits: [] };
+        blob_url: 'PRIVATE_BLOB_URL', raw_url: 'PRIVATE_RAW_URL', contents_url: 'PRIVATE_CONTENTS_URL', patch: '@@ -1 +1 @@\n-old\n+implemented' };
+    const data = { base_commit: { sha: base }, merge_base_commit: { sha: base }, ahead_by: 1, behind_by: 0, total_commits: 1, files: [file], commits: [] };
     const compareCommits = jest.fn(async () => ({ data }));
     const getClient = jest.fn(() => ({ rest: { repos: { compareCommits } } }));
     const repository = new ProgressDiffRepository({ getClient } as unknown as { getClient(token: string): GithubBranchComparisonClient });
@@ -21,7 +21,7 @@ describe('pinned bounded progress diff', () => {
         expect(result).toMatchObject({ baseSha: base, headSha: head });
         expect(Object.isFrozen(result)).toBe(true);
         expect(JSON.parse(result.evidence)).toEqual({ kind: 'pinned-branch-comparison', baseSha: base, headSha: head,
-            changes: [{ path: 'src/feature.ts', status: 'modified', additions: 1, deletions: 1, patch: '-old\n+implemented' }] });
+            changes: [{ path: 'src/feature.ts', status: 'modified', additions: 1, deletions: 1, patch: '@@ -1 +1 @@\n-old\n+implemented' }] });
         expect(result.evidence).not.toMatch(/PRIVATE_/u);
     });
     it('retains generated file metadata without exposing its patch or certifying a build', async () => {
@@ -77,7 +77,7 @@ describe('pinned bounded progress diff', () => {
         expect(JSON.parse((await f.read()).evidence).changes).toHaveLength(299);
     });
     it('partitions complete large provider evidence but preserves genuine transport errors', async () => {
-        const f = fixture(); f.data.files = ['a', 'b'].map(filename => ({ ...f.file, filename, patch: 'x'.repeat(150_000) }));
+        const f = fixture(); f.data.files = ['a', 'b'].map(filename => ({ ...f.file, filename, patch: '@@ -1 +1 @@\n-' + 'x'.repeat(150_000) + '\n+new' }));
         expect(await f.read()).toMatchObject({ kind: 'partitioned', partitions: expect.any(Array) });
         const transport = new Error('private provider failure'); f.compareCommits.mockRejectedValue(transport);
         await expect(f.read()).rejects.toBe(transport);
@@ -98,7 +98,7 @@ describe('pinned bounded progress diff', () => {
         if (scenario === 'empty path') f.file.filename = '';
         if (scenario === 'non-string path') f.file.filename = 42 as never;
         if (scenario === 'oversized filename') f.file.filename = 'x'.repeat(1025);
-        await expect(f.read(base, scenario === 'same-object nonempty diff' ? base : head)).rejects.toMatchObject({ code: scenario === 'same-object nonempty diff' ? 'workflow.stale' : scenario === 'missing source patch' ? 'validation.evidence-unavailable' : scenario.startsWith('oversized') && scenario !== 'oversized filename' ? 'validation.evidence-too-large' : 'provider.unavailable' });
+        await expect(f.read(base, scenario === 'same-object nonempty diff' ? base : head)).rejects.toMatchObject({ code: scenario === 'same-object nonempty diff' ? 'workflow.stale' : scenario === 'missing source patch' ? 'validation.evidence-unavailable' : scenario.startsWith('oversized') && scenario !== 'oversized filename' ? 'validation.evidence-unavailable' : 'provider.unavailable' });
     });
     it.each([undefined, -1, 0.5])('rejects unproven numeric file facts %s', async additions => {
         const f = fixture(); Object.assign(f.file, { additions }); await expect(f.read()).rejects.toMatchObject({ code: 'provider.unavailable' });

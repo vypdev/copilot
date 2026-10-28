@@ -263,6 +263,21 @@ describe("IssueUseCase", () => {
     expect(param.labels.currentIssueLabels).not.toContain('branched');
   });
 
+  it('keeps a blocked SDD outcome primary instead of adding the welcome fallback (#714)', async () => {
+    const begin = jest.fn().mockResolvedValue({ status: 'blocked', results: [new Result({
+      id: 'PreBranchSddGateUseCase', success: false, executed: true,
+    })] });
+    const publish = jest.fn();
+    const param = minimalExecution({ tokenUser: 'vypbot', eventName: 'issues',
+      inputs: { eventName: 'issues', action: 'opened' }, issue: { opened: true },
+      issueStartDecision: { started: true, branchRequired: true, sddRequired: true, helpRequired: false } });
+    const results = await createUseCase(undefined, { begin, publish } as never).invoke(param);
+    expect(results.some(result => result.id === 'CopilotWelcomeUseCase')).toBe(false);
+    expect(mockRecommendStepsInvoke).not.toHaveBeenCalled();
+    expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
+    expect(publish).not.toHaveBeenCalled();
+  });
+
   it('waits for SDD answers without preparing a branch or deployment', async () => {
     const begin = jest.fn().mockResolvedValue({ status: 'waiting', results: [new Result({ id: 'PreBranchSddGateUseCase', success: true, executed: true })] });
     const publish = jest.fn();
@@ -761,4 +776,29 @@ describe("IssueUseCase", () => {
     expect(mockListIssueComments).not.toHaveBeenCalled();
     expect(results.some((result) => result.id === 'CopilotWelcomeUseCase')).toBe(false);
   });
+  it('retains exact mapped field recovery before issue workflow enrichment',async()=>{
+    const [result]=await createUseCase().invoke(minimalExecution({issueWorkflowAdmission:{status:'invalid',kind:'bugfix',missingHeadings:['VaultStadio Version']}}));
+    expect(result.success).toBe(false);expect(result.errors[0]).toMatchObject({recovery:{id:'issue-workflow-admission-blocked',variables:{kind:'bugfix',fields:'["VaultStadio Version"]'}}});expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();expect(mockRecommendStepsInvoke).not.toHaveBeenCalled();
+  });
+  it('keeps legacy incomplete field evidence blocking without serializing invented facts',async()=>{
+    const [result]=await createUseCase().invoke(minimalExecution({issueWorkflowAdmission:{status:'invalid',kind:'bugfix',missingHeadings:[]}}));
+    expect(result.success).toBe(false);expect(result.errors[0]).toMatchObject({code:'configuration.invalid',recovery:undefined});expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
+  });
+
+  it.each(['bug', 'bugfix', 'priority: high'].flatMap(label => ['labeled', 'unlabeled'].map(action => [label, action])))(
+    'reconciles the same backlog state without event-specific branch/model effects for %s/%s', async (label, action) => {
+      const results = await createUseCase().invoke(minimalExecution({
+        actor: 'maintainer', eventName: 'issues', inputs: { action },
+        issueStartDecision: { started: false, branchRequired: true, sddRequired: false, helpRequired: false },
+        issue: { labeled: action === 'labeled', labelAdded: label, opened: false }, labels: { isBug: true, isBugfix: true },
+      }));
+      expect(results.every(result => result.success)).toBe(true);
+      expect(mockAssignMemberInvoke).toHaveBeenCalledTimes(1); expect(mockUpdateIssueTypeInvoke).toHaveBeenCalledTimes(1);
+      expect(mockLinkIssueProjectInvoke).toHaveBeenCalledTimes(1); expect(mockCheckPriorityInvoke).toHaveBeenCalledTimes(1);
+      expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled(); expect(mockRemoveIssueBranchesInvoke).not.toHaveBeenCalled();
+      expect(mockRemoveNotNeededInvoke).not.toHaveBeenCalled(); expect(mockDeployAddedInvoke).not.toHaveBeenCalled();
+      expect(mockRecommendStepsInvoke).not.toHaveBeenCalled(); expect(mockAnswerIssueHelpInvoke).not.toHaveBeenCalled();
+      expect(mockListIssueComments).not.toHaveBeenCalled();
+    });
+
 });

@@ -27,9 +27,9 @@ English. Error codes and references never translate.
 | `agent.failed` | An admitted agent did not produce a usable result. | Inspect sanitized agent status and retry if appropriate. |
 | `locale.output-invalid` | Generated product content violated its target-locale contract. | Retry with a provider compatible with the configured repository locale. |
 | `locale.translation-failed` | An addressed request could not be safely adapted to the target locale. | Rephrase the request or retry when the language provider is available. |
-| `validation.evidence-unavailable` | GitHub omitted a required patch from an exact-SHA progress comparison, including a lockfile or binary change. Progress was not assessed; existing labels and assessments remain unchanged. This is nonretryable. | Inspect the exact base/head comparison manually or split into smaller reviewed changes with complete patches. Retrying the same commits does not recover omitted evidence; manual inspection does not certify Copilot completion. |
-| `validation.evidence-too-large` | Progress evidence exceeds a fixed per-file, aggregate or partition-count limit. Existing labels and assessments remain unchanged; this is nonretryable. | Reduce the comparison or split work into smaller reviewed changes before a new assessment. |
-| `validation.invalid-input` | Entrypoint input is malformed. | Correct the input and retry. |
+| `validation.evidence-unavailable` | A required patch is omitted/incomplete and bounded immutable content recovery cannot verify complete regular UTF-8 text (including a lockfile or binary change). The diagnostic identifies unreviewed paths. Progress was not assessed; existing labels and assessments remain unchanged. This is nonretryable. | Inspect the intended native PR target and exact pinned paths, then supply complete reviewable evidence. Actually changed binary contents require source and provenance; metadata or a successful build is not binary review. Retrying the same commits does not repair unavailable immutable contents; manual inspection does not certify Copilot completion. |
+| `validation.evidence-too-large` | Progress evidence or immutable recovery exceeds a fixed file/byte/request/directory/unit/aggregate/partition-count limit. Existing labels and assessments remain unchanged; this is nonretryable. | Reduce the comparison or split work into smaller reviewed changes before a new assessment. |
+| `validation.invalid-input` | Entrypoint input is malformed. Comment-command failures identify the safe syntax/limit cause without echoing input. | Follow the shown command example and [argument rules](/issues/comment-commands#argument-rules-and-rejected-commands), then send a corrected comment. Other entrypoints retain their own recovery. |
 | `workflow.invalid-event` | The event cannot start the requested workflow. | Start from a supported event or surface. |
 | `workflow.stale` | A newer durable state superseded this invocation. | Inspect current state and start a fresh invocation only if needed. |
 | `workflow.cancelled` | The operation was explicitly cancelled before completion. | Start a new invocation if the operation is still required. |
@@ -65,3 +65,74 @@ synchronization likewise use fixed semantic messages. Maintainers must call
 message text into that safe message. Provider-returned observation reasons are
 untrusted too: before setup or deployment renders them, secret patterns are
 redacted and GitHub workflow commands, markup and mentions are neutralized.
+
+
+Pre-branch SDD validation failures also publish a reusable issue status card.
+Open its safe validation details and inspect the exact check and available
+section/row/count evidence before retrying. An unavailable diagnostic is not
+proof that the candidate or validator is correct. Existing specifications and
+answers remain; see [blocked preparation recovery](/issues/pre-branch-sdds#when-specification-preparation-is-blocked).
+
+
+Catalog profile failures use `configuration.unsupported` with the closed
+`sdd-catalog-unsupported-profile` or `sdd-catalog-format-invalid` recovery.
+Review [SDD publication profiles](/issues/pre-branch-sdds#catalog-publication-profiles)
+before retrying the same issue. The diagnostic preserves repository-native
+schema/readiness, answers and historical publication; a rejected profile does
+not publish a branch or start the model.
+
+For progress, a unique exact same-repository PR owns the comparison base; only
+proven absence uses development. Inherited production libraries can therefore be
+unchanged in the real PR delta. If binary/non-text changes remain unsupported,
+`progress-binary-evidence-unavailable` adds an inert bounded path excerpt and
+complete inventory in run logs. Up to eight whole paths fit 8,192 diagnostic bytes;
+total/shown counts disclose the excerpt. Progress is unassessed and retained;
+project verification is a separate result. Do not manufacture a passing status,
+retarget a legitimate PR or split production binaries just to obtain text patches.
+
+
+## Optional Check Run publication not confirmed
+
+This warning concerns an optional evidence projection. Required-stage success
+or failure and completed external effects are preserved. It has its own safe
+provider details; an earlier required error's correlation reference does not
+identify this Check Run failure.
+
+```text
+Optional Check Run publication not confirmed
+Impact: Native check status is not confirmed. The workflow result and existing Job Summary remain authoritative.
+Cause: GitHub denied the check publication request. Credential type and exact policy cause are not inferred.
+Action: Verify repository access and Checks write on the dedicated evidence credential. Keep the product token separate.
+Retained state: Required-stage results and completed external effects were preserved.
+Details: operation=checks.create; check=Copilot / Verification; head=<full SHA>; credential-route=action-token-fallback; error=authorization.denied; status=403; request=AB12:CD34
+```
+
+For 401/403 inspect the dedicated credential/access and the job's Checks write
+permission. For 429 or an explicit secondary limit follow provider guidance. For
+400/422/404 inspect the target/request or visibility. For 409/412 inspect the
+conflict and existing check. For 408/5xx/known transport errors publication is
+unconfirmed: a check may already exist. Without classified facts, the cause is
+unknown; do not claim an outage. No automatic publication retry is made.
+
+Only an integer HTTP status and a bounded colon-separated hexadecimal request
+reference are exposed. Invalid fields become unavailable; credentials, response
+bodies, authentication headers, URLs and raw exception messages are omitted.
+The primary warning is in the log and a Summary appendix; if the appendix fails,
+a localized note points back to the retained log. For credential selection and
+the supported default, see [workflow setup](/issues/workflow-setup).
+
+
+## Missing publication context
+
+If `create_release` cannot load its durable deployment operation, it reports
+`configuration.invalid` and stops before creating a GitHub release. Missing
+context does not mean a newer state superseded the run. Persisted state and
+completed external effects, including any previously published packages, remain
+preserved; the message makes no claim that a release is absent remotely.
+
+Verify `single-action-issue` selects the existing launcher issue and restore its
+verified operation context. Only then retry the supported release/hotfix workflow
+with the same `single-action-operation-id` and `single-action-version`. Do not
+create a new operation, publish packages again, or bypass the stored ID, version,
+phase and accepted production SHA checks to clear this error. See
+[single-action configuration](/single-actions/configuration#internal-operation-identity).

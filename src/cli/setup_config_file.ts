@@ -1,3 +1,4 @@
+import { createIssueWorkflowProfile } from '../domain/issue_workflow_profile';
 import { readFileSync } from 'node:fs';
 import * as yaml from 'js-yaml';
 import {
@@ -157,7 +158,7 @@ function validateIssueWorkflows(value: unknown): void {
     if (value === undefined) return;
     validateObject(value, 'issueWorkflows');
     const section = value as Record<string, unknown>;
-    validateObjectKeys(section, new Set(['enabled']), 'issueWorkflows');
+    validateObjectKeys(section, new Set(['enabled', 'fieldMappings']), 'issueWorkflows');
     if (!Array.isArray(section.enabled) || section.enabled.some(item => typeof item !== 'string')) {
         throw new Error('issueWorkflows.enabled must be an array of workflow IDs.');
     }
@@ -165,6 +166,7 @@ function validateIssueWorkflows(value: unknown): void {
     const unknown = enabled.filter(item => !ISSUE_WORKFLOW_KINDS.includes(item as IssueWorkflowKind));
     if (unknown.length > 0) throw new Error(`Unknown issue workflow(s): ${unknown.join(', ')}.`);
     if (new Set(enabled).size !== enabled.length) throw new Error('issueWorkflows.enabled cannot contain duplicates.');
+    createIssueWorkflowProfile(enabled as IssueWorkflowKind[], section.fieldMappings as never);
 }
 
 function validateGuidance(value: unknown): void {

@@ -1,3 +1,5 @@
+import { SddCatalogCompatibilityFailure, isSddCatalogOwnerPath } from './sdd_catalog_compatibility';
+import { normalizeSddValidationDiagnostic, type SddDraftFormatReason, type SddValidationDiagnostic } from './sdd_validation_diagnostic';
 /** Pure, bounded contracts for clarification before an Action-owned issue branch exists. */
 export type SddOwnerAction = 'update' | 'companion' | 'new';
 export type SddAnswerOwner = 'issue-author' | 'maintainer';
@@ -86,6 +88,16 @@ export class SddOwnershipFailure extends Error {
 
 /** The agent may propose ownership but cannot invent a catalogued owner or arbitrary path. */
 export function parseSddPlan(value: unknown, catalog: ReadonlyMap<string, readonly string[]>): SddPlan {
+  const registeredPaths = new Set<string>();
+  for (const paths of catalog.values()) {
+    if (!Array.isArray(paths) || paths.length === 0) throw new SddCatalogCompatibilityFailure('owner-paths-invalid');
+    for (const ownerPath of paths) {
+      if (typeof ownerPath !== 'string' || !isSddCatalogOwnerPath(ownerPath) || registeredPaths.has(ownerPath)) {
+        throw new SddCatalogCompatibilityFailure('owner-paths-invalid');
+      }
+      registeredPaths.add(ownerPath);
+    }
+  }
   if (!isRecord(value)) throw new Error('The SDD analysis must be an object.');
   const action = value.action;
   const path = value.path;
@@ -98,7 +110,7 @@ export function parseSddPlan(value: unknown, catalog: ReadonlyMap<string, readon
     throw new Error('The SDD analysis has an invalid owner, path, or reason.');
   }
   const ownerPaths = catalog.get(capabilityId);
-  const registered = [...catalog.values()].some(paths => paths.includes(path));
+  const registered = registeredPaths.has(path);
   if (action === 'update' && (!ownerPaths?.includes(path) || !registered)) {
     throw new SddOwnershipFailure('update-owner-mismatch');
   }
@@ -229,7 +241,13 @@ export function parseSddAnswer(body: string, questionId: string): string | undef
 
 /** Only these content failures may trigger a bounded draft regeneration. */
 export class SddDraftFormatFailure extends Error {
-  constructor(readonly reason: 'required-heading' | 'test-budget' | 'case-identity' | 'case-budget' | 'requirement-mapping' | 'repository-path', message: string) { super(message); }
+  readonly diagnostic: SddValidationDiagnostic;
+  constructor(readonly reason: SddDraftFormatReason, message: string, diagnostic?: SddValidationDiagnostic) {
+    super(message);
+    this.diagnostic = normalizeSddValidationDiagnostic(diagnostic ?? { reason, phase: 'validation',
+      facts: [{ detail: 'validation-contract', section: 0 }] });
+    if (this.diagnostic.reason !== reason) throw new TypeError('SDD diagnostic reason does not match its failure.');
+  }
 }
 
 /** An immutable owner cannot be repaired by regenerating its proposed appendix. */
@@ -246,11 +264,11 @@ export const SDD_REQUIRED_HEADINGS = Object.freeze([
 export function validateSddMarkdown(markdown: string): void {
   if (markdown.length < SDD_MIN_DRAFT_CHARACTERS || markdown.length > SDD_MAX_DRAFT_CHARACTERS) throw new Error('The SDD draft length is outside the supported range.');
   for (const heading of SDD_REQUIRED_HEADINGS) {
-    if (!markdown.includes(heading)) throw new SddDraftFormatFailure('required-heading', `The SDD draft is missing ${heading}.`);
+    if (!markdown.includes(heading)) throw new SddDraftFormatFailure('required-heading', `The SDD draft is missing ${heading}.`, { reason: 'required-heading', phase: 'validation', facts: [{ detail: 'required-heading', section: 0, row: SDD_REQUIRED_HEADINGS.indexOf(heading) + 1 }] });
   }
   if (!/\b[1-9]\d*\s+(?:distinct\s+)?(?:cases|tests|casos|pruebas)\b/i.test(markdown)
     && !hasNumericSddBudgetTable(markdown)) {
-    throw new SddDraftFormatFailure('test-budget', 'The SDD must include a numeric test budget.');
+    throw new SddDraftFormatFailure('test-budget', 'The SDD must include a numeric test budget.', { reason: 'test-budget', phase: 'validation', facts: [{ detail: 'numeric-budget', section: 14 }] });
   }
 }
 

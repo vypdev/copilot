@@ -16,7 +16,7 @@ export interface ExecutionBranchVersionResolution {
     resolve(context: BranchVersionResolutionContext): Promise<BranchVersionResolutionResult>;
 }
 
-export interface BranchVersionResolutionContext {
+export interface BranchVersionResolutionContext extends VersionDescriptionContext {
     readonly issueNumber: number;
     readonly release: SetupReleaseState;
     readonly hotfix: SetupHotfixState;
@@ -53,7 +53,7 @@ export class ExecutionBranchVersionResolver implements ExecutionBranchVersionRes
     }
 
     private async resolveRelease(context: BranchVersionResolutionContext): Promise<BranchVersionResolutionResult> {
-        const query = { issueNumber: context.issueNumber };
+        const query = { issueNumber: context.issueNumber, ...(context.body !== undefined ? { body: context.body } : {}), ...(context.issueWorkflowProfile ? { issueWorkflowProfile: context.issueWorkflowProfile } : {}) };
         const versionInfo = (await this.getReleaseVersion.invoke(query)).at(-1);
         let type = context.release.type;
         let version = context.release.version;
@@ -91,7 +91,7 @@ export class ExecutionBranchVersionResolver implements ExecutionBranchVersionRes
     }
 
     private async resolveHotfix(context: BranchVersionResolutionContext): Promise<BranchVersionResolutionResult> {
-        const versionInfo = (await this.getHotfixVersion.invoke({ issueNumber: context.issueNumber })).at(-1);
+        const versionInfo = (await this.getHotfixVersion.invoke({ issueNumber: context.issueNumber, ...(context.body !== undefined ? { body: context.body } : {}), ...(context.issueWorkflowProfile ? { issueWorkflowProfile: context.issueWorkflowProfile } : {}) })).at(-1);
         let baseVersion: string | undefined;
         let version: string | undefined;
         if (versionInfo?.executed && versionInfo.success) {

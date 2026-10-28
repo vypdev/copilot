@@ -34,10 +34,19 @@ const NEWER_HEAD = 'b'.repeat(40);
 
 
 const mockAskAgent = jest.fn();
-async function localizedProgress(request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }): Promise<AgentQueryResult> {
+async function localizedProgress(request: { configuration: unknown; agentId: string; prompt: string; options?: { schemaName?: string } }): Promise<AgentQueryResult> {
+  if (request.options?.schemaName === 'progress_scope') {
+    return { outputLocale: 'en-US', lines: [{ id: 'L1', kind: 'required' }] };
+  }
   const response = await mockAskAgent(request.configuration, request.agentId, request.prompt, request.options);
   return response && typeof response === 'object' && !Array.isArray(response)
-    ? { outputLocale: 'en-US', ...response as Record<string, unknown> }
+    ? (() => {
+      const value = response as Record<string, unknown>;
+      return { outputLocale: value.outputLocale ?? 'en-US', progress: value.progress,
+        requirements: [{ id: 'R1', status: value.progress === 100 ? 'supported' : 'verification-unknown',
+          evidence: value.progress === 100 ? 'source-only' : 'external-unverified', summary: value.summary,
+          remaining: value.progress === 100 ? null : value.remaining ?? 'Verification unknown.' }] };
+    })()
     : response;
 }
 function baseParam(overrides: Record<string, unknown> = {}): Execution {
@@ -77,7 +86,7 @@ describe('native progress closure races', () => {
       { getOpenPullRequestNumbersByHeadBranch: mockGetOpenPullRequestNumbersByHeadBranch },
       { query: localizedProgress },
       { isIssueOpen: mockIsIssueOpen, getBranchHeadSha: mockGetBranchHeadSha },
-      { getDiff: mockGetDiff },
+      { getDiff: mockGetDiff }, { getSource: jest.fn(async () => ({ kind: 'none' as const })) }
     );
     invoke = (param) => useCase.invoke(projectProgressContext(param));
     mockIsIssueOpen.mockReset().mockResolvedValue(true);
@@ -113,7 +122,7 @@ describe('native progress closure races', () => {
     const source = { getBranchHeadSha: mockGetBranchHeadSha };
     const denied = new CheckProgressUseCase({ getDescription: mockGetDescription }, { getLabels: mockGetLabels, setLabels: mockSetLabels },
       { setProgressLabel: mockSetProgressLabel }, { getListOfBranches: mockGetListOfBranches },
-      { getOpenPullRequestNumbersByHeadBranch: mockGetOpenPullRequestNumbersByHeadBranch }, { query: localizedProgress }, source, { getDiff: mockGetDiff });
+      { getOpenPullRequestNumbersByHeadBranch: mockGetOpenPullRequestNumbersByHeadBranch }, { query: localizedProgress }, source, { getDiff: mockGetDiff }, { getSource: jest.fn(async () => ({ kind: 'none' as const })) });
     const results = await denied.invoke(projectProgressContext(baseParam()));
     expect(results[0].errors[0]).toMatchObject({ code: 'configuration.unsupported' });
     expect(mockAskAgent).not.toHaveBeenCalled(); expect(mockGetDescription).not.toHaveBeenCalled();

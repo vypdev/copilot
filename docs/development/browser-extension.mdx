@@ -1,0 +1,326 @@
+---
+title: Browser extension runtime
+description: Build, test and diagnose the private browser runtime, protected sessions and native-browser harnesses.
+---
+
+# Browser extension runtime
+
+The private `extension` package is version **0.1.0**. H1 supplies target builds;
+H2 adds scoped lifecycle, bounded settings, protected read sessions and native
+browser harnesses. The runtime-health section and local connection page are
+engineering surfaces. The full 150-function product, center/setup integration
+and 803 product cases remain required and are delivered through their owning
+milestones. No store availability or complete-product acceptance is implied.
+
+Read the [runtime preview and recovery guide](/browser-extension/runtime) before
+using a development installation. This package makes no GitHub writes and does
+not invoke the Action or a model when a page opens.
+
+```text
+Locked install -> contracts and typecheck -> three target builds
+ -> architecture/package checks -> two clean rebuilds -> review the receipt
+```
+
+Contributors install locked dependencies, check the shared contract, build all
+targets and compare their deterministic receipts before opening a PR.
+
+## Build and verify
+
+Use Node 24 and the repository's pnpm 10.12.4. From the repository root:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm run typecheck:extension
+pnpm run build:extension
+pnpm run test:extension
+pnpm run validate:extension
+```
+
+`test:extension` runs Vitest with per-file coverage. `validate:extension` checks
+the root package/CI contract, parses the generated artifacts, builds twice in
+fresh temporary directories and compares their receipts with the current output.
+The root build, typecheck, lint and CI coverage flow include the extension
+gates. Plain `pnpm test` retains Jest and its existing argument forwarding; use
+`test:extension` for the separate suite. Existing Action/CLI/web and coverage gates
+continue to apply.
+The extension also emits `extension/coverage/lcov.info` with repository-relative
+source paths. CI uploads it together with the retained root Jest report so the
+shared contract and browser/tooling modules are included in coverage reporting.
+The root Jest suite also consumes the shared barrel under CommonJS, checking its
+public exports and the same wire contract independently of the ESM test runner.
+This accounts for declaration/re-export lines when combining the reports; runtime
+coverage exclusions and thresholds are unchanged.
+
+Inspect one target's manifest or run a focused Vitest test while diagnosing a
+problem. Acceptance always builds and validates all three targets; there is no
+arbitrary output-path or partial-target CLI override.
+
+## Target artifacts and compatibility
+
+Generated outputs are under `extension/dist/chrome`, `extension/dist/firefox`
+and `extension/dist/safari`. Each contains exactly `manifest.json`, `background.js`, `content.js`,
+`runtime.html` and `runtime.js`. `extension/dist/receipt.json` records
+`development-build-only`, the Git revision, an input-tree SHA-256 and asset hashes.
+The tree hash distinguishes pending source edits from the committed revision.
+Validation reads the bounded closed receipt and recomputes each declared asset
+hash from the actual UTF-8 bytes. A valid bundle changed after the receipt fails
+integrity validation; changing both bundle and receipt still fails comparison
+with fresh source builds. Invalid UTF-8 and malformed/noncanonical receipts are
+rejected rather than accepted as verified output.
+No timestamps, absolute source paths or secrets are included in the receipt.
+
+| Target | Chosen API floor | Development background | Identity |
+|---|---|---|---|
+| Chrome | 140 | MV3 module service worker | Development name; unpacked artifact |
+| Firefox | 140, including ESR | MV3 nonpersistent scripts | Reserved `.invalid` development add-on ID |
+| Safari | 18.2 on macOS 15.2+ | MV3 nonpersistent scripts | Actual local ad-hoc containing app; signed distribution remains separate |
+
+These are compatibility targets, **not results from loading the extension**.
+Real Chrome/Firefox/Safari extension-loaded evidence, including a Safari containing
+app, belongs to [H2, issue #703](https://github.com/vypdev/copilot/issues/703).
+Generic WebKit, VM execution, a ZIP or build success does not establish that proof.
+Store identities, signing, accounts and publication remain later release work.
+
+## Permissions and data
+
+All targets require `storage` and exact `https://github.com/*` page access. The
+only optional host is `https://api.github.com/*`, requested by explicit Connect.
+Static content scripts are isolated and top-frame-only; incognito is unsupported.
+Toolbar/options open the packaged local runtime page. The in-page settings
+button sends only the closed `settings.open` method; the background opens the
+fixed private page in the originating native window after verifying the current
+active, nonprivate tab. There is no caller URL or public extension resource. There is no loopback grant,
+remote code, cookie/history access or telemetry. API grants never create a session
+without canonical native identity checks; a credential never enters page content.
+
+H1 historically stopped at a pure URL guard. H2 preserves that guard before
+starting its scoped runtime on eligible pages. Protected account,
+authentication, token/settings, billing/security and repository administration
+paths are excluded, including encoded sensitive paths and ambiguous URLs.
+Native organization/enterprise SSO and SAML consumption routes on github.com
+are authentication surfaces and are excluded too.
+Protected direct loads install no observer, send no message and read no state.
+Eligible pages may show one runtime-health section. Manual read activity goes
+through the closed background gateway; hidden/navigation/revoke events cancel
+its matching scope. Manifests and optional grants alone never authorize a read.
+
+The shared connection-manifest v1 validator accepts an already decoded value.
+It returns a closed result, copies/freeze-validates accepted data and follows the
+versioned JSON Schema. Workflow/capability patterns require a true string end,
+including rejecting a trailing newline. Raw duplicate-key JSON parsing, status
+and request decoding are later work. A valid `enabled: false` value does not
+establish a connection.
+
+## Architecture and contributor rules
+
+Runtime code lives in `extension/src`: pure `domain`, `application` and semantic ports, narrow browser/GitHub/DOM
+`adapters`, `infrastructure` composition and credential-free `presentation`. Empty future layers need no placeholder runtime code.
+The sole permitted root-source import is
+`src/domain/browser_extension_contract/index.ts`. Shared contracts remain pure;
+Node setup, provider SDKs and Action policy stay outside browser bundles.
+
+The TypeScript AST/import-resolution gate rejects dependency direction violations,
+external/dynamic imports, unresolved/escaping paths, cycles, impure domain globals
+and presentation authority. Negative fixtures run the same validator as real code.
+Manifest parsing and bundle inspection also reject undeclared assets, permission
+drift, remote imports and prohibited runtime primitives. H1's strict bundle
+allowlist must be deliberately reviewed with future features.
+
+Pure policies require 100% branch coverage; other new executable modules require
+95% statements and 90% branches per file. Executable modules stay at most 220
+lines. The 28 named H1 acceptance cases supplement the unchanged 803-case complete
+product floor. Matrix repetitions do not count as new behavior cases.
+
+## Failure and recovery
+
+| Result | Meaning | Next action | Retained state |
+|---|---|---|---|
+| Pending | Checks/build still run | Wait for the current command/CI | No accepted new set |
+| Rule failure | A file/manifest/bundle violates a gate | Correct its reported rule, then rerun | Source and previous complete output |
+| Partial build | A target failed before replacement | Fix that target, then rebuild all | No partial new set is advertised |
+| Stale receipt | Inputs/output changed since the last build | Run build, tests and validation again | Existing evidence remains explicitly stale |
+| Complete | Contracts, artifacts and clean rebuilds agree | Review the PR evidence | Build proof; browser/product gates remain open |
+
+Builds use an exclusive output lock and isolated staging; successful replacement
+removes stale assets. A failed target cleans its staging and retains the previous
+complete output with its original receipt. Concurrent invocations fail rather than
+overwriting each other. After an interrupted process, first confirm that no build
+is active, then inspect `extension/dist.lock` and `extension/dist.previous` before
+manually removing only the obsolete lock or restoring the previous complete set.
+If cleanup fails after replacement, the command explicitly reports that the new complete set is present and the previous backup remains; it does not report that replacement failed. A pre-existing backup is never discarded automatically. Rebuild and revalidate
+after recovery; do not treat retained old output as the latest build.
+
+Generated extension outputs are ignored and excluded from the root npm package.
+The root allowlist separately includes the isolated Issue Action descriptor
+`issue-admission/action.yml`; this does not ship extension runtime or artifacts.
+Reverting H1 requires no user-data migration or external rollback. Keep root
+verification gates when reverting the extension orchestration.
+
+See [issue #702](https://github.com/vypdev/copilot/issues/702), the
+[foundation SDD](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-foundation.md),
+and the [complete-product milestone](https://github.com/vypdev/copilot/milestone/1).
+PR evidence records the actual commands and hashes and leaves merge to maintainers.
+
+## Tooling and primary references
+
+The lockfile selects TypeScript 5.9.3, Vite 8.3.1 and Vitest/coverage-v8 5.0.5.
+Vitest's declared Node/Vite peer ranges include this toolchain; only development
+dependencies are added to the private package.
+See [Vitest requirements](https://vitest.dev/guide/),
+[Vite library builds](https://vite.dev/guide/build.html#library-mode),
+[extension background differences](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/background),
+[Firefox development metadata](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/browser_specific_settings),
+[isolated content execution](https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts),
+and [Safari version requirements](https://developer.apple.com/documentation/safariservices/optimizing-your-web-extension-for-safari).
+GitHub documents the protected [SSO entrypoints](https://docs.github.com/en/enterprise-cloud@latest/authentication/authenticating-with-single-sign-on/about-authentication-with-single-sign-on)
+and [SAML consumption routes](https://docs.github.com/en/enterprise-cloud@latest/admin/managing-iam/iam-configuration-reference/saml-configuration-reference).
+
+
+## H2 architecture and exact browser evidence
+
+`src/domain` validates immutable identities, complete settings, closed messages,
+GET operations and I6 scheduling. `src/application` owns feature generations,
+atomic settings, protected sessions, per-tab leases and the shared scheduler.
+Browser, scoped DOM and HTTP adapters implement semantic ports. Composition
+registers wake listeners synchronously; views receive no credential. Only the
+GET adapter has network authority. The AST check also rejects statically named
+network properties acquired through brackets, constant-key aliases, optional
+access, computed destructuring or union keys. Assigning that acquisition to a
+new variable does not exempt it. Ordinary payload strings and unrelated indexed
+data remain valid; there is no configuration override for another reader.
+The expanded artifact gate permits browser
+APIs in their specific bundles while retaining no Node/eval/remote imports,
+exact manifests/assets, canonical receipts and recomputed asset hashes.
+
+The build-input SHA-256 is embedded into content, background and options code.
+A browser receipt checks all three executed values, not just extension version.
+A changed runtime, tool, lockfile or target requires a fresh build and browser
+receipts. Reports are under `.tmp/extension-browser-evidence`; failed runs emit
+failed prerequisite/assertion receipts and never count as compatibility proof.
+
+Use pinned native browser/driver binaries in isolated profiles. Example for the
+chosen Chrome for Testing 156.0.8078.47 and matching ChromeDriver:
+
+```sh
+COPILOT_H2_CHROME_BINARY=/absolute/path/to/chrome \
+COPILOT_H2_CHROME_DRIVER=/absolute/path/to/chromedriver \
+pnpm run test:browsers:extension chrome
+```
+
+Firefox 158.0.1 uses `COPILOT_H2_FIREFOX_BINARY` and
+`COPILOT_H2_FIREFOX_DRIVER`; ESR 153.5.1esr uses
+`COPILOT_H2_FIREFOX_ESR_BINARY` and `COPILOT_H2_FIREFOX_ESR_DRIVER` with target
+`firefox-esr`. The harness uses geckodriver 0.37.1, a temporary extension and an
+owned temporary profile. Modern Firefox requires the driver's
+`--allow-system-access` for extension-page automation: this is a privileged
+local test driver, bound to loopback and stopped after the test; it adds no
+extension permission. Do not use your personal profile or expose that port.
+Firefox's `getManifest()` expands absolute extension paths and nullable defaults;
+only the explicitly tested inert defaults are normalized. New grants/remote code
+or a foreign extension origin fail acceptance.
+
+Safari prerequisites are macOS 27.0.1 build 26A434, Safari 27.0.1 build
+22625.1.29.11.28, Xcode 27.1 build 27A9275, enabled remote automation and local
+development-extension support. Build the actual containing app:
+
+```sh
+pnpm run build:extension
+pnpm run build:safari:extension
+pnpm run test:browsers:extension safari
+```
+
+The converter creates a macOS app and embedded WebExtension with distinct
+private identity `invalid.extensions.copilot.h2`, version 0.1.0 and local ad-hoc
+signature. Xcode's generated identifiers/version are verified and corrected to
+that private identity. No Apple distribution identity, App Store action or
+release is used. Build diagnostics/receipt live under `.tmp/safari-h2`.
+Enable the app's extension and github.com access in normal Safari for human
+permission/enablement testing. SafariDriver has a separate clean automation
+session: its native WebExtension endpoint loads the exact embedded resources
+from the verified registered containing app. Ordinary WebKit is never used.
+Receipts distinguish this automation from normal-profile enablement and signed
+store delivery. Never replace a failed prerequisite with a generic WebKit pass.
+
+The automated browser workflow starts at an unauthenticated public github.com
+page to establish the genuine content-script origin, then installs the original
+DOM fixture through WebDriver. Extension code and WebExtension APIs remain
+native. No real token/private repository is used. It checks 20 route cycles,
+protected navigation, draft/selection/focus, closed messages, native APIs,
+manifest semantics and the executed source digests. Unit harness fakes prove
+failure detection only and are not native-browser receipts.
+
+Chosen API floors remain Chrome 140, Firefox/ESR 140 and Safari 18.2/macOS 15.2.
+Their API surfaces/absence are exercised deterministically; the old floor
+binaries are not advertised as run. Full multi-OS/current/previous browser,
+human accessibility/usability/performance and signed product evidence remain
+separate acceptance gates.
+
+See the [H2 SDD](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-runtime.md),
+[Mozilla driver access](https://firefox-source-docs.mozilla.org/testing/geckodriver/Flags.html#allow-system-access),
+[Safari's native extension automation](https://webkit.org/blog/17333/webkit-features-in-safari-26-0/#web-extensions),
+and [WebExtension WebDriver commands](https://github.com/w3c/webextensions/blob/main/specification/webdriver-classic.bs).
+
+
+The required native Firefox ESR step in the Ubuntu platform CI check executes exact ESR
+153.5.1esr/geckodriver 0.37.1 on hosted Ubuntu and retains native receipts and
+official-download hashes. The macOS 27.0.1 ESR startup prerequisite failure is
+recorded separately; a Linux pass never claims macOS ESR compatibility. This
+choice keeps the browser/OS and failed-prerequisite evidence explicit rather
+than disabling the browser sandbox.
+
+Failed Xcode builds replace `.tmp/safari-h2/build.log` with captured stdout/stderr
+(up to 4 MiB), or an explicit message when the command returned no diagnostics.
+A stale successful log is never presented as evidence for a failed build.
+
+Safari's extension checkbox and website grant are separate. On github.com, open
+the extension toolbar item and allow that exact website for the development
+session. Keep private browsing disabled. Safari may lowercase its sender-origin
+UUID; the runtime normalizes hostname case while keeping its closed path,
+scheme, runtime identity and frame checks. A failed native-browser run removes
+its previous success receipt, and successful receipts require completed driver
+cleanup.
+
+Native `tabs.onUpdated` URL and loading events cancel the background page lease,
+including protected destinations and same-URL reloads. Content disposal does not
+broaden the protected-route message policy. The browser composition fixture uses
+independent local and session storage areas: integration tests assert that only
+nonsecret preferences reach local storage and only protected session storage
+holds connection/scheduler state.
+
+Post-Connect preference changes use the serialized settings update port and
+retain the initiating operation/session fence. An older failed settings commit
+cannot disconnect a newer account, and a newer update reads the latest complete
+envelope after any in-flight commit. Test dependencies support Node 24.0.0;
+verify frozen installation with engine checking when updating the lockfile.
+
+The native ESR CI step verifies both downloaded archives before extraction or
+execution. Firefox's pinned SHA-256 comes from Mozilla's release SHA256SUMS;
+geckodriver's comes from its official GitHub release asset digest. A mismatch
+stops the step. Update version, URL and reviewed upstream digest together.
+
+
+The native harness clicks the same settings button as a user, then follows exactly
+one newly created native context and waits for that private page to finish loading.
+ChromeDriver enables extension targets explicitly; otherwise current drivers omit
+those views. Safari may mask an extension link in page JavaScript and replace a
+source context while opening it; the harness never derives the options URL from
+page markup or substitutes an unrelated view. It verifies the actual SDK extension
+ID in Safari, separately from the temporary WebDriver installation ID, plus all
+three executed source hashes. Safari cleanup switches to an owned blank configured
+view before uninstalling, then deletes its session and temporary profile.
+
+Same-document navigation can leave a native sender's frame URL at its original
+route. Both native frame and current-tab URLs must be eligible github.com routes;
+the closed snapshot route binds to the current native tab and is checked against
+`tabs.get` before and after the read. Protected, foreign-origin, child-frame and
+private senders remain rejected. Settings opening verifies that same current tab.
+See [native message sender fields](https://developer.chrome.com/docs/extensions/reference/api/runtime#type-MessageSender),
+[ChromeDriver extension targets](https://developer.chrome.com/docs/chromedriver/capabilities),
+and [Mozilla's sender contract](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/runtime/MessageSender).
+
+
+Before checking the runtime, the harness gives native pointer focus to the inert
+heading in its independently authored DOM fixture and verifies that document
+visibility is genuinely visible. Safari can otherwise leave an automation tab
+hidden; the runtime correctly pauses such a tab. No live GitHub control is clicked
+for focus, and no script overrides visibility, extension code or native APIs.

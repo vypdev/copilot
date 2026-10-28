@@ -88,6 +88,9 @@ describe('setup execution live issue admission', () => {
 
   it('classifies an issue-bound single action and blocks a disabled kind before routing', async () => {
     const ports = dependencies(['bug'], '## Description\nBad');
+    // The explicit target is a real issue; admission policy still rejects its disabled kind.
+    ports.issueSetupPort.isPullRequest.mockResolvedValue(false);
+    ports.issueSetupPort.isIssue.mockResolvedValue(true);
     const result = await runSetupExecution(context({
       isSingleAction: true,
       configuredSingleActionIssue: 42,
@@ -131,4 +134,27 @@ describe('setup execution live issue admission', () => {
       },
     });
   });
+});
+
+
+it('passes the mapped admitted live snapshot to the release resolver instead of the event body',async()=>{
+  const profile=createIssueWorkflowProfile(['release'],{release:{'Release Type':'Bump','Release Version':'Product Version'}});
+  const body='### Bump\nMinor\n### Product Version\nAutomatic\n### Changelog\nChanges\n### Additional Context\n_No response_';
+  const ports=dependencies(['release'],body);await runSetupExecution(context({issueWorkflowProfile:profile}),ports);
+  expect(ports.branchVersionResolver.resolve).toHaveBeenCalledWith(expect.objectContaining({body,issueWorkflowProfile:profile}));
+});
+it('never reaches version resolution when a mapped required release field is absent',async()=>{
+  const profile=createIssueWorkflowProfile(['release'],{release:{'Release Version':'Product Version'}});const ports=dependencies(['release'],'### Release Version\n1.2.3');
+  const result=await runSetupExecution(context({issueWorkflowProfile:profile}),ports);expect(result).toMatchObject({state:{issueWorkflowAdmission:{status:'invalid',missingHeadings:expect.arrayContaining(['Product Version'])}}});expect(ports.branchVersionResolver.resolve).not.toHaveBeenCalled();
+});
+it('admits a repaired consumer bug body on a fresh invocation',async()=>{
+  const profile=createIssueWorkflowProfile(['bugfix'],{bugfix:{'copilot Version':'VaultStadio Version'}});const ports=dependencies(['bugfix'],'### Description\nFailure\n### Reproducing the issue\nSteps\n### VaultStadio Version\n1.2.3');
+  expect(await runSetupExecution(context({issueWorkflowProfile:profile}),ports)).toMatchObject({status:'configured',branchType:'bugfix',state:{issueWorkflowAdmission:{status:'eligible',kind:'bugfix'}}});
+});
+it('keeps conflicting mapped workflow labels blocked before version resolution',async()=>{
+  const ports=dependencies(['release','hotfix'],'### Product Version\n1.2.3');await runSetupExecution(context({issueWorkflowProfile:createIssueWorkflowProfile(['release','hotfix'],{release:{'Release Version':'Product Version'}})}),ports);expect(ports.branchVersionResolver.resolve).not.toHaveBeenCalled();
+});
+it('does not admit a fenced consumer field from an otherwise incomplete live bug body',async()=>{
+  const ports=dependencies(['bugfix'],'### Description\nFailure\n### Reproducing the issue\nSteps\n```\n### VaultStadio Version\n1.2.3\n```');const profile=createIssueWorkflowProfile(['bugfix'],{bugfix:{'copilot Version':'VaultStadio Version'}});
+  expect(await runSetupExecution(context({issueWorkflowProfile:profile}),ports)).toMatchObject({state:{issueWorkflowAdmission:{status:'invalid',missingHeadings:['VaultStadio Version']}}});
 });

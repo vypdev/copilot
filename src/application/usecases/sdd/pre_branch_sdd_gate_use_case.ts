@@ -1,3 +1,9 @@
+import { SddCatalogCompatibilityFailure } from '../../../domain/sdd_catalog_compatibility';
+import { SddDraftPreparationFailure } from '../../errors/sdd_draft_preparation_failure';
+import { renderSddPreparationFailure, renderSddPreparationRecovered, type SddWorkflowRunFacts } from '../../policies/sdd_preparation_status_policy';
+import { resolveSddPreparationCatalog, resolveStaticSddPreparationCatalog } from '../../policies/sdd_preparation_message_catalog';
+import { resolveApplicationErrorCatalog, resolveStaticApplicationErrorCatalog } from '../../policies/application_error_message_catalog';
+import type { MessageCatalogResolutionPort } from '../../ports/message_catalog_ports';
 import { buildSddIssueDigest } from '../../policies/sdd_issue_identity_policy';
 import type { AgentConfiguration } from '../../ports/agent_configuration_ports';
 import type { FindingsQueryPort } from '../../ports/agent_findings_ports';
@@ -98,9 +104,13 @@ export class PreBranchSddGateUseCase {
     private readonly descriptions: BoundIssueDescriptionQueryPort,
     private readonly titles: BoundIssueTitlePort,
     private readonly linkedBranch: BoundLinkedBranchReadinessPort,
+    private readonly presentation: Readonly<{ run?: SddWorkflowRunFacts; catalogResolver?: MessageCatalogResolutionPort }> = {},
   ) {}
 
   async begin(context: PreBranchSddContext): Promise<PreBranchSddOutcome> {
+    let ownershipStatusWritten = false;
+    let failureBranch = context.workingBranch ?? context.baseBranch;
+    let failureSource: Readonly<{ branch: string; sha: string }> | undefined;
     try {
       await this.ensureSddLabel(context.issueNumber);
       if (!context.tokenUser.trim()) throw new Error('The Action bot identity is unavailable; SDD question ownership cannot be verified.');
@@ -109,10 +119,12 @@ export class PreBranchSddGateUseCase {
       const card = latestOwnedCard(allComments, context.issueNumber, context.tokenUser);
       const retainedBranch = card?.record.branchName ?? context.workingBranch;
       const sourceBranch = retainedBranch ?? context.baseBranch;
+      failureBranch = sourceBranch;
       if (retainedBranch && !await this.linkedBranch.getLinkedBranch(context.issueNumber, retainedBranch)) {
         throw new Error('The retained SDD branch is no longer linked to this issue.');
       }
       const snapshot = await this.workspace.loadSnapshot(sourceBranch);
+      failureSource = { branch: sourceBranch, sha: snapshot.baseSha };
       if (retainedBranch && !card?.record.commitSha) {
         if (card?.record.branchName && snapshot.baseSha !== card.record.baseSha) {
           const recovered = await this.workspace.recoverPublished(retainedBranch, {
@@ -148,9 +160,10 @@ export class PreBranchSddGateUseCase {
           card.record.branchName!, card.record.revisionBaseSha!, card.record.revisionSha, card.record.plan.path,
         );
         if (revisionVerified) {
+          const restored = await this.clearPreparationFailure(context, failureSource);
           return {
             status: 'published', branchName: card.record.branchName!, commitSha: card.record.revisionSha ?? card.record.commitSha!,
-            results: [this.result(true, false, `The published SDD commit ${card.record.revisionSha ?? card.record.commitSha} remains verified.`)],
+            results: [this.result(true, false, `The published SDD commit ${card.record.revisionSha ?? card.record.commitSha} remains verified.`), ...restored],
           };
         }
         throw new Error('The SDD revision is absent from the linked remote branch.');
@@ -161,6 +174,7 @@ export class PreBranchSddGateUseCase {
         const currentAnswers = card.record.plan.questions.length === 0 ? []
           : await this.collectAnswers(card.record, card.id, allComments, context);
         if (currentAnswers.length < card.record.plan.questions.length) {
+          await this.writePreparationRecovered(context, 'waiting', failureSource);
           return { status: 'waiting', results: [this.result(true, true, 'Waiting for the numbered SDD answers; no draft or branch was created.')] };
         }
         answers = retainSddAnswers(card.record.answers ?? [], currentAnswers);
@@ -183,6 +197,7 @@ export class PreBranchSddGateUseCase {
       } catch (error) {
         if (!(error instanceof SddOwnershipFailure)) throw error;
         await this.writeAnalysisStatus(context, allComments, error.reason);
+        ownershipStatusWritten = true;
         throw new ApplicationError('provider.contract-invalid', `${error.message} Clarify the catalog owner/path in the same issue and rerun the original workflow. No automatic retry was attempted.`);
       }
       if (card?.record.branchName && (plan.action !== 'update'
@@ -203,6 +218,7 @@ export class PreBranchSddGateUseCase {
       };
       if (plan.questions.length > 0) {
         await this.writeCard(context.issueNumber, card?.id, record, context.issueLocale, context.issueUrl);
+        await this.writePreparationRecovered(context, 'waiting', failureSource);
         return { status: 'waiting', results: [this.result(true, true, `Asked ${plan.questions.length} blocking SDD question(s); no draft or branch was created.`)] };
       }
 
@@ -226,13 +242,22 @@ export class PreBranchSddGateUseCase {
       await this.assertFresh(context, snapshot.baseSha, sourceBranch);
       return { status: 'drafted', prepared, record, ...(card ? { cardId: card.id } : {}), results: [this.result(true, true, `Validated ${plan.path} before branch publication.`)] };
     } catch (error) {
-      return { status: 'blocked', results: [this.failure(error)] };
+      if (error instanceof SddCatalogCompatibilityFailure && error.sourceCommit) {
+        failureSource = { branch: failureBranch, sha: error.sourceCommit };
+      }
+      const failure = this.failure(error);
+      if (!ownershipStatusWritten && failure.errors[0].code !== 'workflow.stale') {
+        try { await this.writePreparationFailure(context, failure.errors[0], error, false, failureSource); }
+        catch (publicationError) { return { status: 'blocked', results: [failure, this.failure(publicationError)] }; }
+      }
+      return { status: 'blocked', results: [failure] };
     }
   }
 
   async publish(context: PreBranchSddContext, draft: Extract<PreBranchSddOutcome, { status: 'drafted' }>, branchName: string): Promise<PreBranchSddOutcome> {
+    let failureSource = { sha: draft.prepared.baseSha, branch: draft.record.branchName ?? context.baseBranch };
     try {
-      await this.assertFresh(context, draft.prepared.baseSha, draft.record.branchName ?? context.baseBranch);
+      await this.assertFresh(context, failureSource.sha, failureSource.branch);
       const linked = await this.linkedBranch.getLinkedBranch(context.issueNumber, branchName);
       if (!linked) throw new Error('The exact SDD branch is not linked to this issue.');
       const recovered = await this.workspace.recoverPublished(branchName, draft.prepared);
@@ -240,6 +265,8 @@ export class PreBranchSddGateUseCase {
         throw new Error('The linked branch head changed before the SDD commit; rerun on the same branch.');
       }
       const commitSha = recovered ?? await this.workspace.publish(branchName, draft.prepared);
+      // A revision advances its own source branch; only that returned commit is an expected change.
+      if (failureSource.branch === branchName) failureSource = { ...failureSource, sha: commitSha };
       const verified = await this.workspace.verifyPublication(branchName, draft.prepared.baseSha, commitSha, draft.prepared.plan.path);
       if (!verified) throw new Error('The pushed SDD commit could not be verified on the exact linked branch.');
       if (!await this.linkedBranch.getLinkedBranch(context.issueNumber, branchName)) {
@@ -252,14 +279,18 @@ export class PreBranchSddGateUseCase {
         ...(revision ? { revisionSha: commitSha, revisionBaseSha: draft.prepared.baseSha } : {}),
       };
       await this.writeCard(context.issueNumber, draft.cardId, published, context.issueLocale, context.issueUrl);
+      const restored = await this.clearPreparationFailure(context, failureSource);
       return {
         status: 'published', branchName, commitSha,
-        results: [this.result(true, true, `Published and verified ${revision ? 'the SDD revision' : 'the first SDD commit'} ${commitSha} on ${branchName}.`)],
+        results: [this.result(true, true, `Published and verified ${revision ? 'the SDD revision' : 'the first SDD commit'} ${commitSha} on ${branchName}.`), ...restored],
       };
     } catch (error) {
       const failure = this.failure(error);
+      if (failure.errors[0].code === 'workflow.stale') return { status: 'blocked', results: [failure] };
       try {
+        await this.assertFresh(context, failureSource.sha, failureSource.branch);
         await this.writeCard(context.issueNumber, draft.cardId, { ...draft.record, branchName }, context.issueLocale, context.issueUrl);
+        await this.writePreparationFailure(context, failure.errors[0], error, true, failureSource);
       } catch (publicationError) {
         return { status: 'blocked', results: [failure, this.failure(publicationError)] };
       }
@@ -309,21 +340,68 @@ export class PreBranchSddGateUseCase {
       && comment.body?.includes(marker)).sort((a, b) => b.id - a.id)[0];
     if (!reason && !prior) return;
     const body = renderSddAnalysisStatus(context.issueNumber, context.issueLocale, reason);
+    await this.upsertPreparationStatus(context, comments, body, Boolean(reason));
+  }
+
+  private async writePreparationFailure(context: PreBranchSddContext, error: ApplicationError, cause: unknown,
+    publicationPending: boolean, source?: Readonly<{ branch: string; sha: string }>): Promise<void> {
+    if (!context.tokenUser.trim()) throw new ApplicationError('configuration.unsupported', 'The SDD diagnostic card requires a trusted bot identity.');
+    if (cause instanceof SddCatalogCompatibilityFailure && !source) throw new ApplicationError('configuration.unsupported', 'The catalog compatibility diagnostic requires a verified source revision.');
+    const comments = await this.comments.listIssueComments(context.issueNumber);
+    const [catalog, errorCatalog] = await Promise.all([
+      resolveSddPreparationCatalog(context.issueLocale ?? 'en-US', context.agentConfiguration, this.presentation.catalogResolver),
+      resolveApplicationErrorCatalog(context.issueLocale ?? 'en-US', context.agentConfiguration, this.presentation.catalogResolver),
+    ]);
+    const aligned = catalog.locale === errorCatalog.locale;
+    const body = renderSddPreparationFailure({ issueNumber: context.issueNumber, locale: context.issueLocale,
+      error, publicationPending, run: this.presentation.run,
+      ...(cause instanceof SddDraftPreparationFailure ? { diagnostic: cause.diagnostic, attempts: cause.attempts } : {}),
+      ...(cause instanceof SddCatalogCompatibilityFailure ? { catalogReason: cause.reason } : {}),
+    }, aligned ? catalog : resolveStaticSddPreparationCatalog('en-US'),
+    aligned ? errorCatalog.message : resolveStaticApplicationErrorCatalog('en-US').message)
+      + (aligned ? '' : '\n\n' + resolveStaticSddPreparationCatalog('en-US').message('sddPreparation.fallbackSlices'));
+    if (source) await this.assertFresh(context, source.sha, source.branch);
+    await this.upsertPreparationStatus(context, comments, body, true);
+  }
+
+  private async writePreparationRecovered(context: PreBranchSddContext, phase: 'waiting' | 'published', source: Readonly<{ branch: string; sha: string }>): Promise<void> {
+    const comments = await this.comments.listIssueComments(context.issueNumber);
+    if (!comments.some(comment => comment.user?.login?.toLowerCase() === context.tokenUser.toLowerCase()
+      && comment.body?.includes(sddAnalysisStatusMarker(context.issueNumber)))) return;
+    const catalog = await resolveSddPreparationCatalog(context.issueLocale ?? 'en-US', context.agentConfiguration, this.presentation.catalogResolver);
+    const body = renderSddPreparationRecovered(context.issueNumber, phase, context.issueLocale, catalog);
+    await this.assertFresh(context, source.sha, source.branch);
+    await this.upsertPreparationStatus(context, comments, body, false);
+  }
+
+  private async clearPreparationFailure(context: PreBranchSddContext, source: Readonly<{ branch: string; sha: string }>): Promise<readonly Result[]> {
+    try { await this.writePreparationRecovered(context, 'published', source); return []; }
+    catch (error) {
+      // Verified publication remains a fact if refreshing its separate diagnostic card fails.
+      return [this.failure(toApplicationError(error, 'provider.unavailable', 'The SDD publication is verified; its diagnostic status card still needs refresh.'))];
+    }
+  }
+
+  private async upsertPreparationStatus(context: PreBranchSddContext, comments: readonly IssueCommentPublicationTarget[], body: string, create: boolean): Promise<void> {
+    const marker = sddAnalysisStatusMarker(context.issueNumber);
+    const prior = comments.filter(comment => comment.user?.login?.toLowerCase() === context.tokenUser.toLowerCase()
+      && comment.body?.includes(marker)).sort((a, b) => b.id - a.id)[0];
     if (prior) {
       if (prior.body !== body) await this.comments.updateComment(context.issueNumber, prior.id, body);
-    } else await this.comments.addComment(context.issueNumber, body);
+    } else if (create) await this.comments.addComment(context.issueNumber, body);
   }
 
   private async assertFresh(context: PreBranchSddContext, expectedBaseSha: string, sourceBranch: string): Promise<void> {
-    const [liveBody, liveTitle, snapshot] = await Promise.all([
+    const [liveBody, liveTitle, sourceRevision] = await Promise.all([
       this.descriptions.getDescription(context.issueNumber),
       this.titles.getTitle(context.issueNumber),
-      this.workspace.loadSnapshot(sourceBranch),
+      this.workspace.readSourceRevision ? this.workspace.readSourceRevision(sourceBranch)
+        : this.workspace.loadSnapshot(sourceBranch).then(snapshot => snapshot.baseSha),
     ]);
-    if (snapshot.baseSha !== expectedBaseSha
+    if (sourceRevision !== expectedBaseSha
       || getVisibleIssueDescription(liveBody ?? '') !== getVisibleIssueDescription(context.issueBody)
       || normalizeSddIssueTitle(liveTitle ?? '') !== normalizeSddIssueTitle(context.issueTitle)) {
-      throw new Error('The issue or development base changed during SDD preparation; rerun analysis before publishing.');
+      throw new ApplicationError('workflow.stale', 'The issue or development base changed during SDD preparation; rerun analysis before publishing.');
     }
   }
 
@@ -334,8 +412,12 @@ export class PreBranchSddGateUseCase {
   private failure(error: unknown): Result {
     // The runtime logger redacts credentials and makes workflow-command text inert.
     logError(`Pre-branch SDD gate failed: ${error instanceof Error ? error.message : 'unknown failure'}`);
-    const semanticError = toApplicationError(error, 'workflow.failed', 'The pre-branch SDD gate is blocked.');
-    return new Result({ id: this.taskId, success: false, executed: true, steps: [semanticError.message], errors: [semanticError] });
+    const semanticError = error instanceof SddCatalogCompatibilityFailure
+      ? new ApplicationError('configuration.unsupported', error.message, { recovery: {
+        id: error.reason === 'unsupported-profile' ? 'sdd-catalog-unsupported-profile' : 'sdd-catalog-format-invalid', variables: {},
+      } }) : toApplicationError(error, 'workflow.failed', 'The pre-branch SDD gate is blocked.');
+    return new Result({ id: this.taskId, success: false, executed: true, steps: [semanticError.message], errors: [semanticError],
+      ...(error instanceof SddDraftPreparationFailure ? { payload: { sddDiagnostic: error.diagnostic, attempts: error.attempts } } : {}) });
   }
 }
 

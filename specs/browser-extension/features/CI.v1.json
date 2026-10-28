@@ -1,0 +1,544 @@
+{
+  "id": "CI",
+  "title": "Actions, checks and delivery evidence",
+  "features": [
+    {
+      "id": "BEX-CI-01",
+      "family": "CI",
+      "title": "Check hierarchy overview",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Pull request and commit checks",
+      "userOutcome": "Show canonical check/status outcomes; classify required/advisory only with current requirement evidence, otherwise unknown.",
+      "boundaryAcceptance": "Checks/Commit statuses read are optional feature grants; denied or partial sources never become zero failures, and skipped legs never count as successful required evidence.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "Integration 11.2: Checks read check-runs at the full head SHA, Commit statuses read contexts, and explicitly labeled loaded native requirement evidence; Action assessment remains separate.",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CI"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CI01-C01",
+          "scenario": "With selected-repository Checks read and Commit statuses read, canonical full-head check runs and status contexts are shown separately; current native requirement evidence classifies requiredness and its absence yields unknown."
+        },
+        {
+          "id": "bexp-CI01-C02",
+          "scenario": "A skipped matrix leg never becomes successful required evidence, and a successful advisory/unknown-policy check never establishes merge readiness."
+        },
+        {
+          "id": "bexp-CI01-C03",
+          "scenario": "Denied Checks/Commit statuses read, truncated pagination or stale evidence shows source-specific unavailable/partial states with native links, retaining only labeled loaded-native rows and never claiming zero failures."
+        },
+        {
+          "id": "bexp-CI01-C04",
+          "scenario": "Changing the selected repository/account/revision while check hierarchy overview is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CI-02",
+      "family": "CI",
+      "title": "Run and attempt navigation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Actions and PR checks",
+      "userOutcome": "Navigate the exact workflow run, attempt, job and annotation referenced by a result.",
+      "boundaryAcceptance": "A later attempt cannot silently replace the source of an older finding.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "Integration 11.2: Actions read run/attempt/job identities and, when granted, Checks read check identities; external check IDs are not Actions IDs.",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CI"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CI02-C01",
+          "scenario": "Given the eligible actions and pr checks and verified input, choosing run and attempt navigation produces this observable result: Navigate the exact workflow run, attempt, job and annotation referenced by a result."
+        },
+        {
+          "id": "bexp-CI02-C02",
+          "scenario": "For run and attempt navigation, exercise the concrete boundary: A later attempt cannot silently replace the source of an older finding."
+        },
+        {
+          "id": "bexp-CI02-C03",
+          "scenario": "A denied, truncated or expired source for run and attempt navigation shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-CI02-C04",
+          "scenario": "Changing the selected repository/account/revision while run and attempt navigation is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CI-03",
+      "family": "CI",
+      "title": "Annotation navigator",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Check output and changed files",
+      "userOutcome": "Group annotations from the verified Checks read endpoint by file/severity with exact line/revision mapping.",
+      "boundaryAcceptance": "Missing Checks read shows unavailable/native loaded-only fallback; unmapped or truncated annotations remain explicit partial/unplaced evidence.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "Integration 11.2: GET check-runs/{verified-id}/annotations with optional selected-repository Checks read, parent repository/full-head validation and bounded pagination; loaded DOM is an explicit subset.",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CI"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CI03-C01",
+          "scenario": "With Checks read granted, verify the selected check parent repository/full head, read canonical annotations through its fixed endpoint and group by file/severity with exact line mapping; the Action projection is not an annotation source."
+        },
+        {
+          "id": "bexp-CI03-C02",
+          "scenario": "An unmapped line or a collection exceeding three 100-item pages or shared byte/request limits remains partial with unplaced evidence and an explicit budgeted continuation."
+        },
+        {
+          "id": "bexp-CI03-C03",
+          "scenario": "Missing/denied Checks read shows unavailable with a native destination or labeled loaded-only native evidence; expired/partial data never becomes a complete or empty annotation inventory."
+        },
+        {
+          "id": "bexp-CI03-C04",
+          "scenario": "Changing the selected repository/account/revision while annotation navigator is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CI-04",
+      "family": "CI",
+      "title": "Failure comparison",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Workflow run history",
+      "userOutcome": "Compare selected attempts' observed outcomes and changed failure locations.",
+      "boundaryAcceptance": "The extension does not diagnose causation from a single timing correlation.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CI"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CI04-C01",
+          "scenario": "Given the eligible workflow run history and verified input, choosing failure comparison produces this observable result: Compare selected attempts' observed outcomes and changed failure locations."
+        },
+        {
+          "id": "bexp-CI04-C02",
+          "scenario": "For failure comparison, exercise the concrete boundary: The extension does not diagnose causation from a single timing correlation."
+        },
+        {
+          "id": "bexp-CI04-C03",
+          "scenario": "A denied, truncated or expired source for failure comparison shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-CI04-C04",
+          "scenario": "Changing the selected repository/account/revision while failure comparison is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CI-05",
+      "family": "CI",
+      "title": "Run retry controls",
+      "delivery": "required-for-product-acceptance",
+      "mode": "write",
+      "surface": "Workflow run or failed job",
+      "userOutcome": "Preview exact repository, workflow, run/attempt and failed-job scope, then request one supported retry.",
+      "boundaryAcceptance": "An uncertain response is reconciled through canonical run state before any repeated request.",
+      "permissionProfile": "explicit-user-write",
+      "dataSource": "canonical target, separately authorized write identity and reviewed intent",
+      "freshnessRule": "final live target/permission/approval fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CI"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CI05-C01",
+          "scenario": "Given the eligible workflow run or failed job and verified input, choosing run retry controls produces this observable result: Preview exact repository, workflow, run/attempt and failed-job scope, then request one supported retry."
+        },
+        {
+          "id": "bexp-CI05-C02",
+          "scenario": "For run retry controls, exercise the concrete boundary: An uncertain response is reconciled through canonical run state before any repeated request."
+        },
+        {
+          "id": "bexp-CI05-C03",
+          "scenario": "Opening or refreshing run retry controls performs no write; a denied write grant leaves the repository unchanged."
+        },
+        {
+          "id": "bexp-CI05-C04",
+          "scenario": "A changed target/head/current value after the preview for run retry controls invalidates approval and requires review again."
+        },
+        {
+          "id": "bexp-CI05-C05",
+          "scenario": "A timeout after submitting run retry controls is reconciled through canonical state and is never retried blindly."
+        },
+        {
+          "id": "bexp-CI05-C06",
+          "scenario": "A duplicate click or restored tab for run retry controls cannot reuse a consumed operation intent."
+        },
+        {
+          "id": "bexp-CI05-C07",
+          "scenario": "After the provider accepts one retry, delayed visibility of the new attempt shows acknowledged and awaiting canonical verification; the extension neither invents an attempt number nor sends another retry."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CI-06",
+      "family": "CI",
+      "title": "Run cancellation controls",
+      "delivery": "required-for-product-acceptance",
+      "mode": "write",
+      "surface": "Active workflow run",
+      "userOutcome": "Confirm the exact running attempt and explain retained side effects before cancellation.",
+      "boundaryAcceptance": "A completed or replaced attempt invalidates the confirmation rather than cancelling another run.",
+      "permissionProfile": "explicit-user-write",
+      "dataSource": "canonical target, separately authorized write identity and reviewed intent",
+      "freshnessRule": "final live target/permission/approval fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CI"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CI06-C01",
+          "scenario": "Given the eligible active workflow run and verified input, choosing run cancellation controls produces this observable result: Confirm the exact running attempt and explain retained side effects before cancellation."
+        },
+        {
+          "id": "bexp-CI06-C02",
+          "scenario": "For run cancellation controls, exercise the concrete boundary: A completed or replaced attempt invalidates the confirmation rather than cancelling another run."
+        },
+        {
+          "id": "bexp-CI06-C03",
+          "scenario": "Opening or refreshing run cancellation controls performs no write; a denied write grant leaves the repository unchanged."
+        },
+        {
+          "id": "bexp-CI06-C04",
+          "scenario": "A changed target/head/current value after the preview for run cancellation controls invalidates approval and requires review again."
+        },
+        {
+          "id": "bexp-CI06-C05",
+          "scenario": "A timeout after submitting run cancellation controls is reconciled through canonical state and is never retried blindly."
+        },
+        {
+          "id": "bexp-CI06-C06",
+          "scenario": "A duplicate click or restored tab for run cancellation controls cannot reuse a consumed operation intent."
+        },
+        {
+          "id": "bexp-CI06-C07",
+          "scenario": "After cancellation is accepted, the selected attempt may still run or complete naturally; show its verified terminal outcome and retained side effects without claiming cancellation succeeded or issuing a second cancel."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CI-07",
+      "family": "CI",
+      "title": "Workflow dispatch preparation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "draft",
+      "surface": "Actions workflow page",
+      "userOutcome": "Prepare a reviewed native workflow-dispatch form with exact ref and supported inputs.",
+      "boundaryAcceptance": "Hidden inputs, deployment policy and unknown workflow identity block an invented execution route.",
+      "permissionProfile": "native-human-submission",
+      "dataSource": "verified target plus explicit user input",
+      "freshnessRule": "live target/context checked before preparing the native draft",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CI"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CI07-C01",
+          "scenario": "Given the eligible actions workflow page and verified input, choosing workflow dispatch preparation produces this observable result: Prepare a reviewed native workflow-dispatch form with exact ref and supported inputs."
+        },
+        {
+          "id": "bexp-CI07-C02",
+          "scenario": "For workflow dispatch preparation, exercise the concrete boundary: Hidden inputs, deployment policy and unknown workflow identity block an invented execution route."
+        },
+        {
+          "id": "bexp-CI07-C03",
+          "scenario": "Opening workflow dispatch preparation preserves the current native selection/input and requires the human's native confirmation; cancel performs no mutation."
+        },
+        {
+          "id": "bexp-CI07-C04",
+          "scenario": "A changed target, permission or selection while workflow dispatch preparation is being prepared invalidates the handoff and refreshes its exact scope."
+        },
+        {
+          "id": "bexp-CI07-C05",
+          "scenario": "Keyboard-only use of workflow dispatch preparation announces the exact native destination and effect, returns focus on cancel and submits nothing from the extension."
+        }
+      ],
+      "nativeTarget": "control-handoff"
+    },
+    {
+      "id": "BEX-CI-08",
+      "family": "CI",
+      "title": "Artifacts and job summaries",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Workflow runs",
+      "userOutcome": "Navigate verified summaries and user-selected artifacts with size/type/source preview.",
+      "boundaryAcceptance": "Expired artifacts or redirected downloads never receive an unrelated credential.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CI"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CI08-C01",
+          "scenario": "Given the eligible workflow runs and verified input, choosing artifacts and job summaries produces this observable result: Navigate verified summaries and user-selected artifacts with size/type/source preview."
+        },
+        {
+          "id": "bexp-CI08-C02",
+          "scenario": "For artifacts and job summaries, exercise the concrete boundary: Expired artifacts or redirected downloads never receive an unrelated credential."
+        },
+        {
+          "id": "bexp-CI08-C03",
+          "scenario": "A denied, truncated or expired source for artifacts and job summaries shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-CI08-C04",
+          "scenario": "Changing the selected repository/account/revision while artifacts and job summaries is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CI-09",
+      "family": "CI",
+      "title": "Queue, runner and waiting explanations",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Run and PR status",
+      "userOutcome": "Distinguish queued, waiting for environment approval, running and unavailable runner evidence.",
+      "boundaryAcceptance": "Unavailable runner permissions cannot be converted into zero capacity or a failed workflow.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CI"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CI09-C01",
+          "scenario": "Given the eligible run and pr status and verified input, choosing queue, runner and waiting explanations produces this observable result: Distinguish queued, waiting for environment approval, running and unavailable runner evidence."
+        },
+        {
+          "id": "bexp-CI09-C02",
+          "scenario": "For queue, runner and waiting explanations, exercise the concrete boundary: Unavailable runner permissions cannot be converted into zero capacity or a failed workflow."
+        },
+        {
+          "id": "bexp-CI09-C03",
+          "scenario": "A denied, truncated or expired source for queue, runner and waiting explanations shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-CI09-C04",
+          "scenario": "Changing the selected repository/account/revision while queue, runner and waiting explanations is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-CI-10",
+      "family": "CI",
+      "title": "Performance and reliability trends",
+      "delivery": "required-for-product-acceptance",
+      "mode": "read",
+      "surface": "Selected workflow history",
+      "userOutcome": "Summarize a bounded explicit run sample with percentile, cancellation and missing-sample disclosure.",
+      "boundaryAcceptance": "Sampling bias and incomplete history prevent claims about repository-wide reliability.",
+      "permissionProfile": "selected-repository-read",
+      "dataSource": "canonical allowlisted GitHub reads or verified Action publications",
+      "freshnessRule": "I1-I6 observation and identity fence",
+      "default": "explicit-opt-in",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-CI"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-CI10-C01",
+          "scenario": "Given the eligible selected workflow history and verified input, choosing performance and reliability trends produces this observable result: Summarize a bounded explicit run sample with percentile, cancellation and missing-sample disclosure."
+        },
+        {
+          "id": "bexp-CI10-C02",
+          "scenario": "For performance and reliability trends, exercise the concrete boundary: Sampling bias and incomplete history prevent claims about repository-wide reliability."
+        },
+        {
+          "id": "bexp-CI10-C03",
+          "scenario": "A denied, truncated or expired source for performance and reliability trends shows its exact unavailable/partial reason instead of a zero or success."
+        },
+        {
+          "id": "bexp-CI10-C04",
+          "scenario": "Changing the selected repository/account/revision while performance and reliability trends is loading prevents the late result from rendering."
+        }
+      ],
+      "nativeTarget": "none"
+    }
+  ]
+}

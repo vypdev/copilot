@@ -22,6 +22,13 @@ For `check_progress_action`, `detect_potential_problems_action`, `recommend_step
 |-------|-------------|---------|
 | `single-action-issue` | Issue number to run the action on | `'123'` |
 
+A positive, validated `single-action-issue` takes precedence over issue/PR
+payloads, branch names and tag refs. The Action checks that exact native target;
+a missing target or failed lookup cannot redirect execution to another issue.
+If the target is a PR, its managed head branch must identify the associated
+issue. `initial_setup` remains repository-only, and actions without an
+explicit positive target retain their documented optional/event context.
+
 `close_inactive_issues_action` does not use `single-action-issue`. It scans the
 repository's open issues carrying a waiting-state label. Configure its optional
 `inactivity-threshold-hours` input (default: `168`) or the
@@ -36,7 +43,17 @@ exact durable ID supplied by Copilot for that launcher issue. The workflows also
 pass the matching version where applicable. `prepare_deployment_action` creates
 the operation ID and instead requires issue, version, title, and changelog.
 
-These seven actions belong to `release_workflow.yml`, `hotfix_workflow.yml`, and
+A tag-triggered `create_release` restores the operation from the explicit
+launcher issue even when the tag payload carries no issue field. It must still
+match the stored operation ID, version, allowed publication phase and accepted
+production SHA. If the durable operation is unavailable, publication stops
+before creating a release. Inspect the selected issue and restore its verified
+operation context, then retry the supported workflow with the same operation ID
+and version. Existing persisted state and completed external effects remain
+preserved; missing context alone does not establish that a newer state
+superseded the invocation. See the [error reference](/security-operations/operations/error-reference#missing-publication-context).
+
+These workflow-owned actions belong to `release_workflow.yml`, `hotfix_workflow.yml`, and
 `copilot_deployment_orchestration.yml`; do not invoke them manually or reuse an
 ID across issues.
 
@@ -78,3 +95,26 @@ Use the supplied release/hotfix workflows for publication; direct examples are
 intentionally omitted because there is no standalone or local compatibility path.
 
 See [Workflow & CLI](/single-actions/workflow-and-cli) for more examples and CLI equivalents.
+
+## Replacement proof inputs
+
+`replace_deployment_action` is only the final step of the supplied serialized
+release/hotfix `replace` workflow. It requires the existing issue/version and
+operation ID plus all five declared inputs below. Generic `INPUT_VARS_JSON`
+cannot synthesize a replacement or override these proofs. The local CLI rejects
+this action before composing deployment capabilities.
+
+| Input | Default | Meaning |
+|---|---|---|
+| `single-action-expected-revision` | empty | Exact previous positive durable revision |
+| `single-action-reviewed-source-sha` | empty | Full corrected SHA reviewed before preparation |
+| `single-action-candidate-sha` | empty | Full resulting SHA after complete project validation and normal push |
+| `single-action-production-base-sha` | empty | Native production base fixed by read-only preflight |
+| `single-action-confirm-unpublished` | false | Explicit confirmation after checking every project registry |
+
+Title and changelog must remain empty; their stored values are retained. The
+final adapter checks the native run, attempt, workflow path and successful
+preflight/producer steps. Calling the single action from another job or passing
+only a SHA does not establish fresh validation. See
+[unpublished candidate recovery](/issues/deployment-orchestration#replace-an-unpublished-candidate)
+for the supported operator flow.

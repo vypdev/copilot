@@ -5,7 +5,7 @@
       "missingEntryLabel": "deployment handler",
       "rules": [
         {
-          "expectedFileCount": 6,
+          "expectedFileCount": 7,
           "fileKind": "deployment handler files",
           "mode": "aggregate",
           "pathIncludes": "src/application/usecases/actions/deployment_handlers/",
@@ -48,6 +48,7 @@
             "src/application/policies/bugbot_resolution_eligibility_policy.ts",
             "src/application/policies/bugbot_telemetry_projection_policy.ts",
             "src/application/policies/bugbot_diff_partition_policy.ts",
+            "src/application/policies/bugbot_conversation_packing_policy.ts",
             "src/application/policies/bugbot_partition_completion_policy.ts",
             "src/application/usecases/steps/commit/bugbot/bugbot_partition_aggregation.ts",
             "src/application/usecases/steps/commit/bugbot/bugbot_previous_findings_context.ts",
@@ -65,6 +66,7 @@
             "src/application/policies/bugbot_resolution_eligibility_policy.ts",
             "src/application/policies/bugbot_telemetry_projection_policy.ts",
             "src/application/policies/bugbot_diff_partition_policy.ts",
+            "src/application/policies/bugbot_conversation_packing_policy.ts",
             "src/application/policies/bugbot_partition_completion_policy.ts",
             "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts",
             "src/application/usecases/steps/commit/bugbot/bugbot_partition_aggregation.ts",
@@ -440,7 +442,12 @@
             "src/domain/issue_workflow_runtime_policy.ts",
             "src/application/policies/repository_agent_guidance_policy.ts",
             "src/application/policies/setup_issue_resource_policy.ts",
-            "src/application/policies/setup_issue_workflow_policy.ts"
+            "src/application/policies/setup_issue_workflow_policy.ts",
+            "src/domain/issue_workflow_body.ts",
+            "src/domain/issue_workflow_field_mapping.ts",
+            "src/domain/issue_workflow_form.ts",
+            "src/domain/issue_workflow_diagnostic.ts",
+            "src/domain/strict_json_keys.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"
@@ -828,17 +835,35 @@
         {
           "files": [
             "src/application/policies/progress_diff_partition_policy.ts",
-            "src/application/policies/progress_partition_response_policy.ts"
+            "src/application/policies/progress_partition_response_policy.ts",
+            "src/application/policies/progress_scope_policy.ts",
+            "src/prompts/progress_scope.ts",
+            "src/application/policies/progress_content_evidence_policy.ts",
+            "src/application/policies/progress_patch_completeness_policy.ts",
+            "src/application/policies/progress_comparison_source_policy.ts",
+            "src/domain/progress_binary_evidence_diagnostic.ts",
+            "src/domain/progress_evidence_path.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"
         },
         {
           "files": [
-            "src/application/usecases/actions/summarize_progress_diff_workflow.ts"
+            "src/application/usecases/actions/summarize_progress_diff_workflow.ts",
+            "src/application/usecases/actions/check_progress_workflow.ts",
+            "src/application/usecases/actions/progress_analysis_workflow.ts"
           ],
           "mode": "each",
           "thresholdProfile": "default"
+        },
+        {
+          "files": [
+            "src/data/repository/immutable_progress_content_repository.ts",
+            "src/data/repository/progress_comparison_source_repository.ts",
+            "src/infrastructure/composition/check_progress_composition_root.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
         }
       ],
       "successMessage": "complete multipart progress coverage: PASS (pure policies 100%; bounded orchestration 95% lines/statements, 90% branches/functions)"
@@ -975,6 +1000,139 @@
         }
       ],
       "successMessage": "finding identity continuity coverage: PASS (pure matching 100%; changed path 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Source candidate verification readiness",
+      "missingEntryLabel": "source candidate verification readiness",
+      "rules": [
+        {
+          "files": [
+            "src/domain/verification_failure.ts",
+            "src/application/policies/source_verification_dependency_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/infrastructure/source_verification_dependencies.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "source candidate verification readiness: PASS (100% lines/statements/branches/functions)"
+    },
+    {
+      "name": "Size reconciliation diagnostics",
+      "missingEntryLabel": "size reconciliation diagnostics",
+      "rules": [
+        {
+          "files": [
+            "src/domain/change_size_reconciliation.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/ports/change_size_provider_error.ts",
+            "src/data/repository/github/change_size_provider_failure.ts",
+            "src/application/usecases/steps/commit/change_size_reconciliation.ts",
+            "src/infrastructure/composition/change_size_diagnostics_composition_root.ts"
+          ],
+          "mode": "aggregate",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "size reconciliation diagnostics coverage: PASS (closed facts 100%; changed path 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Authoritative branch advisory relationships",
+      "missingEntryLabel": "authoritative branch advisory relationships",
+      "rules": [
+        {
+          "files": [
+            "src/data/repository/branch_sync/branch_dependency_policy.ts",
+            "src/application/policies/branch_sync_relationship_retirement_policy.ts",
+            "src/application/usecases/actions/retire_unrelated_branch_sync_cards.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "authoritative branch advisory relationships: PASS (100% lines/statements/functions/branches)"
+    },
+    {
+      "name": "Optional Check Run publication diagnostics",
+      "missingEntryLabel": "optional Check Run publication diagnostics",
+      "rules": [
+        {
+          "files": [
+            "src/application/ports/copilot_evidence_error.ts",
+            "src/application/policies/optional_check_diagnostic_policy.ts",
+            "src/data/repository/github/copilot_evidence_provider_failure.ts",
+            "src/data/repository/copilot_evidence_repository.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/actions/github_action_completion.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "optional Check Run diagnostics: PASS (closed boundary/presentation/adapter100%; completion95/90)"
+    },
+    {
+      "name": "Early issue event admission",
+      "missingEntryLabel": "early issue admission",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/issue_event_admission_policy.ts",
+            "issue-admission/index.cjs"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/execution/issue_event_admission_workflow.ts",
+            "src/data/repository/workflow/issue_event_admission_repository.ts",
+            "src/actions/issue_event_admission_action.ts",
+            "src/infrastructure/composition/issue_event_admission_composition_root.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "early issue admission coverage: PASS (pure policy 100%; each boundary 95/90)"
+    },
+    {
+      "name": "Unpublished candidate replacement",
+      "missingEntryLabel": "unpublished candidate replacement",
+      "rules": [
+        {
+          "files": [
+            "src/domain/deployment_candidate_replacement.ts",
+            "src/application/usecases/actions/deployment_handlers/replace_candidate_handler.ts",
+            "src/application/usecases/execution/deployment_candidate_preflight_workflow.ts",
+            "src/data/repository/deployment/github_candidate_replacement_repository.ts",
+            "src/data/repository/deployment/native_candidate_preparation.ts",
+            "src/infrastructure/composition/deployment_candidate_replacement_composition_root.ts",
+            "src/application/policies/deployment_candidate_preflight_presentation.ts",
+            "src/actions/deployment_candidate_preflight_action.ts",
+            "deployment-recovery/index.cjs"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        }
+      ],
+      "successMessage": "unpublished candidate replacement coverage: PASS (100% lines/statements/branches/functions)"
     }
   ]
 }

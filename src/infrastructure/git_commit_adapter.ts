@@ -8,6 +8,7 @@ import { withoutGitHooks } from './git_hook_isolation';
 import { assertVerificationRuntimePrerequisites } from './verification_runtime_preflight';
 import { DISABLED_VERIFICATION_SETUP, type PreparedVerificationSetup } from '../application/ports/verification_setup_ports';
 import { prepareRepositoryVerification } from './verification_setup_runner';
+import { captureSourceDependencyPreparation, type SourceDependencyPreparation } from './source_verification_dependencies';
 
 type GitCommandOptions = { stdout?: (data: Buffer) => void; env?: Record<string, string>; untrusted?: boolean; verifyRuntimePrerequisites?: boolean; resolveFromEnvironment?: boolean };
 type GitCommandExecutor = (program: string, args: string[], options?: GitCommandOptions) => Promise<number>;
@@ -25,6 +26,7 @@ export class GitCommitAdapter implements GitCommitPort {
             : exec.exec(program, args),
         private readonly checkPrerequisites: (environment: Record<string, string>) => void = assertVerificationRuntimePrerequisites,
         private readonly verificationSetup: PreparedVerificationSetup = DISABLED_VERIFICATION_SETUP,
+        private readonly prepareSourceDependencies: SourceDependencyPreparation = captureSourceDependencyPreparation(),
     ) {}
 
     async execute(program: string, args: string[], options?: GitCommandOptions): Promise<number> {
@@ -36,6 +38,7 @@ export class GitCommitAdapter implements GitCommitPort {
             if (options.verifyRuntimePrerequisites) {
                 await prepareRepositoryVerification(this.verificationSetup, runtime.environment);
                 this.checkPrerequisites(runtime.environment);
+                await this.prepareSourceDependencies(runtime.environment);
             }
             return await this.executeCommand(program, args, {
                 ...(options.stdout ? { stdout: options.stdout } : {}),

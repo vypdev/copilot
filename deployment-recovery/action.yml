@@ -1,0 +1,52 @@
+name: Inspect unpublished candidate replacement
+description: Read-only native prerequisite and replay inspection before project preparation.
+inputs:
+  token:
+    description: Existing product token; this action performs only native reads.
+    required: true
+  issue:
+    description: Positive launcher issue.
+    required: true
+  operation-id:
+    description: Exact previous deployment operation.
+    required: true
+  expected-revision:
+    description: Exact previous durable revision.
+    required: true
+  version:
+    description: Exact unpublished version.
+    required: true
+  source-sha:
+    description: Reviewed corrected source before complete preparation.
+    required: true
+  confirm-unpublished:
+    description: Explicit maintainer confirmation after inspecting every project registry.
+    default: 'false'
+  issue-workflow-profile:
+    description: Same enabled workflows and field mappings as the ordinary preparation action.
+    default: ''
+  release-label:
+    description: Configured release-kind label.
+    default: release
+  hotfix-label:
+    description: Configured hotfix-kind label.
+    default: hotfix
+  repository-locale:
+    description: Repository Summary language; English and Spanish have static catalogs.
+    default: en-US
+outputs:
+  mode:
+    description: prepare requires full validation; recover reuses the recorded candidate; recorded does not mutate.
+  source-branch:
+    description: Native operation-owned source branch.
+  candidate-sha:
+    description: Reviewed source for new preparation, or existing validated successor for recovery.
+  production-base-sha:
+    description: Native base for fresh replacement or the recorded replacement base for recovery.
+  operation-id:
+    description: Exact previous operation.
+  expected-revision:
+    description: Exact previous revision.
+runs:
+  using: node24
+  main: index.cjs

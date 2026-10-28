@@ -30,7 +30,7 @@ export async function runCommentAutomation(
       return [new Result({ id: options.taskId, success: true, executed: false })];
     }
     if (command.kind === 'invalid') {
-      return [invalidCommentCommandResult(options.taskId, command.reason)];
+      return [invalidCommentCommandResult(options.taskId, command.reason, command.validation)];
     }
     const isPublicMetadataCommand = command.kind === 'command'
       && (command.command.name === 'help' || command.command.name === 'status' || command.command.name === 'sdd-diff'
@@ -59,7 +59,7 @@ export async function runCommentAutomation(
     if (adaptation) param = withCommentLanguageAdaptation(param, adaptation);
     const adaptedCommand = parseCopilotCommand(param.userComment);
     if (adaptedCommand.kind === 'invalid') {
-      return [...languageResults, invalidCommentCommandResult(options.taskId, adaptedCommand.reason)];
+      return [...languageResults, invalidCommentCommandResult(options.taskId, adaptedCommand.reason, adaptedCommand.validation)];
     }
     if (adaptedCommand.kind === 'command') {
       const explicitResults = await runExplicitCommentCommand(param, options, adaptedCommand.command, actorAuthorizationPort);

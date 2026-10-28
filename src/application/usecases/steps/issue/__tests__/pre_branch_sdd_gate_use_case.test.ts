@@ -1,3 +1,4 @@
+import { SddCatalogCompatibilityFailure, SDD_CATALOG_COMPATIBILITY_REASONS } from '../../../../../domain/sdd_catalog_compatibility';
 import { readSddGateRecord, SddDraftFormatFailure } from '../../../../../domain/pre_branch_sdd';
 import { PreBranchSddGateUseCase, type PreBranchSddContext } from '../../../sdd/pre_branch_sdd_gate_use_case';
 import type { SddCatalogSnapshot, SddPreparedDraft } from '../../../../ports/pre_branch_sdd_ports';
@@ -27,18 +28,19 @@ function context(): PreBranchSddContext {
   };
 }
 
-function harness() {
+function harness(presentation?: ConstructorParameters<typeof PreBranchSddGateUseCase>[8], revisionReader = false) {
   let labels = ['feature', 'in-progress'];
   const comments: { id: number; body: string; user: { login: string } }[] = [];
   const query = jest.fn();
   const loadSnapshot = jest.fn().mockResolvedValue(snapshot);
+  const readSourceRevision = jest.fn(async (branch: string) => (await loadSnapshot(branch)).baseSha as string);
   const isAncestor = jest.fn().mockResolvedValue(true);
   const readSdd = jest.fn().mockResolvedValue('# Existing SDD');
   const validateDraft = jest.fn().mockResolvedValue(prepared);
   const publish = jest.fn().mockResolvedValue(commitSha);
   const recoverPublished = jest.fn().mockResolvedValue(undefined);
   const verifyPublication = jest.fn().mockResolvedValue(true);
-  const addComment = jest.fn(async (_issue: number, body: string) => { comments.push({ id: 100, body, user: { login: 'copilot[bot]' } }); });
+  const addComment = jest.fn(async (_issue: number, body: string) => { comments.push({ id: Math.max(99, ...comments.map(comment => comment.id)) + 1, body, user: { login: 'copilot[bot]' } }); });
   const updateComment = jest.fn(async (_issue: number, id: number, body: string) => {
     const target = comments.find(comment => comment.id === id);
     if (target) target.body = body;
@@ -51,15 +53,16 @@ function harness() {
   const getLinkedBranch = jest.fn().mockResolvedValue({ name: 'feature/42-change', headSha: baseSha });
   const useCase = new PreBranchSddGateUseCase(
     { query },
-    { loadSnapshot, isAncestor, readSdd, validateDraft, publish, recoverPublished, verifyPublication },
+    { loadSnapshot, isAncestor, readSdd, validateDraft, publish, recoverPublished, verifyPublication, ...(revisionReader ? { readSourceRevision } : {}) },
     { listIssueComments: jest.fn(async () => comments), addComment, updateComment },
     { getLabels: jest.fn(async () => labels), setLabels },
     { isActorAllowedToModifyFiles, isActorAllowedToUseMemberOnlyAutomation },
     { getDescription },
     { getTitle } as never,
     { getLinkedBranch },
+    presentation,
   );
-  return { useCase, comments, query, loadSnapshot, isAncestor, readSdd, validateDraft, publish, recoverPublished, verifyPublication, addComment, updateComment, setLabels, isActorAllowedToModifyFiles, getDescription, getTitle, getLinkedBranch, labels: () => labels };
+  return { useCase, comments, query, loadSnapshot, readSourceRevision, isAncestor, readSdd, validateDraft, publish, recoverPublished, verifyPublication, addComment, updateComment, setLabels, isActorAllowedToModifyFiles, getDescription, getTitle, getLinkedBranch, labels: () => labels };
 }
 
 describe('PreBranchSddGateUseCase', () => {
@@ -620,7 +623,9 @@ describe('PreBranchSddGateUseCase', () => {
     h.query.mockResolvedValueOnce({ ...plan, path: 'src/outside.md', questions: [], newCapability: null });
     const outcome = await h.useCase.begin(context());
     expect(outcome.status).toBe('blocked');
-    expect(h.addComment).not.toHaveBeenCalled();
+    expect(h.addComment).toHaveBeenCalledTimes(1);
+    expect(h.comments[0].body).toContain('Specific table facts are unavailable');
+    expect(readSddGateRecord(h.comments[0].body, 42)).toBeUndefined();
     expect(h.validateDraft).not.toHaveBeenCalled();
   });
 
@@ -693,7 +698,9 @@ describe('safe ownership diagnostics (#636)', () => {
     h.query.mockRejectedValue(new Error('Provider unavailable'));
     expect((await h.useCase.begin(context())).status).toBe('blocked');
     expect(h.query).toHaveBeenCalledTimes(1);
-    expect(h.addComment).not.toHaveBeenCalled();
+    expect(h.addComment).toHaveBeenCalledTimes(1);
+    expect(h.comments[0].body).toContain('Specific table facts are unavailable');
+    expect(readSddGateRecord(h.comments[0].body, 42)).toBeUndefined();
   });
   it('withholds all publication when diagnostic publication itself fails', async () => {
     const h = harness();
@@ -725,12 +732,415 @@ it('reports a later valid ownership analysis in Spanish without a readiness reco
   expect(readSddGateRecord(h.comments[0].body, 42)).toBeUndefined();
 });
 
-it('keeps malformed analysis outside ownership recovery and publishes no draft or diagnostic', async () => {
+it('keeps malformed analysis outside ownership recovery and publishes only a safe operational card', async () => {
   const h = harness();
   h.query.mockResolvedValue({ ...plan, reason: 'short' });
   expect((await h.useCase.begin(context())).status).toBe('blocked');
   expect(h.query).toHaveBeenCalledTimes(1);
-  expect(h.addComment).not.toHaveBeenCalled();
+  expect(h.addComment).toHaveBeenCalledTimes(1);
+    expect(h.comments[0].body).toContain('Specific table facts are unavailable');
+    expect(readSddGateRecord(h.comments[0].body, 42)).toBeUndefined();
   expect(h.validateDraft).not.toHaveBeenCalled();
   expect(h.publish).not.toHaveBeenCalled();
+});
+
+
+describe('blocked SDD diagnostics regression (#714)', () => {
+  it('publishes a safe actionable failure card after the single repair is exhausted', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# PRIVATE_CANDIDATE' });
+    h.validateDraft.mockRejectedValue(new SddDraftFormatFailure('requirement-mapping', 'PRIVATE_VALIDATION_TEXT'));
+    const outcome = await h.useCase.begin(context());
+    expect(outcome.status).toBe('blocked');
+    expect(h.validateDraft).toHaveBeenCalledTimes(2);
+    const card = h.comments.map(comment => comment.body).join('\n');
+    expect(card).toContain('Specification preparation is blocked');
+    expect(card).toContain('Validation diagnostics');
+    expect(card).toContain('requirement-mapping');
+    expect(card).not.toMatch(/PRIVATE_CANDIDATE|PRIVATE_VALIDATION_TEXT/u);
+    expect(h.publish).not.toHaveBeenCalled();
+    expect(h.labels()).not.toContain('branched');
+  });
+
+  it('updates one owned blocked card on a retry instead of leaving only operator logs', async () => {
+    const h = harness();
+    h.query.mockImplementation(async request => request.agentId === 'pre-branch-sdd-analysis'
+      ? { ...plan, newCapability: null } : { markdown: '# PRIVATE_CANDIDATE' });
+    h.validateDraft.mockRejectedValue(new SddDraftFormatFailure('case-identity', 'PRIVATE_VALIDATION_TEXT'));
+    await h.useCase.begin(context());
+    await h.useCase.begin(context());
+    expect(h.comments).toHaveLength(1);
+    expect(h.comments[0].body).toContain('case-identity');
+    expect(h.validateDraft).toHaveBeenCalledTimes(4);
+    expect(h.publish).not.toHaveBeenCalled();
+  });
+});
+
+
+describe('SDD diagnostic retention and recovery (#714)', () => {
+  const failDraft = (h: ReturnType<typeof harness>) => {
+    h.query.mockImplementation(async request => request.agentId === 'pre-branch-sdd-analysis'
+      ? { ...plan, newCapability: null } : { markdown: '# PRIVATE_CANDIDATE' });
+    h.validateDraft.mockRejectedValue(new SddDraftFormatFailure('case-identity', 'PRIVATE_VALIDATION_TEXT', {
+      reason: 'case-identity', phase: 'validation', facts: [{ detail: 'case-reserved', section: 14, expected: 0, observed: 1 }],
+    }));
+  };
+
+  it('preserves numbered answers and immutable owner context across failed draft retries', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });
+    await h.useCase.begin(context());
+    h.comments.push({ id: 101, body: 'SDD Q1: Preserve existing API behavior.', user: { login: 'alice' } });
+    failDraft(h);
+    await h.useCase.begin(context());
+    await h.useCase.begin(context());
+    expect(h.comments.find(comment => comment.id === 101)?.body).toBe('SDD Q1: Preserve existing API behavior.');
+    expect(h.comments.filter(comment => comment.body.includes('copilot:sdd-analysis-status:v1'))).toHaveLength(1);
+    expect(h.query.mock.calls.filter(([request]) => request.agentId === 'pre-branch-sdd-analysis').slice(1)
+      .every(([request]) => request.prompt.includes('Preserve existing API behavior.'))).toBe(true);
+    expect(h.query.mock.calls.filter(([request]) => request.agentId === 'pre-branch-sdd-draft')).toHaveLength(4);
+    expect(h.publish).not.toHaveBeenCalled();
+    expect(h.comments.filter(comment => comment.body.includes('copilot:sdd-analysis-status:v1'))[0].body)
+      .not.toContain('Preserve existing API behavior.');
+  });
+
+  it('replaces the blocked view after a verified retry without granting readiness from a diagnostic', async () => {
+    const h = harness(); failDraft(h); await h.useCase.begin(context());
+    h.validateDraft.mockResolvedValue(prepared);
+    const draft = await h.useCase.begin(context());
+    expect(draft.status).toBe('drafted');
+    if (draft.status !== 'drafted') throw new Error('Expected validated draft');
+    const result = await h.useCase.publish(context(), draft, 'feature/42-change');
+    expect(result.status).toBe('published');
+    const cards = h.comments.filter(comment => comment.body.includes('copilot:sdd-analysis-status:v1'));
+    expect(cards).toHaveLength(1);
+    expect(cards[0].body).toContain('publication was verified');
+    expect(cards[0].body).not.toContain('is blocked');
+    expect(readSddGateRecord(cards[0].body, 42)).toBeUndefined();
+    expect(h.publish).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a partial publication without claiming the linked branch disappeared', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    const draft = await h.useCase.begin(context());
+    if (draft.status !== 'drafted') throw new Error('Expected validated draft');
+    h.publish.mockRejectedValue(new Error('PRIVATE_PROVIDER_ERROR'));
+    const result = await h.useCase.publish(context(), draft, 'feature/42-change');
+    expect(result.status).toBe('blocked');
+    const card = h.comments.find(comment => comment.body.includes('copilot:sdd-analysis-status:v1'))!.body;
+    expect(card).toContain('publication needs recovery');
+    expect(card).toContain('linked branch or commit may already exist');
+    expect(card).not.toMatch(/PRIVATE_PROVIDER_ERROR|No new specification or branch was published/u);
+    const record = h.comments.map(comment => readSddGateRecord(comment.body, 42)).find(Boolean)!;
+    expect(record).toMatchObject({ branchName: 'feature/42-change', phase: 'awaiting-answer' });
+  });
+
+  it('retains verified publication when refreshing a prior failure card fails', async () => {
+    const h = harness(); failDraft(h); await h.useCase.begin(context());
+    h.validateDraft.mockResolvedValue(prepared);
+    const draft = await h.useCase.begin(context());
+    if (draft.status !== 'drafted') throw new Error('Expected validated draft');
+    const update = h.updateComment.getMockImplementation()!;
+    h.updateComment.mockRejectedValue(new Error('PRIVATE_PROVIDER_ERROR'));
+    const result = await h.useCase.publish(context(), draft, 'feature/42-change');
+    expect(result.status).toBe('published');
+    expect(result.results).toEqual(expect.arrayContaining([expect.objectContaining({ success: false,
+      errors: [expect.objectContaining({ code: 'provider.unavailable' })] })]));
+    expect(h.comments.map(comment => readSddGateRecord(comment.body, 42)).find(Boolean))
+      .toMatchObject({ phase: 'published', commitSha });
+    h.updateComment.mockImplementation(update);
+    h.query.mockClear(); h.validateDraft.mockClear();
+    expect((await h.useCase.begin(context())).status).toBe('published');
+    expect(h.query).not.toHaveBeenCalled();
+    expect(h.validateDraft).not.toHaveBeenCalled();
+    expect(h.comments.find(comment => comment.body.includes('copilot:sdd-analysis-status:v1'))?.body)
+      .toContain('publication was verified');
+
+  });
+
+  it('keeps blocked status and the original error if the diagnostic cannot be published', async () => {
+    const h = harness(); failDraft(h);
+    h.addComment.mockRejectedValue(new Error('PRIVATE_PUBLICATION_ERROR'));
+    const result = await h.useCase.begin(context());
+    expect(result.status).toBe('blocked');
+    expect(result.results).toHaveLength(2);
+    expect(result.results[0].errors[0].recovery?.id).toBe('sdd-draft-case-identity-invalid');
+    expect(h.publish).not.toHaveBeenCalled();
+    expect(h.comments).toHaveLength(0);
+  });
+
+  it('withholds stale candidate diagnostics after the issue changes', async () => {
+    const h = harness(); failDraft(h);
+    h.getDescription.mockResolvedValue('New issue input');
+    const result = await h.useCase.begin(context());
+    expect(result.status).toBe('blocked');
+    expect(result.results.flatMap(result => result.errors)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'workflow.stale' }),
+    ]));
+    expect(h.addComment).not.toHaveBeenCalled();
+    expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it.each(['body', 'title', 'base'] as const)('preserves the current cards when publication starts from a stale %s', async changed => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    const draft = await h.useCase.begin(context());
+    if (draft.status !== 'drafted') throw new Error('Expected validated draft');
+    const current = '<!-- copilot:sdd-analysis-status:v1 issue="42" --> Current run';
+    h.comments.push({ id: 900, body: current, user: { login: 'copilot[bot]' } });
+    if (changed === 'body') h.getDescription.mockResolvedValue('Updated issue body');
+    if (changed === 'title') h.getTitle.mockResolvedValue('Updated issue title');
+    if (changed === 'base') h.loadSnapshot.mockResolvedValue({ ...snapshot, baseSha: 'd'.repeat(40) });
+    h.addComment.mockClear(); h.updateComment.mockClear();
+    const result = await h.useCase.publish(context(), draft, 'feature/42-change');
+    expect(result.status).toBe('blocked');
+    expect(result.results.flatMap(result => result.errors)).toEqual([expect.objectContaining({ code: 'workflow.stale' })]);
+    expect(h.addComment).not.toHaveBeenCalled();
+    expect(h.updateComment).not.toHaveBeenCalled();
+    expect(h.comments).toEqual([{ id: 900, body: current, user: { login: 'copilot[bot]' } }]);
+    expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it('rechecks the source before writing either recovery card after a publication failure', async () => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    const draft = await h.useCase.begin(context());
+    if (draft.status !== 'drafted') throw new Error('Expected validated draft');
+    const current = '<!-- copilot:sdd-analysis-status:v1 issue="42" --> Current run';
+    h.comments.push({ id: 900, body: current, user: { login: 'copilot[bot]' } });
+    h.publish.mockImplementation(async () => {
+      h.getDescription.mockResolvedValue('Newer human request');
+      throw new Error('Interrupted push');
+    });
+    h.addComment.mockClear(); h.updateComment.mockClear();
+    const result = await h.useCase.publish(context(), draft, 'feature/42-change');
+    expect(result.status).toBe('blocked');
+    expect(result.results.flatMap(result => result.errors)).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'workflow.stale' })]));
+    expect(h.addComment).not.toHaveBeenCalled();
+    expect(h.updateComment).not.toHaveBeenCalled();
+    expect(h.comments[0].body).toBe(current);
+  });
+
+  it('withholds publication diagnostics if the source changes while localized copy resolves', async () => {
+    const resolve = jest.fn();
+    const h = harness({ catalogResolver: { resolve } });
+    resolve.mockImplementation(async request => {
+      h.getTitle.mockResolvedValue('New human title');
+      return { requestedLocale: 'fr-FR', resolvedLocale: 'en-US', source: 'fallback',
+        fallbackReason: 'dynamic-response-invalid', messages: request.sourceCatalog.messages };
+    });
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    const draft = await h.useCase.begin(context());
+    if (draft.status !== 'drafted') throw new Error('Expected validated draft');
+    const current = '<!-- copilot:sdd-analysis-status:v1 issue="42" --> Current run';
+    h.comments.push({ id: 900, body: current, user: { login: 'copilot[bot]' } });
+    h.publish.mockRejectedValue(new Error('Interrupted push'));
+    const result = await h.useCase.publish({ ...context(), issueLocale: 'fr-FR' }, draft, 'feature/42-change');
+    expect(result.status).toBe('blocked');
+    expect(resolve).toHaveBeenCalledTimes(2);
+    expect(result.results.flatMap(result => result.errors)).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'workflow.stale' })]));
+    expect(h.comments.find(comment => comment.id === 900)?.body).toBe(current);
+    expect(h.updateComment).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])('guards revision recovery against the actual returned commit (foreign advance: %s)', async foreignAdvance => {
+    const h = harness();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    const draft = await h.useCase.begin(context());
+    if (draft.status !== 'drafted') throw new Error('Expected validated draft');
+    const revision = { ...draft, record: { ...draft.record, branchName: 'feature/42-change', commitSha: baseSha } };
+    h.publish.mockImplementation(async () => {
+      h.loadSnapshot.mockResolvedValue({ ...snapshot, baseSha: foreignAdvance ? 'd'.repeat(40) : commitSha });
+      return commitSha;
+    });
+    h.verifyPublication.mockResolvedValue(false);
+    const result = await h.useCase.publish(context(), revision, 'feature/42-change');
+    expect(result.status).toBe('blocked');
+    if (foreignAdvance) {
+      expect(h.comments).toHaveLength(0);
+      expect(result.results.flatMap(result => result.errors)).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'workflow.stale' })]));
+    } else {
+      expect(h.comments.find(comment => comment.body.includes('copilot:sdd-analysis-status:v1'))?.body).toContain('publication needs recovery');
+      expect(h.comments.map(comment => readSddGateRecord(comment.body, 42)).find(Boolean))
+        .toMatchObject({ branchName: 'feature/42-change', phase: 'awaiting-answer', commitSha: baseSha });
+      expect(result.results).toHaveLength(1);
+    }
+  });
+
+  it.each([1, 2])('clears a failed answer check when %i existing question(s) remain incomplete', async count => {
+    const h = harness();
+    const questions = Array.from({ length: count }, (_, index) => ({ ...question, id: `Q${index + 1}` }));
+    h.query.mockResolvedValueOnce({ ...plan, questions, newCapability: null });
+    const first = await h.useCase.begin(context());
+    expect(first.status).toBe('waiting');
+    const original = h.comments[0].body;
+    h.comments.push({ id: 101, body: 'SDD Q1: Preserve current behavior.', user: { login: 'bob' } });
+    h.isActorAllowedToModifyFiles.mockRejectedValueOnce(new Error('Permission query unavailable'));
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.comments.find(comment => comment.body.includes('copilot:sdd-analysis-status:v1'))?.body).toContain('is blocked');
+    h.isActorAllowedToModifyFiles.mockResolvedValue(count === 2);
+    h.query.mockClear(); h.addComment.mockClear(); h.updateComment.mockClear();
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    expect(h.comments.find(comment => comment.body.includes('copilot:sdd-analysis-status:v1'))?.body).toContain('Waiting for the numbered answers');
+    expect(h.comments[0].body).toBe(original);
+    expect(h.comments[1].body).toBe('SDD Q1: Preserve current behavior.');
+    expect(h.query).not.toHaveBeenCalled(); expect(h.publish).not.toHaveBeenCalled();
+    expect(h.updateComment).toHaveBeenCalledTimes(1); expect(h.addComment).not.toHaveBeenCalled();
+    expect((await h.useCase.begin(context())).status).toBe('waiting');
+    expect(h.updateComment).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['deleted', 'stale'] as const)('does not recreate or overwrite a %s recovery view during localization', async race => {
+    const resolve = jest.fn(); const h = harness({ catalogResolver: { resolve } });
+    const ctx = { ...context(), issueLocale: 'fr-FR' };
+    h.query.mockResolvedValueOnce({ ...plan, questions: [question], newCapability: null });
+    await h.useCase.begin(ctx);
+    const current = '<!-- copilot:sdd-analysis-status:v1 issue="42" --> Current run';
+    h.comments.push({ id: 900, body: current, user: { login: 'copilot[bot]' } });
+    resolve.mockImplementation(async request => {
+      if (race === 'deleted') h.comments.splice(h.comments.findIndex(comment => comment.id === 900), 1);
+      else h.getDescription.mockResolvedValue('Newer issue request');
+      return { requestedLocale: 'fr-FR', resolvedLocale: 'en-US', source: 'fallback',
+        fallbackReason: 'dynamic-response-invalid', messages: request.sourceCatalog.messages };
+    });
+    h.addComment.mockClear(); h.updateComment.mockClear();
+    const result = await h.useCase.begin(ctx);
+    expect(resolve).toHaveBeenCalledTimes(1);
+    expect(h.addComment).not.toHaveBeenCalled(); expect(h.updateComment).not.toHaveBeenCalled();
+    if (race === 'deleted') {
+      expect(result.status).toBe('waiting'); expect(h.comments).toHaveLength(1);
+    } else {
+      expect(result.status).toBe('blocked'); expect(h.comments[1].body).toBe(current);
+      expect(result.results[0].errors[0].code).toBe('workflow.stale');
+    }
+    expect(h.query).toHaveBeenCalledTimes(1); expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it('does not overwrite a human-owned forged draft diagnostic marker', async () => {
+    const h = harness(); failDraft(h);
+    const forged = '<!-- copilot:sdd-analysis-status:v1 issue="42" --> PRIVATE_HUMAN_TEXT';
+    h.comments.push({ id: 99, body: forged, user: { login: 'human' } });
+    await h.useCase.begin(context());
+    expect(h.comments[0].body).toBe(forged);
+    expect(h.addComment).toHaveBeenCalledTimes(1);
+    expect(h.updateComment).not.toHaveBeenCalled();
+  });
+
+  it('reuses the latest trusted card when historical duplicates and a forged marker coexist', async () => {
+    const h = harness(); failDraft(h);
+    const marker = '<!-- copilot:sdd-analysis-status:v1 issue="42" -->';
+    h.comments.push({ id: 90, body: marker + ' historical', user: { login: 'copilot[bot]' } },
+      { id: 95, body: marker + ' current', user: { login: 'copilot[bot]' } },
+      { id: 99, body: marker + ' human', user: { login: 'attacker' } });
+    await h.useCase.begin(context());
+    expect(h.addComment).not.toHaveBeenCalled();
+    expect(h.updateComment.mock.calls.every(([, id]) => id === 95)).toBe(true);
+    expect(h.comments.find(comment => comment.id === 95)?.body).toContain('case-identity');
+    expect(h.comments.find(comment => comment.id === 95)?.body).toContain('reserved by an immutable owning specification');
+    expect(h.comments.find(comment => comment.id === 90)?.body).toBe(marker + ' historical');
+    expect(h.comments.find(comment => comment.id === 99)?.body).toBe(marker + ' human');
+  });
+
+  it('requires a trusted bot identity before publishing diagnostics', async () => {
+    const h = harness(); failDraft(h);
+    expect((await h.useCase.begin({ ...context(), tokenUser: '' })).status).toBe('blocked');
+    expect(h.addComment).not.toHaveBeenCalled();
+    expect(h.query).not.toHaveBeenCalled();
+  });
+
+  it('falls back as one artifact if its required localization slices disagree', async () => {
+    const resolver = { resolve: jest.fn(async request => request.ids[0].startsWith('sddPreparation.') ? {
+      requestedLocale: 'fr-FR', resolvedLocale: 'fr-FR', source: 'dynamic',
+      messages: Object.fromEntries(Object.entries(request.sourceCatalog.messages).map(([id, text]) => [id, 'FR ' + text])),
+    } : { requestedLocale: 'fr-FR', resolvedLocale: 'en-US', source: 'fallback',
+      fallbackReason: 'dynamic-response-invalid', messages: request.sourceCatalog.messages }) };
+    const h = harness({ catalogResolver: resolver as never }); failDraft(h);
+    await h.useCase.begin({ ...context(), issueLocale: 'fr-FR' });
+    expect(h.comments[0].body).toContain('Specification preparation is blocked');
+    expect(h.comments[0].body).not.toContain('FR ');
+    expect(resolver.resolve).toHaveBeenCalledTimes(2);
+  });
+});
+
+
+describe('catalog profile preflight and recovery (#716)', () => {
+  it.each(SDD_CATALOG_COMPATIBILITY_REASONS)('publishes a bounded %s compatibility card before model operations', async reason => {
+    const h = harness(undefined, true); h.readSourceRevision.mockResolvedValue(baseSha);
+    h.loadSnapshot.mockRejectedValue(new SddCatalogCompatibilityFailure(reason, baseSha));
+    for (let replay = 0; replay < 2; replay++) {
+      const result = await h.useCase.begin(context()); expect(result.status).toBe('blocked');
+      expect(result.results[0].errors[0]).toMatchObject({ code: 'configuration.unsupported', recovery: {
+        id: reason === 'unsupported-profile' ? 'sdd-catalog-unsupported-profile' : 'sdd-catalog-format-invalid', variables: {},
+      } });
+    }
+    expect(h.comments).toHaveLength(1); expect(h.comments[0].body).toContain('Catalog compatibility');
+    expect(h.comments[0].body).toContain(reason); expect(h.comments[0].body).toContain('readiness');
+    expect(h.comments[0].body).not.toMatch(/PRIVATE|99 shape errors|Cannot read properties/u);
+    expect(h.query).not.toHaveBeenCalled(); expect(h.validateDraft).not.toHaveBeenCalled(); expect(h.publish).not.toHaveBeenCalled();
+    expect(h.readSourceRevision).toHaveBeenCalledWith('develop'); expect(h.labels()).not.toContain('branched');
+  });
+
+  it.each(['base', 'issue'] as const)('withholds an obsolete catalog diagnostic after a %s race', async race => {
+    const h = harness(undefined, true);
+    h.loadSnapshot.mockRejectedValue(new SddCatalogCompatibilityFailure('unsupported-profile', baseSha));
+    h.readSourceRevision.mockResolvedValue(race === 'base' ? commitSha : baseSha);
+    if (race === 'issue') h.getDescription.mockResolvedValue('Newer human request');
+    const current = '<!-- copilot:sdd-analysis-status:v1 issue="42" --> Current source';
+    h.comments.push({ id: 900, body: current, user: { login: 'copilot[bot]' } });
+    const result = await h.useCase.begin(context()); expect(result.status).toBe('blocked');
+    expect(result.results.flatMap(result => result.errors)).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'workflow.stale' })]));
+    expect(h.comments[0].body).toBe(current); expect(h.addComment).not.toHaveBeenCalled(); expect(h.updateComment).not.toHaveBeenCalled();
+    expect(h.query).not.toHaveBeenCalled(); expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it('fails closed if the catalog failure has no immutable source provenance', async () => {
+    const h = harness(undefined, true); h.loadSnapshot.mockRejectedValue(new SddCatalogCompatibilityFailure('unsupported-profile'));
+    const result = await h.useCase.begin(context()); expect(result.status).toBe('blocked'); expect(result.results).toHaveLength(2);
+    expect(h.comments).toHaveLength(0); expect(h.query).not.toHaveBeenCalled(); expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it('fails closed on a legacy workspace that cannot read freshness without loading the rejected catalog', async () => {
+    const h = harness(); h.loadSnapshot.mockRejectedValue(new SddCatalogCompatibilityFailure('unsupported-profile', baseSha));
+    const result = await h.useCase.begin(context()); expect(result.status).toBe('blocked'); expect(result.results).toHaveLength(2);
+    expect(h.loadSnapshot).toHaveBeenCalledTimes(2); expect(h.comments).toHaveLength(0); expect(h.query).not.toHaveBeenCalled();
+  });
+
+  it('recovers on the same issue after a compatible SDK snapshot becomes available', async () => {
+    const h = harness(undefined, true); h.readSourceRevision.mockResolvedValue(baseSha);
+    h.loadSnapshot.mockRejectedValueOnce(new SddCatalogCompatibilityFailure('unsupported-profile', baseSha));
+    expect((await h.useCase.begin(context())).status).toBe('blocked'); expect(h.query).not.toHaveBeenCalled();
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    const draft = await h.useCase.begin(context()); expect(draft.status).toBe('drafted');
+    if (draft.status !== 'drafted') throw new Error('Expected validated SDK draft');
+    expect((await h.useCase.publish(context(), draft, 'feature/42-change')).status).toBe('published');
+    expect(h.comments.filter(comment => comment.body.includes('copilot:sdd-analysis-status:v1'))).toHaveLength(1);
+    expect(h.comments.find(comment => comment.body.includes('copilot:sdd-analysis-status:v1'))?.body).toContain('publication was verified');
+    expect(h.publish).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains a foreign marker and localizes the catalog-specific recovery in Spanish', async () => {
+    const h = harness(undefined, true); h.readSourceRevision.mockResolvedValue(baseSha);
+    h.loadSnapshot.mockRejectedValue(new SddCatalogCompatibilityFailure('unsupported-profile', baseSha));
+    const human = '<!-- copilot:sdd-analysis-status:v1 issue="42" --> PRIVATE_HUMAN_TEXT';
+    h.comments.push({ id: 90, body: human, user: { login: 'alice' } });
+    expect((await h.useCase.begin({ ...context(), issueLocale: 'es-MX' })).status).toBe('blocked');
+    expect(h.comments[0].body).toBe(human); expect(h.comments[1].body).toContain('Compatibilidad del catálogo');
+    expect(h.comments[1].body).toContain('Conserva el esquema nativo'); expect(h.comments[1].body).not.toContain('PRIVATE_HUMAN_TEXT');
+    expect(h.updateComment).not.toHaveBeenCalled(); expect(h.query).not.toHaveBeenCalled();
+  });
+
+  it('checks the retained linked branch rather than develop when catalog compatibility changes', async () => {
+    const h = harness(undefined, true); h.readSourceRevision.mockResolvedValue(baseSha);
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValue({ markdown: '# Draft' });
+    const draft = await h.useCase.begin(context()); if (draft.status !== 'drafted') throw new Error('Expected draft');
+    await h.useCase.publish(context(), draft, 'feature/42-change');
+    const record = h.comments.find(comment => readSddGateRecord(comment.body, 42))!.body;
+    h.loadSnapshot.mockRejectedValue(new SddCatalogCompatibilityFailure('unsupported-profile', commitSha));
+    h.readSourceRevision.mockResolvedValue(commitSha); h.readSourceRevision.mockClear(); h.query.mockClear();
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.readSourceRevision).toHaveBeenCalledWith('feature/42-change'); expect(h.query).not.toHaveBeenCalled();
+    expect(h.comments.find(comment => readSddGateRecord(comment.body, 42))!.body).toBe(record);
+    expect(h.publish).toHaveBeenCalledTimes(1);
+  });
 });

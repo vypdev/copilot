@@ -1,21 +1,23 @@
 # Execution Admission, Queueing, Routing, and Result Publication
 
-- Status: As-built baseline with implemented review-evidence ownership hardening
+- Status: As-built baseline with review-evidence and native coordination hardening
 - Date: 2026-09-15
-- Last verified: 2026-09-15 on `develop` plus PR workflow UX implementation branch
+- Last verified: 2026-10-25; issue #692 coordination regression verification
 - Owners: Copilot maintainers
 - Scope: the shared GitHub Action lifecycle from an incoming event to visible results and persisted execution state
 - Related issues/PRs: architecture quality and scalability hardening SDD;
   [PR #363](https://github.com/vypdev/copilot/pull/363);
-  [PR #378](https://github.com/vypdev/copilot/pull/378); historic motivation
+  [PR #378](https://github.com/vypdev/copilot/pull/378);
+  [issue #692](https://github.com/vypdev/copilot/issues/692); historic motivation
   before that live evidence is not recoverable from repository evidence
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none for the baseline; see known debt and limitations
 
 ## 1. Executive summary
 
-Copilot admits an event before expensive setup, serializes mutation-capable runs
-per workflow, resolves one application route, and publishes a bounded result to
+Copilot admits an event before expensive setup, verifies native resource/lane
+coordination or serializes mutation-capable runs per workflow, resolves one
+application route, and publishes a bounded result to
 the relevant GitHub conversation and Job Summary. A run created by the account
 behind the workflow PAT is ignored unless it is an explicit valid single action.
 The native `Copilot / Review` name is reserved for results carrying exactly one
@@ -49,8 +51,10 @@ create inconsistent authorization and failure behavior.
 2. Bot-authored normal events are discarded; valid explicit single actions pass.
 3. Only agent roles reachable by the event are prepared, subject to
    `ai-members-only` authorization.
-4. `mainRun` waits for older active runs of the same workflow, except the
-   dedicated failure-comment action.
+4. Before setup, `mainRun` verifies the executing job's native resource/lane
+   coordination as specified in §6.4. Without that proof it waits for older
+   active runs of the same workflow. The dedicated failure-comment action stays
+   runnable when queue verification fails.
 5. Setup restores issue, branch, and durable operation state; the route policy
    selects exactly one of issue, issue-comment, PR, review-comment, push, or
    single-action.
@@ -69,7 +73,8 @@ create inconsistent authorization and failure behavior.
 - Observed behavior: `src/actions/github_action.ts`, `common_action.ts`,
   `main_run_lifecycle.ts`, `main_run_route.ts`, and
   `github_action_completion.ts`.
-- Intentional contract: early bot-loop admission, workflow-scoped serialization,
+- Intentional contract: early bot-loop admission, verified native resource/lane
+  coordination with workflow-scoped serialization as the conservative fallback,
   single-route ownership, sanitized publication, and fail-closed errors.
 - Known debt and limitations: queue state is polled and bounded by a 90-minute
   internal budget; optional Check Run publication is best-effort; 26 production
@@ -83,8 +88,10 @@ create inconsistent authorization and failure behavior.
   [`execution-error-and-context-hardening.md`](./execution-error-and-context-hardening.md),
   under the sequencing and cross-cutting gates in
   [`architecture-quality-and-scalability-hardening.md`](./architecture-quality-and-scalability-hardening.md).
-  Changes to queue ownership or durable event processing beyond that proposal
-  require a separate design; they are not part of this baseline.
+  Issue #692 corrects a verified scheduler inversion: a later PR job occupied a
+  shared runner while waiting for an older queued job for a different PR. That
+  predecessor needed a runner from the same finite pool. The solution below
+  recognizes the existing native lanes rather than increasing the wait budget.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -104,7 +111,8 @@ presentation adapters decide where that fact appears.
 ### 4.1 Goals
 
 1. Every accepted event MUST resolve to at most one top-level route.
-2. Mutation-capable workflow runs MUST wait for older active runs or fail.
+2. Mutation-capable workflow runs MUST have verified native resource/lane
+   coordination, wait for older active workflow runs, or fail before setup.
 3. Results MUST remain understandable without raw logs.
 4. A named native Check MUST represent only its semantic capability; a metadata
    result MUST NOT supersede a same-head review in GitHub's latest-by-name view.
@@ -133,7 +141,7 @@ presentation adapters decide where that fact appears.
 | Stage | Pre-baseline understanding | As-built contract | Effect |
 |---|---|---|---|
 | Admission | implicit in entrypoint | explicit identity decision | bot loops stop early |
-| Queue | implementation detail | fail-closed workflow gate | mutations do not overlap |
+| Queue | every run polls the entire workflow | verify native lane before setup; otherwise fail-closed workflow gate | unrelated PRs do not hold runners waiting for each other |
 | Routing | spread across handlers | one route policy | predictable ownership |
 | Completion | comments only were assumed | route-owned comment when applicable + summary + optional check + state | evidence is inspectable without duplicate discussion noise |
 | Review evidence | every PR completion could reuse the Review name | exact-head telemetry owns Review; metadata keeps workflow/summary only | latest-by-name remains truthful |
@@ -176,6 +184,60 @@ neutral.
 Duplicate events are tolerated through route-specific idempotency and persisted
 markers; this shared layer does not itself deduplicate GitHub deliveries.
 
+### 6.4 Native coordination recognition — issue #692
+
+The recommended installed Commit, PR analysis and PR review-state jobs already
+declare native job concurrency. The runtime MUST recognize that exact contract
+before setup, without a user-controlled bypass input and without enumerating
+older runs when native coordination is proven.
+
+```text
+Validate run/workflow identity
+  -> eligible normal event + pinned workflow/job metadata?
+     -> read executing workflow at GITHUB_WORKFLOW_SHA
+        -> exact job concurrency proven? -> setup -> existing guarded route
+        -> custom/legacy shape? -> existing predecessor queue -> setup
+     -> no eligible metadata? -> existing predecessor queue -> setup
+  -> provider/parse error or deadline -> fail before setup
+```
+
+Text equivalent: native proof delegates coordination to GitHub; missing proof
+retains the predecessor fence; errors never grant permission to execute.
+
+| Normal event/resource | Required literal job group | Native cancellation |
+|---|---|---|
+| Branch `push` | `copilot-push-${{ github.repository }}-${{ github.ref_name }}` | `true` |
+| `pull_request` with positive safe-integer PR number | `copilot-pr-${{ github.repository }}-${{ github.event.pull_request.number }}-analysis` | `true` |
+| `pull_request_review` with positive safe-integer PR number | `copilot-pr-${{ github.repository }}-${{ github.event.pull_request.number }}-review-state` | `true` |
+
+The entrypoint MUST use GitHub's workflow ref, workflow commit SHA and current
+job ID, bound to the current repository, rather than a checked-out file, workflow
+display name or filename allowlist. Single actions, missing/invalid metadata,
+tag pushes, unrelated events, reusable or multi-job workflows, workflow-level concurrency and
+nonmatching groups MUST retain the existing workflow queue. The source read is
+limited to a normal YAML workflow file at a full 40-hex commit SHA, at most
+256 KiB. Parsing uses the JSON schema and executes no expressions or tags.
+Recognition requires one direct job, preventing a reusable callee's job ID from
+being mistaken for another protected job in the caller's workflow context.
+Missing/malformed provider content, YAML errors, provider errors and exhausted
+retry/deadline budgets MUST fail closed through the existing sanitized queue
+failure. There is no disk fallback or read from a moving branch.
+
+GitHub's native key owns serialization/replacement within the same resource and
+lane; PR identity keeps two PRs sharing a head branch independent. No runtime
+comparison of `head_branch` substitutes for PR identity. Existing head/base,
+finding, permission, publication and deployment fences remain mandatory.
+Durable issue/comment mutations and legacy/custom jobs retain active-status
+pagination, same-workflow predecessor ordering, retries and the 90-minute bound.
+The recognition read and any fallback queue share that absolute deadline.
+
+No extra comments, checks or labels are introduced. A proven job logs
+`Native workflow resource/lane coordination verified; continuing before setup.`
+Legacy waiting and sanitized failures keep their existing messages. The run
+and Job Summary remain the operator navigation surfaces. Cancellation before
+setup leaves no application mutation; cancellation after setup retains the
+existing route recovery rules.
+
 ## 7. User-facing configuration
 
 | Input | Type | Recommended default | Allowed values | Scope/persistence |
@@ -189,6 +251,11 @@ The 90-minute queue budget, exponential backoff, maximum 60-second delay,
 jitter, admission rules, route precedence, and error-to-exit mapping are not
 configurable. Inputs use Action values; stored issue configuration restores
 operation facts but never secrets.
+
+Native recognition adds no public configuration or persisted state. Recommended
+setup uses the three exact job groups in §6.4; a custom workflow without those
+groups is a supported conservative alternative. Missing or future metadata
+selects the existing queue, never a permissive mode.
 
 ## 8. Clean Architecture design
 
@@ -215,6 +282,15 @@ Text equivalent: GitHub data is adapted at the entrypoint; pure policies and
 application use cases decide; provider adapters satisfy ports; renderers expose
 sanitized results. Architecture and cycle tests MUST prevent inward layers from
 importing concrete infrastructure.
+
+The entrypoint projects immutable workflow/job/event metadata before setup. The
+waiting use case asks a semantic native-coordination query port once, then either
+continues or uses its existing predecessor port. The GitHub adapter reads and
+parses the pinned workflow; a pure application policy recognizes the exact group
+and cancellation contract. Only infrastructure owns YAML/Octokit and environment
+access stays at the entrypoint. Architecture import tests, workflow parser
+contracts and the integrated scheduler-inversion regression enforce these
+boundaries. No provider DTO or `Execution` dependency enters the pure policy.
 
 ## 9. UI/UX and content contract
 
@@ -285,13 +361,22 @@ as `invalid`, never as zero findings.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
-This document records the repository behavior at the audit commit. There are no
-installed users or real in-flight markers to preserve. The linked hardening work
-therefore makes a clean cut: removed API/marker/result shapes are rejected and
-no compatibility parser, migration, deprecation window, or dual reader ships.
-After first real use, already completed provider mutations are never hidden or
-rewound; incompatible future state fails closed and recovery starts from
-inspectable provider facts.
+For issue #692, consumers with the current native groups need only the fixed
+runtime; workflow changes are unnecessary. Older/custom workflows keep the
+queue. Roll out through a reviewed PR and the normal release process. A run
+already waiting in an older runtime cannot adopt the fix in place; inspect its
+predecessors and rerun after the fix is available. Changing concurrency keys
+during an active run may overlap an old key, so existing freshness/idempotency
+guards remain essential. Rollback restores the earlier runtime and its global
+wait behavior; it does not undo provider mutations. Live consumer cancellation,
+deployment and release are outside this issue's implementation authorization.
+
+The native coordination increment changes no installed input or durable marker
+schema. Existing production consumers retain their workflow groups and operation
+state. Already completed provider mutations are never hidden or rewound;
+incompatible state fails closed and recovery starts from inspectable provider
+facts. The historical evidence-schema cutover remains documented in the linked
+hardening specifications; it is not a migration introduced by issue #692.
 
 ## 14. Testing strategy and numeric budget
 
@@ -311,6 +396,20 @@ Tests use fake clocks/randomness/providers and no live waits. Golden Markdown
 needs semantic assertions. Human evidence remains required for desktop/mobile,
 light/dark, and screen-reader order.
 
+Issue #692 adds a minimum **24 distinct cases**, derived from the new proof
+boundary: **12 pure policy/context** cases (three lanes, same-owner stability,
+invalid resources/metadata, single actions and custom groups), **6 adapter**
+cases (pinned contents, malformed content/YAML, endpoint errors, safe fallback
+and bounds), **4 orchestration/integration** cases (scheduler inversion before
+setup, retained mutation fence, native failure before setup and deadline), and
+**2 shipped/setup workflow replays** proving different-PR independence and
+same-resource/lane stability. Existing predecessor pagination/retry/error and
+workflow mutant cases remain required. New pure policy targets at least 95%
+branch coverage; changed adapters/use cases target at least 90% lines. Fake
+providers, clocks and delays exercise the race without live runner sleeps.
+No new graphical UI exists, so human visual captures are not needed for this
+increment; native log copy is checked semantically.
+
 ## 15. Documentation and discoverability
 
 | Audience | Artifact | Contract |
@@ -320,11 +419,16 @@ light/dark, and screen-reader order.
 | Operator | troubleshooting | timeout, partial publication, retry |
 | Contributor | architecture + this SDD | boundaries and route ownership |
 
+Issue #692 updates `docs/features.mdx`, `docs/pull-requests/workflow-setup.mdx`
+and the README with native proof, conservative custom fallback, pinned-content
+read permissions, shared-runner recovery and unchanged safety guards.
+
 ## 16. Acceptance scenarios
 
 1. Given a PAT-authored normal event, the run exits before queue or mutation.
 2. Given a valid explicit single action from that account, it executes.
-3. Given older active runs, the current run waits with bounded jitter.
+3. Given older active runs without native coordination proof, the current run
+   waits with bounded jitter.
 4. Given unavailable workflow identity on GitHub Actions, queueing fails closed.
 5. Given a known event, exactly one route owns it.
 6. Given successful core work and failed optional check publication, the summary
@@ -350,6 +454,20 @@ light/dark, and screen-reader order.
     telemetry, the telemetry-set and finding-state projections are invalid; no
     Review Check is published and every other current-state consumer fails or
     blocks instead of reporting success.
+16. Given an older queued PR A and a later executing PR B on a finite shared
+    pool, a proven native job reaches setup without enumerating predecessors
+    or waiting; the shipped and setup workflow fixtures reproduce this.
+17. Given successive events for the same PR/lane, GitHub's exact group stays
+    stable; different PRs and analysis/review-state lanes remain independent.
+18. Given a legacy/custom job, missing metadata, tag push or single action, the
+    original predecessor fence blocks setup until older active runs finish.
+19. Given malformed source, unreadable workflow content or an expired proof
+    deadline, setup/routes do not run and raw provider diagnostics are absent
+    from the public queue failure.
+20. Given a misleading filename, different checkout or moving branch, native
+    recognition uses only the executing repository/workflow SHA/job and rejects
+    nonmatching contracts. Policy and adapter tests enforce the inspection bound
+    and prohibit executable YAML tags.
 
 ## 17. Requirements traceability
 
@@ -357,6 +475,7 @@ light/dark, and screen-reader order.
 |---|---|---|---|
 | admission invariants | admission policy/use case | admission tests | overview |
 | serialization | queue policy/use case/adapters | queue + workflow tests | troubleshooting |
+| §6.4 native proof and conservative fallback | native coordination policy/port/adapter + waiting use case | policy/context, pinned-content, scheduler-inversion and failure/deadline cases; shipped/setup replays | features and PR workflow setup |
 | one route | route policy/dispatcher | route tests | architecture |
 | safe publication | completion/presentation policies | completion tests | overview |
 | metadata noise bound | explicit generic-comment publication mode | metadata-edit context/use-case/completion negatives | workflow setup and troubleshooting |
@@ -374,6 +493,10 @@ light/dark, and screen-reader order.
 
 ## 19. Definition of Done
 
+- [x] Issue #692: the additional 24-case budget, policy/adapter coverage,
+      scheduler inversion, same-resource contracts, sanitized failures,
+      documentation, typecheck/lint, workflow and specification validation pass.
+
 - [x] Normative changes have acceptance and traceability.
 - [x] Architecture, workflow, catalog, and cycle checks pass.
 - [x] The 70-case risk budget and repository coverage gates pass; both shared
@@ -387,6 +510,13 @@ light/dark, and screen-reader order.
 ## 20. References and decisions
 
 - Primary sources: catalogued code, workflows, tests, and documentation.
+- Issue #692 primary provider contracts: [native job concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency),
+  [workflow SHA and job metadata](https://docs.github.com/en/actions/reference/workflows-and-actions/variables),
+  and [repository content at a ref](https://docs.github.com/en/rest/repos/contents#get-repository-content).
+  Decision: prove the executing job's existing native contract, then delegate
+  to GitHub. Reject a filename-only allowlist, a caller bypass flag, checked-out
+  YAML, branch-name predecessor filtering and larger timeouts: none establishes
+  safe PR identity and native fencing before setup.
 - Related specs: release orchestration, merge-queue readiness, Bugbot reconciliation.
 - Planned hardening: `execution-error-and-context-hardening.md` owns the semantic
   error boundary and `Execution` context replacement; the architecture hardening
@@ -399,3 +529,18 @@ light/dark, and screen-reader order.
   lifecycle/debug-only summaries into the durable conversation because the
   native workflow and Job Summary already retain that evidence.
 - Follow-up outside scope: durable event storage beyond issue configuration markers.
+
+
+## Early issue admission — issue #730
+
+The generated Issue workflow now uses a fixed hosted preflight before the
+selected work runner and a non-canceling, multi-pending native per-issue queue.
+The isolated subaction authenticates the actual product identity and may reuse
+only a successful unchanged-state receipt covering an event already in queue.
+All substantive intent and unproven/partial work retains the normal runtime.
+The exact contract, provider queue limit, matching runtime adoption requirement,
+privacy model and numeric test budget are in
+[early issue admission](./early-issue-event-admission.md). This extends §6.4:
+issues use workflow-level `queue: max` and `cancel-in-progress: false`; the three
+existing PR/push lanes keep their original contracts. Unsupported/custom proof
+continues through the predecessor fence. No consumer rollout is implied.

@@ -208,3 +208,21 @@ describe("deployment operation state machine", () => {
     expect(isDeploymentOperationSnapshot(value)).toBe(false);
   });
 });
+
+
+describe('bounded superseded candidate provenance', () => {
+  const record = { operationId: 'operation-earlier', revision: 1, sourceSha: 'e'.repeat(40), promotionPullRequest: 12, replacementSourceSha: 'f'.repeat(40), replacementBaseSha: 'c'.repeat(40) };
+  it('retains old v1 snapshots and accepts empty or complete additive history', () => {
+    expect(isDeploymentOperationSnapshot(operation())).toBe(true);
+    expect(isDeploymentOperationSnapshot(operation('preparing', { supersededCandidates: [] }))).toBe(true);
+    expect(isDeploymentOperationSnapshot(operation('preparing', { supersededCandidates: [record] }))).toBe(true);
+  });
+  it.each([null, {}, 'history', Array.from({ length: 9 }, () => record), [null], [[]], [{ ...record, secret: 'not allowed' }],
+    [{ ...record, operationId: undefined }], [{ ...record, operationId: '../unsafe' }],
+    [{ ...record, operationId: 'operation-12345678' }], [record, record],
+    [{ ...record, revision: 0 }], [{ ...record, revision: 1.5 }], [{ ...record, sourceSha: 'x' }], [{ ...record, replacementSourceSha: undefined }], [{ ...record, replacementBaseSha: 'bad' }],
+    [{ ...record, promotionPullRequest: 0 }], [{ ...record, promotionPullRequest: Number.MAX_SAFE_INTEGER + 1 }],
+  ])('rejects malformed, cyclic, duplicate or excessive history: %p', value => {
+    expect(isDeploymentOperationSnapshot(operation('preparing', { supersededCandidates: value as never }))).toBe(false);
+  });
+});

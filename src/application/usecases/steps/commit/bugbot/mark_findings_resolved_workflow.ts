@@ -118,6 +118,7 @@ async function tryResolvePullRequestFinding(
             commentIdentity: destination.commentIdentity,
             pullRequestNumber: destination.pullRequestNumber,
             resolution,
+            reopened: destination.resolved && destination.verificationRequired === true && destination.threadResolved === false,
         }, catalog);
     } catch (cause) {
         addResolutionError(errors, 'pull request', findingId, cause);

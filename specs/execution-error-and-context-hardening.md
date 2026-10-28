@@ -184,8 +184,8 @@ readonly fields: `code`, derived `kind`, `retryable`, `impact`, `action`,
 Its inherited `message` is the safe public message. `toJSON()` returns exactly
 those allowlisted fields plus `name`, `message`, and the optional descriptor.
 The descriptor ID selects reviewed code-specific recovery templates, and its
-variables are an exact, bounded allowlist of validated branch names or positive
-issue numbers. Application callers cannot override presentation prose directly.
+variables are an exact, bounded allowlist of validated branch names, positive
+issue numbers, closed semantic diagnostics and admitted command names. Application callers cannot override presentation prose directly.
 
 The raw cause is stored in an ECMAScript `#cause` private field with no public
 getter and is never serialized. It exists only for an in-memory debugger before
@@ -939,3 +939,43 @@ the existing global quality gates unchanged. These tests establish this format
 boundary rather than provider runtime readiness. Update troubleshooting, catalog
 evidence and generated catalog, then pass focused/full tests, type/lint,
 documentation/specification checks and rebuilt package gates before release.
+
+
+### Comment-command validation recovery — #701 (2026-10-26)
+
+`validation.invalid-input` MAY carry one of the 13 closed `comment-command-*`
+recovery IDs specified in `comment-automation-and-authorization.md`. Its exact
+variables are `{ command }`: the command MUST be an allowed member of the fixed
+reason/command relation. Global length and name failures use `help`; review
+reasons accept only the four review commands; sync reasons accept only
+`sync-branch`. Missing/extra variables or forged pairs are rejected by
+`ApplicationError` normalization. No new error code or caller-supplied prose
+field is introduced. Parser `message` values remain static and do not echo
+unknown option names or operands into API serialization.
+
+The application factory accepts bounded domain diagnostics. The shared
+presenter selects reviewed cause/action/retained-state copy and adds fixed
+command examples, prefix, option syntax and help destination after localization.
+Generic callers without a descriptor keep their existing presentation. The
+existing protected-data, architecture and locale catalog checks remain required;
+#701's pure/domain, presentation and actual command/replay suites establish the
+new cases without duplicating their primary numeric budget here. No storage
+migration, timeout, retry or authorization change is required.
+
+
+### Publication context absence — #740 (2026-10-28)
+
+Missing durable context in `create_release` MUST use nonretryable
+`configuration.invalid` with closed, empty-variable recovery
+`deployment-publication-context-missing`. It does not prove supersession, so it
+MUST NOT use the generic `workflow.stale` explanation. Its reviewed EN/ES and
+English fallback guidance identifies `single-action-issue`, restoring verified
+context, and the same stored operation ID/version through the supported workflow.
+The public model and localized view retain persisted state and completed external
+effects, and state only that this attempt did not create a release. Known
+identity/version/phase mismatches and the accepted-production-SHA fence keep
+their prior semantics. No provider detail or input value is interpolated. The
+32-case allocation, entrypoint-to-handler acceptance and architecture boundaries
+are owned by [CLI and single-action execution](./cli-and-single-action-execution.md#explicit-action-target-restoration--740-2026-10-28),
+not counted again here. Configuration and error-reference documentation are
+updated with the same change.

@@ -1,7 +1,13 @@
+import { isProgressBinaryEvidenceFacts, type ProgressBinaryEvidenceFacts } from '../../domain/progress_binary_evidence_diagnostic';
+import { isIssueWorkflowDiagnostic, type IssueWorkflowDiagnosticFacts } from '../../domain/issue_workflow_diagnostic';
+import { isChangeSizeReconciliationFacts, type ChangeSizeReconciliationFacts } from '../../domain/change_size_reconciliation';
+import { COPILOT_COMMAND_VALIDATION_REASONS, isCopilotCommandValidationReason, isValidCopilotCommandValidation, type CopilotCommandValidationReason } from '../../domain/copilot_command_validation';
+import type { CopilotCommandName } from '../../domain/copilot_command';
 import { CLOSED_ISSUE_RESULTS, CLOSED_ISSUE_PHASES, CLOSED_ISSUE_REASONS, type ClosedIssueReconciliationFacts } from '../../domain/closed_issue_reconciliation';
 import { APPROVAL_EVIDENCE_PERMISSIONS, APPROVAL_EVIDENCE_REASONS, type ApprovalEvidenceDiagnostic } from '../../domain/approval_evidence_diagnostic';
 
 import { BRANCH_SYNC_VALIDATION_CODES, type BranchSyncValidationCode } from '../../domain/branch_sync_validation';
+import { isBranchSyncVerificationFailure, type BranchSyncVerificationFailure } from '../../domain/verification_failure';
 
 export type ApplicationErrorKind =
     | 'configuration'
@@ -38,6 +44,7 @@ export type ApplicationErrorCode =
     | 'unexpected';
 
 export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
+    ...COPILOT_COMMAND_VALIDATION_REASONS,
     'pull-request-link-restored',
     'pull-request-link-base-retained',
     'pull-request-link-reference-retained',
@@ -48,16 +55,23 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-agent-disabled',
     'branch-sync-fixer-unavailable',
     'branch-sync-resolution-invalid',
+    'branch-sync-verification-failed',
     'sdd-draft-size-exceeded',
+    'sdd-catalog-unsupported-profile',
+    'sdd-catalog-format-invalid',
     'sdd-draft-format-invalid',
     'sdd-draft-case-identity-invalid',
     'sdd-draft-case-budget-invalid',
     'sdd-draft-requirement-mapping-invalid',
     'sdd-draft-repository-path-invalid',
 
+    'deployment-publication-context-missing',
     'workspace-changes-rejected',
     'closed-issue-reconciliation-failed',
     'approval-evidence-read-failed',
+    'change-size-reconciliation-failed',
+    'issue-workflow-admission-blocked',
+    'progress-binary-evidence-unavailable',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -66,12 +80,15 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
 
 export type ApplicationErrorRecoveryId = typeof APPLICATION_ERROR_RECOVERY_IDS[number];
 
-interface ApplicationErrorRecoveryVariables {
+interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotCommandValidationReason, Readonly<{ command: CopilotCommandName }>>> {
     readonly 'stored-configuration-schema-missing': Readonly<{ issueNumber: number; expectedVersion: number }>;
     readonly 'stored-configuration-schema-unsupported': Readonly<{ issueNumber: number; expectedVersion: number; actualVersion: number }>;
     readonly 'stored-configuration-invalid': Readonly<{ issueNumber: number; expectedVersion: number }>;
     readonly 'closed-issue-reconciliation-failed': ClosedIssueReconciliationFacts;
     readonly 'approval-evidence-read-failed': ApprovalEvidenceDiagnostic;
+    readonly 'change-size-reconciliation-failed': ChangeSizeReconciliationFacts;
+    readonly 'issue-workflow-admission-blocked': IssueWorkflowDiagnosticFacts;
+    readonly 'progress-binary-evidence-unavailable': ProgressBinaryEvidenceFacts;
 
     readonly 'pull-request-link-restored': Readonly<Record<string, never>>;
     readonly 'pull-request-link-base-retained': Readonly<Record<string, never>>;
@@ -83,13 +100,17 @@ interface ApplicationErrorRecoveryVariables {
     readonly 'branch-sync-agent-disabled': Readonly<{ command: '/copilot sync-branch' }>;
     readonly 'branch-sync-fixer-unavailable': Readonly<{ command: '/copilot sync-branch' }>;
     readonly 'branch-sync-resolution-invalid': Readonly<{ validationCode: BranchSyncValidationCode; command: '/copilot sync-branch' }>;
+    readonly 'branch-sync-verification-failed': BranchSyncVerificationFailure;
     readonly 'sdd-draft-size-exceeded': Readonly<Record<string, never>>;
+    readonly 'sdd-catalog-unsupported-profile': Readonly<Record<string, never>>;
+    readonly 'sdd-catalog-format-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-draft-format-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-draft-case-identity-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-draft-case-budget-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-draft-requirement-mapping-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-draft-repository-path-invalid': Readonly<Record<string, never>>;
 
+    readonly 'deployment-publication-context-missing': Readonly<Record<string, never>>;
     readonly 'workspace-changes-rejected': Readonly<Record<string, never>>;
 }
 
@@ -198,8 +219,8 @@ export const APPLICATION_ERROR_METADATA: Readonly<Record<ApplicationErrorCode, A
     },
     'validation.evidence-unavailable': {
         kind: 'validation', retryable: false,
-        impact: 'Progress was not assessed because GitHub omitted a required file patch.',
-        action: 'Inspect the exact base/head comparison manually or split the work into smaller reviewed changes with complete patches before a new assessment. Retrying the same commits cannot restore omitted evidence.',
+        impact: 'Progress was not assessed because a required patch and its complete immutable contents were unavailable.',
+        action: 'Inspect the unreviewed paths and intended pull request base in the exact base/head comparison. Provide complete reviewable evidence before a new assessment. Retrying the same commits cannot restore unavailable immutable evidence.',
         retainedState: 'Existing progress labels and published assessments were preserved; no model assessment was made.',
     },
     'validation.evidence-too-large': {
@@ -309,7 +330,11 @@ export class ApplicationError extends Error {
         this.retryable = options.retryable ?? metadata.retryable;
         this.impact = metadata.impact;
         this.action = metadata.action;
-        this.retainedState = metadata.retainedState;
+        this.retainedState = options.recovery?.id === 'change-size-reconciliation-failed'
+            ? 'Completed effects were retained; the failed and later size operations remain unverified.'
+            : options.recovery?.id === 'deployment-publication-context-missing'
+            ? PRESERVED_STATE
+            : metadata.retainedState;
         this.correlationId = correlationId;
         this.recovery = normalizeApplicationErrorRecovery(options.recovery);
         this.#cause = options.cause;
@@ -332,11 +357,26 @@ export class ApplicationError extends Error {
 }
 
 const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readonly string[]>> = Object.freeze({
+    'comment-command-length': Object.freeze(['command']),
+    'comment-command-name-missing': Object.freeze(['command']),
+    'comment-command-name-unknown': Object.freeze(['command']),
+    'comment-command-argument-count': Object.freeze(['command']),
+    'comment-command-arguments-unexpected': Object.freeze(['command']),
+    'comment-command-arguments-missing': Object.freeze(['command']),
+    'comment-command-finding-quoting': Object.freeze(['command']),
+    'comment-command-review-format': Object.freeze(['command']),
+    'comment-command-review-effort': Object.freeze(['command']),
+    'comment-command-review-boolean': Object.freeze(['command']),
+    'comment-command-review-option': Object.freeze(['command']),
+    'comment-command-sync-option': Object.freeze(['command']),
+    'comment-command-sync-parent': Object.freeze(['command']),
     'stored-configuration-schema-missing': Object.freeze(['issueNumber', 'expectedVersion']),
     'stored-configuration-schema-unsupported': Object.freeze(['issueNumber', 'expectedVersion', 'actualVersion']),
     'stored-configuration-invalid': Object.freeze(['issueNumber', 'expectedVersion']),
     'closed-issue-reconciliation-failed': Object.freeze(['resultId', 'phase', 'state', 'reason', 'changed', 'remaining']),
     'approval-evidence-read-failed': Object.freeze(['operation', 'reason', 'permission']),
+    'issue-workflow-admission-blocked': Object.freeze(['kind', 'reason', 'fields']),
+    'change-size-reconciliation-failed': Object.freeze(['operation', 'issueNumber', 'targetNumber', 'projectIndex', 'verifiedOperations', 'pendingProjectSizes', 'providerStatus', 'providerReference']),
 
     'pull-request-link-restored': Object.freeze([]),
     'pull-request-link-base-retained': Object.freeze([]),
@@ -348,13 +388,18 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'branch-sync-agent-disabled': Object.freeze(['command']),
     'branch-sync-fixer-unavailable': Object.freeze(['command']),
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
+    'branch-sync-verification-failed': Object.freeze(['stage', 'reason', 'command', 'commandIndex', 'childSha', 'restoration']),
     'sdd-draft-size-exceeded': Object.freeze([]),
+    'sdd-catalog-unsupported-profile': Object.freeze([]),
+    'sdd-catalog-format-invalid': Object.freeze([]),
     'sdd-draft-format-invalid': Object.freeze([]),
     'sdd-draft-case-identity-invalid': Object.freeze([]),
     'sdd-draft-case-budget-invalid': Object.freeze([]),
     'sdd-draft-requirement-mapping-invalid': Object.freeze([]),
     'sdd-draft-repository-path-invalid': Object.freeze([]),
 
+    'progress-binary-evidence-unavailable': Object.freeze(['paths', 'pathCount']),
+    'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
 
@@ -371,6 +416,10 @@ function normalizeApplicationErrorRecovery(
     if (actualKeys.length !== expectedKeys.length
         || actualKeys.some((key, index) => key !== expectedKeys[index])) {
         throw new TypeError(`Application error recovery variables are invalid for ${recovery.id}.`);
+    }
+    if (isCopilotCommandValidationReason(recovery.id)
+        && !isValidCopilotCommandValidation(recovery.id, variables.command)) {
+        throw new TypeError('Comment command validation diagnostic is invalid.');
     }
     if (recovery.id.startsWith('stored-configuration-')
         && (![variables.issueNumber, variables.expectedVersion].every(value =>
@@ -405,6 +454,9 @@ function normalizeApplicationErrorRecovery(
         && !BRANCH_SYNC_VALIDATION_CODES.some(code => code === variables.validationCode)) {
         throw new TypeError('Application error recovery synchronization validation code is invalid.');
     }
+    if (recovery.id === 'branch-sync-verification-failed' && !isBranchSyncVerificationFailure(variables)) {
+        throw new TypeError('Branch synchronization verification diagnostic is invalid.');
+    }
     if (recovery.id === 'closed-issue-reconciliation-failed'
         && (!CLOSED_ISSUE_RESULTS.some(value => value === variables.resultId)
             || !CLOSED_ISSUE_PHASES.some(value => value === variables.phase)
@@ -418,6 +470,11 @@ function normalizeApplicationErrorRecovery(
             || !APPROVAL_EVIDENCE_REASONS.some(reason => reason === variables.reason)
             || APPROVAL_EVIDENCE_PERMISSIONS[variables.operation as keyof typeof APPROVAL_EVIDENCE_PERMISSIONS] !== variables.permission)) {
         throw new TypeError('Approval evidence diagnostic is invalid.');
+    }
+    if (recovery.id === 'progress-binary-evidence-unavailable' && !isProgressBinaryEvidenceFacts(variables)) throw new TypeError('Progress binary evidence diagnostic is invalid.');
+    if (recovery.id === 'issue-workflow-admission-blocked' && !isIssueWorkflowDiagnostic(variables)) throw new TypeError('Issue admission diagnostic is invalid.');
+    if (recovery.id === 'change-size-reconciliation-failed' && !isChangeSizeReconciliationFacts(variables)) {
+        throw new TypeError('Change size reconciliation diagnostic is invalid.');
     }
     return Object.freeze({
         id: recovery.id,

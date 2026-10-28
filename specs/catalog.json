@@ -7,12 +7,14 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-20",
+      "lastVerified": "2026-10-28",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md",
         "specs/copilot-history.md",
-        "specs/pull-request-title-compatibility.md"
+        "specs/pull-request-title-compatibility.md",
+        "specs/immutable-progress-content-recovery.md",
+        "specs/optional-check-run-diagnostics.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -159,7 +161,34 @@
         "src/data/repository/issue/issue_title_repository.ts",
         "src/domain/closed_issue_reconciliation.ts",
         "src/application/errors/closed_issue_reconciliation_error.ts",
-        "src/application/policies/closed_issue_reconciliation_outcome_policy.ts"
+        "src/application/policies/closed_issue_reconciliation_outcome_policy.ts",
+        "src/domain/copilot_command_validation.ts",
+        "src/application/errors/comment_command_validation_error.ts",
+        "src/application/policies/comment_command_validation_message_catalog.ts",
+        "src/application/policies/comment_command_validation_presentation_policy.ts",
+        "src/domain/copilot_command_vocabulary.ts",
+        "src/domain/sdd_validation_diagnostic.ts",
+        "src/application/errors/sdd_draft_preparation_failure.ts",
+        "src/application/policies/sdd_preparation_message_catalog.ts",
+        "src/application/policies/sdd_preparation_status_policy.ts",
+        "src/application/policies/progress_scope_policy.ts",
+        "src/prompts/progress_scope.ts",
+        "src/prompts/check_progress.ts",
+        "src/application/policies/branch_sync_relationship_retirement_policy.ts",
+        "src/application/usecases/actions/retire_unrelated_branch_sync_cards.ts",
+        "src/application/policies/progress_content_evidence_policy.ts",
+        "src/application/policies/progress_patch_completeness_policy.ts",
+        "src/data/repository/immutable_progress_content_repository.ts",
+        "src/infrastructure/github/ports/github_progress_object_provider_port.ts",
+        "src/application/policies/progress_comparison_source_policy.ts",
+        "src/application/ports/progress_comparison_source_ports.ts",
+        "src/data/repository/progress_comparison_source_repository.ts",
+        "src/domain/progress_binary_evidence_diagnostic.ts",
+        "src/domain/progress_evidence_path.ts",
+        "src/infrastructure/github/ports/github_progress_comparison_provider_port.ts",
+        "src/application/ports/copilot_evidence_error.ts",
+        "src/application/policies/optional_check_diagnostic_policy.ts",
+        "src/data/repository/github/copilot_evidence_provider_failure.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -260,7 +289,32 @@
         "src/application/policies/__tests__/pull_request_title_policy.test.ts",
         "src/application/usecases/steps/common/__tests__/pull_request_title_compatibility.test.ts",
         "src/application/usecases/steps/common/__tests__/update_title_use_case.test.ts",
-        "src/data/repository/issue/__tests__/issue_title_repository.test.ts"
+        "src/data/repository/issue/__tests__/issue_title_repository.test.ts",
+        "src/domain/__tests__/copilot_command_validation.test.ts",
+        "src/application/policies/__tests__/comment_command_validation_presentation.test.ts",
+        "src/application/usecases/__tests__/command_validation_diagnostics.test.ts",
+        "src/domain/__tests__/sdd_validation_diagnostic.test.ts",
+        "src/application/policies/__tests__/sdd_preparation_status_policy.test.ts",
+        "src/application/policies/__tests__/progress_scope_policy.test.ts",
+        "src/application/usecases/actions/__tests__/progress_scope.integration.test.ts",
+        "src/application/usecases/actions/__tests__/progress_response.test.ts",
+        "src/prompts/__tests__/check_progress.test.ts",
+        "src/prompts/__tests__/progress_scope.test.ts",
+        "src/application/usecases/actions/__tests__/retire_unrelated_branch_sync_cards.test.ts",
+        "src/application/policies/__tests__/progress_content_evidence_policy.test.ts",
+        "src/application/policies/__tests__/progress_patch_completeness_policy.test.ts",
+        "src/data/repository/__tests__/immutable_progress_content_repository.test.ts",
+        "src/data/repository/__tests__/progress_diff_recovery.test.ts",
+        "src/application/policies/__tests__/progress_comparison_source_policy.test.ts",
+        "src/data/repository/__tests__/progress_comparison_source_repository.test.ts",
+        "src/application/usecases/actions/__tests__/progress_comparison_source.integration.test.ts",
+        "src/domain/__tests__/progress_binary_evidence_diagnostic.test.ts",
+        "src/data/repository/__tests__/progress_binary_evidence.test.ts",
+        "src/infrastructure/composition/__tests__/progress_comparison_binding.test.ts",
+        "src/application/policies/__tests__/optional_check_diagnostic_policy.test.ts",
+        "src/data/repository/__tests__/copilot_evidence_failure.test.ts",
+        "src/actions/__tests__/optional_check_completion.test.ts",
+        "src/architecture/__tests__/raw_error_logging_boundaries.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -299,20 +353,23 @@
         "docs/development/testing.mdx",
         "docs/issues/branch-management.mdx",
         "docs/agents/execution-contract.mdx",
-        "docs/security-operations/operations/error-reference.mdx"
+        "docs/security-operations/operations/error-reference.mdx",
+        "docs/issues/pre-branch-sdds.mdx",
+        "docs/development/specifications.mdx"
       ]
     },
     {
       "id": "release-orchestration",
       "title": "Configurable production-first release orchestration",
       "status": "implemented",
-      "scope": "Release and hotfix promotion, publication, bounded merge readiness recovery, and receipt-verified reconciliation without republication",
+      "scope": "Release and hotfix promotion, publication, bounded merge readiness recovery, and receipt-verified reconciliation without republication; explicit native-guarded replacement of closed unpublished candidates with complete fresh validation and bounded audit history",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-16",
+      "lastVerified": "2026-10-28",
       "specs": [
         "specs/configurable-release-orchestration.md",
         "specs/configurable-release-orchestration-traceability.md",
-        "specs/deployment-concurrency-and-state-fencing.md"
+        "specs/deployment-concurrency-and-state-fencing.md",
+        "specs/unpublished-candidate-replacement.md"
       ],
       "workflows": [
         ".github/workflows/release_workflow.yml",
@@ -323,7 +380,8 @@
         "setup/workflows/copilot_deployment_orchestration.yml"
       ],
       "entrypoints": [
-        "src/application/usecases/actions/deployment_orchestration_use_case.ts"
+        "src/application/usecases/actions/deployment_orchestration_use_case.ts",
+        "src/actions/deployment_candidate_preflight_action.ts"
       ],
       "code": [
         "src/domain/deployment_configuration.ts",
@@ -355,7 +413,18 @@
         "src/infrastructure/github/octokit_deployment_adapter.ts",
         "src/application/errors/deployment_merge_effect_error.ts",
         "src/application/services/deployment_merge_effects.ts",
-        "src/data/repository/deployment/github_deployment_merge_error.ts"
+        "src/data/repository/deployment/github_deployment_merge_error.ts",
+        "src/domain/deployment_candidate_replacement.ts",
+        "src/application/usecases/actions/deployment_handlers/replace_candidate_handler.ts",
+        "src/application/usecases/execution/deployment_candidate_preflight_workflow.ts",
+        "src/application/ports/deployment_candidate_inspection_ports.ts",
+        "src/data/repository/deployment/github_candidate_replacement_repository.ts",
+        "src/data/repository/deployment/native_candidate_preparation.ts",
+        "src/infrastructure/composition/deployment_candidate_replacement_composition_root.ts",
+        "src/application/policies/deployment_candidate_preflight_presentation.ts",
+        "deployment-recovery/action.yml",
+        "deployment-recovery/index.cjs",
+        "scripts/deployment-replacement-contract.cjs"
       ],
       "tests": [
         "src/domain/__tests__/deployment_operation.test.ts",
@@ -375,13 +444,27 @@
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
         "src/infrastructure/composition/__tests__/push_single_action_capability_port_binding.test.ts",
         "src/application/services/__tests__/deployment_merge_effects.test.ts",
-        "src/data/repository/deployment/__tests__/github_deployment_merge_error.test.ts"
+        "src/data/repository/deployment/__tests__/github_deployment_merge_error.test.ts",
+        "src/domain/__tests__/deployment_candidate_replacement.test.ts",
+        "src/data/repository/deployment/__tests__/native_candidate_preparation.test.ts",
+        "src/data/repository/deployment/__tests__/github_candidate_replacement_repository.test.ts",
+        "src/infrastructure/composition/__tests__/deployment_candidate_replacement_composition_root.test.ts",
+        "src/application/usecases/actions/__tests__/deployment_candidate_replacement.integration.test.ts",
+        "src/application/usecases/execution/__tests__/deployment_candidate_preflight_workflow.test.ts",
+        "src/application/policies/__tests__/deployment_candidate_replacement_presentation.test.ts",
+        "src/actions/__tests__/deployment_candidate_recovery_bootstrap.test.ts",
+        "src/actions/__tests__/deployment_candidate_declared_inputs.test.ts",
+        "src/actions/__tests__/deployment_candidate_preflight_action.test.ts",
+        "src/tooling/__tests__/deployment_replacement_workflows.test.ts",
+        "src/application/usecases/execution/__tests__/single_action_target_restore.integration.test.ts"
       ],
       "documentation": [
         "docs/issues/deployment-orchestration.mdx",
         "docs/issues/type/release.mdx",
         "docs/issues/type/hotfix.mdx",
-        "docs/development/release-process.mdx"
+        "docs/development/release-process.mdx",
+        "docs/single-actions/configuration.mdx",
+        "docs/single-actions/available-actions.mdx"
       ]
     },
     {
@@ -440,7 +523,7 @@
       "status": "implemented",
       "scope": "Reconcile review snapshots, findings, threads, comments, and check conclusions",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-24",
+      "lastVerified": "2026-10-26",
       "specs": [
         "specs/bugbot-review-state-reconciliation.md"
       ],
@@ -485,7 +568,15 @@
         "src/domain/bugbot/finding.ts",
         "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts",
         "src/application/usecases/steps/commit/bugbot/publish_findings_use_case.ts",
-        "scripts/validate-workflow-contract.cjs"
+        "scripts/validate-workflow-contract.cjs",
+        "src/application/policies/bugbot_resolution_eligibility_policy.ts",
+        "src/application/usecases/steps/commit/bugbot/resolve_pull_request_finding.ts",
+        "src/application/usecases/steps/commit/bugbot/mark_findings_resolved_workflow.ts",
+        "src/application/usecases/steps/commit/bugbot/verify_reopened_finding_thread.ts",
+        "src/application/ports/bugbot_pull_request_resolution_ports.ts",
+        "src/application/ports/bugbot_pull_request_write_ports.ts",
+        "src/application/ports/pull_request_review_comment_ports.ts",
+        "src/infrastructure/composition/bugbot_scm_port_factory.ts"
       ],
       "tests": [
         "src/domain/bugbot/__tests__/review_state.test.ts",
@@ -515,7 +606,11 @@
         "src/domain/bugbot/__tests__/finding.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/finding_identity_replay.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/analyze_bugbot_revision_use_case.test.ts",
-        "src/application/usecases/steps/commit/bugbot/__tests__/publish_findings_use_case.test.ts"
+        "src/application/usecases/steps/commit/bugbot/__tests__/publish_findings_use_case.test.ts",
+        "src/application/policies/__tests__/bugbot_resolution_eligibility_policy.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/reopened_dismissal_reconciliation.test.ts",
+        "src/infrastructure/composition/__tests__/bugbot_scm_port_factory.test.ts",
+        "src/application/ports/__tests__/bugbot_port_boundaries.test.ts"
       ],
       "documentation": [
         "docs/bugbot/detection.mdx",
@@ -533,14 +628,15 @@
       "id": "execution-lifecycle",
       "title": "Execution admission, queueing, routing, and result publication",
       "status": "implemented",
-      "scope": "Shared GitHub Action lifecycle from event admission through durable user-facing results",
+      "scope": "Shared GitHub Action lifecycle with pinned native resource/lane coordination proof, conservative predecessor fencing, routing and durable user-facing results",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-21",
+      "lastVerified": "2026-10-28",
       "specs": [
         "specs/execution-admission-queue-and-publication.md",
         "specs/execution-error-and-context-hardening.md",
         "specs/execution-boundary-closure-audit.md",
-        "specs/push-and-single-action-context-hardening.md"
+        "specs/push-and-single-action-context-hardening.md",
+        "specs/early-issue-event-admission.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -551,7 +647,8 @@
       ],
       "entrypoints": [
         "src/actions/github_action.ts",
-        "src/actions/common_action.ts"
+        "src/actions/common_action.ts",
+        "issue-admission/action.yml"
       ],
       "code": [
         "scripts/coverage-budgets.json",
@@ -604,7 +701,32 @@
         "src/manager/description/configuration_handler.ts",
         "src/manager/description/configuration_markers.ts",
         "src/data/repository/issue/issue_content_repository.ts",
-        "src/data/repository/github/github_error_policy.ts"
+        "src/data/repository/github/github_error_policy.ts",
+        "src/application/policies/native_workflow_coordination_policy.ts",
+        "src/application/ports/workflow_run_ports.ts",
+        "src/application/usecases/workflow/wait_for_previous_workflow_runs_use_case.ts",
+        "src/data/repository/workflow/active_previous_workflow_runs_repository.ts",
+        "src/data/repository/workflow/native_workflow_coordination_repository.ts",
+        "src/infrastructure/composition/workflow_queue_composition_root.ts",
+        "src/domain/copilot_command_validation.ts",
+        "src/application/errors/comment_command_validation_error.ts",
+        "src/application/policies/comment_command_validation_message_catalog.ts",
+        "src/application/policies/comment_command_validation_presentation_policy.ts",
+        "src/domain/copilot_command_vocabulary.ts",
+        "src/domain/change_size_reconciliation.ts",
+        "src/application/ports/change_size_provider_error.ts",
+        "src/data/repository/github/change_size_provider_failure.ts",
+        "src/application/usecases/steps/commit/change_size_reconciliation.ts",
+        "src/infrastructure/composition/change_size_diagnostics_composition_root.ts",
+        "src/data/repository/issue/issue_label_repository.ts",
+        "src/actions/issue_event_admission_action.ts",
+        "src/data/repository/workflow/issue_event_admission_repository.ts",
+        "src/infrastructure/composition/issue_event_admission_composition_root.ts",
+        "src/application/policies/issue_event_admission_policy.ts",
+        "src/application/ports/issue_event_admission_ports.ts",
+        "src/application/usecases/execution/issue_event_admission_workflow.ts",
+        "src/application/policies/setup_runner_policy.ts",
+        "src/manager/description/base/issue_content_interface.ts"
       ],
       "tests": [
         "src/tooling/__tests__/coverage_budget_validator.test.ts",
@@ -644,7 +766,26 @@
         "src/infrastructure/composition/__tests__/change_size_project_membership_composition_root.test.ts",
         "src/manager/description/__tests__/configuration_recovery.test.ts",
         "src/manager/description/__tests__/configuration_handler.test.ts",
-        "src/data/repository/issue/__tests__/issue_content_repository.test.ts"
+        "src/data/repository/issue/__tests__/issue_content_repository.test.ts",
+        "src/application/policies/__tests__/native_workflow_coordination_policy.test.ts",
+        "src/data/repository/workflow/__tests__/native_workflow_coordination_repository.test.ts",
+        "src/data/repository/workflow/__tests__/active_previous_workflow_runs_repository.test.ts",
+        "src/actions/__tests__/common_action.test.ts",
+        "src/tooling/__tests__/validate_workflow_contract.test.ts",
+        "src/domain/__tests__/copilot_command_validation.test.ts",
+        "src/application/policies/__tests__/comment_command_validation_presentation.test.ts",
+        "src/application/usecases/__tests__/command_validation_diagnostics.test.ts",
+        "src/domain/__tests__/change_size_reconciliation.test.ts",
+        "src/data/repository/github/__tests__/change_size_provider_failure.test.ts",
+        "src/application/usecases/steps/commit/__tests__/change_size_reconciliation.test.ts",
+        "src/data/repository/issue/__tests__/issue_label_repository.test.ts",
+        "src/data/repository/workflow/__tests__/issue_event_admission_repository.test.ts",
+        "src/application/usecases/execution/__tests__/issue_event_admission_workflow.test.ts",
+        "src/actions/__tests__/issue_event_admission_action.test.ts",
+        "src/manager/description/base/__tests__/issue_content_interface.test.ts",
+        "src/application/usecases/__tests__/issue_use_case.test.ts",
+        "src/utils/__tests__/setup_runner_installation.test.ts",
+        "src/application/usecases/execution/__tests__/single_action_target_restore.integration.test.ts"
       ],
       "documentation": [
         "docs/overview.mdx",
@@ -655,7 +796,12 @@
         "docs/bugbot/failure-scenarios.mdx",
         "docs/development/architecture.mdx",
         "docs/issues/assignees-and-projects.mdx",
-        "docs/configuration.mdx"
+        "docs/configuration.mdx",
+        "README.md",
+        "docs/features.mdx",
+        "docs/pull-requests/workflow-setup.mdx",
+        "docs/issues/comment-commands.mdx",
+        "docs/issues/workflow-setup.mdx"
       ]
     },
     {
@@ -1378,7 +1524,8 @@
         "docs/guides/work-with-the-bot.mdx",
         "docs/guides/releases-and-hotfixes.mdx",
         "docs/security-operations/operations/verification.mdx",
-        "docs/security-operations/operations/upgrade-rollback.mdx"
+        "docs/security-operations/operations/upgrade-rollback.mdx",
+        "specs/github-browser-extension-control-center-and-setup.md"
       ]
     },
     {
@@ -1502,7 +1649,7 @@
       "status": "implemented",
       "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-25",
+      "lastVerified": "2026-10-27",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
         "specs/pre-branch-sdd-gate.md",
@@ -1580,7 +1727,12 @@
         "src/application/policies/setup_doctor_message_catalog.ts",
         "src/domain/sdd_prerequisite_policy.cjs",
         "src/application/policies/sdd_analysis_status_policy.ts",
-        "src/domain/sdd_draft_consistency.ts"
+        "src/domain/sdd_draft_consistency.ts",
+        "src/domain/sdd_validation_diagnostic.ts",
+        "src/application/errors/sdd_draft_preparation_failure.ts",
+        "src/application/policies/sdd_preparation_message_catalog.ts",
+        "src/application/policies/sdd_preparation_status_policy.ts",
+        "src/domain/sdd_catalog_compatibility.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1625,7 +1777,13 @@
         "src/infrastructure/__tests__/branch_sync_sdd_catalog.test.ts",
         "src/cli/__tests__/setup_presenters.test.ts",
         "src/domain/__tests__/sdd_draft_consistency.test.ts",
-        "src/domain/__tests__/sdd_derived_tables.test.ts"
+        "src/domain/__tests__/sdd_derived_tables.test.ts",
+        "src/domain/__tests__/sdd_validation_diagnostic.test.ts",
+        "src/application/policies/__tests__/sdd_preparation_status_policy.test.ts",
+        "src/domain/__tests__/sdd_catalog_compatibility.test.ts",
+        "src/testing/fixtures/sdd-native-catalog/catalog.json",
+        "src/testing/fixtures/sdd-native-catalog/catalog.schema.json",
+        "src/testing/fixtures/sdd-native-catalog/provenance.json"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
@@ -1637,7 +1795,8 @@
         "docs/issues/labels-and-branch-types.mdx",
         "docs/issues/configuration.mdx",
         "docs/configuration.mdx",
-        "docs/single-actions/workflow-and-cli.mdx"
+        "docs/single-actions/workflow-and-cli.mdx",
+        "docs/security-operations/operations/error-reference.mdx"
       ]
     },
     {
@@ -1738,7 +1897,7 @@
       "status": "implemented",
       "scope": "Admit only explicit commands or exact mentions, then route them while protecting repository mutations",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-11",
+      "lastVerified": "2026-10-26",
       "specs": [
         "specs/comment-automation-and-authorization.md"
       ],
@@ -1788,7 +1947,12 @@
         "src/application/policies/implementation_result_policy.ts",
         "src/application/policies/agent_execution_failure_policy.ts",
         "src/application/usecases/steps/commit/bugbot/workspace_changes.ts",
-        "src/application/usecases/steps/commit/workspace_mutation_guard.ts"
+        "src/application/usecases/steps/commit/workspace_mutation_guard.ts",
+        "src/domain/copilot_command_validation.ts",
+        "src/application/errors/comment_command_validation_error.ts",
+        "src/application/policies/comment_command_validation_message_catalog.ts",
+        "src/application/policies/comment_command_validation_presentation_policy.ts",
+        "src/domain/copilot_command_vocabulary.ts"
       ],
       "tests": [
         "src/actions/__tests__/github_action.test.ts",
@@ -1820,7 +1984,10 @@
         "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts",
         "src/application/usecases/__tests__/comment_automation_action_workflow.test.ts",
         "src/application/usecases/steps/commit/__tests__/user_request_use_case.test.ts",
-        "src/application/usecases/steps/commit/bugbot/__tests__/workspace_changes.test.ts"
+        "src/application/usecases/steps/commit/bugbot/__tests__/workspace_changes.test.ts",
+        "src/domain/__tests__/copilot_command_validation.test.ts",
+        "src/application/policies/__tests__/comment_command_validation_presentation.test.ts",
+        "src/application/usecases/__tests__/command_validation_diagnostics.test.ts"
       ],
       "documentation": [
         "docs/issues/comment-commands.mdx",
@@ -1829,20 +1996,22 @@
         "docs/bugbot/examples.mdx",
         "docs/bugbot/how-it-works.mdx",
         "docs/authentication.mdx",
-        "docs/bugbot/permissions.mdx"
+        "docs/bugbot/permissions.mdx",
+        "docs/security-operations/operations/error-reference.mdx"
       ]
     },
     {
       "id": "bugbot-analysis-and-autofix",
       "title": "Bugbot analysis, finding publication, and autofix",
       "status": "implemented",
-      "scope": "Select one canonical PR, exhaustively analyze its bounded diff partitions, publish stable findings atomically, and apply authorized verified fixes",
+      "scope": "Select one canonical PR, exhaustively analyze bounded diff partitions with version-grounded dependency, delegated test-path and external Action input-contract evidence, publish stable findings atomically, and apply authorized verified fixes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-21",
+      "lastVerified": "2026-10-28",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md",
-        "specs/bugbot-exhaustive-partitioned-analysis.md"
+        "specs/bugbot-exhaustive-partitioned-analysis.md",
+        "specs/bugbot-lossless-conversation-context.md"
       ],
       "workflows": [
         ".github/workflows/copilot_commit.yml",
@@ -1863,6 +2032,7 @@
         "src/application/policies/bugbot_result_finding_state_projection_policy.ts",
         "src/application/policies/bugbot_telemetry_projection_policy.ts",
         "src/application/policies/bugbot_diff_partition_policy.ts",
+        "src/application/policies/bugbot_conversation_packing_policy.ts",
         "src/application/policies/bugbot_partition_completion_policy.ts",
         "src/application/policies/action_summary_policy.ts",
         "src/application/policies/copilot_evidence_policy.ts",
@@ -1910,12 +2080,19 @@
         "src/application/usecases/steps/commit/bugbot/commit_and_push_workflow.ts",
         "quality/bugbot/corpus.v1.json",
         "quality/bugbot/reference-predictions.v1.json",
-        "src/tooling/bugbot_benchmark_runner.ts"
+        "src/tooling/bugbot_benchmark_runner.ts",
+        "quality/bugbot/compose-720-observations.v1.json",
+        "quality/bugbot/evidence/issue-722.json",
+        "quality/bugbot/evidence/issue-736.json",
+        "quality/bugbot/evidence/issue-738.json",
+        "quality/bugbot/evidence/issue-739.json",
+        "quality/bugbot/evidence/issue-749.json"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_operation_context.test.ts",
         "src/application/policies/__tests__/bugbot_partition_completion_policy.test.ts",
+        "src/application/policies/__tests__/bugbot_conversation_packing_policy.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/analyze_bugbot_revision_use_case.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_partition_aggregation.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_context_request.test.ts",
@@ -1953,8 +2130,12 @@
         "src/application/usecases/steps/commit/bugbot/__tests__/commit_verification_workspace.test.ts",
         "src/application/usecases/__tests__/autofix_conversation_branch_authority.test.ts",
         "src/tooling/__tests__/bugbot_benchmark.test.ts",
+        "src/tooling/__tests__/fixtures/bugbot_call_path_oracles.ts",
         "src/tooling/__tests__/bugbot_benchmark_runner.test.ts",
-        "src/prompts/__tests__/bugbot.test.ts"
+        "src/prompts/__tests__/bugbot.test.ts",
+        "src/prompts/__tests__/bugbot_framework_semantics.test.ts",
+        "src/tooling/__tests__/fixtures/bugbot_validation_oracles.ts",
+        "src/tooling/__tests__/fixtures/bugbot_validation_functions.ts"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
@@ -1976,7 +2157,7 @@
       "status": "implemented",
       "scope": "Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-22",
+      "lastVerified": "2026-10-27",
       "specs": [
         "specs/branch-synchronization-and-conflict-recovery.md",
         "specs/repository-verification-runtime-prerequisites.md",
@@ -2058,7 +2239,12 @@
         "scripts/prepare-native-source-action.cjs",
         "src/domain/copilot_comment_workflow.ts",
         "src/infrastructure/copilot_comment_inputs.json",
-        "scripts/validate-comment-workflows.cjs"
+        "scripts/validate-comment-workflows.cjs",
+        "src/domain/verification_failure.ts",
+        "src/application/policies/source_verification_dependency_policy.ts",
+        "src/infrastructure/source_verification_dependencies.ts",
+        "src/application/policies/branch_sync_relationship_retirement_policy.ts",
+        "src/application/usecases/actions/retire_unrelated_branch_sync_cards.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -2107,7 +2293,10 @@
         "src/infrastructure/__tests__/verification_executable.test.ts",
         "src/infrastructure/__tests__/native_verification_post.test.ts",
         "src/infrastructure/__tests__/native_verification_source_runtime.test.ts",
-        "src/domain/__tests__/copilot_comment_workflow.test.ts"
+        "src/domain/__tests__/copilot_comment_workflow.test.ts",
+        "src/domain/__tests__/verification_failure.test.ts",
+        "src/infrastructure/__tests__/source_verification_dependencies.test.ts",
+        "src/application/usecases/actions/__tests__/retire_unrelated_branch_sync_cards.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",
@@ -2345,7 +2534,7 @@
       "status": "as-built-baseline",
       "scope": "Expose bounded local commands and workflow-dispatched operations through the shared application core",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-19",
+      "lastVerified": "2026-10-28",
       "specs": [
         "specs/cli-and-single-action-execution.md"
       ],
@@ -2374,7 +2563,10 @@
         "src/application/policies/application_error_message_catalog.ts",
         "src/application/policies/application_error_presentation_policy.ts",
         "src/actions/local_action_output.ts",
-        "src/infrastructure/composition/local_action_composition_root.ts"
+        "src/infrastructure/composition/local_action_composition_root.ts",
+        "src/application/usecases/execution/execution_issue_number_policy.ts",
+        "src/application/usecases/actions/create_release_workflow.ts",
+        "src/data/model/application_error.ts"
       ],
       "tests": [
         "src/cli/__tests__/cli_program.test.ts",
@@ -2391,7 +2583,10 @@
         "src/application/usecases/steps/common/__tests__/think_request_policy.test.ts",
         "src/application/usecases/steps/common/__tests__/think_use_case.test.ts",
         "src/infrastructure/composition/__tests__/local_action_composition_root.test.ts",
-        "src/application/usecases/__tests__/single_action_use_case.test.ts"
+        "src/application/usecases/__tests__/single_action_use_case.test.ts",
+        "src/application/usecases/execution/__tests__/execution_issue_number_policy.test.ts",
+        "src/application/usecases/execution/__tests__/single_action_target_restore.integration.test.ts",
+        "src/application/usecases/actions/__tests__/create_release_use_case.test.ts"
       ],
       "documentation": [
         "docs/single-actions/available-actions.mdx",
@@ -2400,16 +2595,17 @@
         "docs/single-actions/workflow-and-cli.mdx",
         "docs/single-actions/examples.mdx",
         "docs/single-actions/configuration.mdx",
-        "docs/agents/cli-commands.mdx"
+        "docs/agents/cli-commands.mdx",
+        "docs/security-operations/operations/error-reference.mdx"
       ]
     },
     {
       "id": "configurable-issue-workflows",
       "title": "Configurable issue workflows and fail-closed admission",
       "status": "implemented",
-      "scope": "Select one canonical set of issue workflows and enforce its forms, dependencies, branch policy, runtime admission, migration, and diagnosis",
+      "scope": "Select canonical issue workflows and explicit consumer field mappings; preserve forms, compare setup/doctor schemas, and report actionable fail-closed admission without state writes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-13",
+      "lastVerified": "2026-10-27",
       "specs": [
         "specs/configurable-issue-workflows-and-admission.md"
       ],
@@ -2468,7 +2664,23 @@
         "src/utils/setup_files.ts",
         "scripts/coverage-budgets.json",
         "scripts/validate-workflow-contract.cjs",
-        "scripts/validate-npm-package.cjs"
+        "scripts/validate-npm-package.cjs",
+        "src/domain/issue_workflow_body.ts",
+        "src/domain/issue_workflow_field_mapping.ts",
+        "src/domain/issue_workflow_form.ts",
+        "src/domain/issue_workflow_diagnostic.ts",
+        "src/domain/strict_json_keys.ts",
+        "src/utils/setup_issue_form_review.ts",
+        "src/actions/github_action_completion.ts",
+        "src/application/policies/configuration_persistence_policy.ts",
+        "src/application/policies/application_error_presentation_policy.ts",
+        "src/application/usecases/execution/execution_branch_version_resolver.ts",
+        "src/application/policies/deploy_workflow_policy.ts",
+        "src/application/usecases/steps/common/get_release_version_use_case.ts",
+        "src/application/usecases/steps/common/get_release_type_use_case.ts",
+        "src/application/usecases/steps/common/get_hotfix_version_use_case.ts",
+        "src/application/policies/setup_configuration_clone_policy.ts",
+        "src/cli/setup_config_file.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_configuration_policy.test.ts",
@@ -2491,7 +2703,20 @@
         "src/cli/__tests__/setup_prompt_rendering.test.ts",
         "src/infrastructure/__tests__/setup_workspace_adapter.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts",
-        "src/utils/__tests__/setup_files.test.ts"
+        "src/utils/__tests__/setup_files.test.ts",
+        "src/domain/__tests__/issue_workflow_field_mappings.test.ts",
+        "src/domain/__tests__/issue_workflow_body.test.ts",
+        "src/domain/__tests__/issue_workflow_form.test.ts",
+        "src/domain/__tests__/issue_workflow_diagnostic.test.ts",
+        "src/domain/__tests__/strict_json_keys.test.ts",
+        "src/utils/__tests__/setup_issue_form_review.test.ts",
+        "src/application/usecases/steps/common/__tests__/mapped_workflow_versions.test.ts",
+        "src/actions/__tests__/github_action_completion.test.ts",
+        "src/application/policies/__tests__/mapped_deploy_workflow_policy.test.ts",
+        "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
+        "src/cli/__tests__/setup_config_file.test.ts",
+        "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
+        "src/infrastructure/__tests__/setup_verification_action.test.ts"
       ],
       "documentation": [
         "docs/how-to-use.mdx",
@@ -2510,7 +2735,8 @@
         "docs/issues/type/release.mdx",
         "docs/issues/deployment-orchestration.mdx",
         "docs/development/architecture.mdx",
-        "docs/issues/workflow-setup.mdx"
+        "docs/issues/workflow-setup.mdx",
+        "docs/agents/repository-guidance-troubleshooting.mdx"
       ]
     },
     {
@@ -2695,6 +2921,154 @@
         "docs/issues/comment-commands.mdx",
         "docs/bugbot/configuration.mdx",
         "docs/development/architecture.mdx"
+      ]
+    },
+    {
+      "id": "github-browser-extension",
+      "title": "Complete GitHub productivity extension and integrated Copilot setup",
+      "status": "proposed",
+      "scope": "Complete proposed desktop product: 150 required functions, local center, Action integration, shared setup and 803 product cases. H1 establishes builds; H2 implements shared runtime/session/settings/GET services and exact native-browser harnesses. Full product/core acceptance and signed delivery remain separate gates.",
+      "owner": "Copilot maintainers",
+      "lastVerified": "2026-10-28",
+      "specs": [
+        "specs/github-browser-extension.md",
+        "specs/github-browser-extension-action-integration.md",
+        "specs/github-browser-extension-platforms-and-delivery.md",
+        "specs/github-browser-extension-functional-catalog.md",
+        "specs/github-browser-extension-control-center-and-setup.md",
+        "specs/github-browser-extension-foundation.md",
+        "specs/github-browser-extension-runtime.md"
+      ],
+      "workflows": [
+        ".github/workflows/ci_check.yml",
+        ".github/workflows/setup_platform_smoke.yml"
+      ],
+      "entrypoints": [
+        "src/actions/github_action.ts",
+        "extension/src/infrastructure/content_entry.ts",
+        "extension/src/infrastructure/background_entry.ts",
+        "extension/tooling/cli.mts"
+      ],
+      "code": [
+        "src/application/usecases/read_copilot_status_workflow.ts",
+        "src/application/ports/pull_request_status_read_ports.ts",
+        "extension/package.json",
+        "extension/tsconfig.json",
+        "extension/vitest.config.mts",
+        "extension/src/domain/eligibility.ts",
+        "extension/src/domain/target.ts",
+        "extension/src/infrastructure/target_manifests.ts",
+        "src/domain/browser_extension_contract/index.ts",
+        "src/domain/browser_extension_contract/manifest.ts",
+        "extension/tooling/architecture_validation.mts",
+        "extension/tooling/artifact_validation.mts",
+        "extension/tooling/build.mts",
+        "extension/tooling/cli.mts",
+        "extension/tooling/gate_error.mts",
+        "extension/tooling/package_contract.mts",
+        "extension/tooling/source_graph.mts",
+        "extension/tooling/validation.mts",
+        "extension/src/adapters/browser/api.ts",
+        "extension/src/adapters/browser/cancellation.ts",
+        "extension/src/adapters/browser/resource_scope.ts",
+        "extension/src/adapters/browser/storage.ts",
+        "extension/src/adapters/dom/runtime_panel.ts",
+        "extension/src/adapters/github/get_reader.ts",
+        "extension/src/application/lifecycle.ts",
+        "extension/src/application/message_gateway.ts",
+        "extension/src/application/protected_session.ts",
+        "extension/src/application/read_ports.ts",
+        "extension/src/application/read_scheduler.ts",
+        "extension/src/application/runtime_ports.ts",
+        "extension/src/application/settings_repository.ts",
+        "extension/src/domain/feature_defaults.ts",
+        "extension/src/domain/page.ts",
+        "extension/src/domain/protocol.ts",
+        "extension/src/domain/read.ts",
+        "extension/src/domain/scheduling.ts",
+        "extension/src/domain/session.ts",
+        "extension/src/domain/settings.ts",
+        "extension/src/domain/value.ts",
+        "extension/src/infrastructure/background_entry.ts",
+        "extension/src/infrastructure/background_runtime.ts",
+        "extension/src/infrastructure/build_identity.ts",
+        "extension/src/infrastructure/content_entry.ts",
+        "extension/src/infrastructure/content_runtime.ts",
+        "extension/src/infrastructure/options_runtime.ts",
+        "extension/src/infrastructure/runtime_entry.ts",
+        "extension/src/presentation/runtime_copy.ts",
+        "extension/tooling/browser_cli.mts",
+        "extension/tooling/loaded_manifest.mts",
+        "extension/tooling/runtime_harness.mts",
+        "extension/tooling/safari_cli.mts",
+        "extension/tooling/safari_container.mts",
+        "extension/tooling/static_assets.mts",
+        "extension/tooling/webdriver.mts",
+        "extension/src/application/shared_read_cancellation.ts"
+      ],
+      "tests": [
+        "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
+        "extension/test/contracts/architecture.test.ts",
+        "extension/test/contracts/eligibility.test.ts",
+        "extension/test/contracts/manifest_value.test.ts",
+        "extension/test/contracts/target_manifests.test.ts",
+        "extension/test/integration/build.test.ts",
+        "extension/test/integration/commands.test.ts",
+        "extension/test/integration/package.test.ts",
+        "extension/test/integration/recovery.test.ts",
+        "src/domain/__tests__/browser_extension_contract.test.ts",
+        "extension/test/integration/receipt.test.ts",
+        "extension/test/contracts/loaded_manifest.test.ts",
+        "extension/test/contracts/runtime_browser.test.ts",
+        "extension/test/contracts/runtime_navigation.test.ts",
+        "extension/test/contracts/runtime_entries.test.ts",
+        "extension/test/contracts/runtime_protocol.test.ts",
+        "extension/test/contracts/runtime_reads.test.ts",
+        "extension/test/contracts/runtime_scheduling.test.ts",
+        "extension/test/contracts/runtime_settings.test.ts",
+        "extension/test/integration/browser-harness.test.ts",
+        "extension/test/integration/gateway.test.ts",
+        "extension/test/integration/runtime.test.ts",
+        "extension/test/integration/runtime_dom.test.ts",
+        "extension/test/integration/runtime_options.test.ts",
+        "extension/test/integration/safari-container.test.ts",
+        "extension/test/integration/scheduler.test.ts",
+        "extension/test/integration/session.test.ts",
+        "extension/test/integration/settings_repository.test.ts",
+        "extension/test/integration/webdriver.test.ts",
+        "extension/test/integration/session_races.test.ts",
+        "extension/test/integration/shared_reads.test.ts",
+        "extension/test/integration/runtime_settings_navigation.test.ts"
+      ],
+      "documentation": [
+        "docs/development/specifications.mdx",
+        "docs/issues/comment-commands.mdx",
+        "specs/browser-extension/manifest-v1.schema.json",
+        "specs/browser-extension/status-v1.schema.json",
+        "specs/browser-extension/examples/manifest-v1.json",
+        "specs/browser-extension/examples/status-pr-v1.json",
+        "specs/browser-extension/examples/status-issue-v1.json",
+        "specs/browser-extension/examples/status-invalid-head-v1.json",
+        "specs/browser-extension/feature-catalog.v1.json",
+        "specs/browser-extension/feature-catalog.schema.json",
+        "specs/browser-extension/requests-v2.schema.json",
+        "specs/browser-extension/examples/requests-v2.json",
+        "specs/browser-extension/feature-catalog-index.schema.json",
+        "specs/browser-extension/features/NAV.v1.json",
+        "specs/browser-extension/features/CODE.v1.json",
+        "specs/browser-extension/features/REVIEW.v1.json",
+        "specs/browser-extension/features/ISSUE.v1.json",
+        "specs/browser-extension/features/SEARCH.v1.json",
+        "specs/browser-extension/features/NOTIFY.v1.json",
+        "specs/browser-extension/features/CI.v1.json",
+        "specs/browser-extension/features/RELEASE.v1.json",
+        "specs/browser-extension/features/WORK.v1.json",
+        "specs/browser-extension/features/COPILOT.v1.json",
+        "specs/browser-extension/features/CENTER.v1.json",
+        "specs/browser-extension/features/SETUP.v1.json",
+        "docs/development/browser-extension.mdx",
+        "extension/README.md",
+        "docs/browser-extension/runtime.mdx"
       ]
     }
   ]

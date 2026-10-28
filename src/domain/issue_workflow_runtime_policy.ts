@@ -63,7 +63,7 @@ export function decideIssueWorkflowRuntime(context: IssueWorkflowRuntimeContext)
     : 'Issue is unmanaged because no recognized issue workflow label was found.';
 
   if (context.hasDurableOperation) {
-    if (context.singleAction === 'prepare_deployment_action') {
+    if (['prepare_deployment_action', 'replace_deployment_action'].includes(context.singleAction ?? '')) {
       return { mode: 'block', message: `${identity} A new deployment cannot start from disabled work.` };
     }
     if (context.route === 'single-action' && !DURABLE_CONTINUATION_ACTIONS.has(context.singleAction ?? '')) {

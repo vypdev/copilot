@@ -1,3 +1,4 @@
+import { COPILOT_COMMAND_VALIDATION_REASONS } from '../../../domain/copilot_command_validation';
 import {
     APPLICATION_ERROR_METADATA,
     APPLICATION_ERROR_RECOVERY_IDS,
@@ -19,6 +20,35 @@ const RECOVERY_CASES: readonly Readonly<{
     english: string;
     spanish: string;
 }>[] = [
+    {
+        recovery: { id: 'deployment-publication-context-missing', variables: {} },
+        english: 'Existing persisted state and completed external effects were preserved; this attempt did not create a GitHub release.',
+        spanish: 'Se conservaron el estado persistido y los efectos externos completados; este intento no creó una release de GitHub.',
+    },
+    {
+        recovery: { id: 'progress-binary-evidence-unavailable', variables: { paths: '["lib/a.dll"]', pathCount: 1 } },
+        english: 'Existing progress labels and assessments were preserved; no model assessment was made. Project verification remains a separate result.',
+        spanish: 'Se conservaron las etiquetas de progreso y las evaluaciones; no se realizó ninguna evaluación del modelo. La verificación del proyecto sigue siendo un resultado independiente.',
+    },
+    {
+        recovery: { id:'issue-workflow-admission-blocked', variables:{kind:'bugfix',reason:'missing-fields',fields:'["VaultStadio Version"]'} },
+        english: 'No branch or planner was started. Issue configuration is unchanged; this run only reports the admission diagnostic.',
+        spanish: 'No se inició ninguna rama ni planificador. La configuración de la issue permanece igual; esta ejecución solo informa del diagnóstico de admisión.',
+    },
+
+    {
+        recovery: {id: 'branch-sync-verification-failed', variables: {stage: 'dependencies', reason: 'unsupported-graph', command: 'pnpm run typecheck', commandIndex: 2, childSha: 'a'.repeat(40), restoration: 'restored'}},
+        english: `No synchronization commit or push was attempted. Original head: ${'a'.repeat(40)}. Local rollback: restored; restored means the original head was verified, unverified requires operator inspection before retrying.`,
+        spanish: `No se intentó crear ni subir un commit de sincronización. Head original: ${'a'.repeat(40)}. Rollback local: restored; restored confirma el head original, unverified requiere inspección del operador antes de reintentar.`,
+    },
+    ...COPILOT_COMMAND_VALIDATION_REASONS.map(id => ({
+        recovery: { id, variables: { command: id.startsWith('comment-command-review-') ? 'review' as const
+            : id.startsWith('comment-command-sync-') ? 'sync-branch' as const
+                : id === 'comment-command-arguments-unexpected' ? 'status' as const
+                    : id === 'comment-command-arguments-missing' || id === 'comment-command-finding-quoting' ? 'fix' as const : 'help' as const } },
+        english: 'No command action ran. Existing files, branches and reviews were preserved.',
+        spanish: 'No se ejecutó ninguna acción del comando. Se conservaron los archivos, las ramas y las revisiones existentes.',
+    })),
     ...(['sdd-draft-case-identity-invalid', 'sdd-draft-case-budget-invalid', 'sdd-draft-requirement-mapping-invalid', 'sdd-draft-repository-path-invalid'] as const).map(id => ({
         recovery: { id, variables: {} },
         english: 'Existing answers and published SDDs were preserved; no draft was published. Publication checks do not establish runtime acceptance.',
@@ -37,6 +67,14 @@ const RECOVERY_CASES: readonly Readonly<{
         spanish: 'Se conservó el estado nativo. Cambios confirmados: 1; cambios pendientes en el último plan verificado: 1. Una lectura no disponible no demuestra que haya finalizado.',
     },
     {
+        recovery: { id: 'change-size-reconciliation-failed', variables: {
+            operation: 'pr-project-size', issueNumber: 42, targetNumber: 99, projectIndex: 1,
+            verifiedOperations: 7, pendingProjectSizes: 0, providerStatus: 'http-403', providerReference: 'ABCD:1234',
+        } },
+        english: 'Completed effects were retained. Verified operations: 7; PR Project sizes awaiting lifecycle linkage: 0. The failed and later operations remain unverified; an optional Check Run warning is a separate publication stage.',
+        spanish: 'Se conservaron los efectos completados. Operaciones verificadas: 7; tamaños de PR en Projects pendientes de vinculación: 0. La operación fallida y las posteriores siguen sin verificar; un aviso del Check Run opcional corresponde a otra etapa de publicación.',
+    },
+    {
         recovery: { id: 'approval-evidence-read-failed', variables: { operation: 'jobs', reason: 'http-403', permission: 'actions-read' } },
         english: 'No approval is authorized by this failed read. Existing PRs, reviews and completed external effects were preserved.',
         spanish: 'Esta lectura fallida no autoriza ninguna aprobación. Se conservaron las PRs, revisiones y efectos externos completados.',
@@ -45,6 +83,16 @@ const RECOVERY_CASES: readonly Readonly<{
         recovery: { id: 'branch-sync-resolution-invalid', variables: { validationCode: 'sdd-catalog-invalid', command: '/copilot sync-branch' } },
         english: 'No synchronization commit was pushed; remote branches were preserved.',
         spanish: 'No se publicó ningún commit de sincronización; se conservaron las ramas remotas.',
+    },
+    {
+        recovery: { id: 'sdd-catalog-unsupported-profile', variables: {} },
+        english: 'The repository catalog, answers and published SDDs remain unchanged; no specification or branch was published by this attempt.',
+        spanish: 'El catálogo, las respuestas y los SDD publicados permanecen intactos; este intento no publicó ninguna especificación ni rama.',
+    },
+    {
+        recovery: { id: 'sdd-catalog-format-invalid', variables: {} },
+        english: 'The source catalog, answers and published SDDs remain unchanged; no automatic catalog conversion was attempted.',
+        spanish: 'El catálogo de origen, las respuestas y los SDD publicados permanecen intactos; no se intentó convertir el catálogo automáticamente.',
     },
     {
         recovery: { id: 'sdd-draft-format-invalid', variables: {} },

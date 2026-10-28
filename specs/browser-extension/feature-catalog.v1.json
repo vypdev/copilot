@@ -1,0 +1,75 @@
+{
+  "$schema": "./feature-catalog-index.schema.json",
+  "schemaVersion": 1,
+  "status": "proposed-product-contract",
+  "runtimeVerified": false,
+  "releaseContract": "All registered features are required at general acceptance; delivery order is not a reduced product tier.",
+  "locales": [
+    "en",
+    "es",
+    "fr",
+    "pt"
+  ],
+  "families": [
+    {
+      "id": "NAV",
+      "title": "Navigation and context",
+      "file": "features/NAV.v1.json"
+    },
+    {
+      "id": "CODE",
+      "title": "Code, files and diffs",
+      "file": "features/CODE.v1.json"
+    },
+    {
+      "id": "REVIEW",
+      "title": "Pull requests and reviews",
+      "file": "features/REVIEW.v1.json"
+    },
+    {
+      "id": "ISSUE",
+      "title": "Issues, discussions and collaboration",
+      "file": "features/ISSUE.v1.json"
+    },
+    {
+      "id": "SEARCH",
+      "title": "Search and personal views",
+      "file": "features/SEARCH.v1.json"
+    },
+    {
+      "id": "NOTIFY",
+      "title": "Notifications and attention",
+      "file": "features/NOTIFY.v1.json"
+    },
+    {
+      "id": "CI",
+      "title": "Actions, checks and delivery evidence",
+      "file": "features/CI.v1.json"
+    },
+    {
+      "id": "RELEASE",
+      "title": "Releases, tags and repository changes",
+      "file": "features/RELEASE.v1.json"
+    },
+    {
+      "id": "WORK",
+      "title": "Personal workspaces and platform ergonomics",
+      "file": "features/WORK.v1.json"
+    },
+    {
+      "id": "COPILOT",
+      "title": "Copilot Action integration",
+      "file": "features/COPILOT.v1.json"
+    },
+    {
+      "id": "CENTER",
+      "title": "Local configuration and product experience",
+      "file": "features/CENTER.v1.json"
+    },
+    {
+      "id": "SETUP",
+      "title": "Integrated Copilot setup and management",
+      "file": "features/SETUP.v1.json"
+    }
+  ]
+}

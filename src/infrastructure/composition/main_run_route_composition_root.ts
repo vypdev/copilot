@@ -1,3 +1,5 @@
+import { createDeploymentCandidateInspection } from './deployment_candidate_replacement_composition_root';
+import { withChangeSizeDiagnostics } from './change_size_diagnostics_composition_root';
 import { createSddDiffQueryPort } from './sdd_diff_composition_root';
 import { createPullRequestStatusReadPorts } from './pull_request_status_composition_root';
 import { createGithubRuntimeDoctorPorts } from './github_runtime_doctor_composition_root';
@@ -171,6 +173,7 @@ export function createSingleActionUseCaseCompositionRoot(
       catalogResolver,
       createNativeStatusReadPort(binding),
       createClosedIssueRetirementUseCase(binding),
+      createReplyRequestReadPort(binding),
     ),
     deploymentOrchestration,
   );
@@ -195,6 +198,7 @@ function createDeploymentOrchestrationUseCase(
     state: bindDeploymentState(new DeploymentStateRepositoryFactory(issueDescriptionQueryPort), binding),
     labels: bindDeploymentLabels(createIssueLabelRepository(), binding),
     issues: bindDeploymentIssues(createIssueClosureRepository(), binding),
+    replacementInspection: createDeploymentCandidateInspection(binding),
     operationId: randomUUID,
     catalogResolver,
   });
@@ -332,14 +336,19 @@ export function createCommitUseCaseCompositionRoot(
   projectBoardCommandPort: ProjectBoardCommandPort,
   binding: BugbotScmBinding,
 ): CommitUseCase {
+  const labels = createIssueLabelRepository();
+  const size = withChangeSizeDiagnostics({
+    projectBoardCommandPort: bindProjectBoardCommands(projectBoardCommandPort, binding),
+    issueRepository: bindIssueLabels({ getLabels: labels.getRequiredLabels, setLabels: labels.setLabels }, binding),
+    pullRequestRepository: bindPullRequestBranchQuery(new PullRequestLifecycleRepository(createPullRequestLifecycleClient()), binding),
+    branchChangeSizePort: bindBranchChangeSize(new BranchCompareRepository(createBranchComparisonClient()), binding),
+    projectMembershipQueryPort: createChangeSizeProjectMembershipQueryPort(binding),
+  });
   return new CommitUseCase(
     new NotifyNewCommitOnIssueUseCase(bindIssueReopen(createIssueNotificationRepository(), binding)),
     new CheckChangesIssueSizeUseCase(
-      bindProjectBoardCommands(projectBoardCommandPort, binding),
-      bindIssueLabels(createIssueLabelRepository(), binding),
-      bindPullRequestBranchQuery(new PullRequestLifecycleRepository(createPullRequestLifecycleClient()), binding),
-      bindBranchChangeSize(new BranchCompareRepository(createBranchComparisonClient()), binding),
-      createChangeSizeProjectMembershipQueryPort(binding),
+      size.projectBoardCommandPort, size.issueRepository, size.pullRequestRepository,
+      size.branchChangeSizePort, size.projectMembershipQueryPort,
     ),
     createDetectPotentialProblemsUseCase(binding),
     createCheckProgressCompositionRoot(binding),

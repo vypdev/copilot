@@ -12,7 +12,7 @@ export function effectiveIssueWorkflowProfile(configuration: Pick<SetupConfigura
     ? []
     : configured.filter(kind => kind !== 'release' || configuration.features.release !== false)
       .filter(kind => kind !== 'hotfix' || configuration.features.hotfix !== false);
-  return createIssueWorkflowProfile(enabled);
+  return createIssueWorkflowProfile(enabled, configuration.issueWorkflows?.fieldMappings);
 }
 
 /** The workflow profile is authoritative for release/hotfix setup assets. */

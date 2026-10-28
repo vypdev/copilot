@@ -1,0 +1,1140 @@
+{
+  "id": "SETUP",
+  "title": "Integrated Copilot setup and management",
+  "features": [
+    {
+      "id": "BEX-SETUP-01",
+      "family": "SETUP",
+      "title": "Setup entry and repository confirmation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "setup",
+      "surface": "Local setup route",
+      "userOutcome": "Confirm the exact repository and show inspect, configure, repair or full setup as separate journeys.",
+      "boundaryAcceptance": "A URL, local checkout and selected GitHub account mismatch blocks application.",
+      "permissionProfile": "cli-owned-setup",
+      "dataSource": "shared setup contracts and paired CLI metadata-only views",
+      "freshnessRule": "CLI plan revision, controller and permission audit",
+      "default": "local-planning-available; pairing-and-apply-explicit",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SETUP"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SETUP01-C01",
+          "scenario": "Given the eligible local setup route and verified input, choosing setup entry and repository confirmation produces this observable result: Confirm the exact repository and show inspect, configure, repair or full setup as separate journeys."
+        },
+        {
+          "id": "bexp-SETUP01-C02",
+          "scenario": "For setup entry and repository confirmation, exercise the concrete boundary: A URL, local checkout and selected GitHub account mismatch blocks application."
+        },
+        {
+          "id": "bexp-SETUP01-C03",
+          "scenario": "Setup entry and repository confirmation uses the same canonical question/setting or transaction contract as CLI and local web setup; adapter-specific defaults cannot diverge."
+        },
+        {
+          "id": "bexp-SETUP01-C04",
+          "scenario": "A stale CLI controller or plan revision for setup entry and repository confirmation cannot approve or start a new effect."
+        },
+        {
+          "id": "bexp-SETUP01-C05",
+          "scenario": "Credentials and approval capabilities used during setup entry and repository confirmation never enter extension views, storage, exports or content-script messages."
+        },
+        {
+          "id": "bexp-SETUP01-C06",
+          "scenario": "Cancellation or connection loss during setup entry and repository confirmation preserves already verified effects and surfaces unconfirmed cleanup separately."
+        },
+        {
+          "id": "bexp-SETUP01-C07",
+          "scenario": "An unavailable or incompatible local companion for setup entry and repository confirmation offers the documented nonsecret planning/handoff path without claiming application."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SETUP-02",
+      "family": "SETUP",
+      "title": "Shared full questionnaire",
+      "delivery": "required-for-product-acceptance",
+      "mode": "setup",
+      "surface": "Packaged setup wizard",
+      "userOutcome": "Use the shared setup questionnaire, catalog and validation for every existing CLI/web choice.",
+      "boundaryAcceptance": "Extension-only defaults cannot silently create a second setup policy.",
+      "permissionProfile": "cli-owned-setup",
+      "dataSource": "shared setup contracts and paired CLI metadata-only views",
+      "freshnessRule": "CLI plan revision, controller and permission audit",
+      "default": "local-planning-available; pairing-and-apply-explicit",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SETUP"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SETUP02-C01",
+          "scenario": "Given the eligible packaged setup wizard and verified input, choosing shared full questionnaire produces this observable result: Use the shared setup questionnaire, catalog and validation for every existing CLI/web choice."
+        },
+        {
+          "id": "bexp-SETUP02-C02",
+          "scenario": "For shared full questionnaire, exercise the concrete boundary: Extension-only defaults cannot silently create a second setup policy."
+        },
+        {
+          "id": "bexp-SETUP02-C03",
+          "scenario": "Shared full questionnaire uses the same canonical question/setting or transaction contract as CLI and local web setup; adapter-specific defaults cannot diverge."
+        },
+        {
+          "id": "bexp-SETUP02-C04",
+          "scenario": "A stale CLI controller or plan revision for shared full questionnaire cannot approve or start a new effect."
+        },
+        {
+          "id": "bexp-SETUP02-C05",
+          "scenario": "Credentials and approval capabilities used during shared full questionnaire never enter extension views, storage, exports or content-script messages."
+        },
+        {
+          "id": "bexp-SETUP02-C06",
+          "scenario": "Cancellation or connection loss during shared full questionnaire preserves already verified effects and surfaces unconfirmed cleanup separately."
+        },
+        {
+          "id": "bexp-SETUP02-C07",
+          "scenario": "An unavailable or incompatible local companion for shared full questionnaire offers the documented nonsecret planning/handoff path without claiming application."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SETUP-03",
+      "family": "SETUP",
+      "title": "Effective configuration inspector",
+      "delivery": "required-for-product-acceptance",
+      "mode": "setup",
+      "surface": "Copilot configuration route",
+      "userOutcome": "Inspect understood bindings, repository/organization precedence, source times and unknown values.",
+      "boundaryAcceptance": "A Secret name or complex workflow expression is not displayed as a verified effective value.",
+      "permissionProfile": "cli-owned-setup",
+      "dataSource": "shared setup contracts and paired CLI metadata-only views",
+      "freshnessRule": "CLI plan revision, controller and permission audit",
+      "default": "local-planning-available; pairing-and-apply-explicit",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SETUP"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SETUP03-C01",
+          "scenario": "Given the eligible copilot configuration route and verified input, choosing effective configuration inspector produces this observable result: Inspect understood bindings, repository/organization precedence, source times and unknown values."
+        },
+        {
+          "id": "bexp-SETUP03-C02",
+          "scenario": "For effective configuration inspector, exercise the concrete boundary: A Secret name or complex workflow expression is not displayed as a verified effective value."
+        },
+        {
+          "id": "bexp-SETUP03-C03",
+          "scenario": "Effective configuration inspector uses the same canonical question/setting or transaction contract as CLI and local web setup; adapter-specific defaults cannot diverge."
+        },
+        {
+          "id": "bexp-SETUP03-C04",
+          "scenario": "A stale CLI controller or plan revision for effective configuration inspector cannot approve or start a new effect."
+        },
+        {
+          "id": "bexp-SETUP03-C05",
+          "scenario": "Credentials and approval capabilities used during effective configuration inspector never enter extension views, storage, exports or content-script messages."
+        },
+        {
+          "id": "bexp-SETUP03-C06",
+          "scenario": "Cancellation or connection loss during effective configuration inspector preserves already verified effects and surfaces unconfirmed cleanup separately."
+        },
+        {
+          "id": "bexp-SETUP03-C07",
+          "scenario": "An unavailable or incompatible local companion for effective configuration inspector offers the documented nonsecret planning/handoff path without claiming application."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SETUP-04",
+      "family": "SETUP",
+      "title": "Focused runtime adjustments",
+      "delivery": "required-for-product-acceptance",
+      "mode": "setup",
+      "surface": "Configuration quick adjustments",
+      "userOutcome": "Review current/new value and existing scope, then delegate the existing narrow approved adjustment transaction.",
+      "boundaryAcceptance": "Structural changes, scope movement and unknown bindings require the full reviewed setup journey.",
+      "permissionProfile": "cli-owned-setup",
+      "dataSource": "shared setup contracts and paired CLI metadata-only views",
+      "freshnessRule": "CLI plan revision, controller and permission audit",
+      "default": "local-planning-available; pairing-and-apply-explicit",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SETUP"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SETUP04-C01",
+          "scenario": "Given the eligible configuration quick adjustments and verified input, choosing focused runtime adjustments produces this observable result: Review current/new value and existing scope, then delegate the existing narrow approved adjustment transaction."
+        },
+        {
+          "id": "bexp-SETUP04-C02",
+          "scenario": "For focused runtime adjustments, exercise the concrete boundary: Structural changes, scope movement and unknown bindings require the full reviewed setup journey."
+        },
+        {
+          "id": "bexp-SETUP04-C03",
+          "scenario": "Focused runtime adjustments uses the same canonical question/setting or transaction contract as CLI and local web setup; adapter-specific defaults cannot diverge."
+        },
+        {
+          "id": "bexp-SETUP04-C04",
+          "scenario": "A stale CLI controller or plan revision for focused runtime adjustments cannot approve or start a new effect."
+        },
+        {
+          "id": "bexp-SETUP04-C05",
+          "scenario": "Credentials and approval capabilities used during focused runtime adjustments never enter extension views, storage, exports or content-script messages."
+        },
+        {
+          "id": "bexp-SETUP04-C06",
+          "scenario": "Cancellation or connection loss during focused runtime adjustments preserves already verified effects and surfaces unconfirmed cleanup separately."
+        },
+        {
+          "id": "bexp-SETUP04-C07",
+          "scenario": "An unavailable or incompatible local companion for focused runtime adjustments offers the documented nonsecret planning/handoff path without claiming application."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SETUP-05",
+      "family": "SETUP",
+      "title": "Runner and verification setup",
+      "delivery": "required-for-product-acceptance",
+      "mode": "setup",
+      "surface": "Setup runtime stage",
+      "userOutcome": "Plan supported runner profiles, required runtime versions and verification setup with ownership preserved.",
+      "boundaryAcceptance": "Generated starter files do not count as a working verification environment.",
+      "permissionProfile": "cli-owned-setup",
+      "dataSource": "shared setup contracts and paired CLI metadata-only views",
+      "freshnessRule": "CLI plan revision, controller and permission audit",
+      "default": "local-planning-available; pairing-and-apply-explicit",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SETUP"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SETUP05-C01",
+          "scenario": "Given the eligible setup runtime stage and verified input, choosing runner and verification setup produces this observable result: Plan supported runner profiles, required runtime versions and verification setup with ownership preserved."
+        },
+        {
+          "id": "bexp-SETUP05-C02",
+          "scenario": "For runner and verification setup, exercise the concrete boundary: Generated starter files do not count as a working verification environment."
+        },
+        {
+          "id": "bexp-SETUP05-C03",
+          "scenario": "Runner and verification setup uses the same canonical question/setting or transaction contract as CLI and local web setup; adapter-specific defaults cannot diverge."
+        },
+        {
+          "id": "bexp-SETUP05-C04",
+          "scenario": "A stale CLI controller or plan revision for runner and verification setup cannot approve or start a new effect."
+        },
+        {
+          "id": "bexp-SETUP05-C05",
+          "scenario": "Credentials and approval capabilities used during runner and verification setup never enter extension views, storage, exports or content-script messages."
+        },
+        {
+          "id": "bexp-SETUP05-C06",
+          "scenario": "Cancellation or connection loss during runner and verification setup preserves already verified effects and surfaces unconfirmed cleanup separately."
+        },
+        {
+          "id": "bexp-SETUP05-C07",
+          "scenario": "An unavailable or incompatible local companion for runner and verification setup offers the documented nonsecret planning/handoff path without claiming application."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SETUP-06",
+      "family": "SETUP",
+      "title": "Credential role guidance",
+      "delivery": "required-for-product-acceptance",
+      "mode": "setup",
+      "surface": "Protected credential handoff",
+      "userOutcome": "Explain operator, bot and provider credential roles and open the paired trusted local setup step.",
+      "boundaryAcceptance": "No setup/bot/provider secret enters content scripts, extension messages or extension storage.",
+      "permissionProfile": "cli-owned-setup",
+      "dataSource": "shared setup contracts and paired CLI metadata-only views",
+      "freshnessRule": "CLI plan revision, controller and permission audit",
+      "default": "local-planning-available; pairing-and-apply-explicit",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SETUP"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SETUP06-C01",
+          "scenario": "Given the eligible protected credential handoff and verified input, choosing credential role guidance produces this observable result: Explain operator, bot and provider credential roles and open the paired trusted local setup step."
+        },
+        {
+          "id": "bexp-SETUP06-C02",
+          "scenario": "For credential role guidance, exercise the concrete boundary: No setup/bot/provider secret enters content scripts, extension messages or extension storage."
+        },
+        {
+          "id": "bexp-SETUP06-C03",
+          "scenario": "Credential role guidance uses the same canonical question/setting or transaction contract as CLI and local web setup; adapter-specific defaults cannot diverge."
+        },
+        {
+          "id": "bexp-SETUP06-C04",
+          "scenario": "A stale CLI controller or plan revision for credential role guidance cannot approve or start a new effect."
+        },
+        {
+          "id": "bexp-SETUP06-C05",
+          "scenario": "Credentials and approval capabilities used during credential role guidance never enter extension views, storage, exports or content-script messages."
+        },
+        {
+          "id": "bexp-SETUP06-C06",
+          "scenario": "Cancellation or connection loss during credential role guidance preserves already verified effects and surfaces unconfirmed cleanup separately."
+        },
+        {
+          "id": "bexp-SETUP06-C07",
+          "scenario": "An unavailable or incompatible local companion for credential role guidance offers the documented nonsecret planning/handoff path without claiming application."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SETUP-07",
+      "family": "SETUP",
+      "title": "Permission audit progress",
+      "delivery": "required-for-product-acceptance",
+      "mode": "setup",
+      "surface": "Setup permission stage",
+      "userOutcome": "Show canonical metadata-only initial read and approved final write-probe progress from the shared engine.",
+      "boundaryAcceptance": "A write probe is a real temporary mutation and cleanup uncertainty remains a partial result.",
+      "permissionProfile": "cli-owned-setup",
+      "dataSource": "shared setup contracts and paired CLI metadata-only views",
+      "freshnessRule": "CLI plan revision, controller and permission audit",
+      "default": "local-planning-available; pairing-and-apply-explicit",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SETUP"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SETUP07-C01",
+          "scenario": "Given the eligible setup permission stage and verified input, choosing permission audit progress produces this observable result: Show canonical metadata-only initial read and approved final write-probe progress from the shared engine."
+        },
+        {
+          "id": "bexp-SETUP07-C02",
+          "scenario": "For permission audit progress, exercise the concrete boundary: A write probe is a real temporary mutation and cleanup uncertainty remains a partial result."
+        },
+        {
+          "id": "bexp-SETUP07-C03",
+          "scenario": "Permission audit progress uses the same canonical question/setting or transaction contract as CLI and local web setup; adapter-specific defaults cannot diverge."
+        },
+        {
+          "id": "bexp-SETUP07-C04",
+          "scenario": "A stale CLI controller or plan revision for permission audit progress cannot approve or start a new effect."
+        },
+        {
+          "id": "bexp-SETUP07-C05",
+          "scenario": "Credentials and approval capabilities used during permission audit progress never enter extension views, storage, exports or content-script messages."
+        },
+        {
+          "id": "bexp-SETUP07-C06",
+          "scenario": "Cancellation or connection loss during permission audit progress preserves already verified effects and surfaces unconfirmed cleanup separately."
+        },
+        {
+          "id": "bexp-SETUP07-C07",
+          "scenario": "An unavailable or incompatible local companion for permission audit progress offers the documented nonsecret planning/handoff path without claiming application."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SETUP-08",
+      "family": "SETUP",
+      "title": "Reviewed installation plan",
+      "delivery": "required-for-product-acceptance",
+      "mode": "setup",
+      "surface": "Setup review stage",
+      "userOutcome": "Show exact files/resources, scope, defaults, conflicts, changed facts and consequences before privileged approval.",
+      "boundaryAcceptance": "A changed plan or target invalidates prior approval and requires a new review.",
+      "permissionProfile": "cli-owned-setup",
+      "dataSource": "shared setup contracts and paired CLI metadata-only views",
+      "freshnessRule": "CLI plan revision, controller and permission audit",
+      "default": "local-planning-available; pairing-and-apply-explicit",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SETUP"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SETUP08-C01",
+          "scenario": "Given the eligible setup review stage and verified input, choosing reviewed installation plan produces this observable result: Show exact files/resources, scope, defaults, conflicts, changed facts and consequences before privileged approval."
+        },
+        {
+          "id": "bexp-SETUP08-C02",
+          "scenario": "For reviewed installation plan, exercise the concrete boundary: A changed plan or target invalidates prior approval and requires a new review."
+        },
+        {
+          "id": "bexp-SETUP08-C03",
+          "scenario": "Reviewed installation plan uses the same canonical question/setting or transaction contract as CLI and local web setup; adapter-specific defaults cannot diverge."
+        },
+        {
+          "id": "bexp-SETUP08-C04",
+          "scenario": "A stale CLI controller or plan revision for reviewed installation plan cannot approve or start a new effect."
+        },
+        {
+          "id": "bexp-SETUP08-C05",
+          "scenario": "Credentials and approval capabilities used during reviewed installation plan never enter extension views, storage, exports or content-script messages."
+        },
+        {
+          "id": "bexp-SETUP08-C06",
+          "scenario": "Cancellation or connection loss during reviewed installation plan preserves already verified effects and surfaces unconfirmed cleanup separately."
+        },
+        {
+          "id": "bexp-SETUP08-C07",
+          "scenario": "An unavailable or incompatible local companion for reviewed installation plan offers the documented nonsecret planning/handoff path without claiming application."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SETUP-09",
+      "family": "SETUP",
+      "title": "Presets and organization reuse",
+      "delivery": "required-for-product-acceptance",
+      "mode": "setup",
+      "surface": "Setup planning stage",
+      "userOutcome": "Select named reviewed presets and organization inheritance with per-repository differences displayed.",
+      "boundaryAcceptance": "A preset cannot carry credentials, grant permissions or overwrite unrelated workflow customization.",
+      "permissionProfile": "cli-owned-setup",
+      "dataSource": "shared setup contracts and paired CLI metadata-only views",
+      "freshnessRule": "CLI plan revision, controller and permission audit",
+      "default": "local-planning-available; pairing-and-apply-explicit",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SETUP"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SETUP09-C01",
+          "scenario": "Given the eligible setup planning stage and verified input, choosing presets and organization reuse produces this observable result: Select named reviewed presets and organization inheritance with per-repository differences displayed."
+        },
+        {
+          "id": "bexp-SETUP09-C02",
+          "scenario": "For presets and organization reuse, exercise the concrete boundary: A preset cannot carry credentials, grant permissions or overwrite unrelated workflow customization."
+        },
+        {
+          "id": "bexp-SETUP09-C03",
+          "scenario": "Presets and organization reuse uses the same canonical question/setting or transaction contract as CLI and local web setup; adapter-specific defaults cannot diverge."
+        },
+        {
+          "id": "bexp-SETUP09-C04",
+          "scenario": "A stale CLI controller or plan revision for presets and organization reuse cannot approve or start a new effect."
+        },
+        {
+          "id": "bexp-SETUP09-C05",
+          "scenario": "Credentials and approval capabilities used during presets and organization reuse never enter extension views, storage, exports or content-script messages."
+        },
+        {
+          "id": "bexp-SETUP09-C06",
+          "scenario": "Cancellation or connection loss during presets and organization reuse preserves already verified effects and surfaces unconfirmed cleanup separately."
+        },
+        {
+          "id": "bexp-SETUP09-C07",
+          "scenario": "An unavailable or incompatible local companion for presets and organization reuse offers the documented nonsecret planning/handoff path without claiming application."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SETUP-10",
+      "family": "SETUP",
+      "title": "Batch repository setup",
+      "delivery": "required-for-product-acceptance",
+      "mode": "setup",
+      "surface": "Batch selection and review",
+      "userOutcome": "Preview an explicit bounded repository set and exact per-item plans using the shared batch engine.",
+      "boundaryAcceptance": "One approval cannot silently include a newly discovered repository or changed per-item plan.",
+      "permissionProfile": "cli-owned-setup",
+      "dataSource": "shared setup contracts and paired CLI metadata-only views",
+      "freshnessRule": "CLI plan revision, controller and permission audit",
+      "default": "local-planning-available; pairing-and-apply-explicit",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SETUP"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SETUP10-C01",
+          "scenario": "Given the eligible batch selection and review and verified input, choosing batch repository setup produces this observable result: Preview an explicit bounded repository set and exact per-item plans using the shared batch engine."
+        },
+        {
+          "id": "bexp-SETUP10-C02",
+          "scenario": "For batch repository setup, exercise the concrete boundary: One approval cannot silently include a newly discovered repository or changed per-item plan."
+        },
+        {
+          "id": "bexp-SETUP10-C03",
+          "scenario": "Batch repository setup uses the same canonical question/setting or transaction contract as CLI and local web setup; adapter-specific defaults cannot diverge."
+        },
+        {
+          "id": "bexp-SETUP10-C04",
+          "scenario": "A stale CLI controller or plan revision for batch repository setup cannot approve or start a new effect."
+        },
+        {
+          "id": "bexp-SETUP10-C05",
+          "scenario": "Credentials and approval capabilities used during batch repository setup never enter extension views, storage, exports or content-script messages."
+        },
+        {
+          "id": "bexp-SETUP10-C06",
+          "scenario": "Cancellation or connection loss during batch repository setup preserves already verified effects and surfaces unconfirmed cleanup separately."
+        },
+        {
+          "id": "bexp-SETUP10-C07",
+          "scenario": "An unavailable or incompatible local companion for batch repository setup offers the documented nonsecret planning/handoff path without claiming application."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SETUP-11",
+      "family": "SETUP",
+      "title": "Protected application and progress",
+      "delivery": "required-for-product-acceptance",
+      "mode": "setup",
+      "surface": "Paired local setup authority",
+      "userOutcome": "Run Apply only through the CLI-owned current review/controller and stream redacted effects back to the center.",
+      "boundaryAcceptance": "The extension cannot invoke arbitrary shell commands, push managed refs or bypass final grant re-audit.",
+      "permissionProfile": "cli-owned-setup",
+      "dataSource": "shared setup contracts and paired CLI metadata-only views",
+      "freshnessRule": "CLI plan revision, controller and permission audit",
+      "default": "local-planning-available; pairing-and-apply-explicit",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SETUP"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SETUP11-C01",
+          "scenario": "Given the eligible paired local setup authority and verified input, choosing protected application and progress produces this observable result: Run Apply only through the CLI-owned current review/controller and stream redacted effects back to the center."
+        },
+        {
+          "id": "bexp-SETUP11-C02",
+          "scenario": "For protected application and progress, exercise the concrete boundary: The extension cannot invoke arbitrary shell commands, push managed refs or bypass final grant re-audit."
+        },
+        {
+          "id": "bexp-SETUP11-C03",
+          "scenario": "Protected application and progress uses the same canonical question/setting or transaction contract as CLI and local web setup; adapter-specific defaults cannot diverge."
+        },
+        {
+          "id": "bexp-SETUP11-C04",
+          "scenario": "A stale CLI controller or plan revision for protected application and progress cannot approve or start a new effect."
+        },
+        {
+          "id": "bexp-SETUP11-C05",
+          "scenario": "Credentials and approval capabilities used during protected application and progress never enter extension views, storage, exports or content-script messages."
+        },
+        {
+          "id": "bexp-SETUP11-C06",
+          "scenario": "Cancellation or connection loss during protected application and progress preserves already verified effects and surfaces unconfirmed cleanup separately."
+        },
+        {
+          "id": "bexp-SETUP11-C07",
+          "scenario": "An unavailable or incompatible local companion for protected application and progress offers the documented nonsecret planning/handoff path without claiming application."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SETUP-12",
+      "family": "SETUP",
+      "title": "Doctor and installation evidence",
+      "delivery": "required-for-product-acceptance",
+      "mode": "setup",
+      "surface": "Setup result and health route",
+      "userOutcome": "Separate file/resource application, metadata diagnosis, runner verification and live Action execution evidence.",
+      "boundaryAcceptance": "Installed Secret presence does not prove credential validity or deployment success.",
+      "permissionProfile": "cli-owned-setup",
+      "dataSource": "shared setup contracts and paired CLI metadata-only views",
+      "freshnessRule": "CLI plan revision, controller and permission audit",
+      "default": "local-planning-available; pairing-and-apply-explicit",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SETUP"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SETUP12-C01",
+          "scenario": "Given the eligible setup result and health route and verified input, choosing doctor and installation evidence produces this observable result: Separate file/resource application, metadata diagnosis, runner verification and live Action execution evidence."
+        },
+        {
+          "id": "bexp-SETUP12-C02",
+          "scenario": "For doctor and installation evidence, exercise the concrete boundary: Installed Secret presence does not prove credential validity or deployment success."
+        },
+        {
+          "id": "bexp-SETUP12-C03",
+          "scenario": "Doctor and installation evidence uses the same canonical question/setting or transaction contract as CLI and local web setup; adapter-specific defaults cannot diverge."
+        },
+        {
+          "id": "bexp-SETUP12-C04",
+          "scenario": "A stale CLI controller or plan revision for doctor and installation evidence cannot approve or start a new effect."
+        },
+        {
+          "id": "bexp-SETUP12-C05",
+          "scenario": "Credentials and approval capabilities used during doctor and installation evidence never enter extension views, storage, exports or content-script messages."
+        },
+        {
+          "id": "bexp-SETUP12-C06",
+          "scenario": "Cancellation or connection loss during doctor and installation evidence preserves already verified effects and surfaces unconfirmed cleanup separately."
+        },
+        {
+          "id": "bexp-SETUP12-C07",
+          "scenario": "An unavailable or incompatible local companion for doctor and installation evidence offers the documented nonsecret planning/handoff path without claiming application."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SETUP-13",
+      "family": "SETUP",
+      "title": "Drift, upgrade and maintenance plans",
+      "delivery": "required-for-product-acceptance",
+      "mode": "setup",
+      "surface": "Configuration maintenance route",
+      "userOutcome": "Compare the installed known manifest and current reviewed plan with safe preserve/replace decisions.",
+      "boundaryAcceptance": "Unknown consumer files and newer schemas are never deleted or downgraded automatically.",
+      "permissionProfile": "cli-owned-setup",
+      "dataSource": "shared setup contracts and paired CLI metadata-only views",
+      "freshnessRule": "CLI plan revision, controller and permission audit",
+      "default": "local-planning-available; pairing-and-apply-explicit",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SETUP"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SETUP13-C01",
+          "scenario": "Given the eligible configuration maintenance route and verified input, choosing drift, upgrade and maintenance plans produces this observable result: Compare the installed known manifest and current reviewed plan with safe preserve/replace decisions."
+        },
+        {
+          "id": "bexp-SETUP13-C02",
+          "scenario": "For drift, upgrade and maintenance plans, exercise the concrete boundary: Unknown consumer files and newer schemas are never deleted or downgraded automatically."
+        },
+        {
+          "id": "bexp-SETUP13-C03",
+          "scenario": "Drift, upgrade and maintenance plans uses the same canonical question/setting or transaction contract as CLI and local web setup; adapter-specific defaults cannot diverge."
+        },
+        {
+          "id": "bexp-SETUP13-C04",
+          "scenario": "A stale CLI controller or plan revision for drift, upgrade and maintenance plans cannot approve or start a new effect."
+        },
+        {
+          "id": "bexp-SETUP13-C05",
+          "scenario": "Credentials and approval capabilities used during drift, upgrade and maintenance plans never enter extension views, storage, exports or content-script messages."
+        },
+        {
+          "id": "bexp-SETUP13-C06",
+          "scenario": "Cancellation or connection loss during drift, upgrade and maintenance plans preserves already verified effects and surfaces unconfirmed cleanup separately."
+        },
+        {
+          "id": "bexp-SETUP13-C07",
+          "scenario": "An unavailable or incompatible local companion for drift, upgrade and maintenance plans offers the documented nonsecret planning/handoff path without claiming application."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SETUP-14",
+      "family": "SETUP",
+      "title": "Cancellation and partial recovery",
+      "delivery": "required-for-product-acceptance",
+      "mode": "setup",
+      "surface": "Active setup and recovery route",
+      "userOutcome": "Cancel before new effects, retain completed effects and expose exact cleanup/retry ownership.",
+      "boundaryAcceptance": "Cancellation cannot undo completed writes or suppress an unresolved cleanup journal.",
+      "permissionProfile": "cli-owned-setup",
+      "dataSource": "shared setup contracts and paired CLI metadata-only views",
+      "freshnessRule": "CLI plan revision, controller and permission audit",
+      "default": "local-planning-available; pairing-and-apply-explicit",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SETUP"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SETUP14-C01",
+          "scenario": "Given the eligible active setup and recovery route and verified input, choosing cancellation and partial recovery produces this observable result: Cancel before new effects, retain completed effects and expose exact cleanup/retry ownership."
+        },
+        {
+          "id": "bexp-SETUP14-C02",
+          "scenario": "For cancellation and partial recovery, exercise the concrete boundary: Cancellation cannot undo completed writes or suppress an unresolved cleanup journal."
+        },
+        {
+          "id": "bexp-SETUP14-C03",
+          "scenario": "Cancellation and partial recovery uses the same canonical question/setting or transaction contract as CLI and local web setup; adapter-specific defaults cannot diverge."
+        },
+        {
+          "id": "bexp-SETUP14-C04",
+          "scenario": "A stale CLI controller or plan revision for cancellation and partial recovery cannot approve or start a new effect."
+        },
+        {
+          "id": "bexp-SETUP14-C05",
+          "scenario": "Credentials and approval capabilities used during cancellation and partial recovery never enter extension views, storage, exports or content-script messages."
+        },
+        {
+          "id": "bexp-SETUP14-C06",
+          "scenario": "Cancellation or connection loss during cancellation and partial recovery preserves already verified effects and surfaces unconfirmed cleanup separately."
+        },
+        {
+          "id": "bexp-SETUP14-C07",
+          "scenario": "An unavailable or incompatible local companion for cancellation and partial recovery offers the documented nonsecret planning/handoff path without claiming application."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SETUP-15",
+      "family": "SETUP",
+      "title": "Offline intent preparation and handoff",
+      "delivery": "required-for-product-acceptance",
+      "mode": "setup",
+      "surface": "Local wizard without companion",
+      "userOutcome": "Prepare a nonsecret portable setup intent and import it into a later reviewed local setup session.",
+      "boundaryAcceptance": "An exported intent is never an approval or a trusted installation manifest.",
+      "permissionProfile": "cli-owned-setup",
+      "dataSource": "shared setup contracts and paired CLI metadata-only views",
+      "freshnessRule": "CLI plan revision, controller and permission audit",
+      "default": "local-planning-available; pairing-and-apply-explicit",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SETUP"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SETUP15-C01",
+          "scenario": "Given the eligible local wizard without companion and verified input, choosing offline intent preparation and handoff produces this observable result: Prepare a nonsecret portable setup intent and import it into a later reviewed local setup session."
+        },
+        {
+          "id": "bexp-SETUP15-C02",
+          "scenario": "For offline intent preparation and handoff, exercise the concrete boundary: An exported intent is never an approval or a trusted installation manifest."
+        },
+        {
+          "id": "bexp-SETUP15-C03",
+          "scenario": "Offline intent preparation and handoff uses the same canonical question/setting or transaction contract as CLI and local web setup; adapter-specific defaults cannot diverge."
+        },
+        {
+          "id": "bexp-SETUP15-C04",
+          "scenario": "A stale CLI controller or plan revision for offline intent preparation and handoff cannot approve or start a new effect."
+        },
+        {
+          "id": "bexp-SETUP15-C05",
+          "scenario": "Credentials and approval capabilities used during offline intent preparation and handoff never enter extension views, storage, exports or content-script messages."
+        },
+        {
+          "id": "bexp-SETUP15-C06",
+          "scenario": "Cancellation or connection loss during offline intent preparation and handoff preserves already verified effects and surfaces unconfirmed cleanup separately."
+        },
+        {
+          "id": "bexp-SETUP15-C07",
+          "scenario": "An unavailable or incompatible local companion for offline intent preparation and handoff offers the documented nonsecret planning/handoff path without claiming application."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SETUP-16",
+      "family": "SETUP",
+      "title": "CLI pairing and controller lifecycle",
+      "delivery": "required-for-product-acceptance",
+      "mode": "setup",
+      "surface": "Connect local companion",
+      "userOutcome": "Pair an explicitly launched local CLI session, bind repository/controller and show liveness/expiry.",
+      "boundaryAcceptance": "The extension never scans loopback ports or adopts a session from a page-supplied URL.",
+      "permissionProfile": "cli-owned-setup",
+      "dataSource": "shared setup contracts and paired CLI metadata-only views",
+      "freshnessRule": "CLI plan revision, controller and permission audit",
+      "default": "local-planning-available; pairing-and-apply-explicit",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SETUP"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SETUP16-C01",
+          "scenario": "Given the eligible connect local companion and verified input, choosing cli pairing and controller lifecycle produces this observable result: Pair an explicitly launched local CLI session, bind repository/controller and show liveness/expiry."
+        },
+        {
+          "id": "bexp-SETUP16-C02",
+          "scenario": "For cli pairing and controller lifecycle, exercise the concrete boundary: The extension never scans loopback ports or adopts a session from a page-supplied URL."
+        },
+        {
+          "id": "bexp-SETUP16-C03",
+          "scenario": "CLI pairing and controller lifecycle uses the same canonical question/setting or transaction contract as CLI and local web setup; adapter-specific defaults cannot diverge."
+        },
+        {
+          "id": "bexp-SETUP16-C04",
+          "scenario": "A stale CLI controller or plan revision for cli pairing and controller lifecycle cannot approve or start a new effect."
+        },
+        {
+          "id": "bexp-SETUP16-C05",
+          "scenario": "Credentials and approval capabilities used during cli pairing and controller lifecycle never enter extension views, storage, exports or content-script messages."
+        },
+        {
+          "id": "bexp-SETUP16-C06",
+          "scenario": "Cancellation or connection loss during cli pairing and controller lifecycle preserves already verified effects and surfaces unconfirmed cleanup separately."
+        },
+        {
+          "id": "bexp-SETUP16-C07",
+          "scenario": "An unavailable or incompatible local companion for cli pairing and controller lifecycle offers the documented nonsecret planning/handoff path without claiming application."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SETUP-17",
+      "family": "SETUP",
+      "title": "Plan revision and audit history",
+      "delivery": "required-for-product-acceptance",
+      "mode": "setup",
+      "surface": "Setup review and result",
+      "userOutcome": "Navigate redacted plan revisions and verified effects without reusing an old approval.",
+      "boundaryAcceptance": "A restored browser tab cannot regain controller authority after expiry or takeover.",
+      "permissionProfile": "cli-owned-setup",
+      "dataSource": "shared setup contracts and paired CLI metadata-only views",
+      "freshnessRule": "CLI plan revision, controller and permission audit",
+      "default": "local-planning-available; pairing-and-apply-explicit",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SETUP"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SETUP17-C01",
+          "scenario": "Given the eligible setup review and result and verified input, choosing plan revision and audit history produces this observable result: Navigate redacted plan revisions and verified effects without reusing an old approval."
+        },
+        {
+          "id": "bexp-SETUP17-C02",
+          "scenario": "For plan revision and audit history, exercise the concrete boundary: A restored browser tab cannot regain controller authority after expiry or takeover."
+        },
+        {
+          "id": "bexp-SETUP17-C03",
+          "scenario": "Plan revision and audit history uses the same canonical question/setting or transaction contract as CLI and local web setup; adapter-specific defaults cannot diverge."
+        },
+        {
+          "id": "bexp-SETUP17-C04",
+          "scenario": "A stale CLI controller or plan revision for plan revision and audit history cannot approve or start a new effect."
+        },
+        {
+          "id": "bexp-SETUP17-C05",
+          "scenario": "Credentials and approval capabilities used during plan revision and audit history never enter extension views, storage, exports or content-script messages."
+        },
+        {
+          "id": "bexp-SETUP17-C06",
+          "scenario": "Cancellation or connection loss during plan revision and audit history preserves already verified effects and surfaces unconfirmed cleanup separately."
+        },
+        {
+          "id": "bexp-SETUP17-C07",
+          "scenario": "An unavailable or incompatible local companion for plan revision and audit history offers the documented nonsecret planning/handoff path without claiming application."
+        }
+      ],
+      "nativeTarget": "none"
+    },
+    {
+      "id": "BEX-SETUP-18",
+      "family": "SETUP",
+      "title": "Shared setup parity and documentation",
+      "delivery": "required-for-product-acceptance",
+      "mode": "setup",
+      "surface": "Help and acceptance surfaces",
+      "userOutcome": "Use the same setting catalog, localized explanations, examples and acceptance fixtures across CLI, web and extension.",
+      "boundaryAcceptance": "Any transport-specific unsupported step is explicit and cannot be silently skipped to claim completion.",
+      "permissionProfile": "cli-owned-setup",
+      "dataSource": "shared setup contracts and paired CLI metadata-only views",
+      "freshnessRule": "CLI plan revision, controller and permission audit",
+      "default": "local-planning-available; pairing-and-apply-explicit",
+      "optionalBrowserPermissions": [],
+      "browsers": [
+        "chrome",
+        "firefox",
+        "safari"
+      ],
+      "privacy": "session-first-private-data; no telemetry; redacted exports; explicit persistence only for authored personal state",
+      "activation": "eligibility before mount; user gesture for reads beyond the current page, drafts, writes and optional grants",
+      "coexistence": "omit equivalent native control; explain loaded scope; preserve native content, drafts, checks and recovery",
+      "accessibility": "keyboard/focus, screen reader, 200% zoom/320 CSS px, themes, reduced motion; complete en/es/fr/pt",
+      "requirements": [
+        "CAT-SETUP"
+      ],
+      "documentation": [
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
+      ],
+      "tests": [
+        {
+          "id": "bexp-SETUP18-C01",
+          "scenario": "Given the eligible help and acceptance surfaces and verified input, choosing shared setup parity and documentation produces this observable result: Use the same setting catalog, localized explanations, examples and acceptance fixtures across CLI, web and extension."
+        },
+        {
+          "id": "bexp-SETUP18-C02",
+          "scenario": "For shared setup parity and documentation, exercise the concrete boundary: Any transport-specific unsupported step is explicit and cannot be silently skipped to claim completion."
+        },
+        {
+          "id": "bexp-SETUP18-C03",
+          "scenario": "Shared setup parity and documentation uses the same canonical question/setting or transaction contract as CLI and local web setup; adapter-specific defaults cannot diverge."
+        },
+        {
+          "id": "bexp-SETUP18-C04",
+          "scenario": "A stale CLI controller or plan revision for shared setup parity and documentation cannot approve or start a new effect."
+        },
+        {
+          "id": "bexp-SETUP18-C05",
+          "scenario": "Credentials and approval capabilities used during shared setup parity and documentation never enter extension views, storage, exports or content-script messages."
+        },
+        {
+          "id": "bexp-SETUP18-C06",
+          "scenario": "Cancellation or connection loss during shared setup parity and documentation preserves already verified effects and surfaces unconfirmed cleanup separately."
+        },
+        {
+          "id": "bexp-SETUP18-C07",
+          "scenario": "An unavailable or incompatible local companion for shared setup parity and documentation offers the documented nonsecret planning/handoff path without claiming application."
+        }
+      ],
+      "nativeTarget": "none"
+    }
+  ]
+}

@@ -260,6 +260,7 @@ describe('runLocalAction', () => {
     'create_release',
     'publish_github_action',
     'prepare_deployment_action',
+    'replace_deployment_action',
     'continue_deployment_action',
     'published_deployment_action',
     'failed_deployment_action',
