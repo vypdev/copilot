@@ -515,3 +515,14 @@ lines. Every prior and new module budget passes. The setup ledger remains
 implemented here. Extension verification passes all 267 cases with 100% on every
 metric. Native GitHub Linux acceptance and final PR checks still require their
 own successful exact-head evidence before merge.
+
+The first GitHub run passed all 790 suites and 14,655 cases, but the controller
+branch budget failed at 88% on Linux/macOS. Add six protocol cases before the
+next run: absent inherited runtime exports, missing request, malformed snapshot
+digest, delayed worker-session publication, continuation entry routing, and an
+exhausted boundary that blocks publication and cancels its pending worker.
+These supplement the 42 cases above; the new distinct-case count is 48. Keep
+the 90% branch floor. The native Linux job separately rejected setup metadata
+before preflight; fixture-only diagnostics classify tool/root ownership using
+closed enums and booleans, without printing runtime paths or accepting more roots.
+That rejection requires a resolved cause and successful native rerun before merge.

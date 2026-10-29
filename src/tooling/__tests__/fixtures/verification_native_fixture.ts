@@ -1,12 +1,48 @@
 /** Native CI acceptance: the real Actions runner executes the reviewed YAML between candidate and verifier. */
 import * as core from '@actions/core';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { isAbsolute, join, relative, sep } from 'node:path';
 import { runNativeVerificationEntry } from '../../../infrastructure/native_verification_controller';
 import { captureVerificationSetup } from '../../../infrastructure/verification_setup_snapshot';
 import { GitCommitAdapter } from '../../../infrastructure/git_commit_adapter';
 import { VERIFICATION_SETUP_DIRECTORY, VERIFICATION_SETUP_PATH } from '../../../application/policies/verification_setup_policy';
+import { nativeVerificationProfilePaths } from '../../../infrastructure/native_verification_profiles';
+import type { PreparedVerificationSetup } from '../../../application/ports/verification_setup_ports';
+
+/** Fixture-only closed facts: never print runtime paths or arbitrary setup metadata. */
+function nativeRuntimeRejectionFacts(setup: PreparedVerificationSetup): void {
+    const session = process.env.COPILOT_NATIVE_WORKER_SESSION;
+    if (!session || setup.kind !== 'ready') return;
+    try {
+        const home = nativeVerificationProfilePaths(session).at(-1);
+        if (!home) return;
+        const file = join(home, 'native-setup-result.json');
+        const stat = lstatSync(file);
+        if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.size > 16_384) return;
+        const result = JSON.parse(readFileSync(file, 'utf8'));
+        const roots = [{ role: 'profile', path: home }, { role: 'workspace', path: setup.workspace },
+            ...(setup.toolRoot ? [{ role: 'tool-cache', path: setup.toolRoot }] : [])];
+        const rootRole = (value: string): string => roots.find(root => {
+            const part = relative(root.path, value);
+            return part === '' || part !== '..' && !part.startsWith('..' + sep) && !isAbsolute(part);
+        })?.role ?? 'outside';
+        const classify = (value: unknown): Record<string, string | boolean> => {
+            if (typeof value !== 'string') return { kind: 'invalid' };
+            const tool = /gradle/iu.test(value) ? 'gradle' : /java|jdk/iu.test(value) ? 'java'
+                : /python|venv/iu.test(value) ? 'python' : /pnpm/iu.test(value) ? 'pnpm' : 'other';
+            try {
+                const actual = realpathSync(value);
+                return { tool, lexicalRoot: rootRole(value), canonicalRoot: rootRole(actual), directory: lstatSync(actual).isDirectory() };
+            } catch { return { tool, lexicalRoot: rootRole(value), canonicalRoot: 'unreadable', directory: false }; }
+        };
+        core.info('Native runtime rejection facts: ' + JSON.stringify({
+            pathCount: Array.isArray(result.path) ? result.path.length : 'invalid',
+            paths: Array.isArray(result.path) ? result.path.slice(0, 8).map(classify) : [],
+            javaHome: classify(result.environment?.JAVA_HOME),
+        }));
+    } catch { core.info('Native runtime rejection facts: unavailable'); }
+}
 
 const yaml = `name: Native setup acceptance
 runs:
@@ -95,6 +131,7 @@ async function fixture(): Promise<void> {
         writeFileSync(join(process.cwd(), '.github/actions/copilot-native-fixture/dist/index.js'), 'throw new Error("Candidate runtime must never execute during continuation or post");');
         core.info('Native composite acceptance passed: candidate manifests, trusted snapshot, Python/pytest and Node/pnpm, ' + (process.platform === 'linux' ? 'JVM/Gradle and three' : 'two') + ' fresh profiles.');
     } catch (error) {
+        nativeRuntimeRejectionFacts(setup);
         // This controlled fixture contains no credentials. File names, rather than file contents,
         // identify dependency installers that unexpectedly alter the publishable candidate.
         core.info(`Native fixture candidate status: ${git('status', '--porcelain=v1').slice(0, 8_192)}`);
