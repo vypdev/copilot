@@ -3,7 +3,7 @@
 - Status: Implemented — automated verification complete; live provider UX review pending
 - Date: 2026-09-17
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: 2026-10-27 (actionable blocked preparation and safe diagnostics, #714)
+- Last verified: 2026-10-29 (nested catalog links, #768; actionable blocked preparation and safe diagnostics, #714)
 - Owners: Copilot maintainers
 - Scope: clarify, update, validate, and publish the owning SDD before eligible branch-based work
 - Related issues/PRs: none; local design work; companion SDD `issue-start-and-branch-readiness.md`
@@ -1728,3 +1728,74 @@ and remain blocked pending a reviewed compatible adapter. The disabled-by-defaul
 opt-in, no-deployment policy, remote branch ownership and human approval gates
 are unchanged. Rollback restores the prior visibility/compatibility defect;
 retained data and historical publication are never rewritten by this fix.
+
+
+### Nested catalog specification links — #768 (2026-10-29)
+
+**Observed defect and intentional contract.** The portable validator accepts
+nested regular SDDs, but the catalog renderer previously kept only their
+basename. For example, `specs/group/example.md` incorrectly linked to
+`./example.md`. Both the primary-SDD table and companion evidence links were
+affected; equal filenames in separate groups could silently select the wrong
+contract. See [#768](https://github.com/vypdev/copilot/issues/768).
+
+The generated `specs/CATALOG.md` MUST preserve the full path after `specs/` in
+all primary and companion specification links. Root-level links MUST remain
+compatible, and other evidence MUST retain its repository-relative `../` target.
+Registered metadata, source files, titles, companion counts and ownership MUST
+remain unchanged. This corrects the existing supported layout contract; it adds
+no new layout policy or status/readiness semantics.
+
+| Registered path (example) | Catalog-relative target |
+|---|---|
+| `specs/example.md` | `./example.md` |
+| `specs/group/example.md` | `./group/example.md` |
+| `specs/other/example.md` | `./other/example.md` |
+| `docs/guide.mdx` | `../docs/guide.mdx` |
+
+Text equivalent: remove the leading `specs/` from specification targets and
+retain the remaining directory path; other evidence remains relative to the
+repository root. Equal basenames in different directories stay distinct.
+
+**Architecture, configuration and safety.** The existing pure `renderCatalog`
+and `renderPathLinks` functions own this presentation mapping. Validation,
+filesystem containment, unique ownership, publication allowlists, immutable
+revisions, state, adapters and permissions keep their existing responsibilities.
+No configuration or schema field changes. Existing invalid catalogs continue to
+fail through the same validation/recovery path; this renderer does not admit new
+files or read paths. Existing architecture and specification contracts remain
+executable gates.
+
+**UX, recovery and compatibility.** The generated Markdown table and evidence
+map keep their labels, ordering and companion counts. Their links now open the
+intended nested SDD; for example `[Example](./group/example.md)`. No new pending,
+blocked, partial, failure or complete operation state, notification, localization
+string or interaction is introduced; existing gate/CLI states apply unchanged.
+Regenerating the catalog repairs existing flattened links without moving source
+files or changing metadata. Rollback reverts rendering without a data migration;
+previously generated nested links would again require repair. Automated target
+resolution covers this static-link correction; no new manual UI flow is claimed.
+
+Allocate **seven additional distinct cases** in
+`portable_specification_catalog.test.ts`: root primary, nested primary, nested
+primary plus companion, equal basenames in separate directories, deeply nested
+primary, root primary with an equal-name nested companion, and unchanged
+non-specification evidence links. The six specification fixtures MUST pass the
+real catalog validator, assert exact table/evidence targets, and resolve every
+rendered relative target to an existing regular file in a temporary repository.
+Five nested cases fail before the fix; root and non-spec controls stay green.
+All existing unsafe-path and symlink cases remain required. Fixtures use regular
+files and execute no consumer toolchain. Existing global/module coverage limits
+remain mandatory.
+
+**Traceability and DoD.** The seven renderer cases cover the mapping and
+compatibility requirements; the existing repository-catalog and branch-sync
+suites cover generated-output and integration compatibility. Documentation in
+`docs/development/specifications.mdx` explains nested links and regeneration;
+`docs/issues/pre-branch-sdds.mdx` retains layout/support and recovery guidance.
+Catalog metadata/evidence and its generated view are updated with this change.
+Acceptance requires all seven cases, unchanged path/security tests, branch-sync
+checks, specification generation/validation, typecheck/lint, documentation and
+workflow contracts, generated bundles and package smoke, required CI coverage,
+platform checks and exact-head review without unresolved findings before merge.
+No unresolved design decision or new operator permission blocks this fix.

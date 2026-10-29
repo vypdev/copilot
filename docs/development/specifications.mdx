@@ -50,6 +50,14 @@ contained files; `specs/` and workflow publication boundaries stay fixed. Run
 `copilot doctor` before enabling the gate and verify compiler/framework tooling
 separately. See [layout support and migration](/issues/pre-branch-sdds#repository-layouts-and-support-limits).
 
+Nested SDD directories are preserved in the generated catalog. For example,
+`specs/group/example.md` links to `./group/example.md` from `specs/CATALOG.md`,
+in both the primary-SDD table and the evidence map. Companion SDDs keep their
+directories too, so equal filenames in separate groups point to separate files.
+Root-level SDD links and `../` links to other repository evidence keep their
+existing format. Regenerate the catalog after upgrading to repair older flattened
+links; the source files and registered paths do not need to move.
+
 ## Issue-driven specification gate
 
 Repositories can opt into `pre-branch-sdd: true` for feature and
