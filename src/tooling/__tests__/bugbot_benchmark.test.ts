@@ -10,6 +10,7 @@ describe('versioned Bugbot benchmark', () => {
   const root = join(__dirname, '..', '..', '..');
 
   it.each([
+    'kt-wasm-parameter-closure', 'kt-wasm-size-count-parameters', 'kt-wasm-object-parameter', 'kt-wasm-binding-evidence-unavailable',
     'kt-email-unicode-empty-label-guard', 'ts-email-caller-empty-label-guard', 'ts-email-normalization-before-guard',
     'py-coverage-config-branch', 'py-http10-reconnect', 'docs-correct-regression-total',
     'py-short-circuit-unhashable', 'py-helper-retry-validation', 'ts-exclusive-render-branches',
@@ -32,6 +33,7 @@ describe('versioned Bugbot benchmark', () => {
   });
 
   it.each([
+    'kt-wasm-missing-direct-identifier', 'kt-wasm-missing-callback-identifier',
     'ts-email-existential-label-defect', 'ts-email-ignored-validator-result', 'ts-email-normalization-after-guard',
     'py-short-circuit-unsafe-order', 'ts-composed-duplicate-ids',
     'android-absent-platform-package', 'android-unrelated-green-job',
@@ -269,3 +271,16 @@ it('rejects corpus/native source drift before executing a different function', a
     .toThrow('Authored validation source does not match the compiled function.');
   expect(calls).toBe(0);
 });
+
+
+it.each(['kt-wasm-missing-direct-identifier', 'kt-wasm-missing-callback-identifier'])(
+  'anchors the missing binding to exact changed source in %s', async id => {
+    const corpus = await loadBugbotBenchmark(join(__dirname, '..', '..', '..', 'quality/bugbot/corpus.v1.json'));
+    const item = corpus.cases.find(candidate => candidate.id === id)!;
+    const finding = item.expected[0];
+    const line = item.diff.split('\n')[finding.line! - item.startLine];
+    expect(line.startsWith('+')).toBe(true);
+    expect(line.slice(1).trim()).toBe(finding.codeSnippet);
+    expect(item.diff).toContain(`private fun ${finding.symbol}`);
+  },
+);

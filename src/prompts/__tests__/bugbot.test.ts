@@ -1,5 +1,20 @@
 import { getBugbotPrompt } from '../bugbot';
 
+it.each([false, true])('checks Kotlin/Wasm generated bindings with partitioned=%s', partitioned => {
+    const prompt = getBugbotPrompt({
+        projectContextInstruction: '', owner: 'org', repo: 'repo', headBranch: 'bugfix/764',
+        baseBranch: 'develop', issueNumber: '764', changeScopeInstruction: 'Review the interop fixture.',
+        ignoreBlock: '', previousBlock: '', coverageBlock: '', targetLocale: 'en-US',
+        ...(partitioned ? { partitionBlock: 'Review partition 1/2.', outputContractBlock: 'Return partition attestation.' } : {}),
+    });
+    expect(prompt).toContain('Kotlin/Wasm package-level = js(...)');
+    expect(prompt).toContain('declared parameters are generated JavaScript formals');
+    expect(prompt).toContain('nested callbacks can close over them');
+    expect(prompt).toContain('not all snippets are global-only');
+    expect(prompt).toContain('Preserve genuinely missing identifiers');
+    expect(prompt).toContain('Never invent compiler/test execution');
+});
+
 describe('getBugbotPrompt', () => {
     it('fills repo context, ignoreBlock and previousBlock', () => {
         const prompt = getBugbotPrompt({

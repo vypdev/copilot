@@ -113,6 +113,12 @@
         "codeSnippet": "const stored = domain.normalize('NFKC');",
         "confidence": 0.98
       }
-    ]
+    ],
+    "kt-wasm-parameter-closure": [],
+    "kt-wasm-size-count-parameters": [],
+    "kt-wasm-object-parameter": [],
+    "kt-wasm-binding-evidence-unavailable": [],
+    "kt-wasm-missing-direct-identifier": [{"id": "kt-wasm-missing-direct-identifier-missing-binding", "title": "Missing JavaScript binding fails when the bridge runs", "file": "fixtures/WasmBindings.kt", "line": 2, "severity": "medium", "category": "correctness", "symbol": "installBudget", "codeSnippet": "\"\"\"Array.from({length: count}, () => new Uint8Array(size))\"\"\""}],
+    "kt-wasm-missing-callback-identifier": [{"id": "kt-wasm-missing-callback-identifier-missing-binding", "title": "Missing JavaScript binding fails when the bridge runs", "file": "fixtures/WasmBindings.kt", "line": 3, "severity": "medium", "category": "correctness", "symbol": "installDirectory", "codeSnippet": "globalThis.onSelection = () => empty ? new Uint8Array(0) : new Uint8Array([1]);"}]
   }
 }

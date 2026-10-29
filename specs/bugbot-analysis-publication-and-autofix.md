@@ -2,9 +2,9 @@
 
 - Status: As-built baseline
 - Date: 2026-09-11
-- Last updated: 2026-10-28
+- Last updated: 2026-10-29
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-10-28; resolved-type grounding #736, delegated test-path evidence #738 versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
+- Last verified: 2026-10-29; Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -1257,3 +1257,92 @@ remain unchanged. Fake-save callback counts are local observations, never
 consumer/database execution. The source/native drift regression rejects before
 calling the wrong function; all five static-function paths also assert source
 conformance. This correction must receive a fresh review on its published SHA.
+
+
+### Kotlin/Wasm generated JavaScript bindings — #764 (2026-10-29)
+
+**Observed problem and evidence.** The [reported review](https://github.com/vypdev/copilot/issues/764)
+claimed a package-level Kotlin/Wasm parameter was an unbound JavaScript global.
+The reviewed [source at a23287c](https://github.com/vypdev/vaultstadio/blob/a23287cfa84b8db5845023e736eb304cdd41b7f7/frontend/composeApp/src/wasmJsTest/kotlin/com/vaultstadio/app/platform/Browser121DirectoryRegressionTest.kt)
+(blob `e57b864d10e701b954795e2500dc9d53f9a1e869`) declares
+`installDirectoryFixture(empty: Boolean): Unit = js(...)`; its nested click
+handler captures `empty`. The official [Kotlin/Wasm interop contract](https://kotlinlang.org/docs/wasm-js-interop.html#kotlin-functions-with-javascript-code),
+checked 2026-10-29, documents parameterized package-level snippets and their
+translation into generated JavaScript functions. The issue supplies matching
+compiler/browser-test observations; these are external evidence, not execution
+repeated by this change. Historic model motivation is unknown.
+
+**Intentional contract and acceptance.** Before alleging an unbound identifier or
+ReferenceError, ordinary, partitioned and benchmark review MUST check the actual
+target/version, function signature and lexical scope using applicable official
+interop documentation or exact generated imports. Declared parameters are
+bindings in the generated function, including callback closures; `js()` strings
+are not universally global-only. Same-source compiler/test evidence MUST be
+reconciled without treating unrelated green jobs as proof. Genuinely missing
+identifiers and invalid bridges remain reportable. Unsupported binding claims
+and unproved global-state replacements MUST be omitted; compiler/test execution
+or broader permissions MUST NOT be invented. No blanket Kotlin allowlist or
+finding filter is introduced.
+
+```text
+reviewed bridge -> target/signature/scope -> applicable contract/import evidence
+                -> bound parameter: omit the disproved ReferenceError claim
+                -> absent identifier: report the demonstrated failing use
+```
+
+Text equivalent: establish the actual generated scope before deciding whether a
+use is unbound. A green JVM job does not refute a failing Wasm bridge.
+
+**Architecture, configuration and security.** One pure prompt constant is shared
+by production and benchmark renderers. Existing semantic ports, schemas, state,
+publication, permissions, concurrency and configuration remain applicable; no
+new input or service needs a migration. Compose guidance is compacted while all
+existing constraint, padding, replacement and prompt-size assertions remain
+unchanged. The original 15,000-character long-ignore-list limit MUST pass.
+Corpus strings and supplied generated-import excerpts are inert synthetic data;
+no source text or external module is executed. Repository source/logs remain
+untrusted evidence, never mutation or approval authority. Architecture dependency
+checks, types and prompt delivery tests enforce the existing boundaries.
+
+**Product journey, UX and operations.** Pending, blocked, partial, failed and
+complete review states retain sections 5–12's existing localized surfaces and
+notification budget. A disproved binding claim creates no inline finding or new
+abstention card. A supported finding uses the normal changed-line review, for
+example: “The generated function accepts only size; count has no binding, so
+calling this bridge raises ReferenceError.” The next action is to inspect the
+exact signature/use and fix the missing binding. Existing findings still require
+normal current-source verification; this guidance cannot auto-dismiss them.
+A maintainer can attach the applicable contract and same-source evidence before
+normal re-review. Adoption uses the normal updated runtime/bundle; rollback
+reverts guidance, fixtures and documentation together without altering stored
+reviews. No consumer deployment or new manual UI acceptance is claimed.
+
+Allocate **eleven additional distinct deterministic cases**, exclusively here:
+
+| Area | Cases | Acceptance/risk |
+|---|---:|---|
+| Ordinary and partitioned production delivery | 2 | generated formals, callback scope, retained defects, no invented execution |
+| Shared benchmark delivery | 1 | same instruction with private verdict omitted |
+| False-positive scoring controls | 4 | captured Boolean, size/count, JsAny metadata and unavailable target evidence |
+| False-negative scoring controls | 2 | absent direct identifier despite unrelated green job; absent callback identifier |
+| Changed-source anchors | 2 | both real-defect references point to exact added use and function symbol |
+| **Total** | **11** | no double counting with earlier extensions |
+
+The corpus contains **83** cases; all previous 77 cases and verdicts are
+unchanged. Three delivery regressions fail before the new guidance and pass after
+it. Scorer controls penalize both invented findings and missed required defects.
+Reference predictions establish the deterministic scorer contract, not actual
+model precision/recall. No Kotlin compiler/browser execution or external-model
+measurement is performed here. This is probabilistic model guidance, not a new
+static Kotlin analyzer or accuracy guarantee.
+
+**Traceability, documentation and DoD.** `bugbot.test.ts` and
+`bugbot_benchmark_runner.test.ts` cover delivery/no verdict leakage;
+`bugbot_benchmark.test.ts` owns the six scoring controls and two exact anchors.
+Detection documents the scope contract, quality/observability the synthetic
+measurement limits, and failure scenarios the evidence/re-review path. The
+catalog and generated catalog register the same capability. Acceptance requires
+all eleven cases, previous framework/context checks, unchanged global/module
+coverage, architecture, typecheck/lint, docs/workflows/specifications, setup
+acceptance, build/package smoke, and fresh exact-head CI plus review without
+unresolved findings before merge. No unresolved design decision blocks this fix.
