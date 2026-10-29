@@ -10,6 +10,7 @@ describe('versioned Bugbot benchmark', () => {
   const root = join(__dirname, '..', '..', '..');
 
   it.each([
+    'action-self-ref-bootstrap', 'action-self-ref-version-policy', 'action-workspace-ref-after-checkout', 'action-reference-contract-unavailable',
     'kt-wasm-parameter-closure', 'kt-wasm-size-count-parameters', 'kt-wasm-object-parameter', 'kt-wasm-binding-evidence-unavailable',
     'kt-email-unicode-empty-label-guard', 'ts-email-caller-empty-label-guard', 'ts-email-normalization-before-guard',
     'py-coverage-config-branch', 'py-http10-reconnect', 'docs-correct-regression-total',
@@ -33,6 +34,7 @@ describe('versioned Bugbot benchmark', () => {
   });
 
   it.each([
+    'action-self-ref-explicit-suffix', 'action-workspace-ref-before-checkout', 'action-self-ref-unsupported-host',
     'kt-wasm-missing-direct-identifier', 'kt-wasm-missing-callback-identifier',
     'ts-email-existential-label-defect', 'ts-email-ignored-validator-result', 'ts-email-normalization-after-guard',
     'py-short-circuit-unsafe-order', 'ts-composed-duplicate-ids',
@@ -284,3 +286,41 @@ it.each(['kt-wasm-missing-direct-identifier', 'kt-wasm-missing-callback-identifi
     expect(item.diff).toContain(`private fun ${finding.symbol}`);
   },
 );
+
+
+it.each([
+  ['action-self-ref-bootstrap', '$/.github/actions/bootstrap', -1],
+  ['action-workspace-ref-after-checkout', './.github/actions/bootstrap', 0],
+  ['action-reference-contract-unavailable', '$/.github/actions/bootstrap', -1],
+  ['action-self-ref-explicit-suffix', '$/.github/actions/bootstrap@v1', -1],
+  ['action-workspace-ref-before-checkout', './.github/actions/bootstrap', 1],
+  ['action-self-ref-unsupported-host', '$/.github/actions/bootstrap', -1],
+] as const)('preserves inert workflow reference and checkout evidence for %s', async (id, reference, checkoutIndex) => {
+  const corpus = await loadBugbotBenchmark(join(__dirname, '..', '..', '..', 'quality/bugbot/corpus.v1.json'));
+  const item = corpus.cases.find(candidate => candidate.id === id)!;
+  const yaml = item.diff.split('\n').filter(line => line.startsWith('+')).map(line => line.slice(1)).join('\n');
+  const workflow = parse(yaml) as { jobs: { build: { steps: { uses: string }[] } } };
+  const steps = workflow.jobs.build.steps;
+  expect(steps.findIndex(step => step.uses === 'actions/checkout@v5')).toBe(checkoutIndex);
+  expect(steps.find(step => step.uses !== 'actions/checkout@v5')!.uses).toBe(reference);
+  if (item.expected.length) {
+    const finding = item.expected[0];
+    const line = item.diff.split('\n')[finding.line! - item.startLine];
+    expect(line.startsWith('+')).toBe(true);
+    expect(line.slice(1).trim()).toBe(finding.codeSnippet);
+  }
+  if (id === 'action-self-ref-unsupported-host') expect(item.diff).toContain('GHES) 3.19');
+  if (id === 'action-reference-contract-unavailable') expect(item.diff).toContain('Host implementation/version');
+});
+
+it('separates the authored remote-tag policy from a resolved job-log name', async () => {
+  const corpus = await loadBugbotBenchmark(join(__dirname, '..', '..', '..', 'quality/bugbot/corpus.v1.json'));
+  const item = corpus.cases.find(candidate => candidate.id === 'action-self-ref-version-policy')!;
+  expect(item.diff).toContain('reference.startswith(("./", "$/.github/actions/"))');
+  expect(item.diff).toContain('VERSION.fullmatch(reference.rsplit("@", 1)[-1])');
+  const yaml = item.diff.split('\n').filter(line => line.startsWith(' // |')).map(line => line.slice(5)).join('\n');
+  const workflow = parse(yaml) as { jobs: { build: { steps: { uses: string }[] } } };
+  expect(workflow.jobs.build.steps[0].uses).toBe('$/.github/actions/bootstrap');
+  expect(item.diff).toContain('Run fixture/repo/.github/actions/bootstrap@1111111111111111111111111111111111111111');
+  expect(item.expected).toEqual([]);
+});

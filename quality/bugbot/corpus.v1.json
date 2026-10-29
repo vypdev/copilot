@@ -903,6 +903,106 @@
           "codeSnippet": "globalThis.onSelection = () => empty ? new Uint8Array(0) : new Uint8Array([1]);"
         }
       ]
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/build.yml",
+      "startLine": 1,
+      "id": "action-self-ref-bootstrap",
+      "category": "negative",
+      "description": "A first-step repository action initializes a fresh checkout.",
+      "diff": "+jobs:\n+  build:\n+    runs-on: ubuntu-latest\n+    steps:\n+      - uses: $/.github/actions/bootstrap\n // Contract snapshot 2026-10-29: GitHub.com supports $/path in the containing workflow repository at its running commit, without checkout; an explicit @ref suffix is invalid.\n // Host: GitHub.com. Fresh empty workspace; .github/actions/bootstrap/action.yml exists at the reviewed repository commit.\n // Synthetic matching execution: first step resolved to fixture/repo/.github/actions/bootstrap@1111111111111111111111111111111111111111 and succeeded.",
+      "expected": []
+    },
+    {
+      "language": "python",
+      "file": ".github/scripts/check_actions.py",
+      "startLine": 1,
+      "id": "action-self-ref-version-policy",
+      "category": "negative",
+      "description": "A remote-tag checker changes while an existing workflow bootstraps its repository action.",
+      "diff": " import re\n VERSION = re.compile(r\"v[0-9]+(?:\\.[0-9]+){0,2}(?:-[0-9A-Za-z.-]+)?\")\n+def remote_tag_allowed(reference):\n+    if isinstance(reference, str) and reference.startswith((\"./\", \"$/.github/actions/\")):\n+        return True\n+    return isinstance(reference, str) and \"@\" in reference and VERSION.fullmatch(reference.rsplit(\"@\", 1)[-1]) is not None\n // Policy scope: require version tags for remote references; the platform independently validates local-reference grammar.\n // Contract snapshot 2026-10-29: GitHub.com supports $/path in the containing workflow repository at its running commit, without checkout; an explicit @ref suffix is invalid.\n // Existing workflow:\n // |jobs:\n // |  build:\n // |    runs-on: ubuntu-latest\n // |    steps:\n // |      - uses: $/.github/actions/bootstrap\n // All workflow references use this exact shape without an @ref suffix.\n // Synthetic same-source job log: Run fixture/repo/.github/actions/bootstrap@1111111111111111111111111111111111111111 succeeded before checkout.",
+      "expected": []
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/build.yml",
+      "startLine": 1,
+      "id": "action-workspace-ref-after-checkout",
+      "category": "negative",
+      "description": "A workflow loads an action from its populated workspace.",
+      "diff": "+jobs:\n+  build:\n+    runs-on: ubuntu-latest\n+    steps:\n+      - uses: actions/checkout@v5\n+      - uses: ./.github/actions/bootstrap\n // Contract snapshot 2026-10-29: GitHub.com supports $/path in the containing workflow repository at its running commit, without checkout; an explicit @ref suffix is invalid.\n // Host: GitHub.com. Checkout populates the workspace root; .github/actions/bootstrap/action.yml exists there.",
+      "expected": []
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/build.yml",
+      "startLine": 1,
+      "id": "action-reference-contract-unavailable",
+      "category": "negative",
+      "description": "A repository-action reference is supplied without the hosting contract.",
+      "diff": "+jobs:\n+  build:\n+    runs-on: self-hosted\n+    steps:\n+      - uses: $/.github/actions/bootstrap\n // Host implementation/version, applicable syntax documentation and matching execution evidence are unavailable. No resolution failure is supplied.",
+      "expected": []
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/build.yml",
+      "startLine": 1,
+      "id": "action-self-ref-explicit-suffix",
+      "category": "reliability",
+      "description": "A workflow selects a ref on its self-repository action.",
+      "diff": "+jobs:\n+  build:\n+    runs-on: ubuntu-latest\n+    steps:\n+      - uses: $/.github/actions/bootstrap@v1\n // Contract snapshot 2026-10-29: GitHub.com supports $/path in the containing workflow repository at its running commit, without checkout; an explicit @ref suffix is invalid.\n // Host: GitHub.com. The action exists; this is the literal changed uses value, not an internal resolved job-log name.",
+      "expected": [
+        {
+          "id": "action-self-ref-explicit-suffix-invalid-reference",
+          "title": "Action reference cannot resolve in this execution context",
+          "file": ".github/workflows/build.yml",
+          "line": 5,
+          "severity": "medium",
+          "category": "reliability",
+          "codeSnippet": "- uses: $/.github/actions/bootstrap@v1"
+        }
+      ]
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/build.yml",
+      "startLine": 1,
+      "id": "action-workspace-ref-before-checkout",
+      "category": "reliability",
+      "description": "A fresh workspace runs a repository action before its source is populated.",
+      "diff": "+jobs:\n+  build:\n+    runs-on: ubuntu-latest\n+    steps:\n+      - uses: ./.github/actions/bootstrap\n+      - uses: actions/checkout@v5\n // Contract snapshot 2026-10-29: GitHub.com supports $/path in the containing workflow repository at its running commit, without checkout; an explicit @ref suffix is invalid.\n // Host: GitHub.com. Workspace is initially empty; action files exist only in repository source. The checkout step is later.\n // Applicable contract: ./path resolves from workspace and requires its files to be checked out before use.",
+      "expected": [
+        {
+          "id": "action-workspace-ref-before-checkout-invalid-reference",
+          "title": "Action reference cannot resolve in this execution context",
+          "file": ".github/workflows/build.yml",
+          "line": 5,
+          "severity": "medium",
+          "category": "reliability",
+          "codeSnippet": "- uses: ./.github/actions/bootstrap"
+        }
+      ]
+    },
+    {
+      "language": "yaml",
+      "file": ".github/workflows/build.yml",
+      "startLine": 1,
+      "id": "action-self-ref-unsupported-host",
+      "category": "reliability",
+      "description": "A workflow uses the same-repository shorthand on an identified enterprise host.",
+      "diff": "+jobs:\n+  build:\n+    runs-on: self-hosted\n+    steps:\n+      - uses: $/.github/actions/bootstrap\n // Host: GitHub Enterprise Server (GHES) 3.19. Applicable documented contract snapshot: $/ is unsupported on this host; use an available workspace or remote repository reference.\n // This contract is host-specific; successful GitHub.com execution is not execution on this server.",
+      "expected": [
+        {
+          "id": "action-self-ref-unsupported-host-invalid-reference",
+          "title": "Action reference cannot resolve in this execution context",
+          "file": ".github/workflows/build.yml",
+          "line": 5,
+          "severity": "medium",
+          "category": "reliability",
+          "codeSnippet": "- uses: $/.github/actions/bootstrap"
+        }
+      ]
     }
   ]
 }

@@ -53,6 +53,33 @@ unsupported claim or replacement rather than inventing a lookup. This strengthen
 model guidance and does not guarantee future accuracy or automatically dismiss
 an existing finding.
 
+## Self-repository Action references
+
+Bugbot checks the applicable host and version before claiming a `uses` reference
+is invalid. On GitHub.com, [`$/path` resolves from the repository containing the
+workflow or action at its running commit](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#example-using-an-action-in-the-same-repository-as-the-workflow-at-the-running-commit-recommended).
+It needs neither a workspace checkout nor an `@ref` suffix. `./path` instead reads
+the checked-out workspace and requires those files to be present before the step.
+GitHub Enterprise Server has a different support contract; verify the actual host
+and applicable documentation rather than extrapolating GitHub.com behavior.
+
+Review reconciles the authored reference, checkout order and matching execution.
+A job log displaying an internally resolved `owner/repo/path@SHA` does not turn
+the authored `$/path` into a remote SHA pin. A valid bootstrap reference must
+remain valid while independent remote version-tag policies remain enforceable.
+A check for remote tags need not also validate local-reference grammar; alleging
+a bypass requires an actual malformed authored reference and a reachable failure.
+Malformed suffixes, missing workspace files and proved host incompatibility still
+need findings. Missing contract evidence cannot justify an invented syntax claim.
+Findings anchor the literal `uses` line, counting every displayed source line from
+its stated start. For Action reference fixes and step moves, review gives a prose
+suggestion and omits a code replacement to avoid altering YAML list structure or
+lines outside the finding.
+
+This shared review/benchmark guidance adds no blanket allowlist, lookup permission
+or automatic dismissal. Existing findings use normal current-source verification
+and re-review. See [quality evidence and limits](/bugbot/quality-observability).
+
 ## Framework lifecycle evidence
 
 Before reporting that a loader or stale DOM child remains, Bugbot must trace the

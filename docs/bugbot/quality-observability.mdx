@@ -5,7 +5,7 @@ description: Measure Bugbot accuracy, latency, outcomes, feedback, and regressio
 
 # Bugbot quality and observability
 
-Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 83 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
+Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 90 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
 
 The #655 cases cover branch coverage enabled through repository configuration,
 inherited HTTP/1.0 connection behavior, correct arithmetic, short-circuit guards,
@@ -251,3 +251,26 @@ accuracy. Supplied generated imports are inert synthetic evidence. These tests
 do not run a Kotlin compiler or browser, and no external-model measurement is
 claimed for #764. All earlier cases, thresholds and prompt-size limits remain
 unchanged.
+
+
+The seven #770 Action-reference cases cover checkout-free GitHub.com bootstrap,
+an independent remote-tag policy, checkout-first workspace use and unavailable
+host evidence, paired with an illegal suffix, checkout-too-late and explicitly
+unsupported-host controls. Tests parse YAML and inspect Python literals as inert
+data; no synthetic workflow runs on GitHub.com or GHES. Review checks exact
+prefix characters, validator responsibility and host-specific resolution, rather
+than inventing a malformed reference or treating an internal resolved SHA as an
+authored remote pin. Step fixes use prose suggestions instead of unsafe YAML
+replacements. Prior findings still require normal current-head verification.
+
+All five actual product-runtime observations are retained in
+`quality/bugbot/evidence/issue-770.json`. The first four fail default gates through
+wrong anchors or false positives; the final sample passes all default thresholds
+with zero false positives/negatives and exact locations, severities and categories.
+The seven inputs, expected verdicts and thresholds are unchanged. Unlike the
+first four runs from the development repository, the final run uses an empty Git
+workspace with no corpus or reference predictions copied into it. Expected arrays
+never enter the prompt, but repository files were available to the earlier runs.
+This setup change and small sample prevent attributing improvement solely to the
+prompt or making a statistical/general accuracy claim. External consumer source
+and successful-run receipts were inspected separately; they were not rerun.
