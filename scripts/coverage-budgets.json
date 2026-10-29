@@ -1165,6 +1165,27 @@
         }
       ],
       "successMessage": "private JVM/Gradle coverage: PASS (encoding/profile100%; native controller95/90)"
+    },
+    {
+      "name": "CPython verification libraries",
+      "missingEntryLabel": "CPython verification libraries",
+      "rules": [
+        {
+          "files": [
+            "src/infrastructure/verification_python_library_environment.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/infrastructure/git_commit_adapter.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "CPython library coverage: PASS (derivation100%; verification adapter95/90)"
     }
   ]
 }

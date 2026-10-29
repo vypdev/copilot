@@ -1,3 +1,4 @@
+import { VERIFICATION_NATIVE_SETUP_YAML as yaml } from './verification_native_setup_action';
 /** Native CI acceptance: the real Actions runner executes the reviewed YAML between candidate and verifier. */
 import * as core from '@actions/core';
 import { execFileSync } from 'node:child_process';
@@ -44,52 +45,6 @@ function nativeRuntimeRejectionFacts(setup: PreparedVerificationSetup): void {
     } catch { core.info('Native runtime rejection facts: unavailable'); }
 }
 
-const yaml = `name: Native setup acceptance
-runs:
-  using: composite
-  steps:
-    - uses: actions/setup-java@v6
-      if: runner.os == 'Linux'
-      with:
-        distribution: temurin
-        java-version: '17'
-        # Replace a hosted cache alias with a real install inside the approved cache.
-        force-download: true
-    - uses: gradle/actions/setup-gradle@v6
-      if: runner.os == 'Linux'
-      with:
-        gradle-version: '9.8.2'
-        cache-provider: basic
-        cache-disabled: true
-    - uses: actions/setup-python@v6
-      id: python
-      with:
-        update-environment: false
-        python-version: '3.12'
-    - uses: pnpm/action-setup@v5
-      with:
-        version: 10.12.4
-        dest: \${{ env.HOME }}/native-pnpm
-        standalone: false
-    - name: Install candidate test dependencies privately
-      run: |
-        "$PYTHON_EXECUTABLE" - <<'PYTHON'
-        import os, pathlib, subprocess, venv
-        home = pathlib.Path(os.environ['HOME']) / 'venv'
-        venv.create(home, with_pip=True)
-        tools = home / ('Scripts' if os.name == 'nt' else 'bin')
-        python = tools / ('python.exe' if os.name == 'nt' else 'python')
-        subprocess.check_call([str(python), '-m', 'pip', 'install', '--no-cache-dir', '--disable-pip-version-check', '-r', 'requirements-native-fixture.txt'])
-        with open(os.environ['GITHUB_PATH'], 'a') as paths:
-            print(tools, file=paths)
-        PYTHON
-      shell: bash
-      env:
-        PYTHON_EXECUTABLE: \${{ steps.python.outputs.python-path }}
-    - run: python -c "from pathlib import Path; assert Path('.copilot-native-candidate').read_text() == 'after-agent'"
-      shell: bash
-`;
-
 async function fixture(): Promise<void> {
     const git = (...args: string[]): string => execFileSync('git', args, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
     const inputGit = (input: string, ...args: string[]): string => execFileSync('git', args, { input, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
@@ -112,14 +67,34 @@ async function fixture(): Promise<void> {
     writeFileSync(join(candidateAction, 'action.yml'), candidateYaml);
     writeFileSync(marker, 'after-agent');
     writeFileSync(requirements, 'pytest==8.4.2\n');
-    writeFileSync(testFile, 'from pathlib import Path\ndef test_candidate():\n    assert Path(".copilot-native-candidate").read_text() == "after-agent"\n');
+    writeFileSync(testFile, [
+        'import os,sys',
+        'from pathlib import Path',
+        'def test_candidate():',
+        '    assert Path(".copilot-native-candidate").read_text() == "after-agent"',
+        '    if sys.platform == "linux":',
+        '        assert sys.version_info[:3] == (3,11,17)',
+        '        library = Path(os.environ["LD_LIBRARY_PATH"]).resolve()',
+        '        assert library.is_dir() and library.is_relative_to(Path(os.environ["RUNNER_TOOL_CACHE"]).resolve())',
+        '        assert Path(sys.prefix).resolve() == Path(os.environ["HOME"]).resolve() / "venv"',
+        '    assert "PAT" not in os.environ and "PYTHONHOME" not in os.environ and "PYTHONPATH" not in os.environ',
+        '',
+    ].join('\n'));
+    const parentLibrary = process.env.LD_LIBRARY_PATH;
+    const parentCredential = process.env.PAT;
+    process.env.LD_LIBRARY_PATH = '/foreign-caller-library';
+    process.env.PAT = 'fixture-parent-credential';
     try {
         if (process.platform === 'linux') {
             mkdirSync(join(process.cwd(), '.copilot'), { recursive: true });
-            writeFileSync(prerequisites, JSON.stringify({ schemaVersion: 1, runtimes: { java: '17', node: '24', pnpm: '10' } }));
+            writeFileSync(prerequisites, JSON.stringify({ schemaVersion: 1, runtimes: { java: '17', node: '24', pnpm: '10', python: '3.11' } }));
         }
         const adapter = new GitCommitAdapter(undefined, undefined, setup);
         await adapter.execute('python', ['-m', 'pytest', '-q', testFile, '-p', 'no:cacheprovider'], { untrusted: true, verifyRuntimePrerequisites: true });
+        if (process.env.LD_LIBRARY_PATH !== '/foreign-caller-library' || process.env.PAT !== 'fixture-parent-credential') {
+            throw new Error('Verifier runtime state leaked into its parent Node environment');
+        }
+        core.info('Native Python acceptance passed: real private venv, configured pytest, filtered credential/loader options and unchanged parent Node environment.');
         await adapter.execute('pnpm', ['--version'], { untrusted: true, verifyRuntimePrerequisites: true });
         if (process.platform === 'linux') {
             const before = git('status', '--porcelain=v1', '--untracked-files=all');
@@ -140,6 +115,10 @@ async function fixture(): Promise<void> {
         core.info(`Native fixture tracked changes: ${git('diff', '--no-ext-diff', '--no-textconv', '--numstat', 'HEAD', '--').slice(0, 8_192)}`);
         throw error;
     } finally {
+        if (parentLibrary === undefined) delete process.env.LD_LIBRARY_PATH;
+        else process.env.LD_LIBRARY_PATH = parentLibrary;
+        if (parentCredential === undefined) delete process.env.PAT;
+        else process.env.PAT = parentCredential;
         if (process.platform === 'linux') {
             if (originalPrerequisites) writeFileSync(prerequisites, originalPrerequisites);
             else rmSync(prerequisites, { force: true });
