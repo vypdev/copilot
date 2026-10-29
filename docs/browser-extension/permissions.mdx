@@ -97,8 +97,9 @@ or optional write controls as available because their descriptions are visible.
 
 Optional generated history is still under development. Its typed Activity,
 Diagnostics and Privacy controls now provide independent reads, reviewed
-start/stop/clear and exact-JSON export. Trusted producers and full native/human
-acceptance remain outstanding. See the [local history guide](/browser-extension/local-history).
+start/stop/clear and exact-JSON export. Consented recent destinations are now
+composed from accepted local-center navigation; operation/diagnostic producers
+and full native/human acceptance remain outstanding. See the [local history guide](/browser-extension/local-history).
 The defaults remain off: redacted diagnostics/operation facts at most200
 entries, recent extension destinations at most50, both for seven days. Stopping
 collection and explicitly clearing retained history are separate actions. Exact
@@ -110,7 +111,8 @@ The retention design distinguishes generated entries from the small generation,
 revision and clock controls that prevent old writes from returning after clear.
 Those controls, and the last consent receipt, persist until native extension-data
 removal. A reviewed history clear removes entries and retains the disclosed safety
-controls. These collection/clear screens are still being implemented.
+controls. These screens are present in development source; complete product
+acceptance remains outstanding.
 
 The consent flow also distinguishes a pause in the current background process
 from a confirmed durable stop. If policy storage fails, an observed off preference
@@ -122,7 +124,7 @@ The source's retained start/stop service also checks the exact saved intent and
 policy receipt before admitting collection. A later stop cannot be absorbed into
 an older activation. Replayed operation results describe what was observed then;
 the current collection view remains a separate fact. The mounted controls now
-expose these independent facts; trusted collector producers and complete native
+expose these independent facts; operation/diagnostic producers and complete native
 and human evidence remain outstanding. The background now
 shares the preference safeguards with a closed reviewed-control channel. It may
 initialize local control metadata while capture is off; that does not create
@@ -132,5 +134,10 @@ The pending implementation also separates a successful action from successful
 history retention. If storage cannot establish which record was written, the
 history is incomplete; matching a similar record or repeating an uncertain write
 would give misleading evidence. The bounded application writer now enforces that
-rule. The screens now consume its independent state; actual producers remain
-under development.
+rule. The screens now consume its independent state. Recent destinations come
+only from admitted current views or accepted navigation, with consent already
+known. Off/unknown visits are never backfilled, hidden navigation is not captured,
+and lost responses are never resent automatically. Profile detail is stripped
+before delivery. A read-only window may record its own consented routes without
+gaining authored mutation access. Missing delivery is disclosed separately from
+retained entries; operation and diagnostic producers remain under development.

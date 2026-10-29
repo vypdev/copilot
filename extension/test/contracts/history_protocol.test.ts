@@ -10,6 +10,8 @@ it.each([
     { ...client, method: 'center.history.read', kind: 'diagnostics' },
     { ...client, method: 'center.history.read', kind: 'recents' }, preview,
     { ...preview, kind: 'recents', action: 'stop' }, { ...editor, method: 'center.history.clear.preview', kind: 'recents' },
+    { ...editor, method: 'center.recents.capture' },
+    { ...editor, method: 'center.recents.observe', permit: `visit-${'c'.repeat(32)}`, sequence: 1, destination: { route: 'privacy' } },
     ...['center.collection.confirm', 'center.collection.cancel', 'center.history.clear.confirm', 'center.history.clear.cancel',
         'center.collection.result', 'center.history.clear.result'].map(method => ({ ...confirm, method })),
 ])('accepts the closed use case $method $kind $action through the center parser', message => {
@@ -25,4 +27,8 @@ it.each([
 it('rejects a hostile serialization that exceeds the fixed request budget', () => {
     const hostile = Object.defineProperty({ ...preview }, 'toJSON', { value: () => ({ private: 'x'.repeat(9000) }) });
     expect(isHistoryMessage(hostile)).toBe(false);
+});
+it.each([0, -1, Number.MAX_SAFE_INTEGER + 1])('rejects destination delivery sequence %s at the closed parser before dispatch', sequence => {
+    const message = { ...editor, method: 'center.recents.observe', permit: `visit-${'c'.repeat(32)}`, sequence, destination: { route: 'privacy' } };
+    expect(isHistoryMessage(message)).toBe(false); expect(parseCenterMessage(message)).toBeNull();
 });

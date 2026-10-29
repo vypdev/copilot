@@ -283,6 +283,14 @@ their own explicit H4 admission/scope contract. Diagnostic export previews exact
 the selected nonsecret JSON, at most64KiB, before a fixed native download. This
 database is never a credential fallback, sync destination or authorization proof.
 
+The composed center destination producer follows the private consent/source/epoch
+permit contract in the [collection refinement](github-browser-extension-collection-consent.md#68-admitted-local-destinations).
+It accepts only closed admitted local destinations, without renderer-supplied
+facts or timestamps. Editor and observer windows may report their own consented
+navigation; authored controls remain editor-only. Off/unknown visits and canceled
+or hidden navigation are not backfilled. Delivery uncertainty stays separate from
+retained rows, and no unknown response is automatically resent.
+
 ## 12. Observability and operational UX
 
 History reports its own availability, capture pause and retained count. Closed

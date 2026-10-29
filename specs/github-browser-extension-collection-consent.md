@@ -39,11 +39,13 @@ preserves the two version1 journals and adds a fixed policy store. An applicatio
 coordinator observes consent and fences admission/clear. Dedicated retained
 start/stop application services and a bounded ticket writer are now present.
 The background now shares its preference repository with that collection owner
-and exposes closed, native-client-bound history/review use cases. Actual trusted
-producers and native/human acceptance remain incomplete. The mounted center now
+and exposes closed, native-client-bound history/review use cases. The actual
+center now produces accepted recent destinations under private native consent
+and generation fences. Operation/diagnostic producers and native/human acceptance
+remain incomplete. The mounted center now
 has a source-validated typed client and four-locale read/start/stop/clear/export
 controls, independent of preference-read availability. Saved collection flags
-still default false; no producer is activated by merely opening these screens.
+still default false; opening a screen does not opt into collection.
 
 ### 2.3 Evidence
 
@@ -70,6 +72,13 @@ navigation guards and exact reviewed export bytes. DOM contract tests are not
 loaded-browser or human evidence. A timed-out result inspection cannot erase
 an earlier clear acknowledgement; delayed old reads cannot republish cleared
 or superseded entries.
+`recents_capture.ts`, `recents_client.ts`, `visit_delivery.ts` and
+`center_visits.ts` now compose a closed native permit, bounded source delivery
+and safe destination projection. `center_app.ts` observes only accepted visible
+navigation and the first admitted current view. Native gateway, application and
+mounted DOM cases exercise consent/source/epoch fencing, no backfill or resend,
+private-detail removal and four-locale delivery uncertainty. They do not establish
+real-browser or human acceptance.
 
 ### 2.4 Retrospective classification
 
@@ -280,7 +289,7 @@ The live owner view remains separate.
 | Durably paused, preference unchanged | Capture stopped; preference write incomplete | Review preference change |
 | Unknown/future/corrupt | No admission; existing data preserved | Recovery/compatible package |
 
-### 6.4 Bounded retained observations
+### 6.6 Bounded retained observations
 
 Trusted use cases MUST admit only a validated, frozen, closed fact under known
 active consent and a known history epoch. Admission creates an opaque in-process
@@ -317,7 +326,7 @@ them. A failed clear releases deferred admitted updates without claiming deletio
 Late reads cannot lower a known epoch/revision or erase a newer observation.
 Failed retention/readback/notification never changes primary success.
 
-### 6.5 Production ownership and closed control channel
+### 6.7 Production ownership and closed control channel
 
 The background MUST use the same `SettingsRepository`, coordinator, writer and
 native policy/journal ports for ordinary saves, collection review and clear.
@@ -330,11 +339,12 @@ creates retrospective entries.
 
 The native-center protocol accepts only one fixed history kind per read,
 retained start/stop previews, clear previews, confirmation/cancellation IDs and
-read-only inspection of a retained result.
-It MUST NOT accept recording facts, policy nonces, private guards, store names,
+read-only inspection of a retained result and the narrow destination producer
+below. It MUST NOT accept generic recording facts, policy nonces, private guards, store names,
 arbitrary commands or provider operands. The existing extension-origin,
 document/tab binding, editor/controller and credential checks apply. An observer
-may inspect; only the current editor may mutate. Controller changes invalidate
+may inspect; only the current editor may change authored preferences or collection
+controls. Both roles may report their own consented local destinations. Controller changes invalidate
 both retained plan families. A native reread rechecks its current binding and
 credential after I/O before publishing the view.
 
@@ -344,7 +354,8 @@ data separately; unknown settings never become invented off/on preferences.
 History changes notify only native centers and never reset content quarantine.
 Current compound collection results preserve their independent preference and
 policy facts. A collector MUST NOT flatten partial results into completed history;
-actual producers and localized controls remain required delivery work.
+operation/diagnostic producers remain required delivery work. Localized controls
+and the narrow destination producer are composed in development source.
 
 After a lost response, inspecting the exact retained review MUST NOT submit or
 repeat any effect. It reports pending, the same immutable historical result,
@@ -356,6 +367,58 @@ another review family or client cannot reuse its selector. Current collection
 and historical result remain separate. Retry is always an explicit reviewed
 gesture; never convert a status read into confirmation or infer a result from
 matching state/payload.
+
+### 6.8 Admitted local destinations
+
+Recent destinations MUST come only from the packaged application's accepted
+navigation or its first admitted current view after native startup. A guarded
+destination, Stay, focus refresh or intended navigation is not a visit. Profile
+detail is generalized to Profiles; only registered feature IDs may accompany
+Features. No URL, private label, authored target or caller timestamp is accepted.
+
+```text
+Known active consent + history generation → private native source permit
+ → accepted local destination snapshots that permit → bounded delivery
+ → native source/permit recheck → ordinary generation-checked journal writer
+```
+
+The permit is worker-local, purpose-separated from review/operation IDs and
+bound to the native document/tab, client, controller/credential epochs, current
+admission witness and known history generation. Keep at most8 source permits.
+It grants no browser permission, GitHub capability, preference mutation or review
+approval. Both native editor and observer windows may report their own admitted
+destinations under the same explicit collection consent. No permit may enter a
+presentation model, export, preference or journal. Invalidation MUST retire a
+permit irreversibly when consent becomes unknown/paused, its witness changes or
+history loses/changes generation; later recovery cannot revive it.
+
+The closed capture endpoint reads already known metadata without I/O. The closed
+observation endpoint accepts only a permit and local destination, never generic
+facts, private guards or storage commands. Both keep existing native-origin,
+document/tab and source-epoch checks. Acknowledging observation does not establish
+durable retention; the writer's independent state remains authoritative.
+
+The application MUST snapshot source and permit when observing the visit. Keep
+one delivery active and one latest pending visit; replacement is disclosed as
+unconfirmed delivery. Never acquire new consent for an old queued visit or retry
+an unknown submission. Fresh capture reads are independently single-flight with
+one coalesced trailing read. Controller/credential changes, clear and disposal
+retire stale queued work. Old callbacks cannot republish permits or incompleteness
+in a newer generation. Native duplicate delivery returns its original observation
+answer without another append. Each captured visit has a positive safe-integer
+sequence, local to this source permit. Equal sequence/destination replays the
+same answer; an older sequence is stale and equal sequence with changed content
+is invalid. The sequence never becomes a journal row identity or proves durable
+retention. Capture metadata includes the source high-watermark so a resumed
+client does not reuse earlier sequences. An exhausted delivery sequence rotates
+only this ephemeral permit namespace for future observations; it never resets
+journal/policy counters or retries an earlier event. Cache pruning MUST NOT touch other native clients
+and accidentally extend their idle lifetime.
+
+The Activity/Privacy recent-destination section discloses unconfirmed observations
+in the current window separately from native writer pending/dropped facts. It
+does not claim that transport acknowledgement means a retained row. Opening with
+consent off performs no history write and reports no invented retention gap.
 
 ## 7. User-facing configuration
 
@@ -467,12 +530,14 @@ upgrade or publication is implied.
 | Retained start/stop application plans | 90 | Exact phase/full-snapshot receipts, ownership/lifetime/capacity, exhausted/unreadable stores, scoped stop staging/races, independent acknowledgement/readback, replay/cleanup |
 | Bounded writer/ticket ownership | 64 | Opt-in timing, cap/coalescing, expiry, unknown append identity, known-row reconciliation, clear/late-result races, primary-result isolation |
 | Production ownership and closed gateway | 40 | Same preference owner, lazy listener-first bootstrap, independent reads, native binding/editor/credential fences, plan-family isolation, private-context/storage failure, center-only notifications |
-| Actual navigation producers | 8 | Admitted destinations, canceled navigation, lost context, private label generalization |
+| Native destination permits/producer | 20 | Known consent/epoch, irreversible retirement, native document/editor-observer/credential boundaries, duplicate/capacity/reentry/fault isolation |
+| Bounded destination client | 18 | Captured scope, no backfill, single flight/latest pending, uncertain delivery, context/epoch rollover and late replies |
+| Actual navigation composition | 12 | Initial admitted view, accepted/canceled/stay/leave, observer, profile generalization/feature IDs, off/unknown consent, separate privacy queries and uncertainty UI |
 | Typed client/response closure | 120 | Closed detached replies, source binding, wrong-family/scope, immutable independent facts |
 | Reader/review/export ownership | 35 | Read-after-clear/revision races, retained result inspection, known-fact preservation, explicit exact-byte download, retirement/single flight |
 | Mounted UI/locales/export/recovery | 40 | Independent phase facts, editor/observer, guarded navigation,4locales, accessible JSON, separate privacy inspectors |
 | Real targets and human | 9 | Three native journeys per target plus owning human gate |
-| **Total** | **509** | No substitution for semantic H3/catalog coverage |
+| **Total** | **551** | No substitution for semantic H3/catalog coverage |
 
 Count each case once. Pure branches and modified executable lines/branches100%,
 no exclusions/threshold weakening; keep root budgets. Request fixtures are not
@@ -489,8 +554,11 @@ Retained plans add `collection_reviews.test.ts`, `collection_review_races.test.t
 `collection_activation_ownership.test.ts` and `collection_stop_staging.test.ts`;
 count their distinct cases once.
 The writer's eight application/domain suites cover bounded ownership, uncertainty,
-reconciliation, clear composition, queue faults and frozen projections. Navigation
-producers and mounted/native acceptance remain separate required evidence.
+reconciliation, clear composition, queue faults and frozen projections.
+`recents_capture.test.ts`, `recents_client.test.ts`, `visit_delivery.test.ts`,
+`recents_gateway.test.ts` and `recents_center.test.ts` now exercise the actual
+destination producer and mounted navigation. Loaded-browser and human acceptance
+remain separate required evidence.
 
 ## 15. Documentation and discoverability
 
@@ -516,10 +584,22 @@ docs/specs/catalog and concrete examples together.
     uncertainty is read back without automatic resubmission.
 12. An update queued behind a real clear reservation cannot recreate cleared
     history; failed clear releases the work and leaves existing history intact.
-13. Native-client-bound controls use the actual preference queue; an observer,
-    replaced document, moved credential or arbitrary recording operand cannot mutate.
+13. Native-client-bound authored controls use the actual preference queue; an
+    observer, replaced document, moved credential or arbitrary recording operand
+    cannot change preferences or collection controls.
 14. Unavailable native history leaves ordinary saves functional; bootstrap runs
     after listeners, and history-only notifications never reset content quarantine.
+15. With active known consent and generation, an accepted visible destination is
+    projected before IPC and admitted once. An observer reports only its own
+    consented navigation; no profile detail reaches IPC or storage.
+16. Off/unknown, hidden, pending or canceled navigation is not captured later.
+    Losing consent, native context or generation irreversibly retires old permits.
+17. Burst navigation holds one active and one latest waiting delivery. Replacement
+    and lost responses disclose local uncertainty in all four locales; no automatic
+    resend occurs, and an old callback cannot affect the new context or clear epoch.
+18. Equal source-sequence/destination replay returns its existing answer without
+    appending; changed equal-sequence input is invalid and older input is stale.
+    Metadata resumes the private delivery high-water mark without resetting journals.
 
 ## 17. Requirements traceability
 
@@ -530,8 +610,9 @@ docs/specs/catalog and concrete examples together.
 | Truthful ordered phases | Application | Partial/ack/replay/queue | Activity/privacy |
 | Restriction-only save and owner lifetime | Settings/coordinator | Five application contract suites; native/UI evidence still required | Configuration/contributor |
 | Reviewed phase continuation and priority of a later stop | CollectionReviews/effects/private leases | Eight retained-plan/phase/ownership/staging suites; full native/UI evidence pending | Configuration/privacy/contributor |
-| Bounded secondary retention and unknown identity | JournalWriter/queue/IO/progress | Eight writer/domain/race suites; actual producers and native/UI evidence pending | Privacy/recovery/contributor |
-| One production owner and closed native control | CollectionHistory/HistoryControls/HistoryGateway/native composition | Protocol/application/gateway/bootstrap suites; actual UI/native-browser acceptance pending | Contributor/privacy/recovery |
+| Bounded secondary retention and unknown identity | JournalWriter/queue/IO/progress | Eight writer/domain/race suites; operation/diagnostic producers and native evidence pending | Privacy/recovery/contributor |
+| One production owner and closed native control | CollectionHistory/HistoryControls/HistoryGateway/native composition | Protocol/application/gateway/bootstrap and mounted UI suites; native/human acceptance pending | Contributor/privacy/recovery |
+| Accepted destinations and consent/source retirement | RecentsCapture/RecentsClient/VisitDelivery/centerDestination/center_app | Native source, delivery, gateway and 12 mounted navigation/localization cases; real-browser/human gates outstanding | Local history/privacy/contributor |
 | Minimal discoverable facts | Presentation | Locales/a11y/export | User navigation |
 
 ## 18. Implementation sequence

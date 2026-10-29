@@ -23,6 +23,8 @@ export const HISTORY_PT: HistoryCopy = {
         exportTitle: 'Rever JSON do histórico gerado', exportScope: 'Descarregue estes bytes exatos sem segredos. Exclui preferências, credenciais, notas escritas e destinos privados.',
         download: 'Descarregar JSON revisto', recovery: 'Abrir recuperação', guide: 'Guia do histórico e da privacidade',
         active: 'Ativo', paused: 'Em pausa', sourceCurrent: 'O contexto de origem ainda era atual nessa observação', downloadFailed: 'A descarga não foi confirmada. Reveja os dados atuais e tente novamente.', stepResult: 'Resultado do passo', reason: 'Resultado',
+        visitsUnconfirmed: 'Alguns destinos recentes desta janela estão por confirmar. Consulte o estado atual. As visitas anteriores não serão reenviadas.',
+        visitsPending: 'Observações de navegação à espera de entrega', visitsUnconfirmedCount: 'Observações de navegação por confirmar', visitsScope: 'Esta janela e geração do histórico. Uma confirmação de entrega não certifica o armazenamento.',
     },
     actions: {
         'profile-create': 'Criar perfil', 'profile-edit': 'Editar perfil', 'profile-select': 'Selecionar perfil', 'profile-deselect': 'Desselecionar perfil', 'profile-remove': 'Remover perfil',

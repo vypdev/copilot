@@ -23,6 +23,8 @@ export const HISTORY_FR: HistoryCopy = {
         exportTitle: 'Examiner le JSON de l’historique généré', exportScope: 'Téléchargez exactement ces octets sans secrets. Préférences, identifiants secrets, notes rédigées et cibles privées sont exclus.',
         download: 'Télécharger le JSON examiné', recovery: 'Ouvrir la récupération', guide: 'Guide de l’historique et de la confidentialité',
         active: 'Actif', paused: 'En pause', sourceCurrent: 'Le contexte d’origine était encore actuel lors de cette observation', downloadFailed: 'Le téléchargement n’est pas confirmé. Examinez les données actuelles et réessayez.', stepResult: 'Résultat de l’étape', reason: 'Résultat',
+        visitsUnconfirmed: 'Certaines destinations récentes de cette fenêtre ne sont pas confirmées. Consultez l’état actuel. Les anciennes visites ne seront pas renvoyées.',
+        visitsPending: 'Observations de navigation en attente de livraison', visitsUnconfirmedCount: 'Observations de navigation non confirmées', visitsScope: 'Cette fenêtre et cette génération d’historique. Un accusé de livraison ne certifie pas le stockage.',
     },
     actions: {
         'profile-create': 'Créer un profil', 'profile-edit': 'Modifier un profil', 'profile-select': 'Sélectionner un profil', 'profile-deselect': 'Désélectionner un profil', 'profile-remove': 'Supprimer un profil',

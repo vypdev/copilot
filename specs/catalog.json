@@ -3192,7 +3192,12 @@
         "extension/src/presentation/HistoryPanel.svelte",
         "extension/src/presentation/HistoryReview.svelte",
         "extension/src/presentation/HistoryRoute.svelte",
-        "extension/src/presentation/SettingsPhaseFact.svelte"
+        "extension/src/presentation/SettingsPhaseFact.svelte",
+        "extension/src/application/recents_capture.ts",
+        "extension/src/application/recents_client.ts",
+        "extension/src/application/visit_delivery.ts",
+        "extension/src/domain/center_visits.ts",
+        "extension/src/domain/center_limits.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3376,7 +3381,16 @@
         "extension/test/integration/history_review_page.test.ts",
         "extension/test/integration/history_client_lifetimes.test.ts",
         "extension/test/integration/history_review_client_bounds.test.ts",
-        "extension/test/integration/history_review_client_edges.test.ts"
+        "extension/test/integration/history_review_client_edges.test.ts",
+        "extension/test/contracts/center_visits.test.ts",
+        "extension/test/fixtures/recents_capture.ts",
+        "extension/test/fixtures/recents_client.ts",
+        "extension/test/fixtures/recents_gateway.ts",
+        "extension/test/integration/recents_capture.test.ts",
+        "extension/test/integration/recents_client.test.ts",
+        "extension/test/integration/recents_gateway.test.ts",
+        "extension/test/integration/recents_center.test.ts",
+        "extension/test/integration/visit_delivery.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

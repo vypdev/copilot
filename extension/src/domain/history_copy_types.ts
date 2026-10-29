@@ -7,7 +7,8 @@ export const HISTORY_TEXT_KEYS = ['diagnostics', 'recents', 'diagnosticIntro', '
     'empty', 'firstObserved', 'timeUnavailable', 'intent', 'acknowledgement', 'observation', 'helper', 'activeHelper', 'retiredHelper',
     'review', 'before', 'after', 'confirm', 'cancel', 'close', 'inspect', 'submitting', 'cancelling', 'uncertain', 'historical',
     'notSubmitted', 'phasePreference', 'phasePolicy', 'verified', 'unverified', 'clearScope', 'entries', 'clearControls',
-    'exportTitle', 'exportScope', 'download', 'recovery', 'guide', 'active', 'paused', 'sourceCurrent', 'downloadFailed', 'stepResult', 'reason'] as const;
+    'exportTitle', 'exportScope', 'download', 'recovery', 'guide', 'active', 'paused', 'sourceCurrent', 'downloadFailed', 'stepResult', 'reason',
+    'visitsUnconfirmed', 'visitsPending', 'visitsUnconfirmedCount', 'visitsScope'] as const;
 export interface HistoryCopy {
     readonly text: Readonly<Record<typeof HISTORY_TEXT_KEYS[number], string>>;
     readonly actions: Readonly<Record<JournalAction, string>>;

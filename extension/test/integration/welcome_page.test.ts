@@ -53,7 +53,8 @@ it('shows only safely escaped selected local profile names without treating them
     const h = await render('welcome', false, initial); await observed();
     expect(document.querySelector('[data-welcome-profiles]')?.textContent).toBe('<img src=x>'); expect(document.querySelector('img')).toBeNull();
     expect(document.body.textContent).toContain(c.profileMeaning); expect(h.native.port.set).not.toHaveBeenCalled();
-    expect(h.port.send.mock.calls.map(([m]) => m.method)).toEqual(['center.open', 'center.read']);
+    expect(h.port.send.mock.calls.map(([m]) => m.method).filter(method => method !== 'center.recents.capture')).toEqual(['center.open', 'center.read']);
+    expect(h.port.send.mock.calls.filter(([m]) => m.method === 'center.recents.capture').length).toBeLessThanOrEqual(2);
     expect(h.native.values.get(SETTINGS_KEY)).toEqual(initial);
 });
 it('requires neither a selected profile nor a connection to advance and offers the native privacy inspector as a separate route', async () => {

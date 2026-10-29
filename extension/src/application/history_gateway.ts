@@ -7,8 +7,14 @@ import type { HistoryControls } from './history_controls.ts';
 export class HistoryGateway {
     constructor(private readonly controller: CenterController, private readonly history: CollectionHistory, private readonly controls: HistoryControls) {}
     async handle(message: HistoryMessage, identity: CenterClient, binding: CenterBinding): Promise<unknown> {
-        const current = () => this.controller.authorize(message.clientId, binding, identity.controllerEpoch)?.credentialEpoch === identity.credentialEpoch;
+        const current = () => this.controller.authorize(identity.clientId, binding, identity.controllerEpoch)?.credentialEpoch === identity.credentialEpoch;
         if (message.method === 'center.history.read') return this.history.read(message.kind, current);
+        if (message.method === 'center.recents.capture' || message.method === 'center.recents.observe') {
+            if (message.credentialEpoch !== identity.credentialEpoch) return { state: 'stale' };
+            const source = { clientId: identity.clientId, controllerEpoch: identity.controllerEpoch, credentialEpoch: identity.credentialEpoch, ...binding };
+            return message.method === 'center.recents.capture' ? this.history.recents.capture(source, current)
+                : this.history.recents.observe(source, message.permit, message.sequence, message.destination, current);
+        }
         if (identity.role !== 'editor') return { state: 'denied' };
         if (message.credentialEpoch !== identity.credentialEpoch) return { state: 'stale' };
         if (message.method === 'center.collection.result') return this.controls.collection.inspect(message.operationId, message.clientId);

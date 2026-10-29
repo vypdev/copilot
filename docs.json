@@ -362,12 +362,12 @@
         {
           "title": "Local navigation shortcuts",
           "href": "/browser-extension/shortcuts",
-          "icon": "keyboard"
+          "icon": "terminal"
         },
         {
           "title": "Welcome, updates and recovery",
           "href": "/browser-extension/onboarding",
-          "icon": "book-open"
+          "icon": "book"
         },
         {
           "title": "Testing",

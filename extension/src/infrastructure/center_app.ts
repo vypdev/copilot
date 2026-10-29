@@ -4,7 +4,7 @@ import { CenterClient } from '../application/center_client.ts';
 import { CenterNavigation } from '../application/center_navigation.ts';
 import { SETTINGS_KEY } from '../application/settings_repository.ts';
 import { centerFrame } from '../domain/center_frame.ts';
-import { parseCenterLocation } from '../domain/center_routes.ts';
+import { parseCenterLocation, type CenterLocation } from '../domain/center_routes.ts';
 import { sameSettingsContent } from '../domain/settings_operation.ts';
 import type { Settings } from '../domain/settings.ts';
 import { keys, record } from '../domain/value.ts';
@@ -45,11 +45,12 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     const navigation = new CenterNavigation(window.location.hash, {
         replace: hash => { window.history.replaceState(null, '', `${canonical}${hash}`); },
         changed: () => {
-            if (observedLocation !== navigation.location) { observedLocation = navigation.location; retireObservations(); readObservations(); }
+            if (observedLocation !== navigation.location) { observedLocation = navigation.location; observeDestination(); retireObservations(); readObservations(); }
             publish(); focus(navigation.pendingLocation ? '[role=alert] button' : 'main h1');
         },
     });
     let observedLocation = navigation.location;
+    let deliveredLocation: CenterLocation | null = null;
     const history = new HistoryClient({ request: input => client.requestHistory(input), now: () => Date.now(),
         canMutate: () => historyVisible() && client.view.phase === 'ready' && client.view.role === 'editor' && !client.view.review && !navigation.hasDraft
             && (client.view.issue === null || client.view.issue === 'invalid' || client.view.issue === 'unchanged'),
@@ -57,7 +58,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     const historyHeld = () => history.view.busy || history.view.exportBusy || !!history.view.review || !!history.view.exportReview;
     const protect = () => navigation.protect(!!history.view.review || !!history.view.exportReview || client.view.review?.state === 'preview'
         || client.view.review?.state === 'unknown', client.view.phase === 'committing' || history.view.busy || history.view.exportBusy);
-    const frame = () => centerFrame(client.view, navigation.location, navigation.pendingLocation, nativeLanguage, draftEpoch, navigation.hasDraft, inventory, inspector.view, packageIdentity, history.view);
+    const frame = () => centerFrame(client.view, navigation.location, navigation.pendingLocation, nativeLanguage, draftEpoch, navigation.hasDraft, inventory, inspector.view, packageIdentity, history.view, client.visitDelivery);
     function publish(): void {
         if (stopped) return;
         const value = frame(); document.documentElement.lang = value.copy.locale; document.title = value.copy.messages.title;
@@ -122,6 +123,10 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     }
     function readPermissions(): void { if (!stopped && focused && document.visibilityState !== 'hidden' && navigation.location.route === 'privacy') inspector.read(); }
     function historyVisible(): boolean { return !stopped && focused && document.visibilityState !== 'hidden' && ['activity', 'diagnostics', 'privacy'].includes(navigation.location.route); }
+    function observeDestination(): void {
+        if (!stopped && focused && document.visibilityState !== 'hidden' && navigation.location !== deliveredLocation
+            && client.observeDestination(navigation.location)) deliveredLocation = navigation.location;
+    }
     function readHistory(): void { if (historyVisible()) { void history.reader.read('diagnostics'); if (navigation.location.route !== 'diagnostics') void history.reader.read('recents'); } }
     function readObservations(): void { readConnections(); readPermissions(); readHistory(); }
     function retireObservations(): void { client.invalidateConnections(); inspector.invalidate(); history.reader.invalidate(); }
@@ -138,7 +143,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     const invalidated: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender) => {
         if (sender.id !== api.runtime.id || sender.tab || !record(value) || !keys(value, ['version', 'method']) || value.version !== 1) return;
         if (value.method === 'center.invalidated') { history.reviews.retire(); visible(); }
-        if (value.method === 'center.history.invalidated') { history.reader.invalidate(); readHistory(); }
+        if (value.method === 'center.history.invalidated') { void client.refreshVisitCapture(); history.reader.invalidate(); readHistory(); }
     };
     const beforeUnload = (event: BeforeUnloadEvent) => { if (navigation.guarded) { event.preventDefault(); event.returnValue = ''; } };
     const stop = () => {
@@ -153,5 +158,5 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     window.addEventListener('beforeunload', beforeUnload); window.addEventListener('pagehide', stop);
     window.addEventListener('blur', blurred); window.addEventListener('focus', foreground);
     api.storage.onChanged.addListener(changed); api.runtime.onMessage.addListener(invalidated);
-    readPermissions(); void client.start().then(() => { readConnections(); readHistory(); }); return stop;
+    readPermissions(); void client.start().then(() => { readConnections(); readHistory(); void client.startVisitCapture().then(observeDestination); }); return stop;
 }

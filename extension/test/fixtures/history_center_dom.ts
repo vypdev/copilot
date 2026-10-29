@@ -7,11 +7,12 @@ import type { JournalKind } from '../../src/domain/journal_facts.ts';
 
 const owners: ReturnType<typeof historyGatewayFixture>[] = [];
 afterEach(() => { owners.splice(0).forEach(f => f.history.stop()); });
-export async function renderHistory(route = 'activity', language = 'en') {
+export async function renderHistory(route = 'activity', language = 'en', configure: (f: ReturnType<typeof historyGatewayFixture>) => Promise<void> = async () => undefined) {
     const f = historyGatewayFixture(); owners.push(f); const native = centerClientFixture();
+    await configure(f);
     native.port.send.mockImplementation(async input => ({ ...await f.call(input) as object, sourceTree: native.port.sourceTree }));
     const app = await render(route, false, undefined, true, native, language);
-    await ready(() => !!document.querySelector('[data-history-consent]'));
+    if (['activity', 'diagnostics', 'privacy'].includes(route)) await ready(() => !!document.querySelector('[data-history-consent]'));
     return { ...f, app, copy: historyCopy(language) };
 }
 export function historyButton(kind: JournalKind, label: string): HTMLButtonElement {

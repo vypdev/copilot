@@ -10,6 +10,7 @@ import { JournalWriter } from './journal_writer.ts';
 import { ObservedJournalStore } from './observed_journal_store.ts';
 import { SettingsRepository } from './settings_repository.ts';
 import type { StoragePort } from './runtime_ports.ts';
+import { RecentsCapture } from './recents_capture.ts';
 
 export interface CollectionHistoryPorts { now(): number; identifier(): string; changed(): void }
 /** One background owner, mandatory preference preflight and secondary retention; constructing performs no IO. */
@@ -18,14 +19,19 @@ export class CollectionHistory {
     readonly settings: SettingsRepository;
     readonly writer: JournalWriter;
     readonly store: JournalStore;
+    readonly recents: RecentsCapture;
     private stopped = false;
     constructor(storage: StoragePort, journals: JournalStore, policies: CollectionPolicyStore, private readonly ports: CollectionHistoryPorts) {
+        const changed = () => { recents.retire(); ports.changed(); };
         const coordinator: CollectionCoordinator = new CollectionCoordinator(policies, { settings: () => settings.read(), identifier: ports.identifier,
-            writerIdle: kind => writer.idle(kind), changed: () => { writer.wake(); ports.changed(); } });
+            writerIdle: kind => writer.idle(kind), changed: () => { writer.wake(); changed(); } });
         const settings: SettingsRepository = new SettingsRepository(storage, coordinator);
         const store = new ObservedJournalStore(journals, (kind, snapshot) => { writer.observe(kind, snapshot); });
         const writer: JournalWriter = new JournalWriter(store, { now: ports.now, admission: kind => coordinator.admission(kind),
-            mayRun: kind => coordinator.writerMayRun(kind), changed: ports.changed });
+            mayRun: kind => coordinator.writerMayRun(kind), changed });
+        const recents = new RecentsCapture({ admission: () => coordinator.admission('recents'), epoch: () => writer.state('recents').epoch,
+            identifier: () => ports.identifier(), admit: (fact, current) => writer.admit('recents', fact, current) });
+        this.recents = recents;
         this.coordinator = coordinator; this.settings = settings; this.writer = writer; this.store = store;
     }
     async refresh(): Promise<void> {
@@ -51,5 +57,5 @@ export class CollectionHistory {
             return deepFreeze({ state: 'ready', kind, retained, collection: this.coordinator.state(kind), writer });
         } catch { return eligible() ? { state: 'unavailable' } : { state: 'stale' }; }
     }
-    stop(): void { this.stopped = true; this.coordinator.dispose(); this.writer.dispose(); }
+    stop(): void { this.stopped = true; this.recents.stop(); this.coordinator.dispose(); this.writer.dispose(); }
 }

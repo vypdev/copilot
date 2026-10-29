@@ -542,8 +542,9 @@ snapshot and replay/revision checks. Native preference publication waits for it
 and rechecks the source. The scope remains owned through primary readback;
 cleanup failure cannot change an established settings result. Existing startup
 migrations are preserved. `CollectionHistory` now wires this preflight into the
-production background's same preference repository. Actual trusted collector
-producers and mounted center controls remain the next delivery work.
+production background's same preference repository. Mounted center controls and
+the admitted-destination producer are now composed; operation/diagnostic producers
+and complete native/human acceptance remain delivery work.
 
 Both kinds pause admission before a consent-change I/O wait. Off attempts a
 policy pause and independently permits the off preference to save. Every
@@ -629,7 +630,7 @@ release cannot resurrect them. Failed clear releases deferred admitted work
 without claiming deletion. Wire `JournalReviews.idle` to the actual writer's idle
 state, not coordinator eligibility, which is false while the reservation is held.
 The writer and review cores now share production ownership and a closed gateway;
-actual producers, mounted UI and independent real-browser acceptance remain.
+operation/diagnostic producers and independent real-browser acceptance remain.
 
 `CollectionHistory` constructs the actual coordinator, preference repository,
 writer and observed store without I/O. Native bootstrap follows synchronous
@@ -641,8 +642,9 @@ break unrelated preference saves. History notifications use only
 
 `HistoryControls` binds both retained review families to the same native editor
 fence and real writer-idle reservation. `HistoryGateway` is reached through the
-existing origin/document/tab authorization; observers may read while only the
-current editor and credential may mutate. Controller movement invalidates both
+existing origin/document/tab authorization; observers may read and report their
+own consented local destinations. Only the current editor and credential may
+change authored preferences or collection controls. Controller movement invalidates both
 families. Reads recheck the binding/credential after I/O and remain available
 independently from unreadable preferences. Domain history-state declarations keep
 UI contracts independent from application implementation classes.
@@ -651,7 +653,7 @@ The closed protocol supports one collection's read, start/stop or clear preview,
 confirmation/cancellation and read-only inspection of a retained public review ID. It accepts no raw
 facts, policy nonce, callback, store name or provider request. Current compound
 results preserve separate preference/policy facts; do not flatten partial success
-into a completed history record. Actual producer projections remain unfinished
+into a completed history record. Operation/diagnostic projections remain unfinished
 H3 deliverables. The localized typed client/UI is now composed in the options
 page; native-browser and human acceptance remain outstanding.
 
@@ -671,3 +673,38 @@ inspector. The options composition combines primary and history navigation
 guards, fences queued actions, and refreshes canonical preferences after a
 collection result. History-only invalidation never refreshes the unrelated
 provider/settings views. See [local activity](/browser-extension/local-history).
+
+### Accepted-destination producer
+
+`RecentsCapture` issues a private, purpose-separated permit only from already
+known active consent and a known writer epoch. Capture reads native metadata;
+it performs no store or provider I/O. The permit binds client, document, tab,
+controller and credential generation. It stays outside public preference, Svelte,
+journal and export state. Consent or writer uncertainty synchronously retires it;
+later recovery cannot revive it. Cache pruning never calls other clients'
+authorization callbacks or prolongs their native idle lifetimes.
+
+`center.recents.observe` accepts only that permit, a positive safe delivery
+sequence and a closed destination. Native binding and admission are rechecked
+before the actual writer port. Sequence replay is semantic and idempotent;
+reusing a sequence with different content is invalid and older delivery is stale.
+Capture returns the private high-water mark so reconnection cannot reuse an
+earlier submission number. Exhausting this ephemeral delivery namespace rotates
+only the permit for future observations; it never resets a journal or retries an
+old visit.
+
+`RecentsClient` snapshots that private context at observation. `VisitDelivery`
+keeps one active submission and one latest queued destination. Replacements or
+unknown responses produce local, count-only uncertainty; there is no resend or
+backfill. A fresh metadata read prepares future observations only. Old native
+contexts and clear generations cannot publish into the current queue or revive
+cleared data. Subscriber and provider failures do not change navigation.
+
+The actual options composition observes the first admitted current view and
+accepted visible navigation, never a pending guarded destination, Stay or focus
+refresh. `centerDestination` strips private profile details before IPC and retains
+only registered feature detail. Native editor and observer windows can report
+their own consented visits. Four-locale Activity/Privacy views distinguish local
+delivery uncertainty from retained history and writer progress. Gateway and DOM
+integration tests exercise this composition; loaded-browser and human evidence
+remain separate gates.

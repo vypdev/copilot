@@ -66,7 +66,8 @@ it('About presents only escaped observed package facts and a separate source ide
     expect(document.querySelector('details')?.textContent).toContain('<img src=x>'); expect(document.querySelector('img')).toBeNull();
     expect(document.querySelector('[data-page-source]')?.textContent).toBe(h.port.sourceTree);
     expect(document.body.textContent).not.toContain('do-not-display'); expect(document.body.textContent).toContain(copy.identityBoundary);
-    expect(h.browser.api.permissions.contains).not.toHaveBeenCalled(); expect(h.port.send.mock.calls.map(([m]) => m.method)).toEqual(['center.open', 'center.read']);
+    expect(h.browser.api.permissions.contains).not.toHaveBeenCalled(); expect(h.port.send.mock.calls.map(([m]) => m.method).filter(method => method !== 'center.recents.capture')).toEqual(['center.open', 'center.read']);
+    expect(h.port.send.mock.calls.filter(([m]) => m.method === 'center.recents.capture').length).toBeLessThanOrEqual(2);
 });
 it.each(['missing', 'throws', 'invalid'] as const)('About handles %s package metadata without guessing version or exposing the native error', async kind => {
     await render('about', false, undefined, true, centerClientFixture(), 'en', browser => {
@@ -84,7 +85,8 @@ it('an unbundled page says source unknown independently of native package metada
 });
 it('readonly observers can use support without taking control, changing sessions or granting access', async () => {
     const h = await render('help', true, undefined, true, centerClientFixture(), 'en'); await observed();
-    expect(seen()).toBe(copy.statuses.ready); expect(h.port.send.mock.calls.map(([m]) => m.method)).toEqual(['center.open', 'center.read']);
+    expect(seen()).toBe(copy.statuses.ready); expect(h.port.send.mock.calls.map(([m]) => m.method).filter(method => method !== 'center.recents.capture')).toEqual(['center.open', 'center.read']);
+    expect(h.port.send.mock.calls.filter(([m]) => m.method === 'center.recents.capture').length).toBeLessThanOrEqual(2);
     expect(h.native.port.set).not.toHaveBeenCalled(); expect(h.browser.api.permissions.request).not.toHaveBeenCalled();
     expect(document.querySelector('main a[href="#/connections"]')?.textContent).toBe(copy.connections);
 });
@@ -122,5 +124,7 @@ it.each(['en', 'es', 'fr', 'pt'] as const)('support has complete %s content, mea
     const release = document.querySelector('main a[href="https://github.com/vypdev/copilot/releases"]'); expect(release?.textContent).toBe(c.history); expect(release?.getAttribute('rel')).toBe('noreferrer');
     expect(document.body.textContent).toContain(c.historyBoundary); expect(document.querySelectorAll('#support-updates + ol li')).toHaveLength(3);
     await navigate('recovery'); await observed(); expect(document.body.textContent).toContain(c.recoverySteps[2]);
-    expect(document.querySelector('script,iframe,img,input')).toBeNull(); expect(h.port.send.mock.calls.every(([message]) => ['center.open', 'center.read'].includes(message.method))).toBe(true);
+    expect(document.querySelector('script,iframe,img,input')).toBeNull(); expect(h.port.send.mock.calls.every(([message]) => ['center.open', 'center.read', 'center.recents.capture'].includes(message.method))).toBe(true);
+    // Three observed routes: initial metadata plus at most one coalesced/startup trailing read.
+    expect(h.port.send.mock.calls.filter(([m]) => m.method === 'center.recents.capture').length).toBeLessThanOrEqual(4);
 });

@@ -23,6 +23,8 @@ export const HISTORY_EN: HistoryCopy = {
         exportTitle: 'Review generated-history JSON', exportScope: 'Download these exact nonsecret bytes. Preferences, credentials, authored notes and private targets are excluded.',
         download: 'Download reviewed JSON', recovery: 'Open recovery', guide: 'History and privacy guide',
         active: 'Active', paused: 'Paused', sourceCurrent: 'Originating context was current at that observation', downloadFailed: 'Download was not established. Review the current data and try again.', stepResult: 'Step result', reason: 'Outcome',
+        visitsUnconfirmed: 'Some recent destinations in this window are unconfirmed. Read current state. Earlier visits will not be replayed.',
+        visitsPending: 'Navigation observations awaiting delivery', visitsUnconfirmedCount: 'Unconfirmed navigation observations', visitsScope: 'This window and history generation. A delivery acknowledgement does not certify storage.',
     },
     actions: {
         'profile-create': 'Create profile', 'profile-edit': 'Edit profile', 'profile-select': 'Select profile', 'profile-deselect': 'Deselect profile', 'profile-remove': 'Remove profile',

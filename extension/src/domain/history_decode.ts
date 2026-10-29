@@ -1,4 +1,4 @@
-import { MAX_CENTER_RESPONSE_BYTES } from './center_protocol.ts';
+import { MAX_CENTER_RESPONSE_BYTES } from './center_limits.ts';
 import { deepFreeze, jsonBytesWithin, keys, record } from './value.ts';
 
 export function exactHistoryFields(value: unknown, fields: readonly string[]): value is Record<string, unknown> {

@@ -18,7 +18,7 @@ export type CenterMessage = Version & { readonly method: 'center.open' }
     | Confirmation & { readonly method: 'center.cancel' };
 export type ConnectionMessage = Client & { readonly method: 'center.connections.read' }
     | Editor & { readonly method: 'center.connections.change'; readonly credentialEpoch: number; readonly expectedRevision: number; readonly intent: ConnectionIntent };
-export const MAX_CENTER_RESPONSE_BYTES = 132 * 1024;
+export { MAX_CENTER_RESPONSE_BYTES } from './center_limits.ts';
 
 /** Center authority is a closed protocol; content pages never receive these methods. */
 export function parseCenterMessage(value: unknown): CenterMessage | ConnectionMessage | HistoryMessage | null {

@@ -40,9 +40,9 @@
     {:else if Privacy}<Privacy context={{ copy, inspection: frame.inspection, connection: privacyConnection(frame.client, frame.inspection.grants['github-api']),
         canInspectConnection: !busy && !frame.client.review && (frame.client.role === 'editor' || frame.client.role === 'observer') }} actions={surface.actions}/>
     {:else}<p role="status">{copy.messages.loading}</p>{/if}
-    <HistoryRoute context={{ copy, view: frame.history, route: 'privacy', editable: historyEditable }} actions={surface.actions.history} load={surface.loadHistory}/>
+    <HistoryRoute context={{ copy, view: frame.history, visits: frame.visits, route: 'privacy', editable: historyEditable }} actions={surface.actions.history} load={surface.loadHistory}/>
 {:else if route === 'activity' || route === 'diagnostics'}
-    <HistoryRoute context={{ copy, view: frame.history, route, editable: historyEditable }} actions={surface.actions.history} load={surface.loadHistory}/>
+    <HistoryRoute context={{ copy, view: frame.history, visits: frame.visits, route, editable: historyEditable }} actions={surface.actions.history} load={surface.loadHistory}/>
 {:else if isSupportRoute(route)}
     {#if loadFailed}<p role="alert">{copy.messages.unavailable}</p><a href="https://docs.page/vypdev/copilot/browser-extension/onboarding">{copy.messages.documentation}</a>
     {:else if Support}<Support context={{ copy, route, status: supportStatus(frame.client), packageIdentity: frame.packageIdentity }} actions={{ reload: surface.actions.reload }}/>

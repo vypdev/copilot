@@ -16,6 +16,7 @@
     <p>{copy.text[kind === 'diagnostics' ? 'diagnosticIntro' : 'recentIntro']}</p>
     <p><span>{copy.text.scope}</span>: <span>{copy.text.scopeValue}</span></p>
     <button type="button" disabled={slot.phase === 'reading'} onclick={() => actions.read(kind)}>{copy.text.read}</button>
+    {#if kind === 'recents' && context.visits.incomplete}<p class="notice" data-visit-uncertain>{copy.text.visitsUnconfirmed}</p>{/if}
     {#if !data}<p role="status" aria-live="polite">{copy.text[slot.phase === 'ready' ? 'unavailable' : slot.phase]}</p>{/if}
     {#if data}
         <dl data-history-consent><dt>{copy.text.preference}</dt><dd>{copy.text[data.collection.preference]}</dd>
@@ -37,5 +38,10 @@
             <dt>{copy.text.epoch}</dt><dd>{data.writer.epoch ?? copy.text.unknown}</dd>
             <dt>{copy.text.revision}</dt><dd>{data.writer.observedRevision ?? copy.text.unknown}</dd>
             <dt>{copy.text.dropped}</dt><dd>{data.writer.dropped}</dd></dl></details>
+    {/if}
+    {#if kind === 'recents' && (context.visits.incomplete || context.visits.pending > 0)}
+        <details data-visit-delivery><summary>{copy.text.details}</summary><p>{copy.text.visitsScope}</p>
+            <dl><dt>{copy.text.visitsPending}</dt><dd>{context.visits.pending}</dd>
+                <dt>{copy.text.visitsUnconfirmedCount}</dt><dd>{context.visits.dropped}</dd></dl></details>
     {/if}
 </section>

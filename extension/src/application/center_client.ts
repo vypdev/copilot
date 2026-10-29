@@ -7,6 +7,7 @@ import { deepFreeze, record } from '../domain/value.ts';
 import { HISTORY_EFFECTS, type HistoryMessage } from '../domain/history_protocol.ts';
 import type { HistoryRequest } from '../domain/history_request.ts';
 import { uncertainSettingsOutcome as uncertain, publicSettingsReview as publicReview } from '../domain/settings_review_projection.ts';
+import { RecentsClient } from './recents_client.ts';
 
 export interface CenterClientPort { readonly sourceTree: string; send(message: CenterMessage | ConnectionMessage | HistoryMessage): Promise<unknown> }
 
@@ -22,7 +23,15 @@ export class CenterClient {
     private queuedRead = false;
     private readonly listeners = new Set<(view: CenterClientView) => void>();
     private value: CenterClientView = deepFreeze({ phase: 'loading', data: null, review: null, issue: null });
-    constructor(private readonly port: CenterClientPort) {}
+    private readonly recents: RecentsClient;
+    private visitTracking = false;
+    constructor(private readonly port: CenterClientPort) {
+        this.recents = new RecentsClient({ identity: () => this.owner, request: message => this.request(message, true), changed: () => this.update({}) });
+    }
+    get visitDelivery() { return this.recents.view; }
+    refreshVisitCapture(): Promise<void> { return this.visitTracking ? this.recents.refresh() : Promise.resolve(); }
+    startVisitCapture(): Promise<void> { this.visitTracking = true; return this.recents.refresh(); }
+    observeDestination(location: unknown): boolean { return this.recents.observe(location); }
     get view(): CenterClientView { return this.value; }
     invalidateConnections(): void { if (!this.stopped) { this.connectionGeneration++; this.update({ connections: null }); } }
     subscribe(listener: (view: CenterClientView) => void): () => void {
@@ -40,7 +49,7 @@ export class CenterClient {
             const payload = centerPayload(response, this.port.sourceTree);
             if (!payload && !this.stopped) {
                 const mismatch = record(response) && response.sourceTree !== this.port.sourceTree;
-                if (mismatch) { this.owner = null; this.pending = null; this.update({ role: null, connections: null }); }
+                if (mismatch) { this.owner = null; this.recents.contextChanged(); this.pending = null; this.update({ role: null, connections: null }); }
                 if (!secondary || mismatch) this.update({ issue: mismatch ? 'incompatible' : 'unavailable',
                     review: mismatch && this.value.review ? { ...this.value.review, state: 'stale' } : this.value.review });
             }
@@ -63,7 +72,7 @@ export class CenterClient {
     async start(): Promise<void> {
         if (this.stopped || this.busy) return;
         this.busy = true; const generation = ++this.generation;
-        this.pending = null; this.attempted = null; this.owner = null;
+        this.pending = null; this.attempted = null; this.owner = null; this.recents.contextChanged();
         this.update({ phase: 'loading', issue: null, review: null, role: null, connections: null });
         if (!this.current(generation)) return;
         const owner = decodeCenterIdentity(await this.request({ version: 1, method: 'center.open' }));
@@ -91,12 +100,13 @@ export class CenterClient {
         if (!document || document.identity.clientId !== owner.clientId) {
             if (body?.state === 'stale') {
                 const review = this.pending ? publicReview(this.pending, 'stale') : this.value.review;
-                this.owner = null; this.pending = null; this.update({ issue: 'stale', review, role: null, connections: null });
+                this.owner = null; this.recents.contextChanged(); this.pending = null; this.update({ issue: 'stale', review, role: null, connections: null });
             }
             else if (!this.value.issue) this.update({ issue: 'unavailable' });
             return;
         }
         this.owner = document.identity;
+        if (this.visitTracking) void this.recents.refresh();
         const { identity: identity, ...data } = document;
         let review = this.value.review;
         if (this.pending && (!document.settings || !sameSettingsContent(document.settings, this.pending.before)
@@ -121,7 +131,7 @@ export class CenterClient {
         if (!this.current(generation)) return;
         const next = decodeCenterIdentity(await this.request({ version: 1, method: 'center.claim', clientId: owner.clientId, controllerEpoch: owner.controllerEpoch }));
         if (this.current(generation)) {
-            if (next && next.clientId === owner.clientId) { this.owner = next; await this.load(generation); }
+            if (next && next.clientId === owner.clientId) { this.owner = next; this.recents.contextChanged(); await this.load(generation); }
             else this.update({ issue: 'stale' });
         } else if (next && next.clientId === owner.clientId) {
             await this.request({ version: 1, method: 'center.close', clientId: next.clientId, controllerEpoch: next.controllerEpoch });
@@ -198,7 +208,7 @@ export class CenterClient {
     }
     stop(): void {
         if (this.stopped) return;
-        this.stopped = true; this.generation++; this.pending = null; this.attempted = null; this.listeners.clear();
+        this.stopped = true; this.recents.stop(); this.generation++; this.pending = null; this.attempted = null; this.listeners.clear();
         const owner = this.owner; this.owner = null; this.update({ phase: 'stopped', review: null, connections: null });
         if (owner) void this.request({ version: 1, method: 'center.close', clientId: owner.clientId, controllerEpoch: owner.controllerEpoch });
     }

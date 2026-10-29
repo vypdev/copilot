@@ -13,6 +13,12 @@ it('does not expose or request native authority before startup or after its own 
     expect(JSON.stringify(f.client.view)).not.toContain(clientId); f.client.stop(); const count = f.port.send.mock.calls.length;
     expect(await f.client.requestHistory(read)).toEqual({ state: 'stale' }); expect(f.port.send).toHaveBeenCalledTimes(count);
 });
+it('capture invalidation does no native I/O until the actual application explicitly starts its producer', async () => {
+    const f = centerClientFixture(); await f.client.refreshVisitCapture(); expect(f.port.send).not.toHaveBeenCalled();
+    await f.client.start(); const count = f.port.send.mock.calls.length; await f.client.refreshVisitCapture();
+    expect(f.port.send).toHaveBeenCalledTimes(count); expect(f.port.send.mock.calls.some(([message]) => message.method === 'center.recents.capture')).toBe(false);
+    f.client.stop();
+});
 it('fills controller/credential authority privately for a closed logical operation', async () => {
     const f = centerClientFixture(); await f.client.start(); await f.client.requestHistory(preview);
     expect(f.port.send.mock.lastCall![0]).toMatchObject({ version: 1, method: preview.method, kind: 'diagnostics', action: 'start',
