@@ -38,6 +38,23 @@ remain under the component AST gate. Welcome reuses the existing preference
 transaction and four progress values, without adding a storage engine or schema.
 Source-bound native and human H3 acceptance remains required after unit coverage.
 
+Runtime helper failures are independent of configuration availability. A failing
+panel cannot disable a valid shortcut helper. Only the failed helper is held
+until a fresh source-bound configuration lease. The content lifetime keeps at
+most100 closed mount/refresh/cleanup reason records in memory; retired failures
+remain historical and cannot disable replacements. Diagnostic delivery cannot
+prevent another controller's cleanup. Error text, URLs, identities, credentials
+and drafts do not enter the ring.
+
+The existing native listener accepts the parameterless `runtime.health` query
+only from this extension's non-content sender. It returns the page source and
+closed snapshot only for a current visible eligible configuration. Unknown,
+hidden/protected or identity-changed contexts are unavailable without a stale
+payload. Stopped listeners inspect no document. Responses are synchronous and
+attempted at most once. This boundary adds no network, storage, grant or generic
+request dispatcher. Full activity/diagnostic-history UI, consent, reviewed
+export/clear/recovery and native/human H3 evidence remain required.
+
 Use Node 24 and the repository's pnpm 10.12.4. From the repository root:
 
 ```sh

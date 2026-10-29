@@ -1268,3 +1268,68 @@ Primary sources checked2026-10-29: [Chrome commands](https://developer.chrome.co
 and [composition state](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/isComposing).
 
 Additional shortcut source: [Firefox modifier semantics](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/getModifierState) and [native platform keyboard hints](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/platform), verified2026-10-29.
+
+### Closed health reasons and helper isolation refinement (2026-10-29)
+
+Observed before refinement: content composition changed its shared valid-
+configuration flag to false on any helper failure. Two mounted regressions show
+that a panel mount failure blocks shortcuts, and a panel refresh failure retires
+a healthy shortcut scope. These controlled cases are not a production incident.
+
+Configuration availability and helper failure MUST remain independent. A current
+failure quarantines only that registered helper for its admitted configuration
+lease. Repeated page hints do not retry it. A fresh source-bound lease may reset
+quarantine without changing preferences or grants. A retired failure cannot
+disable its replacement. Diagnostic-delivery failures cannot reject the runtime
+or prevent the remaining owned-resource cleanup.
+
+Mount-failed includes local activation-policy or resource-allocation failure;
+these stages are isolated before a controller exists. An unallocated scope cannot
+certify itself current, and a failed eligibility decision releases only its own
+existing controller. No private exception payload is accepted.
+
+```text
+Current failure → release its resources → closed reason → other helpers remain
+ → fresh admitted configuration lease → eligible helper may retry
+Retired failure → bounded historical reason; no current quarantine
+```
+
+The content lifetime retains at most100 closed in-memory records: a registered
+nonprivate helper ID, mount-failed/refresh-failed/cleanup-failed, and active-at-
+observation/retired-at-observation. Observation scope is historical, not current
+health. No raw error, URL, timestamp trail, account/repository identity, credential,
+code or draft is accepted. Detached immutable snapshots separate current blocked
+helpers from prior events. Reset preserves prior events; disposal clears both.
+This is the existing D6 closed-reason allowance, not persistent diagnostic history.
+
+The existing native content listener accepts exactly
+`{version:1,method:"runtime.health"}` from this extension's non-content sender.
+Foreign/content senders and unknown/future/expanded packets remain inert. Replies
+carry this page's source and either `ready` with `{blocked,events}`, or
+`unavailable` without a retained snapshot. Ready describes current configuration,
+not proof that all150 functions or permissions work. Pending, hidden, protected,
+identity-changed and uninspectable contexts cannot return stale facts as an empty
+current result. Hidden/protected queries inspect no page metadata. Stopped
+listeners ignore queued delivery before accessing a retired document. Synchronous
+response is attempted at most once; failed delivery changes no helper or setting.
+No network, storage, grant, export, polling or retry command is added. The
+background parser still offers no generic corresponding page-send operation.
+Future center consumers must validate the closed source-bound reply and cannot
+use an observation as mutation authority.
+
+Domain owns the bounded registry/reason policy; lifecycle owns current versus
+retired scopes and cleanup; composition owns the content-lifetime ring and native
+listener. Existing AST/import/cycle/size/package constraints remain. Add at least
+24 distinct cases:8 pure registry/reason/bounds/immutability,6 lifecycle/races,
+8 native sender/context/delivery,2 real composition regressions. Maintain100%
+changed-line and pure-branch coverage without partials or exclusions, root
+budgets, three-target builds and source-bound native/human H3 evidence.
+
+Complete CENTER09/CENTER10 UI, opt-in diagnostic200entries/7days and recents50/
+7days, reviewed export/clear/recovery and all H3 scope remain required. The ring
+does not satisfy those flows by itself. Update runtime/contributor recovery
+guidance and catalog evidence together. No new user-facing string is introduced;
+the existing four localized resources remain. Acceptance requires meaningful
+semantic tests and native/human evidence, not case counts alone. Primary API
+reference checked2026-10-29:
+[native response semantics](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/runtime/onMessage).

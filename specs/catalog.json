@@ -3126,7 +3126,8 @@
         "extension/src/domain/welcome_copy.ts",
         "extension/src/adapters/browser/package_reader.ts",
         "extension/src/presentation/SupportPage.svelte",
-        "extension/src/presentation/WelcomePage.svelte"
+        "extension/src/presentation/WelcomePage.svelte",
+        "extension/src/domain/runtime_health.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3239,7 +3240,9 @@
         "extension/test/contracts/welcome.test.ts",
         "extension/test/integration/package_reader.test.ts",
         "extension/test/integration/support_page.test.ts",
-        "extension/test/integration/welcome_page.test.ts"
+        "extension/test/integration/welcome_page.test.ts",
+        "extension/test/contracts/runtime_health.test.ts",
+        "extension/test/integration/runtime_isolation.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

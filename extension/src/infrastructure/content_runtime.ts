@@ -11,11 +11,13 @@ import { record } from '../domain/value.ts';
 import { mountShortcuts } from '../adapters/dom/shortcuts.ts';
 import { shortcutsCopy } from '../domain/shortcuts_copy.ts';
 import { centerCopy } from '../domain/center_copy.ts';
+import { RuntimeHealth } from '../domain/runtime_health.ts';
 
 export function startContent(api: BrowserApi, window: Window, document: Document): (() => void) | undefined {
     if (!pageIdentity(window.location.href) || api.extension?.inIncognitoContext === true || window.top !== window.self) return;
     let configuration: RuntimeConfiguration | null = null; let enabled = false; let stopped = false;
     let generation = 0; let credentialEpoch = 0; let loading = 0; let scopeKey = '';
+    const health = new RuntimeHealth(['runtime-health', 'center-shortcuts']);
     let observer: MutationObserver | undefined; let observed: (Node | null)[] = [];
     const native = () => ({ repositoryId: document.querySelector<HTMLMetaElement>('meta[name="octolytics-dimension-repository_id"]')?.content ?? '',
         viewer: document.querySelector<HTMLMetaElement>('meta[name="user-login"]')?.content || null });
@@ -24,18 +26,18 @@ export function startContent(api: BrowserApi, window: Window, document: Document
         const identity = native();
         return { page, identity, key: JSON.stringify([page?.route, page?.object, identity.repositoryId, identity.viewer]) };
     };
-    const runtime = new FeatureRuntime([{ id: 'runtime-health', enabled: () => true,
+    const runtime = new FeatureRuntime([{ id: 'runtime-health', enabled: () => health.canMount('runtime-health'),
         mount: (context, scope) => {
             const copy = { ...runtimeCopy(context.settings.locale === 'auto' ? window.navigator.language : context.settings.locale), sourceTree: buildSourceIdentity() };
             const connected = configuration !== null && configuration.connected;
             return mountRuntimePanel(context, scope, api, document, { ...copy, ready: enabled,
                 standalone: !enabled ? copy.unavailable : connected ? copy.connected : copy.standalone }, (state, retryAt) => statusText(state, copy, retryAt), native);
-        } }, { id: 'center-shortcuts', enabled: context => enabled && context.settings.shortcuts && context.settings.features['BEX-CENTER-07'],
+        } }, { id: 'center-shortcuts', enabled: context => enabled && health.canMount('center-shortcuts') && context.settings.shortcuts && context.settings.features['BEX-CENTER-07'],
         mount: (context, scope) => mountShortcuts(context, scope, window, document, async command => {
             const response = await api.runtime.sendMessage({ version: 1, method: 'settings.open', command });
             return record(response) && response.state === 'opened' && response.sourceTree === buildSourceIdentity();
         }, shortcutsCopy(centerCopy(context.settings.locale, window.navigator.language).locale)) }],
-    { scope: valid => new BrowserResourceScope(valid), diagnostic: () => { enabled = false; } });
+    { scope: valid => new BrowserResourceScope(valid), diagnostic: (id, code, current) => { if (!stopped) health.record(id, code, current); } });
     const release = () => {
         if (generation && scopeKey) void api.runtime.sendMessage({ version: 1, method: 'page.release', generation }).catch(() => undefined);
         loading++; configuration = null; enabled = false; scopeKey = ''; runtime.dispose();
@@ -62,7 +64,8 @@ export function startContent(api: BrowserApi, window: Window, document: Document
         try {
             const response = await api.runtime.sendMessage(request);
             if (!current()) return;
-            configuration = decodeRuntimeConfiguration(response, request, buildSourceIdentity()); enabled = configuration !== null; paint();
+            configuration = decodeRuntimeConfiguration(response, request, buildSourceIdentity()); enabled = configuration !== null;
+            if (configuration) health.resetFailures(); paint();
         } catch { if (current()) { enabled = false; paint(); } }
     };
     const reconcile = (force = false) => {
@@ -81,15 +84,22 @@ export function startContent(api: BrowserApi, window: Window, document: Document
     };
     const event = (hint: Event) => reconcile(hint.type === 'online' || hint.type === 'offline');
     const visibility = () => reconcile(true);
-    const invalidated: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender) => {
-        if (sender.id === api.runtime.id && sender.tab === undefined && record(value) && value.version === 1
-            && value.method === 'runtime.invalidated' && Object.keys(value).length === 2) { credentialEpoch++; reconcile(true); }
+    const invalidated: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender, respond) => {
+        if (stopped || sender.id !== api.runtime.id || sender.tab !== undefined || !record(value) || value.version !== 1 || Object.keys(value).length !== 2) return;
+        if (value.method === 'runtime.health') {
+            let response: unknown = { sourceTree: buildSourceIdentity(), state: 'unavailable' };
+            try {
+                const current = document.visibilityState === 'visible' && configuration !== null && pageIdentity(window.location.href) !== null && scopeKey === observation().key;
+                if (current) response = { sourceTree: buildSourceIdentity(), state: 'ready', health: health.snapshot() };
+            } catch { /* A closed native context cannot certify current health. */ }
+            try { respond(response); } catch { /* Never deliver a second response or change another feature after a failed acknowledgement. */ }
+        } else if (value.method === 'runtime.invalidated') { credentialEpoch++; reconcile(true); }
     };
     const events = ['popstate', 'hashchange', 'pageshow', 'online', 'offline', 'turbo:load', 'turbo:render', 'pjax:end'];
     for (const name of events) window.addEventListener(name, event);
     document.addEventListener('visibilitychange', visibility); api.runtime.onMessage.addListener(invalidated);
     reconcile();
-    return () => { if (stopped) return; stopped = true; release(); observer?.disconnect();
+    return () => { if (stopped) return; stopped = true; release(); health.clear(); observer?.disconnect();
         for (const name of events) window.removeEventListener(name, event);
         document.removeEventListener('visibilitychange', visibility); api.runtime.onMessage.removeListener(invalidated); };
 }

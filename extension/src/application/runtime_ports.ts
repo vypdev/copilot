@@ -1,5 +1,6 @@
 import type { Epochs, PageIdentity } from '../domain/page.ts';
 import type { RuntimeSettings } from '../domain/runtime_configuration.ts';
+import type { RuntimeFaultCode } from '../domain/runtime_health.ts';
 
 export interface RuntimeContext {
     readonly page: PageIdentity;
@@ -22,7 +23,7 @@ export interface RuntimeFeature {
 }
 export interface RuntimePorts {
     scope(current: () => boolean): ResourceScope;
-    diagnostic(featureId: string, code: 'mount-failed' | 'refresh-failed' | 'cleanup-failed'): void;
+    diagnostic(featureId: string, code: RuntimeFaultCode, current: boolean): void;
 }
 export interface StoragePort {
     get(key: string): Promise<unknown>;

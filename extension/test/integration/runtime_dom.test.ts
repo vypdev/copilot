@@ -122,11 +122,13 @@ it('content composition renders read results through localized presentation and 
     h.window.dispatchEvent(new h.dom.window.Event('pageshow')); await Promise.resolve();
 });
 
-it('isolates a feature exception, recovers with a disabled diagnostic panel, and ignores failed release acknowledgement', async () => {
+it('isolates a panel exception until a fresh source-bound lease, without misreporting valid configuration as unavailable', async () => {
     const mount = vi.spyOn(panelAdapter, 'mountRuntimePanel').mockImplementationOnce(() => { throw new Error('private'); });
     const h = content(); await vi.waitFor(() => expect(mount).toHaveBeenCalledTimes(1));
     h.window.dispatchEvent(new h.dom.window.Event('pageshow'));
-    await vi.waitFor(() => expect(h.document.querySelector<HTMLElement>('[data-copilot-runtime]')!.dataset.copilotSettings).toBe('unavailable'));
+    await Promise.resolve(); expect(mount).toHaveBeenCalledTimes(1); expect(h.document.querySelector('[data-copilot-runtime]')).toBeNull();
+    for (const listener of h.onMessage.listeners) listener({ version: 1, method: 'runtime.invalidated' }, { id: 'test' }, () => undefined);
+    await vi.waitFor(() => expect(h.document.querySelector<HTMLElement>('[data-copilot-runtime]')!.dataset.copilotSettings).toBe('ready'));
     vi.mocked(h.api.runtime.sendMessage).mockRejectedValueOnce(new Error('unavailable'));
     Object.defineProperty(h.document, 'visibilityState', { configurable: true, value: 'hidden' });
     h.document.dispatchEvent(new h.dom.window.Event('visibilitychange')); await Promise.resolve(); mount.mockRestore();
