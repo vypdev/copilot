@@ -842,7 +842,12 @@
             "src/application/policies/progress_patch_completeness_policy.ts",
             "src/application/policies/progress_comparison_source_policy.ts",
             "src/domain/progress_binary_evidence_diagnostic.ts",
-            "src/domain/progress_evidence_path.ts"
+            "src/domain/progress_evidence_path.ts",
+            "src/application/policies/progress_evidence_protocol_policy.ts",
+            "src/application/policies/progress_partition_receipt_policy.ts",
+            "src/application/policies/progress_prompt_capacity_policy.ts",
+            "src/application/policies/progress_recovery_capacity_policy.ts",
+            "src/application/policies/agent_prompt_envelope_policy.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"

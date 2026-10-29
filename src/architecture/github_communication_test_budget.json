@@ -7,7 +7,7 @@
       "id": "semantic-github-publication",
       "spec": "specs/semantic-github-publication-and-notification.md",
       "requiredCases": 135,
-      "allocatedCases": 886,
+      "allocatedCases": 977,
       "files": [
         {
           "path": "src/domain/__tests__/github_publication.test.ts",
@@ -272,6 +272,38 @@
         {
           "path": "src/application/policies/__tests__/deployment_candidate_replacement_presentation.test.ts",
           "qualifyingCases": 6
+        },
+        {
+          "path": "src/data/repository/__tests__/progress_framed_recovery.test.ts",
+          "qualifyingCases": 22
+        },
+        {
+          "path": "src/application/usecases/actions/__tests__/progress_framed_protocol.integration.test.ts",
+          "qualifyingCases": 7
+        },
+        {
+          "path": "src/application/usecases/actions/__tests__/progress_large_comparison.integration.test.ts",
+          "qualifyingCases": 2
+        },
+        {
+          "path": "src/application/policies/__tests__/progress_framed_diagnostics.test.ts",
+          "qualifyingCases": 11
+        },
+        {
+          "path": "src/application/policies/__tests__/progress_partition_receipt_policy.test.ts",
+          "qualifyingCases": 8
+        },
+        {
+          "path": "src/application/policies/__tests__/progress_prompt_capacity_policy.test.ts",
+          "qualifyingCases": 6
+        },
+        {
+          "path": "src/application/policies/__tests__/progress_evidence_protocol_policy.test.ts",
+          "qualifyingCases": 27
+        },
+        {
+          "path": "src/application/policies/__tests__/progress_recovery_capacity_policy.test.ts",
+          "qualifyingCases": 8
         }
       ]
     },

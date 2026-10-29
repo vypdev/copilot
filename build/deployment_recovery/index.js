@@ -32481,7 +32481,7 @@ const SPANISH_CONTENT = Object.freeze({
     }),
     'validation.evidence-too-large': Object.freeze({
         impact: 'No se pudo evaluar el progreso dentro de los límites fijos de evidencia.',
-        action: 'Reduce el tamaño de la comparación o divide el trabajo en cambios revisados más pequeños antes de iniciar otra evaluación.',
+        action: 'Inspecciona la comparación completa y la capacidad indicada. La recuperación por partes continúa automáticamente cuando es compatible. Si se interrumpe, vuelve a ejecutar la fuente gestionada actual; una comparación idéntica que excede el límite no obtiene más capacidad.',
         retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas.',
     }),
     'workflow.invalid-event': Object.freeze({
@@ -33792,7 +33792,7 @@ exports.APPLICATION_ERROR_METADATA = {
     'validation.evidence-too-large': {
         kind: 'validation', retryable: false,
         impact: 'Progress could not be assessed within the fixed evidence limits.',
-        action: 'Reduce the comparison size or split the work into smaller reviewed changes before running a new assessment.',
+        action: 'Inspect the complete comparison and reported capacity. Supported multipart recovery continues automatically. If interrupted, rerun the current managed source; an identical over-limit comparison cannot gain capacity.',
         retainedState: 'Existing progress labels and published assessments were preserved.',
     },
     'workflow.invalid-event': {

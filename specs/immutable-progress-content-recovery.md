@@ -512,3 +512,234 @@ documentation and normal local/remote gates; live consumer adoption is separate.
 
 Primary sources: [native PR reads](https://docs.github.com/en/rest/pulls/pulls#get-a-pull-request)
 and [pinned comparisons](https://docs.github.com/en/rest/commits/commits#compare-two-commits).
+
+
+## 22. Bounded framed assessment for coherent large comparisons — #773
+
+- Status: implementation contract, 2026-10-29.
+- Owner: existing `github-communication-experience` capability.
+- Evidence: [#773](https://github.com/vypdev/copilot/issues/773).
+- Open decisions: none; use invocation-local multipart execution, without durable cross-run checkpoints.
+
+This section supersedes earlier native single-frame and 16-part bounds in this
+document. The direct legacy recovery adapter retains its original profile.
+
+### Observed boundary and intended outcome
+
+The reported pinned base `b461b78c035928856862b995d9008a64b3d59848`, preimage
+`2ef0f5d5125b08e2a481d30ede0e1cdd88e4cc85` and head
+`55792600c0be6aa581d34880073eb29abde634b7` have 140 comparison paths and 85
+omitted patches. Read-only immutable commit/tree metadata independently shows
+85 added regular blobs, 4,446,409 represented side bytes and a largest blob of
+1,106,150 bytes. These are advertised object sizes, not a claim that private
+blob bytes were decoded or a consumer assessment executed here. Returned patch
+text totals 1,035,821 bytes; API line counters are not a complete source-size
+measurement or the original comparison's historical 72,064 additions.
+
+The file, blob and total recovery limits in section 7 each independently block
+this workload; the old sixteen-part capacity can also block the full serialized
+comparison. A file-count edit alone is insufficient. The native progress route
+MUST admit a coherent supported large text package through bounded recovery
+frames and analysis rounds, preserving every path, exact contents and freshness.
+Consumers MUST NOT split product scope, omit registries or weaken evidence to
+fit one old frame. Unsupported content or exhausted total capacity still retains
+prior progress and never publishes a subset percentage.
+
+### Fixed capacity and compatibility
+
+Automatic framed recovery has no repository flag, permission, secret or model
+policy override. Direct legacy recovery and the existing small-patch protocol
+remain supported. Native complete comparisons use the framed capacity below
+when recovery/multipart analysis is needed. This versioned profile supersedes
+the single-frame ceilings for that native route; it does not remove resource
+checks. A Git blob is returned whole, so a bounded 2 MiB blob allowance is
+necessary for the observed 1.1 MB file. UTF-8 source slices and model requests
+remain independently bounded.
+
+| Resource | Per recovery frame/request | Total invocation bound |
+|---|---:|---:|
+| Recovery frames | one active frame | 4 |
+| Recovered files | 64 | 256 |
+| Represented recovered side bytes, including cache hits | 4,194,304 | 16,777,216 |
+| Each recovered blob | 2,097,152 bytes, checked before download | included in side-byte budget |
+| Immutable object requests, charged before I/O | 256 | 1,024 |
+| Directory entries visited | 50,000 | 200,000 |
+| Complete comparison inventory | existing 299 maximum | unchanged |
+| Source-part JSON / full manifest | existing 256,000 bytes each | 64 parts maximum |
+| Analysis rounds | 16 parts each | 4 rounds |
+| Evidence units / JSON slice text | 512 / 120,000 bytes | unchanged |
+| Combined model facts / complete runtime prompt | 384,000 / 524,288 bytes | unchanged |
+
+A recovery frame is a bounded accounting epoch; a file may require object reads
+across epochs. A claim that cannot fit the remaining epoch advances automatically
+to the next one, charging global totals too. A single overlarge claim or a total
+limit MUST fail before its operation. Cache hits still charge represented bytes;
+failed provider requests still consume requests. Accounting epochs and model
+rounds need not align. Both are finite and observable. Complete serialization,
+unit, fact and request-envelope budgets MUST pass before model admission; raw
+byte capacity does not guarantee admissible JSON escaping or prompt framing.
+
+### Source, request and receipt protocol
+
+```text
+pin native source -> validate every path -> verify all immutable bytes in bounded frames
+ -> complete hashed source plan -> reserve scope/request/fact budgets
+ -> classify issue scope -> bind parts to this attempt and scope
+ -> assess all parts/rounds -> validate complete receipts -> final assessment
+ -> native issue/body/ownership/base/head freshness fences -> existing publication
+```
+
+Text equivalent: collect and verify the complete source first, bind every model
+request to that source and this assessment, then publish once after all receipts
+and the final result remain valid and current.
+
+1. Existing path/status/presence/tree/blob/hash/UTF-8 requirements remain. Every
+   source part MUST carry a SHA-256 identity covering its exact evidence, units,
+   paths, ordinal and immutable base/head/preimage. A complete canonical manifest
+   binds every required path, unit and source-part digest, resource usage and one
+   host-generated attempt UUID. The data adapter owns entropy; source and model
+   text cannot select it. Corrupt/missing/duplicate/reordered plan records fail
+   validation before any model request.
+2. After issue-only acceptance scope validates, a deterministic request binding
+   MUST include that manifest/attempt, source-part identity, complete issue,
+   extracted scope and target locale. Its fixed-length ID is echoed through the
+   existing exact `partitionId` field/schema. A response from another head,
+   scope, attempt, part or round MUST be rejected. Source IDs and request IDs
+   remain distinct; neither model confidence nor a copied path certifies a part.
+3. Validated receipts MUST retain their returned request identity through
+   aggregation. Aggregation MUST independently require exactly one receipt for
+   every assignment, reject duplicates/missing/cross-assignment replays and
+   revalidate exact unit/path facts. It MUST NOT manufacture a matching receipt
+   header from an expected array index. Source/resource metadata and all
+   model-derived facts remain separate from CI/build/test execution evidence.
+4. All actual request envelopes include the same security/schema wrapper used
+   by the findings adapter. Move that pure envelope formatter to application
+   policy with the existing data import retained as a compatibility facade.
+   Preflight scope, every part and the reserved final-assessment envelope,
+   including schema bytes and bounded framing reserve, before source analysis;
+   recheck the actual scope/final request after classification. No truncation or
+   lowered fact/identity requirement may make a request fit.
+5. A failed/malformed/unsupported middle part prevents final assessment and all
+   progress mutations. Existing native issue, body, PR ownership and both ref
+   fences still run before publication. Zero progress retains its existing
+   meaning; new receipts cannot grant merge/verification approval.
+
+### Architecture, state and operations
+
+The existing semantic diff port gains optional immutable framed-plan metadata;
+legacy injected port results retain their contract. Pure policies own finite
+accounting, canonical hashes, request binding and receipt completeness. Data
+adapters own read-only provider objects, byte/hash checks and the fresh attempt
+UUID. Existing progress orchestration owns scope, sequential rounds, final
+assessment and publication fences. No workspace, subprocess, consumer-code
+execution, provider write or new credential capability enters recovery.
+Dependency/cycle/type/composition contracts MUST continue to enforce these
+boundaries. Source caches, partial facts and receipts remain invocation-local.
+
+Automatic continuation is the next bounded part/round in the same invocation.
+If interrupted, rerun the existing progress/Commits workflow for the current
+managed source; it reloads complete evidence with a fresh attempt and budgets.
+It does not reuse partial facts or claim a durable checkpoint. Moving heads or
+scope invalidate the old attempt. This is the supported multipart route for the
+reported package, not a promise of unbounded comparisons. Total-limit failures
+show exact capacity/usage and retained state; retrying an identical over-limit
+input cannot enlarge a limit. Do not recommend splitting coherent product scope
+or retargeting a PR to hide files. Binary/non-text support remains outside this
+correction; its existing recovery descriptor and source-only distinction stay.
+
+Representative existing run/summary surfaces, with no extra timeline comments:
+
+```text
+Pending: Collecting all evidence for the pinned comparison. Previous progress remains.
+Technical details: 140 required paths; recovery frame 2/4; source bytes 4,446,409/16,777,216.
+Partial analysis: Assessing part 17/25, round 2/2. No percentage is published yet.
+Complete: All 25 part receipts validated; final assessment and native freshness checks completed.
+Interrupted: Progress was not assessed. Previous progress retained. Rerun the current source;
+a fresh bounded attempt collects all evidence again, without reusing partial receipts.
+Blocked: Complete evidence exceeds supported total capacity. No partial assessment published.
+Action: Inspect the bounded resource/coverage details and linked current workflow result.
+```
+
+Numbers are illustrative fixture dimensions/plan counts, not a fixed part count
+promise. Existing locale/fallback, sanitizer, narrow/mobile/light/dark text,
+correlation/run links and semantic comment ownership remain. Resource/path
+errors MUST use closed reasons and bounded counters/path excerpts; no source
+contents, credentials, raw provider URLs or model text may become recovery
+instructions. Diagnostic improvement for a completed final assessment rejected
+by scope policy is separately tracked in #774.
+
+### Numeric acceptance budget, documentation and rollout
+
+Allocate **96 additional distinct regression cases**, without double counting
+existing #726/#727 cases:
+
+| Area | Minimum | Acceptance/risk |
+|---|---:|---|
+| Pure capacity, source/request identities and receipt policies | 36 | epoch/global/single-claim limits, canonical manifests, every bound context, duplicate/missing/replayed receipts, exact full envelopes |
+| Provider adapters and immutable recovery | 32 | 140-path geometry, blob integrity/presence/encoding, framed/global exhaustion, cached accounting, fresh attempts and legacy compatibility |
+| Application/integration and races | 16 | all rounds before one final assessment, malformed middle/late source, no early model/publication, changed head/base/body/native owner and interrupted retry |
+| Closed diagnostics, locale and composition contracts | 12 | usage/retained state, bounded inert paths/reasons, supported automatic continuation, read-only binding and existing locale fallback |
+| **Total** | **96** | distinct executable behaviors; repeated full-suite runs do not add cases |
+
+One realistic success and one late-corruption integration fixture preserve the
+140/85/4,446,409/1,106,150-byte geometry and approximately 1 MB of complete
+patches, without copying private source. They MUST verify every supplied byte
+and unit and tail markers; all other boundaries use smaller deterministic
+fixtures. The two large instrumented fixtures have an explicit 30-second test
+budget on every platform; existing test timeouts remain unchanged. New pure
+policies MUST reach 100% lines/statements/functions/branches, recovery adapters
+100%, and changed orchestration at least 95% lines/statements and 90%
+branches/functions. Existing global/module/setup/extension and quality budgets
+remain. A fake model proves transport/completeness behavior, not semantic model
+accuracy or real consumer execution.
+
+Update branch-management progress guidance, agent execution contract and operator
+error reference with the supported native route, limits, progress states,
+retry/continuation and scope-independent verification distinction. Register new
+code/tests in the owning catalog/communication ledger and regenerate the index.
+Rollout is the normal reviewed runtime/package upgrade, without consumer policy
+forks or extra scopes. Rollback restores the former fail-closed capacity;
+there is no persisted partial state to migrate. Implementation order is contract
+and risk fixtures, pure budgets/protocol/envelope, adapters, orchestration and
+receipts, diagnostics/docs/catalog, then complete verification. DoD requires all
+96 cases and coverage, unchanged security/quality/architecture gates, full root/
+extension/type/lint/spec/docs/workflow/build/package checks, Graphify, normal
+hooks and exact-head CI/platform/review with no active findings before merge.
+
+### Executable evidence for #773
+
+The eight new suites execute **172 additional cases**: 109 pure capacity/protocol/
+receipt/envelope cases, 32 immutable adapter cases, 19 application/integration
+cases (including the two large fixtures), and 12 diagnostic/localization cases.
+The existing binary suite adds one further regression for binary refusal between
+legacy and framed blob limits. Parameterized rows are distinct executed cases;
+the shared communication ledger conservatively records 91 test declarations and
+counts each parameterized declaration only once. These measures are different
+and are not added together. Existing provider, ownership and native-open races
+remain in their original suites.
+
+The large success and late-corruption fixtures failed at the original 64-file
+boundary before implementation. Current fixtures verify the complete synthetic
+140-path package, 85 recovered blobs, all tail markers, exact reconstructed
+SHA-256 contents, 4,446,409 recovered bytes, the 1,106,150-byte largest registry
+and exactly 1,035,821 complete-patch bytes. They exercise more than 16 source
+parts and permit only one progress publication after every request and final
+native fence. The failure fixture corrupts the last recovered blob and permits
+no model request or label mutation. The native adapter keeps its verified Git
+blob SHA-1 checks; synthetic reconstructed-content SHA-256 is an independent test
+oracle, not a replacement for immutable object verification.
+
+Consumer evidence was limited to authorized read-only comparison and immutable
+commit/tree metadata for the exact cited SHAs. No consumer source was executed
+or modified, no private blob bytes were copied into fixtures, and a fake model
+is not a semantic accuracy, deployment or live-consumer assessment claim. Normal
+root/extension coverage and local/remote quality gates are required separately
+before merge.
+
+Local root verification passes 782 suites and 14,452 tests, with the existing 35
+skips. Global coverage is 98.05% lines, 97.26% statements, 97.94% functions and
+94.96% branches. All five new pure policies and the immutable content recovery
+adapter reach 100% on every metric. The native comparison adapter has 100%
+lines/statements/functions and 98.21% branches; orchestration has 100%
+lines/statements/functions and at least 95.83% branches. Every existing coverage
+budget passes; setup remains 336/350 with 14 explicitly open acceptance cases.

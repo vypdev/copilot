@@ -2050,7 +2050,7 @@ function progressContentUnits(change, content, fileId) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.MAX_PROGRESS_PARTITIONS = exports.MAX_PROGRESS_EVIDENCE_BYTES = void 0;
+exports.MAX_FRAMED_PROGRESS_PARTITIONS = exports.MAX_PROGRESS_PARTITIONS = exports.MAX_PROGRESS_EVIDENCE_BYTES = void 0;
 exports.progressEvidenceTooLarge = progressEvidenceTooLarge;
 exports.serializeProgressDiff = serializeProgressDiff;
 exports.partitionProgressDiff = partitionProgressDiff;
@@ -2058,6 +2058,7 @@ const progress_content_evidence_policy_1 = __nccwpck_require__(6471);
 const application_error_1 = __nccwpck_require__(5999);
 exports.MAX_PROGRESS_EVIDENCE_BYTES = 256000;
 exports.MAX_PROGRESS_PARTITIONS = 16;
+exports.MAX_FRAMED_PROGRESS_PARTITIONS = exports.MAX_PROGRESS_PARTITIONS * 4;
 function progressEvidenceTooLarge() {
     return new application_error_1.ApplicationError('validation.evidence-too-large', 'Progress evidence exceeds a fixed analysis budget. Existing progress was retained; retrying the same comparison cannot resolve this limit.');
 }
@@ -2065,7 +2066,7 @@ function serializeProgressDiff(baseSha, headSha, changes) {
     return JSON.stringify({ kind: 'pinned-branch-comparison', baseSha, headSha, changes });
 }
 /** Losslessly partitions complete, adapter-validated file facts. No source file is omitted. */
-function partitionProgressDiff(baseSha, headSha, changes) {
+function partitionProgressDiff(baseSha, headSha, changes, profile) {
     const serialize = (files) => serializeProgressDiff(baseSha, headSha, files);
     const unitMode = changes.some(change => change.unitId !== undefined);
     if (unitMode && (changes.length > progress_content_evidence_policy_1.MAX_PROGRESS_EVIDENCE_UNITS || changes.some(change => !change.unitId)
@@ -2079,7 +2080,7 @@ function partitionProgressDiff(baseSha, headSha, changes) {
             throw progressEvidenceTooLarge();
         if (Buffer.byteLength(serialize([...current, change]), 'utf8') > exports.MAX_PROGRESS_EVIDENCE_BYTES) {
             groups.push(current);
-            if (groups.length >= exports.MAX_PROGRESS_PARTITIONS)
+            if (groups.length >= (profile === 'framed-v1' ? exports.MAX_FRAMED_PROGRESS_PARTITIONS : exports.MAX_PROGRESS_PARTITIONS))
                 throw progressEvidenceTooLarge();
             current = [];
         }
@@ -2114,7 +2115,7 @@ function partitionProgressDiff(baseSha, headSha, changes) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.MAX_PROGRESS_SCOPE_BYTES = void 0;
+exports.MAX_PROGRESS_SCOPE_CLAUSES = exports.MAX_PROGRESS_SCOPE_BYTES = void 0;
 exports.progressScopeSourceLines = progressScopeSourceLines;
 exports.progressScopeResponseSchema = progressScopeResponseSchema;
 exports.parseProgressScope = parseProgressScope;
@@ -2124,7 +2125,7 @@ const application_error_1 = __nccwpck_require__(5999);
 const progress_diff_partition_policy_1 = __nccwpck_require__(628);
 const agent_output_locale_policy_1 = __nccwpck_require__(601);
 exports.MAX_PROGRESS_SCOPE_BYTES = 64000;
-const MAX_CLAUSES = 32;
+exports.MAX_PROGRESS_SCOPE_CLAUSES = 32;
 const MAX_QUOTE = 1200;
 const MAX_FACT = 800;
 function progressScopeSourceLines(issue) {
@@ -2175,7 +2176,7 @@ function parseProgressScope(response, issue, locale) {
     });
     function clauses(kinds, prefix) {
         const selected = source.filter(line => kinds.includes(classified.find(item => item.id === line.id).kind));
-        if (selected.length > MAX_CLAUSES)
+        if (selected.length > exports.MAX_PROGRESS_SCOPE_CLAUSES)
             invalid('scope-clause-limit');
         return Object.freeze(selected.map((line, index) => Object.freeze({ id: `${prefix}${index + 1}`, quote: line.quote,
             ...(classified.find(item => item.id === line.id).kind === 'uncertain' ? { uncertain: true } : {}) })));
@@ -5746,7 +5747,7 @@ exports.APPLICATION_ERROR_METADATA = {
     'validation.evidence-too-large': {
         kind: 'validation', retryable: false,
         impact: 'Progress could not be assessed within the fixed evidence limits.',
-        action: 'Reduce the comparison size or split the work into smaller reviewed changes before running a new assessment.',
+        action: 'Inspect the complete comparison and reported capacity. Supported multipart recovery continues automatically. If interrupted, rerun the current managed source; an identical over-limit comparison cannot gain capacity.',
         retainedState: 'Existing progress labels and published assessments were preserved.',
     },
     'workflow.invalid-event': {

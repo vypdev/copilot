@@ -3,7 +3,7 @@ import { progressEvidenceTooLarge } from './progress_diff_partition_policy';
 import { AGENT_OUTPUT_LOCALE_SCHEMA_PROPERTY, agentOutputLocaleFailureMessage, validateAgentOutputLocale } from './agent_output_locale_policy';
 
 export const MAX_PROGRESS_SCOPE_BYTES = 64_000;
-const MAX_CLAUSES = 32;
+export const MAX_PROGRESS_SCOPE_CLAUSES = 32;
 const MAX_QUOTE = 1_200;
 const MAX_FACT = 800;
 export interface ProgressScopeClause { readonly id: string; readonly quote: string; readonly uncertain?: true }
@@ -52,7 +52,7 @@ export function parseProgressScope(response: unknown, issue: string, locale: str
     });
     function clauses(kinds: readonly string[], prefix: string): readonly ProgressScopeClause[] {
         const selected = source.filter(line => kinds.includes(classified.find(item => item.id === line.id)!.kind as string));
-        if (selected.length > MAX_CLAUSES) invalid('scope-clause-limit');
+        if (selected.length > MAX_PROGRESS_SCOPE_CLAUSES) invalid('scope-clause-limit');
         return Object.freeze(selected.map((line, index) => Object.freeze({ id: `${prefix}${index + 1}`, quote: line.quote,
             ...(classified.find(item => item.id === line.id)!.kind === 'uncertain' ? { uncertain: true as const } : {}) })));
     }
