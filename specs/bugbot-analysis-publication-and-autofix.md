@@ -4,7 +4,7 @@
 - Date: 2026-09-11
 - Last updated: 2026-10-29
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-10-29; host-aware self-repository Action references #770, Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
+- Last verified: 2026-10-29; renderer-grounded Markdown links #772, host-aware self-repository Action references #770, Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -1443,3 +1443,125 @@ unchanged global/module coverage budgets, architecture, types/lint, specificatio
 documentation/workflow validation, generated build/package smoke, and exact-head
 CI plus complete review without unresolved findings before merge. No unresolved
 configuration or design decision blocks this correction.
+
+
+### Renderer-grounded Markdown path claims — #772 (2026-10-29)
+
+**Observed problem and primary contract.** The [reported review](https://github.com/vypdev/copilot/issues/772)
+concatenated a valid `../specs/<self>.md` link into a nonexistent `specs/specs/`
+path. Read-only inspection of the three cited documents at
+`80bd64fb9d83f1cad9c4828e141dd4bf16c4dc8b` verifies their literal links, ordinary
+relative-path resolution, existing targets and architecture headings. This is
+source/path evidence, not an executed consumer render. Their historical review
+comments already became obsolete before this correction; this change does not
+claim that transition. GitHub's [relative-link and section-link contract](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#relative-links)
+uses the source file's directory, supports `.`/`..`, and treats initial `/` as
+repository-relative. Other renderers and heading/encoding conventions require
+applicable evidence rather than a universal guessed slug.
+
+**Intentional behavior.** Before publishing or repeating a broken-link claim,
+review MUST deterministically normalize the authored href from the source parent
+under the applicable renderer, inspect the exact-head target and verify its
+fragment separately. Query/percent-decoding, case, heading and custom-anchor
+rules matter. `specs/a.md` plus `../specs/a.md` is `specs/a.md`;
+`./specs/a.md` differs. Evidence MUST identify source, authored href, normalized
+target and the observed missing file or anchor. An existing target and fragment
+MUST yield no finding at any severity, including info; a self-refuting explanation
+cannot become an informational report. Navigation-only documentation
+failures use low severity and correctness category; independent security or
+functional effects retain their demonstrated impact.
+
+A valid self-link MUST NOT hide a real nested primary/companion renderer defect
+or destination-symlink publication fault. Inspect those transformations and
+write boundaries independently. A prior explanation/confidence is a claim to
+recheck against current source, not proof. Disproved premises use the ordinary
+eligible resolution path; missing evidence MUST retain unresolved state and
+omit unsupported new claims. Resolution ownership, retained exact IDs, schema,
+freshness and provider reconciliation remain authoritative. No automatic
+filter, path allowlist, confidence override or forced dismissal is introduced.
+
+```text
+authored source + href -> renderer-aware normalization -> exact-head target/anchor
+                       -> concrete missing destination: localized finding
+                       -> disproved premise: ordinary eligible resolution
+                       -> evidence unavailable: retain unknown, no invented result
+```
+
+Text equivalent: compute the destination before asserting absence, then separate
+proved failures, disproved premises and unavailable evidence.
+
+**Architecture, bounds and security.** A pure shared instruction is delivered by
+both the production prompt builder and real-agent benchmark. The findings-array
+schema description reinforces actionable-only output and an empty array for
+disproved candidates, including informational explanations of correct code. This
+changes model guidance without changing accepted response shapes, enums or host
+validation; concrete actionable info findings remain supported. Compact redundant
+external-fact and delegated-test-path prose while preserving its existing
+semantic regressions and the original 15,000-character long-ignore prompt bound.
+Existing read-only context/provider limits, partition ownership, models, schema,
+permissions, thresholds, configuration and persistence remain applicable. Corpus
+strings are inert evidence, never commands. Native fixtures execute only a
+statically authored renderer and Node URL/path/filesystem operations against
+owned temporary files. They compare their source to the inert corpus first;
+transpiled comparison text is never executed. Known plain ASCII headings are
+explicit fixture oracles, not a general Markdown parser. Repository content,
+logs and discussion cannot grant execution, network or mutation authority.
+
+**Product journey, UX and operations.** The ordinary complete, pending,
+partial, blocked, failed and canceled review surfaces remain those in sections
+5–12. A disproved new link claim creates no inline finding or extra abstention
+notification. A real example reads: “This architecture link resolves to
+`specs/specs/payments.md`, which is absent,” at the changed authored link, with
+the source/href/target in evidence. Its operator action is to correct the path
+or fragment after inspection. For an older false finding, supply current source
+and normalized-path/anchor evidence and request `/copilot recheck`; do not edit
+working source merely to satisfy its old premise. No new status field, comment,
+notification or configuration switch is added. Existing locale, sanitization,
+accessible text/link and noise contracts remain in force. Adopt the updated
+runtime; rollback prompt, corpus, evidence and docs together, preserving review
+history. Consumer configuration/catalogs need no migration or write.
+
+Allocate **20 additional distinct deterministic cases**, exclusively here:
+
+| Area | Cases | Executable acceptance/risk |
+|---|---:|---|
+| Production/benchmark delivery | 4 | unavailable PR metadata/local scope, owner and non-owner partitions, benchmark; unchanged ownership and no hidden verdict leakage |
+| False-positive scorer controls | 5 | root self-link, nested self-link, companion, repository-root link and unavailable evidence |
+| False-negative scorer controls | 3 | duplicated directory, missing fragment and a real renderer losing a nested directory |
+| Native path/source/anchor observations | 7 | all available fixtures normalize against real owned files; statically authored renderer comparison; reject modified corpus text |
+| Serialized schema guidance and compatibility | 1 | ordinary/partition/bound output instructions; accepted empty lists and concrete info results |
+| **Total** | **20** | no double counting with the existing #768 renderer or #771 publication suites |
+
+All four delivery regressions fail before guidance. The serialized-schema case
+also fails before its description is added. The corpus expands from
+90 to **98** cases, preserving all prior inputs/verdicts and every default
+quality threshold. Scorer/reference cases establish evaluator behavior, not
+model accuracy. Native oracles establish the supplied path/anchor facts, not
+execution of a consumer toolchain or an accuracy guarantee. Actual agent
+observations, conditions and source/bundle/corpus identities are recorded
+separately in `quality/bugbot/evidence/issue-772.json`, retaining failed samples.
+A benchmark that scores current findings alone cannot prove historical-finding
+resolution; any such live observation must exercise the production task-2 prompt
+and report that distinction explicitly. The retained V1 and V2 samples each
+produce one self-refuting informational finding (nested and companion links).
+V3 reinforces the findings-array description and passes every unchanged default
+gate on the same eight inputs/verdicts: zero false positives/negatives and exact
+locations/severity/category for all three real defects. Separate actual production
+builder/schema/port observations on one committed synthetic Git fixture return
+the exact obsolete ID and no resolutions from the non-owner partition in all
+three variants. These are returned model responses, not provider mutations or
+statistical improvement evidence. All sample conditions and limits remain in
+the evidence file.
+
+**Traceability and DoD.** `build_bugbot_prompt.test.ts` and
+`bugbot_benchmark_runner.test.ts` own delivery; `schema.test.ts` owns serialized
+array guidance/compatibility; `bugbot_benchmark.test.ts` owns
+scoring and `bugbot_markdown_link_oracles.ts` the native source/path observations.
+Detection, failure scenarios and quality/observability document the contract,
+recheck path and measurement limits. Catalog metadata and generated evidence
+links register this work. Acceptance requires these 20 cases, historical prompt
+and context regressions, #768/#771 compatibility, actual agent observations,
+unchanged global/module coverage/quality gates, architecture, types/lint,
+all specification/documentation/workflow contracts, generated build/package
+smoke and exact-head CI/platform checks plus complete review with no active
+findings before merge. No material configuration/design decision remains open.

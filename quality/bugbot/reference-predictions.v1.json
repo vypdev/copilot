@@ -126,6 +126,44 @@
     "action-reference-contract-unavailable": [],
     "action-self-ref-explicit-suffix": [{"id": "action-self-ref-explicit-suffix-invalid-reference", "title": "Action reference cannot resolve in this execution context", "file": ".github/workflows/build.yml", "line": 5, "severity": "medium", "category": "reliability", "codeSnippet": "- uses: $/.github/actions/bootstrap@v1"}],
     "action-workspace-ref-before-checkout": [{"id": "action-workspace-ref-before-checkout-invalid-reference", "title": "Action reference cannot resolve in this execution context", "file": ".github/workflows/build.yml", "line": 5, "severity": "medium", "category": "reliability", "codeSnippet": "- uses: ./.github/actions/bootstrap"}],
-    "action-self-ref-unsupported-host": [{"id": "action-self-ref-unsupported-host-invalid-reference", "title": "Action reference cannot resolve in this execution context", "file": ".github/workflows/build.yml", "line": 5, "severity": "medium", "category": "reliability", "codeSnippet": "- uses: $/.github/actions/bootstrap"}]
+    "action-self-ref-unsupported-host": [{"id": "action-self-ref-unsupported-host-invalid-reference", "title": "Action reference cannot resolve in this execution context", "file": ".github/workflows/build.yml", "line": 5, "severity": "medium", "category": "reliability", "codeSnippet": "- uses: $/.github/actions/bootstrap"}],
+    "md-link-root-self": [],
+    "md-link-nested-self": [],
+    "md-link-companion": [],
+    "md-link-root-relative": [],
+    "md-link-evidence-unavailable": [],
+    "md-link-extra-specs-directory": [
+      {
+        "id": "md-link-extra-specs-directory-broken-navigation",
+        "title": "The rendered architecture link does not reach its target",
+        "file": "specs/payments.md",
+        "line": 41,
+        "severity": "low",
+        "category": "correctness",
+        "codeSnippet": "[Design](./specs/payments.md#architecture)"
+      }
+    ],
+    "md-link-missing-fragment": [
+      {
+        "id": "md-link-missing-fragment-broken-navigation",
+        "title": "The rendered architecture link does not reach its target",
+        "file": "specs/payments.md",
+        "line": 41,
+        "severity": "low",
+        "category": "correctness",
+        "codeSnippet": "[Design](../specs/payments.md#missing-architecture)"
+      }
+    ],
+    "md-link-renderer-drops-directory": [
+      {
+        "id": "md-link-renderer-drops-directory-broken-navigation",
+        "title": "The rendered architecture link does not reach its target",
+        "file": "scripts/catalog.ts",
+        "line": 41,
+        "severity": "low",
+        "category": "correctness",
+        "codeSnippet": "function renderSpecLink(spec: string): string { return './' + spec.slice(spec.lastIndexOf('/') + 1); }"
+      }
+    ]
   }
 }

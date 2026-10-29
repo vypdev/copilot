@@ -126,3 +126,13 @@ normal finding verification/re-review. A green job on another target does not
 prove this bridge succeeds. Keep actual missing identifiers actionable; avoid
 introducing global state to satisfy a disproved scope claim. Evidence alone does
 not auto-dismiss findings or grant permissions. See [parameter scope](/bugbot/detection#kotlinwasm-javascript-parameter-scope).
+
+
+## A review claims that an existing relative link is broken
+
+Check the source document's directory, the literal link and its normalized
+target at the reviewed commit. Inspect the fragment under the actual renderer's
+heading or custom-anchor rules. Include those facts when requesting
+`/copilot recheck`; a prior confidence score does not prove the path claim.
+Keep working links intact. A missing file or fragment remains actionable, while
+unavailable source context cannot establish either failure or resolution.

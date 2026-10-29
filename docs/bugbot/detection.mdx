@@ -449,3 +449,21 @@ and invalid bridges remain reportable. Unsupported binding claims and unproved
 global-state replacements are omitted. This shared model guidance is neither a
 static Kotlin analyzer nor a guarantee of accuracy. See the [official contract](https://kotlinlang.org/docs/wasm-js-interop.html#kotlin-functions-with-javascript-code)
 and [quality evidence limits](/bugbot/quality-observability).
+
+
+## Relative Markdown links
+
+Bugbot resolves a link from the document containing it and checks its target and
+section separately. From `specs/a.md`, `../specs/a.md#architecture` points back
+to `specs/a.md`; `./specs/a.md` points to a different directory. The applicable
+renderer determines repository-root links, decoding, case and heading/custom
+anchors. A broken-link finding should show the authored link and normalized
+missing target or anchor. Existing targets and fragments yield no finding,
+including informational reports. Navigation-only failures have low severity and the
+correctness category.
+
+A valid self-link does not prove that a catalog preserves nested primary or
+companion directories, or that its output writer handles symlinks safely. Those
+remain independent checks. Prior findings are rechecked against current source;
+missing evidence keeps their state unresolved instead of inventing a failure or
+resolution.

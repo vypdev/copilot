@@ -156,3 +156,22 @@ it('delivers exact-witness grounding without exposing private verdicts', () => {
   expect(prompt).toContain('no stricter character policy or execution evidence');
   expect(prompt).not.toContain('Hidden ground truth title');
 });
+
+
+it('shares renderer-grounded path and prior-claim evidence without leaking a link verdict', () => {
+  const prompt = buildBugbotBenchmarkPrompt({ ...testCase,
+    language: 'markdown', file: 'specs/a.md',
+    diff: '+[Design](../specs/a.md#architecture)',
+    expected: [{ title: 'Private link verdict', suggestion: 'Never expose this expected repair' }],
+  });
+  expect(prompt).toContain("normalize its literal href from the source file's directory");
+  expect(prompt).toContain('Verify exact-head target and fragment separately');
+  expect(prompt).toContain('specs/a.md + ../specs/a.md = specs/a.md');
+  expect(prompt).toContain('nested primary/companion renderer output');
+  expect(prompt).toContain('destination symlinks independently');
+  expect(prompt).toContain('Prior confidence is not evidence');
+  expect(prompt).toContain('retain unresolved state');
+  expect(prompt).toContain('emit no finding, including info');
+  expect(prompt).not.toContain('Private link verdict');
+  expect(prompt).not.toContain('Never expose this expected repair');
+});
