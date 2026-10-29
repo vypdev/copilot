@@ -217,3 +217,41 @@ describe("buildBugbotPrompt", () => {
         expect(prompt).toContain("- Base branch: develop");
     });
 });
+
+
+describe('Markdown link evidence before persisting a path claim', () => {
+  function grounded(prompt: string): void {
+    for (const text of [
+      "normalize its literal href from the source file's directory",
+      'Verify exact-head target and fragment separately',
+      'specs/a.md + ../specs/a.md = specs/a.md',
+      'nested primary/companion renderer output',
+      'destination symlinks independently',
+      'Prior confidence is not evidence',
+      'normal eligible resolution',
+      'retain unresolved state',
+      'emit no finding, including info',
+      'Invent no lookup/execution or permissions',
+    ]) expect(prompt).toContain(text);
+  }
+  it('retains link grounding when PR metadata is unavailable and local scope is used', () => {
+    const prompt = buildBugbotPrompt(mockExecution(), mockContext());
+    grounded(prompt);
+    expect(prompt).toContain('No canonical pull-request diff is available');
+  });
+  it.each([true, false])('grounds paths without broadening partition resolution ownership=%s', ownsResolution => {
+    const prompt = buildBugbotPrompt(mockExecution(), mockContext({
+      previousFindingsBlock: 'retained wrong path claim: old-link-id',
+    }), { partition: {
+      id: 'diff-links', ordinal: 1, total: 2, headSha: 'a'.repeat(40),
+      block: '+[Design](../specs/a.md#architecture)', files: ['specs/a.md'],
+      fragmentCount: 1, ownsResolution,
+    } });
+    grounded(prompt);
+    if (ownsResolution) expect(prompt).toContain('retained wrong path claim: old-link-id');
+    else {
+      expect(prompt).not.toContain('retained wrong path claim: old-link-id');
+      expect(prompt).toContain('must return an empty resolved_findings array');
+    }
+  });
+});

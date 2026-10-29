@@ -1003,6 +1003,116 @@
           "codeSnippet": "- uses: $/.github/actions/bootstrap"
         }
       ]
+    },
+    {
+      "id": "md-link-root-self",
+      "language": "markdown",
+      "category": "negative",
+      "description": "Architecture navigation from specs/payments.md.",
+      "file": "specs/payments.md",
+      "startLine": 41,
+      "diff": "+[Design](../specs/payments.md#architecture)\n ## Architecture\n <!-- Synthetic same-revision complete tracked-file inventory: specs/payments.md. -->\n <!-- Each document consists only of this added link (for the source) and the plain Architecture heading; no custom anchors. -->\n <!-- GitHub Markdown: relative paths use the source directory; initial / means repository root. The plain heading ## Architecture has anchor architecture. -->",
+      "expected": []
+    },
+    {
+      "id": "md-link-nested-self",
+      "language": "markdown",
+      "category": "negative",
+      "description": "Architecture navigation from specs/payments/design.md.",
+      "file": "specs/payments/design.md",
+      "startLine": 41,
+      "diff": "+[Design](../payments/design.md#architecture)\n ## Architecture\n <!-- Synthetic same-revision complete tracked-file inventory: specs/payments/design.md. -->\n <!-- Each document consists only of this added link (for the source) and the plain Architecture heading; no custom anchors. -->\n <!-- GitHub Markdown: relative paths use the source directory; initial / means repository root. The plain heading ## Architecture has anchor architecture. -->",
+      "expected": []
+    },
+    {
+      "id": "md-link-companion",
+      "language": "markdown",
+      "category": "negative",
+      "description": "Architecture navigation from specs/payments/design.md.",
+      "file": "specs/payments/design.md",
+      "startLine": 41,
+      "diff": "+[Design](../../specs/private-sharing.md#architecture)\n ## Architecture\n <!-- Synthetic same-revision complete tracked-file inventory: specs/payments/design.md, specs/private-sharing.md. -->\n <!-- Each document consists only of this added link (for the source) and the plain Architecture heading; no custom anchors. -->\n <!-- GitHub Markdown: relative paths use the source directory; initial / means repository root. The plain heading ## Architecture has anchor architecture. -->",
+      "expected": []
+    },
+    {
+      "id": "md-link-root-relative",
+      "language": "markdown",
+      "category": "negative",
+      "description": "Architecture navigation from specs/payments/design.md.",
+      "file": "specs/payments/design.md",
+      "startLine": 41,
+      "diff": "+[Design](/specs/semantic-editor.md#architecture)\n ## Architecture\n <!-- Synthetic same-revision complete tracked-file inventory: specs/payments/design.md, specs/semantic-editor.md. -->\n <!-- Each document consists only of this added link (for the source) and the plain Architecture heading; no custom anchors. -->\n <!-- GitHub Markdown: relative paths use the source directory; initial / means repository root. The plain heading ## Architecture has anchor architecture. -->",
+      "expected": []
+    },
+    {
+      "id": "md-link-evidence-unavailable",
+      "language": "markdown",
+      "category": "negative",
+      "description": "Architecture navigation from specs/payments.md.",
+      "file": "specs/payments.md",
+      "startLine": 41,
+      "diff": "+[Design](../specs/unknown.md#architecture)\n // Target source, tree inventory, renderer and heading context are unavailable; no lookup or execution receipt is supplied.",
+      "expected": []
+    },
+    {
+      "id": "md-link-extra-specs-directory",
+      "language": "markdown",
+      "category": "correctness",
+      "description": "Architecture navigation from specs/payments.md.",
+      "file": "specs/payments.md",
+      "startLine": 41,
+      "diff": "+[Design](./specs/payments.md#architecture)\n ## Architecture\n <!-- Synthetic same-revision complete tracked-file inventory: specs/payments.md. -->\n <!-- Each document consists only of this added link (for the source) and the plain Architecture heading; no custom anchors. -->\n <!-- GitHub Markdown: relative paths use the source directory; initial / means repository root. The plain heading ## Architecture has anchor architecture. -->",
+      "expected": [
+        {
+          "id": "md-link-extra-specs-directory-broken-navigation",
+          "title": "The rendered architecture link does not reach its target",
+          "file": "specs/payments.md",
+          "line": 41,
+          "severity": "low",
+          "category": "correctness",
+          "codeSnippet": "[Design](./specs/payments.md#architecture)"
+        }
+      ]
+    },
+    {
+      "id": "md-link-missing-fragment",
+      "language": "markdown",
+      "category": "correctness",
+      "description": "Architecture navigation from specs/payments.md.",
+      "file": "specs/payments.md",
+      "startLine": 41,
+      "diff": "+[Design](../specs/payments.md#missing-architecture)\n ## Architecture\n <!-- Synthetic same-revision complete tracked-file inventory: specs/payments.md. -->\n <!-- Each document consists only of this added link (for the source) and the plain Architecture heading; no custom anchors. -->\n <!-- GitHub Markdown: relative paths use the source directory; initial / means repository root. The plain heading ## Architecture has anchor architecture. -->",
+      "expected": [
+        {
+          "id": "md-link-missing-fragment-broken-navigation",
+          "title": "The rendered architecture link does not reach its target",
+          "file": "specs/payments.md",
+          "line": 41,
+          "severity": "low",
+          "category": "correctness",
+          "codeSnippet": "[Design](../specs/payments.md#missing-architecture)"
+        }
+      ]
+    },
+    {
+      "id": "md-link-renderer-drops-directory",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "A catalog renderer maps a catalogued specification to a Markdown destination.",
+      "file": "scripts/catalog.ts",
+      "startLine": 41,
+      "diff": "+function renderSpecLink(spec: string): string { return './' + spec.slice(spec.lastIndexOf('/') + 1); }\n // Synthetic same-revision renderer call: renderSpecLink(\"specs/payments/design.md\")\n // The result becomes [Design](result) in specs/CATALOG.md.\n // Complete tracked-file inventory: scripts/catalog.ts, specs/CATALOG.md, specs/payments/design.md.\n // Every Markdown target contains only ## Architecture; no custom anchors or other files exist.\n // GitHub Markdown: relative paths use the source directory; initial / means repository root. The plain heading ## Architecture has anchor architecture.",
+      "expected": [
+        {
+          "id": "md-link-renderer-drops-directory-broken-navigation",
+          "title": "The rendered architecture link does not reach its target",
+          "file": "scripts/catalog.ts",
+          "line": 41,
+          "severity": "low",
+          "category": "correctness",
+          "codeSnippet": "function renderSpecLink(spec: string): string { return './' + spec.slice(spec.lastIndexOf('/') + 1); }"
+        }
+      ]
     }
   ]
 }

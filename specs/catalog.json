@@ -2006,7 +2006,7 @@
       "id": "bugbot-analysis-and-autofix",
       "title": "Bugbot analysis, finding publication, and autofix",
       "status": "implemented",
-      "scope": "Select one canonical PR, exhaustively analyze bounded diff partitions with version-grounded dependency, delegated test-path and external Action input-contract, host-aware self-repository references and Kotlin/Wasm lexical-binding evidence, publish stable findings atomically, and apply authorized verified fixes",
+      "scope": "Select one canonical PR, exhaustively analyze bounded diff partitions with version-grounded dependency, delegated test-path and external Action input-contract, host-aware self-repository references and Kotlin/Wasm lexical-binding and renderer-grounded Markdown path evidence, publish stable findings atomically, and apply authorized verified fixes",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-10-29",
       "specs": [
@@ -2138,7 +2138,9 @@
         "src/prompts/__tests__/bugbot.test.ts",
         "src/prompts/__tests__/bugbot_framework_semantics.test.ts",
         "src/tooling/__tests__/fixtures/bugbot_validation_oracles.ts",
-        "src/tooling/__tests__/fixtures/bugbot_validation_functions.ts"
+        "src/tooling/__tests__/fixtures/bugbot_validation_functions.ts",
+        "src/tooling/__tests__/fixtures/bugbot_markdown_link_oracles.ts",
+        "quality/bugbot/evidence/issue-772.json"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
