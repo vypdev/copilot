@@ -4,7 +4,7 @@
 - Date: 2026-09-11
 - Last updated: 2026-10-29
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-10-29; Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
+- Last verified: 2026-10-29; host-aware self-repository Action references #770, Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -1346,3 +1346,100 @@ all eleven cases, previous framework/context checks, unchanged global/module
 coverage, architecture, typecheck/lint, docs/workflows/specifications, setup
 acceptance, build/package smoke, and fresh exact-head CI plus review without
 unresolved findings before merge. No unresolved design decision blocks this fix.
+
+
+### Host-aware self-repository Action references — #770 (2026-10-29)
+
+**Observed evidence and intended contract.** The [reported false positive](https://github.com/vypdev/copilot/issues/770)
+rejects a documented checkout-free self-repository reference and proposes changing
+an independent remote version-tag check. GitHub.com's [workflow syntax contract](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#example-using-an-action-in-the-same-repository-as-the-workflow-at-the-running-commit-recommended)
+resolves `$/path` against the repository containing the workflow/action at its
+running commit, without checkout or an `@ref` suffix. `./path` reads the workspace
+and requires its files first. GitHub Enterprise Server support differs; verify
+the applicable host/version. The consumer checker at
+`60ac0b924549e3bfc14d45ab217bdc42519bbe64`, blob
+`0afb450f1aad5e63f49d4ff49b12e7d4a4efad3f`, exempts local references before applying
+its version-tag regex. Its matching successful job `123031685987` resolves the
+bootstrap action before workspace checkout. These are inspected external source
+and run receipts, not a consumer run executed by this change.
+
+Before alleging invalid syntax or replacing a reference, review MUST reconcile
+the authored literal, containing repository, host/version contract, checkout order
+and applicable same-revision execution. An internally resolved log SHA is not an
+authored remote pin. For prefix checks, compare exact literal characters through
+`startswith` and returns; invented spaces cannot create a failing witness.
+A remote-version check need not validate local-reference grammar; a bypass claim
+requires a malformed authored reference and a reachable failure.
+Valid bootstrap refs and independent remote tag policies MUST remain supported;
+malformed suffixes, missing checkout and proved unsupported hosts remain
+reportable. Without applicable evidence, omit unsupported claims/replacements.
+Anchor the literal changed `uses` line, not `steps`, counting every displayed line
+from its declared start and rechecking the numeric range. Action reference fixes
+and step moves MUST use prose suggestions and omit code replacements to avoid
+unsafe YAML indentation or edits outside the reported span. Other suggestions
+retain the existing exact-span requirement.
+
+```text
+authored uses -> host/version + literal/source + checkout/run evidence
+              -> valid self ref or accepted prefix: omit disproved finding
+              -> proved suffix/checkout/host failure: report exact uses line
+```
+
+Text equivalent: establish which repository and files the host actually resolves,
+then evaluate the precise changed reference and its demonstrated failure.
+
+**Architecture, bounds and security.** Extend the existing pure shared Action
+instruction in production and benchmark prompts. Compact redundant external-fact
+and dependency prose while retaining their historical regression assertions and
+the original 15,000-character long-ignore prompt bound. Existing ports, schemas,
+publication states, permissions, configuration, timeouts and resource budgets
+remain applicable. This adds no allowlist, syntax parser, filter or automatic
+finding dismissal. Corpus text is inert synthetic data; ordinary tests parse
+YAML and inspect Python literals without executing supplied strings. Source,
+logs and discussions remain untrusted evidence, never approval/mutation authority.
+
+**Product journey and operations.** Valid references yield no inline finding or
+extra abstention notification. A real defect uses the existing localized review
+and states in sections 5–12; for example, “This workspace action runs before its
+files are checked out,” anchored to the changed `uses` line. Inspect the reference
+and order before fixing it. A prior false finding still needs normal current-head
+verification: attach the applicable contract and matching source/run receipt,
+then request `/copilot recheck`. Pending, blocked, partial and failed reviews keep
+their existing recovery and notification budgets. Adoption is the updated runtime;
+rollback reverts prompt, fixtures, evidence and docs together without changing
+stored finding history or consumer configuration.
+
+Allocate **17 additional distinct deterministic cases**, exclusively here:
+
+| Area | Cases | Executable acceptance/risk |
+|---|---:|---|
+| Ordinary, partitioned and benchmark delivery | 3 | shared host/literal/anchor contract; no hidden verdict leakage |
+| False-positive scorer controls | 4 | bootstrap, remote tag policy, checkout-first, unavailable host evidence |
+| False-negative scorer controls | 3 | explicit suffix, checkout-too-late, proved unsupported host |
+| Inert source and anchor controls | 7 | six parsed workflow reference/order/line checks; exact Python prefix and source/log distinction |
+| **Total** | **17** | no double counting with earlier amendments |
+
+The corpus now has **90** cases; all earlier 83 inputs/verdicts and default scoring
+thresholds remain unchanged. Three delivery cases fail before guidance. Scorer
+fixtures establish the evaluator contract, not model accuracy. Native controls
+are synthetic evidence checks, not execution on GitHub.com or GHES. Actual
+product-runtime observations, source/bundle hashes, unchanged selected seven cases
+and default scores are retained separately in
+`quality/bugbot/evidence/issue-770.json`, including failed intermediate samples.
+The final V5 sample passes every unchanged default gate, with zero false
+positives/negatives, exact anchors and no code replacements. V1/V3 fail location;
+V2 invents a prefix space; V4 incorrectly widens the remote validator scope. The
+first four runs used the development repository; V5 uses an empty Git workspace
+with no corpus/source/verdict files copied into it. This setup difference prevents
+attributing score changes solely to prompt wording. No statistical improvement,
+historical false-positive reproduction or future accuracy guarantee is claimed.
+
+**Traceability and DoD.** `bugbot.test.ts`, `bugbot_benchmark_runner.test.ts` and
+`bugbot_benchmark.test.ts` own the budget. Detection documents host/literal rules,
+failure scenarios the evidence/re-review path, and quality/observability the
+actual sample limits. Catalog metadata and generated links register the evidence.
+Acceptance requires these cases, historical context/framework and prompt bounds,
+unchanged global/module coverage budgets, architecture, types/lint, specification,
+documentation/workflow validation, generated build/package smoke, and exact-head
+CI plus complete review without unresolved findings before merge. No unresolved
+configuration or design decision blocks this correction.

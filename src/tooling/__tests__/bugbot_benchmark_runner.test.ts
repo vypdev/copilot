@@ -7,6 +7,27 @@ const testCase: BugbotBenchmarkCase = {
     file: 'src/example.ts', startLine: 40, diff: '+return user.name;', expected: [{ title: 'Hidden ground truth title' }],
 };
 
+it('shares host-grounded Action reference guidance without leaking a private verdict', () => {
+    const prompt = buildBugbotBenchmarkPrompt({ ...testCase, language: 'yaml',
+        description: 'A workflow bootstraps an action in its own repository.',
+        diff: '+- uses: $/.github/actions/bootstrap',
+    });
+    expect(prompt).toContain('GitHub.com supports $/path');
+    expect(prompt).toContain('containing workflow/action repository at its running commit');
+    expect(prompt).toContain('without checkout or an @ref suffix');
+    expect(prompt).toContain('./path needs the checked-out workspace');
+    expect(prompt).toContain('host/version contract');
+    expect(prompt).toContain('Preserve valid bootstrap refs');
+    expect(prompt).toContain('remote version-tag policy');
+    expect(prompt).toContain('compare literal strings character by character through startswith and returns');
+    expect(prompt).toContain('Anchor the literal uses line, not its steps key');
+    expect(prompt).toContain('A remote tag check need not validate local-reference grammar');
+    expect(prompt).toContain('Prove a malformed reference exists and reaches execution before alleging a bypass');
+    expect(prompt).toContain('Count every displayed line from its stated start');
+    expect(prompt).toContain('For Action reference fixes or step moves, use prose suggestion and omit suggestedCode');
+    expect(prompt).not.toContain('Hidden ground truth title');
+});
+
 it('delivers Kotlin/Wasm binding guidance without leaking the private verdict', () => {
     const prompt = buildBugbotBenchmarkPrompt({ ...testCase, language: 'kotlin',
         description: 'A package-level interop function installs a callback.',
