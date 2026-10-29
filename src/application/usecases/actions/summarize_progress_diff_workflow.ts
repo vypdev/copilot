@@ -1,3 +1,4 @@
+import { queryProgressResult } from './query_progress_result_workflow';
 import type { ProgressDiffEvidence } from '../../ports/progress_diff_query_ports';
 import type { FindingsQueryPort } from '../../ports/agent_findings_ports';
 import type { ProgressContext } from '../push_single_action_contexts';
@@ -47,9 +48,9 @@ export async function summarizeProgressDiff(diff: ProgressDiffEvidence, context:
     logInfo(`Progress comparison requires ${diff.partitions.length} complete bounded parts; no percentage is published until all parts and final assessment finish.`);
     for (const [index, partition] of diff.partitions.entries()) {
         logInfo(`Assessing progress evidence part ${index + 1} of ${diff.partitions.length}, round ${Math.floor(index / MAX_PROGRESS_PARTITIONS) + 1} of ${Math.ceil(diff.partitions.length / MAX_PROGRESS_PARTITIONS)}.`);
-        const response = await agent.query({ configuration: context.agentConfiguration, agentId: AGENT_PLAN, prompt: prompts[index],
+        const response = await queryProgressResult(agent, { configuration: context.agentConfiguration, agentId: AGENT_PLAN, prompt: prompts[index],
             options: { ...productFacingAgentQueryOptions('progress-partition', progressPartitionResponseSchema(partition, factLimit)),
-                includeReasoning: context.includeReasoning } });
+                includeReasoning: context.includeReasoning } }, { phase: 'partition' });
         if (diff.protocol) receipts.push(parseProgressPartitionReceipt(response, partition, context.targetLocale, factLimit));
         else facts.push(parseProgressPartitionFacts(response, partition, context.targetLocale, factLimit));
     }

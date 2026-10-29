@@ -194,7 +194,12 @@
         "src/application/policies/progress_prompt_capacity_policy.ts",
         "src/application/policies/progress_recovery_capacity_policy.ts",
         "src/application/policies/agent_prompt_envelope_policy.ts",
-        "src/data/repository/ai/agent_capability_adapter.ts"
+        "src/data/repository/ai/agent_capability_adapter.ts",
+        "src/domain/progress_response_diagnostic.ts",
+        "src/domain/agent_response_schema_failure.ts",
+        "src/data/repository/progress_agent_response_policy.ts",
+        "src/application/policies/progress_response_rejection_policy.ts",
+        "src/application/usecases/actions/query_progress_result_workflow.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -330,7 +335,12 @@
         "src/application/policies/__tests__/progress_evidence_protocol_policy.test.ts",
         "src/application/policies/__tests__/progress_recovery_capacity_policy.test.ts",
         "src/application/usecases/actions/__tests__/progress_prompt_preflight.test.ts",
-        "src/application/usecases/actions/__tests__/progress_agent_prompt_capacity.integration.test.ts"
+        "src/application/usecases/actions/__tests__/progress_agent_prompt_capacity.integration.test.ts",
+        "src/domain/__tests__/progress_response_diagnostic.test.ts",
+        "src/data/repository/__tests__/progress_agent_response_policy.test.ts",
+        "src/application/usecases/actions/__tests__/progress_result_rejection.integration.test.ts",
+        "src/application/policies/__tests__/progress_rejection_diagnostics.test.ts",
+        "src/application/policies/__tests__/progress_response_error_presentation.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",
@@ -646,7 +656,7 @@
       "status": "implemented",
       "scope": "Shared GitHub Action lifecycle with pinned native resource/lane coordination proof, conservative predecessor fencing, routing and durable user-facing results",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-28",
+      "lastVerified": "2026-10-29",
       "specs": [
         "specs/execution-admission-queue-and-publication.md",
         "specs/execution-error-and-context-hardening.md",
@@ -742,7 +752,9 @@
         "src/application/ports/issue_event_admission_ports.ts",
         "src/application/usecases/execution/issue_event_admission_workflow.ts",
         "src/application/policies/setup_runner_policy.ts",
-        "src/manager/description/base/issue_content_interface.ts"
+        "src/manager/description/base/issue_content_interface.ts",
+        "src/domain/agent_response_schema_failure.ts",
+        "src/data/repository/agent_json_schema_validator.ts"
       ],
       "tests": [
         "src/tooling/__tests__/coverage_budget_validator.test.ts",
@@ -801,7 +813,9 @@
         "src/manager/description/base/__tests__/issue_content_interface.test.ts",
         "src/application/usecases/__tests__/issue_use_case.test.ts",
         "src/utils/__tests__/setup_runner_installation.test.ts",
-        "src/application/usecases/execution/__tests__/single_action_target_restore.integration.test.ts"
+        "src/application/usecases/execution/__tests__/single_action_target_restore.integration.test.ts",
+        "src/data/repository/__tests__/agent_json_schema_validator.test.ts",
+        "src/data/repository/__tests__/progress_agent_response_policy.test.ts"
       ],
       "documentation": [
         "docs/overview.mdx",

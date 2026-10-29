@@ -91,6 +91,29 @@ project verification is a separate result. Do not manufacture a passing status,
 retarget a legitimate PR or split production binaries just to obtain text patches.
 
 
+
+## Invalid completed progress result
+
+`agent.failed` can describe a process failure or an invalid returned assessment.
+Completed progress contract rejections additionally identify
+`progress-result-contract-invalid`. Inspect its phase, reviewed reason, known
+field and any verified requirement/original-issue line. For example, requirement
+`R2`, original line `L7` and `$.requirements[1].evidence` point to an invalid
+evidence field. The array index is a field location, not a requirement identity.
+`none` explicitly means an identity is unavailable; no positional or repeated-
+quote anchor is inferred. Blank lines keep their original physical numbering.
+
+The result remains rejected and prior labels/assessments remain unchanged. A
+fresh attempt can help if the provider can return conforming data for the same
+requirements; deterministic limits and unsupported contracts cannot be fixed by
+repeating identical invalid data. Inspect the linked run and named schema rule;
+do not weaken acceptance, verification or strict output validation, and do not
+dump raw model output. JSON/schema/semantic details use only bounded reviewed
+codes and fields, never returned values, unknown property names or exceptions.
+Existing execution/transport classification and retryability remain unchanged.
+A later optional Check Run 403 is secondary and retains the primary failure and
+correlation reference.
+
 ## Optional Check Run publication not confirmed
 
 This warning concerns an optional evidence projection. Required-stage success

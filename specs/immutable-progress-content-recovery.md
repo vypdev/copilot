@@ -775,3 +775,231 @@ branches. Every module budget passes; setup remains 336/350 with 14 explicitly
 open cases. The full run includes the four native-adapter envelope cases and
 part-preflight boundary regression, rather than extrapolating their results
 from the initial full run.
+
+## 23. Completed progress-result rejection diagnostics — #774
+
+- Status: implementation contract, 2026-10-29.
+- Owner: `github-communication-experience`; shared semantic error rules remain
+  owned by `execution-lifecycle`.
+- Related evidence: [#774](https://github.com/vypdev/copilot/issues/774).
+- Open decisions: none. Use closed diagnostics, preserve every acceptance rule,
+  and keep successful model request/response shapes unchanged.
+
+### Evidence and product outcome
+
+The cited geckocv run pins base `b461b78c035928856862b995d9008a64b3d59848`
+and head `ad9c0ff78cafe77552ff4589953f86133fc431c9`. Its two agent operations
+reported completion, followed by generic `assessment-invalid` / `agent.failed`.
+A permitted same-head retry succeeded. This proves the missing diagnostic, not
+which undisclosed response field was wrong or a deterministic model regression.
+The later optional `checks.create` 403 is separate. No private model response
+is available as a regression fixture or inferred from those logs.
+
+Observed source behavior: schema failures can occur in the native findings
+adapter before application parsing; the final scope parser combines many rules
+under a bare `assessment-invalid`. Both boundaries need deterministic fixtures.
+An application-only catch or inference from producer error-message text is
+insufficient.
+
+The operator MUST learn that a returned progress result violated its contract,
+which reviewed rule/field failed, and any verified requirement or original-issue
+line identity. The result MUST remain rejected and previous progress retained.
+A returned object is interpretation, never source/execution attestation.
+Transport/process failure MUST retain its existing classification and MUST NOT
+be presented as a completed structured-result rejection.
+
+### State flow and fixed invariants
+
+```mermaid
+flowchart LR
+    A[Agent operation] --> B{Usable completed output?}
+    B -->|process or transport failure| C[Existing execution diagnostic]
+    B -->|returned data| D[Strict JSON and schema validation]
+    D --> E[Scope and requirement semantic validation]
+    D -->|invalid| F[Closed rejection details; previous progress retained]
+    E -->|invalid| F
+    E -->|valid| G[Existing source and issue freshness fences]
+    G --> H[Existing publication]
+    F --> I[Optional evidence publication; separate outcome]
+```
+
+Text equivalent: distinguish execution failure from returned output, validate
+that output strictly, reject invalid schema or semantics with bounded details,
+and publish only after the unchanged successful validation/freshness path.
+Optional evidence publication cannot erase or replace the primary diagnostic.
+
+- Every existing locale, exact-ID/path/unit, evidence/status, uncertainty,
+  cardinality, percentage/remaining, Unicode and size rule MUST remain enforced.
+- No invalid result becomes accepted; no source or scope is shortened or changed.
+- There is no automatic result-repair loop, retry, threshold change, new runtime
+  permission, credential, command or repository configuration.
+- Existing execution/provider errors and retry rules remain authoritative.
+  `agent.failed` remains eligible for a fresh attempt after a provider returns
+  an invalid result; same input is not promised to produce a valid result.
+- Cancellation, missing results and superseded source retain progress without
+  claiming a completed valid assessment. There is no partial progress state.
+
+### Closed diagnostic and architecture contract
+
+Add one semantic recovery descriptor, `progress-result-contract-invalid`, with
+exactly five bounded machine fields: `phase`, `reason`, `field`,
+`requirementId`, `sourceLineId`. Phases are `scope`, `partition`, `assessment`.
+Reasons are reviewed schema/semantic codes, never provider messages or values.
+Field paths use only the phase's known JSON keys and bounded numeric indices;
+unknown returned property names MUST NOT be copied. Original source line IDs
+are positive physical line IDs through `L524289` (the fixed 512 KiB input
+ceiling plus one), requirement IDs `R1` through `R32`; `none` explicitly
+means no verified identity. The variables fit within 512 serialized UTF-8 bytes.
+The public error model MUST validate exact keys, closed values and phase/ID
+relationships before serialization.
+
+Native adapter work is limited to typed schema-failure facts and a progress-only
+completed-output mapper selected by the application's existing closed schema
+names. Non-progress schema messages and strict validation behavior remain;
+`AgentResponseLengthFailure` and SDD-size remediation retain their semantics.
+Malformed completed JSON yields a closed root-field diagnostic. No raw output,
+unknown property name, returned enum/value, exception message, stack, prompt,
+path, provider URL or credential enters the new recovery descriptor.
+
+Application scope extraction retains a separate immutable host-owned map from
+R/X IDs to original L-line IDs. A source-aware extraction helper returns this
+map alongside the existing scope; the existing scope JSON and model schemas
+MUST remain unchanged. The existing helper still returns that same scope shape.
+The map never comes from the model, is not inferred by matching quote text, and
+never assumes response-array order equals requirement order. Repeated quotes
+and reordered results therefore keep the correct original anchors.
+
+Application query orchestration maps only the typed completed-output failure,
+verifies its phase and intersects identities with this attempt's host inventory,
+then adds verified source anchors. Unrelated thrown values pass through their
+existing boundary unchanged. Semantic parsers select the same descriptor using
+known input/scope facts; an unavailable result does not gain completed-output
+authority. Known missing/duplicate/invalid requirements receive applicable
+verified IDs; ambiguous/unrecognized identities use `none`, never raw values or
+a fabricated positional anchor.
+
+Domain owns the finite diagnostic grammar and typed error carriers. Application
+owns host binding, semantic rejection and error construction. Data owns strict
+JSON/schema interpretation. Existing semantic ports, composition, correlation
+ownership, mutation fences and presenters remain; no generic response payload
+or extra credential-bearing context is added. Dependency/cycle, Result/raw-error,
+capability-context and JSON Schema checks MUST continue to enforce those limits.
+
+### Operator experience and recovery
+
+Use the existing CLI/Check/Job Summary semantic view and existing reply ownership,
+markers, links, correlation ID and comment budgets. No new timeline comment or
+surface is created. English and Spanish descriptors ship together; other locales
+use the existing complete bounded resolver/English fallback. Machine codes and
+IDs remain verbatim. Ordinary text and short fields must wrap on narrow/mobile
+views and need no color, HTML, image or theme-specific representation.
+
+| State | Visible outcome | Next action |
+|---|---|---|
+| Pending | Current assessment is running; previous progress remains | Wait for the existing run |
+| Completed output rejected | Progress not published; reason, field and verified identities available | Inspect the original requirement and schema; rerun if the provider can produce a conforming result |
+| Partial work / interrupted | Earlier model parts do not establish a percentage | Existing fresh-attempt recovery; no partial result reuse |
+| Process/transport failure | Existing execution/provider code and retry guidance | Follow that category, without inventing a schema failure |
+| Optional publication 403 | Primary assessment failure remains; separate publication warning | Use the existing supported credential/setup route |
+| Valid completed assessment | Existing freshness/publication path | No extra diagnostic or operator action |
+
+Representative error content, with illustrative verified identifiers:
+
+```text
+Impact: The returned progress result violated its contract; progress was not published.
+Error code: agent.failed
+Action: Inspect the original requirement and response schema. Details: phase assessment,
+reason requirement-evidence-invalid, field $.requirements[1].evidence,
+requirement R2, original issue line L7. none means no verified identity is available.
+A fresh attempt may help when the provider can satisfy the unchanged contract.
+Retained state: Existing progress labels and published assessments were preserved.
+Retryable: Yes
+Reference: <existing correlation UUID and run navigation>
+```
+
+This content identifies data fields for an operator decision, not implementation
+instructions for a repository author. It MUST NOT ask consumers to alter their
+acceptance, remove verification, dump model output or grant credentials to
+repair an invalid assessment. A source line refers to this attempt's original
+issue body, not a guessed current line after later edits.
+
+### Risk-derived acceptance, documentation and rollout
+
+Allocate **84 additional distinct regression cases** before implementation:
+
+| Area | Minimum | Concrete risks |
+|---|---:|---|
+| Pure diagnostic grammar and identity binding | 28 | closed phases/reasons/fields, exact keys/byte bounds, unknown IDs, immutable host maps, no positional/quote guessing |
+| Native adapter/JSON/schema contracts | 20 | malformed output, types/enums/cardinality/length, known/unrecognized IDs, unchanged non-progress and SDD-length behavior |
+| Application/publication integration | 24 | scope/final/part failures, missing/duplicate/out-of-scope IDs, evidence/remaining/percentage rules, transport/cancellation/stale source, valid retry and secondary-check failure |
+| Presentation/localization/privacy | 12 | English/Spanish/fallback, actionable retained state, inert technical identifiers, malicious field/value redaction, shared JSON/CLI/summary behavior |
+| **Total** | **84** | no double counting of prior suites or repeated runs |
+
+New pure policy/diagnostic/native-mapping modules require 100% on all four
+coverage metrics. Existing exhaustive scope/partition policies retain 100%.
+Changed query/orchestration requires 95% lines/statements and 90%
+branches/functions; every prior global/module/setup/extension/benchmark budget
+and timeout remains. Use deterministic provider/CLI fakes and host-authored
+outputs; no live provider wait, consumer execution, real secret or credential
+publication fixture. The historical bad response is unknown and is not invented.
+
+| Requirement | Executable evidence | Documentation |
+|---|---|---|
+| Completed schema/semantic rejection has bounded details | Native findings-adapter plus scope/partition parser fixtures | execution contract; progress evidence |
+| Correct host anchors after reorder/repeated quotes | Source-aware extraction and late-bound native failure fixtures | progress operator guidance |
+| Invalid results retain progress; valid retry remains possible | Complete CheckProgress use-case integration | progress recovery; error reference |
+| Execution and optional publication remain independent | AgentCliError/provider and completion/check-403 fixtures | existing optional-check diagnostic guide |
+| No raw model data enters output | Recovery normalizer and JSON/text/Markdown localization tests | error contract and privacy rules |
+
+Update the owning catalog/code/test evidence and conservative communication
+ledger; regenerate `specs/CATALOG.md`. Update progress guidance, agent execution
+contract, operator error reference and shared semantic-error SDD together. No
+setup/config migration is needed: successful model contracts are unchanged and
+the new descriptor is additive to the existing typed error catalog. Rollback
+restores the former generic diagnostic, retaining strict rejection and state.
+There is no durable partial-result state or diagnostic cache to clean up.
+
+Implementation order: contracts/typed facts and baseline-failing fixtures;
+native schema mapping; host scope binding and semantic parsers; query boundary;
+recovery templates and secondary-publication integration; docs/catalog/ledger;
+then Graphify and all local/remote gates. DoD requires the 84-case floor,
+exhaustive/module/global coverage, unchanged behavior/security/architecture
+checks, generated bundles/package smoke, normal hooks and exact-head
+CI/Linux/macOS/Windows/Codecov/review with zero active/unknown findings before
+merge. Existing in-flight source/issue freshness fences remain authoritative.
+
+Original L identities count physical lines, while the existing 1,024-input-line
+limit counts nonempty source records. Blank lines MUST NOT cause the diagnostic
+to reject or mislabel otherwise supported scope. The admitted 512 KiB input
+bounds the physical line number at 524,289; source-array field indices still
+stop at 1,023. Out-of-admission helper inputs use `none` rather than publishing
+an unbounded line identifier. Regression fixtures cover blank lines beyond
+1,024 and preserve unchanged successful scope/model JSON.
+
+### Executed regression evidence for issue #774
+
+The five new suites contain **153 distinct passing cases**: 65 diagnostic
+grammar/identity cases, 39 native JSON/schema mapping cases, 29 complete
+query/publication integration cases, 14 presentation/privacy cases and six
+semantic/native regression controls. Existing presentation and optional-check
+suites additionally cover the additive descriptor and English/Spanish primary
+error preservation after an optional 403. Repeated runs are not additional
+cases. The initial regression run failed four behavior assertions; malformed
+array-container fixtures also failed before identity inference was corrected.
+
+The focused verification passes 1,226 cases across 53 suites. New diagnostic,
+typed-schema-failure, rejection, native-mapping and query-boundary modules reach
+100% statements, branches, functions and lines. Existing scope, partition and
+summarization policies retain 100%; analysis orchestration retains 100%
+statements/functions/lines and 95.83% branches. This scoped run supplements the
+required unchanged full-repository, setup, extension and exact-head CI gates;
+it does not replace them or claim an unavailable historical response.
+
+The full current-source run passes **789 suites / 14,613 tests**, with the same
+35 pre-existing skips, in 658.698 seconds. Global coverage is 97.28% statements,
+95% branches, 97.95% functions and 98.06% lines. All existing and extended module
+budgets pass. The unchanged setup ledger reports 336/350 passing cases and 14
+explicitly open cases. Extension verification passes all 267 tests with 100%
+on all four metrics; its packaging check uses a writable temporary npm cache
+after the sandbox rejected access to the user's cache. These results make no
+claim that the explicitly open setup cases were implemented by this change.

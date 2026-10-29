@@ -1,3 +1,4 @@
+import { interpretProgressAgentOutput, progressResponsePhaseForSchema } from '../progress_agent_response_policy';
 import { logError } from '../../../utils/logger';
 import { buildAgentPrompt } from '../agent_prompt_policy';
 import { interpretFindingsResponse } from '../agent_findings_response_policy';
@@ -24,7 +25,10 @@ export class FindingsAgentAdapter extends AgentCapabilityAdapter implements Find
             capability: 'findings',
             ...(options.expectJson && options.schema ? { outputSchema: options.schema } : {}),
             mapCliOutput: (output) => {
-                if (options.expectJson && options.schema) return interpretFindingsResponse(output, options);
+                if (options.expectJson && options.schema) {
+                    const phase = progressResponsePhaseForSchema(schemaName);
+                    return phase ? interpretProgressAgentOutput(output, phase, options.schema) : interpretFindingsResponse(output, options);
+                }
                 return output;
             },
         });

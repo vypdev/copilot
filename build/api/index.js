@@ -2110,6 +2110,35 @@ function partitionProgressDiff(baseSha, headSha, changes, profile) {
 
 /***/ }),
 
+/***/ 3023:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.progressResponseRejected = progressResponseRejected;
+exports.progressResponsePayload = progressResponsePayload;
+const agent_output_locale_policy_1 = __nccwpck_require__(601);
+const application_error_1 = __nccwpck_require__(5999);
+const progress_response_diagnostic_1 = __nccwpck_require__(6289);
+function progressResponseRejected(facts, code = 'agent.failed') {
+    if (!(0, progress_response_diagnostic_1.isProgressResponseDiagnosticFacts)(facts))
+        throw new TypeError('Progress response diagnostic is invalid.');
+    return new application_error_1.ApplicationError(code, `Progress ${facts.phase} result was rejected (${facts.reason}; field ${facts.field}; requirement ${facts.requirementId}; source ${facts.sourceLineId}). Existing progress was retained.`, { recovery: { id: 'progress-result-contract-invalid', variables: facts } });
+}
+/** An absent result retains its original code without claiming completed output. */
+function progressResponsePayload(response, locale, phase, code = 'locale.output-invalid') {
+    const validation = (0, agent_output_locale_policy_1.validateAgentOutputLocale)(response, locale);
+    if (validation.kind === 'valid')
+        return validation.payload;
+    if (response === undefined)
+        throw new application_error_1.ApplicationError(code, (0, agent_output_locale_policy_1.agentOutputLocaleFailureMessage)(validation));
+    throw progressResponseRejected({ phase, reason: validation.reason,
+        field: validation.reason === 'response-not-object' ? '$' : '$.outputLocale', requirementId: 'none', sourceLineId: 'none' }, code);
+}
+
+
+/***/ }),
+
 /***/ 2704:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -2119,9 +2148,11 @@ exports.MAX_PROGRESS_SCOPE_CLAUSES = exports.MAX_PROGRESS_SCOPE_BYTES = void 0;
 exports.progressScopeSourceLines = progressScopeSourceLines;
 exports.progressScopeResponseSchema = progressScopeResponseSchema;
 exports.parseProgressScope = parseProgressScope;
+exports.parseProgressScopeWithAnchors = parseProgressScopeWithAnchors;
 exports.scopedProgressResponseSchema = scopedProgressResponseSchema;
 exports.parseScopedProgressResponse = parseScopedProgressResponse;
-const application_error_1 = __nccwpck_require__(5999);
+const progress_response_rejection_policy_1 = __nccwpck_require__(3023);
+const progress_response_diagnostic_1 = __nccwpck_require__(6289);
 const progress_diff_partition_policy_1 = __nccwpck_require__(628);
 const agent_output_locale_policy_1 = __nccwpck_require__(601);
 exports.MAX_PROGRESS_SCOPE_BYTES = 64000;
@@ -2143,50 +2174,66 @@ function progressScopeResponseSchema(lines) {
                         kind: { type: 'string', enum: ['required', 'excluded', 'context', 'uncertain'] } },
                     required: ['id', 'kind'] } } }, required: ['outputLocale', 'lines'] };
 }
-function invalid(reason = 'assessment-invalid') {
-    throw new application_error_1.ApplicationError('agent.failed', `Progress scope or requirement evidence was rejected (${reason}). Existing progress was retained.`);
-}
-function payloadFor(response, locale) {
-    const result = (0, agent_output_locale_policy_1.validateAgentOutputLocale)(response, locale);
-    if (result.kind === 'invalid')
-        throw new application_error_1.ApplicationError('locale.output-invalid', (0, agent_output_locale_policy_1.agentOutputLocaleFailureMessage)(result));
-    return result.payload;
-}
 function exactKeys(value, keys) {
     return Object.keys(value).sort().join(',') === [...keys].sort().join(',');
 }
 function parseProgressScope(response, issue, locale) {
-    const payload = payloadFor(response, locale);
+    return parseProgressScopeWithAnchors(response, issue, locale).scope;
+}
+/** Retains host physical-line identities separately; scope/model JSON is unchanged. */
+function parseProgressScopeWithAnchors(response, issue, locale) {
+    const payload = (0, progress_response_rejection_policy_1.progressResponsePayload)(response, locale, 'scope');
     const source = progressScopeSourceLines(issue);
-    if (!exactKeys(payload, ['outputLocale', 'lines']) || !Array.isArray(payload.lines) || payload.lines.length !== source.length)
-        invalid('scope-incomplete');
+    const reject = (reason, field, id = 'none') => {
+        throw (0, progress_response_rejection_policy_1.progressResponseRejected)({ phase: 'scope', reason, field, requirementId: 'none',
+            sourceLineId: (0, progress_response_diagnostic_1.isProgressSourceLineId)(id) && source.some(line => line.id === id) ? id : 'none' });
+    };
+    if (!exactKeys(payload, ['outputLocale', 'lines']))
+        reject('scope-incomplete', '$');
+    if (!Array.isArray(payload.lines))
+        reject('scope-incomplete', '$.lines');
+    const input = payload.lines;
+    if (input.length !== source.length) {
+        const missing = source.find(line => !input.some(entry => entry !== null && typeof entry === 'object' && !Array.isArray(entry)
+            && entry.id === line.id));
+        reject('scope-incomplete', '$.lines', missing?.id);
+    }
     const seen = new Set();
-    const classified = payload.lines.map((entry) => {
+    const classified = input.map((entry, index) => {
+        const field = `$.lines[${index}]`;
         if (!entry || typeof entry !== 'object' || Array.isArray(entry))
-            invalid('scope-entry-invalid');
+            reject('scope-entry-invalid', field);
         const item = entry;
-        if (!exactKeys(item, ['id', 'kind']) || typeof item.id !== 'string' || !source.some(line => line.id === item.id))
-            invalid('scope-source-id-invalid');
-        if (seen.has(item.id))
-            invalid('scope-source-id-duplicate');
-        seen.add(item.id);
+        if (!exactKeys(item, ['id', 'kind']))
+            reject('scope-source-id-invalid', field, item.id);
+        if (typeof item.id !== 'string' || !source.some(line => line.id === item.id))
+            reject('scope-source-id-invalid', `${field}.id`);
+        const id = item.id;
+        if (seen.has(id))
+            reject('scope-source-id-duplicate', `${field}.id`, id);
+        seen.add(id);
         if (!['required', 'excluded', 'context', 'uncertain'].includes(item.kind))
-            invalid('scope-classification-invalid');
-        return { id: item.id, kind: item.kind };
+            reject('scope-classification-invalid', `${field}.kind`, id);
+        return { id, kind: item.kind };
     });
+    const anchors = {};
     function clauses(kinds, prefix) {
         const selected = source.filter(line => kinds.includes(classified.find(item => item.id === line.id).kind));
         if (selected.length > exports.MAX_PROGRESS_SCOPE_CLAUSES)
-            invalid('scope-clause-limit');
-        return Object.freeze(selected.map((line, index) => Object.freeze({ id: `${prefix}${index + 1}`, quote: line.quote,
-            ...(classified.find(item => item.id === line.id).kind === 'uncertain' ? { uncertain: true } : {}) })));
+            reject('scope-clause-limit', '$.lines', selected[exports.MAX_PROGRESS_SCOPE_CLAUSES].id);
+        return Object.freeze(selected.map((line, index) => {
+            const id = `${prefix}${index + 1}`;
+            anchors[id] = line.id;
+            return Object.freeze({ id, quote: line.quote,
+                ...(classified.find(item => item.id === line.id).kind === 'uncertain' ? { uncertain: true } : {}) });
+        }));
     }
-    const result = Object.freeze({ requirements: clauses(['required', 'uncertain'], 'R'), exclusions: clauses(['excluded'], 'X') });
-    if (result.requirements.length === 0)
-        invalid('scope-no-requirements');
-    if (Buffer.byteLength(JSON.stringify(result), 'utf8') > exports.MAX_PROGRESS_SCOPE_BYTES)
-        invalid('scope-budget');
-    return result;
+    const scope = Object.freeze({ requirements: clauses(['required', 'uncertain'], 'R'), exclusions: clauses(['excluded'], 'X') });
+    if (scope.requirements.length === 0)
+        reject('scope-no-requirements', '$.lines');
+    if (Buffer.byteLength(JSON.stringify(scope), 'utf8') > exports.MAX_PROGRESS_SCOPE_BYTES)
+        reject('scope-budget', '$.lines');
+    return Object.freeze({ scope, anchors: Object.freeze(anchors) });
 }
 const factSchema = { type: 'string', minLength: 1, maxLength: MAX_FACT };
 function scopedProgressResponseSchema(scope) {
@@ -2205,45 +2252,69 @@ function scopedProgressResponseSchema(scope) {
     };
 }
 /** Only exact in-scope entries can reach the existing progress card. No model top-level remaining is published. */
-function parseScopedProgressResponse(response, locale, scope) {
-    const payload = payloadFor(response, locale);
-    if (!exactKeys(payload, ['outputLocale', 'progress', 'requirements']) || typeof payload.progress !== 'number'
-        || !Number.isFinite(payload.progress) || payload.progress < 0 || payload.progress > 100
-        || !Array.isArray(payload.requirements) || payload.requirements.length !== scope.requirements.length)
-        invalid();
+function parseScopedProgressResponse(response, locale, scope, anchors = {}) {
+    const payload = (0, progress_response_rejection_policy_1.progressResponsePayload)(response, locale, 'assessment');
+    const reject = (reason, field, candidate = 'none') => {
+        const id = (0, progress_response_diagnostic_1.isProgressRequirementId)(candidate) && scope.requirements.some(requirement => requirement.id === candidate) ? candidate : 'none';
+        const source = anchors[id];
+        throw (0, progress_response_rejection_policy_1.progressResponseRejected)({ phase: 'assessment', reason, field, requirementId: id,
+            sourceLineId: id !== 'none' && (0, progress_response_diagnostic_1.isProgressSourceLineId)(source) ? source : 'none' });
+    };
+    if (!exactKeys(payload, ['outputLocale', 'progress', 'requirements']))
+        reject('response-shape-invalid', '$');
+    if (typeof payload.progress !== 'number' || !Number.isFinite(payload.progress) || payload.progress < 0 || payload.progress > 100)
+        reject('progress-invalid', '$.progress');
+    if (!Array.isArray(payload.requirements))
+        reject('requirements-incomplete', '$.requirements');
+    const input = payload.requirements;
+    if (input.length !== scope.requirements.length) {
+        const missing = scope.requirements.find(requirement => !input.some(entry => entry !== null && typeof entry === 'object' && !Array.isArray(entry)
+            && entry.id === requirement.id));
+        reject('requirements-incomplete', '$.requirements', missing?.id);
+    }
     const seen = new Set();
-    const entries = payload.requirements.map((entry) => {
+    const entries = input.map((entry, index) => {
+        const field = `$.requirements[${index}]`;
         if (!entry || typeof entry !== 'object' || Array.isArray(entry))
-            invalid();
+            reject('requirement-shape-invalid', field);
         const fact = entry;
-        if (!exactKeys(fact, ['id', 'status', 'evidence', 'summary', 'remaining']) || typeof fact.id !== 'string'
-            || !scope.requirements.some(requirement => requirement.id === fact.id) || seen.has(fact.id))
-            invalid();
-        seen.add(fact.id);
-        if (scope.requirements.find(requirement => requirement.id === fact.id).uncertain && fact.status !== 'verification-unknown')
-            invalid('scope-uncertain');
-        if (!['supported', 'missing', 'verification-unknown'].includes(fact.status)
-            || !['source-only', 'external-unverified', 'unavailable', 'contradictory'].includes(fact.evidence))
-            invalid();
+        if (!exactKeys(fact, ['id', 'status', 'evidence', 'summary', 'remaining']))
+            reject('requirement-shape-invalid', field, fact.id);
+        if (typeof fact.id !== 'string' || !scope.requirements.some(requirement => requirement.id === fact.id))
+            reject('requirement-id-invalid', `${field}.id`);
+        const id = fact.id;
+        if (seen.has(id))
+            reject('requirement-id-duplicate', `${field}.id`, id);
+        seen.add(id);
+        if (scope.requirements.find(requirement => requirement.id === id).uncertain && fact.status !== 'verification-unknown')
+            reject('scope-uncertain', `${field}.status`, id);
+        if (!['supported', 'missing', 'verification-unknown'].includes(fact.status))
+            reject('requirement-status-invalid', `${field}.status`, id);
+        if (!['source-only', 'external-unverified', 'unavailable', 'contradictory'].includes(fact.evidence))
+            reject('requirement-evidence-invalid', `${field}.evidence`, id);
         function text(value) { return typeof value === 'string' && value.trim().length > 0 && [...value].length <= MAX_FACT; }
         if (!text(fact.summary))
-            invalid();
+            reject('requirement-summary-invalid', `${field}.summary`, id);
         if (fact.status === 'supported') {
-            if (fact.remaining !== null || fact.evidence !== 'source-only')
-                invalid();
+            if (fact.remaining !== null)
+                reject('requirement-remaining-invalid', `${field}.remaining`, id);
+            if (fact.evidence !== 'source-only')
+                reject('requirement-evidence-mismatch', `${field}.evidence`, id);
         }
         else if (!text(fact.remaining))
-            invalid();
-        return { id: fact.id, summary: fact.summary, remaining: fact.remaining };
+            reject('requirement-remaining-invalid', `${field}.remaining`, id);
+        return { id, summary: fact.summary, remaining: fact.remaining };
     });
     const ordered = scope.requirements.map(requirement => ({ requirement, fact: entries.find(entry => entry.id === requirement.id) }));
     const summary = ordered.map(({ requirement, fact }) => `[${requirement.id}] ${requirement.quote} — ${fact.summary}`).join('\n');
     const remaining = ordered.filter(({ fact }) => fact.remaining !== null)
         .map(({ requirement, fact }) => `[${requirement.id}] ${requirement.quote} — ${fact.remaining}`).join('\n');
-    // Never round an uncertain 99.9 to completion. A percentage is still an estimate, not a review/merge approval.
+    // Never round an uncertain 99.9 to completion. A percentage cannot authorize approval/merge.
     const progress = payload.progress === 100 ? 100 : Math.min(99, Math.round(payload.progress));
-    if ((progress === 100) === Boolean(remaining) || [...summary].length > 8000 || [...remaining].length > 8000)
-        invalid();
+    if ((progress === 100) === Boolean(remaining))
+        reject('progress-completion-mismatch', '$.progress');
+    if ([...summary].length > 8000 || [...remaining].length > 8000)
+        reject('assessment-text-limit', '$.requirements');
     return { progress, summary, remaining, reasoning: '' };
 }
 
@@ -5611,6 +5682,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const progress_response_diagnostic_1 = __nccwpck_require__(6289);
 const progress_binary_evidence_diagnostic_1 = __nccwpck_require__(364);
 const issue_workflow_diagnostic_1 = __nccwpck_require__(4347);
 const change_size_reconciliation_1 = __nccwpck_require__(5304);
@@ -5647,6 +5719,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'change-size-reconciliation-failed',
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
+    'progress-result-contract-invalid',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -5885,6 +5958,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'sdd-draft-requirement-mapping-invalid': Object.freeze([]),
     'sdd-draft-repository-path-invalid': Object.freeze([]),
     'progress-binary-evidence-unavailable': Object.freeze(['paths', 'pathCount']),
+    'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
@@ -5954,6 +6028,8 @@ function normalizeApplicationErrorRecovery(recovery) {
             || approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_PERMISSIONS[variables.operation] !== variables.permission)) {
         throw new TypeError('Approval evidence diagnostic is invalid.');
     }
+    if (recovery.id === 'progress-result-contract-invalid' && !(0, progress_response_diagnostic_1.isProgressResponseDiagnosticFacts)(variables))
+        throw new TypeError('Progress response diagnostic is invalid.');
     if (recovery.id === 'progress-binary-evidence-unavailable' && !(0, progress_binary_evidence_diagnostic_1.isProgressBinaryEvidenceFacts)(variables))
         throw new TypeError('Progress binary evidence diagnostic is invalid.');
     if (recovery.id === 'issue-workflow-admission-blocked' && !(0, issue_workflow_diagnostic_1.isIssueWorkflowDiagnostic)(variables))
@@ -7478,6 +7554,88 @@ function renderProgressEvidencePath(path) {
         delimiter += '`';
     return `${delimiter}${visible}${delimiter}`;
 }
+
+
+/***/ }),
+
+/***/ 6289:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ProgressResponseContractFailure = exports.isProgressSourceLineId = exports.isProgressRequirementId = exports.PROGRESS_RESPONSE_REASONS = exports.PROGRESS_RESPONSE_PHASES = void 0;
+exports.isProgressResponseField = isProgressResponseField;
+exports.safeProgressResponseField = safeProgressResponseField;
+exports.isProgressResponseDiagnosticFacts = isProgressResponseDiagnosticFacts;
+const agent_execution_plan_1 = __nccwpck_require__(2253);
+exports.PROGRESS_RESPONSE_PHASES = Object.freeze(['scope', 'partition', 'assessment']);
+const schemaReasons = ['json-invalid', 'schema-type', 'schema-enum', 'schema-string-short', 'schema-string-long', 'schema-number-finite',
+    'schema-number-min', 'schema-number-max', 'schema-array-short', 'schema-array-long', 'schema-required', 'schema-additional',
+    'response-not-object', 'output-locale-missing', 'output-locale-invalid', 'output-locale-mismatch', 'response-shape-invalid'];
+exports.PROGRESS_RESPONSE_REASONS = Object.freeze({
+    scope: Object.freeze([...schemaReasons, 'scope-incomplete', 'scope-entry-invalid', 'scope-source-id-invalid', 'scope-source-id-duplicate',
+        'scope-classification-invalid', 'scope-clause-limit', 'scope-no-requirements', 'scope-budget']),
+    partition: Object.freeze([...schemaReasons, 'partition-shape-invalid', 'partition-id-invalid', 'partition-files-incomplete',
+        'partition-file-invalid', 'partition-unit-invalid', 'partition-facts-invalid']),
+    assessment: Object.freeze([...schemaReasons, 'requirements-incomplete', 'progress-invalid', 'requirement-shape-invalid', 'requirement-id-invalid',
+        'requirement-id-duplicate', 'scope-uncertain', 'requirement-status-invalid', 'requirement-evidence-invalid', 'requirement-summary-invalid',
+        'requirement-remaining-invalid', 'requirement-evidence-mismatch', 'progress-completion-mismatch', 'assessment-text-limit']),
+});
+const fieldPatterns = Object.freeze({
+    scope: /^\$(?:\.outputLocale|\.lines(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|kind))?)?)?$/u,
+    partition: /^\$(?:\.outputLocale|\.partitionId|\.files(?:\[(0|[1-9]\d{0,3})\](?:\.(?:path|unitId|implemented|remaining))?)?)?$/u,
+    assessment: /^\$(?:\.outputLocale|\.progress|\.requirements(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|status|evidence|summary|remaining))?)?)?$/u,
+});
+const maxIndex = Object.freeze({ scope: 1023, partition: 511, assessment: 31 });
+function knownId(value, prefix, maximum) {
+    if (typeof value !== 'string')
+        return false;
+    const match = value.match(/^([RL])([1-9]\d{0,5})$/u);
+    return match !== null && match[0] === value && match[1] === prefix && Number(match[2]) <= maximum;
+}
+const isProgressRequirementId = (value) => knownId(value, 'R', 32);
+exports.isProgressRequirementId = isProgressRequirementId;
+const isProgressSourceLineId = (value) => knownId(value, 'L', agent_execution_plan_1.AGENT_PROMPT_MAX_BYTES + 1);
+exports.isProgressSourceLineId = isProgressSourceLineId;
+function isProgressResponseField(phase, value) {
+    if (typeof value !== 'string')
+        return false;
+    const match = value.match(fieldPatterns[phase]);
+    return match !== null && match[0] === value && (match[1] === undefined || Number(match[1]) <= maxIndex[phase]);
+}
+/** Unknown model keys and oversized locations never become operator field names. */
+function safeProgressResponseField(phase, value) {
+    return isProgressResponseField(phase, value) ? value : '$';
+}
+function isProgressResponseDiagnosticFacts(value) {
+    if (value === null || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const facts = value;
+    if (Object.keys(facts).sort().join(',') !== 'field,phase,reason,requirementId,sourceLineId'
+        || !exports.PROGRESS_RESPONSE_PHASES.includes(facts.phase))
+        return false;
+    const phase = facts.phase;
+    if (!exports.PROGRESS_RESPONSE_REASONS[phase].includes(facts.reason) || !isProgressResponseField(phase, facts.field))
+        return false;
+    const { requirementId, sourceLineId, field } = facts;
+    if (phase === 'partition')
+        return requirementId === 'none' && sourceLineId === 'none';
+    if (phase === 'scope')
+        return requirementId === 'none' && (sourceLineId === 'none' || ((0, exports.isProgressSourceLineId)(sourceLineId) && field.startsWith('$.lines')));
+    return (requirementId === 'none' ? sourceLineId === 'none'
+        : (0, exports.isProgressRequirementId)(requirementId) && field.startsWith('$.requirements') && (sourceLineId === 'none' || (0, exports.isProgressSourceLineId)(sourceLineId)));
+}
+/** Carries bounded completed-output facts, never a raw output or exception cause. */
+class ProgressResponseContractFailure extends Error {
+    constructor(facts) {
+        super('A returned progress result violated its response contract.');
+        if (!isProgressResponseDiagnosticFacts(facts))
+            throw new TypeError('Progress response diagnostic is invalid.');
+        this.name = 'ProgressResponseContractFailure';
+        this.facts = Object.freeze({ ...facts });
+    }
+}
+exports.ProgressResponseContractFailure = ProgressResponseContractFailure;
 
 
 /***/ }),
