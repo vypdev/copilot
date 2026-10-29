@@ -58,6 +58,39 @@ Root-level SDD links and `../` links to other repository evidence keep their
 existing format. Regenerate the catalog after upgrading to repair older flattened
 links; the source files and registered paths do not need to move.
 
+## Safe catalog output
+
+Generation accepts a missing `specs/CATALOG.md` or a regular file under real
+repository directories. It rejects existing or dangling output links and
+nonregular collisions. The writer pins its directories during synchronous I/O,
+prepares a private exclusive temporary file, then publishes the complete catalog
+atomically. It cannot follow a replaced parent or final link to overwrite its
+target, and a competing new file is preserved. Regenerating a regular file also
+preserves the bytes of any other hard-link alias. Read-only validation verifies
+its opened index before consuming data.
+
+Unsafe access returns nonzero with an actionable diagnostic and no generation
+success receipt. Inspect links, directory/file collisions, concurrent changes,
+free space and permissions before retrying the normal generation command. Review
+and preserve any intentional link target before replacing that link with a regular
+repository output. Pre-publication failures preserve the old index; another
+writer or relocation after atomic publication requires inspection and fresh
+regeneration. Cleanup never removes another writer's temporary replacement. If the first stat
+of a newly created temporary file fails, cleanup retries that identity read once.
+A verified match can be removed safely; generation still fails. Unavailable
+identity or failed cleanup produces a diagnostic naming the generated UUID entry.
+Inspect it in the original specs directory and verify ownership before manual
+cleanup; the generator preserves unverifiable or foreign entries. Directory restoration
+uses the caller's original identity; a replaced or unavailable caller path fails
+without claiming success.
+
+Updated CLI/Action bundles include this behavior. A source-vendored portable
+validator must copy the matching `specification_catalog_validator.cjs`,
+`specification_catalog_publication.cjs` and `specification_catalog_path_policy.cjs`
+in their original infrastructure/domain layout; the isolated-copy regression
+verifies that complete dependency set. This is destination safety, not a change
+to catalog evidence or implementation-readiness requirements.
+
 ## Issue-driven specification gate
 
 Repositories can opt into `pre-branch-sdd: true` for feature and

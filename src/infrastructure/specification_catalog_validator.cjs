@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { isSafeRelativePath, matchesFieldBoundary } = require('../domain/specification_catalog_path_policy.cjs');
+const { publishCatalogMarkdown, readCatalogMarkdown } = require('./specification_catalog_publication.cjs');
 
 const DEFAULT_ROOT = path.resolve(__dirname, '../..');
 const CATALOG_JSON = 'specs/catalog.json';
@@ -277,13 +278,19 @@ function main(argv = process.argv.slice(2), root = DEFAULT_ROOT) {
     return;
   }
   const rendered = renderCatalog(catalog);
-  const markdownPath = path.join(root, CATALOG_MARKDOWN);
-  if (argv.includes('--write')) {
-    fs.writeFileSync(markdownPath, rendered, 'utf8');
-    console.log(`specification catalog generation: PASS (${catalog.capabilities.length} capabilities)`);
+  let current;
+  try {
+    if (argv.includes('--write')) {
+      publishCatalogMarkdown(root, rendered);
+      console.log(`specification catalog generation: PASS (${catalog.capabilities.length} capabilities)`);
+      return;
+    }
+    current = readCatalogMarkdown(root);
+  } catch {
+    console.error(`${CATALOG_MARKDOWN} could not be safely accessed. Inspect links, directory or file collisions, concurrent changes, available space and permissions; then regenerate the catalog.`);
+    process.exitCode = 1;
     return;
   }
-  const current = fs.existsSync(markdownPath) ? fs.readFileSync(markdownPath, 'utf8') : '';
   if (normalizeCheckoutLineEndings(current) !== rendered) {
     console.error(`${CATALOG_MARKDOWN} is stale; run pnpm run generate:specifications.`);
     process.exitCode = 1;

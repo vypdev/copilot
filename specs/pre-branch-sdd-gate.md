@@ -3,7 +3,7 @@
 - Status: Implemented — automated verification complete; live provider UX review pending
 - Date: 2026-09-17
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: 2026-10-29 (nested catalog links, #768; actionable blocked preparation and safe diagnostics, #714)
+- Last verified: 2026-10-29 (safe portable catalog publication, #771; nested catalog links, #768; actionable blocked preparation and safe diagnostics, #714)
 - Owners: Copilot maintainers
 - Scope: clarify, update, validate, and publish the owning SDD before eligible branch-based work
 - Related issues/PRs: none; local design work; companion SDD `issue-start-and-branch-readiness.md`
@@ -1799,3 +1799,143 @@ checks, specification generation/validation, typecheck/lint, documentation and
 workflow contracts, generated bundles and package smoke, required CI coverage,
 platform checks and exact-head review without unresolved findings before merge.
 No unresolved design decision or new operator permission blocks this fix.
+
+
+### Safe portable catalog publication — #771 (2026-10-29)
+
+**Observed defect and evidence.** The [reported generator defect](https://github.com/vypdev/copilot/issues/771)
+is reproduced with the actual exported portable validator at base
+`a0ddd1ef8a4edaafe77fb690b5d9d1d37bca09e2`: a valid synthetic catalog with
+`specs/CATALOG.md` linked to an owned sibling sentinel returns no validation
+errors, prints a generation success receipt, and overwrites that sibling.
+The reproduction creates and removes one temporary parent; no real consumer,
+account data or user file is read or modified. This is a destination-publication
+fault, separate from nested link rendering and catalog profile admission.
+
+**Intentional requirements.** Catalog generation MUST accept a missing output or
+an existing regular file in real repository directories. It MUST reject an
+observed symlink, dangling link, directory or other nonregular output before
+publication. Every destination-directory component MUST be a real directory.
+A check followed by an ordinary pathname write is insufficient: parent or leaf
+replacement MUST NOT redirect writes through a link to an external target.
+Concurrent creation of a new output MUST win over this generator's create attempt.
+A late link substitution at atomic replacement may itself be replaced, but its
+target MUST remain untouched and the resulting catalog MUST be this operation's
+regular file. Existing hard-link aliases MUST retain their prior bytes.
+
+Read-only validation MUST likewise reject a linked index and verify the opened
+file identity before consuming its data. Normal catalog validation, status,
+readiness, evidence containment, unique ownership and nested-link rendering
+remain unchanged. No new input, service, permission or migration is introduced.
+
+```mermaid
+flowchart LR
+  A[Validate catalog] --> B[Pin real root and specs directory]
+  B --> C[Inspect output and create exclusive temporary file]
+  C --> D[Write and verify route and file identities]
+  D --> E{Output existed?}
+  E -->|yes| F[Atomic directory entry replacement]
+  E -->|no| G[Atomic no-replace creation]
+  F --> H[Verify result and clean owned temporary file]
+  G --> H
+  H --> I[Restore working directory and emit PASS]
+```
+
+Text equivalent: keep the operating-system directory fixed, prepare the output
+privately, verify identities, publish one complete regular file without following
+a destination link, clean only owned temporary data, then report success.
+
+**Architecture and bounds.** The bundled infrastructure module
+`specification_catalog_publication.cjs` owns fixed-name catalog I/O. The existing
+validator retains parsing, policy validation and rendering. The publication
+helper uses Node built-ins and the existing native directory-pinning pattern
+from `setup_verification_action.ts`; Node has no portable `openat`. Its critical
+section is synchronous, invokes no repository code, uses only single-component
+relative operations after directory entry, and restores the original cwd by identity when still addressable or already
+pinned. An unavailable/replaced caller directory fails without a success receipt.
+Directory descriptors bind metadata while entering; the OS cwd then retains the
+directory through POSIX renames or prevents its rename on Windows. Route/inode
+checks detect observed relocation and replacement. Unsupported identity or I/O
+operations fail closed. No process-wide cwd change may span an await.
+
+The sibling temporary name uses a fresh UUID, exclusive creation and initial
+mode 0600. Publication keeps its descriptor open through cleanup to prevent inode
+reuse, honors the caller's umask for new files and existing ordinary permission
+bits for replacement, and never removes a foreign entry at the temporary name.
+If the first descriptor stat fails after exclusive creation, cleanup MUST make
+one bounded identity-recovery attempt while that descriptor remains held. A
+recovered identity permits only matching owned-entry removal; generation still
+fails. Two failed stats, or failed cleanup inspection/unlink, MUST emit a cleanup
+diagnostic naming the host-generated UUID entry before descriptor close and cwd
+restoration. Preserve unverifiable/foreign entries and require ownership inspection
+before manual cleanup. A secondary close/restore failure cannot suppress an
+already emitted cleanup notice. No automatic delete is authorized by a filename
+alone, and no retained entry is reused on the next invocation.
+
+Existing outputs use atomic rename; missing outputs use atomic no-replace hard
+link creation. Parent pinning prevents either operation from following a swapped
+parent. Read-only opening checks type, identity and metadata before data access.
+No arbitrary destination path or callback is a public option. The isolated
+portable-copy fixture includes validator, path policy and publication module;
+normal CLI/Action bundles include the same dependency closure.
+
+**UX, failures and recovery.** A successful generator keeps its current single
+`specification catalog generation: PASS` receipt after publication and cleanup.
+A stale ordinary index still reports the existing regeneration instruction.
+Unsafe or changed output access returns nonzero, prints a fixed actionable
+English CLI diagnostic and emits no success receipt. An incomplete cleanup also
+prints its host-generated UUID basename and an ownership-inspection next step; no
+repository content, arbitrary pathname or raw filesystem exception is exposed. Inspect
+links/collisions, concurrent changes, capacity and permissions before rerunning.
+The same current generation command retries from fresh metadata. The operation
+adds no background job, notification, provider write or stored review state.
+
+Pre-publication write/open/rename failures preserve the old catalog; external
+link targets are never changed. A route change or another writer after atomic
+publication can invalidate the success claim even though the originally pinned
+directory received the complete output. In that case inspect both locations and
+regenerate; no rollback of another writer's file is attempted. Cleanup removes
+only an entry still matching this operation's held descriptor. Foreign temporary
+replacements are preserved. This guarantees atomic file visibility, not an OS
+sandbox or a full power-loss transaction. Rollback reverts the module and main
+integration together; source metadata needs no conversion. Vendored installations
+must adopt the complete matching source dependency set or updated bundles.
+
+Allocate **40 additional distinct native cases**, exclusively in
+`specification_catalog_publication.test.ts`:
+
+| Area | Cases | Executable acceptance |
+|---|---:|---|
+| Supported creation, regeneration, portable copy and hard-link alias | 4 | exact output, ordinary modes, successful read validation, preserved external alias |
+| Existing unsafe destination or parent | 5 | internal/external/dangling links, directory collision, linked specs parent; nonzero, no success, retained targets |
+| Publication races | 11 | early leaf swaps (2), directory entry race (1), open/metadata parent replacements (2), pre-open parent swap (1), new output winner (1), pre-publication regular edit (1), final leaf substitution (1), substituted temporary link (1), post-publication winner (1) |
+| I/O failure and ownership-aware cleanup | 5 | metadata/write/open/rename failure and foreign temporary replacement preserve other data |
+| Read-only link and identity races | 5 | observed link, pre-open replacement, post-open link, post-stat edit and post-read edit; no unverified success |
+| Caller directory restoration | 2 | keep its pinned inode after rename; reject a replacement at its original path |
+| Invalid catalog | 1 | no output or temporary publication |
+| Independent directory metadata mismatches | 2 | real owned directory/link metadata exercises fail-closed guards even where the OS prevents renames |
+| Post-creation identity and cleanup failures | 5 | bounded stat recovery; persistent stat failure with/without foreign replacement; cleanup stat/unlink failure is explicitly disclosed |
+| **Total** | **40** | no double counting with prior amendments |
+
+The original 19-case candidate has 14 failures before the fix; later cases cover
+additional native boundary and packaging risks. Three post-creation stat cases
+also fail against initial PR head `2252127de6040a7a2c5f0a12cbf93733ca115a65`,
+proving the review-reported cleanup gap before its correction. Fault injection changes actual
+filesystem entries at the boundary; it does not execute consumer strings. CLI
+fixtures run Node against the actual exported main in fresh temporary repositories.
+Windows directory-rename denial is a successful OS prevention of that attack,
+not skipped verification; unsupported file-symlink capability follows the suite's
+existing explicit platform capability convention. All source and outside sentinels
+are test-owned. These cases do not claim a real consumer setup/deployment run.
+
+**Traceability and DoD.** The new suite maps to the table above; existing portable,
+repository-catalog, pre-branch and branch-sync suites retain compatibility checks.
+Explicitly collect the new CJS helper in mandatory Jest coverage and enforce
+95% lines/statements and 90% branches/functions for that module. Keep every
+existing global/module budget unchanged. Also measure native V8 coverage of CLI
+subprocesses, retaining source/hash/result receipts and disclosing unexecuted
+platform-only or defensive branches. Update development documentation, catalog code/test evidence and generated
+catalog. Acceptance requires focused/native tests, architecture, typecheck/lint,
+all documentation/workflow/specification contracts, generated bundles/package
+smoke, exact-head CI and every platform check, plus complete review with no
+unresolved findings before merge. No new operator authorization is required.
