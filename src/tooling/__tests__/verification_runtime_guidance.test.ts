@@ -4,9 +4,8 @@ import yaml from 'js-yaml';
 import { VERIFICATION_NATIVE_SETUP_YAML } from './fixtures/verification_native_setup_action';
 
 type Step = { id?: string; uses?: string; run?: string; env?: Record<string, string>; with?: Record<string, unknown> };
-function pythonExample(): Step[] {
-    const content = readFileSync(path.resolve('docs/security-operations/operations/verification.mdx'), 'utf8');
-    for (const block of content.matchAll(/```yaml\n([\s\S]*?)```/gu)) {
+function pythonExample(content = readFileSync(path.resolve('docs/security-operations/operations/verification.mdx'), 'utf8')): Step[] {
+    for (const block of content.matchAll(/```yaml\r?\n([\s\S]*?)```/gu)) {
         const value = yaml.load(block[1]) as { runs?: { steps?: Step[] } };
         if (value.runs?.steps?.some(step => step.uses === 'actions/setup-python@v6')) return value.runs.steps;
     }
@@ -14,6 +13,13 @@ function pythonExample(): Step[] {
 }
 
 describe('shipped verification runtime guidance', () => {
+    it('reads the shipped Python bootstrap from a Windows CRLF checkout', () => {
+        const content = readFileSync(path.resolve('docs/security-operations/operations/verification.mdx'), 'utf8')
+            .replace(/\r?\n/gu, '\r\n');
+        const steps = pythonExample(content);
+        expect(steps.find(step => step.uses === 'actions/setup-python@v6')?.with?.['update-environment']).toBe(false);
+        expect(steps.find(step => step.run?.includes('venv.create'))?.run).toContain('export LD_LIBRARY_PATH=');
+    });
     it('keeps explicit Python selection and the complete locked dependency bootstrap', () => {
         const steps = pythonExample(); const setup = steps.find(step => step.uses === 'actions/setup-python@v6')!;
         const bootstrap = steps.find(step => step.run?.includes('venv.create'))!;

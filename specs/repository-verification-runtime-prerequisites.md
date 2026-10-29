@@ -651,14 +651,20 @@ permit executable venv copies; an earlier noexec harness failure was discarded.
 
 ### Executed source and regression evidence
 
-The implementation adds 72 distinct Jest cases: 58 derivation/metadata cases,
-ten adapter/order/failure cases and four documentation/native-contract cases.
+The implementation adds 73 distinct Jest cases: 58 derivation/metadata cases,
+ten adapter/order/failure cases and five documentation/native-contract cases.
 The derivation module reaches 100% statements, branches, functions and lines;
 four existing continuation cases additionally reject foreign loader metadata.
-The complete root run passes 792 suites and 14,733 tests (35 existing platform
+The initial complete root run passes 792 suites and 14,733 tests (35 existing platform
 skips). Its coverage is 97.30% statements, 95.05% branches, 97.95% functions and
 98.08% lines; the changed Git adapter has 100% statements/functions/lines and
 93.18% branches. Every prior and newly declared module budget passes.
+The native Windows run then exposed an LF-only fence extractor in two new
+documentation tests. The real native Python verifier passed. A separate CRLF
+regression reproduces that extraction failure locally before accepting both
+checkout line endings; it adds one case without changing production behavior,
+platform skips, timeouts or coverage floors. Fresh exact-head gates remain
+required after this test correction.
 
 The same candidate, Python artifact and probe run against the adapter archived
 from develop commit 229c576e5a0bc3eac9a8cd1067b072f4dd4c5ac2 and the corrected
