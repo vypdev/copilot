@@ -103,3 +103,9 @@ collection and explicitly clearing retained history are separate actions. Exact
 private targets, credentials, authored notes and browser history are outside that
 generated-data journal. Its presence in source does not change current collection
 or grant any permission.
+
+The retention design distinguishes generated entries from the small generation,
+revision and clock controls that prevent old writes from returning after clear.
+Those controls, and the last consent receipt, persist until native extension-data
+removal. A reviewed history clear removes entries and retains the disclosed safety
+controls. These collection/clear screens are still being implemented.

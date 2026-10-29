@@ -79,6 +79,21 @@ it('rechecks writer availability after reading and rejects missing/colliding/thr
     f.ports.identifier.mockImplementation(() => { throw new Error('identifier'); });
     expect(await f.reviews.preview('diagnostics', JOURNAL_OWNER)).toEqual({ state: 'unavailable' });
 });
+it('cannot offer clear from an unknown or invalid paused-policy observation', async () => {
+    for (const revision of [null, -1, NaN]) {
+        const f = journalReviewsFixture(); f.ports.pausedPolicyRevision.mockReturnValue(revision);
+        expect(await f.reviews.preview('diagnostics', JOURNAL_OWNER)).toEqual({ state: 'unavailable' }); expect(f.store.execute).not.toHaveBeenCalled();
+    }
+    const f = journalReviewsFixture(); f.ports.pausedPolicyRevision.mockImplementation(() => { throw new Error('policy'); });
+    expect(await f.reviews.preview('diagnostics', JOURNAL_OWNER)).toEqual({ state: 'unavailable' });
+});
+it('requires a new review if paused policy changes during history read or before clear confirmation', async () => {
+    const f = journalReviewsFixture(); const execute = f.store.execute.getMockImplementation()!;
+    f.store.execute.mockImplementationOnce(async (...args) => { const result = await execute(...args); f.ports.pausedPolicyRevision.mockReturnValue(1); return result; });
+    expect(await f.reviews.preview('diagnostics', JOURNAL_OWNER)).toEqual({ state: 'stale' });
+    const other = journalReviewsFixture(); const preview = await clearPreview(other); other.ports.pausedPolicyRevision.mockReturnValue(1);
+    expect(await other.reviews.confirm(preview.operationId, JOURNAL_OWNER)).toEqual({ state: 'stale' }); expect(other.store.execute.mock.calls).toHaveLength(1);
+});
 it('expires previews at five minutes, rejects clock rollback and never borrows a different owner', async () => {
     const f = journalReviewsFixture(); const preview = await clearPreview(f);
     expect(await f.reviews.confirm(preview.operationId, 'b'.repeat(32))).toEqual({ state: 'denied' });

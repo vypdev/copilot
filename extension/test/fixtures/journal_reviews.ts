@@ -22,7 +22,7 @@ export function journalReviewsFixture() {
     const lease = { current: vi.fn(() => leaseCurrent), release: vi.fn() };
     const ports = { now: vi.fn(() => now), identifier: vi.fn(() => (++counter).toString(16).padStart(32, '0')),
         fence: vi.fn((owner: string) => owner === JOURNAL_OWNER ? { controllerEpoch, credentialEpoch } : null),
-        idle: vi.fn(() => true), reserve: vi.fn(() => lease) };
+        idle: vi.fn(() => true), pausedPolicyRevision: vi.fn((): number | null => 0), reserve: vi.fn(() => lease) };
     const store = { execute }; const reviews = new JournalReviews(store, settings, ports);
     return { ...memory, get: vi.mocked(memory.port.get), settings, documents, store, ports, lease, reviews, setTime: (value: number) => { now = value; },
         takeover: () => { controllerEpoch++; }, disconnect: () => { credentialEpoch++; }, retireLease: () => { leaseCurrent = false; },

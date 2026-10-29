@@ -2940,7 +2940,8 @@
         "specs/github-browser-extension-runtime.md",
         "specs/github-browser-extension-control-center-h3.md",
         "specs/github-browser-extension-onboarding-and-support.md",
-        "specs/github-browser-extension-local-journal.md"
+        "specs/github-browser-extension-local-journal.md",
+        "specs/github-browser-extension-collection-consent.md"
       ],
       "workflows": [
         ".github/workflows/ci_check.yml",
@@ -3134,7 +3135,13 @@
         "extension/src/application/journal_ports.ts",
         "extension/src/adapters/browser/journal_store.ts",
         "extension/src/domain/journal_clear.ts",
-        "extension/src/application/journal_reviews.ts"
+        "extension/src/application/journal_reviews.ts",
+        "extension/src/application/settings_mutation_queue.ts",
+        "extension/src/domain/collection_policy.ts",
+        "extension/src/application/collection_policy_ports.ts",
+        "extension/src/adapters/browser/collection_policy_store.ts",
+        "extension/src/adapters/browser/journal_database.ts",
+        "extension/src/domain/controlled_journal.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3257,7 +3264,15 @@
         "extension/test/fixtures/journal_reviews.ts",
         "extension/test/integration/journal_reviews.test.ts",
         "extension/test/integration/journal_review_fences.test.ts",
-        "extension/test/integration/journal_review_native.test.ts"
+        "extension/test/integration/journal_review_native.test.ts",
+        "extension/test/contracts/settings_mutation_queue.test.ts",
+        "extension/test/integration/settings_history_coordination.test.ts",
+        "extension/test/contracts/collection_policy.test.ts",
+        "extension/test/fixtures/collection_policy.ts",
+        "extension/test/integration/collection_policy_store.test.ts",
+        "extension/test/integration/journal_database.test.ts",
+        "extension/test/contracts/controlled_journal.test.ts",
+        "extension/test/integration/collection_admission.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

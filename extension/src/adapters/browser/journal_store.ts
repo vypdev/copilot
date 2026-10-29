@@ -1,60 +1,32 @@
 import type { JournalStore } from '../../application/journal_ports.ts';
-import { decideJournal, validJournalCommand, type JournalCommand, type JournalResult } from '../../domain/local_journal.ts';
+import type { JournalCommand, JournalResult } from '../../domain/local_journal.ts';
+import { decideControlledJournal, validJournalAdmission } from '../../domain/controlled_journal.ts';
 import type { JournalKind } from '../../domain/journal_facts.ts';
+import { closeJournalDatabase, openJournalDatabase } from './journal_database.ts';
 
-const DATABASE = 'copilot.generated-history.v1';
-const STORES = ['diagnostics', 'recents'] as const;
 const KEY = 'current';
 const unavailable = (effect: 'not-started' | 'aborted' | 'unknown'): JournalResult => ({ state: 'unavailable', effect });
-const close = (database: IDBDatabase): void => { try { database.close(); } catch { /* Cleanup cannot erase a terminal transaction fact. */ } };
 
 /** Fixed native transactions, with no promise boundary between reading and queueing the decision's write. */
 export class IndexedJournalStore implements JournalStore {
     constructor(private readonly factory: Pick<IDBFactory, 'open'>) {}
-    async execute(kind: JournalKind, command: JournalCommand, eligible?: () => boolean): Promise<JournalResult> {
+    async execute(kind: JournalKind, command: JournalCommand, eligible?: () => boolean, policyRevision?: number): Promise<JournalResult> {
         try {
-            if (!validJournalCommand(kind, command)) return { state: 'invalid' };
-            const current = () => { try { return eligible === undefined || eligible() === true; } catch { return false; } };
-            if (!current()) return { state: 'stale' };
+            if (!validJournalAdmission(kind, command, policyRevision)) return { state: 'invalid' };
             // Native request payloads must not keep mutable application references across open().
             const captured = JSON.parse(JSON.stringify(command)) as JournalCommand;
-            const opened = await this.open();
+            if (!validJournalAdmission(kind, captured, policyRevision)) return { state: 'invalid' };
+            const current = () => { try { return eligible === undefined ? captured.type === 'read' : eligible() === true; } catch { return false; } };
+            if (!current()) return { state: 'stale' };
+            const opened = await openJournalDatabase(this.factory);
             if (!('transaction' in opened)) return opened;
-            try { return current() ? await this.transact(opened, kind, captured, current) : { state: 'stale' }; } finally { close(opened); }
+            try { return current() ? await this.transact(opened, kind, captured, current, policyRevision) : { state: 'stale' }; } finally { closeJournalDatabase(opened); }
         } catch { return unavailable('not-started'); }
     }
-    private open(): Promise<IDBDatabase | JournalResult> {
-        return new Promise(resolve => {
-            let finished = false;
-            const finish = (result: IDBDatabase | JournalResult) => { if (!finished) { finished = true; resolve(result); } };
-            const request = this.factory.open(DATABASE, 1);
-            request.onblocked = () => { finish(unavailable('not-started')); };
-            request.onerror = () => { finish(request.error?.name === 'VersionError' ? { state: 'future' } : unavailable('not-started')); };
-            request.onupgradeneeded = () => {
-                try {
-                    for (const store of STORES) request.result.createObjectStore(store);
-                } catch {
-                    // An unexpected layout is preserved, never deleted/recreated as a fallback.
-                    try { request.transaction?.abort(); } catch { /* No journal write was submitted. */ }
-                    finish(unavailable('not-started'));
-                }
-            };
-            request.onsuccess = () => {
-                const database = request.result;
-                database.onversionchange = () => { close(database); };
-                if (finished) { close(database); return; }
-                if (database.version !== 1 || database.objectStoreNames.length !== 2
-                    || !STORES.every(name => database.objectStoreNames.contains(name))) {
-                    close(database); finish(unavailable('not-started')); return;
-                }
-                finish(database);
-            };
-        });
-    }
-    private transact(database: IDBDatabase, kind: JournalKind, command: JournalCommand, current: () => boolean): Promise<JournalResult> {
+    private transact(database: IDBDatabase, kind: JournalKind, command: JournalCommand, current: () => boolean, policyRevision?: number): Promise<JournalResult> {
         return new Promise(resolve => {
             let result: JournalResult = unavailable('unknown'); let transaction: IDBTransaction;
-            try { transaction = database.transaction(kind, 'readwrite'); }
+            try { transaction = database.transaction([kind, 'policy'], 'readwrite'); }
             catch { resolve(unavailable('not-started')); return; }
             transaction.oncomplete = () => { resolve(result); };
             transaction.onabort = () => { resolve(unavailable('aborted')); };
@@ -64,16 +36,21 @@ export class IndexedJournalStore implements JournalStore {
                 try { transaction.abort(); } catch { resolve(unavailable('unknown')); }
             };
             try {
-                const store = transaction.objectStore(kind);
-                const request = store.get(KEY);
-                request.onsuccess = () => {
+                const store = transaction.objectStore(kind); const request = store.get(KEY);
+                const policy = transaction.objectStore('policy').get(kind);
+                let journalRead = false; let policyRead = false; let decided = false; let journalValue: unknown; let policyValue: unknown;
+                const decide = () => {
                     try {
+                        if (decided || !journalRead || !policyRead) return;
+                        decided = true;
                         if (!current()) { result = { state: 'stale' }; return; }
-                        const decision = decideJournal(kind, request.result, command);
+                        const decision = decideControlledJournal(kind, journalValue, policyValue, command, policyRevision);
                         result = decision.result;
                         if (decision.write) store.put(decision.write, KEY);
                     } catch { abort(); }
                 };
+                request.onsuccess = () => { try { journalValue = request.result; journalRead = true; decide(); } catch { abort(); } };
+                policy.onsuccess = () => { try { policyValue = policy.result; policyRead = true; decide(); } catch { abort(); } };
             } catch { abort(); }
         });
     }

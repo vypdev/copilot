@@ -19,6 +19,10 @@ defines optional redacted activity/diagnostics, recent destinations and atomic
 generation-fenced clearing. Its transactional core is an implementation slice;
 it does not accept the complete CENTER09/10/14 journeys or H3.
 
+The [durable consent refinement](github-browser-extension-collection-consent.md)
+defines reviewed activation/stop, restart behavior, atomic policy admission and
+truthful partial outcomes. Its specification is not an implementation claim.
+
 ## 1. Executive summary
 
 H3 delivers a packaged, local-first control center for understanding and configuring the GitHub browser extension. Users can navigate real center routes, search the complete 150-feature inventory, inspect effective settings and availability, manage profiles, permissions and sessions, and preview safe backup, reset and rollback actions. The experience is keyboard and screen-reader accessible, responsive, localized in English, Spanish, French and Portuguese, and available from toolbar, options and GitHub Settings entrypoints.

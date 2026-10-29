@@ -17,7 +17,7 @@ it.each(['diagnostics', 'recents'] as const)('clears only reviewed %s and separa
     const f = journalReviewsFixture(); const other = structuredClone(f.documents.get(kind === 'diagnostics' ? 'recents' : 'diagnostics'));
     const preview = await clearPreview(f, kind); const result = await f.reviews.confirm(preview.operationId, JOURNAL_OWNER);
     expect(result).toEqual({ state: 'observed-cleared', acknowledgement: 'accepted', epoch: 1, revision: 2, sourceCurrentAtObservation: true });
-    expect(f.ports.reserve).toHaveBeenCalledExactlyOnceWith(kind, 0); expect(f.lease.release).toHaveBeenCalledTimes(1);
+    expect(f.ports.reserve).toHaveBeenCalledExactlyOnceWith(kind, 0, 0); expect(f.lease.release).toHaveBeenCalledTimes(1);
     expect(f.documents.get(kind === 'diagnostics' ? 'recents' : 'diagnostics')).toEqual(other);
     expect(f.port.set).not.toHaveBeenCalled(); expect(f.port.remove).not.toHaveBeenCalled();
 });
@@ -105,4 +105,8 @@ it('rejects a malformed readback rather than displaying private or fabricated em
     const f = journalReviewsFixture(); const preview = await clearPreview(f); const execute = f.store.execute.getMockImplementation()!;
     f.store.execute.mockImplementationOnce(execute).mockResolvedValueOnce({ state: 'ready', snapshot: { ...DEFAULT_SETTINGS, entries: [] } } as never);
     expect(await f.reviews.confirm(preview.operationId, JOURNAL_OWNER)).toMatchObject({ state: 'unknown', acknowledgement: 'accepted', observation: 'unavailable' });
+});
+it('reports an actual active native policy instead of clearing through a stale paused cache', async () => {
+    const f = journalReviewsFixture(); const preview = await clearPreview(f); f.store.execute.mockResolvedValueOnce({ state: 'collection-active' });
+    expect(await f.reviews.confirm(preview.operationId, JOURNAL_OWNER)).toEqual({ state: 'collection-active' });
 });

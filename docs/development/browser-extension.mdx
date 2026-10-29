@@ -499,9 +499,11 @@ implemented. It is not an exposed generic recording endpoint or completed H3.
 The [journal specification](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-local-journal.md)
 defines its full delivery requirements.
 
-`IndexedJournalStore` opens only `copilot.generated-history.v1`, version1, with
-the fixed `diagnostics` and `recents` stores and `current` key. A readwrite
-transaction reads the complete bounded envelope, runs the synchronous domain
+`IndexedJournalStore` opens only `copilot.generated-history.v1`, native version2,
+with fixed `diagnostics`, `recents` and `policy` stores. The known version1
+upgrade adds policy without changing either history; an unknown layout is not
+repaired. Journals use the `current` key, policy uses only diagnostics/recents.
+A readwrite transaction reads the bounded journal and policy, runs the synchronous domain
 decision, and queues its replacement from the native success callback. Do not
 await unrelated work inside that callback. Only transaction completion establishes
 commit; request success does not. A rollback is reported as aborted, and an
@@ -524,3 +526,23 @@ acknowledged clear from its observed result; unknown acknowledgements do not
 attribute the write. In-flight cancellation stays pending, and duplicate confirms
 join or replay one result. The coordinator, collection and center UI composition
 remain required; these application services alone do not expose clear controls.
+
+The preference half uses `SettingsRepository.reserveMutations()` over its existing
+FIFO. It is acquired only when no own preference mutation is pending. While held,
+new commit/update/startup-migration operations wait; read/inspection remains
+available. `JournalReviews` acquires it before the collection reservation and
+holds it through canonical readback. Rejected work does not poison the queue,
+source guards still apply after waiting, and a stale/idempotently released lease
+cannot unlock a new owner. Durable collection consent and the collection writer
+remain separate work; this queue reservation alone does not establish them.
+
+`IndexedCollectionPolicyStore` stores one closed receipt per collection and
+requires a private source guard for a set. Policy and history request success are
+distinct from native transaction commit. Append checks active policy revision and
+journal epoch atomically; clear checks paused policy plus its reviewed revision.
+Admitted updates may finish while off until history clear invalidates their epoch.
+Both native reads must finish before any decision; repeated callbacks cannot
+substitute missing policy or cause a second put. Policy domain/adapter code does
+not yet compose the collector or UI. See the
+[consent refinement](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-collection-consent.md)
+for full restart, partial-outcome and native/human delivery requirements.

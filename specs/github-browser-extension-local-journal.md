@@ -27,6 +27,11 @@ Review collection → explicitly enable → retain bounded safe facts
 This refinement preserves all150 functions/803 catalog cases and the owning H3
 acceptance. The core alone does not implement or accept the center UI.
 
+The [durable collection-consent refinement](github-browser-extension-collection-consent.md)
+defines the prospective version2 policy-store upgrade and atomic admission.
+Version1 below records the implemented engineering core; collection remains
+uncomposed until that refinement and its complete native/UI evidence are delivered.
+
 ## 2. Problem, current behavior, and evidence
 
 ### 2.1 Problem
@@ -137,6 +142,12 @@ fabricate freshness. Ordinary reads do not clear or reset unknown data. Once a
 completion is canonically established, a later unavailable read cannot downgrade
 that completed historical fact. Duplicate settled updates are inert.
 
+Clear removes entries, not the small epoch/revision/clock-fence envelope used to
+reject stale work and backwards clocks. That envelope persists until native
+extension-data removal; its one clock value is not a browsing or incident trail.
+Privacy/clear review MUST disclose that distinction. Seven-day retention applies
+to generated entries; policy and safety-control metadata have separate lifetimes.
+
 ## 7. User-facing configuration
 
 | Preference | Default | Meaning and bounds |
@@ -158,7 +169,7 @@ they do not silently resume. Clear requires paused collection and a settled owne
 |---|---|---|
 | Domain | Strict facts, expiry, limits, transitions, immutable decisions | DOM, clocks, storage, provider errors |
 | Application | Consent, opaque tickets, source/controller fences, reviewed clear | Native IndexedDB requests |
-| Browser adapter | Fixed IndexedDB1 stores and transaction events | Consent or UI decisions |
+| Browser adapter | Fixed versioned journal/policy stores and transaction events | Consent or UI decisions |
 | Composition | Native factory and service ownership | Renderer-selected database/store |
 | Presentation | Localized state and exact preview | Generic append/update/delete RPC |
 
@@ -186,7 +197,7 @@ Before clear, the use case requires a shared-owner reservation for that paused
 settings revision. The coordinator MUST prevent new admissions and consent writes
 for that collection until release; an unavailable/busy reservation does not grant
 authority. This is an application coordination contract, not an atomic transaction
-across preferences and IndexedDB. Coordinator composition is a remaining delivery
+across preferences and IndexedDB. Collection-coordinator composition is a remaining delivery
 requirement. The adapter rechecks the supplied private admission guard before
 open, after open and in the native request callback before deciding any write.
 Loss of source/lease authority leaves the envelope unchanged. No renderer can
@@ -201,6 +212,28 @@ noncurrent without erasing it. No confirm replay resubmits the clear. Connection
 and reservation cleanup cannot erase a terminal effect fact.
 `sourceCurrentAtObservation` describes the source/reservation when the result was
 observed; a replay never promotes that historical field to a new live observation.
+
+The preference half of that reservation reuses `SettingsRepository`'s serialized
+mutation queue. A reservation succeeds only when no owned preference mutation is
+pending. Once held, subsequently queued commit/update/initialize operations wait
+for its release and then read the current complete envelope; their source guard
+still applies. Reads/inspection remain available. A failed mutation cannot poison
+the next queue entry; an old/idempotently released reservation cannot unlock a
+new one. These are background-owned capabilities, never renderer-selected work.
+
+`JournalReviews` acquires this preference reservation before the collection
+reservation and rereads canonical privacy while both are held. It releases both
+on every terminal path without losing a committed fact. A busy preference queue
+blocks clear before native history submission. Existing preference migration,
+rollback, admission snapshots, acknowledgement/readback and source fencing remain
+unchanged. This does not implement durable collection consent across worker
+restart; that policy must be refined before the collector is composed.
+
+Add at least14 distinct coordination cases beyond the core budget:6 queue
+ordering/rejection/release cases,4 actual preference mutation/migration cases,
+4 composed history/preference races. Keep100%modified lines/branches and all
+owning H3 gates. Counter bookkeeping and leases are transient; no new user
+configuration, persistence schema, permission or automatic mutation retry is added.
 
 ## 9. UI/UX and content contract
 
@@ -252,8 +285,10 @@ center-only invalidation avoids resetting content quarantine through history wri
 
 ## 13. Compatibility, migration, rollout, and rollback
 
-No generated history exists before this refinement. Native DB version1 creates
-only fixed stores. Newer DB/envelope versions remain unavailable without mutation.
+The initial uncomposed core used native DB version1 with two fixed history
+stores. The consent refinement upgrades known version1 to version2, adding only
+the policy store and preserving version1 history envelopes. Unexpected/future
+layouts and envelope versions remain unavailable without destructive replacement.
 Retain current H2 Safari rollback separately; it is not H3 browser evidence. No
 browser SDK, dependency upgrade, manifest permission or release is introduced.
 

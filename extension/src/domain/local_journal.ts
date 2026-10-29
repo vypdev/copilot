@@ -13,7 +13,7 @@ export type JournalCommand = { readonly type: 'read'; readonly now: number }
     | { readonly type: 'update'; readonly now: number; readonly epoch: number; readonly sequence: number; readonly fact: OperationFact }
     | { readonly type: 'clear'; readonly now: number; readonly epoch: number; readonly revision: number };
 export type JournalResult = { readonly state: 'ready' | 'written' | 'unchanged'; readonly snapshot: JournalSnapshot; readonly sequence?: number }
-    | { readonly state: 'stale' | 'invalid' | 'future' | 'corrupt' | 'clock-invalid' | 'exhausted' }
+    | { readonly state: 'stale' | 'invalid' | 'future' | 'corrupt' | 'clock-invalid' | 'exhausted' | 'collection-active' | 'collection-inactive' }
     | { readonly state: 'unavailable'; readonly effect: 'not-started' | 'aborted' | 'unknown' };
 export interface JournalDecision { readonly result: JournalResult; readonly write?: JournalSnapshot }
 

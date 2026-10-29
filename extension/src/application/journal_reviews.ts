@@ -10,12 +10,14 @@ import type { SettingsRepository } from './settings_repository.ts';
 export interface JournalReviewPorts {
     now(): number; identifier(): string; fence(owner: string): SettingsOwnerFence | null;
     idle(kind: JournalKind): boolean;
+    /** Current verified paused policy revision; unknown/active policy cannot authorize a clear. */
+    pausedPolicyRevision(kind: JournalKind): number | null;
     /** Shared owner reserves known-paused consent at this settings revision; blocks new admission/consent writes until released. */
-    reserve(kind: JournalKind, settingsRevision: number): { current(): boolean; release(): void } | null;
+    reserve(kind: JournalKind, settingsRevision: number, policyRevision: number): { current(): boolean; release(): void } | null;
 }
 interface Clear {
     readonly owner: string; readonly kind: JournalKind; readonly epoch: number; readonly revision: number;
-    readonly settingsRevision: number; readonly createdAt: number; readonly expiresAt: number;
+    readonly settingsRevision: number; readonly policyRevision: number; readonly createdAt: number; readonly expiresAt: number;
     readonly generation: number; readonly fence: SettingsOwnerFence;
 }
 interface Completed extends Clear { readonly result: JournalClearOutcome }
@@ -28,7 +30,7 @@ export class JournalReviews {
     private readonly completed = new Map<string, Completed>();
     private readonly running = new Map<string, Running>();
     private generation = 0;
-    constructor(private readonly store: JournalStore, private readonly settings: Pick<SettingsRepository, 'inspect'>,
+    constructor(private readonly store: JournalStore, private readonly settings: Pick<SettingsRepository, 'inspect' | 'reserveMutations'>,
         private readonly ports: JournalReviewPorts) {}
     invalidate(): void { this.generation++; this.pending.clear(); this.completed.clear(); }
     private time(): number | null { try { const now = this.ports.now(); return natural(now) ? now : null; } catch { return null; } }
@@ -50,11 +52,13 @@ export class JournalReviews {
             if (now < record.createdAt || now >= record.expiresAt) map.delete(id);
         }
     }
-    private async paused(kind: JournalKind): Promise<{ readonly revision: number } | { readonly issue: JournalClearIssue }> {
+    private async paused(kind: JournalKind): Promise<{ readonly revision: number; readonly policyRevision: number } | { readonly issue: JournalClearIssue }> {
         const { loaded } = await this.settings.inspect();
         if (loaded.state !== 'ready') return { issue: loaded.state === 'future' ? 'future' : 'corrupt' };
         if (loaded.migrated) return { issue: 'migration-required' };
-        return loaded.settings.center[kind] ? { issue: 'collection-active' } : { revision: loaded.settings.revision };
+        if (loaded.settings.center[kind]) return { issue: 'collection-active' };
+        const policyRevision = this.ports.pausedPolicyRevision(kind);
+        return natural(policyRevision) ? { revision: loaded.settings.revision, policyRevision } : { issue: 'unavailable' };
     }
     async preview(kind: JournalKind, owner: string): Promise<JournalClearPreview> {
         if (!journalKind(kind)) return { state: 'invalid' };
@@ -76,14 +80,15 @@ export class JournalReviews {
             const rechecked = await this.paused(kind);
             if (!this.current(bound)) return { state: 'stale' };
             if ('issue' in rechecked) return { state: rechecked.issue };
-            if (rechecked.revision !== privacy.revision) return { state: 'stale' };
+            if (rechecked.revision !== privacy.revision || rechecked.policyRevision !== privacy.policyRevision) return { state: 'stale' };
             if (!this.idle(kind) || this.pending.size + this.running.size >= 16) return { state: 'busy' };
             const id = this.ports.identifier();
             if (!settingsOperationId(id) || this.pending.has(id) || this.running.has(id) || this.completed.has(id)) return { state: 'unavailable' };
             if (!this.current(bound)) return { state: 'stale' };
-            this.pending.set(id, { ...bound, kind, epoch: result.snapshot.epoch, revision: result.snapshot.revision, settingsRevision: privacy.revision });
+            this.pending.set(id, { ...bound, kind, epoch: result.snapshot.epoch, revision: result.snapshot.revision,
+                settingsRevision: privacy.revision, policyRevision: privacy.policyRevision });
             return deepFreeze({ state: 'preview', operationId: id, kind, epoch: result.snapshot.epoch,
-                revision: result.snapshot.revision, entries: result.snapshot.entries.length, expiresAt: bound.expiresAt });
+                revision: result.snapshot.revision, policyRevision: privacy.policyRevision, entries: result.snapshot.entries.length, expiresAt: bound.expiresAt });
         } catch { return { state: 'unavailable' }; }
     }
     confirm(id: string, owner: string): Promise<JournalClearOutcome> {
@@ -121,11 +126,15 @@ export class JournalReviews {
     }
     private async apply(record: Clear): Promise<JournalClearOutcome> {
         try {
-            const lease = this.ports.reserve(record.kind, record.settingsRevision);
-            if (!lease) return { state: 'busy' };
-            const current = () => { try { return lease.current() === true && this.current(record); } catch { return false; } };
-            try { return await this.clear(record, current); }
-            finally { try { lease.release(); } catch { /* Cleanup does not erase an observed native outcome. */ } }
+            const preferences = this.settings.reserveMutations();
+            if (!preferences) return { state: 'busy' };
+            try {
+                const lease = this.ports.reserve(record.kind, record.settingsRevision, record.policyRevision);
+                if (!lease) return { state: 'busy' };
+                const current = () => { try { return preferences.current() && lease.current() === true && this.current(record); } catch { return false; } };
+                try { return await this.clear(record, current); }
+                finally { try { lease.release(); } catch { /* Cleanup does not erase an observed native outcome. */ } }
+            } finally { try { preferences.release(); } catch { /* Preference cleanup cannot erase a terminal effect fact. */ } }
         } catch { return { state: 'unavailable' }; }
     }
     private async clear(record: Clear, current: () => boolean): Promise<JournalClearOutcome> {
@@ -133,15 +142,15 @@ export class JournalReviews {
         try { privacy = await this.paused(record.kind); } catch { return { state: 'unavailable' }; }
         if (!current()) return { state: 'stale' };
         if ('issue' in privacy) return { state: privacy.issue };
-        if (privacy.revision !== record.settingsRevision) return { state: 'stale' };
+        if (privacy.revision !== record.settingsRevision || privacy.policyRevision !== record.policyRevision) return { state: 'stale' };
         if (!this.idle(record.kind)) return { state: 'busy' };
         const now = this.time(); if (now === null) return { state: 'unavailable' };
         let result: JournalResult;
-        try { result = await this.store.execute(record.kind, { type: 'clear', now, epoch: record.epoch, revision: record.revision }, current); }
+        try { result = await this.store.execute(record.kind, { type: 'clear', now, epoch: record.epoch, revision: record.revision }, current, record.policyRevision); }
         catch { result = { state: 'unavailable', effect: 'unknown' }; }
         if (result.state === 'unavailable' && result.effect !== 'unknown') return { state: 'not-applied', reason: result.effect };
         if (result.state !== 'written' && result.state !== 'unavailable') {
-            return { state: ['stale', 'invalid', 'future', 'corrupt', 'clock-invalid', 'exhausted'].includes(result.state)
+            return { state: ['stale', 'invalid', 'future', 'corrupt', 'clock-invalid', 'exhausted', 'collection-active'].includes(result.state)
                 ? result.state as JournalClearIssue : 'unavailable' };
         }
         const acknowledgement = result.state === 'written' ? 'accepted' as const : 'unknown' as const;

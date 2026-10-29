@@ -3,20 +3,21 @@ import { sameSettingsContent, settingsOperationId, settingsSnapshot } from '../d
 import { deepFreeze, keys, natural, record } from '../domain/value.ts';
 import type { StoragePort } from './runtime_ports.ts';
 import type { SettingsCommit, SettingsInspection, SettingsReceipt } from './settings_transaction_ports.ts';
+import { SettingsMutationQueue, type SettingsMutationReservation } from './settings_mutation_queue.ts';
 
 export const SETTINGS_KEY = 'copilot.settings.v1';
 interface Envelope { readonly current: unknown; readonly previous?: unknown; readonly operation?: SettingsReceipt }
 function isEnvelope(value: unknown): value is Record<string, unknown> {
     return record(value) && Object.hasOwn(value, 'current') && keys(value, ['current', 'previous', 'operation']);
 }
-const continueAfterFailure = () => undefined;
 /** The migration write was attempted; callers may inspect its observed result without retrying it. */
 export class SettingsMigrationError extends Error {
     constructor() { super('settings-migration-unavailable'); }
 }
 export class SettingsRepository {
-    private queue: Promise<unknown> = Promise.resolve();
+    private readonly mutations = new SettingsMutationQueue();
     constructor(private readonly storage: StoragePort) {}
+    reserveMutations(): SettingsMutationReservation | null { return this.mutations.reserve(); }
     async read(): Promise<SettingsLoad> {
         const value = await this.storage.get(SETTINGS_KEY);
         const current = isEnvelope(value) ? value.current : value;
@@ -38,7 +39,7 @@ export class SettingsRepository {
     commit(value: unknown, expectedRevision: number, id: string, current: () => boolean): Promise<SettingsCommit> {
         const admitted = settingsSnapshot(value);
         if (!settingsOperationId(id) || !natural(expectedRevision) || !admitted) return Promise.resolve({ state: 'invalid' });
-        const operation = this.queue.then(async (): Promise<SettingsCommit> => {
+        return this.mutations.run(async (): Promise<SettingsCommit> => {
             const eligible = () => { try { return current() === true; } catch { return false; } };
             let inspected: SettingsInspection;
             try { inspected = await this.inspect(); } catch { return { state: 'unavailable' }; }
@@ -68,8 +69,6 @@ export class SettingsRepository {
                         : sameSettingsContent(observed.loaded.settings, before) ? 'unchanged' : 'changed' };
             } catch { return { state: 'unknown', acknowledgement, observedRevision: null, observation: 'unavailable' }; }
         });
-        this.queue = operation.catch(continueAfterFailure);
-        return operation;
     }
     write(value: unknown, expectedRevision: number): Promise<Settings> {
         return this.update(settings => {
@@ -79,7 +78,7 @@ export class SettingsRepository {
     }
     /** Serialize application mutations against the latest complete settings envelope. */
     update(change: (settings: Settings) => unknown, current: () => boolean = () => true): Promise<Settings> {
-        const operation = this.queue.then(async () => {
+        return this.mutations.run(async () => {
             const loaded = await this.read();
             if (loaded.state !== 'ready' || !current()) throw new Error('settings-conflict-or-invalid');
             const value = change(loaded.settings);
@@ -90,11 +89,9 @@ export class SettingsRepository {
             await this.storage.set(SETTINGS_KEY, envelope);
             return next;
         });
-        this.queue = operation.catch(continueAfterFailure);
-        return operation;
     }
     initialize(): Promise<SettingsLoad> {
-        const operation = this.queue.then(async () => {
+        return this.mutations.run(async () => {
             const loaded = await this.read();
             if (loaded.state === 'ready' && loaded.migrated) {
                 const stored = await this.storage.get(SETTINGS_KEY);
@@ -104,8 +101,6 @@ export class SettingsRepository {
             }
             return loaded;
         });
-        this.queue = operation.catch(continueAfterFailure);
-        return operation;
     }
     async rollback(expectedRevision: number): Promise<Settings> {
         const envelope = await this.storage.get(SETTINGS_KEY);
