@@ -1679,7 +1679,7 @@
       "id": "issue-start-and-sdd-readiness",
       "title": "Uniform issue start and pre-branch SDD readiness",
       "status": "implemented",
-      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve nested catalog specification links and safely publish generated catalogs without following destination links",
+      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve nested catalog specification links and safely publish generated catalogs without following destination links; bootstrap truthful proposed SDK capabilities before implementation without changing readiness",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-10-29",
       "specs": [
@@ -1765,7 +1765,8 @@
         "src/application/policies/sdd_preparation_message_catalog.ts",
         "src/application/policies/sdd_preparation_status_policy.ts",
         "src/domain/sdd_catalog_compatibility.ts",
-        "src/infrastructure/specification_catalog_publication.cjs"
+        "src/infrastructure/specification_catalog_publication.cjs",
+        "jest.config.js"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1817,7 +1818,9 @@
         "src/testing/fixtures/sdd-native-catalog/catalog.json",
         "src/testing/fixtures/sdd-native-catalog/catalog.schema.json",
         "src/testing/fixtures/sdd-native-catalog/provenance.json",
-        "src/tooling/__tests__/specification_catalog_publication.test.ts"
+        "src/tooling/__tests__/specification_catalog_publication.test.ts",
+        "src/tooling/__tests__/proposed_sdd_catalog.test.ts",
+        "src/tooling/__tests__/proposed_sdd_catalog_entrypoint.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",
@@ -1830,7 +1833,8 @@
         "docs/issues/configuration.mdx",
         "docs/configuration.mdx",
         "docs/single-actions/workflow-and-cli.mdx",
-        "docs/security-operations/operations/error-reference.mdx"
+        "docs/security-operations/operations/error-reference.mdx",
+        "specs/README.md"
       ]
     },
     {

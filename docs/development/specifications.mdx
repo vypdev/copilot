@@ -58,6 +58,50 @@ Root-level SDD links and `../` links to other repository evidence keep their
 existing format. Regenerate the catalog after upgrading to repair older flattened
 links; the source files and registered paths do not need to move.
 
+## Initial catalog generation
+
+For a new product, register existing Draft specifications and user documentation
+under SDK version-1 `proposed` capabilities. Keep `entrypoints`, `code` and
+`tests` explicitly empty until real implementation evidence exists. The
+[initialization lifecycle](/issues/pre-branch-sdds#starting-without-product-implementation)
+uses the existing documentation workflow and then the normal feature gate.
+Generated entries say **Not yet implemented (proposed capability).**; validation
+preserves Draft/readiness blockers and does not certify application tests.
+
+In this Copilot source repository, use the package tasks shown above. A repository
+adopting the source-vendored SDK copies these three matching files from the same
+reviewed SDK version, retaining their original layout:
+
+- `src/infrastructure/specification_catalog_validator.cjs`
+- `src/infrastructure/specification_catalog_publication.cjs`
+- `src/domain/specification_catalog_path_policy.cjs`
+
+Its existing standalone entrypoint works with Node and no application package:
+
+```bash
+node src/infrastructure/specification_catalog_validator.cjs --write
+node src/infrastructure/specification_catalog_validator.cjs
+```
+
+Run them from that repository after creating the catalog and its referenced
+documents. These commands check catalog metadata, registered files and the
+generated index. SDD content/consistency and application execution remain
+separate checks in the ordinary workflow. Generation creates or safely replaces
+`specs/CATALOG.md`; validation
+returns nonzero for stale output, missing arrays, unsafe or nonexistent supplied
+files, or missing required evidence. Follow the reported field/output recovery,
+regenerate and retry. Keep all source-vendored dependencies at the same reviewed
+revision. Upgrade an older installed Action/SDK through its normal reviewed route;
+changing its validator, declaring fake evidence or disabling a gate cannot
+establish readiness.
+
+When implementation exists, record its actual entrypoints, source and meaningful
+tests and review the implementation before changing to `implemented`. Mixed
+proposed/implemented catalogs are supported; implemented, as-built and deprecated
+entries retain their full evidence requirements. Existing dates and extension
+metadata remain unchanged by generation. Native catalogs still need a compatible
+reviewed publication adapter.
+
 ## Safe catalog output
 
 Generation accepts a missing `specs/CATALOG.md` or a regular file under real

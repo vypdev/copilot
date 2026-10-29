@@ -10,6 +10,8 @@ module.exports = {
     'issue-admission/index.cjs',
     'deployment-recovery/index.cjs',
     'src/infrastructure/specification_catalog_publication.cjs',
+    'src/infrastructure/specification_catalog_validator.cjs',
+    'src/domain/specification_catalog_path_policy.cjs',
     'web/src/**/*.ts',
     '!web/src/main.ts',
     '!src/**/*.d.ts',

@@ -3,7 +3,7 @@
 - Status: Implemented — automated verification complete; live provider UX review pending
 - Date: 2026-09-17
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: 2026-10-29 (safe portable catalog publication, #771; nested catalog links, #768; actionable blocked preparation and safe diagnostics, #714)
+- Last verified: 2026-10-29 (truthful proposed SDK bootstrap, #777; safe portable catalog publication, #771; nested catalog links, #768; actionable blocked preparation and safe diagnostics, #714)
 - Owners: Copilot maintainers
 - Scope: clarify, update, validate, and publish the owning SDD before eligible branch-based work
 - Related issues/PRs: none; local design work; companion SDD `issue-start-and-branch-readiness.md`
@@ -1939,3 +1939,142 @@ catalog. Acceptance requires focused/native tests, architecture, typecheck/lint,
 all documentation/workflow/specification contracts, generated bundles/package
 smoke, exact-head CI and every platform check, plus complete review with no
 unresolved findings before merge. No new operator authorization is required.
+
+### Truthful proposed SDK capability bootstrap — #777 (2026-10-29)
+
+**Problem and observed evidence.** The SDK version-1 catalog already recognizes
+`proposed`, but its filesystem validator, immutable profile reader and new-entry
+parser require implementation paths even before implementation exists. The
+authorized, read-only reproduction of the snapshot cited in
+[issue #777](https://github.com/vypdev/copilot/issues/777) contains eleven proposed
+capabilities and produces exactly 33 errors: empty entrypoints/code/tests for
+each entry. Its specification and documentation files exist. Draft validation
+and planned acceptance inventories are not executed application evidence.
+
+**Contract and readiness.** `proposed-sdk-R01`: every SDK path field MUST remain
+an explicitly present array. Only `entrypoints`, `code` and `tests` MAY be empty
+for `status: proposed`; workflows retain their existing optional cardinality.
+Specifications and documentation remain nonempty. Implemented, as-built and
+deprecated entries retain their complete evidence requirements. All supplied
+paths still require the existing role boundary, normalized contained regular
+file, no-symlink, uniqueness and ownership checks. An empty array is absence of
+implementation evidence; a missing/null field or a nonexistent supplied path
+is invalid, including in a proposed entry.
+
+`proposed-sdk-R02`: the filesystem validator, immutable reader, doctor and new-entry
+parser MUST use the same pure cardinality policy. Analysis guidance MUST allow
+truthful empty implementation arrays and prohibit fabricated source, wrapper
+tests or documents substituted for implementation. Existing extension metadata,
+requirements, blockers, status, dates and readiness MUST be preserved by SDK
+round trips. No native-profile adapter or schema migration is added.
+
+`proposed-sdk-R03`: structural acceptance MUST NOT set an SDD to Ready for
+implementation, promote a capability to implemented, erase blockers or imply
+that planned tests executed. Existing clarification, SDD consistency, case/budget
+traceability, immutable evidence, allowed-diff, publication and branch checks
+remain mandatory. The normal eligible feature flow reviews its own contract
+before implementation; catalog acceptance alone establishes none of that work.
+
+**Supported initialization and transition.** `proposed-sdk-R04`: a maintainer
+uses the enabled documentation Issue Form for the initial standard, template,
+prospective SDDs, documentation and version-1 proposed catalog. They start it
+with in-progress and use the exact Action-owned branch. Its existing exemption
+from the feature gate allows prerequisite documentation to be reviewed without
+disabling the gate or creating fake source. Merge those reviewed prerequisites
+through the normal PR lifecycle, then start the feature issue and its ordinary
+clarification/publication flow. A source-vendored SDK uses the matching reviewed
+validator, publication helper and path policy in their original layout; its
+existing Node generation/validation entrypoint requires no application package.
+An older installed validator must be upgraded through the reviewed SDK/Action
+installation route, never patched or bypassed in a consumer to manufacture green.
+
+```mermaid
+flowchart LR
+    E[Empty product repository] --> D[Action-owned documentation branch]
+    D --> P[Draft SDDs and proposed catalog with absent implementation arrays]
+    P --> V[Structural validation and reviewed prerequisite PR]
+    V --> G[Ordinary feature clarification and verified SDD publication]
+    G --> I[Implement and execute meaningful tests]
+    I --> R[Review real evidence paths and implemented status]
+```
+
+Text equivalent: bootstrap the reviewed documents through the existing
+documentation workflow, validate truthful proposed metadata, then follow the
+normal feature gate. Add real implementation evidence as it exists and promote
+status only with the corresponding review. A failed or interrupted preparation
+retains its documents and blockers and retries the same normal workflow.
+
+**Visible content and recovery.** `proposed-sdk-R05`: an empty proposed
+implementation field renders **Not yet implemented (proposed capability).**
+in the generated evidence map. Empty workflows retain their current
+not-applicable message; existing populated evidence links are unchanged. For
+example, a proposed payments SDD with entrypoints/code/tests empty shows its
+specification/documentation paths, the explicit absence message and its recorded
+date. That date records the reviewed metadata/document snapshot, not test
+execution. Invalid/missing fields keep their actionable field diagnostic; users
+restore the required array or supply real contained files, regenerate and retry.
+Unsupported native profiles retain their existing compatibility recovery and
+byte-preservation behavior. No new comment, notification, locale field, config
+flag, permission, workflow or runtime is introduced.
+
+**Numeric budget, coverage and executable acceptance.** Before implementation,
+reserve at least **34 distinct additional cases**; existing cases do not count
+again:
+
+| Area | Minimum | Observable behavior |
+|---|---:|---|
+| Pure cardinality and immutable SDK views | 12 | Three proposed omissions and strict status/field alternatives; arrays remain required |
+| Real filesystem and transition | 8 | All-proposed/mixed repositories; missing/unsafe/linked paths, ownership, required docs/specs and real evidence transition |
+| SDD planning and publication | 6 | New proposed entry, rejected promotion, update/companion/new scratch writes and metadata retention |
+| Generator/validator entrypoint | 4 | Generate, read-only validation, stale output and invalid evidence without false success |
+| Generated UX and documentation | 4 | Explicit not-implemented state, retained workflow semantics, populated links and executable bootstrap guidance |
+| **Total** | **34** | Deterministic, owned fixtures; no consumer mutations or claimed live application acceptance |
+
+Collect the previously unmeasured CJS path policy and catalog validator in the
+mandatory root coverage run. Enforce 100% statements/branches/functions/lines
+for the pure path policy and immutable compatibility reader, and 95% statements/
+lines plus 90% branches/functions for the catalog validator, doctor policy and changed gate use
+case. Retain every prior global/module budget. CLI/root-shape/error cases that
+close the old coverage gap must test meaningful observable outcomes.
+
+`proposed-sdk-R06`: the original immutable consumer snapshot MUST fail before
+the correction with its 33 absent-evidence errors, then validate unchanged with
+zero errors under the corrected SDK. It remains proposed with the same decoded
+readiness/blockers/metadata; this proves catalog compatibility, not consumer
+implementation or live gate readiness. Owned scratch repositories cover actual
+SDD allowlisted writes and real Node generator/validator invocation. Update this
+owner, the canonical standard's bootstrap guidance, both specification guides,
+catalog evidence and generated index together. Map R01/R02 to policy/reader/CJS
+fixtures, R03/R04 to gate and scratch publication fixtures, R05 to generator/guide
+contracts and R06 to the immutable reproduction receipt. Complete focused and
+full coverage, extension/package/build/web/types/lint, documentation/workflow/
+specification contracts, Graphify, normal commit hooks and fresh exact-head CI,
+all platforms, Codecov diff audit and complete review without active findings
+before the authorized develop merge. No release or consumer update is implied.
+
+**Executed focused evidence.** The change adds 59 distinct cases: 32 catalog/
+immutable-view/filesystem/transition cases, 14 entrypoint/rendered-guide cases,
+seven doctor cases, three gate cases and three real Git scratch-publication
+cases. The initial focused run has seven genuine failures and 25 passing cases;
+the corrected core and workflow groups pass 455 tests with one existing platform
+skip. The shared path policy and immutable reader have 100% all metrics. The
+previously unmeasured CJS validator has 100% lines/functions, 97.70% statements
+and 94.73% branches in the focused run; the full run and strict new budgets remain
+mandatory.
+
+The nineteen fetched reference files from the issue's immutable consumer
+snapshot match their GitHub Git blob SHA and remain byte-identical (SHA-256
+447871dcfa8d8c32f016ed717f1baccfd569ab0a4fce2e347ad00a5921340e9c).
+The unchanged validator initially reports exactly 33 missing implementation-array
+errors; the corrected validator reports zero. All eleven capabilities remain
+proposed and all retained readiness facts still say Draft/absent implementation/
+changes disallowed. No consumer application command, implementation acceptance,
+feature gate or remote mutation is claimed by that structural reproduction.
+
+The complete local run passes 794 suites and 14,793 tests with the same 35
+existing platform skips. Coverage is 97.31% statements, 95.05% branches, 97.96%
+functions and 98.09% lines; every previous and new module budget passes. Doctor,
+the shared path policy and compatibility reader each reach 100% all metrics.
+The gate retains 98.14% statements/98.68% lines/97.56% functions/95.42% branches;
+the CJS validator retains its focused 100% lines/functions and 97.70% statements/
+94.73% branches. Fresh remote gates remain required before merge.

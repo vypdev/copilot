@@ -2,7 +2,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { isSafeRelativePath, matchesFieldBoundary } = require('../domain/specification_catalog_path_policy.cjs');
+const { isSafeRelativePath, matchesFieldBoundary, allowsEmptyPathField } = require('../domain/specification_catalog_path_policy.cjs');
 const { publishCatalogMarkdown, readCatalogMarkdown } = require('./specification_catalog_publication.cjs');
 
 const DEFAULT_ROOT = path.resolve(__dirname, '../..');
@@ -64,7 +64,7 @@ function validateCatalog(root, catalog) {
         errors.push(`${prefix}.${field} must be an array.`);
         continue;
       }
-      if (field !== 'workflows' && values.length === 0) {
+      if (!allowsEmptyPathField(capability.status, field) && values.length === 0) {
         errors.push(`${prefix}.${field} must not be empty.`);
       }
       if (new Set(values).size !== values.length) {
@@ -215,9 +215,9 @@ function renderCatalog(catalog) {
     `- Last verified: ${capability.lastVerified}`,
     `- Specifications: ${renderPathLinks(capability.specs)}`,
     `- Workflows: ${renderPathLinks(capability.workflows)}`,
-    `- Entrypoints: ${renderPathLinks(capability.entrypoints)}`,
-    `- Core code: ${renderPathLinks(capability.code)}`,
-    `- Tests: ${renderPathLinks(capability.tests)}`,
+    `- Entrypoints: ${renderImplementationLinks(capability.entrypoints, capability.status)}`,
+    `- Core code: ${renderImplementationLinks(capability.code, capability.status)}`,
+    `- Tests: ${renderImplementationLinks(capability.tests, capability.status)}`,
     `- User documentation: ${renderPathLinks(capability.documentation)}`,
     '',
   ]);
@@ -253,6 +253,12 @@ function renderCatalog(catalog) {
 
 function normalizeCheckoutLineEndings(content, platform = process.platform) {
   return platform === 'win32' ? content.replace(/\r\n/g, '\n') : content;
+}
+
+function renderImplementationLinks(paths, status) {
+  return status === 'proposed' && paths.length === 0
+    ? 'Not yet implemented (proposed capability).'
+    : renderPathLinks(paths);
 }
 
 function renderPathLinks(paths) {
