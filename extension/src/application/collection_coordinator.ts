@@ -1,9 +1,12 @@
 import type { JournalKind } from '../domain/journal_facts.ts';
 import type { Settings, SettingsLoad } from '../domain/settings.ts';
 import { deepFreeze } from '../domain/value.ts';
+import { loadCollectionPolicy, type CollectionPolicy } from '../domain/collection_policy.ts';
+import { settingsOperationId } from '../domain/settings_operation.ts';
 import type { CollectionPolicyStore } from './collection_policy_ports.ts';
-import { collectionCurrent, pauseCollectionPolicy, readCollectionPolicy, type CollectionObservation, type CollectionRestrictionFact } from './collection_restrictions.ts';
+import { collectionCurrent, pauseCollectionPolicy, readCollectionPolicy, type CollectionObservation, type CollectionRestrictionFact, type CollectionRestrictionResult } from './collection_restrictions.ts';
 import type { SettingsWriteEffects, SettingsWritePreparation } from './settings_write_effects.ts';
+import type { CollectionCapture, CollectionPreparation, CollectionPreparations, CollectionActivationLease } from './collection_transition_ports.ts';
 
 const KINDS = ['diagnostics', 'recents'] as const;
 interface Preferences { readonly revision: number; readonly paused: boolean; readonly diagnostics: boolean; readonly recents: boolean }
@@ -25,6 +28,8 @@ export class CollectionCoordinator implements SettingsWriteEffects {
         recents: { observed: { state: 'unavailable' }, blocked: false, epoch: {}, held: null, restriction: null },
     };
     private readonly writes = new Set<object>();
+    private readonly preparations = new Map<string, CollectionPreparations>();
+    private readonly stagedStops = new Map<string, { kind: JournalKind; revision: number; result: CollectionRestrictionResult }>();
     private readGeneration: object = {};
     private readRequested = false;
     private reading: Promise<void> | null = null;
@@ -90,6 +95,48 @@ export class CollectionCoordinator implements SettingsWriteEffects {
         const observed = this.slots[kind].observed;
         return observed.state === 'ready' && observed.policy.mode === 'paused' ? observed.policy.revision : null;
     }
+    capture(kind: JournalKind, restricting = false): CollectionCapture | null {
+        const slot = this.slots[kind];
+        return !this.disposed && (!this.globalStop || restricting) && this.preferences && (restricting || this.idle(kind)) && (slot.observed.state === 'ready' || restricting)
+            ? Object.freeze({ policy: slot.observed.state === 'ready' ? slot.observed.policy : null,
+                stamp: slot.epoch, settingsRevision: this.preferences.revision }) : null;
+    }
+    /** An authorized stop retires admission immediately, even if persistence subsequently remains unavailable. */
+    pause(kind: JournalKind): object { this.readGeneration = {}; this.slots[kind].blocked = true; this.slots[kind].epoch = {}; this.publish(); return this.slots[kind].epoch; }
+    owns(kind: JournalKind, stamp: object): boolean { return !this.disposed && this.slots[kind].epoch === stamp; }
+    observeStop(kind: JournalKind, stamp: object, result: CollectionRestrictionResult): boolean {
+        if (!this.owns(kind, stamp)) return false;
+        this.readGeneration = {}; this.slots[kind].observed = result.observed; this.slots[kind].restriction = result.fact;
+        this.publish(); return true;
+    }
+    takePreparation(id: string): CollectionPreparations | null {
+        const value = this.preparations.get(id); this.preparations.delete(id); return value ?? null;
+    }
+    stageStop(id: string, kind: JournalKind, revision: number, result: CollectionRestrictionResult): boolean {
+        if (!settingsOperationId(id) || this.stagedStops.has(id) || this.stagedStops.size >= 16) return false;
+        this.stagedStops.set(id, { kind, revision, result }); return true;
+    }
+    clearStagedStop(id: string): void { this.stagedStops.delete(id); }
+    reserveActivation(kind: JournalKind, stamp: object, settingsRevision: number, policyRevision: number, operationId: string): CollectionActivationLease | null {
+        const slot = this.slots[kind];
+        if (!settingsOperationId(operationId) || !this.capture(kind) || slot.epoch !== stamp || !this.preferences?.[kind]
+            || this.preferences.paused || this.preferences.revision !== settingsRevision || slot.observed.state !== 'ready'
+            || slot.observed.policy.revision !== policyRevision || policyRevision >= Number.MAX_SAFE_INTEGER - 1) return null;
+        const held = {}; slot.held = held;
+        const current = () => !this.disposed && !this.globalStop && slot.held === held && slot.epoch === stamp && !this.writes.size
+            && this.preferences?.revision === settingsRevision && this.preferences[kind] && !this.preferences.paused;
+        this.publish();
+        return Object.freeze({ current, accept: (raw: CollectionPolicy, sourceCurrent: () => boolean) => {
+            const loaded = loadCollectionPolicy(kind, raw);
+            if (!current() || !collectionCurrent(sourceCurrent) || loaded.state !== 'ready' || loaded.policy.mode !== 'active'
+                || loaded.policy.revision !== policyRevision + 1 || loaded.policy.receipt?.id !== operationId
+                || loaded.policy.receipt.beforeRevision !== policyRevision || loaded.policy.receipt.settingsRevision !== settingsRevision) return false;
+            slot.observed = loaded; slot.blocked = false; this.publish(); return true;
+        }, release: () => {
+            if (slot.held !== held) return;
+            slot.held = null; this.publish(); void this.refresh();
+        } });
+    }
     idle(kind: JournalKind): boolean {
         return !this.disposed && !this.writes.size && this.slots[kind].held === null && collectionCurrent(() => this.ports.writerIdle(kind));
     }
@@ -105,24 +152,35 @@ export class CollectionCoordinator implements SettingsWriteEffects {
             slot.held = null; this.publish();
         } });
     }
-    async prepare(before: Settings, after: Settings, current: () => boolean): Promise<SettingsWritePreparation> {
+    async prepare(before: Settings, after: Settings, current: () => boolean, operationId?: string): Promise<SettingsWritePreparation> {
         const increases = KINDS.some(kind => !before.center[kind] && after.center[kind]);
         if (this.disposed) return Object.freeze({ allowed: !increases, release() {} });
         const write = {}; this.writes.add(write); this.readGeneration = {};
+        const stamps = { diagnostics: this.slots.diagnostics.epoch, recents: this.slots.recents.epoch };
+        const preparations: Partial<Record<JournalKind, CollectionPreparation>> = {};
         if (!before.paused && after.paused) this.globalStop = true;
         if (before.paused !== after.paused || KINDS.some(kind => before.center[kind] !== after.center[kind])) this.preferences = null;
         for (const kind of KINDS) {
             if (before.center[kind] !== after.center[kind]) this.slots[kind].blocked = true;
             if (before.paused !== after.paused || before.center[kind] !== after.center[kind]) this.slots[kind].epoch = {};
         }
+        const afterStamps = { diagnostics: this.slots.diagnostics.epoch, recents: this.slots.recents.epoch };
         this.publish();
         let allowed = true;
         for (const kind of KINDS) if (before.center[kind] !== after.center[kind]) {
             const guard = () => !this.disposed && this.writes.has(write) && this.slots[kind].held === null && collectionCurrent(current);
-            const result = await pauseCollectionPolicy(this.policies, kind, before.revision, () => this.ports.identifier(), guard);
+            const staged = operationId === undefined ? undefined : this.stagedStops.get(operationId);
+            const reuse = staged?.kind === kind && staged.revision === before.revision && before.center[kind] && !after.center[kind];
+            const result = reuse ? staged.result : await pauseCollectionPolicy(this.policies, kind, before.revision, () => this.ports.identifier(), guard);
+            if (reuse) this.stagedStops.delete(operationId!);
             this.slots[kind].observed = result.observed; this.slots[kind].restriction = result.fact;
+            preparations[kind] = Object.freeze({ beforeStamp: stamps[kind], afterStamp: afterStamps[kind], result });
             if (after.center[kind] && (result.observed.state !== 'ready' || result.observed.policy.mode !== 'paused')) allowed = false;
             this.publish();
+        }
+        if (settingsOperationId(operationId) && Object.keys(preparations).length) {
+            this.preparations.set(operationId, Object.freeze(preparations));
+            if (this.preparations.size > 32) this.preparations.delete(this.preparations.keys().next().value!);
         }
         return Object.freeze({ allowed, release: () => {
             if (!this.writes.delete(write)) return;

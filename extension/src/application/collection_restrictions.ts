@@ -11,6 +11,11 @@ export interface CollectionRestrictionFact {
     readonly policyRevision: number | null;
     readonly sourceCurrentAtObservation: boolean;
 }
+export interface CollectionRestrictionResult {
+    readonly observed: CollectionObservation; readonly fact: CollectionRestrictionFact;
+    /** The submitted native identity is private; public facts do not contain an unexecuted nonce. */
+    readonly operationId: string | null;
+}
 export function collectionCurrent(current: () => boolean): boolean { try { return current() === true; } catch { return false; } }
 export async function readCollectionPolicy(store: CollectionPolicyStore, kind: JournalKind): Promise<CollectionObservation> {
     try {
@@ -23,13 +28,15 @@ export async function readCollectionPolicy(store: CollectionPolicyStore, kind: J
 
 /** Restrict once, then independently read. An observed pause never attributes another owner's write to this call. */
 export async function pauseCollectionPolicy(store: CollectionPolicyStore, kind: JournalKind, settingsRevision: number,
-    identifier: () => string, current: () => boolean): Promise<{ readonly observed: CollectionObservation; readonly fact: CollectionRestrictionFact }> {
+    identifier: () => string, current: () => boolean): Promise<CollectionRestrictionResult> {
     let observed = await readCollectionPolicy(store, kind);
+    let operationId: string | null = null;
     let acknowledgement: CollectionRestrictionFact['acknowledgement'] = 'not-attempted';
     if (observed.state === 'ready' && observed.policy.mode === 'active' && collectionCurrent(current)) {
         let id: string | null;
         try { id = identifier(); } catch { id = null; }
         if (settingsOperationId(id)) {
+            operationId = id;
             let result: CollectionPolicyResult;
             try { result = await store.execute(kind, { type: 'set', mode: 'paused', expectedRevision: observed.policy.revision,
                 settingsRevision, operationId: id }, current); }
@@ -39,6 +46,6 @@ export async function pauseCollectionPolicy(store: CollectionPolicyStore, kind: 
             observed = await readCollectionPolicy(store, kind);
         }
     }
-    return deepFreeze({ observed, fact: { acknowledgement, observation: observed.state === 'ready' ? observed.policy.mode : 'unavailable',
+    return deepFreeze({ observed, operationId, fact: { acknowledgement, observation: observed.state === 'ready' ? observed.policy.mode : 'unavailable',
         policyRevision: observed.state === 'ready' ? observed.policy.revision : null, sourceCurrentAtObservation: collectionCurrent(current) } });
 }

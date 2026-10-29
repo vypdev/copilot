@@ -3144,7 +3144,11 @@
         "extension/src/domain/controlled_journal.ts",
         "extension/src/application/settings_write_effects.ts",
         "extension/src/application/collection_restrictions.ts",
-        "extension/src/application/collection_coordinator.ts"
+        "extension/src/application/collection_coordinator.ts",
+        "extension/src/application/collection_transition_ports.ts",
+        "extension/src/domain/collection_review.ts",
+        "extension/src/application/collection_effects.ts",
+        "extension/src/application/collection_reviews.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3281,7 +3285,16 @@
         "extension/test/integration/collection_restrictions.test.ts",
         "extension/test/integration/collection_coordinator.test.ts",
         "extension/test/integration/collection_preference_coordination.test.ts",
-        "extension/test/integration/collection_global_pause.test.ts"
+        "extension/test/integration/collection_global_pause.test.ts",
+        "extension/test/fixtures/collection_reviews.ts",
+        "extension/test/integration/collection_reviews.test.ts",
+        "extension/test/integration/collection_review_races.test.ts",
+        "extension/test/integration/collection_review_failures.test.ts",
+        "extension/test/integration/collection_review_lifetimes.test.ts",
+        "extension/test/integration/collection_review_bounds.test.ts",
+        "extension/test/integration/collection_activation_ownership.test.ts",
+        "extension/test/integration/collection_review_phase_fences.test.ts",
+        "extension/test/integration/collection_stop_staging.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

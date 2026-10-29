@@ -542,7 +542,7 @@ snapshot and replay/revision checks. Native preference publication waits for it
 and rechecks the source. The scope remains owned through primary readback;
 cleanup failure cannot change an established settings result. Existing startup
 migrations are preserved. The optional port is not yet wired to the production
-background: collector, reviewed activation and actual center composition remain
+background: collector, gateway and actual center composition remain
 the next delivery work.
 
 Both kinds pause admission before a consent-change I/O wait. Off attempts a
@@ -560,6 +560,40 @@ Old/mid-write refreshes cannot replace newer observations. A burst shares one
 active read batch and at most one coalesced trailing request, including reentry;
 disposing a scheduled owner performs no native read. History notifications
 must stay center-only and must not invalidate content helper quarantine.
+
+`CollectionReviews` now retains at most16 pending/running plans and32 completed
+results with a five-minute lifetime and editor/controller/credential fence.
+Confirm/cancel selects the retained exact plan; the renderer receives no private
+native policy nonce or admission witness. Completed records discard full saved
+preference snapshots. Duplicate confirmation joins one submission, in-flight
+cancel remains pending, and replay returns historical facts without another write.
+
+`collection_effects.ts` orders preference and policy phases. A committed opt-in
+continues only from its own operation-bound preflight receipt and admission
+generation. That generation is captured before the native wait, so a later stop
+cannot be adopted by the older start. Activation acquires an idle preference
+lease after the queued preference operation has completed, rereads the complete
+confirmed canonical snapshot and receipt, and submits one exact guarded policy
+transition. Partial persistence of other settings cannot certify that plan.
+Independent readback
+must match the private receipt before admission. Source or policy movement keeps
+the first-phase fact and prevents later admission. Exhausted counters fail closed.
+
+Stop retires admission synchronously after its running promise is registered.
+It attempts metadata pause first under an idle preference lease, even when the
+preference counter cannot advance. For on intent, that one attempt is staged
+under the operation ID, kind and preference revision (at most16 running contexts).
+Release the lease before queued commit; its mandatory preflight consumes the
+matching stop result instead of repeating an unknown submission. Mismatching or
+increasing intents cannot consume it, and all terminal paths clear staging.
+Already-off intent gets an actual retained policy plan, with no invented settings
+change. Guarded stop observation retires older reads, so the live cache retains
+known policy success even if preferences subsequently fail. Unknown/future policy
+and a busy secondary writer do not prevent reviewing off.
+`preferenceVerifiedAtObservation`, `admittedAtObservation` and
+`sourceCurrentAtObservation` are historical result fields; always render the live
+coordinator view independently. These application contracts are not yet native
+browser or mounted UI acceptance.
 
 `IndexedCollectionPolicyStore` stores one closed receipt per collection and
 requires a private source guard for a set. Policy and history request success are

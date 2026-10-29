@@ -31,7 +31,9 @@ Optional Activity/Diagnostics collection remains under development. Its source
 now separates saved intent from actual consent policy: importing or restoring an
 enabled preference will not itself start collection. Disabling it first attempts
 the policy pause, then saves the off preference even if that pause is unavailable.
-The dedicated activation, history and clear screens still need integration;
+The retained start/stop service now verifies those phases independently, keeps
+partial results and requires a fresh review after relevant state changes. Its
+activation, history and clear screens still need integration;
 collection stays off by default. See the [privacy and retention details](/browser-extension/permissions).
 
 **Shortcuts** reviews [four bounded local navigation assignments](/browser-extension/shortcuts)

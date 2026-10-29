@@ -56,7 +56,7 @@ export class SettingsRepository {
             if (before.revision !== expectedRevision) return { state: 'conflict' };
             const envelope: Envelope = { current: deepFreeze(JSON.parse(JSON.stringify(next)) as Settings), previous: before,
                 operation: { id, beforeRevision: expectedRevision } };
-            const scope = await settingsWriteScope(this.effects, before, envelope.current as Settings, eligible);
+            const scope = await settingsWriteScope(this.effects, before, envelope.current as Settings, eligible, id);
             try {
                 if (!eligible()) return { state: 'stale' };
                 if (!scope.allowed) return { state: 'unavailable' };

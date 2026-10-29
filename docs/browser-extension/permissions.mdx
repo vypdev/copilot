@@ -116,3 +116,8 @@ can still stop future collection. If neither restriction can be saved, a process
 pause cannot promise protection after restart; the completed interface must make
 that failure explicit and offer browser-level extension disablement. Reading
 state does not automatically retry a write or activate an imported preference.
+The source's retained start/stop service also checks the exact saved intent and
+policy receipt before admitting collection. A later stop cannot be absorbed into
+an older activation. Replayed operation results describe what was observed then;
+the current collection view remains a separate fact. These services still need
+their production gateway, collector and UI integration.

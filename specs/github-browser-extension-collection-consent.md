@@ -36,8 +36,9 @@ Treating an acknowledgement as every desired effect hides partial outcomes.
 The source has a transactional journal, a reviewed clear service, a preference
 queue reservation and restriction-only preference preflight. Native database2
 preserves the two version1 journals and adds a fixed policy store. An application
-coordinator observes consent and fences admission/clear. Production collector,
-dedicated start/stop reviews and center UI composition remain incomplete. Saved
+coordinator observes consent and fences admission/clear. Dedicated retained
+start/stop application services are now present. Their production collector,
+gateway and center UI composition remain incomplete. Saved
 collection flags still default false; these source slices do not activate them.
 
 ### 2.3 Evidence
@@ -47,6 +48,8 @@ See `local_journal.ts`, `journal_store.ts`, `journal_reviews.ts`,
 `collection_coordinator.ts`, `collection_restrictions.ts`, `center_settings.ts` and
 the [journal refinement](github-browser-extension-local-journal.md). Current
 deterministic fixtures are not native-browser acceptance. Primary sources: section20.
+`collection_reviews.ts` and `collection_effects.ts` now retain exact plans and
+execute their independent preference/policy phases; they are not yet renderer controls.
 
 ### 2.4 Retrospective classification
 
@@ -188,6 +191,66 @@ Known-history clear reserves the exact off preference and paused policy plus an
 idle writer. It never reacquires the preference reservation already held by the
 clear service. A replacement lease cannot be released by an older owner.
 
+### 6.5 Retained start and stop
+
+Keep at most16 pending/running plans,32 completed results and a five-minute
+review/replay lifetime under the editor/controller/credential fence. Each review
+retains the actual complete preference snapshot, kind, action, policy observation
+and a private admission-generation witness. The public frame shows only the
+exact planned preference/policy states and revisions. Its confirmation ID is
+distinct from the unexecuted native policy nonce. IDs cannot collide with pending,
+running/completed identities or relevant existing receipts. Completed results
+discard full preference snapshots and private witnesses.
+
+Start with off intent first confirms the retained preference through the existing
+FIFO. Its mandatory preflight records at most32 consumable, operation-bound
+restriction receipts, with the admission generations before/after its own change.
+The after-generation is captured before asynchronous policy work, so a later stop
+cannot be adopted as that older start's continuation. Activation requires the
+exact previously paused revision, or the exact owned pause receipt/revision that
+the opt-in preflight produced. A changed policy may leave saved intent but cannot
+authorize undoing another stop. Imported intent that is already on uses a genuine
+policy review without submitting an unchanged preference operation.
+
+Only after preference publication finishes may activation acquire the idle
+preference reservation. Canonical inspection must establish the complete exact
+confirmed snapshot and revision, and, when changed, the owned preference receipt.
+A matching receipt/opt-in with partially persisted other fields is insufficient.
+No recursive queued confirmation
+runs while that reservation is held. Policy activation uses its private nonce,
+exact revision and source/generation guard. An independent read must establish
+the exact active receipt before the current owner can admit capture. Unknown
+acknowledgement may coexist with an attributed observed effect; acceptance alone
+cannot establish the effect. A newer stop, changed source or incompatible data
+prevents admission without erasing already submitted effects. Do not activate a
+counter whose resulting active revision cannot still advance once to stop.
+
+Stop retires admission synchronously, after registering its running operation and
+before any native wait or notification callback. Under an idle preference lease,
+the retained plan attempts its one metadata pause before preference publication.
+Its observed restriction retires older cache reads and updates the current owner
+only when its admission generation is still owned. With on intent, the result is
+staged for at most16 running operations under exact operation ID/kind/preference
+revision. The preference lease is released before queued commit; mandatory
+preflight consumes that exact completed attempt instead of repeating an unknown
+submission. A mismatching or increasing transition cannot consume it. Staging is
+cleared after the operation, including failed or exhausted preference writes.
+Thus an exhausted/unreadable preference store still permits the independent
+durable policy stop. With already-off intent, there is no fabricated settings
+change. Stop authorizes
+a restriction of that kind under the current owner, not activation of a changed
+policy. Future/unavailable policy and a busy secondary writer must not prevent
+reviewing off; incompatible data stays preserved. Actual preference-queue
+contention may leave a session-only pause and explicit partial result.
+
+Duplicate confirmation joins one running submission; in-flight cancellation is
+pending. Replay returns the same historical facts with no repeated writes.
+`preferenceVerifiedAtObservation`, `admittedAtObservation` and
+`sourceCurrentAtObservation` describe that result's observation, never current
+collection. Observed off does not certify partially persisted unrelated settings;
+retain the actual preference uncertainty and full-snapshot verification result.
+The live owner view remains separate.
+
 | State | Meaning | Primary action |
 |---|---|---|
 | Off | Known paused policy or canonically observed off preference | Review enable |
@@ -304,10 +367,11 @@ upgrade or publication is implied.
 | Preference write preparation | 14 | Commit/update, immutable input, replay, failure/cleanup, source retirement |
 | Restriction and observation | 18 | CAS, unknown/accepted/not-applied, closed reads, no invented attribution |
 | Consent owner and coordination | 35 | Partial stop, import, restart, late reads/burst/reentry/disposal, independent kinds, clear leases/global pause |
+| Retained start/stop application plans | 90 | Exact phase/full-snapshot receipts, ownership/lifetime/capacity, exhausted/unreadable stores, scoped stop staging/races, independent acknowledgement/readback, replay/cleanup |
 | Recorder/tickets/navigation | 16 | Opt-in timing, coalescing/cap, expiry, lost context |
 | UI/locales/export/recovery | 20 | Independent facts, scope,4locales, a11y |
 | Real targets and human | 9 | Three native journeys per target plus owning human gate |
-| **Total** | **148** | No substitution for semantic H3/catalog coverage |
+| **Total** | **238** | No substitution for semantic H3/catalog coverage |
 
 Count each case once. Pure branches and modified executable lines/branches100%,
 no exclusions/threshold weakening; keep root budgets. Request fixtures are not
@@ -318,6 +382,11 @@ Application ownership cases live in `settings_collection_preflight.test.ts`,
 `collection_preference_coordination.test.ts`, plus `collection_global_pause.test.ts`.
 Their contract fixtures are not
 native-browser, renderer or complete-milestone acceptance.
+Retained plans add `collection_reviews.test.ts`, `collection_review_races.test.ts`,
+`collection_review_failures.test.ts`, `collection_review_lifetimes.test.ts`,
+`collection_review_bounds.test.ts`, `collection_review_phase_fences.test.ts` and
+`collection_activation_ownership.test.ts` and `collection_stop_staging.test.ts`;
+count their distinct cases once.
 
 ## 15. Documentation and discoverability
 
@@ -348,6 +417,7 @@ docs/specs/catalog and concrete examples together.
 | Atomic late-work fence | Transaction/recorder | Policy/source/epoch races | Contributor/recovery |
 | Truthful ordered phases | Application | Partial/ack/replay/queue | Activity/privacy |
 | Restriction-only save and owner lifetime | Settings/coordinator | Five application contract suites; native/UI evidence still required | Configuration/contributor |
+| Reviewed phase continuation and priority of a later stop | CollectionReviews/effects/private leases | Eight retained-plan/phase/ownership/staging suites; full native/UI evidence pending | Configuration/privacy/contributor |
 | Minimal discoverable facts | Presentation | Locales/a11y/export | User navigation |
 
 ## 18. Implementation sequence
