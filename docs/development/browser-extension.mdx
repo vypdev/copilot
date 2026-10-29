@@ -490,3 +490,28 @@ provenance are pure domain policies; Svelte receives their immutable output.
 Repository pause/reset uses retained preference reviews and cannot consume an
 unsubmitted connection draft. Content-runtime resolver wiring, workspaces, rename
 recovery and source-bound native/human journeys remain required for H3.
+
+## Generated history transaction boundary
+
+The journal core is available to background-owned application services; its
+consent, activity/privacy UI and source-bound browser acceptance are still being
+implemented. It is not an exposed generic recording endpoint or completed H3.
+The [journal specification](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-local-journal.md)
+defines its full delivery requirements.
+
+`IndexedJournalStore` opens only `copilot.generated-history.v1`, version1, with
+the fixed `diagnostics` and `recents` stores and `current` key. A readwrite
+transaction reads the complete bounded envelope, runs the synchronous domain
+decision, and queues its replacement from the native success callback. Do not
+await unrelated work inside that callback. Only transaction completion establishes
+commit; request success does not. A rollback is reported as aborted, and an
+unestablished result stays unknown. Connection cleanup cannot erase a completed fact.
+
+Clear advances the generation and revision atomically. An admitted old-generation
+write or update cannot repopulate cleared history after a worker restart. A clear
+for an older reviewed revision is stale. Expiry runs transactionally on access;
+it is not a background wakeup or guaranteed physical erasure at exactly seven days.
+Future/corrupt documents and unexpected native layouts are preserved. No database
+deletion, downgrade, permission request, network request, telemetry or credential
+fallback is present. The deterministic request driver verifies these boundaries;
+real Chrome, Firefox and Safari transaction journeys remain a separate H3 gate.

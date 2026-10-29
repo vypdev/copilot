@@ -94,3 +94,12 @@ and recovery operations; these are separate from this read-only report. Inspect
 the [feature inventory](/browser-extension/features) for the remaining product
 capabilities and their implementation milestones. Do not treat future retention
 or optional write controls as available because their descriptions are visible.
+
+Optional generated history is still under development. Its bounded transaction
+core does not yet provide the Activity/Diagnostics collection or clear controls.
+The planned defaults remain off: redacted diagnostics/operation facts at most200
+entries, recent extension destinations at most50, both for seven days. Stopping
+collection and explicitly clearing retained history are separate actions. Exact
+private targets, credentials, authored notes and browser history are outside that
+generated-data journal. Its presence in source does not change current collection
+or grant any permission.
