@@ -355,6 +355,11 @@
           "icon": "shield"
         },
         {
+          "title": "Local navigation shortcuts",
+          "href": "/browser-extension/shortcuts",
+          "icon": "keyboard"
+        },
+        {
           "title": "Testing",
           "href": "/development/testing",
           "icon": "vial"

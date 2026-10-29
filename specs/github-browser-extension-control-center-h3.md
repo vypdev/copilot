@@ -1176,3 +1176,91 @@ Primary API sources verified2026-10-29: [Chrome permissions API](https://develop
 and [Safari permission management](https://developer.apple.com/documentation/safariservices/managing-safari-web-extension-permissions).
 Actual cross-browser observations supplement these contracts; no browser loading
 or native UX approval follows from unit tests or API documentation.
+
+### Bounded shortcut refinement (2026-10-29)
+
+The four local commands are `open-center`, `open-features`, `open-profiles` and
+`open-help`. They open only Overview, Features, Profiles and Help in the packaged
+center. A command never supplies a URL, credential, GitHub operation or Apply
+authority. The existing native active-tab, sender, eligibility and incognito
+checks remain mandatory before opening a center window.
+
+The Shortcuts form edits the global enabled preference and at most four unique
+command/binding pairs atomically through the existing preview/confirmation
+transaction. Bindings retain the closed `Alt+Shift+[A-Z]` grammar, with an empty
+choice meaning unassigned. Duplicate commands/chords, other modifier families,
+unknown commands and malformed input fail before persistence. Reset reviews
+removal of these assignments, preserving favorites, profiles and grants. The
+review describes command names and actual before/after chords in the current
+locale. An observer can inspect but must take control explicitly before editing.
+
+```text
+Shortcuts -> edit global switch/closed assignments -> inspect conflict limits
+ -> review complete delta -> confirm -> native readback -> eligible page
+ -> trusted matching key outside protected typing -> fixed local destination
+```
+
+A saved chord is a preference, not an authorization or proof of native delivery.
+The content configuration projects only these four bounded assignments alongside
+the already resolved shortcuts/feature/pause policy. It does not expose the
+profile/favorite/session collections. The runtime listens in the bubbling phase,
+respects an already prevented event, and does not stop native propagation. It
+acts only in the current visible, focused, eligible top frame, with current
+source-bound settings, resolved shortcuts enabled, CENTER07 enabled and pause
+inactive. A held/repeated key, Ctrl/Meta/AltGr, synthetic event, dead/process
+key, composition session or legacy composing signal does not invoke a command.
+Assignments explicitly name physical US-QWERTY positions, with a visible reference
+in all four locales. Match only `KeyboardEvent.code` values `KeyA`–`KeyZ`; do not
+mislabel them as printed characters. `key` still rejects dead/process/unknown or
+control delivery. This keeps Option-modified symbols usable on macOS and avoids
+assuming that Alt preserves a Latin character. Missing/unsupported physical codes
+remain inactive. Check both the physical letter and delivered character against
+page access keys. No keyboard-layout permission or layout fingerprint is read. Firefox reports
+Option as AltGraph on Mac; a transient browser-reported Mac platform hint
+normalizes that documented alias. Ctrl/Meta and protected-typing checks remain
+independent. Unknown/failed modifier context stays inactive. The hint is never
+stored, exported or treated as provider authority.
+
+The DOM boundary rejects inputs, textareas, editable content, interactive form
+controls, textbox/combobox/searchbox roles, protected focus in frames and
+retargeted shadow editors before reading the event's character. It reads no
+field value, draft, clipboard, history or credential. Native access-key collision
+checks are bounded and fail closed when their complete inspection is unavailable.
+At most one center-opening request is pending in an owning runtime scope. Route,
+settings, permission or document retirement removes listeners and prevents queued
+callbacks or late results from opening a new destination.
+
+Closed-shadow focus can retarget to a standard `div`, not only a custom element.
+Reject focused hosts other than the known document roots/current `main`, after
+excluding their editable/form ancestry; do not infer safety from the host's tag
+name. Ordinary main-region keyboard focus remains a supported navigation context.
+
+Native opening admission has at most one ticket per tab and128 tickets total.
+Tab/global invalidation and worker shutdown retire pending tickets before the
+tab-inspection await resolves. An older ticket cannot remove a newer ticket.
+Once the native opening effect was accepted, later retirement does not falsify
+its acknowledgement or claim that the resulting tab was undone. The stopped
+gateway rejects queued deliveries before reading any native tab.
+
+Conflict UX must distinguish duplicate local bindings, observed HTML access-key
+collisions, potential browser/OS interception, unavailable observations and
+actual received-key evidence. It MUST NOT call any configuration conflict-free
+merely because a binding parsed or a native command list was empty. Native
+command enumeration does not expose a complete OS/other-extension registry.
+Keep toolbar/options entrypoints and per-browser recovery guidance available;
+actual native keyboard and protected-typing evidence remain required on Chrome,
+Firefox and Safari. No manifest permission or generic command dispatcher is added.
+
+Add at least40 distinct cases:12 pure admission/configuration cases,12 protected
+DOM/IME/coexistence cases,8 mounted reviewed edit/reset/recovery journeys,4
+native gateway target/sender races and4 artifact/traceability/localization cases.
+Count translation and platform reruns once. Keep the existing H3/catalog budgets,
+100% changed lines without partials, complete docs and independent native/human
+acceptance. No UI placeholder or fake native conflict result satisfies the flow.
+
+Primary sources checked2026-10-29: [Chrome commands](https://developer.chrome.com/docs/extensions/reference/api/commands),
+[Mozilla commands.getAll](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/commands/getAll),
+[KeyboardEvent.key/code distinction](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/code)
+and [composition state](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/isComposing).
+
+Additional shortcut source: [Firefox modifier semantics](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/getModifierState) and [native platform keyboard hints](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/platform), verified2026-10-29.

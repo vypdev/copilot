@@ -6,6 +6,7 @@ import { centerCopy } from './center_copy.ts';
 import { deepFreeze, record } from './value.ts';
 import { EMPTY_INVENTORY_NAVIGATION, type InventoryNavigationState } from './inventory_filters.ts';
 import { EMPTY_PERMISSION_INSPECTION, type PermissionInspection } from './permission_inspection.ts';
+import { CENTER_COMMANDS, centerCommandRoute, type CenterBinding } from './shortcuts.ts';
 
 export interface CenterFrame {
     readonly client: CenterClientView; readonly location: CenterLocation; readonly pendingLocation: CenterLocation | null;
@@ -25,6 +26,16 @@ export function settingsReviewChanges(before: unknown, after: unknown, copy: Cen
                 : typeof value === 'object' && value !== null ? copy.messages.inherit : String(value);
     function walk(old: unknown, next: unknown, path: readonly string[]): void {
         if (old === next) return;
+        if (path.join('/') === 'center/bindings') {
+            const before = old as readonly CenterBinding[]; const after = next as readonly CenterBinding[];
+            for (const command of CENTER_COMMANDS) {
+                const left = before.find(binding => binding.command === command)?.binding;
+                const right = after.find(binding => binding.command === command)?.binding;
+                if (left !== right) changes.push({ id: `center/bindings/${command}`, label: `${copy.routes.shortcuts} › ${copy.routes[centerCommandRoute(command)]}`,
+                    before: left ?? copy.messages.unset, after: right ?? copy.messages.unset });
+            }
+            return;
+        }
         if (record(old) || record(next) || Array.isArray(old) || Array.isArray(next)) {
             const left = old !== null && typeof old === 'object' ? old as Record<string, unknown> : {};
             const right = next !== null && typeof next === 'object' ? next as Record<string, unknown> : {};

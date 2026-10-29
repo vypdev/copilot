@@ -53,7 +53,8 @@ it('bexp-CENTER02-C01 retains the complete150 inventory and truthful H3/later mi
     for (const feature of all) { expect(feature.issue).toBe(feature.milestone + 701); expect(Object.isFrozen(feature)).toBe(true); }
     expect(all.find(f => f.id === 'BEX-COPILOT-01')).toMatchObject({ milestone: 9, issue: 710, tools: null, phase: 'later' });
     expect(all.find(f => f.id === 'BEX-SETUP-01')).toMatchObject({ milestone: 11, issue: 712 });
-    expect(all.find(f => f.id === 'BEX-CENTER-06')!.tools).toBe(null);
+    expect(all.find(f => f.id === 'BEX-CENTER-06')!.tools).toBe('privacy');
+    expect(all.find(f => f.id === 'BEX-CENTER-07')!.tools).toBe('shortcuts');
     expect(all.find(f => f.id === 'BEX-CENTER-08')!.tools).toBe('data');
 });
 it.each(['en', 'es', 'fr', 'pt'] as const)('bexh3-center-C31 complete %s inventory, filter labels and details share one language', locale => {

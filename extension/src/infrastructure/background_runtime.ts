@@ -11,6 +11,8 @@ import { ProtectedSessionService } from '../application/protected_session.ts';
 import { MessageGateway } from '../application/message_gateway.ts';
 import { createCenter, centerIdentifier } from './center_runtime.ts';
 import { NamedSessions } from '../application/named_sessions.ts';
+import { centerCommandRoute } from '../domain/shortcuts.ts';
+import { centerLocationHash } from '../domain/center_routes.ts';
 
 export function startBackground(api: BrowserApi): () => void {
     const local = new BrowserStorage(api.storage.local);
@@ -36,7 +38,8 @@ export function startBackground(api: BrowserApi): () => void {
             await settings.update(value => ({ ...value, repositories: { ...value.repositories, [id]: { ...value.repositories[id], connected: true } } }), current);
         } });
     const gateway = new MessageGateway(api.runtime.id, api.runtime.getURL(''), settings, sessions,
-        { currentTab: id => api.tabs.get(id), openSettings: windowId => api.tabs.create({ url: api.runtime.getURL('runtime.html'), windowId }),
+        { currentTab: id => api.tabs.get(id), openSettings: (windowId, command) => api.tabs.create({
+            url: api.runtime.getURL('runtime.html') + (command === undefined ? '' : centerLocationHash({ route: centerCommandRoute(command) })), windowId }),
             cancellation: () => new BrowserCancellation(),
             online: () => globalThis.navigator?.onLine !== false, notify }, createCenter(api, settings, sessions, notify, connections), connections);
     const message: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender, respond) => {

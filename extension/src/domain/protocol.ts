@@ -2,6 +2,7 @@ import { isEligibleGitHubUrl } from './eligibility.ts';
 import { pageIdentity } from './page.ts';
 import { parseCenterLocation } from './center_routes.ts';
 import { keys, natural, record, utf8Bytes } from './value.ts';
+import { CENTER_COMMANDS, type CenterCommand } from './shortcuts.ts';
 
 export interface Sender {
     readonly id?: string; readonly url?: string; readonly origin?: string; readonly frameId?: number;
@@ -9,7 +10,7 @@ export interface Sender {
     readonly tab?: { readonly id?: number; readonly url?: string; readonly incognito?: boolean; readonly active?: boolean };
 }
 export type Message = { readonly method: 'settings.read'; readonly version: 1 }
-    | { readonly method: 'settings.open'; readonly version: 1 }
+    | { readonly method: 'settings.open'; readonly version: 1; readonly command?: CenterCommand }
     | { readonly method: 'session.status'; readonly version: 1 }
     | { readonly method: 'session.disconnect'; readonly version: 1 }
     | { readonly method: 'page.release'; readonly version: 1; readonly generation: number }
@@ -43,7 +44,10 @@ export function pageSender(sender: Sender, id: string): boolean {
 }
 export function parseMessage(value: unknown): Message | null {
     if (!record(value) || value.version !== 1 || typeof value.method !== 'string') return null;
-    if (['settings.read', 'settings.open', 'session.status', 'session.disconnect'].includes(value.method)) {
+    if (value.method === 'settings.open') return keys(value, ['version', 'method', 'command'])
+        && Object.keys(value).length === (Object.hasOwn(value, 'command') ? 3 : 2)
+        && (!Object.hasOwn(value, 'command') || typeof value.command === 'string' && CENTER_COMMANDS.includes(value.command as CenterCommand)) ? value as Message : null;
+    if (['settings.read', 'session.status', 'session.disconnect'].includes(value.method)) {
         return keys(value, ['version', 'method']) && Object.keys(value).length === 2 ? value as Message : null;
     }
     if (value.method === 'page.release') return keys(value, ['version', 'method', 'generation'])

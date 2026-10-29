@@ -12,7 +12,7 @@ export interface CenterDocument {
 }
 export type CenterPlan = Extract<SettingsPreview, { state: 'preview' }>;
 const identityKeys = ['state', 'clientId', 'role', 'controllerEpoch', 'credentialEpoch'];
-const actions = ['profile-create', 'profile-edit', 'profile-select', 'profile-deselect', 'profile-remove', 'preferences', 'appearance',
+const actions = ['profile-create', 'profile-edit', 'profile-select', 'profile-deselect', 'profile-remove', 'preferences', 'appearance', 'shortcuts',
     'center-preferences', 'repository-preferences', 'import', 'rollback', 'reset-global', 'reset-profiles', 'reset-appearance', 'reset-repository', 'reset-all'];
 const reasons = ['invalid-input', 'profile-invalid', 'profile-capacity', 'profile-not-found', 'profile-conflict', 'future-schema', 'pause-protected', 'no-rollback'];
 const copied = <T>(value: T): T => deepFreeze(JSON.parse(JSON.stringify(value)) as T);

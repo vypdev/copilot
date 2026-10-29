@@ -10,29 +10,45 @@ import { sameSettingsContent } from '../domain/settings_operation.ts';
 import { record } from '../domain/value.ts';
 import type { NamedSessions } from './named_sessions.ts';
 import { PageConfigurationService } from './page_configuration.ts';
+import type { CenterCommand } from '../domain/shortcuts.ts';
 
 interface PageLease { readonly fence: PageFence; readonly cancel: CancellationOwner }
 export interface GatewayPorts {
     currentTab(id: number): Promise<{ readonly url?: string; readonly active?: boolean; readonly incognito?: boolean; readonly windowId?: number }>;
-    openSettings(windowId: number): Promise<unknown>;
+    openSettings(windowId: number, command?: CenterCommand): Promise<unknown>;
     cancellation(): CancellationOwner;
     online(): boolean;
     notify(): void;
 }
 export class MessageGateway {
     private readonly pages = new Map<number, PageLease>();
+    private readonly openings = new Map<number, object>();
+    private stopped = false;
     private connectionOperation = 0;
     constructor(private readonly id: string, private readonly origin: string, private readonly settings: SettingsRepository,
         private readonly sessions: ProtectedSessionService, private readonly ports: GatewayPorts, private readonly center?: CenterGateway,
         private readonly connections?: NamedSessions) {}
     releaseCenterTab(id: number): void { this.center?.releaseTab(id); }
-    shutdown(): void { this.invalidate(); this.center?.shutdown(); }
+    shutdown(): void { if (this.stopped) return; this.stopped = true; this.invalidate(); this.center?.shutdown(); }
     invalidate(tabId?: number, notify = true): void {
         if (tabId !== undefined) {
-            this.pages.get(tabId)?.cancel.abort(); this.pages.delete(tabId); return;
+            this.pages.get(tabId)?.cancel.abort(); this.pages.delete(tabId); this.openings.delete(tabId); return;
         }
         for (const lease of this.pages.values()) lease.cancel.abort();
-        this.pages.clear(); if (notify) this.ports.notify();
+        this.pages.clear(); this.openings.clear(); if (notify) this.ports.notify();
+    }
+    private async open(message: Extract<Message, { method: 'settings.open' }>, sender: Sender): Promise<unknown> {
+        const id = sender.tab!.id!;
+        if (this.openings.has(id) || this.openings.size >= 128) return { state: 'busy' };
+        const ticket = {}; this.openings.set(id, ticket);
+        try {
+            const current = await this.ports.currentTab(id);
+            if (this.openings.get(id) !== ticket) return { state: 'stale' };
+            if (current.url !== sender.tab?.url || current.incognito !== false || current.active !== true || !natural(current.windowId)) return { state: 'rejected' };
+            if (message.command === undefined) await this.ports.openSettings(current.windowId);
+            else await this.ports.openSettings(current.windowId, message.command);
+            return { state: 'opened' };
+        } finally { if (this.openings.get(id) === ticket) this.openings.delete(id); }
     }
     private async connect(message: Extract<Message, { method: 'session.connect' }>): Promise<unknown> {
         const operation = ++this.connectionOperation;
@@ -55,6 +71,7 @@ export class MessageGateway {
         }
     }
     async handle(value: unknown, sender: Sender): Promise<unknown> {
+        if (this.stopped) return { state: 'rejected' };
         const center = parseCenterMessage(value);
         if (center) return extensionSender(sender, this.id, this.origin) && this.center
             ? this.center.handle(center, sender) : { state: 'rejected' };
@@ -89,11 +106,8 @@ export class MessageGateway {
                 if (this.pages.get(id)?.fence.generation === message.generation) this.invalidate(id);
                 return { state: 'released' };
             }
+            if (message.method === 'settings.open') return await this.open(message, sender);
             const current = await this.ports.currentTab(id);
-            if (message.method === 'settings.open') {
-                if (current.url !== sender.tab?.url || current.incognito !== false || current.active !== true || !natural(current.windowId)) return { state: 'rejected' };
-                await this.ports.openSettings(current.windowId); return { state: 'opened' };
-            }
             if (current.incognito !== false || current.url !== message.route) return { state: 'rejected' };
             const fence = { generation: message.generation, route: message.route, repositoryId: message.repositoryId };
             const previous = this.pages.get(id);

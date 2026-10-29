@@ -7,6 +7,7 @@ export async function loadCenterPage(route: Exclude<CenterRoute, 'features' | 'p
         case 'overview': return (await import('../presentation/OverviewPage.svelte')).default;
         case 'appearance': return (await import('../presentation/AppearancePage.svelte')).default;
         case 'language': return (await import('../presentation/LanguagePage.svelte')).default;
+        case 'shortcuts': return (await import('../presentation/ShortcutsPage.svelte')).default;
         case 'profiles': return (await import('../presentation/ProfilesPage.svelte')).default;
         case 'data': return (await import('../presentation/DataPage.svelte')).default;
         default: return (await import('../presentation/InformationPage.svelte')).default;

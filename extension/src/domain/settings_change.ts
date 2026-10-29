@@ -7,7 +7,7 @@ import { sameSettingsContent } from './settings_operation.ts';
 import { deepFreeze, jsonBytesWithin, keys, record } from './value.ts';
 
 export type SettingsAction = `profile-${'create' | 'edit' | 'select' | 'deselect' | 'remove'}`
-    | 'preferences' | 'appearance' | 'center-preferences' | 'repository-preferences' | 'import' | 'rollback'
+    | 'preferences' | 'appearance' | 'shortcuts' | 'center-preferences' | 'repository-preferences' | 'import' | 'rollback'
     | `reset-${'global' | 'profiles' | 'appearance' | 'repository' | 'all'}`;
 export type SettingsChangePlan = { readonly state: 'invalid'; readonly reason: 'invalid-input' | 'profile-invalid'
     | 'profile-capacity' | 'profile-not-found' | 'profile-conflict' | 'future-schema' | 'pause-protected' | 'no-rollback' }
@@ -37,6 +37,9 @@ function keepConnections(current: Settings, incoming: Settings): Settings['repos
 /** Closed preference intents only. No credential, grant, arbitrary URL, command or repository write. */
 export function planSettingsChange(current: Settings, intent: unknown, rollback: Settings | null = null): SettingsChangePlan {
     if (!validSettings(current) || !record(intent) || !jsonBytesWithin(intent, MAX_CENTER_REQUEST_BYTES)) return { state: 'invalid', reason: 'invalid-input' };
+    if (intent.type === 'shortcuts' && keys(intent, ['type', 'enabled', 'bindings']) && Object.keys(intent).length === 3) {
+        return complete(current, { ...current, shortcuts: intent.enabled, center: { ...current.center, bindings: intent.bindings } }, 'shortcuts');
+    }
     if (intent.type === 'appearance' && keys(intent, ['type', 'values']) && record(intent.values)
         && keys(intent.values, ['theme', 'density', 'text', 'motion', 'contrast']) && Object.keys(intent.values).length === 5) {
         const { theme, density, text, motion, contrast } = intent.values;

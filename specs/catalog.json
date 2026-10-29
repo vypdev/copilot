@@ -3107,7 +3107,12 @@
         "extension/src/domain/privacy_context.ts",
         "extension/src/domain/privacy_copy.ts",
         "extension/src/presentation/PrivacyPage.svelte",
-        "extension/src/presentation/CenterRouteContent.svelte"
+        "extension/src/presentation/CenterRouteContent.svelte",
+        "extension/src/domain/shortcuts.ts",
+        "extension/src/domain/shortcuts_copy.ts",
+        "extension/src/adapters/dom/shortcut_context.ts",
+        "extension/src/adapters/dom/shortcuts.ts",
+        "extension/src/presentation/ShortcutsPage.svelte"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3210,7 +3215,12 @@
         "extension/test/contracts/browser_permission_reader.test.ts",
         "extension/test/contracts/permission_architecture.test.ts",
         "extension/test/integration/permission_inspector.test.ts",
-        "extension/test/integration/privacy_page.test.ts"
+        "extension/test/integration/privacy_page.test.ts",
+        "extension/test/contracts/shortcuts.test.ts",
+        "extension/test/integration/shortcut_runtime.test.ts",
+        "extension/test/integration/shortcut_gateway.test.ts",
+        "extension/test/integration/shortcuts_page.test.ts",
+        "extension/test/integration/shortcuts_composition.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",
@@ -3243,7 +3253,8 @@
         "docs/browser-extension/runtime.mdx",
         "docs/browser-extension/configuration.mdx",
         "docs/browser-extension/features.mdx",
-        "docs/browser-extension/permissions.mdx"
+        "docs/browser-extension/permissions.mdx",
+        "docs/browser-extension/shortcuts.mdx"
       ]
     }
   ]

@@ -30,7 +30,7 @@ it('standalone global and host profiles apply without connection while repositor
 it('a valid receipt is immutable and contains no profile/session collections', () => {
     const reply = configurationReply(CONFIG); const decoded = decodeRuntimeConfiguration(reply, CONFIG, 'unbundled')!;
     expect(decoded).not.toBe(reply); expect(Object.isFrozen(decoded.settings.features)).toBe(true);
-    expect(Object.keys(decoded.settings)).toHaveLength(7); expect(decoded.settings).not.toHaveProperty('center');
+    expect(Object.keys(decoded.settings)).toHaveLength(8); expect(decoded.settings).not.toHaveProperty('center');
 });
 it.each([null, [], {}, { sourceTree: 'foreign' }, { state: 'future' }, { route: `${CONFIG.route}?other` }, { generation: 2 },
     { repositoryId: '8' }, { viewer: 'other' }, { epoch: -1 }, { connected: 1 }, { extra: 'private' }, { settings: null }])('rejects missing, foreign or malformed configuration receipt %j', patch => {

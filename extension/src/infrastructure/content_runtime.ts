@@ -8,6 +8,9 @@ import { DEFAULT_SETTINGS } from '../domain/settings.ts';
 import { decodeRuntimeConfiguration, type PageRequest, type RuntimeConfiguration } from '../domain/runtime_configuration.ts';
 import { runtimeCopy, statusText } from '../presentation/runtime_copy.ts';
 import { record } from '../domain/value.ts';
+import { mountShortcuts } from '../adapters/dom/shortcuts.ts';
+import { shortcutsCopy } from '../domain/shortcuts_copy.ts';
+import { centerCopy } from '../domain/center_copy.ts';
 
 export function startContent(api: BrowserApi, window: Window, document: Document): (() => void) | undefined {
     if (!pageIdentity(window.location.href) || api.extension?.inIncognitoContext === true || window.top !== window.self) return;
@@ -27,7 +30,12 @@ export function startContent(api: BrowserApi, window: Window, document: Document
             const connected = configuration !== null && configuration.connected;
             return mountRuntimePanel(context, scope, api, document, { ...copy, ready: enabled,
                 standalone: !enabled ? copy.unavailable : connected ? copy.connected : copy.standalone }, (state, retryAt) => statusText(state, copy, retryAt), native);
-        } }], { scope: valid => new BrowserResourceScope(valid), diagnostic: () => { enabled = false; } });
+        } }, { id: 'center-shortcuts', enabled: context => enabled && context.settings.shortcuts && context.settings.features['BEX-CENTER-07'],
+        mount: (context, scope) => mountShortcuts(context, scope, window, document, async command => {
+            const response = await api.runtime.sendMessage({ version: 1, method: 'settings.open', command });
+            return record(response) && response.state === 'opened' && response.sourceTree === buildSourceIdentity();
+        }, shortcutsCopy(centerCopy(context.settings.locale, window.navigator.language).locale)) }],
+    { scope: valid => new BrowserResourceScope(valid), diagnostic: () => { enabled = false; } });
     const release = () => {
         if (generation && scopeKey) void api.runtime.sendMessage({ version: 1, method: 'page.release', generation }).catch(() => undefined);
         loading++; configuration = null; enabled = false; scopeKey = ''; runtime.dispose();
@@ -35,7 +43,7 @@ export function startContent(api: BrowserApi, window: Window, document: Document
     const paint = () => {
         const { page, identity } = observation();
         // Only reconcile/current() call this synchronously after admitting this exact observation.
-        const settings = configuration?.settings ?? DEFAULT_SETTINGS;
+        const settings = configuration?.settings ?? { ...DEFAULT_SETTINGS, bindings: DEFAULT_SETTINGS.center.bindings };
         void runtime.update({ page: page!, settings, repositoryId: identity.repositoryId,
             epochs: { route: generation, object: generation, settings: settings.revision, credential: credentialEpoch }, paused: settings.paused });
     };
