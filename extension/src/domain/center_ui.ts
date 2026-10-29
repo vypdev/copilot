@@ -25,3 +25,6 @@ export interface CenterRouteContext {
     readonly inventory: InventoryNavigationState; readonly hasDraft: boolean;
 }
 export interface CenterRouteProps { context: CenterRouteContext; actions: CenterActions }
+/** Static discovery stays available without an editable or invented settings document. */
+export type InventoryRouteContext = Omit<CenterRouteContext, 'settings'> & { readonly settings: Settings | null };
+export interface InventoryRouteProps { context: InventoryRouteContext; actions: CenterActions }

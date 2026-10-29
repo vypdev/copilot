@@ -1023,3 +1023,62 @@ hash mismatch before unrelated parsing and still rejects rehashed executable
 authority after hashes match; no cap or timeout is raised. Native invalidation
 and foreground refresh clear session projections before awaits, with one queued
 current-state read after the client is ready. Stop drops private connection data.
+
+### Read-only discovery and recovery refinement (2026-10-29)
+
+H3-R02 discovery MUST remain available independently of a usable saved-settings
+document. Native options load the same packaged inventory and lazy detail routes
+through a narrow nullable-settings presentation port. Future/corrupt/migration
+states, failed native opening and inaccessible storage MUST NOT substitute
+DEFAULT_SETTINGS for current user facts. One shared pure admission policy also
+rejects retained settings after a failed current observation; recoverable invalid
+or unchanged draft messages do not invalidate a successfully read configuration.
+
+```text
+Unknown configuration -> searchable 150-feature catalog + documented defaults
+                      -> saved state/favorites/profiles unknown; no mutation UI
+Explicit successful read -> actual saved state and reviewed controls
+Dirty draft + unknown configuration -> retained, disabled authored value
+Recovery at changed revision -> original draft fence -> conflict; explicit discard
+```
+
+The inventory model uses null for unknown enabled/favorite/pause facts and an
+explicit unknown source. It MUST NOT describe unknown preferences as disabled,
+unfavorited, inherited defaults or current profile decisions. Metadata search,
+category/surface/capability/access/implementation filters, paging, details and
+fixed milestone/contract links stay available. Personal-state filters temporarily
+show All and are disabled; their unknown facts cannot filter out catalog rows.
+Their retained per-page state is reapplied only after a compatible current read,
+or discarded when the user edits the available filters. No private context or
+profile names appear in the unknown view. A saved revision is displayed only
+when the shared policy admits its settings as current.
+
+Static discovery MUST NOT read private connection projections or retry a failed
+migration on navigation. Initial native configuration observation retains its
+existing bounded repository semantics; this change grants no repair/reset or
+migration authority. Localized explanations use the native supported locale
+when unsupported stored metadata cannot be trusted. A missing/failed lazy module
+shows sanitized local recovery; a retired route's late result cannot replace the
+current page. After an explicit successful compatible read, the native center
+MUST reread its current connection projection once before presenting verified
+scope provenance; a retained private projection cannot stand in for that read.
+
+An authored feature override MUST survive temporary unknown settings as an
+inert draft. Its original revision remains the preview fence after recovery;
+new external edits cause conflict before a write. Untouched forms follow a new
+successful current read. Successful reviewed saves still reset drafts through
+the existing epoch; canceled reviews and explicit navigation discard preserve
+their established contracts. These rules add no automatic write retry.
+
+This refinement requires at least 16 distinct risk cases: four unavailable-data
+causes, migration retry suppression, both known/unknown transitions, two draft
+revision journeys, private projection retirement, personal-filter handling,
+sanitized chunk failure, both late chunk outcomes, complete locale recovery and
+one explicit fresh-scope recovery.
+Parameterized translations supplement the locale obligation without counting
+as four distinct product journeys. Evidence owners are catalog_readonly.test.ts
+(contract and mounted integration), center_host.test.ts, the shared inventory,
+center_client_view admission, typed local loader/host and feature editor.
+The feature guide documents recovery and the original revision fence. Keep the
+160 distinct H3 risk floor, 56+56 CENTER obligations, full 803-case baseline and
+all architecture/coverage/browser/human gates unchanged.

@@ -6,23 +6,24 @@ import InformationPage from '../../src/presentation/InformationPage.svelte';
 import AppearancePage from '../../src/presentation/AppearancePage.svelte';
 import FeatureDetailPage from '../../src/presentation/FeatureDetailPage.svelte';
 import type { CenterSurface } from '../../src/presentation/center_surface.ts';
-import type { CenterActions, CenterRouteProps } from '../../src/domain/center_ui.ts';
+import type { CenterActions, CenterRouteProps, InventoryRouteProps } from '../../src/domain/center_ui.ts';
 import type { CenterClientView } from '../../src/domain/center_client_view.ts';
 import { centerFrame, type CenterFrame } from '../../src/domain/center_frame.ts';
 import { centerClientFixture } from '../fixtures/center_client.ts';
 import { deferred } from '../fixtures/runtime.ts';
 import { DEFAULT_SETTINGS } from '../../src/domain/settings.ts';
 import { SETTINGS_KEY } from '../../src/application/settings_repository.ts';
+import { loadInventoryPage } from '../../src/infrastructure/center_pages.ts';
 
 const mounts: Record<string, unknown>[] = []; const clients: ReturnType<typeof centerClientFixture>[] = [];
 afterEach(async () => { for (const host of mounts.splice(0)) await unmount(host); clients.splice(0).forEach(h => h.client.stop()); document.body.replaceChildren(); vi.restoreAllMocks(); });
 async function ready(predicate: () => boolean): Promise<void> { await vi.waitFor(() => { flushSync(); expect(predicate()).toBe(true); }); }
 async function client() { const h = centerClientFixture(); clients.push(h); await h.client.start(); return h; }
-function render(view: CenterClientView, load: CenterSurface['load'] = async () => InformationPage) {
+function render(view: CenterClientView, load: CenterSurface['load'] = async () => InformationPage, loadInventory: CenterSurface['loadInventory'] = loadInventoryPage) {
     const listeners = new Set<(frame: CenterFrame) => void>(); let frame = centerFrame(view, { route: 'help' }, null, 'en');
     const actions: CenterActions = { connections: { connect: vi.fn(), change: vi.fn(), refresh: vi.fn(), dirty: vi.fn() }, preview: vi.fn(), dirty: vi.fn(), takeControl: vi.fn(), stay: vi.fn(), leave: vi.fn(), confirm: vi.fn(), cancel: vi.fn(), dismiss: vi.fn(),
         reload: vi.fn(), focusContent: vi.fn(), browseInventory: vi.fn(), exportSettings: vi.fn(async () => false), importSettings: vi.fn(async () => false) };
-    const unsubscribe = vi.fn(); const surface: CenterSurface = { initial: frame, actions, load,
+    const unsubscribe = vi.fn(); const surface: CenterSurface = { initial: frame, actions, load, loadInventory,
         subscribe: listener => { listeners.add(listener); listener(frame); return () => { listeners.delete(listener); unsubscribe(); }; } };
     const host = mount(CenterHost, { target: document.body, props: { surface } }); mounts.push(host); flushSync();
     return { host, actions, unsubscribe, publish: (next: CenterFrame) => { frame = next; listeners.forEach(listener => listener(next)); flushSync(); } };
@@ -68,4 +69,19 @@ it('an unavailable metadata detail shows recovery without inventing another feat
     view.publish(centerFrame(h.client.view, { route: 'features', detail: 'missing' }, null, 'en'));
     await ready(() => !!document.querySelector('main [role=alert]'));
     expect(document.querySelector('[data-feature-detail]')).toBeNull(); expect(document.querySelector('form')).toBeNull();
+});
+it('a failed catalog chunk remains a local recovery state even when settings are unavailable', async () => {
+    const h = await client(); const view = render({ ...h.client.view, data: null }, undefined, async () => { throw new Error('private-module-location'); });
+    view.publish(centerFrame({ ...h.client.view, data: null }, { route: 'features' }, null, 'en'));
+    await ready(() => !!document.querySelector('main > [role=alert]'));
+    expect(document.body.textContent).not.toContain('private-module-location'); expect(document.querySelector('form')).toBe(null);
+});
+it.each(['resolved', 'rejected'] as const)('a retired catalog’s late %s chunk cannot replace the current settings page', async outcome => {
+    const h = await client(); const wait = deferred<Component<InventoryRouteProps>>();
+    const view = render(h.client.view, async () => AppearancePage, () => wait.promise);
+    view.publish(centerFrame(h.client.view, { route: 'features', detail: 'BEX-NAV-01' }, null, 'en'));
+    view.publish(centerFrame(h.client.view, { route: 'appearance' }, null, 'en'));
+    await ready(() => !!document.querySelector('#center-theme'));
+    if (outcome === 'resolved') wait.resolve(FeatureDetailPage); else wait.reject(new Error('retired-module-location'));
+    await tick(); flushSync(); expect(document.querySelector('#center-theme')).not.toBe(null); expect(document.querySelector('[data-feature-detail]')).toBe(null);
 });

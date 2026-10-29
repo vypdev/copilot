@@ -11,11 +11,12 @@ import { keys, record } from '../domain/value.ts';
 import type { CenterActions } from '../domain/center_ui.ts';
 import type { CenterSurface } from '../presentation/center_surface.ts';
 import CenterHost from '../presentation/CenterHost.svelte';
-import { loadCenterPage } from './center_pages.ts';
+import { loadCenterPage, loadInventoryPage } from './center_pages.ts';
 import { downloadCenterSettings, readCenterImport } from './center_files.ts';
 import { buildSourceIdentity } from './build_identity.ts';
 import { connectionActions } from './center_connections.ts';
 import { EMPTY_INVENTORY_NAVIGATION } from '../domain/inventory_filters.ts';
+import { currentCenterSettings } from '../domain/center_client_view.ts';
 
 /** Native options-page composition. The UI receives preferences and callbacks, never reusable authority. */
 export function startCenter(api: BrowserApi, document: Document, nativeLanguage: string): () => void {
@@ -45,7 +46,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
         connections: connectionActions(api, document, client, () => !stopped && ['connections', 'repositories'].includes(navigation.location.route), value => { navigation.dirty(value); publish(); }),
         preview: (intent, revision) => { void client.preview(intent, revision); },
         confirm: () => { void client.confirm(); }, cancel: () => { void client.cancel(); },
-        dismiss: () => { void client.dismiss(); }, reload: () => { void client.refresh(); },
+        dismiss: () => { void client.dismiss(); }, reload: () => { void client.refresh().then(readConnections); },
         takeControl: () => { void client.takeControl(); }, dirty: value => { navigation.dirty(value); publish(); },
         stay: () => navigation.stay(), leave: () => {
             if (client.view.phase !== 'committing') void client.dismiss().then(() => { if (!stopped) navigation.leave(); });
@@ -73,10 +74,14 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
         });
         if (view.review?.state === 'preview') focus('#settings-review-heading');
     });
-    const surface: CenterSurface = { initial: frame(), actions, load: loadCenterPage,
+    const surface: CenterSurface = { initial: frame(), actions, load: loadCenterPage, loadInventory: loadInventoryPage,
         subscribe: listener => { listeners.add(listener); listener(frame()); return () => { listeners.delete(listener); }; } };
     const host = mount(CenterHost, { target: document.body, props: { surface } }); flushSync();
-    function readConnections(): void { if (['connections', 'repositories', 'profiles', 'features'].includes(navigation.location.route)) void client.connections(); }
+    function readConnections(): void {
+        const route = navigation.location.route;
+        if (route === 'features' && currentCenterSettings(client.view) === null) return;
+        if (['connections', 'repositories', 'profiles', 'features'].includes(route)) void client.connections();
+    }
     const hash = () => navigation.navigate(window.location.hash);
     const visible = () => {
         if (stopped) return;

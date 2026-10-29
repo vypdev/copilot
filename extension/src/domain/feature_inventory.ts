@@ -21,21 +21,23 @@ const routes: Readonly<Record<string, CenterRoute>> = Object.freeze({ 'BEX-CENTE
     'BEX-CENTER-11': 'appearance', 'BEX-CENTER-12': 'language', 'BEX-CENTER-13': 'welcome', 'BEX-CENTER-14': 'data' });
 export type InventorySource = keyof InventoryCopy['sources'];
 export interface InventoryFeature extends FeatureMetadata {
-    readonly favorite: boolean; readonly enabled: boolean; readonly defaultEnabled: boolean; readonly paused: boolean; readonly source: InventorySource;
+    readonly favorite: boolean | null; readonly enabled: boolean | null; readonly defaultEnabled: boolean; readonly paused: boolean | null; readonly source: InventorySource;
     readonly profileName: string | null; readonly profileId: string | null; readonly milestone: number; readonly issue: number;
     readonly phase: 'current' | 'later'; readonly tools: CenterRoute | null;
 }
 export function inventorySource(source: PreferenceSource): InventorySource { return source.startsWith('profile:') ? 'profile' : source as InventorySource; }
-export function featureInventory(settings: Settings, connections: ConnectionOutcome | null | undefined, locale: CenterLocale): readonly InventoryFeature[] {
-    const state = centerProfileResolution(settings, connections);
+export function featureInventory(settings: Settings | null, connections: ConnectionOutcome | null | undefined, locale: CenterLocale): readonly InventoryFeature[] {
+    const known = settings === null ? null : { settings, state: centerProfileResolution(settings, connections) };
     return deepFreeze(FEATURE_METADATA.map(feature => {
         const text = locale === 'en' ? [feature.title, feature.description] : resources[locale][feature.id];
-        const source = state.preferences.sources.features[feature.id]; const milestone = FEATURE_MILESTONES[feature.family];
+        const milestone = FEATURE_MILESTONES[feature.family];
+        const metadata = { ...feature, title: text[0], description: text[1], defaultEnabled: FEATURE_DEFAULTS[feature.id], milestone, issue: milestone + 701,
+            phase: milestone === 3 ? 'current' as const : 'later' as const, tools: routes[feature.id] ?? null };
+        if (known === null) return { ...metadata, favorite: null, enabled: null, paused: null, source: 'unknown' as const, profileId: null, profileName: null };
+        const source = known.state.preferences.sources.features[feature.id];
         const profileId = source.startsWith('profile:') ? source.slice('profile:'.length) : null;
-        return { ...feature, title: text[0], description: text[1], favorite: settings.center.favorites.includes(feature.id),
-            enabled: state.preferences.features[feature.id], defaultEnabled: FEATURE_DEFAULTS[feature.id], paused: state.preferences.paused, source: inventorySource(source),
-            profileName: sourceProfileName(source, settings), profileId, milestone, issue: milestone + 701,
-            phase: milestone === 3 ? 'current' : 'later', tools: routes[feature.id] ?? null };
+        return { ...metadata, favorite: known.settings.center.favorites.includes(feature.id), enabled: known.state.preferences.features[feature.id],
+            paused: known.state.preferences.paused, source: inventorySource(source), profileName: sourceProfileName(source, known.settings), profileId };
     }));
 }
 const normalized = (value: string) => value.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase();
@@ -45,7 +47,7 @@ export function filterInventory(features: readonly InventoryFeature[], filters: 
         && (!filters.mode || feature.mode === filters.mode) && (!filters.permission || feature.permission === filters.permission)
         && (!filters.phase || feature.phase === filters.phase) && (!filters.source || feature.source === filters.source)
         && (!filters.profile || feature.profileId === filters.profile)
-        && (!filters.setting || filters.setting === (feature.paused ? 'paused' : feature.enabled ? 'enabled' : 'disabled'))
+        && (!filters.setting || filters.setting === (feature.enabled === null ? 'unknown' : feature.paused ? 'paused' : feature.enabled ? 'enabled' : 'disabled'))
         && (!filters.favorites || feature.favorite) && words.every(word => normalized([feature.id, feature.title, feature.description,
             copy.families[feature.family], ...feature.surfaces.map(surface => copy.surfaces[surface]), copy.modes[feature.mode], copy.permissions[feature.permission],
             copy.sources[feature.source], feature.profileName ?? ''].join(' ')).includes(word)));

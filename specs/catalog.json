@@ -3099,7 +3099,8 @@
         "extension/src/presentation/FeaturePreferenceEditor.svelte",
         "extension/src/presentation/FeatureProvenance.svelte",
         "extension/src/presentation/InventoryFilters.svelte",
-        "extension/src/presentation/InventorySelect.svelte"
+        "extension/src/presentation/InventorySelect.svelte",
+        "extension/src/presentation/InventoryRoute.svelte"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3193,7 +3194,9 @@
         "extension/test/integration/content_configuration.test.ts",
         "extension/test/contracts/feature_inventory.test.ts",
         "extension/test/integration/feature_inventory.test.ts",
-        "extension/test/integration/artifact_proof.test.ts"
+        "extension/test/integration/artifact_proof.test.ts",
+        "extension/test/contracts/catalog_readonly.test.ts",
+        "extension/test/integration/catalog_readonly.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

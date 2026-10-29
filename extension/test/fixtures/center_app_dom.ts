@@ -10,7 +10,7 @@ const stops: (() => void)[] = [];
 afterEach(async () => { for (const stop of stops.splice(0)) stop(); await tick(); document.body.replaceChildren();
     window.history.replaceState(null, '', 'https://extension.test/runtime.html'); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 export async function ready(predicate: () => boolean): Promise<void> { await vi.waitFor(() => { flushSync(); expect(predicate()).toBe(true); }, { timeout: 5000 }); }
-export async function render(route = 'overview', observer = false, initial?: unknown, hasSettings = true, native = centerClientFixture()) {
+export async function render(route = 'overview', observer = false, initial?: unknown, hasSettings = true, native = centerClientFixture(), language = 'es-ES') {
     window.history.replaceState(null, '', `https://extension.test/runtime.html#/${route}`);
     const browser = browserFixture();
     if (initial !== undefined) native.native.values.set(SETTINGS_KEY, structuredClone(initial));
@@ -19,7 +19,7 @@ export async function render(route = 'overview', observer = false, initial?: unk
     if (observer) native.native.open({ ...CENTER_BINDING, documentId: 'other-window', tabId: 2 });
     vi.stubGlobal('__COPILOT_SOURCE_TREE__', native.port.sourceTree);
     browser.api.runtime.sendMessage = vi.fn(message => native.port.send(message as Parameters<typeof native.port.send>[0]));
-    const stop = startCenter(browser.api, document, 'es-ES'); stops.push(stop);
+    const stop = startCenter(browser.api, document, language); stops.push(stop);
     await ready(() => document.querySelector('h1') !== null && document.querySelector('main')?.getAttribute('aria-busy') === 'false' && (!hasSettings || !!document.querySelector('main .revision')));
     return { ...native, browser, stop };
 }

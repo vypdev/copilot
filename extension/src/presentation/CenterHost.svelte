@@ -1,15 +1,18 @@
 <script lang="ts">
     import { onMount, untrack, type Component } from 'svelte';
     import type { CenterSurface } from './center_surface.ts';
-    import type { CenterRouteProps } from '../domain/center_ui.ts';
+    import type { CenterRouteProps, InventoryRouteProps } from '../domain/center_ui.ts';
     import { CENTER_ROUTES, centerLocationHash } from '../domain/center_routes.ts';
     import { reviewCopy } from '../domain/review_copy.ts';
+    import { currentCenterSettings } from '../domain/center_client_view.ts';
+    import InventoryRoute from './InventoryRoute.svelte';
     import SettingsReview from './SettingsReview.svelte';
     import ConnectionsPanel from './ConnectionsPanel.svelte';
     import RepositoryPreferencesPanel from './RepositoryPreferencesPanel.svelte';
     let { surface }: { surface: CenterSurface } = $props();
     let frame = $state.raw(untrack(() => surface.initial));
     let Page = $state.raw<Component<CenterRouteProps> | null>(null);
+    let Inventory = $state.raw<Component<InventoryRouteProps> | null>(null);
     let loadFailed = $state(false);
     const route = $derived(frame.location.route);
     const routeDetail = $derived(frame.location.detail);
@@ -17,14 +20,16 @@
     const data = $derived(frame.client.data);
     const role = $derived(frame.client.role === undefined ? data?.role : frame.client.role);
     const busy = $derived(frame.client.phase !== 'ready');
+    const knownSettings = $derived(currentCenterSettings(frame.client));
     const editable = $derived(!busy && data?.role === 'editor' && !frame.client.review
         && (frame.client.issue === null || frame.client.issue === 'invalid' || frame.client.issue === 'unchanged') && data.state === 'ready');
     onMount(() => surface.subscribe(value => { frame = value; }));
     $effect(() => {
         const destination = route;
         const detail = routeDetail;
-        let current = true; Page = null; loadFailed = false;
-        void surface.load(destination, detail).then(value => { if (current) Page = value; }, () => { if (current) loadFailed = true; });
+        let current = true; Page = null; Inventory = null; loadFailed = false;
+        if (destination === 'features') void surface.loadInventory(detail).then(value => { if (current) Inventory = value; }, () => { if (current) loadFailed = true; });
+        else void surface.load(destination, detail).then(value => { if (current) Page = value; }, () => { if (current) loadFailed = true; });
         return () => { current = false; };
     });
 </script>
@@ -54,7 +59,9 @@
             {/if}
             {#if frame.client.issue}<p role="alert" class="notice">{copy.issues[frame.client.issue]}</p>{/if}
             {#if frame.review}<SettingsReview view={frame.review} copy={reviewCopy(copy.locale)} actions={surface.actions}/>{/if}
-            {#if route === 'connections' || route === 'repositories'}
+            {#if route === 'features'}
+                <InventoryRoute {frame} Page={Inventory} {loadFailed} {editable} actions={surface.actions}/>
+            {:else if route === 'connections' || route === 'repositories'}
                 {#if route === 'repositories' && data?.settings && data.state === 'ready'}
                     <RepositoryPreferencesPanel context={{ settings: data.settings, copy, editable: editable && !frame.hasDraft,
                         location: frame.location, rollbackAvailable: data.rollbackAvailable, connections: frame.client.connections,
@@ -74,7 +81,7 @@
                 <p class="notice">{data.state === 'future' ? copy.messages.future : data.state === 'corrupt' ? copy.messages.corrupt : copy.messages.migration}</p>
                 <a href="https://docs.page/vypdev/copilot/">{copy.messages.documentation}</a>
             {:else if frame.client.phase === 'ready'}<p>{copy.messages.unavailable}</p>{/if}
-            {#if data?.settings}<p class="revision"><span>{copy.messages.revision}</span>: <code>{data.settings.revision}</code></p>{/if}
+            {#if knownSettings}<p class="revision"><span>{copy.messages.revision}</span>: <code>{knownSettings.revision}</code></p>{/if}
         </main>
     </div>
 </div>

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { CenterRouteProps } from '../domain/center_ui.ts';
+    import type { InventoryRouteProps } from '../domain/center_ui.ts';
     import { featureInventory } from '../domain/feature_inventory.ts';
     import { inventoryCopy } from '../domain/inventory_copy.ts';
     import { centerLocationHash } from '../domain/center_routes.ts';
@@ -7,7 +7,8 @@
     import FeatureFavorite from './FeatureFavorite.svelte';
     import FeatureProvenance from './FeatureProvenance.svelte';
     import FeaturePreferenceEditor from './FeaturePreferenceEditor.svelte';
-    let { context, actions }: CenterRouteProps = $props();
+    let { context, actions }: InventoryRouteProps = $props();
+    const knownContext = $derived(context.settings === null ? null : { ...context, settings: context.settings });
     const copy = $derived(inventoryCopy(context.copy.locale));
     const feature = $derived(featureInventory(context.settings, context.connections, context.copy.locale).find(value => value.id === context.location.detail));
 </script>
@@ -18,8 +19,10 @@
         <h2 tabindex="-1">{feature.title}</h2>
         <p class="notice">{`${feature.phase === 'current' ? copy.current : `${copy.later} · H${feature.milestone}`} · ${copy.development}`}</p>
         <h3>{copy.detail}</h3><p>{feature.description}</p>
-        <FeatureFavorite {context} {actions} {feature} {copy}/>
-        <FeatureProvenance {context} {feature} {copy}/>
+        {#if knownContext}
+            <FeatureFavorite context={knownContext} {actions} {feature} {copy}/>
+            <FeatureProvenance context={knownContext} {feature} {copy}/>
+        {:else}<p role="status" data-inventory-unknown>{copy.unknownHint}</p>{/if}
         <FeaturePreferenceEditor {context} {actions} {feature} {copy}/>
         <dl>
             <dt>{copy.family}</dt><dd>{copy.families[feature.family]}</dd>

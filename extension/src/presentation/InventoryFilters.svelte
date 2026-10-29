@@ -2,7 +2,7 @@
     import type { InventoryFilters } from '../domain/inventory_filters.ts';
     import type { InventoryCopy } from '../domain/inventory_copy.ts';
     import InventorySelect from './InventorySelect.svelte';
-    let { value, copy, profiles, change, clear }: { value: InventoryFilters; copy: InventoryCopy; profiles: Readonly<Record<string, string>>;
+    let { value, copy, profiles, change, clear, readOnly }: { value: InventoryFilters; copy: InventoryCopy; profiles: Readonly<Record<string, string>>; readOnly: boolean;
         change(key: keyof InventoryFilters, value: string | boolean): void; clear(): void } = $props();
     const groups = $derived([
         { key: 'family', label: copy.family, options: copy.families }, { key: 'surface', label: copy.surface, options: copy.surfaces },
@@ -19,10 +19,11 @@
     <div class="cards">
         {#each groups as group}
             <div><label for={`inventory-${group.key}`}>{group.label}</label>
-                <InventorySelect id={`inventory-${group.key}`} selected={value[group.key]} emptyValue="" placeholder={copy.all} options={group.options} change={selected => change(group.key, selected)} />
+                <InventorySelect id={`inventory-${group.key}`} selected={value[group.key]} emptyValue="" placeholder={copy.all} options={group.options}
+                    disabled={readOnly && ['source', 'profile', 'setting'].includes(group.key)} change={selected => change(group.key, selected)} />
             </div>
         {/each}
     </div>
-    <label class="checkbox-label"><input type="checkbox" checked={value.favorites} onchange={event => change('favorites', event.currentTarget.checked)} />{copy.favorites}</label>
+    <label class="checkbox-label"><input type="checkbox" disabled={readOnly} checked={value.favorites} onchange={event => change('favorites', event.currentTarget.checked)} />{copy.favorites}</label>
     <button type="button" onclick={clear}>{copy.clear}</button>
 </fieldset>
