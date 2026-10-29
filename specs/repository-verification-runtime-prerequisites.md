@@ -529,8 +529,13 @@ That rejection requires a resolved cause and successful native rerun before merg
 
 The native diagnostic identified the rejected JDK: its lexical tool-cache entry
 resolved outside all approved roots, while Python and pnpm stayed within the
-current private profile. Keep rejecting that alias. The controlled setup-java
-step now uses a step-local RUNNER_TOOL_CACHE beneath the current HOME, so its
-real JDK installation is owned by that profile. This changes only native test
-provisioning; it does not widen result roots, forward the temporary cache setting
-to continuation, change the selected JDK 17, or claim a successful rerun yet.
+current private profile. Keep rejecting that alias. A step-local RUNNER_TOOL_CACHE
+override was ineffective: GitHub reserves RUNNER_* variables. The controlled
+setup-java step instead uses its supported force-download input to replace the
+alias with a real installation inside the already approved tool cache. JVM and
+Gradle account configuration still use each fresh private profile; JDK binaries
+are tool-cache assets. This changes only native test provisioning; it does not
+widen result roots, change the selected JDK 17, or claim a successful rerun yet.
+The exact setup-java revision observed in CI, b843ebf9b913146b38da2eaa7aeddf76074ae1ad,
+declares this input and bypasses both installed and restored JDK cache entries
+before downloading/installing the distribution.
