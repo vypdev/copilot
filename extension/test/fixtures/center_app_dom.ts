@@ -9,7 +9,7 @@ import { CENTER_BINDING } from './center.ts';
 const stops: (() => void)[] = [];
 afterEach(async () => { for (const stop of stops.splice(0)) stop(); await tick(); document.body.replaceChildren();
     window.history.replaceState(null, '', 'https://extension.test/runtime.html'); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
-export async function ready(predicate: () => boolean): Promise<void> { await vi.waitFor(() => { flushSync(); expect(predicate()).toBe(true); }, { timeout: 5000 }); }
+export async function ready(predicate: () => boolean, message?: string): Promise<void> { await vi.waitFor(() => { flushSync(); expect(predicate(), message).toBe(true); }, { timeout: 5000 }); }
 export async function render(route = 'overview', observer = false, initial?: unknown, hasSettings = true, native = centerClientFixture(), language = 'es-ES') {
     window.history.replaceState(null, '', `https://extension.test/runtime.html#/${route}`);
     const browser = browserFixture();

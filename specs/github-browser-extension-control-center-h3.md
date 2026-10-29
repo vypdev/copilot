@@ -1082,3 +1082,13 @@ center_client_view admission, typed local loader/host and feature editor.
 The feature guide documents recovery and the original revision fence. Keep the
 160 distinct H3 risk floor, 56+56 CENTER obligations, full 803-case baseline and
 all architecture/coverage/browser/human gates unchanged.
+
+Additional lifetime evidence exercises the existing H3-R01/R07/R11 contracts
+without adding capabilities: `center_client_retirement.test.ts` covers disposal
+during refresh/preview/confirmation, stale native documents, changed controller
+and credential epochs, foreign late takeover replies and one retained committed
+effect. `center_queued_actions.test.ts` observes the real mounted presentation
+port for unavailable exports and queued navigation around commit/disposal;
+`center_foreground.test.ts` verifies that an already queued native notification
+cannot reopen a disposed center. Native driver and human evidence remain
+separate requirements. No coverage exclusion or threshold change is permitted.

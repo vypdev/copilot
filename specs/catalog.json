@@ -3196,7 +3196,9 @@
         "extension/test/integration/feature_inventory.test.ts",
         "extension/test/integration/artifact_proof.test.ts",
         "extension/test/contracts/catalog_readonly.test.ts",
-        "extension/test/integration/catalog_readonly.test.ts"
+        "extension/test/integration/catalog_readonly.test.ts",
+        "extension/test/integration/center_client_retirement.test.ts",
+        "extension/test/integration/center_queued_actions.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

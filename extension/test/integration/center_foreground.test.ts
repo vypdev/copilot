@@ -23,3 +23,9 @@ it('a queued route focus cannot steal focus from a replacement view after dispos
     replacement.append(heading); document.body.append(replacement); heading.focus(); await tick();
     expect(document.activeElement).toBe(heading);
 });
+it('a native invalidation already queued before listener removal cannot reopen a disposed center', async () => {
+    const h = await render(); const invalidated = [...h.browser.onMessage.listeners][0]; h.stop();
+    const before = h.port.send.mock.calls.length;
+    invalidated({ version: 1, method: 'center.invalidated' }, { id: 'test' }, () => undefined); await tick();
+    expect(h.port.send).toHaveBeenCalledTimes(before); expect(h.browser.onMessage.listeners.size).toBe(0);
+});
