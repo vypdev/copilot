@@ -193,7 +193,8 @@
         "src/application/policies/progress_partition_receipt_policy.ts",
         "src/application/policies/progress_prompt_capacity_policy.ts",
         "src/application/policies/progress_recovery_capacity_policy.ts",
-        "src/application/policies/agent_prompt_envelope_policy.ts"
+        "src/application/policies/agent_prompt_envelope_policy.ts",
+        "src/data/repository/ai/agent_capability_adapter.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -327,7 +328,9 @@
         "src/application/policies/__tests__/progress_partition_receipt_policy.test.ts",
         "src/application/policies/__tests__/progress_prompt_capacity_policy.test.ts",
         "src/application/policies/__tests__/progress_evidence_protocol_policy.test.ts",
-        "src/application/policies/__tests__/progress_recovery_capacity_policy.test.ts"
+        "src/application/policies/__tests__/progress_recovery_capacity_policy.test.ts",
+        "src/application/usecases/actions/__tests__/progress_prompt_preflight.test.ts",
+        "src/application/usecases/actions/__tests__/progress_agent_prompt_capacity.integration.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",

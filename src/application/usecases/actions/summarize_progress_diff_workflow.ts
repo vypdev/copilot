@@ -8,13 +8,13 @@ import { productFacingAgentQueryOptions } from '../../policies/agent_output_loca
 import { PROGRESS_SCOPE_INSTRUCTIONS, renderProgressPromptData } from '../../../prompts/progress_scope';
 import { UNTRUSTED_CONTENT_POLICY } from '../../../domain/security/untrusted_content';
 import { MAX_PROGRESS_SCOPE_BYTES } from '../../policies/progress_scope_policy';
-import { remainingProgressPromptBytes } from '../../policies/progress_prompt_capacity_policy';
+import { remainingProgressPromptBytes, PROGRESS_PROMPT_FRAMING_RESERVE_BYTES } from '../../policies/progress_prompt_capacity_policy';
 import { framedProgressFactLimit, parseProgressPartitionReceipt, aggregateProgressReceipts, type ProgressPartitionReceipt } from '../../policies/progress_partition_receipt_policy';
-import { MAX_PROGRESS_PARTITIONS } from '../../policies/progress_diff_partition_policy';
+import { MAX_PROGRESS_PARTITIONS, progressEvidenceTooLarge } from '../../policies/progress_diff_partition_policy';
 import { logInfo } from '../../ports/logging_ports';
 
 /** Preflight all complete prompts before any request, including the reserved scope envelope. */
-export function planProgressDiffPrompts(diff: ProgressDiffEvidence, context: ProgressContext, issueDescription: string, aggregateBudget: number, acceptanceScope: string): { readonly prompts: readonly string[]; readonly factLimit: number } {
+export function planProgressDiffPrompts(diff: ProgressDiffEvidence, context: ProgressContext, issueDescription: string, aggregateBudget: number, acceptanceScope: string, reserveDynamicFraming = true): { readonly prompts: readonly string[]; readonly factLimit: number } {
     if (diff.kind !== 'partitioned') return { prompts: [], factLimit: 600 };
     const factLimit = diff.protocol ? framedProgressFactLimit(diff, aggregateBudget)
         : progressPartitionFactLimit(diff.baseSha, diff.headSha, diff.partitions, aggregateBudget);
@@ -31,14 +31,17 @@ partitionId: ${JSON.stringify(partition.id)}
 issueRequirements: ${renderProgressPromptData(JSON.stringify(issueDescription), 'progress.issue-description', AGENT_PROMPT_MAX_BYTES)}
 acceptanceScope: ${renderProgressPromptData(acceptanceScope, 'progress.acceptance-scope', MAX_PROGRESS_SCOPE_BYTES)}
 immutableComparison: ${renderProgressPromptData(partition.evidence, 'progress.comparison', AGENT_PROMPT_MAX_BYTES)}`);
-    prompts.forEach((prompt, index) => remainingProgressPromptBytes(prompt, 'progress-partition', progressPartitionResponseSchema(diff.partitions[index], factLimit)));
+    const reserve = reserveDynamicFraming ? PROGRESS_PROMPT_FRAMING_RESERVE_BYTES : 0;
+    prompts.forEach((prompt, index) => {
+        if (remainingProgressPromptBytes(prompt, 'progress-partition', progressPartitionResponseSchema(diff.partitions[index], factLimit), context.agentConfiguration?.effort) < reserve) throw progressEvidenceTooLarge();
+    });
     return { prompts, factLimit };
 }
 
 /** Collects every part before exposing one aggregate to the final assessment. No mutation capability. */
 export async function summarizeProgressDiff(diff: ProgressDiffEvidence, context: ProgressContext, issueDescription: string, agent: FindingsQueryPort, aggregateBudget: number, acceptanceScope: string): Promise<string> {
     if (diff.kind !== 'partitioned') return diff.evidence;
-    const { prompts, factLimit } = planProgressDiffPrompts(diff, context, issueDescription, aggregateBudget, acceptanceScope);
+    const { prompts, factLimit } = planProgressDiffPrompts(diff, context, issueDescription, aggregateBudget, acceptanceScope, false);
     const facts: (readonly ProgressFileFacts[])[] = [];
     const receipts: ProgressPartitionReceipt[] = [];
     logInfo(`Progress comparison requires ${diff.partitions.length} complete bounded parts; no percentage is published until all parts and final assessment finish.`);

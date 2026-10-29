@@ -55,6 +55,7 @@ export async function analyzeProgress(
     dependencies: ProgressAnalysisDependencies,
 ): Promise<ProgressAnalysis> {
     const issueNumber = param.issueNumber;
+    const effort = param.agentConfiguration?.effort;
     const agentReady = isAgentConfigurationReady(
         param.agentConfiguration,
     );
@@ -131,24 +132,24 @@ export async function analyzeProgress(
     };
     const sourceLines = progressScopeSourceLines(issueDescription);
     const scopePrompt = getProgressScopePrompt(JSON.stringify(sourceLines), param.targetLocale);
-    remainingProgressPromptBytes(scopePrompt, 'progress-scope', progressScopeResponseSchema(sourceLines));
+    remainingProgressPromptBytes(scopePrompt, 'progress-scope', progressScopeResponseSchema(sourceLines), effort);
     const reservedScope = { requirements: Array.from({ length: MAX_PROGRESS_SCOPE_CLAUSES }, (_, index) =>
         ({ id: `R${index + 1}`, quote: 'Reserved requirement' })), exclusions: [] };
     const reservedSchema = progressResponseSchema(reservedScope);
-    const aggregateBudget = progressAggregateBudget(getCheckProgressPrompt(promptParameters), reservedSchema);
+    const aggregateBudget = progressAggregateBudget(getCheckProgressPrompt(promptParameters), reservedSchema, effort);
     const reservedDiff = bindProgressEvidence(diff, issueDescription, promptParameters.acceptanceScope, param.targetLocale);
     planProgressDiffPrompts(reservedDiff, param, issueDescription, aggregateBudget, promptParameters.acceptanceScope);
-    if (diff.kind !== 'partitioned') remainingProgressPromptBytes(getCheckProgressPrompt({ ...promptParameters, diffEvidence: diff.evidence }), 'progress', reservedSchema);
+    if (diff.kind !== 'partitioned') remainingProgressPromptBytes(getCheckProgressPrompt({ ...promptParameters, diffEvidence: diff.evidence }), 'progress', reservedSchema, effort);
     const scope = parseProgressScope(await dependencies.aiRepository.query({
         configuration: param.agentConfiguration, agentId: AGENT_PLAN, prompt: scopePrompt,
         options: { ...productFacingAgentQueryOptions('progress-scope', progressScopeResponseSchema(sourceLines)), includeReasoning: param.includeReasoning },
     }), issueDescription, param.targetLocale);
     const acceptanceScope = JSON.stringify(scope);
     const boundDiff = bindProgressEvidence(diff, issueDescription, acceptanceScope, param.targetLocale);
-    const actualBudget = progressAggregateBudget(getCheckProgressPrompt({ ...promptParameters, acceptanceScope }), progressResponseSchema(scope));
+    const actualBudget = progressAggregateBudget(getCheckProgressPrompt({ ...promptParameters, acceptanceScope }), progressResponseSchema(scope), effort);
     const diffEvidence = await summarizeProgressDiff(boundDiff, param, issueDescription, dependencies.aiRepository, actualBudget, acceptanceScope);
     const prompt = getCheckProgressPrompt({ ...promptParameters, acceptanceScope, diffEvidence });
-    remainingProgressPromptBytes(prompt, 'progress', progressResponseSchema(scope));
+    remainingProgressPromptBytes(prompt, 'progress', progressResponseSchema(scope), effort);
     logDebugInfo(
         `CheckProgress: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`,
     );

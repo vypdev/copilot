@@ -708,12 +708,12 @@ hooks and exact-head CI/platform/review with no active findings before merge.
 
 ### Executable evidence for #773
 
-The eight new suites execute **172 additional cases**: 109 pure capacity/protocol/
-receipt/envelope cases, 32 immutable adapter cases, 19 application/integration
+The ten new suites execute **177 additional cases**: 109 pure capacity/protocol/
+receipt/envelope cases, 32 immutable adapter cases, 24 application/integration
 cases (including the two large fixtures), and 12 diagnostic/localization cases.
 The existing binary suite adds one further regression for binary refusal between
 legacy and framed blob limits. Parameterized rows are distinct executed cases;
-the shared communication ledger conservatively records 91 test declarations and
+the shared communication ledger conservatively records 94 test declarations and
 counts each parameterized declaration only once. These measures are different
 and are not added together. Existing provider, ownership and native-open races
 remain in their original suites.
@@ -736,10 +736,42 @@ is not a semantic accuracy, deployment or live-consumer assessment claim. Normal
 root/extension coverage and local/remote quality gates are required separately
 before merge.
 
-Local root verification passes 782 suites and 14,452 tests, with the existing 35
+The initial implementation root verification passes 782 suites and 14,452 tests, with the existing 35
 skips. Global coverage is 98.05% lines, 97.26% statements, 97.94% functions and
 94.96% branches. All five new pure policies and the immutable content recovery
 adapter reach 100% on every metric. The native comparison adapter has 100%
 lines/statements/functions and 98.21% branches; orchestration has 100%
 lines/statements/functions and at least 95.83% branches. Every existing coverage
 budget passes; setup remains 336/350 with 14 explicitly open acceptance cases.
+
+Local review added a boundary regression for the pre-scope part plan: a prompt
+that exactly occupied all 524,288 bytes had no credit for the variable data
+terminators of the later extracted scope. The regression failed with zero
+remaining bytes on the initial implementation. Preflight now reserves 1,024
+bytes in every part, in addition to the complete final-envelope reserve. After
+scope extraction the actual complete request is checked without spending that
+reserve twice. Both checks retain the original hard runtime ceiling. This is
+one additional application regression, included in the 177-case count above.
+
+The native capability adapter also appends a configured effort preference after
+security/schema/task framing. Its unchanged text/trim behavior now lives in the
+same pure envelope module, used by both execution and progress admission. Every
+scope, source-part and final request counts that exact suffix using the selected
+configuration. Four additional native-adapter request cases compare measured
+bytes against the real adapter's captured CLI-port request (undefined, empty and
+configured effort) and reject an oversized effort before progress admission.
+On the prior implementation, configured `high` undercounted by 121 bytes and an
+oversized preference was admitted by preflight. The two substantive regressions
+failed before the shared-envelope correction. These cases are included in the
+177-case total; the CLI port is owned synthetic infrastructure, not a live
+provider execution or a model-quality claim.
+
+Final native-envelope/framing verification passes **784 suites and 14,457 tests**,
+with the same 35 skips. Coverage remains 98.05% lines, 97.26% statements, 97.94%
+functions and 94.96% branches. All five pure modules, immutable recovery and the
+shared native capability adapter reach 100% on every metric; both progress
+orchestrations retain 100% lines/statements/functions and at least 95.83%
+branches. Every module budget passes; setup remains 336/350 with 14 explicitly
+open cases. The full run includes the four native-adapter envelope cases and
+part-preflight boundary regression, rather than extrapolating their results
+from the initial full run.
