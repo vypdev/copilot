@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // @vitest-environment-options {"url":"https://extension.test/runtime.html"}
 import { expect, it, vi } from 'vitest';
-import { flushSync, tick } from 'svelte';
+import { tick } from 'svelte';
 import { ready, render, navigate, button } from '../fixtures/center_app_dom.ts';
 import { browserFixture } from '../fixtures/browser.ts';
 import { centerClientFixture } from '../fixtures/center_client.ts';

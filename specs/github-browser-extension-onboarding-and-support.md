@@ -80,7 +80,10 @@ tabs, setup pairing, privileged Apply, automatic repair/reset, credential export
 or replacing any later milestone. None is removed from its owning product scope.
 
 Fixed invariants: no permission requests, GitHub requests, new credential scope,
-profile change or automatic write on route entry; no raw manifest/error export.
+profile selection or new automatic preference mutation on route entry; no raw
+manifest/error export. The established startup-owned supported migration can
+persist a compatible legacy record, and a later explicit settings read can retry
+that migration. Support/welcome do not add another migration or repair engine.
 No onboarding or support status can authorize an operation.
 
 ## 5. Current versus proposed journey
