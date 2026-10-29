@@ -116085,6 +116085,136 @@ module.exports = { resolveWindowsSystemRoot, trustedWindowsSystemRoot };
 
 /***/ }),
 
+/***/ 143:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const fs = __nccwpck_require__(87561);
+const path = __nccwpck_require__(49411);
+const { randomUUID } = __nccwpck_require__(6005);
+
+const INDEX = 'CATALOG.md';
+const directoryFlags = fs.constants.O_RDONLY | (fs.constants.O_DIRECTORY ?? 0)
+  | (fs.constants.O_NOFOLLOW ?? 0) | (fs.constants.O_NONBLOCK ?? 0);
+const unsafe = () => new Error('Catalog access requires real directories and a regular non-symlink index.');
+const changed = () => new Error('The catalog path changed during access.');
+const sameObject = (left, right) => left.ino > 0n && left.dev === right.dev && left.ino === right.ino;
+
+function entry(name = INDEX) {
+  try { return fs.lstatSync(name, { bigint: true }); }
+  catch (error) { if (error.code === 'ENOENT') return undefined; throw error; }
+}
+
+function destination() {
+  const current = entry();
+  if (current && (!current.isFile() || current.isSymbolicLink())) throw unsafe();
+  return current;
+}
+
+function enterDirectory(name, expected) {
+  const descriptor = fs.openSync(name, directoryFlags);
+  try {
+    const bound = fs.fstatSync(descriptor, { bigint: true });
+    const observed = fs.lstatSync(name, { bigint: true });
+    if (!bound.isDirectory() || !observed.isDirectory() || observed.isSymbolicLink()) throw unsafe();
+    if (!sameObject(bound, observed)) throw changed();
+    if (expected && !sameObject(expected, bound)) throw changed();
+    process.chdir(name);
+    if (!sameObject(bound, fs.lstatSync('.', { bigint: true }))) throw changed();
+    return bound;
+  } finally { fs.closeSync(descriptor); }
+}
+
+/** Node has no portable openat: pin directories as cwd for synchronous,
+ * single-component operations. Never await or call repository code here.
+ * POSIX retains the directory through renames; Windows prevents its rename.
+ */
+function inCatalogDirectory(root, operation) {
+  const absoluteRoot = fs.realpathSync(root);
+  const previous = fs.realpathSync('.');
+  const previousIdentity = fs.lstatSync('.', { bigint: true });
+  try {
+    const rootIdentity = enterDirectory(absoluteRoot);
+    const specsIdentity = enterDirectory('specs');
+    function assertRoute() {
+      for (const [name, expected] of [[absoluteRoot, rootIdentity], [path.join(absoluteRoot, 'specs'), specsIdentity], ['.', specsIdentity]]) {
+        const current = fs.lstatSync(name, { bigint: true });
+        if (!current.isDirectory() || current.isSymbolicLink() || !sameObject(expected, current)) throw changed();
+      }
+    }
+    assertRoute();
+    return operation(assertRoute);
+  } finally {
+    // The caller may itself have been in specs before it was renamed. Do not
+    // re-enter that old pathname if cwd already retains the original inode.
+    if (!sameObject(previousIdentity, fs.lstatSync('.', { bigint: true }))) {
+      enterDirectory(previous, previousIdentity);
+    }
+  }
+}
+
+function unchanged(expected, current) {
+  return expected === undefined ? current === undefined : current !== undefined
+    && sameObject(expected, current) && expected.mode === current.mode
+    && expected.size === current.size
+    && expected.mtimeNs === current.mtimeNs && expected.ctimeNs === current.ctimeNs;
+}
+
+function publishCatalogMarkdown(root, content) {
+  return inCatalogDirectory(root, assertRoute => {
+    const expected = destination();
+    const temporary = '.copilot-catalog-' + randomUUID() + '.tmp';
+    let descriptor, owned;
+    try {
+      descriptor = fs.openSync(temporary, 'wx', 0o600);
+      owned = fs.fstatSync(descriptor, { bigint: true });
+      if (!owned.isFile()) throw unsafe();
+      fs.writeFileSync(descriptor, content, 'utf8');
+      fs.fchmodSync(descriptor, expected ? Number(expected.mode & 0o777n) : 0o666 & ~process.umask());
+      fs.fsyncSync(descriptor);
+      assertRoute();
+      if (!unchanged(expected, destination())) throw changed();
+      const candidate = entry(temporary);
+      if (!candidate || !candidate.isFile() || !sameObject(owned, candidate)) throw changed();
+      if (expected) fs.renameSync(temporary, INDEX);
+      else fs.linkSync(temporary, INDEX); // Atomic no-replace creation.
+      assertRoute();
+      const published = destination();
+      if (!published || !sameObject(owned, published)) throw changed();
+    } finally {
+      try {
+        // Keep the descriptor open until cleanup to prevent inode reuse.
+        // Never remove another writer's replacement at our temporary name.
+        const current = owned ? entry(temporary) : undefined;
+        if (current && current.isFile() && sameObject(owned, current)) fs.unlinkSync(temporary);
+      } finally { if (descriptor !== undefined) fs.closeSync(descriptor); }
+    }
+  });
+}
+
+function readCatalogMarkdown(root) {
+  return inCatalogDirectory(root, assertRoute => {
+    const expected = destination();
+    if (!expected) return '';
+    const descriptor = fs.openSync(INDEX, fs.constants.O_RDONLY
+      | (fs.constants.O_NOFOLLOW ?? 0) | (fs.constants.O_NONBLOCK ?? 0));
+    try {
+      const opened = fs.fstatSync(descriptor, { bigint: true });
+      if (!opened.isFile() || !unchanged(expected, opened)) throw changed();
+      assertRoute();
+      if (!unchanged(expected, destination())) throw changed();
+      const content = fs.readFileSync(descriptor, 'utf8');
+      assertRoute();
+      if (!unchanged(expected, destination())) throw changed();
+      return content;
+    } finally { fs.closeSync(descriptor); }
+  });
+}
+
+module.exports = { publishCatalogMarkdown, readCatalogMarkdown };
+
+
+/***/ }),
+
 /***/ 29617:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -116093,6 +116223,7 @@ module.exports = { resolveWindowsSystemRoot, trustedWindowsSystemRoot };
 const fs = __nccwpck_require__(87561);
 const path = __nccwpck_require__(49411);
 const { isSafeRelativePath, matchesFieldBoundary } = __nccwpck_require__(66014);
+const { publishCatalogMarkdown, readCatalogMarkdown } = __nccwpck_require__(143);
 
 const DEFAULT_ROOT = path.resolve(__dirname, '../..');
 const CATALOG_JSON = 'specs/catalog.json';
@@ -116367,13 +116498,19 @@ function main(argv = process.argv.slice(2), root = DEFAULT_ROOT) {
     return;
   }
   const rendered = renderCatalog(catalog);
-  const markdownPath = path.join(root, CATALOG_MARKDOWN);
-  if (argv.includes('--write')) {
-    fs.writeFileSync(markdownPath, rendered, 'utf8');
-    console.log(`specification catalog generation: PASS (${catalog.capabilities.length} capabilities)`);
+  let current;
+  try {
+    if (argv.includes('--write')) {
+      publishCatalogMarkdown(root, rendered);
+      console.log(`specification catalog generation: PASS (${catalog.capabilities.length} capabilities)`);
+      return;
+    }
+    current = readCatalogMarkdown(root);
+  } catch {
+    console.error(`${CATALOG_MARKDOWN} could not be safely accessed. Inspect links, directory or file collisions, concurrent changes, available space and permissions; then regenerate the catalog.`);
+    process.exitCode = 1;
     return;
   }
-  const current = fs.existsSync(markdownPath) ? fs.readFileSync(markdownPath, 'utf8') : '';
   if (normalizeCheckoutLineEndings(current) !== rendered) {
     console.error(`${CATALOG_MARKDOWN} is stale; run pnpm run generate:specifications.`);
     process.exitCode = 1;
