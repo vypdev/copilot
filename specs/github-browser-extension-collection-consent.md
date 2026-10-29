@@ -37,8 +37,10 @@ The source has a transactional journal, a reviewed clear service, a preference
 queue reservation and restriction-only preference preflight. Native database2
 preserves the two version1 journals and adds a fixed policy store. An application
 coordinator observes consent and fences admission/clear. Dedicated retained
-start/stop application services and a bounded ticket writer are now present. Their production collector,
-gateway and center UI composition remain incomplete. Saved
+start/stop application services and a bounded ticket writer are now present.
+The background now shares its preference repository with that collection owner
+and exposes closed, native-client-bound history/review use cases. Actual trusted
+producers and the mounted center UI remain incomplete. Saved
 collection flags still default false; these source slices do not activate them.
 
 ### 2.3 Evidence
@@ -54,6 +56,11 @@ execute their independent preference/policy phases; they are not yet renderer co
 `journal_progress.ts` add secondary retention. `observed_journal_store.ts` delivers
 canonical clear observations before releasing deferred old work. Their application
 fixtures do not establish production composition or native/browser acceptance.
+`collection_history.ts`, `history_controls.ts`, `history_gateway.ts` and
+`history_protocol.ts` now compose one preference queue, actual writer idle,
+controller/credential fences and independent history reads. `history_runtime.ts`
+opens native history lazily; background bootstrap follows listener registration.
+These deterministic composition tests are not loaded-browser acceptance.
 
 ### 2.4 Retrospective classification
 
@@ -87,7 +94,7 @@ Signed delivery and later GitHub-native recents remain in their existing milesto
 | Stage | Current source | Required outcome |
 |---|---|---|
 | Preference | Saved Boolean | Display independently from actual collection |
-| Start | No collector | Reviewed activation after observed opt-in |
+| Start | Reviewed service and closed gateway | Actual localized controls and trusted producers |
 | Stop | No durable collection gate | Observed policy pause before preference-off |
 | Restart | No collector | Restore only healthy active policy and canonical opt-in |
 | Failure | Core closed errors | Retain completed phases and one recovery action |
@@ -301,6 +308,34 @@ them. A failed clear releases deferred admitted updates without claiming deletio
 Late reads cannot lower a known epoch/revision or erase a newer observation.
 Failed retention/readback/notification never changes primary success.
 
+### 6.5 Production ownership and closed control channel
+
+The background MUST use the same `SettingsRepository`, coordinator, writer and
+native policy/journal ports for ordinary saves, collection review and clear.
+Constructing them performs no storage/native I/O; all wake listeners register
+before bootstrap. Native IndexedDB acquisition is lazy and fails closed in a
+private context or when unavailable. Secondary storage failure cannot prevent
+unrelated preferences from saving. Bootstrap reads control metadata even when
+capture is off and primes journals only for verified active consent; it never
+creates retrospective entries.
+
+The native-center protocol accepts only one fixed history kind per read,
+retained start/stop previews, clear previews and confirmation/cancellation IDs.
+It MUST NOT accept recording facts, policy nonces, private guards, store names,
+arbitrary commands or provider operands. The existing extension-origin,
+document/tab binding, editor/controller and credential checks apply. An observer
+may inspect; only the current editor may mutate. Controller changes invalidate
+both retained plan families. A native reread rechecks its current binding and
+credential after I/O before publishing the view.
+
+Known history remains independently readable when authored preferences are
+unreadable. The view reports collection state, writer availability and retained
+data separately; unknown settings never become invented off/on preferences.
+History changes notify only native centers and never reset content quarantine.
+Current compound collection results preserve their independent preference and
+policy facts. A collector MUST NOT flatten partial results into completed history;
+actual producers and localized controls remain required delivery work.
+
 ## 7. User-facing configuration
 
 | Input | Default | Scope/limit |
@@ -410,10 +445,11 @@ upgrade or publication is implied.
 | Consent owner and coordination | 35 | Partial stop, import, restart, late reads/burst/reentry/disposal, independent kinds, clear leases/global pause |
 | Retained start/stop application plans | 90 | Exact phase/full-snapshot receipts, ownership/lifetime/capacity, exhausted/unreadable stores, scoped stop staging/races, independent acknowledgement/readback, replay/cleanup |
 | Bounded writer/ticket ownership | 64 | Opt-in timing, cap/coalescing, expiry, unknown append identity, known-row reconciliation, clear/late-result races, primary-result isolation |
+| Production ownership and closed gateway | 40 | Same preference owner, lazy listener-first bootstrap, independent reads, native binding/editor/credential fences, plan-family isolation, private-context/storage failure, center-only notifications |
 | Actual navigation producers | 8 | Admitted destinations, canceled navigation, lost context, private label generalization |
 | UI/locales/export/recovery | 20 | Independent facts, scope,4locales, a11y |
 | Real targets and human | 9 | Three native journeys per target plus owning human gate |
-| **Total** | **294** | No substitution for semantic H3/catalog coverage |
+| **Total** | **334** | No substitution for semantic H3/catalog coverage |
 
 Count each case once. Pure branches and modified executable lines/branches100%,
 no exclusions/threshold weakening; keep root budgets. Request fixtures are not
@@ -457,6 +493,10 @@ docs/specs/catalog and concrete examples together.
     uncertainty is read back without automatic resubmission.
 12. An update queued behind a real clear reservation cannot recreate cleared
     history; failed clear releases the work and leaves existing history intact.
+13. Native-client-bound controls use the actual preference queue; an observer,
+    replaced document, moved credential or arbitrary recording operand cannot mutate.
+14. Unavailable native history leaves ordinary saves functional; bootstrap runs
+    after listeners, and history-only notifications never reset content quarantine.
 
 ## 17. Requirements traceability
 
@@ -468,6 +508,7 @@ docs/specs/catalog and concrete examples together.
 | Restriction-only save and owner lifetime | Settings/coordinator | Five application contract suites; native/UI evidence still required | Configuration/contributor |
 | Reviewed phase continuation and priority of a later stop | CollectionReviews/effects/private leases | Eight retained-plan/phase/ownership/staging suites; full native/UI evidence pending | Configuration/privacy/contributor |
 | Bounded secondary retention and unknown identity | JournalWriter/queue/IO/progress | Eight writer/domain/race suites; actual producers and native/UI evidence pending | Privacy/recovery/contributor |
+| One production owner and closed native control | CollectionHistory/HistoryControls/HistoryGateway/native composition | Protocol/application/gateway/bootstrap suites; actual UI/native-browser acceptance pending | Contributor/privacy/recovery |
 | Minimal discoverable facts | Presentation | Locales/a11y/export | User navigation |
 
 ## 18. Implementation sequence

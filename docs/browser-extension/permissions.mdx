@@ -120,7 +120,10 @@ The source's retained start/stop service also checks the exact saved intent and
 policy receipt before admitting collection. A later stop cannot be absorbed into
 an older activation. Replayed operation results describe what was observed then;
 the current collection view remains a separate fact. These services still need
-their production gateway, collector and UI integration.
+their actual collector producers and mounted UI integration. The background now
+shares the preference safeguards with a closed reviewed-control channel. It may
+initialize local control metadata while capture is off; that does not create
+activity entries or grant any browser permission.
 
 The pending implementation also separates a successful action from successful
 history retention. If storage cannot establish which record was written, the

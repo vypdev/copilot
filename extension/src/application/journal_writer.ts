@@ -24,7 +24,10 @@ export class JournalWriter {
     private signature = '';
     constructor(private readonly store: JournalStore, private readonly ports: JournalWriterPorts) {
         this.queue = new JournalWorkQueue({ mayRun: kind => this.ports.mayRun(kind), work: work => this.write(work),
-            failed: work => { work.retention = 'unknown'; work.needsRead = true; work.authority = null; work.source = null; this.drop(work.kind, 'unknown'); }, changed: () => this.publish() });
+            failed: work => {
+                if (this.records.get(work.ticket) !== work) return;
+                work.retention = 'unknown'; work.needsRead = true; work.authority = null; work.source = null; this.drop(work.kind, 'unknown');
+            }, changed: () => this.publish() });
     }
     private time(): number | null { try { const now = this.ports.now(); return natural(now) ? now : null; } catch { return null; } }
     private current(work: Work): boolean {

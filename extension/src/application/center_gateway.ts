@@ -5,28 +5,31 @@ import { jsonBytesWithin } from '../domain/value.ts';
 import { centerBinding, CenterController } from './center_controller.ts';
 import { SettingsOperations } from './settings_operations.ts';
 import { SettingsRepository, SettingsMigrationError } from './settings_repository.ts';
+import { isHistoryMessage, type HistoryMessage } from '../domain/history_protocol.ts';
+import type { HistoryGateway } from './history_gateway.ts';
 
 /** Called only after native extension-origin admission by MessageGateway. */
 export class CenterGateway {
     constructor(private readonly controller: CenterController, private readonly operations: SettingsOperations,
-        private readonly settings: SettingsRepository, private readonly connections?: NamedSessions) {}
+        private readonly settings: SettingsRepository, private readonly connections?: NamedSessions, private readonly history?: HistoryGateway) {}
     releaseTab(id: number): void { this.controller.releaseTab(id); }
     shutdown(): void { this.controller.shutdown(); }
-    async handle(message: CenterMessage | ConnectionMessage, sender: Sender): Promise<unknown> {
+    async handle(message: CenterMessage | ConnectionMessage | HistoryMessage, sender: Sender): Promise<unknown> {
         try {
             const result = await this.dispatch(message, sender);
             return jsonBytesWithin(result, MAX_CENTER_RESPONSE_BYTES) ? result : { state: 'unavailable' };
         } catch { return { state: 'unavailable' }; }
     }
-    private async dispatch(message: CenterMessage | ConnectionMessage, sender: Sender): Promise<unknown> {
+    private async dispatch(message: CenterMessage | ConnectionMessage | HistoryMessage, sender: Sender): Promise<unknown> {
         const binding = centerBinding(sender);
         if (!binding) return { state: 'rejected' };
         if (message.method === 'center.open') return this.controller.open(binding);
         if (message.method === 'center.claim') return this.controller.claim(message.clientId, binding, message.controllerEpoch);
         if (message.method === 'center.close') return this.controller.close(message.clientId, binding, message.controllerEpoch);
-        const epoch = message.method === 'center.read' || message.method === 'center.connections.read' ? undefined : message.controllerEpoch;
+        const epoch = message.method === 'center.read' || message.method === 'center.connections.read' || message.method === 'center.history.read' ? undefined : message.controllerEpoch;
         const client = this.controller.authorize(message.clientId, binding, epoch);
         if (!client) return { state: 'stale' };
+        if (isHistoryMessage(message)) return this.history?.handle(message, client, binding) ?? { state: 'unavailable' };
         if (message.method === 'center.connections.read') return this.connections?.read(() =>
             this.controller.authorize(message.clientId, binding, client.controllerEpoch) !== null) ?? { state: 'unavailable' };
         if (message.method === 'center.connections.change') {

@@ -46,8 +46,9 @@ complete. Content health has a separate100-entry closed-reason memory ring;
 that ring is not persistent history. Preferences already declare diagnostics
 and recent-destination consent, both false.
 The application now has a bounded opaque-ticket writer and canonical-clear
-observer. It is not yet connected to actual center producers, gateway or UI;
-this source increment does not enable capture or complete CENTER09/10.
+observer, composed with the background preference owner and closed native-center
+history/review gateway. Actual trusted producers and mounted controls remain
+required; this source increment does not complete CENTER09/10.
 
 ### 2.3 Evidence
 

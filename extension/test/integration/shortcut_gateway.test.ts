@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { MessageGateway, type GatewayPorts } from '../../src/application/message_gateway.ts';
-import { SettingsRepository } from '../../src/application/settings_repository.ts';
+import { SettingsRepository, SETTINGS_KEY } from '../../src/application/settings_repository.ts';
 import { BrowserCancellation } from '../../src/adapters/browser/cancellation.ts';
 import { CENTER_COMMANDS, centerCommandRoute } from '../../src/domain/shortcuts.ts';
 import { parseMessage } from '../../src/domain/protocol.ts';
@@ -19,11 +19,15 @@ function fixture() {
     const gateway = new MessageGateway('test', 'chrome-extension://test/', new SettingsRepository(store.port), session.service, ports);
     stops.push(() => gateway.shutdown()); return { gateway, ports, call: () => gateway.handle(request, pageSender) };
 }
-it.each(CENTER_COMMANDS)('the real background composition opens %s in the verified native window without GitHub or preference operations', async command => {
+it.each(CENTER_COMMANDS)('the real background composition opens %s in the verified native window without GitHub or additional preference operations', async command => {
     const h = backgroundCenterFixture(); stops.push(h.stop);
+    // Separate the independent, listener-first consent bootstrap from the shortcut's own effects.
+    await new Promise<void>(resolve => { setImmediate(resolve); });
+    expect(h.localArea.get).toHaveBeenCalledExactlyOnceWith(SETTINGS_KEY); vi.mocked(h.localArea.get).mockClear();
     expect(await h.call({ ...request, command }, pageSender)).toMatchObject({ state: 'opened', sourceTree: 'unbundled' });
     expect(h.api.tabs.create).toHaveBeenCalledExactlyOnceWith({ url: `chrome-extension://test/runtime.html#/${centerCommandRoute(command)}`, windowId: 1 });
     expect(h.provider).not.toHaveBeenCalled(); expect(h.localArea.get).not.toHaveBeenCalled(); expect(h.api.permissions.request).not.toHaveBeenCalled();
+    expect(h.localArea.set).not.toHaveBeenCalled();
 });
 it.each([undefined, null, 'run-shell', 'https://evil.invalid', 'open-help\n', 1])('an invalid command operand %j cannot broaden the legacy open method', async command => {
     const h = fixture(); expect(parseMessage({ ...request, command })).toBeNull();

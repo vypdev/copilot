@@ -6,7 +6,8 @@ import { BrowserStorage } from '../adapters/browser/storage.ts';
 import { BrowserCancellation } from '../adapters/browser/cancellation.ts';
 import { GitHubGetReader } from '../adapters/github/get_reader.ts';
 import { ReadScheduler } from '../application/read_scheduler.ts';
-import { SettingsRepository, SETTINGS_KEY } from '../application/settings_repository.ts';
+import { SETTINGS_KEY } from '../application/settings_repository.ts';
+import { createHistory } from './history_runtime.ts';
 import { ProtectedSessionService } from '../application/protected_session.ts';
 import { MessageGateway } from '../application/message_gateway.ts';
 import { createCenter, centerIdentifier } from './center_runtime.ts';
@@ -32,7 +33,10 @@ export function startBackground(api: BrowserApi): () => void {
             }
         }).catch(() => undefined);
     };
-    const settings = new SettingsRepository(local);
+    const { history, policies } = createHistory(api, local, () => {
+        void api.runtime.sendMessage({ version: 1, method: 'center.history.invalidated' }).catch(() => undefined);
+    });
+    const settings = history.settings;
     const connections = new NamedSessions(session, sessions, { protected: () => session.protect(), identifier: () => `s-${centerIdentifier()}`,
         changed: notify, connected: async (id, current) => {
             await settings.update(value => ({ ...value, repositories: { ...value.repositories, [id]: { ...value.repositories[id], connected: true } } }), current);
@@ -41,7 +45,7 @@ export function startBackground(api: BrowserApi): () => void {
         { currentTab: id => api.tabs.get(id), openSettings: (windowId, command) => api.tabs.create({
             url: api.runtime.getURL('runtime.html') + (command === undefined ? '' : centerLocationHash({ route: centerCommandRoute(command) })), windowId }),
             cancellation: () => new BrowserCancellation(),
-            online: () => globalThis.navigator?.onLine !== false, notify }, createCenter(api, settings, sessions, notify, connections), connections);
+            online: () => globalThis.navigator?.onLine !== false, notify }, createCenter(api, settings, sessions, notify, connections, { owner: history, policies }), connections);
     const message: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender, respond) => {
         void gateway.handle(value, sender).then(result => respond({ ...(record(result) ? result : { state: 'unavailable' }), sourceTree: buildSourceIdentity() })); return true;
     };
@@ -59,7 +63,9 @@ export function startBackground(api: BrowserApi): () => void {
         }
     };
     const storage = (changes: Record<string, unknown>, area: string) => {
-        if (area === 'local' && Object.hasOwn(changes, SETTINGS_KEY)) gateway.invalidate();
+        if (area === 'local' && Object.hasOwn(changes, SETTINGS_KEY)) {
+            history.invalidate(); gateway.invalidate(); void history.refresh();
+        }
     };
     const open = () => { void api.tabs.create({ url: api.runtime.getURL('runtime.html') }).catch(() => undefined); };
     // Register all wake listeners synchronously, before any asynchronous initialization.
@@ -67,8 +73,9 @@ export function startBackground(api: BrowserApi): () => void {
     api.tabs.onUpdated.addListener(updated); api.permissions.onRemoved.addListener(permission);
     api.tabs.onActivated.addListener(activated);
     api.storage.onChanged.addListener(storage); api.action.onClicked.addListener(open);
+    void history.refresh();
     return () => {
-        gateway.shutdown(); void sessions.revoke();
+        history.stop(); gateway.shutdown(); void sessions.revoke();
         api.runtime.onMessage.removeListener(message); api.tabs.onRemoved.removeListener(removed);
         api.tabs.onUpdated.removeListener(updated); api.permissions.onRemoved.removeListener(permission);
         api.tabs.onActivated.removeListener(activated);

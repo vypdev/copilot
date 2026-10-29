@@ -1257,6 +1257,10 @@ tab-inspection await resolves. An older ticket cannot remove a newer ticket.
 Once the native opening effect was accepted, later retirement does not falsify
 its acknowledgement or claim that the resulting tab was undone. The stopped
 gateway rejects queued deliveries before reading any native tab.
+Opening a shortcut adds no preference read/write or GitHub request. Independent
+listener-first background bootstrap reads collection control metadata under the
+[consent refinement](github-browser-extension-collection-consent.md); that startup
+work is measured separately from each shortcut's effects.
 
 Conflict UX must distinguish duplicate local bindings, observed HTML access-key
 collisions, potential browser/OS interception, unavailable observations and

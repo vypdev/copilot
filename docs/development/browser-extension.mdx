@@ -541,9 +541,9 @@ collection or complete its UI.
 snapshot and replay/revision checks. Native preference publication waits for it
 and rechecks the source. The scope remains owned through primary readback;
 cleanup failure cannot change an established settings result. Existing startup
-migrations are preserved. The optional port is not yet wired to the production
-background: collector, gateway and actual center composition remain
-the next delivery work.
+migrations are preserved. `CollectionHistory` now wires this preflight into the
+production background's same preference repository. Actual trusted collector
+producers and mounted center controls remain the next delivery work.
 
 Both kinds pause admission before a consent-change I/O wait. Off attempts a
 policy pause and independently permits the off preference to save. Every
@@ -628,5 +628,28 @@ reservations. A new clear epoch retires old tickets and queued work; reservation
 release cannot resurrect them. Failed clear releases deferred admitted work
 without claiming deletion. Wire `JournalReviews.idle` to the actual writer's idle
 state, not coordinator eligibility, which is false while the reservation is held.
-The writer, review and native cores still need production producer/gateway/UI
-composition and independent real-browser acceptance.
+The writer and review cores now share production ownership and a closed gateway;
+actual producers, mounted UI and independent real-browser acceptance remain.
+
+`CollectionHistory` constructs the actual coordinator, preference repository,
+writer and observed store without I/O. Native bootstrap follows synchronous
+listener registration. It reads control policy even with capture off and primes
+only verified active journals. The lazy IndexedDB factory acquires the native API
+only on open and fails closed in private contexts. Native unavailability cannot
+break unrelated preference saves. History notifications use only
+`center.history.invalidated`, without querying tabs or resetting helper quarantine.
+
+`HistoryControls` binds both retained review families to the same native editor
+fence and real writer-idle reservation. `HistoryGateway` is reached through the
+existing origin/document/tab authorization; observers may read while only the
+current editor and credential may mutate. Controller movement invalidates both
+families. Reads recheck the binding/credential after I/O and remain available
+independently from unreadable preferences. Domain history-state declarations keep
+UI contracts independent from application implementation classes.
+
+The closed protocol supports one collection's read, start/stop or clear preview,
+and confirmation/cancellation of a retained public review ID. It accepts no raw
+facts, policy nonce, callback, store name or provider request. Current compound
+results preserve separate preference/policy facts; do not flatten partial success
+into a completed history record. Actual producer projections and the localized
+typed client/UI remain unfinished H3 deliverables.

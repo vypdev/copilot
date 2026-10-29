@@ -3,14 +3,10 @@ import type { JournalKind } from '../domain/journal_facts.ts';
 import { settingsOperationId } from '../domain/settings_operation.ts';
 import { deepFreeze } from '../domain/value.ts';
 import type { CollectionPolicyStore } from './collection_policy_ports.ts';
+import type { CollectionRestrictionFact } from '../domain/history_state.ts';
+export type { CollectionRestrictionFact } from '../domain/history_state.ts';
 
 export type CollectionObservation = CollectionPolicyLoad | { readonly state: 'unavailable' };
-export interface CollectionRestrictionFact {
-    readonly acknowledgement: 'not-attempted' | 'not-applied' | 'accepted' | 'unknown';
-    readonly observation: 'paused' | 'active' | 'unavailable';
-    readonly policyRevision: number | null;
-    readonly sourceCurrentAtObservation: boolean;
-}
 export interface CollectionRestrictionResult {
     readonly observed: CollectionObservation; readonly fact: CollectionRestrictionFact;
     /** The submitted native identity is private; public facts do not contain an unexecuted nonce. */

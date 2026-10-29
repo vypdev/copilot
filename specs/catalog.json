@@ -3154,7 +3154,14 @@
         "extension/src/application/journal_work_queue.ts",
         "extension/src/application/journal_writer_io.ts",
         "extension/src/application/journal_writer.ts",
-        "extension/src/application/observed_journal_store.ts"
+        "extension/src/application/observed_journal_store.ts",
+        "extension/src/domain/history_state.ts",
+        "extension/src/domain/history_document.ts",
+        "extension/src/domain/history_protocol.ts",
+        "extension/src/application/collection_history.ts",
+        "extension/src/application/history_controls.ts",
+        "extension/src/application/history_gateway.ts",
+        "extension/src/infrastructure/history_runtime.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3310,7 +3317,13 @@
         "extension/test/integration/journal_writer_clear.test.ts",
         "extension/test/integration/journal_writer_failures.test.ts",
         "extension/test/integration/journal_writer_observations.test.ts",
-        "extension/test/integration/journal_writer_io.test.ts"
+        "extension/test/integration/journal_writer_io.test.ts",
+        "extension/test/fixtures/collection_history.ts",
+        "extension/test/fixtures/history_gateway.ts",
+        "extension/test/contracts/history_protocol.test.ts",
+        "extension/test/integration/collection_history.test.ts",
+        "extension/test/integration/history_gateway.test.ts",
+        "extension/test/integration/history_runtime.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

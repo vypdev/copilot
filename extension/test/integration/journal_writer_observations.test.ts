@@ -96,3 +96,15 @@ it('a later canonical terminal fact survives an older response from a delayed na
     release.resolve(); await pending; expect(f.writer.retention(ticket)).toBe('stored');
     expect(f.commands.filter(c => c[1].type === 'update')).toHaveLength(1);
 });
+it('a retired exceptional response cannot mark a newer cleared epoch incomplete', async () => {
+    const f = await journalWriterFixture(); await f.ready();
+    vi.mocked(f.native.execute).mockResolvedValueOnce(new Proxy({ state: 'stale' } as const, { get(target, key) {
+        if (key === 'state') {
+            f.writer.observe('diagnostics', { ...empty(1), epoch: 1 }); throw new Error('private');
+        }
+        return Reflect.get(target, key);
+    } }));
+    const ticket = f.writer.admit('diagnostics', writerFact(), () => true)!; await f.writer.flush();
+    expect(f.writer.retention(ticket)).toBe('untracked');
+    expect(f.writer.state('diagnostics')).toMatchObject({ epoch: 1, dropped: 0, incomplete: false, issue: 'none' });
+});

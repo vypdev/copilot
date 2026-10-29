@@ -2,6 +2,7 @@ import { MAX_CENTER_REQUEST_BYTES } from './settings_change.ts';
 import { settingsOperationId } from './settings_operation.ts';
 import { jsonBytesWithin, keys, natural, record } from './value.ts';
 import { connectionIntent, type ConnectionIntent } from './named_sessions.ts';
+import { isHistoryMessage, type HistoryMessage } from './history_protocol.ts';
 
 interface Version { readonly version: 1 }
 interface Client extends Version { readonly clientId: string }
@@ -20,7 +21,8 @@ export type ConnectionMessage = Client & { readonly method: 'center.connections.
 export const MAX_CENTER_RESPONSE_BYTES = 132 * 1024;
 
 /** Center authority is a closed protocol; content pages never receive these methods. */
-export function parseCenterMessage(value: unknown): CenterMessage | ConnectionMessage | null {
+export function parseCenterMessage(value: unknown): CenterMessage | ConnectionMessage | HistoryMessage | null {
+    if (isHistoryMessage(value)) return value;
     if (!record(value) || value.version !== 1 || typeof value.method !== 'string') return null;
     const fields = ['version', 'method'];
     if (value.method === 'center.open') return keys(value, fields) && Object.keys(value).length === 2 ? value as unknown as CenterMessage : null;

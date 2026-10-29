@@ -7,17 +7,14 @@ import type { CollectionPolicyStore } from './collection_policy_ports.ts';
 import { collectionCurrent, pauseCollectionPolicy, readCollectionPolicy, type CollectionObservation, type CollectionRestrictionFact, type CollectionRestrictionResult } from './collection_restrictions.ts';
 import type { SettingsWriteEffects, SettingsWritePreparation } from './settings_write_effects.ts';
 import type { CollectionCapture, CollectionPreparation, CollectionPreparations, CollectionActivationLease } from './collection_transition_ports.ts';
+import type { CollectionState } from '../domain/history_state.ts';
+export type { CollectionState } from '../domain/history_state.ts';
 
 const KINDS = ['diagnostics', 'recents'] as const;
 interface Preferences { readonly revision: number; readonly paused: boolean; readonly diagnostics: boolean; readonly recents: boolean }
 interface Slot { observed: CollectionObservation; blocked: boolean; epoch: object; held: object | null; restriction: CollectionRestrictionFact | null }
 export interface CollectionCoordinatorPorts {
     settings(): Promise<SettingsLoad>; identifier(): string; writerIdle(kind: JournalKind): boolean; changed(): void;
-}
-export interface CollectionState {
-    readonly kind: JournalKind; readonly preference: 'on' | 'off' | 'unknown'; readonly globallyPaused: boolean | null;
-    readonly policy: 'active' | 'paused' | 'future' | 'corrupt' | 'unavailable'; readonly policyRevision: number | null;
-    readonly collecting: boolean; readonly sessionBlocked: boolean; readonly busy: boolean; readonly restriction: CollectionRestrictionFact | null;
 }
 
 /** One background owner. Observation can restore healthy consent after restart, never undo an uncertain local stop. */
