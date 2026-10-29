@@ -3141,7 +3141,10 @@
         "extension/src/application/collection_policy_ports.ts",
         "extension/src/adapters/browser/collection_policy_store.ts",
         "extension/src/adapters/browser/journal_database.ts",
-        "extension/src/domain/controlled_journal.ts"
+        "extension/src/domain/controlled_journal.ts",
+        "extension/src/application/settings_write_effects.ts",
+        "extension/src/application/collection_restrictions.ts",
+        "extension/src/application/collection_coordinator.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3272,7 +3275,13 @@
         "extension/test/integration/collection_policy_store.test.ts",
         "extension/test/integration/journal_database.test.ts",
         "extension/test/contracts/controlled_journal.test.ts",
-        "extension/test/integration/collection_admission.test.ts"
+        "extension/test/integration/collection_admission.test.ts",
+        "extension/test/fixtures/collection_coordinator.ts",
+        "extension/test/integration/settings_collection_preflight.test.ts",
+        "extension/test/integration/collection_restrictions.test.ts",
+        "extension/test/integration/collection_coordinator.test.ts",
+        "extension/test/integration/collection_preference_coordination.test.ts",
+        "extension/test/integration/collection_global_pause.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

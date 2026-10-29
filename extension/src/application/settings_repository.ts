@@ -4,6 +4,7 @@ import { deepFreeze, keys, natural, record } from '../domain/value.ts';
 import type { StoragePort } from './runtime_ports.ts';
 import type { SettingsCommit, SettingsInspection, SettingsReceipt } from './settings_transaction_ports.ts';
 import { SettingsMutationQueue, type SettingsMutationReservation } from './settings_mutation_queue.ts';
+import { settingsWriteScope, type SettingsWriteEffects } from './settings_write_effects.ts';
 
 export const SETTINGS_KEY = 'copilot.settings.v1';
 interface Envelope { readonly current: unknown; readonly previous?: unknown; readonly operation?: SettingsReceipt }
@@ -16,7 +17,7 @@ export class SettingsMigrationError extends Error {
 }
 export class SettingsRepository {
     private readonly mutations = new SettingsMutationQueue();
-    constructor(private readonly storage: StoragePort) {}
+    constructor(private readonly storage: StoragePort, private readonly effects?: SettingsWriteEffects) {}
     reserveMutations(): SettingsMutationReservation | null { return this.mutations.reserve(); }
     async read(): Promise<SettingsLoad> {
         const value = await this.storage.get(SETTINGS_KEY);
@@ -55,19 +56,24 @@ export class SettingsRepository {
             if (before.revision !== expectedRevision) return { state: 'conflict' };
             const envelope: Envelope = { current: deepFreeze(JSON.parse(JSON.stringify(next)) as Settings), previous: before,
                 operation: { id, beforeRevision: expectedRevision } };
-            let acknowledgement: 'accepted' | 'unknown' = 'accepted';
-            try { await this.storage.set(SETTINGS_KEY, envelope); } catch { acknowledgement = 'unknown'; }
-            // Read even after an acknowledgement; partial or missing persistence is never success.
+            const scope = await settingsWriteScope(this.effects, before, envelope.current as Settings, eligible);
             try {
-                const observed = await this.inspect();
-                if (observed.loaded.state === 'ready' && observed.operation?.id === id
-                    && observed.operation.beforeRevision === expectedRevision && sameSettingsContent(observed.loaded.settings, next)) {
-                    return { state: 'committed', revision: next.revision, acknowledgement, current: eligible() };
-                }
-                return { state: 'unknown', acknowledgement, observedRevision: observed.loaded.state === 'ready' ? observed.loaded.settings.revision : null,
-                    observation: observed.loaded.state !== 'ready' ? 'unavailable'
-                        : sameSettingsContent(observed.loaded.settings, before) ? 'unchanged' : 'changed' };
-            } catch { return { state: 'unknown', acknowledgement, observedRevision: null, observation: 'unavailable' }; }
+                if (!eligible()) return { state: 'stale' };
+                if (!scope.allowed) return { state: 'unavailable' };
+                let acknowledgement: 'accepted' | 'unknown' = 'accepted';
+                try { await this.storage.set(SETTINGS_KEY, envelope); } catch { acknowledgement = 'unknown'; }
+                // Read even after an acknowledgement; partial or missing persistence is never success.
+                try {
+                    const observed = await this.inspect();
+                    if (observed.loaded.state === 'ready' && observed.operation?.id === id
+                        && observed.operation.beforeRevision === expectedRevision && sameSettingsContent(observed.loaded.settings, next)) {
+                        return { state: 'committed', revision: next.revision, acknowledgement, current: eligible() };
+                    }
+                    return { state: 'unknown', acknowledgement, observedRevision: observed.loaded.state === 'ready' ? observed.loaded.settings.revision : null,
+                        observation: observed.loaded.state !== 'ready' ? 'unavailable'
+                            : sameSettingsContent(observed.loaded.settings, before) ? 'unchanged' : 'changed' };
+                } catch { return { state: 'unknown', acknowledgement, observedRevision: null, observation: 'unavailable' }; }
+            } finally { scope.release(); }
         });
     }
     write(value: unknown, expectedRevision: number): Promise<Settings> {
@@ -81,13 +87,18 @@ export class SettingsRepository {
         return this.mutations.run(async () => {
             const loaded = await this.read();
             if (loaded.state !== 'ready' || !current()) throw new Error('settings-conflict-or-invalid');
-            const value = change(loaded.settings);
-            if (loaded.settings.revision >= Number.MAX_SAFE_INTEGER || !validSettings(value)) throw new Error('settings-conflict-or-invalid');
+            const value = settingsSnapshot(change(loaded.settings));
+            if (loaded.settings.revision >= Number.MAX_SAFE_INTEGER || !value) throw new Error('settings-conflict-or-invalid');
             const next = deepFreeze({ ...value, revision: loaded.settings.revision + 1 });
             const envelope: Envelope = { current: next, previous: loaded.settings };
-            // One storage operation atomically publishes current + one nonsecret rollback.
-            await this.storage.set(SETTINGS_KEY, envelope);
-            return next;
+            const scope = await settingsWriteScope(this.effects, loaded.settings, next, current);
+            try {
+                if (!current()) throw new Error('settings-conflict-or-invalid');
+                if (!scope.allowed) throw new Error('settings-collection-unavailable');
+                // One storage operation atomically publishes current + one nonsecret rollback.
+                await this.storage.set(SETTINGS_KEY, envelope);
+                return next;
+            } finally { scope.release(); }
         });
     }
     initialize(): Promise<SettingsLoad> {

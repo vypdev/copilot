@@ -524,7 +524,7 @@ collection reservation and passes a private admission guard through asynchronous
 native opening to the request callback. A separate reread distinguishes an
 acknowledged clear from its observed result; unknown acknowledgements do not
 attribute the write. In-flight cancellation stays pending, and duplicate confirms
-join or replay one result. The coordinator, collection and center UI composition
+join or replay one result. The production collector and center UI composition
 remain required; these application services alone do not expose clear controls.
 
 The preference half uses `SettingsRepository.reserveMutations()` over its existing
@@ -533,8 +533,33 @@ new commit/update/startup-migration operations wait; read/inspection remains
 available. `JournalReviews` acquires it before the collection reservation and
 holds it through canonical readback. Rejected work does not poison the queue,
 source guards still apply after waiting, and a stale/idempotently released lease
-cannot unlock a new owner. Durable collection consent and the collection writer
-remain separate work; this queue reservation alone does not establish them.
+cannot unlock a new owner. This queue reservation alone does not establish
+collection or complete its UI.
+
+`CollectionCoordinator` is the application consent owner. Its restriction-only
+`SettingsWriteEffects` port runs inside the same FIFO, after the before/after
+snapshot and replay/revision checks. Native preference publication waits for it
+and rechecks the source. The scope remains owned through primary readback;
+cleanup failure cannot change an established settings result. Existing startup
+migrations are preserved. The optional port is not yet wired to the production
+background: collector, reviewed activation and actual center composition remain
+the next delivery work.
+
+Both kinds pause admission before a consent-change I/O wait. Off attempts a
+policy pause and independently permits the off preference to save. Every
+false-to-true change must first observe paused policy; a plain import cannot
+reuse an old active marker. Unknown writes keep acknowledgement and canonical
+observation separate. Ordinary refresh cannot release an uncertain session stop.
+If neither restriction persisted, restart can only restore the stored active
+facts; the UI must disclose the missing durable stop and native-disable recovery.
+Unrelated saves preserve healthy consent. Global pause retains consent/history
+and retires old admission tickets. An uncertain global-pause save stays blocked
+in this process until a durable pause is observed; reading unchanged unpaused
+preferences cannot release it. A later verified resume creates fresh admission.
+Old/mid-write refreshes cannot replace newer observations. A burst shares one
+active read batch and at most one coalesced trailing request, including reentry;
+disposing a scheduled owner performs no native read. History notifications
+must stay center-only and must not invalidate content helper quarantine.
 
 `IndexedCollectionPolicyStore` stores one closed receipt per collection and
 requires a private source guard for a set. Policy and history request success are

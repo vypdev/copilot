@@ -109,3 +109,10 @@ revision and clock controls that prevent old writes from returning after clear.
 Those controls, and the last consent receipt, persist until native extension-data
 removal. A reviewed history clear removes entries and retains the disclosed safety
 controls. These collection/clear screens are still being implemented.
+
+The consent flow also distinguishes a pause in the current background process
+from a confirmed durable stop. If policy storage fails, an observed off preference
+can still stop future collection. If neither restriction can be saved, a process
+pause cannot promise protection after restart; the completed interface must make
+that failure explicit and offer browser-level extension disablement. Reading
+state does not automatically retry a write or activate an imported preference.

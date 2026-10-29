@@ -33,14 +33,18 @@ Treating an acknowledgement as every desired effect hides partial outcomes.
 
 ### 2.2 Current behavior
 
-The source has a transactional journal, a reviewed clear service and a preference
-queue reservation. They are not yet composed into collection/UI. Native database1
-contains diagnostics/recents; strict saved collection flags default false.
+The source has a transactional journal, a reviewed clear service, a preference
+queue reservation and restriction-only preference preflight. Native database2
+preserves the two version1 journals and adds a fixed policy store. An application
+coordinator observes consent and fences admission/clear. Production collector,
+dedicated start/stop reviews and center UI composition remain incomplete. Saved
+collection flags still default false; these source slices do not activate them.
 
 ### 2.3 Evidence
 
 See `local_journal.ts`, `journal_store.ts`, `journal_reviews.ts`,
-`settings_repository.ts`, `settings_mutation_queue.ts`, `center_settings.ts` and
+`settings_repository.ts`, `settings_mutation_queue.ts`, `settings_write_effects.ts`,
+`collection_coordinator.ts`, `collection_restrictions.ts`, `center_settings.ts` and
 the [journal refinement](github-browser-extension-local-journal.md). Current
 deterministic fixtures are not native-browser acceptance. Primary sources: section20.
 
@@ -151,6 +155,38 @@ Every await rechecks facts before later effects. An intervening change retains
 truthful partial results, never rollback or automatic repeat. Do not recursively
 confirm queued settings while holding the preference reservation. Clear uses the
 reservation; compound consent phases do not claim cross-storage atomicity.
+
+### 6.4 Owner lifetime and preference preflight
+
+The one preference FIFO admits a detached immutable before/after pair. After
+validation and duplicate/revision checks, restriction-only preflight runs before
+native preference publication. The source is rechecked after it resolves. Its
+owned scope covers publication and canonical observation; releasing it twice,
+or a cleanup/notification error, cannot erase an established primary result.
+Startup migration preserves its existing behavior and grants no collection.
+
+Consent changes retire private admission tickets synchronously before policy
+I/O. All changed kinds are restricted even if another kind cannot be enabled.
+A failed increase prevents publishing the combined preference plan, while any
+already observed restriction remains a truthful partial fact. No cross-store
+rollback or automatic repeat is implied. Unrelated saves neither rewrite policy
+nor retire healthy admission. Global pause retains policy/intent; resume may
+restore only healthy consent, and never the previously retired ticket.
+A global pause whose preference write is uncertain also remains blocked in the
+current owner. Reading an unchanged unpaused value cannot discharge it. Observing
+a saved global pause establishes that restriction; a later reviewed resume may
+then restore otherwise healthy consent without reviving retired tickets.
+
+Refresh reads canonical preferences and the two fixed policy keys. Older or
+mid-write reads cannot replace a newer observation. Bursts share one active
+read batch and at most one coalesced trailing request, including synchronous
+reentry; there is no unbounded queue of native reads. An uncertain stop remains
+blocked for that owner despite later ordinary reads of an active marker. A new
+owner restores only the actual persisted facts: if both restriction writes failed,
+a session-only pause cannot survive restart. Report that limitation explicitly.
+Known-history clear reserves the exact off preference and paused policy plus an
+idle writer. It never reacquires the preference reservation already held by the
+clear service. A replacement lease cannot be released by an older owner.
 
 | State | Meaning | Primary action |
 |---|---|---|
@@ -265,16 +301,23 @@ upgrade or publication is implied.
 |---|---:|---|
 | Policy schema/CAS/replay | 16 | Closed fields, future preservation, counter/identity bounds |
 | Native migration/admission | 20 | V1 preservation, stale/inactive writer, request/commit/abort |
-| Consent/preference coordination | 18 | Partial/unknown, restart, source change, no queue deadlock |
+| Preference write preparation | 14 | Commit/update, immutable input, replay, failure/cleanup, source retirement |
+| Restriction and observation | 18 | CAS, unknown/accepted/not-applied, closed reads, no invented attribution |
+| Consent owner and coordination | 35 | Partial stop, import, restart, late reads/burst/reentry/disposal, independent kinds, clear leases/global pause |
 | Recorder/tickets/navigation | 16 | Opt-in timing, coalescing/cap, expiry, lost context |
 | UI/locales/export/recovery | 20 | Independent facts, scope,4locales, a11y |
 | Real targets and human | 9 | Three native journeys per target plus owning human gate |
-| **Total** | **99** | No substitution for semantic H3/catalog coverage |
+| **Total** | **148** | No substitution for semantic H3/catalog coverage |
 
 Count each case once. Pure branches and modified executable lines/branches100%,
 no exclusions/threshold weakening; keep root budgets. Request fixtures are not
 native evidence. Actual Chrome/Firefox/Safari verify preservation, durable pause
 across worker restart, stale append and clear.
+Application ownership cases live in `settings_collection_preflight.test.ts`,
+`collection_restrictions.test.ts`, `collection_coordinator.test.ts` and
+`collection_preference_coordination.test.ts`, plus `collection_global_pause.test.ts`.
+Their contract fixtures are not
+native-browser, renderer or complete-milestone acceptance.
 
 ## 15. Documentation and discoverability
 
@@ -304,6 +347,7 @@ docs/specs/catalog and concrete examples together.
 | Consent/off | Policy/native | Schema/migration/restart | Privacy/configuration |
 | Atomic late-work fence | Transaction/recorder | Policy/source/epoch races | Contributor/recovery |
 | Truthful ordered phases | Application | Partial/ack/replay/queue | Activity/privacy |
+| Restriction-only save and owner lifetime | Settings/coordinator | Five application contract suites; native/UI evidence still required | Configuration/contributor |
 | Minimal discoverable facts | Presentation | Locales/a11y/export | User navigation |
 
 ## 18. Implementation sequence

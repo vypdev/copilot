@@ -27,6 +27,13 @@ revocation, and separates browser access from a selected GitHub read identity.
 Inspecting that identity is a separate explicit action that may contact GitHub.
 The native inspector remains available when saved settings cannot be read.
 
+Optional Activity/Diagnostics collection remains under development. Its source
+now separates saved intent from actual consent policy: importing or restoring an
+enabled preference will not itself start collection. Disabling it first attempts
+the policy pause, then saves the off preference even if that pause is unavailable.
+The dedicated activation, history and clear screens still need integration;
+collection stays off by default. See the [privacy and retention details](/browser-extension/permissions).
+
 **Shortcuts** reviews [four bounded local navigation assignments](/browser-extension/shortcuts)
 with the global enabled preference. Draft clearing, duplicate detection,
 protected typing and current native context checks remain separate from browser

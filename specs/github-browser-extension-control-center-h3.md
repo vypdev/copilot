@@ -21,7 +21,9 @@ it does not accept the complete CENTER09/10/14 journeys or H3.
 
 The [durable consent refinement](github-browser-extension-collection-consent.md)
 defines reviewed activation/stop, restart behavior, atomic policy admission and
-truthful partial outcomes. Its specification is not an implementation claim.
+truthful partial outcomes. The source includes restriction-only preference
+preflight and an application consent coordinator; production collector, reviewed
+activation and actual activity/privacy UI remain required for acceptance.
 
 ## 1. Executive summary
 
