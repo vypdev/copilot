@@ -325,3 +325,14 @@ setup-result overrides; the response remains approved PATH/JAVA_HOME only.
 Canonical setup bindings carry them, while Node continuation and provider-secret
 boundaries remain unchanged. Each subsequent command uses a new private profile;
 existing candidate/session/publication guards and post cleanup still apply.
+
+### Derived CPython loader discovery — issue #776
+
+The [CPython amendment](./repository-verification-runtime-prerequisites.md#22-dynamically-linked-cpython-verification-issue-776)
+owns the incremental minimum 40-case budget and real Linux acceptance. Its
+bootstrap loader directory is local to the trusted Python run step. Verifier
+children separately derive a contained library from the captured tool cache,
+including copied private-venv base metadata, before ordinary runtime probes.
+PATH/JAVA_HOME remain the only native result fields; the parent Node environment,
+provider credentials, complete configured commands and deferred cleanup keep
+their existing boundaries. Do not double count the amendment's cases here.

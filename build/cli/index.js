@@ -102166,6 +102166,7 @@ const verification_runtime_preflight_1 = __nccwpck_require__(23100);
 const verification_setup_ports_1 = __nccwpck_require__(26509);
 const verification_setup_runner_1 = __nccwpck_require__(11709);
 const source_verification_dependencies_1 = __nccwpck_require__(94558);
+const verification_python_library_environment_1 = __nccwpck_require__(813);
 class GitCommitAdapter {
     constructor(executeCommand = (program, args, options) => options
         ? exec.exec(options.resolveFromEnvironment && options.env ? (0, verification_executable_1.verificationExecutable)(program, options.env) : program, args, {
@@ -102180,6 +102181,7 @@ class GitCommitAdapter {
         this.checkPrerequisites = checkPrerequisites;
         this.verificationSetup = verificationSetup;
         this.prepareSourceDependencies = prepareSourceDependencies;
+        this.preparePythonLibraries = (0, verification_python_library_environment_1.captureVerificationPythonLibraries)(verificationSetup.kind === 'ready' ? verificationSetup.toolRoot : process.env.RUNNER_TOOL_CACHE);
     }
     async execute(program, args, options) {
         if (options?.verifyRuntimePrerequisites && !options.untrusted)
@@ -102192,6 +102194,7 @@ class GitCommitAdapter {
         try {
             if (options.verifyRuntimePrerequisites) {
                 await (0, verification_setup_runner_1.prepareRepositoryVerification)(this.verificationSetup, runtime.environment);
+                this.preparePythonLibraries(runtime.environment);
                 this.checkPrerequisites(runtime.environment);
                 await this.prepareSourceDependencies(runtime.environment);
             }
@@ -108460,6 +108463,117 @@ function verificationExecutable(program, environment, platform = process.platfor
             catch { /* Try only the next executable in the isolated PATH. */ }
         }
     throw new Error('Verification executable is unavailable in the isolated PATH.');
+}
+
+
+/***/ }),
+
+/***/ 813:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.captureVerificationPythonLibraries = captureVerificationPythonLibraries;
+const node_fs_1 = __importDefault(__nccwpck_require__(87561));
+const node_path_1 = __nccwpck_require__(49411);
+const verification_executable_1 = __nccwpck_require__(20878);
+const MAX_VENV_METADATA_BYTES = 4096;
+const ownedPath = (value) => typeof value === 'string' && node_path_1.posix.isAbsolute(value)
+    && !/[:;$]/u.test(value) && ![...value].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)
+    && !value.split('/').includes('..');
+const contained = (root, value) => {
+    const part = node_path_1.posix.relative(root, value);
+    return part === '' || part !== '..' && !part.startsWith('../') && !node_path_1.posix.isAbsolute(part);
+};
+function directory(value) {
+    // Callers check the lexical candidate before any filesystem access.
+    const actual = node_fs_1.default.realpathSync(value);
+    return ownedPath(actual) && node_fs_1.default.lstatSync(actual).isDirectory() ? actual : undefined;
+}
+/** Read only the base-home fact; executable/command text is inert, and file identity must stay stable. */
+function venvBaseHome(file) {
+    const before = node_fs_1.default.lstatSync(file, { bigint: true });
+    if (!before.isFile() || before.nlink !== 1n || before.size > BigInt(MAX_VENV_METADATA_BYTES))
+        return undefined;
+    const descriptor = node_fs_1.default.openSync(file, node_fs_1.default.constants.O_RDONLY | node_fs_1.default.constants.O_NOFOLLOW);
+    try {
+        const opened = node_fs_1.default.fstatSync(descriptor, { bigint: true });
+        if (!opened.isFile() || opened.nlink !== 1n || opened.dev !== before.dev || opened.ino !== before.ino
+            || opened.size !== before.size || opened.mtimeNs !== before.mtimeNs)
+            return undefined;
+        const bytes = Buffer.alloc(MAX_VENV_METADATA_BYTES + 1);
+        const size = node_fs_1.default.readSync(descriptor, bytes, 0, bytes.length, 0);
+        const after = node_fs_1.default.fstatSync(descriptor, { bigint: true });
+        if (size !== Number(opened.size) || size > MAX_VENV_METADATA_BYTES || after.size !== opened.size
+            || after.mtimeNs !== opened.mtimeNs || after.nlink !== 1n)
+            return undefined;
+        const homes = bytes.subarray(0, size).toString('utf8').split(/\r?\n/u)
+            .filter(line => /^\s*home\s*=/u.test(line)).map(line => line.slice(line.indexOf('=') + 1).trim());
+        return homes.length === 1 ? homes[0] : undefined;
+    }
+    finally {
+        node_fs_1.default.closeSync(descriptor);
+    }
+}
+/** Capture the trusted tool cache before candidate execution; prepare only verifier children. */
+function captureVerificationPythonLibraries(toolRoot, platform = process.platform) {
+    const lexicalRoot = ownedPath(toolRoot) ? toolRoot : undefined;
+    let cache;
+    if (platform === 'linux' && lexicalRoot) {
+        try {
+            cache = directory(lexicalRoot);
+            if (cache === '/')
+                cache = undefined;
+        }
+        catch { /* Missing cache is not an inferred runtime requirement. */ }
+    }
+    return environment => {
+        delete environment.LD_LIBRARY_PATH;
+        if (!cache || !lexicalRoot)
+            return;
+        try {
+            const selected = (0, verification_executable_1.verificationExecutable)('python3', environment, 'linux');
+            if (!ownedPath(selected))
+                return;
+            const privateSelection = ownedPath(environment.HOME) && environment.HOME !== '/' && contained(environment.HOME, selected);
+            if (!contained(lexicalRoot, selected) && !contained(cache, selected) && !privateSelection)
+                return;
+            const actual = node_fs_1.default.realpathSync(selected);
+            if (!ownedPath(actual) || !node_fs_1.default.lstatSync(actual).isFile())
+                return;
+            let bin = node_path_1.posix.dirname(actual);
+            if (!contained(cache, actual)) {
+                if (!privateSelection || node_path_1.posix.basename(node_path_1.posix.dirname(selected)) !== 'bin')
+                    return;
+                const home = directory(environment.HOME);
+                if (home !== environment.HOME || !contained(environment.HOME, actual))
+                    return;
+                const venv = directory(node_path_1.posix.dirname(node_path_1.posix.dirname(selected)));
+                if (!venv || !contained(home, venv))
+                    return;
+                const base = venvBaseHome(node_path_1.posix.join(venv, 'pyvenv.cfg'));
+                if (!ownedPath(base) || !contained(lexicalRoot, base) && !contained(cache, base))
+                    return;
+                const baseBin = directory(base);
+                if (!baseBin || !contained(cache, baseBin))
+                    return;
+                bin = baseBin;
+            }
+            if (node_path_1.posix.basename(bin) !== 'bin')
+                return;
+            const lib = node_path_1.posix.join(node_path_1.posix.dirname(bin), 'lib');
+            if (!contained(cache, lib))
+                return;
+            const actualLibrary = directory(lib);
+            if (actualLibrary && contained(cache, actualLibrary))
+                environment.LD_LIBRARY_PATH = actualLibrary;
+        }
+        catch { /* Readiness is established by the unchanged real probe/verifier, never by this lookup. */ }
+    };
 }
 
 

@@ -539,3 +539,139 @@ widen result roots, change the selected JDK 17, or claim a successful rerun yet.
 The exact setup-java revision observed in CI, b843ebf9b913146b38da2eaa7aeddf76074ae1ad,
 declares this input and bypasses both installed and restored JDK cache entries
 before downloading/installing the distribution.
+
+## 22. Dynamically linked CPython verification (issue #776)
+
+### Problem, scope and flow
+
+The observed Linux setup-python installation succeeds, but its Python 3.11.17
+cannot start without its installation's lib directory in the loader search path.
+The documented update-environment:false example fails before creating its venv.
+Allowing arbitrary inherited LD_LIBRARY_PATH, or merely enabling broad Action
+environment exports, would not establish the closed verifier's readiness.
+
+Support the selected CPython tool-cache installation and its private venv without
+adding a runtime requirement, configuration flag or setup-result field. Keep the
+setup result restricted to PATH/JAVA_HOME. The trusted Python bootstrap derives a
+step-local loader directory from setup-python's python-path output on Linux;
+it never appends the caller's loader path or exports it through GITHUB_ENV.
+After native setup, derive the verifier's single loader directory from the
+selected interpreter and canonical runner tool cache before runtime preflight,
+source dependency preparation and the configured command. Never mutate the
+continuation process environment or add loader options to native control messages.
+
+```mermaid
+flowchart LR
+  S[Reviewed native setup] --> B[Step-local Python bootstrap and private venv]
+  B --> P[Approved PATH result]
+  P --> D[Bounded interpreter and base-library ownership checks]
+  D --> R[Existing runtime preflight]
+  R --> V[Complete configured verifier]
+  V --> C[Existing candidate/publication checks and deferred cleanup]
+```
+
+The runtime lookup must cover both symlinked venv interpreters and copied
+interpreters whose pyvenv.cfg identifies the base installation. Read that one
+regular, non-linked, single-link file with a 4,096-byte bound and stable descriptor
+identity; never evaluate its command or executable-looking values. Resolve both
+lexical and canonical paths against the active owned profile and the canonical
+runner tool cache, frozen before candidate execution (use the native snapshot's
+captured root when active). Admit only the CPython base library directory within
+that cache; reject colon/semicolon list separators, dynamic-loader dollar tokens,
+control characters and escaping aliases. Do not scan
+directories, install tools, execute Python to discover a library before it can
+start, or accept candidate/account library locations as an ambient search path.
+
+An absent or untrusted derivation must not copy loader state. Existing fixed
+runtime probes and configured-command failures remain authoritative; unavailable
+Python still blocks verification. Self-contained runtimes and non-Linux platforms
+retain their ordinary behavior. The documented Python version and complete
+verification command remain repository choices. This is filesystem/metadata
+filtering within the existing trust model, not an OS sandbox.
+
+### Numeric test budget and executable acceptance
+
+Before implementation, reserve at least **40 additional distinct Jest cases**:
+16 canonical-root/interpreter/library ownership cases, 12 copied/symlinked venv
+and bounded-metadata cases, eight adapter/preflight/failure/fresh-profile cases,
+and four documentation/native-contract cases. Strengthening an existing
+parameterized continuation test does not create a second logical-case count.
+Require 100% statements/lines/branches/functions for each new derivation module;
+keep every prior global/per-module budget and the changed adapter's 95/90 floor.
+
+Separately run real CPython 3.11.17 before/after controls in disposable Linux
+containers, including copied and symlinked venvs. The broken control must expose
+the actual dynamic-loader failure; the correction must run the real version
+probe and configured verifier after filtering, not report synthesized readiness.
+Use pinned official Python/Node image digests, no user-directory mounts, no
+provider credentials and boolean/closed-version receipts. Prove unchanged source,
+excluded inherited options, fresh profiles, failure propagation and cleanup.
+
+The real native Linux acceptance must execute setup-python, private venv creation,
+declared Python preflight and the existing pytest command, retaining its Node/pnpm
+and JDK/Gradle verifiers and all deferred post checks. Include a derived-loader
+receipt so a self-contained hosted binary cannot conceal missing propagation.
+Native continuation must still ignore foreign loader metadata and keep the parent
+Node environment unchanged. Preserve all platform selections and time limits.
+
+Run focused regressions and new-module coverage first, then the full root and
+extension coverage/acceptance suites, build/package smoke, types, lint, web checks,
+documentation/workflow/specification validators and normal commit hooks. Exact-head
+CI, all three platforms, Codecov patch verification and complete review without
+active findings gate the authorized develop merge.
+
+### Documentation, evidence and configuration boundaries
+
+Update the Python operator example and this owner, the native-setup companion and
+catalogued code/test evidence together. Document bootstrap versus verifier loader
+scope, copied-venv base metadata and recovery for an unavailable interpreter.
+Keep provider credentials, caller environments, existing setup-result keys,
+wrapper commands, installed Action-reference conventions and runtime versions
+outside this correction's ownership. Regenerate the catalog and run
+validate:specifications; run Graphify's AST update after source changes. Consumer
+repositories supply read-only observations; upstream acceptance owns its fixtures.
+
+### Initial real-runtime observations (before implementation)
+
+The official Python 3.11.17 image is a self-contained control: its relocated base
+and symlinked venv start without an extra loader path; its copied venv needs the
+base library. The actual setup-python artifact reproduces the reported failure
+for the base interpreter and both venv forms. With only that installation's lib
+directory, both real unittest verifiers pass, and copied venv metadata points to
+the base bin directory while the copied executable resolves inside the venv.
+These are runtime-layout observations, not a completed Copilot/native fix claim.
+
+The artifact is actions/python-versions release 3.11.17-36876195594,
+python-3.11.17-linux-22.04-arm64.tar.gz, asset 603458725. Its downloaded SHA-256
+d6d9d8fb8b94e9a3139bb0076a5c035b03e9c16f76ac4e63cd9d7061b328ad82 matches the
+published asset digest. Controls run on the pinned Node image used in section 21
+and Python image f06d01d4ba3f8ad5af45a3ec87df19c1d317d8e8961edc0fabda61811af6f7cf,
+without runtime network, user mounts or host-library edits. The owned tmpfs must
+permit executable venv copies; an earlier noexec harness failure was discarded.
+
+### Executed source and regression evidence
+
+The implementation adds 72 distinct Jest cases: 58 derivation/metadata cases,
+ten adapter/order/failure cases and four documentation/native-contract cases.
+The derivation module reaches 100% statements, branches, functions and lines;
+four existing continuation cases additionally reject foreign loader metadata.
+The complete root run passes 792 suites and 14,733 tests (35 existing platform
+skips). Its coverage is 97.30% statements, 95.05% branches, 97.95% functions and
+98.08% lines; the changed Git adapter has 100% statements/functions/lines and
+93.18% branches. Every prior and newly declared module budget passes.
+
+The same candidate, Python artifact and probe run against the adapter archived
+from develop commit 229c576e5a0bc3eac9a8cd1067b072f4dd4c5ac2 and the corrected
+adapter. Both use the default runtime preflight and command executor. The old
+adapter blocks both venv forms before dependency preparation, and fails the
+positive acceptance expectation with the actual unavailable-Python diagnostic.
+The correction runs the full configured unittest command with copied and
+symlinked private venvs, two distinct profiles, excluded inherited options,
+unchanged candidate bytes and parent Node environment, and complete cleanup.
+This source-wired container proof does not substitute for the native Actions
+acceptance and exact-head CI/review gates described above.
+
+The bounded copied-venv lookup follows Python's documented
+[venv layout and base home](https://docs.python.org/3.11/library/venv.html).
+The path checks account for the Linux loader's
+[list separators and dynamic string tokens](https://man7.org/linux/man-pages/man8/ld.so.8.html).

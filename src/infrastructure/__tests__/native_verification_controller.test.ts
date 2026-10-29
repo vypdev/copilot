@@ -104,6 +104,7 @@ describe('native Actions phase controller', () => {
         await continueNativeVerification(f.session, f.id, outcome, {
             PATH: 'approved', JAVA_HOME: 'java',
             JDK_JAVA_OPTIONS: '-Duser.home=/foreign', GRADLE_USER_HOME: '/foreign/gradle',
+            LD_LIBRARY_PATH: '/foreign/loader', LD_PRELOAD: '/foreign/preload',
         });
         expect(protocol.readNativeRecord(f.session, `response-${f.id}.json`)).toEqual({ id: f.id, success: outcome === 'success', path: 'approved', javaHome: 'java' });
         expect(fs.existsSync(join(f.session, 'request.json'))).toBe(false);

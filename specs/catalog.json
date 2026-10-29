@@ -2285,7 +2285,11 @@
         "src/infrastructure/private_jvm_environment.ts",
         "src/tooling/__tests__/fixtures/verification_jvm_gradle_probe.cjs",
         "src/tooling/__tests__/fixtures/verification_jvm_gradle_container_fixture.ts",
-        "src/tooling/__tests__/fixtures/verification_native_fixture.ts"
+        "src/tooling/__tests__/fixtures/verification_native_fixture.ts",
+        "src/infrastructure/verification_python_library_environment.ts",
+        "src/tooling/__tests__/fixtures/verification_python_container_fixture.ts",
+        "src/tooling/__tests__/fixtures/verification_python_probe.cjs",
+        "src/tooling/__tests__/fixtures/verification_native_setup_action.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -2338,7 +2342,9 @@
         "src/domain/__tests__/verification_failure.test.ts",
         "src/infrastructure/__tests__/source_verification_dependencies.test.ts",
         "src/application/usecases/actions/__tests__/retire_unrelated_branch_sync_cards.test.ts",
-        "src/infrastructure/__tests__/private_jvm_environment.test.ts"
+        "src/infrastructure/__tests__/private_jvm_environment.test.ts",
+        "src/infrastructure/__tests__/verification_python_library_environment.test.ts",
+        "src/infrastructure/__tests__/git_commit_python_runtime.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",
