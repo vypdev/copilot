@@ -22,7 +22,7 @@ export function collectionFixture(initial: Settings = DEFAULT_SETTINGS) {
         return decision.result;
     }) };
     const ports = { settings: vi.fn(() => repository.read()), identifier: vi.fn(() => (++sequence).toString(16).padStart(32, '0')),
-        writerIdle: vi.fn(() => true), changed: vi.fn() };
+        writerIdle: vi.fn((_kind: JournalKind) => true), changed: vi.fn() };
     const coordinator = new CollectionCoordinator(policies, ports);
     const repository = new SettingsRepository(memory.port, coordinator);
     const set = memory.port.set;

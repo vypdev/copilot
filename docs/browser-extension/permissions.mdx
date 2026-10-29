@@ -121,3 +121,9 @@ policy receipt before admitting collection. A later stop cannot be absorbed into
 an older activation. Replayed operation results describe what was observed then;
 the current collection view remains a separate fact. These services still need
 their production gateway, collector and UI integration.
+
+The pending implementation also separates a successful action from successful
+history retention. If storage cannot establish which record was written, the
+history is incomplete; matching a similar record or repeating an uncertain write
+would give misleading evidence. The bounded application writer now enforces that
+rule, but these history screens and actual producers remain under development.

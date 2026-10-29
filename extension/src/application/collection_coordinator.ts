@@ -104,6 +104,7 @@ export class CollectionCoordinator implements SettingsWriteEffects {
     /** An authorized stop retires admission immediately, even if persistence subsequently remains unavailable. */
     pause(kind: JournalKind): object { this.readGeneration = {}; this.slots[kind].blocked = true; this.slots[kind].epoch = {}; this.publish(); return this.slots[kind].epoch; }
     owns(kind: JournalKind, stamp: object): boolean { return !this.disposed && this.slots[kind].epoch === stamp; }
+    writerMayRun(kind: JournalKind): boolean { return !this.disposed && this.slots[kind].held === null; }
     observeStop(kind: JournalKind, stamp: object, result: CollectionRestrictionResult): boolean {
         if (!this.owns(kind, stamp)) return false;
         this.readGeneration = {}; this.slots[kind].observed = result.observed; this.slots[kind].restriction = result.fact;

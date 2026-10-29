@@ -3148,7 +3148,13 @@
         "extension/src/application/collection_transition_ports.ts",
         "extension/src/domain/collection_review.ts",
         "extension/src/application/collection_effects.ts",
-        "extension/src/application/collection_reviews.ts"
+        "extension/src/application/collection_reviews.ts",
+        "extension/src/domain/journal_progress.ts",
+        "extension/src/application/journal_writer_ports.ts",
+        "extension/src/application/journal_work_queue.ts",
+        "extension/src/application/journal_writer_io.ts",
+        "extension/src/application/journal_writer.ts",
+        "extension/src/application/observed_journal_store.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3294,7 +3300,17 @@
         "extension/test/integration/collection_review_bounds.test.ts",
         "extension/test/integration/collection_activation_ownership.test.ts",
         "extension/test/integration/collection_review_phase_fences.test.ts",
-        "extension/test/integration/collection_stop_staging.test.ts"
+        "extension/test/integration/collection_stop_staging.test.ts",
+        "extension/test/fixtures/journal_writer.ts",
+        "extension/test/fixtures/journal_writer_io.ts",
+        "extension/test/contracts/journal_progress.test.ts",
+        "extension/test/integration/journal_work_queue.test.ts",
+        "extension/test/integration/journal_writer.test.ts",
+        "extension/test/integration/journal_writer_bounds.test.ts",
+        "extension/test/integration/journal_writer_clear.test.ts",
+        "extension/test/integration/journal_writer_failures.test.ts",
+        "extension/test/integration/journal_writer_observations.test.ts",
+        "extension/test/integration/journal_writer_io.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

@@ -37,7 +37,7 @@ The source has a transactional journal, a reviewed clear service, a preference
 queue reservation and restriction-only preference preflight. Native database2
 preserves the two version1 journals and adds a fixed policy store. An application
 coordinator observes consent and fences admission/clear. Dedicated retained
-start/stop application services are now present. Their production collector,
+start/stop application services and a bounded ticket writer are now present. Their production collector,
 gateway and center UI composition remain incomplete. Saved
 collection flags still default false; these source slices do not activate them.
 
@@ -50,6 +50,10 @@ the [journal refinement](github-browser-extension-local-journal.md). Current
 deterministic fixtures are not native-browser acceptance. Primary sources: section20.
 `collection_reviews.ts` and `collection_effects.ts` now retain exact plans and
 execute their independent preference/policy phases; they are not yet renderer controls.
+`journal_writer.ts`, `journal_work_queue.ts`, `journal_writer_io.ts` and
+`journal_progress.ts` add secondary retention. `observed_journal_store.ts` delivers
+canonical clear observations before releasing deferred old work. Their application
+fixtures do not establish production composition or native/browser acceptance.
 
 ### 2.4 Retrospective classification
 
@@ -260,13 +264,50 @@ The live owner view remains separate.
 | Durably paused, preference unchanged | Capture stopped; preference write incomplete | Review preference change |
 | Unknown/future/corrupt | No admission; existing data preserved | Recovery/compatible package |
 
+### 6.4 Bounded retained observations
+
+Trusted use cases MUST admit only a validated, frozen, closed fact under known
+active consent and a known history epoch. Admission creates an opaque in-process
+object ticket; no renderer can supply it. Unknown consent admits nothing. Active
+consent with an unknown epoch drops the observation and marks history incomplete;
+later availability MUST NOT retrospectively capture it.
+
+Track at most200 logical tickets for five minutes from first observation. A
+single-flight writer coalesces changes to the same ticket without consuming more
+slots. Pending/running records cannot be evicted to make room; only idle completed
+or failed unproven slots can be replaced. Capacity, invalid clock and expiry are
+closed retention issues, never a failure of the primary operation. A retained
+entry's time describes its first observation, not a fabricated completion time.
+Expiry is enforced on admission, update and native submission; no timer wakes a
+worker. Stale in-memory slots are discarded on access or disposal, without a
+promise of physical cleanup at the exact five-minute boundary.
+
+An unknown append has no proved durable row identity. Do not guess a sequence by
+matching time, action or payload, repeat the append, or attach later updates to a
+similar row. A known append permits updates to its exact epoch, sequence, original
+time and action, including while collection is off. An uncertain update may be
+observationally reread. That reread never resubmits the write; only a different,
+new explicit observation may advance the known row. Already established
+acknowledgement/completion cannot be downgraded by weaker later availability.
+If reviewed was persisted, a coalesced settled fact still passes through the
+required persisted submitted transition. A not-yet-written first observation may
+already describe a settled operation without inventing earlier retained events.
+
+Clear and activation reservations defer new native writer jobs. Clear's idle
+check measures the actual writer, not the coordinator's reservation eligibility.
+The canonical clear epoch MUST reach the writer before lease release, retire
+old tickets and queued work, and prevent any late continuation from recreating
+them. A failed clear releases deferred admitted updates without claiming deletion.
+Late reads cannot lower a known epoch/revision or erase a newer observation.
+Failed retention/readback/notification never changes primary success.
+
 ## 7. User-facing configuration
 
 | Input | Default | Scope/limit |
 |---|---|---|
 | `center.diagnostics` | false | Redacted diagnostics/operation facts,200entries/7days |
 | `center.recents` | false | Extension-owned destinations,50entries/7days |
-| Writer | fixed | At most200pending/coalesced jobs |
+| Writer | fixed | At most200pending/coalesced logical tickets, five-minute tracking |
 | Private exact targets | session-only | Never policy/history/export |
 | Authored notes | existing session default | Separate persistence/deletion review |
 
@@ -368,10 +409,11 @@ upgrade or publication is implied.
 | Restriction and observation | 18 | CAS, unknown/accepted/not-applied, closed reads, no invented attribution |
 | Consent owner and coordination | 35 | Partial stop, import, restart, late reads/burst/reentry/disposal, independent kinds, clear leases/global pause |
 | Retained start/stop application plans | 90 | Exact phase/full-snapshot receipts, ownership/lifetime/capacity, exhausted/unreadable stores, scoped stop staging/races, independent acknowledgement/readback, replay/cleanup |
-| Recorder/tickets/navigation | 16 | Opt-in timing, coalescing/cap, expiry, lost context |
+| Bounded writer/ticket ownership | 64 | Opt-in timing, cap/coalescing, expiry, unknown append identity, known-row reconciliation, clear/late-result races, primary-result isolation |
+| Actual navigation producers | 8 | Admitted destinations, canceled navigation, lost context, private label generalization |
 | UI/locales/export/recovery | 20 | Independent facts, scope,4locales, a11y |
 | Real targets and human | 9 | Three native journeys per target plus owning human gate |
-| **Total** | **238** | No substitution for semantic H3/catalog coverage |
+| **Total** | **294** | No substitution for semantic H3/catalog coverage |
 
 Count each case once. Pure branches and modified executable lines/branches100%,
 no exclusions/threshold weakening; keep root budgets. Request fixtures are not
@@ -387,6 +429,9 @@ Retained plans add `collection_reviews.test.ts`, `collection_review_races.test.t
 `collection_review_bounds.test.ts`, `collection_review_phase_fences.test.ts` and
 `collection_activation_ownership.test.ts` and `collection_stop_staging.test.ts`;
 count their distinct cases once.
+The writer's eight application/domain suites cover bounded ownership, uncertainty,
+reconciliation, clear composition, queue faults and frozen projections. Navigation
+producers and mounted/native acceptance remain separate required evidence.
 
 ## 15. Documentation and discoverability
 
@@ -408,6 +453,10 @@ docs/specs/catalog and concrete examples together.
 8. Database1 upgrade preserves records and defaults collection paused.
 9. Future/private input stays inert without private output.
 10. Full native/human/H3/current-base review and remote Codecov gates pass.
+11. Unknown append cannot be retried or joined to a guessed row; a known-row
+    uncertainty is read back without automatic resubmission.
+12. An update queued behind a real clear reservation cannot recreate cleared
+    history; failed clear releases the work and leaves existing history intact.
 
 ## 17. Requirements traceability
 
@@ -418,6 +467,7 @@ docs/specs/catalog and concrete examples together.
 | Truthful ordered phases | Application | Partial/ack/replay/queue | Activity/privacy |
 | Restriction-only save and owner lifetime | Settings/coordinator | Five application contract suites; native/UI evidence still required | Configuration/contributor |
 | Reviewed phase continuation and priority of a later stop | CollectionReviews/effects/private leases | Eight retained-plan/phase/ownership/staging suites; full native/UI evidence pending | Configuration/privacy/contributor |
+| Bounded secondary retention and unknown identity | JournalWriter/queue/IO/progress | Eight writer/domain/race suites; actual producers and native/UI evidence pending | Privacy/recovery/contributor |
 | Minimal discoverable facts | Presentation | Locales/a11y/export | User navigation |
 
 ## 18. Implementation sequence

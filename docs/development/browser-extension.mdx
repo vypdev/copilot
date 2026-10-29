@@ -605,3 +605,28 @@ substitute missing policy or cause a second put. Policy domain/adapter code does
 not yet compose the collector or UI. See the
 [consent refinement](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-collection-consent.md)
 for full restart, partial-outcome and native/human delivery requirements.
+
+`JournalWriter` adds secondary retention without changing the primary operation's
+result. Trusted use cases admit frozen closed facts under known active consent
+and a known history epoch. Its opaque tickets stay in the background; they are
+not reusable renderer authority. Track at most200 logical records for five
+minutes, coalesce per ticket, and perform one native operation at a time. Initial
+unknown epoch, capacity or expiry drops are inspectable as incomplete history;
+later availability does not backfill them. The entry time is the first observed
+fact, rather than a claimed completion timestamp.
+
+An uncertain append cannot be identified by guessing a sequence or matching its
+time/action. It remains unknown without automatic retry or later row updates.
+Known rows retain exact epoch/sequence/original-time/action identity. An uncertain
+update can be read back; that observation does not retry the write. A different
+new observation may advance the same known row. Established completion and
+accepted acknowledgement survive weaker later availability. Persisted reviewed
+records pass through submitted even when the desired completion was coalesced.
+
+`ObservedJournalStore` delivers canonical results before releasing shared clear
+reservations. A new clear epoch retires old tickets and queued work; reservation
+release cannot resurrect them. Failed clear releases deferred admitted work
+without claiming deletion. Wire `JournalReviews.idle` to the actual writer's idle
+state, not coordinator eligibility, which is false while the reservation is held.
+The writer, review and native cores still need production producer/gateway/UI
+composition and independent real-browser acceptance.

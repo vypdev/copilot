@@ -45,6 +45,9 @@ Settings previews and operation outcomes are ephemeral. CENTER09/10 are not
 complete. Content health has a separate100-entry closed-reason memory ring;
 that ring is not persistent history. Preferences already declare diagnostics
 and recent-destination consent, both false.
+The application now has a bounded opaque-ticket writer and canonical-clear
+observer. It is not yet connected to actual center producers, gateway or UI;
+this source increment does not enable capture or complete CENTER09/10.
 
 ### 2.3 Evidence
 
@@ -298,15 +301,19 @@ browser SDK, dependency upgrade, manifest permission or release is introduced.
 |---|---:|---|
 | Pure schema/expiry/transitions | 30 | Private fields, unsafe time, bounds, monotonic facts |
 | Native transaction adapter | 18 | Abort/commit, upgrade, blocked/late open, serialization |
-| Admission/clear/source races | 18 | Consent, restart, stale writer, replay |
+| Admission/clear/source races | 48 | Consent, restart, bounded tickets, stale writer, uncertain identity, reconciliation without write retry, replay |
 | UI/locales/export | 18 | Factual states, scope, exact preview, accessibility |
 | Native targets and human | 9 | Three target transaction journeys and human UX |
-| **Total** | **93** | Cases count once; full H3 gates remain |
+| **Total** | **123** | Cases count once; full H3 gates remain |
 
 Keep root budgets and100%modified executable lines with no partials; pure branches
 100%. Deterministic request fixtures test adapter contracts; they do not prove
 native IndexedDB semantics. Actual source-bound Chrome/Firefox/Safari evidence
 must exercise a write queued before clear and a late old-generation update.
+The consent refinement defines the writer's200-ticket/five-minute bound, exact
+known-row progress, visible dropped observations and unknown-append prohibition.
+Application clear races use the actual preference queue, coordinator, writer and
+review service; those deterministic ports are not loaded-browser acceptance.
 
 ## 15. Documentation and discoverability
 
