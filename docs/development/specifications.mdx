@@ -75,7 +75,12 @@ free space and permissions before retrying the normal generation command. Review
 and preserve any intentional link target before replacing that link with a regular
 repository output. Pre-publication failures preserve the old index; another
 writer or relocation after atomic publication requires inspection and fresh
-regeneration. Cleanup never removes another writer's temporary replacement. Directory restoration
+regeneration. Cleanup never removes another writer's temporary replacement. If the first stat
+of a newly created temporary file fails, cleanup retries that identity read once.
+A verified match can be removed safely; generation still fails. Unavailable
+identity or failed cleanup produces a diagnostic naming the generated UUID entry.
+Inspect it in the original specs directory and verify ownership before manual
+cleanup; the generator preserves unverifiable or foreign entries. Directory restoration
 uses the caller's original identity; a replaced or unavailable caller path fails
 without claiming success.
 

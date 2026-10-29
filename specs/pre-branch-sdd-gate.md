@@ -1862,6 +1862,16 @@ The sibling temporary name uses a fresh UUID, exclusive creation and initial
 mode 0600. Publication keeps its descriptor open through cleanup to prevent inode
 reuse, honors the caller's umask for new files and existing ordinary permission
 bits for replacement, and never removes a foreign entry at the temporary name.
+If the first descriptor stat fails after exclusive creation, cleanup MUST make
+one bounded identity-recovery attempt while that descriptor remains held. A
+recovered identity permits only matching owned-entry removal; generation still
+fails. Two failed stats, or failed cleanup inspection/unlink, MUST emit a cleanup
+diagnostic naming the host-generated UUID entry before descriptor close and cwd
+restoration. Preserve unverifiable/foreign entries and require ownership inspection
+before manual cleanup. A secondary close/restore failure cannot suppress an
+already emitted cleanup notice. No automatic delete is authorized by a filename
+alone, and no retained entry is reused on the next invocation.
+
 Existing outputs use atomic rename; missing outputs use atomic no-replace hard
 link creation. Parent pinning prevents either operation from following a swapped
 parent. Read-only opening checks type, identity and metadata before data access.
@@ -1872,9 +1882,10 @@ normal CLI/Action bundles include the same dependency closure.
 **UX, failures and recovery.** A successful generator keeps its current single
 `specification catalog generation: PASS` receipt after publication and cleanup.
 A stale ordinary index still reports the existing regeneration instruction.
-Unsafe or changed output access returns nonzero, prints one fixed actionable
-English CLI diagnostic and emits no success receipt; no repository path/content
-or raw filesystem exception is interpolated into that new diagnostic. Inspect
+Unsafe or changed output access returns nonzero, prints a fixed actionable
+English CLI diagnostic and emits no success receipt. An incomplete cleanup also
+prints its host-generated UUID basename and an ownership-inspection next step; no
+repository content, arbitrary pathname or raw filesystem exception is exposed. Inspect
 links/collisions, concurrent changes, capacity and permissions before rerunning.
 The same current generation command retries from fresh metadata. The operation
 adds no background job, notification, provider write or stored review state.
@@ -1890,7 +1901,7 @@ sandbox or a full power-loss transaction. Rollback reverts the module and main
 integration together; source metadata needs no conversion. Vendored installations
 must adopt the complete matching source dependency set or updated bundles.
 
-Allocate **35 additional distinct native cases**, exclusively in
+Allocate **40 additional distinct native cases**, exclusively in
 `specification_catalog_publication.test.ts`:
 
 | Area | Cases | Executable acceptance |
@@ -1903,10 +1914,13 @@ Allocate **35 additional distinct native cases**, exclusively in
 | Caller directory restoration | 2 | keep its pinned inode after rename; reject a replacement at its original path |
 | Invalid catalog | 1 | no output or temporary publication |
 | Independent directory metadata mismatches | 2 | real owned directory/link metadata exercises fail-closed guards even where the OS prevents renames |
-| **Total** | **35** | no double counting with prior amendments |
+| Post-creation identity and cleanup failures | 5 | bounded stat recovery; persistent stat failure with/without foreign replacement; cleanup stat/unlink failure is explicitly disclosed |
+| **Total** | **40** | no double counting with prior amendments |
 
 The original 19-case candidate has 14 failures before the fix; later cases cover
-additional native boundary and packaging risks. Fault injection changes actual
+additional native boundary and packaging risks. Three post-creation stat cases
+also fail against initial PR head `2252127de6040a7a2c5f0a12cbf93733ca115a65`,
+proving the review-reported cleanup gap before its correction. Fault injection changes actual
 filesystem entries at the boundary; it does not execute consumer strings. CLI
 fixtures run Node against the actual exported main in fresh temporary repositories.
 Windows directory-rename denial is a successful OS prevention of that attack,

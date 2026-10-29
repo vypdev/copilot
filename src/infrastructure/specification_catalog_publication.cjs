@@ -69,6 +69,33 @@ function unchanged(expected, current) {
     && expected.mtimeNs === current.mtimeNs && expected.ctimeNs === current.ctimeNs;
 }
 
+function reportRetainedTemporary(name) {
+  console.error('Catalog temporary cleanup could not be completed: ' + name
+    + '. An entry may remain in the original specs directory; inspect it and verify ownership before cleanup.');
+}
+
+function releaseTemporary(descriptor, owned, temporary) {
+  try {
+    // A failed first stat does not prove the new entry's identity. Make
+    // one bounded recovery attempt while its descriptor is still held.
+    if (descriptor !== undefined && owned === undefined) {
+      try { owned = fs.fstatSync(descriptor, { bigint: true }); }
+      catch {
+        // Emit before close/cwd restoration: secondary failures must not
+        // hide the possible retained entry. The name is generated here.
+        reportRetainedTemporary(temporary);
+      }
+    }
+    // Keep the descriptor open until cleanup to prevent inode reuse.
+    // Never remove another writer's replacement at our temporary name.
+    const current = owned ? entry(temporary) : undefined;
+    if (current && current.isFile() && sameObject(owned, current)) fs.unlinkSync(temporary);
+  } catch (error) {
+    reportRetainedTemporary(temporary);
+    throw error;
+  } finally { if (descriptor !== undefined) fs.closeSync(descriptor); }
+}
+
 function publishCatalogMarkdown(root, content) {
   return inCatalogDirectory(root, assertRoute => {
     const expected = destination();
@@ -90,14 +117,7 @@ function publishCatalogMarkdown(root, content) {
       assertRoute();
       const published = destination();
       if (!published || !sameObject(owned, published)) throw changed();
-    } finally {
-      try {
-        // Keep the descriptor open until cleanup to prevent inode reuse.
-        // Never remove another writer's replacement at our temporary name.
-        const current = owned ? entry(temporary) : undefined;
-        if (current && current.isFile() && sameObject(owned, current)) fs.unlinkSync(temporary);
-      } finally { if (descriptor !== undefined) fs.closeSync(descriptor); }
-    }
+    } finally { releaseTemporary(descriptor, owned, temporary); }
   });
 }
 

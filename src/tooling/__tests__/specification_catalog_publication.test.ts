@@ -341,6 +341,88 @@ describe('catalog publication through real filesystem boundaries', () => {
     expect(fs.readFileSync(join(root, 'specs', foreign), 'utf8')).toBe('foreign bytes');
     expect(fs.readFileSync(target, 'utf8')).toBe('old catalog');
   });
+  it('recovers a failed first descriptor stat for safe cleanup without claiming success', () => {
+    fs.writeFileSync(target, 'old catalog');
+    const realOpen = fs.openSync, realStat = fs.fstatSync, realClose = fs.closeSync;
+    let temporaryDescriptor = -1, attempts = 0;
+    jest.spyOn(fs, 'openSync').mockImplementation(((file: fs.PathLike, flags: fs.OpenMode, mode?: fs.Mode) => {
+      const descriptor = realOpen(file, flags, mode);
+      if (String(file).startsWith('.copilot-catalog-')) temporaryDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync);
+    jest.spyOn(fs, 'closeSync').mockImplementation(descriptor => {
+      if (descriptor === temporaryDescriptor) temporaryDescriptor = -1;
+      realClose(descriptor);
+    });
+    jest.spyOn(fs, 'fstatSync').mockImplementation(((descriptor: number, ...args: unknown[]) => {
+      if (descriptor === temporaryDescriptor && attempts < 2) {
+        attempts++;
+        if (attempts === 1) throw Object.assign(new Error('fixture transient stat failure'), { code: 'EIO' });
+      }
+      return Reflect.apply(realStat, fs, [descriptor, ...args]);
+    }) as typeof fs.fstatSync);
+    failed(invoke()); expect(attempts).toBe(2);
+    expect(fs.readFileSync(target, 'utf8')).toBe('old catalog'); noTemps();
+  });
+  it.each([false, true])('discloses an unverified temporary entry after two stat failures with foreign replacement=%s', replace => {
+    fs.writeFileSync(target, 'old catalog');
+    const realOpen = fs.openSync, realStat = fs.fstatSync, realClose = fs.closeSync;
+    let temporaryDescriptor = -1, temporary = '', attempts = 0;
+    jest.spyOn(fs, 'openSync').mockImplementation(((file: fs.PathLike, flags: fs.OpenMode, mode?: fs.Mode) => {
+      const descriptor = realOpen(file, flags, mode);
+      if (String(file).startsWith('.copilot-catalog-')) { temporaryDescriptor = descriptor; temporary = String(file); }
+      return descriptor;
+    }) as typeof fs.openSync);
+    jest.spyOn(fs, 'closeSync').mockImplementation(descriptor => {
+      if (descriptor === temporaryDescriptor) temporaryDescriptor = -1;
+      realClose(descriptor);
+    });
+    jest.spyOn(fs, 'fstatSync').mockImplementation(((descriptor: number, ...args: unknown[]) => {
+      if (descriptor === temporaryDescriptor && attempts < 2) {
+        attempts++;
+        if (attempts === 1 && replace) { fs.unlinkSync(temporary); fs.writeFileSync(temporary, 'foreign bytes'); }
+        throw Object.assign(new Error('fixture persistent stat failure'), { code: 'EIO' });
+      }
+      return Reflect.apply(realStat, fs, [descriptor, ...args]);
+    }) as typeof fs.fstatSync);
+    const result = invoke(); failed(result); expect(attempts).toBe(2);
+    expect(result.logs).toContain('Catalog temporary cleanup could not be completed: ' + temporary);
+    expect(result.logs).toContain('verify ownership before cleanup');
+    expect(fs.readFileSync(target, 'utf8')).toBe('old catalog');
+    expect(fs.readFileSync(join(root, 'specs', temporary), 'utf8')).toBe(replace ? 'foreign bytes' : '');
+    expect(fs.readdirSync(join(root, 'specs')).filter(name => name.startsWith('.copilot-catalog-'))).toEqual([temporary]);
+  });
+  it('discloses a retained entry when cleanup metadata inspection fails', () => {
+    fs.writeFileSync(target, 'old catalog');
+    const realWrite = fs.writeFileSync, realStat = fs.lstatSync;
+    jest.spyOn(fs, 'writeFileSync').mockImplementation(((file: fs.PathOrFileDescriptor, ...args: unknown[]) => {
+      if (typeof file === 'number') throw Object.assign(new Error('fixture write failure'), { code: 'ENOSPC' });
+      return Reflect.apply(realWrite, fs, [file, ...args]);
+    }) as typeof fs.writeFileSync);
+    jest.spyOn(fs, 'lstatSync').mockImplementation(((file: fs.PathLike, ...args: unknown[]) => {
+      if (String(file).startsWith('.copilot-catalog-')) throw Object.assign(new Error('fixture cleanup stat failure'), { code: 'EIO' });
+      return Reflect.apply(realStat, fs, [file, ...args]);
+    }) as typeof fs.lstatSync);
+    const result = invoke(); failed(result);
+    const names = fs.readdirSync(join(root, 'specs')).filter(name => name.startsWith('.copilot-catalog-'));
+    expect(names).toHaveLength(1);
+    expect(result.logs).toContain('Catalog temporary cleanup could not be completed: ' + names[0]);
+    expect(result.logs).toContain('verify ownership before cleanup');
+    expect(fs.readFileSync(target, 'utf8')).toBe('old catalog');
+  });
+  it('discloses a retained owned entry when its unlink fails after publication', () => {
+    const realUnlink = fs.unlinkSync;
+    jest.spyOn(fs, 'unlinkSync').mockImplementation(file => {
+      if (String(file).startsWith('.copilot-catalog-')) throw Object.assign(new Error('fixture cleanup unlink failure'), { code: 'EACCES' });
+      realUnlink(file);
+    });
+    const result = invoke(); failed(result);
+    const names = fs.readdirSync(join(root, 'specs')).filter(name => name.startsWith('.copilot-catalog-'));
+    expect(names).toHaveLength(1);
+    expect(result.logs).toContain('Catalog temporary cleanup could not be completed: ' + names[0]);
+    expect(fs.readFileSync(target, 'utf8')).toBe(renderCatalog(catalog));
+    expect(fs.readFileSync(join(root, 'specs', names[0]), 'utf8')).toBe(renderCatalog(catalog));
+  });
   it('cleans its temporary file and preserves the old catalog on rename failure', () => {
     fs.writeFileSync(target, 'old catalog');
     jest.spyOn(fs, 'renameSync').mockImplementation(() => { throw Object.assign(new Error('fixture rename failure'), { code: 'EACCES' }); });
