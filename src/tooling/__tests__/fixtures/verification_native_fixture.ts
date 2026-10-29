@@ -50,6 +50,10 @@ runs:
   steps:
     - uses: actions/setup-java@v6
       if: runner.os == 'Linux'
+      env:
+        # Hosted tool-cache JDK entries may link to account/system installations.
+        # Provision inside the current owned profile instead of accepting those links.
+        RUNNER_TOOL_CACHE: \${{ env.HOME }}/native-java-tool-cache
       with:
         distribution: temurin
         java-version: '17'

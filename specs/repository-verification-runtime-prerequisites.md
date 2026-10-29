@@ -526,3 +526,11 @@ the 90% branch floor. The native Linux job separately rejected setup metadata
 before preflight; fixture-only diagnostics classify tool/root ownership using
 closed enums and booleans, without printing runtime paths or accepting more roots.
 That rejection requires a resolved cause and successful native rerun before merge.
+
+The native diagnostic identified the rejected JDK: its lexical tool-cache entry
+resolved outside all approved roots, while Python and pnpm stayed within the
+current private profile. Keep rejecting that alias. The controlled setup-java
+step now uses a step-local RUNNER_TOOL_CACHE beneath the current HOME, so its
+real JDK installation is owned by that profile. This changes only native test
+provisioning; it does not widen result roots, forward the temporary cache setting
+to continuation, change the selected JDK 17, or claim a successful rerun yet.
