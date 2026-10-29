@@ -29,7 +29,7 @@ function readReceipt(raw: string): Record<string, unknown> {
     return value;
 }
 
-export function validateTarget(target: BrowserTarget, files: ReadonlyMap<string, string>): void {
+function validateTargetShape(target: BrowserTarget, files: ReadonlyMap<string, string>): readonly string[] {
     const chunks = [...files.keys()].filter(name => CENTER_CHUNK.test(name));
     if (files.size > 96 || ASSETS.some(name => !files.has(name)) || files.size !== ASSETS.length + chunks.length
         || [...files.values()].reduce((total, text) => total + Buffer.byteLength(text), 0) > 8 * 1024 * 1024) throw new FoundationGateError(`${target}: undeclared-or-missing-asset`);
@@ -41,6 +41,9 @@ export function validateTarget(target: BrowserTarget, files: ReadonlyMap<string,
         throw new FoundationGateError(`${target}: manifest-drift (permissions, hosts, identity, background or canonical JSON)`);
     }
     if (files.get('runtime.html') !== RUNTIME_HTML) throw new FoundationGateError(`${target}: runtime-page-drift`);
+    return chunks;
+}
+function validateTargetCode(target: BrowserTarget, files: ReadonlyMap<string, string>, chunks: readonly string[]): void {
     validateStyles(`${target}/runtime.css`, files.get('runtime.css')!);
     const graph = new Map<string, readonly string[]>();
     for (const name of ['background.js', 'content.js', 'runtime.js', ...chunks]) graph.set(name, validateJavaScript(target, name, files.get(name)!, files));
@@ -48,6 +51,22 @@ export function validateTarget(target: BrowserTarget, files: ReadonlyMap<string,
     const visit = (name: string): void => { if (reached.has(name)) return; reached.add(name); for (const child of graph.get(name)!) visit(child); };
     visit('runtime.js');
     if (chunks.some(name => !reached.has(name))) throw new FoundationGateError(`${target}: unreachable-center-chunk`);
+}
+// Reuse only successful checks of identical immutable bytes under these exact policies.
+// This fixed process-local bound stores no source, receipt claims, paths or failed results.
+const codeProofs = new Map<string, { javascript: typeof validateJavaScript; styles: typeof validateStyles }>();
+function validateTargetCodeOnce(target: BrowserTarget, files: ReadonlyMap<string, string>, chunks: readonly string[]): void {
+    const key = createHash('sha256').update(JSON.stringify([target, assetHashes(files)])).digest('hex');
+    const proof = codeProofs.get(key);
+    if (proof?.javascript === validateJavaScript && proof.styles === validateStyles) return;
+    validateTargetCode(target, files, chunks);
+    codeProofs.delete(key);
+    if (codeProofs.size === 12) codeProofs.delete(codeProofs.keys().next().value!);
+    codeProofs.set(key, { javascript: validateJavaScript, styles: validateStyles });
+}
+export function validateTarget(target: BrowserTarget, files: ReadonlyMap<string, string>): void {
+    const snapshot = new Map(files);
+    validateTargetCodeOnce(target, snapshot, validateTargetShape(target, snapshot));
 }
 
 export async function readTarget(directory: string): Promise<Map<string, string>> {
@@ -68,11 +87,16 @@ export async function validateArtifactSet(directory: string): Promise<void> {
         throw new FoundationGateError('artifact-set: incomplete or unexpected target set');
     }
     const recorded = readReceipt(await readFile(path.join(directory, 'receipt.json'), 'utf8'));
+    const admitted: { target: BrowserTarget; files: ReadonlyMap<string, string>; chunks: readonly string[] }[] = [];
     for (const target of TARGETS) {
         const files = await readTarget(path.join(directory, target));
-        validateTarget(target, files);
+        const chunks = validateTargetShape(target, files);
         const hashes = recorded.targets as Record<string, unknown>;
         if (!isDeepStrictEqual(hashes[target], assetHashes(files))) throw new FoundationGateError(`${target}: receipt-hash-mismatch`);
         if ([...files.keys()].filter(name => CENTER_CHUNK.test(name)).some(name => !name.endsWith(`${(recorded.sourceTreeSha256 as string).slice(0, 16)}.js`))) throw new FoundationGateError(`${target}: chunk-source-mismatch`);
+        admitted.push({ target, files, chunks });
     }
+    // Receipt hashes alone never authorize code: require fresh checks or an exact prior proof.
+    // Reject mismatched metadata for every target before repeatedly parsing a large local catalog.
+    for (const { target, files, chunks } of admitted) validateTargetCodeOnce(target, files, chunks);
 }

@@ -95,3 +95,18 @@ it('rejects a consistently rehashed changed bundle when comparing it to clean so
         await expect(validateDevelopmentBuild(root, output)).rejects.toThrow('existing output is stale');
     } finally { await writeFile(file, original); await writeFile(path.join(output, 'receipt.json'), receipt); }
 });
+
+it('rejects a later target hash mismatch before parsing unrelated code, then still rejects rehashed executable authority', async () => {
+    const { assetHashes } = await import('../../tooling/artifact_validation.mts');
+    const file = path.join(output, 'chrome/content.js'); const original = await readFile(file, 'utf8');
+    try {
+        await writeFile(file, `${original}\neval('never execute this fixture');\n`);
+        const changed = JSON.parse(receipt); changed.targets.chrome = assetHashes(await readTarget(path.join(output, 'chrome')));
+        changed.targets.safari['content.js'] = '0'.repeat(64);
+        await writeFile(path.join(output, 'receipt.json'), `${JSON.stringify(changed, null, 2)}\n`);
+        await expect(validateArtifactSet(output)).rejects.toThrow('safari: receipt-hash-mismatch');
+        changed.targets.safari = JSON.parse(receipt).targets.safari;
+        await writeFile(path.join(output, 'receipt.json'), `${JSON.stringify(changed, null, 2)}\n`);
+        await expect(validateArtifactSet(output)).rejects.toThrow(/executable|eval|authority/u);
+    } finally { await writeFile(file, original); await writeFile(path.join(output, 'receipt.json'), receipt); }
+});

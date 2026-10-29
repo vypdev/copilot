@@ -345,6 +345,11 @@
           "icon": "code"
         },
         {
+          "title": "Feature inventory",
+          "href": "/browser-extension/features",
+          "icon": "code"
+        },
+        {
           "title": "Testing",
           "href": "/development/testing",
           "icon": "vial"

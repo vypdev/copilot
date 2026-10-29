@@ -2929,7 +2929,7 @@
       "status": "proposed",
       "scope": "Complete proposed desktop product: 150 required functions, local center, Action integration, shared setup and 803 product cases. H1 establishes builds; H2 implements shared runtime/session/settings/GET services and exact native-browser harnesses. Full product/core acceptance and signed delivery remain separate gates.",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-28",
+      "lastVerified": "2026-10-29",
       "specs": [
         "specs/github-browser-extension.md",
         "specs/github-browser-extension-action-integration.md",
@@ -3071,7 +3071,35 @@
         "extension/src/presentation/RepositoryPreferencesPanel.svelte",
         "extension/src/presentation/ScopeIdentitySelect.svelte",
         "extension/src/domain/runtime_configuration.ts",
-        "extension/src/application/page_configuration.ts"
+        "extension/src/application/page_configuration.ts",
+        "extension/src/domain/feature_inventory.ts",
+        "extension/src/domain/feature_links.ts",
+        "extension/src/domain/feature_metadata.ts",
+        "extension/src/domain/feature_metadata_center.ts",
+        "extension/src/domain/feature_metadata_ci.ts",
+        "extension/src/domain/feature_metadata_code.ts",
+        "extension/src/domain/feature_metadata_copilot.ts",
+        "extension/src/domain/feature_metadata_issue.ts",
+        "extension/src/domain/feature_metadata_nav.ts",
+        "extension/src/domain/feature_metadata_notify.ts",
+        "extension/src/domain/feature_metadata_release.ts",
+        "extension/src/domain/feature_metadata_review.ts",
+        "extension/src/domain/feature_metadata_search.ts",
+        "extension/src/domain/feature_metadata_setup.ts",
+        "extension/src/domain/feature_metadata_types.ts",
+        "extension/src/domain/feature_metadata_work.ts",
+        "extension/src/domain/feature_text_es.ts",
+        "extension/src/domain/feature_text_fr.ts",
+        "extension/src/domain/feature_text_pt.ts",
+        "extension/src/domain/inventory_copy.ts",
+        "extension/src/domain/inventory_filters.ts",
+        "extension/src/presentation/FeatureDetailPage.svelte",
+        "extension/src/presentation/FeatureFavorite.svelte",
+        "extension/src/presentation/FeatureInventoryPage.svelte",
+        "extension/src/presentation/FeaturePreferenceEditor.svelte",
+        "extension/src/presentation/FeatureProvenance.svelte",
+        "extension/src/presentation/InventoryFilters.svelte",
+        "extension/src/presentation/InventorySelect.svelte"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3162,7 +3190,10 @@
         "extension/test/integration/legacy_center_upgrade.test.ts",
         "extension/test/contracts/runtime_configuration.test.ts",
         "extension/test/integration/page_configuration.test.ts",
-        "extension/test/integration/content_configuration.test.ts"
+        "extension/test/integration/content_configuration.test.ts",
+        "extension/test/contracts/feature_inventory.test.ts",
+        "extension/test/integration/feature_inventory.test.ts",
+        "extension/test/integration/artifact_proof.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",
@@ -3193,7 +3224,8 @@
         "docs/development/browser-extension.mdx",
         "extension/README.md",
         "docs/browser-extension/runtime.mdx",
-        "docs/browser-extension/configuration.mdx"
+        "docs/browser-extension/configuration.mdx",
+        "docs/browser-extension/features.mdx"
       ]
     }
   ]

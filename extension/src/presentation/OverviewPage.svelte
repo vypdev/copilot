@@ -6,8 +6,8 @@
 </script>
 <p>{m.welcome}</p>
 <ul class="cards">
-    {#each ['appearance', 'language', 'profiles', 'data'] as destination}
-        <li><a href={centerLocationHash({ route: destination })}>{context.copy.routes[destination as 'appearance' | 'language' | 'profiles' | 'data']}</a></li>
+    {#each ['features', 'appearance', 'language', 'profiles', 'data'] as destination}
+        <li><a href={centerLocationHash({ route: destination })}>{context.copy.routes[destination as 'features' | 'appearance' | 'language' | 'profiles' | 'data']}</a></li>
     {/each}
 </ul>
 <p><span>{m.profiles}</span>: <strong>{context.settings.center.profiles.length}</strong></p>

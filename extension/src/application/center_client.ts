@@ -26,6 +26,7 @@ export class CenterClient {
     private value: CenterClientView = deepFreeze({ phase: 'loading', data: null, review: null, issue: null });
     constructor(private readonly port: CenterClientPort) {}
     get view(): CenterClientView { return this.value; }
+    invalidateConnections(): void { if (!this.stopped) this.update({ connections: null }); }
     subscribe(listener: (view: CenterClientView) => void): () => void {
         if (this.listeners.size >= 8) throw new Error('center-subscriber-capacity');
         this.listeners.add(listener); listener(this.value); return () => { this.listeners.delete(listener); };
@@ -104,7 +105,9 @@ export class CenterClient {
                 acknowledgement: 'unknown', current: identity.controllerEpoch === owner.controllerEpoch && identity.credentialEpoch === owner.credentialEpoch });
             this.attempted = null;
         }
-        this.update({ data: { ...data, role: identity.role }, role: identity.role, review, issue: null });
+        const connections = this.value.connections;
+        this.update({ data: { ...data, role: identity.role }, role: identity.role, review, issue: null,
+            ...(connections?.state === 'ready' && connections.credentialEpoch !== identity.credentialEpoch ? { connections: null } : {}) });
     }
     async takeControl(): Promise<void> {
         if (this.stopped || this.busy || !this.owner) return;
@@ -191,7 +194,7 @@ export class CenterClient {
     stop(): void {
         if (this.stopped) return;
         this.stopped = true; this.generation++; this.pending = null; this.attempted = null; this.listeners.clear();
-        const owner = this.owner; this.owner = null; this.update({ phase: 'stopped', review: null });
+        const owner = this.owner; this.owner = null; this.update({ phase: 'stopped', review: null, connections: null });
         if (owner) void this.request({ version: 1, method: 'center.close', clientId: owner.clientId, controllerEpoch: owner.controllerEpoch });
     }
 }

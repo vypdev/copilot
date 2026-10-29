@@ -37,12 +37,13 @@ export class NamedSessions {
     private view(vault: SessionVault): ConnectionOutcome {
         const selected = vault.entries.find(entry => entry.id === vault.selected);
         const verified = this.active.verifiedIdentity();
-        if (!selected || !verified || !this.active.matches(selected.connection)) return connectionsView(vault, false);
+        const epoch = this.active.status().epoch;
+        if (!selected || !verified || !this.active.matches(selected.connection)) return connectionsView(vault, false, epoch);
         // A restored connection may have a new canonical name or organization owner.
         // Current effective context uses the verified facts, never stale vault metadata.
         const { organizationId: _oldOrganization, ...previous } = selected.connection;
         return connectionsView({ ...vault, entries: vault.entries.map(entry => entry.id === selected.id
-            ? { ...entry, connection: { ...previous, ...verified } } : entry) }, true);
+            ? { ...entry, connection: { ...previous, ...verified } } : entry) }, true, epoch);
     }
     async read(current: () => boolean): Promise<ConnectionOutcome> {
         try {

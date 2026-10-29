@@ -76,3 +76,14 @@ it('blocks implicit resource/submit attributes even when their operand is a loca
         expect(() => componentScript(name, source)).toThrow(/presentation-(?:resource-attribute|active-element)/u);
     }
 });
+
+it('accepts only the closed feature-reference builder from its exact domain module; arbitrary URLs and forged/shadowed builders stay rejected', () => {
+    const safe = '<script>import {featureReferenceLink as reference} from "../domain/feature_links.ts";</script><a href={reference({kind:"milestone",id:"BEX-NAV-01"})}>Milestone</a>';
+    expect(() => componentScript(name, safe)).not.toThrow();
+    for (const source of [
+        safe.replace('../domain/feature_links.ts', './foreign.ts'),
+        safe.replace('featureReferenceLink as reference', 'other as reference'),
+        '<script>import {featureReferenceLink as reference} from "../domain/feature_links.ts";let {items}=$props();</script>{#each items as reference}<a href={reference()}>Bad</a>{/each}',
+        '<a href={`https://github.com/vypdev/copilot/issues/${id}`}>Bad</a>',
+    ]) expect(() => componentScript(name, source)).toThrow(/presentation-(?:unchecked-navigation|markup-authority)/u);
+});

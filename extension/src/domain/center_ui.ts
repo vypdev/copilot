@@ -4,6 +4,7 @@ import type { CenterLocation } from './center_routes.ts';
 import type { ReviewActions } from './center_review.ts';
 import type { ConnectionActions } from './connection_ui.ts';
 import type { ConnectionOutcome } from './named_sessions.ts';
+import type { InventoryNavigationState } from './inventory_filters.ts';
 
 export interface CenterActions extends ReviewActions {
     readonly connections: ConnectionActions;
@@ -15,10 +16,12 @@ export interface CenterActions extends ReviewActions {
     exportSettings(): Promise<boolean>;
     importSettings(revision: number): Promise<boolean>;
     focusContent(): void;
+    browseInventory(value: InventoryNavigationState): void;
 }
 export interface CenterRouteContext {
     readonly connections?: ConnectionOutcome | null;
     readonly settings: Settings; readonly copy: CenterCopy; readonly editable: boolean;
     readonly location: CenterLocation; readonly rollbackAvailable: boolean;
+    readonly inventory: InventoryNavigationState; readonly hasDraft: boolean;
 }
 export interface CenterRouteProps { context: CenterRouteContext; actions: CenterActions }

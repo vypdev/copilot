@@ -65,9 +65,9 @@ it('reports a failed download and still allows a later explicit export', async (
     button('Exportar preferencias locales').click(); await ready(() => document.body.textContent?.includes('No se ha podido descargar') === true);
     expect(document.body.textContent).not.toContain('private-download-error');
 });
-it.each(['help', 'about', 'recovery', 'features'])('opens the %s route with useful information and honest unfinished-state copy', async route => {
+it.each(['help', 'about', 'recovery', 'work'])('opens the %s route with useful information and honest unfinished-state copy', async route => {
     await render(route); await ready(() => document.querySelector('main a')?.textContent === 'Abrir documentación');
-    if (route === 'features') expect(document.body.textContent).toContain('Esta sección sigue en desarrollo');
+    if (route === 'work') expect(document.body.textContent).toContain('Esta sección sigue en desarrollo');
     else expect(document.body.textContent).toContain('Los cambios se revisan antes de guardarse.');
     if (route === 'recovery') [...document.querySelectorAll('button')].filter(node => node.textContent === 'Consultar configuración actual').at(-1)!.click();
 });

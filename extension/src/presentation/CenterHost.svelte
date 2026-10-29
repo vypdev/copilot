@@ -12,6 +12,7 @@
     let Page = $state.raw<Component<CenterRouteProps> | null>(null);
     let loadFailed = $state(false);
     const route = $derived(frame.location.route);
+    const routeDetail = $derived(frame.location.detail);
     const copy = $derived(frame.copy);
     const data = $derived(frame.client.data);
     const role = $derived(frame.client.role === undefined ? data?.role : frame.client.role);
@@ -21,8 +22,9 @@
     onMount(() => surface.subscribe(value => { frame = value; }));
     $effect(() => {
         const destination = route;
+        const detail = routeDetail;
         let current = true; Page = null; loadFailed = false;
-        void surface.load(destination).then(value => { if (current) Page = value; }, () => { if (current) loadFailed = true; });
+        void surface.load(destination, detail).then(value => { if (current) Page = value; }, () => { if (current) loadFailed = true; });
         return () => { current = false; };
     });
 </script>
@@ -55,7 +57,8 @@
             {#if route === 'connections' || route === 'repositories'}
                 {#if route === 'repositories' && data?.settings && data.state === 'ready'}
                     <RepositoryPreferencesPanel context={{ settings: data.settings, copy, editable: editable && !frame.hasDraft,
-                        location: frame.location, rollbackAvailable: data.rollbackAvailable, connections: frame.client.connections }} actions={surface.actions}/>
+                        location: frame.location, rollbackAvailable: data.rollbackAvailable, connections: frame.client.connections,
+                        inventory: frame.inventory, hasDraft: frame.hasDraft }} actions={surface.actions}/>
                 {/if}
                 <ConnectionsPanel view={frame.client.connections ?? null} locale={copy.locale} {busy}
                     editable={!busy && frame.client.role === 'editor' && !frame.client.review} actions={surface.actions.connections}/>
@@ -63,7 +66,8 @@
                 {#if loadFailed}<p role="alert">{copy.messages.unavailable}</p>
                 {:else if Page}
                     {#key `${route}/${frame.location.detail ?? ''}/${frame.draftEpoch}`}
-                        <Page context={{ settings: data.settings, copy, editable, location: frame.location, rollbackAvailable: data.rollbackAvailable, connections: frame.client.connections }} actions={surface.actions}/>
+                        <Page context={{ settings: data.settings, copy, editable, location: frame.location, rollbackAvailable: data.rollbackAvailable, connections: frame.client.connections,
+                            inventory: frame.inventory, hasDraft: frame.hasDraft }} actions={surface.actions}/>
                     {/key}
                 {:else}<p role="status">{copy.messages.loading}</p>{/if}
             {:else if data}

@@ -20,9 +20,11 @@ it('actual background/center/content composition applies verified density and dr
     vi.mocked(h.api.runtime.sendMessage).mockImplementation(message => h.call(message, pageSender));
     const stop = startContent(h.api, dom.window, dom.document)!; cleanups.push(stop);
     await vi.waitFor(() => expect(panel(dom.document)?.dataset.copilotDensity).toBe('compact'));
+    expect(panel(dom.document)!.textContent).toContain('Connected for this browser session.');
     expect(panel(dom.document)!.style.padding).toBe('0.5rem'); const providerCalls = h.provider.mock.calls.length;
     dom.document.querySelector<HTMLMetaElement>('meta[name="user-login"]')!.content = 'other';
     await vi.waitFor(() => expect(panel(dom.document)?.dataset.copilotDensity).toBe('comfortable'));
+    expect(panel(dom.document)!.textContent).toContain('optional connection is disconnected');
     expect(h.provider).toHaveBeenCalledTimes(providerCalls);
     expect(dom.document.body.textContent).not.toContain('Private profile name');
     expect(dom.document.querySelector('textarea')!.value).toContain('draft');

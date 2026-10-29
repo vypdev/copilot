@@ -19,6 +19,7 @@ export interface ConnectionSummary {
 export interface ConnectionsView {
     readonly state: 'ready'; readonly revision: number; readonly selected: string | null;
     readonly connected: boolean; readonly entries: readonly ConnectionSummary[];
+    readonly credentialEpoch?: number;
 }
 export type ConnectionIntent = { readonly type: 'connect'; readonly name: string; readonly secret: string; readonly repository: string }
     | { readonly type: 'select' | 'remove'; readonly id: string }
@@ -47,8 +48,9 @@ export function validVault(value: unknown): value is SessionVault {
     }
     return value.selected === null || (typeof value.selected === 'string' && ids.has(value.selected));
 }
-export function connectionsView(vault: SessionVault, connected: boolean): ConnectionsView {
+export function connectionsView(vault: SessionVault, connected: boolean, credentialEpoch?: number): ConnectionsView {
     return deepFreeze({ state: 'ready', revision: vault.revision, selected: vault.selected, connected,
+        ...(credentialEpoch === undefined ? {} : { credentialEpoch }),
         entries: vault.entries.map(({ connection, ...entry }) => ({ ...entry, viewerId: connection.viewerId, viewerLogin: connection.viewerLogin,
             repositoryId: connection.repositoryId, repository: connection.repository,
             ...(connection.organizationId === undefined ? {} : { organizationId: connection.organizationId }) })) });
@@ -58,7 +60,9 @@ export function decodeConnections(value: unknown): ConnectionOutcome | null {
     if (value.state !== 'ready') return keys(value, ['state']) && Object.keys(value).length === 1
         && ['invalid', 'capacity', 'conflict', 'stale', 'unavailable', 'denied', 'unknown', 'limited', 'cooldown', 'budget'].includes(value.state as string)
         ? value as unknown as ConnectionOutcome : null;
-    if (!keys(value, ['state', 'revision', 'selected', 'connected', 'entries']) || Object.keys(value).length !== 5 || !natural(value.revision)
+    if (!keys(value, ['state', 'revision', 'selected', 'connected', 'entries', 'credentialEpoch'])
+        || Object.keys(value).length !== (Object.hasOwn(value, 'credentialEpoch') ? 6 : 5) || !natural(value.revision)
+        || Object.hasOwn(value, 'credentialEpoch') && !natural(value.credentialEpoch)
         || typeof value.connected !== 'boolean' || !Array.isArray(value.entries) || value.entries.length > NAMED_SESSION_LIMIT
         || Object.keys(value.entries).length !== value.entries.length) return null;
     const ids = new Set<string>(); const names = new Set<string>();
@@ -71,5 +75,6 @@ export function decodeConnections(value: unknown): ConnectionOutcome | null {
     }
     if (!(value.selected === null || (typeof value.selected === 'string' && ids.has(value.selected))) || (value.connected && value.selected === null)) return null;
     return deepFreeze({ state: 'ready', revision: value.revision, connected: value.connected, selected: value.selected as string | null,
+        ...(Object.hasOwn(value, 'credentialEpoch') ? { credentialEpoch: value.credentialEpoch } : {}),
         entries: value.entries.map(entry => ({ ...entry })) }) as ConnectionsView;
 }

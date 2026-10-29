@@ -6,5 +6,5 @@ export interface CenterSurface {
     readonly initial: CenterFrame;
     readonly actions: CenterActions;
     subscribe(listener: (frame: CenterFrame) => void): () => void;
-    load(route: CenterRoute): Promise<Component<CenterRouteProps>>;
+    load(route: CenterRoute, detail?: string): Promise<Component<CenterRouteProps>>;
 }

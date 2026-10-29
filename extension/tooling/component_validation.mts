@@ -34,10 +34,12 @@ export function componentScript(name: string, source: string): string {
     const scripts = [ast!.module, ast!.instance].filter(script => script !== undefined && script !== null);
     const links = new Set<string>();
     for (const script of scripts) for (const statement of script!.content.body) {
-        if (statement.type === 'ImportDeclaration' && typeof statement.source.value === 'string'
-            && path.posix.normalize(path.posix.join(path.posix.dirname(name), statement.source.value)) === 'extension/src/domain/center_routes.ts') {
+        if (statement.type === 'ImportDeclaration' && typeof statement.source.value === 'string') {
+            const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(name), statement.source.value));
+            const checked = resolved === 'extension/src/domain/center_routes.ts' ? 'centerLocationHash'
+                : resolved === 'extension/src/domain/feature_links.ts' ? 'featureReferenceLink' : null;
             for (const specifier of statement.specifiers) if (specifier.type === 'ImportSpecifier'
-                && specifier.imported.type === 'Identifier' && specifier.imported.name === 'centerLocationHash') links.add(specifier.local.name);
+                && specifier.imported.type === 'Identifier' && specifier.imported.name === checked) links.add(specifier.local.name);
         }
     }
     function visit(value: unknown, binding = false): void {

@@ -10,6 +10,8 @@ it('separates validated protected vault records from immutable nonsecret center 
     expect(view.entries[0]).toMatchObject({ name: '<Work>', viewerId: '1', repositoryId: '7' });
     expect(JSON.stringify(view)).not.toContain(CONNECTED.secret); expect(Object.isFrozen(view.entries[0])).toBe(true);
     expect(decodeConnections(view)).toEqual(view);
+    const current = connectionsView(vault, true, 4); expect(decodeConnections(current)).toEqual(current);
+    for (const credentialEpoch of [-1, '4', undefined]) expect(decodeConnections({ ...current, credentialEpoch })).toBeNull();
     expect(decodeConnections({ ...view, secret: CONNECTED.secret })).toBeNull();
     expect(decodeConnections({ ...view, entries: [{ ...view.entries[0], secret: CONNECTED.secret }] })).toBeNull();
 });

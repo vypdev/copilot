@@ -15,6 +15,7 @@ import { loadCenterPage } from './center_pages.ts';
 import { downloadCenterSettings, readCenterImport } from './center_files.ts';
 import { buildSourceIdentity } from './build_identity.ts';
 import { connectionActions } from './center_connections.ts';
+import { EMPTY_INVENTORY_NAVIGATION } from '../domain/inventory_filters.ts';
 
 /** Native options-page composition. The UI receives preferences and callbacks, never reusable authority. */
 export function startCenter(api: BrowserApi, document: Document, nativeLanguage: string): () => void {
@@ -26,13 +27,15 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     }
     const client = new CenterClient({ sourceTree: buildSourceIdentity(), send: message => api.runtime.sendMessage(message) });
     let stopped = false; let draftEpoch = 0; let savedRevision = -1; let savedCandidate: Settings | null = null; let importGeneration = 0;
+    let inventory = EMPTY_INVENTORY_NAVIGATION;
+    let connectionReadPending = false;
     const listeners = new Set<Parameters<CenterSurface['subscribe']>[0]>();
     const focus = (selector: string) => { void tick().then(() => { if (!stopped) document.querySelector<HTMLElement>(selector)?.focus(); }); };
     const navigation = new CenterNavigation(window.location.hash, {
         replace: hash => { window.history.replaceState(null, '', `${canonical}${hash}`); },
         changed: () => { publish(); focus(navigation.pendingLocation ? '[role=alert] button' : 'main h1'); readConnections(); },
     });
-    const frame = () => centerFrame(client.view, navigation.location, navigation.pendingLocation, nativeLanguage, draftEpoch, navigation.hasDraft);
+    const frame = () => centerFrame(client.view, navigation.location, navigation.pendingLocation, nativeLanguage, draftEpoch, navigation.hasDraft, inventory);
     function publish(): void {
         if (stopped) return;
         const value = frame(); document.documentElement.lang = value.copy.locale; document.title = value.copy.messages.title;
@@ -48,6 +51,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
             if (client.view.phase !== 'committing') void client.dismiss().then(() => { if (!stopped) navigation.leave(); });
         },
         focusContent: () => { document.querySelector<HTMLElement>('main')?.focus(); },
+        browseInventory: value => { inventory = value; publish(); },
         exportSettings: async () => downloadCenterSettings(document, client.view.data?.settings ?? null),
         importSettings: async revision => {
             const origin = navigation.location; const epoch = draftEpoch; const generation = ++importGeneration;
@@ -63,14 +67,22 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
             savedRevision = savedCandidate.revision; savedCandidate = null; draftEpoch++; navigation.dirty(false);
         }
         publish();
+        if (connectionReadPending && view.phase === 'ready' && !view.review) queueMicrotask(() => {
+            if (stopped || !connectionReadPending || client.view.phase !== 'ready' || client.view.review) return;
+            connectionReadPending = false; readConnections();
+        });
         if (view.review?.state === 'preview') focus('#settings-review-heading');
     });
     const surface: CenterSurface = { initial: frame(), actions, load: loadCenterPage,
         subscribe: listener => { listeners.add(listener); listener(frame()); return () => { listeners.delete(listener); }; } };
     const host = mount(CenterHost, { target: document.body, props: { surface } }); flushSync();
-    function readConnections(): void { if (['connections', 'repositories', 'profiles'].includes(navigation.location.route)) void client.connections(); }
+    function readConnections(): void { if (['connections', 'repositories', 'profiles', 'features'].includes(navigation.location.route)) void client.connections(); }
     const hash = () => navigation.navigate(window.location.hash);
-    const visible = () => { if (document.visibilityState !== 'hidden') void client.refresh(); };
+    const visible = () => {
+        if (stopped) return;
+        client.invalidateConnections();
+        if (document.visibilityState !== 'hidden') { connectionReadPending = true; void client.refresh(); }
+    };
     const changed = (changes: Record<string, unknown>, area: string) => { if (area === 'local' && Object.hasOwn(changes, SETTINGS_KEY)) visible(); };
     const invalidated: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender) => {
         if (sender.id === api.runtime.id && !sender.tab && record(value) && keys(value, ['version', 'method'])

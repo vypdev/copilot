@@ -4,6 +4,7 @@ import { mount, unmount, flushSync, tick, type Component } from 'svelte';
 import CenterHost from '../../src/presentation/CenterHost.svelte';
 import InformationPage from '../../src/presentation/InformationPage.svelte';
 import AppearancePage from '../../src/presentation/AppearancePage.svelte';
+import FeatureDetailPage from '../../src/presentation/FeatureDetailPage.svelte';
 import type { CenterSurface } from '../../src/presentation/center_surface.ts';
 import type { CenterActions, CenterRouteProps } from '../../src/domain/center_ui.ts';
 import type { CenterClientView } from '../../src/domain/center_client_view.ts';
@@ -20,7 +21,7 @@ async function client() { const h = centerClientFixture(); clients.push(h); awai
 function render(view: CenterClientView, load: CenterSurface['load'] = async () => InformationPage) {
     const listeners = new Set<(frame: CenterFrame) => void>(); let frame = centerFrame(view, { route: 'help' }, null, 'en');
     const actions: CenterActions = { connections: { connect: vi.fn(), change: vi.fn(), refresh: vi.fn(), dirty: vi.fn() }, preview: vi.fn(), dirty: vi.fn(), takeControl: vi.fn(), stay: vi.fn(), leave: vi.fn(), confirm: vi.fn(), cancel: vi.fn(), dismiss: vi.fn(),
-        reload: vi.fn(), focusContent: vi.fn(), exportSettings: vi.fn(async () => false), importSettings: vi.fn(async () => false) };
+        reload: vi.fn(), focusContent: vi.fn(), browseInventory: vi.fn(), exportSettings: vi.fn(async () => false), importSettings: vi.fn(async () => false) };
     const unsubscribe = vi.fn(); const surface: CenterSurface = { initial: frame, actions, load,
         subscribe: listener => { listeners.add(listener); listener(frame); return () => { listeners.delete(listener); unsubscribe(); }; } };
     const host = mount(CenterHost, { target: document.body, props: { surface } }); mounts.push(host); flushSync();
@@ -61,4 +62,10 @@ it('an unavailable opening result shows recovery after loading finishes and neve
     const h = centerClientFixture(); clients.push(h); h.port.send.mockResolvedValueOnce(null); await h.client.start();
     render(h.client.view); await ready(() => document.querySelector('.toolbar [role=status]')?.textContent === 'Recovery');
     expect(document.querySelector('form')).toBeNull(); expect(document.querySelector('.revision')).toBeNull();
+});
+it('an unavailable metadata detail shows recovery without inventing another feature or editable defaults', async () => {
+    const h = await client(); const view = render(h.client.view, async () => FeatureDetailPage);
+    view.publish(centerFrame(h.client.view, { route: 'features', detail: 'missing' }, null, 'en'));
+    await ready(() => !!document.querySelector('main [role=alert]'));
+    expect(document.querySelector('[data-feature-detail]')).toBeNull(); expect(document.querySelector('form')).toBeNull();
 });

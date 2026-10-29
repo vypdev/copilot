@@ -24,7 +24,9 @@ export function startContent(api: BrowserApi, window: Window, document: Document
     const runtime = new FeatureRuntime([{ id: 'runtime-health', enabled: () => true,
         mount: (context, scope) => {
             const copy = { ...runtimeCopy(context.settings.locale === 'auto' ? window.navigator.language : context.settings.locale), sourceTree: buildSourceIdentity() };
-            return mountRuntimePanel(context, scope, api, document, { ...copy, ready: enabled, standalone: enabled ? copy.standalone : copy.unavailable }, (state, retryAt) => statusText(state, copy, retryAt), native);
+            const connected = configuration !== null && configuration.connected;
+            return mountRuntimePanel(context, scope, api, document, { ...copy, ready: enabled,
+                standalone: !enabled ? copy.unavailable : connected ? copy.connected : copy.standalone }, (state, retryAt) => statusText(state, copy, retryAt), native);
         } }], { scope: valid => new BrowserResourceScope(valid), diagnostic: () => { enabled = false; } });
     const release = () => {
         if (generation && scopeKey) void api.runtime.sendMessage({ version: 1, method: 'page.release', generation }).catch(() => undefined);

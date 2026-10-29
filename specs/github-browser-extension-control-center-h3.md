@@ -916,3 +916,110 @@ and [testing guidance](https://svelte.dev/docs/svelte/testing) guide mount/dispo
 and component tests. [Chrome options](https://developer.chrome.com/docs/extensions/develop/ui/options-page)
 and [Mozilla options](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/user_interface/Options_pages)
 describe native entrypoints; actual target receipts remain independently required.
+
+## Implementation refinement — complete local inventory (2026-10-29)
+
+The Features route now serves the complete 150 canonical records, with purpose
+and safeguards in en/es/fr/pt. Packaged metadata retains the exact IDs, modes,
+permissions, optional browser grants, native target and English outcome/boundary
+from each family contract. Parity tests detect drift; localized title/description
+resources cover every ID. High-level native surface tags span categories rather
+than equating a family with one surface. These are discovery records, never
+implementations or permission grants. No later-milestone module is activated.
+
+```text
+Local inventory → combined filters in the displayed context → lazy detail
+ → effective saved value and winning source → reviewed preference/favorite
+ → current revision confirmation → observed saved result
+```
+
+Search is case/accent-insensitive across all 150 IDs, localized content and source
+labels, bounded to 200 characters. Category, multi-surface, capability, required
+access, implementation, source, winning-profile and enabled/disabled/paused
+filters compose. Results announce counts/range, use25-record pages and reset to
+page 1 when filters change. No-match and clear-filter recovery are explicit.
+Search/filter/page state is memory-only in this options instance and survives a
+visit to a detail and back. It is absent from URLs, exported preferences and
+browser history. The overview links to Features. Details load as a distinct
+packaged component through literal imports; source-bound late-load fencing remains.
+
+The phase label separates all 14 current H3 capabilities still in progress from
+136 later-milestone functions, with their exact existing issues. It never claims
+full implementation from a saved boolean, existing subflow, catalog count or
+rendered button. Links to current tools are present only for useful implemented
+local routes; unfinished workflows get their milestone, not a placeholder
+activation. Required access and optional permissions remain requirements, with
+an explicit statement that this view certifies no grant. Native and full product
+acceptance remain unproven, as do future transient/session/tab/emergency controls.
+The current host still gates feature pages when settings are future/corrupt or
+unavailable; read-only discovery in those recovery states remains required before
+H3 acceptance and must not be solved by fabricating editable default preferences.
+
+Per-feature values use the shared resolver and selected verified context. The
+view names its account/repository or personal/github.com scope. A profile filter
+matches the winning profile here, not an implicit profile switch. Profile names
+are escaped text and local links use the closed route builder. The global editor
+plans one known boolean or explicit inheritance (delete that override), preserves
+other preferences, and retains inherited pause. An unsaved choice guards
+navigation and blocks an unrelated favorite review. Favorites retain order,
+accept at most 20 distinct known IDs and always use the existing current-revision
+preview/confirm transaction. Observer/dirty/capacity/stale states cannot become
+mutation authority through DOM interference.
+
+Connection projections now carry the current optional credentialEpoch fact,
+separate from persisted vault schema and all secrets. The manager stamps current
+views; the client drops a ready projection whose absent/different epoch does not
+match its freshly read native controller document. Old five-field views remain
+parsable for compatibility but cannot survive that client freshness check as
+verified context. Foreground/invalidation refresh rereads current connections on
+relevant routes. Both retained and delayed pre-revocation projections are tested;
+failed/unknown mutations are not retried. No credential reaches metadata/content.
+The runtime health panel also uses existing localized connected copy only when
+its current validated configuration establishes that connection.
+
+Authored navigation remains constrained. Every local data-dependent link calls
+centerLocationHash. Two external reference kinds use featureReferenceLink:
+registered feature ID → exact existing milestone issue, or its fixed product
+contract file under vypdev/copilot. The helper accepts no host/ref/path/URL,
+rejects extra fields, and has pure boundary tests. The component AST gate admits
+only that exact named import from its canonical domain module alongside the
+existing local builder; generic expressions, forged imports, shadowing and
+resource URLs remain rejected. No remote SPA, new endpoint or browser grant is
+introduced.
+
+This refinement adds a minimum 24 distinct risk cases to the implementation
+campaign: 6 pure filter/provenance/planning/pagination cases, 6 metadata/locale/
+closed-link contract cases, 8 mounted discovery/review/navigation/favorite/role
+journeys, and 4 freshness/race/architecture cases. Matrix repetitions and metadata
+presence cannot substitute for feature implementations or the unchanged 160
+risk floor,56+56 CENTER obligations and full 803 product baseline.
+
+| Requirement | Current owners and executable evidence | User guidance |
+|---|---|---|
+| H3-R02 | feature_metadata*, feature_text*, feature_inventory; feature_inventory.test.ts contract and mounted integration; exact150 parity, search, surfaces, phases, lazy details and no-match recovery | features.mdx |
+| H3-R03/R04 | shared profile resolver/context, FeatureProvenance/FeaturePreferenceEditor; verified scope/source and reviewed override/inheritance/pause tests | features.mdx, configuration.mdx |
+| H3-R05/R11 | named_sessions/center_client credential epoch; retained/delayed stale-view regressions and no credential in messages | features.mdx |
+| H3-R06 | bounded favorite intents and reviewed UI; limit 20, removal at capacity, dirty/observer and full-inventory filtering | features.mdx |
+| H3-R10 | complete four-locale inventory/copy contracts and mounted details; required human/native evidence still pending | features.mdx, development guide |
+
+Metadata, mounted tests, canonical catalog code/test paths and the registered
+feature guide change together. Run specifications/catalog, documentation/routes,
+types/Svelte, lint, full extension coverage, normal root hooks, source-bound
+three-target reproducibility and Graphify. Source-controlled assertions do not
+constitute browser loading, native UX or remote Codecov proof.
+
+Inventory verification also exposed repeated parsing of large bundles on a later
+target receipt mismatch. Artifact validation now admits each target’s bounded
+shape and hashes first, then requires successful JavaScript/style/import checks.
+A fixed process-local cache of at most 12 successful proofs can reuse the same
+check for identical target, complete filename/byte hashes and policy function
+identities. It retains no source text, disk path, receipt assertion or failure.
+Caller maps are snapshotted; target shape, receipt metadata, every asset hash and
+source-tagged chunk identity are always checked afresh. Receipt hashes alone
+never authorize code. Six guard regressions cover exact reuse, changed bytes,
+target/permission identity, failed JS/CSS, file/import graph changes, policy
+replacement and bounded eviction. A receipt regression rejects a later-target
+hash mismatch before unrelated parsing and still rejects rehashed executable
+authority after hashes match; no cap or timeout is raised. Native invalidation
+and foreground refresh clear session projections before awaits, with one queued
+current-state read after the client is ready. Stop drops private connection data.
