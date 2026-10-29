@@ -115,9 +115,27 @@ selects its `bin/java` (`java.exe` on Windows), including installations not on
 `PATH`. Python uses `python3` on Linux/macOS and `python` on Windows; pnpm uses the
 installed Windows command shim via fixed `cmd.exe` arguments. The isolated
 `HOME`, temporary directories and Windows profile/cache paths remain private.
-`JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS`, `MAVEN_OPTS`, `GRADLE_USER_HOME`,
-`NODE_OPTIONS`, agent auth-store paths and credentials are not inherited. Avoid
-depending on authenticated caches or user-home build settings.
+Inherited Java/Gradle tool options, Node options, agent auth-store paths and
+credentials remain excluded. Copilot derives its own JVM user.home option and
+Gradle user home inside each fresh verification profile, before native setup,
+runtime probes and the configured command. Changing HOME alone is insufficient
+for normal JVM discovery; this correction does not require a wrapper rewrite or
+different verification commands.
+
+The derived `JDK_JAVA_OPTIONS` contains only that private user.home property;
+`GRADLE_USER_HOME` points to the profile's `.gradle` directory. Caller values
+cannot override them. `JAVA_TOOL_OPTIONS`, `_JAVA_OPTIONS`, `GRADLE_OPTS`,
+`MAVEN_OPTS` and `NODE_OPTIONS` remain excluded. Each command starts with new
+private configuration/cache state, retained only until its native post steps
+finish. Provision required dependencies explicitly and avoid authenticated
+account caches or user-home settings.
+
+Upgrade the Action and its canonical coordinator/generated callbacks together
+so native setup also receives these derived values. The setup result still
+accepts only approved PATH directories and JAVA_HOME, with no arbitrary option
+forwarding. Private discovery does not provide an OS sandbox, prevent deliberate
+candidate overrides or relocate Gradle distribution-level init scripts. Existing
+runtime, verification, candidate and publication gates still apply.
 
 If a declared runtime is missing, incompatible or cannot be verified, the
 configured repository command is not executed. The existing result reports,

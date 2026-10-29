@@ -29,8 +29,26 @@ describe('native Actions phase controller', () => {
         expect(core.setOutput).toHaveBeenCalledWith('verification-request', f.id);
         expect(core.setOutput).toHaveBeenCalledWith('verification-home', f.runtime.environment.HOME);
     });
-    it.each([{id: 'wrong'}, {sourceSha: 'wrong'}, {environment: {}}, {environment: {HOME: '\nsecret'}}])('rejects malformed pending request %j', async edit => {
+    it.each(['JDK_JAVA_OPTIONS', 'GRADLE_USER_HOME'])('emits the current profile-derived %s for native setup', async key => {
+        request(); await awaitNativeBoundary(f.session);
+        expect(core.setOutput).toHaveBeenCalledWith(`verification-${key.toLowerCase()}`, f.runtime.environment[key]);
+    });
+    it.each(['JDK_JAVA_OPTIONS', 'GRADLE_USER_HOME'].flatMap(key => ['missing', 'foreign'].map(kind => [key, kind])))(
+        'rejects %s %s before emitting any native metadata', async (key, kind) => {
+            const environment = { ...f.runtime.environment };
+            if (kind === 'missing') delete environment[key];
+            else environment[key] = '/foreign/unapproved';
+            request({ environment });
+            await expect(awaitNativeBoundary(f.session)).rejects.toThrow('handoff-invalid');
+            expect(core.setOutput).not.toHaveBeenCalled();
+        });
+    it.each([{id: 'wrong'}, {sourceSha: 'wrong'}, {environment: {}}, {environment: {HOME: '\nsecret'}}, {environment: {HOME: 'relative'}}])('rejects malformed pending request %j', async edit => {
         request(edit); await expect(awaitNativeBoundary(f.session)).rejects.toThrow('handoff-invalid');
+    });
+    it.each([7, 'invalid\nruntime-metadata'])('rejects malformed ordinary runtime metadata %j after validating the private locations', async value => {
+        request({ environment: { ...f.runtime.environment, PATH: value } });
+        await expect(awaitNativeBoundary(f.session)).rejects.toThrow('handoff-invalid');
+        expect(core.setOutput).not.toHaveBeenCalledWith('verification-path', value);
     });
     it('reports completion and copies native action outputs into the current step', async () => {
         process.env.GITHUB_OUTPUT = join(f.session, 'parent-output'); fs.writeFileSync(join(f.session, 'worker-output'), 'telemetry=value\n'); done();
@@ -52,6 +70,14 @@ describe('native Actions phase controller', () => {
     });
     it('bounds the operation wait without restarting the agent', async () => {
         await expect(awaitNativeBoundary(f.session, 0)).rejects.toThrow('timeout');
+    });
+    it('waits for a live worker before publishing the late request with its current private profile', async () => {
+        jest.spyOn(process, 'kill').mockReturnValue(true);
+        const pause = jest.spyOn(protocol, 'nativePause').mockImplementation(async () => { request(); });
+        await awaitNativeBoundary(f.session);
+        expect(pause).toHaveBeenCalledWith(100);
+        expect(core.setOutput).toHaveBeenCalledWith('verification-gradle_user_home', f.runtime.environment.GRADLE_USER_HOME);
+        expect(core.setOutput).toHaveBeenCalledWith('verification-setup-pending', 'true');
     });
     it('detects a worker that exited before a result or handoff', async () => {
         jest.spyOn(process, 'kill').mockImplementation(() => { throw new Error('not alive'); });
@@ -75,13 +101,31 @@ describe('native Actions phase controller', () => {
     it.each(['success', 'failure', 'cancelled', 'skipped'])('delivers native %s and waits for the existing operation', async outcome => {
         request(); const write = protocol.writeNativeRecord;
         jest.spyOn(protocol, 'writeNativeRecord').mockImplementation((root, name, value) => { write(root, name, value); if (name.startsWith('response-')) write(root, 'done.json', { exitCode: 0 }); });
-        await continueNativeVerification(f.session, f.id, outcome, { PATH: 'approved', JAVA_HOME: 'java' });
+        await continueNativeVerification(f.session, f.id, outcome, {
+            PATH: 'approved', JAVA_HOME: 'java',
+            JDK_JAVA_OPTIONS: '-Duser.home=/foreign', GRADLE_USER_HOME: '/foreign/gradle',
+        });
         expect(protocol.readNativeRecord(f.session, `response-${f.id}.json`)).toEqual({ id: f.id, success: outcome === 'success', path: 'approved', javaHome: 'java' });
         expect(fs.existsSync(join(f.session, 'request.json'))).toBe(false);
     });
     it('rejects a replayed continuation', async () => {
         request(); protocol.writeNativeRecord(f.session, `response-${f.id}.json`, {});
         await expect(continueNativeVerification(f.session, f.id, 'success')).rejects.toThrow('handoff-invalid');
+    });
+    it('delivers a continuation without inherited PATH or JAVA_HOME as an empty closed result', async () => {
+        request(); const write = protocol.writeNativeRecord;
+        jest.spyOn(protocol, 'writeNativeRecord').mockImplementation((root, name, value) => { write(root, name, value); if (name.startsWith('response-')) write(root, 'done.json', { exitCode: 0 }); });
+        await continueNativeVerification(f.session, f.id, 'success', {});
+        expect(protocol.readNativeRecord(f.session, `response-${f.id}.json`)).toEqual({ id: f.id, success: true, path: '' });
+    });
+    it('rejects continuation after the request has disappeared without writing a response', async () => {
+        await expect(continueNativeVerification(f.session, f.id, 'success', {})).rejects.toThrow('handoff-invalid');
+        expect(fs.existsSync(join(f.session, `response-${f.id}.json`))).toBe(false);
+    });
+    it('rejects a malformed snapshot digest before emitting setup metadata', async () => {
+        request({ digest: 'invalid' });
+        await expect(awaitNativeBoundary(f.session)).rejects.toThrow('handoff-invalid');
+        expect(core.setOutput).not.toHaveBeenCalled();
     });
     it('rejects a stale request before signaling the worker', async () => {
         request(); await expect(continueNativeVerification(f.session, 'wrong', 'success')).rejects.toThrow('handoff-invalid');
@@ -122,6 +166,14 @@ describe('native Actions phase controller', () => {
         fs.rmSync(join(f.session, 'session.json')); let now = 0; jest.spyOn(Date, 'now').mockImplementation(() => now++ ? 30_001 : 0);
         await expect(runNativeVerificationEntry(jest.fn())).rejects.toThrow('timeout');
     });
+    it('starts the worker callback after its owner publishes the session', async () => {
+        const session = protocol.nativeSession(f.session); fs.rmSync(join(f.session, 'session.json'));
+        const pause = jest.spyOn(protocol, 'nativePause').mockImplementation(async () => { protocol.writeNativeRecord(f.session, 'session.json', session); });
+        const run = jest.fn().mockResolvedValue(undefined);
+        await runNativeVerificationEntry(run);
+        expect(pause).toHaveBeenCalledWith(10); expect(run).toHaveBeenCalledTimes(1);
+        expect(protocol.readNativeRecord(f.session, 'done.json')).toEqual({ exitCode: 0 });
+    });
     it('rejects a native continuation without a ticket', async () => {
         delete process.env.COPILOT_NATIVE_WORKER_SESSION; process.env.GITHUB_ACTIONS = 'true'; process.env.COPILOT_NATIVE_PHASE = 'continue'; delete process.env.COPILOT_NATIVE_TICKET;
         await expect(runNativeVerificationEntry(jest.fn())).rejects.toThrow('handoff-invalid');
@@ -137,6 +189,24 @@ describe('native Actions phase controller', () => {
     it('finishes failed operations without overriding their status', async () => {
         delete process.env.COPILOT_NATIVE_WORKER_SESSION; process.env.GITHUB_ACTIONS = 'true'; process.env.COPILOT_NATIVE_PHASE = 'finish'; process.env.COPILOT_NATIVE_TICKET = f.session; done(1);
         await runNativeVerificationEntry(jest.fn()); expect(core.setFailed).toHaveBeenCalled();
+    });
+    it('routes a native continuation to the existing worker without replaying the operation', async () => {
+        request(); delete process.env.COPILOT_NATIVE_WORKER_SESSION;
+        process.env.GITHUB_ACTIONS = 'true'; process.env.COPILOT_NATIVE_PHASE = 'continue'; process.env.COPILOT_NATIVE_TICKET = f.session;
+        process.env.COPILOT_NATIVE_REQUEST = f.id; process.env.COPILOT_NATIVE_OUTCOME = 'success';
+        const write = protocol.writeNativeRecord;
+        jest.spyOn(protocol, 'writeNativeRecord').mockImplementation((root, name, value) => { write(root, name, value); if (name.startsWith('response-')) write(root, 'done.json', { exitCode: 0 }); });
+        const run = jest.fn(); await runNativeVerificationEntry(run);
+        expect(run).not.toHaveBeenCalled();
+        expect(protocol.readNativeRecord(f.session, `response-${f.id}.json`)).toMatchObject({ id: f.id, success: true });
+    });
+    it('blocks publication at an exhausted boundary and cancels the pending worker', async () => {
+        delete process.env.COPILOT_NATIVE_WORKER_SESSION; process.env.GITHUB_ACTIONS = 'true'; process.env.COPILOT_NATIVE_PHASE = 'finish'; process.env.COPILOT_NATIVE_TICKET = f.session;
+        jest.spyOn(protocol, 'nativePause').mockImplementation(async () => { done(1); });
+        const run = jest.fn(); await runNativeVerificationEntry(run);
+        expect(run).not.toHaveBeenCalled(); expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Pending verification and subsequent publication are blocked'));
+        expect(protocol.readNativeRecord(f.session, 'cancel.json')).toEqual({ cancelled: true });
+        expect(fs.existsSync(f.session)).toBe(true);
     });
     it('uses the post phase only for cleanup', async () => {
         jest.mocked(core.getState).mockImplementation(key => key === 'copilot-native-post' || key === 'native-verification-owner' ? 'true' : key === 'native-verification-ticket' ? f.session : ''); done(); const run = jest.fn();

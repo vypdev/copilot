@@ -1143,6 +1143,28 @@
         }
       ],
       "successMessage": "unpublished candidate replacement coverage: PASS (100% lines/statements/branches/functions)"
+    },
+    {
+      "name": "Private JVM and Gradle discovery",
+      "missingEntryLabel": "private JVM and Gradle discovery",
+      "rules": [
+        {
+          "files": [
+            "src/infrastructure/private_jvm_environment.ts",
+            "src/infrastructure/untrusted_command_environment.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/infrastructure/native_verification_controller.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "private JVM/Gradle coverage: PASS (encoding/profile100%; native controller95/90)"
     }
   ]
 }
