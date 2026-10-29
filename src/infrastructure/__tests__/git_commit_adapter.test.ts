@@ -143,6 +143,42 @@ describe('GitCommitAdapter', () => {
         expect(fs.existsSync(home)).toBe(false);
     });
 
+    it('retries a failed prerequisite in a fresh private JVM/Gradle profile before allowing one verifier', async () => {
+        const environments: Record<string, string>[] = [];
+        const execute = jest.fn(async (_program, _args, options) => {
+            expect(options.env).toBe(environments[1]);
+            expect(options.env.GRADLE_USER_HOME).toBe(path.join(options.env.HOME, '.gradle'));
+            return 0;
+        });
+        const check = (environment: Record<string, string>): void => {
+            environments.push(environment);
+            expect(environment.JDK_JAVA_OPTIONS).toMatch(/^-Duser\.home=/u);
+            if (environments.length === 1) throw new Error('fixture-prerequisite-blocked');
+        };
+        const adapter = new GitCommitAdapter(execute, check, undefined, async () => {});
+        await expect(adapter.execute('node', ['verification.js'], { untrusted: true, verifyRuntimePrerequisites: true })).rejects.toThrow('fixture-prerequisite-blocked');
+        expect(execute).not.toHaveBeenCalled();
+        expect(fs.existsSync(environments[0].HOME)).toBe(false);
+        await adapter.execute('node', ['verification.js'], { untrusted: true, verifyRuntimePrerequisites: true });
+        expect(environments[1].HOME).not.toBe(environments[0].HOME);
+        expect(environments[1].GRADLE_USER_HOME).not.toBe(environments[0].GRADLE_USER_HOME);
+        expect(environments.every(environment => !fs.existsSync(environment.HOME))).toBe(true);
+        expect(execute).toHaveBeenCalledTimes(1);
+    });
+    it('keeps non-JVM verification available without adding a Java prerequisite', async () => {
+        let home = '';
+        const check = jest.fn(() => { throw new Error('must-not-probe'); });
+        const execute = jest.fn(async (_program, _args, options) => {
+            home = options.env.HOME;
+            expect(options.env.GRADLE_USER_HOME).toBe(path.join(home, '.gradle'));
+            expect(options.env.JDK_JAVA_OPTIONS).toMatch(/^-Duser\.home=/u);
+            return 0;
+        });
+        await new GitCommitAdapter(execute, check).execute('node', ['verification.js'], { untrusted: true });
+        expect(check).not.toHaveBeenCalled();
+        expect(execute).toHaveBeenCalledTimes(1);
+        expect(fs.existsSync(home)).toBe(false);
+    });
     it('rejects preflight outside isolation and does not probe during ordinary trusted git or hook-isolated commits', async () => {
         const execute = jest.fn().mockResolvedValue(0);
         const check = jest.fn();

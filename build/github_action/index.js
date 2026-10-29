@@ -49770,7 +49770,7 @@ Never expose credentials, tokens, private keys, or other secrets in issues, comm
 
 The setup runner profile selects placement; it does not install the project's language runtimes. An operator must provision the project's required runtimes and dependencies in every job that runs file-changing or branch-sync verification, before the Copilot step. A separate application CI job does not prepare this job.
 
-Declare reviewed version prefixes in \`.copilot/verification-prerequisites.json\` (schemaVersion 1, runtimes such as java 17, node 24, pnpm 10). Copilot checks declared versions in the credential-free verification environment before each configured verification command; a missing or incompatible runtime blocks publication. Without this optional declaration, existing verification behavior remains and no language is inferred. Java provisioning may use \`actions/setup-java\`; \`JAVA_HOME\` and \`PATH\` survive isolation, while agent credentials and tool-option injection variables do not. Do not add an unreviewed bootstrap or weaken verification to work around a missing runtime. Read [verification prerequisites and same-job setup](https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-verification-prerequisites).
+Declare reviewed version prefixes in \`.copilot/verification-prerequisites.json\` (schemaVersion 1, runtimes such as java 17, node 24, pnpm 10). Copilot checks declared versions in the credential-free verification environment before each configured verification command; a missing or incompatible runtime blocks publication. Without this optional declaration, existing verification behavior remains and no language is inferred. Java provisioning may use \`actions/setup-java\`; \`JAVA_HOME\` and \`PATH\` survive isolation. Repository verification derives \`JDK_JAVA_OPTIONS\` for its private JVM user.home and \`GRADLE_USER_HOME\` inside the same fresh profile; inherited tool options, account caches and agent credentials remain excluded. Do not add an unreviewed bootstrap or weaken verification to work around a missing runtime. Read [verification prerequisites and same-job setup](https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-verification-prerequisites).
 
 The optional repository-owned composite action prepares each candidate before verification. Setup creates .github/actions/copilot-verification-setup/action.yml only if missing and preserves an existing consumer action and its assets. The shared terminal/web assistant offers explicit activation, disabled by default. Customize the generated failing placeholder before enabling; setup generation and installer PRs do not prove runtime readiness. Review \`.github/actions/copilot-verification-setup/action.yml\` and its assets onto trusted main, update generated workflows, then enable \`VERIFICATION_SETUP=true\` (Action input \`verification-setup\`, disabled by default). GitHub Actions executes the trusted snapshot before each command with a fresh private HOME; candidate changes cannot replace it. Native post steps finish before profile cleanup. Setup failure blocks verification and commit/push. The local CLI cannot execute composite actions and fails closed when opted in. Read [repository-owned setup](https://docs.page/vypdev/copilot/security-operations/operations/verification#repository-owned-setup).
 
@@ -93949,6 +93949,7 @@ const core = __importStar(__nccwpck_require__(75855));
 const node_child_process_1 = __nccwpck_require__(17718);
 const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
+const private_jvm_environment_1 = __nccwpck_require__(46584);
 const agent_private_install_root_1 = __nccwpck_require__(44640);
 const agent_trusted_system_tools_1 = __nccwpck_require__(76049);
 const github_action_input_1 = __nccwpck_require__(57581);
@@ -94033,12 +94034,17 @@ async function awaitNativeBoundary(root, timeoutMs = 7200000) {
             if (!/^[a-f0-9-]{36}$/u.test(request.id) || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(request.sourceSha)
                 || !/^[a-f0-9]{64}$/u.test(request.digest) || !request.environment || typeof request.environment.HOME !== 'string')
                 throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
+            const home = request.environment.HOME;
+            if (!(0, node_path_1.isAbsolute)(home) || /[\r\n\0]/u.test(home)
+                || request.environment.JDK_JAVA_OPTIONS !== (0, private_jvm_environment_1.privateJvmHomeOption)(home)
+                || request.environment.GRADLE_USER_HOME !== (0, node_path_1.join)(home, '.gradle'))
+                throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
             core.setOutput('verification-request', request.id);
             core.setOutput('verification-source', request.sourceSha);
             core.setOutput('verification-digest', request.digest);
             core.saveState('native-verification-digest', request.digest);
             core.saveState('native-verification-source', request.sourceSha);
-            for (const key of ['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'PATH', 'JAVA_HOME', 'TMP', 'TEMP', 'TMPDIR']) {
+            for (const key of ['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'PATH', 'JAVA_HOME', 'JDK_JAVA_OPTIONS', 'GRADLE_USER_HOME', 'TMP', 'TEMP', 'TMPDIR']) {
                 const value = request.environment[key] ?? '';
                 if (typeof value !== 'string' || /[\r\n\0]/u.test(value))
                     throw new verification_setup_policy_1.VerificationSetupError('handoff-invalid');
@@ -94942,6 +94948,30 @@ function writeSpecFile(target, content, exists) {
 
 /***/ }),
 
+/***/ 46584:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.privateJvmHomeOption = privateJvmHomeOption;
+/** Encode one JDK launcher argument, independently of shell/JSON/Windows argv quoting. */
+function privateJvmHomeOption(home) {
+    if (!home || /[\0\r\n]/u.test(home))
+        throw new Error('Private JVM home is invalid.');
+    const value = Array.from(home, character => {
+        if (character === '"')
+            return "'\"'";
+        if (/[\s']/u.test(character))
+            return '"' + character + '"';
+        return character;
+    }).join('');
+    return '-Duser.home=' + value;
+}
+
+
+/***/ }),
+
 /***/ 12471:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -95488,6 +95518,7 @@ exports.prepareUntrustedCommandEnvironment = prepareUntrustedCommandEnvironment;
 const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
 const agent_private_install_root_1 = __nccwpck_require__(44640);
+const private_jvm_environment_1 = __nccwpck_require__(46584);
 const ALLOWED_VARIABLES = [
     'PATH',
     'JAVA_HOME',
@@ -95522,31 +95553,41 @@ const ALLOWED_VARIABLES = [
  * credentials or paths to local agent authentication stores.
  */
 function prepareUntrustedCommandEnvironment(source = process.env, platform = process.platform) {
-    const runtimeHome = (0, node_fs_1.realpathSync)((0, agent_private_install_root_1.createPrivateVerificationRuntimeRoot)());
-    const environment = { HOME: runtimeHome };
-    for (const variable of ALLOWED_VARIABLES) {
-        const value = source[variable];
-        if (value !== undefined)
-            environment[variable] = value;
+    const ownedRoot = (0, agent_private_install_root_1.createPrivateVerificationRuntimeRoot)();
+    try {
+        const runtimeHome = (0, node_fs_1.realpathSync)(ownedRoot);
+        const environment = { HOME: runtimeHome };
+        for (const variable of ALLOWED_VARIABLES) {
+            const value = source[variable];
+            if (value !== undefined)
+                environment[variable] = value;
+        }
+        // These are derived, never inherited tool-option or account-cache settings.
+        environment.JDK_JAVA_OPTIONS = (0, private_jvm_environment_1.privateJvmHomeOption)(runtimeHome);
+        environment.GRADLE_USER_HOME = (0, node_path_1.join)(runtimeHome, '.gradle');
+        (0, node_fs_1.mkdirSync)(environment.GRADLE_USER_HOME, { mode: 0o700 });
+        // Nested fixtures/installers stay inside this command's owned profile.
+        const runtimeTemp = (0, node_path_1.join)(runtimeHome, 'temp');
+        (0, node_fs_1.mkdirSync)(runtimeTemp, { mode: 0o700 });
+        for (const key of ['TMP', 'TEMP', 'TMPDIR', 'RUNNER_TEMP'])
+            environment[key] = runtimeTemp;
+        if (platform === 'win32') {
+            environment.USERPROFILE = runtimeHome;
+            environment.APPDATA = (0, node_path_1.join)(runtimeHome, 'roaming');
+            environment.LOCALAPPDATA = (0, node_path_1.join)(runtimeHome, 'local');
+            for (const directory of [environment.APPDATA, environment.LOCALAPPDATA])
+                (0, node_fs_1.mkdirSync)(directory, { mode: 0o700 });
+            environment.PSModuleAnalysisCachePath = (0, node_path_1.join)(environment.LOCALAPPDATA, 'powershell-module-analysis.cache');
+        }
+        return {
+            environment,
+            cleanup: () => (0, node_fs_1.rmSync)(runtimeHome, { recursive: true, force: true }),
+        };
     }
-    // Nested fixtures/installers must not fall back into host temp directories
-    // whose ancestors may be replaceable by another Windows principal.
-    const runtimeTemp = (0, node_path_1.join)(runtimeHome, 'temp');
-    (0, node_fs_1.mkdirSync)(runtimeTemp, { mode: 0o700 });
-    for (const key of ['TMP', 'TEMP', 'TMPDIR', 'RUNNER_TEMP'])
-        environment[key] = runtimeTemp;
-    if (platform === 'win32') {
-        environment.USERPROFILE = runtimeHome;
-        environment.APPDATA = (0, node_path_1.join)(runtimeHome, 'roaming');
-        environment.LOCALAPPDATA = (0, node_path_1.join)(runtimeHome, 'local');
-        for (const directory of [environment.APPDATA, environment.LOCALAPPDATA])
-            (0, node_fs_1.mkdirSync)(directory, { mode: 0o700 });
-        environment.PSModuleAnalysisCachePath = (0, node_path_1.join)(environment.LOCALAPPDATA, 'powershell-module-analysis.cache');
+    catch (error) {
+        (0, node_fs_1.rmSync)(ownedRoot, { recursive: true, force: true });
+        throw error;
     }
-    return {
-        environment,
-        cleanup: () => (0, node_fs_1.rmSync)(runtimeHome, { recursive: true, force: true }),
-    };
 }
 
 

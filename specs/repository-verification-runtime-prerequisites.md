@@ -199,10 +199,13 @@ irreversible partial success because preflight runs before commit/push.
 
 ## 11. Security, permissions, and privacy
 
-Preserve only JAVA_HOME as additional runtime metadata; PATH remains allowlisted.
-JAVA_TOOL_OPTIONS, JDK_JAVA_OPTIONS, NODE_OPTIONS, MAVEN_OPTS, GRADLE_USER_HOME,
-credentials and auth-store references remain stripped. HOME/temp/profile paths stay
-private. Build tools must not depend on inherited user-home credentials/settings.
+Preserve JAVA_HOME as additional runtime metadata; PATH remains allowlisted.
+Inherited JAVA_TOOL_OPTIONS, JDK_JAVA_OPTIONS, NODE_OPTIONS, MAVEN_OPTS,
+GRADLE_USER_HOME, credentials and auth-store references remain stripped.
+The issue #775 amendment below derives fresh JDK_JAVA_OPTIONS and
+GRADLE_USER_HOME from the private verification profile; it never admits the
+inherited values. HOME/temp/profile paths stay private. Build tools must not
+depend on inherited user-home credentials/settings.
 Manifest reads reject symbolic/hard links, unsafe parents, oversized and changed
 file identities with bounded reads. Device/inode identities MUST use exact 64-bit
 comparisons (BigInt), including values beyond JavaScript number precision. This is not a sandbox against a concurrently
@@ -326,3 +329,189 @@ The [repository-owned setup contract](./repository-verification-setup-hooks.md) 
 ### Source candidate dependency correction — #746
 
 The [source candidate readiness amendment](./branch-synchronization-and-conflict-recovery.md#candidate-dependency-readiness-and-failure-facts--746-2026-10-27) owns the incremental source-only frozen-pnpm preparation and closed sync failure facts. Source runtime bootstrap remains before the Action; source dependencies move to each actual candidate verifier boundary after optional native setup and runtime probes. Consumer setup opt-in, runtime-only declarations and generic no-installer behavior remain unchanged. The amendment owns its incremental test budget and separately authorized default-runtime rollout; do not double count it here.
+
+## 21. Private JVM and Gradle discovery — issue #775 (2026-10-29)
+
+### Decision, evidence and boundaries
+
+Status: implementation contract. Owner: Copilot maintainers. Review gates:
+runtime security, native workflow compatibility, architecture, testing and
+operator documentation. No material design decision remains open.
+
+[Issue #775](https://github.com/vypdev/copilot/issues/775) reports an actual
+macOS/JDK 17 observation: changing HOME alone leaves Java user.home at the OS
+account home. A successful Gradle run with up-to-date tasks and a global init
+message does not prove private discovery or freshly executed tests. No consumer
+native continuation was activated by that report.
+
+A separate Linux/aarch64 exploration with the official Gradle 9.8.2/JDK 17
+image, pinned to digest
+`sha256:2ec771e6a429a3aca72d38aca70a4ea05b41bf4098e4e22868b425a215fa4d0f`,
+reproduces the gap using only a disposable account's harmless init/properties
+sentinels. Explicit derived-variable controls isolate discovery and preserve
+the candidate bytes. Eight additional JDK launcher experiments preserve exact
+synthetic property values containing spaces, quotes and Windows-style
+backslashes. These are exploration controls, not a completed production/native
+acceptance claim.
+
+Primary contracts: [JDK 17 launcher/JDK_JAVA_OPTIONS](https://docs.oracle.com/en/java/javase/17/docs/specs/man/java.html),
+[Gradle user home](https://docs.gradle.org/current/userguide/directory_layout.html),
+[initialization scripts](https://docs.gradle.org/current/userguide/init_scripts.html)
+and [build environment](https://docs.gradle.org/current/userguide/build_environment.html).
+Their discovery rules motivate explicit private locations; they do not establish
+an OS sandbox. Gradle distribution-level initialization, deliberate candidate
+overrides, concurrent same-user access and project verification failures retain
+their existing trust boundaries. No wrapper rewrite, skipped command,
+credential grant, universal Java installer or new configuration input is added.
+
+### Required behavior and architecture
+
+```text
+Admitted verification -> fresh private profile -> derive JVM/Gradle locations
+ -> optional native setup -> fixed runtime probes -> configured command
+ -> existing workspace/head/publication guards -> owned post cleanup
+```
+
+Text equivalent: each command receives a fresh profile and derived locations;
+native setup and the verifier share that profile, and ordinary guards and
+cleanup still decide publication.
+
+1. The infrastructure environment builder MUST derive exactly one JDK launcher
+   property assigning user.home to its canonical private HOME and an absolute
+   GRADLE_USER_HOME inside that same profile. Both apply with setup enabled or
+   disabled, before prerequisite probes and the configured command.
+2. It MUST keep rejecting inherited tool-option injection, including arbitrary
+   JDK_JAVA_OPTIONS/GRADLE_USER_HOME. JAVA_TOOL_OPTIONS, _JAVA_OPTIONS,
+   GRADLE_OPTS, MAVEN_OPTS, NODE_OPTIONS, credentials and auth-store paths do not
+   become allowed inputs. Existing JAVA_HOME/PATH provisioning remains.
+3. JVM option encoding MUST preserve the entire path as one property argument,
+   including whitespace, either quote and literal backslashes. It uses the JDK
+   launcher's own grammar, not shell or JSON escaping. NUL/CR/LF input is rejected
+   with a fixed diagnostic before execution; failure to prepare a profile MUST
+   clean the newly owned directory and withhold verification/publication.
+4. Native pending outputs and canonical setup steps MUST forward only these two
+   host-derived values alongside existing runtime metadata. Setup-result parsing
+   remains closed to approved PATH/JAVA_HOME; consumer or ambient option values
+   MUST NOT replace the worker's derived values or be forwarded as Node
+   continuation controls.
+5. Every later verification command MUST get a different private profile and
+   Gradle state. Cleanup includes the derived Gradle/JVM state and retains native
+   profiles until deferred posts finish. No shared readiness/cache authority or
+   durable configuration is introduced.
+
+The OS/process-specific encoder and environment builder belong to infrastructure;
+they do not add filesystem/process dependencies to domain/application policies.
+Existing Git execution ports, setup/session binding, prerequisite checks,
+candidate/remote-head fences and localized result presenters remain owners.
+Canonical workflow generation and structural mutation checks enforce the closed
+native metadata boundary. Agent-provider environments are a separate contract.
+
+### Product journey, configuration and recovery
+
+| State | Existing primary surface and next action |
+|---|---|
+| Pending | Preparing repository verification; wait for native setup and probes |
+| Action required | Declared Java unavailable: provision it in this job or review the trusted setup; retry the original operation |
+| Blocked | Private profile/setup/probe failed: verification and publication withheld; inspect the linked run |
+| Partial | Candidate prepared but verification failed: existing sync recovery and retained-state report remain authoritative |
+| Complete | Configured checks passed in the private profile; existing publication guards decide the final result |
+| Canceled/retried | Existing cancellation cleanup; a fresh admitted retry creates new state |
+
+Representative existing result: “Repository setup completed; runtime preflight
+and verification may proceed.” Technical acceptance output MAY report only
+booleans such as “JVM home is private: true” and “candidate unchanged: true”. It
+MUST NOT copy account paths, real properties/init contents or credentials into
+issues, summaries or evidence. There are no new comments, labels or operator UI;
+existing localized text/fallback, plain-text status, descriptive run/docs links
+and narrow/light/dark rendering stay authoritative.
+
+Recommended setup remains explicit same-job Java 17 provisioning (or a reviewed
+native composite), with verification commands unchanged. The supported
+alternative is a non-JVM project with no Java declaration/installer. Derived
+private locations have no caller override and no persistence across commands.
+Upgrade the Action and its canonical coordinator/generated callbacks together
+so native setup receives the derived fields. Consumer-owned setup assets remain
+preserved. Older in-flight jobs retain their original snapshot; retry after the
+upgrade. Rollback restores the old discovery limitation and does not migrate or
+delete account caches. No automatic retry is added.
+
+### Risk-derived test budget and acceptance
+
+Allocate **32 additional distinct Jest cases** before source implementation:
+
+| Area | Minimum | Risks |
+|---|---:|---|
+| JVM argument grammar | 12 | spaces, both quotes, backslashes, Unicode, injection-like suffixes and forbidden controls |
+| Profile/environment security | 8 | inherited injection excluded, canonical containment, unique profiles, owned cleanup and preparation failures |
+| Native protocol/continuation | 6 | derived outputs, malformed fields, foreign values/replay and unchanged closed response |
+| Workflow/setup structure | 4 | missing/changed derived bindings and option leakage into continuation |
+| Git/prerequisite integration | 2 | same environment/order, failure withholding and legacy non-JVM behavior |
+| **Total** | **32** | no repeated-run or existing-case double counting |
+
+New pure encoding targets 100% statements/branches/functions/lines. Changed
+environment/native adapters retain at least 95% statements/lines and 90%
+branches/functions. All global, module, setup, extension and benchmark budgets,
+case selections and timeouts remain unchanged. Unit tests use deterministic
+fixtures; normal Node tests gain no Java/Gradle prerequisite or silent skip.
+
+Additional required native observations, separate from the Jest case count:
+
+- Actual source-wired Linux JDK 17/Gradle execution in a disposable OS account
+  demonstrates the legacy global-sentinel gap and the corrected private JVM,
+  Gradle properties/init/cache discovery, without real user configuration.
+- Actual Linux GitHub native setup provisions the tools, resumes the existing
+  operation, passes runtime preflight and executes offline Java compilation and
+  verification in the private profile. A Java home guard precedes Gradle startup
+  on hosted runners. A container is not claimed as native Actions emulation.
+- Candidate source/action bytes remain unchanged, inherited injection stays
+  excluded, fresh profiles do not share state, and deferred native posts clean
+  the owned profiles. Existing failure/no-publication fences stay covered.
+
+| Requirement | Executable evidence | Documentation |
+|---|---|---|
+| Exact private property and Gradle location | Grammar/environment suites; real JDK/Gradle fixture | Verification environment/reference |
+| Same native profile, closed continuation | Controller/generator mutation tests and native Linux job | Native setup and upgrade guidance |
+| Failure, freshness and cleanup | Environment/Git integration and native post acceptance | Existing recovery and isolation limits |
+| No account secrets or candidate mutation | Disposable sentinels, boolean-only reports and identity assertions | Security/operator trust boundary |
+
+Update this owner, native-setup companion, catalog evidence, verification and
+agent/contributor guidance together; regenerate canonical workflows and catalog.
+DoD requires the case floor, actual source/native observations, all unchanged
+coverage/architecture/docs/workflow/spec/build/package checks, Graphify update,
+normal hooks and exact-head CI/three-platform/Codecov/review without findings
+before the authorized normal merge to develop.
+
+### Executed observations and bounded workflow representation
+
+The source-wired disposable Linux runs use the same pinned JDK 17/Gradle image,
+candidate probe and actual GitCommitAdapter before and after the correction.
+Each version completes two fresh compilations and JavaExec verifications with
+unchanged source and excluded inherited injection. The baseline discovers the
+disposable account's global sentinels; the corrected version discovers only the
+private properties/init script and private JVM/Gradle homes. The corrected probe
+also checks the actual JDK 17 specification version. No real account data is
+mounted or inspected, and no consumer execution is claimed.
+
+All 42 additional distinct regression cases pass in the full current-source
+run: 16 grammar, eight profile, ten protocol, six workflow and two Git cases. Encoding
+and environment construction reach 100% on every metric. Native-controller
+coverage is 95.39% statements, 97.68% lines, 90% branches and 100% functions;
+the new per-module budgets enforce these floors without relying on an aggregate.
+
+Adding the native metadata exposed the existing 100,000-byte workflow review
+limit: the first full run rejected the 101,210-byte smoke workflow, producing 40
+setup/CLI failures from that one cause. The workflow now shares 43 identical
+native steps using GitHub-supported YAML anchors. Its 59,394-byte representation
+parses to the exact same jobs, steps, inputs, conditions and permissions; all 233
+focused setup/CLI/workflow cases pass. The per-file/aggregate review limits,
+runner routes, phase count and timeouts are unchanged. Required full and native
+remote verification remain separate acceptance gates.
+
+After the workflow representation correction, the full current-source run passes
+790 suites and 14,655 tests, with the same 35 existing skips, in 477.661 seconds.
+Global coverage is 97.29% statements, 95% branches, 97.95% functions and 98.06%
+lines. Every prior and new module budget passes. The setup ledger remains
+336/350 passing with 14 explicitly open cases; no open case is represented as
+implemented here. Extension verification passes all 267 cases with 100% on every
+metric. Native GitHub Linux acceptance and final PR checks still require their
+own successful exact-head evidence before merge.

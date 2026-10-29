@@ -934,7 +934,7 @@
       "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-24",
+      "lastVerified": "2026-10-29",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md",
@@ -1126,7 +1126,8 @@
         "src/application/usecases/steps/commit/bugbot/verify_command_runner.ts",
         "src/cli/setup_config_file.ts",
         "src/domain/copilot_comment_workflow.ts",
-        "src/infrastructure/copilot_comment_inputs.json"
+        "src/infrastructure/copilot_comment_inputs.json",
+        "src/infrastructure/private_jvm_environment.ts"
       ],
       "tests": [
         "src/data/repository/__tests__/repository_version_tags_query_repository.test.ts",
@@ -1259,7 +1260,8 @@
         "src/tooling/__tests__/verification_runtime_guidance.test.ts",
         "src/infrastructure/__tests__/verification_setup_configuration.test.ts",
         "src/domain/__tests__/copilot_comment_workflow.test.ts",
-        "src/tooling/__tests__/credential_health_transport.test.ts"
+        "src/tooling/__tests__/credential_health_transport.test.ts",
+        "src/infrastructure/__tests__/private_jvm_environment.test.ts"
       ],
       "documentation": [
         "README.md",
@@ -2192,7 +2194,7 @@
       "status": "implemented",
       "scope": "Observe parent drift with one localized status card and transition-only notifications, then safely merge a parent branch into a linked working branch",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-27",
+      "lastVerified": "2026-10-29",
       "specs": [
         "specs/branch-synchronization-and-conflict-recovery.md",
         "specs/repository-verification-runtime-prerequisites.md",
@@ -2279,7 +2281,11 @@
         "src/application/policies/source_verification_dependency_policy.ts",
         "src/infrastructure/source_verification_dependencies.ts",
         "src/application/policies/branch_sync_relationship_retirement_policy.ts",
-        "src/application/usecases/actions/retire_unrelated_branch_sync_cards.ts"
+        "src/application/usecases/actions/retire_unrelated_branch_sync_cards.ts",
+        "src/infrastructure/private_jvm_environment.ts",
+        "src/tooling/__tests__/fixtures/verification_jvm_gradle_probe.cjs",
+        "src/tooling/__tests__/fixtures/verification_jvm_gradle_container_fixture.ts",
+        "src/tooling/__tests__/fixtures/verification_native_fixture.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/branch_sync_notification_policy.test.ts",
@@ -2331,7 +2337,8 @@
         "src/domain/__tests__/copilot_comment_workflow.test.ts",
         "src/domain/__tests__/verification_failure.test.ts",
         "src/infrastructure/__tests__/source_verification_dependencies.test.ts",
-        "src/application/usecases/actions/__tests__/retire_unrelated_branch_sync_cards.test.ts"
+        "src/application/usecases/actions/__tests__/retire_unrelated_branch_sync_cards.test.ts",
+        "src/infrastructure/__tests__/private_jvm_environment.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-synchronization.mdx",
@@ -2447,7 +2454,7 @@
       "status": "implemented",
       "scope": "Resolve, provision, authenticate, authorize, and execute only the agent roles reachable by a run",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-24",
+      "lastVerified": "2026-10-29",
       "specs": [
         "specs/agent-runtime-provider-and-model-routing.md",
         "specs/agent-execution-policy-hardening.md"
@@ -2508,7 +2515,8 @@
         "scripts/diagnose-windows-powershell-startup.cjs",
         "scripts/diagnose-windows-sandbox-prerequisites.cjs",
         "src/infrastructure/logging/logger_agent_execution_observer_adapter.ts",
-        "scripts/coverage-budgets.json"
+        "scripts/coverage-budgets.json",
+        "src/infrastructure/private_jvm_environment.ts"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
@@ -2539,7 +2547,8 @@
         "src/data/repository/ai/__tests__/agent_capability_adapters.test.ts",
         "src/infrastructure/__tests__/untrusted_command_environment.test.ts",
         "src/infrastructure/agents/__tests__/windows_acl_probe_contract.test.ts",
-        "src/infrastructure/logging/__tests__/logger_agent_execution_observer_adapter.test.ts"
+        "src/infrastructure/logging/__tests__/logger_agent_execution_observer_adapter.test.ts",
+        "src/infrastructure/__tests__/private_jvm_environment.test.ts"
       ],
       "documentation": [
         "docs/configuration-checklist.mdx",

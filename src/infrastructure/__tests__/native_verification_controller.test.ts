@@ -29,8 +29,26 @@ describe('native Actions phase controller', () => {
         expect(core.setOutput).toHaveBeenCalledWith('verification-request', f.id);
         expect(core.setOutput).toHaveBeenCalledWith('verification-home', f.runtime.environment.HOME);
     });
-    it.each([{id: 'wrong'}, {sourceSha: 'wrong'}, {environment: {}}, {environment: {HOME: '\nsecret'}}])('rejects malformed pending request %j', async edit => {
+    it.each(['JDK_JAVA_OPTIONS', 'GRADLE_USER_HOME'])('emits the current profile-derived %s for native setup', async key => {
+        request(); await awaitNativeBoundary(f.session);
+        expect(core.setOutput).toHaveBeenCalledWith(`verification-${key.toLowerCase()}`, f.runtime.environment[key]);
+    });
+    it.each(['JDK_JAVA_OPTIONS', 'GRADLE_USER_HOME'].flatMap(key => ['missing', 'foreign'].map(kind => [key, kind])))(
+        'rejects %s %s before emitting any native metadata', async (key, kind) => {
+            const environment = { ...f.runtime.environment };
+            if (kind === 'missing') delete environment[key];
+            else environment[key] = '/foreign/unapproved';
+            request({ environment });
+            await expect(awaitNativeBoundary(f.session)).rejects.toThrow('handoff-invalid');
+            expect(core.setOutput).not.toHaveBeenCalled();
+        });
+    it.each([{id: 'wrong'}, {sourceSha: 'wrong'}, {environment: {}}, {environment: {HOME: '\nsecret'}}, {environment: {HOME: 'relative'}}])('rejects malformed pending request %j', async edit => {
         request(edit); await expect(awaitNativeBoundary(f.session)).rejects.toThrow('handoff-invalid');
+    });
+    it.each([7, 'invalid\nruntime-metadata'])('rejects malformed ordinary runtime metadata %j after validating the private locations', async value => {
+        request({ environment: { ...f.runtime.environment, PATH: value } });
+        await expect(awaitNativeBoundary(f.session)).rejects.toThrow('handoff-invalid');
+        expect(core.setOutput).not.toHaveBeenCalledWith('verification-path', value);
     });
     it('reports completion and copies native action outputs into the current step', async () => {
         process.env.GITHUB_OUTPUT = join(f.session, 'parent-output'); fs.writeFileSync(join(f.session, 'worker-output'), 'telemetry=value\n'); done();
@@ -52,6 +70,14 @@ describe('native Actions phase controller', () => {
     });
     it('bounds the operation wait without restarting the agent', async () => {
         await expect(awaitNativeBoundary(f.session, 0)).rejects.toThrow('timeout');
+    });
+    it('waits for a live worker before publishing the late request with its current private profile', async () => {
+        jest.spyOn(process, 'kill').mockReturnValue(true);
+        const pause = jest.spyOn(protocol, 'nativePause').mockImplementation(async () => { request(); });
+        await awaitNativeBoundary(f.session);
+        expect(pause).toHaveBeenCalledWith(100);
+        expect(core.setOutput).toHaveBeenCalledWith('verification-gradle_user_home', f.runtime.environment.GRADLE_USER_HOME);
+        expect(core.setOutput).toHaveBeenCalledWith('verification-setup-pending', 'true');
     });
     it('detects a worker that exited before a result or handoff', async () => {
         jest.spyOn(process, 'kill').mockImplementation(() => { throw new Error('not alive'); });
@@ -75,7 +101,10 @@ describe('native Actions phase controller', () => {
     it.each(['success', 'failure', 'cancelled', 'skipped'])('delivers native %s and waits for the existing operation', async outcome => {
         request(); const write = protocol.writeNativeRecord;
         jest.spyOn(protocol, 'writeNativeRecord').mockImplementation((root, name, value) => { write(root, name, value); if (name.startsWith('response-')) write(root, 'done.json', { exitCode: 0 }); });
-        await continueNativeVerification(f.session, f.id, outcome, { PATH: 'approved', JAVA_HOME: 'java' });
+        await continueNativeVerification(f.session, f.id, outcome, {
+            PATH: 'approved', JAVA_HOME: 'java',
+            JDK_JAVA_OPTIONS: '-Duser.home=/foreign', GRADLE_USER_HOME: '/foreign/gradle',
+        });
         expect(protocol.readNativeRecord(f.session, `response-${f.id}.json`)).toEqual({ id: f.id, success: outcome === 'success', path: 'approved', javaHome: 'java' });
         expect(fs.existsSync(join(f.session, 'request.json'))).toBe(false);
     });
