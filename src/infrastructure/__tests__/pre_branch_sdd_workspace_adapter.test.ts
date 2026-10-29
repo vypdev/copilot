@@ -222,6 +222,38 @@ describe('PreBranchSddWorkspaceAdapter with a local bare remote', () => {
     expect(git(repo, 'ls-remote', '--heads', 'origin', 'feature/42-change')).toBe('');
   });
 
+  it.each(['update', 'companion', 'new'] as const)('keeps a greenfield %s SDD publication truthful and within its allowed diff', async action => {
+    const file = path.join(repo, 'specs/catalog.json'); const source = JSON.parse(fs.readFileSync(file, 'utf8'));
+    source.review = { ready: false, blockers: ['Owner review pending'] };
+    Object.assign(source.capabilities[0], { entrypoints: [], code: [], tests: [],
+      readiness: { state: 'draft', implementationEvidence: 'absent', changesAllowed: false } });
+    fs.rmSync(path.join(repo, 'src'), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(source));
+    git(repo, 'add', '-A'); git(repo, 'commit', '-m', 'truthful greenfield prerequisites'); git(repo, 'push', 'origin', 'develop');
+    const before = fs.readFileSync(file, 'utf8'); const workspace = new PreBranchSddWorkspaceAdapter(repo);
+    const snapshot = await workspace.loadSnapshot('develop');
+    const selected = { ...plan, action, path: action === 'update' ? plan.path : 'specs/prospective.md',
+      capabilityId: action === 'new' ? 'prospective' : plan.capabilityId };
+    const additional = action === 'new' ? { ...snapshot.capabilities[0], id: 'prospective', title: 'Prospective', specs: [selected.path] } : undefined;
+    const prepared = await workspace.validateDraft(snapshot, selected, draft(selected.path, action), additional);
+    const expected = action === 'update' ? [plan.path] : ['specs/CATALOG.md', 'specs/catalog.json', selected.path];
+    expect(prepared.changedPaths).toEqual(expected);
+    expect(prepared.markdown).toContain('Status: Draft');
+    git(repo, 'push', 'origin', 'develop:refs/heads/feature/42-change');
+    const sha = await workspace.publish('feature/42-change', prepared);
+    expect(await workspace.verifyPublication('feature/42-change', snapshot.baseSha, sha, selected.path)).toBe(true);
+    const published = JSON.parse(git(repo, 'show', sha + ':specs/catalog.json'));
+    expect(published.review).toEqual(source.review);
+    expect(published.capabilities[0]).toEqual({ ...source.capabilities[0],
+      specs: action === 'companion' ? [...source.capabilities[0].specs, selected.path] : source.capabilities[0].specs });
+    if (action === 'new') expect(published.capabilities[1]).toMatchObject({ status: 'proposed', entrypoints: [], code: [], tests: [] });
+    expect(fs.readFileSync(file, 'utf8')).toBe(before);
+    expect(fs.existsSync(path.join(repo, 'src'))).toBe(false);
+    expect(git(repo, 'diff-tree', '--no-commit-id', '--name-only', '-r', sha).split('\n').sort()).toEqual(expected);
+    expect(git(repo, 'status', '--porcelain')).toBe('');
+    expect(git(repo, 'worktree', 'list', '--porcelain').match(/^worktree /gm)).toHaveLength(1);
+  });
+
   it('validates a table-only owner update with the real scratch-worktree and catalog boundary', async () => {
     const owner = legacyDraft().replace('At least 20 distinct cases cover success, replay, authorization, and failure.',
       '| Area | Minimum cases | Risks |\n|---|---:|---|\n| Policy | 12 | Authority |\n| Adapter | 8 | Publication |\n| Total | 20 | Distinct |');

@@ -1186,6 +1186,30 @@
         }
       ],
       "successMessage": "CPython library coverage: PASS (derivation100%; verification adapter95/90)"
+    },
+    {
+      "name": "Proposed SDK catalog evidence",
+      "missingEntryLabel": "proposed SDK catalog evidence",
+      "rules": [
+        {
+          "files": [
+            "src/domain/specification_catalog_path_policy.cjs",
+            "src/domain/sdd_catalog_compatibility.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/infrastructure/specification_catalog_validator.cjs",
+            "src/application/usecases/sdd/pre_branch_sdd_gate_use_case.ts",
+            "src/application/policies/github_runtime_doctor_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "proposed SDK catalog coverage: PASS (path/compatibility100%; validator/gate/doctor95/90)"
     }
   ]
 }

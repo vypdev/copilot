@@ -432,10 +432,44 @@ describe('PreBranchSddGateUseCase', () => {
     expect(h.validateDraft).toHaveBeenCalledWith(snapshot, newPlan, '# Invoice contract', newCapability);
   });
 
+  it('accepts a new proposed capability with truthful absent implementation arrays', async () => {
+    const h = harness();
+    const newCapability = { ...snapshot.capabilities[0], id: 'invoicing', title: 'Invoicing', status: 'proposed',
+      specs: [newPlan.path], entrypoints: [], code: [], tests: [] };
+    h.query.mockResolvedValueOnce({ ...newPlan, newCapability }).mockResolvedValueOnce({ markdown: '# Prospective invoice contract' });
+    expect((await h.useCase.begin(context())).status).toBe('drafted');
+    expect(h.validateDraft).toHaveBeenCalledWith(snapshot, newPlan, '# Prospective invoice contract', newCapability);
+    expect(h.query.mock.calls[0][0].prompt).toContain('Every path field must be an array');
+    expect(h.query.mock.calls[0][0].prompt).toContain('never fabricate source, wrapper tests or documentation-as-code');
+    expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it('does not promote a newly proposed capability to implemented to satisfy evidence rules', async () => {
+    const h = harness();
+    const newCapability = { ...snapshot.capabilities[0], id: 'invoicing', title: 'Invoicing',
+      status: 'implemented', specs: [newPlan.path] };
+    h.query.mockResolvedValueOnce({ ...newPlan, newCapability });
+    expect((await h.useCase.begin(context())).status).toBe('blocked');
+    expect(h.validateDraft).not.toHaveBeenCalled(); expect(h.publish).not.toHaveBeenCalled();
+  });
+
+  it('preserves absence and Draft guidance when preparing an existing proposed owner', async () => {
+    const h = harness();
+    const prospective = { ...snapshot, capabilities: [{ ...snapshot.capabilities[0],
+      status: 'proposed', entrypoints: [], code: [], tests: [] }] };
+    h.loadSnapshot.mockResolvedValue(prospective);
+    h.query.mockResolvedValueOnce({ ...plan, newCapability: null }).mockResolvedValueOnce({ markdown: '# Proposed update' });
+    expect((await h.useCase.begin(context())).status).toBe('drafted');
+    expect(h.query.mock.calls[1][0].prompt).toContain('absent implementation evidence');
+    expect(h.query.mock.calls[1][0].prompt).toContain('preserve Draft/readiness blockers');
+    expect(prospective.capabilities[0].status).toBe('proposed');
+    expect(h.publish).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['missing proposed owner', null],
     ['wrong owner ID', { ...snapshot.capabilities[0], id: 'payments', status: 'proposed', specs: [newPlan.path] }],
-    ['missing tests', { ...snapshot.capabilities[0], id: 'invoicing', status: 'proposed', specs: [newPlan.path], tests: [] }],
+    ['missing tests array', { ...snapshot.capabilities[0], id: 'invoicing', status: 'proposed', specs: [newPlan.path], tests: undefined }],
     ['invalid path type', { ...snapshot.capabilities[0], id: 'invoicing', status: 'proposed', specs: [newPlan.path], code: [42] }],
   ])('blocks a new capability with %s', async (_reason, newCapability) => {
     const h = harness();
