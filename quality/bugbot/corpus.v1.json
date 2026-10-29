@@ -821,6 +821,88 @@
           "codeSnippet": "const stored = domain.normalize('NFKC');"
         }
       ]
+    },
+    {
+      "language": "kotlin",
+      "file": "fixtures/WasmBindings.kt",
+      "startLine": 1,
+      "id": "kt-wasm-parameter-closure",
+      "category": "negative",
+      "description": "Kotlin/Wasm package-level bridge installs a delayed callback; inspect lexical bindings.",
+      "diff": "+private fun installDirectory(empty: Boolean): Unit = js(\n+    \"\"\"{\n+    globalThis.onSelection = () => empty ? new Uint8Array(0) : new Uint8Array([1]);\n+    }\"\"\"\n+)\n // Applicable Kotlin/Wasm interop contract: snippets become generated JS functions with declared formals.\n // Synthetic same-source generated import: installDirectory: (empty) => { globalThis.onSelection = () => empty ? new Uint8Array(0) : new Uint8Array([1]); }\n // This supplied synthetic excerpt is evidence, not a new compiler execution.",
+      "expected": []
+    },
+    {
+      "language": "kotlin",
+      "file": "fixtures/WasmBindings.kt",
+      "startLine": 1,
+      "id": "kt-wasm-size-count-parameters",
+      "category": "negative",
+      "description": "Kotlin/Wasm creates a byte array per requested file.",
+      "diff": "+private fun installBudget(size: Int, count: Int): JsAny = js(\n+    \"\"\"Array.from({length: count}, () => new Uint8Array(size))\"\"\"\n+)\n // Kotlin/Wasm package-level expression body; generated import has formal parameters (size, count).",
+      "expected": []
+    },
+    {
+      "language": "kotlin",
+      "file": "fixtures/WasmBindings.kt",
+      "startLine": 1,
+      "id": "kt-wasm-object-parameter",
+      "category": "negative",
+      "description": "Kotlin/Wasm metadata bridge accepts a JavaScript object and captures the new size.",
+      "diff": "+private fun changeReportedSize(file: JsAny, size: Int): Unit = js(\n+    \"\"\"{\n+    Object.defineProperty(file, \"size\", {get: () => size});\n+    }\"\"\"\n+)\n // Kotlin/Wasm JsAny interop; generated import has formal parameters (file, size).",
+      "expected": []
+    },
+    {
+      "language": "kotlin",
+      "file": "fixtures/WasmBindings.kt",
+      "startLine": 1,
+      "id": "kt-wasm-binding-evidence-unavailable",
+      "category": "negative",
+      "description": "An interop snippet is supplied without its target or resolved compiler contract.",
+      "diff": "+fun bridge(value: Int): JsAny = js(\"({value: value})\")\n // Target/compiler metadata, generated imports and applicable execution evidence are unavailable.\n // No observed runtime failure is supplied.",
+      "expected": []
+    },
+    {
+      "language": "kotlin",
+      "file": "fixtures/WasmBindings.kt",
+      "startLine": 1,
+      "id": "kt-wasm-missing-direct-identifier",
+      "category": "correctness",
+      "description": "A Kotlin/Wasm bridge constructs files; an unrelated test job is green.",
+      "diff": "+private fun installBudget(size: Int): JsAny = js(\n+    \"\"\"Array.from({length: count}, () => new Uint8Array(size))\"\"\"\n+)\n // Complete generated import: installBudget: (size) => Array.from({length: count}, () => new Uint8Array(size))\n // No count binding/global exists; calling installBudget(4) raises ReferenceError.\n // The green job tested the JVM target, not this wasmJs bridge.",
+      "expected": [
+        {
+          "id": "kt-wasm-missing-direct-identifier-missing-binding",
+          "title": "Missing JavaScript binding fails when the bridge runs",
+          "file": "fixtures/WasmBindings.kt",
+          "line": 2,
+          "severity": "medium",
+          "category": "correctness",
+          "symbol": "installBudget",
+          "codeSnippet": "\"\"\"Array.from({length: count}, () => new Uint8Array(size))\"\"\""
+        }
+      ]
+    },
+    {
+      "language": "kotlin",
+      "file": "fixtures/WasmBindings.kt",
+      "startLine": 1,
+      "id": "kt-wasm-missing-callback-identifier",
+      "category": "correctness",
+      "description": "A Kotlin/Wasm bridge installs a callback which reads another identifier.",
+      "diff": "+private fun installDirectory(selected: Boolean): Unit = js(\n+    \"\"\"{\n+    globalThis.onSelection = () => empty ? new Uint8Array(0) : new Uint8Array([1]);\n+    }\"\"\"\n+)\n // Complete generated import has only (selected); no empty binding/global exists.\n // Invoking the installed callback raises ReferenceError.",
+      "expected": [
+        {
+          "id": "kt-wasm-missing-callback-identifier-missing-binding",
+          "title": "Missing JavaScript binding fails when the bridge runs",
+          "file": "fixtures/WasmBindings.kt",
+          "line": 3,
+          "severity": "medium",
+          "category": "correctness",
+          "symbol": "installDirectory",
+          "codeSnippet": "globalThis.onSelection = () => empty ? new Uint8Array(0) : new Uint8Array([1]);"
+        }
+      ]
     }
   ]
 }

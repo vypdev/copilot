@@ -5,7 +5,7 @@ description: Measure Bugbot accuracy, latency, outcomes, feedback, and regressio
 
 # Bugbot quality and observability
 
-Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 71 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
+Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 83 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
 
 The #655 cases cover branch coverage enabled through repository configuration,
 inherited HTTP/1.0 connection behavior, correct arithmetic, short-circuit guards,
@@ -239,3 +239,15 @@ the witness comments, whose Unicode values are passed verbatim to that function.
 This closes the initial candidate's separate kind-based modeling gap. The real
 static executor and comparison-only parser remain distinct from consumer runtime
 execution and actual model measurement.
+
+
+The six #764 Kotlin/Wasm cases cover captured Boolean, size/count and JsAny
+parameters, unavailable target evidence, and two genuinely absent identifiers
+(direct and nested). A green JVM job accompanies one failing Wasm control to
+prevent unrelated execution from hiding the defect. Production and benchmark
+share the binding instruction; private verdicts stay out of model prompts. The
+83-case reference evaluation checks scorer/schema behavior, not actual model
+accuracy. Supplied generated imports are inert synthetic evidence. These tests
+do not run a Kotlin compiler or browser, and no external-model measurement is
+claimed for #764. All earlier cases, thresholds and prompt-size limits remain
+unchanged.

@@ -408,3 +408,17 @@ operation just to reach a mock without first establishing the intended contract.
 Unverifiable always-fails claims are omitted. This uses existing bounded read-only
 context and review policies, with no new permission or deterministic call-graph
 service. See [quality and observability](/bugbot/quality-observability).
+
+
+## Kotlin/Wasm JavaScript parameter scope
+
+For package-level Kotlin/Wasm `= js(...)` functions, declared parameters become
+formal arguments in generated JavaScript, and nested callbacks can capture them.
+Before reporting an unbound identifier, Bugbot checks the target/version,
+signature and lexical scope against applicable official interop documentation or
+exact generated imports. It reconciles same-source compiler/test evidence; an
+unrelated green job cannot prove the bridge works. Genuinely missing identifiers
+and invalid bridges remain reportable. Unsupported binding claims and unproved
+global-state replacements are omitted. This shared model guidance is neither a
+static Kotlin analyzer nor a guarantee of accuracy. See the [official contract](https://kotlinlang.org/docs/wasm-js-interop.html#kotlin-functions-with-javascript-code)
+and [quality evidence limits](/bugbot/quality-observability).

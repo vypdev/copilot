@@ -97,3 +97,16 @@ A real ignored validation result or transform that creates an invalid value afte
 checking remains actionable. Evidence cannot grant new mutation, approval or
 lookup permissions. See [exact validation witnesses](/bugbot/detection#exact-validation-witnesses)
 and [quality evidence limits](/bugbot/quality-observability).
+
+
+## A Kotlin/Wasm parameter is reported as an unbound JavaScript global
+
+Inspect the exact package-level function signature and its target/compiler
+version. A declared parameter of `= js(...)` is available in the generated
+JavaScript function and can be captured by a nested callback. Attach applicable
+[official interop documentation](https://kotlinlang.org/docs/wasm-js-interop.html#kotlin-functions-with-javascript-code)
+and, when available, same-source generated imports and executed test results to
+normal finding verification/re-review. A green job on another target does not
+prove this bridge succeeds. Keep actual missing identifiers actionable; avoid
+introducing global state to satisfy a disproved scope claim. Evidence alone does
+not auto-dismiss findings or grant permissions. See [parameter scope](/bugbot/detection#kotlinwasm-javascript-parameter-scope).

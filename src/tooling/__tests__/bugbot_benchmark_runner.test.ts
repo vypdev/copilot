@@ -7,6 +7,19 @@ const testCase: BugbotBenchmarkCase = {
     file: 'src/example.ts', startLine: 40, diff: '+return user.name;', expected: [{ title: 'Hidden ground truth title' }],
 };
 
+it('delivers Kotlin/Wasm binding guidance without leaking the private verdict', () => {
+    const prompt = buildBugbotBenchmarkPrompt({ ...testCase, language: 'kotlin',
+        description: 'A package-level interop function installs a callback.',
+        diff: '+fun install(empty: Boolean): Unit = js("{ target.onclick = () => consume(empty); }")',
+    });
+    expect(prompt).toContain('Kotlin/Wasm package-level = js(...)');
+    expect(prompt).toContain('declared parameters are generated JavaScript formals');
+    expect(prompt).toContain('nested callbacks can close over them');
+    expect(prompt).toContain('Preserve genuinely missing identifiers');
+    expect(prompt).toContain('Never invent compiler/test execution');
+    expect(prompt).not.toContain('Hidden ground truth title');
+});
+
 describe('Bugbot benchmark runner', () => {
     it('does not leak ground truth into the agent prompt', () => {
         const prompt = buildBugbotBenchmarkPrompt(testCase);
