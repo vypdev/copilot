@@ -4,6 +4,7 @@
     import { CENTER_ROUTES, centerLocationHash } from '../domain/center_routes.ts';
     import { reviewCopy } from '../domain/review_copy.ts';
     import { currentCenterSettings } from '../domain/center_client_view.ts';
+    import { isSupportRoute } from '../domain/support_context.ts';
     import SettingsReview from './SettingsReview.svelte';
     import CenterRouteContent from './CenterRouteContent.svelte';
     let { surface }: { surface: CenterSurface } = $props();
@@ -28,7 +29,7 @@
                 <a href={centerLocationHash({ route: destination })} aria-current={route === destination ? 'page' : undefined}>{copy.routes[destination]}</a>
             {/each}
         </nav>
-        <main id="center-main" tabindex="-1" aria-busy={busy && route !== 'privacy'}>
+        <main id="center-main" tabindex="-1" aria-busy={busy && route !== 'privacy' && !isSupportRoute(route)}>
             <h1 tabindex="-1">{copy.routes[route]}</h1>
             <div class="toolbar">
                 <span role="status">{role === 'editor' ? copy.messages.editor

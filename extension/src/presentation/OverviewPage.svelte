@@ -1,10 +1,13 @@
 <script lang="ts">
     import type { CenterRouteProps } from '../domain/center_ui.ts';
     import { centerLocationHash } from '../domain/center_routes.ts';
+    import { welcomeCopy } from '../domain/welcome_copy.ts';
     let { context, actions }: CenterRouteProps = $props();
     const m = $derived(context.copy.messages);
+    const welcome = $derived(welcomeCopy(context.copy.locale));
 </script>
 <p>{m.welcome}</p>
+<p><span>{welcome.progress}</span>: <strong>{welcome.steps[context.settings.center.onboarding]}</strong> · <a href="#/welcome">{context.copy.routes.welcome}</a></p>
 <ul class="cards">
     {#each ['features', 'appearance', 'language', 'profiles', 'data'] as destination}
         <li><a href={centerLocationHash({ route: destination })}>{context.copy.routes[destination as 'features' | 'appearance' | 'language' | 'profiles' | 'data']}</a></li>

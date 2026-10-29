@@ -360,6 +360,11 @@
           "icon": "keyboard"
         },
         {
+          "title": "Welcome, updates and recovery",
+          "href": "/browser-extension/onboarding",
+          "icon": "book-open"
+        },
+        {
           "title": "Testing",
           "href": "/development/testing",
           "icon": "vial"

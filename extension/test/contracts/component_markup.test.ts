@@ -87,9 +87,10 @@ it('accepts only the closed feature-reference builder from its exact domain modu
         '<a href={`https://github.com/vypdev/copilot/issues/${id}`}>Bad</a>',
     ]) expect(() => componentScript(name, source)).toThrow(/presentation-(?:unchecked-navigation|markup-authority)/u);
 });
-it('accepts only the two exact authored privacy help destinations without opening arbitrary provider navigation', () => {
+it('accepts only exact authored privacy and project release help destinations without opening arbitrary provider navigation', () => {
     for (const href of ['https://github.com/vypdev/copilot/issues/712',
-        'https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens']) {
+        'https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens',
+        'https://github.com/vypdev/copilot/releases']) {
         expect(() => componentScript(name, `<a href="${href}">Read guidance</a>`)).not.toThrow();
         for (const bad of [`${href}?return=https://evil.invalid`, `${href}#private`, `${href}/extra`, `${href}\n`, href.replace('https://', 'http://')]) {
             expect(() => componentScript(name, `<a href="${bad}">Bad</a>`)).toThrow('presentation-unchecked-navigation');

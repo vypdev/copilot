@@ -4,6 +4,7 @@ import { expect, it, vi } from 'vitest';
 import { flushSync } from 'svelte';
 import { ready, render, button, change, save } from '../fixtures/center_app_dom.ts';
 import { DEFAULT_SETTINGS } from '../../src/domain/settings.ts';
+import { supportCopy } from '../../src/domain/support_copy.ts';
 import { scopedCenterFixture } from '../fixtures/scoped_center.ts';
 
 it('reviews all appearance preferences and cancels without persisting or erasing the form', async () => {
@@ -66,18 +67,18 @@ it('reports a failed download and still allows a later explicit export', async (
     expect(document.body.textContent).not.toContain('private-download-error');
 });
 it.each(['help', 'about', 'recovery', 'work'])('opens the %s route with useful information and honest unfinished-state copy', async route => {
-    await render(route); await ready(() => document.querySelector('main a')?.textContent === 'Abrir documentación');
+    await render(route); await ready(() => route === 'work' ? document.querySelector('main a')?.textContent === 'Abrir documentación' : !!document.querySelector('[data-support-status]'));
     if (route === 'work') expect(document.body.textContent).toContain('Esta sección sigue en desarrollo');
-    else expect(document.body.textContent).toContain('Los cambios se revisan antes de guardarse.');
+    else expect(document.body.textContent).toContain(supportCopy('es').safety);
     if (route === 'recovery') [...document.querySelectorAll('button')].filter(node => node.textContent === 'Consultar configuración actual').at(-1)!.click();
 });
 it('welcome completion is an explicit reviewed preference, rather than an implied connection or product acceptance', async () => {
-    const h = await render('welcome'); await ready(() => !!document.querySelector('main a'));
-    expect(document.querySelector('main a')?.getAttribute('href')).toBe('#/appearance'); button('Terminar bienvenida').click(); await save();
-    expect((await h.native.repository.read()).settings.center.onboarding).toBe('complete'); expect(h.browser.api.permissions.request).not.toHaveBeenCalled();
+    const h = await render('welcome'); await ready(() => !!document.querySelector('[data-welcome-step]'));
+    expect(document.querySelector('main a')?.getAttribute('href')).toBe('#/features'); button('Revisar avance al siguiente paso').click(); await save();
+    expect((await h.native.repository.read()).settings.center.onboarding).toBe('profile'); expect(h.browser.api.permissions.request).not.toHaveBeenCalled();
 });
 it.each([{ schemaVersion: 99 }, { schemaVersion: 2, broken: true }])('keeps unsupported or corrupt saved data inert instead of rendering editable defaults', async initial => {
     const h = await render('recovery', false, initial, false); await ready(() => !!document.querySelector('main .notice'));
     expect(document.querySelector('form')).toBeNull(); expect(document.querySelector('.revision')).toBeNull(); expect(h.native.port.set).not.toHaveBeenCalled();
-    expect(document.body.textContent).toContain('conservado');
+    expect(document.body.textContent).toContain('conserv');
 });

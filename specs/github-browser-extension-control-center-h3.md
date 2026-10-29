@@ -10,6 +10,10 @@
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none for this refinement; implementation must establish H3-specific source-bound acceptance evidence.
 
+The focused [welcome and independent support refinement](github-browser-extension-onboarding-and-support.md)
+defines CENTER13 progress, native package observations and recovery without
+readable settings. It preserves the full H3 and product acceptance requirements.
+
 ## 1. Executive summary
 
 H3 delivers a packaged, local-first control center for understanding and configuring the GitHub browser extension. Users can navigate real center routes, search the complete 150-feature inventory, inspect effective settings and availability, manage profiles, permissions and sessions, and preview safe backup, reset and rollback actions. The experience is keyboard and screen-reader accessible, responsive, localized in English, Spanish, French and Portuguese, and available from toolbar, options and GitHub Settings entrypoints.

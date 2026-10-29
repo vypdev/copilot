@@ -2938,7 +2938,8 @@
         "specs/github-browser-extension-control-center-and-setup.md",
         "specs/github-browser-extension-foundation.md",
         "specs/github-browser-extension-runtime.md",
-        "specs/github-browser-extension-control-center-h3.md"
+        "specs/github-browser-extension-control-center-h3.md",
+        "specs/github-browser-extension-onboarding-and-support.md"
       ],
       "workflows": [
         ".github/workflows/ci_check.yml",
@@ -3112,7 +3113,20 @@
         "extension/src/domain/shortcuts_copy.ts",
         "extension/src/adapters/dom/shortcut_context.ts",
         "extension/src/adapters/dom/shortcuts.ts",
-        "extension/src/presentation/ShortcutsPage.svelte"
+        "extension/src/presentation/ShortcutsPage.svelte",
+        "extension/src/domain/package_identity.ts",
+        "extension/src/domain/support_context.ts",
+        "extension/src/domain/support_copy_types.ts",
+        "extension/src/domain/support_copy.ts",
+        "extension/src/domain/support_copy_en.ts",
+        "extension/src/domain/support_copy_es.ts",
+        "extension/src/domain/support_copy_fr.ts",
+        "extension/src/domain/support_copy_pt.ts",
+        "extension/src/domain/welcome.ts",
+        "extension/src/domain/welcome_copy.ts",
+        "extension/src/adapters/browser/package_reader.ts",
+        "extension/src/presentation/SupportPage.svelte",
+        "extension/src/presentation/WelcomePage.svelte"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3220,7 +3234,12 @@
         "extension/test/integration/shortcut_runtime.test.ts",
         "extension/test/integration/shortcut_gateway.test.ts",
         "extension/test/integration/shortcuts_page.test.ts",
-        "extension/test/integration/shortcuts_composition.test.ts"
+        "extension/test/integration/shortcuts_composition.test.ts",
+        "extension/test/contracts/package_identity.test.ts",
+        "extension/test/contracts/welcome.test.ts",
+        "extension/test/integration/package_reader.test.ts",
+        "extension/test/integration/support_page.test.ts",
+        "extension/test/integration/welcome_page.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",
@@ -3254,7 +3273,8 @@
         "docs/browser-extension/configuration.mdx",
         "docs/browser-extension/features.mdx",
         "docs/browser-extension/permissions.mdx",
-        "docs/browser-extension/shortcuts.mdx"
+        "docs/browser-extension/shortcuts.mdx",
+        "docs/browser-extension/onboarding.mdx"
       ]
     }
   ]

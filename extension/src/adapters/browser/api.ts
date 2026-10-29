@@ -10,6 +10,7 @@ export interface BrowserStorageArea {
 export interface BrowserApi {
     runtime: {
         id: string; getURL(path: string): string; sendMessage(value: unknown): Promise<unknown>;
+        getManifest?(): unknown;
         onMessage: BrowserEvent<(value: unknown, sender: Sender, respond: (result: unknown) => void) => boolean | void>;
     };
     storage: { local: BrowserStorageArea; session?: BrowserStorageArea;

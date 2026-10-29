@@ -7,6 +7,8 @@ import type { ConnectionOutcome } from './named_sessions.ts';
 import type { InventoryNavigationState } from './inventory_filters.ts';
 import type { PermissionInspection } from './permission_inspection.ts';
 import type { PrivacyConnection } from './privacy_context.ts';
+import type { SupportRoute, SupportStatus } from './support_context.ts';
+import type { PackageIdentity } from './package_identity.ts';
 
 export interface CenterActions extends ReviewActions {
     readonly connections: ConnectionActions;
@@ -35,4 +37,8 @@ export interface InventoryRouteProps { context: InventoryRouteContext; actions: 
 export interface PrivacyRouteProps {
     context: { readonly copy: CenterCopy; readonly inspection: PermissionInspection; readonly connection: PrivacyConnection; readonly canInspectConnection: boolean };
     actions: Pick<CenterActions, 'inspectPermissions' | 'inspectConnection'>;
+}
+export interface SupportRouteProps {
+    context: { readonly copy: CenterCopy; readonly route: SupportRoute; readonly status: SupportStatus; readonly packageIdentity: PackageIdentity };
+    actions: Pick<CenterActions, 'reload'>;
 }

@@ -13,17 +13,18 @@ import { centerClientFixture } from '../fixtures/center_client.ts';
 import { deferred } from '../fixtures/runtime.ts';
 import { DEFAULT_SETTINGS } from '../../src/domain/settings.ts';
 import { SETTINGS_KEY } from '../../src/application/settings_repository.ts';
-import { loadInventoryPage, loadPrivacyPage } from '../../src/infrastructure/center_pages.ts';
+import { loadInventoryPage, loadPrivacyPage, loadSupportPage } from '../../src/infrastructure/center_pages.ts';
+import { supportCopy } from '../../src/domain/support_copy.ts';
 
 const mounts: Record<string, unknown>[] = []; const clients: ReturnType<typeof centerClientFixture>[] = [];
 afterEach(async () => { for (const host of mounts.splice(0)) await unmount(host); clients.splice(0).forEach(h => h.client.stop()); document.body.replaceChildren(); vi.restoreAllMocks(); });
 async function ready(predicate: () => boolean): Promise<void> { await vi.waitFor(() => { flushSync(); expect(predicate()).toBe(true); }); }
 async function client() { const h = centerClientFixture(); clients.push(h); await h.client.start(); return h; }
-function render(view: CenterClientView, load: CenterSurface['load'] = async () => InformationPage, loadInventory: CenterSurface['loadInventory'] = loadInventoryPage, loadPrivacy: CenterSurface['loadPrivacy'] = loadPrivacyPage) {
-    const listeners = new Set<(frame: CenterFrame) => void>(); let frame = centerFrame(view, { route: 'help' }, null, 'en');
+function render(view: CenterClientView, load: CenterSurface['load'] = async () => InformationPage, loadInventory: CenterSurface['loadInventory'] = loadInventoryPage, loadPrivacy: CenterSurface['loadPrivacy'] = loadPrivacyPage, loadSupport: CenterSurface['loadSupport'] = loadSupportPage) {
+    const listeners = new Set<(frame: CenterFrame) => void>(); let frame = centerFrame(view, { route: 'work' }, null, 'en');
     const actions: CenterActions = { connections: { connect: vi.fn(), change: vi.fn(), refresh: vi.fn(), dirty: vi.fn() }, preview: vi.fn(), dirty: vi.fn(), takeControl: vi.fn(), stay: vi.fn(), leave: vi.fn(), confirm: vi.fn(), cancel: vi.fn(), dismiss: vi.fn(),
         reload: vi.fn(), focusContent: vi.fn(), browseInventory: vi.fn(), inspectPermissions: vi.fn(), inspectConnection: vi.fn(), exportSettings: vi.fn(async () => false), importSettings: vi.fn(async () => false) };
-    const unsubscribe = vi.fn(); const surface: CenterSurface = { initial: frame, actions, load, loadInventory, loadPrivacy,
+    const unsubscribe = vi.fn(); const surface: CenterSurface = { initial: frame, actions, load, loadInventory, loadPrivacy, loadSupport,
         subscribe: listener => { listeners.add(listener); listener(frame); return () => { listeners.delete(listener); unsubscribe(); }; } };
     const host = mount(CenterHost, { target: document.body, props: { surface } }); mounts.push(host); flushSync();
     return { host, actions, unsubscribe, publish: (next: CenterFrame) => { frame = next; listeners.forEach(listener => listener(next)); flushSync(); } };
@@ -36,7 +37,7 @@ it('failed lazy loading exposes recovery and never renders a provider exception 
 });
 it.each(['resolved', 'rejected'] as const)('a previous route’s late %s load cannot replace the current page', async outcome => {
     const h = await client(); const wait = deferred<Component<CenterRouteProps>>();
-    const view = render(h.client.view, route => route === 'help' ? wait.promise : Promise.resolve(AppearancePage));
+    const view = render(h.client.view, route => route === 'work' ? wait.promise : Promise.resolve(AppearancePage));
     view.publish(centerFrame(h.client.view, { route: 'appearance' }, null, 'en')); await ready(() => !!document.querySelector('#center-theme'));
     if (outcome === 'resolved') wait.resolve(InformationPage); else wait.reject(new Error('old-load-failed'));
     await tick(); flushSync(); expect(document.querySelector('#center-theme')).not.toBeNull(); expect(document.querySelector('main > [role=alert]')).toBeNull();
@@ -98,4 +99,37 @@ it.each(['resolved', 'rejected'] as const)('a retired privacy chunk’s late %s 
     view.publish(centerFrame(h.client.view, { route: 'appearance' }, null, 'en')); await ready(() => !!document.querySelector('#center-theme'));
     if (outcome === 'resolved') wait.resolve(await loadPrivacyPage()); else wait.reject(new Error('retired-privacy-path'));
     await tick(); flushSync(); expect(document.querySelector('#center-theme')).not.toBeNull(); expect(document.querySelector('[data-permission-status]')).toBeNull();
+});
+it('a failed independent support chunk preserves a fixed recovery guide without exposing native or chunk exceptions', async () => {
+    const h = await client(); const view = render({ ...h.client.view, data: null }, undefined, undefined, undefined, async () => { throw new Error('private-support-chunk'); });
+    view.publish(centerFrame({ ...h.client.view, data: null }, { route: 'help' }, null, 'en'));
+    await ready(() => !!document.querySelector('main > [role=alert]'));
+    expect(document.querySelector('main a')?.getAttribute('href')).toBe('https://docs.page/vypdev/copilot/browser-extension/onboarding');
+    expect(document.body.textContent).not.toContain('private-support-chunk'); expect(document.querySelector('form')).toBeNull();
+});
+it.each(['resolved', 'rejected'] as const)('a retired support chunk’s late %s result cannot render a former route or erase the current form', async outcome => {
+    const h = await client(); const wait = deferred<Awaited<ReturnType<CenterSurface['loadSupport']>>>();
+    const view = render(h.client.view, async () => AppearancePage, undefined, undefined, () => wait.promise);
+    view.publish(centerFrame(h.client.view, { route: 'about' }, null, 'en')); await tick();
+    view.publish(centerFrame(h.client.view, { route: 'appearance' }, null, 'en')); await ready(() => !!document.querySelector('#center-theme'));
+    if (outcome === 'resolved') wait.resolve(await loadSupportPage()); else wait.reject(new Error('retired-support-location'));
+    await tick(); flushSync(); expect(document.querySelector('#center-theme')).not.toBeNull(); expect(document.querySelector('[data-support-status]')).toBeNull();
+});
+it('retiring the mounted host ignores a pending support module and never invokes a stale action', async () => {
+    const h = await client(); const wait = deferred<Awaited<ReturnType<CenterSurface['loadSupport']>>>();
+    const view = render(h.client.view, undefined, undefined, undefined, () => wait.promise);
+    view.publish(centerFrame(h.client.view, { route: 'help' }, null, 'en')); await tick(); await unmount(view.host); mounts.splice(mounts.indexOf(view.host), 1);
+    wait.resolve(await loadSupportPage()); await tick(); expect(document.body.textContent).toBe(''); expect(view.actions.reload).not.toHaveBeenCalled();
+});
+it('support presents an actual native-client uncertain save independently of retained settings, then reconciles only through a read', async () => {
+    const h = await client(); await h.client.preview({ type: 'center', values: { onboarding: 'profile' } }, 0);
+    const send = h.port.send.getMockImplementation()!; h.port.send.mockImplementation(async message => { const value = await send(message); return message.method === 'center.confirm' ? null : value; });
+    await h.client.confirm(); expect(h.client.view.review?.state).toBe('unknown');
+    const view = render(h.client.view); view.publish(centerFrame(h.client.view, { route: 'recovery' }, null, 'en'));
+    await ready(() => !!document.querySelector('[data-support-operation]'));
+    expect(document.querySelector('[data-support-operation]')?.textContent).toBe(supportCopy('en').operations.unknown);
+    expect(document.querySelector('[data-support-status]')?.textContent).toBe(supportCopy('en').statuses.unavailable);
+    await h.client.refresh(); view.publish(centerFrame(h.client.view, { route: 'recovery' }, null, 'en'));
+    expect(document.querySelector('[data-support-operation]')?.textContent).toBe(supportCopy('en').operations.saved);
+    expect(h.port.send.mock.calls.filter(([message]) => message.method === 'center.confirm')).toHaveLength(1);
 });

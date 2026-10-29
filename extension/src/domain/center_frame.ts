@@ -7,21 +7,26 @@ import { deepFreeze, record } from './value.ts';
 import { EMPTY_INVENTORY_NAVIGATION, type InventoryNavigationState } from './inventory_filters.ts';
 import { EMPTY_PERMISSION_INSPECTION, type PermissionInspection } from './permission_inspection.ts';
 import { CENTER_COMMANDS, centerCommandRoute, type CenterBinding } from './shortcuts.ts';
+import { UNKNOWN_PACKAGE_IDENTITY, type PackageIdentity } from './package_identity.ts';
+import { welcomeCopy } from './welcome_copy.ts';
 
 export interface CenterFrame {
     readonly client: CenterClientView; readonly location: CenterLocation; readonly pendingLocation: CenterLocation | null;
     readonly copy: CenterCopy; readonly review: CenterReview | null; readonly draftEpoch: number; readonly hasDraft: boolean;
     readonly inventory: InventoryNavigationState;
     readonly inspection: PermissionInspection;
+    readonly packageIdentity: PackageIdentity;
 }
 /** Complete local preference delta, including removals. Input is validated credential-free Settings. */
 export function settingsReviewChanges(before: unknown, after: unknown, copy: CenterCopy): readonly ReviewChange[] {
     const changes: ReviewChange[] = [];
-    const fields: Readonly<Record<string, string>> = { ...copy.routes, ...copy.messages };
+    const welcome = welcomeCopy(copy.locale);
+    const fields: Readonly<Record<string, string>> = { ...copy.routes, ...copy.messages, onboarding: welcome.progress };
     const label = (path: readonly string[]) => path.map(key => Object.hasOwn(fields, key) ? fields[key] : key).join(' › ');
     const localized = new Set(['theme', 'density', 'text', 'motion', 'contrast', 'locale']);
     const text = (value: unknown, path: readonly string[]): string => value === undefined ? copy.messages.unset
         : typeof value === 'boolean' ? copy.messages[value ? 'yes' : 'no']
+        : typeof value === 'string' && path.join('/') === 'center/onboarding' && Object.hasOwn(welcome.steps, value) ? welcome.steps[value as keyof typeof welcome.steps]
             : typeof value === 'string' && localized.has(path[path.length - 1]) && Object.hasOwn(fields, value) ? fields[value]
                 : typeof value === 'object' && value !== null ? copy.messages.inherit : String(value);
     function walk(old: unknown, next: unknown, path: readonly string[]): void {
@@ -48,12 +53,12 @@ export function settingsReviewChanges(before: unknown, after: unknown, copy: Cen
     }
     walk(before, after, []); return deepFreeze(changes);
 }
-export function centerFrame(client: CenterClientView, location: CenterLocation, pendingLocation: CenterLocation | null, nativeLanguage: string, draftEpoch = 0, hasDraft = false, inventory = EMPTY_INVENTORY_NAVIGATION, inspection = EMPTY_PERMISSION_INSPECTION): CenterFrame {
+export function centerFrame(client: CenterClientView, location: CenterLocation, pendingLocation: CenterLocation | null, nativeLanguage: string, draftEpoch = 0, hasDraft = false, inventory = EMPTY_INVENTORY_NAVIGATION, inspection = EMPTY_PERMISSION_INSPECTION, packageIdentity = UNKNOWN_PACKAGE_IDENTITY): CenterFrame {
     const copy = centerCopy(client.data?.settings?.locale ?? 'auto', nativeLanguage);
     const plan = client.review;
     const review: CenterReview | null = plan ? { state: plan.state, title: copy.messages.reviewTitle,
         summary: copy.messages.reviewSummary, revision: plan.revision,
         editable: client.data?.role === 'editor' && client.issue === null,
         changes: settingsReviewChanges(plan.before, plan.after, copy) } : null;
-    return deepFreeze({ client, location, pendingLocation, copy, review, draftEpoch, hasDraft, inventory, inspection });
+    return deepFreeze({ client, location, pendingLocation, copy, review, draftEpoch, hasDraft, inventory, inspection, packageIdentity });
 }

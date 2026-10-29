@@ -11,8 +11,9 @@ const FORBIDDEN = new Set(['HtmlTag', 'SvelteWindow', 'SvelteDocument', 'SvelteB
     'SpreadAttribute', 'UseDirective', 'AttachTag', 'TransitionDirective', 'AnimateDirective', 'StyleDirective', 'LetDirective']);
 const RESOURCE_STYLE = new Set(['fill', 'stroke', 'filter', 'clip-path', 'mask', 'marker-start', 'marker-mid', 'marker-end', 'cursor']);
 // Exact authored help destinations, never a general provider host/path permission.
-const PRIVACY_REFERENCES = new Set(['https://github.com/vypdev/copilot/issues/712',
-    'https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens']);
+const AUTHORED_REFERENCES = new Set(['https://github.com/vypdev/copilot/issues/712',
+    'https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens',
+    'https://github.com/vypdev/copilot/releases']);
 interface Node { readonly type?: string; readonly [field: string]: unknown }
 const node = (value: unknown): Node | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Node : null;
 const literal = (value: unknown): string | null => Array.isArray(value) && value.every(part => node(part)?.type === 'Text')
@@ -82,7 +83,7 @@ export function componentScript(name: string, source: string): string {
                 const checked = expression?.type === 'CallExpression' && callee?.type === 'Identifier' && typeof callee.name === 'string' && links.has(callee.name);
                 const local = text !== null && parseCenterLocation(text) !== null;
                 const documentation = text !== null && (/^https:\/\/(?:docs\.page\/vypdev\/copilot\/[a-z0-9/-]*|github\.com\/vypdev\/copilot)$(?![\s\S])/u.test(text)
-                    || PRIVACY_REFERENCES.has(text));
+                    || AUTHORED_REFERENCES.has(text));
                 if (!checked && !local && !documentation) fail('presentation-unchecked-navigation');
             }
         }
