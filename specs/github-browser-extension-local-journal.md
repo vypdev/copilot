@@ -175,6 +175,33 @@ blocked result. Version changes close old connections; no database is deleted or
 downgraded. One transaction reads epoch+payload and writes both atomically.
 AST dependency/cycle/220-line module/pure-environment rules remain enforced.
 
+`JournalReviews` separately owns at most16 retained five-minute clear previews,
+32 completed results and duplicate-confirmation single flight. Its preview binds
+the editor/controller/credential lifetime, kind, exact history generation/revision
+and a canonically read paused-collection settings revision. It rereads privacy
+after reading history. Cancel before submission discards the preview; cancel
+during a native effect reports pending and cannot claim to abort it.
+
+Before clear, the use case requires a shared-owner reservation for that paused
+settings revision. The coordinator MUST prevent new admissions and consent writes
+for that collection until release; an unavailable/busy reservation does not grant
+authority. This is an application coordination contract, not an atomic transaction
+across preferences and IndexedDB. Coordinator composition is a remaining delivery
+requirement. The adapter rechecks the supplied private admission guard before
+open, after open and in the native request callback before deciding any write.
+Loss of source/lease authority leaves the envelope unchanged. No renderer can
+provide this callback. A submitted transaction is not retrospectively canceled.
+
+After commit or unknown submission, a distinct read checks the exact next
+generation/revision and empty scope. Lost acknowledgement plus matching state is
+reported as observed-cleared with acknowledgement unknown; it does not attribute
+the transaction to this request. Unavailable/changed readback preserves the
+accepted or unknown submission fact. A later source retirement marks the fact
+noncurrent without erasing it. No confirm replay resubmits the clear. Connection
+and reservation cleanup cannot erase a terminal effect fact.
+`sourceCurrentAtObservation` describes the source/reservation when the result was
+observed; a replay never promotes that historical field to a new live observation.
+
 ## 9. UI/UX and content contract
 
 ```text

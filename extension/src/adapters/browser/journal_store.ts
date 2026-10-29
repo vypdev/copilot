@@ -11,14 +11,16 @@ const close = (database: IDBDatabase): void => { try { database.close(); } catch
 /** Fixed native transactions, with no promise boundary between reading and queueing the decision's write. */
 export class IndexedJournalStore implements JournalStore {
     constructor(private readonly factory: Pick<IDBFactory, 'open'>) {}
-    async execute(kind: JournalKind, command: JournalCommand): Promise<JournalResult> {
+    async execute(kind: JournalKind, command: JournalCommand, eligible?: () => boolean): Promise<JournalResult> {
         try {
             if (!validJournalCommand(kind, command)) return { state: 'invalid' };
+            const current = () => { try { return eligible === undefined || eligible() === true; } catch { return false; } };
+            if (!current()) return { state: 'stale' };
             // Native request payloads must not keep mutable application references across open().
             const captured = JSON.parse(JSON.stringify(command)) as JournalCommand;
             const opened = await this.open();
             if (!('transaction' in opened)) return opened;
-            try { return await this.transact(opened, kind, captured); } finally { close(opened); }
+            try { return current() ? await this.transact(opened, kind, captured, current) : { state: 'stale' }; } finally { close(opened); }
         } catch { return unavailable('not-started'); }
     }
     private open(): Promise<IDBDatabase | JournalResult> {
@@ -49,7 +51,7 @@ export class IndexedJournalStore implements JournalStore {
             };
         });
     }
-    private transact(database: IDBDatabase, kind: JournalKind, command: JournalCommand): Promise<JournalResult> {
+    private transact(database: IDBDatabase, kind: JournalKind, command: JournalCommand, current: () => boolean): Promise<JournalResult> {
         return new Promise(resolve => {
             let result: JournalResult = unavailable('unknown'); let transaction: IDBTransaction;
             try { transaction = database.transaction(kind, 'readwrite'); }
@@ -66,6 +68,7 @@ export class IndexedJournalStore implements JournalStore {
                 const request = store.get(KEY);
                 request.onsuccess = () => {
                     try {
+                        if (!current()) { result = { state: 'stale' }; return; }
                         const decision = decideJournal(kind, request.result, command);
                         result = decision.result;
                         if (decision.write) store.put(decision.write, KEY);

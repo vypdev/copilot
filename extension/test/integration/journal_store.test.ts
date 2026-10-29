@@ -101,6 +101,32 @@ it('does not open storage for a malformed, future or expanded recording command'
     }
     expect(await store.execute('credential' as never, append())).toEqual({ state: 'invalid' }); expect(native.opens).toHaveLength(0);
 });
+it('does not open storage when a retired owner cannot admit the operation', async () => {
+    const { native, store } = fixture();
+    const result = store.execute('diagnostics', append(), () => false);
+    if (native.opens.length) { native.opened(); await tick(); native.transactions[0].read(); native.transactions[0].complete(); }
+    expect(await result).toEqual({ state: 'stale' });
+    expect(native.opens).toHaveLength(0);
+});
+it('rechecks owner admission after an asynchronous native open before creating a transaction', async () => {
+    const { native, store } = fixture(); let current = true;
+    const result = store.execute('diagnostics', append(), () => current); current = false; native.opened(); await tick();
+    if (native.transactions.length) { native.transactions[0].read(); native.transactions[0].complete(); }
+    expect(await result).toEqual({ state: 'stale' }); expect(native.transactions).toHaveLength(0); expect(native.closeCount).toBe(1);
+});
+it('fences a takeover between the native request and its write without reporting an abort', async () => {
+    const { native, store } = fixture(); let current = true;
+    const result = store.execute('diagnostics', append(), () => current); native.opened(); await tick();
+    const transaction = native.transactions[0]; current = false; transaction.read(); transaction.complete();
+    expect(await result).toEqual({ state: 'stale' }); expect(transaction.puts).toHaveLength(0); expect(transaction.aborted).toBe(false);
+});
+it('contains a throwing admission guard before storage starts', async () => {
+    const { native, store } = fixture();
+    const result = store.execute('diagnostics', append(), () => { throw new Error('private-fence'); });
+    if (native.opens.length) { native.opened(); await tick(); native.transactions[0].read(); native.transactions[0].complete(); }
+    expect(await result).toEqual({ state: 'stale' });
+    expect(native.opens).toHaveLength(0);
+});
 it('snapshots the command before native open so a mutable caller cannot replace its safe admitted fact', async () => {
     const { native, store } = fixture(); const command = { ...append(), fact: { ...helper } };
     const result = store.execute('diagnostics', command); Object.assign(command.fact, { code: 'private-error' }); command.epoch = 8;

@@ -515,3 +515,12 @@ Future/corrupt documents and unexpected native layouts are preserved. No databas
 deletion, downgrade, permission request, network request, telemetry or credential
 fallback is present. The deterministic request driver verifies these boundaries;
 real Chrome, Firefox and Safari transaction journeys remain a separate H3 gate.
+
+`JournalReviews` adds retained, time-limited clear plans with editor/credential,
+privacy revision and exact history revision fences. It requires a shared paused-
+collection reservation and passes a private admission guard through asynchronous
+native opening to the request callback. A separate reread distinguishes an
+acknowledged clear from its observed result; unknown acknowledgements do not
+attribute the write. In-flight cancellation stays pending, and duplicate confirms
+join or replay one result. The coordinator, collection and center UI composition
+remain required; these application services alone do not expose clear controls.

@@ -3132,7 +3132,9 @@
         "extension/src/domain/journal_facts.ts",
         "extension/src/domain/local_journal.ts",
         "extension/src/application/journal_ports.ts",
-        "extension/src/adapters/browser/journal_store.ts"
+        "extension/src/adapters/browser/journal_store.ts",
+        "extension/src/domain/journal_clear.ts",
+        "extension/src/application/journal_reviews.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3251,7 +3253,11 @@
         "extension/test/contracts/local_journal.test.ts",
         "extension/test/fixtures/journal_native.ts",
         "extension/test/fixtures/local_journal.ts",
-        "extension/test/integration/journal_store.test.ts"
+        "extension/test/integration/journal_store.test.ts",
+        "extension/test/fixtures/journal_reviews.ts",
+        "extension/test/integration/journal_reviews.test.ts",
+        "extension/test/integration/journal_review_fences.test.ts",
+        "extension/test/integration/journal_review_native.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",
