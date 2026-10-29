@@ -21,6 +21,12 @@ per-feature effective preference sources. The inventory keeps future work visibl
 and distinguishes a saved preference from implemented functionality or granted
 access.
 
+**Privacy** provides a [browser permission and privacy inspector](/browser-extension/permissions).
+It queries only the three declared native scopes, explains retention and native
+revocation, and separates browser access from a selected GitHub read identity.
+Inspecting that identity is a separate explicit action that may contact GitHub.
+The native inspector remains available when saved settings cannot be read.
+
 ## Change a preference
 
 1. Open **Appearance** or **Language**.

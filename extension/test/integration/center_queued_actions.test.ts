@@ -50,3 +50,18 @@ it('a pending discard callback cannot navigate the disposed document or its repl
     port.actions.leave(); h.stop(); const replace = vi.spyOn(window.history, 'replaceState');
     await tick(); expect(replace).not.toHaveBeenCalled(); expect(window.location.hash).toBe('#/appearance');
 });
+it.each(['disposed', 'blurred', 'hidden', 'navigated'] as const)('queued inspector callbacks in a %s context cannot query native permissions or read a GitHub identity', async context => {
+    vi.mocked(mount).mockClear(); const h = await render('privacy'); const port = surface();
+    await ready(() => !!document.querySelector('[data-permission-status]'));
+    if (context === 'disposed') { h.stop(); await tick(); }
+    else if (context === 'blurred') window.dispatchEvent(new Event('blur'));
+    else if (context === 'hidden') {
+        vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden'); document.dispatchEvent(new Event('visibilitychange'));
+    } else { window.location.hash = '#/appearance'; await ready(() => !!document.querySelector('#center-theme')); }
+    const probes = vi.mocked(h.browser.api.permissions.contains).mock.calls.length;
+    const reads = h.port.send.mock.calls.filter(([message]) => message.method === 'center.connections.read').length;
+    port.actions.inspectPermissions(); port.actions.inspectConnection(); await tick();
+    expect(h.browser.api.permissions.contains).toHaveBeenCalledTimes(probes);
+    expect(h.port.send.mock.calls.filter(([message]) => message.method === 'center.connections.read')).toHaveLength(reads);
+    expect(h.browser.api.permissions.request).not.toHaveBeenCalled(); expect(h.native.port.set).not.toHaveBeenCalled();
+});

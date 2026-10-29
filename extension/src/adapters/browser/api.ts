@@ -15,9 +15,10 @@ export interface BrowserApi {
     storage: { local: BrowserStorageArea; session?: BrowserStorageArea;
         onChanged: BrowserEvent<(changes: Record<string, unknown>, area: string) => void> };
     permissions: {
-        contains(value: { origins: string[] }): Promise<boolean>;
+        contains(value: { origins?: string[]; permissions?: string[] }): Promise<boolean>;
         request(value: { origins: string[] }): Promise<boolean>;
         onRemoved: BrowserEvent<(permissions: { origins?: string[] }) => void>;
+        onAdded?: BrowserEvent<(permissions: { origins?: string[] }) => void>;
     };
     tabs: {
         get(id: number): Promise<{ url?: string; active?: boolean; incognito?: boolean; windowId?: number }>;

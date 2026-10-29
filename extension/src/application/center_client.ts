@@ -19,6 +19,7 @@ export class CenterClient {
     private pending: CenterPlan | null = null;
     private attempted: CenterPlan | null = null;
     private generation = 0;
+    private connectionGeneration = 0;
     private stopped = false;
     private busy = false;
     private queuedRead = false;
@@ -26,7 +27,7 @@ export class CenterClient {
     private value: CenterClientView = deepFreeze({ phase: 'loading', data: null, review: null, issue: null });
     constructor(private readonly port: CenterClientPort) {}
     get view(): CenterClientView { return this.value; }
-    invalidateConnections(): void { if (!this.stopped) this.update({ connections: null }); }
+    invalidateConnections(): void { if (!this.stopped) { this.connectionGeneration++; this.update({ connections: null }); } }
     subscribe(listener: (view: CenterClientView) => void): () => void {
         if (this.listeners.size >= 8) throw new Error('center-subscriber-capacity');
         this.listeners.add(listener); listener(this.value); return () => { this.listeners.delete(listener); };
@@ -148,7 +149,7 @@ export class CenterClient {
     async cancel(): Promise<void> { await this.complete('center.cancel'); }
     async connections(input: ConnectionIntent | null | (() => Promise<ConnectionIntent | null>) = null, expectedRevision = 0): Promise<void> {
         if (this.stopped || this.busy || !this.owner || this.value.review) return;
-        const owner = this.owner; const generation = this.generation;
+        const owner = this.owner; const generation = this.generation; const connectionGeneration = this.connectionGeneration;
         if (input && owner.role !== 'editor') { this.update({ connections: { state: 'denied' } }); return; }
         this.busy = true; this.update({ phase: input ? 'committing' : 'reading' });
         let intent: ConnectionIntent | null;
@@ -161,7 +162,7 @@ export class CenterClient {
             clientId: owner.clientId, controllerEpoch: owner.controllerEpoch, credentialEpoch: owner.credentialEpoch, expectedRevision, intent }
             : { version: 1, method: 'center.connections.read', clientId: owner.clientId }));
         if (!this.current(generation)) return;
-        this.update({ connections: response ?? { state: intent ? 'unknown' : 'unavailable' } });
+        if (connectionGeneration === this.connectionGeneration) this.update({ connections: response ?? { state: intent ? 'unknown' : 'unavailable' } });
         this.queuedRead = true;
         await this.finish(generation);
     }

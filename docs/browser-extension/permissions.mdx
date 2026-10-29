@@ -1,0 +1,96 @@
+---
+title: Browser permissions and privacy
+description: Inspect browser-reported access, understand a selected GitHub read connection and find native revocation controls without granting access.
+---
+
+# Browser permissions and privacy
+
+Open **Privacy** in the [local control center](/browser-extension/configuration)
+to inspect access in this development build. The page can inspect browser
+permissions even when saved preferences are unreadable or configuration cannot
+open. A read-only center window can also inspect them.
+
+H3 remains in progress. This inspector is one implemented subflow; the complete
+permission, credential-role, retention and native-browser acceptance requirements
+still apply. Its results do not certify the rest of the product.
+
+## Inspect browser access
+
+Opening Privacy makes one local native check of these three declared capabilities:
+
+| Capability | Fixed query | What the observation means |
+|---|---|---|
+| Local storage | `storage` | The browser reports the extension's named storage permission. It does not prove a future storage operation will succeed. |
+| GitHub pages | `https://github.com/*` | The browser reports the declared site scope. Actual page eligibility and native site/profile controls still apply. |
+| GitHub API | `https://api.github.com/*` | The browser reports the optional API site scope. It does not validate a GitHub credential or authorize an API operation. |
+
+Each card gives its scope, source, current reported status, retention and native
+revocation path. **Granted** and **Not granted** are native boolean results.
+**Unknown** means a check failed or did not return a valid result. **Unsupported**
+means this browser context does not expose the query API. A manifest declaration
+or enabled preference never becomes a grant by itself.
+
+**Read browser permissions** repeats these fixed native queries. Opening this
+page or checking browser access does not request a grant, read GitHub, change
+preferences or start an Action. Results stay in the open page's memory; they are
+not exported or saved.
+
+There is one pending batch of three queries at most. After five seconds without
+a complete response, the page reports an unknown timeout. The browser calls may
+still be pending, so refresh stays unavailable until they finish. Late timed-out
+results cannot become grants. Close and reopen the page if its native context
+remains unresponsive; there is no automatic failure retry loop.
+
+Leaving Privacy, hiding the page, moving focus away, native permission events
+and closing the center retire old observations. Returning to the foreground or
+Privacy checks current browser access again. Permission events depend on native
+API support; a fresh explicit check remains available.
+
+## Inspect the selected GitHub read identity
+
+The selected read identity is separate from browser access. Select **Read
+selected GitHub identity (may contact GitHub)** deliberately to use the existing
+protected connection service. The page does not make this read automatically.
+A native center session must be available, with no other active operation or
+settings review. Use **Connections** to manage read sessions.
+
+An admitted result displays only the selected github.com account and repository.
+It does not list other saved sessions, their private local labels or credentials.
+An unavailable or retired result remains unknown. A verified disconnected result
+is shown separately from unknown access. Losing current native API access hides
+the retained private identity until it can be checked again.
+
+The connection's read purpose describes what this extension service uses. It
+does not prove that the provider credential has no other entitlements. Review
+and revoke those separately in [GitHub credential settings](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
+Future extension GitHub writes and CLI pairing remain unavailable here; this
+inspector does not create a write identity or CLI session.
+
+## Revoke access in the browser
+
+- **Chrome:** open Extensions → Manage extensions → Copilot → Details and
+  review Site access. Optional GitHub API access is separate from page access.
+- **Firefox:** open Add-ons and themes → Extensions → Copilot → Permissions.
+  Review optional access and remove it in the browser's controls.
+- **Safari on macOS:** open Settings → Extensions, select Copilot and review
+  website access and the relevant profile. Native approval can be temporary;
+  a coarse scope result does not replace Safari's current site decision.
+
+Disabling or removing the extension is another native control. Local data
+retention and deletion behavior must be considered separately. After changing
+access, return to Privacy and check current browser permissions. A provider-side
+credential revocation also requires a fresh connection read.
+
+## Understand retention
+
+Nonsecret settings belong to local preferences. Credential material and private
+API evidence stay in the extension's protected session storage, with no fallback
+to local preferences. The inspector neither reads credential material nor saves
+its permission report. This extension package requests no browser history
+permission and has no telemetry collector.
+
+Use **Data and recovery** for the implemented reviewed preference export/import
+and recovery operations; these are separate from this read-only report. Inspect
+the [feature inventory](/browser-extension/features) for the remaining product
+capabilities and their implementation milestones. Do not treat future retention
+or optional write controls as available because their descriptions are visible.

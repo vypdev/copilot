@@ -11,12 +11,14 @@ import { keys, record } from '../domain/value.ts';
 import type { CenterActions } from '../domain/center_ui.ts';
 import type { CenterSurface } from '../presentation/center_surface.ts';
 import CenterHost from '../presentation/CenterHost.svelte';
-import { loadCenterPage, loadInventoryPage } from './center_pages.ts';
+import { loadCenterPage, loadInventoryPage, loadPrivacyPage } from './center_pages.ts';
 import { downloadCenterSettings, readCenterImport } from './center_files.ts';
 import { buildSourceIdentity } from './build_identity.ts';
 import { connectionActions } from './center_connections.ts';
 import { EMPTY_INVENTORY_NAVIGATION } from '../domain/inventory_filters.ts';
 import { currentCenterSettings } from '../domain/center_client_view.ts';
+import { BrowserPermissionReader } from '../adapters/browser/permission_reader.ts';
+import { PermissionInspector } from '../application/permission_inspector.ts';
 
 /** Native options-page composition. The UI receives preferences and callbacks, never reusable authority. */
 export function startCenter(api: BrowserApi, document: Document, nativeLanguage: string): () => void {
@@ -29,14 +31,17 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     const client = new CenterClient({ sourceTree: buildSourceIdentity(), send: message => api.runtime.sendMessage(message) });
     let stopped = false; let draftEpoch = 0; let savedRevision = -1; let savedCandidate: Settings | null = null; let importGeneration = 0;
     let inventory = EMPTY_INVENTORY_NAVIGATION;
-    let connectionReadPending = false;
+    let connectionReadPending = false; let focused = true;
+    const permissionReader = new BrowserPermissionReader(api);
+    const inspector = new PermissionInspector({ query: capability => permissionReader.query(capability),
+        after: (milliseconds, action) => { const id = window.setTimeout(action, milliseconds); return () => window.clearTimeout(id); }, changed: () => publish() });
     const listeners = new Set<Parameters<CenterSurface['subscribe']>[0]>();
     const focus = (selector: string) => { void tick().then(() => { if (!stopped) document.querySelector<HTMLElement>(selector)?.focus(); }); };
     const navigation = new CenterNavigation(window.location.hash, {
         replace: hash => { window.history.replaceState(null, '', `${canonical}${hash}`); },
-        changed: () => { publish(); focus(navigation.pendingLocation ? '[role=alert] button' : 'main h1'); readConnections(); },
+        changed: () => { retireObservations(); focus(navigation.pendingLocation ? '[role=alert] button' : 'main h1'); readObservations(); },
     });
-    const frame = () => centerFrame(client.view, navigation.location, navigation.pendingLocation, nativeLanguage, draftEpoch, navigation.hasDraft, inventory);
+    const frame = () => centerFrame(client.view, navigation.location, navigation.pendingLocation, nativeLanguage, draftEpoch, navigation.hasDraft, inventory, inspector.view);
     function publish(): void {
         if (stopped) return;
         const value = frame(); document.documentElement.lang = value.copy.locale; document.title = value.copy.messages.title;
@@ -46,13 +51,15 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
         connections: connectionActions(api, document, client, () => !stopped && ['connections', 'repositories'].includes(navigation.location.route), value => { navigation.dirty(value); publish(); }),
         preview: (intent, revision) => { void client.preview(intent, revision); },
         confirm: () => { void client.confirm(); }, cancel: () => { void client.cancel(); },
-        dismiss: () => { void client.dismiss(); }, reload: () => { void client.refresh().then(readConnections); },
+        dismiss: () => { void client.dismiss(); }, reload: () => { retireObservations(); void client.refresh().then(readObservations); },
         takeControl: () => { void client.takeControl(); }, dirty: value => { navigation.dirty(value); publish(); },
         stay: () => navigation.stay(), leave: () => {
             if (client.view.phase !== 'committing') void client.dismiss().then(() => { if (!stopped) navigation.leave(); });
         },
         focusContent: () => { document.querySelector<HTMLElement>('main')?.focus(); },
         browseInventory: value => { inventory = value; publish(); },
+        inspectPermissions: () => readPermissions(),
+        inspectConnection: () => { if (!stopped && focused && document.visibilityState !== 'hidden' && navigation.location.route === 'privacy') void client.connections(); },
         exportSettings: async () => downloadCenterSettings(document, client.view.data?.settings ?? null),
         importSettings: async revision => {
             const origin = navigation.location; const epoch = draftEpoch; const generation = ++importGeneration;
@@ -74,7 +81,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
         });
         if (view.review?.state === 'preview') focus('#settings-review-heading');
     });
-    const surface: CenterSurface = { initial: frame(), actions, load: loadCenterPage, loadInventory: loadInventoryPage,
+    const surface: CenterSurface = { initial: frame(), actions, load: loadCenterPage, loadInventory: loadInventoryPage, loadPrivacy: loadPrivacyPage,
         subscribe: listener => { listeners.add(listener); listener(frame()); return () => { listeners.delete(listener); }; } };
     const host = mount(CenterHost, { target: document.body, props: { surface } }); flushSync();
     function readConnections(): void {
@@ -82,12 +89,18 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
         if (route === 'features' && currentCenterSettings(client.view) === null) return;
         if (['connections', 'repositories', 'profiles', 'features'].includes(route)) void client.connections();
     }
+    function readPermissions(): void { if (!stopped && focused && document.visibilityState !== 'hidden' && navigation.location.route === 'privacy') inspector.read(); }
+    function readObservations(): void { readConnections(); readPermissions(); }
+    function retireObservations(): void { client.invalidateConnections(); inspector.invalidate(); }
     const hash = () => navigation.navigate(window.location.hash);
     const visible = () => {
         if (stopped) return;
-        client.invalidateConnections();
-        if (document.visibilityState !== 'hidden') { connectionReadPending = true; void client.refresh(); }
+        retireObservations();
+        if (focused && document.visibilityState !== 'hidden') { connectionReadPending = true; void client.refresh(); readPermissions(); }
     };
+    const blurred = () => { focused = false; retireObservations(); };
+    const foreground = () => { focused = true; visible(); };
+    const unobservePermissions = permissionReader.observe(visible);
     const changed = (changes: Record<string, unknown>, area: string) => { if (area === 'local' && Object.hasOwn(changes, SETTINGS_KEY)) visible(); };
     const invalidated: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender) => {
         if (sender.id === api.runtime.id && !sender.tab && record(value) && keys(value, ['version', 'method'])
@@ -96,13 +109,15 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     const beforeUnload = (event: BeforeUnloadEvent) => { if (navigation.guarded) { event.preventDefault(); event.returnValue = ''; } };
     const stop = () => {
         if (stopped) return;
-        stopped = true; unsubscribe(); client.stop(); listeners.clear(); void unmount(host);
+        stopped = true; inspector.stop(); unobservePermissions(); unsubscribe(); client.stop(); listeners.clear(); void unmount(host);
         window.removeEventListener('hashchange', hash); document.removeEventListener('visibilitychange', visible);
         window.removeEventListener('beforeunload', beforeUnload); window.removeEventListener('pagehide', stop);
+        window.removeEventListener('blur', blurred); window.removeEventListener('focus', foreground);
         api.storage.onChanged.removeListener(changed); api.runtime.onMessage.removeListener(invalidated);
     };
     window.addEventListener('hashchange', hash); document.addEventListener('visibilitychange', visible);
     window.addEventListener('beforeunload', beforeUnload); window.addEventListener('pagehide', stop);
+    window.addEventListener('blur', blurred); window.addEventListener('focus', foreground);
     api.storage.onChanged.addListener(changed); api.runtime.onMessage.addListener(invalidated);
-    void client.start().then(readConnections); return stop;
+    readPermissions(); void client.start().then(readConnections); return stop;
 }

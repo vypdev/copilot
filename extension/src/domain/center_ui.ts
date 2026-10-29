@@ -5,6 +5,8 @@ import type { ReviewActions } from './center_review.ts';
 import type { ConnectionActions } from './connection_ui.ts';
 import type { ConnectionOutcome } from './named_sessions.ts';
 import type { InventoryNavigationState } from './inventory_filters.ts';
+import type { PermissionInspection } from './permission_inspection.ts';
+import type { PrivacyConnection } from './privacy_context.ts';
 
 export interface CenterActions extends ReviewActions {
     readonly connections: ConnectionActions;
@@ -17,6 +19,8 @@ export interface CenterActions extends ReviewActions {
     importSettings(revision: number): Promise<boolean>;
     focusContent(): void;
     browseInventory(value: InventoryNavigationState): void;
+    inspectPermissions(): void;
+    inspectConnection(): void;
 }
 export interface CenterRouteContext {
     readonly connections?: ConnectionOutcome | null;
@@ -28,3 +32,7 @@ export interface CenterRouteProps { context: CenterRouteContext; actions: Center
 /** Static discovery stays available without an editable or invented settings document. */
 export type InventoryRouteContext = Omit<CenterRouteContext, 'settings'> & { readonly settings: Settings | null };
 export interface InventoryRouteProps { context: InventoryRouteContext; actions: CenterActions }
+export interface PrivacyRouteProps {
+    context: { readonly copy: CenterCopy; readonly inspection: PermissionInspection; readonly connection: PrivacyConnection; readonly canInspectConnection: boolean };
+    actions: Pick<CenterActions, 'inspectPermissions' | 'inspectConnection'>;
+}

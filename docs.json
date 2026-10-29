@@ -350,6 +350,11 @@
           "icon": "code"
         },
         {
+          "title": "Browser permissions and privacy",
+          "href": "/browser-extension/permissions",
+          "icon": "shield"
+        },
+        {
           "title": "Testing",
           "href": "/development/testing",
           "icon": "vial"

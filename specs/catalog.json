@@ -3100,7 +3100,14 @@
         "extension/src/presentation/FeatureProvenance.svelte",
         "extension/src/presentation/InventoryFilters.svelte",
         "extension/src/presentation/InventorySelect.svelte",
-        "extension/src/presentation/InventoryRoute.svelte"
+        "extension/src/presentation/InventoryRoute.svelte",
+        "extension/src/adapters/browser/permission_reader.ts",
+        "extension/src/application/permission_inspector.ts",
+        "extension/src/domain/permission_inspection.ts",
+        "extension/src/domain/privacy_context.ts",
+        "extension/src/domain/privacy_copy.ts",
+        "extension/src/presentation/PrivacyPage.svelte",
+        "extension/src/presentation/CenterRouteContent.svelte"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3198,7 +3205,12 @@
         "extension/test/contracts/catalog_readonly.test.ts",
         "extension/test/integration/catalog_readonly.test.ts",
         "extension/test/integration/center_client_retirement.test.ts",
-        "extension/test/integration/center_queued_actions.test.ts"
+        "extension/test/integration/center_queued_actions.test.ts",
+        "extension/test/contracts/permission_inspection.test.ts",
+        "extension/test/contracts/browser_permission_reader.test.ts",
+        "extension/test/contracts/permission_architecture.test.ts",
+        "extension/test/integration/permission_inspector.test.ts",
+        "extension/test/integration/privacy_page.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",
@@ -3230,7 +3242,8 @@
         "extension/README.md",
         "docs/browser-extension/runtime.mdx",
         "docs/browser-extension/configuration.mdx",
-        "docs/browser-extension/features.mdx"
+        "docs/browser-extension/features.mdx",
+        "docs/browser-extension/permissions.mdx"
       ]
     }
   ]

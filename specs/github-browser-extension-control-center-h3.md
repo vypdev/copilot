@@ -1092,3 +1092,87 @@ port for unavailable exports and queued navigation around commit/disposal;
 `center_foreground.test.ts` verifies that an already queued native notification
 cannot reopen a disposed center. Native driver and human evidence remain
 separate requirements. No coverage exclusion or threshold change is permitted.
+
+### Permission inspection refinement (2026-10-29)
+
+CENTER06 MUST distinguish browser-reported access from the extension's GitHub
+read identity, provider-side token entitlements and future CLI pairing. The
+inspector is a local observation surface. No reported grant authorizes an
+operation; existing native execution fences remain independent. A manifest
+declaration alone cannot establish an observed grant.
+
+The options composition calls a narrow semantic browser-permission reader for
+exactly three fixed build capabilities: storage, `https://github.com/*`, and
+`https://api.github.com/*`. It uses `permissions.contains` with constant operands;
+it accepts no arbitrary permission, origin, ref or command. It never requests a
+grant, changes browser access, fetches GitHub data or reads a credential. Native
+API absence, exceptions and malformed nonboolean results are distinct from
+denial. Future optional capabilities remain unavailable in this build. Broad
+reported site access is not proof that a particular page is eligible or that
+Safari's native per-site/per-profile controls permit its current operation.
+
+```text
+Open Privacy -> unknown -> one native three-query check -> per-capability result
+Context changes -> retire observation before awaits -> one fresh queued check
+No response in5s -> unknown timeout; original native calls remain bounded
+Late/canceled/retired response -> ignored; explicit fresh check required
+```
+
+One options instance owns the transient reader. There is at most one physical
+three-query batch and one coalesced explicit request. A five-second deadline
+reports unknown without pretending the native calls were aborted; no additional
+calls start until the original batch settles or the page is reopened. There is
+no failure retry loop. Navigation, hiding, focus loss, native permission events
+and disposal retire prior results synchronously. Supported permission events,
+return to foreground and explicit refresh can request a new observation. No
+inspection result is persisted or exported.
+
+This reader is composed directly in the native options infrastructure through
+the browser adapter. It does not extend the CenterGateway protocol or supply
+observed permissions to background authorization. The inspector starts without
+awaiting the configuration opening handshake, including a suspended handshake.
+
+Presentation receives immutable closed states through the existing local frame;
+the native adapter and application reader stay outside Svelte. The page remains
+usable when saved settings are future/corrupt/unavailable. Private GitHub scope
+is displayed only from a current admitted named-session projection, never a
+browser grant or retained unsupported settings. Read purpose does not certify
+the credential's full provider entitlements. Optional write identities and CLI
+operations must describe actual supported state; their remaining implementation
+and acceptance are not replaced by this inspector.
+
+Opening Privacy and native permission queries never request a GitHub read.
+The separate, explicit selected-identity button states that it may contact
+GitHub and uses the existing protected connection service. It is available to
+editor or observer only with a current native session and no active operation or
+review. Invalidating a connection observation increments a separate read-result
+generation before awaiting anything; a response from an older generation cannot
+republish private scope even when the native permission remains granted. The
+completed operation still releases its busy state and reads current settings.
+
+Privacy's independently usable region must not inherit the configuration
+handshake's busy announcement. Its native-check section owns its own busy/status
+semantics. A canceled deadline already queued by the event loop cannot replace
+a completed observation with a fictitious timeout. Queued presentation actions
+must recheck route, focus, visibility and disposal before starting a query.
+
+Required content: each capability's source, scope and observed status; protected
+session versus local preference retention; separate provider and CLI status;
+native revocation instructions for Chrome, Firefox and Safari; explicit next
+actions for pending/denied/unknown/unavailable states; links to Connections,
+reviewed Data controls and the complete feature inventory. All content has
+en/es/fr/pt resources, text statuses, native controls and accessible focus.
+
+This refinement adds a floor of40 distinct risk cases:7 pure scope/state cases,
+9 lifecycle/timeout/coalescing races,6 adapter outcomes,10 mounted integration
+journeys,6 presentation/localization/recovery cases and2 architecture/manifest
+contracts. Translation repetitions count once. Keep all existing H3/catalog
+budgets and native/human acceptance gates. Add the user permission guide and
+catalog code/test evidence together; validate specifications, docs, types,
+authored component constraints, full coverage and exact target artifacts.
+
+Primary API sources verified2026-10-29: [Chrome permissions API](https://developer.chrome.com/docs/extensions/reference/api/permissions),
+[Mozilla permissions.contains](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/permissions/contains)
+and [Safari permission management](https://developer.apple.com/documentation/safariservices/managing-safari-web-extension-permissions).
+Actual cross-browser observations supplement these contracts; no browser loading
+or native UX approval follows from unit tests or API documentation.
