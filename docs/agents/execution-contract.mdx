@@ -164,6 +164,26 @@ publication. See [progress evidence](/issues/branch-management#progress-evidence
 and the [error reference](/security-operations/operations/error-reference).
 
 
+
+## Invalid completed progress output
+
+After the CLI returns, progress still requires strict single-object JSON, the
+exact response schema and all existing scope/semantic checks. A rejected result
+uses the closed `progress-result-contract-invalid` recovery detail with phase
+(`scope`, `partition`, `assessment`), reviewed reason, known schema field and
+verified requirement/original source-line IDs. Unknown identities are `none`;
+raw producer text and unknown field names never become recovery instructions.
+The application binds the details to its current host inventory, retaining a
+separate immutable source-anchor map without changing scope/model JSON.
+
+Execution/provider errors remain distinct. A missing result does not become
+proof of completed output, and no automatic repair/retry loop is added. A fresh
+attempt can help when the provider returns a result conforming to the unchanged
+contract; it cannot enlarge fixed budgets or authorize a scope change. All
+invalid, canceled, incomplete or stale outcomes retain previous progress.
+The same correlation reference and localized semantic view reach CLI, Check
+and Job Summary; optional native evidence publication is a separate result.
+
 ## Optional native Check Run evidence
 
 Required results and their Job Summary remain authoritative when optional native

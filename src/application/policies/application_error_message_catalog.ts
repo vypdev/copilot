@@ -233,6 +233,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Inspect the closed-issue or merged-PR run and current native state. Retry cleanup only if the issue is still closed with the intended reason; leave reopened work open. Resolve the named failure before retrying.',
     retainedState: 'Native state was preserved. Confirmed changes: {changed}; remaining required changes in the last verified plan: {remaining}. Unavailable reads do not establish completion.',
   }),
+  'progress-result-contract-invalid': Object.freeze({
+    impact: 'The returned progress result violated its contract; progress was not published.',
+    action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
+    retainedState: 'Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.',
+  }),
   'progress-binary-evidence-unavailable': Object.freeze({
     impact: 'Progress was not assessed because required binary or non-text contents cannot be reviewed. Unreviewed paths ({pathCount} total; {shownCount} shown; complete inventory in run details): {paths}.',
     action: 'Inspect the intended pull request base and the pinned paths. Changed binary contents need reviewable source and provenance; file metadata or a successful build does not establish binary correctness.',
@@ -382,6 +387,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'La limpieza de la issue sigue sin verificarse: {resultId}, fase {phase}; estado nativo {state}, motivo {reason}.',
     action: 'Revisa la ejecución de cierre o de la PR fusionada y el estado nativo actual. Reintenta la limpieza solo si la issue sigue cerrada con el motivo previsto; conserva abierto el trabajo reabierto. Resuelve el fallo indicado antes de reintentar.',
     retainedState: 'Se conservó el estado nativo. Cambios confirmados: {changed}; cambios pendientes en el último plan verificado: {remaining}. Una lectura no disponible no demuestra que haya finalizado.',
+  }),
+  'progress-result-contract-invalid': Object.freeze({
+    impact: 'El resultado de progreso devuelto incumplió su contrato; no se publicó el progreso.',
+    action: 'Inspecciona el requisito original y el esquema de respuesta. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Un nuevo intento puede ayudar si el proveedor cumple el contrato sin cambiarlo; no relajes la aceptación ni la verificación.',
+    retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
   }),
   'progress-binary-evidence-unavailable': Object.freeze({
     impact: 'No se evaluó el progreso porque no se pueden revisar los contenidos binarios o no textuales necesarios. Rutas sin revisar ({pathCount} en total; {shownCount} mostradas; inventario completo en los detalles de ejecución): {paths}.',

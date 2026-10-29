@@ -7,7 +7,7 @@
       "id": "semantic-github-publication",
       "spec": "specs/semantic-github-publication-and-notification.md",
       "requiredCases": 135,
-      "allocatedCases": 980,
+      "allocatedCases": 1047,
       "files": [
         {
           "path": "src/domain/__tests__/github_publication.test.ts",
@@ -312,6 +312,26 @@
         {
           "path": "src/application/usecases/actions/__tests__/progress_agent_prompt_capacity.integration.test.ts",
           "qualifyingCases": 2
+        },
+        {
+          "path": "src/domain/__tests__/progress_response_diagnostic.test.ts",
+          "qualifyingCases": 13
+        },
+        {
+          "path": "src/data/repository/__tests__/progress_agent_response_policy.test.ts",
+          "qualifyingCases": 22
+        },
+        {
+          "path": "src/application/usecases/actions/__tests__/progress_result_rejection.integration.test.ts",
+          "qualifyingCases": 16
+        },
+        {
+          "path": "src/application/policies/__tests__/progress_rejection_diagnostics.test.ts",
+          "qualifyingCases": 6
+        },
+        {
+          "path": "src/application/policies/__tests__/progress_response_error_presentation.test.ts",
+          "qualifyingCases": 10
         }
       ]
     },

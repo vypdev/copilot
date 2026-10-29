@@ -1,3 +1,4 @@
+import { isProgressResponseDiagnosticFacts, type ProgressResponseDiagnosticFacts } from '../../domain/progress_response_diagnostic';
 import { isProgressBinaryEvidenceFacts, type ProgressBinaryEvidenceFacts } from '../../domain/progress_binary_evidence_diagnostic';
 import { isIssueWorkflowDiagnostic, type IssueWorkflowDiagnosticFacts } from '../../domain/issue_workflow_diagnostic';
 import { isChangeSizeReconciliationFacts, type ChangeSizeReconciliationFacts } from '../../domain/change_size_reconciliation';
@@ -72,6 +73,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'change-size-reconciliation-failed',
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
+    'progress-result-contract-invalid',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -89,6 +91,7 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'change-size-reconciliation-failed': ChangeSizeReconciliationFacts;
     readonly 'issue-workflow-admission-blocked': IssueWorkflowDiagnosticFacts;
     readonly 'progress-binary-evidence-unavailable': ProgressBinaryEvidenceFacts;
+    readonly 'progress-result-contract-invalid': ProgressResponseDiagnosticFacts;
 
     readonly 'pull-request-link-restored': Readonly<Record<string, never>>;
     readonly 'pull-request-link-base-retained': Readonly<Record<string, never>>;
@@ -399,6 +402,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'sdd-draft-repository-path-invalid': Object.freeze([]),
 
     'progress-binary-evidence-unavailable': Object.freeze(['paths', 'pathCount']),
+    'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
@@ -471,6 +475,7 @@ function normalizeApplicationErrorRecovery(
             || APPROVAL_EVIDENCE_PERMISSIONS[variables.operation as keyof typeof APPROVAL_EVIDENCE_PERMISSIONS] !== variables.permission)) {
         throw new TypeError('Approval evidence diagnostic is invalid.');
     }
+    if (recovery.id === 'progress-result-contract-invalid' && !isProgressResponseDiagnosticFacts(variables)) throw new TypeError('Progress response diagnostic is invalid.');
     if (recovery.id === 'progress-binary-evidence-unavailable' && !isProgressBinaryEvidenceFacts(variables)) throw new TypeError('Progress binary evidence diagnostic is invalid.');
     if (recovery.id === 'issue-workflow-admission-blocked' && !isIssueWorkflowDiagnostic(variables)) throw new TypeError('Issue admission diagnostic is invalid.');
     if (recovery.id === 'change-size-reconciliation-failed' && !isChangeSizeReconciliationFacts(variables)) {

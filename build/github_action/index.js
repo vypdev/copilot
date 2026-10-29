@@ -41306,6 +41306,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect the closed-issue or merged-PR run and current native state. Retry cleanup only if the issue is still closed with the intended reason; leave reopened work open. Resolve the named failure before retrying.',
         retainedState: 'Native state was preserved. Confirmed changes: {changed}; remaining required changes in the last verified plan: {remaining}. Unavailable reads do not establish completion.',
     }),
+    'progress-result-contract-invalid': Object.freeze({
+        impact: 'The returned progress result violated its contract; progress was not published.',
+        action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
+        retainedState: 'Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.',
+    }),
     'progress-binary-evidence-unavailable': Object.freeze({
         impact: 'Progress was not assessed because required binary or non-text contents cannot be reviewed. Unreviewed paths ({pathCount} total; {shownCount} shown; complete inventory in run details): {paths}.',
         action: 'Inspect the intended pull request base and the pinned paths. Changed binary contents need reviewable source and provenance; file metadata or a successful build does not establish binary correctness.',
@@ -41453,6 +41458,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'La limpieza de la issue sigue sin verificarse: {resultId}, fase {phase}; estado nativo {state}, motivo {reason}.',
         action: 'Revisa la ejecución de cierre o de la PR fusionada y el estado nativo actual. Reintenta la limpieza solo si la issue sigue cerrada con el motivo previsto; conserva abierto el trabajo reabierto. Resuelve el fallo indicado antes de reintentar.',
         retainedState: 'Se conservó el estado nativo. Cambios confirmados: {changed}; cambios pendientes en el último plan verificado: {remaining}. Una lectura no disponible no demuestra que haya finalizado.',
+    }),
+    'progress-result-contract-invalid': Object.freeze({
+        impact: 'El resultado de progreso devuelto incumplió su contrato; no se publicó el progreso.',
+        action: 'Inspecciona el requisito original y el esquema de respuesta. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Un nuevo intento puede ayudar si el proveedor cumple el contrato sin cambiarlo; no relajes la aceptación ni la verificación.',
+        retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
     }),
     'progress-binary-evidence-unavailable': Object.freeze({
         impact: 'No se evaluó el progreso porque no se pueden revisar los contenidos binarios o no textuales necesarios. Rutas sin revisar ({pathCount} en total; {shownCount} mostradas; inventario completo en los detalles de ejecución): {paths}.',
@@ -47587,6 +47597,7 @@ exports.parseProgressPartitionFacts = parseProgressPartitionFacts;
 exports.progressPartitionFactLimit = progressPartitionFactLimit;
 exports.aggregateProgressFacts = aggregateProgressFacts;
 const application_error_1 = __nccwpck_require__(75999);
+const progress_response_rejection_policy_1 = __nccwpck_require__(43023);
 const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 const progress_diff_partition_policy_1 = __nccwpck_require__(70628);
 // Leaves space inside the unchanged 512 KiB runtime prompt ceiling. The caller
@@ -47611,27 +47622,47 @@ function progressPartitionResponseSchema(partition, factLimit = 600) {
 }
 /** Complete exact-path facts only; model output cannot attest a build or a percentage. */
 function parseProgressPartitionFacts(response, partition, locale, factLimit = 600) {
-    const validation = (0, agent_output_locale_policy_1.validateAgentOutputLocale)(response, locale);
-    if (validation.kind !== 'valid')
-        throw invalid();
-    const payload = validation.payload;
-    if (Object.keys(payload).sort().join(',') !== 'files,outputLocale,partitionId' || payload.partitionId !== partition.id
-        || !Array.isArray(payload.files) || payload.files.length !== (partition.units?.length ?? partition.paths.length))
-        throw invalid();
+    const payload = (0, progress_response_rejection_policy_1.progressResponsePayload)(response, locale, 'partition', 'agent.failed');
+    const reject = (reason, field) => {
+        throw (0, progress_response_rejection_policy_1.progressResponseRejected)({ phase: 'partition', reason, field, requirementId: 'none', sourceLineId: 'none' });
+    };
+    if (Object.keys(payload).sort().join(',') !== 'files,outputLocale,partitionId')
+        reject('partition-shape-invalid', '$');
+    if (payload.partitionId !== partition.id)
+        reject('partition-id-invalid', '$.partitionId');
+    if (!Array.isArray(payload.files) || payload.files.length !== (partition.units?.length ?? partition.paths.length))
+        reject('partition-files-incomplete', '$.files');
     const seen = new Set();
-    const facts = payload.files.map((entry) => {
+    const facts = payload.files.map((entry, index) => {
+        const field = `$.files[${index}]`;
         if (!entry || typeof entry !== 'object' || Array.isArray(entry))
-            throw invalid();
+            reject('partition-file-invalid', field);
         const file = entry;
         const identity = partition.units ? file.unitId : file.path;
-        if (Object.keys(file).sort().join(',') !== (partition.units ? 'implemented,path,remaining,unitId' : 'implemented,path,remaining')
-            || typeof file.path !== 'string' || typeof identity !== 'string' || seen.has(identity)
-            || (partition.units ? !partition.units.some(unit => unit.id === identity && unit.path === file.path) : !partition.paths.includes(file.path)))
-            throw invalid();
-        seen.add(identity);
-        if (![file.implemented, file.remaining].every(value => typeof value === 'string' && value.trim().length > 0 && [...value].length <= factLimit))
-            throw invalid();
-        return Object.freeze({ path: file.path, ...(partition.units ? { unitId: identity } : {}), implemented: file.implemented, remaining: file.remaining });
+        const idField = `${field}.${partition.units ? 'unitId' : 'path'}`;
+        if (Object.keys(file).sort().join(',') !== (partition.units ? 'implemented,path,remaining,unitId' : 'implemented,path,remaining'))
+            reject('partition-file-invalid', field);
+        if (typeof file.path !== 'string')
+            reject('partition-unit-invalid', `${field}.path`);
+        if (typeof identity !== 'string' || seen.has(identity))
+            reject('partition-unit-invalid', idField);
+        const id = identity;
+        if (partition.units) {
+            const unit = partition.units.find(unit => unit.id === id);
+            if (!unit)
+                reject('partition-unit-invalid', idField);
+            if (unit.path !== file.path)
+                reject('partition-unit-invalid', `${field}.path`);
+        }
+        else if (!partition.paths.includes(file.path))
+            reject('partition-unit-invalid', `${field}.path`);
+        seen.add(id);
+        for (const key of ['implemented', 'remaining']) {
+            const value = file[key];
+            if (typeof value !== 'string' || value.trim().length === 0 || [...value].length > factLimit)
+                reject('partition-facts-invalid', `${field}.${key}`);
+        }
+        return Object.freeze({ path: file.path, ...(partition.units ? { unitId: id } : {}), implemented: file.implemented, remaining: file.remaining });
     });
     return Object.freeze(facts);
 }
@@ -47812,6 +47843,36 @@ function spendProgressRecovery(usage, resource, amount) {
 
 /***/ }),
 
+/***/ 43023:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.progressResponseRejected = progressResponseRejected;
+exports.progressResponsePayload = progressResponsePayload;
+const agent_output_locale_policy_1 = __nccwpck_require__(30601);
+const application_error_1 = __nccwpck_require__(75999);
+const progress_response_diagnostic_1 = __nccwpck_require__(56289);
+function progressResponseRejected(facts, code = 'agent.failed') {
+    if (!(0, progress_response_diagnostic_1.isProgressResponseDiagnosticFacts)(facts))
+        throw new TypeError('Progress response diagnostic is invalid.');
+    return new application_error_1.ApplicationError(code, `Progress ${facts.phase} result was rejected (${facts.reason}; field ${facts.field}; requirement ${facts.requirementId}; source ${facts.sourceLineId}). Existing progress was retained.`, { recovery: { id: 'progress-result-contract-invalid', variables: facts } });
+}
+/** An absent result retains its original code without claiming completed output. */
+function progressResponsePayload(response, locale, phase, code = 'locale.output-invalid') {
+    const validation = (0, agent_output_locale_policy_1.validateAgentOutputLocale)(response, locale);
+    if (validation.kind === 'valid')
+        return validation.payload;
+    if (response === undefined)
+        throw new application_error_1.ApplicationError(code, (0, agent_output_locale_policy_1.agentOutputLocaleFailureMessage)(validation));
+    throw progressResponseRejected({ phase, reason: validation.reason,
+        field: validation.reason === 'response-not-object' ? '$' : '$.outputLocale', requirementId: 'none', sourceLineId: 'none' }, code);
+}
+
+
+/***/ }),
+
 /***/ 82704:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -47822,9 +47883,11 @@ exports.MAX_PROGRESS_SCOPE_CLAUSES = exports.MAX_PROGRESS_SCOPE_BYTES = void 0;
 exports.progressScopeSourceLines = progressScopeSourceLines;
 exports.progressScopeResponseSchema = progressScopeResponseSchema;
 exports.parseProgressScope = parseProgressScope;
+exports.parseProgressScopeWithAnchors = parseProgressScopeWithAnchors;
 exports.scopedProgressResponseSchema = scopedProgressResponseSchema;
 exports.parseScopedProgressResponse = parseScopedProgressResponse;
-const application_error_1 = __nccwpck_require__(75999);
+const progress_response_rejection_policy_1 = __nccwpck_require__(43023);
+const progress_response_diagnostic_1 = __nccwpck_require__(56289);
 const progress_diff_partition_policy_1 = __nccwpck_require__(70628);
 const agent_output_locale_policy_1 = __nccwpck_require__(30601);
 exports.MAX_PROGRESS_SCOPE_BYTES = 64000;
@@ -47846,50 +47909,66 @@ function progressScopeResponseSchema(lines) {
                         kind: { type: 'string', enum: ['required', 'excluded', 'context', 'uncertain'] } },
                     required: ['id', 'kind'] } } }, required: ['outputLocale', 'lines'] };
 }
-function invalid(reason = 'assessment-invalid') {
-    throw new application_error_1.ApplicationError('agent.failed', `Progress scope or requirement evidence was rejected (${reason}). Existing progress was retained.`);
-}
-function payloadFor(response, locale) {
-    const result = (0, agent_output_locale_policy_1.validateAgentOutputLocale)(response, locale);
-    if (result.kind === 'invalid')
-        throw new application_error_1.ApplicationError('locale.output-invalid', (0, agent_output_locale_policy_1.agentOutputLocaleFailureMessage)(result));
-    return result.payload;
-}
 function exactKeys(value, keys) {
     return Object.keys(value).sort().join(',') === [...keys].sort().join(',');
 }
 function parseProgressScope(response, issue, locale) {
-    const payload = payloadFor(response, locale);
+    return parseProgressScopeWithAnchors(response, issue, locale).scope;
+}
+/** Retains host physical-line identities separately; scope/model JSON is unchanged. */
+function parseProgressScopeWithAnchors(response, issue, locale) {
+    const payload = (0, progress_response_rejection_policy_1.progressResponsePayload)(response, locale, 'scope');
     const source = progressScopeSourceLines(issue);
-    if (!exactKeys(payload, ['outputLocale', 'lines']) || !Array.isArray(payload.lines) || payload.lines.length !== source.length)
-        invalid('scope-incomplete');
+    const reject = (reason, field, id = 'none') => {
+        throw (0, progress_response_rejection_policy_1.progressResponseRejected)({ phase: 'scope', reason, field, requirementId: 'none',
+            sourceLineId: (0, progress_response_diagnostic_1.isProgressSourceLineId)(id) && source.some(line => line.id === id) ? id : 'none' });
+    };
+    if (!exactKeys(payload, ['outputLocale', 'lines']))
+        reject('scope-incomplete', '$');
+    if (!Array.isArray(payload.lines))
+        reject('scope-incomplete', '$.lines');
+    const input = payload.lines;
+    if (input.length !== source.length) {
+        const missing = source.find(line => !input.some(entry => entry !== null && typeof entry === 'object' && !Array.isArray(entry)
+            && entry.id === line.id));
+        reject('scope-incomplete', '$.lines', missing?.id);
+    }
     const seen = new Set();
-    const classified = payload.lines.map((entry) => {
+    const classified = input.map((entry, index) => {
+        const field = `$.lines[${index}]`;
         if (!entry || typeof entry !== 'object' || Array.isArray(entry))
-            invalid('scope-entry-invalid');
+            reject('scope-entry-invalid', field);
         const item = entry;
-        if (!exactKeys(item, ['id', 'kind']) || typeof item.id !== 'string' || !source.some(line => line.id === item.id))
-            invalid('scope-source-id-invalid');
-        if (seen.has(item.id))
-            invalid('scope-source-id-duplicate');
-        seen.add(item.id);
+        if (!exactKeys(item, ['id', 'kind']))
+            reject('scope-source-id-invalid', field, item.id);
+        if (typeof item.id !== 'string' || !source.some(line => line.id === item.id))
+            reject('scope-source-id-invalid', `${field}.id`);
+        const id = item.id;
+        if (seen.has(id))
+            reject('scope-source-id-duplicate', `${field}.id`, id);
+        seen.add(id);
         if (!['required', 'excluded', 'context', 'uncertain'].includes(item.kind))
-            invalid('scope-classification-invalid');
-        return { id: item.id, kind: item.kind };
+            reject('scope-classification-invalid', `${field}.kind`, id);
+        return { id, kind: item.kind };
     });
+    const anchors = {};
     function clauses(kinds, prefix) {
         const selected = source.filter(line => kinds.includes(classified.find(item => item.id === line.id).kind));
         if (selected.length > exports.MAX_PROGRESS_SCOPE_CLAUSES)
-            invalid('scope-clause-limit');
-        return Object.freeze(selected.map((line, index) => Object.freeze({ id: `${prefix}${index + 1}`, quote: line.quote,
-            ...(classified.find(item => item.id === line.id).kind === 'uncertain' ? { uncertain: true } : {}) })));
+            reject('scope-clause-limit', '$.lines', selected[exports.MAX_PROGRESS_SCOPE_CLAUSES].id);
+        return Object.freeze(selected.map((line, index) => {
+            const id = `${prefix}${index + 1}`;
+            anchors[id] = line.id;
+            return Object.freeze({ id, quote: line.quote,
+                ...(classified.find(item => item.id === line.id).kind === 'uncertain' ? { uncertain: true } : {}) });
+        }));
     }
-    const result = Object.freeze({ requirements: clauses(['required', 'uncertain'], 'R'), exclusions: clauses(['excluded'], 'X') });
-    if (result.requirements.length === 0)
-        invalid('scope-no-requirements');
-    if (Buffer.byteLength(JSON.stringify(result), 'utf8') > exports.MAX_PROGRESS_SCOPE_BYTES)
-        invalid('scope-budget');
-    return result;
+    const scope = Object.freeze({ requirements: clauses(['required', 'uncertain'], 'R'), exclusions: clauses(['excluded'], 'X') });
+    if (scope.requirements.length === 0)
+        reject('scope-no-requirements', '$.lines');
+    if (Buffer.byteLength(JSON.stringify(scope), 'utf8') > exports.MAX_PROGRESS_SCOPE_BYTES)
+        reject('scope-budget', '$.lines');
+    return Object.freeze({ scope, anchors: Object.freeze(anchors) });
 }
 const factSchema = { type: 'string', minLength: 1, maxLength: MAX_FACT };
 function scopedProgressResponseSchema(scope) {
@@ -47908,45 +47987,69 @@ function scopedProgressResponseSchema(scope) {
     };
 }
 /** Only exact in-scope entries can reach the existing progress card. No model top-level remaining is published. */
-function parseScopedProgressResponse(response, locale, scope) {
-    const payload = payloadFor(response, locale);
-    if (!exactKeys(payload, ['outputLocale', 'progress', 'requirements']) || typeof payload.progress !== 'number'
-        || !Number.isFinite(payload.progress) || payload.progress < 0 || payload.progress > 100
-        || !Array.isArray(payload.requirements) || payload.requirements.length !== scope.requirements.length)
-        invalid();
+function parseScopedProgressResponse(response, locale, scope, anchors = {}) {
+    const payload = (0, progress_response_rejection_policy_1.progressResponsePayload)(response, locale, 'assessment');
+    const reject = (reason, field, candidate = 'none') => {
+        const id = (0, progress_response_diagnostic_1.isProgressRequirementId)(candidate) && scope.requirements.some(requirement => requirement.id === candidate) ? candidate : 'none';
+        const source = anchors[id];
+        throw (0, progress_response_rejection_policy_1.progressResponseRejected)({ phase: 'assessment', reason, field, requirementId: id,
+            sourceLineId: id !== 'none' && (0, progress_response_diagnostic_1.isProgressSourceLineId)(source) ? source : 'none' });
+    };
+    if (!exactKeys(payload, ['outputLocale', 'progress', 'requirements']))
+        reject('response-shape-invalid', '$');
+    if (typeof payload.progress !== 'number' || !Number.isFinite(payload.progress) || payload.progress < 0 || payload.progress > 100)
+        reject('progress-invalid', '$.progress');
+    if (!Array.isArray(payload.requirements))
+        reject('requirements-incomplete', '$.requirements');
+    const input = payload.requirements;
+    if (input.length !== scope.requirements.length) {
+        const missing = scope.requirements.find(requirement => !input.some(entry => entry !== null && typeof entry === 'object' && !Array.isArray(entry)
+            && entry.id === requirement.id));
+        reject('requirements-incomplete', '$.requirements', missing?.id);
+    }
     const seen = new Set();
-    const entries = payload.requirements.map((entry) => {
+    const entries = input.map((entry, index) => {
+        const field = `$.requirements[${index}]`;
         if (!entry || typeof entry !== 'object' || Array.isArray(entry))
-            invalid();
+            reject('requirement-shape-invalid', field);
         const fact = entry;
-        if (!exactKeys(fact, ['id', 'status', 'evidence', 'summary', 'remaining']) || typeof fact.id !== 'string'
-            || !scope.requirements.some(requirement => requirement.id === fact.id) || seen.has(fact.id))
-            invalid();
-        seen.add(fact.id);
-        if (scope.requirements.find(requirement => requirement.id === fact.id).uncertain && fact.status !== 'verification-unknown')
-            invalid('scope-uncertain');
-        if (!['supported', 'missing', 'verification-unknown'].includes(fact.status)
-            || !['source-only', 'external-unverified', 'unavailable', 'contradictory'].includes(fact.evidence))
-            invalid();
+        if (!exactKeys(fact, ['id', 'status', 'evidence', 'summary', 'remaining']))
+            reject('requirement-shape-invalid', field, fact.id);
+        if (typeof fact.id !== 'string' || !scope.requirements.some(requirement => requirement.id === fact.id))
+            reject('requirement-id-invalid', `${field}.id`);
+        const id = fact.id;
+        if (seen.has(id))
+            reject('requirement-id-duplicate', `${field}.id`, id);
+        seen.add(id);
+        if (scope.requirements.find(requirement => requirement.id === id).uncertain && fact.status !== 'verification-unknown')
+            reject('scope-uncertain', `${field}.status`, id);
+        if (!['supported', 'missing', 'verification-unknown'].includes(fact.status))
+            reject('requirement-status-invalid', `${field}.status`, id);
+        if (!['source-only', 'external-unverified', 'unavailable', 'contradictory'].includes(fact.evidence))
+            reject('requirement-evidence-invalid', `${field}.evidence`, id);
         function text(value) { return typeof value === 'string' && value.trim().length > 0 && [...value].length <= MAX_FACT; }
         if (!text(fact.summary))
-            invalid();
+            reject('requirement-summary-invalid', `${field}.summary`, id);
         if (fact.status === 'supported') {
-            if (fact.remaining !== null || fact.evidence !== 'source-only')
-                invalid();
+            if (fact.remaining !== null)
+                reject('requirement-remaining-invalid', `${field}.remaining`, id);
+            if (fact.evidence !== 'source-only')
+                reject('requirement-evidence-mismatch', `${field}.evidence`, id);
         }
         else if (!text(fact.remaining))
-            invalid();
-        return { id: fact.id, summary: fact.summary, remaining: fact.remaining };
+            reject('requirement-remaining-invalid', `${field}.remaining`, id);
+        return { id, summary: fact.summary, remaining: fact.remaining };
     });
     const ordered = scope.requirements.map(requirement => ({ requirement, fact: entries.find(entry => entry.id === requirement.id) }));
     const summary = ordered.map(({ requirement, fact }) => `[${requirement.id}] ${requirement.quote} — ${fact.summary}`).join('\n');
     const remaining = ordered.filter(({ fact }) => fact.remaining !== null)
         .map(({ requirement, fact }) => `[${requirement.id}] ${requirement.quote} — ${fact.remaining}`).join('\n');
-    // Never round an uncertain 99.9 to completion. A percentage is still an estimate, not a review/merge approval.
+    // Never round an uncertain 99.9 to completion. A percentage cannot authorize approval/merge.
     const progress = payload.progress === 100 ? 100 : Math.min(99, Math.round(payload.progress));
-    if ((progress === 100) === Boolean(remaining) || [...summary].length > 8000 || [...remaining].length > 8000)
-        invalid();
+    if ((progress === 100) === Boolean(remaining))
+        reject('progress-completion-mismatch', '$.progress');
+    if ([...summary].length > 8000 || [...remaining].length > 8000)
+        reject('assessment-text-limit', '$.requirements');
     return { progress, summary, remaining, reasoning: '' };
 }
 
@@ -56108,6 +56211,7 @@ function failure(message, cause, payload) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.analyzeProgress = analyzeProgress;
+const query_progress_result_workflow_1 = __nccwpck_require__(33658);
 const progress_comparison_source_policy_1 = __nccwpck_require__(33167);
 const agent_1 = __nccwpck_require__(79937);
 const result_1 = __nccwpck_require__(73817);
@@ -56201,10 +56305,10 @@ async function analyzeProgress(param, taskId, dependencies) {
     (0, summarize_progress_diff_workflow_1.planProgressDiffPrompts)(reservedDiff, param, issueDescription, aggregateBudget, promptParameters.acceptanceScope);
     if (diff.kind !== 'partitioned')
         (0, progress_prompt_capacity_policy_1.remainingProgressPromptBytes)((0, prompts_1.getCheckProgressPrompt)({ ...promptParameters, diffEvidence: diff.evidence }), 'progress', reservedSchema, effort);
-    const scope = (0, progress_scope_policy_1.parseProgressScope)(await dependencies.aiRepository.query({
+    const { scope, anchors } = (0, progress_scope_policy_1.parseProgressScopeWithAnchors)(await (0, query_progress_result_workflow_1.queryProgressResult)(dependencies.aiRepository, {
         configuration: param.agentConfiguration, agentId: agent_task_policy_1.AGENT_PLAN, prompt: scopePrompt,
         options: { ...(0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('progress-scope', (0, progress_scope_policy_1.progressScopeResponseSchema)(sourceLines)), includeReasoning: param.includeReasoning },
-    }), issueDescription, param.targetLocale);
+    }, { phase: 'scope', sourceLineIds: sourceLines.map(line => line.id) }), issueDescription, param.targetLocale);
     const acceptanceScope = JSON.stringify(scope);
     const boundDiff = (0, progress_evidence_protocol_policy_1.bindProgressEvidence)(diff, issueDescription, acceptanceScope, param.targetLocale);
     const actualBudget = (0, progress_prompt_capacity_policy_1.progressAggregateBudget)((0, prompts_1.getCheckProgressPrompt)({ ...promptParameters, acceptanceScope }), (0, progress_response_1.progressResponseSchema)(scope), effort);
@@ -56213,7 +56317,7 @@ async function analyzeProgress(param, taskId, dependencies) {
     (0, progress_prompt_capacity_policy_1.remainingProgressPromptBytes)(prompt, 'progress', (0, progress_response_1.progressResponseSchema)(scope), effort);
     (0, logging_ports_1.logDebugInfo)(`CheckProgress: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`);
     (0, logging_ports_1.logInfo)('🤖 Analyzing progress using the configured agent...');
-    const attemptResult = (0, progress_response_1.parseProgressResponse)(await dependencies.aiRepository.query({
+    const attemptResult = (0, progress_response_1.parseProgressResponse)(await (0, query_progress_result_workflow_1.queryProgressResult)(dependencies.aiRepository, {
         configuration: param.agentConfiguration,
         agentId: agent_task_policy_1.AGENT_PLAN,
         prompt,
@@ -56221,7 +56325,8 @@ async function analyzeProgress(param, taskId, dependencies) {
             ...(0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('progress', (0, progress_response_1.progressResponseSchema)(scope)),
             includeReasoning: param.includeReasoning,
         },
-    }), param.targetLocale, scope);
+    }, { phase: 'assessment', requirementIds: scope.requirements.map(requirement => requirement.id),
+        sourceLineIds: sourceLines.map(line => line.id), anchors }), param.targetLocale, scope, anchors);
     return {
         kind: 'ready',
         issueNumber,
@@ -56282,8 +56387,8 @@ exports.progressResponseSchema = void 0;
 exports.parseProgressResponse = parseProgressResponse;
 const progress_scope_policy_1 = __nccwpck_require__(82704);
 exports.progressResponseSchema = progress_scope_policy_1.scopedProgressResponseSchema;
-function parseProgressResponse(response, targetLocale, scope) {
-    return (0, progress_scope_policy_1.parseScopedProgressResponse)(response, targetLocale, scope);
+function parseProgressResponse(response, targetLocale, scope, anchors) {
+    return (0, progress_scope_policy_1.parseScopedProgressResponse)(response, targetLocale, scope, anchors);
 }
 
 
@@ -56482,6 +56587,37 @@ async function runPublishIssueComment(param, taskId, issueCommentPort) {
 function appendCommentContent(previous, addition) {
     const existing = previous ?? '';
     return existing.length > 0 ? `${existing}\n\n${addition}` : addition;
+}
+
+
+/***/ }),
+
+/***/ 33658:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.queryProgressResult = queryProgressResult;
+const application_error_1 = __nccwpck_require__(75999);
+const progress_response_rejection_policy_1 = __nccwpck_require__(43023);
+const progress_response_diagnostic_1 = __nccwpck_require__(56289);
+/** Adds only current host-owned identities to typed completed-output failures. */
+async function queryProgressResult(agent, request, host) {
+    try {
+        return await agent.query(request);
+    }
+    catch (error) {
+        if (!(error instanceof progress_response_diagnostic_1.ProgressResponseContractFailure))
+            throw error;
+        const facts = error.facts;
+        if (facts.phase !== host.phase)
+            throw new application_error_1.ApplicationError('agent.failed', 'Returned validation detail could not be bound to the current progress task. Existing progress was retained.');
+        const requirementId = host.phase === 'assessment' && host.requirementIds?.includes(facts.requirementId) ? facts.requirementId : 'none';
+        const candidateLine = host.phase === 'scope' ? facts.sourceLineId : host.anchors?.[requirementId];
+        const sourceLineId = (0, progress_response_diagnostic_1.isProgressSourceLineId)(candidateLine) && host.sourceLineIds?.includes(candidateLine) ? candidateLine : 'none';
+        throw (0, progress_response_rejection_policy_1.progressResponseRejected)({ ...facts, requirementId, sourceLineId });
+    }
 }
 
 
@@ -57414,6 +57550,7 @@ async function upsertSecretGroups(context, port, groups) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.planProgressDiffPrompts = planProgressDiffPrompts;
 exports.summarizeProgressDiff = summarizeProgressDiff;
+const query_progress_result_workflow_1 = __nccwpck_require__(33658);
 const agent_task_policy_1 = __nccwpck_require__(85712);
 const progress_partition_response_policy_1 = __nccwpck_require__(30025);
 const agent_execution_plan_1 = __nccwpck_require__(12253);
@@ -57461,9 +57598,9 @@ async function summarizeProgressDiff(diff, context, issueDescription, agent, agg
     (0, logging_ports_1.logInfo)(`Progress comparison requires ${diff.partitions.length} complete bounded parts; no percentage is published until all parts and final assessment finish.`);
     for (const [index, partition] of diff.partitions.entries()) {
         (0, logging_ports_1.logInfo)(`Assessing progress evidence part ${index + 1} of ${diff.partitions.length}, round ${Math.floor(index / progress_diff_partition_policy_1.MAX_PROGRESS_PARTITIONS) + 1} of ${Math.ceil(diff.partitions.length / progress_diff_partition_policy_1.MAX_PROGRESS_PARTITIONS)}.`);
-        const response = await agent.query({ configuration: context.agentConfiguration, agentId: agent_task_policy_1.AGENT_PLAN, prompt: prompts[index],
+        const response = await (0, query_progress_result_workflow_1.queryProgressResult)(agent, { configuration: context.agentConfiguration, agentId: agent_task_policy_1.AGENT_PLAN, prompt: prompts[index],
             options: { ...(0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('progress-partition', (0, progress_partition_response_policy_1.progressPartitionResponseSchema)(partition, factLimit)),
-                includeReasoning: context.includeReasoning } });
+                includeReasoning: context.includeReasoning } }, { phase: 'partition' });
         if (diff.protocol)
             receipts.push((0, progress_partition_receipt_policy_1.parseProgressPartitionReceipt)(response, partition, context.targetLocale, factLimit));
         else
@@ -71699,6 +71836,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const progress_response_diagnostic_1 = __nccwpck_require__(56289);
 const progress_binary_evidence_diagnostic_1 = __nccwpck_require__(90364);
 const issue_workflow_diagnostic_1 = __nccwpck_require__(14347);
 const change_size_reconciliation_1 = __nccwpck_require__(25304);
@@ -71735,6 +71873,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'change-size-reconciliation-failed',
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
+    'progress-result-contract-invalid',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -71973,6 +72112,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'sdd-draft-requirement-mapping-invalid': Object.freeze([]),
     'sdd-draft-repository-path-invalid': Object.freeze([]),
     'progress-binary-evidence-unavailable': Object.freeze(['paths', 'pathCount']),
+    'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
@@ -72042,6 +72182,8 @@ function normalizeApplicationErrorRecovery(recovery) {
             || approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_PERMISSIONS[variables.operation] !== variables.permission)) {
         throw new TypeError('Approval evidence diagnostic is invalid.');
     }
+    if (recovery.id === 'progress-result-contract-invalid' && !(0, progress_response_diagnostic_1.isProgressResponseDiagnosticFacts)(variables))
+        throw new TypeError('Progress response diagnostic is invalid.');
     if (recovery.id === 'progress-binary-evidence-unavailable' && !(0, progress_binary_evidence_diagnostic_1.isProgressBinaryEvidenceFacts)(variables))
         throw new TypeError('Progress binary evidence diagnostic is invalid.');
     if (recovery.id === 'issue-workflow-admission-blocked' && !(0, issue_workflow_diagnostic_1.isIssueWorkflowDiagnostic)(variables))
@@ -74731,12 +74873,13 @@ function parseStrictJsonFromAgentText(text) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.assertAgentResponseSchema = assertAgentResponseSchema;
+const agent_response_schema_failure_1 = __nccwpck_require__(70809);
 const agent_response_length_failure_1 = __nccwpck_require__(28528);
 /** Validates the JSON Schema subset used by all public agent response contracts. */
 function assertAgentResponseSchema(value, schema, path = '$') {
     assertType(value, schema.type, path);
     if (Array.isArray(schema.enum) && !schema.enum.some(candidate => Object.is(candidate, value))) {
-        throw new Error(`Agent response schema violation at ${path}: value is outside the allowed enum.`);
+        throw new agent_response_schema_failure_1.AgentResponseSchemaFailure('enum', path, `Agent response schema violation at ${path}: value is outside the allowed enum.`);
     }
     if (typeof value === 'string')
         validateString(value, schema, path);
@@ -74757,7 +74900,7 @@ function assertType(value, expected, path) {
         return;
     const valid = expectedTypes.some(type => matchesType(value, type));
     if (!valid)
-        throw new Error(`Agent response schema violation at ${path}: expected ${expectedTypes.join(' or ')}.`);
+        throw new agent_response_schema_failure_1.AgentResponseSchemaFailure('type', path, `Agent response schema violation at ${path}: expected ${expectedTypes.join(' or ')}.`);
 }
 function matchesType(value, expected) {
     if (expected === 'null')
@@ -74773,7 +74916,7 @@ function matchesType(value, expected) {
 function validateString(value, schema, path) {
     const length = [...value].length;
     if (typeof schema.minLength === 'number' && length < schema.minLength) {
-        throw new Error(`Agent response schema violation at ${path}: string is too short.`);
+        throw new agent_response_schema_failure_1.AgentResponseSchemaFailure('string-short', path, `Agent response schema violation at ${path}: string is too short.`);
     }
     if (typeof schema.maxLength === 'number' && length > schema.maxLength) {
         throw new agent_response_length_failure_1.AgentResponseLengthFailure(path, schema.maxLength);
@@ -74781,20 +74924,20 @@ function validateString(value, schema, path) {
 }
 function validateNumber(value, schema, path) {
     if (!Number.isFinite(value))
-        throw new Error(`Agent response schema violation at ${path}: number is not finite.`);
+        throw new agent_response_schema_failure_1.AgentResponseSchemaFailure('number-finite', path, `Agent response schema violation at ${path}: number is not finite.`);
     if (typeof schema.minimum === 'number' && value < schema.minimum) {
-        throw new Error(`Agent response schema violation at ${path}: number is below minimum.`);
+        throw new agent_response_schema_failure_1.AgentResponseSchemaFailure('number-min', path, `Agent response schema violation at ${path}: number is below minimum.`);
     }
     if (typeof schema.maximum === 'number' && value > schema.maximum) {
-        throw new Error(`Agent response schema violation at ${path}: number is above maximum.`);
+        throw new agent_response_schema_failure_1.AgentResponseSchemaFailure('number-max', path, `Agent response schema violation at ${path}: number is above maximum.`);
     }
 }
 function validateArray(value, schema, path) {
     if (typeof schema.minItems === 'number' && value.length < schema.minItems) {
-        throw new Error(`Agent response schema violation at ${path}: array has too few items.`);
+        throw new agent_response_schema_failure_1.AgentResponseSchemaFailure('array-short', path, `Agent response schema violation at ${path}: array has too few items.`);
     }
     if (typeof schema.maxItems === 'number' && value.length > schema.maxItems) {
-        throw new Error(`Agent response schema violation at ${path}: array has too many items.`);
+        throw new agent_response_schema_failure_1.AgentResponseSchemaFailure('array-long', path, `Agent response schema violation at ${path}: array has too many items.`);
     }
     if (isObject(schema.items)) {
         value.forEach((item, index) => assertAgentResponseSchema(item, schema.items, `${path}[${index}]`));
@@ -74805,7 +74948,7 @@ function validateObject(value, schema, path) {
     const required = Array.isArray(schema.required) ? schema.required.filter((item) => typeof item === 'string') : [];
     for (const property of required) {
         if (!Object.prototype.hasOwnProperty.call(value, property)) {
-            throw new Error(`Agent response schema violation at ${path}: missing required property ${property}.`);
+            throw new agent_response_schema_failure_1.AgentResponseSchemaFailure('required', `${path}.${property}`, `Agent response schema violation at ${path}: missing required property ${property}.`);
         }
     }
     for (const [property, nested] of Object.entries(value)) {
@@ -74814,7 +74957,7 @@ function validateObject(value, schema, path) {
             continue;
         }
         if (schema.additionalProperties === false) {
-            throw new Error(`Agent response schema violation at ${path}: unexpected property ${property}.`);
+            throw new agent_response_schema_failure_1.AgentResponseSchemaFailure('additional', path, `Agent response schema violation at ${path}: unexpected property ${property}.`);
         }
         if (isObject(schema.additionalProperties)) {
             assertAgentResponseSchema(nested, schema.additionalProperties, `${path}.${property}`);
@@ -74934,6 +75077,7 @@ exports.AGENT_REQUEST_TIMEOUT_MS = 900000;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FindingsAgentAdapter = void 0;
+const progress_agent_response_policy_1 = __nccwpck_require__(75695);
 const logger_1 = __nccwpck_require__(91151);
 const agent_prompt_policy_1 = __nccwpck_require__(78804);
 const agent_findings_response_policy_1 = __nccwpck_require__(34908);
@@ -74953,8 +75097,10 @@ class FindingsAgentAdapter extends agent_capability_adapter_1.AgentCapabilityAda
             capability: 'findings',
             ...(options.expectJson && options.schema ? { outputSchema: options.schema } : {}),
             mapCliOutput: (output) => {
-                if (options.expectJson && options.schema)
-                    return (0, agent_findings_response_policy_1.interpretFindingsResponse)(output, options);
+                if (options.expectJson && options.schema) {
+                    const phase = (0, progress_agent_response_policy_1.progressResponsePhaseForSchema)(schemaName);
+                    return phase ? (0, progress_agent_response_policy_1.interpretProgressAgentOutput)(output, phase, options.schema) : (0, agent_findings_response_policy_1.interpretFindingsResponse)(output, options);
+                }
                 return output;
             },
         });
@@ -79987,6 +80133,82 @@ exports.OrganizationMembersRepository = OrganizationMembersRepository;
 
 /***/ }),
 
+/***/ 75695:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.progressResponsePhaseForSchema = progressResponsePhaseForSchema;
+exports.interpretProgressAgentOutput = interpretProgressAgentOutput;
+const agent_response_schema_failure_1 = __nccwpck_require__(70809);
+const agent_response_length_failure_1 = __nccwpck_require__(28528);
+const progress_response_diagnostic_1 = __nccwpck_require__(56289);
+const agent_json_parser_1 = __nccwpck_require__(19951);
+const agent_json_schema_validator_1 = __nccwpck_require__(52663);
+/** Existing application-owned schema names, never names read from model output. */
+function progressResponsePhaseForSchema(name) {
+    if (name === 'progress_scope')
+        return 'scope';
+    if (name === 'progress_partition_facts')
+        return 'partition';
+    if (name === 'progress_response')
+        return 'assessment';
+    return undefined;
+}
+const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const property = (value, key) => record(value) && Object.prototype.hasOwnProperty.call(value, key) ? value[key] : undefined;
+/** Select only an ID admitted by this exact host schema; array position is not an ID. */
+function verifiedEntryId(phase, field, parsed, schema) {
+    if (phase === 'partition')
+        return 'none';
+    const key = phase === 'scope' ? 'lines' : 'requirements';
+    if (!field.startsWith(`$.${key}`))
+        return 'none';
+    const definition = property(property(schema, 'properties'), key);
+    const values = property(property(property(property(definition, 'items'), 'properties'), 'id'), 'enum');
+    if (!Array.isArray(values) || values.length > (phase === 'scope' ? 1024 : 32))
+        return 'none';
+    const validId = phase === 'scope' ? progress_response_diagnostic_1.isProgressSourceLineId : progress_response_diagnostic_1.isProgressRequirementId;
+    const allowed = values.filter(validId);
+    const entries = parsed[key];
+    if (!Array.isArray(entries))
+        return 'none';
+    const match = field.match(/\[(\d+)\]/u);
+    if (match) {
+        const id = property(entries[Number(match[1])], 'id');
+        return validId(id) && allowed.includes(id) ? id : 'none';
+    }
+    const present = new Set(entries.map(entry => property(entry, 'id')));
+    return allowed.find(id => !present.has(id)) ?? 'none';
+}
+/** Called only after the CLI port returned; execution failures never enter this mapper. */
+function interpretProgressAgentOutput(text, phase, schema) {
+    let parsed;
+    try {
+        parsed = (0, agent_json_parser_1.parseStrictJsonFromAgentText)(text);
+    }
+    catch {
+        throw new progress_response_diagnostic_1.ProgressResponseContractFailure({ phase, reason: 'json-invalid', field: '$', requirementId: 'none', sourceLineId: 'none' });
+    }
+    try {
+        (0, agent_json_schema_validator_1.assertAgentResponseSchema)(parsed, schema);
+    }
+    catch (error) {
+        if (!(error instanceof agent_response_schema_failure_1.AgentResponseSchemaFailure) && !(error instanceof agent_response_length_failure_1.AgentResponseLengthFailure))
+            throw error;
+        const field = (0, progress_response_diagnostic_1.safeProgressResponseField)(phase, error.path);
+        const id = verifiedEntryId(phase, field, parsed, schema);
+        throw new progress_response_diagnostic_1.ProgressResponseContractFailure({ phase,
+            reason: error instanceof agent_response_length_failure_1.AgentResponseLengthFailure ? 'schema-string-long' : `schema-${error.reason}`,
+            field, requirementId: phase === 'assessment' ? id : 'none', sourceLineId: phase === 'scope' ? id : 'none' });
+    }
+    return parsed;
+}
+
+
+/***/ }),
+
 /***/ 56999:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -83711,6 +83933,26 @@ class AgentResponseLengthFailure extends Error {
     }
 }
 exports.AgentResponseLengthFailure = AgentResponseLengthFailure;
+
+
+/***/ }),
+
+/***/ 70809:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AgentResponseSchemaFailure = void 0;
+/** Internal schema facts; public boundaries must select their own closed detail. */
+class AgentResponseSchemaFailure extends Error {
+    constructor(reason, path, message) {
+        super(message);
+        this.reason = reason;
+        this.path = path;
+    }
+}
+exports.AgentResponseSchemaFailure = AgentResponseSchemaFailure;
 
 
 /***/ }),
@@ -87582,6 +87824,89 @@ function renderProgressEvidencePath(path) {
         delimiter += '`';
     return `${delimiter}${visible}${delimiter}`;
 }
+
+
+/***/ }),
+
+/***/ 56289:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ProgressResponseContractFailure = exports.isProgressSourceLineId = exports.isProgressRequirementId = exports.PROGRESS_RESPONSE_REASONS = exports.PROGRESS_RESPONSE_PHASES = void 0;
+exports.isProgressResponseField = isProgressResponseField;
+exports.safeProgressResponseField = safeProgressResponseField;
+exports.isProgressResponseDiagnosticFacts = isProgressResponseDiagnosticFacts;
+const agent_execution_plan_1 = __nccwpck_require__(12253);
+exports.PROGRESS_RESPONSE_PHASES = Object.freeze(['scope', 'partition', 'assessment']);
+const schemaReasons = ['json-invalid', 'schema-type', 'schema-enum', 'schema-string-short', 'schema-string-long', 'schema-number-finite',
+    'schema-number-min', 'schema-number-max', 'schema-array-short', 'schema-array-long', 'schema-required', 'schema-additional',
+    'response-not-object', 'output-locale-missing', 'output-locale-invalid', 'output-locale-mismatch', 'response-shape-invalid'];
+exports.PROGRESS_RESPONSE_REASONS = Object.freeze({
+    scope: Object.freeze([...schemaReasons, 'scope-incomplete', 'scope-entry-invalid', 'scope-source-id-invalid', 'scope-source-id-duplicate',
+        'scope-classification-invalid', 'scope-clause-limit', 'scope-no-requirements', 'scope-budget']),
+    partition: Object.freeze([...schemaReasons, 'partition-shape-invalid', 'partition-id-invalid', 'partition-files-incomplete',
+        'partition-file-invalid', 'partition-unit-invalid', 'partition-facts-invalid']),
+    assessment: Object.freeze([...schemaReasons, 'requirements-incomplete', 'progress-invalid', 'requirement-shape-invalid', 'requirement-id-invalid',
+        'requirement-id-duplicate', 'scope-uncertain', 'requirement-status-invalid', 'requirement-evidence-invalid', 'requirement-summary-invalid',
+        'requirement-remaining-invalid', 'requirement-evidence-mismatch', 'progress-completion-mismatch', 'assessment-text-limit']),
+});
+const fieldPatterns = Object.freeze({
+    scope: /^\$(?:\.outputLocale|\.lines(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|kind))?)?)?$/u,
+    partition: /^\$(?:\.outputLocale|\.partitionId|\.files(?:\[(0|[1-9]\d{0,3})\](?:\.(?:path|unitId|implemented|remaining))?)?)?$/u,
+    assessment: /^\$(?:\.outputLocale|\.progress|\.requirements(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|status|evidence|summary|remaining))?)?)?$/u,
+});
+const maxIndex = Object.freeze({ scope: 1023, partition: 511, assessment: 31 });
+function knownId(value, prefix, maximum) {
+    if (typeof value !== 'string')
+        return false;
+    const match = value.match(/^([RL])([1-9]\d{0,5})$/u);
+    return match !== null && match[0] === value && match[1] === prefix && Number(match[2]) <= maximum;
+}
+const isProgressRequirementId = (value) => knownId(value, 'R', 32);
+exports.isProgressRequirementId = isProgressRequirementId;
+const isProgressSourceLineId = (value) => knownId(value, 'L', agent_execution_plan_1.AGENT_PROMPT_MAX_BYTES + 1);
+exports.isProgressSourceLineId = isProgressSourceLineId;
+function isProgressResponseField(phase, value) {
+    if (typeof value !== 'string')
+        return false;
+    const match = value.match(fieldPatterns[phase]);
+    return match !== null && match[0] === value && (match[1] === undefined || Number(match[1]) <= maxIndex[phase]);
+}
+/** Unknown model keys and oversized locations never become operator field names. */
+function safeProgressResponseField(phase, value) {
+    return isProgressResponseField(phase, value) ? value : '$';
+}
+function isProgressResponseDiagnosticFacts(value) {
+    if (value === null || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const facts = value;
+    if (Object.keys(facts).sort().join(',') !== 'field,phase,reason,requirementId,sourceLineId'
+        || !exports.PROGRESS_RESPONSE_PHASES.includes(facts.phase))
+        return false;
+    const phase = facts.phase;
+    if (!exports.PROGRESS_RESPONSE_REASONS[phase].includes(facts.reason) || !isProgressResponseField(phase, facts.field))
+        return false;
+    const { requirementId, sourceLineId, field } = facts;
+    if (phase === 'partition')
+        return requirementId === 'none' && sourceLineId === 'none';
+    if (phase === 'scope')
+        return requirementId === 'none' && (sourceLineId === 'none' || ((0, exports.isProgressSourceLineId)(sourceLineId) && field.startsWith('$.lines')));
+    return (requirementId === 'none' ? sourceLineId === 'none'
+        : (0, exports.isProgressRequirementId)(requirementId) && field.startsWith('$.requirements') && (sourceLineId === 'none' || (0, exports.isProgressSourceLineId)(sourceLineId)));
+}
+/** Carries bounded completed-output facts, never a raw output or exception cause. */
+class ProgressResponseContractFailure extends Error {
+    constructor(facts) {
+        super('A returned progress result violated its response contract.');
+        if (!isProgressResponseDiagnosticFacts(facts))
+            throw new TypeError('Progress response diagnostic is invalid.');
+        this.name = 'ProgressResponseContractFailure';
+        this.facts = Object.freeze({ ...facts });
+    }
+}
+exports.ProgressResponseContractFailure = ProgressResponseContractFailure;
 
 
 /***/ }),

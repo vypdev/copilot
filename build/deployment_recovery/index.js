@@ -32546,6 +32546,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Inspect the closed-issue or merged-PR run and current native state. Retry cleanup only if the issue is still closed with the intended reason; leave reopened work open. Resolve the named failure before retrying.',
         retainedState: 'Native state was preserved. Confirmed changes: {changed}; remaining required changes in the last verified plan: {remaining}. Unavailable reads do not establish completion.',
     }),
+    'progress-result-contract-invalid': Object.freeze({
+        impact: 'The returned progress result violated its contract; progress was not published.',
+        action: 'Inspect the original requirement and response schema. Details: phase {phase}, reason {reason}, field {field}, requirement {requirementId}, original issue line {sourceLineId}. none means no verified identity is available. A fresh attempt may help when the provider can satisfy the unchanged contract; do not relax acceptance or verification.',
+        retainedState: 'Existing progress labels and published assessments were preserved. An optional check-publication warning is a separate result.',
+    }),
     'progress-binary-evidence-unavailable': Object.freeze({
         impact: 'Progress was not assessed because required binary or non-text contents cannot be reviewed. Unreviewed paths ({pathCount} total; {shownCount} shown; complete inventory in run details): {paths}.',
         action: 'Inspect the intended pull request base and the pinned paths. Changed binary contents need reviewable source and provenance; file metadata or a successful build does not establish binary correctness.',
@@ -32693,6 +32698,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'La limpieza de la issue sigue sin verificarse: {resultId}, fase {phase}; estado nativo {state}, motivo {reason}.',
         action: 'Revisa la ejecución de cierre o de la PR fusionada y el estado nativo actual. Reintenta la limpieza solo si la issue sigue cerrada con el motivo previsto; conserva abierto el trabajo reabierto. Resuelve el fallo indicado antes de reintentar.',
         retainedState: 'Se conservó el estado nativo. Cambios confirmados: {changed}; cambios pendientes en el último plan verificado: {remaining}. Una lectura no disponible no demuestra que haya finalizado.',
+    }),
+    'progress-result-contract-invalid': Object.freeze({
+        impact: 'El resultado de progreso devuelto incumplió su contrato; no se publicó el progreso.',
+        action: 'Inspecciona el requisito original y el esquema de respuesta. Detalles: fase {phase}, motivo {reason}, campo {field}, requisito {requirementId}, línea original de la issue {sourceLineId}. none indica que no hay una identidad verificada. Un nuevo intento puede ayudar si el proveedor cumple el contrato sin cambiarlo; no relajes la aceptación ni la verificación.',
+        retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas. Un aviso de publicación del check opcional corresponde a otro resultado.',
     }),
     'progress-binary-evidence-unavailable': Object.freeze({
         impact: 'No se evaluó el progreso porque no se pueden revisar los contenidos binarios o no textuales necesarios. Rutas sin revisar ({pathCount} en total; {shownCount} mostradas; inventario completo en los detalles de ejecución): {paths}.',
@@ -33656,6 +33666,7 @@ var _ApplicationError_cause;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = exports.APPLICATION_ERROR_RECOVERY_IDS = void 0;
 exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const progress_response_diagnostic_1 = __nccwpck_require__(6289);
 const progress_binary_evidence_diagnostic_1 = __nccwpck_require__(364);
 const issue_workflow_diagnostic_1 = __nccwpck_require__(4347);
 const change_size_reconciliation_1 = __nccwpck_require__(5304);
@@ -33692,6 +33703,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'change-size-reconciliation-failed',
     'issue-workflow-admission-blocked',
     'progress-binary-evidence-unavailable',
+    'progress-result-contract-invalid',
     'stored-configuration-schema-missing',
     'stored-configuration-schema-unsupported',
     'stored-configuration-invalid',
@@ -33930,6 +33942,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'sdd-draft-requirement-mapping-invalid': Object.freeze([]),
     'sdd-draft-repository-path-invalid': Object.freeze([]),
     'progress-binary-evidence-unavailable': Object.freeze(['paths', 'pathCount']),
+    'progress-result-contract-invalid': Object.freeze(['phase', 'reason', 'field', 'requirementId', 'sourceLineId']),
     'deployment-publication-context-missing': Object.freeze([]),
     'workspace-changes-rejected': Object.freeze([]),
 });
@@ -33999,6 +34012,8 @@ function normalizeApplicationErrorRecovery(recovery) {
             || approval_evidence_diagnostic_1.APPROVAL_EVIDENCE_PERMISSIONS[variables.operation] !== variables.permission)) {
         throw new TypeError('Approval evidence diagnostic is invalid.');
     }
+    if (recovery.id === 'progress-result-contract-invalid' && !(0, progress_response_diagnostic_1.isProgressResponseDiagnosticFacts)(variables))
+        throw new TypeError('Progress response diagnostic is invalid.');
     if (recovery.id === 'progress-binary-evidence-unavailable' && !(0, progress_binary_evidence_diagnostic_1.isProgressBinaryEvidenceFacts)(variables))
         throw new TypeError('Progress binary evidence diagnostic is invalid.');
     if (recovery.id === 'issue-workflow-admission-blocked' && !(0, issue_workflow_diagnostic_1.isIssueWorkflowDiagnostic)(variables))
@@ -34640,6 +34655,24 @@ function readHeader(headers, expected) {
     const key = Object.keys(headers).find(candidate => candidate.toLowerCase() === expected);
     const value = key ? headers[key] : undefined;
     return typeof value === 'string' || typeof value === 'number' ? String(value) : undefined;
+}
+
+
+/***/ }),
+
+/***/ 2253:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AGENT_OUTPUT_MAX_BYTES = exports.AGENT_PROMPT_MAX_BYTES = exports.AGENT_EXECUTION_TIMEOUT_MAX_MS = void 0;
+exports.workspaceModeForCapability = workspaceModeForCapability;
+exports.AGENT_EXECUTION_TIMEOUT_MAX_MS = 15 * 60 * 1000;
+exports.AGENT_PROMPT_MAX_BYTES = 512 * 1024;
+exports.AGENT_OUTPUT_MAX_BYTES = 4 * 1024 * 1024;
+function workspaceModeForCapability(capability) {
+    return capability === 'fixer' ? 'workspace-write' : 'read-only';
 }
 
 
@@ -36440,6 +36473,89 @@ function renderProgressEvidencePath(path) {
         delimiter += '`';
     return `${delimiter}${visible}${delimiter}`;
 }
+
+
+/***/ }),
+
+/***/ 6289:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ProgressResponseContractFailure = exports.isProgressSourceLineId = exports.isProgressRequirementId = exports.PROGRESS_RESPONSE_REASONS = exports.PROGRESS_RESPONSE_PHASES = void 0;
+exports.isProgressResponseField = isProgressResponseField;
+exports.safeProgressResponseField = safeProgressResponseField;
+exports.isProgressResponseDiagnosticFacts = isProgressResponseDiagnosticFacts;
+const agent_execution_plan_1 = __nccwpck_require__(2253);
+exports.PROGRESS_RESPONSE_PHASES = Object.freeze(['scope', 'partition', 'assessment']);
+const schemaReasons = ['json-invalid', 'schema-type', 'schema-enum', 'schema-string-short', 'schema-string-long', 'schema-number-finite',
+    'schema-number-min', 'schema-number-max', 'schema-array-short', 'schema-array-long', 'schema-required', 'schema-additional',
+    'response-not-object', 'output-locale-missing', 'output-locale-invalid', 'output-locale-mismatch', 'response-shape-invalid'];
+exports.PROGRESS_RESPONSE_REASONS = Object.freeze({
+    scope: Object.freeze([...schemaReasons, 'scope-incomplete', 'scope-entry-invalid', 'scope-source-id-invalid', 'scope-source-id-duplicate',
+        'scope-classification-invalid', 'scope-clause-limit', 'scope-no-requirements', 'scope-budget']),
+    partition: Object.freeze([...schemaReasons, 'partition-shape-invalid', 'partition-id-invalid', 'partition-files-incomplete',
+        'partition-file-invalid', 'partition-unit-invalid', 'partition-facts-invalid']),
+    assessment: Object.freeze([...schemaReasons, 'requirements-incomplete', 'progress-invalid', 'requirement-shape-invalid', 'requirement-id-invalid',
+        'requirement-id-duplicate', 'scope-uncertain', 'requirement-status-invalid', 'requirement-evidence-invalid', 'requirement-summary-invalid',
+        'requirement-remaining-invalid', 'requirement-evidence-mismatch', 'progress-completion-mismatch', 'assessment-text-limit']),
+});
+const fieldPatterns = Object.freeze({
+    scope: /^\$(?:\.outputLocale|\.lines(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|kind))?)?)?$/u,
+    partition: /^\$(?:\.outputLocale|\.partitionId|\.files(?:\[(0|[1-9]\d{0,3})\](?:\.(?:path|unitId|implemented|remaining))?)?)?$/u,
+    assessment: /^\$(?:\.outputLocale|\.progress|\.requirements(?:\[(0|[1-9]\d{0,3})\](?:\.(?:id|status|evidence|summary|remaining))?)?)?$/u,
+});
+const maxIndex = Object.freeze({ scope: 1023, partition: 511, assessment: 31 });
+function knownId(value, prefix, maximum) {
+    if (typeof value !== 'string')
+        return false;
+    const match = value.match(/^([RL])([1-9]\d{0,5})$/u);
+    return match !== null && match[0] === value && match[1] === prefix && Number(match[2]) <= maximum;
+}
+const isProgressRequirementId = (value) => knownId(value, 'R', 32);
+exports.isProgressRequirementId = isProgressRequirementId;
+const isProgressSourceLineId = (value) => knownId(value, 'L', agent_execution_plan_1.AGENT_PROMPT_MAX_BYTES + 1);
+exports.isProgressSourceLineId = isProgressSourceLineId;
+function isProgressResponseField(phase, value) {
+    if (typeof value !== 'string')
+        return false;
+    const match = value.match(fieldPatterns[phase]);
+    return match !== null && match[0] === value && (match[1] === undefined || Number(match[1]) <= maxIndex[phase]);
+}
+/** Unknown model keys and oversized locations never become operator field names. */
+function safeProgressResponseField(phase, value) {
+    return isProgressResponseField(phase, value) ? value : '$';
+}
+function isProgressResponseDiagnosticFacts(value) {
+    if (value === null || typeof value !== 'object' || Array.isArray(value))
+        return false;
+    const facts = value;
+    if (Object.keys(facts).sort().join(',') !== 'field,phase,reason,requirementId,sourceLineId'
+        || !exports.PROGRESS_RESPONSE_PHASES.includes(facts.phase))
+        return false;
+    const phase = facts.phase;
+    if (!exports.PROGRESS_RESPONSE_REASONS[phase].includes(facts.reason) || !isProgressResponseField(phase, facts.field))
+        return false;
+    const { requirementId, sourceLineId, field } = facts;
+    if (phase === 'partition')
+        return requirementId === 'none' && sourceLineId === 'none';
+    if (phase === 'scope')
+        return requirementId === 'none' && (sourceLineId === 'none' || ((0, exports.isProgressSourceLineId)(sourceLineId) && field.startsWith('$.lines')));
+    return (requirementId === 'none' ? sourceLineId === 'none'
+        : (0, exports.isProgressRequirementId)(requirementId) && field.startsWith('$.requirements') && (sourceLineId === 'none' || (0, exports.isProgressSourceLineId)(sourceLineId)));
+}
+/** Carries bounded completed-output facts, never a raw output or exception cause. */
+class ProgressResponseContractFailure extends Error {
+    constructor(facts) {
+        super('A returned progress result violated its response contract.');
+        if (!isProgressResponseDiagnosticFacts(facts))
+            throw new TypeError('Progress response diagnostic is invalid.');
+        this.name = 'ProgressResponseContractFailure';
+        this.facts = Object.freeze({ ...facts });
+    }
+}
+exports.ProgressResponseContractFailure = ProgressResponseContractFailure;
 
 
 /***/ }),

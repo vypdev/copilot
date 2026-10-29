@@ -170,6 +170,29 @@ same boundary. The evidence and runtime ceilings still count UTF-8 bytes.
 
 If source evidence is missing or any part fails, the Action retains the current progress and reports that it could not assess the revision. A single file, the final aggregate or a comparison exceeding the fixed part budget reports `validation.evidence-too-large` with Retryable: No; inspect the pinned comparison and reported supported capacity. Native multipart recovery continues automatically within its fixed totals; after interruption, rerun the current source for a fresh complete attempt. Retrying identical over-limit evidence cannot add capacity. It also retains state if either head or the issue body changes while the assessment is running. Inspect the run before retrying; an unavailable assessment is not proof of 0% completion.
 
+
+### Invalid returned assessments
+
+A completed agent operation can return data that violates the progress contract.
+Copilot rejects that result and retains the previous progress. Its existing
+CLI, Check and Job Summary expose `progress-result-contract-invalid` with a
+bounded phase, reason, schema field and verified requirement/original-issue line.
+For example, `assessment / requirement-evidence-invalid`,
+`$.requirements[1].evidence`, requirement `R2`, original line `L7` identifies the
+record needing attention. Response order does not determine the requirement;
+repeated issue quotes do not determine the source line. `none` means that an
+identity was not verified, so no anchor is guessed.
+
+The line refers to the original issue body supplied to that attempt. Blank lines
+retain their physical numbering. These diagnostics contain no raw model output,
+unknown returned property names or values. Strict JSON, exact scope, evidence,
+locale, size and percentage rules still apply; an invalid response cannot update
+labels. Review the named requirement and response schema. A fresh run can help
+when the provider can satisfy the unchanged contract, as opposed to changing
+acceptance or dropping verification. Process/transport failures retain their
+own status and retry guidance. A later optional check-publication warning remains
+a separate outcome and cannot replace the primary rejection.
+
 ## Completion after a PR merge
 
 Native issue closure owns completion. Copilot clears obsolete managed active,

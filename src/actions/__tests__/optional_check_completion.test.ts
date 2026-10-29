@@ -1,3 +1,4 @@
+import { progressResponseRejected } from '../../application/policies/progress_response_rejection_policy';
 import * as core from '@actions/core';
 import { finishGithubAction } from '../github_action_completion';
 import { Ai } from '../../data/model/ai';
@@ -77,4 +78,16 @@ it('contains a private semantic error from a custom adapter without treating it 
     const logs = jest.mocked(logInfo).mock.calls.map(([text]) => text).join('\n');
     expect(logs).not.toContain('PRIVATE_ADAPTER_MESSAGE'); expect(logs).toContain('underlying cause is not established');
     expect(core.setFailed).not.toHaveBeenCalled();
+});
+
+it.each(['en-US', 'es-MX'])('retains the exact completed progress rejection and host detail after optional 403 in %s', async locale => {
+    const f = fixture(locale), required = progressResponseRejected({ phase: 'assessment', reason: 'requirement-evidence-invalid',
+        field: '$.requirements[1].evidence', requirementId: 'R2', sourceLineId: 'L7' });
+    const result = new Result({ id: 'CheckProgressUseCase', success: false, executed: true, errors: [required] });
+    await finishGithubAction(f.action, [result], {} as never, {} as never, f.evidence, f.summary);
+    expect(result.errors[0]).toBe(required); expect(required.recovery).toMatchObject({ id: 'progress-result-contract-invalid', variables: { requirementId: 'R2', sourceLineId: 'L7' } });
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining(required.correlationId));
+    expect(f.summary.publish.mock.calls[1][0]).toContain(locale.startsWith('es') ? 'Publicación del Check Run opcional' : 'Optional Check Run publication');
+    expect(JSON.stringify(result)).not.toMatch(/PRIVATE_PROVIDER_BODY|PRIVATE_HEADER|PRIVATE_PRODUCT_TOKEN/u);
+    expect(f.create).toHaveBeenCalledTimes(1); expect(result.success).toBe(false);
 });
