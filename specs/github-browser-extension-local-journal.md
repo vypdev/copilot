@@ -29,8 +29,9 @@ acceptance. The core alone does not implement or accept the center UI.
 
 The [durable collection-consent refinement](github-browser-extension-collection-consent.md)
 defines the prospective version2 policy-store upgrade and atomic admission.
-Version1 below records the implemented engineering core; collection remains
-uncomposed until that refinement and its complete native/UI evidence are delivered.
+Version1 below records the journal envelope retained under the native version2
+policy-store upgrade. Its deterministic composition and mounted UI do not replace
+the outstanding trusted producers and complete native/human evidence.
 
 ## 2. Problem, current behavior, and evidence
 
@@ -47,8 +48,10 @@ that ring is not persistent history. Preferences already declare diagnostics
 and recent-destination consent, both false.
 The application now has a bounded opaque-ticket writer and canonical-clear
 observer, composed with the background preference owner and closed native-center
-history/review gateway. Actual trusted producers and mounted controls remain
-required; this source increment does not complete CENTER09/10.
+history/review gateway. The mounted four-locale controls now use a source-validated
+typed reader/review/export client and retain independent phase facts. Actual
+trusted producers and native/human acceptance remain required; this source
+increment does not complete CENTER09/10.
 
 ### 2.3 Evidence
 

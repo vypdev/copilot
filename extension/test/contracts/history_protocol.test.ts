@@ -10,7 +10,8 @@ it.each([
     { ...client, method: 'center.history.read', kind: 'diagnostics' },
     { ...client, method: 'center.history.read', kind: 'recents' }, preview,
     { ...preview, kind: 'recents', action: 'stop' }, { ...editor, method: 'center.history.clear.preview', kind: 'recents' },
-    ...['center.collection.confirm', 'center.collection.cancel', 'center.history.clear.confirm', 'center.history.clear.cancel'].map(method => ({ ...confirm, method })),
+    ...['center.collection.confirm', 'center.collection.cancel', 'center.history.clear.confirm', 'center.history.clear.cancel',
+        'center.collection.result', 'center.history.clear.result'].map(method => ({ ...confirm, method })),
 ])('accepts the closed use case $method $kind $action through the center parser', message => {
     expect(isHistoryMessage(message)).toBe(true); expect(parseCenterMessage(message)).toEqual(message);
 });

@@ -1,4 +1,4 @@
-import type { CollectionAction, CollectionOutcome, CollectionPreview, CollectionReviewIssue } from '../domain/collection_review.ts';
+import type { CollectionAction, CollectionInspection, CollectionOutcome, CollectionPreview, CollectionReviewIssue } from '../domain/collection_review.ts';
 import { journalKind, type JournalKind } from '../domain/journal_facts.ts';
 import { settingsOperationId } from '../domain/settings_operation.ts';
 import type { SettingsOwnerFence } from '../domain/settings_result.ts';
@@ -25,6 +25,10 @@ export class CollectionReviews {
     constructor(private readonly repository: SettingsRepository, private readonly coordinator: CollectionCoordinator,
         private readonly policies: CollectionPolicyStore, private readonly ports: CollectionReviewPorts) {}
     invalidate(): void { this.generation++; this.pending.clear(); this.completed.clear(); }
+    inspect(id: string, owner: string): CollectionInspection {
+        const record = this.admit(id, owner); if ('state' in record) return record;
+        return 'result' in record ? record.result : { state: 'promise' in record ? 'pending' : 'not-submitted' };
+    }
     private time(): number | null { try { const now = this.ports.now(); return natural(now) ? now : null; } catch { return null; } }
     private fence(owner: string): SettingsOwnerFence | null {
         if (!settingsOperationId(owner)) return null;

@@ -40,8 +40,10 @@ coordinator observes consent and fences admission/clear. Dedicated retained
 start/stop application services and a bounded ticket writer are now present.
 The background now shares its preference repository with that collection owner
 and exposes closed, native-client-bound history/review use cases. Actual trusted
-producers and the mounted center UI remain incomplete. Saved
-collection flags still default false; these source slices do not activate them.
+producers and native/human acceptance remain incomplete. The mounted center now
+has a source-validated typed client and four-locale read/start/stop/clear/export
+controls, independent of preference-read availability. Saved collection flags
+still default false; no producer is activated by merely opening these screens.
 
 ### 2.3 Evidence
 
@@ -51,7 +53,7 @@ See `local_journal.ts`, `journal_store.ts`, `journal_reviews.ts`,
 the [journal refinement](github-browser-extension-local-journal.md). Current
 deterministic fixtures are not native-browser acceptance. Primary sources: section20.
 `collection_reviews.ts` and `collection_effects.ts` now retain exact plans and
-execute their independent preference/policy phases; they are not yet renderer controls.
+execute their independent preference/policy phases behind explicit renderer reviews.
 `journal_writer.ts`, `journal_work_queue.ts`, `journal_writer_io.ts` and
 `journal_progress.ts` add secondary retention. `observed_journal_store.ts` delivers
 canonical clear observations before releasing deferred old work. Their application
@@ -61,6 +63,13 @@ fixtures do not establish production composition or native/browser acceptance.
 controller/credential fences and independent history reads. `history_runtime.ts`
 opens native history lazily; background bootstrap follows listener registration.
 These deterministic composition tests are not loaded-browser acceptance.
+`history_client.ts`, `history_reader.ts` and `history_review_client.ts` retain
+bounded private selectors behind immutable public facts. The mounted local
+routes use literal lazy components, independent read availability, shared
+navigation guards and exact reviewed export bytes. DOM contract tests are not
+loaded-browser or human evidence. A timed-out result inspection cannot erase
+an earlier clear acknowledgement; delayed old reads cannot republish cleared
+or superseded entries.
 
 ### 2.4 Retrospective classification
 
@@ -320,7 +329,8 @@ capture is off and primes journals only for verified active consent; it never
 creates retrospective entries.
 
 The native-center protocol accepts only one fixed history kind per read,
-retained start/stop previews, clear previews and confirmation/cancellation IDs.
+retained start/stop previews, clear previews, confirmation/cancellation IDs and
+read-only inspection of a retained result.
 It MUST NOT accept recording facts, policy nonces, private guards, store names,
 arbitrary commands or provider operands. The existing extension-origin,
 document/tab binding, editor/controller and credential checks apply. An observer
@@ -335,6 +345,17 @@ History changes notify only native centers and never reset content quarantine.
 Current compound collection results preserve their independent preference and
 policy facts. A collector MUST NOT flatten partial results into completed history;
 actual producers and localized controls remain required delivery work.
+
+After a lost response, inspecting the exact retained review MUST NOT submit or
+repeat any effect. It reports pending, the same immutable historical result,
+expired/stale/denied, or that this owner has not observed a confirmation for the
+still-retained plan. That last observation does not prove an earlier IPC request
+cannot arrive later. No read resets the five-minute lifetime or extends the32-result
+bound. It requires the original current editor/controller/credential context;
+another review family or client cannot reuse its selector. Current collection
+and historical result remain separate. Retry is always an explicit reviewed
+gesture; never convert a status read into confirmation or infer a result from
+matching state/payload.
 
 ## 7. User-facing configuration
 
@@ -447,9 +468,11 @@ upgrade or publication is implied.
 | Bounded writer/ticket ownership | 64 | Opt-in timing, cap/coalescing, expiry, unknown append identity, known-row reconciliation, clear/late-result races, primary-result isolation |
 | Production ownership and closed gateway | 40 | Same preference owner, lazy listener-first bootstrap, independent reads, native binding/editor/credential fences, plan-family isolation, private-context/storage failure, center-only notifications |
 | Actual navigation producers | 8 | Admitted destinations, canceled navigation, lost context, private label generalization |
-| UI/locales/export/recovery | 20 | Independent facts, scope,4locales, a11y |
+| Typed client/response closure | 120 | Closed detached replies, source binding, wrong-family/scope, immutable independent facts |
+| Reader/review/export ownership | 35 | Read-after-clear/revision races, retained result inspection, known-fact preservation, explicit exact-byte download, retirement/single flight |
+| Mounted UI/locales/export/recovery | 40 | Independent phase facts, editor/observer, guarded navigation,4locales, accessible JSON, separate privacy inspectors |
 | Real targets and human | 9 | Three native journeys per target plus owning human gate |
-| **Total** | **334** | No substitution for semantic H3/catalog coverage |
+| **Total** | **509** | No substitution for semantic H3/catalog coverage |
 
 Count each case once. Pure branches and modified executable lines/branches100%,
 no exclusions/threshold weakening; keep root budgets. Request fixtures are not

@@ -95,9 +95,11 @@ the [feature inventory](/browser-extension/features) for the remaining product
 capabilities and their implementation milestones. Do not treat future retention
 or optional write controls as available because their descriptions are visible.
 
-Optional generated history is still under development. Its bounded transaction
-core does not yet provide the Activity/Diagnostics collection or clear controls.
-The planned defaults remain off: redacted diagnostics/operation facts at most200
+Optional generated history is still under development. Its typed Activity,
+Diagnostics and Privacy controls now provide independent reads, reviewed
+start/stop/clear and exact-JSON export. Trusted producers and full native/human
+acceptance remain outstanding. See the [local history guide](/browser-extension/local-history).
+The defaults remain off: redacted diagnostics/operation facts at most200
 entries, recent extension destinations at most50, both for seven days. Stopping
 collection and explicitly clearing retained history are separate actions. Exact
 private targets, credentials, authored notes and browser history are outside that
@@ -119,8 +121,9 @@ state does not automatically retry a write or activate an imported preference.
 The source's retained start/stop service also checks the exact saved intent and
 policy receipt before admitting collection. A later stop cannot be absorbed into
 an older activation. Replayed operation results describe what was observed then;
-the current collection view remains a separate fact. These services still need
-their actual collector producers and mounted UI integration. The background now
+the current collection view remains a separate fact. The mounted controls now
+expose these independent facts; trusted collector producers and complete native
+and human evidence remain outstanding. The background now
 shares the preference safeguards with a closed reviewed-control channel. It may
 initialize local control metadata while capture is off; that does not create
 activity entries or grant any browser permission.
@@ -129,4 +132,5 @@ The pending implementation also separates a successful action from successful
 history retention. If storage cannot establish which record was written, the
 history is incomplete; matching a similar record or repeating an uncertain write
 would give misleading evidence. The bounded application writer now enforces that
-rule, but these history screens and actual producers remain under development.
+rule. The screens now consume its independent state; actual producers remain
+under development.

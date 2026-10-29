@@ -43,10 +43,12 @@ export class CollectionHistory {
             const now = this.ports.now(); if (!natural(now)) return { state: 'unavailable' };
             const result = await this.store.execute(kind, { type: 'read', now }, eligible);
             if (!eligible()) return { state: 'stale' };
+            const writer = this.writer.state(kind);
             const retained: RetainedHistory = result.state === 'ready' && validJournalSnapshot(kind, result.snapshot)
+                && writer.epoch === result.snapshot.epoch && writer.observedRevision === result.snapshot.revision
                 ? { state: 'ready', snapshot: result.snapshot }
                 : { state: result.state === 'future' || result.state === 'corrupt' || result.state === 'clock-invalid' || result.state === 'exhausted' ? result.state : 'unavailable' };
-            return deepFreeze({ state: 'ready', kind, retained, collection: this.coordinator.state(kind), writer: this.writer.state(kind) });
+            return deepFreeze({ state: 'ready', kind, retained, collection: this.coordinator.state(kind), writer });
         } catch { return eligible() ? { state: 'unavailable' } : { state: 'stale' }; }
     }
     stop(): void { this.stopped = true; this.coordinator.dispose(); this.writer.dispose(); }

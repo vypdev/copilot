@@ -21,7 +21,7 @@ const open = () => render('privacy', false, undefined, true, centerClientFixture
 it('bexp-CENTER06-C01 entering privacy reads exactly three declared native scopes without a GitHub read, grant or preference write', async () => {
     const h = await open(); await observed();
     expect(vi.mocked(h.browser.api.permissions.contains).mock.calls.map(([query]) => query)).toEqual(BROWSER_CAPABILITIES.map(permissionQuery));
-    expect(h.port.send.mock.calls.map(([message]) => message.method)).toEqual(['center.open', 'center.read']);
+    expect(h.port.send.mock.calls.map(([message]) => message.method)).toEqual(['center.open', 'center.read', 'center.history.read', 'center.history.read']);
     expect(h.browser.api.permissions.request).not.toHaveBeenCalled(); expect(h.native.port.set).not.toHaveBeenCalled();
     expect(document.querySelector('[data-permission-status]')?.getAttribute('aria-live')).toBe('polite');
     expect(document.querySelectorAll('[data-browser-capability] dl')).toHaveLength(3);

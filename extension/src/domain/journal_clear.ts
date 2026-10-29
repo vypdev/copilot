@@ -11,3 +11,4 @@ export type JournalClearOutcome = { readonly state: 'observed-cleared'; readonly
         readonly observation: 'changed' | 'unavailable'; readonly sourceCurrentAtObservation: boolean }
     | { readonly state: 'not-applied'; readonly reason: 'not-started' | 'aborted' }
     | { readonly state: JournalClearIssue | 'cancelled' | 'pending' };
+export type JournalClearInspection = JournalClearOutcome | { readonly state: 'not-submitted' };

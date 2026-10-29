@@ -1,17 +1,14 @@
 import { centerPayload, decodeCenterDocument, decodeCenterIdentity, decodeCenterOutcome, decodeCenterPreview, type CenterIdentity, type CenterPlan } from '../domain/center_reply.ts';
 import type { CenterMessage, ConnectionMessage } from '../domain/center_protocol.ts';
 import { connectionIntent, decodeConnections, type ConnectionIntent } from '../domain/named_sessions.ts';
-import type { CenterClientView, ClientReview } from '../domain/center_client_view.ts';
+import type { CenterClientView } from '../domain/center_client_view.ts';
 import { sameSettingsContent } from '../domain/settings_operation.ts';
 import { deepFreeze, record } from '../domain/value.ts';
-import type { SettingsOperationOutcome } from '../domain/settings_result.ts';
+import { HISTORY_EFFECTS, type HistoryMessage } from '../domain/history_protocol.ts';
+import type { HistoryRequest } from '../domain/history_request.ts';
+import { uncertainSettingsOutcome as uncertain, publicSettingsReview as publicReview } from '../domain/settings_review_projection.ts';
 
-export interface CenterClientPort { readonly sourceTree: string; send(message: CenterMessage | ConnectionMessage): Promise<unknown> }
-const uncertain = (): SettingsOperationOutcome => ({ state: 'unknown', acknowledgement: 'unknown', observedRevision: null, observation: 'unavailable' });
-const publicReview = (plan: CenterPlan, state: ClientReview['state'], outcome?: SettingsOperationOutcome): ClientReview => {
-    const { operationId: _id, state: _state, ...view } = plan;
-    return { ...view, state, ...(outcome ? { outcome } : {}) };
-};
+export interface CenterClientPort { readonly sourceTree: string; send(message: CenterMessage | ConnectionMessage | HistoryMessage): Promise<unknown> }
 
 /** One mounted view; reusable authority stays private, while committed receipts are inspectable facts. */
 export class CenterClient {
@@ -37,18 +34,25 @@ export class CenterClient {
         for (const listener of this.listeners) { try { listener(this.value); } catch { /* One renderer cannot erase saved facts. */ } }
     }
     private current(generation: number): boolean { return !this.stopped && this.generation === generation; }
-    private async request(message: CenterMessage | ConnectionMessage): Promise<Record<string, unknown> | null> {
+    private async request(message: CenterMessage | ConnectionMessage | HistoryMessage, secondary = false): Promise<Record<string, unknown> | null> {
         try {
             const response = await this.port.send(message);
             const payload = centerPayload(response, this.port.sourceTree);
             if (!payload && !this.stopped) {
                 const mismatch = record(response) && response.sourceTree !== this.port.sourceTree;
                 if (mismatch) { this.owner = null; this.pending = null; this.update({ role: null, connections: null }); }
-                this.update({ issue: mismatch ? 'incompatible' : 'unavailable',
+                if (!secondary || mismatch) this.update({ issue: mismatch ? 'incompatible' : 'unavailable',
                     review: mismatch && this.value.review ? { ...this.value.review, state: 'stale' } : this.value.review });
             }
             return payload;
-        } catch { if (!this.stopped) this.update({ issue: 'unavailable' }); return null; }
+        } catch { if (!this.stopped && !secondary) this.update({ issue: 'unavailable' }); return null; }
+    }
+    async requestHistory(input: HistoryRequest): Promise<Record<string, unknown> | null> {
+        const owner = this.owner;
+        if (this.stopped || !owner || this.value.issue === 'incompatible') return { state: 'stale' };
+        if (HISTORY_EFFECTS[input.method] && (this.busy || this.value.review)) return { state: 'busy' };
+        if (input.method === 'center.history.read') return this.request({ ...input, version: 1, clientId: owner.clientId }, true);
+        return this.request({ ...input, version: 1, clientId: owner.clientId, controllerEpoch: owner.controllerEpoch, credentialEpoch: owner.credentialEpoch }, true);
     }
     private async finish(generation: number): Promise<void> {
         if (!this.current(generation)) return;

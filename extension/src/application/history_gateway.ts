@@ -11,6 +11,8 @@ export class HistoryGateway {
         if (message.method === 'center.history.read') return this.history.read(message.kind, current);
         if (identity.role !== 'editor') return { state: 'denied' };
         if (message.credentialEpoch !== identity.credentialEpoch) return { state: 'stale' };
+        if (message.method === 'center.collection.result') return this.controls.collection.inspect(message.operationId, message.clientId);
+        if (message.method === 'center.history.clear.result') return this.controls.clear.inspect(message.operationId, message.clientId);
         if (message.method === 'center.collection.preview') return this.controls.previewCollection(message.kind, message.action, message.clientId);
         if (message.method === 'center.history.clear.preview') return this.controls.previewClear(message.kind, message.clientId);
         if (message.method === 'center.collection.confirm') return this.controls.collection.confirm(message.operationId, message.clientId);

@@ -13,18 +13,21 @@ import { centerClientFixture } from '../fixtures/center_client.ts';
 import { deferred } from '../fixtures/runtime.ts';
 import { DEFAULT_SETTINGS } from '../../src/domain/settings.ts';
 import { SETTINGS_KEY } from '../../src/application/settings_repository.ts';
-import { loadInventoryPage, loadPrivacyPage, loadSupportPage } from '../../src/infrastructure/center_pages.ts';
+import { loadInventoryPage, loadPrivacyPage, loadSupportPage, loadHistoryPage } from '../../src/infrastructure/center_pages.ts';
+import { historyActionsFixture } from '../fixtures/history_ui.ts';
+import { historyWireExamples } from '../fixtures/history_wire.ts';
+import { EMPTY_HISTORY_VIEW } from '../../src/domain/history_client_view.ts';
 import { supportCopy } from '../../src/domain/support_copy.ts';
 
 const mounts: Record<string, unknown>[] = []; const clients: ReturnType<typeof centerClientFixture>[] = [];
 afterEach(async () => { for (const host of mounts.splice(0)) await unmount(host); clients.splice(0).forEach(h => h.client.stop()); document.body.replaceChildren(); vi.restoreAllMocks(); });
 async function ready(predicate: () => boolean): Promise<void> { await vi.waitFor(() => { flushSync(); expect(predicate()).toBe(true); }); }
 async function client() { const h = centerClientFixture(); clients.push(h); await h.client.start(); return h; }
-function render(view: CenterClientView, load: CenterSurface['load'] = async () => InformationPage, loadInventory: CenterSurface['loadInventory'] = loadInventoryPage, loadPrivacy: CenterSurface['loadPrivacy'] = loadPrivacyPage, loadSupport: CenterSurface['loadSupport'] = loadSupportPage) {
+function render(view: CenterClientView, load: CenterSurface['load'] = async () => InformationPage, loadInventory: CenterSurface['loadInventory'] = loadInventoryPage, loadPrivacy: CenterSurface['loadPrivacy'] = loadPrivacyPage, loadSupport: CenterSurface['loadSupport'] = loadSupportPage, loadHistory: CenterSurface['loadHistory'] = loadHistoryPage) {
     const listeners = new Set<(frame: CenterFrame) => void>(); let frame = centerFrame(view, { route: 'work' }, null, 'en');
-    const actions: CenterActions = { connections: { connect: vi.fn(), change: vi.fn(), refresh: vi.fn(), dirty: vi.fn() }, preview: vi.fn(), dirty: vi.fn(), takeControl: vi.fn(), stay: vi.fn(), leave: vi.fn(), confirm: vi.fn(), cancel: vi.fn(), dismiss: vi.fn(),
+    const actions: CenterActions = { history: historyActionsFixture(), connections: { connect: vi.fn(), change: vi.fn(), refresh: vi.fn(), dirty: vi.fn() }, preview: vi.fn(), dirty: vi.fn(), takeControl: vi.fn(), stay: vi.fn(), leave: vi.fn(), confirm: vi.fn(), cancel: vi.fn(), dismiss: vi.fn(),
         reload: vi.fn(), focusContent: vi.fn(), browseInventory: vi.fn(), inspectPermissions: vi.fn(), inspectConnection: vi.fn(), exportSettings: vi.fn(async () => false), importSettings: vi.fn(async () => false) };
-    const unsubscribe = vi.fn(); const surface: CenterSurface = { initial: frame, actions, load, loadInventory, loadPrivacy, loadSupport,
+    const unsubscribe = vi.fn(); const surface: CenterSurface = { initial: frame, actions, load, loadInventory, loadPrivacy, loadSupport, loadHistory,
         subscribe: listener => { listeners.add(listener); listener(frame); return () => { listeners.delete(listener); unsubscribe(); }; } };
     const host = mount(CenterHost, { target: document.body, props: { surface } }); mounts.push(host); flushSync();
     return { host, actions, unsubscribe, publish: (next: CenterFrame) => { frame = next; listeners.forEach(listener => listener(next)); flushSync(); } };
@@ -120,6 +123,28 @@ it('retiring the mounted host ignores a pending support module and never invokes
     const view = render(h.client.view, undefined, undefined, undefined, () => wait.promise);
     view.publish(centerFrame(h.client.view, { route: 'help' }, null, 'en')); await tick(); await unmount(view.host); mounts.splice(mounts.indexOf(view.host), 1);
     wait.resolve(await loadSupportPage()); await tick(); expect(document.body.textContent).toBe(''); expect(view.actions.reload).not.toHaveBeenCalled();
+});
+it('history chunk failure cannot hide the independently packaged browser permission inspector', async () => {
+    const h = await client(); const view = render(h.client.view, undefined, undefined, undefined, undefined, async () => { throw new Error('private-history-chunk'); });
+    view.publish(centerFrame({ ...h.client.view, data: null }, { route: 'privacy' }, null, 'en'));
+    await ready(() => document.querySelectorAll('[data-browser-capability]').length === 3 && !!document.querySelector('main [role=alert]'));
+    expect(document.body.textContent).not.toContain('private-history-chunk'); expect(document.querySelector('[data-permission-status]')).not.toBeNull();
+});
+it.each(['resolved', 'rejected'] as const)('a history route retired before its %s chunk cannot replace the current page', async outcome => {
+    const h = await client(); const gate = deferred<Awaited<ReturnType<CenterSurface['loadHistory']>>>();
+    const view = render(h.client.view, async () => AppearancePage, undefined, undefined, undefined, () => gate.promise);
+    view.publish(centerFrame(h.client.view, { route: 'activity' }, null, 'en')); await tick();
+    view.publish(centerFrame(h.client.view, { route: 'appearance' }, null, 'en')); await ready(() => !!document.querySelector('#center-theme'));
+    if (outcome === 'resolved') gate.resolve(await loadHistoryPage()); else gate.reject(new Error('private-retired-history'));
+    await tick(); flushSync(); expect(document.querySelector('#center-theme')).not.toBeNull(); expect(document.querySelector('.history-page')).toBeNull();
+});
+it.each(['invalid', 'unchanged'] as const)('a recoverable %s preference draft keeps an independently current history review available', async issue => {
+    const h = await client(); const f = await historyWireExamples(); const view = render(h.client.view);
+    view.publish({ ...centerFrame({ ...h.client.view, issue }, { route: 'activity' }, null, 'en'), history: { ...EMPTY_HISTORY_VIEW,
+        slots: { ...EMPTY_HISTORY_VIEW.slots, diagnostics: { phase: 'ready', current: true, data: f.off } } } });
+    await ready(() => !!document.querySelector('[data-history-consent]'));
+    const enable = [...document.querySelectorAll<HTMLButtonElement>('[data-history=diagnostics] button')].find(node => node.textContent === 'Review enable')!;
+    expect(enable.disabled).toBe(false);
 });
 it('support presents an actual native-client uncertain save independently of retained settings, then reconciles only through a read', async () => {
     const h = await client(); await h.client.preview({ type: 'center', values: { onboarding: 'profile' } }, 0);

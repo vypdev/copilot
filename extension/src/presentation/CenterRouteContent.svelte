@@ -9,6 +9,7 @@
     import InventoryRoute from './InventoryRoute.svelte';
     import ConnectionsPanel from './ConnectionsPanel.svelte';
     import RepositoryPreferencesPanel from './RepositoryPreferencesPanel.svelte';
+    import HistoryRoute from './HistoryRoute.svelte';
     let { surface, frame, editable, busy }: { surface: CenterSurface; frame: CenterFrame; editable: boolean; busy: boolean } = $props();
     let Page = $state.raw<Component<CenterRouteProps> | null>(null);
     let Inventory = $state.raw<Component<InventoryRouteProps> | null>(null);
@@ -19,6 +20,8 @@
     const detail = $derived(frame.location.detail);
     const data = $derived(frame.client.data);
     const copy = $derived(frame.copy);
+    const historyEditable = $derived(frame.client.phase === 'ready' && frame.client.role === 'editor' && !frame.client.review && !frame.hasDraft
+        && (frame.client.issue === null || frame.client.issue === 'invalid' || frame.client.issue === 'unchanged'));
     $effect(() => {
         const destination = route; const parameter = detail;
         let current = true; Page = null; Inventory = null; Privacy = null; Support = null; loadFailed = false;
@@ -26,7 +29,7 @@
         if (destination === 'features') void surface.loadInventory(parameter).then(value => { if (current) Inventory = value; }, failed);
         else if (destination === 'privacy') void surface.loadPrivacy().then(value => { if (current) Privacy = value; }, failed);
         else if (isSupportRoute(destination)) void surface.loadSupport().then(value => { if (current) Support = value; }, failed);
-        else void surface.load(destination, parameter).then(value => { if (current) Page = value; }, failed);
+        else if (destination !== 'activity' && destination !== 'diagnostics') void surface.load(destination, parameter).then(value => { if (current) Page = value; }, failed);
         return () => { current = false; };
     });
 </script>
@@ -37,6 +40,9 @@
     {:else if Privacy}<Privacy context={{ copy, inspection: frame.inspection, connection: privacyConnection(frame.client, frame.inspection.grants['github-api']),
         canInspectConnection: !busy && !frame.client.review && (frame.client.role === 'editor' || frame.client.role === 'observer') }} actions={surface.actions}/>
     {:else}<p role="status">{copy.messages.loading}</p>{/if}
+    <HistoryRoute context={{ copy, view: frame.history, route: 'privacy', editable: historyEditable }} actions={surface.actions.history} load={surface.loadHistory}/>
+{:else if route === 'activity' || route === 'diagnostics'}
+    <HistoryRoute context={{ copy, view: frame.history, route, editable: historyEditable }} actions={surface.actions.history} load={surface.loadHistory}/>
 {:else if isSupportRoute(route)}
     {#if loadFailed}<p role="alert">{copy.messages.unavailable}</p><a href="https://docs.page/vypdev/copilot/browser-extension/onboarding">{copy.messages.documentation}</a>
     {:else if Support}<Support context={{ copy, route, status: supportStatus(frame.client), packageIdentity: frame.packageIdentity }} actions={{ reload: surface.actions.reload }}/>

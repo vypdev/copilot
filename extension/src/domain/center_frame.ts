@@ -9,6 +9,7 @@ import { EMPTY_PERMISSION_INSPECTION, type PermissionInspection } from './permis
 import { CENTER_COMMANDS, centerCommandRoute, type CenterBinding } from './shortcuts.ts';
 import { UNKNOWN_PACKAGE_IDENTITY, type PackageIdentity } from './package_identity.ts';
 import { welcomeCopy } from './welcome_copy.ts';
+import { EMPTY_HISTORY_VIEW, type HistoryClientView } from './history_client_view.ts';
 
 export interface CenterFrame {
     readonly client: CenterClientView; readonly location: CenterLocation; readonly pendingLocation: CenterLocation | null;
@@ -16,6 +17,7 @@ export interface CenterFrame {
     readonly inventory: InventoryNavigationState;
     readonly inspection: PermissionInspection;
     readonly packageIdentity: PackageIdentity;
+    readonly history: HistoryClientView;
 }
 /** Complete local preference delta, including removals. Input is validated credential-free Settings. */
 export function settingsReviewChanges(before: unknown, after: unknown, copy: CenterCopy): readonly ReviewChange[] {
@@ -53,12 +55,12 @@ export function settingsReviewChanges(before: unknown, after: unknown, copy: Cen
     }
     walk(before, after, []); return deepFreeze(changes);
 }
-export function centerFrame(client: CenterClientView, location: CenterLocation, pendingLocation: CenterLocation | null, nativeLanguage: string, draftEpoch = 0, hasDraft = false, inventory = EMPTY_INVENTORY_NAVIGATION, inspection = EMPTY_PERMISSION_INSPECTION, packageIdentity = UNKNOWN_PACKAGE_IDENTITY): CenterFrame {
+export function centerFrame(client: CenterClientView, location: CenterLocation, pendingLocation: CenterLocation | null, nativeLanguage: string, draftEpoch = 0, hasDraft = false, inventory = EMPTY_INVENTORY_NAVIGATION, inspection = EMPTY_PERMISSION_INSPECTION, packageIdentity = UNKNOWN_PACKAGE_IDENTITY, history = EMPTY_HISTORY_VIEW): CenterFrame {
     const copy = centerCopy(client.data?.settings?.locale ?? 'auto', nativeLanguage);
     const plan = client.review;
     const review: CenterReview | null = plan ? { state: plan.state, title: copy.messages.reviewTitle,
         summary: copy.messages.reviewSummary, revision: plan.revision,
         editable: client.data?.role === 'editor' && client.issue === null,
         changes: settingsReviewChanges(plan.before, plan.after, copy) } : null;
-    return deepFreeze({ client, location, pendingLocation, copy, review, draftEpoch, hasDraft, inventory, inspection, packageIdentity });
+    return deepFreeze({ client, location, pendingLocation, copy, review, draftEpoch, hasDraft, inventory, inspection, packageIdentity, history });
 }

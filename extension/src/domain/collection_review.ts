@@ -24,3 +24,5 @@ export interface CollectionSettled {
     readonly policy: CollectionPolicyFact; readonly admittedAtObservation: boolean; readonly sourceCurrentAtObservation: boolean;
 }
 export type CollectionOutcome = CollectionSettled | { readonly state: CollectionReviewIssue | 'cancelled' | 'pending' };
+/** A retained-owner observation, not proof that an earlier IPC request cannot still arrive. */
+export type CollectionInspection = CollectionOutcome | { readonly state: 'not-submitted' };

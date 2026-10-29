@@ -9,9 +9,16 @@ interface Confirmation extends Editor { readonly operationId: string }
 export type HistoryMessage = Client & { readonly method: 'center.history.read'; readonly kind: JournalKind }
     | Editor & { readonly method: 'center.collection.preview'; readonly kind: JournalKind; readonly action: CollectionAction }
     | Editor & { readonly method: 'center.history.clear.preview'; readonly kind: JournalKind }
-    | Confirmation & { readonly method: 'center.collection.confirm' | 'center.collection.cancel' | 'center.history.clear.confirm' | 'center.history.clear.cancel' };
-const METHODS = ['center.history.read', 'center.collection.preview', 'center.history.clear.preview', 'center.collection.confirm',
-    'center.collection.cancel', 'center.history.clear.confirm', 'center.history.clear.cancel'];
+    | Confirmation & { readonly method: 'center.collection.confirm' | 'center.collection.cancel' | 'center.history.clear.confirm' | 'center.history.clear.cancel'
+        | 'center.collection.result' | 'center.history.clear.result' };
+/** Read/result/cancel can observe or retire a review while a primary preference operation is busy. */
+export const HISTORY_EFFECTS: Readonly<Record<HistoryMessage['method'], boolean>> = Object.freeze({
+    'center.history.read': false, 'center.collection.result': false, 'center.history.clear.result': false,
+    'center.collection.cancel': false, 'center.history.clear.cancel': false,
+    'center.collection.preview': true, 'center.history.clear.preview': true,
+    'center.collection.confirm': true, 'center.history.clear.confirm': true,
+});
+const METHODS = Object.keys(HISTORY_EFFECTS);
 /** These fixed use cases accept no recording facts, private guards, storage commands or provider operands. */
 export function isHistoryMessage(value: unknown): value is HistoryMessage {
     if (!record(value) || value.version !== 1 || !METHODS.includes(value.method as string) || !settingsOperationId(value.clientId)) return false;

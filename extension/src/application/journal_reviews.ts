@@ -1,6 +1,6 @@
 import { journalKind, type JournalKind } from '../domain/journal_facts.ts';
 import { validJournalSnapshot, type JournalResult } from '../domain/local_journal.ts';
-import type { JournalClearOutcome, JournalClearPreview, JournalClearIssue } from '../domain/journal_clear.ts';
+import type { JournalClearOutcome, JournalClearPreview, JournalClearIssue, JournalClearInspection } from '../domain/journal_clear.ts';
 import { settingsOperationId } from '../domain/settings_operation.ts';
 import type { SettingsOwnerFence } from '../domain/settings_result.ts';
 import { deepFreeze, natural } from '../domain/value.ts';
@@ -33,6 +33,10 @@ export class JournalReviews {
     constructor(private readonly store: JournalStore, private readonly settings: Pick<SettingsRepository, 'inspect' | 'reserveMutations'>,
         private readonly ports: JournalReviewPorts) {}
     invalidate(): void { this.generation++; this.pending.clear(); this.completed.clear(); }
+    inspect(id: string, owner: string): JournalClearInspection {
+        const record = this.admit(id, owner); if ('state' in record) return record;
+        return 'result' in record ? record.result : { state: 'promise' in record ? 'pending' : 'not-submitted' };
+    }
     private time(): number | null { try { const now = this.ports.now(); return natural(now) ? now : null; } catch { return null; } }
     private fence(owner: string): SettingsOwnerFence | null {
         if (!settingsOperationId(owner)) return null;

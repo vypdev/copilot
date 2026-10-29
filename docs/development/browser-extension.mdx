@@ -648,8 +648,26 @@ independently from unreadable preferences. Domain history-state declarations kee
 UI contracts independent from application implementation classes.
 
 The closed protocol supports one collection's read, start/stop or clear preview,
-and confirmation/cancellation of a retained public review ID. It accepts no raw
+confirmation/cancellation and read-only inspection of a retained public review ID. It accepts no raw
 facts, policy nonce, callback, store name or provider request. Current compound
 results preserve separate preference/policy facts; do not flatten partial success
-into a completed history record. Actual producer projections and the localized
-typed client/UI remain unfinished H3 deliverables.
+into a completed history record. Actual producer projections remain unfinished
+H3 deliverables. The localized typed client/UI is now composed in the options
+page; native-browser and human acceptance remain outstanding.
+
+`HistoryClient` owns one mutation review and one bounded read stream with at
+most one trailing request per kind. Public immutable views strip native review
+selectors. Secondary read/transport failures do not poison primary preferences;
+a source-tree mismatch still retires the shared native owner. Read cursors and
+clear anchors prevent late old data from restoring cleared rows. Result-only
+inspection never confirms or retries an effect and cannot erase established
+completion or clear acknowledgement facts. Exact export bytes are retired as
+soon as their source read is invalidated. Download uses a separate native-file
+adapter and fixed filenames; no storage envelope or credential is exported.
+
+Activity, Diagnostics and the independent Privacy history section are packaged
+literal lazy modules. Their load failures cannot hide the native permission
+inspector. The options composition combines primary and history navigation
+guards, fences queued actions, and refreshes canonical preferences after a
+collection result. History-only invalidation never refreshes the unrelated
+provider/settings views. See [local activity](/browser-extension/local-history).

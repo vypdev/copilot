@@ -355,6 +355,11 @@
           "icon": "shield"
         },
         {
+          "title": "Local activity and history",
+          "href": "/browser-extension/local-history",
+          "icon": "clock"
+        },
+        {
           "title": "Local navigation shortcuts",
           "href": "/browser-extension/shortcuts",
           "icon": "keyboard"
