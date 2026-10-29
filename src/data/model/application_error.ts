@@ -226,7 +226,7 @@ export const APPLICATION_ERROR_METADATA: Readonly<Record<ApplicationErrorCode, A
     'validation.evidence-too-large': {
         kind: 'validation', retryable: false,
         impact: 'Progress could not be assessed within the fixed evidence limits.',
-        action: 'Reduce the comparison size or split the work into smaller reviewed changes before running a new assessment.',
+        action: 'Inspect the complete comparison and reported capacity. Supported multipart recovery continues automatically. If interrupted, rerun the current managed source; an identical over-limit comparison cannot gain capacity.',
         retainedState: 'Existing progress labels and published assessments were preserved.',
     },
     'workflow.invalid-event': {

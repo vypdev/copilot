@@ -108,7 +108,7 @@ retarget or replacement invalidates the old assessment. Generated `build/` outpu
 `specs/CATALOG.md` index contribute file facts only; editable catalogs, lockfiles
 and specifications require complete source evidence. These facts never certify
 a build or test. Complete patches and identified recovered-content units are
-assessed in at most 16 parts of 256,000 UTF-8 bytes each, then one final assessment.
+assessed in at most four rounds of 16 parts (64 total), each at most 256,000 UTF-8 bytes, then one final assessment.
 
 Omitted, structurally truncated or individually oversized text patches trigger
 bounded immutable commit/tree/blob recovery. The comparison merge base pins the
@@ -120,13 +120,28 @@ Added/removed empty files require proven presence/absence. Binary/non-UTF8
 contents, symlinks and submodules remain unsupported.
 
 Recovery is read-only with no checkout, shell, mutable ref or provider URL
-fallback. Its fixed per-invocation bounds are 64 files, 1,048,576 bytes per blob,
-4,194,304 represented side bytes, 256 requests, 50,000 directory entries and 512
-units. Contiguous text slices have a 120,000-byte JSON text ceiling; the source,
-manifest, final-fact and runtime budgets remain unchanged. Every required unit
-and every complete prompt is admitted before the first model request. Exact
-unit/partition/path/locale responses must all validate before final assessment;
-there is no partial percentage or durable partial-analysis reuse.
+fallback. Native recovery uses four bounded accounting frames, each with 64
+files, 4,194,304 represented side bytes, 256 requests and 50,000 directory entries.
+Claims are charged before I/O; advancing a frame never refreshes total credit.
+The totals are 256 files, 16,777,216 bytes, 1,024 requests and 200,000 entries;
+individual blobs are bounded at 2,097,152 bytes. The direct legacy adapter profile
+retains its old single-frame/1 MiB bounds. The native composition selects the
+closed framed profile without exposing a configuration switch.
+
+Contiguous text slices keep their 120,000-byte JSON text ceiling and there are
+at most 512 evidence units. Source, manifest, final-fact and full runtime prompt
+budgets remain unchanged. Admission counts the exact security/schema/task
+wrapper and configured effort suffix as well as source and issue text before the first model call. Source
+parts bind the complete independently recovered inventory and both commits.
+Request IDs also bind a fresh host attempt, preimage, full issue, scope and locale;
+actual returned IDs are retained and checked again at aggregation. No missing,
+replayed, duplicated or stale response can attest complete coverage.
+
+Every required source and complete prompt is admitted before the first model
+request. No percentage is published between rounds. Interruption requires a new
+complete invocation against current native source; partial facts are never
+persisted or reused as a checkpoint. The read-only source adapter receives no
+checkout, command, mutable-ref or new credential capability.
 
 Inherited production binaries may be absent from the complete actual PR delta
 even when they differ from development; this is a comparison-source correction,

@@ -7,7 +7,7 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-28",
+      "lastVerified": "2026-10-29",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md",
@@ -188,7 +188,13 @@
         "src/infrastructure/github/ports/github_progress_comparison_provider_port.ts",
         "src/application/ports/copilot_evidence_error.ts",
         "src/application/policies/optional_check_diagnostic_policy.ts",
-        "src/data/repository/github/copilot_evidence_provider_failure.ts"
+        "src/data/repository/github/copilot_evidence_provider_failure.ts",
+        "src/application/policies/progress_evidence_protocol_policy.ts",
+        "src/application/policies/progress_partition_receipt_policy.ts",
+        "src/application/policies/progress_prompt_capacity_policy.ts",
+        "src/application/policies/progress_recovery_capacity_policy.ts",
+        "src/application/policies/agent_prompt_envelope_policy.ts",
+        "src/data/repository/ai/agent_capability_adapter.ts"
       ],
       "tests": [
         "src/domain/__tests__/implementation_plan.test.ts",
@@ -314,7 +320,17 @@
         "src/application/policies/__tests__/optional_check_diagnostic_policy.test.ts",
         "src/data/repository/__tests__/copilot_evidence_failure.test.ts",
         "src/actions/__tests__/optional_check_completion.test.ts",
-        "src/architecture/__tests__/raw_error_logging_boundaries.test.ts"
+        "src/architecture/__tests__/raw_error_logging_boundaries.test.ts",
+        "src/data/repository/__tests__/progress_framed_recovery.test.ts",
+        "src/application/usecases/actions/__tests__/progress_framed_protocol.integration.test.ts",
+        "src/application/usecases/actions/__tests__/progress_large_comparison.integration.test.ts",
+        "src/application/policies/__tests__/progress_framed_diagnostics.test.ts",
+        "src/application/policies/__tests__/progress_partition_receipt_policy.test.ts",
+        "src/application/policies/__tests__/progress_prompt_capacity_policy.test.ts",
+        "src/application/policies/__tests__/progress_evidence_protocol_policy.test.ts",
+        "src/application/policies/__tests__/progress_recovery_capacity_policy.test.ts",
+        "src/application/usecases/actions/__tests__/progress_prompt_preflight.test.ts",
+        "src/application/usecases/actions/__tests__/progress_agent_prompt_capacity.integration.test.ts"
       ],
       "documentation": [
         "docs/configuration.mdx",

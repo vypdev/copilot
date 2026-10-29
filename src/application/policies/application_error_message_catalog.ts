@@ -166,7 +166,7 @@ const SPANISH_CONTENT: ErrorContent = Object.freeze({
   }),
   'validation.evidence-too-large': Object.freeze({
     impact: 'No se pudo evaluar el progreso dentro de los límites fijos de evidencia.',
-    action: 'Reduce el tamaño de la comparación o divide el trabajo en cambios revisados más pequeños antes de iniciar otra evaluación.',
+    action: 'Inspecciona la comparación completa y la capacidad indicada. La recuperación por partes continúa automáticamente cuando es compatible. Si se interrumpe, vuelve a ejecutar la fuente gestionada actual; una comparación idéntica que excede el límite no obtiene más capacidad.',
     retainedState: 'Se conservaron las etiquetas de progreso y las evaluaciones publicadas.',
   }),
   'workflow.invalid-event': Object.freeze({

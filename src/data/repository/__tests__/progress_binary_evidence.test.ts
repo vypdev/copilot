@@ -28,7 +28,12 @@ describe('binary evidence in the selected immutable comparison',()=>{
         expect(result.partitions[0].evidence).toContain('complete textual fixture');expect(result.partitions[0].evidence).not.toContain('generated-metadata-only');
     });
     it('keeps the byte cap before classifying or downloading an oversized binary',async()=>{
-        const f=fixture('added',{}, {'lib/a.dll':Buffer.alloc(1_048_577)});await expect(f.read()).rejects.toMatchObject({code:'validation.evidence-too-large'});expect(f.getBlob).not.toHaveBeenCalled();
+        const f=fixture('added',{}, {'lib/a.dll':Buffer.alloc(2_097_153)});await expect(f.read()).rejects.toMatchObject({code:'validation.evidence-too-large'});expect(f.getBlob).not.toHaveBeenCalled();
+    });
+    it('still refuses binary content between the legacy and framed blob limits after immutable verification',async()=>{
+        const f=fixture('added',{}, {'lib/a.dll':Buffer.alloc(1_048_577)});
+        await expect(f.read()).rejects.toMatchObject({code:'validation.evidence-unavailable',recovery:{id:'progress-binary-evidence-unavailable'}});
+        expect(f.getBlob).toHaveBeenCalledTimes(1);
     });
     it('retains genuine immutable-provider outages rather than claiming binary review',async()=>{
         const f=fixture('added',{}, {'lib/a.dll':Buffer.from([0,1])}),failure={status:500,message:'PRIVATE_PROVIDER'};f.getBlob.mockRejectedValue(failure);
