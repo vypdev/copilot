@@ -156,6 +156,22 @@ is 0/2 and fails the unchanged 0.8 gate; this is not a pass of every model-quali
 threshold. Both independent controls pass all default gates in this bounded sample.
 All intermediate regressions and complete scores remain recorded.
 
+The six #798 credential-source cases bind configuration-selected setup to the
+persisted initial session and distinguish an unused endpoint stub from a reached
+refresh. Counterexamples retain an opaque initial state, an expired-session
+refresh and a missing bearer separator; unavailable setup evidence stays unknown.
+Owned oracles use real Node HMAC/base64url and a controlled storageState JSON
+roundtrip. They execute only fixed owned fixtures, reject modified or unknown
+inputs and expose no token values, signatures or keys. They do not execute
+Playwright, jose or private consumers. The retained actual six-case baseline and
+first two corrections each omit one real fault. The final instruction has zero
+false positives or omissions; its 2/3 exact anchors still fail the unchanged 0.8
+location gate. All predictions, failed scores and source/prompt identities remain
+in `quality/bugbot/evidence/issue-798.json`; this is no all-gates or statistical
+reliability claim. Existing exact-source consumer CI and
+read-only source provenance remain separate evidence. All 114 earlier corpus
+inputs/verdicts and quality thresholds remain unchanged.
+
 ## Quality gates
 
 ```bash

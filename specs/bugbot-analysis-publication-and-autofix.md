@@ -1987,3 +1987,89 @@ Update the public limits, dated evidence, generated artifacts and all original
 coverage/native/review gates. A transient GitHub publication failure must be
 recovered by the normal fresh review/recheck, with complete exact-head evidence
 and zero unknown/active state before merging.
+
+### Configuration-selected initial credential ownership — #798 (2026-10-30)
+
+The reported old-runtime review attributed an initial browser credential to an
+unused mocked token response. Read-only exact-source evidence instead binds
+Playwright globalSetup -> configured storageState -> localStorage session ->
+request header; the initial token is signed, and a separate login/refresh stub
+is not its producer. This establishes a false premise, not an internal parser or
+context-selection diagnosis. Existing matching consumer CI is separate evidence;
+no consumer execution, mutation, credential or signature is required here.
+
+Strengthen the shared test-path instruction used by ordinary, partitioned and
+benchmark review: trace configuration-selected bootstrap/globalSetup and persisted
+state to the assertion's active credential producer. Distinguish initial state
+from actual login/refresh transitions; cite which edge supplies the tested value.
+An unused endpoint response cannot establish the initial token. Preserve genuine
+opaque initial state, a reached refresh overwriting the token and independent
+header-format failures. If the selected producer is unavailable, omit unsupported
+always-fails claims. Keep normal eligible historical verification; no automatic
+dismissal, JWT whitelist, new provider call, permission, setting or filter.
+
+```text
+configuration -> selected setup -> persisted session -> initial header -> assertion
+                                      |
+                        actual expiry/login transition -> endpoint response
+```
+
+Reserve **20 distinct new cases before implementation**: six independent source
+observations (including one unavailable-source outcome), six scorer controls,
+four instruction-delivery routes (ordinary, owner/non-owner partition, benchmark),
+two inert-input ownership guards and two verdict/privacy independence cases.
+Owned fixtures use real Node HMAC/base64url and the storageState JSON shape in a
+controlled in-memory storage roundtrip. They do not execute Playwright, jose,
+private consumer code or external requests, and observations omit token values,
+signatures and keys. The actual consumer's jose source/CI provenance remains a
+separate read-only receipt. Never turn the harness observation into a claimed
+fresh browser or consumer run.
+
+Keep all 114 prior corpus inputs/verdicts, severity/confidence and quality floors,
+the 15,000-character legacy prompt compatibility bound and existing context/query
+budgets. No new dependency is needed. Preserve the four-case exploratory actual
+f7b4 CLI sample separately (0 false positives/negatives, all default gates pass);
+it is not a controlled comparison with the expanded six-case corpus. Freeze all
+six inputs/verdicts before measuring baseline and corrected shared instructions;
+retain complete scores, including failures, and make no statistical guarantee or
+consumer-adoption claim. Update public detection/quality documentation and catalog
+evidence with the regression. Prompt coverage stays 100% all metrics and added
+runtime lines 100%; mandatory full hook, fresh CI, three-platform cleanup and
+complete zero-active-finding exact-head review remain merge conditions.
+
+
+The controlled six-case baseline and first corrected instruction both produced
+zero false positives and one false negative; the first correction detected opaque
+initial state but omitted the reached expired-session refresh. Retain both failed
+scores. Refine the same credential-provenance rule to explicitly evaluate expiry
+predicates and login/refresh overwrites before the assertion. Inputs, verdicts,
+model/effort and quality thresholds remain frozen. This is an instruction change,
+not repetition or selection of an identical model sample; all limits and original
+20 regression cases remain required.
+
+The second correction still omitted the expired refresh; keep that failed score
+also. Clarify the complete value-flow sequence through the evaluated guard and
+last overwrite to the final asserted credential, explicitly forbidding stopping
+at bootstrap. This preserves initial-state and real refresh/header contradictions
+under the same unchanged six-case inputs, model/effort and thresholds.
+
+The final V3 actual six-case sample has **0 false positives and 0 false negatives**
+(precision/recall/F1 1.0), preserving all three genuine fault controls. Two of three
+anchors are exact: the bearer-separator finding incorrectly supplies context line
+24 instead of changed line 29, so location accuracy 0.667 **fails** the unchanged
+0.8 gate. Do not claim all actual-model gates pass. Complete baseline/V1/V2/V3
+predictions, scores, frozen CLI/source identities and derived core-prompt hashes
+are recorded in `quality/bugbot/evidence/issue-798.json`. The earlier four-case
+exploration remains explicitly separate. Deterministic source/scorer/delivery
+regressions and native exact-head review are independent merge evidence; this
+bounded campaign is not a statistical guarantee or fresh consumer execution.
+
+Exact-head CI at `5754dcb7` passes all 811 suites / 15,349 tests, but the
+processed diff report finds the compacted review-effort line partially covered
+(4/5 measured added runtime lines fully hit). Extend the original 20-case budget
+to **22** before adding two real delivery controls: explicitly configured high
+and low effort must retain their distinct review policy, the session-provenance
+rule, supplied assertion and eligible historical finding. Keep all existing
+source/scorer cases and actual-model samples unchanged. The final merge still
+requires 100% fully hit added runtime lines on the new exact head; a green global
+coverage check alone is insufficient.

@@ -2053,7 +2053,7 @@
       "id": "bugbot-analysis-and-autofix",
       "title": "Bugbot analysis, finding publication, and autofix",
       "status": "implemented",
-      "scope": "Select one canonical PR, exhaustively analyze bounded diff partitions with version-grounded dependency, policy-to-request transformation and source-bound assertion and generated-source coordinates with independent candidate verification, delegated test-path and external Action input-contract, host-aware self-repository references and Kotlin/Wasm lexical-binding and renderer-grounded Markdown path evidence, publish stable findings atomically, and apply authorized verified fixes",
+      "scope": "Select one canonical PR, exhaustively analyze bounded diff partitions with version-grounded dependency, policy-to-request transformation and source-bound assertion and generated-source coordinates with independent candidate verification, configuration-selected initial-session credential ownership, delegated test-path and external Action input-contract, host-aware self-repository references and Kotlin/Wasm lexical-binding and renderer-grounded Markdown path evidence, publish stable findings atomically, and apply authorized verified fixes",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-10-30",
       "specs": [
@@ -2200,7 +2200,10 @@
         "src/application/policies/__tests__/bugbot_python_literal_witness_policy.test.ts",
         "src/application/policies/__tests__/bugbot_literal_verification_policy.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/verify_generated_literal_findings.test.ts",
-        "quality/bugbot/evidence/issue-796.json"
+        "quality/bugbot/evidence/issue-796.json",
+        "src/tooling/__tests__/fixtures/bugbot_initial_session_oracles.ts",
+        "src/tooling/__tests__/bugbot_initial_session_evidence.test.ts",
+        "quality/bugbot/evidence/issue-798.json"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",
