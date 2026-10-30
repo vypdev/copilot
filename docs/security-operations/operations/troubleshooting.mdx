@@ -707,3 +707,60 @@ Do not enable active cancellation or single-pending replacement as a workaround.
 Older runtime references missing `issue-admission` require the matching runtime
 upgrade before installing the new generated workflow. This upstream change does
 not itself prove a consumer's queue improved.
+
+
+## Collect logs when advisory checks appear as jobs
+
+If `gh run view RUN_ID --repo OWNER/REPO --log` reports
+`log not found: CHECK_ID`, inspect the native job inventory before retrying.
+Optional `Copilot / Approval`, `Copilot / Review` or `Copilot / Verification`
+checks published by the GitHub Actions app can appear beside executable jobs
+with zero steps and no assigned runner. Those advisory records have check
+output, rather than an executed job log. This does not establish the cause of
+the workflow's own success or failure.
+
+1. Select the exact run and attempt. For a complete collection, wait for its
+   real jobs to finish. Inventory every page; the endpoint below explicitly
+   selects the latest attempt. When auditing an older attempt, use the native
+   `/actions/runs/RUN_ID/attempts/ATTEMPT/jobs` endpoint instead.
+
+   ```bash
+   gh api --paginate \
+     'repos/OWNER/REPO/actions/runs/RUN_ID/jobs?filter=latest&per_page=100' \
+     --jq '.jobs[] | {id, name, status, conclusion, runner_id, stepCount: (if (.steps | type) == "array" then (.steps | length) else null end)}'
+   ```
+
+2. Match each record to the native run. Inspect advisory check output separately
+   when a completed zero-step/no-runner record corresponds to a Copilot check.
+   A name or missing log alone does not prove a record advisory.
+
+   | Native record | Next action |
+   |---|---|
+   | Completed job with execution steps | Fetch that exact job ID, including failed jobs |
+   | Confirmed completed advisory check without steps/runner | Read its check output; no job execution log is expected |
+   | Queued or running job, possibly without steps/runner yet | Keep it pending; wait for execution/completion |
+   | Skipped job | Preserve the skip and its condition; do not call it executed or advisory |
+   | Missing/incomplete metadata or failed inventory request | Keep collection incomplete; investigate the actual API error |
+
+3. Retrieve each real job independently with the ID from that inventory:
+
+   ```bash
+   gh run view --repo OWNER/REPO --job JOB_ID --log
+   ```
+
+   Preserve every command's exit status and any partial output. A whole-run
+   command may already print real logs before failing on an advisory record.
+   A failed per-job download for an executable job remains a genuine collection
+   failure; inspect the native job, access, availability or log retention rather
+   than suppressing it. Continue collecting other available real jobs, but call
+   the bundle partial until all intended executable jobs are accounted for.
+   `--log-failed` alone does not collect successful-step evidence.
+
+The supported per-job command is documented in the
+[GitHub CLI manual](https://cli.github.com/manual/gh_run_view); native job and
+attempt inventories are described in the
+[Actions jobs API](https://docs.github.com/en/rest/actions/workflow-jobs).
+An exported log proves what that job recorded, not that its workflow passed.
+Keep required failures, review findings and coverage results unchanged. No
+check deletion, permission expansion, token replacement, workflow rerun or
+blanket error suppression is needed for this read-only collection route.

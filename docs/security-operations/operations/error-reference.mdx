@@ -153,6 +153,15 @@ a localized note points back to the retained log. For credential selection and
 the supported default, see [workflow setup](/issues/workflow-setup).
 
 
+## Missing logs for advisory checks
+
+If GitHub CLI whole-run log retrieval reports `log not found: CHECK_ID`, use the
+[paginated inventory and per-job collection guide](/security-operations/operations/troubleshooting#collect-logs-when-advisory-checks-appear-as-jobs).
+Collect real execution jobs by their native IDs and inspect advisory check output
+separately. Preserve pending/skipped states, failed downloads and any partial
+output. Required workflow results and existing review/coverage conclusions keep
+their original meaning.
+
 ## Missing publication context
 
 If `create_release` cannot load its durable deployment operation, it reports
