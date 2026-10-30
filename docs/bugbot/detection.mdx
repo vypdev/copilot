@@ -99,6 +99,25 @@ lifecycle contract cannot be verified, the reviewer must omit a speculative
 permanent-loader claim. This instruction improves evidence gathering; it does
 not guarantee model accuracy or suppress findings through a text-matching rule.
 
+## Routing-root identity
+
+Before claiming that a framework call returns a detached subtree, Bugbot traces
+the actual receiver, delegated call and version-matched implementation. Ktor
+3.0.2 [`Application.routing`](https://github.com/ktorio/ktor/blob/3.0.2/ktor-server/ktor-server-core/common/src/io/ktor/server/routing/RoutingRoot.kt)
+reuses the installed root and applies configuration to it; it installs a root
+when none exists. A repeated call on the same application is not proof of a
+different root. Selecting an actual child or another application's root can
+still violate a caller's complete-root requirement and needs its own finding.
+
+Reconcile applicable test/export evidence with the exact reviewed source.
+Passing export consistency does not certify unrelated business behavior or
+approve a baseline for adoption. Public source or artifact inspection is not a
+claim about a private resolved jar. If the implementation or receiver cannot
+be established, omit an unsupported unconditional failure claim. Existing
+findings retain normal current-source verification. The six regression cases
+and their measured limitations are described in
+[quality evidence](/bugbot/quality-observability#routing-root-regression).
+
 ## Dependency-generated request values
 
 Before claiming a required request value is missing, Bugbot follows policy and

@@ -1643,6 +1643,86 @@
         "description": "Only this delegated decode call is available. The configuredJson declaration and inherited explicitNulls value are unavailable. Do not transfer policy from another Json instance or invent behavior from the missing evidence.",
         "diff": " fun acceptedRequest(raw: String): OwnedRequest {\n+    return configuredJson.decodeFromString<OwnedRequest>(raw)\n }",
         "expected": []
-      }
+      },
+    {
+      "id": "ktor-routing-installed-root",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Owned inert Kotlin example using the public Ktor 3.0.2 routing contract. The pinned public RoutingRoot.kt blob 7519c959a6caba4c1b3fb3c7e429ded46e2f21e8 implements Application.routing as pluginOrNull(RoutingRoot)?.apply(configuration) ?: install(RoutingRoot, configuration); independent public 3.0.2 jar disassembly corroborates the same-object return on reuse. This is source/bytecode evidence, not execution of this example or private dependency resolution. The caller supplies two distinct Applications; the first begins without routing, then the shown setup installs exactly one child. The selected node must preserve the complete installed root identity, checked by this active caller. Review the added selection; no other files or hidden framework overrides are in scope.",
+      "file": "backend/OwnedRoutingSelection.kt",
+      "startLine": 1,
+      "diff": " import io.ktor.server.application.Application\n import io.ktor.server.routing.*\n fun existingRoot(app: Application): RoutingRoot = app.routing {}\n fun selectForExport(app: Application, otherApp: Application): RoutingNode {\n     val installed = app.routing { route(\"/owned\") {} }\n+    val selected = app.routing {}\n     check(selected === installed) { \"Export must retain the entire installed root\" }\n     return selected\n }",
+      "expected": []
+    },
+    {
+      "id": "ktor-routing-delegated-root",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Owned inert Kotlin example using the public Ktor 3.0.2 routing contract. The pinned public RoutingRoot.kt blob 7519c959a6caba4c1b3fb3c7e429ded46e2f21e8 implements Application.routing as pluginOrNull(RoutingRoot)?.apply(configuration) ?: install(RoutingRoot, configuration); independent public 3.0.2 jar disassembly corroborates the same-object return on reuse. This is source/bytecode evidence, not execution of this example or private dependency resolution. The caller supplies two distinct Applications; the first begins without routing, then the shown setup installs exactly one child. The selected node must preserve the complete installed root identity, checked by this active caller. Review the added selection; no other files or hidden framework overrides are in scope.",
+      "file": "backend/OwnedRoutingSelection.kt",
+      "startLine": 1,
+      "diff": " import io.ktor.server.application.Application\n import io.ktor.server.routing.*\n fun existingRoot(app: Application): RoutingRoot = app.routing {}\n fun selectForExport(app: Application, otherApp: Application): RoutingNode {\n     val installed = app.routing { route(\"/owned\") {} }\n+    val selected = existingRoot(app)\n     check(selected === installed) { \"Export must retain the entire installed root\" }\n     return selected\n }",
+      "expected": []
+    },
+    {
+      "id": "ktor-routing-configured-root",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Owned inert Kotlin example using the public Ktor 3.0.2 routing contract. The pinned public RoutingRoot.kt blob 7519c959a6caba4c1b3fb3c7e429ded46e2f21e8 implements Application.routing as pluginOrNull(RoutingRoot)?.apply(configuration) ?: install(RoutingRoot, configuration); independent public 3.0.2 jar disassembly corroborates the same-object return on reuse. This is source/bytecode evidence, not execution of this example or private dependency resolution. The caller supplies two distinct Applications; the first begins without routing, then the shown setup installs exactly one child. The selected node must preserve the complete installed root identity, checked by this active caller. Review the added selection; no other files or hidden framework overrides are in scope.",
+      "file": "backend/OwnedRoutingSelection.kt",
+      "startLine": 1,
+      "diff": " import io.ktor.server.application.Application\n import io.ktor.server.routing.*\n fun existingRoot(app: Application): RoutingRoot = app.routing {}\n fun selectForExport(app: Application, otherApp: Application): RoutingNode {\n     val installed = app.routing { route(\"/owned\") {} }\n+    val selected = app.routing { route(\"/extra\") {} }\n     check(selected === installed) { \"Export must retain the entire installed root\" }\n     return selected\n }",
+      "expected": []
+    },
+    {
+      "id": "ktor-routing-child-subtree",
+      "language": "kotlin",
+      "category": "correctness",
+      "description": "Owned inert Kotlin example using the public Ktor 3.0.2 routing contract. The pinned public RoutingRoot.kt blob 7519c959a6caba4c1b3fb3c7e429ded46e2f21e8 implements Application.routing as pluginOrNull(RoutingRoot)?.apply(configuration) ?: install(RoutingRoot, configuration); independent public 3.0.2 jar disassembly corroborates the same-object return on reuse. This is source/bytecode evidence, not execution of this example or private dependency resolution. The caller supplies two distinct Applications; the first begins without routing, then the shown setup installs exactly one child. The selected node must preserve the complete installed root identity, checked by this active caller. Review the added selection; no other files or hidden framework overrides are in scope.",
+      "file": "backend/OwnedRoutingSelection.kt",
+      "startLine": 1,
+      "diff": " import io.ktor.server.application.Application\n import io.ktor.server.routing.*\n fun existingRoot(app: Application): RoutingRoot = app.routing {}\n fun selectForExport(app: Application, otherApp: Application): RoutingNode {\n     val installed = app.routing { route(\"/owned\") {} }\n+    val selected = installed.children.single()\n     check(selected === installed) { \"Export must retain the entire installed root\" }\n     return selected\n }",
+      "expected": [
+        {
+          "id": "ktor-routing-child-subtree",
+          "title": "The changed selection loses the installed application routing root",
+          "file": "backend/OwnedRoutingSelection.kt",
+          "line": 6,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "    val selected = installed.children.single()"
+        }
+      ]
+    },
+    {
+      "id": "ktor-routing-different-application",
+      "language": "kotlin",
+      "category": "correctness",
+      "description": "Owned inert Kotlin example using the public Ktor 3.0.2 routing contract. The pinned public RoutingRoot.kt blob 7519c959a6caba4c1b3fb3c7e429ded46e2f21e8 implements Application.routing as pluginOrNull(RoutingRoot)?.apply(configuration) ?: install(RoutingRoot, configuration); independent public 3.0.2 jar disassembly corroborates the same-object return on reuse. This is source/bytecode evidence, not execution of this example or private dependency resolution. The caller supplies two distinct Applications; the first begins without routing, then the shown setup installs exactly one child. The selected node must preserve the complete installed root identity, checked by this active caller. Review the added selection; no other files or hidden framework overrides are in scope.",
+      "file": "backend/OwnedRoutingSelection.kt",
+      "startLine": 1,
+      "diff": " import io.ktor.server.application.Application\n import io.ktor.server.routing.*\n fun existingRoot(app: Application): RoutingRoot = app.routing {}\n fun selectForExport(app: Application, otherApp: Application): RoutingNode {\n     val installed = app.routing { route(\"/owned\") {} }\n+    val selected = otherApp.routing {}\n     check(selected === installed) { \"Export must retain the entire installed root\" }\n     return selected\n }",
+      "expected": [
+        {
+          "id": "ktor-routing-different-application",
+          "title": "The changed selection loses the installed application routing root",
+          "file": "backend/OwnedRoutingSelection.kt",
+          "line": 6,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "    val selected = otherApp.routing {}"
+        }
+      ]
+    },
+    {
+      "id": "ktor-routing-unavailable-implementation",
+      "language": "kotlin",
+      "category": "negative",
+      "file": "backend/OwnedRoutingSelection.kt",
+      "startLine": 1,
+      "description": "Only this delegated root-selection call is available. The selectConfiguredRoot declaration, dependency version and implementation are unavailable. No concrete identity mismatch or unconditional export failure is established by the supplied evidence.",
+      "diff": " fun selectForExport(app: Application): RoutingNode {\n+    return selectConfiguredRoot(app)\n }",
+      "expected": []
+    }
   ]
 }
