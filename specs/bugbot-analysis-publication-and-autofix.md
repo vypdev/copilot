@@ -2063,3 +2063,13 @@ are recorded in `quality/bugbot/evidence/issue-798.json`. The earlier four-case
 exploration remains explicitly separate. Deterministic source/scorer/delivery
 regressions and native exact-head review are independent merge evidence; this
 bounded campaign is not a statistical guarantee or fresh consumer execution.
+
+Exact-head CI at `5754dcb7` passes all 811 suites / 15,349 tests, but the
+processed diff report finds the compacted review-effort line partially covered
+(4/5 measured added runtime lines fully hit). Extend the original 20-case budget
+to **22** before adding two real delivery controls: explicitly configured high
+and low effort must retain their distinct review policy, the session-provenance
+rule, supplied assertion and eligible historical finding. Keep all existing
+source/scorer cases and actual-model samples unchanged. The final merge still
+requires 100% fully hit added runtime lines on the new exact head; a green global
+coverage check alone is insufficient.

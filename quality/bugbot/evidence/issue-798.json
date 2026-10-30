@@ -837,7 +837,7 @@
     "modelAndEffortUnchanged": true,
     "existingCorpusCasesPreserved": 114,
     "newCorpusCases": 6,
-    "newDeterministicCases": 20,
+    "newDeterministicCases": 22,
     "qualityFloorsUnchanged": true,
     "finalFalsePositives": 0,
     "finalFalseNegatives": 0,
@@ -867,6 +867,101 @@
         "existingSkipped": 35
       },
       "actualMeasurements": "The frozen V3 CLI above predates this generic native framing adjustment. Its benchmark core prompt and shared instruction remain identical in the final implementation; no new actual sample is claimed."
+    },
+    "exactHeadCoverageFollowup": {
+      "head": "5754dcb7af0ea69844d603fdc4e17735b8a33c99",
+      "ciRun": 41092669245,
+      "ciJob": 124190315450,
+      "rootCiConclusion": "success",
+      "initialPatchCoverage": {
+        "base": "071044e96e25d5b7866b2ff6ccbd11a53d12645f",
+        "head": "5754dcb7af0ea69844d603fdc4e17735b8a33c99",
+        "source": "exact-head Codecov line report (0 hit,1 miss,2 partial), git diff -U0 against current develop",
+        "measuredAddedLines": 5,
+        "fullyHitLines": 4,
+        "coverage": 80.0,
+        "files": [
+          {
+            "file": "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts",
+            "measured": 3,
+            "hit": 2,
+            "miss": 0,
+            "partial": 1,
+            "nonHits": [
+              [
+                87,
+                2
+              ]
+            ]
+          },
+          {
+            "file": "src/prompts/bugbot.ts",
+            "measured": 2,
+            "hit": 2,
+            "miss": 0,
+            "partial": 0,
+            "nonHits": []
+          }
+        ],
+        "unreportedProductionScripts": [],
+        "uninstrumentedTypeOnlyFiles": []
+      },
+      "response": "Add two explicit high/low native delivery controls to fully exercise the compacted effort line without changing production instructions, runtime logic, corpus, verdicts, thresholds or model samples."
     }
+  },
+  "reviewAnchorVerification": {
+    "head": "5754dcb7af0ea69844d603fdc4e17735b8a33c99",
+    "fixtureSha256": "e171b5936d28bc554a44b5133b9e3105ec031e606f12eebd2835cc1b5087402f",
+    "caseId": "session-source-prefix-gap",
+    "generatedPhysicalLines": 30,
+    "expectedLine": 29,
+    "expectedCodeSnippet": "const authorization = \"Bearer\" + accessToken;",
+    "generatedTail": [
+      {
+        "line": 27,
+        "text": " let accessToken = storedSession.access_token;"
+      },
+      {
+        "line": 28,
+        "text": " if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;"
+      },
+      {
+        "line": 29,
+        "text": "+const authorization = \"Bearer\" + accessToken;"
+      },
+      {
+        "line": 30,
+        "text": "+assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);"
+      }
+    ],
+    "observation": {
+      "kind": "observed",
+      "setup": "signed.setup.ts",
+      "tokenEndpointCalls": 0,
+      "initialSegments": 3,
+      "selectedSegments": 3,
+      "assertionPassed": false
+    },
+    "correctLineMetrics": {
+      "expected": 1,
+      "actual": 1,
+      "matched": 1,
+      "precision": 1,
+      "recall": 1,
+      "locationAccuracy": 1,
+      "severityAccuracy": 1,
+      "categoryAccuracy": 1,
+      "f1": 1,
+      "falsePositives": 0,
+      "falseNegatives": 0,
+      "meanLineDistance": 0,
+      "confidenceBrierScore": 0
+    },
+    "suggestedMinusTwoWouldTarget": {
+      "line": 28,
+      "text": " if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;"
+    },
+    "sourceOnlyOwnedFixture": true,
+    "privateConsumerExecution": false
   }
 }

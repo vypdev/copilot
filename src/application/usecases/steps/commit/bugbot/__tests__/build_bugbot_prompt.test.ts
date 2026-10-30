@@ -395,6 +395,20 @@ it('retains multiple compact legacy literal witnesses with one trusted verificat
 });
 
 describe('configuration-selected initial session evidence', () => {
+  it.each([
+    ['high', 'Perform deeper cross-file and adversarial analysis.'],
+    ['low', 'Prioritize high-signal changed-code defects and avoid speculative breadth.'],
+  ] as const)('delivers the session rule and retained evidence at explicit %s effort', (effort, policy) => {
+    const prompt = buildBugbotPrompt(mockExecution({ analysis: {
+      reviewConfiguration: { ...DEFAULT_BUGBOT_REVIEW_CONFIGURATION, effort },
+    } }), mockContext({ reviewDiffBlock: '+assert.equal(selectedCredential, storedCredential);',
+      previousFindingsBlock: 'retained-session-effort-finding' }));
+    expect(prompt).toContain(`Review effort:** ${effort}. ${policy}`);
+    expect(prompt).toContain('evaluated expiry/login/refresh guard -> last write -> asserted credential');
+    expect(prompt).toContain('unused token-response stub is not initial-token evidence');
+    expect(prompt).toContain('+assert.equal(selectedCredential, storedCredential);');
+    expect(prompt).toContain('retained-session-effort-finding');
+  });
   it.each([undefined, true, false])('traces bootstrap and stored credentials with resolution ownership=%s', ownsResolution => {
     const prompt = buildBugbotPrompt(mockExecution(), mockContext({ previousFindingsBlock: 'retained-session-finding' }),
       ownsResolution === undefined ? undefined : { partition: { id: 'session-source', ordinal: 1, total: 2,
