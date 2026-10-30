@@ -42,6 +42,7 @@ it.each([
 it.each([
   ['space dedent', 'x = textwrap.dedent("""    a\n      b""")', 'dedent', ['a', '  b']],
   ['tab dedent', 'x = textwrap.dedent("""\ta\n\tb""")', 'dedent', ['a', 'b']],
+  ['unequal visual tab/space widths (Python dedent never expands tabs)', 'x = textwrap.dedent("""\t  a\n        b""")', 'dedent', ['\t  a', '        b']],
   ['mixed prefixes', 'x = textwrap.dedent(""" a\n\tb""")', 'dedent', [' a', '\tb']],
   ['whitespace blank', 'x = textwrap.dedent("""    a\n  \n    b""")', 'dedent', ['a', '', 'b']],
   ['dedent and LF strip', 'x = textwrap.dedent("""\n    a\n    b""").lstrip("\\n")', 'dedent+lstrip-LF', ['a', 'b']],

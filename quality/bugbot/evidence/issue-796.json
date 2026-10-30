@@ -1906,6 +1906,11 @@
     "sourceSha256": "23dc4b81de9c06a9ebdd4f495fe92039b0c99c748046a9993228640c59458001",
     "verification": "A regression test rejects a serialized wrong-locale empty initial result. Frozen measured bundle/source identities remain unchanged and accurately recorded.",
     "taskInventory": "Register the verifier as its own locale-guarded internal product task instead of sharing the detector task inventory key. The wire schemaName stays bugbot_literal_candidate_verification; measured valid requests have unchanged prompt/schema/options.",
-    "taskInventorySourceSha256": "4e7b80b2eedee5fae082dc5076970310f60052a74f936e81bc520290b4df290c"
+    "taskInventorySourceSha256": "4e7b80b2eedee5fae082dc5076970310f60052a74f936e81bc520290b4df290c",
+    "legacyPatchRead": {
+      "change": "Read each legacy Python patch once and reuse the same string for rendering and trusted activation, removing an unreachable second nullish fallback. Add multiple retained/unavailable witnesses and exact mixed-indentation regression coverage.",
+      "sourceSha256": "d7391f955035c3df7c43d0cfdd4b4a64de6914651b886c754f07b733ee08eca0",
+      "benchmarkImpact": "No change to the measured benchmark adapter, its prompts/corpus or shared verifier behavior for valid responses. Recorded bundle identities and failed scores remain intact."
+    }
   }
 }

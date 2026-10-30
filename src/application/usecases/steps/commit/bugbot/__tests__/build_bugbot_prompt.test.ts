@@ -4,7 +4,7 @@
 
 import { DEFAULT_BUGBOT_REVIEW_CONFIGURATION } from '../../../../../../domain/bugbot/review_configuration';
 import type { BugbotContext } from "../types";
-import { buildBugbotPrompt } from "../build_bugbot_prompt";
+import { buildBugbotPrompt, buildBugbotReviewInput } from "../build_bugbot_prompt";
 import type { BugbotReviewOperationContext } from '../bugbot_review_operation_context';
 import type { BugbotReviewDiffPartition } from '../types';
 import { buildReviewDiffPlan, MAX_REVIEW_DIFF_PARTITION_LENGTH } from '../../../../../policies/bugbot_diff_partition_policy';
@@ -377,4 +377,19 @@ describe('deterministic Python literal evidence in real review delivery', () => 
     expect(prompt).toContain('retained=3, omitted=2, truncated=1, provider page limit reached');
     expect(prompt).toContain('do not claim that the whole pull request is clean');
   });
+});
+
+
+it('retains multiple compact legacy literal witnesses with one trusted verification activation', () => {
+  const changes = ['unavailable.py', 'first.py', 'second.py'].map((filename, index) => ({ filename, status: 'modified', additions: 1, deletions: 0,
+    patch: index === 0 ? '+source = r"a\\nb"' : '+source = "a\\nb' + index + '"' }));
+  const input = buildBugbotReviewInput(mockExecution(), mockContext({
+    prContext: { prHeadSha: 'a'.repeat(40), prFiles: [], pathToFirstDiffLine: {}, changes },
+  }));
+  expect(input.hasLiteralWitnesses).toBe(true);
+  expect(input.prompt).toContain('first.py');
+  expect(input.prompt).toContain('second.py');
+  expect(input.prompt).toContain('"unavailable":1');
+  expect(input.prompt).toContain('"line":2,"text":"b1"');
+  expect(input.prompt).toContain('"line":2,"text":"b2"');
 });

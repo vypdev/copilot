@@ -64512,7 +64512,8 @@ function legacyPythonWitnesses(changes) {
     let hasWitnesses = false;
     let remaining = bugbot_python_literal_witness_policy_1.PYTHON_LITERAL_OUTPUT_LIMIT;
     for (const [index, change] of changes.filter(change => /\.py$/iu.test(change.filename)).slice(0, 3).entries()) {
-        const witness = (0, bugbot_python_literal_witness_policy_1.renderPythonLiteralWitnesses)(change.patch ?? '', `github.legacy.literal.${index + 1}`);
+        const patch = change.patch ?? '';
+        const witness = (0, bugbot_python_literal_witness_policy_1.renderPythonLiteralWitnesses)(patch, `github.legacy.literal.${index + 1}`);
         if (!witness)
             continue;
         const path = (0, untrusted_content_1.renderUntrustedField)(change.filename, `github.legacy.literal.path.${index + 1}`, 1000);
@@ -64520,7 +64521,7 @@ function legacyPythonWitnesses(changes) {
         if (block.length > remaining)
             continue;
         blocks.push(block);
-        hasWitnesses || (hasWitnesses = (0, bugbot_python_literal_witness_policy_1.projectPythonLiteralWitnesses)(change.patch ?? '').witnesses.length > 0);
+        hasWitnesses || (hasWitnesses = (0, bugbot_python_literal_witness_policy_1.projectPythonLiteralWitnesses)(patch).witnesses.length > 0);
         remaining -= block.length + 2;
     }
     return { block: blocks.join('\n\n'), hasWitnesses };

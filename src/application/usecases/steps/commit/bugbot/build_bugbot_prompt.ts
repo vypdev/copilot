@@ -99,13 +99,14 @@ function legacyPythonWitnesses(changes: readonly { readonly filename: string; re
     let hasWitnesses = false;
     let remaining = PYTHON_LITERAL_OUTPUT_LIMIT;
     for (const [index, change] of changes.filter(change => /\.py$/iu.test(change.filename)).slice(0, 3).entries()) {
-        const witness = renderPythonLiteralWitnesses(change.patch ?? '', `github.legacy.literal.${index + 1}`);
+        const patch = change.patch ?? '';
+        const witness = renderPythonLiteralWitnesses(patch, `github.legacy.literal.${index + 1}`);
         if (!witness) continue;
         const path = renderUntrustedField(change.filename, `github.legacy.literal.path.${index + 1}`, 1_000);
         const block = path + '\n' + witness;
         if (block.length > remaining) continue;
         blocks.push(block);
-        hasWitnesses ||= projectPythonLiteralWitnesses(change.patch ?? '').witnesses.length > 0;
+        hasWitnesses ||= projectPythonLiteralWitnesses(patch).witnesses.length > 0;
         remaining -= block.length + 2;
     }
     return { block: blocks.join('\n\n'), hasWitnesses };
