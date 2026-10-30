@@ -6,6 +6,7 @@ export interface NativeIssueCompletionFacts {
     readonly state: 'open' | 'closed';
     readonly reason: 'completed' | 'not_planned' | 'duplicate' | 'reopened' | 'unknown';
     readonly labels: readonly string[];
+    readonly deploymentCompletion?: 'pending' | 'complete';
 }
 
 export interface IssueCompletionLabelConfiguration {
@@ -17,6 +18,7 @@ export const ISSUE_COMPLETION_LABEL_LIMIT = 1_000;
 export type IssueCompletionPlan =
     | { readonly kind: 'invalid'; readonly code: 'invalid-identity' | 'invalid-metadata' | 'invalid-configuration' }
     | { readonly kind: 'open' }
+    | { readonly kind: 'deferred' }
     | { readonly kind: 'closed'; readonly reason: NativeIssueCompletionFacts['reason']; readonly remove: readonly string[]; readonly add: readonly string[] };
 const canonicalProgress = /^(?:0|[1-9][0-9]?|100)%$/u;
 export const isIssueCompletionLabelName = (value: unknown): value is string => typeof value === 'string' && value.length > 0 && value.length <= 100
@@ -29,6 +31,7 @@ export function planIssueCompletion(facts: NativeIssueCompletionFacts, configura
     if (!Number.isSafeInteger(facts?.number) || facts.number < 1) return Object.freeze({ kind: 'invalid', code: 'invalid-identity' });
     if (!['open', 'closed'].includes(facts.state) || !['completed', 'not_planned', 'duplicate', 'reopened', 'unknown'].includes(facts.reason)
         || !labelsValid(facts.labels)
+        || facts.deploymentCompletion !== undefined && !['pending', 'complete'].includes(facts.deploymentCompletion)
         || facts.state === 'open' && ['completed', 'not_planned', 'duplicate'].includes(facts.reason)
         || facts.state === 'closed' && facts.reason === 'reopened') return Object.freeze({ kind: 'invalid', code: 'invalid-metadata' });
     const keys = Object.keys(DEFAULT_COPILOT_LIFECYCLE_LABELS) as (keyof typeof DEFAULT_COPILOT_LIFECYCLE_LABELS)[];
@@ -38,6 +41,7 @@ export function planIssueCompletion(facts: NativeIssueCompletionFacts, configura
     if (configuration.protectedLabels.some(name => managed.has(name.toLowerCase()) || canonicalProgress.test(name))) {
         return Object.freeze({ kind: 'invalid', code: 'invalid-configuration' });
     }
+    if (facts.deploymentCompletion === 'pending') return Object.freeze({ kind: 'deferred' });
     if (facts.state === 'open') return Object.freeze({ kind: 'open' });
     const completed = facts.reason === 'completed';
     return Object.freeze({ kind: 'closed', reason: facts.reason,

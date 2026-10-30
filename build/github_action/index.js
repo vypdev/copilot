@@ -37612,6 +37612,7 @@ async function writeActionSummary(execution, summaryPort, catalogResolver) {
         };
         appendLocalizationEvidence = true;
         body = (0, deployment_presentation_policy_1.renderDeploymentJobSummary)(operation, {
+            issueCompletionPending: execution.currentConfiguration.results.some(result => (0, result_1.getResultPayload)((0, result_1.getResultPayload)(result.payload)?.deployment)?.issueCompletionVerified === false),
             owner: execution.owner,
             repository: execution.repo,
             issue: execution.singleAction.issue,
@@ -43973,6 +43974,8 @@ function projectClosedIssueCleanupCounts(results) {
             continue;
         const completion = result.id === 'CloseIssueAfterMergingUseCase' || result.id === 'ReconcileClosedIssueMetadataUseCase'
             ? (0, result_1.getResultPayload)(payload.issueCompletion) : payload;
+        if (completion?.outcome === 'deferred' && completion.deploymentCompletion === 'pending' && result.executed === false)
+            continue;
         if (completion?.outcome === 'not-applicable' && completion.nativeClosed === false)
             continue;
         if (completion?.nativeClosed !== true || completion.reconciled !== true) {
@@ -45560,13 +45563,15 @@ function renderReconciliationPullRequest(operation, target, context, catalog = (
 }
 function renderDeploymentJobSummary(operation, context, previousPhase, catalog = (0, deployment_message_catalog_1.resolveStaticDeploymentCatalog)(context.repositoryLocale)) {
     const messages = (0, deployment_message_catalog_1.deploymentCopy)(catalog);
-    const failure = operation.phase === 'blocked' ? (0, deployment_operation_1.requiredDeploymentFailure)(operation) : undefined;
+    const issueCompletionPending = context.issueCompletionPending === true && operation.phase === 'completed';
+    const failure = operation.phase === 'blocked' ? (0, deployment_operation_1.requiredDeploymentFailure)(operation)
+        : issueCompletionPending ? { message: `${messages.cleanup}: ${messages.pending}`, retryable: true } : undefined;
     const externallyPending = operation.phase === 'promotion_pr_pending' || operation.phase === 'reconciliation_pending';
-    const result = operation.phase === 'blocked'
+    const result = failure
         ? messages.workflowFailure
         : externallyPending ? messages.externalWait : messages.phase[operation.phase];
     const lines = [
-        `# ${operation.phase === 'blocked' ? '❌' : externallyPending ? '⏳' : '✅'} ${messages.jobSummary}`, '',
+        `# ${failure ? '❌' : externallyPending ? '⏳' : '✅'} ${messages.jobSummary}`, '',
         `> **${messages.result}: ${result}.**`, '',
         `| ${messages.previousPhase} | ${messages.resultingPhase} | ${messages.retryable} |`, '|---|---|---|',
         `| ${inline(previousPhase ?? operation.phase)} | ${inline(operation.phase)} | ${failure?.retryable ? messages.yes : messages.no} |`, '',
@@ -45581,9 +45586,11 @@ function renderDeploymentJobSummary(operation, context, previousPhase, catalog =
             ? inline(`${operation.publicationReceipt.tag}@${shortSha(operation.publicationReceipt.productionSha)}`)
             : messages.absent}`, '',
     ];
-    if (operation.phase === 'blocked') {
+    if (failure) {
         lines.push(`## ${messages.actionRequired}`, '', `${safeText(failure.message)}. ${failure.retryable ? messages.retryAfterCorrection : messages.manualIntervention}.`, '');
     }
+    if (issueCompletionPending)
+        lines.push(messages.noRepublish, '');
     lines.push(deploymentLinks(operation, context, messages, catalog).join(' · '));
     return lines.join('\n');
 }
@@ -53733,6 +53740,7 @@ class DeploymentMergeEffects {
     }
     async apply(action, pullRequest) {
         try {
+            await this.pullRequests.prepareIssueCompletion(pullRequest);
             if (action === "merge") {
                 await this.pullRequests.mergePullRequest(pullRequest.number, pullRequest.headSha);
             }
@@ -54756,6 +54764,26 @@ function noTagResult(taskId, tagName) {
 
 /***/ }),
 
+/***/ 26779:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.deferredDeploymentCompletionResult = deferredDeploymentCompletionResult;
+const result_1 = __nccwpck_require__(73817);
+function deferredDeploymentCompletionResult(id, facts, nested = false) {
+    const completion = { nativeClosed: facts.state === 'closed', reconciled: false,
+        deploymentCompletion: 'pending', outcome: 'deferred' };
+    return new result_1.Result({ id, success: true, executed: false,
+        steps: ['Issue completion is deferred until deployment publication, reconciliation and cleanup are verified.',
+            ...(facts.state === 'closed' ? ['The existing native closure was retained for inspection.'] : [])],
+        payload: nested ? { issueCompletion: completion } : completion });
+}
+
+
+/***/ }),
+
 /***/ 28399:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -54864,8 +54892,7 @@ class ConfirmPublicationHandler {
                 ?? (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Publication for ${resumed.tag} was already verified; reconciliation state was recovered.`);
         }
         if (resumed.phase === "completed" && resumed.publicationVerified) {
-            await this.runtime.publishDashboard(context, resumed);
-            return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Publication for ${resumed.tag} was already verified; duplicate notification ignored.`);
+            return this.reconciliation.complete(context, resumed);
         }
         assertPublicationPhase(resumed);
         const published = {
@@ -55188,6 +55215,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ReconciliationHandler = void 0;
 const deployment_plan_policy_1 = __nccwpck_require__(8352);
 const deployment_operation_1 = __nccwpck_require__(92730);
+const result_1 = __nccwpck_require__(73817);
+const application_error_1 = __nccwpck_require__(75999);
 const managed_pull_request_1 = __nccwpck_require__(95914);
 const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
 class ReconciliationHandler {
@@ -55271,18 +55300,46 @@ class ReconciliationHandler {
         return undefined;
     }
     async complete(context, operation, completionContext = "") {
+        if (!operation.publicationVerified || !operation.publicationReceipt
+            || !operation.reconciliationTargets.every(target => target.status === 'completed')) {
+            throw new application_error_1.ApplicationError('workflow.stale', 'Deployment completion requires verified publication and all configured reconciliation.');
+        }
         try {
-            await this.runtime.cleanup(context, operation);
-            if (operation.issueCompletion === "close") {
-                await this.runtime.dependencies.issues.closeIssue(context.singleAction.issue);
-            }
+            if (operation.phase !== 'completed')
+                await this.runtime.cleanup(context, operation);
         }
         catch (error) {
             const semanticError = (0, deployment_orchestration_runtime_1.semanticCleanupError)(error);
             return await this.runtime.block(context, operation, "cleanup", semanticError.message, true, semanticError);
         }
         const completed = { ...operation, phase: "completed", lastFailure: null };
-        await this.runtime.persist(context, completed);
+        if (operation.phase !== 'completed')
+            await this.runtime.persist(context, completed);
+        try {
+            if (completed.issueCompletion === 'close') {
+                await this.runtime.dependencies.issues.closeIssue(context.singleAction.issue);
+                const results = await this.runtime.dependencies.issues.reconcileCompletion({
+                    issueNumber: context.singleAction.issue, locale: context.locale.issue, trustedBotLogin: context.tokenUser,
+                    completionLabels: { lifecycle: context.labels.lifecycle,
+                        protectedLabels: context.labels.completionProtectedLabels ?? [] },
+                });
+                const failed = results.find(result => !result.success);
+                if (failed)
+                    throw failed.errors?.[0] ?? new application_error_1.ApplicationError('workflow.stale', 'Native issue completion metadata is unverified.');
+                if (!results.length || results.some(result => {
+                    const payload = (0, result_1.getResultPayload)(result.payload);
+                    const completion = payload?.issueCompletion ? (0, result_1.getResultPayload)(payload.issueCompletion) : payload;
+                    return completion?.nativeClosed !== true || completion.reconciled !== true;
+                }))
+                    throw new application_error_1.ApplicationError('workflow.stale', 'Native issue closure and completion metadata are not fully verified.');
+            }
+        }
+        catch (cause) {
+            const error = (0, application_error_1.toApplicationError)(cause, 'provider.unavailable', 'Deployment completed but native issue completion remains unverified.');
+            return new result_1.Result({ id: 'DeploymentOrchestrationUseCase', success: false, executed: true,
+                steps: ['Verified publication, reconciliation and cleanup were retained. Retry the failed publication completion job to finish native issue completion.'],
+                errors: [error], payload: { deployment: { operationId: completed.operationId, phase: 'completed', issueCompletionVerified: false } } });
+        }
         await this.runtime.publishDashboard(context, completed);
         await this.runtime.publishMilestone(context, completed, { kind: "orchestration-complete", tag: completed.tag });
         return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Deployment ${completed.tag} completed${completionContext}.`);
@@ -56892,6 +56949,8 @@ function failure(taskId, message, code) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ReconcileClosedIssueMetadataUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
+const issue_completion_1 = __nccwpck_require__(31147);
+const deferred_deployment_completion_1 = __nccwpck_require__(26779);
 const application_error_1 = __nccwpck_require__(75999);
 const closed_issue_reconciliation_error_1 = __nccwpck_require__(12183);
 const reconcile_issue_completion_metadata_1 = __nccwpck_require__(70614);
@@ -56907,7 +56966,12 @@ class ReconcileClosedIssueMetadataUseCase {
             if (!Number.isSafeInteger(context.issueNumber) || context.issueNumber < 1)
                 throw stale();
             const target = this.issues.forIssue(context.issueNumber);
-            const repaired = await (0, reconcile_issue_completion_metadata_1.reconcileIssueCompletionMetadata)(target, context.issueNumber, context.completionLabels, progress);
+            progress.phase = 'read';
+            const facts = await target.read();
+            if (facts?.number === context.issueNumber && (0, issue_completion_1.planIssueCompletion)(facts, context.completionLabels).kind === 'deferred') {
+                return [(0, deferred_deployment_completion_1.deferredDeploymentCompletionResult)(this.taskId, facts, true)];
+            }
+            const repaired = await (0, reconcile_issue_completion_metadata_1.reconcileIssueCompletionMetadata)(target, context.issueNumber, context.completionLabels, progress, facts);
             return [new result_1.Result({ id: this.taskId, success: true, executed: progress.labelsChanged > 0,
                     steps: ['The closed issue completion metadata was verified; historical and unrelated labels were retained.'],
                     payload: { issueCompletion: { nativeClosed: progress.nativeClosed, labelsChanged: progress.labelsChanged, reconciled: true, ...repaired } } })];
@@ -57046,6 +57110,7 @@ const publication_identity_policy_1 = __nccwpck_require__(45403);
 const branch_sync_notification_policy_1 = __nccwpck_require__(79895);
 const branch_sync_message_catalog_1 = __nccwpck_require__(89245);
 const application_error_1 = __nccwpck_require__(75999);
+const deferred_deployment_completion_1 = __nccwpck_require__(26779);
 /** Retire existing owned status cards only; no create/delete, labels, Git or agent authority. */
 class RetireBranchSyncUseCase {
     constructor(issues, comments, cardFreshness) {
@@ -57079,6 +57144,8 @@ class RetireBranchSyncUseCase {
             const initial = await read();
             if (initial.number !== context.issueNumber || !['open', 'closed'].includes(initial.state) || initial.state === 'closed' && !['completed', 'not_planned', 'duplicate', 'unknown'].includes(initial.reason))
                 throw stale();
+            if (initial.deploymentCompletion === 'pending')
+                return [(0, deferred_deployment_completion_1.deferredDeploymentCompletionResult)(this.taskId, initial)];
             if (initial.state !== 'closed')
                 return [this.result(retired, nativeClosed)];
             nativeClosed = true;
@@ -57098,7 +57165,7 @@ class RetireBranchSyncUseCase {
             const verifyClosed = async () => {
                 phase = 'native-fence';
                 const fresh = await read();
-                if (!nativeClosed || fresh.reason !== initial.reason)
+                if (!nativeClosed || fresh.reason !== initial.reason || fresh.deploymentCompletion === 'pending')
                     throw stale();
             };
             for (const card of cards) {
@@ -57174,6 +57241,7 @@ const github_user_policy_1 = __nccwpck_require__(84403);
 const publication_identity_policy_1 = __nccwpck_require__(45403);
 const retired_progress_presentation_policy_1 = __nccwpck_require__(93427);
 const application_error_1 = __nccwpck_require__(75999);
+const deferred_deployment_completion_1 = __nccwpck_require__(26779);
 /** Retire existing owned status cards only; no create/delete, labels, Git or agent authority. */
 class RetireProgressUseCase {
     constructor(issues, comments, cardFreshness) {
@@ -57207,6 +57275,8 @@ class RetireProgressUseCase {
             const initial = await read();
             if (initial.number !== context.issueNumber || !['open', 'closed'].includes(initial.state) || initial.state === 'closed' && !['completed', 'not_planned', 'duplicate', 'unknown'].includes(initial.reason))
                 throw stale();
+            if (initial.deploymentCompletion === 'pending')
+                return [(0, deferred_deployment_completion_1.deferredDeploymentCompletionResult)(this.taskId, initial)];
             if (initial.state !== 'closed')
                 return [this.result(retired, nativeClosed)];
             nativeClosed = true;
@@ -57225,7 +57295,7 @@ class RetireProgressUseCase {
             const verifyClosed = async () => {
                 phase = 'native-fence';
                 const fresh = await read();
-                if (!nativeClosed || fresh.reason !== initial.reason)
+                if (!nativeClosed || fresh.reason !== initial.reason || fresh.deploymentCompletion === 'pending')
                     throw stale();
             };
             for (const card of cards) {
@@ -60908,6 +60978,7 @@ function projectDeploymentOrchestrationContext(source) {
     return {
         owner: source.owner,
         repo: source.repo,
+        ...(source.tokenUser ? { tokenUser: source.tokenUser } : {}),
         branches: Object.freeze({ ...source.branches }),
         workflows: Object.freeze({ ...source.workflows }),
         locale: Object.freeze({ ...source.locale }),
@@ -60922,6 +60993,8 @@ function projectDeploymentOrchestrationContext(source) {
             deploy: source.labels.deploy,
             deployed: source.labels.deployed,
             lifecycle: Object.freeze({ ...source.labels.lifecycle }),
+            ...(source.labels.completionProtectedLabels
+                ? { completionProtectedLabels: Object.freeze([...source.labels.completionProtectedLabels]) } : {}),
         }),
         deployment: deepFreezeCopy(source.deployment),
         singleAction: Object.freeze({
@@ -69852,6 +69925,7 @@ const result_1 = __nccwpck_require__(73817);
 const issue_completion_1 = __nccwpck_require__(31147);
 const application_error_1 = __nccwpck_require__(75999);
 const positive_integer_policy_1 = __nccwpck_require__(19879);
+const deferred_deployment_completion_1 = __nccwpck_require__(26779);
 /** Native completion first, selective metadata second; retained effects survive partial failures. */
 class CloseIssueAfterMergingUseCase {
     constructor(issues) {
@@ -69881,6 +69955,8 @@ class CloseIssueAfterMergingUseCase {
                 return current;
             };
             let facts = await read();
+            if (facts.deploymentCompletion === 'pending')
+                return [(0, deferred_deployment_completion_1.deferredDeploymentCompletionResult)(this.taskId, facts, true)];
             if (facts.state === 'open' && facts.reason === 'reopened')
                 throw stale();
             if (facts.state === 'open') {
@@ -76641,6 +76717,106 @@ function isNotFound(error) {
 
 /***/ }),
 
+/***/ 75508:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.prepareManagedIssueCompletion = prepareManagedIssueCompletion;
+const application_error_1 = __nccwpck_require__(75999);
+const managed_pull_request_1 = __nccwpck_require__(95914);
+const query = `query DeploymentIssueCompletion($owner: String!, $repo: String!, $number: Int!, $issue: Int!, $cursor: String) {
+    repository(owner: $owner, name: $repo) {
+        nameWithOwner
+        issue(number: $issue) { id number }
+        pullRequest(number: $number) {
+            id number state body headRefName headRefOid baseRefName
+            headRepository { nameWithOwner }
+            closingIssuesReferences(first: 100, after: $cursor) {
+                nodes { number repository { nameWithOwner } }
+                pageInfo { hasNextPage endCursor }
+            }
+        }
+    }
+}`;
+/** Detach only the verified operation's launcher reference before native merge handoff. */
+async function prepareManagedIssueCompletion(client, owner, repository, expected) {
+    if (typeof expected.body !== 'string' || typeof expected.repositoryFullName !== 'string'
+        || typeof expected.nodeId !== 'string' || !expected.nodeId
+        || typeof expected.headBranch !== 'string' || !expected.headBranch
+        || typeof expected.baseBranch !== 'string' || !expected.baseBranch
+        || typeof expected.headSha !== 'string')
+        throw invalid();
+    const marker = (0, managed_pull_request_1.parseManagedPullRequestMarker)(expected.body);
+    const fullName = `${owner}/${repository}`.toLowerCase();
+    if (!marker || !Number.isSafeInteger(expected.number) || expected.number < 1 || marker.issue === expected.number
+        || !sameRepository(expected.repositoryFullName, fullName) || expected.state !== 'open' || expected.merged !== false
+        || !/^[a-f0-9]{40}$/iu.test(expected.headSha))
+        throw invalid();
+    const read = async (cursor) => {
+        const snapshot = await client.graphql(query, { owner, repo: repository, number: expected.number,
+            issue: marker.issue, cursor });
+        const resource = snapshot?.repository;
+        const issue = resource?.issue;
+        const pr = resource?.pullRequest;
+        const identity = (0, managed_pull_request_1.parseManagedPullRequestMarker)(pr?.body);
+        if (!sameRepository(resource?.nameWithOwner, fullName) || typeof issue?.id !== 'string' || !issue.id || issue.number !== marker.issue
+            || pr?.id !== expected.nodeId || pr.number !== expected.number || pr.state !== 'OPEN'
+            || !sameRepository(pr.headRepository?.nameWithOwner, fullName)
+            || pr.headRefName !== expected.headBranch || pr.headRefOid !== expected.headSha || pr.baseRefName !== expected.baseBranch
+            || !identity || identity.operationId !== marker.operationId || identity.phase !== marker.phase || identity.issue !== marker.issue
+            || pr.body.split('<!-- copilot-deployment operation-id=').length !== 2)
+            throw invalid();
+        const refs = pr.closingIssuesReferences;
+        if (!Array.isArray(refs?.nodes) || refs.nodes.length > 100 || typeof refs.pageInfo?.hasNextPage !== 'boolean'
+            || refs.nodes.some(node => !node || !Number.isSafeInteger(node.number) || node.number < 1
+                || typeof node.repository?.nameWithOwner !== 'string' || !node.repository.nameWithOwner))
+            throw invalid();
+        return { issueId: issue.id, prId: pr.id, refs };
+    };
+    try {
+        const before = await read(null);
+        const response = await client.graphql(`mutation DeferDeploymentIssueCompletion($issueId: ID!, $pullRequestIds: [ID!]!) {
+                removeCloseIssueReferences(input: { issueId: $issueId, pullRequestIds: $pullRequestIds }) {
+                    issue { id number }
+                }
+            }`, { issueId: before.issueId, pullRequestIds: [before.prId] });
+        if (response?.removeCloseIssueReferences?.issue?.id !== before.issueId
+            || response.removeCloseIssueReferences.issue.number !== marker.issue)
+            throw invalid();
+        let cursor = null;
+        for (let page = 0; page < 2; page++) {
+            const current = await read(cursor);
+            if (current.issueId !== before.issueId || current.prId !== before.prId)
+                throw invalid();
+            if (current.refs.nodes.some(node => node.number === marker.issue
+                && node.repository.nameWithOwner.toLowerCase() === fullName)) {
+                throw new application_error_1.ApplicationError('provider.conflict', 'The managed PR still closes its deployment launcher. Inspect closing keywords and native closing references, then retry the stored promotion or reconciliation phase.');
+            }
+            if (!current.refs.pageInfo.hasNextPage)
+                return;
+            const next = current.refs.pageInfo.endCursor;
+            if (typeof next !== 'string' || !next || next === cursor)
+                throw invalid();
+            cursor = next;
+        }
+        throw new application_error_1.ApplicationError('provider.contract-invalid', 'Deployment closing references exceed the fixed 200-reference inspection bound.');
+    }
+    catch (cause) {
+        throw (0, application_error_1.toApplicationError)(cause, 'provider.unavailable', 'The managed PR launcher closing reference could not be safely deferred. Inspect native closing references and retry; automatic merge was not authorized.');
+    }
+}
+function invalid() {
+    return new application_error_1.ApplicationError('provider.contract-invalid', 'Native deployment PR, launcher, ownership or closing-reference evidence changed or is incomplete.');
+}
+function sameRepository(value, fullName) {
+    return typeof value === 'string' && value.toLowerCase() === fullName;
+}
+
+
+/***/ }),
+
 /***/ 30873:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -76692,9 +76868,13 @@ exports.GithubManagedPullRequestRepository = void 0;
 const managed_pull_request_1 = __nccwpck_require__(95914);
 const github_deployment_merge_error_1 = __nccwpck_require__(30873);
 const deployment_merge_effect_error_1 = __nccwpck_require__(72594);
+const github_deployment_issue_completion_1 = __nccwpck_require__(75508);
 class GithubManagedPullRequestRepository {
     constructor(clientProvider) {
         this.clientProvider = clientProvider;
+    }
+    prepareIssueCompletion(owner, repository, pullRequest, token) {
+        return (0, github_deployment_issue_completion_1.prepareManagedIssueCompletion)(this.clientProvider.getClient(token), owner, repository, pullRequest);
     }
     async findManagedPullRequests(query) {
         const client = this.clientProvider.getClient(query.token);
@@ -78999,6 +79179,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueCompletionRepository = void 0;
 const issue_completion_1 = __nccwpck_require__(31147);
 const application_error_1 = __nccwpck_require__(75999);
+const configuration_markers_1 = __nccwpck_require__(4586);
+const deployment_issue_completion_1 = __nccwpck_require__(50574);
+const config_1 = __nccwpck_require__(90450);
 /** Exact repository/subject reads and selective writes. Never replaces a label inventory. */
 class IssueCompletionRepository {
     constructor(client, binding) {
@@ -79032,9 +79215,10 @@ class IssueCompletionRepository {
             if (labels.some(value => !(0, issue_completion_1.isIssueCompletionLabelName)(value))
                 || new Set(labels.map(value => value.toLowerCase())).size !== labels.length)
                 throw invalid();
+            const deploymentCompletion = readDeploymentCompletion(data.body);
             return Object.freeze({ number, state: data.state,
                 reason: data.state_reason === null ? 'unknown' : data.state_reason,
-                labels: Object.freeze(labels) });
+                labels: Object.freeze(labels), ...(deploymentCompletion ? { deploymentCompletion } : {}) });
         }
         catch (error) {
             throw (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Current native issue completion facts could not be verified.');
@@ -79058,7 +79242,10 @@ class IssueCompletionRepository {
         }
     }
     async closeIssue(number) {
-        if ((await this.readIssue(number)).state === 'closed')
+        const facts = await this.readIssue(number);
+        if (facts.deploymentCompletion === 'pending')
+            throw new application_error_1.ApplicationError('workflow.stale', 'The native deployment has not reached its completion boundary.');
+        if (facts.state === 'closed')
             return false;
         try {
             await this.client.getClient(this.binding.token).rest.issues.update({ ...this.parameters(number), state: 'closed', state_reason: 'completed' });
@@ -79093,6 +79280,34 @@ function object(value) {
 }
 function invalid() {
     return new application_error_1.ApplicationError('provider.contract-invalid', 'Native completion facts do not match the verified repository and subject.');
+}
+function readDeploymentCompletion(body) {
+    if (body === undefined || body === null)
+        return undefined;
+    if (typeof body !== 'string')
+        throw invalid();
+    const block = (0, configuration_markers_1.readConfigurationBlock)(body);
+    if (block.kind === 'invalid')
+        throw invalid();
+    if (block.kind === 'absent')
+        return undefined;
+    let payload;
+    try {
+        payload = object(JSON.parse(block.content));
+    }
+    catch {
+        throw invalid();
+    }
+    if (payload.deploymentOrchestration === undefined)
+        return undefined;
+    if (payload.schemaVersion !== config_1.CONFIG_SCHEMA_VERSION)
+        throw invalid();
+    try {
+        return (0, deployment_issue_completion_1.projectDeploymentIssueCompletion)(payload.deploymentOrchestration);
+    }
+    catch {
+        throw invalid();
+    }
 }
 
 
@@ -85703,6 +85918,28 @@ const merge_queue_readiness_1 = __nccwpck_require__(12515);
 
 /***/ }),
 
+/***/ 50574:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectDeploymentIssueCompletion = projectDeploymentIssueCompletion;
+const deployment_operation_1 = __nccwpck_require__(92730);
+/** Ordinary issues have no operation. Unknown stored state cannot certify completion. */
+function projectDeploymentIssueCompletion(value) {
+    if (value === undefined)
+        return undefined;
+    if (!(0, deployment_operation_1.isDeploymentOperationSnapshot)(value))
+        throw new Error('Durable deployment completion state is invalid or unsupported.');
+    return value.phase === 'completed' && value.publicationVerified && value.publicationReceipt !== undefined
+        && value.reconciliationTargets.every(target => target.status === 'completed')
+        ? 'complete' : 'pending';
+}
+
+
+/***/ }),
+
 /***/ 92730:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -86376,6 +86613,7 @@ function planIssueCompletion(facts, configuration) {
         return Object.freeze({ kind: 'invalid', code: 'invalid-identity' });
     if (!['open', 'closed'].includes(facts.state) || !['completed', 'not_planned', 'duplicate', 'reopened', 'unknown'].includes(facts.reason)
         || !labelsValid(facts.labels)
+        || facts.deploymentCompletion !== undefined && !['pending', 'complete'].includes(facts.deploymentCompletion)
         || facts.state === 'open' && ['completed', 'not_planned', 'duplicate'].includes(facts.reason)
         || facts.state === 'closed' && facts.reason === 'reopened')
         return Object.freeze({ kind: 'invalid', code: 'invalid-metadata' });
@@ -86387,6 +86625,8 @@ function planIssueCompletion(facts, configuration) {
     if (configuration.protectedLabels.some(name => managed.has(name.toLowerCase()) || canonicalProgress.test(name))) {
         return Object.freeze({ kind: 'invalid', code: 'invalid-configuration' });
     }
+    if (facts.deploymentCompletion === 'pending')
+        return Object.freeze({ kind: 'deferred' });
     if (facts.state === 'open')
         return Object.freeze({ kind: 'open' });
     const completed = facts.reason === 'completed';
@@ -92683,6 +92923,7 @@ function createSingleActionUseCaseCompositionRoot(surface, binding, setupProgres
 }
 function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication, binding, catalogResolver) {
     const deploymentClient = new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter();
+    const completion = createClosedIssueRetirementUseCase(binding);
     return new deployment_orchestration_use_case_1.DeploymentOrchestrationUseCase({
         pullRequests: (0, push_single_action_capability_port_binding_1.bindManagedPullRequests)(new github_managed_pull_request_repository_1.GithubManagedPullRequestRepository(deploymentClient), binding),
         targetRules: (0, push_single_action_capability_port_binding_1.bindDeploymentTargetRules)(new github_target_merge_capabilities_inspector_1.GithubTargetMergeCapabilitiesInspector(deploymentClient), binding),
@@ -92692,7 +92933,10 @@ function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publica
         publication: (0, push_single_action_capability_port_binding_1.bindDeploymentPublicationReceipt)(publication, binding),
         state: (0, push_single_action_capability_port_binding_1.bindDeploymentState)(new deployment_state_repository_1.DeploymentStateRepositoryFactory(issueDescriptionQueryPort), binding),
         labels: (0, push_single_action_capability_port_binding_1.bindDeploymentLabels)((0, issue_labels_composition_root_1.createIssueLabelRepository)(), binding),
-        issues: (0, push_single_action_capability_port_binding_1.bindDeploymentIssues)((0, issue_interaction_composition_root_1.createIssueClosureRepository)(), binding),
+        issues: {
+            ...(0, push_single_action_capability_port_binding_1.bindDeploymentIssues)((0, issue_interaction_composition_root_1.createIssueClosureRepository)(), binding),
+            reconcileCompletion: completion.invoke.bind(completion),
+        },
         replacementInspection: (0, deployment_candidate_replacement_composition_root_1.createDeploymentCandidateInspection)(binding),
         operationId: node_crypto_1.randomUUID,
         catalogResolver,
@@ -93031,6 +93275,7 @@ exports.bindSetupRemoteConfiguration = bindSetupRemoteConfiguration;
 exports.bindBranchSyncRetirementComments = bindBranchSyncRetirementComments;
 function bindManagedPullRequests(port, binding) {
     return Object.freeze({
+        prepareIssueCompletion: pullRequest => port.prepareIssueCompletion(binding.owner, binding.repository, pullRequest, binding.token),
         findManagedPullRequests: (query) => port.findManagedPullRequests({ ...query, owner: binding.owner, repository: binding.repository, token: binding.token }),
         createManagedPullRequest: (command) => port.createManagedPullRequest({ ...command, owner: binding.owner, repository: binding.repository, token: binding.token }),
         getPullRequest: (pullRequest) => port.getPullRequest(binding.owner, binding.repository, pullRequest, binding.token),

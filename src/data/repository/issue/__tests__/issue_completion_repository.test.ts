@@ -1,4 +1,5 @@
 import { IssueCompletionRepository } from '../issue_completion_repository';
+import { deploymentOperationFixture, completedDeploymentFixture } from '../../../../testing/deployment_operation_fixture';
 const binding = { owner: 'o', repository: 'r', token: 'private-token', apiBaseUrl: 'https://api.github.com' };
 const repositoryUrl = 'https://api.github.com/repos/o/r';
 function fixture() {
@@ -13,6 +14,31 @@ function fixture() {
         repository: new IssueCompletionRepository({ getClient: () => client }, binding) };
 }
 describe('native issue completion repository', () => {
+    it.each(['pending', 'complete'] as const)('reads the validated %s deployment completion boundary and fences closure', async expected => {
+        const f = fixture(); const operation = expected === 'pending' ? deploymentOperationFixture({ phase: 'publishing' }) : completedDeploymentFixture();
+        const body = `Human\n\n<!-- copilot-configuration-start\n${JSON.stringify({ schemaVersion: 3, deploymentOrchestration: operation })}\ncopilot-configuration-end -->`;
+        f.get.mockResolvedValue({ url: `${repositoryUrl}/issues/42`, data: { ...f.issue, body, state: 'open', state_reason: null } } as never);
+        expect(await f.repository.readIssue(42)).toMatchObject({ deploymentCompletion: expected });
+        if (expected === 'pending') { await expect(f.repository.closeIssue(42)).rejects.toMatchObject({ code: 'workflow.stale' }); expect(f.update).not.toHaveBeenCalled(); }
+        else { expect(await f.repository.closeIssue(42)).toBe(true); expect(f.update).toHaveBeenCalledWith(expect.objectContaining({ state: 'closed' })); }
+    });
+    it('keeps ordinary prose and configuration outside the typed deployment boundary', async () => {
+        const f = fixture();
+        for (const body of ['Human', '<!-- copilot-configuration-start\n{"schemaVersion":3,"branchType":"bugfix"}\ncopilot-configuration-end -->']) {
+            f.get.mockResolvedValue({ url: `${repositoryUrl}/issues/42`, data: { ...f.issue, body } } as never);
+            expect(await f.repository.readIssue(42)).not.toHaveProperty('deploymentCompletion');
+        }
+    });
+    it('rejects ambiguous, malformed or unsupported durable completion evidence', async () => {
+        const f = fixture();
+        const blocks = [42, '<!-- copilot-configuration-start', '<!-- copilot-configuration-start\n{bad}\ncopilot-configuration-end -->',
+            '<!-- copilot-configuration-start\n[]\ncopilot-configuration-end -->',
+            ...[{ schemaVersion: 999, deploymentOrchestration: completedDeploymentFixture() },
+                { schemaVersion: 3, deploymentOrchestration: { stateVersion: 99 } }].map(value => `<!-- copilot-configuration-start\n${JSON.stringify(value)}\ncopilot-configuration-end -->`)];
+        for (const body of blocks) { f.get.mockResolvedValue({ url: `${repositoryUrl}/issues/42`, data: { ...f.issue, body } } as never);
+            await expect(f.repository.readIssue(42)).rejects.toMatchObject({ code: 'provider.contract-invalid' }); }
+        expect(f.update).not.toHaveBeenCalled();
+    });
     it('normalizes an immutable complete inventory and rejects redirects at the HTTP boundary', async () => {
         const f = fixture(); const facts = await f.repository.readIssue(42);
         expect(facts).toEqual({ number: 42, state: 'closed', reason: 'completed', labels: ['SDD', '55%'] });

@@ -11,6 +11,7 @@ import { buildRetiredBranchSyncComment } from '../../policies/branch_sync_notifi
 import { resolveStaticBranchSyncCatalog } from '../../policies/branch_sync_message_catalog';
 import { ApplicationError } from '../../errors/application_error';
 import type { ParamUseCase } from '../base/param_usecase';
+import { deferredDeploymentCompletionResult } from './deferred_deployment_completion';
 
 export interface RetireBranchSyncContext {
   readonly issueNumber: number;
@@ -50,6 +51,7 @@ export class RetireBranchSyncUseCase implements ParamUseCase<RetireBranchSyncCon
       phase = 'read';
       const initial = await read();
       if (initial.number !== context.issueNumber || !['open', 'closed'].includes(initial.state) || initial.state === 'closed' && !['completed', 'not_planned', 'duplicate', 'unknown'].includes(initial.reason)) throw stale();
+      if (initial.deploymentCompletion === 'pending') return [deferredDeploymentCompletionResult(this.taskId, initial)];
       if (initial.state !== 'closed') return [this.result(retired, nativeClosed)];
       nativeClosed = true;
       const messages = resolveStaticBranchSyncCatalog(context.locale);
@@ -67,7 +69,7 @@ export class RetireBranchSyncUseCase implements ParamUseCase<RetireBranchSyncCon
       const verifyClosed = async () => {
         phase = 'native-fence';
         const fresh = await read();
-        if (!nativeClosed || fresh.reason !== initial.reason) throw stale();
+        if (!nativeClosed || fresh.reason !== initial.reason || fresh.deploymentCompletion === 'pending') throw stale();
       };
       for (const card of cards) {
         const marker = parsePublicationMarker(card.body)!;

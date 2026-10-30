@@ -17,6 +17,22 @@ function fixture(reason: NativeIssueCompletionFacts['reason'] = 'completed') {
 }
 
 describe('guarded native-close metadata repair', () => {
+    it('defers progress and lifecycle cleanup for a pending deployment despite native closure', async () => {
+        const f = fixture(); const facts = await f.target.read();
+        f.target.read.mockResolvedValue({ ...facts, deploymentCompletion: 'pending' } as never);
+        expect((await f.run())[0]).toMatchObject({ success: true, executed: false,
+            payload: { issueCompletion: { nativeClosed: true, deploymentCompletion: 'pending', outcome: 'deferred' } } });
+        expect(f.target.addLabel).not.toHaveBeenCalled(); expect(f.target.removeLabel).not.toHaveBeenCalled();
+    });
+    it('does not close a pending launcher after a generic merged PR', async () => {
+        const f = fixture(); const close = jest.fn();
+        f.target.read.mockResolvedValue({ number: 42, state: 'open', reason: 'unknown', labels: ['55%'], deploymentCompletion: 'pending' } as never);
+        const useCase = new CloseIssueAfterMergingUseCase({ forIssue: () => ({ ...f.target, close }),
+            readPullRequest: async () => ({ number: 10, state: 'closed', merged: true }) });
+        expect((await useCase.invoke({ issueNumber: 42, pullRequestNumber: 10, completionLabels: configuration }))[0])
+            .toMatchObject({ success: true, executed: false, payload: { issueCompletion: { outcome: 'deferred', nativeClosed: false } } });
+        expect(close).not.toHaveBeenCalled(); expect(f.target.addLabel).not.toHaveBeenCalled();
+    });
     it.each(['completed', 'not_planned', 'duplicate', 'unknown'] as const)('repairs %s closure without changing native state or historical labels', async reason => {
         const f = fixture(reason); const [result] = await f.run();
         expect(result).toMatchObject({ success: true, executed: true, payload: { issueCompletion: { nativeClosed: true, reconciled: true, reason } } });
