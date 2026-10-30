@@ -312,3 +312,13 @@ restoration and GitHub reads. An unavailable, corrupt or newer pause document
 blocks those reads and preserves the document. It never means that a resume
 succeeded. The complete temporary-control editor, reviewed resumption and
 visible provenance remain part of the ongoing H3 implementation.
+
+An unconfirmed native pause change also has an extra precaution in the running
+extension. Pending changes block connected reads; an uncertain result keeps
+that precaution. Reading the current pause record or saving another pause does
+not clear it. The recovery contract requires explicitly reviewing and adopting
+the exact observed state. Adoption keeps every emergency/tab restriction in
+that state and every saved preference pause; it does not prove an earlier
+acknowledgement. This extra precaution has the running process's lifetime,
+distinct from a confirmed native browser-session pause. The full controls and
+recovery interface remain under H3 implementation.

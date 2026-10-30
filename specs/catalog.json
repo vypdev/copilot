@@ -3248,7 +3248,10 @@
         "extension/src/presentation/WorkspaceEditor.svelte",
         "extension/src/presentation/WorkspaceReferences.svelte",
         "extension/src/domain/temporary_pauses.ts",
-        "extension/src/application/temporary_pause_reader.ts"
+        "extension/src/application/temporary_pause_reader.ts",
+        "extension/src/domain/temporary_pause_result.ts",
+        "extension/src/application/temporary_pause_guard.ts",
+        "extension/src/application/temporary_pause_store.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3531,7 +3534,13 @@
         "extension/test/integration/temporary_pause_admission.test.ts",
         "extension/test/integration/temporary_pause_background.test.ts",
         "extension/test/integration/temporary_pause_races.test.ts",
-        "extension/test/fixtures/temporary_pause.ts"
+        "extension/test/fixtures/temporary_pause.ts",
+        "extension/test/fixtures/temporary_pause_store.ts",
+        "extension/test/integration/temporary_pause_store.test.ts",
+        "extension/test/integration/temporary_pause_recovery.test.ts",
+        "extension/test/integration/temporary_pause_queue.test.ts",
+        "extension/test/integration/temporary_pause_guard.test.ts",
+        "extension/test/integration/temporary_pause_guard_admission.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

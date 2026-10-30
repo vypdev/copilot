@@ -957,3 +957,20 @@ and presentation integration before H3 is complete. Deterministic independent
 worker instances prove composition against retained fake session storage; they
 do not prove Chrome, Firefox or Safari restart behavior. The existing loaded
 H2 receipts cannot substitute for that evidence.
+
+`TemporaryPauseStore` owns a bounded16-job native FIFO and canonical snapshot
+persistence. `TemporaryPauseGuard` has at most16 private holds, a worker-local
+precaution and a changing private witness. A production writer and runtime
+reader must share that guard. Complete reviewed snapshots are detached before
+queueing; a source retired before a queued start cannot inspect native storage.
+Compare the full current record and recheck ownership before one native set.
+Keep acknowledgement, canonical observation and current-publication authority
+separate. Preserve unknown effects; never automatically repeat or inverse-write.
+
+Explicit reconciliation rereads the exact reviewed native state and the same
+idle private guard witness, then lifts only the extra precaution. It writes no
+native data and certifies no older operation. Neither a metadata read nor an
+ordinary successful write can clear prior precaution. Private witnesses do not
+belong in browser messages or Svelte props. Retained native target/controller
+reviews, operation observations and the localized control UI still need their
+separate integration before these primitives form an exposed H3 workflow.

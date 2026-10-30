@@ -4,9 +4,9 @@ import { TemporaryPauseReader } from '../../src/application/temporary_pause_read
 import { CONFIG, pageSender, pageConfigurationFixture, scopedSettings } from './page_configuration.ts';
 import { memoryStore } from './runtime.ts';
 
-export function temporaryPauseFixture() {
-    const h = pageConfigurationFixture(scopedSettings()); const store = memoryStore(); const protect = vi.fn(async () => true);
-    const pauses = new TemporaryPauseReader(store.port, protect);
+export function temporaryPauseFixture(restricted: () => boolean = () => false, store = memoryStore()) {
+    const h = pageConfigurationFixture(scopedSettings()); const protect = vi.fn(async () => true);
+    const pauses = new TemporaryPauseReader(store.port, protect, restricted);
     const gateway = new MessageGateway('test', 'chrome-extension://test/', h.repository, h.service, h.ports, undefined, undefined, undefined, pauses);
     return { ...h, store, protect, pauses, gateway, call: (input: unknown = CONFIG) => gateway.handle(input, pageSender) };
 }

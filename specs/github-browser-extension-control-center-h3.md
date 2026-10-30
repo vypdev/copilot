@@ -1751,3 +1751,117 @@ lifetimes/restriction rules; the contributor guide records the read/write trust
 boundary. Loaded-browser restart/storage behavior, complete authoring UX,
 four-locale provenance and human acceptance remain required evidence, not claims
 made by deterministic composition tests.
+
+### Native pause persistence and precaution component (2026-10-30)
+
+The H3-R04/R05/R07/R08/R11 pause authoring path requires a separate native
+snapshot writer and precaution owner. This component implements those
+primitives; it does **not** expose a mutating browser message or claim a finished
+editor. The retained review/controller/native-target coordinator and localized
+UI MUST be installed before exposing them to users. Application tests supply
+source predicates; they do not establish native client authorization by
+themselves. Full H3 acceptance remains unchanged.
+
+```text
+Reviewed complete snapshots + current owner → reserve precaution and FIFO
+ → fresh protected observation → compare full source, recheck owner
+ → one native set → acknowledgement + one canonical observation
+ → completed facts / unknown result with precaution retained
+Unknown → read current pauses → explicit same-state adoption review
+ → fresh native snapshot + same private precaution witness → lift only precaution
+```
+
+Text equivalent: an uncertain effect blocks connected runtime admission while
+this precaution owner lives. Reading current state cannot certify the earlier
+write or lift that precaution. An explicit adoption can accept the observed
+current native state without rewriting it or fabricating an earlier receipt.
+
+The stored document stays exact schema 1, revision/emergency/native-tab IDs,
+16 KiB/128 tabs. No preference schema, endpoint, browser grant, credential,
+provider request, timer or history collection is added. The native writer owns
+one FIFO with at most **16** outstanding jobs. It reuses the existing
+application FIFO primitive in a separate instance; no
+preference mutation reservation or data is shared. The worker-local guard
+owns at most **16** opaque holds, a precaution flag and an opaque changing
+witness. Tokens/witnesses are private background identity, never portable
+settings, operation IDs, user fields or JSON capabilities. A mutation snapshot
+is detached and revalidated before any queue reservation; the caller's object
+is not frozen or reread later.
+
+The writer accepts only complete changed snapshots with an exact next safe
+revision. Before touching native storage, recheck the current source when the
+job actually starts. Then read through the protected native port, preserve
+future/corrupt/unavailable data and compare **every** source field, not only
+revision. Recheck authority immediately before a single native write. Do not
+repair, initialize, retry, roll back or inverse-write an unknown effect. A
+different native record, even one reusing the expected revision, is a conflict.
+FIFO ownership is registered before a secondary callback can reenter; every
+completion releases only its own hold. A failed earlier source cannot poison
+or overtake the next valid reservation. Notification failure cannot erase facts.
+
+Native attempt acknowledgement and canonical readback remain separate fields.
+An accepted set without the desired observed record is unknown. A lost
+acknowledgement with the exact desired observed record reports that observation
+and the unknown acknowledgement separately; it does not manufacture an
+acknowledgement or prove who wrote the record. A canonical effect after source
+loss remains an effect with `current:false`, not current authority or a reason
+to undo an already accepted action. Unknown readback or source loss retains
+precaution. Publication rechecks current authority after secondary notification.
+
+The guard restricts admission synchronously while native effects are pending.
+The runtime reader checks it both before native work and after asynchronous
+observation; an old unpaused record cannot bypass a newly acquired hold.
+Ordinary successful writes, including a later native resumption, cannot clear
+an earlier precaution. The actual configuration/GET application composition
+must use the **same guard** as the native writer; an independently created guard
+does not protect that writer. Deterministic admission tests exercise this shared
+instance with the real gateway/session/provider orchestration.
+
+The extra precaution is **worker-local**, whereas confirmed native pauses have
+the browser-session lifetime. Do not claim an unconfirmed write or this memory
+flag is durable across worker termination. Restarting cannot prove a previous
+effect. A saved global/profile pause remains the option for longer-lived
+restriction. An unavailable native document still fails closed through normal
+admission independently of the extra guard. The local center/preference editor
+must remain independently available for inspection and recovery.
+
+Explicit adoption has no native set/remove and cannot alter the observed
+emergency/tab scopes. It requires an editable current owner, a fresh exact
+native snapshot, the **same private guard witness** captured in its review and
+no active mutation. A changed document, intervening hold/precaution transition,
+stale source or unavailable observation rejects adoption. A read with no extra
+precaution is unchanged. Repeating an old witness does not adopt a new state;
+the future retained-operation coordinator owns replay of that one operation's
+facts. Adoption is reported as `reconciled`, separate from `committed`, with
+no fabricated storage acknowledgement or prior-operation attribution.
+
+Representative unknown content for the complete editor: “The pause change is
+unconfirmed. Connection reads are temporarily blocked. Read current pauses,
+then review whether to use that observed state. Your saved preferences remain.”
+The recovery preview names the exact native scopes that stay paused and the
+extra precaution that will end. It must not imply that adoption resumes a
+native emergency, a tab pause, a saved profile or a repository scope.
+The finalized UI requires the same four-locale, focus, draft and responsive
+acceptance gates as other center operations.
+
+Domain owns outcome facts. Application owns the protected snapshot writer,
+bounded FIFO, precaution/witness state and the reader gate; adapters retain the
+existing trusted session-storage authority. Presentation must not import these
+classes or receive their private witnesses. A future native origin/controller
+gateway supplies current-owner predicates and retained reviewed snapshots;
+these low-level primitives do not replace that boundary. Enforce existing pure
+imports, dependency cycles and 220/90-line source budgets.
+
+Minimum **56 distinct** component risk cases: 14 native/canonical write facts,
+12 explicit recovery, 10 ownership/FIFO/reentry/source races, 12 guard/reader/
+actual GET admission, 8 invalid-source/revision/capacity boundaries. No locale
+or repeated assertion recount. New executable lines, branches, functions and
+statements require 100% local coverage; repository and exact-head remote checks,
+review and Codecov gates remain. Evidence is in `temporary_pause_store.test.ts`,
+`temporary_pause_recovery.test.ts`, `temporary_pause_queue.test.ts`,
+`temporary_pause_guard.test.ts` and `temporary_pause_guard_admission.test.ts`.
+User configuration documentation explains uncertainty and lifetimes; the
+contributor guide documents queue, private witness and source duties. Native
+browser/storage proof, retained controller/target review, current/retained
+operation observations, four-locale authoring/resumption UI and human acceptance
+remain required before H3 is complete.
