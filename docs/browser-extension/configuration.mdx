@@ -157,8 +157,8 @@ without a connection. For an optional read session:
 3. Review the verified GitHub account and repository. Names are display labels;
    the connection uses the verified numeric identities.
 
-Keep up to five named sessions, for example **Work** and **Personal**. Only one
-is selected for an operation. **Verify and select** rereads an existing entry's
+Keep up to five named sessions, for example **Work** and **Personal**. One read identity and two optional-purpose identities can be selected
+independently. Only the selected read identity serves page activity reads. **Verify and select** rereads an existing entry's
 identities before switching. If verification fails, the candidate remains
 disconnected. The previous connection does not continue silently.
 
@@ -472,3 +472,9 @@ neither writes the preference document nor clears emergency/tab precaution.
 Known native clear/adoption remains available when saved preferences are unreadable;
 their effective values are then shown as unavailable. Newer or malformed temporary
 documents are preserved for recovery instead of replaced with empty defaults.
+
+Profiles, repository preferences and workspace read choices use saved read
+identities only. Optional write identities remain separate, including when their
+verification is current. A retained reference to another purpose stays unavailable
+for read actions; its authored slot or scope is preserved. See the
+[recovery guide](/browser-extension/troubleshooting#a-profile-scope-or-workspace-reference-is-missing).

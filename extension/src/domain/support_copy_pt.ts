@@ -3,7 +3,7 @@ export const pt: SupportCopy = {
     help: 'Explore os ajustes locais, compreenda os acessos e recupere a configuração com segurança. Os guias continuam disponíveis quando não é possível ler os ajustes.',
     recovery: 'Preserve os dados armazenados e qualquer resultado guardado. Consulte o estado atual antes de decidir se é necessária outra alteração.',
     about: 'Informações do pacote de desenvolvimento comunicadas por esta página nativa da extensão.', read: 'Consultar configuração atual',
-    guides: 'Guias de configuração e recuperação', configuration: 'Guia de configuração e boas-vindas', access: 'Guia de permissões e privacidade', runtime: 'Guia de recuperação do runtime',
+    guides: 'Guias de configuração e recuperação', configuration: 'Guia de configuração e boas-vindas', access: 'Guia de permissões e privacidade', runtime: 'Guia de recuperação do runtime', troubleshooting: 'Guia de resolução de problemas',
     localRoutes: 'Explorar o centro de controlo', privacy: 'Consultar acesso do navegador', connections: 'Consultar sessões de ligação', data: 'Rever controlos de dados locais', welcome: 'Abrir boas-vindas',
     version: 'Versão observada do pacote', packageName: 'Nome nativo do pacote', manifest: 'Versão nativa do manifesto', pageSource: 'SHA-256 das fontes desta página',
     unsupported: 'A consulta nativa compatível do pacote não está disponível. Não foi deduzida nenhuma versão.',

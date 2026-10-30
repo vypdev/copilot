@@ -9,12 +9,12 @@ export function workspaceReferences(workspace: Workspace, view: ConnectionOutcom
     return deepFreeze(workspace.members.map((id, index): WorkspaceReference => {
         const slot = index + 1;
         if (view?.state !== 'ready') return { id, slot, state: 'unavailable', entry: null, connected: false, revision: null };
-        const entry = bindableWorkspaceReference(id) ? view.entries.find(entry => entry.id === id) : undefined;
+        const entry = bindableWorkspaceReference(id) ? view.entries.find(entry => entry.id === id && entry.role === 'repository-read') : undefined;
         return entry ? { id, slot, state: 'saved', entry: { ...entry }, connected: view.connected && view.selected === id, revision: view.revision }
             : { id, slot, state: 'missing', entry: null, connected: false, revision: null };
     }));
 }
 export function workspaceChoices(workspace: Workspace, view: ConnectionOutcome | null | undefined): readonly WorkspaceReference[] {
-    const ids = [...new Set([...workspace.members, ...(view?.state === 'ready' ? view.entries.filter(entry => bindableWorkspaceReference(entry.id)).map(entry => entry.id) : [])])];
+    const ids = [...new Set([...workspace.members, ...(view?.state === 'ready' ? view.entries.filter(entry => entry.role === 'repository-read' && bindableWorkspaceReference(entry.id)).map(entry => entry.id) : [])])];
     return workspaceReferences({ ...workspace, members: ids }, view);
 }

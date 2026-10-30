@@ -32,6 +32,7 @@
     <li><a href="https://docs.page/vypdev/copilot/browser-extension/onboarding" rel="noreferrer">{c.configuration}</a></li>
     <li><a href="https://docs.page/vypdev/copilot/browser-extension/permissions" rel="noreferrer">{c.access}</a></li>
     <li><a href="https://docs.page/vypdev/copilot/browser-extension/runtime" rel="noreferrer">{c.runtime}</a></li>
+    <li><a href="https://docs.page/vypdev/copilot/browser-extension/troubleshooting" rel="noreferrer">{c.troubleshooting}</a></li>
 </ul></section>
 <section aria-labelledby="support-local"><h2 id="support-local">{c.localRoutes}</h2><ul>
     <li><a href="#/welcome">{c.welcome}</a></li><li><a href="#/privacy">{c.privacy}</a></li>

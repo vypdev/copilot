@@ -152,6 +152,16 @@ a GitHub token, reset preferences or clear generated user data implicitly.
 
 ### 6.3 States and concurrency
 
+The adjacent read-session consumers MUST keep the same purpose boundary.
+Profile account/organization/repository choices, local repository preference
+rows and new workspace choices use saved `repository-read` entries only. A
+verified or selected optional writer is not a read identity. Existing authored
+scope values remain retained but unknown when only a writer matches; no private
+writer label may fill them. A retained workspace slot pointing to a writer stays
+missing, in its original position, without a read-selection action. Even a
+malformed read-selection projection must not activate a write account's scoped
+preferences. Removing or changing a purpose never rebinds these authored values.
+
 | State | Fact | Next action |
 |---|---|---|
 | Disabled | No optional selection | Add or explicitly select a purpose-bound session |
@@ -333,17 +343,17 @@ Rebuilding packages does not establish loaded-browser behavior or store approval
 
 ## 14. Testing strategy
 
-Minimum **184 distinct new risk cases**, each assigned once:
+Minimum **208 distinct new risk cases**, each assigned once:
 
 | Area | Floor | Distinct risks |
 |---|---:|---|
-| Pure policy/schema | 32 | Purposes, slot matching, migration, capacity, malformed/unknown state, credential reuse |
+| Pure policy/schema | 44 | Purposes, slot matching, migration, capacity, malformed/unknown state, credential reuse and twelve adjacent read-consumer cases |
 | Identity verification | 36 | Numeric identity/rename, isolated GETs, SSO/denial, rate/budget, cancellation and late completion |
 | Native state/races | 40 | CAS/queue, lost acknowledgement, canonical readback, select/disable/remove/forget and suspension |
 | Native wire/security | 24 | Actual closed parser/gateway, controller/source/role denial, oversized/private payloads |
-| Mounted UI | 36 | Defaults, role guidance/review, retained drafts, uncertainty, source loss, focus, localization/accessibility |
-| Composition | 16 | Actual background→gateway→native page; read runtime, settings and setup isolation |
-| **Total** | **184** | Existing cases and repeated locale executions do not add new risks |
+| Mounted UI | 42 | Defaults, role guidance/review, retained drafts, uncertainty, source loss, focus, localization/accessibility and six read-consumer journeys |
+| Composition | 22 | Actual background→gateway→native page; read runtime, settings and setup isolation plus six adjacent role-boundary journeys |
+| **Total** | **208** | Existing cases and repeated locale executions do not add new risks |
 
 Tests use deterministic clocks, IDs and provider/native fakes; no real wait or live
 credential. All existing tests remain. The full extension suite and every changed

@@ -3741,7 +3741,11 @@
         "extension/test/integration/purpose_native_gateway.test.ts",
         "extension/test/integration/purpose_session_races.test.ts",
         "extension/test/integration/purpose_sessions.test.ts",
-        "extension/test/integration/connection_focus.test.ts"
+        "extension/test/integration/connection_focus.test.ts",
+        "extension/test/contracts/read_role_consumers.test.ts",
+        "extension/test/integration/read_role_presentation.test.ts",
+        "extension/test/integration/read_role_composition.test.ts",
+        "extension/test/fixtures/read_role_center.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",
@@ -3777,7 +3781,8 @@
         "docs/browser-extension/permissions.mdx",
         "docs/browser-extension/shortcuts.mdx",
         "docs/browser-extension/onboarding.mdx",
-        "docs/browser-extension/local-history.mdx"
+        "docs/browser-extension/local-history.mdx",
+        "docs/browser-extension/troubleshooting.mdx"
       ]
     }
   ]

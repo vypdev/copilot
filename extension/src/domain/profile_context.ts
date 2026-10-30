@@ -14,9 +14,9 @@ function choices(values: readonly { value: string; label: string }[], retained: 
     if (retained && !entries.has(retained)) entries.set(retained, { value: retained, label: retained, known: false });
     return [...entries.keys()].sort().map(value => entries.get(value)!);
 }
-/** Saved provider identities are choices for authored scope; choosing one grants no connection. */
+/** Saved read identities are choices for authored scope; choosing one grants no connection. */
 export function profileScopeChoices(view: ConnectionOutcome | null | undefined, draft: ProfileDraft) {
-    const entries = view?.state === 'ready' ? view.entries : [];
+    const entries = view?.state === 'ready' ? view.entries.filter(entry => entry.role === 'repository-read') : [];
     const account = entries.filter(entry => entry.viewerId === draft.accountId);
     return deepFreeze({ accounts: choices(entries.map(entry => ({ value: entry.viewerId, label: entry.viewerLogin })), draft.accountId),
         repositories: choices(account.map(entry => ({ value: entry.repositoryId, label: entry.repository })), draft.repositoryId),
@@ -24,7 +24,7 @@ export function profileScopeChoices(view: ConnectionOutcome | null | undefined, 
             .map(entry => ({ value: entry.organizationId!, label: entry.repository.split('/')[0] })), draft.organizationId) });
 }
 export function selectedProfileContext(view: ConnectionOutcome | null | undefined): { readonly context: ProfileContext; readonly entry: ConnectionSummary | null } {
-    const entry = view?.state === 'ready' && view.connected ? view.entries.find(entry => entry.id === view.selected) ?? null : null;
+    const entry = view?.state === 'ready' && view.connected ? view.entries.find(entry => entry.id === view.selected && entry.role === 'repository-read') ?? null : null;
     return deepFreeze({ entry, context: { host: 'github.com', accountId: entry?.viewerId ?? null,
         repositoryId: entry?.repositoryId ?? null, organizationId: entry?.organizationId ?? null, sessionEpoch: null } });
 }
@@ -36,7 +36,7 @@ export function sourceProfileName(source: PreferenceSource, settings: Settings):
     return source.startsWith('profile:') ? settings.center.profiles.find(profile => `profile:${profile.id}` === source)?.name ?? null : null;
 }
 export function repositoryPreferenceRows(settings: Settings, view: ConnectionOutcome | null | undefined) {
-    const entries = view?.state === 'ready' ? view.entries : [];
+    const entries = view?.state === 'ready' ? view.entries.filter(entry => entry.role === 'repository-read') : [];
     const selected = view?.state === 'ready' ? view.selected : null;
     const unique = new Map<string, ConnectionSummary>();
     for (const entry of entries) if (!unique.has(entry.repositoryId) || entry.id === selected) unique.set(entry.repositoryId, entry);

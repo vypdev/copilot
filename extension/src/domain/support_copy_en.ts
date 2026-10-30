@@ -3,7 +3,7 @@ export const en: SupportCopy = {
     help: 'Explore local settings, understand access and recover safely. These guides remain available when settings cannot be read.',
     recovery: 'Keep the stored data and any saved result. Read the current state before deciding whether a new change is needed.',
     about: 'Development package information reported by this native extension page.', read: 'Read current settings',
-    guides: 'Configuration and recovery guides', configuration: 'Configuration and onboarding guide', access: 'Permissions and privacy guide', runtime: 'Runtime recovery guide',
+    guides: 'Configuration and recovery guides', configuration: 'Configuration and onboarding guide', access: 'Permissions and privacy guide', runtime: 'Runtime recovery guide', troubleshooting: 'Troubleshooting guide',
     localRoutes: 'Explore the control center', privacy: 'Inspect browser access', connections: 'Inspect connection sessions', data: 'Review local data controls', welcome: 'Open welcome',
     version: 'Observed package version', packageName: 'Native package name', manifest: 'Native manifest version', pageSource: 'This page’s source tree SHA-256',
     unsupported: 'A compatible native package query is unavailable. No version has been inferred.',

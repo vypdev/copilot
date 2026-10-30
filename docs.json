@@ -370,6 +370,11 @@
           "icon": "book"
         },
         {
+          "title": "Browser extension troubleshooting",
+          "href": "/browser-extension/troubleshooting",
+          "icon": "book"
+        },
+        {
           "title": "Testing",
           "href": "/development/testing",
           "icon": "vial"

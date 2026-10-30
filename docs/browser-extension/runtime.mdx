@@ -51,9 +51,9 @@ browsing and Enterprise/mobile hosts are unsupported.
 ## Optional read session
 
 Standalone health needs no credential or API host grant. To read a selected
-repository, open runtime settings, enter `owner/name` and your own selected-
-repository fine-grained read credential, then choose **Connect read access for
-this session**. GitHub Metadata, Issues read or Pull requests read is sufficient
+repository, open **Connections**, leave **Read selected repository** as the credential
+purpose, enter a unique session name, `owner/name` and your own selected-repository
+fine-grained read credential, then choose **Authorize and connect**. GitHub Metadata, Issues read or Pull requests read is sufficient
 for the H2 native projections as applicable; broader future Action projections
 are not activated by this preview. Never enter a bot/deployment/workflow token.
 
@@ -115,8 +115,10 @@ or background suspension. Scheduling quotas/timestamps remain protected session
 state. A browser restart requires explicit reconnect; session loss is a clear
 disconnect. Background restart revalidates permission and native identity.
 
-**Disconnect this session** invalidates the credential generation before aborting
-work and clearing protected state. Observed logout/different viewer, revoked API
+**Disconnect selected session** in Connections invalidates the read credential
+generation before aborting its work and removing that selected local entry.
+Separate optional selections keep their own documented state; **Forget all
+protected sessions** removes every local credential purpose after confirmation. Observed logout/different viewer, revoked API
 site access or 401 does the same. It does not revoke a PAT at GitHub: use native
 GitHub settings for provider revocation. A protected-storage failure is explicit;
 disable/restart the extension/browser if it cannot confirm local cleanup.
@@ -125,10 +127,14 @@ The development H3 service verifies protected saves and removals with one local
 read after the native attempt. Acknowledgement alone does not prove persistence;
 an exact saved record or actual absence can establish the result even if the
 response was lost. A failed read or different record leaves that desired result
-unconfirmed. No write or removal is automatically repeated. This internal
-verification does not itself implement retained session-operation history.
+unconfirmed. No write or removal is automatically repeated. The [activity guide](/browser-extension/local-history) explains the separate
+current-operation and optional history views of these observations.
 
 ## Recovery
+
+Use the [local-center troubleshooting guide](/browser-extension/troubleshooting)
+for a decision path covering settings, sessions, pauses, missing references and
+uncertain changes.
 
 | State | Meaning | Next action | Retained state |
 |---|---|---|---|

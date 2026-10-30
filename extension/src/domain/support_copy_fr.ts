@@ -3,7 +3,7 @@ export const fr: SupportCopy = {
     help: 'Explorez les réglages locaux, comprenez les accès et récupérez la configuration en sécurité. Les guides restent disponibles si les réglages sont illisibles.',
     recovery: 'Conservez les données stockées et tout résultat enregistré. Consultez l’état actuel avant de décider si une nouvelle modification est nécessaire.',
     about: 'Informations du paquet de développement rapportées par cette page native de l’extension.', read: 'Consulter les réglages actuels',
-    guides: 'Guides de configuration et de récupération', configuration: 'Guide de configuration et d’accueil', access: 'Guide des permissions et de la confidentialité', runtime: 'Guide de récupération du runtime',
+    guides: 'Guides de configuration et de récupération', configuration: 'Guide de configuration et d’accueil', access: 'Guide des permissions et de la confidentialité', runtime: 'Guide de récupération du runtime', troubleshooting: 'Guide de dépannage',
     localRoutes: 'Explorer le centre de contrôle', privacy: 'Consulter les accès du navigateur', connections: 'Consulter les sessions de connexion', data: 'Vérifier les contrôles des données locales', welcome: 'Ouvrir l’accueil',
     version: 'Version observée du paquet', packageName: 'Nom natif du paquet', manifest: 'Version native du manifeste', pageSource: 'SHA-256 des sources de cette page',
     unsupported: 'La requête native compatible du paquet est indisponible. Aucune version n’a été déduite.',
