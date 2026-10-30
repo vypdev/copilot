@@ -1756,9 +1756,10 @@ made by deterministic composition tests.
 
 The H3-R04/R05/R07/R08/R11 pause authoring path requires a separate native
 snapshot writer and precaution owner. This component implements those
-primitives; it does **not** expose a mutating browser message or claim a finished
-editor. The retained review/controller/native-target coordinator and localized
-UI MUST be installed before exposing them to users. Application tests supply
+primitives at that checkpoint; it did **not** expose a mutating browser message
+or claim a finished editor. The retained native coordinator is specified and
+installed in the following increment; the localized UI remains required.
+Application tests supply
 source predicates; they do not establish native client authorization by
 themselves. Full H3 acceptance remains unchanged.
 
@@ -1865,3 +1866,80 @@ contributor guide documents queue, private witness and source duties. Native
 browser/storage proof, retained controller/target review, current/retained
 operation observations, four-locale authoring/resumption UI and human acceptance
 remain required before H3 is complete.
+
+### Retained native pause reviews and tab lifecycle (2026-10-30)
+
+The actual background now composes one pause store/guard with runtime admission,
+the center gateway and trusted native tab lifecycle. The presentation must use
+this boundary rather than importing a store or submitting snapshots to write.
+The five closed version-1 methods are `center.pauses.read`, `.preview`,
+`.confirm`, `.cancel` and `.result`. Native extension origin, nonprivate tab and
+document/client binding are checked by the parent gateway. Metadata is readable
+by observers even when saved preferences are corrupt or future. The other four
+methods require the current editor, controller/credential epochs, observed
+revision and a retained operation ID where applicable. Content scripts cannot
+author, inspect or adopt these operations. No credential or grant is requested.
+
+```text
+Read pauses + eligible native tab choices → explicit emergency/tab/adoption intent
+ → current editor + revision → retained immutable preview (5-minute lifetime)
+ → confirm exact opaque ID → recheck editor and selected native document
+ → shared guarded native writer → factual outcome + current authority
+Lost response → inspect exact operation → never repeat its native effect
+Native close → retire target review → bounded cleanup of only that native ID
+```
+
+Text equivalent: a preview names the complete before/after native state, selected
+scope, expiry and extra precaution. The client confirms its opaque ID, never an
+editable effect. For example, “Resume tab 7, octo/example · #42; emergency pause
+and tab 9 remain.” An adoption preview instead states “Use the observed pauses;
+end only the extra precaution.” A later read never certifies an unknown outcome.
+Publication rechecks source authority after the native primitive returns: a
+confirmed effect remains factual if ownership was then lost, with `current:false`.
+
+Preparing, pending and running reviews share a **16-operation** bound. Reserve
+before the first asynchronous native read; invalidation cannot free an in-flight
+reservation early. Completed facts are bounded to **32**, expiring after five
+minutes; they retain no private target source, plan or witness. Duplicate
+confirmation joins a running operation or returns its completed facts. Cancel
+cannot undo an attempted effect. Ordinary resumption is rejected while extra
+precaution remains; a restrictive pause may preserve it. Result loss after a real
+write/adoption establishes a new precaution without inventing an acknowledgement.
+
+Tab selection uses only the existing github.com host grant, native `tabs.query`
+and `tabs.get`: inspect at most **128** query candidates with at most **4** native
+lookups concurrently. Show a limited-list indication beyond that bound. Exclude
+private, disappeared, foreign-origin and unavailable tabs. Expose only native ID
+and a bounded repository/object label, or a generic label; omit titles, complete
+URLs, queries and fragments. The background-only source binds the reviewed native
+ID to its current GitHub path. Reload/navigation invalidates preparing and running
+reviews even for the same URL. No navigation, new tab, broad `tabs` permission,
+history grant or provider lookup is added. Native IDs are unique within a browser
+session, as documented by [Chrome](https://developer.chrome.com/docs/extensions/reference/api/tabs)
+and [Firefox](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/tabs/Tab);
+Safari identity/lifetime behavior still requires source-bound native evidence.
+
+Native closure facts have one coalescing owner and a **128-ID** pending buffer.
+Cleanup derives a next-revision snapshot removing only those tab scopes, preserves
+emergency and all unrelated scopes, and uses the same canonical writer/guard.
+An unknown cleanup retains precaution. Failed/conflicting/busy/overflowed batches
+are never retried automatically; an unavailable closed scope may remain listed
+for explicit removal but cannot be rebound to another tab. Shutdown retires future
+work without claiming that an already accepted native effect was cancelled.
+Malformed/future native data is preserved. Native expiry is a system fact, not a
+fabricated user operation or user history entry.
+
+Minimum **120** distinct component risk cases: 32 closed domain/protocol, 48
+retained review/ownership/reentry/result boundaries, 16 target metadata/bounds,
+12 native closure/lifecycle and 12 actual gateway/composition and failure cases.
+Each case counts once; locale copies do not count. Require 100% local executable
+lines/branches/functions/statements and no missing/partial changed lines in final
+remote Codecov. Evidence families are `temporary_pause_protocol`,
+`temporary_pause_reviews`, `temporary_pause_review_races`,
+`temporary_pause_review_limits`, `temporary_pause_targets`, `closed_tab_pauses`,
+`closed_pause_cleanup` and `temporary_pause_native_gateway`. Architecture/type
+checks must preserve native authority and 220/90-line module budgets. The full
+H3 160-case floor and 803-case catalog remain unchanged. Current/retained operation
+observations, localized authoring/recovery/provenance UI, loaded-browser journeys
+and human acceptance are still required; deterministic native-port tests do not
+constitute those acceptance gates.

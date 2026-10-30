@@ -3251,7 +3251,16 @@
         "extension/src/application/temporary_pause_reader.ts",
         "extension/src/domain/temporary_pause_result.ts",
         "extension/src/application/temporary_pause_guard.ts",
-        "extension/src/application/temporary_pause_store.ts"
+        "extension/src/application/temporary_pause_store.ts",
+        "extension/src/adapters/browser/temporary_pause_targets.ts",
+        "extension/src/application/closed_pause_cleanup.ts",
+        "extension/src/application/temporary_pause_gateway.ts",
+        "extension/src/application/temporary_pause_review_ports.ts",
+        "extension/src/application/temporary_pause_reviews.ts",
+        "extension/src/domain/closed_tab_pauses.ts",
+        "extension/src/domain/temporary_pause_controls.ts",
+        "extension/src/domain/temporary_pause_protocol.ts",
+        "extension/src/domain/temporary_pause_review.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3540,7 +3549,17 @@
         "extension/test/integration/temporary_pause_recovery.test.ts",
         "extension/test/integration/temporary_pause_queue.test.ts",
         "extension/test/integration/temporary_pause_guard.test.ts",
-        "extension/test/integration/temporary_pause_guard_admission.test.ts"
+        "extension/test/integration/temporary_pause_guard_admission.test.ts",
+        "extension/test/contracts/closed_tab_pauses.test.ts",
+        "extension/test/contracts/temporary_pause_protocol.test.ts",
+        "extension/test/fixtures/temporary_pause_reviews.ts",
+        "extension/test/integration/closed_pause_cleanup.test.ts",
+        "extension/test/integration/temporary_pause_native_gateway.test.ts",
+        "extension/test/integration/temporary_pause_review_limits.test.ts",
+        "extension/test/integration/temporary_pause_review_races.test.ts",
+        "extension/test/integration/temporary_pause_reviews.test.ts",
+        "extension/test/integration/temporary_pause_targets.test.ts",
+        "extension/test/integration/temporary_pause_gateway_fences.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

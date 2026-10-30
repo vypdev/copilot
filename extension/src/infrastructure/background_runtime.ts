@@ -16,11 +16,17 @@ import { NamedSessions } from '../application/named_sessions.ts';
 import { centerCommandRoute } from '../domain/shortcuts.ts';
 import { centerLocationHash } from '../domain/center_routes.ts';
 import { TEMPORARY_PAUSES_KEY, TemporaryPauseReader } from '../application/temporary_pause_reader.ts';
+import { TemporaryPauseGuard } from '../application/temporary_pause_guard.ts';
+import { TemporaryPauseStore } from '../application/temporary_pause_store.ts';
+import { ClosedPauseCleanup } from '../application/closed_pause_cleanup.ts';
 
 export function startBackground(api: BrowserApi): () => void {
     const local = new BrowserStorage(api.storage.local);
     const session = new BrowserStorage(api.storage.session);
-    const pauses = new TemporaryPauseReader(session, () => session.protect());
+    const pauseGuard = new TemporaryPauseGuard();
+    const pauseStore = new TemporaryPauseStore(session, pauseGuard, { protectedArea: () => session.protect(), changed: () => { gateway.invalidate(); } });
+    const closedPauses = new ClosedPauseCleanup(pauseStore);
+    const pauses = new TemporaryPauseReader(session, () => session.protect(), () => pauseGuard.blocked);
     const scheduler = new ReadScheduler(session, new GitHubGetReader(), () => Date.now(), () => Math.random() * 1000);
     const sessions = new ProtectedSessionService(session, scheduler, {
         cancellation: () => new BrowserCancellation(),
@@ -55,11 +61,11 @@ export function startBackground(api: BrowserApi): () => void {
             return opened;
         },
             cancellation: () => new BrowserCancellation(),
-            online: () => globalThis.navigator?.onLine !== false, notify }, createCenter(api, settings, sessions, notify, connections, { owner: history, policies }, helpers), connections, helpers, pauses);
+            online: () => globalThis.navigator?.onLine !== false, notify }, createCenter(api, settings, sessions, notify, connections, { owner: history, policies }, helpers, pauseStore), connections, helpers, pauses);
     const message: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender, respond) => {
         void gateway.handle(value, sender).then(result => respond({ ...(record(result) ? result : { state: 'unavailable' }), sourceTree: buildSourceIdentity() })); return true;
     };
-    const removed = (id: number) => { gateway.invalidate(id); gateway.releaseCenterTab(id); gateway.releaseHelperTab(id); };
+    const removed = (id: number) => { gateway.invalidate(id); gateway.releaseCenterTab(id); gateway.releaseHelperTab(id); closedPauses.close(id); };
     // Native tab events cancel the owning lease even on protected routes and same-URL reloads.
     const updated = (id: number, changes: { url?: string; status?: string }) => {
         if (changes.url || changes.status === 'loading') gateway.invalidate(id);
@@ -86,7 +92,7 @@ export function startBackground(api: BrowserApi): () => void {
     api.storage.onChanged.addListener(storage); api.action.onClicked.addListener(open);
     void history.refresh();
     return () => {
-        history.stop(); gateway.shutdown(); void sessions.revoke();
+        closedPauses.stop(); history.stop(); gateway.shutdown(); void sessions.revoke();
         api.runtime.onMessage.removeListener(message); api.tabs.onRemoved.removeListener(removed);
         api.tabs.onUpdated.removeListener(updated); api.permissions.onRemoved.removeListener(permission);
         api.tabs.onActivated.removeListener(activated);

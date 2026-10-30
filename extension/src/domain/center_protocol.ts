@@ -3,6 +3,7 @@ import { settingsOperationId } from './settings_operation.ts';
 import { jsonBytesWithin, keys, natural, record } from './value.ts';
 import { connectionIntent, type ConnectionIntent } from './named_sessions.ts';
 import { isHistoryMessage, type HistoryMessage } from './history_protocol.ts';
+import { isPauseMessage, type PauseMessage } from './temporary_pause_protocol.ts';
 
 interface Version { readonly version: 1 }
 interface Client extends Version { readonly clientId: string }
@@ -23,8 +24,9 @@ export type ConnectionMessage = Client & { readonly method: 'center.connections.
 export { MAX_CENTER_RESPONSE_BYTES } from './center_limits.ts';
 
 /** Center authority is a closed protocol; content pages never receive these methods. */
-export function parseCenterMessage(value: unknown): CenterMessage | ConnectionMessage | HistoryMessage | null {
+export function parseCenterMessage(value: unknown): CenterMessage | ConnectionMessage | HistoryMessage | PauseMessage | null {
     if (isHistoryMessage(value)) return value;
+    if (isPauseMessage(value)) return value;
     if (!record(value) || value.version !== 1 || typeof value.method !== 'string') return null;
     const fields = ['version', 'method'];
     if (value.method === 'center.open') return keys(value, fields) && Object.keys(value).length === 2 ? value as unknown as CenterMessage : null;

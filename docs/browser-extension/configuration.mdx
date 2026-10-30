@@ -322,3 +322,17 @@ that state and every saved preference pause; it does not prove an earlier
 acknowledgement. This extra precaution has the running process's lifetime,
 distinct from a confirmed native browser-session pause. The full controls and
 recovery interface remain under H3 implementation.
+
+The development background now retains each emergency, tab or adoption review
+for five minutes. Confirmation selects that exact review; a repeated request
+returns its outcome rather than writing again. A tab reload or ownership change
+retires the review. A confirmed effect can remain after control has been lost;
+its outcome must distinguish those facts from permission to continue editing.
+
+Eligible tab choices use existing GitHub access and show a repository/object
+label, without titles or full URLs. Private and unavailable tabs are excluded;
+the list is limited to 128 native candidates. Closing a tab ends that tab's
+scope without releasing emergency or other tab pauses. Failed cleanup can leave
+an unavailable scope for explicit removal; it never resumes another tab. These
+native controls are connected behind the ongoing localized editor work; full
+browser and human acceptance is still pending.

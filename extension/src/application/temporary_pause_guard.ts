@@ -7,6 +7,7 @@ export class TemporaryPauseGuard {
     get uncertain(): boolean { return this.precaution; }
     get pending(): boolean { return this.held.size > 0; }
     capture(): object { return this.witness; }
+    protect(): void { this.precaution = true; this.witness = {}; }
     hold(): object | null {
         if (this.held.size >= 16) return null;
         const token = {}; this.held.add(token); this.witness = {}; return token;

@@ -9,32 +9,35 @@ import { isHistoryMessage, type HistoryMessage } from '../domain/history_protoco
 import type { HistoryGateway } from './history_gateway.ts';
 import type { CurrentOperations } from './current_operations.ts';
 import type { HelperSamples } from './helper_samples.ts';
+import { isPauseMessage, type PauseMessage } from '../domain/temporary_pause_protocol.ts';
+import type { TemporaryPauseGateway } from './temporary_pause_gateway.ts';
 
 /** Called only after native extension-origin admission by MessageGateway. */
 export class CenterGateway {
     constructor(private readonly controller: CenterController, private readonly operations: SettingsOperations,
         private readonly settings: SettingsRepository, private readonly connections?: NamedSessions, private readonly history?: HistoryGateway,
-        private readonly current?: CurrentOperations, private readonly helpers?: HelperSamples) {}
-    releaseTab(id: number): void { this.controller.releaseTab(id); }
-    shutdown(): void { this.current?.stop(); this.controller.shutdown(); }
-    async handle(message: CenterMessage | ConnectionMessage | HistoryMessage, sender: Sender): Promise<unknown> {
+        private readonly current?: CurrentOperations, private readonly helpers?: HelperSamples, private readonly pauses?: TemporaryPauseGateway) {}
+    releaseTab(id: number): void { this.pauses?.invalidateTab(id); this.controller.releaseTab(id); }
+    shutdown(): void { this.pauses?.invalidate(); this.current?.stop(); this.controller.shutdown(); }
+    async handle(message: CenterMessage | ConnectionMessage | HistoryMessage | PauseMessage, sender: Sender): Promise<unknown> {
         try {
             const result = await this.dispatch(message, sender);
             return jsonBytesWithin(result, MAX_CENTER_RESPONSE_BYTES) ? result : { state: 'unavailable' };
         } catch { return { state: 'unavailable' }; }
     }
-    private async dispatch(message: CenterMessage | ConnectionMessage | HistoryMessage, sender: Sender): Promise<unknown> {
+    private async dispatch(message: CenterMessage | ConnectionMessage | HistoryMessage | PauseMessage, sender: Sender): Promise<unknown> {
         const binding = centerBinding(sender);
         if (!binding) return { state: 'rejected' };
         if (message.method === 'center.open') return this.controller.open(binding);
         if (message.method === 'center.claim') return this.controller.claim(message.clientId, binding, message.controllerEpoch);
         if (message.method === 'center.close') return this.controller.close(message.clientId, binding, message.controllerEpoch);
-        const epoch = message.method === 'center.read' || message.method === 'center.operation.read' || message.method === 'center.health.read' || message.method === 'center.connections.read' || message.method === 'center.history.read' ? undefined : message.controllerEpoch;
+        const epoch = message.method === 'center.read' || message.method === 'center.operation.read' || message.method === 'center.health.read' || message.method === 'center.connections.read' || message.method === 'center.history.read' || message.method === 'center.pauses.read' ? undefined : message.controllerEpoch;
         const client = this.controller.authorize(message.clientId, binding, epoch);
         if (!client) return { state: 'stale' };
         if (message.method === 'center.operation.read') return this.current?.read(client.clientId) ?? { state: 'unavailable' };
         if (message.method === 'center.health.read') return binding.tabId === null ? { state: 'empty' } : this.helpers?.read(binding.tabId) ?? { state: 'unavailable' };
         if (isHistoryMessage(message)) return this.history?.handle(message, client, binding) ?? { state: 'unavailable' };
+        if (isPauseMessage(message)) return this.pauses?.handle(message, client, binding) ?? { state: 'unavailable' };
         if (message.method === 'center.connections.read') return this.connections?.read(() =>
             this.controller.authorize(message.clientId, binding, client.controllerEpoch) !== null) ?? { state: 'unavailable' };
         if (message.method === 'center.connections.change') {

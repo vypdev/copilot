@@ -950,10 +950,11 @@ background installs this dependency before credential restoration and shares
 its result with configuration and object-GET admission. It rereads before
 publication and invalidates native page leases on this exact session key.
 
-Pure emergency/tab change plans do not authorize native writes. Authoring,
-retained review, native target/controller admission, canonical commit/readback,
-resumption UX and four-locale provenance still need their separate coordinator
-and presentation integration before H3 is complete. Deterministic independent
+Pure emergency/tab change plans do not authorize native writes. The production
+coordinator now retains authoring reviews and checks native target/controller
+admission before canonical commit/readback. Resumption UX, operation observations
+and four-locale provenance still require presentation integration before H3 is
+complete. Deterministic independent
 worker instances prove composition against retained fake session storage; they
 do not prove Chrome, Firefox or Safari restart behavior. The existing loaded
 H2 receipts cannot substitute for that evidence.
@@ -971,6 +972,23 @@ Explicit reconciliation rereads the exact reviewed native state and the same
 idle private guard witness, then lifts only the extra precaution. It writes no
 native data and certifies no older operation. Neither a metadata read nor an
 ordinary successful write can clear prior precaution. Private witnesses do not
-belong in browser messages or Svelte props. Retained native target/controller
-reviews, operation observations and the localized control UI still need their
-separate integration before these primitives form an exposed H3 workflow.
+belong in browser messages or Svelte props.
+
+The production `TemporaryPauseReviews` coordinator exposes only the five closed
+`center.pauses.*` messages through the native center gateway. It retains at most
+16 preparing/pending/running operations and 32 completed outcomes with five-minute
+lifetimes. Native reads reserve capacity before waiting; takeover cannot pretend
+they have completed. Origin/document/controller/credential/revision fences and
+fresh target checks precede effects. Completion rechecks publication authority
+after the primitive returns. Duplicate confirm joins or replays facts, never an
+effect. An unexpected lost write/adoption result retains shared precaution.
+
+`BrowserPauseTargets` uses the existing GitHub host grant, at most 128 candidates
+and four concurrent lookups. Public choices contain only native ID and bounded
+repository/object labels; target source paths and guard witnesses stay private.
+Native reload/navigation retires matching reviews even at the same URL.
+`ClosedPauseCleanup` coalesces up to 128 trusted closure IDs and removes only
+those scopes through the same guarded writer. It does not retry failed batches,
+rebind stale IDs or fabricate user history. Tests with actual background
+composition cover role isolation, malformed saved preferences, replay, unknown
+effects and native closure. They remain distinct from loaded-browser acceptance.
