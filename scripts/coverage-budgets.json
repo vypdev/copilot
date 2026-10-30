@@ -52,7 +52,8 @@
             "src/application/policies/bugbot_partition_completion_policy.ts",
             "src/application/usecases/steps/commit/bugbot/bugbot_partition_aggregation.ts",
             "src/application/usecases/steps/commit/bugbot/bugbot_previous_findings_context.ts",
-            "src/application/usecases/steps/commit/bugbot/bugbot_review_context.ts"
+            "src/application/usecases/steps/commit/bugbot/bugbot_review_context.ts",
+            "src/application/policies/bugbot_python_literal_witness_policy.ts"
           ],
           "mode": "each",
           "thresholdProfile": "exhaustive"
@@ -79,7 +80,8 @@
             "src/application/usecases/steps/commit/bugbot/schema.ts",
             "src/application/usecases/steps/commit/bugbot/bugbot_review_telemetry.ts",
             "src/data/repository/issue/bugbot_issue_comment_query_repository.ts",
-            "src/infrastructure/composition/bugbot_scm_port_factory.ts"
+            "src/infrastructure/composition/bugbot_scm_port_factory.ts",
+            "src/application/policies/bugbot_python_literal_witness_policy.ts"
           ],
           "mode": "aggregate",
           "thresholdProfile": "default"
@@ -1274,6 +1276,33 @@
         }
       ],
       "successMessage": "deferred native deployment completion: PASS (pure 100%; changed modules 95% lines/statements, 90% branches/functions)"
+    },
+    {
+      "name": "Generated Python literal evidence",
+      "missingEntryLabel": "generated Python literal evidence",
+      "rules": [
+        {
+          "files": [
+            "src/application/policies/bugbot_python_literal_witness_policy.ts",
+            "src/application/policies/bugbot_literal_verification_policy.ts",
+            "src/prompts/bugbot.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts",
+            "src/application/usecases/steps/commit/bugbot/query_bugbot_findings.ts",
+            "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts",
+            "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts",
+            "src/tooling/bugbot_benchmark_runner.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "generated Python literal evidence coverage: PASS (pure projection/prompts100%; each delivery module95/90)"
     }
   ]
 }

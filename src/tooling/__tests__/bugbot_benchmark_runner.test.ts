@@ -7,6 +7,31 @@ const testCase: BugbotBenchmarkCase = {
     file: 'src/example.ts', startLine: 40, diff: '+return user.name;', expected: [{ title: 'Hidden ground truth title' }],
 };
 
+it('delivers generated-source byte and coordinate grounding without leaking a verdict', () => {
+    const prompt = buildBugbotBenchmarkPrompt({ ...testCase, language: 'python',
+        diff: '+assert rows[7]["ci"] == 0',
+    });
+    for (const clause of ['Use read-only literal/AST tool output', 'numbered literal witnesses', 'escapes, leading newlines, dedent',
+        'host/source/counter coordinates', 'executed branch', 'Preserve real wrong-missed assertions',
+        'physical LF lines incl. blanks', 'inline if/return share one line', 'Verify counter-key text', 'otherwise omit failure claims', 'never fixture execution', 'Zero counts may test missed coverage',
+        'Prove an assertion contradiction', 'invent no covered-branch requirement or self-refuting finding']) {
+        expect(prompt).toContain(clause);
+    }
+    expect(prompt).not.toContain('Hidden ground truth title');
+    expect(prompt).not.toContain('"expected"');
+});
+
+it('uses real numbered literal witnesses in the Python benchmark without verdict leakage', () => {
+    const prompt = buildBugbotBenchmarkPrompt({ ...testCase, file: 'coverage/fixture.py', language: 'python',
+        diff: ' source = """if (x > 0) return 1\n return -1"""\n+assert rows[2]["ci"] == 0',
+    });
+    expect(prompt).toContain('Python literal line witnesses: conditional values only');
+    expect(prompt).toContain('"line":1,"text":"if (x > 0) return 1"');
+    expect(prompt).toContain('"line":2,"text":"return -1"');
+    expect(prompt).not.toContain('Hidden ground truth title');
+    expect(prompt).not.toContain('"expected"');
+});
+
 it('delivers dependency request-transform evidence without leaking the expected verdict', () => {
     const prompt = buildBugbotBenchmarkPrompt(testCase);
     for (const clause of ['policy/defaults', 'concrete read/write flags', 'resolved dependency', 'request builder and adapters',
@@ -53,6 +78,21 @@ it('delivers Kotlin/Wasm binding guidance without leaking the private verdict', 
 });
 
 describe('Bugbot benchmark runner', () => {
+    it('rejects a corpus above the fixed real-agent bound before querying', async () => {
+        const query = jest.fn();
+        await expect(runBugbotBenchmarkAgent({ schemaVersion: 1, cases: Array(201).fill(testCase) },
+            { query }, {} as never)).rejects.toThrow('limited to 200 cases');
+        expect(query).not.toHaveBeenCalled();
+    });
+    it.each([
+        ['serialized JSON', JSON.stringify({ findings: [{ id: 'serialized', title: 'Detected', description: 'Real defect.' }] }), 1],
+        ['malformed JSON', '{not-json', 0],
+        ['absent output', undefined, 0],
+    ] as const)('retains the existing %s normalization contract', async (_name, response, count) => {
+        const result = await runBugbotBenchmarkAgent({ schemaVersion: 1, cases: [testCase] },
+            { query: jest.fn().mockResolvedValue(response) }, {} as never);
+        expect(result.predictions[testCase.id]).toHaveLength(count);
+    });
     it('does not leak ground truth into the agent prompt', () => {
         const prompt = buildBugbotBenchmarkPrompt(testCase);
         expect(prompt).toContain('src/example.ts');
@@ -185,4 +225,73 @@ it('shares renderer-grounded path and prior-claim evidence without leaking a lin
   expect(prompt).toContain('emit no finding, including info');
   expect(prompt).not.toContain('Private link verdict');
   expect(prompt).not.toContain('Never expose this expected repair');
+});
+
+
+describe('real benchmark generated-literal verification', () => {
+    const literal = { ...testCase, file: 'fixture.py', language: 'python',
+        diff: ' source = """a\n b"""\n+assert rows[2]["ci"] == 0' };
+    const candidate = { id: 'counter', title: 'Contradiction', description: 'Source and input disagree with the counter.',
+        file: 'fixture.py', line: 3, codeSnippet: 'assert rows[2]["ci"] == 0', evidence: 'Independent source evidence.' };
+    it('runs the same correlated verifier and omits only its rejected hypotheses', async () => {
+        const query = jest.fn().mockResolvedValueOnce({ outputLocale: 'en-US', findings: [candidate] })
+            .mockImplementationOnce(request => ({ verification_id: request.options.schema.properties.verification_id.enum[0],
+                outputLocale: 'en-US', findings: [], rejected_ids: ['counter'] }));
+        const result = await runBugbotBenchmarkAgent({ schemaVersion: 1, cases: [literal] }, { query }, {} as never);
+        expect(result.predictions[literal.id]).toEqual([]);
+        expect(query).toHaveBeenCalledTimes(2);
+        expect(query.mock.calls[1][0].agentId).toBe('bugbot-literal-candidate-verification');
+        expect(query.mock.calls[1][0].prompt).not.toContain('Hidden ground truth title');
+    });
+    it('fails instead of recording an empty prediction on incomplete verification', async () => {
+        const query = jest.fn().mockResolvedValueOnce({ outputLocale: 'en-US', findings: [candidate] })
+            .mockResolvedValueOnce({ outputLocale: 'en-US', findings: [] });
+        await expect(runBugbotBenchmarkAgent({ schemaVersion: 1, cases: [literal] }, { query }, {} as never)).rejects.toThrow('verification');
+    });
+    it('skips verification for empty results and unsupported literal projections', async () => {
+        const query = jest.fn().mockResolvedValue({ outputLocale: 'en-US', findings: [] });
+        await runBugbotBenchmarkAgent({ schemaVersion: 1, cases: [literal, { ...literal, id: 'unsupported', diff: '+source = f"{unknown}"' }] }, { query }, {} as never);
+        expect(query).toHaveBeenCalledTimes(2);
+    });
+    it('retains an independently verified defect with the original assertion anchor', async () => {
+        const query = jest.fn().mockResolvedValueOnce({ outputLocale: 'en-US', findings: [candidate] })
+            .mockImplementationOnce(request => ({ verification_id: request.options.schema.properties.verification_id.enum[0],
+                outputLocale: 'en-US', findings: [candidate], rejected_ids: [] }));
+        const result = await runBugbotBenchmarkAgent({ schemaVersion: 1, cases: [literal] }, { query }, {} as never);
+        expect(result.predictions[literal.id]).toEqual([expect.objectContaining({ id: 'counter', codeSnippet: candidate.codeSnippet })]);
+    });
+});
+
+describe('benchmark whole-response batch compatibility', () => {
+    const literal = { ...testCase, file: 'fixture.py', language: 'python', diff: ' source = """a\n b"""\n+assert ci == 0' };
+    it.each([false, true])('uses every verification batch and fails closed on an invalid final batch=%s', async fail => {
+        const original = Array.from({ length: 21 }, (_, index) => ({ id: `candidate-${index}`, title: 'Counter mismatch',
+            description: 'The source contradicts the counter.', file: 'fixture.py', line: 3, codeSnippet: 'assert ci == 0', evidence: 'Concrete source.' }));
+        const query = jest.fn(async request => {
+            if (request.agentId !== 'bugbot-literal-candidate-verification') return { outputLocale: 'en-US', findings: original };
+            const properties = request.options.schema.properties; const ids = properties.findings.items.properties.id.enum as string[];
+            return { outputLocale: 'en-US', verification_id: properties.verification_id.enum[0],
+                findings: fail && ids.includes('candidate-20') ? [] : ids.map(id => original.find(item => item.id === id)), rejected_ids: [] };
+        });
+        const result = runBugbotBenchmarkAgent({ schemaVersion: 1, cases: [literal] }, { query }, {} as never);
+        if (fail) await expect(result).rejects.toThrow('verification');
+        else expect((await result).predictions[literal.id]).toHaveLength(21);
+        expect(query).toHaveBeenCalledTimes(3);
+    });
+});
+
+it('preserves the serialized 200-candidate envelope through the shared real benchmark route', async () => {
+    const literal = { ...testCase, file: 'fixture.py', language: 'python', diff: ' source = """a\n b"""\n+assert ci == 0' };
+    const original = Array.from({ length: 200 }, (_, index) => ({ id: `candidate-${index}`, title: 'Counter mismatch',
+        description: 'd'.repeat(900), file: 'fixture.py', line: 3, codeSnippet: 'assert ci == 0', evidence: 'Concrete source.' }));
+    const response = JSON.stringify({ outputLocale: 'en-US', findings: original, resolved_findings: [] });
+    expect(Buffer.byteLength(response)).toBeGreaterThan(128_000);
+    const query = jest.fn(async request => {
+        if (request.agentId !== 'bugbot-literal-candidate-verification') return response;
+        const properties = request.options.schema.properties;
+        return JSON.stringify({ outputLocale: 'en-US', verification_id: properties.verification_id.enum[0],
+            findings: (properties.findings.items.properties.id.enum as string[]).map(id => original.find(item => item.id === id)), rejected_ids: [] });
+    });
+    const result = await runBugbotBenchmarkAgent({ schemaVersion: 1, cases: [literal] }, { query }, {} as never);
+    expect(result.predictions[literal.id]).toHaveLength(200); expect(query).toHaveBeenCalledTimes(11);
 });

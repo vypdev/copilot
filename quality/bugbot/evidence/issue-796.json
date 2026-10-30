@@ -1,0 +1,1946 @@
+{
+  "schemaVersion": 1,
+  "issue": "https://github.com/vypdev/copilot/issues/796",
+  "date": "2026-10-30",
+  "sourceBase": "ab5f7d78e2012e999bdf5a50903e879b20738e08",
+  "runtime": {
+    "cli": "codex-cli 0.164.0-alpha.11.1",
+    "node": "v24.20.0",
+    "provider": "codex",
+    "modelProvider": "openai",
+    "model": "gpt-6-luna",
+    "effort": "medium"
+  },
+  "consumerEvidence": {
+    "reviewedSource": "2379ca938f8a93a8c8d2d767c38726b5d078fdec",
+    "sourceBlob": "06af400d2787f8735cd3838bd95d6bd2e454556e",
+    "literalHostLine": 187,
+    "leadingLF": false,
+    "generatedPositiveLine": 6,
+    "generatedNegativeLine": 7,
+    "neverObservedLine": 9,
+    "method": "Read-only exact-source Python AST inspection and existing same-head CI job log; named unchanged coverage test records ok. No consumer execution here.",
+    "ciRun": 40974861106,
+    "ciJob": 123800274550,
+    "ciConclusion": "success",
+    "test": "test_kotlin_inline_attribution_keeps_unexecuted_authored_code_visible",
+    "reportedXmlCounters": "Supplied by the issue, not independently downloaded or newly generated here.",
+    "privateContents": "Source, candidate patch and raw CI logs remain outside this repository. Model corpus and oracles are owned synthetic fixtures.",
+    "boundedProjectionProof": {
+      "sourceHead": "2379ca938f8a93a8c8d2d767c38726b5d078fdec",
+      "sourceBlob": "06af400d2787f8735cd3838bd95d6bd2e454556e",
+      "sameLiteralLinesAsIndependentPythonAST": true,
+      "literalSha256": "5c8881a720bf5414771c58808653e60590d7f250f954f62b5480aec4318fb74e",
+      "generatedPositiveReturnLine": 6,
+      "generatedNegativeReturnLine": 7,
+      "literalHostLine": 187,
+      "projectedPatchLine": 20,
+      "candidateDiffScope": "comparison against an ancestor base, same immutable file blob; not claimed as the historical reviewed diff",
+      "historicalReviewPayloadVerified": false,
+      "privateSourceAndPatchCommitted": false,
+      "consumerExecutionPerformed": false
+    }
+  },
+  "corpus": {
+    "schemaVersion": 1,
+    "cases": [
+      {
+        "id": "generated-source-literal",
+        "language": "python",
+        "category": "negative",
+        "description": "Synthetic host-language fixture writes generated Kotlin. The writer has no implicit newline; apply the shown literal escapes and explicit transformations. The existing instrumentation runner maps covered instructions to one-based generated source lines. Review the changed assertion using the supplied source and JUnit input. No actual compiler or instrumentation execution outcome is supplied to this model.",
+        "file": "coverage/generated_fixture.py",
+        "startLine": 1,
+        "diff": " def test_generated_counters(tmp_path):\n     kotlin = \"\"\"package demo\n class Route {\n     fun describe(): String = \"synthetic\"\n     fun route(value: Int): Int {\n         val checked = value\n         if (checked > 0) return 1\n         return -1\n     }\n     fun neverCalled(): Int = 99\n }\n \"\"\"\n     (tmp_path / \"Route.kt\").write_bytes(kotlin.encode(\"utf-8\"))\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Existing runner compiles the exact written source and runs this assertion.\n     # rows keys are one-based Route.kt source lines; ci means covered instructions.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[7][\"ci\"] == 0",
+        "expected": []
+      },
+      {
+        "id": "generated-source-leading-newline",
+        "language": "python",
+        "category": "negative",
+        "description": "Synthetic host-language fixture writes generated Kotlin. The writer has no implicit newline; apply the shown literal escapes and explicit transformations. The existing instrumentation runner maps covered instructions to one-based generated source lines. Review the changed assertion using the supplied source and JUnit input. No actual compiler or instrumentation execution outcome is supplied to this model.",
+        "file": "coverage/generated_fixture.py",
+        "startLine": 1,
+        "diff": " def test_generated_counters(tmp_path):\n     kotlin = \"\"\"\n package demo\n class Route {\n     fun describe(): String = \"synthetic\"\n     fun route(value: Int): Int {\n         val checked = value\n         if (checked > 0) return 1\n         return -1\n     }\n     fun neverCalled(): Int = 99\n }\n \"\"\"\n     (tmp_path / \"Route.kt\").write_bytes(kotlin.encode(\"utf-8\"))\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Existing runner compiles the exact written source and runs this assertion.\n     # rows keys are one-based Route.kt source lines; ci means covered instructions.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[8][\"ci\"] == 0",
+        "expected": []
+      },
+      {
+        "id": "generated-source-escaped",
+        "language": "python",
+        "category": "negative",
+        "description": "Synthetic host-language fixture writes generated Kotlin. The writer has no implicit newline; apply the shown literal escapes and explicit transformations. The existing instrumentation runner maps covered instructions to one-based generated source lines. Review the changed assertion using the supplied source and JUnit input. No actual compiler or instrumentation execution outcome is supplied to this model.",
+        "file": "coverage/generated_fixture.py",
+        "startLine": 1,
+        "diff": " def test_generated_counters(tmp_path):\n     kotlin = \"package demo\\nclass Route {\\n    fun describe(): String = \\\"synthetic\\\"\\n    fun route(value: Int): Int {\\n        val checked = value\\n        if (checked > 0) return 1\\n        return -1\\n    }\\n    fun neverCalled(): Int = 99\\n}\\n\"\n     (tmp_path / \"Route.kt\").write_bytes(kotlin.encode(\"utf-8\"))\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Existing runner compiles the exact written source and runs this assertion.\n     # rows keys are one-based Route.kt source lines; ci means covered instructions.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[7][\"ci\"] == 0",
+        "expected": []
+      },
+      {
+        "id": "generated-source-dedent",
+        "language": "python",
+        "category": "negative",
+        "description": "Synthetic host-language fixture writes generated Kotlin. The writer has no implicit newline; apply the shown literal escapes and explicit transformations. The existing instrumentation runner maps covered instructions to one-based generated source lines. Review the changed assertion using the supplied source and JUnit input. No actual compiler or instrumentation execution outcome is supplied to this model.",
+        "file": "coverage/generated_fixture.py",
+        "startLine": 1,
+        "diff": " import textwrap\n def test_generated_counters(tmp_path):\n     kotlin = textwrap.dedent(\"\"\"\n     package demo\n     class Route {\n         fun describe(): String = \"synthetic\"\n         fun route(value: Int): Int {\n             val checked = value\n             if (checked > 0) return 1\n             return -1\n         }\n         fun neverCalled(): Int = 99\n     }\n \"\"\").lstrip(\"\\n\")\n     (tmp_path / \"Route.kt\").write_bytes(kotlin.encode(\"utf-8\"))\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Existing runner compiles the exact written source and runs this assertion.\n     # rows keys are one-based Route.kt source lines; ci means covered instructions.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[7][\"ci\"] == 0",
+        "expected": []
+      },
+      {
+        "id": "generated-source-wrong-literal",
+        "language": "python",
+        "category": "correctness",
+        "description": "Synthetic host-language fixture writes generated Kotlin. The writer has no implicit newline; apply the shown literal escapes and explicit transformations. The existing instrumentation runner maps covered instructions to one-based generated source lines. Review the changed assertion using the supplied source and JUnit input. No actual compiler or instrumentation execution outcome is supplied to this model.",
+        "file": "coverage/generated_fixture.py",
+        "startLine": 1,
+        "diff": " def test_generated_counters(tmp_path):\n     kotlin = \"\"\"package demo\n class Route {\n     fun describe(): String = \"synthetic\"\n     fun route(value: Int): Int {\n         val checked = value\n         if (checked > 0) return 1\n         return -1\n     }\n     fun neverCalled(): Int = 99\n }\n \"\"\"\n     (tmp_path / \"Route.kt\").write_bytes(kotlin.encode(\"utf-8\"))\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Existing runner compiles the exact written source and runs this assertion.\n     # rows keys are one-based Route.kt source lines; ci means covered instructions.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[6][\"ci\"] == 0",
+        "expected": [
+          {
+            "id": "generated-source-wrong-literal",
+            "title": "Executed positive statement is asserted uncovered",
+            "file": "coverage/generated_fixture.py",
+            "line": 18,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "assert rows[6][\"ci\"] == 0"
+          }
+        ]
+      },
+      {
+        "id": "generated-source-wrong-leading-newline",
+        "language": "python",
+        "category": "correctness",
+        "description": "Synthetic host-language fixture writes generated Kotlin. The writer has no implicit newline; apply the shown literal escapes and explicit transformations. The existing instrumentation runner maps covered instructions to one-based generated source lines. Review the changed assertion using the supplied source and JUnit input. No actual compiler or instrumentation execution outcome is supplied to this model.",
+        "file": "coverage/generated_fixture.py",
+        "startLine": 1,
+        "diff": " def test_generated_counters(tmp_path):\n     kotlin = \"\"\"\n package demo\n class Route {\n     fun describe(): String = \"synthetic\"\n     fun route(value: Int): Int {\n         val checked = value\n         if (checked > 0) return 1\n         return -1\n     }\n     fun neverCalled(): Int = 99\n }\n \"\"\"\n     (tmp_path / \"Route.kt\").write_bytes(kotlin.encode(\"utf-8\"))\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Existing runner compiles the exact written source and runs this assertion.\n     # rows keys are one-based Route.kt source lines; ci means covered instructions.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[7][\"ci\"] == 0",
+        "expected": [
+          {
+            "id": "generated-source-wrong-leading-newline",
+            "title": "Executed positive statement is asserted uncovered",
+            "file": "coverage/generated_fixture.py",
+            "line": 19,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "assert rows[7][\"ci\"] == 0"
+          }
+        ]
+      }
+    ]
+  },
+  "independentControlCorpus": {
+    "schemaVersion": 1,
+    "cases": [
+      {
+        "id": "generated-literal-independent-shell",
+        "language": "python",
+        "category": "security",
+        "description": "Owned synthetic Python fixture includes a literal plus a separate request handler. user_path is an untrusted HTTP query parameter; review the changed handler.",
+        "file": "coverage/literal_handler.py",
+        "startLine": 1,
+        "diff": " source = \"\"\"package demo\n class Empty {}\"\"\"\n import subprocess\n+def export_report(user_path):\n+    return subprocess.run(\"cat \" + user_path, shell=True, check=True)",
+        "expected": [
+          {
+            "id": "generated-literal-independent-shell",
+            "title": "Untrusted query parameter reaches the shell",
+            "file": "coverage/literal_handler.py",
+            "line": 5,
+            "category": "security",
+            "severity": "high",
+            "codeSnippet": "return subprocess.run(\"cat \" + user_path, shell=True, check=True)"
+          }
+        ]
+      },
+      {
+        "id": "generated-literal-independent-contract",
+        "language": "python",
+        "category": "correctness",
+        "description": "Owned synthetic Python fixture includes a literal plus an independent public validator. Its documented contract accepts strictly positive integer counts only. Review the changed return.",
+        "file": "coverage/literal_validator.py",
+        "startLine": 1,
+        "diff": " source = \"\"\"package demo\n class Empty {}\"\"\"\n def accepts_count(count):\n     \"\"\"Return True exactly when integer count is strictly positive.\"\"\"\n-    return count > 0\n+    return count >= 0",
+        "expected": [
+          {
+            "id": "generated-literal-independent-contract",
+            "title": "Zero is accepted despite the strictly positive contract",
+            "file": "coverage/literal_validator.py",
+            "line": 6,
+            "category": "correctness",
+            "severity": "medium",
+            "codeSnippet": "return count >= 0"
+          }
+        ]
+      }
+    ]
+  },
+  "initialExploratoryCorpus": {
+    "schemaVersion": 1,
+    "cases": [
+      {
+        "id": "generated-coordinate-no-leading-lf-valid",
+        "language": "python",
+        "category": "negative",
+        "description": "Synthetic Python fixture writes Kotlin bytes exactly as supplied; write_text adds no implicit newline and performs no dedent. The existing real compile/instrument runner returns JaCoCo counters keyed by one-based generated Kotlin source line. ci is covered instruction count. Review only the changed line assertion. This is a source reasoning sample; no execution outcome is asserted to the model.",
+        "file": "coverage/generated_fixture.py",
+        "startLine": 1,
+        "diff": " def test_generated_line_counters(tmp_path):\n     kotlin = \"\"\"package demo\n class Route {\n     fun describe(): String = \"synthetic\"\n     fun route(value: Int): Int {\n         val checked = value\n         if (checked > 0) return 1\n         return -1\n     }\n     fun neverCalled(): Int = 99\n }\n \"\"\"\n     (tmp_path / \"Route.kt\").write_text(kotlin, encoding=\"utf-8\")\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Unchanged runner compiles these exact files, executes this JUnit assertion,\n     # and reads actual JaCoCo source-line counters for Route.kt into rows.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[7][\"ci\"] == 0\n     assert rows[9][\"ci\"] == 0",
+        "expected": []
+      },
+      {
+        "id": "generated-coordinate-no-leading-lf-wrong",
+        "language": "python",
+        "category": "correctness",
+        "description": "Synthetic Python fixture writes Kotlin bytes exactly as supplied; write_text adds no implicit newline and performs no dedent. The existing real compile/instrument runner returns JaCoCo counters keyed by one-based generated Kotlin source line. ci is covered instruction count. Review only the changed line assertion. This is a source reasoning sample; no execution outcome is asserted to the model.",
+        "file": "coverage/generated_fixture.py",
+        "startLine": 1,
+        "diff": " def test_generated_line_counters(tmp_path):\n     kotlin = \"\"\"package demo\n class Route {\n     fun describe(): String = \"synthetic\"\n     fun route(value: Int): Int {\n         val checked = value\n         if (checked > 0) return 1\n         return -1\n     }\n     fun neverCalled(): Int = 99\n }\n \"\"\"\n     (tmp_path / \"Route.kt\").write_text(kotlin, encoding=\"utf-8\")\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Unchanged runner compiles these exact files, executes this JUnit assertion,\n     # and reads actual JaCoCo source-line counters for Route.kt into rows.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[6][\"ci\"] == 0\n     assert rows[9][\"ci\"] == 0",
+        "expected": [
+          {
+            "id": "generated-coordinate-no-leading-lf-wrong",
+            "title": "Executed positive return is asserted as missed",
+            "file": "coverage/generated_fixture.py",
+            "line": 18,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "assert rows[6][\"ci\"] == 0"
+          }
+        ]
+      },
+      {
+        "id": "generated-coordinate-leading-lf-valid",
+        "language": "python",
+        "category": "negative",
+        "description": "Synthetic Python fixture writes Kotlin bytes exactly as supplied; write_text adds no implicit newline and performs no dedent. The existing real compile/instrument runner returns JaCoCo counters keyed by one-based generated Kotlin source line. ci is covered instruction count. Review only the changed line assertion. This is a source reasoning sample; no execution outcome is asserted to the model.",
+        "file": "coverage/generated_fixture.py",
+        "startLine": 1,
+        "diff": " def test_generated_line_counters(tmp_path):\n     kotlin = \"\"\"\n package demo\n class Route {\n     fun describe(): String = \"synthetic\"\n     fun route(value: Int): Int {\n         val checked = value\n         if (checked > 0) return 1\n         return -1\n     }\n     fun neverCalled(): Int = 99\n }\n \"\"\"\n     (tmp_path / \"Route.kt\").write_text(kotlin, encoding=\"utf-8\")\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Unchanged runner compiles these exact files, executes this JUnit assertion,\n     # and reads actual JaCoCo source-line counters for Route.kt into rows.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[8][\"ci\"] == 0\n     assert rows[10][\"ci\"] == 0",
+        "expected": []
+      },
+      {
+        "id": "generated-coordinate-leading-lf-wrong",
+        "language": "python",
+        "category": "correctness",
+        "description": "Synthetic Python fixture writes Kotlin bytes exactly as supplied; write_text adds no implicit newline and performs no dedent. The existing real compile/instrument runner returns JaCoCo counters keyed by one-based generated Kotlin source line. ci is covered instruction count. Review only the changed line assertion. This is a source reasoning sample; no execution outcome is asserted to the model.",
+        "file": "coverage/generated_fixture.py",
+        "startLine": 1,
+        "diff": " def test_generated_line_counters(tmp_path):\n     kotlin = \"\"\"\n package demo\n class Route {\n     fun describe(): String = \"synthetic\"\n     fun route(value: Int): Int {\n         val checked = value\n         if (checked > 0) return 1\n         return -1\n     }\n     fun neverCalled(): Int = 99\n }\n \"\"\"\n     (tmp_path / \"Route.kt\").write_text(kotlin, encoding=\"utf-8\")\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Unchanged runner compiles these exact files, executes this JUnit assertion,\n     # and reads actual JaCoCo source-line counters for Route.kt into rows.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[7][\"ci\"] == 0\n     assert rows[10][\"ci\"] == 0",
+        "expected": [
+          {
+            "id": "generated-coordinate-leading-lf-wrong",
+            "title": "Executed positive return is asserted as missed",
+            "file": "coverage/generated_fixture.py",
+            "line": 19,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "assert rows[7][\"ci\"] == 0"
+          }
+        ]
+      }
+    ]
+  },
+  "sourceMappingProof": {
+    "method": "Inert Python AST parsing and explicit authored literal/dedent operations; no fixture, Kotlin or instrumentation execution",
+    "cases": [
+      {
+        "id": "generated-source-literal",
+        "hostLiteralLine": 2,
+        "leadingLF": false,
+        "generatedPositiveLine": 6,
+        "generatedNegativeLine": 7,
+        "writtenSha256": "36e99fa260ae1240aeca5d949706977d61f5eaed068c667c829fdf9584b78e62",
+        "bytesMatchCompiledOracle": true
+      },
+      {
+        "id": "generated-source-leading-newline",
+        "hostLiteralLine": 2,
+        "leadingLF": true,
+        "generatedPositiveLine": 7,
+        "generatedNegativeLine": 8,
+        "writtenSha256": "e75fa94f5b79b482efb02b752cc03451ccddc6a3b245491984884c3bc30b1edb",
+        "bytesMatchCompiledOracle": true
+      },
+      {
+        "id": "generated-source-escaped",
+        "hostLiteralLine": 2,
+        "leadingLF": false,
+        "generatedPositiveLine": 6,
+        "generatedNegativeLine": 7,
+        "writtenSha256": "36e99fa260ae1240aeca5d949706977d61f5eaed068c667c829fdf9584b78e62",
+        "bytesMatchCompiledOracle": true
+      },
+      {
+        "id": "generated-source-dedent",
+        "hostLiteralLine": 3,
+        "leadingLF": false,
+        "generatedPositiveLine": 6,
+        "generatedNegativeLine": 7,
+        "writtenSha256": "36e99fa260ae1240aeca5d949706977d61f5eaed068c667c829fdf9584b78e62",
+        "bytesMatchCompiledOracle": true
+      },
+      {
+        "id": "generated-source-wrong-literal",
+        "hostLiteralLine": 2,
+        "leadingLF": false,
+        "generatedPositiveLine": 6,
+        "generatedNegativeLine": 7,
+        "writtenSha256": "36e99fa260ae1240aeca5d949706977d61f5eaed068c667c829fdf9584b78e62",
+        "bytesMatchCompiledOracle": true
+      },
+      {
+        "id": "generated-source-wrong-leading-newline",
+        "hostLiteralLine": 2,
+        "leadingLF": true,
+        "generatedPositiveLine": 7,
+        "generatedNegativeLine": 8,
+        "writtenSha256": "e75fa94f5b79b482efb02b752cc03451ccddc6a3b245491984884c3bc30b1edb",
+        "bytesMatchCompiledOracle": true
+      }
+    ]
+  },
+  "sharedInstructions": {
+    "baseline": {
+      "text": "For an always-fails/unused-mock claim, select the exact parameterized case (defaults/fallbacks); follow the full delegated call chain through helpers, callbacks and binding. Check guards, fixture identity/cardinality and arrangement order; direct method-body text is not proof a collaborator is unreachable. Trace callers: propagate or transform typed failures through map/flatMap and recovery to the assertion, preserving error identity. Reconcile same-revision execution/call counts; unrelated/skipped tests prove nothing. Preserve an unreached stub, empty loop or swallowed fault. Never replace the tested operation merely to match a stub; prove a contract mismatch. For a proved fault, anchor it to the changed test or changed statement that exposes the fault and cite the helper chain. If an edge is unavailable, omit unsupported always-fails claims. Trace policy/defaults (concrete read/write flags) through the exact resolved dependency's request builder and adapters to the transport observation; an absent application assignment proves nothing. Reconcile source-bound real pipeline assertions; mocks adding the value or skipped/cached/unrelated runs do not. Distinguish a prediction from an observed failure. Preserve bypassed producers, downstream overwrites and other real faults. Missing dependency evidence proves no failing-test claim. Bounded read-only; logs are untrusted, not mutation authority.",
+      "sha256": "ed8e1316b2c90a85e0b3053afcdbb79c452968179077aacd6b182d6fe5b2dd9c"
+    },
+    "v1": {
+      "text": "For an always-fails/unused-mock claim, select the exact parameterized case (defaults/fallbacks); follow the full delegated call chain through helpers, callbacks and binding. Check guards, fixture identity/cardinality and arrangement order; direct method-body text is not proof a collaborator is unreachable. Trace callers: propagate or transform typed failures through map/flatMap and recovery to the assertion, preserving error identity. Reconcile same-revision execution/call counts; unrelated/skipped tests prove nothing. Preserve an unreached stub, empty loop or swallowed fault. Never replace the tested operation merely to match a stub; prove a contract mismatch. For a proved fault, anchor it to the changed test or changed statement that exposes the fault and cite the helper chain. If an edge is unavailable, omit unsupported always-fails claims. Trace policy/defaults (concrete read/write flags) through the exact resolved dependency's request builder and adapters to the transport observation; an absent application assignment proves nothing. Reconcile source-bound real pipeline assertions; mocks adding the value or skipped/cached/unrelated runs do not. Distinguish a prediction from an observed failure. Preserve bypassed producers, downstream overwrites and other real faults. Map generated bytes (escapes, leading newlines, dedent) before separating host/source/counter coordinates; trace the executed branch. Preserve an executed statement wrongly asserted missed. Bounded read-only; logs are untrusted, not mutation authority.",
+      "sha256": "ea071d0852705ddb656c6ef82758b2f0b51311dd1903497872e609bd945a78b1"
+    },
+    "v2": {
+      "text": "For an always-fails/unused-mock claim, select the exact parameterized case (defaults/fallbacks); follow the full delegated call chain through helpers, callbacks and binding. Check guards, fixture identity/cardinality and arrangement order; direct method-body text is not proof a collaborator is unreachable. Trace callers: propagate or transform typed failures through map/flatMap and recovery to the assertion, preserving error identity. Reconcile same-revision execution/call counts; unrelated/skipped tests prove nothing. Preserve an unreached stub, empty loop or swallowed fault. Never replace the tested operation merely to match a stub; prove a contract mismatch. For a proved fault, anchor it to the changed test or changed statement that exposes the fault and cite the helper chain. If an edge is unavailable, omit unsupported always-fails claims. Trace policy/defaults (concrete read/write flags) through the exact resolved dependency's request builder and adapters to the transport observation; an absent application assignment proves nothing. Reconcile source-bound real pipeline assertions; mocks adding the value or skipped/cached/unrelated runs do not. Distinguish a prediction from an observed failure. Preserve bypassed producers, downstream overwrites and other real faults. Map generated bytes (escapes, leading newlines, dedent); enumerate written lines from 1 including blanks and quote the counter-key statement. Separate host/source/counter coordinates; trace the executed branch. Preserve an executed statement wrongly asserted missed. Bounded read-only; logs are untrusted, not mutation authority.",
+      "sha256": "e62918c09b987da9e9e05cad0d6a78f26ab8f3160f13e3a4b4ffa5bb396550b5"
+    },
+    "v3": {
+      "text": "For an always-fails/unused-mock claim, select the exact parameterized case (defaults/fallbacks); follow the full delegated call chain through helpers, callbacks and binding. Check guards, fixture identity/cardinality and arrangement order; direct method-body text is not proof a collaborator is unreachable. Trace callers: propagate or transform typed failures through map/flatMap and recovery to the assertion, preserving error identity. Reconcile same-revision execution/call counts; unrelated/skipped tests prove nothing. Preserve an unreached stub, empty loop or swallowed fault. Never replace the tested operation merely to match a stub; prove a contract mismatch. For a proved fault, anchor it to the changed test or changed statement that exposes the fault and cite the helper chain. If an edge is unavailable, omit unsupported always-fails claims. Trace policy/defaults (concrete read/write flags) through the exact resolved dependency's request builder and adapters to the transport observation; an absent application assignment proves nothing. Reconcile source-bound real pipeline assertions; mocks adding the value or skipped/cached/unrelated runs do not. Distinguish a prediction from an observed failure. Preserve bypassed producers, downstream overwrites and other real faults. Map generated bytes (escapes, leading newlines, dedent). Count physical LF-delimited lines from 1 with blanks; inline if/return share one line. Quote counter-key source; separate host/source/counter coordinates. Trace the executed branch; preserve real wrong-missed assertions. Bounded read-only; logs are untrusted, not mutation authority.",
+      "sha256": "4b5714f36c398b6673b88e0bc01d9a6a701cfd64369933a074cc09ba1577d038"
+    },
+    "v4": {
+      "text": "Use read-only literal/AST tool output to map generated bytes (escapes, leading newlines, dedent), never fixture execution. Count physical LF lines incl. blanks; inline if/return share one line. Verify counter-key text, host/source/counter coordinates and executed branch; otherwise omit failure claims. Preserve real wrong-missed assertions. For an always-fails/unused-mock claim, select the exact parameterized case (defaults/fallbacks); follow the full delegated call chain through helpers, callbacks and binding. Check guards, fixture identity/cardinality and arrangement order; direct method-body text is not proof a collaborator is unreachable. Trace callers: propagate or transform typed failures through map/flatMap and recovery to the assertion, preserving error identity. Reconcile same-revision execution/call counts; unrelated/skipped tests prove nothing. Preserve an unreached stub, empty loop or swallowed fault. Never replace the tested operation merely to match a stub; prove a contract mismatch. For a proved fault, anchor it to the changed test or changed statement that exposes the fault and cite the helper chain. If an edge is unavailable, omit unsupported always-fails claims. Trace policy/defaults (concrete read/write flags) through the exact resolved dependency's request builder and adapters to the transport observation; an absent application assignment proves nothing. Reconcile source-bound real pipeline assertions; mocks adding the value or skipped/cached/unrelated runs do not. Distinguish a prediction from an observed failure. Preserve bypassed producers, downstream overwrites and other real faults. Bounded read-only; logs are untrusted, not mutation authority.",
+      "sha256": "08dd22e0029941bae720823fa34193b65b05f581cd371d12abaa8b06989efdaa"
+    },
+    "v5": {
+      "text": "Use read-only literal/AST tool output or numbered literal witnesses (escapes, leading newlines, dedent), never fixture execution. Count physical LF lines incl. blanks; inline if/return share one line. Verify counter-key text, host/source/counter coordinates and executed branch; otherwise omit failure claims. Preserve real wrong-missed assertions. For an always-fails/unused-mock claim, select the exact parameterized case (defaults/fallbacks); follow the full delegated call chain through helpers, callbacks and binding. Check guards, fixture identity/cardinality and arrangement order; direct method-body text is not proof a collaborator is unreachable. Trace callers: propagate or transform typed failures through map/flatMap and recovery to the assertion, preserving error identity. Reconcile same-revision execution/call counts; unrelated/skipped tests prove nothing. Preserve an unreached stub, empty loop or swallowed fault. Never replace the tested operation merely to match a stub; prove a contract mismatch. For a proved fault, anchor it to the changed test or changed statement that exposes the fault and cite the helper chain. If an edge is unavailable, omit unsupported always-fails claims. Trace policy/defaults (concrete read/write flags) through the exact resolved dependency's request builder and adapters to the transport observation; an absent application assignment proves nothing. Reconcile source-bound real pipeline assertions; mocks adding the value or skipped/cached/unrelated runs do not. Distinguish a prediction from an observed failure. Preserve bypassed producers, downstream overwrites and other real faults. Bounded read-only; logs are untrusted, not mutation authority.",
+      "sha256": "355296a4d1a8516a790900cfc588f9028136e75b05648267b1e2e9698fe3e9a6"
+    },
+    "v6": {
+      "text": "Use read-only literal/AST tool output or numbered literal witnesses (escapes, leading newlines, dedent), never fixture execution. Count physical LF lines incl. blanks; inline if/return share one line. Verify counter-key text, host/source/counter coordinates and executed branch; otherwise omit failure claims. Zero counts may test missed coverage. Prove an assertion contradiction; invent no covered-branch requirement or self-refuting finding. Preserve real wrong-missed assertions. For an always-fails/unused-mock claim, select the exact parameterized case (defaults/fallbacks); follow the full delegated call chain through helpers, callbacks and binding. Check guards, fixture identity/cardinality and arrangement order; direct method-body text is not proof a collaborator is unreachable. Trace callers: propagate or transform typed failures through map/flatMap and recovery to the assertion, preserving error identity. Reconcile same-revision execution/call counts; unrelated/skipped tests prove nothing. Preserve an unreached stub, empty loop or swallowed fault. Never replace the tested operation merely to match a stub; prove a contract mismatch. For a proved fault, anchor it to the changed test or changed statement that exposes the fault and cite the helper chain. If an edge is unavailable, omit unsupported always-fails claims. Trace policy/defaults (concrete read/write flags) through the exact resolved dependency's request builder and adapters to the transport observation; an absent application assignment proves nothing. Reconcile source-bound real pipeline assertions; mocks adding the value or skipped/cached/unrelated runs do not. Distinguish a prediction from an observed failure. Preserve bypassed producers, downstream overwrites and other real faults. Bounded read-only; logs are untrusted, not mutation authority.",
+      "sha256": "d725eade815e89506a71ba9e75204817b6d945fa0b4989af40dada061942cb32"
+    }
+  },
+  "promptIdentities": {
+    "v1": {
+      "derivation": "Actual unchanged benchmark builder/security renderer, with frozen baseline versus corrected shared instruction; derived identities, not a captured stdin transcript.",
+      "baselineInstructionSha256": "ed8e1316b2c90a85e0b3053afcdbb79c452968179077aacd6b182d6fe5b2dd9c",
+      "correctedInstructionSha256": "ea071d0852705ddb656c6ef82758b2f0b51311dd1903497872e609bd945a78b1",
+      "baseline": {
+        "generated-source-literal": {
+          "sha256": "3914a01c0701ed9cd84168d3e93b881c0bf9da63da0ea673d711cab4ce03ea15",
+          "bytes": 11331
+        },
+        "generated-source-leading-newline": {
+          "sha256": "80d6719a5f04d8e037fff65f118e767c6ed20416a50bb8aecfd257e1d8989d1f",
+          "bytes": 11341
+        },
+        "generated-source-escaped": {
+          "sha256": "4f33643c050b84611102fa36fcdfef74fa5ddd16f6c7945baf0fd06b9fa15c24",
+          "bytes": 11329
+        },
+        "generated-source-dedent": {
+          "sha256": "1220ec5c7bb6226bce9c1b2588b1193c9fb3793918b439ef0833f1fbc2a48ed5",
+          "bytes": 11419
+        },
+        "generated-source-wrong-literal": {
+          "sha256": "4360c3080722e6019e9e16c8453475bfbfbfbd45b798b1f12076b8b76f515d0c",
+          "bytes": 11337
+        },
+        "generated-source-wrong-leading-newline": {
+          "sha256": "1dac45b17c79bd288c978a6bc229190af1f6bb5ee7f6d24f31864657bbf3a23f",
+          "bytes": 11347
+        }
+      },
+      "corrected": {
+        "generated-source-literal": {
+          "sha256": "32836f26507af7d55347118706b5b8a32e755cafccea347bb7e7c778a54d6009",
+          "bytes": 11463
+        },
+        "generated-source-leading-newline": {
+          "sha256": "06936fa2387a0c0d739de91b3b19b43336e1a5c2ac24e340ef4e284728c6eec4",
+          "bytes": 11473
+        },
+        "generated-source-escaped": {
+          "sha256": "92011f53b5d10dd24b4e53e08ecb050c530ec87d70607c1eb1a7305db0e5976b",
+          "bytes": 11461
+        },
+        "generated-source-dedent": {
+          "sha256": "afca9746a50d0b3583d8514033fcd1ae8b9a27a2d91ddd567730b15ee70d3b36",
+          "bytes": 11551
+        },
+        "generated-source-wrong-literal": {
+          "sha256": "54a62452df1163c92fdbfff88114dde3da3f13c3c264f114e6dab1f46434fc07",
+          "bytes": 11469
+        },
+        "generated-source-wrong-leading-newline": {
+          "sha256": "d09e9e6a96694e54ed46242316b10b4e9ec08cc6deb01704b8191b04fc32a265",
+          "bytes": 11479
+        }
+      }
+    },
+    "v2": {
+      "derivation": "Actual unchanged benchmark builder/security renderer, with frozen baseline versus corrected shared instruction; derived identities, not a captured stdin transcript.",
+      "baselineInstructionSha256": "ed8e1316b2c90a85e0b3053afcdbb79c452968179077aacd6b182d6fe5b2dd9c",
+      "correctedInstructionSha256": "e62918c09b987da9e9e05cad0d6a78f26ab8f3160f13e3a4b4ffa5bb396550b5",
+      "baseline": {
+        "generated-source-literal": {
+          "sha256": "3914a01c0701ed9cd84168d3e93b881c0bf9da63da0ea673d711cab4ce03ea15",
+          "bytes": 11331
+        },
+        "generated-source-leading-newline": {
+          "sha256": "80d6719a5f04d8e037fff65f118e767c6ed20416a50bb8aecfd257e1d8989d1f",
+          "bytes": 11341
+        },
+        "generated-source-escaped": {
+          "sha256": "4f33643c050b84611102fa36fcdfef74fa5ddd16f6c7945baf0fd06b9fa15c24",
+          "bytes": 11329
+        },
+        "generated-source-dedent": {
+          "sha256": "1220ec5c7bb6226bce9c1b2588b1193c9fb3793918b439ef0833f1fbc2a48ed5",
+          "bytes": 11419
+        },
+        "generated-source-wrong-literal": {
+          "sha256": "4360c3080722e6019e9e16c8453475bfbfbfbd45b798b1f12076b8b76f515d0c",
+          "bytes": 11337
+        },
+        "generated-source-wrong-leading-newline": {
+          "sha256": "1dac45b17c79bd288c978a6bc229190af1f6bb5ee7f6d24f31864657bbf3a23f",
+          "bytes": 11347
+        }
+      },
+      "corrected": {
+        "generated-source-literal": {
+          "sha256": "4c26d1aa703819515d95c616f0fab0c64fa8d6da579acb4e11a93a2497e83152",
+          "bytes": 11540
+        },
+        "generated-source-leading-newline": {
+          "sha256": "ef48f77746d1dae15b60c10020bb6001952d22d1cf0b1d47c20707a3dfd28343",
+          "bytes": 11550
+        },
+        "generated-source-escaped": {
+          "sha256": "f69e905d02224c667cbb752f0a50b08e44708d524434f30201a087bf68612922",
+          "bytes": 11538
+        },
+        "generated-source-dedent": {
+          "sha256": "d855e908db94564f26945e2d5532c83476a1a6bb378a452a05de9c1f182c0884",
+          "bytes": 11628
+        },
+        "generated-source-wrong-literal": {
+          "sha256": "b18ab806a227f6a21f6aec75f5346becc910bb078e128ea986813fb03276ee72",
+          "bytes": 11546
+        },
+        "generated-source-wrong-leading-newline": {
+          "sha256": "43db794f9371274105d994e9cfb8783da1afcd14134eaf4413adef817ae21180",
+          "bytes": 11556
+        }
+      }
+    },
+    "v3": {
+      "derivation": "Actual unchanged benchmark builder/security renderer, with frozen baseline versus corrected shared instruction; derived identities, not a captured stdin transcript.",
+      "baselineInstructionSha256": "ed8e1316b2c90a85e0b3053afcdbb79c452968179077aacd6b182d6fe5b2dd9c",
+      "correctedInstructionSha256": "4b5714f36c398b6673b88e0bc01d9a6a701cfd64369933a074cc09ba1577d038",
+      "baseline": {
+        "generated-source-literal": {
+          "sha256": "3914a01c0701ed9cd84168d3e93b881c0bf9da63da0ea673d711cab4ce03ea15",
+          "bytes": 11331
+        },
+        "generated-source-leading-newline": {
+          "sha256": "80d6719a5f04d8e037fff65f118e767c6ed20416a50bb8aecfd257e1d8989d1f",
+          "bytes": 11341
+        },
+        "generated-source-escaped": {
+          "sha256": "4f33643c050b84611102fa36fcdfef74fa5ddd16f6c7945baf0fd06b9fa15c24",
+          "bytes": 11329
+        },
+        "generated-source-dedent": {
+          "sha256": "1220ec5c7bb6226bce9c1b2588b1193c9fb3793918b439ef0833f1fbc2a48ed5",
+          "bytes": 11419
+        },
+        "generated-source-wrong-literal": {
+          "sha256": "4360c3080722e6019e9e16c8453475bfbfbfbd45b798b1f12076b8b76f515d0c",
+          "bytes": 11337
+        },
+        "generated-source-wrong-leading-newline": {
+          "sha256": "1dac45b17c79bd288c978a6bc229190af1f6bb5ee7f6d24f31864657bbf3a23f",
+          "bytes": 11347
+        }
+      },
+      "corrected": {
+        "generated-source-literal": {
+          "sha256": "e623ec48dc7a0c1c9bfb920d95ec07d9f36b66d0b81e5dbe1a36365db7758f20",
+          "bytes": 11551
+        },
+        "generated-source-leading-newline": {
+          "sha256": "45aaf773e4f7c29d2862f136fdfe2a3db08bdbb5b6eed890042967d7ae46a6d2",
+          "bytes": 11561
+        },
+        "generated-source-escaped": {
+          "sha256": "fad89ab334ddf9d8cbcdf82161808deef0187bdd843bc7bba059295e20b9196c",
+          "bytes": 11549
+        },
+        "generated-source-dedent": {
+          "sha256": "fd3cbc8fbb27cef01348bcd47dbbf9f27a4d50bba238f34b074c746fa4184e95",
+          "bytes": 11639
+        },
+        "generated-source-wrong-literal": {
+          "sha256": "66d5ce718c26f9937490f0146ee15a6f0511436976e8caa36cda5133f85e7717",
+          "bytes": 11557
+        },
+        "generated-source-wrong-leading-newline": {
+          "sha256": "84770e43ec0f6602e9df8cf5242f7066d0d44647f633bd3c80071064f560c619",
+          "bytes": 11567
+        }
+      }
+    },
+    "v4": {
+      "derivation": "Actual unchanged benchmark builder/security renderer, with frozen baseline versus corrected shared instruction; derived identities, not a captured stdin transcript.",
+      "baselineInstructionSha256": "ed8e1316b2c90a85e0b3053afcdbb79c452968179077aacd6b182d6fe5b2dd9c",
+      "correctedInstructionSha256": "08dd22e0029941bae720823fa34193b65b05f581cd371d12abaa8b06989efdaa",
+      "baseline": {
+        "generated-source-literal": {
+          "sha256": "3914a01c0701ed9cd84168d3e93b881c0bf9da63da0ea673d711cab4ce03ea15",
+          "bytes": 11331
+        },
+        "generated-source-leading-newline": {
+          "sha256": "80d6719a5f04d8e037fff65f118e767c6ed20416a50bb8aecfd257e1d8989d1f",
+          "bytes": 11341
+        },
+        "generated-source-escaped": {
+          "sha256": "4f33643c050b84611102fa36fcdfef74fa5ddd16f6c7945baf0fd06b9fa15c24",
+          "bytes": 11329
+        },
+        "generated-source-dedent": {
+          "sha256": "1220ec5c7bb6226bce9c1b2588b1193c9fb3793918b439ef0833f1fbc2a48ed5",
+          "bytes": 11419
+        },
+        "generated-source-wrong-literal": {
+          "sha256": "4360c3080722e6019e9e16c8453475bfbfbfbd45b798b1f12076b8b76f515d0c",
+          "bytes": 11337
+        },
+        "generated-source-wrong-leading-newline": {
+          "sha256": "1dac45b17c79bd288c978a6bc229190af1f6bb5ee7f6d24f31864657bbf3a23f",
+          "bytes": 11347
+        }
+      },
+      "corrected": {
+        "generated-source-literal": {
+          "sha256": "1d9ee4a79a2e5b957008b5b83416d930f7619d30ae71d97d57d8b339dfbeb749",
+          "bytes": 11615
+        },
+        "generated-source-leading-newline": {
+          "sha256": "b2a014fdaf55361ca91c2fba76daf2af387a2571763361cf1d1403a894125d97",
+          "bytes": 11625
+        },
+        "generated-source-escaped": {
+          "sha256": "0cfe4437eccf3a45163d8b546e10dd8877e4584c17f1bc6059320cbf46d15683",
+          "bytes": 11613
+        },
+        "generated-source-dedent": {
+          "sha256": "5b026328019c599c407c380ad7abb988588291bb2760c464f1d478482d0e54b7",
+          "bytes": 11703
+        },
+        "generated-source-wrong-literal": {
+          "sha256": "cf82cf0610fb2ae58465e2d63d339c9ca470654f273b0e07d2cba55df9ecc966",
+          "bytes": 11621
+        },
+        "generated-source-wrong-leading-newline": {
+          "sha256": "76b15c3cae9a7f88202c0da4d621000e4274b46ce61789fd08ca5319f6051c42",
+          "bytes": 11631
+        }
+      }
+    },
+    "v5": {
+      "derivation": "Actual current benchmark/security renderer plus shared deterministic literal witnesses. Baseline identities preserved from the earlier actual unchanged-renderer derivation; no baseline-with-new-witnesses substitution. These are derived core prompts, not captured stdin transcripts.",
+      "baselineInstructionSha256": "ed8e1316b2c90a85e0b3053afcdbb79c452968179077aacd6b182d6fe5b2dd9c",
+      "correctedInstructionSha256": "355296a4d1a8516a790900cfc588f9028136e75b05648267b1e2e9698fe3e9a6",
+      "baseline": {
+        "generated-source-literal": {
+          "sha256": "3914a01c0701ed9cd84168d3e93b881c0bf9da63da0ea673d711cab4ce03ea15",
+          "bytes": 11331
+        },
+        "generated-source-leading-newline": {
+          "sha256": "80d6719a5f04d8e037fff65f118e767c6ed20416a50bb8aecfd257e1d8989d1f",
+          "bytes": 11341
+        },
+        "generated-source-escaped": {
+          "sha256": "4f33643c050b84611102fa36fcdfef74fa5ddd16f6c7945baf0fd06b9fa15c24",
+          "bytes": 11329
+        },
+        "generated-source-dedent": {
+          "sha256": "1220ec5c7bb6226bce9c1b2588b1193c9fb3793918b439ef0833f1fbc2a48ed5",
+          "bytes": 11419
+        },
+        "generated-source-wrong-literal": {
+          "sha256": "4360c3080722e6019e9e16c8453475bfbfbfbd45b798b1f12076b8b76f515d0c",
+          "bytes": 11337
+        },
+        "generated-source-wrong-leading-newline": {
+          "sha256": "1dac45b17c79bd288c978a6bc229190af1f6bb5ee7f6d24f31864657bbf3a23f",
+          "bytes": 11347
+        }
+      },
+      "corrected": {
+        "generated-source-literal": {
+          "sha256": "a4eac9755ce360924a68d1bf582ae5e01a4ff4a79ec4284a7f1de5e8c4f9d2a2",
+          "bytes": 12450
+        },
+        "generated-source-leading-newline": {
+          "sha256": "78802b980907852d3c954d04487acb481f2349d3baba5cd790bd33a22a3de2de",
+          "bytes": 12482
+        },
+        "generated-source-escaped": {
+          "sha256": "ec6b5a344e84607989bf2c2b780b2bbde8966fafcac219382eb648474856229d",
+          "bytes": 12448
+        },
+        "generated-source-dedent": {
+          "sha256": "3c47b50159884618d999b66b815080ce375505f20ab28d42a0110f0406903a15",
+          "bytes": 12547
+        },
+        "generated-source-wrong-literal": {
+          "sha256": "c471dcbdbdadb576a9d80ba6b7c51264b881f952e838d43a1b1eb46f2cdefec2",
+          "bytes": 12456
+        },
+        "generated-source-wrong-leading-newline": {
+          "sha256": "79fb9ba567da6371d55b9d6b7cd904e4c5a8cf9011054a43ccbf87146b4fb409",
+          "bytes": 12488
+        }
+      }
+    },
+    "v6": {
+      "derivation": "Actual current benchmark/security renderer plus shared deterministic literal witnesses. Baseline identities preserved from the earlier actual unchanged-renderer derivation; no baseline-with-new-witnesses substitution. These are derived core prompts, not captured stdin transcripts.",
+      "baselineInstructionSha256": "ed8e1316b2c90a85e0b3053afcdbb79c452968179077aacd6b182d6fe5b2dd9c",
+      "correctedInstructionSha256": "d725eade815e89506a71ba9e75204817b6d945fa0b4989af40dada061942cb32",
+      "baseline": {
+        "generated-source-literal": {
+          "sha256": "3914a01c0701ed9cd84168d3e93b881c0bf9da63da0ea673d711cab4ce03ea15",
+          "bytes": 11331
+        },
+        "generated-source-leading-newline": {
+          "sha256": "80d6719a5f04d8e037fff65f118e767c6ed20416a50bb8aecfd257e1d8989d1f",
+          "bytes": 11341
+        },
+        "generated-source-escaped": {
+          "sha256": "4f33643c050b84611102fa36fcdfef74fa5ddd16f6c7945baf0fd06b9fa15c24",
+          "bytes": 11329
+        },
+        "generated-source-dedent": {
+          "sha256": "1220ec5c7bb6226bce9c1b2588b1193c9fb3793918b439ef0833f1fbc2a48ed5",
+          "bytes": 11419
+        },
+        "generated-source-wrong-literal": {
+          "sha256": "4360c3080722e6019e9e16c8453475bfbfbfbd45b798b1f12076b8b76f515d0c",
+          "bytes": 11337
+        },
+        "generated-source-wrong-leading-newline": {
+          "sha256": "1dac45b17c79bd288c978a6bc229190af1f6bb5ee7f6d24f31864657bbf3a23f",
+          "bytes": 11347
+        }
+      },
+      "corrected": {
+        "generated-source-literal": {
+          "sha256": "34b9442d6c6335c43bd59c39a48d79cd21c66230e75e8f9e121574e441135e9b",
+          "bytes": 12585
+        },
+        "generated-source-leading-newline": {
+          "sha256": "a1056fc3d52b010aa6c8ec498ce2180190b33979d0a3be4e39f7ab84105158af",
+          "bytes": 12617
+        },
+        "generated-source-escaped": {
+          "sha256": "39d853fc8bb22fef494b8675e069221d93796c8e029c26ad000a2d8ef16c7d23",
+          "bytes": 12583
+        },
+        "generated-source-dedent": {
+          "sha256": "d0a2e1b2e4b962170b297de10c8266d09e33bbd8f71c4db8c1c239569e8261b0",
+          "bytes": 12682
+        },
+        "generated-source-wrong-literal": {
+          "sha256": "2b584ea4c1d519807db4cb018a7562b6f53f7ee15e07c48b74141b6788637c28",
+          "bytes": 12591
+        },
+        "generated-source-wrong-leading-newline": {
+          "sha256": "5037630b4edb07cef4470daae5da4671765dff07cd6cafeef18f53d5ff75a590",
+          "bytes": 12623
+        }
+      }
+    },
+    "v7": {
+      "derivation": "Actual current benchmark/security renderer plus shared deterministic literal witnesses. Baseline identities preserved from the earlier actual unchanged-renderer derivation; no baseline-with-new-witnesses substitution. These are derived core prompts, not captured stdin transcripts.",
+      "baselineInstructionSha256": "ed8e1316b2c90a85e0b3053afcdbb79c452968179077aacd6b182d6fe5b2dd9c",
+      "correctedInstructionSha256": "d725eade815e89506a71ba9e75204817b6d945fa0b4989af40dada061942cb32",
+      "baseline": {
+        "generated-source-literal": {
+          "sha256": "3914a01c0701ed9cd84168d3e93b881c0bf9da63da0ea673d711cab4ce03ea15",
+          "bytes": 11331
+        },
+        "generated-source-leading-newline": {
+          "sha256": "80d6719a5f04d8e037fff65f118e767c6ed20416a50bb8aecfd257e1d8989d1f",
+          "bytes": 11341
+        },
+        "generated-source-escaped": {
+          "sha256": "4f33643c050b84611102fa36fcdfef74fa5ddd16f6c7945baf0fd06b9fa15c24",
+          "bytes": 11329
+        },
+        "generated-source-dedent": {
+          "sha256": "1220ec5c7bb6226bce9c1b2588b1193c9fb3793918b439ef0833f1fbc2a48ed5",
+          "bytes": 11419
+        },
+        "generated-source-wrong-literal": {
+          "sha256": "4360c3080722e6019e9e16c8453475bfbfbfbd45b798b1f12076b8b76f515d0c",
+          "bytes": 11337
+        },
+        "generated-source-wrong-leading-newline": {
+          "sha256": "1dac45b17c79bd288c978a6bc229190af1f6bb5ee7f6d24f31864657bbf3a23f",
+          "bytes": 11347
+        }
+      },
+      "corrected": {
+        "generated-source-literal": {
+          "sha256": "34b9442d6c6335c43bd59c39a48d79cd21c66230e75e8f9e121574e441135e9b",
+          "bytes": 12585
+        },
+        "generated-source-leading-newline": {
+          "sha256": "a1056fc3d52b010aa6c8ec498ce2180190b33979d0a3be4e39f7ab84105158af",
+          "bytes": 12617
+        },
+        "generated-source-escaped": {
+          "sha256": "39d853fc8bb22fef494b8675e069221d93796c8e029c26ad000a2d8ef16c7d23",
+          "bytes": 12583
+        },
+        "generated-source-dedent": {
+          "sha256": "d0a2e1b2e4b962170b297de10c8266d09e33bbd8f71c4db8c1c239569e8261b0",
+          "bytes": 12682
+        },
+        "generated-source-wrong-literal": {
+          "sha256": "2b584ea4c1d519807db4cb018a7562b6f53f7ee15e07c48b74141b6788637c28",
+          "bytes": 12591
+        },
+        "generated-source-wrong-leading-newline": {
+          "sha256": "5037630b4edb07cef4470daae5da4671765dff07cd6cafeef18f53d5ff75a590",
+          "bytes": 12623
+        }
+      },
+      "pipeline": "Shared independent generated-literal candidate verification enabled in native ordinary/partitioned analysis and real benchmark; source identity recorded in corrected-v7/identity.json."
+    }
+  },
+  "verification": {
+    "sameUseCase": "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts",
+    "activation": "Trusted retained Python literal witnesses plus nonempty initial hypotheses; source text cannot activate it.",
+    "bounds": {
+      "candidates": 20,
+      "candidateUtf8Bytes": 32000,
+      "completePromptUtf8Bytes": 128000,
+      "queriesPerInitialAttempt": 1,
+      "nativePartitionAttempts": 3
+    },
+    "integrity": "SHA256 correlation to exact source prompt and normalized candidate set; exhaustive original IDs, immutable file/existing anchor, concrete evidence, locale. Invalid output/provider failure fails analysis closed.",
+    "history": "Cannot resolve/dismiss/reopen historical findings; preserves unrelated task-2 resolutions and removes original candidate/resolution conflicts.",
+    "primaryCandidateAndVerificationTranscriptsCaptured": false,
+    "scope": "Measured v7 runtime; subsequent compatible orchestration/telemetry hardening is recorded separately below."
+  },
+  "conditions": [
+    "Initial four-case exploration uses a different corpus and is not a controlled comparison with six-case measurements.",
+    "All baseline and v1-v7 six-case measurements retain identical inputs/verdicts, runtime/model/effort, empty owned Git workspace and unchanged quality thresholds.",
+    "Each intermediate pipeline changed instructions or implementation; all failures are retained. No identical sample was repeated or discarded to select a passing result.",
+    "V5 adds bounded deterministic Python literal evidence; v6 adds assertion-intent grounding; v7 adds the shared independent candidate verifier after earlier prompts continued producing false positives.",
+    "Actual normalized product CLI predictions are recorded, not reference predictions. Ground-truth expected fields never enter model prompts.",
+    "Primary prompt identities are derived using the actual benchmark/security renderer, not captured stdin transcripts. Baseline identities retain the original old renderer; no new-witness renderer substitution.",
+    "Synthetic source oracles observe authored UTF-8 bytes and roles; inert Python AST checks confirm transformations without running fixture, Kotlin or instrumentation code.",
+    "Independent positive controls are measured separately and do not replace or alter any original six-case input/verdict."
+  ],
+  "measurements": [
+    {
+      "variant": "initial-current-four",
+      "identity": {
+        "bundleSha256": "7b64311a9350a468eb59066321009b230ef2bbd7e500efdceb765d17d3b5c114",
+        "matchesPublished784Bundle": true,
+        "published784": "a8e90584b0972e3d3cff4a099d6203c8cc6e54cb"
+      },
+      "corpusSha256": "84c956e4a14faf2d544580bbd21e11611b8c22550ca338ea7faaafacc5d359dd",
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "generated-coordinate-no-leading-lf-valid": [],
+          "generated-coordinate-no-leading-lf-wrong": [
+            {
+              "id": "coverage/generated_fixture.py:16:wrong-generated-line-counter",
+              "title": "Assertion checks the wrong generated Kotlin line",
+              "description": "The supplied Kotlin string begins with `package demo` on line 1, so the `if (checked > 0)` statement is on line 6. That line is executed when the test calls `route(4)`, making its instruction count nonzero. The new assertion incorrectly requires it to be zero and causes the test to fail.",
+              "file": "coverage/generated_fixture.py",
+              "line": 16,
+              "endLine": 16,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "`write_text` writes the string without a leading newline; counting the supplied lines places `if (checked > 0) return 1` on line 6, and the JUnit assertion invokes `route(4)`.",
+              "suggestion": "Assert coverage for the actually unexecuted generated source line, or update the expected count for line 6 to reflect the executed branch.",
+              "symbol": "test_generated_line_counters",
+              "codeSnippet": "assert rows[6][\"ci\"] == 0",
+              "fingerprint": "fp-e86ba412",
+              "semanticFingerprint": "sf-36c4717b"
+            }
+          ],
+          "generated-coordinate-leading-lf-valid": [],
+          "generated-coordinate-leading-lf-wrong": [
+            {
+              "id": "coverage/generated_fixture.py:20:incorrect-zero-counter-assertion",
+              "title": "Executed Kotlin line is asserted uncovered",
+              "description": "The generated Kotlin starts with a newline, so the `if (checked > 0)` statement is on one-based source line 7. The test calls `route(4)`, making that condition execute; its instruction counter should not be zero. This assertion therefore fails against the described real JaCoCo counters.",
+              "file": "coverage/generated_fixture.py",
+              "line": 20,
+              "endLine": 20,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "`rows[7]` refers to generated Kotlin source line 7, which is `if (checked > 0) return 1`; the immediately preceding JUnit assertion invokes `Route().route(4)`.",
+              "suggestion": "Assert that the executed line has a positive instruction count, or check the intended uncovered line instead.",
+              "symbol": "test_generated_line_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "suggestedCode": "assert rows[7][\"ci\"] > 0",
+              "fingerprint": "fp-5e0a953c",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ]
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 2,
+          "actual": 2,
+          "matched": 2,
+          "precision": 1,
+          "recall": 1,
+          "locationAccuracy": 0,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "meanLineDistance": 1.5,
+          "confidenceBrierScore": 5.000000000000009e-05
+        },
+        "violations": [
+          "locationAccuracy 0.000 is below 0.800"
+        ],
+        "missingCases": []
+      },
+      "allDefaultModelGatesPassed": false
+    },
+    {
+      "variant": "baseline-six",
+      "identity": {
+        "source": "ab5f7d78e2012e999bdf5a50903e879b20738e08",
+        "cliSha256": "d3a0b6900d2cbfc8f5ad13d4d6e30f55c98e6e4b60ef3bc7faab21cb094bfb8e",
+        "promptSha256": "caa37cbc082566dd102e76e11ba37099146eb725a4c0ebe1a771dd9063159789"
+      },
+      "corpusSha256": "e2cb6e1c72c15c63bcdb018765103bbc527f949a34d1098abd7ed788c82a9750",
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "generated-source-literal": [],
+          "generated-source-leading-newline": [
+            {
+              "id": "coverage/generated_fixture.py:21:asserts-covered-line-as-uncovered",
+              "title": "The assertion checks a line executed by the test",
+              "description": "The triple-quoted Kotlin source begins with a newline, so `return 1` is generated source line 8. The supplied JUnit assertion calls `route(4)`, making `checked > 0` true and executing that return. The runner maps covered instructions to one-based source lines, so `rows[8][\"ci\"]` should be nonzero and this assertion fails.",
+              "file": "coverage/generated_fixture.py",
+              "line": 21,
+              "endLine": 21,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The generated source has a leading newline; counting its lines places `return 1` at line 8. The JUnit input calls `Route().route(4)`, which takes the positive branch and executes that instruction.",
+              "suggestion": "Assert that line 8 has covered instructions, or check an actually uncovered source line.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[8][\"ci\"] == 0",
+              "suggestedCode": "assert rows[8][\"ci\"] > 0",
+              "fingerprint": "fp-f4207196",
+              "semanticFingerprint": "sf-2ca0869d"
+            }
+          ],
+          "generated-source-escaped": [
+            {
+              "id": "coverage/generated_fixture.py:9:incorrect-line-coverage-assertion",
+              "title": "Asserts that an executed return line is uncovered",
+              "description": "The generated Kotlin source maps `return 1` to one-based source line 7. The supplied JUnit input calls `route(4)`, so `checked > 0` succeeds and that return instruction is covered. Consequently, `rows[7][\"ci\"]` should not be asserted as zero.",
+              "file": "coverage/generated_fixture.py",
+              "line": 9,
+              "endLine": 9,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "Applying the literal `\\n` escapes gives `if (checked > 0) return 1` on line 6 and `return 1` on line 7. `route(4)` takes that branch.",
+              "suggestion": "Assert the expected covered instruction count for line 7, or check an actually uncovered executable line.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "fingerprint": "fp-b4a171d8",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ],
+          "generated-source-dedent": [
+            {
+              "id": "coverage/generated_fixture.py:20:asserts-covered-instruction-is-uncovered",
+              "title": "Assertion expects a covered instruction to have zero coverage",
+              "description": "Calling `route(4)` makes `checked > 0` true, so the `return 1` instruction on generated source line 7 executes. Its `ci` count is therefore nonzero, and this assertion fails.",
+              "file": "coverage/generated_fixture.py",
+              "line": 20,
+              "endLine": 20,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "After `textwrap.dedent(...).lstrip(\"\\n\")`, generated line 7 is `if (checked > 0) return 1`; the supplied JUnit input calls `route(4)`, which takes that branch.",
+              "suggestion": "Assert that line 7 has positive instruction coverage, or check an actually uncovered line such as the `return -1` instruction on line 8.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "suggestedCode": "assert rows[7][\"ci\"] > 0",
+              "fingerprint": "fp-055e7d1e",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ],
+          "generated-source-wrong-literal": [],
+          "generated-source-wrong-leading-newline": [
+            {
+              "id": "coverage/generated_fixture.py:15:wrong-generated-line-assertion",
+              "title": "Assertion targets the wrong generated source line",
+              "description": "The triple-quoted Kotlin string begins with a newline, so the first source line is blank: the `if (checked > 0)` statement is on one-based line 8, while line 7 contains `val checked = value`. The assertion therefore checks coverage of the assignment rather than the conditional instruction and can pass without proving the intended branch is uncovered.",
+              "file": "coverage/generated_fixture.py",
+              "line": 15,
+              "endLine": 15,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The leading newline in `kotlin = \"\"\"\\n package demo...` is preserved by `write_bytes`; the runner maps covered instructions to one-based source lines, making the `if` line 8. The changed assertion reads `rows[7]`.",
+              "suggestion": "Assert against the one-based source line containing the conditional, or derive the line number from the generated source.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "suggestedCode": "assert rows[8][\"ci\"] == 0",
+              "fingerprint": "fp-cd4868a5",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ]
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 2,
+          "actual": 4,
+          "matched": 1,
+          "precision": 0.25,
+          "recall": 0.5,
+          "locationAccuracy": 0,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 0.3333333333333333,
+          "falsePositives": 3,
+          "falseNegatives": 1,
+          "meanLineDistance": 4,
+          "confidenceBrierScore": 0.740075
+        },
+        "violations": [
+          "precision 0.250 is below 0.900",
+          "recall 0.500 is below 0.850",
+          "f1 0.333 is below 0.870",
+          "locationAccuracy 0.000 is below 0.800",
+          "confidenceBrierScore 0.740 exceeds 0.160"
+        ],
+        "missingCases": []
+      },
+      "allDefaultModelGatesPassed": false
+    },
+    {
+      "variant": "intermediate-v1-six",
+      "identity": {
+        "base": "ab5f7d78e2012e999bdf5a50903e879b20738e08",
+        "cliSha256": "b685c29e0ad53d0d58256df448d62d0d73827d84b6a84648707a68274f9f9c13",
+        "promptSha256": "d7090f6453925666041851654511ef5861826c95ff5a199959b7d819ccf1194e",
+        "identity": "built before commit; module/bundle hashes identify measured variant"
+      },
+      "corpusSha256": "e2cb6e1c72c15c63bcdb018765103bbc527f949a34d1098abd7ed788c82a9750",
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "generated-source-literal": [],
+          "generated-source-leading-newline": [
+            {
+              "id": "coverage/generated_fixture.py:17:wrong-generated-line-counter",
+              "title": "Assertion checks the wrong generated source line",
+              "description": "The triple-quoted Kotlin string begins with a newline, and the writer preserves it. Consequently, `if (checked > 0)` is on one-based source line 9, while `return -1` is line 10. The changed assertion checks `rows[8]`, which represents the conditional instruction; for the supplied `route(4)` input that condition is executed, so this assertion incorrectly expects it to be uncovered. The uncovered return is on line 10.",
+              "file": "coverage/generated_fixture.py",
+              "line": 17,
+              "endLine": 17,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The literal starts with a newline before `package demo`; counting the resulting source lines puts `if (checked > 0)` at line 9 and `return -1` at line 10. `route(4)` evaluates the condition as true, so line 9 is covered. The asserted `rows[8]` corresponds to one-based line 9.",
+              "suggestion": "Assert against the counter for the uncovered `return -1` source line.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[8][\"ci\"] == 0",
+              "suggestedCode": "assert rows[10][\"ci\"] == 0",
+              "fingerprint": "fp-26aba7d6",
+              "semanticFingerprint": "sf-2ca0869d"
+            }
+          ],
+          "generated-source-escaped": [],
+          "generated-source-dedent": [],
+          "generated-source-wrong-literal": [
+            {
+              "id": "coverage/generated_fixture.py:17:wrong-covered-line-assertion",
+              "title": "Assertion targets the covered branch line",
+              "description": "The generated Kotlin has a leading newline after the opening triple quote, so `if (checked > 0) return 1` is source line 7, while line 6 is `val checked = value`. The supplied JUnit input `route(4)` takes the positive branch, covering line 7; the changed assertion incorrectly expects line 6 to have zero covered instructions.",
+              "file": "coverage/generated_fixture.py",
+              "line": 17,
+              "endLine": 17,
+              "severity": "medium",
+              "confidence": 0.98,
+              "category": "correctness",
+              "evidence": "Counting the literal exactly: line 1 is the empty line before `package demo`; `fun route` is line 5, `val checked = value` is line 6, and `if (checked > 0) return 1` is line 7. With `value == 4`, the condition is true and the return instruction executes on line 7.",
+              "suggestion": "Assert the intended executed branch line, or assert zero coverage for a genuinely unexecuted statement.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[6][\"ci\"] == 0",
+              "suggestedCode": "assert rows[7][\"ci\"] > 0",
+              "fingerprint": "fp-e11ec450",
+              "semanticFingerprint": "sf-36c4717b"
+            }
+          ],
+          "generated-source-wrong-leading-newline": [
+            {
+              "id": "coverage/generated_fixture.py:21:asserts-covered-line-uncovered",
+              "title": "Assertion expects an executed line to have no covered instructions",
+              "description": "The Python triple-quoted string starts with a newline and is written without stripping or dedenting, so the `if (checked > 0) return 1` statement is on generated Kotlin source line 7. The supplied JUnit assertion calls `route(4)`, making `checked > 0` true and executing that statement. Its line counter therefore should not be asserted to have zero covered instructions.",
+              "file": "coverage/generated_fixture.py",
+              "line": 21,
+              "endLine": 21,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The exact written source has a leading newline: line 1 is blank, lines 2–6 are the package, class, methods, and assignment, and line 7 is `if (checked > 0) return 1`. `Route().route(4)` executes that line.",
+              "suggestion": "Assert that line 7 has covered instructions, or target a source line that the test does not execute.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "suggestedCode": "assert rows[7][\"ci\"] > 0",
+              "fingerprint": "fp-3b97d2a7",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ]
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 2,
+          "actual": 3,
+          "matched": 2,
+          "precision": 0.6666666666666666,
+          "recall": 1,
+          "locationAccuracy": 0,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 0.8,
+          "falsePositives": 1,
+          "falseNegatives": 0,
+          "meanLineDistance": 1.5,
+          "confidenceBrierScore": 0.32686666666666664
+        },
+        "violations": [
+          "precision 0.667 is below 0.900",
+          "f1 0.800 is below 0.870",
+          "locationAccuracy 0.000 is below 0.800",
+          "confidenceBrierScore 0.327 exceeds 0.160"
+        ],
+        "missingCases": []
+      },
+      "allDefaultModelGatesPassed": false
+    },
+    {
+      "variant": "intermediate-v2-six",
+      "identity": {
+        "base": "ab5f7d78e2012e999bdf5a50903e879b20738e08",
+        "cliSha256": "e9a988fa6a99b4653ea2c334470c99dbe8a120202c295d20b5f743902e29728c",
+        "promptSha256": "bca9c628f134e2208492cadda217ae291eadafa1d5171b1907197cad2db2531e",
+        "identity": "built before commit; exact module/bundle hashes identify measured variant"
+      },
+      "corpusSha256": "e2cb6e1c72c15c63bcdb018765103bbc527f949a34d1098abd7ed788c82a9750",
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "generated-source-literal": [
+            {
+              "id": "coverage/generated_fixture.py:19:asserts-covered-line-uncovered",
+              "title": "Asserts that the executed return instruction is uncovered",
+              "description": "The JUnit input calls `route(4)`. That value passes `checked > 0`, so the runner executes the `return 1` instruction on generated `Route.kt` line 7. The new assertion incorrectly expects that line's covered-instruction count to be zero.",
+              "file": "coverage/generated_fixture.py",
+              "line": 19,
+              "endLine": 19,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The generated Kotlin source places `return 1` on line 7, and the supplied JUnit assertion invokes `Route().route(4)`, satisfying the positive guard.",
+              "suggestion": "Assert that line 7 has covered instructions, or assert zero coverage for a line not reached by this invocation.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "suggestedCode": "assert rows[7][\"ci\"] > 0",
+              "fingerprint": "fp-83e6be18",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ],
+          "generated-source-leading-newline": [
+            {
+              "id": "coverage/generated_fixture.py:1:asserts-covered-return-is-uncovered",
+              "title": "The assertion marks an executed return as uncovered",
+              "description": "The triple-quoted Kotlin string begins with a newline, so `return 1` is on generated source line 8. The supplied JUnit input calls `route(4)`, which satisfies `checked > 0` and executes that return. Therefore its covered-instruction count should not be asserted as zero.",
+              "file": "coverage/generated_fixture.py",
+              "line": 1,
+              "endLine": 1,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The added assertion is `assert rows[8][\"ci\"] == 0`; counting the leading blank line places `return 1` at one-based line 8, and `Route().route(4)` reaches it.",
+              "suggestion": "Assert that line 8 has covered instructions instead.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[8][\"ci\"] == 0",
+              "suggestedCode": "assert rows[8][\"ci\"] > 0",
+              "fingerprint": "fp-3a881970",
+              "semanticFingerprint": "sf-2ca0869d"
+            }
+          ],
+          "generated-source-escaped": [
+            {
+              "id": "coverage/generated_fixture.py:8:asserts-covered-return-is-uncovered",
+              "title": "The assertion marks an executed instruction as uncovered",
+              "description": "`Route().route(4)` follows `if (checked > 0) return 1`, so the return on generated Kotlin line 7 executes. The runner reports covered instructions for that line, making `rows[7][\"ci\"] == 0` an incorrect assertion that fails for the stated input.",
+              "file": "coverage/generated_fixture.py",
+              "line": 8,
+              "endLine": 8,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The generated source has `return 1` on one-based line 7, and the JUnit input calls `route(4)`, satisfying `checked > 0`.",
+              "suggestion": "Assert that the covered-instruction count for line 7 is positive.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "suggestedCode": "assert rows[7][\"ci\"] > 0",
+              "fingerprint": "fp-fa31cd73",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ],
+          "generated-source-dedent": [
+            {
+              "id": "coverage/generated_fixture.py:20:asserts-covered-line-uncovered",
+              "title": "The assertion marks an executed return as uncovered",
+              "description": "After `textwrap.dedent(...).lstrip(\"\\n\")`, generated `Route.kt` line 7 is `return 1`. The JUnit input calls `route(4)`, so `checked > 0` is true and that return executes. The assertion therefore expects zero covered instructions for a covered line and fails.",
+              "file": "coverage/generated_fixture.py",
+              "line": 20,
+              "endLine": 20,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "Generated source line 7 is `return 1`, reached by `route(4)`; the changed assertion requires `rows[7][\"ci\"] == 0`.",
+              "suggestion": "Assert that line 7 has covered instructions, or select a generated line that the test does not execute.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "suggestedCode": "assert rows[7][\"ci\"] > 0",
+              "fingerprint": "fp-3e881fbc",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ],
+          "generated-source-wrong-literal": [
+            {
+              "id": "coverage/generated_fixture.py:19:asserts-covered-line-uncovered",
+              "title": "Assertion expects an executed line to be uncovered",
+              "description": "The JUnit input calls `route(4)`, so `checked > 0` is true and the `if` instruction on generated `Route.kt` line 6 executes. The assertion incorrectly requires that line's covered-instruction count to be zero.",
+              "file": "coverage/generated_fixture.py",
+              "line": 19,
+              "endLine": 19,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "Generated line 6 is `if (checked > 0) return 1`; the test invokes `Route().route(4)`, which executes that condition.",
+              "suggestion": "Assert that line 6 has covered instructions, or assert zero coverage for a line not reached by this test.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[6][\"ci\"] == 0",
+              "suggestedCode": "assert rows[6][\"ci\"] > 0",
+              "fingerprint": "fp-5bf0d614",
+              "semanticFingerprint": "sf-36c4717b"
+            }
+          ],
+          "generated-source-wrong-leading-newline": [
+            {
+              "id": "coverage/generated_fixture.py:19:assertion-checks-covered-line",
+              "title": "Assertion checks a covered generated line",
+              "description": "The triple-quoted Kotlin source starts with a newline, so the `if (checked > 0) return 1` statement is on generated source line 7. The test calls `route(4)`, which executes that statement, making `rows[7][\"ci\"]` nonzero. The new assertion therefore fails; it should check the uncalled `neverCalled` statement on generated line 11 if that is the intended coverage check.",
+              "file": "coverage/generated_fixture.py",
+              "line": 19,
+              "endLine": 19,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The generated source has a leading blank line; counting from line 1 places `if (checked > 0) return 1` on line 7. The supplied JUnit input calls `route(4)`, satisfying the condition and executing the line.",
+              "suggestion": "Check the generated source line for `neverCalled`, which is line 11 after accounting for the leading blank line.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "suggestedCode": "assert rows[11][\"ci\"] == 0",
+              "fingerprint": "fp-7225a940",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ]
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 2,
+          "actual": 6,
+          "matched": 2,
+          "precision": 0.3333333333333333,
+          "recall": 1,
+          "locationAccuracy": 0.5,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 0.5,
+          "falsePositives": 4,
+          "falseNegatives": 0,
+          "meanLineDistance": 0.5,
+          "confidenceBrierScore": 0.6633833333333334
+        },
+        "violations": [
+          "precision 0.333 is below 0.900",
+          "f1 0.500 is below 0.870",
+          "locationAccuracy 0.500 is below 0.800",
+          "confidenceBrierScore 0.663 exceeds 0.160"
+        ],
+        "missingCases": []
+      },
+      "allDefaultModelGatesPassed": false
+    },
+    {
+      "variant": "intermediate-v3-six",
+      "identity": {
+        "base": "ab5f7d78e2012e999bdf5a50903e879b20738e08",
+        "cliSha256": "ef7dfc7f11086321fea9a8746d52a1d0597ece3b4a191caeaee97376a577d11e",
+        "promptSha256": "03600cd68f8c592062054ff3a53ff31643086f55d20b73923836d32ee66f91a4",
+        "identity": "built before commit; exact module/bundle hashes identify measured variant"
+      },
+      "corpusSha256": "e2cb6e1c72c15c63bcdb018765103bbc527f949a34d1098abd7ed788c82a9750",
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "generated-source-literal": [
+            {
+              "id": "coverage/generated_fixture.py:19:asserts executed return is uncovered",
+              "title": "Assertion expects an executed line to be uncovered",
+              "description": "`Route().route(4)` makes `checked` equal 4, so the condition on generated line 6 is true and execution returns from generated line 7. The assertion therefore incorrectly expects that covered instruction count to be zero.",
+              "file": "coverage/generated_fixture.py",
+              "line": 19,
+              "endLine": 19,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The generated Kotlin source places `return 1` on one-based line 7, and the JUnit input calls `route(4)`, which reaches that return. Thus `rows[7][\"ci\"]` is nonzero.",
+              "suggestion": "Assert that the covered instruction count is positive for line 7.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "suggestedCode": "assert rows[7][\"ci\"] > 0",
+              "fingerprint": "fp-5bf0d614",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ],
+          "generated-source-leading-newline": [
+            {
+              "id": "coverage/generated_fixture.py:17:incorrect-generated-line-counter",
+              "title": "Assertion checks the wrong generated source line",
+              "description": "The triple-quoted `kotlin` string starts with a newline, so the written `Route.kt` has a blank line 1. `route` is declared on line 6, `val checked = value` on line 7, the `if` is line 8, and `return -1` is line 9. For the supplied `route(4)` assertion, the `if` branch is taken and line 8 has covered instructions; checking `rows[8][\"ci\"] == 0` therefore asserts the opposite of the expected coverage. The never-called method is on line 11.",
+              "file": "coverage/generated_fixture.py",
+              "line": 17,
+              "endLine": 17,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The literal begins with `\\n` and is written without dedenting or trimming. With one-based source lines, the covered `if (checked > 0) return 1` statement is on line 8 and its taken return is also on that line.",
+              "suggestion": "Assert coverage for the actually executed line, or target the never-called method’s source line if the intended check is uncovered code.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[8][\"ci\"] == 0",
+              "suggestedCode": "assert rows[8][\"ci\"] > 0",
+              "fingerprint": "fp-26aba7d6",
+              "semanticFingerprint": "sf-2ca0869d"
+            }
+          ],
+          "generated-source-escaped": [],
+          "generated-source-dedent": [],
+          "generated-source-wrong-literal": [
+            {
+              "id": "coverage/generated_fixture.py:16:asserts wrong generated line",
+              "title": "Assertion checks the wrong generated source line",
+              "description": "The Kotlin string starts with a newline, so `class Route` is line 2 and the `if (checked > 0) return 1` statement is line 7. The instrumentation rows use one-based generated source lines, making `rows[6]` check the preceding `val checked = value` line instead of the branch. The assertion can therefore pass without verifying that the branch was uncovered.",
+              "file": "coverage/generated_fixture.py",
+              "line": 16,
+              "endLine": 16,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The triple-quoted source has an initial LF after `package demo`; counting physical lines places `if (checked > 0) return 1` on line 7, while the changed assertion indexes row 6.",
+              "suggestion": "Index the row for the branch's actual generated source line.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[6][\"ci\"] == 0",
+              "suggestedCode": "assert rows[7][\"ci\"] == 0",
+              "fingerprint": "fp-26aba7d6",
+              "semanticFingerprint": "sf-36c4717b"
+            }
+          ],
+          "generated-source-wrong-leading-newline": [
+            {
+              "id": "coverage/generated_fixture.py:20:asserts-uncovered-instruction",
+              "title": "Assertion expects a covered instruction to be uncovered",
+              "description": "The triple-quoted Kotlin string begins with a newline, so `if (checked > 0) return 1` is on generated source line 7. The JUnit input calls `route(4)`, making `checked > 0` true and executing that instruction. The changed assertion therefore expects `ci` to be 0 for a covered line and fails.",
+              "file": "coverage/generated_fixture.py",
+              "line": 20,
+              "endLine": 20,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The generated source has a leading blank line; counting from 1 places the `if` on line 7. `Route().route(4)` takes its true branch, so line 7 has covered instructions.",
+              "suggestion": "Expect a positive covered-instruction count for line 7, or assert zero coverage for a line not executed by this input.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "suggestedCode": "assert rows[7][\"ci\"] > 0",
+              "fingerprint": "fp-6958f652",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ]
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 2,
+          "actual": 4,
+          "matched": 2,
+          "precision": 0.5,
+          "recall": 1,
+          "locationAccuracy": 0,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 0.6666666666666666,
+          "falsePositives": 2,
+          "falseNegatives": 0,
+          "meanLineDistance": 1.5,
+          "confidenceBrierScore": 0.495075
+        },
+        "violations": [
+          "precision 0.500 is below 0.900",
+          "f1 0.667 is below 0.870",
+          "locationAccuracy 0.000 is below 0.800",
+          "confidenceBrierScore 0.495 exceeds 0.160"
+        ],
+        "missingCases": []
+      },
+      "allDefaultModelGatesPassed": false
+    },
+    {
+      "variant": "intermediate-v4-six",
+      "identity": {
+        "base": "ab5f7d78e2012e999bdf5a50903e879b20738e08",
+        "cliSha256": "5c3e37360e960307be819a0206bf5f30869c62a8bc13fd60a9104a4172aae8e3",
+        "promptSha256": "e04caf282ebd2d3bc3e09be396242b493743cd947934080baf392361825fc40c",
+        "identity": "CLI rebuilt with normal ncc options and normalization before commit; full bundle build/hook still pending"
+      },
+      "corpusSha256": "e2cb6e1c72c15c63bcdb018765103bbc527f949a34d1098abd7ed788c82a9750",
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "generated-source-literal": [],
+          "generated-source-leading-newline": [],
+          "generated-source-escaped": [],
+          "generated-source-dedent": [
+            {
+              "id": "coverage/generated_fixture.py:21:asserts-uncovered-executed-line",
+              "title": "Assertion expects coverage on an executed line to be zero",
+              "description": "The generated Kotlin source has `return 1` on source line 7. The supplied JUnit assertion calls `Route().route(4)`, so `checked > 0` succeeds and execution reaches that return. The changed assertion therefore expects zero coverage for an executed line and fails.",
+              "file": "coverage/generated_fixture.py",
+              "line": 21,
+              "endLine": 21,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "After `textwrap.dedent(...).lstrip(\"\\n\")`, generated line 7 is `if (checked > 0) return 1`? Counting the generated source: package is line 1, class line 2, describe line 3, route signature line 4, checked line 5, conditional return line 6, and `return -1` line 7. For input 4, execution reaches the conditional return on line 6, not line 7; thus this evidence does not support the reported assertion failure.",
+              "suggestion": "Assert coverage for the executed generated line, or assert zero coverage for a line not reached by the supplied JUnit input.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "fingerprint": "fp-6d4684bf",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ],
+          "generated-source-wrong-literal": [
+            {
+              "id": "coverage/generated_fixture.py:19:covered-branch-asserted-uncovered",
+              "title": "Covered branch is asserted to have zero coverage",
+              "description": "The generated Kotlin source places `if (checked > 0) return 1` on line 6. The supplied JUnit input calls `route(4)`, so the condition is true and the line 6 return executes. The added assertion expects `ci` to be zero and therefore fails for this covered line.",
+              "file": "coverage/generated_fixture.py",
+              "line": 19,
+              "endLine": 19,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The generated source has `val checked = value` on line 5, `if (checked > 0) return 1` on line 6, and `return -1` on line 7. `Route().route(4)` takes the line 6 branch.",
+              "suggestion": "Assert that line 6 has covered instructions, or assert zero coverage for a line that the JUnit input does not execute.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[6][\"ci\"] == 0",
+              "suggestedCode": "assert rows[6][\"ci\"] > 0",
+              "fingerprint": "fp-12b44b3d",
+              "semanticFingerprint": "sf-36c4717b"
+            }
+          ],
+          "generated-source-wrong-leading-newline": []
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 2,
+          "actual": 2,
+          "matched": 1,
+          "precision": 0.5,
+          "recall": 0.5,
+          "locationAccuracy": 0,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 0.5,
+          "falsePositives": 1,
+          "falseNegatives": 1,
+          "meanLineDistance": 1,
+          "confidenceBrierScore": 0.5
+        },
+        "violations": [
+          "precision 0.500 is below 0.900",
+          "recall 0.500 is below 0.850",
+          "f1 0.500 is below 0.870",
+          "locationAccuracy 0.000 is below 0.800",
+          "confidenceBrierScore 0.500 exceeds 0.160"
+        ],
+        "missingCases": []
+      },
+      "allDefaultModelGatesPassed": false
+    },
+    {
+      "variant": "intermediate-v5-six",
+      "identity": {
+        "base": "ab5f7d78e2012e999bdf5a50903e879b20738e08",
+        "cliSha256": "1054041df605cabbabd92458a53911f097e82eafe050ae5ee470afb9a7e4514c",
+        "sourceSha256": {
+          "src/prompts/bugbot.ts": "79e0daa154895ec3f4245754fa05bd524357d7b11b39ca29d28c7be5c762dbb8",
+          "src/application/policies/bugbot_python_literal_witness_policy.ts": "39eca7616da8a8c14e31fa70e309e3e2ddfe43047f1bc805b0a71cbd883efdd3",
+          "src/application/policies/bugbot_diff_partition_policy.ts": "484aadd2a496fc6abf12b18bee3b4156daa749b8650095d7fe1dcaf4739170e1",
+          "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "6a8dda8c11b94bca58b4a026af194b6f722bd7ba76fcc9529a80e951b6a357b9",
+          "src/tooling/bugbot_benchmark_runner.ts": "f7c97e70cdf3b08a192d11c67196893f587c3f57217a08eb8e7cc3bf87cfb9a7"
+        },
+        "identity": "actual CLI rebuilt with normal ncc options and normalization; full build/hook pending; literal witnesses now shared by actual production plan and benchmark"
+      },
+      "corpusSha256": "e2cb6e1c72c15c63bcdb018765103bbc527f949a34d1098abd7ed788c82a9750",
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "generated-source-literal": [
+            {
+              "id": "coverage/generated_fixture.py:14:wrong-covered-line",
+              "title": "Assertion checks a covered return instead of the uncovered instruction",
+              "description": "The generated Kotlin string has no leading newline and is dedented by no transformation: the `return -1` statement is on generated source line 7, while the exercised `route(4)` takes the true branch on line 6 and returns before reaching line 7. The changed assertion correctly expects line 7 to have zero covered instructions, so this is not a defect.",
+              "file": "coverage/generated_fixture.py",
+              "fingerprint": "fp-3ab3d9ff",
+              "semanticFingerprint": "sf-0bd609d2"
+            }
+          ],
+          "generated-source-leading-newline": [
+            {
+              "id": "coverage/generated_fixture.py:14:wrong-counter-line",
+              "title": "Assertion checks the wrong generated source line",
+              "description": "The Python triple-quoted string begins with a newline, so the generated Kotlin places `return -1` on line 8. But `Route().route(4)` takes the `checked > 0` branch and returns on line 7. The assertion that line 8 has zero covered instructions therefore checks a line that is not the executed return, instead of verifying the intended coverage behavior.",
+              "file": "coverage/generated_fixture.py",
+              "line": 14,
+              "endLine": 14,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The supplied literal witness numbers the generated lines: line 7 is `if (checked > 0) return 1`, and line 8 is `return -1`. The JUnit input passes 4, so line 7 executes and line 8 is unreachable in that invocation.",
+              "suggestion": "Assert against the generated line corresponding to the executed branch, or change the JUnit input if the intent is to verify the negative return line is uncovered.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[8][\"ci\"] == 0",
+              "suggestedCode": "assert rows[7][\"ci\"] > 0",
+              "fingerprint": "fp-27aba969",
+              "semanticFingerprint": "sf-2ca0869d"
+            }
+          ],
+          "generated-source-escaped": [
+            {
+              "id": "coverage/generated_fixture.py:12:wrong-counter-line",
+              "title": "Assertion checks an uncovered instruction instead of the executed return",
+              "description": "The generated Kotlin literal writes `return -1` on one-based source line 7 and `return 1` on line 6. The supplied JUnit input calls `route(4)`, so execution takes line 6 and does not reach line 7. Consequently `assert rows[7][\"ci\"] == 0` can pass while failing to assert coverage of the executed return; the intended covered-instruction assertion should target line 6.",
+              "file": "coverage/generated_fixture.py",
+              "line": 12,
+              "endLine": 12,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The decoded literal and supplied numbered line witness put `if (checked > 0) return 1` on line 6 and `return -1` on line 7. With input 4, the condition is true, so line 6 is executed and line 7 is not.",
+              "suggestion": "Assert the covered-instruction count for generated source line 6.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "suggestedCode": "assert rows[6][\"ci\"] > 0",
+              "fingerprint": "fp-7056a2fe",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ],
+          "generated-source-dedent": [
+            {
+              "id": "coverage/generated_fixture.py:18:counter assertion targets wrong source line",
+              "title": "Assertion checks an uncovered return instead of the executed branch",
+              "description": "After `dedent(...).lstrip(\"\\n\")`, the positive branch `if (checked > 0) return 1` is on generated line 6 and is executed by `route(4)`. Generated line 7 is `return -1`, which the positive input does not reach, so asserting `rows[7][\"ci\"] == 0` does not verify coverage of the exercised branch. The assertion should target the one-based line 6 counter.",
+              "file": "coverage/generated_fixture.py",
+              "line": 18,
+              "endLine": 18,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The supplied literal witness maps the conditional return to line 6 and the negative return to line 7; the JUnit input passes 4, satisfying `checked > 0`.",
+              "suggestion": "Assert the counter for generated source line 6 to check the executed branch.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "suggestedCode": "assert rows[6][\"ci\"] > 0",
+              "fingerprint": "fp-2aa2c54b",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ],
+          "generated-source-wrong-literal": [
+            {
+              "id": "coverage/generated_fixture.py:16:asserts-uncovered-conditional",
+              "title": "Assertion expects the wrong instruction coverage count",
+              "description": "The generated Kotlin has no implicit leading newline: `Route` begins on line 2, and `if (checked > 0) return 1` is line 6. The supplied assertion calls `route(4)`, so the condition is true and the return instruction on line 6 is executed. Consequently, `rows[6][\"ci\"]` should not be zero, and this assertion fails.",
+              "file": "coverage/generated_fixture.py",
+              "line": 16,
+              "endLine": 16,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The literal witness numbers the conditional return as generated source line 6; the JUnit input supplies 4, making `checked > 0` true.",
+              "suggestion": "Assert that line 6 has covered instructions, or use an input that makes the condition false if the intent is to assert it is uncovered.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[6][\"ci\"] == 0",
+              "suggestedCode": "assert rows[6][\"ci\"] > 0",
+              "fingerprint": "fp-aba3d148",
+              "semanticFingerprint": "sf-36c4717b"
+            }
+          ],
+          "generated-source-wrong-leading-newline": [
+            {
+              "id": "coverage/generated_fixture.py:19:asserts-uncovered-branch-is-covered",
+              "title": "Assertion checks the covered branch as uncovered",
+              "description": "The Python literal writes a leading blank line, so generated source line 7 is `if (checked > 0) return 1`. The JUnit input calls `route(4)`, making the condition true and executing that return. The assertion therefore expects zero coverage for an instruction that is covered and fails.",
+              "file": "coverage/generated_fixture.py",
+              "line": 19,
+              "endLine": 19,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The supplied literal line witness maps generated line 7 to `if (checked > 0) return 1`; `Route().route(4)` takes this branch. The changed assertion is `assert rows[7][\"ci\"] == 0`.",
+              "suggestion": "Assert that the covered-instruction count for line 7 is nonzero, or check line 8 if the intent is to assert that the unexecuted `return -1` is uncovered.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "suggestedCode": "assert rows[7][\"ci\"] > 0",
+              "fingerprint": "fp-ba323db6",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ]
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 2,
+          "actual": 6,
+          "matched": 2,
+          "precision": 0.3333333333333333,
+          "recall": 1,
+          "locationAccuracy": 0.5,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 0.5,
+          "falsePositives": 4,
+          "falseNegatives": 0,
+          "meanLineDistance": 1,
+          "confidenceBrierScore": 0.5317166666666666
+        },
+        "violations": [
+          "precision 0.333 is below 0.900",
+          "f1 0.500 is below 0.870",
+          "locationAccuracy 0.500 is below 0.800",
+          "confidenceBrierScore 0.532 exceeds 0.160"
+        ],
+        "missingCases": []
+      },
+      "allDefaultModelGatesPassed": false
+    },
+    {
+      "variant": "intermediate-v6-six",
+      "identity": {
+        "base": "ab5f7d78e2012e999bdf5a50903e879b20738e08",
+        "cliSha256": "22e82f91631f1408547a647fe8712c3636ca3e05b79bbe5eeb58ba6a6718fb9b",
+        "sourceSha256": {
+          "src/prompts/bugbot.ts": "2c202cfa9c3b2703b93c07d352864db4b9ad22d863b211a79f76c2371708d7b4",
+          "src/application/policies/bugbot_python_literal_witness_policy.ts": "39eca7616da8a8c14e31fa70e309e3e2ddfe43047f1bc805b0a71cbd883efdd3",
+          "src/application/policies/bugbot_diff_partition_policy.ts": "484aadd2a496fc6abf12b18bee3b4156daa749b8650095d7fe1dcaf4739170e1",
+          "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "6a8dda8c11b94bca58b4a026af194b6f722bd7ba76fcc9529a80e951b6a357b9",
+          "src/tooling/bugbot_benchmark_runner.ts": "f7c97e70cdf3b08a192d11c67196893f587c3f57217a08eb8e7cc3bf87cfb9a7"
+        },
+        "identity": "actual normal CLI build; witness projection plus assertion-intent guidance; full build/hook still pending"
+      },
+      "corpusSha256": "e2cb6e1c72c15c63bcdb018765103bbc527f949a34d1098abd7ed788c82a9750",
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "generated-source-literal": [
+            {
+              "id": "coverage/generated_fixture.py:assert-generated-counter-line",
+              "title": "Assertion checks an uncovered source line",
+              "description": "The generated Kotlin places `return -1` on line 7, but the supplied JUnit assertion calls `route(4)`. That follows the `checked > 0` branch and returns on line 6; line 7 is not executed. The new assertion therefore expects zero coverage for an instruction that is correctly uncovered, so it does not demonstrate a counter defect.",
+              "file": "coverage/generated_fixture.py",
+              "line": 16,
+              "endLine": 16,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The literal starts with `package demo` on line 1, making `return -1` line 7. The test input is `Route().route(4)`, for which `checked` is 4 and the positive branch returns 1 on line 6.",
+              "suggestion": "Assert coverage for the executed return on line 6, or change the JUnit input and expected result to exercise line 7.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "fingerprint": "fp-9b8712cb",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ],
+          "generated-source-leading-newline": [],
+          "generated-source-escaped": [
+            {
+              "id": "coverage/generated_fixture.py:11:incorrect-zero-counter-assertion",
+              "title": "Covered return instruction is asserted to have zero coverage",
+              "description": "The generated Kotlin has no implicit newline, and its explicit newlines produce a one-based source map where line 7 is `return -1`. The only supplied JUnit input calls `route(4)`, so `checked > 0` is true and the function executes `return 1` on line 6. The changed assertion incorrectly expects line 7 to have zero covered instructions; this is a real uncovered-path assertion mistake only if the requested benchmark expects a test defect, but the supplied information does not include execution evidence or the runner’s counter semantics sufficient to confirm `rows[7][\"ci\"]` for that instruction. Omit speculative failure claims absent actual instrumentation evidence.",
+              "file": "coverage/generated_fixture.py",
+              "line": 11,
+              "endLine": 11,
+              "severity": "medium",
+              "confidence": 0.44,
+              "category": "correctness",
+              "evidence": "The literal witness maps line 7 to `return -1`; the supplied input `Route().route(4)` takes the positive branch, so line 7 is not executed. However, no actual instrumentation result is supplied to establish the value of `ci` for that source line.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "fingerprint": "fp-b894f968",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ],
+          "generated-source-dedent": [
+            {
+              "id": "coverage/generated_fixture.py:14:asserts-uncovered-line",
+              "title": "Assertion targets a covered instruction",
+              "description": "The generated source has ten physical lines after dedent and stripping the leading newline. `Route().route(4)` satisfies `checked > 0`, so execution returns on line 6 and does not reach line 7. The changed assertion checks `rows[7][\"ci\"] == 0`, which contradicts the exercised route’s covered-instruction count for that line.",
+              "file": "coverage/generated_fixture.py",
+              "line": 14,
+              "endLine": 14,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The literal witness maps generated line 7 to `return -1`; the supplied JUnit input calls `route(4)`, and the condition on line 6 returns 1 first. Thus line 7 is uncovered and `ci` is zero, making this assertion consistent, not defective.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "fingerprint": "fp-354990b9",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ],
+          "generated-source-wrong-literal": [
+            {
+              "id": "coverage/generated_fixture.py:15:wrong counter line",
+              "title": "Assertion checks the return statement instead of the conditional",
+              "description": "The Python triple-quoted literal writes ten Kotlin source lines with no leading blank line. The `route(4)` call takes the true branch, so the conditional instruction on generated line 6 is covered. The added assertion checks `rows[6]`, which represents one-based source line 7 (`return -1`), and that instruction is not executed. This tests the wrong line and does not validate the intended conditional coverage.",
+              "file": "coverage/generated_fixture.py",
+              "line": 15,
+              "endLine": 15,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The supplied literal witness maps line 6 to `if (checked > 0) return 1` and line 7 to `return -1`; `route(4)` satisfies the condition and returns from line 6.",
+              "suggestion": "Assert against the counter for generated source line 6.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[6][\"ci\"] == 0",
+              "suggestedCode": "assert rows[6][\"ci\"] > 0",
+              "fingerprint": "fp-4b914e9e",
+              "semanticFingerprint": "sf-36c4717b"
+            }
+          ],
+          "generated-source-wrong-leading-newline": [
+            {
+              "id": "coverage/generated_fixture.py:20:asserts-covered-branch-is-uncovered",
+              "title": "Assertion expects the executed branch to be uncovered",
+              "description": "The generated Kotlin literal starts with a newline, so its `if (checked > 0) return 1` statement is on one-based source line 7. The JUnit input calls `route(4)`, making `checked > 0` true and executing that branch. The changed assertion therefore expects zero covered instructions for a branch that this input executes, so it contradicts the supplied test setup.",
+              "file": "coverage/generated_fixture.py",
+              "line": 20,
+              "endLine": 20,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The literal witness places `if (checked > 0) return 1` on generated line 7; `junit` is `assertEquals(1, Route().route(4))`; the changed assertion is `assert rows[7][\"ci\"] == 0`.",
+              "suggestion": "Assert that the covered-instruction count for generated line 7 is nonzero.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "suggestedCode": "assert rows[7][\"ci\"] > 0",
+              "fingerprint": "fp-a38858bb",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ]
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 2,
+          "actual": 5,
+          "matched": 2,
+          "precision": 0.4,
+          "recall": 1,
+          "locationAccuracy": 0,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 0.5714285714285715,
+          "falsePositives": 3,
+          "falseNegatives": 0,
+          "meanLineDistance": 2,
+          "confidenceBrierScore": 0.43078000000000005
+        },
+        "violations": [
+          "precision 0.400 is below 0.900",
+          "f1 0.571 is below 0.870",
+          "locationAccuracy 0.000 is below 0.800",
+          "confidenceBrierScore 0.431 exceeds 0.160"
+        ],
+        "missingCases": []
+      },
+      "allDefaultModelGatesPassed": false
+    },
+    {
+      "variant": "verified-v7-six",
+      "identity": {
+        "base": "ab5f7d78e2012e999bdf5a50903e879b20738e08",
+        "cliSha256": "424fc7d339b6ce902249e69f316760bab41f2a83c21f453294bec4b3519e175b",
+        "sourceSha256": {
+          "src/prompts/bugbot.ts": "2c202cfa9c3b2703b93c07d352864db4b9ad22d863b211a79f76c2371708d7b4",
+          "src/application/policies/bugbot_python_literal_witness_policy.ts": "39eca7616da8a8c14e31fa70e309e3e2ddfe43047f1bc805b0a71cbd883efdd3",
+          "src/application/policies/bugbot_literal_verification_policy.ts": "ce2b3c5958643c84d46e3f15660faa93b7e2791bf7158c637471adb7d12e5938",
+          "src/application/policies/bugbot_diff_partition_policy.ts": "86e171503fb3c9ae420d6c034d688237c6321ad66ddcb8b2ee75c41bf204c7e8",
+          "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "a9b3eb2400891a1fc2dc99710d6c95da52fd5a1114e8534807bd1abab3c6d863",
+          "src/application/usecases/steps/commit/bugbot/query_bugbot_findings.ts": "d97190186fe9ad424439a72b4422b66b7f80e6dc7e48075577adee264ba16c5f",
+          "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts": "aa209eef3857eda64d29642d2e0655a5c05526dc00fd91b5bd7ea01662f954ad",
+          "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts": "90836e25151867808a7c82f4c4e7579f2018584c022e40f48c94e365099261a6",
+          "src/tooling/bugbot_benchmark_runner.ts": "89eb4d0467697b6a640774b0053cc337220d79736b60a1c204d9f96ef6aaabe5"
+        },
+        "identity": "Actual normal full build; shared trusted-witness activation and independently correlated read-only candidate verification, unchanged six inputs/verdicts/thresholds."
+      },
+      "corpusSha256": "e2cb6e1c72c15c63bcdb018765103bbc527f949a34d1098abd7ed788c82a9750",
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "generated-source-literal": [],
+          "generated-source-leading-newline": [],
+          "generated-source-escaped": [],
+          "generated-source-dedent": [],
+          "generated-source-wrong-literal": [
+            {
+              "id": "coverage/generated_fixture.py:16:wrong-counter-line",
+              "title": "Assertion expects zero coverage on an executed line",
+              "description": "The one-based counter key 6 maps to generated Kotlin line 6, `if (checked > 0) return 1`. The JUnit input calls `route(4)`, making the condition true and executing the line-6 return. Therefore, asserting that this line has zero covered instructions contradicts the supplied input and source.",
+              "file": "coverage/generated_fixture.py",
+              "line": 16,
+              "endLine": 16,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The literal witness places `if (checked > 0) return 1` on generated line 6. The JUnit assertion calls `Route().route(4)`, so the condition is true. The runner maps one-based row keys to generated source lines, making `rows[6]` the counter for that executed line.",
+              "suggestion": "Assert that the executed line has positive coverage.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[6][\"ci\"] == 0",
+              "suggestedCode": "assert rows[6][\"ci\"] > 0",
+              "fingerprint": "fp-4593504a",
+              "semanticFingerprint": "sf-36c4717b"
+            }
+          ],
+          "generated-source-wrong-leading-newline": [
+            {
+              "id": "coverage/generated_fixture.py:22:wrong-counter-line",
+              "title": "Assertion expects the executed conditional to be uncovered",
+              "description": "The written Kotlin retains the triple-quoted string’s leading newline, placing `if (checked > 0) return 1` on generated source line 7. The test calls `route(4)`, so `checked > 0` is true and that line is executed; expecting its covered-instruction count to be zero contradicts the input and assertion. If the intended check is for the uncalled method, its declaration is on generated line 10.",
+              "file": "coverage/generated_fixture.py",
+              "line": 22,
+              "endLine": 22,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The supplied literal witness numbers the conditional as generated line 7 and `neverCalled` as line 10. The JUnit input calls `Route().route(4)`, which takes the conditional’s true branch and returns 1.",
+              "suggestion": "Check the intended uncovered instruction on generated line 10, or expect line 7 to have covered instructions.",
+              "symbol": "test_generated_counters",
+              "codeSnippet": "assert rows[7][\"ci\"] == 0",
+              "suggestedCode": "assert rows[10][\"ci\"] == 0",
+              "fingerprint": "fp-5ee11d43",
+              "semanticFingerprint": "sf-bd7bdd1c"
+            }
+          ]
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 2,
+          "actual": 2,
+          "matched": 2,
+          "precision": 1,
+          "recall": 1,
+          "locationAccuracy": 0,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "meanLineDistance": 2.5,
+          "confidenceBrierScore": 5.000000000000009e-05
+        },
+        "violations": [
+          "locationAccuracy 0.000 is below 0.800"
+        ],
+        "missingCases": []
+      },
+      "allDefaultModelGatesPassed": false
+    },
+    {
+      "variant": "verified-v7-independent",
+      "identity": {
+        "base": "ab5f7d78e2012e999bdf5a50903e879b20738e08",
+        "cliSha256": "424fc7d339b6ce902249e69f316760bab41f2a83c21f453294bec4b3519e175b",
+        "sourceSha256": {
+          "src/prompts/bugbot.ts": "2c202cfa9c3b2703b93c07d352864db4b9ad22d863b211a79f76c2371708d7b4",
+          "src/application/policies/bugbot_python_literal_witness_policy.ts": "39eca7616da8a8c14e31fa70e309e3e2ddfe43047f1bc805b0a71cbd883efdd3",
+          "src/application/policies/bugbot_literal_verification_policy.ts": "ce2b3c5958643c84d46e3f15660faa93b7e2791bf7158c637471adb7d12e5938",
+          "src/application/policies/bugbot_diff_partition_policy.ts": "86e171503fb3c9ae420d6c034d688237c6321ad66ddcb8b2ee75c41bf204c7e8",
+          "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "a9b3eb2400891a1fc2dc99710d6c95da52fd5a1114e8534807bd1abab3c6d863",
+          "src/application/usecases/steps/commit/bugbot/query_bugbot_findings.ts": "d97190186fe9ad424439a72b4422b66b7f80e6dc7e48075577adee264ba16c5f",
+          "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts": "aa209eef3857eda64d29642d2e0655a5c05526dc00fd91b5bd7ea01662f954ad",
+          "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts": "90836e25151867808a7c82f4c4e7579f2018584c022e40f48c94e365099261a6",
+          "src/tooling/bugbot_benchmark_runner.ts": "89eb4d0467697b6a640774b0053cc337220d79736b60a1c204d9f96ef6aaabe5"
+        },
+        "identity": "Actual normal full build; shared trusted-witness activation and independently correlated read-only candidate verification, unchanged six inputs/verdicts/thresholds."
+      },
+      "corpusSha256": "8d11bfea4f507b3d686a864dbaf984affe9a640bf7f87074d26c684b68765771",
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "generated-literal-independent-shell": [
+            {
+              "id": "coverage/literal_handler.py:5:shell-command-injection",
+              "title": "Untrusted path is interpolated into a shell command",
+              "description": "`export_report` concatenates the untrusted `user_path` into a command string and runs it with `shell=True`. Shell metacharacters in the query parameter can therefore execute commands in the server process.",
+              "file": "coverage/literal_handler.py",
+              "line": 5,
+              "endLine": 5,
+              "severity": "high",
+              "confidence": 1,
+              "category": "security",
+              "evidence": "The changed handler passes `\"cat \" + user_path` to `subprocess.run` with `shell=True`. The return statement is physical line 5, counting the two lines in the preceding multiline literal.",
+              "suggestion": "Pass the executable and path as separate arguments with `shell=False`, and apply any required application-level path restrictions.",
+              "symbol": "export_report",
+              "codeSnippet": "return subprocess.run(\"cat \" + user_path, shell=True, check=True)",
+              "suggestedCode": "return subprocess.run([\"cat\", user_path], check=True)",
+              "fingerprint": "fp-22d9eee8",
+              "semanticFingerprint": "sf-8cceec26"
+            }
+          ],
+          "generated-literal-independent-contract": [
+            {
+              "id": "coverage/literal_validator.py:accepts_count-accepts-zero",
+              "title": "Accepts zero despite requiring a strictly positive count",
+              "description": "The changed comparison admits zero, although the stated contract accepts only strictly positive integer counts.",
+              "file": "coverage/literal_validator.py",
+              "line": 6,
+              "endLine": 6,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "For `count == 0`, `count >= 0` evaluates to true. The stated contract requires strictly positive counts, so zero must be rejected.",
+              "suggestion": "Restore a strict greater-than comparison.",
+              "symbol": "accepts_count",
+              "codeSnippet": "return count >= 0",
+              "suggestedCode": "return count > 0",
+              "fingerprint": "fp-136bb96a",
+              "semanticFingerprint": "sf-aef99a54"
+            }
+          ]
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 2,
+          "actual": 2,
+          "matched": 2,
+          "precision": 1,
+          "recall": 1,
+          "locationAccuracy": 1,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "meanLineDistance": 0,
+          "confidenceBrierScore": 0
+        },
+        "violations": [],
+        "missingCases": []
+      },
+      "allDefaultModelGatesPassed": true
+    }
+  ],
+  "limitations": [
+    "Final six-case classification is 0 false positives/0 false negatives, but exact-location accuracy 0/2 fails the unchanged 0.8 gate. This is not an all-default-model-gates pass.",
+    "The two independent controls pass all default gates in this bounded sample. This does not establish deterministic or statistical accuracy.",
+    "Benchmark does not exercise publication location remapping or historical finding resolution.",
+    "No private consumer source, signatures, credentials or raw logs are included. No consumer adoption, execution or deployment is claimed."
+  ],
+  "postMeasurementHardening": {
+    "change": "Validate the initial response locale, including serialized empty output, before verification. All measured model outputs had the correct en-US locale; this adds an invalid-input rejection only.",
+    "file": "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts",
+    "sourceSha256": "23dc4b81de9c06a9ebdd4f495fe92039b0c99c748046a9993228640c59458001",
+    "verification": "A regression test rejects a serialized wrong-locale empty initial result. Frozen measured bundle/source identities remain unchanged and accurately recorded.",
+    "taskInventory": "Register the verifier as its own locale-guarded internal product task instead of sharing the detector task inventory key. The wire schemaName stays bugbot_literal_candidate_verification; measured valid requests have unchanged prompt/schema/options.",
+    "taskInventorySourceSha256": "4e7b80b2eedee5fae082dc5076970310f60052a74f936e81bc520290b4df290c",
+    "legacyPatchRead": {
+      "change": "Read each legacy Python patch once and reuse the same string for rendering and trusted activation, removing an unreachable second nullish fallback. Add multiple retained/unavailable witnesses and exact mixed-indentation regression coverage.",
+      "sourceSha256": "d7391f955035c3df7c43d0cfdd4b4a64de6914651b886c754f07b733ee08eca0",
+      "benchmarkImpact": "No change to the measured benchmark adapter, its prompts/corpus or shared verifier behavior for valid responses. Recorded bundle identities and failed scores remain intact."
+    },
+    "boundedBatches": {
+      "initialCandidates": 200,
+      "batches": 10,
+      "candidatesPerBatch": 20,
+      "candidateUtf8BytesPerBatch": 32000,
+      "completePromptUtf8BytesPerBatch": 128000,
+      "maximumQueriesPerPartitionAcrossThreeAttempts": 33,
+      "integrity": "Preflight every batch and all global identities before querying. Verify all batches sequentially; never publish a partial prefix. Per-batch identity, locale, proof, file/anchor and history checks remain intact.",
+      "telemetry": "Observe each initial/retried and secondary prompt/response at the query boundary without recounting the aggregate.",
+      "measurementScope": "No change to recorded corpus, shared instructions or single-batch provider prompt/schema/configuration; historical measured bundle identities and all scores are retained. This orchestration follow-up is validated by 21/200-candidate application, benchmark, failure and telemetry controls, not presented as a new model sample.",
+      "sourceSha256": {
+        "src/application/policies/bugbot_literal_verification_policy.ts": "13214a9972e44ee8a50ebda856da3290d9060922131e5d03004b5f8872500897",
+        "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts": "841a8b36ba0ae23fb90d3fe4630590c01f9ef82ecf9716f5fe4a3e16e2238e88",
+        "src/application/usecases/steps/commit/bugbot/query_bugbot_findings.ts": "14afc495190abc5b62c488266b220ac7ae1a774a491371a085447ffae9c09bb0",
+        "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts": "e497db3c80a71331eaf080801a7ad271d5b3eb13d0efde9242243b68b96f4ac1"
+      }
+    },
+    "responseEnvelope": {
+      "serializedResponseUtf8Bytes": 4000000,
+      "promptUtf8BytesUnchanged": 128000,
+      "candidateBatchUtf8BytesUnchanged": 32000,
+      "regression": "A serialized 200-candidate initial reply and serialized secondary proof above128000bytes formerly failed while equivalent objects passed. Dedicated wire-size guard preserves complete batches, locale/identity/proof/history and all-or-nothing behavior.",
+      "redEvidence": "Two serialized cases fail before correction; the object equivalents pass.",
+      "sourceSha256": {
+        "src/application/policies/bugbot_literal_verification_policy.ts": "b74ce1555860b2198ecc8d09d86011a5d641cf462e2725c43021adb5771c35b8",
+        "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts": "bd9ff5d1a24b157410cc49ec0161e7aa26f6a7059050e55d73f43f5bee1fcf7c"
+      },
+      "measurementScope": "Wire-boundary correction only; recorded reasoning prompts/schema/corpus and all measured scores remain unchanged. No new model sample claimed."
+    }
+  }
+}

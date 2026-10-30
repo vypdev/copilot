@@ -13,6 +13,8 @@ import { resolveBugbotReviewEffort } from '../../../../../domain/bugbot/review_c
 import { fileMatchesIgnorePatterns } from '../../../../policies/file_ignore_policy';
 import type { BugbotReviewOperationContext } from './bugbot_review_operation_context';
 import type { BugbotReviewDiffPartition } from './types';
+import { renderPythonLiteralWitnesses, projectPythonLiteralWitnesses, PYTHON_LITERAL_OUTPUT_LIMIT } from '../../../../policies/bugbot_python_literal_witness_policy';
+import { renderUntrustedField } from '../../../../../domain/security/untrusted_content';
 
 const MAX_IGNORE_BLOCK_LENGTH = 2000;
 const GIT_OBJECT_ID = /^[0-9a-f]{7,64}$/i;
@@ -26,6 +28,14 @@ export function buildBugbotPrompt(
     context: BugbotContext,
     assignment?: BugbotPromptPartitionAssignment,
 ): string {
+    return buildBugbotReviewInput(param, context, assignment).prompt;
+}
+
+export function buildBugbotReviewInput(
+    param: BugbotReviewOperationContext,
+    context: BugbotContext,
+    assignment?: BugbotPromptPartitionAssignment,
+): { readonly prompt: string; readonly hasLiteralWitnesses: boolean } {
     const headBranch = param.target.headBranch || 'unknown';
     const baseBranch = param.target.baseBranch;
     const previousBlock = !assignment || assignment.partition.ownsResolution
@@ -53,7 +63,8 @@ export function buildBugbotPrompt(
         touchesSensitivePath: changes.some((change) => /(^|\/)(auth|security|permissions?|credentials?|secrets?|payments?|migrations?)(\/|\.|$)/i.test(change.filename)),
     });
 
-    return getBugbotPrompt({
+    const literalEvidence = assignment ? undefined : legacyPythonWitnesses(changes);
+    const prompt = getBugbotPrompt({
         projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
         owner: param.repository.owner,
         repo: param.repository.name,
@@ -70,7 +81,7 @@ export function buildBugbotPrompt(
         ignoreBlock,
         coverageBlock: buildCoverageBlock(context, assignment?.partition),
         previousBlock,
-        diffBlock: assignment?.partition.block ?? context.reviewDiffBlock,
+        diffBlock: assignment?.partition.block ?? [context.reviewDiffBlock, literalEvidence?.block].filter(Boolean).join('\n\n'),
         reviewConversationBlock: context.reviewConversationBlock,
         rulesBlock: context.reviewRulesBlock,
         effortBlock: `**Review effort:** ${resolvedEffort}. ${resolvedEffort === 'high' ? 'Perform deeper cross-file and adversarial analysis.' : resolvedEffort === 'low' ? 'Prioritize high-signal changed-code defects and avoid speculative breadth.' : 'Balance depth, latency, and false-positive control.'}`,
@@ -80,6 +91,25 @@ export function buildBugbotPrompt(
             ? param.locale.pullRequest
             : param.locale.issue ?? param.locale.pullRequest,
     });
+    return { prompt, hasLiteralWitnesses: assignment ? assignment.partition.hasPythonLiteralWitnesses === true : literalEvidence!.hasWitnesses };
+}
+
+function legacyPythonWitnesses(changes: readonly { readonly filename: string; readonly patch?: string | null }[]): { readonly block: string; readonly hasWitnesses: boolean } {
+    const blocks: string[] = [];
+    let hasWitnesses = false;
+    let remaining = PYTHON_LITERAL_OUTPUT_LIMIT;
+    for (const [index, change] of changes.filter(change => /\.py$/iu.test(change.filename)).slice(0, 3).entries()) {
+        const patch = change.patch ?? '';
+        const witness = renderPythonLiteralWitnesses(patch, `github.legacy.literal.${index + 1}`);
+        if (!witness) continue;
+        const path = renderUntrustedField(change.filename, `github.legacy.literal.path.${index + 1}`, 1_000);
+        const block = path + '\n' + witness;
+        if (block.length > remaining) continue;
+        blocks.push(block);
+        hasWitnesses ||= projectPythonLiteralWitnesses(patch).witnesses.length > 0;
+        remaining -= block.length + 2;
+    }
+    return { block: blocks.join('\n\n'), hasWitnesses };
 }
 
 function buildCoverageBlock(
