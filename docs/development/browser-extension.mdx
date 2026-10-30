@@ -1037,3 +1037,46 @@ post-invocation results independently. The deterministic transport, reentrancy,
 background, four-locale page and actual mounted composition cases are listed in
 [the authoring contract](../../specs/github-browser-extension-collection-consent.md#615-native-pause-authoring-and-recovery).
 These tests and local coverage are not loaded-browser or human H3 acceptance.
+
+
+### Effective-state provenance implementation
+
+The in-progress H3 provenance work adds `TemporaryPauseReader.observe()` alongside
+its fail-closed admission read. A closed worker condition distinguishes pending
+work, earlier precaution, both together and unavailable state. It is sampled
+before protected access, before native IO and after IO. A restriction discards a
+usable old snapshot and is never attributed to native emergency. The production
+background supplies this precise condition without exposing hold counts, tokens
+or witnesses. `nativePauseProvenance` returns closed scalar facts only, with
+independent emergency/tab booleans or explicit unknowns. It reveals no other tab
+IDs, native snapshots or revision.
+
+`resolveProfile` now retains every positive applicable `pauseSources` entry in
+precedence order, while preserving its existing monotonic pause value and winner.
+These domain sources include private local profile IDs and therefore must be
+mapped to generic scope codes before any public content configuration. Neither
+component authorizes connected work. `runtimePreferenceProvenance` maps private
+resolver sources to nine generic scope codes, all 150 feature winners, every
+positive applicable saved pause and four applicability flags. The public decoder
+detaches and validates the closed bounded response before rendering. It rejects
+private extras, missing features, contradictory native facts and unusable scopes.
+
+`PageConfigurationService` finalizes each result against settings content,
+credential epoch, route ownership and a second native observation. Native
+infrastructure failure restricts access; hot identity may explain scope, while
+cold vetoes do not read credentials merely to explain themselves. Retained and
+claimed-scope vetoes remain distinct from verified applicability and native pause.
+Connection facts retain separate bounded waiting/deadline state. The existing
+store invalidation already cancels queued reads when native work acquires its
+guard; real-composition reservation regressions preserve this behavior.
+
+The fixed `local-control` lifecycle purpose allows the readonly shell during
+pause, with its own eligibility/quarantine/source/cleanup gates intact. It does
+not unpause enhancements or authorize GETs. Each configuration delivery retires
+the older view even when settings revision and credential epoch are unchanged.
+`inspectOnly: true` attenuates configuration to local metadata without credential
+restoration or provider invocation; it is unavailable on activity requests.
+Lazy preference rows have one owned toggle listener. View restoration uses only
+owned node references and same-source state, preserving focus/expansion through
+pending delivery without stealing native editor focus. English, Spanish, French
+and Portuguese share these contracts. Full H3 native/human gates remain open.

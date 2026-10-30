@@ -20,7 +20,7 @@ export type Message = { readonly method: 'settings.read'; readonly version: 1 }
     | { readonly method: 'page.snapshot'; readonly version: 1; readonly route: string; readonly generation: number;
         readonly repositoryId: string; readonly viewer: string | null; readonly visible: boolean; readonly manual: boolean }
     | { readonly method: 'page.configuration'; readonly version: 1; readonly route: string; readonly generation: number;
-        readonly repositoryId: string; readonly viewer: string | null; readonly visible: boolean; readonly manual: false };
+        readonly repositoryId: string; readonly viewer: string | null; readonly visible: boolean; readonly manual: false; readonly inspectOnly?: true };
 const PAGE = new Set(['settings.open', 'session.status', 'page.snapshot', 'page.configuration', 'page.release']);
 function extensionLocation(value: unknown): string | null {
     if (typeof value !== 'string') return null;
@@ -63,9 +63,10 @@ export function parseMessage(value: unknown): Message | null {
         && Object.keys(value).length === 4 && typeof value.secret === 'string' && /^[A-Za-z0-9_]{8,255}$(?![\s\S])/u.test(value.secret)
         && typeof value.repository === 'string' && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$(?![\s\S])/u.test(value.repository)
         && value.repository.length <= 201 ? value as Message : null;
+    const inspection = value.method === 'page.configuration' && Object.hasOwn(value, 'inspectOnly');
     if (!['page.snapshot', 'page.configuration'].includes(value.method) || (value.method === 'page.configuration' && value.manual !== false)
-        || !keys(value, ['version', 'method', 'route', 'generation', 'repositoryId', 'viewer', 'visible', 'manual'])
-        || Object.keys(value).length !== 8 || typeof value.route !== 'string' || utf8Bytes(value.route) > 4096
+        || !keys(value, inspection ? ['version', 'method', 'route', 'generation', 'repositoryId', 'viewer', 'visible', 'manual', 'inspectOnly'] : ['version', 'method', 'route', 'generation', 'repositoryId', 'viewer', 'visible', 'manual'])
+        || (inspection && value.inspectOnly !== true) || Object.keys(value).length !== 8 + Number(inspection) || typeof value.route !== 'string' || utf8Bytes(value.route) > 4096
         || !pageIdentity(value.route) || !natural(value.generation) || typeof value.repositoryId !== 'string'
         || !/^(?:[1-9]\d{0,19})?$(?![\s\S])/u.test(value.repositoryId)
         || !(value.viewer === null || (typeof value.viewer === 'string' && /^[A-Za-z0-9-]{1,39}$(?![\s\S])/u.test(value.viewer)))

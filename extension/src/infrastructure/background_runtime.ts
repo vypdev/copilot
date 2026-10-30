@@ -26,7 +26,7 @@ export function startBackground(api: BrowserApi): () => void {
     const pauseGuard = new TemporaryPauseGuard();
     const pauseStore = new TemporaryPauseStore(session, pauseGuard, { protectedArea: () => session.protect(), changed: () => { gateway.invalidate(); } });
     const closedPauses = new ClosedPauseCleanup(pauseStore);
-    const pauses = new TemporaryPauseReader(session, () => session.protect(), () => pauseGuard.blocked);
+    const pauses = new TemporaryPauseReader(session, () => session.protect(), () => pauseGuard.condition);
     const scheduler = new ReadScheduler(session, new GitHubGetReader(), () => Date.now(), () => Math.random() * 1000);
     const sessions = new ProtectedSessionService(session, scheduler, {
         cancellation: () => new BrowserCancellation(),

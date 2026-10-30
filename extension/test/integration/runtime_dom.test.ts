@@ -3,9 +3,10 @@ import * as panelAdapter from '../../src/adapters/dom/runtime_panel.ts';
 import { mountRuntimePanel } from '../../src/adapters/dom/runtime_panel.ts';
 import { BrowserResourceScope } from '../../src/adapters/browser/resource_scope.ts';
 import { startContent } from '../../src/infrastructure/content_runtime.ts';
+import { runtimePanelCopy } from '../fixtures/runtime_panel.ts';
 import { runtimeCopy, statusText } from '../../src/presentation/runtime_copy.ts';
 import { DEFAULT_SETTINGS } from '../../src/domain/settings.ts';
-import { context, deferred } from '../fixtures/runtime.ts';
+import { context, deferred, CONNECTED } from '../fixtures/runtime.ts';
 import { browserFixture } from '../fixtures/browser.ts';
 import { githubDom } from '../fixtures/dom.ts';
 import { configurationReply } from '../fixtures/page_configuration.ts';
@@ -14,13 +15,13 @@ const cleanups: (() => void)[] = [];
 afterEach(() => { for (const stop of cleanups.splice(0).reverse()) stop(); vi.unstubAllGlobals(); });
 function panel(valid = () => true, route?: string) {
     const dom = githubDom(); cleanups.push(() => dom.dom.window.close()); const h = browserFixture();
-    const scope = new BrowserResourceScope(valid); cleanups.push(() => scope.dispose()); const copy = runtimeCopy('en');
-    const controller = mountRuntimePanel(context(route), scope, h.api, dom.document, copy, (state, retryAt) => statusText(state, copy, retryAt), () => ({ viewer: 'octo', repositoryId: '7' }));
+    const scope = new BrowserResourceScope(valid); cleanups.push(() => scope.dispose()); const copy = runtimePanelCopy('en');
+    const controller = mountRuntimePanel(context(route), scope, h.api, dom.document, copy, (state, retryAt) => statusText(state, copy, retryAt), () => ({ viewer: 'octo', repositoryId: '7' }), () => undefined);
     return { ...dom, ...h, scope, controller };
 }
-function content() {
+function content(connected = false) {
     const dom = githubDom(); cleanups.push(() => dom.dom.window.close()); const h = browserFixture();
-    vi.mocked(h.api.runtime.sendMessage).mockImplementation(async request => configurationReply(request));
+    vi.mocked(h.api.runtime.sendMessage).mockImplementation(async request => configurationReply(request, connected ? { ...DEFAULT_SETTINGS, repositories: { '7': { connected: true } } } : DEFAULT_SETTINGS, connected ? CONNECTED : null));
     const stop = startContent(h.api, dom.window, dom.document)!; cleanups.push(stop); return { ...dom, ...h, stop };
 }
 it('github-browser-extension-runtime-C13/github-browser-extension-runtime-C27 preserves native draft bytes, selection and focus while safely rendering issue/PR context', async () => {
@@ -51,10 +52,10 @@ it('github-browser-extension-runtime-C08 discards late panel results, removes on
     expect(replacement.querySelectorAll('[data-copilot-runtime]')).toHaveLength(1);
 });
 it('github-browser-extension-runtime-C07 coexists with equivalent native/extension controls and handles absent anchors without mutation', () => {
-    const h = panel(); const copy = runtimeCopy('en');
-    const duplicate = mountRuntimePanel(context(), h.scope, h.api, h.document, copy, state => statusText(state, copy), () => ({ viewer: null, repositoryId: '' }));
+    const h = panel(); const copy = runtimePanelCopy('en');
+    const duplicate = mountRuntimePanel(context(), h.scope, h.api, h.document, copy, state => statusText(state, copy), () => ({ viewer: null, repositoryId: '' }), () => undefined);
     duplicate.refresh(); duplicate.dispose(); expect(h.document.querySelectorAll('[data-copilot-runtime]')).toHaveLength(1);
-    h.document.querySelector('main')!.remove(); const absent = mountRuntimePanel(context(), h.scope, h.api, h.document, copy, state => statusText(state, copy), () => ({ viewer: null, repositoryId: '' }));
+    h.document.querySelector('main')!.remove(); const absent = mountRuntimePanel(context(), h.scope, h.api, h.document, copy, state => statusText(state, copy), () => ({ viewer: null, repositoryId: '' }), () => undefined);
     absent.refresh(); absent.dispose();
 });
 it('github-browser-extension-runtime-C29 exposes complete EN/ES/FR/PT status meanings, accessible headings/buttons and language fallback', () => {
@@ -115,7 +116,7 @@ it('github-browser-extension-runtime-C08 rejects late startup settings and forei
 });
 
 it('content composition renders read results through localized presentation and isolates a failed feature mount', async () => {
-    const h = content(); await vi.waitFor(() => expect(h.document.querySelector('button')).not.toBe(null));
+    const h = content(true); await vi.waitFor(() => expect(h.document.querySelector<HTMLButtonElement>('[data-copilot-runtime] button')?.disabled).toBe(false));
     vi.mocked(h.api.runtime.sendMessage).mockResolvedValue({ state: 'current', data: { title: 'Native fixture' } });
     h.document.querySelector('button')!.click(); await vi.waitFor(() => expect(h.document.querySelector('[role=status]')!.textContent).toContain('refreshed'));
     h.document.querySelector('meta[name="user-login"]')!.remove(); h.document.querySelector('meta[name="octolytics-dimension-repository_id"]')!.remove();
@@ -173,7 +174,7 @@ it('queued native page hints after teardown and obsolete failed settings reads c
     const stop = startContent(b.api, h.window, h.document)!; cleanups.push(stop);
     h.document.querySelector('meta[name="octolytics-dimension-issue_id"]')!.remove();
     h.document.dispatchEvent(new h.dom.window.Event('visibilitychange'));
-    await vi.waitFor(() => expect(h.document.querySelector('section')).not.toBe(null)); old.reject(new Error('private')); await Promise.resolve();
+    await vi.waitFor(() => expect(h.document.querySelector<HTMLElement>('section')?.dataset.copilotSettings).toBe('ready')); old.reject(new Error('private')); await Promise.resolve();
     expect(h.document.querySelector<HTMLElement>('section')!.dataset.copilotSettings).toBe('ready');
     h.window.history.replaceState({}, '', '/settings/tokens'); Object.defineProperty(h.document, 'visibilityState', { value: 'hidden' });
     h.document.dispatchEvent(new h.dom.window.Event('visibilitychange')); stop();

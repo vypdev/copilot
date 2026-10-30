@@ -9,13 +9,10 @@ import type { Settings } from './settings.ts';
 import type { PreferenceSource } from './profile_resolution.ts';
 import { centerProfileResolution, sourceProfileName } from './profile_context.ts';
 import type { InventoryCopy } from './inventory_copy.ts';
-import { es } from './feature_text_es.ts';
-import { fr } from './feature_text_fr.ts';
-import { pt } from './feature_text_pt.ts';
+import { featureText } from './feature_text.ts';
 import { deepFreeze } from './value.ts';
 import type { InventoryFilters } from './inventory_filters.ts';
 
-const resources = deepFreeze({ es, fr, pt });
 const routes: Readonly<Record<string, CenterRoute>> = Object.freeze({ 'BEX-CENTER-01': 'overview', 'BEX-CENTER-02': 'features', 'BEX-CENTER-03': 'profiles',
     'BEX-CENTER-04': 'repositories', 'BEX-CENTER-05': 'connections', 'BEX-CENTER-06': 'privacy', 'BEX-CENTER-07': 'shortcuts', 'BEX-CENTER-08': 'data',
     'BEX-CENTER-11': 'appearance', 'BEX-CENTER-12': 'language', 'BEX-CENTER-13': 'welcome', 'BEX-CENTER-14': 'data' });
@@ -29,7 +26,7 @@ export function inventorySource(source: PreferenceSource): InventorySource { ret
 export function featureInventory(settings: Settings | null, connections: ConnectionOutcome | null | undefined, locale: CenterLocale): readonly InventoryFeature[] {
     const known = settings === null ? null : { settings, state: centerProfileResolution(settings, connections) };
     return deepFreeze(FEATURE_METADATA.map(feature => {
-        const text = locale === 'en' ? [feature.title, feature.description] : resources[locale][feature.id];
+        const text = featureText(feature, locale);
         const milestone = FEATURE_MILESTONES[feature.family];
         const metadata = { ...feature, title: text[0], description: text[1], defaultEnabled: FEATURE_DEFAULTS[feature.id], milestone, issue: milestone + 701,
             phase: milestone === 3 ? 'current' as const : 'later' as const, tools: routes[feature.id] ?? null };

@@ -21,14 +21,14 @@ export class FeatureRuntime {
     async update(context: RuntimeContext): Promise<void> {
         const previous = this.context;
         const changed = !previous || previous.page.route !== context.page.route || previous.page.object !== context.page.object
-            || !sameEpoch(previous.epochs, context.epochs);
+            || !sameEpoch(previous.epochs, context.epochs) || previous.configurationEpoch !== context.configurationEpoch;
         this.context = context;
         if (changed) { this.generation++; this.releaseAll(); }
         const generation = this.generation;
         await Promise.all(this.features.map(async feature => {
             if (generation !== this.generation) return;
             const existing = this.mounted.get(feature.id);
-            try { if (context.paused || this.disabled.has(feature.id) || !feature.enabled(context)) { if (existing) this.release(feature.id, existing); return; } }
+            try { if (context.paused && feature.purpose !== 'local-control' || this.disabled.has(feature.id) || !feature.enabled(context)) { if (existing) this.release(feature.id, existing); return; } }
             catch { this.diagnostic(feature.id, 'mount-failed', existing ? this.current(existing.scope) : generation === this.generation);
                 if (existing) this.release(feature.id, existing); return; }
             if (generation !== this.generation || this.mounted.get(feature.id) !== existing) return;

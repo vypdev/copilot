@@ -6,6 +6,7 @@ import { DEFAULT_SETTINGS } from '../../src/domain/settings.ts';
 import { BrowserCancellation } from '../../src/adapters/browser/cancellation.ts';
 import { memoryStore, sessionHarness, CONNECTED, PAGE, deferred } from '../fixtures/runtime.ts';
 import type { ReadResult } from '../../src/application/read_ports.ts';
+import { TemporaryPauseReader } from '../../src/application/temporary_pause_reader.ts';
 
 const origin = 'chrome-extension://test/';
 const extension = { id: 'test', url: `${origin}runtime.html` };
@@ -15,7 +16,7 @@ function harness() {
     const ports = { currentTab: vi.fn(async (): Promise<{ url: string; incognito: boolean; active: boolean; windowId?: number }> => ({ url: PAGE.route, incognito: false, active: true, windowId: 1 })),
         openSettings: vi.fn(async (_windowId: number) => undefined),
         cancellation: () => new BrowserCancellation(), online: () => true, notify: vi.fn() };
-    const gateway = new MessageGateway('test', origin, settings, h.service, ports);
+    const gateway = new MessageGateway('test', origin, settings, h.service, ports, undefined, undefined, undefined, new TemporaryPauseReader(memoryStore().port, async () => true));
     const connect = () => gateway.handle({ version: 1, method: 'session.connect', secret: CONNECTED.secret, repository: CONNECTED.repository }, extension);
     return { ...h, local, settings, ports, gateway, connect };
 }

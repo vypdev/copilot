@@ -1,7 +1,8 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { mountRuntimePanel } from '../../src/adapters/dom/runtime_panel.ts';
 import { BrowserResourceScope } from '../../src/adapters/browser/resource_scope.ts';
-import { runtimeCopy, statusText } from '../../src/presentation/runtime_copy.ts';
+import { runtimePanelCopy } from '../fixtures/runtime_panel.ts';
+import { statusText } from '../../src/presentation/runtime_copy.ts';
 import { context, deferred } from '../fixtures/runtime.ts';
 import { browserFixture } from '../fixtures/browser.ts';
 import { githubDom } from '../fixtures/dom.ts';
@@ -11,8 +12,8 @@ afterEach(() => { for (const stop of cleanups.splice(0).reverse()) stop(); vi.un
 function panel() {
     const dom = githubDom(); cleanups.push(() => dom.dom.window.close()); const h = browserFixture();
     const registered = vi.spyOn(dom.dom.window.EventTarget.prototype, 'addEventListener');
-    const scope = new BrowserResourceScope(() => true); cleanups.push(() => scope.dispose()); const copy = runtimeCopy('en');
-    mountRuntimePanel(context(), scope, h.api, dom.document, copy, state => statusText(state, copy), () => ({ viewer: 'octo', repositoryId: '7' }));
+    const scope = new BrowserResourceScope(() => true); cleanups.push(() => scope.dispose()); const copy = runtimePanelCopy('en');
+    mountRuntimePanel(context(), scope, h.api, dom.document, copy, state => statusText(state, copy), () => ({ viewer: 'octo', repositoryId: '7' }), () => undefined);
     const button = dom.document.querySelector<HTMLButtonElement>('[data-copilot-open-settings]')!;
     const index = registered.mock.contexts.findIndex((target, index) => target === button && registered.mock.calls[index][0] === 'click');
     const listener = registered.mock.calls[index][1] as (event: MouseEvent) => void;

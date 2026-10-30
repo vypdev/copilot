@@ -1042,6 +1042,138 @@ lifetimes, unknown recovery, retained facts, permissions and architecture.
 These deterministic native-port/background/DOM tests do not replace loaded
 Chrome/Firefox/Safari, full runtime provenance or the H3 human acceptance tasks.
 
+### 6.16 Complete effective-state and runtime restriction provenance
+
+H3 MUST explain the effective density, shortcut setting, every registered feature
+preference and every applicable active pause, including inherited and shadowed
+restrictions. A winning layer alone is insufficient: emergency and this tab's
+pause can coexist, as can pending native work and earlier worker precaution.
+Never describe unavailable data, an unverified scope or a worker restriction as
+a user-selected emergency pause. This is an explanation contract, not permission
+to connect, restore a credential, request a grant or bypass a pause.
+
+```text
+Saved preferences + verified applicability → pure effective values + all pauses
+Protected native observation → worker condition + current native availability
+ → closed scalar provenance → source/route/epoch checked configuration
+ → required local explanation + settings entrypoint, including while paused
+Connected enhancements / provider reads → existing pause/identity/access gates
+```
+
+Text equivalent: native and saved sources remain independent. A valid explanation
+does not authorize any connected effect. The local control shell remains visible
+when enhancements are paused, but offers no usable connected-read action until
+the independently checked configuration permits it. An unknown configuration
+shows unavailable state with local recovery, never usable default preferences.
+
+Worker observation is a closed condition: `clear`, `pending`, `precaution`,
+`pending-precaution` or `unavailable`. It contains no hold counts, native tokens,
+witnesses or raw failures. Sample before protected access, after that access
+before native IO and after IO. A positive/unknown condition prevents the next
+read and removes any usable older native snapshot. Return it separately from
+native availability. Native state withheld by a worker restriction is
+`not-checked`, never an empty/false native pause record. The internal admission
+reader still returns fail-closed unavailable data to existing GET gates. The
+actual background supplies the precise guard condition; an older positive
+boolean callback is conservatively unknown, never a guessed kind of pause.
+
+For an available canonical native document, disclose emergency and this tab's
+pause independently, with emergency as the higher-priority restriction. Never
+disclose other tab IDs, snapshots, native revision or operation selectors to the
+GitHub page. An unavailable native tab identity makes its tab restriction
+unknown; independently known emergency state must not be discarded or turned
+into permission. Future, corrupt and unavailable native records remain distinct
+from worker state and are never repaired by observation.
+
+The pure preference resolver MUST preserve all positive applicable pause sources.
+An explicit false in a more specific scope cannot erase an inherited true. The
+existing precedence remains default, global preference/profile, host, verified
+account, verified organization, verified repository and verified current session;
+then native tab/emergency restrictions apply independently. Missing identity or
+epoch makes a corresponding layer unavailable, not applicable by inference from
+DOM names. A saved restriction for a claimed repository may veto restoration but
+must be labeled as unverified scope. A retained scoped restriction may veto
+restoration without being presented as freshly verified identity or permission.
+Neither case may masquerade as native emergency. Full verified-session overrides
+must integrate later with this same source model and their own epoch contract.
+
+Public configuration provenance MUST be a closed bounded projection: generic
+source/scope codes, booleans or explicit unknown values, existing registered
+feature IDs and bounded applicability facts. No profile names/IDs, account or
+organization IDs, saved collections, native IDs, raw errors, credentials, grant
+objects or reusable authority may enter the content view. The native center can
+resolve user-authored labels locally under its existing ownership contract; the
+web page uses generic scope labels. Validate exact fields, enum values, source
+consistency, value agreement, pause monotonicity and all feature keys before
+rendering. Preserve the existing source-build/route/generation/credential fence
+and response-size limit. Mixed or incompatible configuration is unavailable.
+
+The configuration service MUST carry real native prerequisite observations
+through each early return, final identity/settings revalidation and invalidation.
+Missing native admission infrastructure fails closed; it is not an unpaused
+compatibility default. Never collapse a saved/retained/unknown restriction into a
+native emergency boolean. The local explanation and current effective values
+must correspond to the same accepted configuration. New settings, route/viewer,
+native scope, credential epoch or package invalidation removes old explanation
+and stale labels before repaint. No extra provider call, native mutation or
+credential read may be introduced merely to explain a restriction.
+
+Representative content: “Connected reads are restricted — Emergency pause: on;
+this tab: on; personal profile pause: on.” When blocked before native inspection:
+“A native change is pending and an earlier extra precaution remains. Current
+native pause state was not inspected.” For unknown scope: “No verified account
+context; account and organization preferences cannot be confirmed.” A “Why this
+setting?” detail shows effective value and generic winning layer; “Manage pauses”
+uses the trusted local settings entrypoint, never an untrusted web return URL or
+an implicit resume. Native GitHub remains usable throughout.
+
+Required local control UI is a distinct fixed lifecycle purpose, not a
+user-configurable pause exemption for productivity features. It can display
+closed metadata and open local recovery while paused; every connected action
+still passes native GET admission. Feature-specific disable/quarantine, disposal,
+hidden/protected-route teardown and resource ownership remain effective. Do not
+set a true pause to false merely to mount the shell. Ship en/es/fr/pt, semantic
+details/lists, named controls, keyboard access and readable non-color status.
+
+The connection is an independent closed fact: disconnected, connected,
+unavailable, revalidating, limited, cooldown or budget. Only the last three may
+carry a nullable natural deadline within the JavaScript date range; unknown or
+elapsed deadlines show waiting, never a fabricated retry time. Network state is
+independent. A verified session for another page is unavailable for that page,
+not disconnected. The connected-read button MUST remain disabled during pending,
+restricted, offline, disconnected, wrong-scope or waiting configuration.
+
+**Recheck local state** sends one `page.configuration` with `inspectOnly: true`.
+This closed optional attenuation is accepted only for that method and only with
+literal true. It cannot restore credentials, invoke a provider, read activity,
+clear precaution, retry a native mutation or request a grant. Normal admitted
+page entry retains its existing restoration rules. While pending, no previous
+preference values remain usable and repeated clicks do not enqueue more work.
+The 150 preference rows populate once, on first expansion, with no IO. They
+describe preferences rather than claiming implementation or eligibility.
+Same-page refresh preserves owned keyboard focus and expanded detail state,
+including through a pending shell. If the user moves into a native editor while
+waiting, delivery MUST NOT steal focus. Route/account/hidden retirement discards
+the old view state and listeners. Only exact extension-owned node references
+are eligible for focus restoration; page-authored lookalikes are never targets.
+
+Minimum **160 distinct semantic cases**: 24 worker/native observation ordering,
+32 all-source monotonic resolution, 32 strict/redacted public configuration,
+20 connection/inspection boundaries, 32 actual composition/admission/invalidation races and 20 mounted paused/unknown
+control-shell/copy/accessibility cases. Locale clones do not count as additional
+semantic risks. Retain all prior regressions, require no test skips and 100%
+local new executable lines/branches/functions/statements. The final exact-head
+remote Codecov gate still requires every modified executable line covered without
+partials against the correct base. Update configuration, runtime, permissions,
+architecture and recovery documentation together. Deterministic proof does not
+replace source-bound Chrome/Firefox/Safari or human H3 acceptance.
+
+Current increment status: worker/native observations, all-source preference
+resolution, closed public configuration, metadata-only inspection and the paused
+local shell are integrated in source. Deterministic composition and mounted
+regressions cover these contracts. Complete unfiltered coverage, native-browser
+and human acceptance remain distinct gates; this is not full H3 acceptance.
+
 ## 7. User-facing configuration
 
 | Input | Default | Scope/limit |
@@ -1357,6 +1489,20 @@ docs/specs/catalog and concrete examples together.
 
 ## 17. Requirements traceability
 
+Effective-state acceptance for section6.16:
+
+1. Simultaneous saved, native emergency and this-tab pauses retain independent
+   positive facts; pending/precaution withholds native values as unknown.
+2. Cold paused or metadata-only inspection never reads a credential or calls a
+   provider. Unknown/future native state remains preserved and restricts GETs.
+3. An account/route/settings-content/credential change retires old values. Strict
+   detached decoding rejects missing, extra, contradictory or private provenance.
+4. All150 feature winners are available on demand in four locales, with generic
+   sources and a clear distinction between preference and implementation.
+5. Same-page recheck preserves expanded details and owned focus through pending;
+   typing in native GitHub, source retirement and detached lookalikes cannot be
+   interrupted or used as restoration targets. Retired faults stay historical.
+
 | Concern | Owner | Evidence | Documentation |
 |---|---|---|---|
 | Consent/off | Policy/native | Schema/migration/restart | Privacy/configuration |
@@ -1373,6 +1519,7 @@ docs/specs/catalog and concrete examples together.
 | Compound effects, exact attribution and staged reuse | CollectionReviews/effects/CollectionObservations/coordinator/native policy attempt | Compound domain/port/service/current/gateway/mounted suites plus two failing-before native regressions; full native/human gate outstanding | Local history/configuration/privacy/contributor |
 | Clear facts, reentry order and no self-record | JournalReviews/ClearObservations/CurrentOperations/ObservedJournalStore | Clear domain/service/current/gateway/mounted suites plus failing-before reservation reentry; full native/human gate outstanding | Local history/configuration/privacy/contributor |
 | Source-checked helper capture and historical options handoff | RuntimeHealth/content open/MessageGateway/HelperSamples/HelperSampleReader/center composition | Helper domain/owner/native source/reader/mounted/actual composition suites and failing-before source/reentry regressions; full native/human gate outstanding | Local history/runtime/privacy/contributor |
+| Complete effective-state provenance and paused local controls (section6.16) | TemporaryPauseReader/profile_resolution/runtime configuration/PageConfigurationService/FeatureRuntime/owned DOM | Observation, profile sources, preference provenance, strict validation, inspection, availability, view, controls, actual content/focus/queue and retired-fault suites; native/human H3 gates remain separate | Configuration/runtime/permissions/contributor |
 | Minimal discoverable facts | Presentation | Locales/a11y/export | User navigation |
 
 ## 18. Implementation sequence

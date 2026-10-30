@@ -8,6 +8,7 @@ import { browserFixture } from '../fixtures/browser.ts';
 import { backgroundCenterFixture } from '../fixtures/background_center.ts';
 import { configurationReply, scopedSettings, CONFIG, pageSender } from '../fixtures/page_configuration.ts';
 import { CONNECTED, deferred } from '../fixtures/runtime.ts';
+import { runtimeCopy } from '../../src/presentation/runtime_copy.ts';
 import { record } from '../../src/domain/value.ts';
 
 const cleanups: (() => void)[] = [];
@@ -24,17 +25,19 @@ it('actual background/center/content composition applies verified density and dr
     expect(panel(dom.document)!.style.padding).toBe('0.5rem'); const providerCalls = h.provider.mock.calls.length;
     dom.document.querySelector<HTMLMetaElement>('meta[name="user-login"]')!.content = 'other';
     await vi.waitFor(() => expect(panel(dom.document)?.dataset.copilotDensity).toBe('comfortable'));
-    expect(panel(dom.document)!.textContent).toContain('optional connection is disconnected');
+    expect(panel(dom.document)!.textContent).toContain(runtimeCopy('en').scopeUnavailable);
     expect(h.provider).toHaveBeenCalledTimes(providerCalls);
     expect(dom.document.body.textContent).not.toContain('Private profile name');
     expect(dom.document.querySelector('textarea')!.value).toContain('draft');
 });
 it('a real selected profile pause removes runtime effects, resumes only after a reviewed preference change, and never performs HTTP', async () => {
     const dom = githubDom(); cleanups.push(() => dom.dom.window.close()); const h = backgroundCenterFixture(); cleanups.push(h.stop);
+    // Required readonly local controls remain; pause removes connected/enhancement effects.
     h.localValues.set(SETTINGS_KEY, { ...scopedSettings(true), paused: true });
     vi.mocked(h.api.runtime.sendMessage).mockImplementation(message => h.call(message, pageSender));
     const stop = startContent(h.api, dom.window, dom.document)!; cleanups.push(stop);
-    await vi.waitFor(() => expect(h.localArea.get).toHaveBeenCalled()); await Promise.resolve(); expect(panel(dom.document)).toBe(null);
+    await vi.waitFor(() => expect(panel(dom.document)?.dataset.copilotSettings).toBe('ready')); expect(dom.document.querySelector<HTMLButtonElement>('[data-copilot-runtime] button')?.disabled).toBe(true);
+    expect(panel(dom.document)?.textContent).toContain('Connected activity is restricted'); expect(panel(dom.document)?.textContent).toContain('Global preference');
     expect(h.provider).not.toHaveBeenCalled();
     // Model the durable result of the independently tested reviewed center commit.
     h.localValues.set(SETTINGS_KEY, { ...scopedSettings(), revision: 1 });
@@ -49,10 +52,10 @@ it('SPA, identity and hidden-page transitions discard delayed receipts before an
     });
     const stop = startContent(h.api, dom.window, dom.document)!; cleanups.push(stop);
     dom.window.history.pushState({}, '', '/octo/other/issues/42'); dom.window.dispatchEvent(new dom.dom.window.Event('turbo:load'));
-    expect(requests).toHaveLength(2); requests[0].pending.resolve(configurationReply(requests[0].request)); await Promise.resolve(); expect(panel(dom.document)).toBe(null);
-    requests[1].pending.resolve(configurationReply(requests[1].request)); await vi.waitFor(() => expect(panel(dom.document)).not.toBe(null));
+    expect(requests).toHaveLength(2); requests[0].pending.resolve(configurationReply(requests[0].request)); await Promise.resolve(); expect(panel(dom.document)?.dataset.copilotSettings).toBe('unavailable'); expect(dom.document.querySelector<HTMLButtonElement>('[data-copilot-runtime] button')?.disabled).toBe(true);
+    requests[1].pending.resolve(configurationReply(requests[1].request)); await vi.waitFor(() => expect(panel(dom.document)?.dataset.copilotSettings).toBe('ready'));
     dom.document.querySelector<HTMLMetaElement>('meta[name="octolytics-dimension-repository_id"]')!.content = '8';
-    await vi.waitFor(() => expect(requests).toHaveLength(3)); expect(panel(dom.document)).toBe(null);
+    await vi.waitFor(() => expect(requests).toHaveLength(3)); expect(panel(dom.document)?.dataset.copilotSettings).toBe('unavailable'); expect(panel(dom.document)?.querySelectorAll('[data-copilot-provenance] dd')).toHaveLength(0);
     Object.defineProperty(dom.document, 'visibilityState', { configurable: true, value: 'hidden' }); dom.document.dispatchEvent(new dom.dom.window.Event('visibilitychange'));
     requests[2].pending.resolve(configurationReply(requests[2].request)); await Promise.resolve(); expect(panel(dom.document)).toBe(null);
 });

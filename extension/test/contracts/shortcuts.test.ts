@@ -61,7 +61,7 @@ it('resetting assignments retains the global switch and unrelated favorites and 
 });
 it('content receives only bounded bindings with the resolved shortcut gate and cannot accept a broadened command or collection', () => {
     const settings = { ...DEFAULT_SETTINGS, center: { ...DEFAULT_SETTINGS.center, bindings } };
-    const configuration = runtimeConfiguration(settings, CONFIG, null, 0);
+    const configuration = runtimeConfiguration(settings, CONFIG, null, 0)!;
     const response = { ...configuration, sourceTree: 'unbundled' };
     expect(decodeRuntimeConfiguration(response, CONFIG, 'unbundled')?.settings.bindings).toEqual(bindings);
     expect(configuration.settings).not.toHaveProperty('center'); expect(configuration.settings).not.toHaveProperty('favorites');

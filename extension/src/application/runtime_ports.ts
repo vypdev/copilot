@@ -8,6 +8,7 @@ export interface RuntimeContext {
     readonly settings: RuntimeSettings;
     readonly paused: boolean;
     readonly repositoryId: string;
+    readonly configurationEpoch?: number;
 }
 export interface ResourceScope {
     readonly stopped: boolean;
@@ -18,6 +19,7 @@ export interface ResourceScope {
 export interface FeatureController { refresh(): void | Promise<void>; dispose(): void }
 export interface RuntimeFeature {
     readonly id: string;
+    readonly purpose?: 'enhancement' | 'local-control';
     readonly enabled: (context: RuntimeContext) => boolean;
     readonly mount: (context: RuntimeContext, scope: ResourceScope) => FeatureController | Promise<FeatureController>;
 }

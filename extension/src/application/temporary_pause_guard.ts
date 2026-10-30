@@ -1,3 +1,5 @@
+import type { TemporaryPauseCondition } from '../domain/temporary_pause_observation.ts';
+
 /** Worker-local precaution, separate from the browser-session document and all saved preferences. */
 export class TemporaryPauseGuard {
     private readonly held = new Set<object>();
@@ -6,6 +8,9 @@ export class TemporaryPauseGuard {
     get blocked(): boolean { return this.held.size > 0 || this.precaution; }
     get uncertain(): boolean { return this.precaution; }
     get pending(): boolean { return this.held.size > 0; }
+    get condition(): Exclude<TemporaryPauseCondition, 'unavailable'> {
+        return this.precaution ? this.pending ? 'pending-precaution' : 'precaution' : this.pending ? 'pending' : 'clear';
+    }
     capture(): object { return this.witness; }
     protect(): void { this.precaution = true; this.witness = {}; }
     hold(): object | null {

@@ -26,7 +26,7 @@ export class RuntimeHealth {
         this.events = deepFreeze([...this.events.slice(-99), { featureId, code: code as RuntimeFaultCode,
             scope: current ? 'active-at-observation' as const : 'retired-at-observation' as const }]);
     }
-    resetFailures(): void { this.failed.clear(); }
+    resetFailures(retain: ReadonlySet<string> = new Set()): void { for (const id of this.failed) if (!retain.has(id)) this.failed.delete(id); }
     clear(): void { this.resetFailures(); this.events = Object.freeze([]); }
     snapshot(): RuntimeHealthView { return deepFreeze({ blocked: [...this.failed], events: [...this.events] }); }
 }
