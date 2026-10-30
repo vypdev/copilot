@@ -4,7 +4,7 @@
 - Date: 2026-09-11
 - Last updated: 2026-10-30
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-10-30; indirect unittest discovery regression #806, generated-source coordinate evidence #796, dependency-generated request/assertion evidence #784, renderer-grounded Markdown links #772, host-aware self-repository Action references #770, Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
+- Last verified: 2026-10-30; active Kotlin Json policy #807, indirect unittest discovery regression #806, generated-source coordinate evidence #796, dependency-generated request/assertion evidence #784, renderer-grounded Markdown links #772, host-aware self-repository Action references #770, Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -2185,3 +2185,102 @@ The actual consumer job checked out a merge containing the reviewed head; runner
 workflow and disputed module blobs match that reviewed head exactly. Keep this
 source-equality proof distinct from claiming the head itself was the checkout.
 Fresh full hooks and remote gates remain required before merge.
+
+### Kotlin Json instance and nullable-input policy — #807 (2026-10-30)
+
+The historical report transfers a nullable-field rejection under one Json policy
+to another. The current SDK independently reproduces that false premise on an
+owned eight-case campaign: one false positive, no missed causal defects, and
+zero exact locations among three matched controls. Preserve these failed scores
+and inputs. Separately authored Kotlin fixtures compiled with Kotlin 2.0.21 and
+public serialization 1.6.3 and 1.7.3 accept omitted nullable fields without
+defaults under explicitNulls=false and reject them under true. These observations
+do not establish the private consumer's resolved Gradle version or execute its
+sources. Declared dependencies and transitive POM requests remain distinct facts.
+
+serializer-policy-R01: reviewer and benchmark guidance MUST trace the Json
+instance actually passed to decoding, its inherited/overridden explicitNulls
+policy, nullable type, default and payload. For ordinary generated fields under the verified versions, false
+makes an absent nullable field without a default decode to null; true requires
+its presence. An absent non-nullable field without a default still fails.
+Defaults apply to omissions under both policies. Evidence about one Json instance
+cannot certify a differently configured instance. Unknown configuration requires
+omitting an unsupported requiredness claim, without inventing a lookup or run.
+
+```text
+changed input/decode -> actual Json instance -> inherited flags -> field/default
+ -> version-matched semantics and applicable execution -> ordinary finding
+```
+
+Text equivalent: determine the active instance before deciding whether omission
+fails, then reconcile the exact version and relevant observations. Keep real
+missing required input reportable. This is one shared pure guidance change;
+ordinary review, resolution-owning/non-owning partitions and the existing
+benchmark consume it. No decoder, generator, port, provider permission, runtime
+dependency, setting, state/schema, retry or severity/confidence floor changes.
+Existing type/lint, architecture and prompt compatibility checks enforce these
+boundaries, including the unchanged 15,000-character legacy prompt bound.
+
+UX uses existing pending/complete/partial/blocked review surfaces. A disproved
+claim produces no finding or additional notification. A real fault uses the
+existing changed-line finding, for example “The active JSON instance rejects
+this documented input,” with its policy and missing field as evidence. Unknown
+policy does not produce a speculative failure card. Existing cancellation,
+retry, historic-finding verification and localization remain unchanged; no
+consumer thread is automatically dismissed or resolved. Normal runtime adoption
+delivers the change; rollback reverts guidance, fixtures and docs together with
+no migration. Source, logs and labels stay untrusted evidence, never execution,
+approval or mutation authority.
+
+Reserve **24 distinct deterministic cases before implementation**:
+
+| Area | Cases | Observable requirement |
+|---|---:|---|
+| Owned observations | 8 | Both flags, nullable with/without default, missing non-nullable input, inherited policy, different active instance, unavailable policy |
+| Scorer controls | 8 | Penalize false requiredness and missed real rejection with unchanged floors |
+| Instruction delivery | 4 | Ordinary, owner/non-owner partition and actual benchmark; preserve source/history ownership |
+| Inert input ownership | 2 | Unknown identity and changed code-like text reject before compiled factory selection |
+| Verdict/privacy independence | 2 | Expected labels cannot influence observations or leak into model prompts |
+| **Total** | **24** | No double counting with compiled observations or earlier tests |
+
+Use fixed authored factories with exact inert fixture bindings, never a corpus
+interpreter, VM, eval, Function or subprocess. Their deterministic observations
+are a test model, not claimed Kotlin execution. Keep the independently compiled
+owned Kotlin source, public artifact pins, commands and observations separate.
+Its optional local execution adds no Kotlin/Java/network requirement to Node CI.
+Preserve all 126 previous corpus inputs/verdicts and append the frozen eight.
+Compare the actual baseline and changed SDK on identical cases, model, effort
+and quality floors. Preserve every outcome, including failed location gates;
+never replace actual predictions with perfect reference scorer inputs.
+
+Acceptance requires the four RED delivery cases, all 24 deterministic cases,
+100% prompt-module coverage, fully hit added runtime lines and unchanged global
+and module floors, full hooks, package/build/types/lint, Graphify, specification,
+catalog and docs checks. Fresh exact-head CI/Codecov, all three native cleanup
+footers and complete review with zero active findings remain mandatory before
+merge. Update detection, quality/observability, this owner, catalog/index and
+public model evidence together. No material readiness decision is open.
+Versioned primary sources are Json.kt at kotlinx.serialization
+[v1.6.3](https://github.com/Kotlin/kotlinx.serialization/blob/v1.6.3/formats/json/commonMain/src/kotlinx/serialization/json/Json.kt)
+and [v1.7.3](https://github.com/Kotlin/kotlinx.serialization/blob/v1.7.3/formats/json/commonMain/src/kotlinx/serialization/json/Json.kt).
+
+**Executed decision and limits.** The final defaults-first guide retains the
+active-instance/inheritance check and explicitly returns no finding when input
+is accepted. Equivalent repository-context, locale and required-field framing
+keeps the original prompt-size limit. All 24 new deterministic cases pass
+alongside 214 related cases. Both changed modules have 100% lines, statements
+and functions; the shared prompt has 100% branches and the context builder
+96.47%. No added statement or branch is uncovered.
+
+Four actual SDK samples retain identical frozen inputs, model, effort and floors
+in `quality/bugbot/evidence/issue-807.json`. The baseline has one false positive.
+V1 corrects that premise but emits a self-refuting finding on an inherited
+policy; V2 emits two false positives, including a mistaken default-field claim.
+Reject both. V3 emits no false positives or false negatives and matches the
+three real defects. Its exact locations are 2/3, failing the unchanged 0.8 floor;
+do not claim all model-quality gates passed or rerun an identical prompt to fish
+for green. This bounded improvement does not guarantee future model accuracy.
+The complete 134-case reference evaluation passes separately; it is not actual
+model execution. The published optional Kotlin source independently passes eight
+observations under each verified serialization version. Fresh full hooks and
+remote merge gates remain required.

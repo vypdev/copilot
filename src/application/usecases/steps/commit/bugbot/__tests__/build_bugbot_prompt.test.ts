@@ -442,3 +442,22 @@ describe('indirect unittest discovery evidence', () => {
     } else expect(prompt).toContain('retained-discovery-finding');
   });
 });
+
+describe('Kotlin Json instance policy evidence', () => {
+  it.each([undefined, true, false])('delivers active serializer policy with resolution ownership=%s', ownsResolution => {
+    const source = '+val decoded = implicitJson.decodeFromString<OwnedRequest>(raw)';
+    const prompt = buildBugbotPrompt(mockExecution(), mockContext({ reviewDiffBlock: source,
+      previousFindingsBlock: 'retained-json-finding' }), ownsResolution === undefined ? undefined : { partition: {
+      id: 'json-policy', ordinal: 1, total: 2, headSha: 'a'.repeat(40), block: source,
+      files: ['backend/OwnedRequest.kt'], fragmentCount: 1, ownsResolution,
+    } });
+    for (const clause of ['actual Json instance', 'explicitNulls=false', 'absent nullable', 'non-nullable', 'Defaults apply first with either flag', 'Json(base) inherits flags', 'If input is accepted return findings: []']) {
+      expect(prompt).toContain(clause);
+    }
+    expect(prompt).toContain(source);
+    if (ownsResolution === false) {
+      expect(prompt).not.toContain('retained-json-finding');
+      expect(prompt).toContain('must return an empty resolved_findings array');
+    } else expect(prompt).toContain('retained-json-finding');
+  });
+});

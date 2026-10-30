@@ -291,6 +291,47 @@
         "confidence": 1
       }
     ],
-    "unittest-discovery-runner-unavailable": []
+    "unittest-discovery-runner-unavailable": [],
+    "kotlin-json-implicit-nullable-omission": [],
+    "kotlin-json-explicit-nullable-omission": [
+      {
+        "id": "kotlin-json-explicit-nullable-omission",
+        "title": "The changed request decode rejects its documented accepted input",
+        "file": "backend/OwnedRequest.kt",
+        "line": 11,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)",
+        "confidence": 1
+      }
+    ],
+    "kotlin-json-implicit-missing-nonnullable": [
+      {
+        "id": "kotlin-json-implicit-missing-nonnullable",
+        "title": "The changed request decode rejects its documented accepted input",
+        "file": "backend/OwnedRequest.kt",
+        "line": 11,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)",
+        "confidence": 1
+      }
+    ],
+    "kotlin-json-implicit-nullable-default": [],
+    "kotlin-json-explicit-nullable-default": [],
+    "kotlin-json-inherited-implicit-policy": [],
+    "kotlin-json-different-instance-policy": [
+      {
+        "id": "kotlin-json-different-instance-policy",
+        "title": "The changed request decode rejects its documented accepted input",
+        "file": "backend/OwnedRequest.kt",
+        "line": 11,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "    val decoded = serverJson.decodeFromString<OwnedRequest>(raw)",
+        "confidence": 1
+      }
+    ],
+    "kotlin-json-unavailable-policy": []
   }
 }

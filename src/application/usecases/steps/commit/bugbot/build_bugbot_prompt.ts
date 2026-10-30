@@ -7,7 +7,6 @@
  */
 
 import { getBugbotPrompt } from "../../../../../prompts";
-import { PROJECT_CONTEXT_INSTRUCTION } from "../../../../../utils/project_context_instruction";
 import type { BugbotContext } from "./types";
 import { resolveBugbotReviewEffort } from '../../../../../domain/bugbot/review_configuration';
 import { fileMatchesIgnorePatterns } from '../../../../policies/file_ignore_policy';
@@ -65,7 +64,7 @@ export function buildBugbotReviewInput(
 
     const literalEvidence = assignment ? undefined : legacyPythonWitnesses(changes);
     const prompt = getBugbotPrompt({
-        projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
+        projectContextInstruction: 'Read code (respect ignores), README/docs and rules/conventions (.cursor/rules, CONTRIBUTING, guidelines).',
         owner: param.repository.owner,
         repo: param.repository.name,
         headBranch,
