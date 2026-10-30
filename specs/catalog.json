@@ -7,7 +7,7 @@
       "status": "implemented",
       "scope": "English-default, localized, semantic, bounded, and idempotent product messages across GitHub and repository-aware operator surfaces",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-29",
+      "lastVerified": "2026-10-30",
       "specs": [
         "specs/semantic-github-publication-and-notification.md",
         "specs/repository-locale-and-localization.md",
@@ -381,7 +381,8 @@
         "docs/agents/execution-contract.mdx",
         "docs/security-operations/operations/error-reference.mdx",
         "docs/issues/pre-branch-sdds.mdx",
-        "docs/development/specifications.mdx"
+        "docs/development/specifications.mdx",
+        "docs/security-operations/operations/troubleshooting.mdx"
       ]
     },
     {
