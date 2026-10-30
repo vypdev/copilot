@@ -814,16 +814,16 @@ runtime, finish or explicitly reconcile pending V2 operations with the newer
 runtime; do not discard their recovery state. No public configuration/schema
 migration, consumer override or deployment is part of this change.
 
-Reserve **91 distinct new cases before implementation**, including the thirty-one review/acceptance extensions recorded below:
+Reserve **93 distinct new cases before implementation**, including the thirty-three review/acceptance extensions recorded below:
 
 | Area | Cases | Acceptance |
 |---|---:|---|
 | Pure record/preservation policy | 30 | V1/V2 round trips, encoded bases, identity/nonce, malformed/unknown/duplicate/bounded records and exact owned-state removal |
 | Setup/original-parent projection | 13 | absent/poisoned PR config, admitted parent, valid pending authority, conflicts, unchanged ordinary/unlinked/issue routes |
 | Link/recovery/compensation | 19 | interrupted writes, verified/unverified restore, new head, foreign owner/ref, lookup failure, changed body/lease and one real worker-kill recovery |
-| Description/configuration writers | 15 | replace/append/preserve/disabled or explicit commands, fresh metadata, model-time head drift and retained state on failure |
+| Description/configuration writers | 17 | replace/append/preserve/disabled or explicit commands, fresh metadata, model-time head drift and retained state on failure |
 | Routing/bindings/completion | 14 | newer synchronize first, original-event retry, review-only preparation, stale persistence fence and native identity binding |
-| **Total** | **91** | no double counting with existing compensation or #610 cases |
+| **Total** | **93** | no double counting with existing compensation or #610 cases |
 
 The owned process-kill case has a **15-second** budget reserved here; it uses
 only a disposable fake-provider state file and a child Node process, never a
@@ -849,7 +849,7 @@ GraphQL error policy. A dedicated regression first reproduces the incorrect
 retryable outage and then verifies terminal, sanitized credential guidance.
 
 Local correction evidence for #785: the two regressions failed on the original
-implementation (2 failed, 63 passed). The reserved 91 new test cases and existing
+implementation (2 failed, 63 passed). The reserved 93 new test cases and existing
 boundary suites now pass together: 644 tests across 25 suites. The concurrent
 missing-marker negative case first failed while its verified positive control
 passed. The five review
@@ -954,3 +954,8 @@ as public configuration. Invalid slash components (empty, dot-prefixed or ending
 in `.lock`) are rejected in V1/V2 stored bases and native head refs before mutations.
 Reserve six pure invalid-component cases, four setup/projection cases and one
 boundary propagation/reset case; existing identity/read/time/coverage limits remain.
+
+Two additional compatibility cases exercise each authorized comment transport
+with the optional legacy recovery dependency absent. They verify description
+delivery and the existing actor authorization guard, and cover the two partial
+added-line branches reported by exact-head Codecov before final acceptance.
