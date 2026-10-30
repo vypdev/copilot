@@ -111702,7 +111702,9 @@ function validateCatalog(root, catalog) {
     errors.push('specs must be an existing repository directory without symlinks.');
     return errors;
   }
-  for (const spec of discoverSpecificationFiles(root)) {
+  const discovery = scanSpecificationFiles(root);
+  errors.push(...discovery.errors);
+  for (const spec of discovery.files) {
     if (!registeredSpecs.has(spec)) errors.push(`${spec} is not registered in the specification catalog.`);
   }
   return errors;
@@ -111773,20 +111775,29 @@ function isRegularRepositoryFile(root, relativePath) { return isRegularRepositor
 function isRegularRepositoryDirectory(root, relativePath) { return isRegularRepositoryPath(root, relativePath, true); }
 
 function discoverSpecificationFiles(root) {
+  const discovery = scanSpecificationFiles(root);
+  if (discovery.errors.length > 0) throw new Error(discovery.errors.join('\n'));
+  return discovery.files;
+}
+
+function scanSpecificationFiles(root) {
   const excluded = new Set(['README.md', '_template.md', 'CATALOG.md']);
   const specsRoot = path.join(root, 'specs');
   const files = [];
+  const errors = [];
   function visit(directory, prefix = '') {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
       const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
-      if (entry.isDirectory()) visit(path.join(directory, entry.name), relative);
+      if (entry.isSymbolicLink()) {
+        errors.push(`specs/${relative} is an unsupported symbolic link. Replace it with ordinary repository files before retrying specification catalog validation.`);
+      } else if (entry.isDirectory()) visit(path.join(directory, entry.name), relative);
       else if (entry.isFile() && entry.name.endsWith('.md') && !(prefix === '' && excluded.has(entry.name))) {
         files.push(`specs/${relative}`);
       }
     }
   }
   visit(specsRoot);
-  return files.sort();
+  return { files: files.sort(), errors: errors.sort() };
 }
 
 function renderCatalog(catalog) {

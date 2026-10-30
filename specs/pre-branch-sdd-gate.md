@@ -3,7 +3,7 @@
 - Status: Implemented — automated verification complete; live provider UX review pending
 - Date: 2026-09-17
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: 2026-10-30 (navigable accepted catalog filenames, #782; truthful proposed SDK bootstrap, #777; safe portable catalog publication, #771; nested catalog links, #768; actionable blocked preparation and safe diagnostics, #714)
+- Last verified: 2026-10-30 (complete no-follow specification discovery, #804; navigable accepted catalog filenames, #782; truthful proposed SDK bootstrap, #777; safe portable catalog publication, #771; nested catalog links, #768; actionable blocked preparation and safe diagnostics, #714)
 - Owners: Copilot maintainers
 - Scope: clarify, update, validate, and publish the owning SDD before eligible branch-based work
 - Related issues/PRs: none; local design work; companion SDD `issue-start-and-branch-readiness.md`
@@ -2150,3 +2150,110 @@ lines/functions, 97.81% statements and 94.96% branches. Extension verification
 passes 267 tests with 100% all metrics. The setup ledger remains 336/350 passed
 with its 14 explicitly open existing cases. Exact-head remote platform checks,
 diff coverage and a complete review without active findings remain merge gates.
+
+## Complete specification discovery without following links — #804 (2026-10-30)
+
+**Observed defect and scope.** At develop `adf86815783f72a6d85a18ce5d27db680ff37e4b`,
+the standalone validator rejects an ordinary unregistered Markdown SDD but
+silently omits unregistered file and directory symlinks from its discovery walk.
+An owned disposable reproduction also gets a successful standalone validation.
+Registered symlinks are already rejected. This correction concerns catalog
+completeness; the former discovery does not follow links or execute their targets.
+
+discovery-R01: every symbolic-link entry encountered below the ordinary `specs/`
+directory MUST produce an explicit unsupported-path diagnostic without following
+the link, reading its target, or recursing into it. Internal, external, dangling
+and cyclic links follow the same rule. All names and extensions are included:
+determining whether an unknown target is a directory must not require following
+it. Root `README.md`, `_template.md` and `CATALOG.md` exclusions continue to apply
+to ordinary files; ordinary non-Markdown files remain excluded. Registered and
+unregistered nested ordinary SDDs retain their existing ownership rules.
+
+discovery-R02: `validateCatalog` MUST retain its error-array contract, collect
+discovery diagnostics and reject incomplete discovery. The exported
+`discoverSpecificationFiles` helper retains its sorted-array result for supported
+trees and MUST throw an explicit diagnostic for unsupported discovery instead of
+returning an apparently complete partial list. A private filesystem scan owns
+file enumeration and diagnostics; no domain/provider dependency, public option,
+new package or fourth standalone SDK file is introduced.
+
+discovery-R03: actual generation and validation entrypoints MUST return a failing
+exit status, omit `PASS`, and leave the existing generated catalog and link
+targets unchanged when discovery is unsupported. Generation validates before its
+existing atomic publication boundary. The same behavior applies to the matching
+three-file standalone SDK without an application package. No automatic deletion,
+conversion, consumer toolchain invocation or remote mutation is permitted.
+
+```text
+catalog command -> inspect ordinary specs tree -> unsupported link: reject
+                                          -> supported files: ownership checks
+                                          -> render and safely publish/compare
+```
+
+Text equivalent: both commands inspect the same ordinary tree. A link blocks
+before publication or successful validation; supported files continue through
+the existing catalog and publication checks.
+
+**User flow and recovery.** The CLI remains synchronous with no new progress
+notification. Pending means the command is inspecting the tree. A blocked command
+shows a relative path and one recovery action, for example:
+
+```text
+specs/alias.md is an unsupported symbolic link. Replace it with ordinary repository files before retrying specification catalog validation.
+```
+
+The maintainer replaces the link through normal reviewed repository work,
+registers any resulting SDD, regenerates the catalog and retries the same command.
+The existing catalog remains available after failure; there is no new partial
+publication state. Success retains the existing `generation: PASS` or
+`validation: PASS` content and capability count. Existing read-only doctor and
+gate consumers receive the same validator failure without gaining bypass or
+publication authority. CLI diagnostics retain their existing English text
+contract; the relative path and plain text carry meaning without color, HTML or
+a diagram. No issue comment, check schema or localization key is added.
+
+**Compatibility, security and operations.** No catalog schema, readiness state,
+configuration, default, permission or branch policy changes. Previously ignored
+links now block the next validation, including an in-flight draft; historical
+commits are not rewritten. Never resolve targets to decide whether to ignore a
+link. Existing containment, regular-file, ownership, supported-profile and atomic
+publication checks remain mandatory. Race hardening beyond the existing
+filesystem checks is outside this bounded correction. Rollback restores the
+prior reviewed SDK, including its known omission; it cannot certify the links.
+
+**Numeric budget before implementation.** Reserve **20 distinct additional cases**:
+
+| Area | Cases | Observable requirement |
+|---|---:|---|
+| Real file links | 6 | Internal/external/dangling at root and nested paths; R01 |
+| Real directory links | 4 | Internal/external/cyclic/dangling without recursion; R01 |
+| Reserved root names as links | 3 | Ordinary-file exclusions cannot hide links; R01 |
+| Supported-tree controls | 2 | Ordinary exclusions and nested registration; R01/R02 |
+| Actual CLI entrypoints | 2 | Generate/check reject file/directory links without publication; R03 |
+| Exported discovery helper | 1 | Supported sorted result and explicit incomplete-discovery failure; R02 |
+| Isolated three-file SDK | 2 | Real generate/check failure without an application package; R03 |
+| **Total** | **20** | No case counted twice |
+
+Use owned temporary files and targets only. Follow the established Windows
+file-symlink privilege probe; directory junctions remain executable platform
+controls. Preserve honest platform skips rather than substituting a mock for
+filesystem evidence. New executable lines/branches require full focused and
+exact-base patch coverage; the existing validator 95/90 and all repository/module
+budgets remain enforced. Real generation/validation failures must preserve
+sentinels and existing output, and must never read the target directory.
+
+Update this owner, catalog evidence/index, `docs/development/specifications.mdx`
+and `docs/issues/pre-branch-sdds.mdx` together. Complete focused regression and
+coverage, specification/docs/workflow/type/lint/package/build checks, Graphify,
+normal commit hooks and exact-head CI, all three native platforms, Codecov audit
+and complete review without active findings before the authorized develop merge.
+The upstream API reference is [Node.js Dirent symbolic-link classification](https://nodejs.org/docs/latest-v24.x/api/fs.html#direntissymboliclink).
+
+Local execution for #804: all 20 new cases ran against the unchanged validator;
+18 reproduced the omission and two supported-tree controls passed. After the
+correction, all 174 catalog regressions pass. The validator reaches 100% lines/
+functions, 97.91% statements and 95.10% branches, with zero uncovered statements
+or branches intersecting added source lines. Four related doctor, branch-sync
+and workspace suites pass 115 tests with one existing platform skip. Fresh
+full-hook and remote gates remain required; these owned fixtures do not claim
+consumer application execution or adoption.
