@@ -42,6 +42,16 @@ describe('branch-sync catalog compatibility before publication', () => {
         expect(readFileSync(file)).toEqual(metadata);
         expect(readFileSync(join(root, 'specs/CATALOG.md'), 'utf8')).toContain('Not yet implemented');
     });
+    it('replays a canonical SDK index without publishing again or changing evidence bytes', () => {
+        writeSdk();
+        expect(refreshBranchSyncSddCatalogDetailed(root)).toEqual({ valid: true });
+        const metadata = readFileSync(join(root, 'specs/catalog.json')), index = readFileSync(join(root, 'specs/CATALOG.md'));
+        const publish = jest.spyOn(publisher, 'publishCatalogMarkdown');
+        expect(refreshBranchSyncSddCatalogDetailed(root)).toEqual({ valid: true });
+        expect(publish).not.toHaveBeenCalled();
+        expect(readFileSync(join(root, 'specs/catalog.json'))).toEqual(metadata);
+        expect(readFileSync(join(root, 'specs/CATALOG.md'))).toEqual(index);
+    });
     it.each(['id', 'title', 'scope', 'owner', 'lastVerified'] as const)('reports the bounded field for an empty SDK %s', field => {
         const capability = sdk(); capability[field] = '';
         writeSdk([capability]);
