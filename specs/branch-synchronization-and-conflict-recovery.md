@@ -1101,10 +1101,11 @@ before the fixer. A clean reviewed migration that produces valid SDK metadata
 must remain possible even when the old child used a legacy catalog. Do not make
 the old child format an unconditional permanent blocker.
 
-Only catalog refreshes already admitted by the original merge/conflict path set
-use this preflight. Unrelated merges without catalog refresh retain their normal
-behavior. After resolution, repeat the normal full catalog/evidence validation;
-use the bundled trusted publisher for the single authorized derived index.
+Catalog JSON changes and original JSON/index conflicts use this preflight.
+Unrelated merges retain their normal behavior. After resolution, repeat the
+normal full catalog/evidence validation. Only refreshes already admitted by the
+original merge/conflict path set use the bundled trusted index publisher;
+all other relevant catalog/index validation is read-only.
 Preserve metadata bytes and all existing HEAD/MERGE_HEAD, conflict path, index,
 whitespace, complete credential-free verification and remote-head controls.
 Never execute a validator or script supplied by the merged branch.
@@ -1118,6 +1119,30 @@ SDK data requires correction. Abort status is completed or unverified; completed
 means the abort call finished, not a new claim of verified application readiness.
 If abort fails, show unverified local state and require inspection before retry.
 No synchronization commit/push is attempted on this path.
+
+catalog-profile-R03a (review finding, declared before correction): a conflict in
+either catalog JSON or its index requires profile preflight. Conflicted JSON
+uses both immutable originals even if the index merged without conflict or Git
+left readable JSON without text markers (for example with a binary merge
+attribute). A
+metadata-only clean update receives the same full SDK validation. Readable
+metadata changes are also classified before resolving unrelated conflicts;
+their complete read-only validation runs after that resolution. Preserve the
+original write authority: only an already-conflicted index or the existing clean
+merge that changed both metadata and index may be regenerated. JSON-only
+resolutions use read-only full catalog/index validation. If their canonical
+index would differ, stop with a closed index-output diagnostic and preserve the
+protected index; do not add it to the conflict set or write/stage another path.
+An unrelated merge remains unchanged. No new user configuration is introduced.
+
+Reserve at least **8 additional regression cases** for this correction beyond
+the primary 48-case floor: four real JSON-only Git merges covering unsupported
+originals and compatible SDK originals, two resolved JSON-only failures
+(invalid SDK and noncanonical protected index), and two direct read-only index
+validation cases. Verify no fixer/publication on unsupported preparation and
+no index mutation or extra staging during read-only validation. The existing
+full coverage, native-platform, protected-path and zero-active-finding gates
+remain required.
 
 catalog-profile-R05: reuse the existing correlated failure reply, with complete
 English/Spanish content and the existing whole-catalog fallback for other
@@ -1165,8 +1190,12 @@ passing consumer validator does not grant an SDK publication adapter.
 flowchart LR
     A[Authorized exact-head merge preview] --> P[Classify relevant catalog]
     P -->|SDK| V[Normal path and bundled contract checks]
-    V --> I[Authorized derived index then full verifier and head fences]
-    I --> C[Trusted normal commit and push]
+    V --> W{Index refresh authorized by original paths}
+    W -->|Yes| I[Trusted derived index publisher]
+    W -->|No| J[Read-only canonical index check]
+    I --> F[Full verifier and head fences]
+    J --> F
+    F --> C[Trusted normal commit and push]
     P -->|Unsupported or invalid| D[Closed profile field and position]
     D --> B[Abort and existing correlated recovery reply]
     B --> R[Reviewed compatible adapter or lossless maintainer mapping]

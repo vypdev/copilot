@@ -74,6 +74,15 @@ export function refreshBranchSyncSddCatalog(repositoryRoot: string): boolean {
 
 /** Refreshes only the already-authorized generated index; metadata is never rewritten. */
 export function refreshBranchSyncSddCatalogDetailed(repositoryRoot: string): BranchSyncCatalogRefresh {
+    return checkBranchSyncSddCatalog(repositoryRoot, true);
+}
+
+/** Certifies JSON-only resolutions without acquiring another path's write authority. */
+export function validateBranchSyncSddCatalogDetailed(repositoryRoot: string): BranchSyncCatalogRefresh {
+    return checkBranchSyncSddCatalog(repositoryRoot, false);
+}
+
+function checkBranchSyncSddCatalog(repositoryRoot: string, mayRefreshIndex: boolean): BranchSyncCatalogRefresh {
     let diagnostic = catalogDiagnostic('workspace-boundary');
     try {
         const root = catalogRoot(repositoryRoot);
@@ -123,7 +132,10 @@ export function refreshBranchSyncSddCatalogDetailed(repositoryRoot: string): Bra
         diagnostic = catalogDiagnostic('index-output', 'sdk-v1');
         const expected = validator.renderCatalog(catalog);
         if (Buffer.byteLength(expected, 'utf8') > BRANCH_SYNC_CATALOG_MAX_BYTES) return rejectCatalog(diagnostic);
-        if (validator.normalizeCheckoutLineEndings(index) !== expected) publisher.publishCatalogMarkdown(root, expected);
+        if (validator.normalizeCheckoutLineEndings(index) !== expected) {
+            if (!mayRefreshIndex) return rejectCatalog(diagnostic);
+            publisher.publishCatalogMarkdown(root, expected);
+        }
         return { valid: true };
     } catch { return rejectCatalog(diagnostic); }
 }

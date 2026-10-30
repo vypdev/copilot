@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import type { BigIntStats } from 'node:fs';
 const fs: typeof import('node:fs') = require('node:fs');
 import { inspectBranchSyncCatalogSource, inspectBranchSyncSddCatalogProfile, refreshBranchSyncSddCatalog,
-    refreshBranchSyncSddCatalogDetailed } from '../branch_sync_sdd_catalog';
+    refreshBranchSyncSddCatalogDetailed, validateBranchSyncSddCatalogDetailed } from '../branch_sync_sdd_catalog';
 import * as logging from '../../application/ports/logging_ports';
 
 const validator = require('../specification_catalog_validator.cjs');
@@ -49,6 +49,19 @@ describe('branch-sync catalog compatibility before publication', () => {
         const publish = jest.spyOn(publisher, 'publishCatalogMarkdown');
         expect(refreshBranchSyncSddCatalogDetailed(root)).toEqual({ valid: true });
         expect(publish).not.toHaveBeenCalled();
+        expect(readFileSync(join(root, 'specs/catalog.json'))).toEqual(metadata);
+        expect(readFileSync(join(root, 'specs/CATALOG.md'))).toEqual(index);
+    });
+    it.each(['canonical', 'noncanonical'] as const)('validates a %s protected index without publishing or changing bytes', scenario => {
+        writeSdk();
+        if (scenario === 'canonical') expect(refreshBranchSyncSddCatalogDetailed(root)).toEqual({ valid: true });
+        const metadata = readFileSync(join(root, 'specs/catalog.json')), index = readFileSync(join(root, 'specs/CATALOG.md'));
+        const publish = jest.spyOn(publisher, 'publishCatalogMarkdown'), validate = jest.spyOn(validator, 'validateCatalog');
+        const result = validateBranchSyncSddCatalogDetailed(root);
+        expect(result).toEqual(scenario === 'canonical' ? { valid: true } : { valid: false, diagnostic: {
+            phase: 'index-output', profile: 'sdk-v1', field: 'catalog', capabilityNumber: 0,
+        } });
+        expect(validate).toHaveBeenCalledTimes(1); expect(publish).not.toHaveBeenCalled();
         expect(readFileSync(join(root, 'specs/catalog.json'))).toEqual(metadata);
         expect(readFileSync(join(root, 'specs/CATALOG.md'))).toEqual(index);
     });

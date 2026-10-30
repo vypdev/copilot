@@ -90649,6 +90649,7 @@ exports.inspectBranchSyncCatalogSource = inspectBranchSyncCatalogSource;
 exports.inspectBranchSyncSddCatalogProfile = inspectBranchSyncSddCatalogProfile;
 exports.refreshBranchSyncSddCatalog = refreshBranchSyncSddCatalog;
 exports.refreshBranchSyncSddCatalogDetailed = refreshBranchSyncSddCatalogDetailed;
+exports.validateBranchSyncSddCatalogDetailed = validateBranchSyncSddCatalogDetailed;
 const node_fs_1 = __nccwpck_require__(87561);
 const node_path_1 = __nccwpck_require__(49411);
 const logging_ports_1 = __nccwpck_require__(6152);
@@ -90721,6 +90722,13 @@ function refreshBranchSyncSddCatalog(repositoryRoot) {
 }
 /** Refreshes only the already-authorized generated index; metadata is never rewritten. */
 function refreshBranchSyncSddCatalogDetailed(repositoryRoot) {
+    return checkBranchSyncSddCatalog(repositoryRoot, true);
+}
+/** Certifies JSON-only resolutions without acquiring another path's write authority. */
+function validateBranchSyncSddCatalogDetailed(repositoryRoot) {
+    return checkBranchSyncSddCatalog(repositoryRoot, false);
+}
+function checkBranchSyncSddCatalog(repositoryRoot, mayRefreshIndex) {
     let diagnostic = (0, branch_sync_catalog_diagnostic_1.catalogDiagnostic)('workspace-boundary');
     try {
         const root = catalogRoot(repositoryRoot);
@@ -90783,8 +90791,11 @@ function refreshBranchSyncSddCatalogDetailed(repositoryRoot) {
         const expected = validator.renderCatalog(catalog);
         if (Buffer.byteLength(expected, 'utf8') > branch_sync_catalog_diagnostic_1.BRANCH_SYNC_CATALOG_MAX_BYTES)
             return rejectCatalog(diagnostic);
-        if (validator.normalizeCheckoutLineEndings(index) !== expected)
+        if (validator.normalizeCheckoutLineEndings(index) !== expected) {
+            if (!mayRefreshIndex)
+                return rejectCatalog(diagnostic);
             publisher.publishCatalogMarkdown(root, expected);
+        }
         return { valid: true };
     }
     catch {
@@ -90855,23 +90866,30 @@ class BranchSyncWorkspaceAdapter {
             throw new Error("Git could not prepare the parent branch merge.");
         }
         let workspacePaths = await this.listWorkspacePaths();
-        if (conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH)) {
+        if (conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_PATH) || conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH)
+            || workspacePaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_PATH)) {
             const diagnostic = (0, branch_sync_sdd_catalog_1.inspectBranchSyncSddCatalogProfile)(this.repositoryRoot);
-            if (diagnostic.phase === 'metadata-conflict-markers' && conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_PATH)) {
+            if (conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_PATH)) {
                 // Immutable original objects establish compatibility before a fixer sees
                 // conflicted JSON. A clean, reviewed SDK migration uses merged bytes instead.
                 await this.assertOriginalCatalogProfile(childSha);
                 await this.assertOriginalCatalogProfile(parentSha);
+                if (diagnostic.phase !== 'metadata-conflict-markers')
+                    this.assertSdkCatalogProfile(diagnostic);
             }
             else
                 this.assertSdkCatalogProfile(diagnostic);
         }
-        if (conflictPaths.length === 0 && workspacePaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_PATH) && workspacePaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH)) {
-            const refreshed = (0, branch_sync_sdd_catalog_1.refreshBranchSyncSddCatalogDetailed)(this.repositoryRoot);
+        if (conflictPaths.length === 0 && workspacePaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_PATH)) {
+            const mayRefreshIndex = workspacePaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH);
+            const refreshed = mayRefreshIndex ? (0, branch_sync_sdd_catalog_1.refreshBranchSyncSddCatalogDetailed)(this.repositoryRoot)
+                : (0, branch_sync_sdd_catalog_1.validateBranchSyncSddCatalogDetailed)(this.repositoryRoot);
             if (!refreshed.valid)
                 throw new branch_sync_catalog_diagnostic_1.BranchSyncCatalogFailure(refreshed.diagnostic);
-            await this.git.stagePaths([branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH]);
-            workspacePaths = await this.listWorkspacePaths();
+            if (mayRefreshIndex) {
+                await this.git.stagePaths([branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH]);
+                workspacePaths = await this.listWorkspacePaths();
+            }
         }
         const indexEntries = await this.readIndexEntries();
         const conflicts = new Set(conflictPaths);
@@ -90916,8 +90934,10 @@ class BranchSyncWorkspaceAdapter {
             if (!this.resolutionValidated && conflictPaths.includes(branch_sync_communication_budget_1.COMMUNICATION_BUDGET_PATH)
                 && !(0, branch_sync_communication_budget_1.refreshBranchSyncCommunicationBudget)(this.repositoryRoot))
                 return invalid('The resolved communication budget is invalid.', 'communication-budget-invalid');
-            if (!this.resolutionValidated && conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH)) {
-                const refreshed = (0, branch_sync_sdd_catalog_1.refreshBranchSyncSddCatalogDetailed)(this.repositoryRoot);
+            if (!this.resolutionValidated && (conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH)
+                || conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_PATH) || snapshot.workspacePaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_PATH))) {
+                const refreshed = conflictPaths.includes(branch_sync_sdd_catalog_1.SDD_CATALOG_INDEX_PATH)
+                    ? (0, branch_sync_sdd_catalog_1.refreshBranchSyncSddCatalogDetailed)(this.repositoryRoot) : (0, branch_sync_sdd_catalog_1.validateBranchSyncSddCatalogDetailed)(this.repositoryRoot);
                 if (!refreshed.valid)
                     return { ...invalid('The resolved SDD catalog is invalid.', 'sdd-catalog-invalid'),
                         catalogDiagnostic: refreshed.diagnostic };

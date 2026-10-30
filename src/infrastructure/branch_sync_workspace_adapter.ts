@@ -9,7 +9,7 @@ import { logInfo } from '../application/ports/logging_ports';
 import type { GitCommitPort } from "../application/ports/git_ports";
 import { listWorkspacePaths as inspectWorkspacePaths } from "../application/usecases/steps/commit/bugbot/workspace_changes";
 import { inspectBranchSyncCatalogSource, inspectBranchSyncSddCatalogProfile, refreshBranchSyncSddCatalogDetailed,
-  SDD_CATALOG_INDEX_PATH, SDD_CATALOG_PATH } from './branch_sync_sdd_catalog';
+  validateBranchSyncSddCatalogDetailed, SDD_CATALOG_INDEX_PATH, SDD_CATALOG_PATH } from './branch_sync_sdd_catalog';
 import { BRANCH_SYNC_CATALOG_MAX_BYTES, BranchSyncCatalogFailure, catalogDiagnostic,
   type BranchSyncCatalogDiagnostic } from '../domain/branch_sync_catalog_diagnostic';
 
@@ -65,20 +65,26 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
     }
 
     let workspacePaths = await this.listWorkspacePaths();
-    if (conflictPaths.includes(SDD_CATALOG_INDEX_PATH)) {
+    if (conflictPaths.includes(SDD_CATALOG_PATH) || conflictPaths.includes(SDD_CATALOG_INDEX_PATH)
+      || workspacePaths.includes(SDD_CATALOG_PATH)) {
       const diagnostic = inspectBranchSyncSddCatalogProfile(this.repositoryRoot);
-      if (diagnostic.phase === 'metadata-conflict-markers' && conflictPaths.includes(SDD_CATALOG_PATH)) {
+      if (conflictPaths.includes(SDD_CATALOG_PATH)) {
         // Immutable original objects establish compatibility before a fixer sees
         // conflicted JSON. A clean, reviewed SDK migration uses merged bytes instead.
         await this.assertOriginalCatalogProfile(childSha);
         await this.assertOriginalCatalogProfile(parentSha);
+        if (diagnostic.phase !== 'metadata-conflict-markers') this.assertSdkCatalogProfile(diagnostic);
       } else this.assertSdkCatalogProfile(diagnostic);
     }
-    if (conflictPaths.length === 0 && workspacePaths.includes(SDD_CATALOG_PATH) && workspacePaths.includes(SDD_CATALOG_INDEX_PATH)) {
-      const refreshed = refreshBranchSyncSddCatalogDetailed(this.repositoryRoot);
+    if (conflictPaths.length === 0 && workspacePaths.includes(SDD_CATALOG_PATH)) {
+      const mayRefreshIndex = workspacePaths.includes(SDD_CATALOG_INDEX_PATH);
+      const refreshed = mayRefreshIndex ? refreshBranchSyncSddCatalogDetailed(this.repositoryRoot)
+        : validateBranchSyncSddCatalogDetailed(this.repositoryRoot);
       if (!refreshed.valid) throw new BranchSyncCatalogFailure(refreshed.diagnostic);
-      await this.git.stagePaths([SDD_CATALOG_INDEX_PATH]);
-      workspacePaths = await this.listWorkspacePaths();
+      if (mayRefreshIndex) {
+        await this.git.stagePaths([SDD_CATALOG_INDEX_PATH]);
+        workspacePaths = await this.listWorkspacePaths();
+      }
     }
     const indexEntries = await this.readIndexEntries();
     const conflicts = new Set(conflictPaths);
@@ -120,8 +126,10 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
     try {
       if (!this.resolutionValidated && conflictPaths.includes(COMMUNICATION_BUDGET_PATH)
         && !refreshBranchSyncCommunicationBudget(this.repositoryRoot)) return invalid('The resolved communication budget is invalid.', 'communication-budget-invalid');
-      if (!this.resolutionValidated && conflictPaths.includes(SDD_CATALOG_INDEX_PATH)) {
-        const refreshed = refreshBranchSyncSddCatalogDetailed(this.repositoryRoot);
+      if (!this.resolutionValidated && (conflictPaths.includes(SDD_CATALOG_INDEX_PATH)
+        || conflictPaths.includes(SDD_CATALOG_PATH) || snapshot.workspacePaths.includes(SDD_CATALOG_PATH))) {
+        const refreshed = conflictPaths.includes(SDD_CATALOG_INDEX_PATH)
+          ? refreshBranchSyncSddCatalogDetailed(this.repositoryRoot) : validateBranchSyncSddCatalogDetailed(this.repositoryRoot);
         if (!refreshed.valid) return { ...invalid('The resolved SDD catalog is invalid.', 'sdd-catalog-invalid'),
           catalogDiagnostic: refreshed.diagnostic };
       }

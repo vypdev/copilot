@@ -609,6 +609,14 @@ to certify a different schema. On conflicted JSON, both immutable original
 catalog objects must establish SDK compatibility before a fixer can proceed.
 A clean merged SDK catalog can establish a reviewed migration directly.
 
+Conflicts in JSON alone receive these same checks. The resolved catalog still
+has to pass full SDK validation. If its index was not authorized for refresh by
+the original merge paths, Copilot checks that index without writing or staging
+it. An `index-output` failure in this case requires a reviewed repair of the
+catalog/index pair before retrying; it does not authorize an extra fixer path.
+Metadata that merged cleanly is also classified before resolving another file's
+conflict, then validated read-only after that resolution.
+
 1. Inspect the workflow response and original catalog at the reported entry
    position. `abort: completed` means the local abort call finished;
    `unverified` requires inspecting the local merge state before retrying.
