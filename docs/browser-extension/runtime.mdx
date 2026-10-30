@@ -104,6 +104,13 @@ site access or 401 does the same. It does not revoke a PAT at GitHub: use native
 GitHub settings for provider revocation. A protected-storage failure is explicit;
 disable/restart the extension/browser if it cannot confirm local cleanup.
 
+The development H3 service verifies protected saves and removals with one local
+read after the native attempt. Acknowledgement alone does not prove persistence;
+an exact saved record or actual absence can establish the result even if the
+response was lost. A failed read or different record leaves that desired result
+unconfirmed. No write or removal is automatically repeated. This internal
+verification does not itself implement retained session-operation history.
+
 ## Recovery
 
 | State | Meaning | Next action | Retained state |

@@ -21,6 +21,11 @@ export function validSession(value: unknown): value is ProtectedSession {
         && /^[A-Za-z0-9_]{8,255}$(?![\s\S])/u.test(value.secret) && validSessionIdentity(value);
 }
 export interface PageFence { readonly generation: number; readonly route: string; readonly repositoryId: string }
+/** Equality of the entire closed protected record, independent of property order. */
+export function sameProtectedSession(value: unknown, expected: unknown): boolean {
+    return validSession(value) && validSession(expected) && Object.keys(value).length === Object.keys(expected).length
+        && Object.entries(expected).every(([key, item]) => value[key as keyof ProtectedSession] === item);
+}
 export function currentFence(previous: PageFence | undefined, next: PageFence): boolean {
     return natural(next.generation) && (!previous || next.generation > previous.generation
         || (next.generation === previous.generation && next.route === previous.route && next.repositoryId === previous.repositoryId));

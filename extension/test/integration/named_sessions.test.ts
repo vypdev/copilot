@@ -118,6 +118,7 @@ it('forgets an unreadable protected vault only on explicit revoke-all, independe
     expect(h.values.has(NAMED_SESSIONS_KEY)).toBe(true);
     expect(await h.connections.change({ type: 'revoke-all' }, 0, h.current)).toMatchObject({ state: 'ready', entries: [], selected: null });
     expect(h.values.has(NAMED_SESSIONS_KEY)).toBe(false);
+    h.values.set(SESSION_KEY, CONNECTED);
     vi.mocked(h.port.remove).mockRejectedValueOnce(new Error('private delete failure'));
     expect(await h.connections.change({ type: 'revoke-all' }, 0, h.current)).toEqual({ state: 'unavailable' });
 });
@@ -134,7 +135,7 @@ it('retains safe state when protected storage or the preference grant cannot be 
     for (const failure of ['vault', 'revoke', 'grant'] as const) {
         const h = namedSessionsFixture(); await h.service.start();
         if (failure === 'vault') h.namedPorts.protected.mockRejectedValueOnce(new Error('private storage'));
-        if (failure === 'revoke') vi.mocked(h.port.remove).mockRejectedValueOnce(new Error('private remove'));
+        if (failure === 'revoke') { h.values.set(SESSION_KEY, CONNECTED); vi.mocked(h.port.remove).mockRejectedValueOnce(new Error('private remove')); }
         if (failure === 'grant') h.namedPorts.connected.mockRejectedValueOnce(new Error('private grant'));
         expect(await h.connections.change(CONNECTION_INPUT, 0, h.current)).toEqual({ state: 'unavailable' });
         expect(h.values.has(NAMED_SESSIONS_KEY)).toBe(false); expect(h.service.status().state).not.toBe('connected');

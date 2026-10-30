@@ -1,7 +1,7 @@
 # H3 — Complete local control center, profiles and accessible configuration
 
 - Status: Draft
-- Date: 2026-10-28
+- Date: 2026-10-30
 - Catalog capability ID: `github-browser-extension`
 - Last verified: not applicable; this is a prospective companion specification
 - Owners: Copilot maintainers
@@ -528,6 +528,36 @@ write from resurrecting credentials. A failed write acknowledgement is inspected
 once; an exactly observed save is accepted, otherwise the result stays unknown
 and the candidate is disconnected. No automatic second write occurs.
 
+#### Canonical active-session persistence
+
+The active-session service MUST distinguish native acknowledgement from a single
+canonical readback for both save and removal. A successful response alone cannot
+establish a saved credential or completed deletion. An exactly observed saved
+record MAY establish completion after a lost acknowledgement. Observed absence
+MAY establish deletion after a lost acknowledgement. A nonmatching record or
+unavailable readback leaves that desired persistence unconfirmed; never repeat
+the native write or removal automatically.
+
+```text
+Attempt once → retain accepted/unknown acknowledgement → inspect once
+ → exact saved record / observed absence: persistence verified
+ → different record / failed inspection: desired persistence unconfirmed
+```
+
+Text equivalent: acknowledgement and observation are independent. Save compares
+the complete validated protected record, including optional organization identity,
+without depending on property order. Removal requires actual absence. Native
+write and readback remain inside the same persistence queue reservation. Epoch,
+permission and current-source fences still apply before publishing a connection;
+an old observation cannot replace a newer session. Unconfirmed removal invalidates
+in-memory access immediately and reports unavailable protected cleanup. No secret,
+raw exception or protected record appears in public persistence facts.
+
+These internal observations are a foundation for the session operation family,
+not proof that its current-operation UI or optional journal producer is delivered.
+Active-session and named-vault phases remain independently owned. No schema,
+permission, automatic retry, persistent-local fallback or publication is introduced.
+
 The authenticated session read/disconnect path works independently of corrupt or
 future preference schemas; it never invents default settings to mount a page.
 Ordinary lifecycle updates are coalesced; a user mutation emits at most two
@@ -767,6 +797,14 @@ Errors follow impact → cause → action → retained state. They never claim a
 | Documentation/discoverability | 6 | Observable scenarios in the case inventory. |
 | Total | 56 | Distinct inventory cases; repeated executions do not add cases. |
 
+Active-session persistence adds a minimum16 distinct regression cases: four
+save/removal acknowledgement-versus-observation combinations, four exact-record
+and optional-identity validation cases, four source/epoch/queue races, and four
+native/readback failure cases. Each belongs to one budget category only. Existing
+H2 cases may satisfy unchanged fences only with current source-bound results;
+new policy and modified executable branches remain100% covered. This supplement
+does not replace the56 CENTER cases, full H3 native journeys or human gate.
+
 | Case ID | Area | Requirements | Scenario |
 |---|---|---|---|
 | bexh3-center-C01 | Domain/configuration/pure planning | H3-R02 | Inventory eligibility marks a later-milestone feature unavailable with its dependency. |
@@ -871,6 +909,13 @@ User documentation leads with the normal journey and recommended defaults, then 
 10. Given untrusted imported or repository-derived strings, when rendered, then markup, URLs and command-like text remain inert.
 11. Given implementation completion, when source-bound browser evidence is reviewed, then Chrome, Firefox and real Safari containing-app options/storage/session journeys pass; H2 receipts alone do not satisfy this gate.
 12. Given the implementation PR, when documentation and catalog validation run, then all new user/contributor pages are linked, examples match fixtures and catalog evidence is current.
+13. Given a protected save or removal, when native acknowledgement disagrees with
+    canonical storage, then only the one readback establishes desired persistence:
+    exact save/absence may survive lost acknowledgement, and accepted-but-unapplied
+    effects remain unconfirmed without an automatic repeated effect.
+14. Given delayed protected readback, when source, permission or epoch changes,
+    then old completion cannot publish current identity or overwrite a newer session;
+    native mutation and observation remain inside the same persistence reservation.
 
 ## 17. Requirements traceability
 
@@ -888,6 +933,12 @@ User documentation leads with the normal journey and recommended defaults, then 
 | H3-R10 | bexh3-center-C31, bexh3-center-C39, bexh3-center-C40, bexh3-center-C55 |
 | H3-R11 | bexh3-center-C15, bexh3-center-C16, bexh3-center-C22, bexh3-center-C23, bexh3-center-C43, bexh3-center-C44, bexh3-center-C54 |
 | H3-R12 | bexh3-center-C17, bexh3-center-C18, bexh3-center-C24, bexh3-center-C32, bexh3-center-C47, bexh3-center-C48, bexh3-center-C49, bexh3-center-C56 |
+
+The canonical active-session supplement to H3-R05/R11 is exercised by
+`protected_persistence.test.ts`, `protected_mutation.test.ts` and
+`protected_session_equality.test.ts`, together with current `session_races.test.ts`
+and `session_owner_projection.test.ts` fences. These deterministic cases do not
+establish the separate H3-R12 loaded-browser or human acceptance gate.
 
 ## 18. Implementation sequence
 

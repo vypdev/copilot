@@ -1,10 +1,11 @@
 import { pageIdentity } from '../domain/page.ts';
-import { validSession, type ProtectedSession, type SessionIdentity } from '../domain/session.ts';
+import { validSession, sameProtectedSession, type ProtectedSession, type SessionIdentity } from '../domain/session.ts';
 import type { NativeObject, Repository, Viewer } from '../domain/read.ts';
 import type { Message } from '../domain/protocol.ts';
 import type { StoragePort } from './runtime_ports.ts';
 import type { CancellationOwner, ReadCancellation, SessionPorts } from './read_ports.ts';
 import { ReadScheduler, type ScheduledRead } from './read_scheduler.ts';
+import { protectedMutation } from './protected_mutation.ts';
 
 export const SESSION_KEY = 'copilot.connection.v1';
 export type SessionStatus = { readonly state: 'disconnected' | 'connected' | 'unavailable' | 'revalidating' | 'limited' | 'cooldown' | 'budget'; readonly epoch: number; readonly retryAt?: number };
@@ -100,7 +101,12 @@ export class ProtectedSessionService {
         if (expected && (expected.viewerId !== viewer.id || expected.repositoryId !== repo.id)) throw new Error('identity-changed');
         const connection: ProtectedSession = { schemaVersion: 1, secret, viewerId: viewer.id, viewerLogin: viewer.login,
             repositoryId: repo.id, repository: repo.name, ...(repo.organizationId === undefined ? {} : { organizationId: repo.organizationId }) };
-        await this.persist(async () => { if (epoch === this.epoch && current()) await this.store.set(SESSION_KEY, connection); });
+        const saved = await this.persist(async () => {
+            if (epoch !== this.epoch || !current()) return null;
+            return protectedMutation(() => this.store.set(SESSION_KEY, connection), async () => sameProtectedSession(await this.store.get(SESSION_KEY), connection));
+        });
+        if (!saved) return;
+        if (saved.observation !== 'committed') throw new Error('protected-save-unconfirmed');
         const permitted = await this.ports.permitted();
         if (epoch !== this.epoch) return;
         if (!permitted || !current()) { await this.revoke(); return; }
@@ -115,10 +121,10 @@ export class ProtectedSessionService {
     async revoke(): Promise<void> {
         const epoch = ++this.epoch; this.retryAt = undefined; this.connection = undefined; this.state = 'disconnected';
         this.cancellation.abort(); this.cancellation = this.ports.cancellation(); this.scheduler.invalidate();
-        try { await this.persist(() => this.store.remove(SESSION_KEY)); }
-        catch { if (epoch === this.epoch) this.state = 'unavailable'; }
+        const removed = await this.persist(() => protectedMutation(() => this.store.remove(SESSION_KEY), async () => await this.store.get(SESSION_KEY) === undefined));
+        if (epoch === this.epoch && removed.observation !== 'committed') this.state = 'unavailable';
     }
-    private persist(operation: () => Promise<void>): Promise<void> {
+    private persist<T>(operation: () => Promise<T>): Promise<T> {
         const next = this.persistence.then(operation); this.persistence = next.catch(() => undefined); return next;
     }
     async snapshot(message: Extract<Message, { method: 'page.snapshot' }>, active: boolean, online: boolean, pageCancellation: ReadCancellation): Promise<unknown> {

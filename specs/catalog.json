@@ -3205,7 +3205,8 @@
         "extension/src/domain/operation_copy.ts",
         "extension/src/domain/settings_observation.ts",
         "extension/src/domain/settings_operation_target.ts",
-        "extension/src/presentation/CurrentOperationPanel.svelte"
+        "extension/src/presentation/CurrentOperationPanel.svelte",
+        "extension/src/application/protected_mutation.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3411,7 +3412,10 @@
         "extension/test/integration/current_operation_reader.test.ts",
         "extension/test/integration/current_operations.test.ts",
         "extension/test/integration/settings_observer.test.ts",
-        "extension/test/integration/settings_operation_gateway.test.ts"
+        "extension/test/integration/settings_operation_gateway.test.ts",
+        "extension/test/contracts/protected_session_equality.test.ts",
+        "extension/test/integration/protected_mutation.test.ts",
+        "extension/test/integration/protected_persistence.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

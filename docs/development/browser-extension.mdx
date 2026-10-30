@@ -753,3 +753,16 @@ history or export. Generated-history clear leaves the separate temporary current
 view intact. Session vault/active-connection and compound preference/policy
 outcomes still need their own closed projections; this settings family cannot
 stand in for them.
+
+### Active-session persistence foundation
+
+`ProtectedSessionService` now keeps native save/removal and their one canonical
+readback inside the same persistence queue. `protectedMutation` returns only
+immutable acknowledgement and desired-state observation, with no raw exception
+or credential. `sameProtectedSession` compares the entire validated record,
+including optional organization identity, independently of key order. A matching
+save or absent removed key can establish completion after lost acknowledgement;
+accepted-but-unapplied effects and failed inspections remain unconfirmed.
+Existing epoch, permission and source gates still control publication. These
+internal facts are a foundation: session current-operation and optional journal
+projections remain separate unfinished H3 work.
