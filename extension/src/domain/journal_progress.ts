@@ -3,6 +3,7 @@ import { deepFreeze } from './value.ts';
 import { sameSessionFact, mergeSessionFact } from './session_fact.ts';
 import { sameCollectionFact, mergeCollectionFact } from './collection_fact.ts';
 import { sameClearFact, mergeClearFact } from './clear_fact.ts';
+import { samePauseFact, mergePauseFact } from './pause_fact.ts';
 
 export function snapshotJournalFact(kind: JournalKind, value: unknown): JournalFact | null {
     try {
@@ -16,6 +17,7 @@ export function sameJournalFact(before: JournalFact, after: JournalFact): boolea
     if (before.kind === 'session-operation' && after.kind === 'session-operation') return sameSessionFact(before, after);
     if (before.kind === 'collection-operation' && after.kind === 'collection-operation') return sameCollectionFact(before, after);
     if (before.kind === 'clear-operation' && after.kind === 'clear-operation') return sameClearFact(before, after);
+    if (before.kind === 'pause-operation' && after.kind === 'pause-operation') return samePauseFact(before, after);
     return Object.keys(before).length === Object.keys(after).length
         && Object.entries(before).every(([key, value]) => after[key as keyof JournalFact] === value);
 }
@@ -23,7 +25,8 @@ export function mergeProgressiveFact(before: ProgressiveFact, after: Progressive
     return before.kind === 'operation' && after.kind === 'operation' ? mergeOperationFact(before, after)
         : before.kind === 'session-operation' && after.kind === 'session-operation' ? mergeSessionFact(before, after)
             : before.kind === 'collection-operation' && after.kind === 'collection-operation' ? mergeCollectionFact(before, after)
-                : before.kind === 'clear-operation' && after.kind === 'clear-operation' ? mergeClearFact(before, after) : null;
+                : before.kind === 'clear-operation' && after.kind === 'clear-operation' ? mergeClearFact(before, after)
+                    : before.kind === 'pause-operation' && after.kind === 'pause-operation' ? mergePauseFact(before, after) : null;
 }
 export function nextStoredProgress(before: ProgressiveFact, desired: ProgressiveFact): ProgressiveFact {
     return before.kind === 'operation' && desired.kind === 'operation' ? nextStoredOperation(before, desired) : desired;

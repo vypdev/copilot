@@ -4,12 +4,13 @@ import type { NativePauseTarget } from '../../src/application/temporary_pause_re
 import { centerFixture } from './center.ts';
 import { temporaryStoreFixture } from './temporary_pause_store.ts';
 import type { PauseReviewPlan } from '../../src/domain/temporary_pause_review.ts';
+import type { ObservePauseOperation } from '../../src/application/pause_observation_ports.ts';
 
 export const PAUSE = { type: 'emergency', paused: true } as const;
 export const TAB_PAUSE = { type: 'tab', tabId: 7, paused: true } as const;
-export function pauseReviewsFixture() {
+export function pauseReviewsFixture(observe?: ObservePauseOperation) {
     const native = temporaryStoreFixture(); const center = centerFixture();
-    const reviewPorts = { now: center.ports.now, identifier: center.ports.identifier, fence: vi.fn((id: string) => center.controller.fence(id)),
+    const reviewPorts = { now: center.ports.now, identifier: center.ports.identifier, fence: vi.fn((id: string) => center.controller.fence(id)), observe,
         target: vi.fn(async (tabId: number): Promise<NativePauseTarget | null> => ({ tabId, source: 'https://github.com/octo/example/issues/42', label: 'octo/example · #42' })) };
     const reviews = new TemporaryPauseReviews(native.store, reviewPorts);
     center.ports.changed.mockImplementation(() => { center.operations.invalidate(); reviews.invalidate(); });

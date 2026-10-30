@@ -98,3 +98,10 @@ it('an unknown native closure write uses the shared precaution rather than silen
     await vi.waitFor(() => expect(h.sessionArea.set).toHaveBeenCalled()); await vi.waitFor(async () => expect(await h.read()).toMatchObject({ precaution: true }));
     expect(await h.call(CONFIG, pageSender)).toMatchObject({ connected: false, settings: { paused: true } }); expect(h.provider).not.toHaveBeenCalled();
 });
+it('trusted native tab expiry does not manufacture a user current operation or diagnostics review', async () => {
+    const h = await fixture(browser => { browser.sessionValues.set(TEMPORARY_PAUSES_KEY, { schemaVersion: 1, revision: 0, emergency: false, tabs: [7] }); });
+    const read = () => h.call({ version: 1, method: 'center.operation.read', clientId: h.owner.clientId }); expect(await read()).toMatchObject({ state: 'empty' });
+    for (const listener of h.onRemoved.listeners) listener(7);
+    await vi.waitFor(() => expect(h.sessionValues.get(TEMPORARY_PAUSES_KEY)).toEqual({ schemaVersion: 1, revision: 1, emergency: false, tabs: [] }));
+    expect(await read()).toMatchObject({ state: 'empty' }); expect(h.provider).not.toHaveBeenCalled();
+});

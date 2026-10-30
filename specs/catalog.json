@@ -3260,7 +3260,12 @@
         "extension/src/domain/closed_tab_pauses.ts",
         "extension/src/domain/temporary_pause_controls.ts",
         "extension/src/domain/temporary_pause_protocol.ts",
-        "extension/src/domain/temporary_pause_review.ts"
+        "extension/src/domain/temporary_pause_review.ts",
+        "extension/src/application/pause_observation_ports.ts",
+        "extension/src/application/pause_observations.ts",
+        "extension/src/domain/pause_fact.ts",
+        "extension/src/domain/pause_observation_copy.ts",
+        "extension/src/presentation/PauseEffects.svelte"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3559,7 +3564,15 @@
         "extension/test/integration/temporary_pause_review_races.test.ts",
         "extension/test/integration/temporary_pause_reviews.test.ts",
         "extension/test/integration/temporary_pause_targets.test.ts",
-        "extension/test/integration/temporary_pause_gateway_fences.test.ts"
+        "extension/test/integration/temporary_pause_gateway_fences.test.ts",
+        "extension/test/contracts/pause_fact.test.ts",
+        "extension/test/fixtures/pause_fact.ts",
+        "extension/test/fixtures/pause_gateway.ts",
+        "extension/test/integration/current_pause_operations.test.ts",
+        "extension/test/integration/pause_effects_presentation.test.ts",
+        "extension/test/integration/pause_observations.test.ts",
+        "extension/test/integration/pause_operation_gateway.test.ts",
+        "extension/test/integration/pause_review_observation_races.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

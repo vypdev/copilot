@@ -841,6 +841,92 @@ The reader registers its in-flight promise before notification callbacks; duplic
 reads, including synchronous reentry, join it without recursive notifications.
 One invalidation can request one fresh generation without retrying capture.
 
+### 6.14 Native pause operation observations
+
+User-confirmed emergency/tab restrictions and explicit adoption use one closed
+`pause-operation` fact. Its nine fields are kind, closed action, lifecycle state,
+actual native submission, primary result, native acknowledgement, canonical
+observation, sampled source-current boolean/null and an incomplete-events flag.
+The five actions are pause/resume emergency, pause/resume tab and adopt observed
+pauses. Do not retain native tab IDs, URLs, labels, snapshots, revisions, operation
+IDs, guard witnesses, credentials or raw errors. Current memory may identify the
+local repositories control section; generated history cannot reconstruct an
+exact native target. Existing eight-client/five-minute current-memory bounds and
+200-row/seven-day/64-KiB diagnostics bounds remain unchanged.
+
+```text
+Native retained review → optional consented diagnostics ticket + current facts
+ → confirmation → actual native set invocation → acknowledgement
+ → one canonical observation → primary response + sampled source
+Later metadata read → inspect facts only; no native retry or new history ticket
+Explicit adoption → reviewed current native state → adopted; no set or native ack
+Native tab expiry → scope cleanup only; never a synthetic user operation
+```
+
+Text equivalent: intent, native invocation, acknowledgement, canonical readback
+and primary response are independent facts. A confirmed acknowledgement can be
+shown while readback is still pending. A lost acknowledgement with observed
+canonical effect stays unknown acknowledgement. A lost coordinator response
+cannot erase an accepted acknowledgement or canonical record already observed;
+it remains an unconfirmed primary response beside those separate facts. No later
+ordinary pause/settings read may certify that response. Explicit adoption has
+`submitted:false`, no native acknowledgement and an adopted-state observation;
+it never changes the older unknown operation's row.
+
+Observation acquisition follows retained preview installation and is secondary.
+Source retirement during capture discards the unexposed preview and frees its
+capacity. Register the running promise before confirmation callbacks; duplicate
+confirmation from a callback joins it. Observe native submission at the existing
+protected mutation boundary, not at review or queue reservation. Notification
+failure cannot suppress the single canonical read or repeat a native write.
+Missing phase events must be disclosed with `incomplete`, never inferred into an
+observed submission. Completion callbacks may retire authority: the final reply
+must recheck source after those callbacks without erasing the accepted effect.
+The historical sampled-source value is distinct from current source availability.
+The retained observer liveness closure captures only owner/epochs/time/generation
+and a shared small retirement marker. It must not capture the full pending plan,
+native path, snapshots, intent or private guard witness after completion.
+
+Acquire at most one optional diagnostics ticket at preview capture under the
+existing explicit consent/policy/source permit. Update only that ticket; no
+fallback append, retrospective admission, automatic resend or new consent.
+Retention failure remains separate from primary effects and current inspection.
+A newer current operation cannot be overwritten by an older pause callback.
+Shutdown/expiry cannot reacquire tickets or renew first-observation time.
+Trusted tab closure is system lifecycle, not a user review, so its cleanup has
+no pause observer or generated operation row. Future/corrupt native preferences
+cannot hide independent current pause facts or authorize a destructive reset.
+
+The existing schema-1 journal envelope now recognizes this closed fact variant.
+Unknown fact kinds remain preserved inert: an older/downgraded reader that cannot
+validate a variant reports unavailable/corrupt history and does not silently
+rewrite or discard it. No preference migration, new database store, credential
+fallback, permission request or history default-on is introduced. Export includes
+only the validated nine-field projection. Unknown fields are rejected rather than
+copied. This additive variant does not permit arbitrary renderer-authored facts.
+
+Current-operation and retained-history components show localized action, neutral
+lifecycle, primary result, actual native submission, acknowledgement, canonical
+observation and a source sample only when one exists. Representative unknown copy:
+“Operation response unconfirmed” next to “Desired native pause record observed”
+and its independent acknowledgement. Adoption explicitly says it writes no
+native record and certifies no earlier operation. Retained facts expose no
+confirm/resume buttons. Ship all content in en/es/fr/pt with proper heading
+hierarchy, readonly fact lists, escaped labels and existing keyboard/focus rules.
+The native pause authoring/recovery/provenance editor remains separate H3 work.
+
+Minimum **64 distinct** component risk cases: 16 closed fact/redaction/transition,
+20 native event ordering/loss/reentry, 12 current/source/optional-retention, 10
+actual composed gateway/lifecycle, 6 mounted disclosure/readonly-content cases.
+Locale repetitions do not increase the semantic risk count. Require 100% local
+new executable lines/branches/functions/statements and the final exact-head
+remote Codecov no-missing/no-partial changed-line gate. Evidence families are
+`pause_fact`, `pause_observations`, `current_pause_operations`,
+`pause_operation_gateway`, `pause_review_observation_races`,
+`pause_effects_presentation`, `protected_mutation` and the actual background
+expiry regression. These deterministic native-port/composition/DOM cases do not
+replace loaded Chrome/Firefox/Safari or human acceptance.
+
 ## 7. User-facing configuration
 
 | Input | Default | Scope/limit |

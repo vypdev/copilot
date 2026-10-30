@@ -23,6 +23,10 @@ import type { CollectionOperationTrace } from './collection_observation_ports.ts
 import type { ClearFact } from '../domain/clear_fact.ts';
 import { ClearObservations } from './clear_observations.ts';
 import type { ClearOperationTrace } from './clear_observation_ports.ts';
+import { pauseAction, type PauseFact } from '../domain/pause_fact.ts';
+import type { PauseReviewIntent } from '../domain/temporary_pause_review.ts';
+import { PauseObservations } from './pause_observations.ts';
+import type { PauseOperationTrace } from './pause_observation_ports.ts';
 
 export interface CurrentOperationPorts {
     now(): number; changed(): void;
@@ -37,7 +41,8 @@ interface SettingsEntry extends EntryBase { readonly family: 'settings'; fact: O
 interface SessionEntry extends EntryBase { readonly family: 'sessions'; fact: SessionFact; stage: SessionFact['state'] }
 interface CollectionEntry extends EntryBase { readonly family: 'collection'; fact: CollectionFact; stage: CollectionFact['state'] }
 interface ClearEntry extends EntryBase { readonly family: 'clear'; fact: ClearFact; stage: ClearFact['state'] }
-type Entry = SettingsEntry | SessionEntry | CollectionEntry | ClearEntry;
+interface PauseEntry extends EntryBase { readonly family: 'pauses'; fact: PauseFact; stage: PauseFact['state'] }
+type Entry = SettingsEntry | SessionEntry | CollectionEntry | ClearEntry | PauseEntry;
 const LIFETIME = 300_000;
 /** Current private targets and optional redacted retention have separate ownership and failure paths. */
 export class CurrentOperations {
@@ -130,6 +135,14 @@ export class CurrentOperations {
         // Diagnostics deletion must not record itself, including under a stale secondary admission cache.
         this.install(entry, kind !== 'diagnostics'); return observer;
     }
+    reviewPause(owner: string, intent: PauseReviewIntent, live: () => boolean): PauseOperationTrace | null {
+        const action = pauseAction(intent); if (!action) return null;
+        let sourceCurrent = true; const current = () => { sourceCurrent = sourceCurrent && collectionCurrent(live); return sourceCurrent; };
+        const base = this.prepare(owner, { location: { route: 'repositories' }, label: null }, current); if (!base) return null;
+        const observer = new PauseObservations(action, fact => { if (!this.stopped) { entry.fact = fact; entry.stage = fact.state; this.update(entry, fact); } });
+        const entry: PauseEntry = { ...base, family: 'pauses', fact: observer.fact, stage: 'reviewed' };
+        this.install(entry); return observer;
+    }
     read(owner: string): CurrentOperationReply | { readonly state: 'unavailable' } {
         const now = this.time(); this.prune(now); if (this.stopped || now === null) return { state: 'unavailable' };
         const entry = this.entries.get(owner); if (!entry) return { state: 'empty' };
@@ -147,7 +160,8 @@ export class CurrentOperations {
         const operation = entry.family === 'settings' ? { ...common, family: entry.family, stage: entry.stage, fact: entry.fact }
             : entry.family === 'sessions' ? { ...common, family: entry.family, stage: entry.stage, fact: entry.fact }
                 : entry.family === 'collection' ? { ...common, family: entry.family, stage: entry.stage, fact: entry.fact }
-                    : { ...common, family: entry.family, stage: entry.stage, fact: entry.fact };
+                    : entry.family === 'clear' ? { ...common, family: entry.family, stage: entry.stage, fact: entry.fact }
+                        : { ...common, family: entry.family, stage: entry.stage, fact: entry.fact };
         return deepFreeze({ state: 'current', operation });
     }
     invalidate(): void { this.generation = {}; for (const entry of this.entries.values()) entry.target = null; this.entries.clear(); }

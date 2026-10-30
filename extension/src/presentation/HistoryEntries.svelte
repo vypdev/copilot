@@ -11,6 +11,8 @@
     import { clearCopy } from '../domain/clear_copy.ts';
     import { helperCopy } from '../domain/helper_copy.ts';
     import ClearEffects from './ClearEffects.svelte';
+    import PauseEffects from './PauseEffects.svelte';
+    import { pauseObservationCopy } from '../domain/pause_observation_copy.ts';
     let { snapshot, copy, center }: { snapshot: JournalSnapshot; copy: HistoryCopy; center: CenterCopy } = $props();
 </script>
 {#if snapshot.entries.some(entry => entry.fact.kind === 'helper')}<p class="notice" data-helper-history-boundary>{helperCopy(center.locale).historyBoundary}</p>{/if}
@@ -31,6 +33,8 @@
                 <h3><span>{collectionCopy(center.locale).actions[entry.fact.action]}</span> · <span>{copy.text[entry.fact.collection]}</span></h3><CollectionEffects fact={entry.fact} {center} heading="h4"/>
             {:else if entry.fact.kind === 'clear-operation'}
                 <h3><span>{clearCopy(center.locale).action}</span> · <span>{copy.text[entry.fact.collection]}</span></h3><ClearEffects fact={entry.fact} {center} heading="h4"/>
+            {:else if entry.fact.kind === 'pause-operation'}
+                <h3>{pauseObservationCopy(center.locale).actions[entry.fact.action]}</h3><PauseEffects fact={entry.fact} {center} heading="h4"/>
             {:else if entry.fact.kind === 'destination'}
                 <a href={centerLocationHash({ route: entry.fact.route, ...(entry.fact.featureId ? { detail: entry.fact.featureId } : {}) })}>
                     <span>{center.routes[entry.fact.route]}</span>{#if entry.fact.featureId} · <code>{entry.fact.featureId}</code>{/if}</a>

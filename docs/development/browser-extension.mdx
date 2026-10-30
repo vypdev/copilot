@@ -992,3 +992,18 @@ those scopes through the same guarded writer. It does not retry failed batches,
 rebind stale IDs or fabricate user history. Tests with actual background
 composition cover role isolation, malformed saved preferences, replay, unknown
 effects and native closure. They remain distinct from loaded-browser acceptance.
+
+`PauseObservations` adds the closed nine-field `pause-operation` projection to
+current memory and optional diagnostics retention. `TemporaryPauseReviews`
+acquires at most one secondary ticket at capture; the same protected native
+writer reports invocation, acknowledgement and canonical readback. Acknowledgement
+is observable before a delayed readback. Source is rechecked after completion
+observers before publishing the response. Secondary failures never repeat effects
+or acquire a fallback ticket. Adoption has no native submission/acknowledgement;
+trusted tab cleanup has no user observer. Current and retained effects render in
+en/es/fr/pt. The localized authoring/provenance editor and loaded-browser/human
+acceptance remain separate H3 obligations.
+
+Pause observer liveness retains only the owner/epoch/time/generation binding and
+its shared retirement marker. It never captures the pending native plan, source
+path, snapshots, intent or guard witness into the longer-lived observer closure.

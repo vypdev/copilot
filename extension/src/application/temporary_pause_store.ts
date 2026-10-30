@@ -3,7 +3,7 @@ import type { TemporaryPauseOutcome } from '../domain/temporary_pause_result.ts'
 import type { StoragePort } from './runtime_ports.ts';
 import { TemporaryPauseGuard } from './temporary_pause_guard.ts';
 import { TEMPORARY_PAUSES_KEY, TemporaryPauseReader } from './temporary_pause_reader.ts';
-import { protectedMutation } from './protected_mutation.ts';
+import { protectedMutation, type ProtectedMutationTrace } from './protected_mutation.ts';
 import { SettingsMutationQueue } from './settings_mutation_queue.ts';
 
 export interface TemporaryPauseStorePorts { protectedArea(): Promise<boolean>; changed(): void }
@@ -29,7 +29,7 @@ export class TemporaryPauseStore {
         this.pending++;
         return this.mutations.run(work).finally(() => { this.pending--; });
     }
-    commit(before: unknown, after: unknown, current: () => boolean): Promise<TemporaryPauseOutcome> {
+    commit(before: unknown, after: unknown, current: () => boolean, trace?: ProtectedMutationTrace | null): Promise<TemporaryPauseOutcome> {
         const expected = copyTemporaryPauses(before); const desired = copyTemporaryPauses(after);
         if (!expected || !desired || expected.revision === Number.MAX_SAFE_INTEGER || desired.revision !== expected.revision + 1
             || expected.emergency === desired.emergency && JSON.stringify(expected.tabs) === JSON.stringify(desired.tabs)) return Promise.resolve({ state: 'invalid' });
@@ -37,9 +37,9 @@ export class TemporaryPauseStore {
         if (this.pending >= 16) return Promise.resolve({ state: 'busy' });
         const token = this.guard.hold(); if (!token) return Promise.resolve({ state: 'busy' });
         // Reserve FIFO ownership before a notification can synchronously reenter this application port.
-        const operation = this.enqueue(() => this.write(expected, desired, current, token)); this.changed(); return operation;
+        const operation = this.enqueue(() => this.write(expected, desired, current, token, trace)); this.changed(); return operation;
     }
-    private async write(expected: TemporaryPauses, desired: TemporaryPauses, current: () => boolean, token: object): Promise<TemporaryPauseOutcome> {
+    private async write(expected: TemporaryPauses, desired: TemporaryPauses, current: () => boolean, token: object, trace?: ProtectedMutationTrace | null): Promise<TemporaryPauseOutcome> {
         let uncertain = false; let outcome: TemporaryPauseOutcome;
         try {
             if (!eligible(current)) return { state: 'stale' };
@@ -54,7 +54,7 @@ export class TemporaryPauseStore {
                 const value = await this.native.read();
                 if (value.state !== 'ready') return undefined;
                 observedRevision = value.value.revision; return same(value.value, desired);
-            });
+            }, trace);
             const live = eligible(current); uncertain = fact.observation !== 'committed' || !live;
             outcome = fact.observation === 'committed' ? { state: 'committed', revision: desired.revision, acknowledgement: fact.acknowledgement, current: live }
                 : { state: 'unknown', acknowledgement: fact.acknowledgement, observation: fact.observation, observedRevision, current: live };

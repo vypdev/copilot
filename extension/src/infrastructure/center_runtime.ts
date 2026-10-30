@@ -37,7 +37,7 @@ export function createCenter(api: BrowserApi, settings: SettingsRepository, sess
         fence: id => controller.fence(id), observe: (...args) => current.reviewCollection(...args), observeClear: (...args) => current.reviewClear(...args) }) : undefined;
     const targets = pauseStore ? new BrowserPauseTargets(api.tabs) : null;
     const pauseReviews = pauseStore ? new TemporaryPauseReviews(pauseStore, { now: () => Date.now(), identifier: centerIdentifier,
-        fence: id => controller.fence(id), target: id => targets!.target(id) }) : null;
+        fence: id => controller.fence(id), target: id => targets!.target(id), observe: (...args) => current.reviewPause(...args) }) : null;
     const pauseControls = pauseStore ? new TemporaryPauseGateway(controller, pauseStore, pauseReviews!, targets!) : undefined;
     return new CenterGateway(controller, operations, settings, connections, history ? new HistoryGateway(controller, history.owner, controls!) : undefined, current, helpers, pauseControls);
 }

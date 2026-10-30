@@ -1943,3 +1943,10 @@ H3 160-case floor and 803-case catalog remain unchanged. Current/retained operat
 observations, localized authoring/recovery/provenance UI, loaded-browser journeys
 and human acceptance are still required; deterministic native-port tests do not
 constitute those acceptance gates.
+
+The following observation increment installs the closed native pause family in
+current/retained operation views and four-locale readonly effects. Its source,
+privacy, event ordering, numeric risk budget and executable acceptance contract
+are in [native pause observations](github-browser-extension-collection-consent.md#614-native-pause-operation-observations).
+This does not complete the localized pause authoring/recovery/provenance editor,
+verified-session overrides, optional purpose management or native/human H3 gates.

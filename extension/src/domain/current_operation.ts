@@ -6,6 +6,7 @@ import { natural, record } from './value.ts';
 import { validSessionFact, type SessionFact } from './session_fact.ts';
 import { validCollectionFact, type CollectionFact } from './collection_fact.ts';
 import { validClearFact, type ClearFact } from './clear_fact.ts';
+import { validPauseFact, type PauseFact } from './pause_fact.ts';
 
 /** Private target detail is current-worker memory only, never a generated journal fact. */
 export interface CurrentTarget { readonly location: CenterLocation; readonly label: string | null }
@@ -28,7 +29,11 @@ export interface CurrentClearOperation {
     readonly family: 'clear'; readonly stage: ClearFact['state']; readonly fact: ClearFact;
     readonly target: CurrentTarget | null; readonly sourceCurrent: boolean; readonly firstObserved: number; readonly retention: JournalRetention;
 }
-export type CurrentOperationReply = { readonly state: 'empty' } | { readonly state: 'current'; readonly operation: CurrentSettingsOperation | CurrentSessionOperation | CurrentCollectionOperation | CurrentClearOperation };
+export interface CurrentPauseOperation {
+    readonly family: 'pauses'; readonly stage: PauseFact['state']; readonly fact: PauseFact;
+    readonly target: CurrentTarget | null; readonly sourceCurrent: boolean; readonly firstObserved: number; readonly retention: JournalRetention;
+}
+export type CurrentOperationReply = { readonly state: 'empty' } | { readonly state: 'current'; readonly operation: CurrentSettingsOperation | CurrentSessionOperation | CurrentCollectionOperation | CurrentClearOperation | CurrentPauseOperation };
 export interface CurrentOperationView {
     readonly phase: 'idle' | 'reading' | 'ready' | 'unavailable'; readonly current: boolean; readonly value: CurrentOperationReply | null;
 }
@@ -58,7 +63,14 @@ export function currentSessionOperation(value: unknown): value is CurrentSession
 }
 export function decodeCurrentOperation(value: unknown): CurrentOperationReply | null {
     return decodeHistoryValue(value, (v): v is CurrentOperationReply => exactHistoryFields(v, ['state']) && v.state === 'empty'
-        || exactHistoryFields(v, ['state', 'operation']) && v.state === 'current' && (currentSettingsOperation(v.operation) || currentSessionOperation(v.operation) || currentCollectionOperation(v.operation) || currentClearOperation(v.operation)));
+        || exactHistoryFields(v, ['state', 'operation']) && v.state === 'current' && (currentSettingsOperation(v.operation) || currentSessionOperation(v.operation) || currentCollectionOperation(v.operation) || currentClearOperation(v.operation) || currentPauseOperation(v.operation)));
+}
+export function currentPauseOperation(value: unknown): value is CurrentPauseOperation {
+    return exactHistoryFields(value, ['family', 'stage', 'fact', 'target', 'sourceCurrent', 'firstObserved', 'retention'])
+        && value.family === 'pauses' && validPauseFact(value.fact) && value.stage === value.fact.state
+        && typeof value.sourceCurrent === 'boolean' && natural(value.firstObserved)
+        && (value.target === null || value.sourceCurrent && currentTarget(value.target))
+        && ['pending', 'stored', 'not-retained', 'unknown', 'untracked'].includes(value.retention as string);
 }
 export function currentCollectionOperation(value: unknown): value is CurrentCollectionOperation {
     return exactHistoryFields(value, ['family', 'stage', 'fact', 'target', 'sourceCurrent', 'firstObserved', 'retention'])

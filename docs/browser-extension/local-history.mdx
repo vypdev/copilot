@@ -265,3 +265,18 @@ imports remain separate under **Data and recovery**.
 Read the [browser permission guide](/browser-extension/permissions) for native
 revocation and the [feature inventory](/browser-extension/features) for the
 remaining product milestones.
+
+### Native pause operation facts
+
+The development center can display emergency/tab pause and adoption operations
+in **Last observed operation**. A retained diagnostics row requires diagnostics
+to have been enabled when the review was captured. It separates the native write
+attempt, acknowledgement, canonical observation and operation response. A lost
+response can coexist with a separately proved acknowledgement or observed pause
+record; reading current pauses never confirms that older response.
+
+Adoption explicitly reports no native write or acknowledgement. Closing a tab
+is native lifecycle cleanup and does not create a user operation in history.
+Retained facts contain no native tab IDs, URLs, pause snapshots or operation IDs,
+and offer no confirm/resume control. Complete pause authoring and native/human
+acceptance remain under H3 implementation.

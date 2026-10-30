@@ -325,6 +325,15 @@ generated clear; canonical generation observations retire old writer tickets
 before reservations release deferred work. Deterministic clear service, current,
 gateway and four-locale mounted regressions supplement the native/human gates.
 
+Native pause observations use the closed nine-field `pause-operation` variant
+and the [native pause observation contract](github-browser-extension-collection-consent.md#614-native-pause-operation-observations).
+One preview may acquire one already-consented diagnostics ticket; native attempt,
+acknowledgement, canonical readback and response update that same row. Adoption
+adds no native write/acknowledgement and cannot certify an older unknown row.
+Native tab expiry never creates a user operation. No native IDs, paths, snapshots
+or reusable authority enter retained facts or exports. Unknown variants remain
+preserved inert, including on downgrade; no implicit repair is authorized.
+
 ## 12. Observability and operational UX
 
 History reports its own availability, capture pause and retained count. Closed

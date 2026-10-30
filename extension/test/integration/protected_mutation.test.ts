@@ -25,3 +25,20 @@ it('canonical readback waits for the actual native attempt and cannot settle whi
     const gate = deferred<void>(); const inspect = vi.fn(async () => true); const pending = protectedMutation(() => gate.promise, inspect);
     await Promise.resolve(); expect(inspect).not.toHaveBeenCalled(); gate.resolve(); expect(await pending).toMatchObject({ observation: 'committed' }); expect(inspect).toHaveBeenCalledOnce();
 });
+it('accepted acknowledgement is observed before a delayed canonical read while the primary result stays pending', async () => {
+    const gate = deferred<boolean>(); const entered = deferred<void>(); const events: string[] = [];
+    const result = protectedMutation(async () => undefined, async () => { entered.resolve(); return gate.promise; }, {
+        submitted: () => events.push('submitted'), acknowledged: value => events.push(value), settled: () => events.push('settled'),
+    });
+    await entered.promise; expect(events).toEqual(['submitted', 'accepted']); gate.resolve(true); await result; expect(events).toEqual(['submitted', 'accepted', 'settled']);
+});
+it('a failed acknowledgement observer cannot suppress the single canonical read or repeat an accepted write', async () => {
+    const write = vi.fn(async () => undefined); const inspect = vi.fn(async () => true);
+    const result = await protectedMutation(write, inspect, { submitted: vi.fn(), acknowledged: () => { throw new Error('secondary observer'); }, settled: vi.fn() });
+    expect(result).toEqual({ acknowledgement: 'accepted', observation: 'committed' }); expect(write).toHaveBeenCalledOnce(); expect(inspect).toHaveBeenCalledOnce();
+});
+it('native failure reports unknown acknowledgement before canonical effect inspection without repeating the write', async () => {
+    const acknowledged = vi.fn(); const write = vi.fn(async () => { throw new Error('native result lost'); }); const inspect = vi.fn(async () => true);
+    expect(await protectedMutation(write, inspect, { submitted: vi.fn(), acknowledged, settled: vi.fn() })).toMatchObject({ acknowledgement: 'unknown', observation: 'committed' });
+    expect(acknowledged).toHaveBeenCalledExactlyOnceWith('unknown'); expect(write).toHaveBeenCalledOnce(); expect(inspect).toHaveBeenCalledOnce();
+});
