@@ -105,6 +105,7 @@ export async function runSetupExecution(
         hotfixBranch: restored.hotfixBranch,
     };
     let currentPullRequestLabels = [...context.currentPullRequestLabels];
+    let pullRequestParentBranch: string | undefined;
 
     if (context.isIssue && !context.isSingleAction && issueResolution.issueNumber !== undefined && issueAdmission?.status === 'eligible') {
         const resolution = await dependencies.branchVersionResolver.resolve({
@@ -159,6 +160,7 @@ export async function runSetupExecution(
         if (pendingParent && admittedParent && pendingParent !== admittedParent) {
             throw new PendingPullRequestLinkError('ownership');
         }
+        pullRequestParentBranch = admittedParent;
         currentPullRequestLabels = await dependencies.issueSetupPort.getLabels(context.pullRequest.number);
         release = {
             ...release,
@@ -171,7 +173,7 @@ export async function runSetupExecution(
         configuration = {
             ...configuration,
             workingBranch: issueResolution.pullRequestHeadBranch || context.pullRequest.head || configuration.workingBranch,
-            parentBranch: pendingParent ?? admittedParent ?? configuration.parentBranch ?? context.pullRequest.base,
+            parentBranch: pendingParent ?? admittedParent ?? (context.pullRequest.base || configuration.parentBranch),
         };
     }
 
@@ -192,6 +194,7 @@ export async function runSetupExecution(
             liveIssueBody,
             issueAdmission,
             liveIssueTitle,
+            pullRequestParentBranch,
         ),
     };
 }
@@ -252,6 +255,7 @@ function setupState(
     liveIssueBody?: string,
     issueWorkflowAdmission?: SetupExecutionState['issueWorkflowAdmission'],
     liveIssueTitle?: string,
+    pullRequestParentBranch?: string,
 ): SetupExecutionState {
     return {
         previousConfiguration,
@@ -263,6 +267,7 @@ function setupState(
         liveIssueBody,
         liveIssueTitle,
         issueWorkflowAdmission,
+        pullRequestParentBranch,
     };
 }
 

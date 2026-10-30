@@ -814,16 +814,16 @@ runtime, finish or explicitly reconcile pending V2 operations with the newer
 runtime; do not discard their recovery state. No public configuration/schema
 migration, consumer override or deployment is part of this change.
 
-Reserve **80 distinct new cases before implementation**, including the twenty review/acceptance extensions recorded below:
+Reserve **91 distinct new cases before implementation**, including the thirty-one review/acceptance extensions recorded below:
 
 | Area | Cases | Acceptance |
 |---|---:|---|
-| Pure record/preservation policy | 24 | V1/V2 round trips, encoded bases, identity/nonce, malformed/unknown/duplicate/bounded records and exact owned-state removal |
-| Setup/original-parent projection | 9 | absent/poisoned PR config, admitted parent, valid pending authority, conflicts, unchanged ordinary/unlinked/issue routes |
+| Pure record/preservation policy | 30 | V1/V2 round trips, encoded bases, identity/nonce, malformed/unknown/duplicate/bounded records and exact owned-state removal |
+| Setup/original-parent projection | 13 | absent/poisoned PR config, admitted parent, valid pending authority, conflicts, unchanged ordinary/unlinked/issue routes |
 | Link/recovery/compensation | 19 | interrupted writes, verified/unverified restore, new head, foreign owner/ref, lookup failure, changed body/lease and one real worker-kill recovery |
 | Description/configuration writers | 15 | replace/append/preserve/disabled or explicit commands, fresh metadata, model-time head drift and retained state on failure |
-| Routing/bindings/completion | 13 | newer synchronize first, original-event retry, review-only preparation, stale persistence fence and native identity binding |
-| **Total** | **80** | no double counting with existing compensation or #610 cases |
+| Routing/bindings/completion | 14 | newer synchronize first, original-event retry, review-only preparation, stale persistence fence and native identity binding |
+| **Total** | **91** | no double counting with existing compensation or #610 cases |
 
 The owned process-kill case has a **15-second** budget reserved here; it uses
 only a disposable fake-provider state file and a child Node process, never a
@@ -849,7 +849,7 @@ GraphQL error policy. A dedicated regression first reproduces the incorrect
 retryable outage and then verifies terminal, sanitized credential guidance.
 
 Local correction evidence for #785: the two regressions failed on the original
-implementation (2 failed, 63 passed). The reserved 80 new test cases and existing
+implementation (2 failed, 63 passed). The reserved 91 new test cases and existing
 boundary suites now pass together: 644 tests across 25 suites. The concurrent
 missing-marker negative case first failed while its verified positive control
 passed. The five review
@@ -941,3 +941,16 @@ four failures and two passing controls before preparation is enabled. Both real
 comment routers then verify preparation ordering and that denied actors invoke
 neither preparation nor generation. A defaulted optional dependency preserves
 existing constructor arity/introspection for older compositions.
+
+### Native base authority and stored ref validation (review extension)
+
+A persisted PR configuration parent alone cannot override the native event base.
+Setup projects a separate invocation-local original-parent fact only after matching
+the distinct admitted issue configuration to the resolved managed head. Recovery
+and description requests use pending ownership, then that verified fact, then the
+native event base. Conversation events without a native base leave it unspecified
+so the existing fresh native detail read supplies it. This fact is never persisted
+as public configuration. Invalid slash components (empty, dot-prefixed or ending
+in `.lock`) are rejected in V1/V2 stored bases and native head refs before mutations.
+Reserve six pure invalid-component cases, four setup/projection cases and one
+boundary propagation/reset case; existing identity/read/time/coverage limits remain.

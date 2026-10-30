@@ -37958,6 +37958,7 @@ function applySetupState(target, state) {
     target.issue.liveBody = state.liveIssueBody;
     target.issue.liveTitle = state.liveIssueTitle;
     target.currentIssueWorkflowAdmission = state.issueWorkflowAdmission;
+    target.pullRequestParentBranch = state.pullRequestParentBranch;
     target.release.active = state.release.active;
     target.release.type = state.release.type;
     target.release.version = state.release.version;
@@ -61220,6 +61221,7 @@ async function runSetupExecution(context, dependencies) {
         hotfixBranch: restored.hotfixBranch,
     };
     let currentPullRequestLabels = [...context.currentPullRequestLabels];
+    let pullRequestParentBranch;
     if (context.isIssue && !context.isSingleAction && issueResolution.issueNumber !== undefined && issueAdmission?.status === 'eligible') {
         const resolution = await dependencies.branchVersionResolver.resolve({
             body: liveIssueBody,
@@ -61261,6 +61263,7 @@ async function runSetupExecution(context, dependencies) {
         if (pendingParent && admittedParent && pendingParent !== admittedParent) {
             throw new pull_request_issue_link_state_1.PendingPullRequestLinkError('ownership');
         }
+        pullRequestParentBranch = admittedParent;
         currentPullRequestLabels = await dependencies.issueSetupPort.getLabels(context.pullRequest.number);
         release = {
             ...release,
@@ -61273,7 +61276,7 @@ async function runSetupExecution(context, dependencies) {
         configuration = {
             ...configuration,
             workingBranch: issueResolution.pullRequestHeadBranch || context.pullRequest.head || configuration.workingBranch,
-            parentBranch: pendingParent ?? admittedParent ?? configuration.parentBranch ?? context.pullRequest.base,
+            parentBranch: pendingParent ?? admittedParent ?? (context.pullRequest.base || configuration.parentBranch),
         };
     }
     return {
@@ -61283,7 +61286,7 @@ async function runSetupExecution(context, dependencies) {
         branchType: issueAdmission && issueAdmission.status !== 'eligible'
             ? ''
             : resolveIssueType(context, issueAdmission),
-        state: setupState(previousConfiguration, currentIssueLabels, currentPullRequestLabels, release, hotfix, configuration, liveIssueBody, issueAdmission, liveIssueTitle),
+        state: setupState(previousConfiguration, currentIssueLabels, currentPullRequestLabels, release, hotfix, configuration, liveIssueBody, issueAdmission, liveIssueTitle, pullRequestParentBranch),
     };
 }
 async function loadTokenUser(context, organizationSetupPort) {
@@ -61320,7 +61323,7 @@ function resolveIssueType(context, admission) {
         release: context.branches.releaseTree,
     })[admission.kind];
 }
-function setupState(previousConfiguration, currentIssueLabels, currentPullRequestLabels, release, hotfix, configuration, liveIssueBody, issueWorkflowAdmission, liveIssueTitle) {
+function setupState(previousConfiguration, currentIssueLabels, currentPullRequestLabels, release, hotfix, configuration, liveIssueBody, issueWorkflowAdmission, liveIssueTitle, pullRequestParentBranch) {
     return {
         previousConfiguration,
         currentIssueLabels: [...currentIssueLabels],
@@ -61331,6 +61334,7 @@ function setupState(previousConfiguration, currentIssueLabels, currentPullReques
         liveIssueBody,
         liveIssueTitle,
         issueWorkflowAdmission,
+        pullRequestParentBranch,
     };
 }
 function positiveIssueNumberOrUndefined(value) {
@@ -62390,7 +62394,7 @@ function projectLinkPullRequestIssueContext(source) {
         pullRequestNumber: source.pullRequest.number,
         issueNumber: source.issueNumber,
         originalBaseBranch: (0, pull_request_issue_link_state_1.pendingPullRequestParent)(source.pullRequest.body ?? '', source.pullRequest.number, source.issueNumber)
-            ?? source.currentConfiguration?.parentBranch ?? source.pullRequest.base,
+            ?? source.pullRequestParentBranch ?? source.pullRequest.base,
         expectedHeadSha: source.pullRequest.headSha,
         expectedHeadRepository: source.pullRequest.headRepository,
         expectedHeadRef: source.pullRequest.head || source.currentConfiguration?.workingBranch,
@@ -62451,7 +62455,7 @@ function projectPullRequestDescriptionContext(source) {
             headBranch: source.pullRequest.head,
             headSha: source.pullRequest.headSha,
             headRepository: source.pullRequest.headRepository,
-            baseBranch: (0, pull_request_issue_link_state_1.pendingPullRequestParent)(source.pullRequest.body ?? '', source.pullRequest.number, source.issueNumber) ?? source.currentConfiguration?.parentBranch ?? source.pullRequest.base,
+            baseBranch: (0, pull_request_issue_link_state_1.pendingPullRequestParent)(source.pullRequest.body ?? '', source.pullRequest.number, source.issueNumber) ?? source.pullRequestParentBranch ?? source.pullRequest.base,
             creator: source.pullRequest.creator,
         }),
         mode: source.ai.getPullRequestDescriptionMode(),
@@ -97783,6 +97787,7 @@ function isOpenPullRequestLinkIdentity(value, number) {
 }
 function safeRef(value) {
     return value.length > 0 && value.length <= 1024 && value === value.trim()
+        && value.split('/').every(component => component.length > 0 && !component.startsWith('.') && !component.endsWith('.lock'))
         && !value.startsWith('/') && !value.endsWith('/') && !value.includes('..') && !value.includes('@{')
         && !/[~^:?*[\\\]\s]/.test(value)
         && !Array.from(value).some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127) && !value.endsWith('.') && !value.endsWith('.lock');

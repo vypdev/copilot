@@ -161,6 +161,7 @@ export function isOpenPullRequestLinkIdentity(value: PullRequestLinkIdentity | u
 
 function safeRef(value: string): boolean {
   return value.length > 0 && value.length <= 1024 && value === value.trim()
+    && value.split('/').every(component => component.length > 0 && !component.startsWith('.') && !component.endsWith('.lock'))
     && !value.startsWith('/') && !value.endsWith('/') && !value.includes('..') && !value.includes('@{')
     && !/[~^:?*[\\\]\s]/.test(value)
     && !Array.from(value).some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127) && !value.endsWith('.') && !value.endsWith('.lock');

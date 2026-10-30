@@ -124,3 +124,10 @@ generation and stale configuration persistence. The generator keeps its narrow
 body/diff port; it does not receive base-write authority. Read-only commands and
 disabled description policy do not run this preparation. An ordinary PR with no
 pending record or stored parent can still use its freshly queried native base.
+
+Without pending state, a saved PR parent alone does not override the native base.
+The admitted issue's original parent remains authoritative only when its managed
+head matches this PR. This avoids blocking a healthy PR because its own saved
+configuration is stale, while retaining original-parent protection after a legacy
+runtime lost the pending marker. Malformed Git ref components in recovery records
+are rejected before provider writes.

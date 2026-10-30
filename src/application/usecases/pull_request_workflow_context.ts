@@ -76,6 +76,7 @@ interface ProjectSource {
 }
 
 export interface PullRequestWorkflowContextSource {
+  readonly pullRequestParentBranch?: string;
   readonly currentConfiguration?: { readonly parentBranch?: string; readonly workingBranch?: string };
   readonly tokenUser?: string;
   readonly isIssue: boolean;
@@ -129,7 +130,7 @@ export function projectLinkPullRequestIssueContext(source: PullRequestWorkflowCo
     pullRequestNumber: source.pullRequest.number,
     issueNumber: source.issueNumber,
     originalBaseBranch: pendingPullRequestParent(source.pullRequest.body ?? '', source.pullRequest.number, source.issueNumber)
-      ?? source.currentConfiguration?.parentBranch ?? source.pullRequest.base,
+      ?? source.pullRequestParentBranch ?? source.pullRequest.base,
     expectedHeadSha: source.pullRequest.headSha,
     expectedHeadRepository: source.pullRequest.headRepository,
     expectedHeadRef: source.pullRequest.head || source.currentConfiguration?.workingBranch,
@@ -196,7 +197,7 @@ export function projectPullRequestDescriptionContext(
       headBranch: source.pullRequest.head,
       headSha: source.pullRequest.headSha,
       headRepository: source.pullRequest.headRepository,
-      baseBranch: pendingPullRequestParent(source.pullRequest.body ?? '', source.pullRequest.number, source.issueNumber) ?? source.currentConfiguration?.parentBranch ?? source.pullRequest.base,
+      baseBranch: pendingPullRequestParent(source.pullRequest.body ?? '', source.pullRequest.number, source.issueNumber) ?? source.pullRequestParentBranch ?? source.pullRequest.base,
       creator: source.pullRequest.creator,
     }),
     mode: source.ai.getPullRequestDescriptionMode(),

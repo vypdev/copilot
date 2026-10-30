@@ -13,6 +13,14 @@ const marker = () => create(input);
 const body = () => attach('Human', marker());
 
 describe('durable pending PR link policy', () => {
+  it.each(['a//b', 'a/.hidden', 'a.lock/b', '.hidden', 'a/.', 'a/.hidden/b'])(
+    'rejects impossible Git ref components before accepting recovery state: %s', base => {
+      expect(() => create({ ...input, originalBaseBranch: base })).toThrow();
+      expect(() => create({ ...input, headRef: base })).toThrow();
+      expect(read(legacyBody.replace('base=develop', `base=${encodeURIComponent(base)}`)).kind).toBe('blocked');
+      expect(open({ number: 10, state: 'open', repository: 'owner/repo', headRepository: input.headRepository,
+        headRef: base, headSha: input.headSha }, 10)).toBe(false);
+    });
   it('recognizes absence and rejects non-string input', () => {
     expect(read('Human')).toEqual({ kind: 'none' });
     expect(read(undefined as never).kind).toBe('blocked');

@@ -160,6 +160,13 @@ it('does not admit a fenced consumer field from an otherwise incomplete live bug
 });
 
 const pendingMarker = '<!-- copilot:pr-issue-link:v1;pr=10;issue=42;base=develop;state=pending -->';
+it('replaces a stale persisted PR parent with its native base when no admitted parent owns it', async () => {
+  const ports = dependencies([], 'Human', { parentBranch: 'main' });
+  const result = await runSetupExecution(context({ isIssue: false, isPullRequest: true,
+    eventName: 'pull_request', pullRequest: { number: 10, head: 'feature/42-work', base: 'develop' } }), ports);
+  expect(result).toMatchObject({ status: 'configured', state: { configuration: { parentBranch: 'develop' } } });
+  if (result.status === 'configured') expect(result.state).not.toHaveProperty('pullRequestParentBranch', expect.any(String));
+});
 it.each([
   [undefined, 'main', 'develop', true],
   [{ parentBranch: 'main' }, 'main', 'develop', true],
@@ -176,7 +183,7 @@ it.each([
     ? { parentBranch: parent, workingBranch: 'feature/42-work' } : previous) as never);
   const result = await runSetupExecution(context({ isIssue: false, isPullRequest: true,
     eventName: 'pull_request', pullRequest: { number: 10, head: 'feature/42-work', base } }), ports);
-  expect(result).toMatchObject({ status: 'configured', state: { configuration: { parentBranch: parent } } });
+  expect(result).toMatchObject({ status: 'configured', state: { pullRequestParentBranch: parent, configuration: { parentBranch: parent } } });
   expect(ports.issueSetupPort.getDescription).toHaveBeenCalledWith(10);
   if (previous?.parentBranch === 'main') {
     for (const parentBranch of ['../unsafe', 'conflicting-parent']) {
@@ -203,6 +210,6 @@ it('binds an admitted original parent to the remote head resolved for a PR conve
     ? { parentBranch: 'develop', workingBranch: 'feature/42-work' } : { parentBranch: 'main' }) as never);
   const result = await runSetupExecution(context({ isIssue: false, isPullRequest: true,
     eventName: 'issue_comment', pullRequest: { number: 10, head: '', base: '' } }), ports);
-  expect(result).toMatchObject({ status: 'configured', state: { configuration: {
+  expect(result).toMatchObject({ status: 'configured', state: { pullRequestParentBranch: 'develop', configuration: {
     parentBranch: 'develop', workingBranch: 'feature/42-work' } } });
 });
