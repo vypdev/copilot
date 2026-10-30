@@ -13,6 +13,7 @@ export function projectClosedIssueCleanupCounts(results: readonly Result[]):
         if (!payload) continue;
         const completion = result.id === 'CloseIssueAfterMergingUseCase' || result.id === 'ReconcileClosedIssueMetadataUseCase'
             ? getResultPayload(payload.issueCompletion) : payload;
+        if (completion?.outcome === 'deferred' && completion.deploymentCompletion === 'pending' && result.executed === false) continue;
         if (completion?.outcome === 'not-applicable' && completion.nativeClosed === false) continue;
         if (completion?.nativeClosed !== true || completion.reconciled !== true) { invalid = true; continue; }
         if (completion.outcome === 'already-converged') converged++;

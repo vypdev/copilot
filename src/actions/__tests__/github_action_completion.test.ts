@@ -4,8 +4,8 @@ import type { Execution } from '../../data/model/execution';
 import { Ai } from '../../data/model/ai';
 import { Result } from '../../data/model/result';
 import { finishGithubAction } from '../github_action_completion';
-import * as core from '@actions/core';
 import { ApplicationError } from '../../application/errors/application_error';
+import * as core from '@actions/core';
 import type { DeploymentOperationSnapshot } from '../../domain/deployment_operation';
 import { ResolveMessageCatalogUseCase } from '../../application/usecases/localization/resolve_message_catalog_use_case';
 import { PublishResultUseCase } from '../../application/usecases/steps/common/publish_resume_use_case';
@@ -394,6 +394,24 @@ describe('finishGithubAction', () => {
         expect(resolve).toHaveBeenCalledTimes(1);
         expect(resolve).toHaveBeenCalledWith(expect.objectContaining({ targetLocale: 'es-ES' }));
         expect(mockPublishInvoke).not.toHaveBeenCalled();
+    });
+
+    it('reports pending native completion in the deployment summary while retaining completed functional state', async () => {
+        const base = deploymentOperation(); const productionSha = 'c'.repeat(40);
+        const operation = { ...base, phase: 'completed', productionSha, publicationVerified: true,
+            publicationReceipt: { tag: base.tag, productionSha, operationId: base.operationId,
+                releaseUrl: 'https://github.com/vypdev/copilot/releases/tag/v3.4.0' } };
+        const action = Object.assign(singleActionExecution(), { owner: 'vypdev', repo: 'copilot',
+            singleAction: { ...singleActionExecution().singleAction, issue: 11, isDeploymentOrchestrationAction: true },
+            currentConfiguration: { results: [], deploymentOrchestration: operation } }) as Execution;
+        await finishGithubAction(action, [new Result({ id: 'DeploymentOrchestrationUseCase', success: false, executed: true,
+            errors: [new ApplicationError('provider.unavailable', 'Native issue projection remains unverified')],
+            payload: { deployment: { operationId: base.operationId, phase: 'completed', issueCompletionVerified: false } } })],
+        {} as never, {} as never, undefined, { publish: mockSummaryPublish });
+        const summary = mockSummaryPublish.mock.calls[0][0] as string;
+        expect(summary).toContain('# ❌'); expect(summary).not.toContain('# ✅');
+        expect(summary.replace(/\u200b/gu, '')).toContain('v3.4.0@ccccccc'); expect(operation.phase).toBe('completed');
+        expect(operation.publicationVerified).toBe(true);
     });
 
     it('links the published package from the first-party deployment summary', async () => {

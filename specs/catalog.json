@@ -390,7 +390,7 @@
       "status": "implemented",
       "scope": "Release and hotfix promotion, publication, bounded merge readiness recovery, and receipt-verified reconciliation without republication; explicit native-guarded replacement of closed unpublished candidates with complete fresh validation and bounded audit history",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-28",
+      "lastVerified": "2026-10-30",
       "specs": [
         "specs/configurable-release-orchestration.md",
         "specs/configurable-release-orchestration-traceability.md",
@@ -450,7 +450,10 @@
         "src/application/policies/deployment_candidate_preflight_presentation.ts",
         "deployment-recovery/action.yml",
         "deployment-recovery/index.cjs",
-        "scripts/deployment-replacement-contract.cjs"
+        "scripts/deployment-replacement-contract.cjs",
+        "src/domain/deployment_issue_completion.ts",
+        "src/data/repository/deployment/github_deployment_issue_completion.ts",
+        "src/application/usecases/actions/deferred_deployment_completion.ts"
       ],
       "tests": [
         "src/domain/__tests__/deployment_operation.test.ts",
@@ -482,7 +485,10 @@
         "src/actions/__tests__/deployment_candidate_declared_inputs.test.ts",
         "src/actions/__tests__/deployment_candidate_preflight_action.test.ts",
         "src/tooling/__tests__/deployment_replacement_workflows.test.ts",
-        "src/application/usecases/execution/__tests__/single_action_target_restore.integration.test.ts"
+        "src/application/usecases/execution/__tests__/single_action_target_restore.integration.test.ts",
+        "src/domain/__tests__/deployment_issue_completion.test.ts",
+        "src/data/repository/deployment/__tests__/github_deployment_issue_completion.test.ts",
+        "src/application/usecases/actions/__tests__/deployment_issue_completion.integration.test.ts"
       ],
       "documentation": [
         "docs/issues/deployment-orchestration.mdx",
@@ -1844,7 +1850,7 @@
       "status": "as-built-baseline",
       "scope": "Convert typed issues into traceable work branches, project state, and lifecycle state",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-20",
+      "lastVerified": "2026-10-30",
       "specs": [
         "specs/managed-issue-and-branch-lifecycle.md"
       ],
@@ -1892,7 +1898,9 @@
         "src/application/errors/closed_issue_reconciliation_error.ts",
         "src/application/usecases/actions/reconcile_issue_completion_metadata.ts",
         "src/application/usecases/actions/verify_closed_issue_card_retirement.ts",
-        "src/application/policies/closed_issue_reconciliation_outcome_policy.ts"
+        "src/application/policies/closed_issue_reconciliation_outcome_policy.ts",
+        "src/domain/deployment_issue_completion.ts",
+        "src/application/usecases/actions/deferred_deployment_completion.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/issue_pull_request_context_projection.test.ts",
@@ -1919,7 +1927,9 @@
         "src/application/usecases/actions/__tests__/reconcile_closed_issue_metadata_use_case.test.ts",
         "src/application/usecases/actions/__tests__/reconcile_closed_issue_use_case.test.ts",
         "src/application/errors/__tests__/closed_issue_reconciliation_error.test.ts",
-        "src/application/policies/__tests__/closed_issue_reconciliation_summary.test.ts"
+        "src/application/policies/__tests__/closed_issue_reconciliation_summary.test.ts",
+        "src/domain/__tests__/deployment_issue_completion.test.ts",
+        "src/application/usecases/actions/__tests__/deployment_issue_completion.integration.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

@@ -44,6 +44,21 @@ Check the durable operation and publication facts together:
 
 A merged production PR, closed issue, created tag or successful preparation job alone does not establish all of these facts.
 
+Production promotion is an intermediate milestone. The launcher remains open
+and below 100% while protected publication, reconciliation or cleanup is pending.
+Copilot detaches the promotion PR's native closing relationship to its launcher
+before handing it to the configured merge policy. If a run reports a remaining
+closing reference, inspect that PR's closing keywords and Development links and
+use the existing recovery action.
+
+After verified publication, reconciliation and cleanup, Copilot records functional
+completion before closing the launcher and verifying its progress metadata and
+existing status cards. If only this final issue projection fails, the failed Job
+Summary remains actionable and retains the verified publication facts. Retry the
+failed publication-completion job; it finishes the issue projection without
+republishing or repeating completed cleanup. A configured keep-open launcher
+remains open.
+
 ## Hotfixes and recovery
 
 For a hotfix, use the installed **Hotfix** form with an existing Base Version tag and the new Hotfix Version, description and solution. Start with `in-progress`, wait for readiness, then explicitly launch with `deploy`. Its origin is the selected production tag; reconciliation follows the configured development/active-release policy.

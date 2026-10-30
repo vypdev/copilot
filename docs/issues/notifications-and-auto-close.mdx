@@ -225,3 +225,13 @@ successful label repair does not conceal a failed card retirement. Inspect the
 named failure and current issue, resolve the access/evidence conflict, then
 retry the actual closed-issue or merged-PR operation only if cleanup is still
 required for that same closure. Keep reopened work open.
+
+## Deployment launcher completion
+
+A Release or Hotfix operation stays pending through production promotion. Its
+launcher closes and reaches 100% only after verified publication, all required
+reconciliation and cleanup. Native PR/branch linkage is not completion evidence.
+Closed-event metadata and recommendation retirement defer when fresh durable
+state still identifies a pending deployment. An already closed historical
+launcher is retained for inspection; no automatic reopen authority is added.
+See the [release and hotfix guide](/guides/releases-and-hotfixes#verify-completion).

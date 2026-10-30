@@ -216,3 +216,12 @@ it('bounds diagnostics for an oversized owned-card inventory without mutating it
   expect(result).toMatchObject({ success: false, errors: [{ recovery: { variables: { phase: 'card-inventory', remaining: 3000 } } }] });
   expect(f.comments.updateComment).not.toHaveBeenCalled();
 });
+
+
+it('retains the active card while deployment completion is pending', async () => {
+  const f = fixture();
+  f.issues.readIssue.mockResolvedValue({ number: 42, state: 'closed', reason: 'completed', labels: ['55%'], deploymentCompletion: 'pending' });
+  expect((await f.useCase.invoke(context))[0]).toMatchObject({ success: true, executed: false,
+    payload: { outcome: 'deferred', nativeClosed: true, reconciled: false } });
+  expect(f.comments.listIssueComments).not.toHaveBeenCalled(); expect(f.comments.updateComment).not.toHaveBeenCalled();
+});

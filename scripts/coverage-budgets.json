@@ -1236,6 +1236,44 @@
         }
       ],
       "successMessage": "branch sync catalog coverage: PASS (closed classification100%; adapters/recovery95/90)"
+    },
+    {
+      "name": "Deferred native deployment issue completion",
+      "missingEntryLabel": "deployment issue completion",
+      "rules": [
+        {
+          "files": [
+            "src/domain/deployment_issue_completion.ts",
+            "src/domain/issue_completion.ts",
+            "src/application/usecases/actions/deferred_deployment_completion.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "exhaustive"
+        },
+        {
+          "files": [
+            "src/data/repository/deployment/github_deployment_issue_completion.ts",
+            "src/data/repository/deployment/github_managed_pull_request_repository.ts",
+            "src/data/repository/issue/issue_completion_repository.ts",
+            "src/application/services/deployment_merge_effects.ts",
+            "src/application/usecases/actions/deployment_handlers/reconciliation_handler.ts",
+            "src/application/usecases/actions/deployment_handlers/confirm_publication_handler.ts",
+            "src/application/usecases/actions/reconcile_closed_issue_metadata_use_case.ts",
+            "src/application/usecases/actions/retire_branch_sync_use_case.ts",
+            "src/application/usecases/actions/retire_progress_use_case.ts",
+            "src/application/usecases/steps/issue/close_issue_after_merging_use_case.ts",
+            "src/application/policies/closed_issue_reconciliation_outcome_policy.ts",
+            "src/application/usecases/push_single_action_contexts.ts",
+            "src/infrastructure/composition/main_run_route_composition_root.ts",
+            "src/infrastructure/composition/push_single_action_capability_port_binding.ts",
+            "src/actions/github_action_completion.ts",
+            "src/application/policies/deployment_presentation_policy.ts"
+          ],
+          "mode": "each",
+          "thresholdProfile": "default"
+        }
+      ],
+      "successMessage": "deferred native deployment completion: PASS (pure 100%; changed modules 95% lines/statements, 90% branches/functions)"
     }
   ]
 }

@@ -7,6 +7,7 @@ import { ApplicationError } from '../../../errors/application_error';
 import type { CloseIssueAfterMergeContext } from '../../issue_workflow_context';
 import { parsePositiveSafeInteger } from '../../../../domain/positive_integer_policy';
 import type { ParamUseCase } from '../../base/param_usecase';
+import { deferredDeploymentCompletionResult } from '../../actions/deferred_deployment_completion';
 
 /** Native completion first, selective metadata second; retained effects survive partial failures. */
 export class CloseIssueAfterMergingUseCase implements ParamUseCase<CloseIssueAfterMergeContext, Result[]> {
@@ -32,6 +33,7 @@ export class CloseIssueAfterMergingUseCase implements ParamUseCase<CloseIssueAft
                 return current;
             };
             let facts = await read();
+            if (facts.deploymentCompletion === 'pending') return [deferredDeploymentCompletionResult(this.taskId, facts, true)];
             if (facts.state === 'open' && facts.reason === 'reopened') throw stale();
             if (facts.state === 'open') {
                 closedThisRun = await target.close();

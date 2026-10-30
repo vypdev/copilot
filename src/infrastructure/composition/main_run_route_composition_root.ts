@@ -188,6 +188,7 @@ function createDeploymentOrchestrationUseCase(
   catalogResolver: ResolveMessageCatalogUseCase,
 ): DeploymentOrchestrationUseCase {
   const deploymentClient = new OctokitDeploymentClientAdapter();
+  const completion = createClosedIssueRetirementUseCase(binding);
   return new DeploymentOrchestrationUseCase({
     pullRequests: bindManagedPullRequests(new GithubManagedPullRequestRepository(deploymentClient), binding),
     targetRules: bindDeploymentTargetRules(new GithubTargetMergeCapabilitiesInspector(deploymentClient), binding),
@@ -199,7 +200,10 @@ function createDeploymentOrchestrationUseCase(
     publication: bindDeploymentPublicationReceipt(publication, binding),
     state: bindDeploymentState(new DeploymentStateRepositoryFactory(issueDescriptionQueryPort), binding),
     labels: bindDeploymentLabels(createIssueLabelRepository(), binding),
-    issues: bindDeploymentIssues(createIssueClosureRepository(), binding),
+    issues: {
+      ...bindDeploymentIssues(createIssueClosureRepository(), binding),
+      reconcileCompletion: completion.invoke.bind(completion),
+    },
     replacementInspection: createDeploymentCandidateInspection(binding),
     operationId: randomUUID,
     catalogResolver,

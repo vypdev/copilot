@@ -152,6 +152,7 @@ describe('push and single-action capability binding', () => {
       findManagedPullRequests: jest.fn(),
       createManagedPullRequest: jest.fn(),
       getPullRequest,
+      prepareIssueCompletion: jest.fn(),
       enableAutoMerge: jest.fn(),
       isPullRequestQueued: jest.fn(),
       enqueuePullRequest: jest.fn(),
@@ -234,6 +235,7 @@ describe('push and single-action capability binding', () => {
     };
     const pullRequestPort = {
       findManagedPullRequests: jest.fn(), createManagedPullRequest: jest.fn(), getPullRequest: jest.fn(),
+      prepareIssueCompletion: jest.fn(),
       enableAutoMerge: jest.fn(), isPullRequestQueued: jest.fn(), enqueuePullRequest: jest.fn(), mergePullRequest: jest.fn(),
     };
     const presentationPort = {
