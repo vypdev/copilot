@@ -523,6 +523,22 @@ Unverifiable always-fails claims are omitted. This uses existing bounded read-on
 context and review policies, with no new permission or deterministic call-graph
 service. See [quality and observability](/bugbot/quality-observability).
 
+For a claim that a test never runs, apply the same grounding to the workflow,
+delegated runner, effective working directory, discovery directory, pattern and
+filters. Python unittest can select a module through a wildcard passed as a
+literal subprocess argument. Follow that selection before recommending another
+direct invocation. Keep actual discovery, module-qualified execution and a
+successful unrelated revision distinct; matching a filename alone does not
+certify execution. A narrower pattern or wrong discovery directory can still be
+a real wiring defect. Missing runner evidence does not establish an
+unconditional failure. Findings must identify the changed selector and an
+accurate source location.
+
+The #806 regression family exercises this existing grounding contract without
+changing runtime instructions. Its actual-model comparison retains a rejected
+prompt proposal and the current location-calibration limitation; see
+[quality and observability](/bugbot/quality-observability).
+
 
 ## Kotlin/Wasm JavaScript parameter scope
 

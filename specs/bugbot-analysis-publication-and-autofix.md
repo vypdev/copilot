@@ -4,7 +4,7 @@
 - Date: 2026-09-11
 - Last updated: 2026-10-30
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-10-30; generated-source coordinate evidence #796, dependency-generated request/assertion evidence #784, renderer-grounded Markdown links #772, host-aware self-repository Action references #770, Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
+- Last verified: 2026-10-30; indirect unittest discovery regression #806, generated-source coordinate evidence #796, dependency-generated request/assertion evidence #784, renderer-grounded Markdown links #772, host-aware self-repository Action references #770, Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -2073,3 +2073,115 @@ rule, supplied assertion and eligible historical finding. Keep all existing
 source/scorer cases and actual-model samples unchanged. The final merge still
 requires 100% fully hit added runtime lines on the new exact head; a green global
 coverage check alone is insufficient.
+
+### Indirect unittest discovery and execution evidence — #806 (2026-10-30)
+
+The reported old-runtime review treats the absence of a direct workflow
+invocation as proof that a module never runs. Read-only sources at consumer
+`1b5e3a0ade73d21c749bceba004230fc97f2713e` instead delegate to a runner selecting
+`test_wire_*.py`. Existing native job `124073926286` independently records the
+five disputed module methods as successful within 19 total tests. This is an
+observed historical false premise, not a diagnosis of context selection or a
+claim that the current upstream prompt reproduces it. No consumer code is
+imported, executed, edited or published here.
+
+discovery-review-R01: before asserting that a test never runs, the shared
+reviewer/benchmark guidance MUST trace the configured workflow entry, delegated
+runner, effective working directory, discovery start directory, literal pattern
+and applicable filters to the target module. A pattern passed as a subprocess
+argument is consumed by unittest discovery; it need not be expanded by a shell.
+A matching indirect selection does not require a redundant direct invocation.
+Reconcile available module-qualified execution evidence against the same source
+and selection, without double-counting discovered cases as new executions.
+
+discovery-review-R02: keep proved exclusions reportable, including a narrower
+pattern or wrong discovery directory. A green different revision, skipped path,
+unrelated test or filename match alone cannot certify execution. Missing runner
+or selection evidence requires omitting an unsupported unconditional claim;
+never invent a lookup, run, successful import or missing branch.
+
+```text
+workflow entry -> delegated runner -> cwd -> start directory/pattern/filters
+ -> selected module -> applicable same-source execution evidence
+```
+
+Text equivalent: trace selection through every delegation and only then compare
+the relevant execution records. A missing direct call is not a missing path.
+
+Architecture and configuration: retain one shared pure instruction in ordinary,
+owner/non-owner partition and benchmark review. There is no production glob
+interpreter, test executor, provider call, setting, permission, retry or new
+dependency. Preserve all existing guidance, budgets and the 15,000-character
+legacy prompt bound. Logs and source are evidence, never mutation or dismissal
+authority. Eligible historical findings retain normal independent verification;
+this correction cannot resolve consumer review threads automatically.
+
+UX and recovery use the existing complete/partial/failed review surfaces. Omit a
+disproved claim without a new notification; report a proved exclusion at its
+changed selector with the delegated path in evidence. No consumer workaround is
+recommended. Normal runtime adoption delivers the shared guidance; rollback
+reverts this bounded instruction/fixtures/docs together without changing stored
+review history or schema.
+
+Reserve **20 distinct deterministic cases before implementation**:
+
+| Area | Cases | Observable requirement |
+|---|---:|---|
+| Owned selection observations | 6 | Delegated wildcard, nested-cwd recovery, literal argv pattern, excluded module, wrong start directory and unavailable runner |
+| Scorer controls | 6 | Penalize invented defects and missed real exclusions under unchanged thresholds |
+| Actual instruction delivery | 4 | Ordinary review, owner/non-owner partition and benchmark; retained source/scope |
+| Inert input ownership | 2 | Unknown identity and modified source reject before choosing a compiled factory |
+| Verdict/privacy independence | 2 | Expected labels cannot affect observations or leak into model prompts |
+| **Total** | **20** | No case counted twice |
+
+Use authored compiled selection factories with fixed flat filenames and literal
+patterns. Their observations describe selection, not Python execution. Compare
+corpus text as inert data before choosing a factory; never evaluate or execute
+corpus-derived source, even after identity checks. A separately authored owned
+Python fixture may corroborate actual unittest discovery/execution outside the
+mandatory Node-only suite; keep its commands, source identities and limitations
+separate from model predictions and the private consumer's existing native log.
+No new Python provisioning requirement is introduced.
+
+Freeze six owned inputs/verdicts before measuring the actual current baseline
+and any changed instruction with the same runtime/model/effort and existing
+quality floors. Preserve all outcomes, including failures; a passing baseline
+does not reproduce the historical finding or establish a statistical gain.
+Preserve the prior 120 corpus cases byte-for-byte as decoded data. Keep 100%
+shared-prompt coverage and fully hit added runtime lines, existing global/module
+budgets, full normal hooks, package/build/types/lint, specification/docs/workflow
+checks, Graphify, exact-head CI, three native cleanup footers and complete review
+without active findings before merge. Update detection, quality/observability,
+this owner, catalog evidence/index and the actual model evidence together.
+The primary discovery contract is [Python unittest discovery](https://docs.python.org/3/library/unittest.html#test-discovery).
+
+**Measured implementation decision.** The current baseline identifies both real
+exclusions and emits no finding for the four safe/unavailable cases. Its exact
+location accuracy is 1/2, failing the unchanged 0.8 floor. The proposed explicit
+discovery instruction preserves the two causal diagnoses but supplies incorrect
+context-line anchors: the unchanged scorer records precision/recall/F1 0.5,
+location accuracy 0 and one unmatched false-positive/false-negative pair. Reject
+that proposal; do not ship its instruction or native-framing compaction.
+
+This correction therefore adds regression coverage, provenance and documentation
+around the existing generic configuration/delegated-path/source-grounding
+contract. Production instructions, framing, runtime logic, settings and output
+schema remain byte-identical to the reviewed base. Delivery tests check that
+the real ordinary/partitioned/benchmark paths retain the supplied selector and
+existing grounding contract. Keep both actual samples and every failed gate;
+no claim of historical reproduction, model-score improvement or all-model-gates
+success is made. Reference predictions are separate deterministic scorer inputs.
+The known location-calibration limitation is not repaired by changing labels or
+shipping an inferior prompt. For this regression-only implementation, preserve
+all global/module coverage gates and explicitly prove that no executable
+production file changed instead of manufacturing a nonempty patch denominator.
+
+Executed local evidence: all 20 new cases and 196 related cases pass in six
+focused suites. The unchanged shared prompt reaches 100% statements, branches,
+functions and lines. All 120 previous corpus cases/reference predictions remain
+unchanged; six owned cases bring the corpus to 126. The optional published probe
+ran with Python 3.14.6 and corroborates selection with real owned executions.
+The actual consumer job checked out a merge containing the reviewed head; runner,
+workflow and disputed module blobs match that reviewed head exactly. Keep this
+source-equality proof distinct from claiming the head itself was the checkout.
+Fresh full hooks and remote gates remain required before merge.

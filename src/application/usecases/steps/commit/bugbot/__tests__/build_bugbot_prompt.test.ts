@@ -423,3 +423,22 @@ describe('configuration-selected initial session evidence', () => {
     } else expect(prompt).toContain('retained-session-finding');
   });
 });
+
+describe('indirect unittest discovery evidence', () => {
+  it.each([undefined, true, false])('delivers runner selection with resolution ownership=%s', ownsResolution => {
+    const source = '+return [sys.executable, "-m", "unittest", "discover", "-p", "test_manifest_*.py"];';
+    const prompt = buildBugbotPrompt(mockExecution(), mockContext({ reviewDiffBlock: source,
+      previousFindingsBlock: 'retained-discovery-finding' }), ownsResolution === undefined ? undefined : { partition: {
+      id: 'unittest-selection', ordinal: 1, total: 2, headSha: 'a'.repeat(40), block: source,
+      files: ['.github/scripts/tests/run_manifest_tests.py'], fragmentCount: 1, ownsResolution,
+    } });
+    for (const clause of ['Read effective repository configuration and inherited library/protocol defaults',
+      'follow the full delegated call chain', 'Reconcile same-revision execution/call counts',
+      'unrelated/skipped tests prove nothing', 'omit unsupported always-fails claims']) expect(prompt).toContain(clause);
+    expect(prompt).toContain(source);
+    if (ownsResolution === false) {
+      expect(prompt).not.toContain('retained-discovery-finding');
+      expect(prompt).toContain('must return an empty resolved_findings array');
+    } else expect(prompt).toContain('retained-discovery-finding');
+  });
+});

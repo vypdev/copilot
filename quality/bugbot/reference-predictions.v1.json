@@ -263,6 +263,34 @@
         "confidence": 1
       }
     ],
-    "session-source-setup-unavailable": []
+    "session-source-setup-unavailable": [],
+    "unittest-discovery-delegated-wildcard": [],
+    "unittest-discovery-nested-working-directory": [],
+    "unittest-discovery-literal-argv-pattern": [],
+    "unittest-discovery-excluded-by-pattern": [
+      {
+        "id": "unittest-discovery-excluded-by-pattern",
+        "title": "The changed discovery selector excludes the required export module",
+        "file": ".github/scripts/tests/run_manifest_tests.py",
+        "line": 12,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \".github/scripts/tests\", \"-p\", \"test_manifest_core.py\", \"-v\"]",
+        "confidence": 1
+      }
+    ],
+    "unittest-discovery-wrong-start-directory": [
+      {
+        "id": "unittest-discovery-wrong-start-directory",
+        "title": "The changed discovery selector excludes the required export module",
+        "file": ".github/scripts/tests/run_manifest_tests.py",
+        "line": 12,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \"backend/checks\", \"-p\", \"test_manifest_*.py\", \"-v\"]",
+        "confidence": 1
+      }
+    ],
+    "unittest-discovery-runner-unavailable": []
   }
 }
