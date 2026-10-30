@@ -172,6 +172,58 @@
     "request-transform-bypass": [{"id":"request-transform-bypass","title":"Raw request bypasses the header-producing middleware","file":"media/request.ts","line":11,"severity":"medium","category":"correctness","codeSnippet":"const request = { headers: {} };","confidence":0.95}],
     "request-transform-overwrite": [{"id":"request-transform-overwrite","title":"Downstream assignment removes the required no-store directive","file":"media/request.ts","line":12,"severity":"medium","category":"correctness","codeSnippet":"request.headers[\"Cache-Control\"] = \"no-cache\";","confidence":0.95}],
     "request-transform-mock": [{"id":"request-transform-mock","title":"Header-injecting mock hides a missing production request header","file":"media/request.ts","line":11,"severity":"medium","category":"correctness","codeSnippet":"const request = { headers: {} };","confidence":0.95}],
-    "request-transform-utf8": [{"id":"request-transform-utf8","title":"Byte truncation splits a multibyte UTF-8 character","file":"media/request.ts","line":23,"severity":"medium","category":"correctness","codeSnippet":"const preview = encoded.slice(0, 1);","confidence":0.95}]
+    "request-transform-utf8": [{"id":"request-transform-utf8","title":"Byte truncation splits a multibyte UTF-8 character","file":"media/request.ts","line":23,"severity":"medium","category":"correctness","codeSnippet":"const preview = encoded.slice(0, 1);","confidence":0.95}],
+    "generated-source-literal": [],
+    "generated-source-leading-newline": [],
+    "generated-source-escaped": [],
+    "generated-source-dedent": [],
+    "generated-source-wrong-literal": [
+      {
+        "id": "generated-source-wrong-literal",
+        "title": "Executed positive statement is asserted uncovered",
+        "file": "coverage/generated_fixture.py",
+        "line": 18,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "assert rows[6][\"ci\"] == 0",
+        "confidence": 1
+      }
+    ],
+    "generated-source-wrong-leading-newline": [
+      {
+        "id": "generated-source-wrong-leading-newline",
+        "title": "Executed positive statement is asserted uncovered",
+        "file": "coverage/generated_fixture.py",
+        "line": 19,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "assert rows[7][\"ci\"] == 0",
+        "confidence": 1
+      }
+    ],
+    "generated-literal-independent-shell": [
+      {
+        "id": "generated-literal-independent-shell",
+        "title": "Untrusted query parameter reaches the shell",
+        "file": "coverage/literal_handler.py",
+        "line": 5,
+        "category": "security",
+        "severity": "high",
+        "codeSnippet": "return subprocess.run(\"cat \" + user_path, shell=True, check=True)",
+        "confidence": 1
+      }
+    ],
+    "generated-literal-independent-contract": [
+      {
+        "id": "generated-literal-independent-contract",
+        "title": "Zero is accepted despite the strictly positive contract",
+        "file": "coverage/literal_validator.py",
+        "line": 6,
+        "category": "correctness",
+        "severity": "medium",
+        "codeSnippet": "return count >= 0",
+        "confidence": 1
+      }
+    ]
   }
 }

@@ -441,6 +441,50 @@ permissions, resolver service, project exception or guarantee of accuracy. See
 [quality and observability](/bugbot/quality-observability) for the paired controls.
 
 
+## Generated fixture line numbers
+
+Before reporting that a numeric coverage assertion fails, Bugbot uses bounded
+numbered literal witnesses or read-only literal/AST tool output to reconstruct the
+bytes written by the fixture, including escaped newlines, a leading newline and
+explicit dedent or stripping. It numbers written lines from 1, including blanks,
+and quotes the statement selected by the counter key. A physical line containing
+inline `if` and `return` stays one line, regardless of statement count or display
+wrapping. Host-file line numbers, generated source lines and
+coverage counter keys are separate coordinates. It traces the actual test input
+and branch, and checks matching source-bound execution evidence when available.
+A positive return on generated line 6 does not make the negative return on line 7
+executed. A zero count can intentionally verify missed coverage; it does not imply that
+the test should assert the covered branch instead. Bugbot must prove an assertion
+contradiction or a stated coverage-contract defect and omit self-refuting reports.
+A real assertion that marks the executed statement as missed remains
+reportable and is anchored to its changed host assertion. Missing writer or
+execution evidence does not establish an observed test failure. Without verified
+counter-key source it omits the claim; it never executes fixture code to obtain
+this mapping. Canonical Python diff sections and the real-agent benchmark also receive bounded,
+numbered literal values when the syntax is supported. These are conditional data:
+verify the host binding and actual writer before treating them as generated-file
+coordinates. Unsupported prefixes, escapes or transforms stay unavailable. The
+projection never runs Python, interpolates an f-string or manufactures counters;
+unknown/omitted witnesses cannot establish a failing test. Canonical diff text and
+review ownership remain intact.
+
+When trusted context construction retains a witness and analysis produces
+candidates, a second read-only query independently checks those hypotheses against
+the same source. Only supported candidates continue to publication; genuine
+assertion contradictions and independent defects remain reportable. Every original
+ID needs exactly one retained or rejected decision. Corrections keep the same file
+and existing code anchor. Wrong locale, incomplete decisions or provider failures
+leave analysis failed/incomplete rather than declaring the review clean.
+
+The verifier uses the same configured provider, model and effort. Each query has
+fixed limits of 20 candidates, 32,000 UTF-8 candidate bytes and 128,000 complete
+prompt bytes. Exceeding a limit requires narrowing the scope and rechecking.
+Ordinary reviews add at most one verification query; partition review keeps its
+existing three attempts, with at most six total queries. Empty candidates and
+contexts without retained witnesses use the existing path. Rejected hypotheses
+cannot resolve, dismiss or reopen historical findings. There is no new public
+configuration, provider permission or workflow step.
+
 ## Delegated test paths
 
 Before claiming a parameterized test always fails or its stub is unused, Bugbot

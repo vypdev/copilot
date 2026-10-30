@@ -1243,6 +1243,126 @@
           "codeSnippet": "const preview = encoded.slice(0, 1);"
         }
       ]
+    },
+    {
+      "id": "generated-source-literal",
+      "language": "python",
+      "category": "negative",
+      "description": "Synthetic host-language fixture writes generated Kotlin. The writer has no implicit newline; apply the shown literal escapes and explicit transformations. The existing instrumentation runner maps covered instructions to one-based generated source lines. Review the changed assertion using the supplied source and JUnit input. No actual compiler or instrumentation execution outcome is supplied to this model.",
+      "file": "coverage/generated_fixture.py",
+      "startLine": 1,
+      "diff": " def test_generated_counters(tmp_path):\n     kotlin = \"\"\"package demo\n class Route {\n     fun describe(): String = \"synthetic\"\n     fun route(value: Int): Int {\n         val checked = value\n         if (checked > 0) return 1\n         return -1\n     }\n     fun neverCalled(): Int = 99\n }\n \"\"\"\n     (tmp_path / \"Route.kt\").write_bytes(kotlin.encode(\"utf-8\"))\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Existing runner compiles the exact written source and runs this assertion.\n     # rows keys are one-based Route.kt source lines; ci means covered instructions.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[7][\"ci\"] == 0",
+      "expected": []
+    },
+    {
+      "id": "generated-source-leading-newline",
+      "language": "python",
+      "category": "negative",
+      "description": "Synthetic host-language fixture writes generated Kotlin. The writer has no implicit newline; apply the shown literal escapes and explicit transformations. The existing instrumentation runner maps covered instructions to one-based generated source lines. Review the changed assertion using the supplied source and JUnit input. No actual compiler or instrumentation execution outcome is supplied to this model.",
+      "file": "coverage/generated_fixture.py",
+      "startLine": 1,
+      "diff": " def test_generated_counters(tmp_path):\n     kotlin = \"\"\"\n package demo\n class Route {\n     fun describe(): String = \"synthetic\"\n     fun route(value: Int): Int {\n         val checked = value\n         if (checked > 0) return 1\n         return -1\n     }\n     fun neverCalled(): Int = 99\n }\n \"\"\"\n     (tmp_path / \"Route.kt\").write_bytes(kotlin.encode(\"utf-8\"))\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Existing runner compiles the exact written source and runs this assertion.\n     # rows keys are one-based Route.kt source lines; ci means covered instructions.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[8][\"ci\"] == 0",
+      "expected": []
+    },
+    {
+      "id": "generated-source-escaped",
+      "language": "python",
+      "category": "negative",
+      "description": "Synthetic host-language fixture writes generated Kotlin. The writer has no implicit newline; apply the shown literal escapes and explicit transformations. The existing instrumentation runner maps covered instructions to one-based generated source lines. Review the changed assertion using the supplied source and JUnit input. No actual compiler or instrumentation execution outcome is supplied to this model.",
+      "file": "coverage/generated_fixture.py",
+      "startLine": 1,
+      "diff": " def test_generated_counters(tmp_path):\n     kotlin = \"package demo\\nclass Route {\\n    fun describe(): String = \\\"synthetic\\\"\\n    fun route(value: Int): Int {\\n        val checked = value\\n        if (checked > 0) return 1\\n        return -1\\n    }\\n    fun neverCalled(): Int = 99\\n}\\n\"\n     (tmp_path / \"Route.kt\").write_bytes(kotlin.encode(\"utf-8\"))\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Existing runner compiles the exact written source and runs this assertion.\n     # rows keys are one-based Route.kt source lines; ci means covered instructions.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[7][\"ci\"] == 0",
+      "expected": []
+    },
+    {
+      "id": "generated-source-dedent",
+      "language": "python",
+      "category": "negative",
+      "description": "Synthetic host-language fixture writes generated Kotlin. The writer has no implicit newline; apply the shown literal escapes and explicit transformations. The existing instrumentation runner maps covered instructions to one-based generated source lines. Review the changed assertion using the supplied source and JUnit input. No actual compiler or instrumentation execution outcome is supplied to this model.",
+      "file": "coverage/generated_fixture.py",
+      "startLine": 1,
+      "diff": " import textwrap\n def test_generated_counters(tmp_path):\n     kotlin = textwrap.dedent(\"\"\"\n     package demo\n     class Route {\n         fun describe(): String = \"synthetic\"\n         fun route(value: Int): Int {\n             val checked = value\n             if (checked > 0) return 1\n             return -1\n         }\n         fun neverCalled(): Int = 99\n     }\n \"\"\").lstrip(\"\\n\")\n     (tmp_path / \"Route.kt\").write_bytes(kotlin.encode(\"utf-8\"))\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Existing runner compiles the exact written source and runs this assertion.\n     # rows keys are one-based Route.kt source lines; ci means covered instructions.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[7][\"ci\"] == 0",
+      "expected": []
+    },
+    {
+      "id": "generated-source-wrong-literal",
+      "language": "python",
+      "category": "correctness",
+      "description": "Synthetic host-language fixture writes generated Kotlin. The writer has no implicit newline; apply the shown literal escapes and explicit transformations. The existing instrumentation runner maps covered instructions to one-based generated source lines. Review the changed assertion using the supplied source and JUnit input. No actual compiler or instrumentation execution outcome is supplied to this model.",
+      "file": "coverage/generated_fixture.py",
+      "startLine": 1,
+      "diff": " def test_generated_counters(tmp_path):\n     kotlin = \"\"\"package demo\n class Route {\n     fun describe(): String = \"synthetic\"\n     fun route(value: Int): Int {\n         val checked = value\n         if (checked > 0) return 1\n         return -1\n     }\n     fun neverCalled(): Int = 99\n }\n \"\"\"\n     (tmp_path / \"Route.kt\").write_bytes(kotlin.encode(\"utf-8\"))\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Existing runner compiles the exact written source and runs this assertion.\n     # rows keys are one-based Route.kt source lines; ci means covered instructions.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[6][\"ci\"] == 0",
+      "expected": [
+        {
+          "id": "generated-source-wrong-literal",
+          "title": "Executed positive statement is asserted uncovered",
+          "file": "coverage/generated_fixture.py",
+          "line": 18,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "assert rows[6][\"ci\"] == 0"
+        }
+      ]
+    },
+    {
+      "id": "generated-source-wrong-leading-newline",
+      "language": "python",
+      "category": "correctness",
+      "description": "Synthetic host-language fixture writes generated Kotlin. The writer has no implicit newline; apply the shown literal escapes and explicit transformations. The existing instrumentation runner maps covered instructions to one-based generated source lines. Review the changed assertion using the supplied source and JUnit input. No actual compiler or instrumentation execution outcome is supplied to this model.",
+      "file": "coverage/generated_fixture.py",
+      "startLine": 1,
+      "diff": " def test_generated_counters(tmp_path):\n     kotlin = \"\"\"\n package demo\n class Route {\n     fun describe(): String = \"synthetic\"\n     fun route(value: Int): Int {\n         val checked = value\n         if (checked > 0) return 1\n         return -1\n     }\n     fun neverCalled(): Int = 99\n }\n \"\"\"\n     (tmp_path / \"Route.kt\").write_bytes(kotlin.encode(\"utf-8\"))\n     junit = \"assertEquals(1, Route().route(4))\"\n     # Existing runner compiles the exact written source and runs this assertion.\n     # rows keys are one-based Route.kt source lines; ci means covered instructions.\n     rows = run_real_jacoco(tmp_path, junit)\n+    assert rows[7][\"ci\"] == 0",
+      "expected": [
+        {
+          "id": "generated-source-wrong-leading-newline",
+          "title": "Executed positive statement is asserted uncovered",
+          "file": "coverage/generated_fixture.py",
+          "line": 19,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "assert rows[7][\"ci\"] == 0"
+        }
+      ]
+    },
+    {
+      "id": "generated-literal-independent-shell",
+      "language": "python",
+      "category": "security",
+      "description": "Owned synthetic Python fixture includes a literal plus a separate request handler. user_path is an untrusted HTTP query parameter; review the changed handler.",
+      "file": "coverage/literal_handler.py",
+      "startLine": 1,
+      "diff": " source = \"\"\"package demo\n class Empty {}\"\"\"\n import subprocess\n+def export_report(user_path):\n+    return subprocess.run(\"cat \" + user_path, shell=True, check=True)",
+      "expected": [
+        {
+          "id": "generated-literal-independent-shell",
+          "title": "Untrusted query parameter reaches the shell",
+          "file": "coverage/literal_handler.py",
+          "line": 5,
+          "category": "security",
+          "severity": "high",
+          "codeSnippet": "return subprocess.run(\"cat \" + user_path, shell=True, check=True)"
+        }
+      ]
+    },
+    {
+      "id": "generated-literal-independent-contract",
+      "language": "python",
+      "category": "correctness",
+      "description": "Owned synthetic Python fixture includes a literal plus an independent public validator. Its documented contract accepts strictly positive integer counts only. Review the changed return.",
+      "file": "coverage/literal_validator.py",
+      "startLine": 1,
+      "diff": " source = \"\"\"package demo\n class Empty {}\"\"\"\n def accepts_count(count):\n     \"\"\"Return True exactly when integer count is strictly positive.\"\"\"\n-    return count > 0\n+    return count >= 0",
+      "expected": [
+        {
+          "id": "generated-literal-independent-contract",
+          "title": "Zero is accepted despite the strictly positive contract",
+          "file": "coverage/literal_validator.py",
+          "line": 6,
+          "category": "correctness",
+          "severity": "medium",
+          "codeSnippet": "return count >= 0"
+        }
+      ]
     }
   ]
 }

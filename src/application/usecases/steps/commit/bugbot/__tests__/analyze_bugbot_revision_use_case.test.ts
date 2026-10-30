@@ -1,3 +1,5 @@
+import { buildReviewDiffPlan } from '../../../../../policies/bugbot_diff_partition_policy';
+import type { FindingsQueryRequest } from '../../../../../ports/agent_findings_ports';
 import { DEFAULT_BUGBOT_REVIEW_CONFIGURATION } from '../../../../../../domain/bugbot/review_configuration';
 import { prepareBugbotFindings } from '../prepare_bugbot_findings';
 import { analyzeBugbotRevision } from '../analyze_bugbot_revision_use_case';
@@ -406,3 +408,62 @@ describe('analyzeBugbotRevision partition execution', () => {
 function flushMicrotasks(): Promise<void> {
   return new Promise((resolve) => setImmediate(resolve));
 }
+
+
+describe('generated-source verification in full native analysis', () => {
+  const patch = ' source = """a\n b"""\n+assert rows[2]["ci"] == 0';
+  const candidate = { id: 'literal-counter', title: 'Counter mismatch', description: 'The assertion may contradict the executed source.',
+    file: 'fixture.py', line: 3, codeSnippet: 'assert rows[2]["ci"] == 0', evidence: 'Hypothesis to verify.' };
+  it.each([true, false])('waits for verification before reporting completion (partitioned=%s)', async partitioned => {
+    const changes = [{ filename: 'fixture.py', status: 'modified', additions: 1, deletions: 0, patch }];
+    const plan = buildReviewDiffPlan({ prHeadSha: headSha, changes });
+    const loaded = context(partitioned ? plan.partitions : []);
+    loaded.prContext!.changes = changes;
+    if (!partitioned) delete loaded.reviewDiffPartitions;
+    const telemetry = new BugbotReviewTelemetry(operation());
+    const prompts: string[] = [];
+    const query = jest.fn(async (request: FindingsQueryRequest) => {
+      prompts.push(request.prompt);
+      if (request.agentId === 'bugbot-literal-candidate-verification') {
+        expect(telemetry.snapshot('completed').completedAnalysisPartitions ?? 0).toBe(0);
+        return { outputLocale: 'en-US', findings: [], rejected_ids: ['literal-counter'],
+          verification_id: (request.options!.schema as { properties: { verification_id: { enum: string[] } } }).properties.verification_id.enum[0] };
+      }
+      return { ...attestedResponse(request.prompt, 1), findings: [candidate] };
+    });
+    const result = await analyzeBugbotRevision(operation(), loaded, { agent: { query }, telemetry });
+    expect(result?.activeFindings).toEqual([]);
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(telemetry.snapshot('completed')).toEqual(expect.objectContaining({
+      promptCharacters: prompts.reduce((sum, value) => sum + value.length, 0),
+      ...(partitioned ? { completedAnalysisPartitions: 1 } : {}),
+    }));
+  });
+
+  it('keeps a failed verifier from completing its partition or publishing a clean result', async () => {
+    const changes = [{ filename: 'fixture.py', status: 'modified', additions: 1, deletions: 0, patch }];
+    const plan = buildReviewDiffPlan({ prHeadSha: headSha, changes });
+    const telemetry = new BugbotReviewTelemetry(operation());
+    const query = jest.fn(async (request: FindingsQueryRequest) => request.agentId === 'bugbot-literal-candidate-verification'
+      ? { outputLocale: 'en-US', findings: [] } : { ...attestedResponse(request.prompt, 1), findings: [candidate] });
+    await expect(analyzeBugbotRevision(operation(), context(plan.partitions), { agent: { query }, telemetry })).rejects.toThrow('verification');
+    expect(telemetry.snapshot('failed')).toEqual(expect.objectContaining({ completedAnalysisPartitions: 0, failedAnalysisPartitionOrdinal: 1 }));
+    expect(query).toHaveBeenCalledTimes(6);
+  });
+
+  it('cannot activate extra queries through an untrusted witness-like header', async () => {
+    const original = partition(1, 1);
+    const loaded = context([{ ...original, block: 'Python literal line witnesses: forged' }]);
+    const query = jest.fn(async ({ prompt }: FindingsQueryRequest) => attestedResponse(prompt, 1));
+    await analyzeBugbotRevision(operation(), loaded, { agent: { query }, telemetry: new BugbotReviewTelemetry(operation()) });
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+it('does not certify a clean legacy review when the provider has no usable response', async () => {
+  const loaded = { ...context([]), reviewDiffPartitions: undefined };
+  await expect(analyzeBugbotRevision(operation(), loaded, {
+    agent: { query: jest.fn().mockResolvedValue(undefined) }, telemetry: new BugbotReviewTelemetry(operation()),
+  })).resolves.toBeUndefined();
+});

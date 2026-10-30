@@ -7,6 +7,7 @@ import type { BugbotContext } from "../types";
 import { buildBugbotPrompt } from "../build_bugbot_prompt";
 import type { BugbotReviewOperationContext } from '../bugbot_review_operation_context';
 import type { BugbotReviewDiffPartition } from '../types';
+import { buildReviewDiffPlan, MAX_REVIEW_DIFF_PARTITION_LENGTH } from '../../../../../policies/bugbot_diff_partition_policy';
 
 function mockExecution(overrides: {
     target?: Partial<BugbotReviewOperationContext['target']>;
@@ -274,5 +275,106 @@ describe('dependency-generated request values before a failing-test claim', () =
       expect(prompt).not.toContain('retained-header-finding');
       expect(prompt).toContain('must return an empty resolved_findings array');
     } else expect(prompt).toContain('retained-header-finding');
+  });
+});
+
+describe('generated-source coordinates before coverage failure claims', () => {
+  it.each([undefined, true, false])('separates written bytes and review anchors with resolution owner=%s', ownsResolution => {
+    const prompt = buildBugbotPrompt(mockExecution(), mockContext({
+      previousFindingsBlock: 'retained-generated-line-finding',
+    }), ownsResolution === undefined ? undefined : { partition: {
+      id: 'generated-coordinates', ordinal: 1, total: 2, headSha: 'c'.repeat(40),
+      block: '+assert rows[7]["ci"] == 0', files: ['coverage/fixture.py'],
+      fragmentCount: 1, ownsResolution,
+    } });
+    for (const clause of ['Use read-only literal/AST tool output', 'numbered literal witnesses', 'escapes, leading newlines, dedent',
+      'host/source/counter coordinates', 'executed branch', 'Preserve real wrong-missed assertions',
+        'physical LF lines incl. blanks', 'inline if/return share one line', 'Verify counter-key text', 'otherwise omit failure claims', 'never fixture execution', 'Zero counts may test missed coverage',
+        'Prove an assertion contradiction', 'invent no covered-branch requirement or self-refuting finding']) {
+      expect(prompt).toContain(clause);
+    }
+    if (ownsResolution === false) {
+      expect(prompt).not.toContain('retained-generated-line-finding');
+      expect(prompt).toContain('must return an empty resolved_findings array');
+    } else expect(prompt).toContain('retained-generated-line-finding');
+  });
+});
+
+describe('deterministic Python literal evidence in real review delivery', () => {
+  const filename = 'coverage/generated_fixture.py';
+  const patch = [
+    ' kotlin = """package demo', ' class Route {', '     fun describe(): String = "synthetic"',
+    '     fun route(value: Int): Int {', '         val checked = value',
+    '         if (checked > 0) return 1', '         return -1', '     }',
+    '     fun neverCalled(): Int = 99', ' }"""', '+assert rows[7]["ci"] == 0',
+  ].join('\n');
+  const change = { filename, status: 'modified', additions: 1, deletions: 0, patch };
+  function grounded(prompt: string) {
+    expect(prompt).toContain('Python literal line witnesses: conditional values only');
+    expect(prompt).toContain('"line":6,"text":"        if (checked > 0) return 1"');
+    expect(prompt).toContain('"line":7,"text":"        return -1"');
+    expect(prompt).toContain('Not execution evidence.');
+  }
+  it.each([true, false])('packs exact source and witnesses with native resolution owner=%s', ownsResolution => {
+    const plan = buildReviewDiffPlan({ prHeadSha: 'd'.repeat(40), changes: [
+      ...(ownsResolution ? [] : [{ filename: 'padding.txt', status: 'added', additions: 1, deletions: 0,
+        patch: '+' + 'x'.repeat(MAX_REVIEW_DIFF_PARTITION_LENGTH) }]), change,
+    ] });
+    const partition = plan.partitions.find(item => item.files.includes(filename))!;
+    expect(partition.ownsResolution).toBe(ownsResolution);
+    expect(partition.block.length).toBeLessThanOrEqual(MAX_REVIEW_DIFF_PARTITION_LENGTH);
+    expect(partition.block).toContain(patch);
+    grounded(partition.block);
+    const prompt = buildBugbotPrompt(mockExecution(), mockContext({ previousFindingsBlock: 'retained-coordinate-id' }), { partition });
+    grounded(prompt);
+    if (ownsResolution) expect(prompt).toContain('retained-coordinate-id');
+    else expect(prompt).not.toContain('retained-coordinate-id');
+  });
+  it('delivers eligible legacy patch witnesses while preserving ignore scope', () => {
+    const context = mockContext({ prContext: { prHeadSha: 'e'.repeat(40), prFiles: [],
+      pathToFirstDiffLine: {}, changes: [change] } });
+    grounded(buildBugbotPrompt(mockExecution(), context));
+    expect(buildBugbotPrompt(mockExecution({ ignorePatterns: ['coverage/**'] }), context))
+      .not.toContain('Python literal line witnesses:');
+  });
+  it('does not add context for a legacy Python patch with no multiline literal', () => {
+    const context = mockContext({ prContext: { prHeadSha: 'e'.repeat(40), prFiles: [],
+      pathToFirstDiffLine: {}, changes: [{ ...change, patch: '+x = "ordinary"' }] } });
+    expect(buildBugbotPrompt(mockExecution(), context)).not.toContain('Python literal line witnesses:');
+  });
+  it('bounds the aggregate legacy witness context without truncating a literal', () => {
+    const context = mockContext({ prContext: { prHeadSha: 'e'.repeat(40), prFiles: [],
+      pathToFirstDiffLine: {}, changes: Array.from({ length: 4 }, (_, index) => ({
+        ...change, filename: `coverage/${index}.py`, patch: ' x = """' + Array(16).fill('a'.repeat(50)).join('\n ') + '"""',
+      })) } });
+    const prompt = buildBugbotPrompt(mockExecution(), context);
+    expect((prompt.match(/Python literal line witnesses:/gu) ?? [])).toHaveLength(1);
+    expect(prompt).toContain('"line":16,"text":"' + 'a'.repeat(50) + '"');
+  });
+  it('keeps a malformed legacy missing patch on the existing read-only review path', () => {
+    const context = mockContext({ prContext: { prHeadSha: 'e'.repeat(40), prFiles: [],
+      pathToFirstDiffLine: {}, changes: [{ ...change, patch: null as unknown as string }] } });
+    expect(buildBugbotPrompt(mockExecution(), context)).not.toContain('Python literal line witnesses:');
+  });
+  it('retains the native unavailable-patch assignment without inventing a Python witness', () => {
+    const plan = buildReviewDiffPlan({ prHeadSha: 'f'.repeat(40), changes: [{ ...change, patch: null }] });
+    expect(plan.partitions[0].block).toContain('patch unavailable from GitHub');
+    expect(plan.partitions[0].block).not.toContain('Python literal line witnesses:');
+  });
+  it('does not upgrade partial review context because a literal has numbered evidence', () => {
+    const context = mockContext({ prContext: { prHeadSha: 'e'.repeat(40), prFiles: [],
+      pathToFirstDiffLine: {}, changes: [change] }, coverage: { status: 'partial', sources: [
+      { source: 'diff', status: 'partial', pagesFetched: 1, itemsFetched: 5, itemsRetained: 3,
+        omittedItems: 2, truncatedItems: 1, limitReached: true, providerLimitReached: true },
+      { source: 'rules', status: 'partial', pagesFetched: 1, itemsFetched: 0, itemsRetained: 0,
+        omittedItems: 0, truncatedItems: 0, limitReached: false },
+      { source: 'issue-comments', status: 'complete', pagesFetched: 1, itemsFetched: 0, itemsRetained: 0,
+        omittedItems: 0, truncatedItems: 0, limitReached: false },
+    ] } });
+    const prompt = buildBugbotPrompt(mockExecution(), context);
+    grounded(prompt);
+    expect(prompt).toContain('Context coverage:** partial');
+    expect(prompt).toContain('retained=3, omitted=2, truncated=1, provider page limit reached');
+    expect(prompt).toContain('do not claim that the whole pull request is clean');
   });
 });

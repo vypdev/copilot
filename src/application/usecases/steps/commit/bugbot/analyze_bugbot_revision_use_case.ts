@@ -4,7 +4,7 @@ import { logInfo } from '../../../../ports/logging_ports';
 import { applyCommentLimit } from './limit_comments';
 import type { BugbotContext } from './types';
 import { findExistingFindingInfo, retainExistingFindingIds } from '../../../../../domain/bugbot/finding';
-import { buildBugbotPrompt } from './build_bugbot_prompt';
+import { buildBugbotReviewInput } from './build_bugbot_prompt';
 import { prepareBugbotFindings } from './prepare_bugbot_findings';
 import type { PreparedBugbotFindings } from './prepare_bugbot_findings';
 import { queryBugbotFindings, queryBugbotPartitionFindings } from './query_bugbot_findings';
@@ -61,7 +61,7 @@ export async function analyzeBugbotRevision(
             logInfo(`Bugbot reviewer planned ${partitions.length} bounded diff ${partitions.length === 1 ? 'partition' : 'partitions'} with maximum concurrency 2.`);
             const responses = await runWithConcurrencyLimit(
                 partitions.map((partition) => async () => {
-                    const prompt = buildBugbotPrompt(execution, context, { partition });
+                    const { prompt, hasLiteralWitnesses } = buildBugbotReviewInput(execution, context, { partition });
                     dependencies.telemetry.observePrompt(prompt);
                     dependencies.telemetry.beginPartition();
                     try {
@@ -71,6 +71,7 @@ export async function analyzeBugbotRevision(
                             prompt,
                             targetLocale,
                             { partitionId: partition.id, headSha: partition.headSha },
+                            { enabled: hasLiteralWitnesses, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) },
                         );
                         dependencies.telemetry.observeResponse(response);
                         dependencies.telemetry.endPartition(true);
@@ -89,13 +90,14 @@ export async function analyzeBugbotRevision(
             return aggregateBugbotPartitionResponses(partitions, responses);
         })
         : await dependencies.telemetry.measure('analysis', async () => {
-            const prompt = buildBugbotPrompt(execution, context);
+            const { prompt, hasLiteralWitnesses } = buildBugbotReviewInput(execution, context);
             dependencies.telemetry.observePrompt(prompt);
             const response = await queryBugbotFindings(
                 dependencies.agent,
                 execution.analysis.agentConfiguration,
                 prompt,
                 targetLocale,
+                { enabled: hasLiteralWitnesses, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) },
             );
             dependencies.telemetry.observeResponse(response);
             return response;

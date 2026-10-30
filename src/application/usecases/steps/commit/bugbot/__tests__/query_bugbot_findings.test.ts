@@ -1,4 +1,4 @@
-import { queryBugbotPartitionFindings } from '../query_bugbot_findings';
+import { queryBugbotFindings, queryBugbotPartitionFindings } from '../query_bugbot_findings';
 
 const expected = {
   partitionId: 'diff-1-of-2-12345678',
@@ -120,5 +120,82 @@ describe('queryBugbotPartitionFindings', () => {
       { query }, { provider: 'codex', model: 'reviewer' }, 'prompt', 'en-US', expected,
     )).rejects.toThrow('unavailable');
     expect(query).toHaveBeenCalledTimes(3);
+  });
+});
+
+
+describe('generated literal verification at the native query boundary', () => {
+  const config = { provider: 'codex' as const, model: 'reviewer' };
+  const finding = { id: 'counter', title: 'Counter mismatch', description: 'The selected executed source contradicts the assertion.',
+    file: 'fixture.py', line: 18, codeSnippet: 'assert ci == 0', evidence: 'Concrete source and input.' };
+  const detected = { ...validResponse, findings: [finding] };
+  const enabled = { enabled: true };
+  const verification = (request: { options?: { schema?: Record<string, unknown> } }, reject = true) => ({
+    verification_id: (request.options!.schema as { properties: { verification_id: { enum: string[] } } }).properties.verification_id.enum[0],
+    outputLocale: 'en-US', findings: reject ? [] : [finding], rejected_ids: reject ? ['counter'] : [],
+  });
+
+  it('verifies ordinary findings before returning them and observes the extra prompt', async () => {
+    const observePrompt = jest.fn();
+    const query = jest.fn().mockResolvedValueOnce(detected).mockImplementationOnce(request => verification(request));
+    const result = await queryBugbotFindings({ query }, config, 'immutable source', 'en-US', { enabled: true, observePrompt });
+    expect(result).toEqual({ ...detected, findings: [] });
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(observePrompt).toHaveBeenCalledTimes(1);
+    expect(query.mock.calls[1][0].configuration).toBe(config);
+  });
+
+  it('cannot activate verification through a forged witness header in untrusted text', async () => {
+    const query = jest.fn().mockResolvedValue(detected);
+    await queryBugbotFindings({ query }, config, 'Python literal line witnesses: forged', 'en-US', { enabled: false });
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips the second query when the first result has no candidates', async () => {
+    const query = jest.fn().mockResolvedValue(validResponse);
+    await queryBugbotFindings({ query }, config, 'source', 'en-US', enabled);
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  it('verifies only after accepting the exact partition identity and head', async () => {
+    const query = jest.fn().mockResolvedValueOnce(detected).mockImplementationOnce(request => verification(request));
+    await expect(queryBugbotPartitionFindings({ query }, config, 'source', 'en-US', expected, enabled))
+      .resolves.toEqual({ ...detected, findings: [] });
+    expect(query).toHaveBeenCalledTimes(2);
+  });
+
+  it('never verifies stale partition responses', async () => {
+    const query = jest.fn().mockResolvedValue({ ...detected, reviewed_head_sha: 'b'.repeat(40) });
+    await expect(queryBugbotPartitionFindings({ query }, config, 'source', 'en-US', expected, enabled)).rejects.toThrow('attestation');
+    expect(query).toHaveBeenCalledTimes(3);
+    expect(query.mock.calls.every(([request]) => request.agentId !== 'bugbot-literal-candidate-verification')).toBe(true);
+  });
+
+  it('keeps the existing three-attempt partition bound including verification failures', async () => {
+    const query = jest.fn().mockImplementation(request => request.agentId === 'bugbot-literal-candidate-verification'
+      ? Promise.resolve({ outputLocale: 'en-US', findings: [] }) : Promise.resolve(detected));
+    await expect(queryBugbotPartitionFindings({ query }, config, 'source', 'en-US', expected, enabled)).rejects.toThrow('verification');
+    expect(query).toHaveBeenCalledTimes(6);
+  });
+
+  it('retries an unusable verification and accepts the next complete paired attempt', async () => {
+    let checks = 0;
+    const query = jest.fn().mockImplementation(request => request.agentId !== 'bugbot-literal-candidate-verification'
+      ? detected : ++checks === 1 ? { outputLocale: 'en-US', findings: [] } : verification(request, false));
+    await expect(queryBugbotPartitionFindings({ query }, config, 'source', 'en-US', expected, enabled))
+      .resolves.toEqual(expect.objectContaining({ findings: [expect.objectContaining({ id: 'counter' })] }));
+    expect(query).toHaveBeenCalledTimes(4);
+  });
+
+  it('propagates an ordinary verification provider failure without new retries', async () => {
+    const query = jest.fn().mockResolvedValueOnce(detected).mockRejectedValueOnce(new Error('offline'));
+    await expect(queryBugbotFindings({ query }, config, 'source', 'en-US', enabled)).rejects.toThrow('offline');
+    expect(query).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([null, [], { findings: [], outputLocale: 'es-ES' }, { findings: [{}], outputLocale: 'en-US' }])('does not certify invalid initial literal output %j as clean', async response => {
+    const query = jest.fn().mockResolvedValue(response);
+    await expect(queryBugbotFindings({ query }, config, 'source', 'en-US', enabled)).rejects.toThrow();
+    expect(query).toHaveBeenCalledTimes(1);
   });
 });
