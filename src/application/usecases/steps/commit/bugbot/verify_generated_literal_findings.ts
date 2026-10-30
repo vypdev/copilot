@@ -3,7 +3,7 @@ import type { FindingsQueryPort } from '../../../../ports/agent_findings_ports';
 import type { BugbotFinding } from '../../../../../domain/bugbot/finding';
 import { BUGBOT_RESPONSE_SCHEMA } from './schema';
 import {
-  applyLiteralVerification, assertLiteralVerificationPrompt, literalVerificationId,
+  applyLiteralVerification, assertLiteralVerificationPrompt, assertLiteralVerificationResponse, literalVerificationId,
   MAX_LITERAL_VERIFICATION_CANDIDATES, MAX_INITIAL_LITERAL_VERIFICATION_CANDIDATES, planLiteralVerificationBatches,
 } from '../../../../policies/bugbot_literal_verification_policy';
 import { renderUntrustedContentVerbatim, UNTRUSTED_CONTENT_POLICY } from '../../../../../domain/security/untrusted_content';
@@ -107,7 +107,7 @@ async function verifyLiteralBatch(
 
 function record(value: unknown): Record<string, unknown> {
   if (typeof value === 'string') {
-    assertLiteralVerificationPrompt(value);
+    assertLiteralVerificationResponse(value);
     try { value = JSON.parse(value); } catch { throw invalidOutput(); }
   }
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw invalidOutput();

@@ -1958,3 +1958,32 @@ Validate full 200-candidate retention, cross-batch duplicates, byte failures
 before querying, last-batch failures, bounded retries, shared benchmark behavior
 and truthful telemetry. Pure batch policy requires 100% all metrics; all original
 coverage, native acceptance and zero-active-finding merge gates remain required.
+
+### Serialized response envelope after #796 review — R06 (2026-10-30)
+
+A JSON response string is not a source prompt. Applying the 128,000-byte prompt
+ceiling to it rejects a valid 200-candidate response whose separate 20-candidate
+batches each fit their 32,000-byte budget, while the equivalent object succeeds.
+Reserve **12 additional cases** before implementing this correction, bringing the
+overall minimum to **134**: four pure UTF-8 response-boundary cases, four
+initial/secondary serialized-object compatibility cases, two native/benchmark
+routing cases and two failure/telemetry cases. Preserve all earlier cases.
+
+Use a dedicated **4,000,000-byte UTF-8 serialized JSON response envelope** before
+parsing either initial or secondary strings. Object responses retain their normal
+schema/normalization and batch validation. This wire envelope is independent of
+the unchanged 128,000-byte complete prompt and 32,000-byte per-batch candidate
+bounds. Oversized strings fail with a response-specific actionable error before
+parsing or querying; malformed strings still fail closed. No truncation, missing
+IDs, partial publication or new historical authority is allowed. Compact JSON
+within this wire envelope is the supported serialization, not unbounded padding.
+
+Verify an initial serialized 200-candidate response larger than 128,000 bytes but
+within all batch bounds, and a schema-valid serialized secondary response larger
+than the prompt ceiling. Preserve exact locale/correlation/file/anchor/proof and
+all-or-nothing behavior, including late failure. Existing provider prompt/schema
+and single-batch reasoning remain unchanged; do not claim a new model sample.
+Update the public limits, dated evidence, generated artifacts and all original
+coverage/native/review gates. A transient GitHub publication failure must be
+recovered by the normal fresh review/recheck, with complete exact-head evidence
+and zero unknown/active state before merging.

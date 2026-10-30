@@ -5,6 +5,7 @@ import { ApplicationError } from '../errors/application_error';
 export const MAX_LITERAL_VERIFICATION_CANDIDATES = 20;
 export const MAX_LITERAL_VERIFICATION_CANDIDATE_BYTES = 32_000;
 export const MAX_LITERAL_VERIFICATION_PROMPT_BYTES = 128_000;
+export const MAX_LITERAL_VERIFICATION_RESPONSE_BYTES = 4_000_000;
 export const MAX_LITERAL_VERIFICATION_BATCHES = 10;
 export const MAX_INITIAL_LITERAL_VERIFICATION_CANDIDATES = MAX_LITERAL_VERIFICATION_CANDIDATES * MAX_LITERAL_VERIFICATION_BATCHES;
 
@@ -34,6 +35,13 @@ export function literalVerificationId(source: string, candidates: readonly Bugbo
 export function assertLiteralVerificationPrompt(prompt: string): void {
   if (Buffer.byteLength(prompt, 'utf8') > MAX_LITERAL_VERIFICATION_PROMPT_BYTES) {
     throw new ApplicationError('agent.failed', 'Generated-source verification exceeded its fixed 128000-byte prompt bound. Split the review scope and recheck; verification did not complete.');
+  }
+}
+
+/** Bound serialized response parsing separately from source/model prompt size. */
+export function assertLiteralVerificationResponse(response: string): void {
+  if (Buffer.byteLength(response, 'utf8') > MAX_LITERAL_VERIFICATION_RESPONSE_BYTES) {
+    throw new ApplicationError('agent.failed', 'Generated-source verification exceeded its fixed 4000000-byte JSON response bound. Return compact JSON within this wire limit and recheck; no complete review was verified.');
   }
 }
 

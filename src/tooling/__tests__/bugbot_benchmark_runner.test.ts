@@ -279,3 +279,19 @@ describe('benchmark whole-response batch compatibility', () => {
         expect(query).toHaveBeenCalledTimes(3);
     });
 });
+
+it('preserves the serialized 200-candidate envelope through the shared real benchmark route', async () => {
+    const literal = { ...testCase, file: 'fixture.py', language: 'python', diff: ' source = """a\n b"""\n+assert ci == 0' };
+    const original = Array.from({ length: 200 }, (_, index) => ({ id: `candidate-${index}`, title: 'Counter mismatch',
+        description: 'd'.repeat(900), file: 'fixture.py', line: 3, codeSnippet: 'assert ci == 0', evidence: 'Concrete source.' }));
+    const response = JSON.stringify({ outputLocale: 'en-US', findings: original, resolved_findings: [] });
+    expect(Buffer.byteLength(response)).toBeGreaterThan(128_000);
+    const query = jest.fn(async request => {
+        if (request.agentId !== 'bugbot-literal-candidate-verification') return response;
+        const properties = request.options.schema.properties;
+        return JSON.stringify({ outputLocale: 'en-US', verification_id: properties.verification_id.enum[0],
+            findings: (properties.findings.items.properties.id.enum as string[]).map(id => original.find(item => item.id === id)), rejected_ids: [] });
+    });
+    const result = await runBugbotBenchmarkAgent({ schemaVersion: 1, cases: [literal] }, { query }, {} as never);
+    expect(result.predictions[literal.id]).toHaveLength(200); expect(query).toHaveBeenCalledTimes(11);
+});

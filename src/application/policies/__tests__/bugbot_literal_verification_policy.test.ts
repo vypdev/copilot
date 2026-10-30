@@ -3,6 +3,7 @@ import {
   applyLiteralVerification, assertLiteralVerificationPrompt, literalVerificationId,
   MAX_LITERAL_VERIFICATION_CANDIDATES, MAX_LITERAL_VERIFICATION_CANDIDATE_BYTES,
   MAX_LITERAL_VERIFICATION_PROMPT_BYTES, planLiteralVerificationBatches,
+  assertLiteralVerificationResponse, MAX_LITERAL_VERIFICATION_RESPONSE_BYTES,
 } from '../bugbot_literal_verification_policy';
 
 const id = 'a'.repeat(64);
@@ -113,4 +114,11 @@ describe('bounded whole-response verification planning', () => {
     const original = candidates(21); original[20].id = '__proto__';
     expect(planLiteralVerificationBatches(original).flat()).toEqual(original);
   });
+});
+
+
+it.each([['a', 1, false], ['a', 1, true], ['Ω', 2, false], ['Ω', 2, true]] as const)('bounds the separate response envelope for %s (%i UTF-8 bytes), overflow=%s', (character, bytes, overflow) => {
+  const value = character.repeat(MAX_LITERAL_VERIFICATION_RESPONSE_BYTES / bytes) + (overflow ? 'x' : '');
+  if (overflow) expect(() => assertLiteralVerificationResponse(value)).toThrow('JSON response bound');
+  else expect(() => assertLiteralVerificationResponse(value)).not.toThrow();
 });

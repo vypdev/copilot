@@ -859,16 +859,18 @@ function countStatuses(statuses) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.MAX_INITIAL_LITERAL_VERIFICATION_CANDIDATES = exports.MAX_LITERAL_VERIFICATION_BATCHES = exports.MAX_LITERAL_VERIFICATION_PROMPT_BYTES = exports.MAX_LITERAL_VERIFICATION_CANDIDATE_BYTES = exports.MAX_LITERAL_VERIFICATION_CANDIDATES = void 0;
+exports.MAX_INITIAL_LITERAL_VERIFICATION_CANDIDATES = exports.MAX_LITERAL_VERIFICATION_BATCHES = exports.MAX_LITERAL_VERIFICATION_RESPONSE_BYTES = exports.MAX_LITERAL_VERIFICATION_PROMPT_BYTES = exports.MAX_LITERAL_VERIFICATION_CANDIDATE_BYTES = exports.MAX_LITERAL_VERIFICATION_CANDIDATES = void 0;
 exports.planLiteralVerificationBatches = planLiteralVerificationBatches;
 exports.literalVerificationId = literalVerificationId;
 exports.assertLiteralVerificationPrompt = assertLiteralVerificationPrompt;
+exports.assertLiteralVerificationResponse = assertLiteralVerificationResponse;
 exports.applyLiteralVerification = applyLiteralVerification;
 const node_crypto_1 = __nccwpck_require__(6005);
 const application_error_1 = __nccwpck_require__(5999);
 exports.MAX_LITERAL_VERIFICATION_CANDIDATES = 20;
 exports.MAX_LITERAL_VERIFICATION_CANDIDATE_BYTES = 32000;
 exports.MAX_LITERAL_VERIFICATION_PROMPT_BYTES = 128000;
+exports.MAX_LITERAL_VERIFICATION_RESPONSE_BYTES = 4000000;
 exports.MAX_LITERAL_VERIFICATION_BATCHES = 10;
 exports.MAX_INITIAL_LITERAL_VERIFICATION_CANDIDATES = exports.MAX_LITERAL_VERIFICATION_CANDIDATES * exports.MAX_LITERAL_VERIFICATION_BATCHES;
 /** Validate the whole response before querying; preserve every original candidate. */
@@ -896,6 +898,12 @@ function literalVerificationId(source, candidates) {
 function assertLiteralVerificationPrompt(prompt) {
     if (Buffer.byteLength(prompt, 'utf8') > exports.MAX_LITERAL_VERIFICATION_PROMPT_BYTES) {
         throw new application_error_1.ApplicationError('agent.failed', 'Generated-source verification exceeded its fixed 128000-byte prompt bound. Split the review scope and recheck; verification did not complete.');
+    }
+}
+/** Bound serialized response parsing separately from source/model prompt size. */
+function assertLiteralVerificationResponse(response) {
+    if (Buffer.byteLength(response, 'utf8') > exports.MAX_LITERAL_VERIFICATION_RESPONSE_BYTES) {
+        throw new application_error_1.ApplicationError('agent.failed', 'Generated-source verification exceeded its fixed 4000000-byte JSON response bound. Return compact JSON within this wire limit and recheck; no complete review was verified.');
     }
 }
 function applyLiteralVerification(expected, observed, original, retained, rejected) {
@@ -5714,7 +5722,7 @@ async function verifyLiteralBatch(agent, configuration, source, candidates, loca
 }
 function record(value) {
     if (typeof value === 'string') {
-        (0, bugbot_literal_verification_policy_1.assertLiteralVerificationPrompt)(value);
+        (0, bugbot_literal_verification_policy_1.assertLiteralVerificationResponse)(value);
         try {
             value = JSON.parse(value);
         }

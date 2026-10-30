@@ -228,3 +228,19 @@ describe('native bounded verification batch execution', () => {
     expect(query).toHaveBeenCalledTimes(33);
   });
 });
+
+it('routes a serialized 200-finding response above the prompt bound through every native verification batch', async () => {
+  const original = Array.from({ length: 200 }, (_, index) => ({ id: `candidate-${index}`, title: 'Counter mismatch',
+    description: 'd'.repeat(900), file: 'fixture.py', line: 3, codeSnippet: 'assert ci == 0', evidence: 'Concrete source.' }));
+  const response = JSON.stringify({ ...validResponse, findings: original });
+  expect(Buffer.byteLength(response)).toBeGreaterThan(128_000);
+  const observeResponse = jest.fn();
+  const query = jest.fn(async request => {
+    if (request.agentId !== 'bugbot-literal-candidate-verification') return response;
+    const properties = request.options.schema.properties;
+    return JSON.stringify({ outputLocale: 'en-US', verification_id: properties.verification_id.enum[0],
+      findings: (properties.findings.items.properties.id.enum as string[]).map(id => original.find(item => item.id === id)), rejected_ids: [] });
+  });
+  const result = await queryBugbotFindings({ query }, { provider: 'codex', model: 'reviewer' }, 'source', 'en-US', { enabled: true, observeResponse }) as { findings: unknown[] };
+  expect(result.findings).toHaveLength(200); expect(query).toHaveBeenCalledTimes(11); expect(observeResponse).toHaveBeenCalledTimes(11);
+});

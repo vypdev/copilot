@@ -1929,6 +1929,18 @@
         "src/application/usecases/steps/commit/bugbot/query_bugbot_findings.ts": "14afc495190abc5b62c488266b220ac7ae1a774a491371a085447ffae9c09bb0",
         "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts": "e497db3c80a71331eaf080801a7ad271d5b3eb13d0efde9242243b68b96f4ac1"
       }
+    },
+    "responseEnvelope": {
+      "serializedResponseUtf8Bytes": 4000000,
+      "promptUtf8BytesUnchanged": 128000,
+      "candidateBatchUtf8BytesUnchanged": 32000,
+      "regression": "A serialized 200-candidate initial reply and serialized secondary proof above128000bytes formerly failed while equivalent objects passed. Dedicated wire-size guard preserves complete batches, locale/identity/proof/history and all-or-nothing behavior.",
+      "redEvidence": "Two serialized cases fail before correction; the object equivalents pass.",
+      "sourceSha256": {
+        "src/application/policies/bugbot_literal_verification_policy.ts": "b74ce1555860b2198ecc8d09d86011a5d641cf462e2725c43021adb5771c35b8",
+        "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts": "bd9ff5d1a24b157410cc49ec0161e7aa26f6a7059050e55d73f43f5bee1fcf7c"
+      },
+      "measurementScope": "Wire-boundary correction only; recorded reasoning prompts/schema/corpus and all measured scores remain unchanged. No new model sample claimed."
     }
   }
 }

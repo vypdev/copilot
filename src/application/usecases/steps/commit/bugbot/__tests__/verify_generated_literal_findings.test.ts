@@ -229,3 +229,51 @@ describe('whole-response verification across bounded batches', () => {
     expect(result.resolved_findings).toEqual([{ id: 'unrelated', resolution: 'obsolete' }]);
   });
 });
+
+describe('response envelopes independent of source prompt size', () => {
+  const candidates = (count: number, long = false) => Array.from({ length: count }, (_, index) => candidate({
+    id: `candidate-${index}`, ...(long ? { description: 'd'.repeat(900) } : {}),
+  }));
+  function assignedReply(request: FindingsQueryRequest, original: BugbotFinding[]) {
+    const schema = request.options!.schema as ReturnType<typeof buildLiteralVerificationSchema>;
+    return reply(request, { findings: schema.properties.findings.items.properties.id.enum.map(id => original.find(item => item.id === id)!), rejected_ids: [] });
+  }
+  it.each([false, true])('accepts the full 200-candidate initial envelope above 128k, serialized=%s', async serialized => {
+    const original = candidates(200, true); const response = initial(original);
+    expect(Buffer.byteLength(JSON.stringify(response))).toBeGreaterThan(128_000);
+    const query = jest.fn(async request => assignedReply(request, original));
+    const result = await verifyGeneratedLiteralFindings({ query }, config, 'source', serialized ? JSON.stringify(response) : response, 'en-US') as { findings: BugbotFinding[] };
+    expect(result.findings.map(item => item.id)).toEqual(original.map(item => item.id)); expect(query).toHaveBeenCalledTimes(10);
+  });
+  it.each([false, true])('accepts a valid secondary proof envelope above 128k, serialized=%s', async serialized => {
+    const original = candidates(20);
+    const query = jest.fn(async request => {
+      const response = assignedReply(request, original); const large = { ...response, findings: response.findings.map(item => ({ ...item, evidence: 'e'.repeat(8_000) })) };
+      expect(Buffer.byteLength(JSON.stringify(large))).toBeGreaterThan(128_000);
+      return serialized ? JSON.stringify(large) : large;
+    });
+    const result = await verifyGeneratedLiteralFindings({ query }, config, 'source', initial(original), 'en-US') as { findings: BugbotFinding[] };
+    expect(result.findings).toHaveLength(20); expect(query).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+it('rejects oversized initial serialized responses before parsing or querying', async () => {
+  const query = jest.fn();
+  await expect(verifyGeneratedLiteralFindings({ query }, config, 'source', ' '.repeat(4_000_001), 'en-US'))
+    .rejects.toThrow('JSON response bound');
+  expect(query).not.toHaveBeenCalled();
+});
+
+it('counts an oversized final response but never returns a partially verified prefix', async () => {
+  const original = Array.from({ length: 21 }, (_, index) => candidate({ id: `candidate-${index}` }));
+  const observe = jest.fn();
+  const query = jest.fn().mockImplementationOnce(request => {
+    const ids = (request.options.schema as ReturnType<typeof buildLiteralVerificationSchema>).properties.findings.items.properties.id.enum;
+    return reply(request, { findings: ids.map(id => original.find(item => item.id === id)), rejected_ids: [] });
+  }).mockResolvedValueOnce(' '.repeat(4_000_001));
+  await expect(verifyGeneratedLiteralFindings({ query }, config, 'source', initial(original), 'en-US', undefined, observe))
+    .rejects.toThrow('JSON response bound');
+  expect(query).toHaveBeenCalledTimes(2); expect(observe).toHaveBeenCalledTimes(2);
+  expect(original).toHaveLength(21);
+});

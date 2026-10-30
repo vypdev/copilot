@@ -484,7 +484,10 @@ validated before the first query; exceeding a byte limit requires narrowing the
 scope and rechecking. Every batch must validate before results are published.
 Ordinary reviews add at most ten verification queries; partition review keeps its
 existing three attempts, with at most 33 total queries. Analysis telemetry counts
-all initial/retried and verification prompts/responses. Empty candidates and
+all initial/retried and verification prompts/responses. Serialized initial and
+secondary JSON replies have a separate 4,000,000-byte UTF-8 wire envelope before
+parsing, so a valid batched reply can exceed the source-prompt limit. Oversized
+wire data requires compact JSON and a recheck; replies are never truncated. Empty candidates and
 contexts without retained witnesses use the existing path. Rejected hypotheses
 cannot resolve, dismiss or reopen historical findings. There is no new public
 configuration, provider permission or workflow step.
