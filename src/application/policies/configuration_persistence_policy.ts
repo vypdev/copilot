@@ -1,6 +1,10 @@
 import { parseCopilotCommand } from '../../domain/copilot_command';
 export interface ConfigurationPersistenceContext {
     readonly isSingleAction: boolean;
+    readonly isPullRequest?: boolean;
+    readonly currentConfiguration?: { readonly results?: readonly {
+        readonly errors: readonly { readonly code: string; readonly recovery?: { readonly id: string } }[];
+    }[] };
     readonly issueWorkflowRuntimeMode?: import('../../domain/issue_workflow_runtime_policy').IssueWorkflowRuntimeMode;
     readonly eventName?: string;
     readonly inputs?: { readonly issue?: { readonly state?: string }; readonly comment?: { readonly body?: string | null }; readonly pull_request_review_comment?: { readonly body?: string | null } };
@@ -19,6 +23,8 @@ export interface ConfigurationPersistenceContext {
  * fingerprint and latest recommendation in the hidden issue configuration.
  */
 export function shouldPersistConfiguration(execution: ConfigurationPersistenceContext): boolean {
+    if (execution.isPullRequest && execution.currentConfiguration?.results?.some(result => result.errors.some(error =>
+        error.code === 'workflow.stale' || error.recovery?.id.startsWith('pull-request-link-')))) return false;
     if (execution.issueWorkflowRuntimeMode === 'block' || execution.issueWorkflowRuntimeMode === 'noop') return false;
     if (!execution.isSingleAction) {
         if (execution.eventName === 'issues' && execution.inputs?.issue?.state === 'closed') return false;

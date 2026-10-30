@@ -47,13 +47,22 @@ export async function runPullRequestWorkflow(
 ): Promise<Result[]> {
   try {
     logPullRequestState(context);
+    // Even synchronize/ready/edited must repair a previous interrupted link
+    // before any ordinary writer or review can observe the temporary target.
+    const recovery = !context.closed && (context.opened || context.synchronize
+      || context.action === 'ready_for_review' || context.action === 'edited')
+      ? await ports.workflowSteps.linkPullRequestIssue.invoke({ ...ports.sharedContexts.steps.linkIssue, recoveryOnly: true })
+      : [];
+    if (recovery.some(result => !result.success)) return recovery;
     const agentAllowed = await canUseAgent(context, ports.actorAuthorizationPort);
     if (context.opened) {
       const results = await ports.workflowSteps.updateTitle.invoke(ports.sharedContexts.title);
       results.push(...(await ports.workflowSteps.assignMemberToIssue.invoke(ports.sharedContexts.steps.assignment)));
       results.push(...(await ports.workflowSteps.assignReviewersToIssue.invoke(ports.sharedContexts.steps.reviewers)));
       results.push(...(await ports.workflowSteps.linkPullRequestProject.invoke(ports.sharedContexts.projectLink)));
-      results.push(...(await ports.workflowSteps.linkPullRequestIssue.invoke(ports.sharedContexts.steps.linkIssue)));
+      const linkage = await ports.workflowSteps.linkPullRequestIssue.invoke(ports.sharedContexts.steps.linkIssue);
+      results.push(...linkage);
+      if (linkage.some(result => !result.success)) return results;
       results.push(...(await ports.workflowSteps.syncSizeAndProgressLabels.invoke(ports.sharedContexts.steps.syncLabels)));
       results.push(...(await ports.workflowSteps.checkPriorityPullRequestSize.invoke(ports.sharedContexts.steps.priority)));
       if (agentAllowed && context.automaticDescription) {

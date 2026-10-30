@@ -270,3 +270,33 @@ describe('ConfigurationHandler', () => {
     });
   });
 });
+
+
+describe('pending PR link configuration preservation', () => {
+  const marker = '<!-- copilot:pr-issue-link:v1;pr=10;issue=42;base=develop;state=pending -->';
+  const body = `Human\n\nResolves #42\n\n${marker}`;
+  const handler = new ConfigurationHandler({ getDescription: mockGetDescription, updateDescription: mockUpdateDescription });
+  it('preserves pending metadata while writing only the recorded original parent', async () => {
+    mockGetDescription.mockResolvedValue(body);
+    mockUpdateDescription.mockClear();
+    await handler.update(configurationQuery(), persistenceContext());
+    const written = mockUpdateDescription.mock.calls[0][3];
+    expect(written).toContain(marker);
+    expect(written).toMatch(/"parentBranch":\s*"develop"/);
+  });
+  it('refuses a transient, missing or malformed parent before any write', async () => {
+    mockGetDescription.mockResolvedValue(body);
+    mockUpdateDescription.mockClear();
+    for (const parentBranch of ['main', undefined]) {
+      await expect(handler.update(configurationQuery(), persistenceContext({ currentConfiguration: { branchType: 'bugfix', parentBranch } }))).rejects.toThrow();
+    }
+    for (const content of ['null', '{}', 'bad']) expect(() => handler.updateContent(body, content)).toThrow();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+  it('blocks configuration writes when pending metadata is malformed', async () => {
+    mockGetDescription.mockResolvedValue('Human <!-- copilot:pr-issue-link:invalid -->');
+    mockUpdateDescription.mockClear();
+    await expect(handler.update(configurationQuery(), persistenceContext())).rejects.toThrow();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+});

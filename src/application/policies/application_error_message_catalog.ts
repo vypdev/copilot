@@ -341,18 +341,18 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
   }),
   'pull-request-link-base-retained': Object.freeze({
     impact: 'The pull request could not be linked to its issue.',
-    action: 'Restore the temporary default base branch, then rerun the workflow.',
+    action: 'Rerun the current PR workflow to recover pending state; inspect ownership if recovery remains blocked.',
     retainedState: 'The temporary default base branch remains; the original description was restored.',
   }),
   'pull-request-link-reference-retained': Object.freeze({
     impact: 'The pull request could not be linked to its issue.',
-    action: 'Remove the temporary issue reference from the description, then rerun the workflow.',
+    action: 'Rerun the current PR workflow to finish owned-reference cleanup; retain its recovery marker until the base is verified.',
     retainedState: 'The original base branch was restored; the temporary issue reference remains in the description.',
   }),
   'pull-request-link-base-and-reference-retained': Object.freeze({
     impact: 'The pull request could not be linked to its issue.',
-    action: 'Restore the temporary default base branch and remove the temporary issue reference, then rerun the workflow.',
-    retainedState: 'The temporary default base branch and issue reference remain.',
+    action: 'Rerun the current PR workflow to recover the original base and owned reference; inspect ownership if recovery remains blocked.',
+    retainedState: 'The original base and temporary-reference cleanup could not be verified; pending recovery evidence was retained when observable.',
   }),
   'managed-branch-enrichment-failed': Object.freeze({
     impact: 'The linked branch exists, but later issue metadata may be incomplete.',
@@ -501,18 +501,18 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
   }),
   'pull-request-link-base-retained': Object.freeze({
     impact: 'No se pudo vincular la pull request con su issue.',
-    action: 'Restaura la rama base predeterminada temporal y vuelve a ejecutar el workflow.',
+    action: 'Vuelve a ejecutar el workflow actual de la PR para recuperar el estado pendiente; revisa la propiedad si sigue bloqueado.',
     retainedState: 'La rama base predeterminada temporal permanece; se restauró la descripción original.',
   }),
   'pull-request-link-reference-retained': Object.freeze({
     impact: 'No se pudo vincular la pull request con su issue.',
-    action: 'Elimina la referencia temporal a la issue de la descripción y vuelve a ejecutar el workflow.',
+    action: 'Vuelve a ejecutar el workflow actual de la PR para limpiar la referencia propia; conserva el marcador hasta verificar la base.',
     retainedState: 'Se restauró la rama base original; la referencia temporal a la issue permanece en la descripción.',
   }),
   'pull-request-link-base-and-reference-retained': Object.freeze({
     impact: 'No se pudo vincular la pull request con su issue.',
-    action: 'Restaura la rama base predeterminada temporal, elimina la referencia temporal a la issue y vuelve a ejecutar el workflow.',
-    retainedState: 'La rama base predeterminada temporal y la referencia a la issue permanecen.',
+    action: 'Vuelve a ejecutar el workflow actual de la PR para recuperar la base original y la referencia propia; revisa la propiedad si sigue bloqueado.',
+    retainedState: 'No se pudo verificar la base original ni la limpieza de la referencia temporal; se conservó la evidencia pendiente cuando pudo observarse.',
   }),
   'managed-branch-enrichment-failed': Object.freeze({
     impact: 'La rama vinculada existe, pero los metadatos posteriores de la issue pueden estar incompletos.',

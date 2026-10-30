@@ -1,198 +1,139 @@
+import { randomUUID } from 'node:crypto';
 import { Result } from '../../../../data/model/result';
 import type { EventualConsistencyDelayPort } from '../../../ports/eventual_consistency_ports';
-import type { BoundPullRequestIssueLinkPort } from '../../../ports/pull_request_issue_link_ports';
+import type { BoundPullRequestIssueLinkPort, PullRequestLinkDetails } from '../../../ports/pull_request_issue_link_ports';
 import type { LinkPullRequestIssueContext } from '../../pull_request_workflow_context';
 import { parsePositiveSafeInteger } from '../../../../domain/positive_integer_policy';
 import { isSafeBranchTree } from '../../../../domain/deployment_configuration';
-
-const LINK_MARKER_PREFIX = '<!-- copilot:pr-issue-link:v1';
+import { ApplicationError } from '../../../errors/application_error';
+import { attachPendingPullRequestLink, createPendingPullRequestLink, isOpenPullRequestLinkIdentity,
+    readPendingPullRequestLink, removePendingPullRequestLink,
+    type PullRequestLinkIdentity } from '../../../../domain/pull_request_issue_link_state';
 
 export class PullRequestIssueLinkOperationError extends Error {
-    readonly retainedBaseBranch: boolean;
-    readonly retainedIssueReference: boolean;
-
-    constructor(retainedBaseBranch: boolean, retainedIssueReference: boolean) {
+    constructor(readonly retainedBaseBranch: boolean, readonly retainedIssueReference: boolean) {
         super('Unable to complete pull-request issue linkage with fully restored provider state.');
         this.name = 'PullRequestIssueLinkOperationError';
-        this.retainedBaseBranch = retainedBaseBranch;
-        this.retainedIssueReference = retainedIssueReference;
     }
 }
 
-/**
- * Establishes the GitHub PR-to-issue relationship and restores all temporary
- * provider state. The pending marker makes an interrupted operation resumable
- * from the same immutable webhook payload without trusting an event URL.
- */
+/** Recover metadata first, including after process death and a newer head. */
 export async function runLinkPullRequestIssue(
-    param: LinkPullRequestIssueContext,
-    taskId: string,
-    port: BoundPullRequestIssueLinkPort,
-    delay: EventualConsistencyDelayPort,
+    param: LinkPullRequestIssueContext, taskId: string,
+    port: BoundPullRequestIssueLinkPort, delay: EventualConsistencyDelayPort,
 ): Promise<Result[]> {
-    const pullRequestNumber = parsePositiveSafeInteger(param.pullRequestNumber);
-    const issueNumber = parsePositiveSafeInteger(param.issueNumber);
-    if (!pullRequestNumber) {
-        return [new Result({
-            id: taskId,
-            success: false,
-            executed: false,
-            steps: ['Pull-request linkage requires a positive pull-request number.'],
-        })];
+    const pr = parsePositiveSafeInteger(param.pullRequestNumber);
+    const issue = parsePositiveSafeInteger(param.issueNumber);
+    if (!pr) return invalid(taskId, 'Pull-request linkage requires a positive pull-request number.');
+    if (!issue || issue === pr) return [new Result({ id: taskId, success: true, executed: false,
+        steps: ['No separate linked issue was inferred; pull-request linkage was skipped.'] })];
+    if (!isSafeBranchTree(param.originalBaseBranch) || !isSafeBranchTree(param.defaultBranch)) {
+        return invalid(taskId, 'Pull-request linkage requires a positive issue number and safe non-empty base branches.');
     }
-    if (!issueNumber || issueNumber === pullRequestNumber) {
-        return [new Result({
-            id: taskId,
-            success: true,
-            executed: false,
-            steps: ['No separate linked issue was inferred; pull-request linkage was skipped.'],
-        })];
+    let current = await port.getDetails(pr);
+    const identity = requireIdentity(current, pr);
+    if ((param.expectedHeadRepository && param.expectedHeadRepository !== identity.headRepository)
+        || (param.expectedHeadRef && param.expectedHeadRef !== identity.headRef)) throw stale();
+    const state = readPendingPullRequestLink(current.body);
+    if (state.kind === 'blocked') throw new PullRequestIssueLinkOperationError(true, true);
+    if (state.kind === 'pending' && (identity.headRepository !== identity.repository
+        || state.record.pullRequestNumber !== pr || state.record.issueNumber !== issue
+        || (state.record.version === 2 && (state.record.headRepository !== identity.headRepository
+            || state.record.headRef !== identity.headRef)))) throw new PullRequestIssueLinkOperationError(true, true);
+    const original = state.kind === 'pending' ? state.record.originalBaseBranch : param.originalBaseBranch;
+    if (state.kind === 'pending' && param.originalBaseBranch !== param.defaultBranch
+        && param.originalBaseBranch !== original) throw new PullRequestIssueLinkOperationError(true, true);
+    if (state.kind === 'none' && param.expectedHeadSha && param.expectedHeadSha !== identity.headSha) throw stale();
+    if (current.baseBranch !== original && !(state.kind === 'pending' && current.baseBranch === param.defaultBranch)) {
+        throw stale();
     }
-    if (!isSafeBranchTree(param.originalBaseBranch)
-        || !isSafeBranchTree(param.defaultBranch)) {
-        return [new Result({
-            id: taskId,
-            success: false,
-            executed: false,
-            steps: ['Pull-request linkage requires a positive issue number and safe non-empty base branches.'],
-        })];
-    }
-    const pendingMarker = buildPendingMarker(param);
-    const details = await port.getDetails(param.pullRequestNumber);
-    const pendingOperation = inspectPendingOperation(details.body, param, pendingMarker);
-    if (pendingOperation.kind === 'blocked') {
-        return [new Result({
-            id: taskId,
-            success: false,
-            executed: true,
-            steps: [pendingOperation.step],
-        })];
-    }
-    if (pendingOperation.kind === 'none' && details.baseBranch !== param.originalBaseBranch) {
-        return [new Result({
-            id: taskId,
-            success: false,
-            executed: false,
-            steps: ['The pull-request base changed after this event. No linkage state was changed; rerun from the current PR state.'],
-        })];
-    }
-    if (pendingOperation.kind === 'recoverable'
-        && ![param.originalBaseBranch, param.defaultBranch].includes(details.baseBranch)) {
-        return [new Result({
-            id: taskId,
-            success: false,
-            executed: true,
-            steps: ['The pending linkage operation no longer matches the current PR base. The temporary description remains; restore the base and description in GitHub, then rerun.'],
-        })];
-    }
-    const hasOwnedPendingOperation = pendingOperation.kind === 'recoverable';
-    const originalBody = hasOwnedPendingOperation ? pendingOperation.originalBody : details.body;
-    const results: Result[] = [];
-    let temporaryDescriptionApplied = hasOwnedPendingOperation;
-    let temporaryBaseApplied = hasOwnedPendingOperation && details.baseBranch === param.defaultBranch;
-    let observationWindowCompleted = false;
+    if (state.kind === 'none' && param.recoveryOnly) return [];
+    let marker = state.kind === 'pending' ? state.marker : undefined;
     let primaryError: unknown;
-    const restorationErrors: unknown[] = [];
-    let retainedBaseBranch = false;
-    let retainedIssueReference = false;
-    let alreadyLinked = false;
-
-    if (!hasOwnedPendingOperation) {
-        alreadyLinked = await port.isLinked(param.pullRequestNumber, param.issueNumber);
-        if (alreadyLinked) return [];
-    } else {
+    if (!marker) {
+        if (await port.isLinked(pr, issue)) return [];
+        const fresh = await port.getDetails(pr);
+        requireSame(fresh, identity, pr, true);
+        if (fresh.body !== current.body || fresh.baseBranch !== original) throw stale();
+        current = fresh;
+        marker = createPendingPullRequestLink({ pullRequestNumber: pr, issueNumber: issue,
+            originalBaseBranch: original, operationId: randomUUID(), headRepository: identity.headRepository,
+            headRef: identity.headRef, headSha: identity.headSha });
         try {
-            alreadyLinked = await port.isLinked(param.pullRequestNumber, param.issueNumber);
-        } catch (error) {
-            primaryError = error;
-        }
+            await port.updateDescription(pr, attachPendingPullRequestLink(current.body, marker));
+            current = await inspectOwned(port, pr, identity, marker, true);
+            if (current.baseBranch !== original) throw stale();
+            if (original !== param.defaultBranch) {
+                await port.updateBaseBranch(pr, param.defaultBranch);
+                current = await inspectOwned(port, pr, identity, marker, true);
+                if (current.baseBranch !== param.defaultBranch) throw stale();
+            }
+            await delay.wait(20_000);
+        } catch (cause) { primaryError = cause; }
     }
-
+    // Never restore an old whole body. Each mutation uses freshly observed native
+    // identity and the exact operation lease; retain it if base restoration fails.
+    let baseRestored = false;
+    let referenceRemoved = false;
+    let headAdvanced: boolean;
     try {
-        if (primaryError === undefined && !temporaryDescriptionApplied) {
-            await port.updateDescription(
-                param.pullRequestNumber,
-                appendTemporaryLink(originalBody, param.issueNumber, pendingMarker),
-            );
-            temporaryDescriptionApplied = true;
-            results.push(success(taskId, `The description temporarily referenced issue **#${param.issueNumber}**.`));
-        }
-        if (primaryError === undefined && !temporaryBaseApplied && details.baseBranch !== param.defaultBranch) {
-            await port.updateBaseBranch(param.pullRequestNumber, param.defaultBranch);
-            temporaryBaseApplied = true;
-            results.push(success(taskId, `The base branch was temporarily updated to \`${param.defaultBranch}\`.`));
-        }
-        if (primaryError === undefined) {
-            if (!alreadyLinked) await delay.wait(20_000);
-            observationWindowCompleted = true;
-        }
-    } catch (error) {
-        primaryError = error;
-    } finally {
-        if (temporaryBaseApplied) {
-            try {
-                await port.updateBaseBranch(param.pullRequestNumber, param.originalBaseBranch);
-                results.push(success(taskId, `The base branch was restored to \`${param.originalBaseBranch}\`.`));
-            } catch (error) {
-                restorationErrors.push(error);
-                retainedBaseBranch = true;
+        current = await port.getDetails(pr);
+        requireSame(current, identity, pr, false);
+        headAdvanced = current.identity!.headSha !== identity.headSha;
+        const pending = readPendingPullRequestLink(current.body);
+        if (pending.kind === 'none' && current.baseBranch === original) {
+            baseRestored = true;
+            referenceRemoved = true;
+        } else {
+            requireOwned(current, marker);
+            if (![original, param.defaultBranch].includes(current.baseBranch)) throw stale();
+            if (current.baseBranch !== original) {
+                await port.updateBaseBranch(pr, original);
+                current = await inspectOwned(port, pr, identity, marker, false);
             }
+            if (current.baseBranch !== original) throw stale();
+            baseRestored = true;
+            await port.updateDescription(pr, removePendingPullRequestLink(current.body, marker));
+            baseRestored = false;
+            current = await port.getDetails(pr);
+            requireSame(current, identity, pr, false);
+            baseRestored = current.baseBranch === original;
+            if (!baseRestored || readPendingPullRequestLink(current.body).kind !== 'none') throw stale();
+            referenceRemoved = true;
+            headAdvanced ||= current.identity!.headSha !== identity.headSha;
         }
-        if (temporaryDescriptionApplied) {
-            try {
-                await port.updateDescription(
-                    param.pullRequestNumber,
-                    originalBody,
-                );
-                results.push(success(
-                    taskId,
-                    observationWindowCompleted
-                        ? 'The original pull-request description was restored.'
-                        : 'The temporary issue reference was removed during compensation.',
-                ));
-            } catch (error) {
-                restorationErrors.push(error);
-                retainedIssueReference = true;
-            }
-        }
+    } catch { throw new PullRequestIssueLinkOperationError(!baseRestored, !referenceRemoved); }
+    if (primaryError !== undefined) {
+        if (primaryError instanceof ApplicationError) throw primaryError;
+        throw new PullRequestIssueLinkOperationError(false, false);
     }
-    if (restorationErrors.length > 0 || primaryError !== undefined) {
-        throw new PullRequestIssueLinkOperationError(retainedBaseBranch, retainedIssueReference);
-    }
-    return results;
+    if (headAdvanced || (param.expectedHeadSha && param.expectedHeadSha !== current.identity!.headSha)) throw stale();
+    return [new Result({ id: taskId, success: true, executed: true,
+        steps: ['The original pull-request base was verified and the owned temporary issue reference removed.'] })];
 }
-
-function buildPendingMarker(param: LinkPullRequestIssueContext): string {
-    return `${LINK_MARKER_PREFIX};pr=${param.pullRequestNumber};issue=${param.issueNumber};base=${encodeURIComponent(param.originalBaseBranch)};state=pending -->`;
+function requireIdentity(details: PullRequestLinkDetails, pr: number): PullRequestLinkIdentity {
+    if (!isOpenPullRequestLinkIdentity(details.identity, pr)) throw stale();
+    return details.identity;
 }
-
-function appendTemporaryLink(body: string, issueNumber: number, marker: string): string {
-    return `${body}${temporaryLinkSuffix(issueNumber, marker)}`;
+function requireSame(details: PullRequestLinkDetails, identity: PullRequestLinkIdentity, pr: number, pinSha: boolean): void {
+    const fresh = requireIdentity(details, pr);
+    if (fresh.headRepository !== identity.headRepository || fresh.headRef !== identity.headRef
+        || (pinSha && fresh.headSha !== identity.headSha)) throw stale();
 }
-
-function inspectPendingOperation(
-    body: string,
-    param: LinkPullRequestIssueContext,
-    expectedMarker: string,
-): { readonly kind: 'none' }
-    | { readonly kind: 'recoverable'; readonly originalBody: string }
-    | { readonly kind: 'blocked'; readonly step: string } {
-    const operationPrefix = `${LINK_MARKER_PREFIX};pr=${param.pullRequestNumber};issue=${param.issueNumber};`;
-    if (!body.includes(operationPrefix)) return { kind: 'none' };
-    const suffix = temporaryLinkSuffix(param.issueNumber, expectedMarker);
-    if (!body.endsWith(suffix)) {
-        return {
-            kind: 'blocked',
-            step: 'A same-operation linkage marker is present but does not match the validated original base and temporary suffix. No new provider state was changed; inspect the PR body and base before rerunning.',
-        };
-    }
-    return { kind: 'recoverable', originalBody: body.slice(0, -suffix.length) };
+function requireOwned(details: PullRequestLinkDetails, marker: string): void {
+    const state = readPendingPullRequestLink(details.body);
+    if (state.kind !== 'pending' || state.marker !== marker) throw stale();
 }
-
-function temporaryLinkSuffix(issueNumber: number, marker: string): string {
-    return `\n\nResolves #${issueNumber}\n\n${marker}`;
+async function inspectOwned(port: BoundPullRequestIssueLinkPort, pr: number, identity: PullRequestLinkIdentity,
+    marker: string, pinSha: boolean): Promise<PullRequestLinkDetails> {
+    const fresh = await port.getDetails(pr);
+    requireSame(fresh, identity, pr, pinSha);
+    requireOwned(fresh, marker);
+    return fresh;
 }
-
-function success(taskId: string, step: string): Result {
-    return new Result({ id: taskId, success: true, executed: true, steps: [step] });
+function stale(): ApplicationError {
+    return new ApplicationError('workflow.stale', 'PR linkage identity, base or operation changed. Recovery state was retained; rerun the current PR workflow before enrichment.');
+}
+function invalid(id: string, step: string): Result[] {
+    return [new Result({ id, success: false, executed: false, steps: [step] })];
 }

@@ -39837,18 +39837,18 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     }),
     'pull-request-link-base-retained': Object.freeze({
         impact: 'The pull request could not be linked to its issue.',
-        action: 'Restore the temporary default base branch, then rerun the workflow.',
+        action: 'Rerun the current PR workflow to recover pending state; inspect ownership if recovery remains blocked.',
         retainedState: 'The temporary default base branch remains; the original description was restored.',
     }),
     'pull-request-link-reference-retained': Object.freeze({
         impact: 'The pull request could not be linked to its issue.',
-        action: 'Remove the temporary issue reference from the description, then rerun the workflow.',
+        action: 'Rerun the current PR workflow to finish owned-reference cleanup; retain its recovery marker until the base is verified.',
         retainedState: 'The original base branch was restored; the temporary issue reference remains in the description.',
     }),
     'pull-request-link-base-and-reference-retained': Object.freeze({
         impact: 'The pull request could not be linked to its issue.',
-        action: 'Restore the temporary default base branch and remove the temporary issue reference, then rerun the workflow.',
-        retainedState: 'The temporary default base branch and issue reference remain.',
+        action: 'Rerun the current PR workflow to recover the original base and owned reference; inspect ownership if recovery remains blocked.',
+        retainedState: 'The original base and temporary-reference cleanup could not be verified; pending recovery evidence was retained when observable.',
     }),
     'managed-branch-enrichment-failed': Object.freeze({
         impact: 'The linked branch exists, but later issue metadata may be incomplete.',
@@ -39995,18 +39995,18 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
     }),
     'pull-request-link-base-retained': Object.freeze({
         impact: 'No se pudo vincular la pull request con su issue.',
-        action: 'Restaura la rama base predeterminada temporal y vuelve a ejecutar el workflow.',
+        action: 'Vuelve a ejecutar el workflow actual de la PR para recuperar el estado pendiente; revisa la propiedad si sigue bloqueado.',
         retainedState: 'La rama base predeterminada temporal permanece; se restauró la descripción original.',
     }),
     'pull-request-link-reference-retained': Object.freeze({
         impact: 'No se pudo vincular la pull request con su issue.',
-        action: 'Elimina la referencia temporal a la issue de la descripción y vuelve a ejecutar el workflow.',
+        action: 'Vuelve a ejecutar el workflow actual de la PR para limpiar la referencia propia; conserva el marcador hasta verificar la base.',
         retainedState: 'Se restauró la rama base original; la referencia temporal a la issue permanece en la descripción.',
     }),
     'pull-request-link-base-and-reference-retained': Object.freeze({
         impact: 'No se pudo vincular la pull request con su issue.',
-        action: 'Restaura la rama base predeterminada temporal, elimina la referencia temporal a la issue y vuelve a ejecutar el workflow.',
-        retainedState: 'La rama base predeterminada temporal y la referencia a la issue permanecen.',
+        action: 'Vuelve a ejecutar el workflow actual de la PR para recuperar la base original y la referencia propia; revisa la propiedad si sigue bloqueado.',
+        retainedState: 'No se pudo verificar la base original ni la limpieza de la referencia temporal; se conservó la evidencia pendiente cuando pudo observarse.',
     }),
     'managed-branch-enrichment-failed': Object.freeze({
         impact: 'La rama vinculada existe, pero los metadatos posteriores de la issue pueden estar incompletos.',
@@ -61148,6 +61148,8 @@ exports.SetupExecutionUseCase = SetupExecutionUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runSetupExecution = runSetupExecution;
+const deployment_configuration_1 = __nccwpck_require__(22495);
+const pull_request_issue_link_state_1 = __nccwpck_require__(96074);
 const application_error_1 = __nccwpck_require__(75999);
 const action_types_1 = __nccwpck_require__(19625);
 const previous_branch_state_policy_1 = __nccwpck_require__(43630);
@@ -61244,6 +61246,20 @@ async function runSetupExecution(context, dependencies) {
         }
     }
     if (context.isPullRequest && !context.isSingleAction) {
+        const pullRequestBody = await dependencies.issueSetupPort.getDescription(context.pullRequest.number);
+        const pendingParent = (0, pull_request_issue_link_state_1.pendingPullRequestParent)(pullRequestBody ?? '', context.pullRequest.number, issueResolution.issueNumber ?? context.pullRequest.number);
+        // An admitted issue's exact managed head retains parent authority even
+        // if an older runtime already discarded the pending body record.
+        const admitted = issueResolution.issueNumber !== undefined && issueAdmission?.status === 'eligible'
+            && ['feature', 'bugfix', 'documentation', 'chore'].includes(issueAdmission.kind)
+            ? await dependencies.configurationPort.get(issueResolution.issueNumber) : undefined;
+        const admittedParent = admitted?.workingBranch === context.pullRequest.head ? admitted?.parentBranch : undefined;
+        if (admittedParent && !(0, deployment_configuration_1.isSafeBranchTree)(admittedParent)) {
+            throw new application_error_1.ApplicationError('configuration.invalid', 'The admitted managed parent is not a safe branch.');
+        }
+        if (pendingParent && admittedParent && pendingParent !== admittedParent) {
+            throw new pull_request_issue_link_state_1.PendingPullRequestLinkError('ownership');
+        }
         currentPullRequestLabels = await dependencies.issueSetupPort.getLabels(context.pullRequest.number);
         release = {
             ...release,
@@ -61256,7 +61272,7 @@ async function runSetupExecution(context, dependencies) {
         configuration = {
             ...configuration,
             workingBranch: issueResolution.pullRequestHeadBranch || context.pullRequest.head || configuration.workingBranch,
-            parentBranch: configuration.parentBranch ?? context.pullRequest.base,
+            parentBranch: pendingParent ?? admittedParent ?? configuration.parentBranch ?? context.pullRequest.base,
         };
     }
     return {
@@ -62171,6 +62187,9 @@ exports.PullRequestReviewCommentUseCase = PullRequestReviewCommentUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestUseCase = void 0;
+const pull_request_issue_link_state_1 = __nccwpck_require__(96074);
+const application_error_1 = __nccwpck_require__(75999);
+const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const pull_request_workflow_1 = __nccwpck_require__(95238);
@@ -62209,6 +62228,11 @@ class PullRequestUseCase {
             || !['opened', 'reopened', 'synchronize'].includes(param.pullRequest.action)
             || !this.reviewPotentialProblemsUseCase)
             return [];
+        if ((0, pull_request_issue_link_state_1.readPendingPullRequestLink)(param.pullRequest.body).kind !== 'none'
+            || (param.currentConfiguration.parentBranch && param.currentConfiguration.parentBranch !== param.pullRequest.base)) {
+            const error = new application_error_1.ApplicationError('workflow.stale', 'Pending linkage requires the normal PR workflow before analysis-only review.');
+            return [new result_1.Result({ id: this.taskId, success: false, executed: false, steps: [error.message], errors: [error] })];
+        }
         return this.reviewPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param));
     }
 }
@@ -62246,13 +62270,24 @@ const application_error_1 = __nccwpck_require__(75999);
 async function runPullRequestWorkflow(context, taskId, ports) {
     try {
         logPullRequestState(context);
+        // Even synchronize/ready/edited must repair a previous interrupted link
+        // before any ordinary writer or review can observe the temporary target.
+        const recovery = !context.closed && (context.opened || context.synchronize
+            || context.action === 'ready_for_review' || context.action === 'edited')
+            ? await ports.workflowSteps.linkPullRequestIssue.invoke({ ...ports.sharedContexts.steps.linkIssue, recoveryOnly: true })
+            : [];
+        if (recovery.some(result => !result.success))
+            return recovery;
         const agentAllowed = await canUseAgent(context, ports.actorAuthorizationPort);
         if (context.opened) {
             const results = await ports.workflowSteps.updateTitle.invoke(ports.sharedContexts.title);
             results.push(...(await ports.workflowSteps.assignMemberToIssue.invoke(ports.sharedContexts.steps.assignment)));
             results.push(...(await ports.workflowSteps.assignReviewersToIssue.invoke(ports.sharedContexts.steps.reviewers)));
             results.push(...(await ports.workflowSteps.linkPullRequestProject.invoke(ports.sharedContexts.projectLink)));
-            results.push(...(await ports.workflowSteps.linkPullRequestIssue.invoke(ports.sharedContexts.steps.linkIssue)));
+            const linkage = await ports.workflowSteps.linkPullRequestIssue.invoke(ports.sharedContexts.steps.linkIssue);
+            results.push(...linkage);
+            if (linkage.some(result => !result.success))
+                return results;
             results.push(...(await ports.workflowSteps.syncSizeAndProgressLabels.invoke(ports.sharedContexts.steps.syncLabels)));
             results.push(...(await ports.workflowSteps.checkPriorityPullRequestSize.invoke(ports.sharedContexts.steps.priority)));
             if (agentAllowed && context.automaticDescription) {
@@ -62334,6 +62369,7 @@ function logPullRequestState(context) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectPullRequestWorkflowStepContexts = projectPullRequestWorkflowStepContexts;
 exports.projectPullRequestDescriptionContext = projectPullRequestDescriptionContext;
+const pull_request_issue_link_state_1 = __nccwpck_require__(96074);
 const copilot_lifecycle_1 = __nccwpck_require__(72418);
 const issue_workflow_context_1 = __nccwpck_require__(98005);
 function projectPullRequestWorkflowStepContexts(source) {
@@ -62348,7 +62384,10 @@ function projectPullRequestWorkflowStepContexts(source) {
         linkIssue: Object.freeze({
             pullRequestNumber: source.pullRequest.number,
             issueNumber: source.issueNumber,
-            originalBaseBranch: source.pullRequest.base,
+            originalBaseBranch: (0, pull_request_issue_link_state_1.pendingPullRequestParent)(source.pullRequest.body ?? '', source.pullRequest.number, source.issueNumber) ?? source.currentConfiguration?.parentBranch ?? source.pullRequest.base,
+            expectedHeadSha: source.pullRequest.headSha,
+            expectedHeadRepository: source.pullRequest.headRepository,
+            expectedHeadRef: source.pullRequest.head,
             defaultBranch: source.branches.defaultBranch,
         }),
         syncLabels: Object.freeze({
@@ -62391,9 +62430,11 @@ function projectPullRequestDescriptionContext(source) {
         issueNumber: source.issueNumber,
         pullRequest: Object.freeze({
             number: source.pullRequest.number > 0 ? source.pullRequest.number : source.issue.number,
-            body: source.pullRequest.body,
+            body: source.pullRequest.body ?? '',
             headBranch: source.pullRequest.head,
-            baseBranch: source.pullRequest.base,
+            headSha: source.pullRequest.headSha,
+            headRepository: source.pullRequest.headRepository,
+            baseBranch: (0, pull_request_issue_link_state_1.pendingPullRequestParent)(source.pullRequest.body ?? '', source.pullRequest.number, source.issueNumber) ?? source.currentConfiguration?.parentBranch ?? source.pullRequest.base,
             creator: source.pullRequest.creator,
         }),
         mode: source.ai.getPullRequestDescriptionMode(),
@@ -74840,7 +74881,8 @@ class LinkPullRequestIssueUseCase {
             (0, logging_ports_1.logError)(semanticError);
             const recoveryStep = error instanceof link_pull_request_issue_workflow_1.PullRequestIssueLinkOperationError
                 ? describeRecovery(error)
-                : 'Unable to link the pull request to its issue. Inspect the PR base and description before rerunning the workflow.';
+                : error instanceof application_error_1.ApplicationError ? error.message
+                    : 'Unable to link the pull request to its issue. Inspect the PR base and description before rerunning the workflow.';
             return [new result_1.Result({
                     id: this.taskId,
                     success: false,
@@ -74870,7 +74912,7 @@ function describeRecovery(error) {
     if (retainedState.length === 0) {
         return 'Pull-request issue linkage failed, but the original base and description were restored. Re-run the workflow.';
     }
-    return `Pull-request issue linkage failed and retained ${retainedState.join(' and ')}. Restore that PR state, then re-run the workflow.`;
+    return `Pull-request issue linkage failed and retained ${retainedState.join(' and ')}. Re-run the current PR workflow to recover pending state; inspect ownership if recovery remains blocked.`;
 }
 
 
@@ -74884,177 +74926,163 @@ function describeRecovery(error) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestIssueLinkOperationError = void 0;
 exports.runLinkPullRequestIssue = runLinkPullRequestIssue;
+const node_crypto_1 = __nccwpck_require__(6005);
 const result_1 = __nccwpck_require__(73817);
 const positive_integer_policy_1 = __nccwpck_require__(19879);
 const deployment_configuration_1 = __nccwpck_require__(22495);
-const LINK_MARKER_PREFIX = '<!-- copilot:pr-issue-link:v1';
+const application_error_1 = __nccwpck_require__(75999);
+const pull_request_issue_link_state_1 = __nccwpck_require__(96074);
 class PullRequestIssueLinkOperationError extends Error {
     constructor(retainedBaseBranch, retainedIssueReference) {
         super('Unable to complete pull-request issue linkage with fully restored provider state.');
-        this.name = 'PullRequestIssueLinkOperationError';
         this.retainedBaseBranch = retainedBaseBranch;
         this.retainedIssueReference = retainedIssueReference;
+        this.name = 'PullRequestIssueLinkOperationError';
     }
 }
 exports.PullRequestIssueLinkOperationError = PullRequestIssueLinkOperationError;
-/**
- * Establishes the GitHub PR-to-issue relationship and restores all temporary
- * provider state. The pending marker makes an interrupted operation resumable
- * from the same immutable webhook payload without trusting an event URL.
- */
+/** Recover metadata first, including after process death and a newer head. */
 async function runLinkPullRequestIssue(param, taskId, port, delay) {
-    const pullRequestNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(param.pullRequestNumber);
-    const issueNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(param.issueNumber);
-    if (!pullRequestNumber) {
-        return [new result_1.Result({
-                id: taskId,
-                success: false,
-                executed: false,
-                steps: ['Pull-request linkage requires a positive pull-request number.'],
-            })];
+    const pr = (0, positive_integer_policy_1.parsePositiveSafeInteger)(param.pullRequestNumber);
+    const issue = (0, positive_integer_policy_1.parsePositiveSafeInteger)(param.issueNumber);
+    if (!pr)
+        return invalid(taskId, 'Pull-request linkage requires a positive pull-request number.');
+    if (!issue || issue === pr)
+        return [new result_1.Result({ id: taskId, success: true, executed: false,
+                steps: ['No separate linked issue was inferred; pull-request linkage was skipped.'] })];
+    if (!(0, deployment_configuration_1.isSafeBranchTree)(param.originalBaseBranch) || !(0, deployment_configuration_1.isSafeBranchTree)(param.defaultBranch)) {
+        return invalid(taskId, 'Pull-request linkage requires a positive issue number and safe non-empty base branches.');
     }
-    if (!issueNumber || issueNumber === pullRequestNumber) {
-        return [new result_1.Result({
-                id: taskId,
-                success: true,
-                executed: false,
-                steps: ['No separate linked issue was inferred; pull-request linkage was skipped.'],
-            })];
+    let current = await port.getDetails(pr);
+    const identity = requireIdentity(current, pr);
+    if ((param.expectedHeadRepository && param.expectedHeadRepository !== identity.headRepository)
+        || (param.expectedHeadRef && param.expectedHeadRef !== identity.headRef))
+        throw stale();
+    const state = (0, pull_request_issue_link_state_1.readPendingPullRequestLink)(current.body);
+    if (state.kind === 'blocked')
+        throw new PullRequestIssueLinkOperationError(true, true);
+    if (state.kind === 'pending' && (identity.headRepository !== identity.repository
+        || state.record.pullRequestNumber !== pr || state.record.issueNumber !== issue
+        || (state.record.version === 2 && (state.record.headRepository !== identity.headRepository
+            || state.record.headRef !== identity.headRef))))
+        throw new PullRequestIssueLinkOperationError(true, true);
+    const original = state.kind === 'pending' ? state.record.originalBaseBranch : param.originalBaseBranch;
+    if (state.kind === 'pending' && param.originalBaseBranch !== param.defaultBranch
+        && param.originalBaseBranch !== original)
+        throw new PullRequestIssueLinkOperationError(true, true);
+    if (state.kind === 'none' && param.expectedHeadSha && param.expectedHeadSha !== identity.headSha)
+        throw stale();
+    if (current.baseBranch !== original && !(state.kind === 'pending' && current.baseBranch === param.defaultBranch)) {
+        throw stale();
     }
-    if (!(0, deployment_configuration_1.isSafeBranchTree)(param.originalBaseBranch)
-        || !(0, deployment_configuration_1.isSafeBranchTree)(param.defaultBranch)) {
-        return [new result_1.Result({
-                id: taskId,
-                success: false,
-                executed: false,
-                steps: ['Pull-request linkage requires a positive issue number and safe non-empty base branches.'],
-            })];
-    }
-    const pendingMarker = buildPendingMarker(param);
-    const details = await port.getDetails(param.pullRequestNumber);
-    const pendingOperation = inspectPendingOperation(details.body, param, pendingMarker);
-    if (pendingOperation.kind === 'blocked') {
-        return [new result_1.Result({
-                id: taskId,
-                success: false,
-                executed: true,
-                steps: [pendingOperation.step],
-            })];
-    }
-    if (pendingOperation.kind === 'none' && details.baseBranch !== param.originalBaseBranch) {
-        return [new result_1.Result({
-                id: taskId,
-                success: false,
-                executed: false,
-                steps: ['The pull-request base changed after this event. No linkage state was changed; rerun from the current PR state.'],
-            })];
-    }
-    if (pendingOperation.kind === 'recoverable'
-        && ![param.originalBaseBranch, param.defaultBranch].includes(details.baseBranch)) {
-        return [new result_1.Result({
-                id: taskId,
-                success: false,
-                executed: true,
-                steps: ['The pending linkage operation no longer matches the current PR base. The temporary description remains; restore the base and description in GitHub, then rerun.'],
-            })];
-    }
-    const hasOwnedPendingOperation = pendingOperation.kind === 'recoverable';
-    const originalBody = hasOwnedPendingOperation ? pendingOperation.originalBody : details.body;
-    const results = [];
-    let temporaryDescriptionApplied = hasOwnedPendingOperation;
-    let temporaryBaseApplied = hasOwnedPendingOperation && details.baseBranch === param.defaultBranch;
-    let observationWindowCompleted = false;
+    if (state.kind === 'none' && param.recoveryOnly)
+        return [];
+    let marker = state.kind === 'pending' ? state.marker : undefined;
     let primaryError;
-    const restorationErrors = [];
-    let retainedBaseBranch = false;
-    let retainedIssueReference = false;
-    let alreadyLinked = false;
-    if (!hasOwnedPendingOperation) {
-        alreadyLinked = await port.isLinked(param.pullRequestNumber, param.issueNumber);
-        if (alreadyLinked)
+    if (!marker) {
+        if (await port.isLinked(pr, issue))
             return [];
-    }
-    else {
+        const fresh = await port.getDetails(pr);
+        requireSame(fresh, identity, pr, true);
+        if (fresh.body !== current.body || fresh.baseBranch !== original)
+            throw stale();
+        current = fresh;
+        marker = (0, pull_request_issue_link_state_1.createPendingPullRequestLink)({ pullRequestNumber: pr, issueNumber: issue,
+            originalBaseBranch: original, operationId: (0, node_crypto_1.randomUUID)(), headRepository: identity.headRepository,
+            headRef: identity.headRef, headSha: identity.headSha });
         try {
-            alreadyLinked = await port.isLinked(param.pullRequestNumber, param.issueNumber);
+            await port.updateDescription(pr, (0, pull_request_issue_link_state_1.attachPendingPullRequestLink)(current.body, marker));
+            current = await inspectOwned(port, pr, identity, marker, true);
+            if (current.baseBranch !== original)
+                throw stale();
+            if (original !== param.defaultBranch) {
+                await port.updateBaseBranch(pr, param.defaultBranch);
+                current = await inspectOwned(port, pr, identity, marker, true);
+                if (current.baseBranch !== param.defaultBranch)
+                    throw stale();
+            }
+            await delay.wait(20000);
         }
-        catch (error) {
-            primaryError = error;
+        catch (cause) {
+            primaryError = cause;
         }
     }
+    // Never restore an old whole body. Each mutation uses freshly observed native
+    // identity and the exact operation lease; retain it if base restoration fails.
+    let baseRestored = false;
+    let referenceRemoved = false;
+    let headAdvanced;
     try {
-        if (primaryError === undefined && !temporaryDescriptionApplied) {
-            await port.updateDescription(param.pullRequestNumber, appendTemporaryLink(originalBody, param.issueNumber, pendingMarker));
-            temporaryDescriptionApplied = true;
-            results.push(success(taskId, `The description temporarily referenced issue **#${param.issueNumber}**.`));
+        current = await port.getDetails(pr);
+        requireSame(current, identity, pr, false);
+        headAdvanced = current.identity.headSha !== identity.headSha;
+        const pending = (0, pull_request_issue_link_state_1.readPendingPullRequestLink)(current.body);
+        if (pending.kind === 'none' && current.baseBranch === original) {
+            baseRestored = true;
+            referenceRemoved = true;
         }
-        if (primaryError === undefined && !temporaryBaseApplied && details.baseBranch !== param.defaultBranch) {
-            await port.updateBaseBranch(param.pullRequestNumber, param.defaultBranch);
-            temporaryBaseApplied = true;
-            results.push(success(taskId, `The base branch was temporarily updated to \`${param.defaultBranch}\`.`));
-        }
-        if (primaryError === undefined) {
-            if (!alreadyLinked)
-                await delay.wait(20000);
-            observationWindowCompleted = true;
-        }
-    }
-    catch (error) {
-        primaryError = error;
-    }
-    finally {
-        if (temporaryBaseApplied) {
-            try {
-                await port.updateBaseBranch(param.pullRequestNumber, param.originalBaseBranch);
-                results.push(success(taskId, `The base branch was restored to \`${param.originalBaseBranch}\`.`));
+        else {
+            requireOwned(current, marker);
+            if (![original, param.defaultBranch].includes(current.baseBranch))
+                throw stale();
+            if (current.baseBranch !== original) {
+                await port.updateBaseBranch(pr, original);
+                current = await inspectOwned(port, pr, identity, marker, false);
             }
-            catch (error) {
-                restorationErrors.push(error);
-                retainedBaseBranch = true;
-            }
-        }
-        if (temporaryDescriptionApplied) {
-            try {
-                await port.updateDescription(param.pullRequestNumber, originalBody);
-                results.push(success(taskId, observationWindowCompleted
-                    ? 'The original pull-request description was restored.'
-                    : 'The temporary issue reference was removed during compensation.'));
-            }
-            catch (error) {
-                restorationErrors.push(error);
-                retainedIssueReference = true;
-            }
+            if (current.baseBranch !== original)
+                throw stale();
+            baseRestored = true;
+            await port.updateDescription(pr, (0, pull_request_issue_link_state_1.removePendingPullRequestLink)(current.body, marker));
+            baseRestored = false;
+            current = await port.getDetails(pr);
+            requireSame(current, identity, pr, false);
+            baseRestored = current.baseBranch === original;
+            if (!baseRestored || (0, pull_request_issue_link_state_1.readPendingPullRequestLink)(current.body).kind !== 'none')
+                throw stale();
+            referenceRemoved = true;
+            headAdvanced || (headAdvanced = current.identity.headSha !== identity.headSha);
         }
     }
-    if (restorationErrors.length > 0 || primaryError !== undefined) {
-        throw new PullRequestIssueLinkOperationError(retainedBaseBranch, retainedIssueReference);
+    catch {
+        throw new PullRequestIssueLinkOperationError(!baseRestored, !referenceRemoved);
     }
-    return results;
-}
-function buildPendingMarker(param) {
-    return `${LINK_MARKER_PREFIX};pr=${param.pullRequestNumber};issue=${param.issueNumber};base=${encodeURIComponent(param.originalBaseBranch)};state=pending -->`;
-}
-function appendTemporaryLink(body, issueNumber, marker) {
-    return `${body}${temporaryLinkSuffix(issueNumber, marker)}`;
-}
-function inspectPendingOperation(body, param, expectedMarker) {
-    const operationPrefix = `${LINK_MARKER_PREFIX};pr=${param.pullRequestNumber};issue=${param.issueNumber};`;
-    if (!body.includes(operationPrefix))
-        return { kind: 'none' };
-    const suffix = temporaryLinkSuffix(param.issueNumber, expectedMarker);
-    if (!body.endsWith(suffix)) {
-        return {
-            kind: 'blocked',
-            step: 'A same-operation linkage marker is present but does not match the validated original base and temporary suffix. No new provider state was changed; inspect the PR body and base before rerunning.',
-        };
+    if (primaryError !== undefined) {
+        if (primaryError instanceof application_error_1.ApplicationError)
+            throw primaryError;
+        throw new PullRequestIssueLinkOperationError(false, false);
     }
-    return { kind: 'recoverable', originalBody: body.slice(0, -suffix.length) };
+    if (headAdvanced || (param.expectedHeadSha && param.expectedHeadSha !== current.identity.headSha))
+        throw stale();
+    return [new result_1.Result({ id: taskId, success: true, executed: true,
+            steps: ['The original pull-request base was verified and the owned temporary issue reference removed.'] })];
 }
-function temporaryLinkSuffix(issueNumber, marker) {
-    return `\n\nResolves #${issueNumber}\n\n${marker}`;
+function requireIdentity(details, pr) {
+    if (!(0, pull_request_issue_link_state_1.isOpenPullRequestLinkIdentity)(details.identity, pr))
+        throw stale();
+    return details.identity;
 }
-function success(taskId, step) {
-    return new result_1.Result({ id: taskId, success: true, executed: true, steps: [step] });
+function requireSame(details, identity, pr, pinSha) {
+    const fresh = requireIdentity(details, pr);
+    if (fresh.headRepository !== identity.headRepository || fresh.headRef !== identity.headRef
+        || (pinSha && fresh.headSha !== identity.headSha))
+        throw stale();
+}
+function requireOwned(details, marker) {
+    const state = (0, pull_request_issue_link_state_1.readPendingPullRequestLink)(details.body);
+    if (state.kind !== 'pending' || state.marker !== marker)
+        throw stale();
+}
+async function inspectOwned(port, pr, identity, marker, pinSha) {
+    const fresh = await port.getDetails(pr);
+    requireSame(fresh, identity, pr, pinSha);
+    requireOwned(fresh, marker);
+    return fresh;
+}
+function stale() {
+    return new application_error_1.ApplicationError('workflow.stale', 'PR linkage identity, base or operation changed. Recovery state was retained; rerun the current PR workflow before enrichment.');
+}
+function invalid(id, step) {
+    return [new result_1.Result({ id, success: false, executed: false, steps: [step] })];
 }
 
 
@@ -75242,6 +75270,7 @@ exports.UpdatePullRequestDescriptionUseCase = UpdatePullRequestDescriptionUseCas
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runUpdatePullRequestDescriptionWorkflow = runUpdatePullRequestDescriptionWorkflow;
+const pull_request_issue_link_state_1 = __nccwpck_require__(96074);
 const result_1 = __nccwpck_require__(73817);
 const agent_task_policy_1 = __nccwpck_require__(85712);
 const prompts_1 = __nccwpck_require__(69518);
@@ -75266,6 +75295,21 @@ async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependen
             return skipped(taskId, 'PR description updates require a positive pull-request number.');
         }
         const details = await loadPullRequestDetails(context, dependencies, request.trigger);
+        const identity = details.identity;
+        if (!(0, pull_request_issue_link_state_1.isOpenPullRequestLinkIdentity)(identity, context.pullRequest.number)
+            || (context.pullRequest.headSha && identity.headSha !== context.pullRequest.headSha)
+            || (context.pullRequest.headRepository && identity.headRepository !== context.pullRequest.headRepository)
+            || (context.pullRequest.headBranch && identity.headRef !== context.pullRequest.headBranch))
+            throw staleDescription();
+        const pending = (0, pull_request_issue_link_state_1.readPendingPullRequestLink)(details.body);
+        if (pending.kind === 'pending' && identity.headRepository !== identity.repository)
+            throw staleDescription();
+        if (pending.kind === 'pending' && pending.record.version === 2
+            && (pending.record.headRepository !== identity.headRepository || pending.record.headRef !== identity.headRef))
+            throw staleDescription();
+        const pendingParent = (0, pull_request_issue_link_state_1.pendingPullRequestParent)(details.body, context.pullRequest.number, context.issueNumber);
+        if (pendingParent && details.baseBranch !== pendingParent)
+            throw staleDescription();
         const branches = resolveBranches(context, details);
         if (!branches) {
             return [new result_1.Result({
@@ -75291,7 +75335,7 @@ async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependen
                 return skipped(taskId, `The pull request creator @${context.pullRequest.creator} is not a team member and \`AI members only\` is enabled. Skipping update pull request description.`);
             }
         }
-        const currentBody = details?.body ?? context.pullRequest.body;
+        const currentBody = details.body;
         const diff = await dependencies.pullRequestDescriptionCommandPort.getDiff(context.pullRequest.number);
         const changes = diff.snapshot.changes;
         const diffEvidence = JSON.stringify(changes);
@@ -75331,10 +75375,16 @@ async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependen
             options: (0, agent_output_locale_policy_1.productFacingAgentQueryOptions)('pull-request-description', agent_response_schemas_1.PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA),
         });
         const generatedDescription = extractDescription(response, context.targetLocale, linkedIssueNumber);
-        const pullRequestBody = context.mode === 'replace'
+        const latest = await dependencies.pullRequestDescriptionCommandPort.getDetails(context.pullRequest.number);
+        if (!(0, pull_request_issue_link_state_1.isOpenPullRequestLinkIdentity)(latest.identity, context.pullRequest.number)
+            || latest.identity.headRepository !== identity.headRepository || latest.identity.headRef !== identity.headRef
+            || latest.identity.headSha !== identity.headSha || latest.baseBranch !== details.baseBranch
+            || latest.body !== currentBody)
+            throw staleDescription();
+        const rendered = context.mode === 'replace'
             ? generatedDescription
             : (0, pull_request_description_1.mergeManagedPullRequestDescription)(currentBody, generatedDescription);
-        await dependencies.pullRequestDescriptionCommandPort.updateDescription(context.pullRequest.number, pullRequestBody);
+        await dependencies.pullRequestDescriptionCommandPort.updateDescription(context.pullRequest.number, (0, pull_request_issue_link_state_1.preservePendingPullRequestLink)(latest.body, rendered));
         return [new result_1.Result({ id: taskId, success: true, executed: true, steps: [] })];
     }
     catch (cause) {
@@ -75356,18 +75406,15 @@ function shouldRun(request) {
         || (0, pull_request_description_1.shouldAutomaticallyUpdatePullRequestDescription)(request.context.mode);
 }
 function resolveBranches(context, details) {
-    const headBranch = context.pullRequest.headBranch || details?.headBranch;
-    const baseBranch = context.pullRequest.baseBranch || details?.baseBranch;
+    const headBranch = details?.headBranch || context.pullRequest.headBranch;
+    const baseBranch = details?.baseBranch || context.pullRequest.baseBranch;
     return headBranch && baseBranch ? { headBranch, baseBranch } : undefined;
 }
-async function loadPullRequestDetails(context, dependencies, trigger) {
-    const needsRemoteDetails = context.eventName === 'issue_comment'
-        || trigger === 'authorized-command'
-        || !context.pullRequest.headBranch
-        || !context.pullRequest.baseBranch;
-    return needsRemoteDetails
-        ? dependencies.pullRequestDescriptionCommandPort.getDetails(context.pullRequest.number)
-        : undefined;
+async function loadPullRequestDetails(context, dependencies, _trigger) {
+    return dependencies.pullRequestDescriptionCommandPort.getDetails(context.pullRequest.number);
+}
+function staleDescription() {
+    return new application_error_1.ApplicationError('workflow.stale', 'PR identity, body or pending linkage changed. Existing body retained; rerun the current PR workflow.');
 }
 function extractDescription(response, targetLocale, linkedIssueNumber) {
     if (response == null) {
@@ -82403,6 +82450,11 @@ class PullRequest {
             ?? this.inputs?.check_suite?.head_branch
             ?? this.inputs?.workflow_run?.head_branch
             ?? '';
+    }
+    get headSha() { return this.inputs?.pull_request?.head?.sha ?? ''; }
+    get headRepository() {
+        const repo = this.inputs?.pull_request?.head?.repo;
+        return repo?.owner?.login && repo.name ? `${repo.owner.login}/${repo.name}` : '';
     }
     get base() {
         return this.inputs?.pull_request?.base?.ref ?? '';
@@ -90944,10 +90996,18 @@ class PullRequestLifecycleRepository {
                 repo: repository,
                 pull_number: pullRequestNumber,
             });
+            const native = toBugbotPullRequestIdentity(data);
+            if (native.number !== pullRequestNumber || native.baseRepository.owner !== owner
+                || native.baseRepository.name !== repository || !native.headRepositoryName) {
+                throw new Error('Pull-request identity does not match the bound repository.');
+            }
             return {
                 body: data.body ?? '',
-                headBranch: data.head?.ref ?? '',
+                headBranch: native.headRef,
                 baseBranch: data.base?.ref ?? '',
+                identity: { number: native.number, state: native.state, repository: `${owner}/${repository}`,
+                    headRepository: `${native.headRepositoryOwner}/${native.headRepositoryName}`,
+                    headRef: native.headRef, headSha: native.headSha },
             };
         };
         this.getPullRequestHeadSha = async (owner, repository, pullRequestNumber, token) => {
@@ -97481,6 +97541,176 @@ function mergeManagedPullRequestDescription(currentBody, generated) {
 }
 function shouldAutomaticallyUpdatePullRequestDescription(mode) {
     return mode === 'replace' || mode === 'append';
+}
+
+
+/***/ }),
+
+/***/ 96074:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PendingPullRequestLinkError = exports.MAX_PENDING_LINK_BODY = exports.MAX_PENDING_LINK_RECORD = void 0;
+exports.readPendingPullRequestLink = readPendingPullRequestLink;
+exports.createPendingPullRequestLink = createPendingPullRequestLink;
+exports.attachPendingPullRequestLink = attachPendingPullRequestLink;
+exports.removePendingPullRequestLink = removePendingPullRequestLink;
+exports.preservePendingPullRequestLink = preservePendingPullRequestLink;
+exports.pendingPullRequestParent = pendingPullRequestParent;
+exports.isOpenPullRequestLinkIdentity = isOpenPullRequestLinkIdentity;
+exports.MAX_PENDING_LINK_RECORD = 4096;
+exports.MAX_PENDING_LINK_BODY = 65536;
+const PREFIX = '<!-- copilot:pr-issue-link:';
+const V2_KEYS = ['version', 'pullRequestNumber', 'issueNumber', 'originalBaseBranch',
+    'operationId', 'headRepository', 'headRef', 'headSha'];
+class PendingPullRequestLinkError extends Error {
+    constructor(reason) {
+        super('Pending pull-request linkage state must be recovered before it can be changed.');
+        this.reason = reason;
+        this.name = 'PendingPullRequestLinkError';
+    }
+}
+exports.PendingPullRequestLinkError = PendingPullRequestLinkError;
+function readPendingPullRequestLink(body) {
+    if (typeof body !== 'string')
+        return { kind: 'blocked', reason: 'invalid' };
+    if (body.length > exports.MAX_PENDING_LINK_BODY)
+        return { kind: 'blocked', reason: 'oversized' };
+    const position = body.indexOf(PREFIX);
+    if (position < 0)
+        return { kind: 'none' };
+    if (body.indexOf(PREFIX, position + PREFIX.length) >= 0)
+        return { kind: 'blocked', reason: 'ambiguous' };
+    const close = body.indexOf('-->', position);
+    if (close < 0)
+        return { kind: 'blocked', reason: 'invalid' };
+    const end = close + 3;
+    const marker = body.slice(position, end);
+    if (marker.length > exports.MAX_PENDING_LINK_RECORD)
+        return { kind: 'blocked', reason: 'oversized' };
+    const record = parseMarker(marker);
+    if (!record)
+        return { kind: 'blocked', reason: 'invalid' };
+    const reference = temporaryReference(record.issueNumber);
+    const start = position - reference.length;
+    if (start < 0 || body.slice(start, position) !== reference)
+        return { kind: 'blocked', reason: 'invalid' };
+    return { kind: 'pending', record, marker, start, end };
+}
+function createPendingPullRequestLink(input) {
+    if (!isRecord(input) || Object.keys(input).length !== V2_KEYS.length - 1
+        || Object.keys(input).some(key => key === 'version' || !V2_KEYS.includes(key))) {
+        throw new PendingPullRequestLinkError('invalid');
+    }
+    const record = { version: 2, ...input };
+    if (!isV2(record))
+        throw new PendingPullRequestLinkError('invalid');
+    const marker = `${PREFIX}v2;data=${encodeURIComponent(JSON.stringify(record))};state=pending -->`;
+    if (marker.length > exports.MAX_PENDING_LINK_RECORD)
+        throw new PendingPullRequestLinkError('oversized');
+    return marker;
+}
+function attachPendingPullRequestLink(body, marker) {
+    const existing = readPendingPullRequestLink(body);
+    if (existing.kind !== 'none')
+        throw new PendingPullRequestLinkError(existing.kind === 'blocked' ? existing.reason : 'ownership');
+    const record = parseMarker(marker);
+    if (!record || marker.length > exports.MAX_PENDING_LINK_RECORD)
+        throw new PendingPullRequestLinkError('invalid');
+    const combined = `${body}${temporaryReference(record.issueNumber)}${marker}`;
+    if (combined.length > exports.MAX_PENDING_LINK_BODY)
+        throw new PendingPullRequestLinkError('oversized');
+    return combined;
+}
+/** Remove only this operation's bytes, retaining concurrent prose/configuration. */
+function removePendingPullRequestLink(body, marker) {
+    const state = readPendingPullRequestLink(body);
+    if (state.kind !== 'pending' || state.marker !== marker)
+        throw new PendingPullRequestLinkError('ownership');
+    return body.slice(0, state.start) + body.slice(state.end);
+}
+/** Model-owned prose never creates, replaces or discards host-owned recovery state. */
+function preservePendingPullRequestLink(current, rendered) {
+    const original = readPendingPullRequestLink(current);
+    if (original.kind === 'blocked')
+        throw new PendingPullRequestLinkError(original.reason);
+    const candidate = readPendingPullRequestLink(rendered);
+    if (candidate.kind === 'blocked')
+        throw new PendingPullRequestLinkError('injected');
+    if (original.kind === 'none') {
+        if (candidate.kind !== 'none')
+            throw new PendingPullRequestLinkError('injected');
+        return rendered;
+    }
+    const prose = candidate.kind === 'pending'
+        ? removePendingPullRequestLink(rendered, original.marker)
+        : rendered;
+    return attachPendingPullRequestLink(prose, original.marker);
+}
+function pendingPullRequestParent(body, pullRequestNumber, issueNumber) {
+    const state = readPendingPullRequestLink(body);
+    if (state.kind === 'none')
+        return undefined;
+    if (state.kind === 'blocked')
+        throw new PendingPullRequestLinkError(state.reason);
+    if (state.record.pullRequestNumber !== pullRequestNumber || state.record.issueNumber !== issueNumber) {
+        throw new PendingPullRequestLinkError('ownership');
+    }
+    return state.record.originalBaseBranch;
+}
+function parseMarker(marker) {
+    try {
+        const legacy = /^<!-- copilot:pr-issue-link:v1;pr=([0-9]+);issue=([0-9]+);base=([^;]*);state=pending -->$/.exec(marker);
+        if (legacy) {
+            const record = { version: 1, pullRequestNumber: Number(legacy[1]), issueNumber: Number(legacy[2]),
+                originalBaseBranch: decodeURIComponent(legacy[3]) };
+            return validBaseRecord(record) ? Object.freeze(record) : undefined;
+        }
+        const current = /^<!-- copilot:pr-issue-link:v2;data=([^;]+);state=pending -->$/.exec(marker);
+        if (!current)
+            return undefined;
+        const record = JSON.parse(decodeURIComponent(current[1]));
+        return isV2(record) ? Object.freeze(record) : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+function isRecord(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function positive(value) {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+}
+function validBaseRecord(value) {
+    return positive(value.pullRequestNumber) && positive(value.issueNumber)
+        && value.pullRequestNumber !== value.issueNumber && typeof value.originalBaseBranch === 'string'
+        && safeRef(value.originalBaseBranch) && value.originalBaseBranch.length <= 100;
+}
+function isV2(value) {
+    return isRecord(value) && Object.keys(value).length === V2_KEYS.length
+        && Object.keys(value).every(key => V2_KEYS.includes(key)) && value.version === 2
+        && validBaseRecord(value) && typeof value.operationId === 'string'
+        && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.operationId)
+        && typeof value.headRepository === 'string' && value.headRepository.length <= 512
+        && /^[A-Za-z0-9][A-Za-z0-9_.-]*\/[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(value.headRepository)
+        && typeof value.headRef === 'string' && safeRef(value.headRef)
+        && typeof value.headSha === 'string' && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(value.headSha);
+}
+function temporaryReference(issueNumber) { return `\n\nResolves #${issueNumber}\n\n`; }
+function isOpenPullRequestLinkIdentity(value, number) {
+    return value !== undefined && value.number === number && value.state === 'open'
+        && /^[A-Za-z0-9][A-Za-z0-9_.-]*\/[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(value.repository)
+        && /^[A-Za-z0-9][A-Za-z0-9_.-]*\/[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(value.headRepository)
+        && safeRef(value.headRef) && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(value.headSha);
+}
+function safeRef(value) {
+    return value.length > 0 && value.length <= 1024 && value === value.trim()
+        && !value.startsWith('/') && !value.endsWith('/') && !value.includes('..') && !value.includes('@{')
+        && !/[~^:?*[\\\]\s]/.test(value)
+        && !Array.from(value).some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127) && !value.endsWith('.') && !value.endsWith('.lock');
 }
 
 
@@ -109422,6 +109652,7 @@ exports.IssueContentInterface = IssueContentInterface;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ConfigurationHandler = void 0;
+const pull_request_issue_link_state_1 = __nccwpck_require__(96074);
 const config_1 = __nccwpck_require__(90450);
 const logger_1 = __nccwpck_require__(91151);
 const issue_content_interface_1 = __nccwpck_require__(60608);
@@ -109438,6 +109669,16 @@ class ConfigurationHandler extends issue_content_interface_1.IssueContentInterfa
         this.updateContent = (description, content) => {
             if (description === undefined || content === undefined)
                 return undefined;
+            const pending = (0, pull_request_issue_link_state_1.readPendingPullRequestLink)(description);
+            if (pending.kind === 'blocked')
+                throw new pull_request_issue_link_state_1.PendingPullRequestLinkError(pending.reason);
+            if (pending.kind === 'pending') {
+                const payload = JSON.parse(content);
+                if (!payload || typeof payload !== 'object' || !('parentBranch' in payload)
+                    || payload.parentBranch !== pending.record.originalBaseBranch) {
+                    throw new pull_request_issue_link_state_1.PendingPullRequestLinkError('ownership');
+                }
+            }
             const updated = (0, configuration_markers_1.writeConfigurationBlock)(description, content);
             if (updated === undefined)
                 (0, logger_1.logError)('The content has a problem with open-close tags: stored configuration.');

@@ -1,3 +1,4 @@
+import { pendingPullRequestParent } from '../../domain/pull_request_issue_link_state';
 import { DEFAULT_COPILOT_LIFECYCLE_LABELS, type CopilotLifecycleLabels } from '../../domain/copilot_lifecycle';
 import type { AgentConfiguration } from '../../domain/agent';
 import type { PullRequestDescriptionMode } from '../../domain/pull_request_description';
@@ -16,6 +17,10 @@ export interface LinkPullRequestIssueContext {
   readonly issueNumber: number;
   readonly originalBaseBranch: string;
   readonly defaultBranch: string;
+  readonly expectedHeadSha?: string;
+  readonly expectedHeadRepository?: string;
+  readonly expectedHeadRef?: string;
+  readonly recoveryOnly?: boolean;
 }
 
 export interface SyncPullRequestLabelsContext {
@@ -32,6 +37,8 @@ export interface PullRequestDescriptionContext {
   readonly pullRequest: {
     readonly number: number;
     readonly body: string;
+    readonly headSha?: string;
+    readonly headRepository?: string;
     readonly headBranch: string;
     readonly baseBranch: string;
     readonly creator: string;
@@ -69,6 +76,7 @@ interface ProjectSource {
 }
 
 export interface PullRequestWorkflowContextSource {
+  readonly currentConfiguration?: { readonly parentBranch?: string };
   readonly tokenUser?: string;
   readonly isIssue: boolean;
   readonly isPullRequest: boolean;
@@ -83,6 +91,8 @@ export interface PullRequestWorkflowContextSource {
     readonly number: number;
     readonly body: string;
     readonly head: string;
+    readonly headSha?: string;
+    readonly headRepository?: string;
     readonly base: string;
     readonly creator: string;
     readonly desiredAssigneesCount: number;
@@ -128,7 +138,10 @@ export function projectPullRequestWorkflowStepContexts(
     linkIssue: Object.freeze({
       pullRequestNumber: source.pullRequest.number,
       issueNumber: source.issueNumber,
-      originalBaseBranch: source.pullRequest.base,
+      originalBaseBranch: pendingPullRequestParent(source.pullRequest.body ?? '', source.pullRequest.number, source.issueNumber) ?? source.currentConfiguration?.parentBranch ?? source.pullRequest.base,
+      expectedHeadSha: source.pullRequest.headSha,
+      expectedHeadRepository: source.pullRequest.headRepository,
+      expectedHeadRef: source.pullRequest.head,
       defaultBranch: source.branches.defaultBranch,
     }),
     syncLabels: Object.freeze({
@@ -174,9 +187,11 @@ export function projectPullRequestDescriptionContext(
     issueNumber: source.issueNumber,
     pullRequest: Object.freeze({
       number: source.pullRequest.number > 0 ? source.pullRequest.number : source.issue.number,
-      body: source.pullRequest.body,
+      body: source.pullRequest.body ?? '',
       headBranch: source.pullRequest.head,
-      baseBranch: source.pullRequest.base,
+      headSha: source.pullRequest.headSha,
+      headRepository: source.pullRequest.headRepository,
+      baseBranch: pendingPullRequestParent(source.pullRequest.body ?? '', source.pullRequest.number, source.issueNumber) ?? source.currentConfiguration?.parentBranch ?? source.pullRequest.base,
       creator: source.pullRequest.creator,
     }),
     mode: source.ai.getPullRequestDescriptionMode(),

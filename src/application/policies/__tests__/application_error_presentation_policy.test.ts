@@ -146,8 +146,8 @@ const RECOVERY_CASES: readonly Readonly<{
     },
     {
         recovery: { id: 'pull-request-link-base-and-reference-retained', variables: {} },
-        english: 'The temporary default base branch and issue reference remain.',
-        spanish: 'La rama base predeterminada temporal y la referencia a la issue permanecen.',
+        english: 'The original base and temporary-reference cleanup could not be verified; pending recovery evidence was retained when observable.',
+        spanish: 'No se pudo verificar la base original ni la limpieza de la referencia temporal; se conservó la evidencia pendiente cuando pudo observarse.',
     },
     {
         recovery: {

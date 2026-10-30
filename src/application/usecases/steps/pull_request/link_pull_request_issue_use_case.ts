@@ -10,6 +10,7 @@ import {
     runLinkPullRequestIssue,
 } from './link_pull_request_issue_workflow';
 import {
+    ApplicationError,
     toApplicationError,
     type ApplicationErrorOptions,
 } from '../../../errors/application_error';
@@ -45,6 +46,7 @@ export class LinkPullRequestIssueUseCase implements ParamUseCase<LinkPullRequest
             logError(semanticError);
             const recoveryStep = error instanceof PullRequestIssueLinkOperationError
                 ? describeRecovery(error)
+                : error instanceof ApplicationError ? error.message
                 : 'Unable to link the pull request to its issue. Inspect the PR base and description before rerunning the workflow.';
             return [new Result({
                 id: this.taskId,
@@ -78,5 +80,5 @@ function describeRecovery(error: PullRequestIssueLinkOperationError): string {
     if (retainedState.length === 0) {
         return 'Pull-request issue linkage failed, but the original base and description were restored. Re-run the workflow.';
     }
-    return `Pull-request issue linkage failed and retained ${retainedState.join(' and ')}. Restore that PR state, then re-run the workflow.`;
+    return `Pull-request issue linkage failed and retained ${retainedState.join(' and ')}. Re-run the current PR workflow to recover pending state; inspect ownership if recovery remains blocked.`;
 }

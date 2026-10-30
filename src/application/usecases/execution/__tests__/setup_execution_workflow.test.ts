@@ -39,11 +39,11 @@ function dependencies(labels: string[], body: string, previousConfiguration?: ob
       isIssue: jest.fn(),
       getHeadBranch: jest.fn(),
       getLabels: jest.fn(async () => labels),
-      getDescription: jest.fn(async () => body),
+      getDescription: jest.fn(async (_number?: number) => body),
       getTitle: jest.fn(async () => 'Current normalized title'),
     },
     organizationSetupPort: { getTokenUser: jest.fn() },
-    configurationPort: { get: jest.fn(async () => previousConfiguration as never) },
+    configurationPort: { get: jest.fn(async (_number?: number) => previousConfiguration as never) },
     branchVersionResolver: { resolve: jest.fn(async (input) => ({ ...input, completed: true })) },
   };
 }
@@ -158,3 +158,37 @@ it('does not admit a fenced consumer field from an otherwise incomplete live bug
   const ports=dependencies(['bugfix'],'### Description\nFailure\n### Reproducing the issue\nSteps\n```\n### VaultStadio Version\n1.2.3\n```');const profile=createIssueWorkflowProfile(['bugfix'],{bugfix:{'copilot Version':'VaultStadio Version'}});
   expect(await runSetupExecution(context({issueWorkflowProfile:profile}),ports)).toMatchObject({state:{issueWorkflowAdmission:{status:'invalid',missingHeadings:['VaultStadio Version']}}});
 });
+
+const pendingMarker = '<!-- copilot:pr-issue-link:v1;pr=10;issue=42;base=develop;state=pending -->';
+it.each([
+  [undefined, 'main', 'develop', true],
+  [{ parentBranch: 'main' }, 'main', 'develop', true],
+  [{ parentBranch: 'develop' }, 'main', 'develop', true],
+  [undefined, 'main', 'release/2.0', true],
+  [undefined, 'develop', 'develop', true],
+  [{ parentBranch: 'develop' }, 'main', 'develop', false],
+] as const)('projects durable parent authority for pending setup %#', async (previous, base, parent, pending) => {
+  const body = pending ? `Human\n\nResolves #42\n\n${pendingMarker.replace('base=develop', `base=${encodeURIComponent(parent)}`)}` : 'Human';
+  const ports = dependencies(['feature'], body, previous);
+  ports.issueSetupPort.getDescription.mockImplementation(async number => number === 10 ? body :
+    '### Description of the idea or improvement\nUseful\n### Current limitations or challenges\nMissing\n### Expected impact\nImprovement');
+  ports.configurationPort.get.mockImplementation(async number => (number === 42
+    ? { parentBranch: parent, workingBranch: 'feature/42-work' } : previous) as never);
+  const result = await runSetupExecution(context({ isIssue: false, isPullRequest: true,
+    eventName: 'pull_request', pullRequest: { number: 10, head: 'feature/42-work', base } }), ports);
+  expect(result).toMatchObject({ status: 'configured', state: { configuration: { parentBranch: parent } } });
+  expect(ports.issueSetupPort.getDescription).toHaveBeenCalledWith(10);
+  if (previous?.parentBranch === 'main') {
+    for (const parentBranch of ['../unsafe', 'conflicting-parent']) {
+      ports.configurationPort.get.mockImplementation(async () => ({ parentBranch, workingBranch: 'feature/42-work' }) as never);
+      await expect(runSetupExecution(context({ isIssue: false, isPullRequest: true, eventName: 'pull_request',
+        pullRequest: { number: 10, head: 'feature/42-work', base } }), ports)).rejects.toThrow();
+    }
+  }
+});
+it.each(['<!-- copilot:pr-issue-link:invalid', `Human\n\nResolves #42\n\n${pendingMarker.replace('pr=10', 'pr=11')}`])(
+  'blocks ambiguous or foreign setup parent metadata %#', async body => {
+    const ports = dependencies([], body);
+    await expect(runSetupExecution(context({ isIssue: false, isPullRequest: true,
+      eventName: 'pull_request', pullRequest: { number: 10, head: 'feature/42-work', base: 'main' } }), ports)).rejects.toThrow();
+  });

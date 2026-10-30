@@ -1,3 +1,4 @@
+import { readPendingPullRequestLink, PendingPullRequestLinkError } from '../../domain/pull_request_issue_link_state';
 import { CONFIG_SCHEMA_VERSION, Config, requireCurrentConfigurationPayload } from "../../data/model/config";
 import type { ExecutionConfigurationQuery } from "../../application/ports/execution_configuration_ports";
 import type { ConfigurationPersistenceContext } from '../../application/ports/configuration_store_ports';
@@ -24,6 +25,15 @@ export class ConfigurationHandler extends IssueContentInterface {
 
     override updateContent = (description: string | undefined, content: string | undefined): string | undefined => {
         if (description === undefined || content === undefined) return undefined;
+        const pending = readPendingPullRequestLink(description);
+        if (pending.kind === 'blocked') throw new PendingPullRequestLinkError(pending.reason);
+        if (pending.kind === 'pending') {
+            const payload: unknown = JSON.parse(content);
+            if (!payload || typeof payload !== 'object' || !('parentBranch' in payload)
+                || payload.parentBranch !== pending.record.originalBaseBranch) {
+                throw new PendingPullRequestLinkError('ownership');
+            }
+        }
         const updated = writeConfigurationBlock(description, content);
         if (updated === undefined) logError('The content has a problem with open-close tags: stored configuration.');
         return updated;

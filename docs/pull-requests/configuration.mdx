@@ -54,7 +54,7 @@ PAT are bound by the action runtime; capability requests contain neither. PR and
 issue numbers must be positive safe integers, branch refs must be safe, and the
 provider target is derived from the configured repository rather than an event
 URL. The temporary marker format, default-branch observation delay, compensation
-order, and exact-body restoration cannot be weakened by workflow inputs.
+order, and owned-reference cleanup cannot be weakened by workflow inputs.
 
 Linkage inspection uses the configured token with GitHub GraphQL
 `closingIssuesReferences`; it never requests a public HTML page. Private and
@@ -73,3 +73,28 @@ supported installation; `provider.contract-invalid` requires integration review
 (including the fixed reference limit). Rate limits and transport outages retain
 their retryable diagnostics. Inspect the run's retained-state guidance before
 retrying an interrupted operation. No additional permission is introduced.
+
+
+A later `opened`, `reopened`, `synchronize`, `ready_for_review` or eligible
+`edited` invocation repairs an interrupted pending link before ordinary work.
+Recovery uses the recorded original base, even if the new event sees the temporary
+default base. It verifies native PR/head repository/ref ownership and the exact
+operation, restores and verifies the original base, then removes only its own
+reference and marker. Concurrent prose and configuration remain intact.
+
+Interrupted recovery from a body record requires a native same-repository head.
+Foreign-head pending records retain evidence for maintainer inspection; a body
+marker cannot grant retarget authority. Fresh fork linkage can still compensate
+its own operation in the same invocation.
+
+The pending original parent takes precedence over the mutable target when loading
+configuration. Stale invocations and blocked linkage do not persist configuration;
+a temporary target cannot silently replace the recorded `parentBranch`. Failed or
+unverified restoration retains pending evidence. Rerun the current PR workflow
+after a transient failure. Inspect identity/base/operation conflicts when recovery
+remains blocked; do not delete the marker to silence the failure.
+
+Existing V1 pending records remain recoverable. New V2 records bind the native
+head repository/ref and an operation ID. Finish or reconcile pending V2 recovery
+with the newer runtime before rolling back to a runtime that cannot read V2.
+No input, storage backend or extra credential permission is required.

@@ -155,6 +155,13 @@ describe('P2-E issue and pull-request context projections', () => {
       target: 'pull request', number: 84, desiredAssigneesCount: 1, creator: 'bob',
     });
     expect(contexts.linkIssue).toMatchObject({ issueNumber: 42, originalBaseBranch: 'develop', defaultBranch: 'main' });
+    const pending = { ...source, pullRequest: { ...source.pullRequest, base: 'main',
+      headSha: 'a'.repeat(40), headRepository: 'owner/repo',
+      body: 'Human\n\nResolves #42\n\n<!-- copilot:pr-issue-link:v1;pr=84;issue=42;base=develop;state=pending -->' } };
+    expect(projectPullRequestWorkflowStepContexts(pending).linkIssue).toMatchObject({ originalBaseBranch: 'develop',
+      expectedHeadSha: 'a'.repeat(40), expectedHeadRepository: 'owner/repo', expectedHeadRef: source.pullRequest.head });
+    expect(projectPullRequestDescriptionContext(pending).pullRequest.baseBranch).toBe('develop');
+    expect(projectPullRequestWorkflowStepContexts({ ...source, currentConfiguration: { parentBranch: 'release/2.0' } }).linkIssue.originalBaseBranch).toBe('release/2.0');
     expect(contexts.syncLabels.sizeLabels).toEqual(['size: S', 'size: M']);
     expect(contexts.description).toMatchObject({ mode: 'append', membersOnly: true });
     expectDataOnly(contexts);
@@ -165,6 +172,9 @@ describe('P2-E issue and pull-request context projections', () => {
     source.eventName = 'issue_comment';
     source.pullRequest.number = -1;
     expect(projectPullRequestDescriptionContext(source).pullRequest.number).toBe(42);
+    source.pullRequest.body = undefined as never;
+    expect(projectPullRequestDescriptionContext(source).pullRequest.body).toBe('');
+    expect(projectPullRequestWorkflowStepContexts(source).linkIssue.originalBaseBranch).toBe('develop');
   });
 
   it('freezes explicit configured Project Size mappings and copied Project references', () => {

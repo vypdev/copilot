@@ -1,8 +1,10 @@
+import type { PullRequestLinkIdentity } from '../../domain/pull_request_issue_link_state';
 import type { PullRequestReviewDiffSnapshot } from './bugbot_pull_request_read_ports';
 import type { BugbotSourceCoverage } from '../../domain/bugbot/context';
 
 export interface PullRequestDescriptionDetails {
     readonly body: string;
+    readonly identity?: PullRequestLinkIdentity;
     readonly headBranch: string;
     readonly baseBranch: string;
 }

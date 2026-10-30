@@ -152,6 +152,13 @@ describe("PullRequestUseCase", () => {
     expect(mockSyncLabelsInvoke).toHaveBeenCalledWith(expect.objectContaining({ pullRequestNumber: 7 }));
     expect(mockLinkProjectInvoke.mock.invocationCallOrder[0]).toBeLessThan(mockSyncLabelsInvoke.mock.invocationCallOrder[0]);
     expect(mockCheckPriorityInvoke).toHaveBeenCalledWith(expect.objectContaining({ contentNumber: 7 }));
+    mockLinkIssueInvoke.mockResolvedValueOnce([]).mockResolvedValueOnce([new Result({ success: false })]);
+    mockSyncLabelsInvoke.mockClear();
+    mockUpdateDescriptionInvoke.mockClear();
+    const blocked = await useCase.invoke(param);
+    expect(blocked.some(result => !result.success)).toBe(true);
+    expect(mockSyncLabelsInvoke).not.toHaveBeenCalled();
+    expect(mockUpdateDescriptionInvoke).not.toHaveBeenCalled();
   });
 
   it("reviews opened and synchronized PRs, but not label-only events", async () => {
@@ -186,6 +193,9 @@ describe("PullRequestUseCase", () => {
     expect(mockUpdateTitleInvoke).not.toHaveBeenCalled();
     expect(mockUpdateDescriptionInvoke).not.toHaveBeenCalled();
     expect(mockLinkIssueInvoke).not.toHaveBeenCalled();
+    const pending = await useCase.reviewOnly(minimalExecution({ pullRequest: { body: '<!-- copilot:pr-issue-link:pending -->' } }));
+    expect(pending[0].errors[0].code).toBe('workflow.stale');
+    expect(mockReviewPotentialProblemsInvoke).toHaveBeenCalledTimes(1);
     await useCase.reviewOnly(minimalExecution({ eventName: 'pull_request_review' }));
     expect(mockReviewPotentialProblemsInvoke).toHaveBeenCalledTimes(1);
   });
@@ -208,7 +218,7 @@ describe("PullRequestUseCase", () => {
     }));
     expect(authorization.isActorAllowedToUseMemberOnlyAutomation).toHaveBeenCalledWith('alice');
     expect(mockReviewPotentialProblemsInvoke).toHaveBeenCalledTimes(allowed ? 1 : 0);
-    for (const invoke of [mockUpdateDescriptionInvoke, ...Object.values(workflowSteps).map(step => step.invoke)]) {
+    for (const invoke of [mockUpdateDescriptionInvoke, ...Object.values(workflowSteps).filter(step => step.invoke !== mockLinkIssueInvoke).map(step => step.invoke)]) {
       expect(invoke).not.toHaveBeenCalled();
     }
   });
@@ -250,6 +260,15 @@ describe("PullRequestUseCase", () => {
     expect(authorization.isActorAllowedToUseMemberOnlyAutomation).toHaveBeenCalledWith('alice');
     expect(authorization.isActorAllowedToModifyFiles).not.toHaveBeenCalled();
     expect(mockReviewPotentialProblemsInvoke).toHaveBeenCalledTimes(1);
+    authorization.isActorAllowedToUseMemberOnlyAutomation.mockResolvedValue(false);
+    mockUpdateDescriptionInvoke.mockClear();
+    await useCase.invoke(param);
+    await useCase.invoke(minimalExecution({ ai: param.ai, pullRequest: { isOpened: false, isSynchronize: true, action: 'synchronize' } }));
+    expect(mockReviewPotentialProblemsInvoke).toHaveBeenCalledTimes(1);
+    expect(mockUpdateDescriptionInvoke).not.toHaveBeenCalled();
+    const unbound = new PullRequestUseCase({ taskId: 'description', invoke: mockUpdateDescriptionInvoke }, workflowSteps);
+    await unbound.invoke(param);
+    expect(mockUpdateDescriptionInvoke).not.toHaveBeenCalled();
   });
 
   it("when PR metadata is edited, normalizes only the title", async () => {
@@ -418,6 +437,8 @@ describe('merged PR synchronization recommendation retirement', () => {
       expect(mockCloseIssueInvoke).toHaveBeenCalledTimes(1);
       return [new Result({ id: 'retire', success: true, executed: true })];
     }) };
+    jest.clearAllMocks();
+    for (const invoke of [mockUpdateTitleInvoke, mockUpdateDescriptionInvoke, mockReviewPotentialProblemsInvoke, mockLinkIssueInvoke]) invoke.mockResolvedValue([]);
     const useCase = new PullRequestUseCase({ taskId: 'description', invoke: mockUpdateDescriptionInvoke }, { ...workflowSteps, retireBranchSync: retire });
     const results = await useCase.invoke(minimalExecution({ issueNumber: 42, pullRequest: { isOpened: false, isClosed: true, isMerged: true, action: 'closed' } }));
     expect(retire.invoke).toHaveBeenCalledWith({ issueNumber: 42, locale: 'en-US', trustedBotLogin: 'bot' });
@@ -425,8 +446,28 @@ describe('merged PR synchronization recommendation retirement', () => {
   });
   it('does not retire recommendations for an unmerged closed PR', async () => {
     const retire = { taskId: 'retire', invoke: jest.fn().mockResolvedValue([]) };
+    jest.clearAllMocks();
+    for (const invoke of [mockUpdateTitleInvoke, mockUpdateDescriptionInvoke, mockReviewPotentialProblemsInvoke, mockLinkIssueInvoke]) invoke.mockResolvedValue([]);
     const useCase = new PullRequestUseCase({ taskId: 'description', invoke: mockUpdateDescriptionInvoke }, { ...workflowSteps, retireBranchSync: retire });
     await useCase.invoke(minimalExecution({ issueNumber: 42, pullRequest: { isOpened: false, isClosed: true, isMerged: false, action: 'closed' } }));
     expect(retire.invoke).not.toHaveBeenCalled();
   });
+  it.each(['synchronize', 'ready_for_review', 'edited'])('recovers pending linkage before ordinary %s work and stops on failure', async action => {
+    jest.clearAllMocks();
+    for (const invoke of [mockUpdateTitleInvoke, mockUpdateDescriptionInvoke, mockReviewPotentialProblemsInvoke, mockLinkIssueInvoke]) invoke.mockResolvedValue([]);
+    const useCase = new PullRequestUseCase({ taskId: 'description', invoke: mockUpdateDescriptionInvoke },
+      workflowSteps, { taskId: 'review', invoke: mockReviewPotentialProblemsInvoke });
+    const failed = [new Result({ success: false, executed: true, steps: ['Retained recovery state'] })];
+    mockLinkIssueInvoke.mockResolvedValueOnce(failed);
+    const execution = minimalExecution({ pullRequest: { action, isOpened: false, isSynchronize: action === 'synchronize' } });
+    expect(await useCase.invoke(execution)).toEqual(failed);
+    expect(mockLinkIssueInvoke).toHaveBeenCalledWith(expect.objectContaining({ recoveryOnly: true }));
+    expect(mockUpdateDescriptionInvoke).not.toHaveBeenCalled();
+    expect(mockUpdateTitleInvoke).not.toHaveBeenCalled();
+    expect(mockReviewPotentialProblemsInvoke).not.toHaveBeenCalled();
+    await useCase.invoke(execution);
+    const next = action === 'edited' ? mockUpdateTitleInvoke : mockReviewPotentialProblemsInvoke;
+    expect(next.mock.invocationCallOrder[0]).toBeGreaterThan(mockLinkIssueInvoke.mock.invocationCallOrder[1]);
+  });
+
 });

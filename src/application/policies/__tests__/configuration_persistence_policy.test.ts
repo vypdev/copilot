@@ -65,3 +65,17 @@ it.each(['open', undefined])('retains normal persistence without native closed e
     expect(shouldPersistConfiguration({ isSingleAction: false, eventName: 'issues', inputs: { issue: { state } },
         singleAction: { isRecommendStepsAction: false } })).toBe(true);
 });
+
+
+it('skips stale or retained-link PR completion state before the configuration writer', () => {
+  for (const error of [{ code: 'workflow.stale' }, { code: 'provider.unavailable', recovery: { id: 'pull-request-link-base-and-reference-retained' } }]) {
+    expect(shouldPersistConfiguration({ isPullRequest: true, isSingleAction: false,
+      singleAction: { isRecommendStepsAction: false }, currentConfiguration: { results: [{ errors: [error] }] } })).toBe(false);
+  }
+});
+it('retains ordinary issue persistence and verified current PR completion', () => {
+  const normal = { isSingleAction: false, singleAction: { isRecommendStepsAction: false } };
+  expect(shouldPersistConfiguration({ ...normal, isPullRequest: true, currentConfiguration: { results: [{ errors: [] }] } })).toBe(true);
+  expect(shouldPersistConfiguration({ ...normal, isPullRequest: false,
+    currentConfiguration: { results: [{ errors: [{ code: 'workflow.stale' }] }] } })).toBe(true);
+});

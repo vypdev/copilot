@@ -150,6 +150,23 @@ second skipped check.
 Metadata-only body/title edits do not start the PR workflow; new commits and
 lifecycle changes still do.
 
+## Interrupted issue linkage
+
+Temporary default-branch retargeting retains a bounded recovery record containing
+the original parent. Eligible PR lifecycle invocations recover it before normal
+metadata, description or review work. A newer head on the same native PR and
+repository/ref may repair metadata. An obsolete event can finish that repair but
+cannot continue with stale enrichment or configuration writes. Ready-for-review
+repairs pending state and then performs its normal review without repeating
+opening enrichment. The PAT-authored analysis-only exception gains no write
+capability.
+
+A verified original base is required before removing the owned temporary record.
+Provider failures, changed ownership or conflicting bases retain evidence and
+show recovery guidance in the existing run result and Job Summary. No additional
+success comment is published. See [fixed linkage safety rules](/pull-requests/configuration#fixed-linkage-safety-rules)
+for rerun and rollback guidance.
+
 ## Next steps
 
 - **[Workflow setup](/pull-requests/workflow-setup)** — Enable the action for pull_request.
