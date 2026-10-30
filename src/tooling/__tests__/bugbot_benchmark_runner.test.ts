@@ -261,3 +261,21 @@ describe('real benchmark generated-literal verification', () => {
         expect(result.predictions[literal.id]).toEqual([expect.objectContaining({ id: 'counter', codeSnippet: candidate.codeSnippet })]);
     });
 });
+
+describe('benchmark whole-response batch compatibility', () => {
+    const literal = { ...testCase, file: 'fixture.py', language: 'python', diff: ' source = """a\n b"""\n+assert ci == 0' };
+    it.each([false, true])('uses every verification batch and fails closed on an invalid final batch=%s', async fail => {
+        const original = Array.from({ length: 21 }, (_, index) => ({ id: `candidate-${index}`, title: 'Counter mismatch',
+            description: 'The source contradicts the counter.', file: 'fixture.py', line: 3, codeSnippet: 'assert ci == 0', evidence: 'Concrete source.' }));
+        const query = jest.fn(async request => {
+            if (request.agentId !== 'bugbot-literal-candidate-verification') return { outputLocale: 'en-US', findings: original };
+            const properties = request.options.schema.properties; const ids = properties.findings.items.properties.id.enum as string[];
+            return { outputLocale: 'en-US', verification_id: properties.verification_id.enum[0],
+                findings: fail && ids.includes('candidate-20') ? [] : ids.map(id => original.find(item => item.id === id)), rejected_ids: [] };
+        });
+        const result = runBugbotBenchmarkAgent({ schemaVersion: 1, cases: [literal] }, { query }, {} as never);
+        if (fail) await expect(result).rejects.toThrow('verification');
+        else expect((await result).predictions[literal.id]).toHaveLength(21);
+        expect(query).toHaveBeenCalledTimes(3);
+    });
+});

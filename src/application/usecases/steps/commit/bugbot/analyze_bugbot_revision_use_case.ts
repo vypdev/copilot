@@ -73,7 +73,6 @@ export async function analyzeBugbotRevision(
                             { partitionId: partition.id, headSha: partition.headSha },
                             { enabled: hasLiteralWitnesses, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) },
                         );
-                        dependencies.telemetry.observeResponse(response);
                         dependencies.telemetry.endPartition(true);
                         logInfo(`Bugbot reviewer completed partition ${partition.ordinal}/${partition.total}.`);
                         return response;
@@ -99,7 +98,6 @@ export async function analyzeBugbotRevision(
                 targetLocale,
                 { enabled: hasLiteralWitnesses, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) },
             );
-            dependencies.telemetry.observeResponse(response);
             return response;
         });
     logInfo(`Bugbot reviewer completed in ${Date.now() - startedAt}ms.`);

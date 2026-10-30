@@ -2,7 +2,7 @@ import type { BugbotFinding } from '../../../domain/bugbot/finding';
 import {
   applyLiteralVerification, assertLiteralVerificationPrompt, literalVerificationId,
   MAX_LITERAL_VERIFICATION_CANDIDATES, MAX_LITERAL_VERIFICATION_CANDIDATE_BYTES,
-  MAX_LITERAL_VERIFICATION_PROMPT_BYTES,
+  MAX_LITERAL_VERIFICATION_PROMPT_BYTES, planLiteralVerificationBatches,
 } from '../bugbot_literal_verification_policy';
 
 const id = 'a'.repeat(64);
@@ -83,4 +83,34 @@ it('treats a prototype-like identity as inert map data', () => {
   const candidate = finding({ id: '__proto__' });
   expect(applyLiteralVerification(id, id, [candidate], [], ['__proto__'])).toEqual([]);
   expect(Object.prototype).not.toHaveProperty('evidence');
+});
+
+
+describe('bounded whole-response verification planning', () => {
+  const candidates = (count: number) => Array.from({ length: count }, (_, index) => finding({ id: `candidate-${index}` }));
+  it.each([[1, [1]], [20, [20]], [21, [20, 1]], [200, Array(10).fill(20)]])('retains all %s schema-valid candidates in bounded ordered batches', (count, sizes) => {
+    const original = Object.freeze(candidates(count as number).map(item => Object.freeze(item)));
+    const plan = planLiteralVerificationBatches(original);
+    expect(plan.map(batch => batch.length)).toEqual(sizes);
+    expect(plan.flat()).toEqual(original);
+    expect(plan[0]).not.toBe(original);
+  });
+  it.each([0, 201])('rejects %s candidates outside the initial review schema', count => {
+    expect(() => planLiteralVerificationBatches(candidates(count))).toThrow('200');
+  });
+  it('rejects duplicates across separate batches before any queries', () => {
+    const original = candidates(21); original[20] = original[0];
+    expect(() => planLiteralVerificationBatches(original)).toThrow();
+  });
+  it('preflights a later oversized batch instead of returning a partial plan', () => {
+    const original = candidates(21); original[20].evidence = 'Ω'.repeat(16_000);
+    expect(() => planLiteralVerificationBatches(original)).toThrow('32000');
+  });
+  it('preflights combined UTF-8 size within a full batch', () => {
+    expect(() => planLiteralVerificationBatches(candidates(20).map(item => ({ ...item, evidence: 'Ω'.repeat(1_000) })))).toThrow('32000');
+  });
+  it('keeps prototype-like identities inert across batch boundaries', () => {
+    const original = candidates(21); original[20].id = '__proto__';
+    expect(planLiteralVerificationBatches(original).flat()).toEqual(original);
+  });
 });

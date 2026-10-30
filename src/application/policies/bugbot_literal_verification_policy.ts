@@ -5,6 +5,26 @@ import { ApplicationError } from '../errors/application_error';
 export const MAX_LITERAL_VERIFICATION_CANDIDATES = 20;
 export const MAX_LITERAL_VERIFICATION_CANDIDATE_BYTES = 32_000;
 export const MAX_LITERAL_VERIFICATION_PROMPT_BYTES = 128_000;
+export const MAX_LITERAL_VERIFICATION_BATCHES = 10;
+export const MAX_INITIAL_LITERAL_VERIFICATION_CANDIDATES = MAX_LITERAL_VERIFICATION_CANDIDATES * MAX_LITERAL_VERIFICATION_BATCHES;
+
+/** Validate the whole response before querying; preserve every original candidate. */
+export function planLiteralVerificationBatches(candidates: readonly BugbotFinding[]): readonly (readonly BugbotFinding[])[] {
+  if (candidates.length === 0 || candidates.length > MAX_INITIAL_LITERAL_VERIFICATION_CANDIDATES) {
+    throw new ApplicationError('agent.failed', 'Generated-source verification requires between 1 and 200 initial candidates, matching the review schema. No complete review was verified.');
+  }
+  const batches: BugbotFinding[][] = [];
+  const seen = new Set<string>();
+  for (let offset = 0; offset < candidates.length; offset += MAX_LITERAL_VERIFICATION_CANDIDATES) {
+    const batch = candidates.slice(offset, offset + MAX_LITERAL_VERIFICATION_CANDIDATES);
+    for (const id of originalCandidates(batch).keys()) {
+      if (seen.has(id)) throw invalidVerification();
+      seen.add(id);
+    }
+    batches.push(batch);
+  }
+  return batches;
+}
 
 export function literalVerificationId(source: string, candidates: readonly BugbotFinding[]): string {
   originalCandidates(candidates);

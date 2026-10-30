@@ -199,3 +199,32 @@ describe('generated literal verification at the native query boundary', () => {
     expect(query).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('native bounded verification batch execution', () => {
+  const config = { provider: 'codex' as const, model: 'reviewer' };
+  const candidates = (count: number) => Array.from({ length: count }, (_, index) => ({ id: `candidate-${index}`,
+    title: 'Counter mismatch', description: 'Executed source contradicts the assertion.', file: 'fixture.py', line: 18,
+    codeSnippet: 'assert ci == 0', evidence: 'Independent input and source evidence.' }));
+  it('returns the full 21-candidate ordinary response after both batches', async () => {
+    const original = candidates(21);
+    const query = jest.fn(async request => {
+      if (request.agentId !== 'bugbot-literal-candidate-verification') return { ...validResponse, findings: original };
+      const properties = request.options.schema.properties;
+      return { outputLocale: 'en-US', verification_id: properties.verification_id.enum[0],
+        findings: properties.findings.items.properties.id.enum.map((id: string) => original.find(item => item.id === id)), rejected_ids: [] };
+    });
+    const result = await queryBugbotFindings({ query }, config, 'source', 'en-US', { enabled: true }) as { findings: unknown[] };
+    expect(result.findings).toHaveLength(21); expect(query).toHaveBeenCalledTimes(3);
+  });
+  it('keeps the three-attempt bound at 33 calls when the last of ten batches fails', async () => {
+    const original = candidates(200);
+    const query = jest.fn(async request => {
+      if (request.agentId !== 'bugbot-literal-candidate-verification') return { ...validResponse, findings: original };
+      const properties = request.options.schema.properties; const ids = properties.findings.items.properties.id.enum as string[];
+      return { outputLocale: 'en-US', verification_id: properties.verification_id.enum[0],
+        findings: ids.includes('candidate-199') ? [] : ids.map(id => original.find(item => item.id === id)), rejected_ids: [] };
+    });
+    await expect(queryBugbotPartitionFindings({ query }, config, 'source', 'en-US', expected, { enabled: true })).rejects.toThrow('verification');
+    expect(query).toHaveBeenCalledTimes(33);
+  });
+});

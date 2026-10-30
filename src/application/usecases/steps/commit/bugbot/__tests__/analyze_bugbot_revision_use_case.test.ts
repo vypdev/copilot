@@ -467,3 +467,36 @@ it('does not certify a clean legacy review when the provider has no usable respo
     agent: { query: jest.fn().mockResolvedValue(undefined) }, telemetry: new BugbotReviewTelemetry(operation()),
   })).resolves.toBeUndefined();
 });
+
+describe('whole-partition completion across candidate batches', () => {
+  it.each([false, true])('counts all batch work and completes only after the final valid batch, fail=%s', async fail => {
+    const changes = [{ filename: 'fixture.py', status: 'modified', additions: 1, deletions: 0,
+      patch: ' source = """a\n b"""\n+assert rows[2]["ci"] == 0' }];
+    const plan = buildReviewDiffPlan({ prHeadSha: headSha, changes });
+    const original = Array.from({ length: 21 }, (_, index) => ({ id: `candidate-${index}`, title: 'Counter mismatch',
+      description: 'The source contradicts the counter.', file: 'fixture.py', line: 3, codeSnippet: 'assert ci == 0', evidence: 'Concrete input and source.' }));
+    const telemetry = new BugbotReviewTelemetry(operation()); const prompts: string[] = []; const responses: string[] = [];
+    const sent = (value: Record<string, unknown>) => { responses.push(JSON.stringify(value)); return value; };
+    const query = jest.fn(async (request: FindingsQueryRequest) => {
+      prompts.push(request.prompt);
+      if (request.agentId !== 'bugbot-literal-candidate-verification') return sent({ ...attestedResponse(request.prompt, 1), findings: original });
+      expect(telemetry.snapshot('completed').completedAnalysisPartitions).toBe(0);
+      const properties = (request.options!.schema as { properties: { verification_id: { enum: string[] }; findings: { items: { properties: { id: { enum: string[] } } } } } }).properties;
+      const ids = properties.findings.items.properties.id.enum;
+      if (fail && ids.includes('candidate-20')) throw new Error('final batch offline');
+      return sent({ outputLocale: 'en-US', verification_id: properties.verification_id.enum[0], findings: [], rejected_ids: ids });
+    });
+    const result = analyzeBugbotRevision(operation(), context(plan.partitions), { agent: { query }, telemetry });
+    if (fail) {
+      await expect(result).rejects.toThrow('final batch offline');
+      expect(query).toHaveBeenCalledTimes(9);
+      expect(telemetry.snapshot('failed').completedAnalysisPartitions).toBe(0);
+    } else {
+      expect((await result)?.activeFindings).toEqual([]);
+      expect(query).toHaveBeenCalledTimes(3);
+      expect(telemetry.snapshot('completed').completedAnalysisPartitions).toBe(1);
+    }
+    expect(telemetry.snapshot(fail ? 'failed' : 'completed').promptCharacters).toBe(prompts.reduce((sum, value) => sum + value.length, 0));
+    expect(telemetry.snapshot(fail ? 'failed' : 'completed').responseCharacters).toBe(responses.reduce((sum, value) => sum + value.length, 0));
+  });
+});

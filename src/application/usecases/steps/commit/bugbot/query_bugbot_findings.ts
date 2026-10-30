@@ -37,6 +37,7 @@ export async function queryBugbotFindings(
         prompt,
         options: bugbotQueryOptions(BUGBOT_RESPONSE_SCHEMA),
     });
+    verification?.observeResponse?.(response);
     if (response == null || typeof response !== 'object' || Array.isArray(response)) {
         return verification?.enabled ? verifyGeneratedLiteralFindings(repository, configuration, prompt, response, targetLocale, verification.observePrompt, verification.observeResponse) : response;
     }
@@ -66,12 +67,14 @@ export async function queryBugbotPartitionFindings(
     const schema = buildBugbotPartitionResponseSchema(expected);
     for (let attempt = 1; attempt <= MAX_PARTITION_QUERY_ATTEMPTS; attempt += 1) {
         try {
+            if (attempt > 1) verification?.observePrompt?.(prompt);
             const response = await repository.query({
                 configuration,
                 agentId: AGENT_PLAN,
                 prompt,
                 options: bugbotQueryOptions(schema),
             });
+            verification?.observeResponse?.(response);
             const validation = validateAgentOutputLocale(response, targetLocale);
             if (validation.kind === 'invalid') {
                 throw new ApplicationError('locale.output-invalid', agentOutputLocaleFailureMessage(validation));

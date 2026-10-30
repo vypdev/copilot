@@ -739,7 +739,8 @@
     },
     "integrity": "SHA256 correlation to exact source prompt and normalized candidate set; exhaustive original IDs, immutable file/existing anchor, concrete evidence, locale. Invalid output/provider failure fails analysis closed.",
     "history": "Cannot resolve/dismiss/reopen historical findings; preserves unrelated task-2 resolutions and removes original candidate/resolution conflicts.",
-    "primaryCandidateAndVerificationTranscriptsCaptured": false
+    "primaryCandidateAndVerificationTranscriptsCaptured": false,
+    "scope": "Measured v7 runtime; subsequent compatible orchestration/telemetry hardening is recorded separately below."
   },
   "conditions": [
     "Initial four-case exploration uses a different corpus and is not a controlled comparison with six-case measurements.",
@@ -1911,6 +1912,23 @@
       "change": "Read each legacy Python patch once and reuse the same string for rendering and trusted activation, removing an unreachable second nullish fallback. Add multiple retained/unavailable witnesses and exact mixed-indentation regression coverage.",
       "sourceSha256": "d7391f955035c3df7c43d0cfdd4b4a64de6914651b886c754f07b733ee08eca0",
       "benchmarkImpact": "No change to the measured benchmark adapter, its prompts/corpus or shared verifier behavior for valid responses. Recorded bundle identities and failed scores remain intact."
+    },
+    "boundedBatches": {
+      "initialCandidates": 200,
+      "batches": 10,
+      "candidatesPerBatch": 20,
+      "candidateUtf8BytesPerBatch": 32000,
+      "completePromptUtf8BytesPerBatch": 128000,
+      "maximumQueriesPerPartitionAcrossThreeAttempts": 33,
+      "integrity": "Preflight every batch and all global identities before querying. Verify all batches sequentially; never publish a partial prefix. Per-batch identity, locale, proof, file/anchor and history checks remain intact.",
+      "telemetry": "Observe each initial/retried and secondary prompt/response at the query boundary without recounting the aggregate.",
+      "measurementScope": "No change to recorded corpus, shared instructions or single-batch provider prompt/schema/configuration; historical measured bundle identities and all scores are retained. This orchestration follow-up is validated by 21/200-candidate application, benchmark, failure and telemetry controls, not presented as a new model sample.",
+      "sourceSha256": {
+        "src/application/policies/bugbot_literal_verification_policy.ts": "13214a9972e44ee8a50ebda856da3290d9060922131e5d03004b5f8872500897",
+        "src/application/usecases/steps/commit/bugbot/verify_generated_literal_findings.ts": "841a8b36ba0ae23fb90d3fe4630590c01f9ef82ecf9716f5fe4a3e16e2238e88",
+        "src/application/usecases/steps/commit/bugbot/query_bugbot_findings.ts": "14afc495190abc5b62c488266b220ac7ae1a774a491371a085447ffae9c09bb0",
+        "src/application/usecases/steps/commit/bugbot/analyze_bugbot_revision_use_case.ts": "e497db3c80a71331eaf080801a7ad271d5b3eb13d0efde9242243b68b96f4ac1"
+      }
     }
   }
 }

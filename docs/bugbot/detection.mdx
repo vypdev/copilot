@@ -477,10 +477,14 @@ and existing code anchor. Wrong locale, incomplete decisions or provider failure
 leave analysis failed/incomplete rather than declaring the review clean.
 
 The verifier uses the same configured provider, model and effort. Each query has
-fixed limits of 20 candidates, 32,000 UTF-8 candidate bytes and 128,000 complete
-prompt bytes. Exceeding a limit requires narrowing the scope and rechecking.
-Ordinary reviews add at most one verification query; partition review keeps its
-existing three attempts, with at most six total queries. Empty candidates and
+up to 200 initial candidates, matching the review schema, in at most ten
+sequential batches of 20. Each batch retains fixed limits of 32,000 UTF-8 candidate
+bytes and 128,000 complete-prompt bytes. All batch identities and byte sizes are
+validated before the first query; exceeding a byte limit requires narrowing the
+scope and rechecking. Every batch must validate before results are published.
+Ordinary reviews add at most ten verification queries; partition review keeps its
+existing three attempts, with at most 33 total queries. Analysis telemetry counts
+all initial/retried and verification prompts/responses. Empty candidates and
 contexts without retained witnesses use the existing path. Rejected hypotheses
 cannot resolve, dismiss or reopen historical findings. There is no new public
 configuration, provider permission or workflow step.

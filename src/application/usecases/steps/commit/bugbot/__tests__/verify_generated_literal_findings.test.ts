@@ -124,7 +124,7 @@ it('propagates a provider failure without manufacturing a verdict', async () => 
 it.each([
   { outputLocale: 'en-US' },
   { outputLocale: 'en-US', findings: [{}] },
-  { outputLocale: 'en-US', findings: Array.from({ length: 21 }, (_, index) => candidate({ id: `candidate-${index}` })) },
+  { outputLocale: 'en-US', findings: Array.from({ length: 201 }, (_, index) => candidate({ id: `candidate-${index}` })) },
 ])('rejects missing or excessive hypotheses before issuing a verification query', async response => {
   const agent = { query: jest.fn() };
   await expect(verifyGeneratedLiteralFindings(agent, config, 'source', response, 'en-US')).rejects.toThrow('verification');
@@ -144,4 +144,88 @@ it('does not invent historical resolution state when the initial response omits 
   const agent = { query: jest.fn(async request => reply(request, { findings: [], rejected_ids: ['counter'] })) };
   expect(await verifyGeneratedLiteralFindings(agent, config, 'source', response, 'en-US'))
     .toEqual({ outputLocale: 'en-US', findings: [] });
+});
+
+
+describe('whole-response verification across bounded batches', () => {
+  const candidates = (count: number) => Array.from({ length: count }, (_, index) => candidate({ id: `candidate-${index}` }));
+  function batchReply(request: FindingsQueryRequest, originals: BugbotFinding[]) {
+    const schema = request.options!.schema as ReturnType<typeof buildLiteralVerificationSchema>;
+    const ids = schema.properties.findings.items.properties.id.enum;
+    return reply(request, { findings: ids.map(id => originals.find(item => item.id === id)!), rejected_ids: [] });
+  }
+  it('verifies all 21 findings as 20 plus one without dropping the tail', async () => {
+    const original = candidates(21);
+    const query = jest.fn(async request => batchReply(request, original));
+    const result = await verifyGeneratedLiteralFindings({ query }, config, 'source', initial(original), 'en-US') as { findings: BugbotFinding[] };
+    expect(result.findings.map(item => item.id)).toEqual(original.map(item => item.id));
+    expect(query.mock.calls.map(([request]) => (request.options.schema as ReturnType<typeof buildLiteralVerificationSchema>).properties.findings.items.properties.id.enum.length)).toEqual([20, 1]);
+  });
+  it('supports the full 200-finding schema in exactly ten sequential queries', async () => {
+    const original = candidates(200); let active = 0; let maximum = 0;
+    const query = jest.fn(async request => { active++; maximum = Math.max(active, maximum); await Promise.resolve(); active--; return batchReply(request, original); });
+    const result = await verifyGeneratedLiteralFindings({ query }, config, 'source', initial(original), 'en-US') as { findings: BugbotFinding[] };
+    expect(result.findings).toHaveLength(200); expect(query).toHaveBeenCalledTimes(10); expect(maximum).toBe(1);
+    expect(query.mock.calls.every(([request]) => request.configuration === config)).toBe(true);
+  });
+  it('rejects duplicate identities across batches before querying', async () => {
+    const original = candidates(21); original[20] = original[0]; const query = jest.fn();
+    await expect(verifyGeneratedLiteralFindings({ query }, config, 'source', initial(original), 'en-US')).rejects.toThrow();
+    expect(query).not.toHaveBeenCalled();
+  });
+  it('preflights later batch byte limits before issuing the first query', async () => {
+    const original = candidates(21); original[20].evidence = 'Ω'.repeat(8_000); original[20].description = 'Ω'.repeat(8_000); const query = jest.fn();
+    await expect(verifyGeneratedLiteralFindings({ query }, config, 'source', initial(original), 'en-US')).rejects.toThrow('32000');
+    expect(query).not.toHaveBeenCalled();
+  });
+  it('propagates a later provider failure instead of returning the verified prefix', async () => {
+    const original = candidates(21); const error = new Error('later provider offline');
+    const query = jest.fn().mockImplementationOnce(request => batchReply(request, original)).mockRejectedValueOnce(error);
+    await expect(verifyGeneratedLiteralFindings({ query }, config, 'source', initial(original), 'en-US')).rejects.toBe(error);
+    expect(query).toHaveBeenCalledTimes(2);
+  });
+  it('rejects a cross-batch candidate substitution even when its ID exists globally', async () => {
+    const original = candidates(21);
+    const query = jest.fn().mockImplementationOnce(request => batchReply(request, original))
+      .mockImplementationOnce(request => reply(request, { findings: [original[0]], rejected_ids: [] }));
+    await expect(verifyGeneratedLiteralFindings({ query }, config, 'source', initial(original), 'en-US')).rejects.toThrow();
+  });
+  it('requires exhaustive rejections in both batches', async () => {
+    const original = candidates(21);
+    const query = jest.fn(async request => { const result = batchReply(request, original); return { ...result, findings: [], rejected_ids: result.findings.map(item => item.id) }; });
+    expect(await verifyGeneratedLiteralFindings({ query }, config, 'source', initial(original), 'en-US')).toEqual(initial([]));
+    expect(query).toHaveBeenCalledTimes(2);
+  });
+  it('retains same-statement corrections from the final batch', async () => {
+    const original = candidates(21);
+    const query = jest.fn(async request => { const result = batchReply(request, original); return { ...result, findings: result.findings.map(item => ({ ...item, line: 22 })) }; });
+    const result = await verifyGeneratedLiteralFindings({ query }, config, 'source', initial(original), 'en-US') as { findings: BugbotFinding[] };
+    expect(result.findings[20]).toEqual(expect.objectContaining({ id: 'candidate-20', line: 22, codeSnippet: original[20].codeSnippet }));
+  });
+  it('rejects the final batch locale before returning any results', async () => {
+    const original = candidates(21);
+    const query = jest.fn().mockImplementationOnce(request => batchReply(request, original))
+      .mockImplementationOnce(request => ({ ...batchReply(request, original), outputLocale: 'es-ES' }));
+    await expect(verifyGeneratedLiteralFindings({ query }, config, 'source', initial(original), 'en-US')).rejects.toThrow('locale');
+  });
+  it('binds each batch to its own complete candidate set and rejects replay', async () => {
+    const original = candidates(21); let firstId: string | undefined;
+    const query = jest.fn(async request => { const result = batchReply(request, original); firstId ??= result.verification_id; return { ...result, verification_id: firstId }; });
+    await expect(verifyGeneratedLiteralFindings({ query }, config, 'source', initial(original), 'en-US')).rejects.toThrow('identity');
+    const ids = query.mock.calls.map(([request]) => (request.options.schema as ReturnType<typeof buildLiteralVerificationSchema>).properties.verification_id.enum[0]);
+    expect(ids[0]).not.toBe(ids[1]);
+  });
+  it('observes every batch prompt and response', async () => {
+    const original = candidates(21); const observePrompt = jest.fn(); const observeResponse = jest.fn();
+    const query = jest.fn(async request => batchReply(request, original));
+    await verifyGeneratedLiteralFindings({ query }, config, 'source', initial(original), 'en-US', observePrompt, observeResponse);
+    expect(observePrompt).toHaveBeenCalledTimes(2); expect(observeResponse).toHaveBeenCalledTimes(2);
+  });
+  it('protects the final candidate from historical resolution when it is rejected', async () => {
+    const original = candidates(21);
+    const response = { ...initial(original), resolved_findings: [{ id: 'candidate-20', resolution: 'fixed' }, { id: 'unrelated', resolution: 'obsolete' }] };
+    const query = jest.fn(async request => { const result = batchReply(request, original); return { ...result, findings: [], rejected_ids: result.findings.map(item => item.id) }; });
+    const result = await verifyGeneratedLiteralFindings({ query }, config, 'source', response, 'en-US') as { resolved_findings: unknown[] };
+    expect(result.resolved_findings).toEqual([{ id: 'unrelated', resolution: 'obsolete' }]);
+  });
 });

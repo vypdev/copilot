@@ -4,7 +4,7 @@ import type { BugbotFinding } from '../../../../../domain/bugbot/finding';
 import { BUGBOT_RESPONSE_SCHEMA } from './schema';
 import {
   applyLiteralVerification, assertLiteralVerificationPrompt, literalVerificationId,
-  MAX_LITERAL_VERIFICATION_CANDIDATES,
+  MAX_LITERAL_VERIFICATION_CANDIDATES, MAX_INITIAL_LITERAL_VERIFICATION_CANDIDATES, planLiteralVerificationBatches,
 } from '../../../../policies/bugbot_literal_verification_policy';
 import { renderUntrustedContentVerbatim, UNTRUSTED_CONTENT_POLICY } from '../../../../../domain/security/untrusted_content';
 import { ApplicationError } from '../../../../errors/application_error';
@@ -60,10 +60,31 @@ export async function verifyGeneratedLiteralFindings(
   if (originalLocale.kind === 'invalid') throw new ApplicationError('locale.output-invalid', agentOutputLocaleFailureMessage(originalLocale));
   if (!Array.isArray(original.findings)) throw invalidOutput();
   if (original.findings.length === 0) return response;
-  if (original.findings.length > MAX_LITERAL_VERIFICATION_CANDIDATES) throw invalidOutput();
+  if (original.findings.length > MAX_INITIAL_LITERAL_VERIFICATION_CANDIDATES) throw invalidOutput();
   const normalized = normalizeBugbotResponse({ findings: original.findings, resolved_findings: [] });
   if (!normalized || normalized.findings.length !== original.findings.length) throw invalidOutput();
   const candidates = normalized.findings;
+  const batches = planLiteralVerificationBatches(candidates);
+  const findings: BugbotFinding[] = [];
+  for (const batch of batches) {
+    findings.push(...await verifyLiteralBatch(agent, configuration, source, batch, locale, observePrompt, observeResponse));
+  }
+  const originalIds = new Set(candidates.map(item => item.id));
+  const resolved = Array.isArray(original.resolved_findings) ? original.resolved_findings.filter(value => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return true;
+    const rawId = (value as Record<string, unknown>).id;
+    const resolutionId = typeof rawId === 'string' ? normalizeFindingIdForMarker(rawId) : undefined;
+    return resolutionId == null || !originalIds.has(resolutionId);
+  }) : original.resolved_findings;
+  logInfo(`Generated-source verification retained ${findings.length} of ${candidates.length} candidates; historical finding state remains independently controlled.`);
+  return { ...original, findings, ...(Array.isArray(original.resolved_findings) ? { resolved_findings: resolved } : {}) };
+}
+
+async function verifyLiteralBatch(
+  agent: FindingsQueryPort, configuration: Readonly<AgentConfiguration>, source: string,
+  candidates: readonly BugbotFinding[], locale: string,
+  observePrompt?: (prompt: string) => void, observeResponse?: (response: unknown) => void,
+): Promise<BugbotFinding[]> {
   const id = literalVerificationId(source, candidates);
   const prompt = buildLiteralVerificationPrompt(source, candidates, id, locale);
   observePrompt?.(prompt);
@@ -81,16 +102,7 @@ export async function verifyGeneratedLiteralFindings(
     || raw.rejected_ids.length > MAX_LITERAL_VERIFICATION_CANDIDATES || !raw.rejected_ids.every(item => typeof item === 'string')) throw invalidOutput();
   const verified = normalizeBugbotResponse({ findings: raw.findings, resolved_findings: [] });
   if (!verified || verified.findings.length !== raw.findings.length) throw invalidOutput();
-  const findings = applyLiteralVerification(id, raw.verification_id, candidates, verified.findings, raw.rejected_ids);
-  const originalIds = new Set(candidates.map(item => item.id));
-  const resolved = Array.isArray(original.resolved_findings) ? original.resolved_findings.filter(value => {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return true;
-    const rawId = (value as Record<string, unknown>).id;
-    const resolutionId = typeof rawId === 'string' ? normalizeFindingIdForMarker(rawId) : undefined;
-    return resolutionId == null || !originalIds.has(resolutionId);
-  }) : original.resolved_findings;
-  logInfo(`Generated-source verification retained ${findings.length} of ${candidates.length} candidates; historical finding state remains independently controlled.`);
-  return { ...original, findings, ...(Array.isArray(original.resolved_findings) ? { resolved_findings: resolved } : {}) };
+  return applyLiteralVerification(id, raw.verification_id, candidates, verified.findings, raw.rejected_ids);
 }
 
 function record(value: unknown): Record<string, unknown> {

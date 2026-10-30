@@ -42795,7 +42795,8 @@ function countStatuses(statuses) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.MAX_LITERAL_VERIFICATION_PROMPT_BYTES = exports.MAX_LITERAL_VERIFICATION_CANDIDATE_BYTES = exports.MAX_LITERAL_VERIFICATION_CANDIDATES = void 0;
+exports.MAX_INITIAL_LITERAL_VERIFICATION_CANDIDATES = exports.MAX_LITERAL_VERIFICATION_BATCHES = exports.MAX_LITERAL_VERIFICATION_PROMPT_BYTES = exports.MAX_LITERAL_VERIFICATION_CANDIDATE_BYTES = exports.MAX_LITERAL_VERIFICATION_CANDIDATES = void 0;
+exports.planLiteralVerificationBatches = planLiteralVerificationBatches;
 exports.literalVerificationId = literalVerificationId;
 exports.assertLiteralVerificationPrompt = assertLiteralVerificationPrompt;
 exports.applyLiteralVerification = applyLiteralVerification;
@@ -42804,6 +42805,26 @@ const application_error_1 = __nccwpck_require__(75999);
 exports.MAX_LITERAL_VERIFICATION_CANDIDATES = 20;
 exports.MAX_LITERAL_VERIFICATION_CANDIDATE_BYTES = 32000;
 exports.MAX_LITERAL_VERIFICATION_PROMPT_BYTES = 128000;
+exports.MAX_LITERAL_VERIFICATION_BATCHES = 10;
+exports.MAX_INITIAL_LITERAL_VERIFICATION_CANDIDATES = exports.MAX_LITERAL_VERIFICATION_CANDIDATES * exports.MAX_LITERAL_VERIFICATION_BATCHES;
+/** Validate the whole response before querying; preserve every original candidate. */
+function planLiteralVerificationBatches(candidates) {
+    if (candidates.length === 0 || candidates.length > exports.MAX_INITIAL_LITERAL_VERIFICATION_CANDIDATES) {
+        throw new application_error_1.ApplicationError('agent.failed', 'Generated-source verification requires between 1 and 200 initial candidates, matching the review schema. No complete review was verified.');
+    }
+    const batches = [];
+    const seen = new Set();
+    for (let offset = 0; offset < candidates.length; offset += exports.MAX_LITERAL_VERIFICATION_CANDIDATES) {
+        const batch = candidates.slice(offset, offset + exports.MAX_LITERAL_VERIFICATION_CANDIDATES);
+        for (const id of originalCandidates(batch).keys()) {
+            if (seen.has(id))
+                throw invalidVerification();
+            seen.add(id);
+        }
+        batches.push(batch);
+    }
+    return batches;
+}
 function literalVerificationId(source, candidates) {
     originalCandidates(candidates);
     return (0, node_crypto_1.createHash)('sha256').update(source).update('\0').update(JSON.stringify(candidates)).digest('hex');
@@ -63116,7 +63137,6 @@ async function analyzeBugbotRevision(execution, context, dependencies) {
                     dependencies.telemetry.beginPartition();
                     try {
                         const response = await (0, query_bugbot_findings_1.queryBugbotPartitionFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale, { partitionId: partition.id, headSha: partition.headSha }, { enabled: hasLiteralWitnesses, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) });
-                        dependencies.telemetry.observeResponse(response);
                         dependencies.telemetry.endPartition(true);
                         (0, logging_ports_1.logInfo)(`Bugbot reviewer completed partition ${partition.ordinal}/${partition.total}.`);
                         return response;
@@ -63135,7 +63155,6 @@ async function analyzeBugbotRevision(execution, context, dependencies) {
                 const { prompt, hasLiteralWitnesses } = (0, build_bugbot_prompt_1.buildBugbotReviewInput)(execution, context);
                 dependencies.telemetry.observePrompt(prompt);
                 const response = await (0, query_bugbot_findings_1.queryBugbotFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt, targetLocale, { enabled: hasLiteralWitnesses, observePrompt: value => dependencies.telemetry.observePrompt(value), observeResponse: value => dependencies.telemetry.observeResponse(value) });
-                dependencies.telemetry.observeResponse(response);
                 return response;
             });
     (0, logging_ports_1.logInfo)(`Bugbot reviewer completed in ${Date.now() - startedAt}ms.`);
@@ -66171,6 +66190,7 @@ async function queryBugbotFindings(repository, configuration, prompt, targetLoca
         prompt,
         options: bugbotQueryOptions(schema_1.BUGBOT_RESPONSE_SCHEMA),
     });
+    verification?.observeResponse?.(response);
     if (response == null || typeof response !== 'object' || Array.isArray(response)) {
         return verification?.enabled ? (0, verify_generated_literal_findings_1.verifyGeneratedLiteralFindings)(repository, configuration, prompt, response, targetLocale, verification.observePrompt, verification.observeResponse) : response;
     }
@@ -66187,12 +66207,15 @@ async function queryBugbotPartitionFindings(repository, configuration, prompt, t
     const schema = (0, schema_1.buildBugbotPartitionResponseSchema)(expected);
     for (let attempt = 1; attempt <= MAX_PARTITION_QUERY_ATTEMPTS; attempt += 1) {
         try {
+            if (attempt > 1)
+                verification?.observePrompt?.(prompt);
             const response = await repository.query({
                 configuration,
                 agentId: agent_task_policy_1.AGENT_PLAN,
                 prompt,
                 options: bugbotQueryOptions(schema),
             });
+            verification?.observeResponse?.(response);
             const validation = (0, agent_output_locale_policy_1.validateAgentOutputLocale)(response, targetLocale);
             if (validation.kind === 'invalid') {
                 throw new application_error_1.ApplicationError('locale.output-invalid', (0, agent_output_locale_policy_1.agentOutputLocaleFailureMessage)(validation));
@@ -67045,12 +67068,29 @@ async function verifyGeneratedLiteralFindings(agent, configuration, source, resp
         throw invalidOutput();
     if (original.findings.length === 0)
         return response;
-    if (original.findings.length > bugbot_literal_verification_policy_1.MAX_LITERAL_VERIFICATION_CANDIDATES)
+    if (original.findings.length > bugbot_literal_verification_policy_1.MAX_INITIAL_LITERAL_VERIFICATION_CANDIDATES)
         throw invalidOutput();
     const normalized = (0, prepare_bugbot_findings_policy_1.normalizeBugbotResponse)({ findings: original.findings, resolved_findings: [] });
     if (!normalized || normalized.findings.length !== original.findings.length)
         throw invalidOutput();
     const candidates = normalized.findings;
+    const batches = (0, bugbot_literal_verification_policy_1.planLiteralVerificationBatches)(candidates);
+    const findings = [];
+    for (const batch of batches) {
+        findings.push(...await verifyLiteralBatch(agent, configuration, source, batch, locale, observePrompt, observeResponse));
+    }
+    const originalIds = new Set(candidates.map(item => item.id));
+    const resolved = Array.isArray(original.resolved_findings) ? original.resolved_findings.filter(value => {
+        if (!value || typeof value !== 'object' || Array.isArray(value))
+            return true;
+        const rawId = value.id;
+        const resolutionId = typeof rawId === 'string' ? (0, bugbot_finding_marker_policy_1.normalizeFindingIdForMarker)(rawId) : undefined;
+        return resolutionId == null || !originalIds.has(resolutionId);
+    }) : original.resolved_findings;
+    (0, logging_ports_1.logInfo)(`Generated-source verification retained ${findings.length} of ${candidates.length} candidates; historical finding state remains independently controlled.`);
+    return { ...original, findings, ...(Array.isArray(original.resolved_findings) ? { resolved_findings: resolved } : {}) };
+}
+async function verifyLiteralBatch(agent, configuration, source, candidates, locale, observePrompt, observeResponse) {
     const id = (0, bugbot_literal_verification_policy_1.literalVerificationId)(source, candidates);
     const prompt = buildLiteralVerificationPrompt(source, candidates, id, locale);
     observePrompt?.(prompt);
@@ -67071,17 +67111,7 @@ async function verifyGeneratedLiteralFindings(agent, configuration, source, resp
     const verified = (0, prepare_bugbot_findings_policy_1.normalizeBugbotResponse)({ findings: raw.findings, resolved_findings: [] });
     if (!verified || verified.findings.length !== raw.findings.length)
         throw invalidOutput();
-    const findings = (0, bugbot_literal_verification_policy_1.applyLiteralVerification)(id, raw.verification_id, candidates, verified.findings, raw.rejected_ids);
-    const originalIds = new Set(candidates.map(item => item.id));
-    const resolved = Array.isArray(original.resolved_findings) ? original.resolved_findings.filter(value => {
-        if (!value || typeof value !== 'object' || Array.isArray(value))
-            return true;
-        const rawId = value.id;
-        const resolutionId = typeof rawId === 'string' ? (0, bugbot_finding_marker_policy_1.normalizeFindingIdForMarker)(rawId) : undefined;
-        return resolutionId == null || !originalIds.has(resolutionId);
-    }) : original.resolved_findings;
-    (0, logging_ports_1.logInfo)(`Generated-source verification retained ${findings.length} of ${candidates.length} candidates; historical finding state remains independently controlled.`);
-    return { ...original, findings, ...(Array.isArray(original.resolved_findings) ? { resolved_findings: resolved } : {}) };
+    return (0, bugbot_literal_verification_policy_1.applyLiteralVerification)(id, raw.verification_id, candidates, verified.findings, raw.rejected_ids);
 }
 function record(value) {
     if (typeof value === 'string') {

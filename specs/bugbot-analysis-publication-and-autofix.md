@@ -1918,3 +1918,43 @@ a failed optional model gate. Two separately measured independent-defect control
 pass all default gates. These bounded observations do not establish statistical
 accuracy, consumer execution/adoption or publication remapping. Unit/integration
 and mandatory CI/coverage/review gates remain independently required.
+
+### Candidate-count compatibility after #796 review — R05 (2026-10-30)
+
+The initial review schema accepts up to 200 findings. A 20-candidate verification
+ceiling must apply to each secondary query rather than reject every otherwise
+valid 21–200-candidate response. Before implementation reserve **24 further
+cases**, bringing the overall minimum to **122**: 10 pure batch-planning cases,
+10 verification/native recovery cases, two benchmark integration cases and two
+telemetry/completion cases. Existing cases remain required and are not counted
+twice.
+
+Plan all candidates in original order into at most **10 sequential batches of
+20**, validate global unique identities and every batch's existing **32,000-byte
+UTF-8 candidate ceiling before querying**, and verify each batch against the same
+immutable source. Keep the **128,000-byte complete prompt bound per query**.
+Oversized evidence remains an explicit resource failure, without truncation or
+publishing unverified excess candidates. Candidate counts 1–200 are supported
+within those byte bounds; 201+ is outside the initial schema and fails closed.
+Every batch must exhaustively retain/correct or reject its assigned IDs, with
+its own source/candidate correlation, locale, file/anchor and proof checks.
+Cross-batch IDs cannot be substituted. Publish/reconcile only after all batches
+succeed; failure of a later batch cannot certify partial completion or resolve
+historical findings. Preserve unrelated task-2 state and candidate/resolution
+conflict protection across the complete original set.
+
+Ordinary/benchmark review makes at most ten secondary queries, with no added
+retry. Existing three-attempt partition retry gives an upper bound of **33 total
+queries per partition** (three initial queries plus 30 secondary queries). Only
+two partitions run concurrently; batches within one partition remain sequential.
+Observe every initial/retried and verification prompt/response at the query
+boundary without counting the returned aggregate a second time; complete the
+partition only after the final validated batch. This supersedes R04's per-review 20-candidate/six-query bound.
+No new public setting, provider/model/effort, permission, durable record or
+historical mutation authority is introduced. One-batch wire prompts/schema and
+proof checks remain identical to the measured campaign, whose failures and
+limitations remain retained; batching does not claim new statistical accuracy.
+Validate full 200-candidate retention, cross-batch duplicates, byte failures
+before querying, last-batch failures, bounded retries, shared benchmark behavior
+and truthful telemetry. Pure batch policy requires 100% all metrics; all original
+coverage, native acceptance and zero-active-finding merge gates remain required.

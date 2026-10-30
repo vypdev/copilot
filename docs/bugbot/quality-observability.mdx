@@ -141,7 +141,11 @@ these synthetic controls; private source/logs remain outside this repository.
 Two additional literal-bearing cases retain independent shell-injection and
 strictly-positive-validator defects. The benchmark uses the same independently
 correlated candidate verifier as ordinary and partitioned review, including its
-closed failure behavior. Expected verdicts never enter either query. Earlier
+closed failure behavior. The initial 200-candidate schema is handled in up to
+ten sequential batches of 20, with complete identity/byte preflight and no partial
+publication if a later batch fails. Every initial/retried query and verification
+query contributes to the existing analysis telemetry. Expected verdicts never
+enter either query. Earlier
 failed campaigns remain evidence and cannot be replaced by reference predictions.
 The [dated #796 evidence](https://github.com/vypdev/copilot/blob/develop/quality/bugbot/evidence/issue-796.json)
 records baseline classification at 3 false positives/1 false negative and final
