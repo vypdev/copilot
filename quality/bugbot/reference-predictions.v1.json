@@ -332,6 +332,34 @@
         "confidence": 1
       }
     ],
-    "kotlin-json-unavailable-policy": []
+    "kotlin-json-unavailable-policy": [],
+    "ktor-routing-installed-root": [],
+    "ktor-routing-delegated-root": [],
+    "ktor-routing-configured-root": [],
+    "ktor-routing-child-subtree": [
+      {
+        "id": "ktor-routing-child-subtree",
+        "title": "The changed selection loses the installed application routing root",
+        "file": "backend/OwnedRoutingSelection.kt",
+        "line": 6,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "    val selected = installed.children.single()",
+        "confidence": 1
+      }
+    ],
+    "ktor-routing-different-application": [
+      {
+        "id": "ktor-routing-different-application",
+        "title": "The changed selection loses the installed application routing root",
+        "file": "backend/OwnedRoutingSelection.kt",
+        "line": 6,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "    val selected = otherApp.routing {}",
+        "confidence": 1
+      }
+    ],
+    "ktor-routing-unavailable-implementation": []
   }
 }

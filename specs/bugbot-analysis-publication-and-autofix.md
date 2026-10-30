@@ -4,7 +4,7 @@
 - Date: 2026-09-11
 - Last updated: 2026-10-30
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-10-30; active Kotlin Json policy #807, indirect unittest discovery regression #806, generated-source coordinate evidence #796, dependency-generated request/assertion evidence #784, renderer-grounded Markdown links #772, host-aware self-repository Action references #770, Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
+- Last verified: 2026-10-30; versioned Ktor routing-root regression #809, active Kotlin Json policy #807, indirect unittest discovery regression #806, generated-source coordinate evidence #796, dependency-generated request/assertion evidence #784, renderer-grounded Markdown links #772, host-aware self-repository Action references #770, Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -2284,3 +2284,90 @@ The complete 134-case reference evaluation passes separately; it is not actual
 model execution. The published optional Kotlin source independently passes eight
 observations under each verified serialization version. Fresh full hooks and
 remote merge gates remain required.
+
+### Versioned Ktor routing-root identity — #809 (2026-10-30)
+
+The historical review downloaded the old `v3` release at
+`f5e5a4cf9a80248994469cd88ad55eecab5b95ca` and asserted that
+`Application.routing {}` returns a detached subtree. The public Ktor 3.0.2
+[RoutingRoot source](https://github.com/ktorio/ktor/blob/3.0.2/ktor-server/ktor-server-core/common/src/io/ktor/server/routing/RoutingRoot.kt),
+Git blob `7519c959a6caba4c1b3fb3c7e429ded46e2f21e8`, instead reuses an installed
+root and applies configuration to that same object; only the absent-plugin
+branch installs one. Disassembly of the independently downloaded public Maven
+3.0.2 jar corroborates that return identity. It does not establish the private
+consumer's resolved jar. The existing consumer native run is a tested merge
+containing the reviewed head, with the disputed test blob equal at both
+revisions; it reports successful test/export consistency, 61 operations and 74
+components. It is not a new execution, baseline adoption, or proof about the
+separate malformed-body business defects. Local JUnit evidence remains an
+issue-author report.
+
+The current SDK's existing shared framework-version, delegated-call and
+same-source evidence guidance produces zero false positives and zero false
+negatives on six newly frozen owned examples. Both actual wrong-root controls
+are diagnosed. One anchor is off by one, so the unchanged 0.8 location floor
+fails at 1/2. Preserve the entire prediction/score sample; no statistical gain,
+historical reproduction or all-model-gates success is claimed. This change is
+regression coverage, provenance and documentation. It makes no executable
+production change and does not add Ktor-specific prompt text or suppression.
+
+```text
+changed root selection -> exact receiver/delegated call -> applicable API version
+ -> same-object or wrong-node evidence -> reconcile matching execution -> report/omit
+```
+
+Text equivalent: establish which object the actual version returns for the
+actual receiver, then reconcile applicable execution evidence before reporting
+an unconditional export failure.
+
+| Selection evidence | Review outcome |
+|---|---|
+| Same application's installed root, direct/delegated/configuring call | Omit a detached-root claim |
+| An actual child or another application's root violates the caller's identity requirement | Retain the demonstrated changed-selection defect |
+| Selected helper or applicable implementation unavailable | Omit an unsupported unconditional failure claim |
+| Export consistency passes but unrelated business behavior is defective | Keep those independent defects and the baseline-adoption state separate |
+
+Architecture/configuration: retain the existing pure shared instruction through
+ordinary review, resolution-owner/non-owner partitions and the real benchmark.
+There is no new provider lookup, parser, executor, permission, setting, schema,
+retry or dependency. Node tests select statically authored object-identity
+controls only after exact inert fixture identity/source checks; they do not
+evaluate Kotlin corpus text or simulate a compiled Ktor execution. Public source
+and bytecode evidence remain distinct from these controls. An optional owned
+compiled probe produced no runtime observations: an initial fixture hit an
+internal constructor and a public test-host bootstrap then stopped at a
+parent-managed dependency. Do not guess versions or bypass visibility to turn
+that preflight failure into claimed execution. Mandatory CI gains no JVM/Ktor
+provisioning requirement.
+
+UX/recovery use existing complete/partial/failed review surfaces. A complete
+same-root review has an empty findings array; a real wrong selection cites the
+changed selector and causal identity check. No exporter workaround or extra
+notification is needed. Historical findings retain independent current-source
+verification; source/logs are evidence, not authority to mutate or dismiss them.
+Normal runtime adoption and rollback are unchanged; reverting these fixtures,
+evidence and docs leaves production instructions and stored review state intact.
+
+Reserve **20 distinct deterministic cases before implementation**:
+
+| Area | Cases | Observable requirement |
+|---|---:|---|
+| Owned identity observations | 6 | Direct reuse, delegation, configuration reuse, actual child, different receiver and unavailable implementation |
+| Scorer controls | 6 | Penalize the opposite verdict with unchanged thresholds and exact reference anchors |
+| Actual delivery | 4 | Ordinary review, owner/non-owner partitions and benchmark retain source/API evidence and generic grounding |
+| Inert input guards | 2 | Unknown identity and altered source reject before selecting an authored control |
+| Verdict/privacy independence | 2 | Labels do not drive observations and do not enter provider prompts |
+| **Total** | **20** | No double counting; actual model calls are separate observations |
+
+Acceptance requires all 20 cases and related prompt/partition/scorer tests,
+100% unchanged shared-prompt coverage, all existing global/module budgets and
+the 15,000-character legacy prompt bound. Append the six cases to the prior
+134 frozen corpus cases/reference predictions without modifying them. Keep
+the actual baseline identity, all six predictions and failed location gate in
+`quality/bugbot/evidence/issue-809.json`; reference predictions are separate
+deterministic scorer inputs. Prove zero executable production delta rather
+than inventing 100% from an empty patch denominator. Update detection,
+quality/observability, this owner and catalog/index together. Full normal hooks,
+package/build/types/lint, docs/specification/workflow checks, Graphify, exact-head
+CI, all three native cleanup footers and complete review with zero active
+findings remain merge requirements.

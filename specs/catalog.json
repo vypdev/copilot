@@ -2214,7 +2214,10 @@
         "src/tooling/__tests__/bugbot_kotlin_json.test.ts",
         "src/tooling/__tests__/fixtures/bugbot_kotlin_json_oracles.ts",
         "src/tooling/__tests__/fixtures/bugbot_kotlin_json_probe.kt",
-        "quality/bugbot/evidence/issue-807.json"
+        "quality/bugbot/evidence/issue-807.json",
+        "src/tooling/__tests__/bugbot_ktor_routing.test.ts",
+        "src/tooling/__tests__/fixtures/bugbot_ktor_routing_oracles.ts",
+        "quality/bugbot/evidence/issue-809.json"
       ],
       "documentation": [
         "docs/bugbot/how-it-works.mdx",

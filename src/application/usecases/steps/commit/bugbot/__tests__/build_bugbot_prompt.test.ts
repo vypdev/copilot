@@ -461,3 +461,22 @@ describe('Kotlin Json instance policy evidence', () => {
     } else expect(prompt).toContain('retained-json-finding');
   });
 });
+
+describe('versioned routing-root selection evidence', () => {
+  it.each([undefined, true, false])('retains API evidence with resolution ownership=%s', ownsResolution => {
+    const source = '+val selected = app.routing {}';
+    const prompt = buildBugbotPrompt(mockExecution(), mockContext({ reviewDiffBlock: source,
+      previousFindingsBlock: 'retained-routing-finding' }), ownsResolution === undefined ? undefined : { partition: {
+      id: 'routing-selection', ordinal: 1, total: 2, headSha: 'a'.repeat(40), block: source,
+      files: ['backend/OwnedRoutingSelection.kt'], fragmentCount: 1, ownsResolution,
+    } });
+    for (const clause of ['Verify the exact framework API and reviewed version', 'similarly named APIs differ',
+      'version-matched official documentation or source', 'Reconcile same-revision execution/call counts',
+      'omit unsupported always-fails claims']) expect(prompt).toContain(clause);
+    expect(prompt).toContain(source);
+    if (ownsResolution === false) {
+      expect(prompt).not.toContain('retained-routing-finding');
+      expect(prompt).toContain('must return an empty resolved_findings array');
+    } else expect(prompt).toContain('retained-routing-finding');
+  });
+});
