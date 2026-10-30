@@ -98,7 +98,7 @@ export class NamedSessions {
             let next: SessionVault;
             if (intent.type === 'connect' || intent.type === 'select') {
                 const secret = intent.type === 'connect' ? intent.secret : selected!.connection.secret;
-                const repository = intent.type === 'connect' ? intent.repository : selected!.connection.repository;
+                const repository = intent.type === 'connect' ? intent.repository : intent.repository ?? selected!.connection.repository;
                 const result = await this.active.connect(secret, repository, selected?.connection, live, trace);
                 if (!live()) { await cleanup(); return { state: 'stale' }; }
                 const verified = this.active.verifiedIdentity();

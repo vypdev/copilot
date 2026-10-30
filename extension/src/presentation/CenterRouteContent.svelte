@@ -53,8 +53,8 @@
             location: frame.location, rollbackAvailable: data.rollbackAvailable, connections: frame.client.connections,
             inventory: frame.inventory, hasDraft: frame.hasDraft }} actions={surface.actions}/>
     {/if}
-    <ConnectionsPanel view={frame.client.connections ?? null} locale={copy.locale} {busy}
-        editable={!busy && frame.client.role === 'editor' && !frame.client.review} actions={surface.actions.connections}/>
+    {#key `${route}/${frame.draftEpoch}`}<ConnectionsPanel hasDraft={frame.hasDraft} view={frame.client.connections ?? null} locale={copy.locale} {busy}
+        editable={!busy && frame.client.role === 'editor' && !frame.client.review} actions={surface.actions.connections}/>{/key}
 {:else if route === 'welcome' && !currentCenterSettings(frame.client)}
     <p class="notice">{data?.state === 'future' ? copy.messages.future : data?.state === 'corrupt' ? copy.messages.corrupt : data?.state === 'migration-required' ? copy.messages.migration : copy.messages.unavailable}</p>
     <a href="#/recovery">{copy.routes.recovery}</a>

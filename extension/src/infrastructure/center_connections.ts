@@ -12,7 +12,7 @@ export function connectionActions(api: BrowserApi, document: Document, client: C
                 const field = document.querySelector<HTMLInputElement>('#connection-secret');
                 if (field) field.value = '';
             }
-            void client.connections(intent, revision);
+            return client.connections(intent, revision);
         },
         connect: form => {
             if (!current() || !(form instanceof document.defaultView!.HTMLFormElement)) return;

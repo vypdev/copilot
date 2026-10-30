@@ -232,3 +232,30 @@ See the [runtime privacy and recovery guide](/browser-extension/runtime) and
 the [contributor verification guide](/development/browser-extension). Build or
 mounted-DOM test success alone is not evidence that the extension has passed
 its real Chrome, Firefox or Safari journeys.
+
+## Recover a renamed or transferred repository
+
+In the development control center, open **Connections** or **Repositories**,
+choose the saved session and select **Recover a renamed repository**. Enter the
+new `owner/name`, review the saved session and proposed address, then choose
+**Verify new address**. No verification runs while you type or review.
+
+The extension checks that both the account and numeric repository identity still
+match the saved read session. A verified new address updates its protected
+canonical name and current organization. It grants no new permission or write
+access and leaves personal preferences unchanged. It does not automatically
+follow a redirect from an old repository name.
+
+If another repository now occupies the old name, its different identity cannot
+replace your saved target. Failed verification leaves the candidate disconnected
+and preserves the previous named session. Its local credential has not thereby
+been revoked at GitHub; use the explicit forgetting controls if removal is your
+goal.
+
+When completion is uncertain, the address draft stays visible. **Read current
+sessions**, inspect the result and review again before deciding whether another
+verification is needed. Reading never repeats verification or proves what an
+earlier missing response meant. A changed session list requires a fresh review;
+a missing or different saved identity keeps confirmation unavailable. **Discard
+address draft** leaves the protected record alone. Normal navigation also offers
+keep editing or discard, including between these two session routes.

@@ -3235,7 +3235,10 @@
         "extension/src/domain/helper_copy.ts",
         "extension/src/domain/helper_sample.ts",
         "extension/src/domain/helper_sample_view.ts",
-        "extension/src/presentation/HelperSamplePanel.svelte"
+        "extension/src/presentation/HelperSamplePanel.svelte",
+        "extension/src/domain/repository_relocation.ts",
+        "extension/src/domain/relocation_copy.ts",
+        "extension/src/presentation/RepositoryRelocation.svelte"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3500,7 +3503,12 @@
         "extension/test/integration/helper_sample_reader.test.ts",
         "extension/test/integration/helper_samples.test.ts",
         "extension/test/integration/helper_observation_context.test.ts",
-        "extension/test/integration/helper_background_history.test.ts"
+        "extension/test/integration/helper_background_history.test.ts",
+        "extension/test/contracts/repository_relocation.test.ts",
+        "extension/test/integration/repository_relocation.test.ts",
+        "extension/test/integration/repository_relocation_ui.test.ts",
+        "extension/test/integration/repository_relocation_authority.test.ts",
+        "extension/test/integration/relocation_port_failure.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

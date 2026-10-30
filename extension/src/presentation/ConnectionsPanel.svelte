@@ -1,12 +1,16 @@
 <script lang="ts">
     import type { ConnectionPanelProps } from '../domain/connection_ui.ts';
     import { connectionCopy } from '../domain/connection_copy.ts';
+    import RepositoryRelocation from './RepositoryRelocation.svelte';
+    import { captureRelocation, type RelocationTarget } from '../domain/repository_relocation.ts';
+    import { relocationCopy } from '../domain/relocation_copy.ts';
     import ConnectionForm from './ConnectionForm.svelte';
-    let { view, locale, editable, busy, actions }: ConnectionPanelProps = $props();
+    let { view, locale, editable, busy, actions, hasDraft = false }: ConnectionPanelProps = $props();
     const copy = $derived(connectionCopy(locale));
     const ready = $derived(view?.state === 'ready' ? view : null);
     let removal = $state<{ id: string; revision: number } | null>(null);
     let forgetAll = $state(false);
+    let relocation = $state<RelocationTarget | null>(null);
     $effect(() => { if (removal && removal.revision !== ready?.revision) removal = null; });
 </script>
 <section aria-labelledby="connections-heading">
@@ -19,7 +23,8 @@
             <button type="button" disabled={!editable || busy} onclick={() => { actions.change({ type: 'revoke-all' }, ready?.revision ?? 0); forgetAll = false; }}>{copy.confirmAll}</button>
             <button type="button" disabled={busy} onclick={() => { forgetAll = false; }}>{copy.cancel}</button>
         </div>
-    {:else}<button type="button" disabled={!editable || busy || !!removal} onclick={() => { forgetAll = true; }}>{copy.revokeAll}</button>{/if}
+    {:else}<button type="button" disabled={!editable || busy || !!removal || !!relocation} onclick={() => { forgetAll = true; }}>{copy.revokeAll}</button>{/if}
+    {#if relocation}<RepositoryRelocation target={relocation} {view} {locale} {editable} {busy} {actions} close={() => { relocation = null; }}/>{/if}
     {#if ready}
         {#if ready.entries.length === 0}<p>{copy.empty}</p>{/if}
         <ul class="cards">
@@ -27,8 +32,10 @@
                 <li><h3>{entry.name}</h3><p><span>{entry.viewerLogin}</span> · <code>{entry.viewerId}</code></p>
                     <p><span>{entry.repository}</span> · <code>{entry.repositoryId}</code></p><p>{copy.role}</p>
                     <p>{ready.connected && ready.selected === entry.id ? copy.connected : copy.disconnected}</p>
-                    <button type="button" disabled={!editable || busy || !!removal || forgetAll} onclick={() => actions.change({ type: 'select', id: entry.id }, ready.revision)}>{copy.select}</button>
-                    <button type="button" disabled={!editable || busy || !!removal || forgetAll} onclick={() => { removal = { id: entry.id, revision: ready.revision }; }}>{copy.remove}</button>
+                    <button type="button" disabled={!editable || busy || !!removal || forgetAll || !!relocation} onclick={() => actions.change({ type: 'select', id: entry.id }, ready.revision)}>{copy.select}</button>
+                    <button type="button" disabled={!editable || busy || !!removal || forgetAll || !!relocation} onclick={() => { removal = { id: entry.id, revision: ready.revision }; }}>{copy.remove}</button>
+                    <button type="button" disabled={!editable || busy || !!removal || forgetAll || !!relocation || hasDraft}
+                        onclick={() => { relocation = captureRelocation(entry, ready.revision); actions.dirty(true); }}>{relocationCopy(locale).open}</button>
                     {#if removal?.id === entry.id}
                         <div class="notice" role="alert"><p>{copy.removal}</p>
                             <button type="button" disabled={!editable || busy} onclick={() => { actions.change({ type: 'remove', id: entry.id }, removal!.revision); }}>{copy.confirm}</button>
@@ -38,7 +45,7 @@
                 </li>
             {/each}
         </ul>
-        {#if ready.selected}<button type="button" disabled={!editable || busy || !!removal || forgetAll} onclick={() => actions.change({ type: 'disconnect' }, ready.revision)}>{copy.disconnect}</button>{/if}
+        {#if ready.selected}<button type="button" disabled={!editable || busy || !!removal || forgetAll || !!relocation} onclick={() => actions.change({ type: 'disconnect' }, ready.revision)}>{copy.disconnect}</button>{/if}
     {/if}
-    <ConnectionForm {copy} disabled={!editable || busy || !ready || ready.entries.length >= 5 || !!removal || forgetAll} {actions}/>
+    <ConnectionForm {copy} disabled={!editable || busy || !ready || ready.entries.length >= 5 || !!removal || forgetAll || !!relocation} {actions}/>
 </section>

@@ -22,18 +22,25 @@ export interface ConnectionsView {
     readonly credentialEpoch?: number;
 }
 export type ConnectionIntent = { readonly type: 'connect'; readonly name: string; readonly secret: string; readonly repository: string }
-    | { readonly type: 'select' | 'remove'; readonly id: string }
+    | { readonly type: 'select'; readonly id: string; readonly repository?: string }
+    | { readonly type: 'remove'; readonly id: string }
     | { readonly type: 'disconnect' } | { readonly type: 'revoke-all' };
 export type ConnectionOutcome = ConnectionsView | { readonly state: 'invalid' | 'capacity' | 'conflict' | 'stale' | 'unavailable' | 'denied' | 'unknown' | 'limited' | 'cooldown' | 'budget' };
 export const sessionName = (value: unknown): value is string => typeof value === 'string' && value.trim() === value
     && value.length >= 1 && value.length <= 64 && !/[\p{Cc}\p{Cf}]/u.test(value);
+export const repositoryAddress = (value: unknown): value is string => typeof value === 'string' && value.length <= 201
+    && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$(?![\s\S])/u.test(value)
+    && value.split('/').every(part => part !== '.' && part !== '..');
 export function connectionIntent(value: unknown): value is ConnectionIntent {
     if (!record(value)) return false;
     if (value.type === 'disconnect' || value.type === 'revoke-all') return keys(value, ['type']) && Object.keys(value).length === 1;
-    if (value.type === 'select' || value.type === 'remove') return keys(value, ['type', 'id']) && Object.keys(value).length === 2 && localIdentifier(value.id);
+    if (value.type === 'remove') return keys(value, ['type', 'id']) && Object.keys(value).length === 2 && localIdentifier(value.id);
+    if (value.type === 'select') return keys(value, ['type', 'id', 'repository']) && localIdentifier(value.id)
+        && Object.keys(value).length === (Object.hasOwn(value, 'repository') ? 3 : 2)
+        && (!Object.hasOwn(value, 'repository') || repositoryAddress(value.repository));
     return value.type === 'connect' && keys(value, ['type', 'name', 'secret', 'repository']) && Object.keys(value).length === 4
         && sessionName(value.name) && typeof value.secret === 'string' && /^[A-Za-z0-9_]{8,255}$(?![\s\S])/u.test(value.secret)
-        && typeof value.repository === 'string' && value.repository.length <= 201 && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$(?![\s\S])/u.test(value.repository);
+        && repositoryAddress(value.repository);
 }
 export function validVault(value: unknown): value is SessionVault {
     if (!record(value) || !keys(value, ['schemaVersion', 'revision', 'selected', 'entries']) || Object.keys(value).length !== 4

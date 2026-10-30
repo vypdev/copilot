@@ -171,3 +171,13 @@ fixed helper may be observed in diagnostic history at this explicit capture.
 The content ring itself remains memory-only; the full ring is not backfilled.
 History retention failure does not block opening or erase the current sample.
 These source flows still require full source-bound native/human H3 acceptance.
+
+### The saved repository moved
+
+Use [repository address recovery](configuration#recover-a-renamed-or-transferred-repository)
+in the local center to verify a new `owner/name` against the saved numeric
+identity. Automatic redirect following is intentionally unavailable. A reused
+old name with a different repository ID is rejected, even if the credential can
+read it. An uncertain response keeps the address draft and requires an explicit
+session read and new review; it does not start an automatic retry. The current
+canonical session and the earlier operation's observation remain separate facts.

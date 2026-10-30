@@ -151,3 +151,14 @@ and lost responses are never resent automatically. Profile detail is stripped
 before delivery. A read-only window may record its own consented routes without
 gaining authored mutation access. Missing delivery is disclosed separately from
 retained entries; operation and diagnostic producers remain under development.
+
+### Recovering a saved repository address
+
+Renaming recovery reuses only the chosen protected repository-read session. The
+new address is not an authorization: fresh account and numeric repository IDs
+must match. It cannot select a host, endpoint, credential purpose or write role,
+and it never relaxes redirect handling or asks for another browser grant. If the
+existing permission is no longer available, verification cannot establish the
+candidate. Review the current browser permission/session state before another
+explicit attempt. The named record remains separate from preferences and
+backups; failure is not proof of credential revocation at GitHub.

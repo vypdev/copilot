@@ -625,7 +625,7 @@ the read credential. Resuming this scope cannot release global or inherited
 pause. Duplicate saved sessions for one physical repository share its numeric
 preference row. An unrelated unfinished connection form disables repository
 preference reviews so saving one cannot discard the other's draft. Full bounded
-workspaces, rename recovery and remaining
+workspaces and remaining
 CENTER workflows are still required before H3 acceptance.
 
 Current evidence: `profile_context.test.ts`, `repository_owner.test.ts`,
@@ -1413,3 +1413,90 @@ the existing four localized resources remain. Acceptance requires meaningful
 semantic tests and native/human evidence, not case counts alone. Primary API
 reference checked2026-10-29:
 [native response semantics](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/runtime/onMessage).
+
+### Explicit repository relocation refinement (2026-10-30)
+
+**Decision:** H3-R04/R05/R11 and BEX-CENTER-04 include a reviewed recovery path
+when a saved repository is renamed or transferred. GitHub documents that old
+names may redirect, and that reusing an old name removes its redirect. Numeric
+repository identity must therefore remain the authority
+([rename guidance](https://docs.github.com/en/repositories/creating-and-managing-repositories/renaming-a-repository),
+[identity guidance](https://github.blog/security/supply-chain-security/how-to-stay-safe-from-repo-jacking/)).
+The existing adapter deliberately rejects redirects. Preserve that boundary.
+
+The user MUST choose an existing protected read session, type its new bounded
+`owner/name`, review that address alongside the saved account/repository, and
+explicitly confirm **Verify new address**. Extend only the existing named
+`select` intent with an optional repository address; removal, disconnect and
+Connect cannot acquire this operand. The address uses the existing 201-character
+repository-name grammar with dot path segments rejected, never a URL, endpoint, credential, host or write role.
+The background MUST reuse only that entry's repository-read credential, verify
+both the saved numeric viewer ID and repository ID, and persist its newly
+verified canonical name/owner using the existing single-attempt/readback queue.
+An identical address remains a legitimate explicit re-verification.
+
+```text
+Choose saved session → type new owner/name → review saved identity + address
+ → explicitly verify → same numeric account/repository → canonical save + receipt
+                    → different identity / unavailable → disconnected candidate
+```
+
+Text equivalent: the proposed name is untrusted until fresh provider identity
+matches the selected session. A wrong or reused name cannot adopt a different
+private repository. The previous named-vault entry remains intact on failed
+verification; the previously serving active session is fenced before candidate
+reads. A newly verified organization replaces old owner metadata. There are no
+new endpoints, redirect exceptions, host grants, background retries, timers or
+credential purposes. Names/IDs are protected session evidence, excluded from
+preferences, backups and redacted history. Current operation/history retain the
+existing `select` action and exact native step observations, rather than treating
+a later canonical name as proof of an earlier unknown outcome.
+
+| State | Primary content/action | Retained facts |
+|---|---|---|
+| Draft | New repository address; Review address | Saved identity + typed local draft; no provider call |
+| Review | Account, repository ID and proposed address; Verify new address | Exact vault revision; cancel keeps draft |
+| Verifying | Checking the selected repository; wait | No duplicate submission or unrelated mutation |
+| Confirmed | Current canonical session is displayed | Only the direct exact next-revision receipt clears this draft |
+| Unknown / failed | Read current sessions before deciding again | Typed address and saved target survive; no automatic resubmission |
+| Changed revision / observer | Review current identity or cancel | Old review cannot be confirmed; missing/changed target stays unavailable |
+
+The review MUST bind the unchanged local entry ID, numeric account/repository,
+and current vault revision. A fresh read may make a new review possible but
+MUST NOT retrospectively certify the previous operation. Navigation retains the
+normal unsaved-draft guard. A connection draft prevents opening this second
+editor. One relocation editor at a time disables unrelated session mutations;
+explicit read and cancel remain available. Four complete locales, semantic
+labels/headings/statuses, keyboard submission and escaping apply. Example:
+“New address: team/renamed · Same saved account and repository required. No new
+permission or write access will be granted.” Technical numeric IDs remain in
+the review's details.
+
+Domain owns the closed operand and immutable draft/source comparison;
+NamedSessions reuses ProtectedSessionService and protected storage observations;
+composition returns the direct mutation receipt; presentation owns only the
+nonsecret draft/review. Enforce the existing import/cycle/size/package rules.
+No durable schema migration is required: vault, preference and journal schemas
+and all old select messages remain unchanged. An older package rejects the new
+operand and preserves state. A recovery command from an old controller, source,
+credential epoch or vault revision remains rejected by independent native gates.
+
+Add **34 distinct risk cases**: 8 closed-wire/identity policies, 10 application
+verification/persistence/fence cases, 10 mounted review/draft/localization cases,
+and 6 transport/composition/privacy cases. Count reruns once. Every changed
+runtime line and branch must be covered; the existing 160 H3 risk floor,
+56+56 CENTER cases and 803-case product floor remain unchanged. Document the
+normal recovery flow, unsupported redirects, wrong-identity/unknown outcomes,
+retained protected credential and explicit retry/revocation in configuration,
+permissions and runtime troubleshooting. Keep native H3 and human acceptance
+separate from deterministic tests.
+
+Acceptance: a renamed or transferred address with the same numeric identities
+updates its protected canonical metadata; a reused old name with a different
+ID disconnects the candidate and preserves the named record; a missing response
+preserves the draft and never repeats verification; a revision/account/controller
+change invalidates review; old select requests still work; every supported locale
+presents the exact destination without exposing a credential. Required evidence
+maps this refinement to closed-wire tests, actual named-session/center composition,
+mounted four-locale review tests and the user recovery documentation. Workspaces,
+optional write-purpose management and remaining H3 acceptance stay required.
