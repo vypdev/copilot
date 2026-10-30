@@ -76,6 +76,24 @@ do not pre-encode paths in `catalog.json`. Regenerate the catalog with the norma
 commands below after updating the shared SDK validator. The same renderer serves
 primary SDDs, companion SDDs and every evidence role.
 
+## Capability titles
+
+Capability titles appear as literal text in the catalog's specification link
+labels and evidence headings. Markdown such as `[draft](https://example.invalid)`,
+backticks, emphasis, pipes, HTML and entity-looking strings stays visible as title
+text. Carriage-return and newline runs become a display space. Ordinary and
+multilingual titles keep their text under the renderer's normal whitespace rules.
+
+Author the title in `specs/catalog.json` without pre-escaping it. Generation keeps
+that source JSON unchanged and uses character references where needed in the
+generated Markdown. Capability IDs, companion counts, evidence paths, ownership
+and readiness rules retain their meaning.
+
+After updating the matching SDK, regenerate and validate with the normal
+[catalog commands](#initial-catalog-generation) to repair an existing index.
+Existing path, symlink, output-publication and size safeguards continue to apply.
+
+
 ## Initial catalog generation
 
 For a new product, register existing Draft specifications and user documentation
