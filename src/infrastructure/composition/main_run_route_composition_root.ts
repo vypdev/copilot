@@ -1,3 +1,5 @@
+import { LinkPullRequestIssueUseCase } from '../../application/usecases/steps/pull_request/link_pull_request_issue_use_case';
+import { TimerDelayAdapter } from '../time/timer_delay_adapter';
 import { createDeploymentCandidateInspection } from './deployment_candidate_replacement_composition_root';
 import { withChangeSizeDiagnostics } from './change_size_diagnostics_composition_root';
 import { createSddDiffQueryPort } from './sdd_diff_composition_root';
@@ -93,7 +95,7 @@ import {
   bindIssueDescriptionQuery,
   bindOrganizationMembers,
 } from './shared_capability_port_binding';
-import { bindPullRequestDescription } from './lifecycle_capability_port_binding';
+import { bindPullRequestDescription, bindPullRequestIssueLink } from './lifecycle_capability_port_binding';
 import { bindIssueLabels, bindProjectBoardCommands } from './lifecycle_capability_port_binding';
 import {
   bindAuthenticatedUser,
@@ -268,6 +270,7 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
     createSddDiffQueryPort(binding, bugbot.scm.context),
     createNativeStatusReadPort(binding),
     createGithubRuntimeDoctorPorts(binding, bugbot.scm.context),
+    createDescriptionLinkRecovery(binding),
   );
 }
 
@@ -329,6 +332,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
     createSddDiffQueryPort(binding, bugbot.scm.context),
     createNativeStatusReadPort(binding),
     createGithubRuntimeDoctorPorts(binding, bugbot.scm.context),
+    createDescriptionLinkRecovery(binding),
   );
 }
 
@@ -428,4 +432,11 @@ export function createClosedIssueRetirementUseCase(binding: BugbotScmBinding): R
   return new ReconcileClosedIssueUseCase(
     new ReconcileClosedIssueMetadataUseCase(bindIssueCompletionMetadata(createIssueCompletionRepository(binding))),
     new RetireClosedIssueCardsUseCase(new RetireBranchSyncUseCase(native, cards, freshness), new RetireProgressUseCase(native, cards, freshness)));
+}
+
+function createDescriptionLinkRecovery(binding: BugbotScmBinding): LinkPullRequestIssueUseCase {
+  return new LinkPullRequestIssueUseCase(
+    bindPullRequestIssueLink(new PullRequestLifecycleRepository(createPullRequestLifecycleClient()), binding),
+    new TimerDelayAdapter(),
+  );
 }

@@ -575,7 +575,8 @@ describe("PullRequestReviewCommentUseCase", () => {
     expect(results.some((r) => r.id === "ThinkUseCase")).toBe(true);
   });
 
-  it("binds optional description and branch-sync capabilities to the route execution", async () => {
+  it.each([true, false])("binds description and branch-sync with optional recovery=%s", async withRecovery => {
+    const mockRecovery = jest.fn().mockResolvedValue([]);
     const mockUpdateDescription = jest.fn().mockResolvedValue([new Result({
       id: "description",
       success: true,
@@ -602,9 +603,17 @@ describe("PullRequestReviewCommentUseCase", () => {
       { invoke: mockUpdateDescription } as never,
       undefined,
       { invoke: mockSyncBranch } as never,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      withRecovery ? { taskId: "recovery", invoke: mockRecovery } : undefined,
     );
     const descriptionExecution = baseExecution({
       actor: "alice",
+      branches: { defaultBranch: "main" } as never,
       pullRequest: { ...baseExecution().pullRequest, commentBody: "/copilot description" } as never,
     });
     const syncExecution = baseExecution({
@@ -619,6 +628,12 @@ describe("PullRequestReviewCommentUseCase", () => {
     await routedUseCase.invoke(syncExecution);
     await routedUseCase.invoke(missingBodyExecution);
 
+    if (withRecovery) {
+      expect(mockRecovery).toHaveBeenCalledWith(expect.objectContaining({ recoveryOnly: true }));
+      expect(mockRecovery.mock.invocationCallOrder[0]).toBeLessThan(mockUpdateDescription.mock.invocationCallOrder[0]);
+    } else {
+      expect(mockRecovery).not.toHaveBeenCalled();
+    }
     expect(mockUpdateDescription).toHaveBeenCalledTimes(1);
     expect(mockUpdateDescription).toHaveBeenCalledWith(expect.objectContaining({
       trigger: 'authorized-command',
@@ -632,5 +647,12 @@ describe("PullRequestReviewCommentUseCase", () => {
       }),
       options: { dryRun: false, useAgent: true, parentOverride: "develop" },
     });
+    mockRecovery.mockClear();
+    mockUpdateDescription.mockClear();
+    mockIsActorAllowedToModifyFiles.mockResolvedValueOnce(false);
+    await routedUseCase.invoke(descriptionExecution);
+    expect(mockRecovery).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+
   });
 });

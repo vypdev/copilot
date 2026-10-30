@@ -25,7 +25,9 @@ export abstract class IssueContentInterface extends ContentInterface {
         }
     }
 
-    internalUpdate = async (query: ExecutionConfigurationQuery, content: string): Promise<string | undefined> => {
+    internalUpdate = async (query: ExecutionConfigurationQuery, content: string,
+        renderer?: (description: string | undefined, content: string) => string | undefined,
+    ): Promise<string | undefined> => {
         try {
             const description = await this.issueDescriptionPort.getDescription(
                 query.owner,
@@ -34,7 +36,7 @@ export abstract class IssueContentInterface extends ContentInterface {
                 query.token,
             );
 
-            const updated = this.updateContent(description, content);
+            const updated = renderer ? renderer(description, content) : this.updateContent(description, content);
             if (updated === undefined) {
                 throw new Error('Issue content markers are missing or inconsistent.');
             }

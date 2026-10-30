@@ -722,7 +722,240 @@ private consumer. Local verification does not claim consumer deployment.
 
 Primary schema: [GitHub PullRequest closingIssuesReferences](https://docs.github.com/en/graphql/reference/pulls).
 
+## 23. Interrupted linkage and durable original-parent recovery — #785 (2026-10-30)
+
+The [report](https://github.com/vypdev/copilot/issues/785) concerns worker
+termination while the PR temporarily targets the default branch. A later
+`synchronize` invocation can replace the body, discard the restoration marker,
+and persist that temporary base as `parentBranch`. A JavaScript `finally` cannot
+compensate a killed worker. The temporary retarget/observation mechanism remains
+supported; its original parent and recovery authority must survive invocations.
+This correction uses the upstream report and repository source; no private
+consumer read, mutation, branch rewrite, tag or deployment is required.
+
+link-recovery-R01: capture the validated original base before temporary writes.
+Read existing V1 pending records and emit a bounded V2 record for new operations,
+binding PR/issue, original base, native head repository/ref and an opaque unique
+operation ID. The ID distinguishes concurrent operations; it grants no permission.
+Keep this host-owned state outside generated prose. Every description mode and
+configuration writer must preserve pending state or fail closed before writing;
+the transient default base must never become settled parent authority.
+
+link-recovery-R02: run narrowly scoped pending restoration before PR enrichment,
+description/review and subsequent configuration persistence on eligible workflow
+invocations. A newer head on the same native PR repository/ref may recover
+metadata, while stale invocations must not start a new linkage, generate prose,
+review or persist stale configuration. Preserve ordinary no-link/self-link and
+already-linked behavior. Ready-for-review permits only this pending repair before
+its normal review; it still does not repeat ordinary enrichment.
+
+link-recovery-R03: use fresh authenticated PR identity, state, head/ref/repository,
+base and exact operation ownership before each write and verify its result.
+Interrupted body-record recovery requires a native same-repository head; a fork-authored body cannot establish its own retarget authority. Fresh fork linkage can compensate its locally owned operation, but interrupted foreign-head records remain blocked for maintainer inspection.
+Closed/foreign/missing or changing identities, conflicting bases, ambiguous or
+malformed records and replacement operations retain state with actionable
+failure. Preserve other actors' body changes; cleanup removes only the owned
+temporary reference/record, never blindly restores an old whole-body snapshot.
+Remove recovery state only after the original base is verified. Failed or
+unverified restoration keeps the original parent recoverable. Provider APIs do
+not make separate metadata writes transactional; bounded before/after fences and
+owned-operation compensation must report uncertainty rather than claim success.
+
+link-recovery-R04: resolve parent configuration from validated pending/original
+authority before a mutable PR-base fallback. An admitted ordinary issue's stored
+parent is considered only when its exact managed working branch matches this PR
+head; promotion/release/hotfix routing does not acquire this inference. This also
+blocks adoption of an already-poisoned PR parent when an older runtime removed
+the marker. A conflicting managed-parent state
+without sufficient recovery evidence blocks body/configuration adoption instead
+of guessing a new parent. After the existing actor authorization, explicit description command coordinators
+run the same narrowly scoped pending repair before generation. The generator
+itself retains its description-only port and receives no base-write capability.
+Failed repair withholds generation and retains pending metadata; disabled modes
+and read-only commands do not invoke this preparation. A stale PR workflow must not overwrite newer persisted configuration.
+
+```text
+pending native snapshot -> validate operation/identity -> restore original base
+ -> verify base -> remove only owned temporary state -> verify cleanup
+ -> fresh event: ordinary route; stale event: stop ordinary writes
+uncertain/conflicting state -> retain record + original-parent authority -> rerun
+```
+
+Architecture: a pure bounded pending-state policy owns decoding, validation and
+metadata preservation. Application workflows own compensation, event sequencing
+and parent projection. Existing credential-bound adapters expose complete native
+identity; no provider DTO or token enters the pure policy. Description/configuration
+writers retain host metadata independently of model output. Native head ownership
+checks remain authoritative; a body marker or event URL cannot authorize another
+PR, repository or branch operation. Only PR metadata is repaired; managed Git
+refs stay Action-owned.
+
+Bounds: one owned pending operation, a maximum 4 KiB encoded record and the
+existing provider body boundary. Reject duplicate/unknown/oversized records.
+Use at most twelve PR-detail reads across linkage/recovery in one route, without
+polling. Setup may read the distinct admitted ordinary issue configuration once
+through its existing port to bind original-parent evidence to the managed head.
+Keep at most two relation lookups per route, each capped at the existing two pages of 100 references, and at most one
+20-second observation wait for a fresh proven-absent linkage. Recovery must not
+repeat that wait merely to restore an already-established relationship. Add no
+public option, model call, provider permission or external state backend.
+
+UX: a verified repair uses existing result steps and normal workflow continuation.
+A blocked repair retains pending evidence and uses the existing semantic error,
+recovery guidance and Job Summary; it must distinguish verified restoration from
+retained/unknown base or body. Rerun the normal PR workflow after a transient
+failure. It must not require contributors to discover and manually retarget a
+recoverable PR. Unknown/conflicting ownership requires inspection rather than
+unverified automatic edits. No extra success comment or notification is added.
+
+Compatibility/rollback: V1 pending state remains readable. New V2 records are
+written only after native identity checks. Before rolling back to an older
+runtime, finish or explicitly reconcile pending V2 operations with the newer
+runtime; do not discard their recovery state. No public configuration/schema
+migration, consumer override or deployment is part of this change.
+
+Reserve **93 distinct new cases before implementation**, including the thirty-three review/acceptance extensions recorded below:
+
+| Area | Cases | Acceptance |
+|---|---:|---|
+| Pure record/preservation policy | 30 | V1/V2 round trips, encoded bases, identity/nonce, malformed/unknown/duplicate/bounded records and exact owned-state removal |
+| Setup/original-parent projection | 13 | absent/poisoned PR config, admitted parent, valid pending authority, conflicts, unchanged ordinary/unlinked/issue routes |
+| Link/recovery/compensation | 19 | interrupted writes, verified/unverified restore, new head, foreign owner/ref, lookup failure, changed body/lease and one real worker-kill recovery |
+| Description/configuration writers | 17 | replace/append/preserve/disabled or explicit commands, fresh metadata, model-time head drift and retained state on failure |
+| Routing/bindings/completion | 14 | newer synchronize first, original-event retry, review-only preparation, stale persistence fence and native identity binding |
+| **Total** | **93** | no double counting with existing compensation or #610 cases |
+
+The owned process-kill case has a **15-second** budget reserved here; it uses
+only a disposable fake-provider state file and a child Node process, never a
+consumer or GitHub mutation. Other existing timeouts stay unchanged. Pure policy
+requires 100% all metrics; changed adapters/orchestration retain at least 95%
+lines/statements and 90% branches/functions, plus 100% measured added runtime
+lines at the exact develop base. Keep every global/module coverage and quality
+floor. Verify targeted local coverage, required commit-hook full tests/build/lint,
+global CI/platform coverage and budgets, architecture, types, specs/catalog/docs,
+package/web smoke and exact-head complete review without active findings before
+merge. All mandatory verification gates remain required.
+
+Update this owner, catalog evidence, PR configuration/description/capability and
+recovery documentation together. Acceptance must reproduce a killed worker,
+process a newer synchronize before the original retry, and verify final native
+base, body, persisted parent and guarded writes together. Rendering-only tests
+or a rejected delay promise that still runs `finally` do not establish recovery
+from worker termination.
+
 Review follow-up: an HTTP 200 GraphQL `UNAUTHORIZED` error is a nonretryable
 `authorization.denied`, consistent with `FORBIDDEN` and the existing deployment
 GraphQL error policy. A dedicated regression first reproduces the incorrect
 retryable outage and then verifies terminal, sanitized credential guidance.
+
+Local correction evidence for #785: the two regressions failed on the original
+implementation (2 failed, 63 passed). The reserved 93 new test cases and existing
+boundary suites now pass together: 644 tests across 25 suites. The concurrent
+missing-marker negative case first failed while its verified positive control
+passed. The five review
+extensions first failed on the initial correction (5 failed, 100 passed). The child-process
+case confirms that SIGKILL leaves native default-base/pending state, then a newer
+synchronize restores the original base, removes only owned bytes, persists the
+original parent and blocks the original-head retry. Focused coverage is 100% all
+metrics for the pure pending-state policy and linkage/description workflows;
+other changed measured modules meet the reserved 95/90 floors. This local receipt
+is not consumer-deployment evidence. Exact-head CI/global/platform coverage,
+review and merge receipts remain required.
+
+Review/acceptance extension reserved before the follow-up implementation: three
+additional linkage cases cover an unindexed pending record before retarget, an
+unindexed record still unobservable after its bounded wait, and an obsolete
+invocation that may restore the base but must retain unconfirmed linkage state.
+A recovered reference may be removed only after both native original-base
+restoration and the intended GraphQL relationship are verified. Proven existing
+relationships do not wait again. Fresh recovery may finish the existing owned
+operation within the same one-wait/read bounds; stale recovery does not restart
+its temporary retarget/observation. Lookup failures retain pending evidence.
+Two additional conversation cases cover original-parent binding to the remotely
+resolved head (absent from comment webhooks), and description rejection when the
+fresh native base differs from that canonical parent even after an older runtime
+lost the marker. These extend the original sixty cases rather than weakening
+coverage, timeouts or any existing assertion.
+
+A verified pending repair on an opened invocation replaces its later ordinary
+linkage step; it must not start a second observation window. Relation reads
+remain bounded to two lookups per route (two pages of 100 references each).
+
+Second review extension, reserved before its code change: two complementary
+concurrent-cleanup cases verify that a missing marker plus restored base cannot
+report linkage success when the relationship remains unobserved, and that an
+independently completed cleanup with a verified relationship remains successful.
+An absent record is not proof of completed linkage. Lost ownership retains the
+current body and reports actionable stale state rather than recreating authority
+or overwriting concurrent text.
+
+Writer-boundary acceptance extension reserved before its implementation: two
+complementary role cases distinguish a normal issue quoting a pending marker
+(such as this report) from a PR with ambiguous pending metadata. The shared
+configuration writer must not interpret issue prose as PR linkage state. Carry
+an ephemeral issue/PR target kind from the existing execution classification,
+keep it outside stored configuration, and apply the PR guard to the freshly read
+body through an invocation-local renderer. Unknown legacy contexts remain
+conservative; explicit issue contexts preserve quoted text. No body can choose
+its own target kind, and no new input, scope or shared mutable handler state is
+introduced.
+
+The direct credential-bound deployment state writer also identifies its already
+known issue target when invoking the shared renderer. Its existing monotonic
+successor/preserved-prose case first reproduces the quoted-marker regression,
+then verifies the same fence and body preservation with the explicit role.
+
+Four additional issue-adapter failure cases are reserved before adding them:
+null, array and primitive stored configuration, plus an incomplete configuration
+marker during a first save. They verify that explicit issue classification does
+not bypass stored-state validation and that failed rendering performs no write.
+These cover the existing error boundaries of the adapter touched by the role
+correction, retaining its 95/90 module floors instead of excluding it.
+
+Explicit-command recovery extension, reserved before implementation: five cases
+cover both ordinary and native review-comment transports recovering a temporary
+target before generation, blocked repair stopping generation/persistence, disabled
+description policy without preparation, and automatic-description passthrough
+without duplicate preparation. Existing command-routing regressions additionally
+verify the injected preparation is invoked only through the already-authorized
+description adapter. The coordinator reuses the credential-bound recovery use
+case with recoveryOnly=true; it cannot start a new linkage and exposes no user
+retarget argument. Frozen recovery context binds the remotely resolved managed
+head when the comment payload omits it. Generator ports, provider scopes, native
+identity/lease fences and the existing one-wait/read budgets remain unchanged.
+
+A sixth explicit-command case is reserved for an ordinary linked PR comment with
+no stored parent and no pending marker. Recovery-only inspection must be a no-op
+there, allowing generation from fresh native details; it must not require a
+webhook base omitted by the comment transport. A known canonical-parent conflict
+still blocks, and no fresh linkage is started by command preparation.
+
+One composition boundary case is additionally reserved to verify that workflow
+and local single-action surfaces retain their existing publication-capability
+separation while comment recovery is wired. It constructs capabilities against
+mocks only and invokes no publication/tag/release operation. This retains the
+changed composition module's branch/function floors without excluding it.
+
+The six explicit-command cases reproduce the previous direct-call behavior with
+four failures and two passing controls before preparation is enabled. Both real
+comment routers then verify preparation ordering and that denied actors invoke
+neither preparation nor generation. A defaulted optional dependency preserves
+existing constructor arity/introspection for older compositions.
+
+### Native base authority and stored ref validation (review extension)
+
+A persisted PR configuration parent alone cannot override the native event base.
+Setup projects a separate invocation-local original-parent fact only after matching
+the distinct admitted issue configuration to the resolved managed head. Recovery
+and description requests use pending ownership, then that verified fact, then the
+native event base. Conversation events without a native base leave it unspecified
+so the existing fresh native detail read supplies it. This fact is never persisted
+as public configuration. Invalid slash components (empty, dot-prefixed or ending
+in `.lock`) are rejected in V1/V2 stored bases and native head refs before mutations.
+Reserve six pure invalid-component cases, four setup/projection cases and one
+boundary propagation/reset case; existing identity/read/time/coverage limits remain.
+
+Two additional compatibility cases exercise each authorized comment transport
+with the optional legacy recovery dependency absent. They verify description
+delivery and the existing actor authorization guard, and cover the two partial
+added-line branches reported by exact-head Codecov before final acceptance.

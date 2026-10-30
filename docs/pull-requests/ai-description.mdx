@@ -62,10 +62,18 @@ Use `ai-pull-request-description-mode` when a team needs a different ownership m
 
 | Mode | Automatic runs | `/copilot description` | Behavior |
 | --- | --- | --- | --- |
-| `replace` | Yes | Yes | Default. The generated text owns the complete body. |
+| `replace` | Yes | Yes | Default. Generated prose replaces the body while retaining host-owned pending recovery metadata. |
 | `append` | Yes | Yes | Keeps human-authored text and replaces only the bounded Copilot-managed section. |
 | `preserve` | No | Yes | Does not touch the body automatically; a maintainer can request an update explicitly from a PR comment. |
 | `disabled` | No | No | Description automation is fully disabled. |
+
+All enabled modes retain pending PR-to-issue linkage metadata. If a cancelled run
+left the PR on its temporary default target, rerun the current PR workflow first:
+it restores and verifies the original base before description generation. An
+authorized explicit description command first runs the same narrow pending
+repair. The generator itself cannot retarget a PR; failed repair retains the
+body and withholds generation. Disabled description policy performs no repair. Native head, base and body changes during generation
+retain the current body and require a fresh invocation.
 
 The mode can be set directly on the Action input or through the `AI_PULL_REQUEST_DESCRIPTION_MODE` Repository Variable written by `copilot setup`.
 

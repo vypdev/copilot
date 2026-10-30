@@ -1,3 +1,5 @@
+import { isSafeBranchTree } from '../../../domain/deployment_configuration';
+import { PendingPullRequestLinkError, pendingPullRequestParent } from '../../../domain/pull_request_issue_link_state';
 import { ApplicationError } from '../../errors/application_error';
 import type {
     SetupConfigurationQueryPort,
@@ -103,6 +105,7 @@ export async function runSetupExecution(
         hotfixBranch: restored.hotfixBranch,
     };
     let currentPullRequestLabels = [...context.currentPullRequestLabels];
+    let pullRequestParentBranch: string | undefined;
 
     if (context.isIssue && !context.isSingleAction && issueResolution.issueNumber !== undefined && issueAdmission?.status === 'eligible') {
         const resolution = await dependencies.branchVersionResolver.resolve({
@@ -141,6 +144,23 @@ export async function runSetupExecution(
     }
 
     if (context.isPullRequest && !context.isSingleAction) {
+        const pullRequestBody = await dependencies.issueSetupPort.getDescription(context.pullRequest.number);
+        const pendingParent = pendingPullRequestParent(pullRequestBody ?? '', context.pullRequest.number,
+            issueResolution.issueNumber ?? context.pullRequest.number);
+        // An admitted issue's exact managed head retains parent authority even
+        // if an older runtime already discarded the pending body record.
+        const admitted = issueResolution.issueNumber !== undefined && issueAdmission?.status === 'eligible'
+            && ['feature', 'bugfix', 'documentation', 'chore'].includes(issueAdmission.kind)
+            ? await dependencies.configurationPort.get(issueResolution.issueNumber) : undefined;
+        const resolvedHead = issueResolution.pullRequestHeadBranch || context.pullRequest.head;
+        const admittedParent = admitted?.workingBranch === resolvedHead ? admitted?.parentBranch : undefined;
+        if (admittedParent && !isSafeBranchTree(admittedParent)) {
+            throw new ApplicationError('configuration.invalid', 'The admitted managed parent is not a safe branch.');
+        }
+        if (pendingParent && admittedParent && pendingParent !== admittedParent) {
+            throw new PendingPullRequestLinkError('ownership');
+        }
+        pullRequestParentBranch = admittedParent;
         currentPullRequestLabels = await dependencies.issueSetupPort.getLabels(context.pullRequest.number);
         release = {
             ...release,
@@ -153,7 +173,7 @@ export async function runSetupExecution(
         configuration = {
             ...configuration,
             workingBranch: issueResolution.pullRequestHeadBranch || context.pullRequest.head || configuration.workingBranch,
-            parentBranch: configuration.parentBranch ?? context.pullRequest.base,
+            parentBranch: pendingParent ?? admittedParent ?? (context.pullRequest.base || configuration.parentBranch),
         };
     }
 
@@ -174,6 +194,7 @@ export async function runSetupExecution(
             liveIssueBody,
             issueAdmission,
             liveIssueTitle,
+            pullRequestParentBranch,
         ),
     };
 }
@@ -234,6 +255,7 @@ function setupState(
     liveIssueBody?: string,
     issueWorkflowAdmission?: SetupExecutionState['issueWorkflowAdmission'],
     liveIssueTitle?: string,
+    pullRequestParentBranch?: string,
 ): SetupExecutionState {
     return {
         previousConfiguration,
@@ -245,6 +267,7 @@ function setupState(
         liveIssueBody,
         liveIssueTitle,
         issueWorkflowAdmission,
+        pullRequestParentBranch,
     };
 }
 
