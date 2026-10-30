@@ -44,6 +44,16 @@ The specification validator rejects missing or escaped paths, duplicate
 capability/spec ownership, invalid status/date metadata, unregistered top-level
 SDDs, and a stale generated `CATALOG.md`.
 
+Discovery also rejects every symbolic link encountered under `specs/`, including
+unregistered file links and directory links. It never follows their targets.
+Replace a reported link with ordinary repository files, register any resulting
+SDD, regenerate the catalog and retry. A blocked command leaves the existing
+catalog and link targets unchanged. Ordinary root `README.md`, `_template.md`
+and `CATALOG.md`, and ordinary non-Markdown files, retain their exclusions;
+those names do not exempt a symbolic link. The standalone SDK applies the same
+rule to generation and validation. Its exported discovery helper reports an
+unsupported tree explicitly instead of returning a partial file list.
+
 Catalog evidence uses the consumer repository's own roots and language
 conventions. Source, entrypoints, tests and documentation can be any regular
 contained files; `specs/` and workflow publication boundaries stay fixed. Run

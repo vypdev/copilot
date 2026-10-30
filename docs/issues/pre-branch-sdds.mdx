@@ -247,6 +247,15 @@ Markdown under `specs/`; workflow evidence remains YAML under
 `.github/workflows/` or `setup/workflows/`. Ownership, SDD structure, numeric test
 budgets and the SDD/catalog-only publication allowlist remain enforced.
 
+Catalog discovery rejects unregistered symbolic links anywhere below `specs/`,
+including links to directories, dangling links and links whose names look like
+excluded files. It does not follow a target to decide whether it contains SDDs.
+The ordinary-file exclusions for root `README.md`, `_template.md`, `CATALOG.md`
+and non-Markdown files remain supported. Replace a reported link with ordinary
+contained files, register any resulting SDD, regenerate and retry. A rejected
+generation or validation leaves the existing catalog and targets unchanged;
+neither the Action nor the standalone SDK silently treats this tree as complete.
+
 Accepted names with parentheses, spaces, Unicode or Markdown punctuation do not
 need renaming. The generated catalog preserves their full paths and literal
 labels, with URI-escaped link destinations. Register the original filename,
