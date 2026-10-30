@@ -1453,6 +1453,86 @@
       "startLine": 1,
       "diff": " const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function tokenEndpoint() { return fakeAuthResponse; }\n const initialSession = loadConfiguredStorageState();\n+assert.equal(initialSession.access_token.split(\".\").length, 3);",
       "expected": []
+    },
+    {
+      "id": "unittest-discovery-delegated-wildcard",
+      "language": "python",
+      "category": "negative",
+      "file": ".github/scripts/tests/run_manifest_tests.py",
+      "startLine": 1,
+      "description": "Owned synthetic runner and fixed flat importable test inventory. The configured workflow invokes this file, including through delegates; its contract requires both manifest modules. Review the changed discovery command, effective cwd and module selection. Supplied observations are separate from model predictions; do not execute fixtures or infer defects from the absence of direct workflow module invocation.",
+      "diff": " import subprocess\n import sys\n from pathlib import Path\n ROOT = Path(__file__).resolve().parents[3]\n # Workflow cwd: .; run: python .github/scripts/tests/run_manifest_tests.py.\n # Owned ordinary importable unittest fixtures:\n # .github/scripts/tests/test_manifest_core.py: 14 TestCase methods.\n # .github/scripts/tests/test_manifest_export.py: 5 TestCase methods.\n # backend/checks/test_manifest_health.py: 1 unrelated TestCase method.\n # Both manifest modules are required by this CI verification contract.\n # Separate owned command observation: 19 tests passed, including all five export methods.\n # The observation uses this exact runner argv, root and owned module sources; no consumer run is claimed.\n def command():\n+    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \".github/scripts/tests\", \"-p\", \"test_manifest_*.py\", \"-v\"]\n def run_discovery():\n     return subprocess.run(command(), cwd=ROOT, check=True)\n def delegate():\n     return run_discovery()\n def alias():\n     return delegate()\n if __name__ == \"__main__\": delegate()",
+      "expected": []
+    },
+    {
+      "id": "unittest-discovery-nested-working-directory",
+      "language": "python",
+      "category": "negative",
+      "file": ".github/scripts/tests/run_manifest_tests.py",
+      "startLine": 1,
+      "description": "Owned synthetic runner and fixed flat importable test inventory. The configured workflow invokes this file, including through delegates; its contract requires both manifest modules. Review the changed discovery command, effective cwd and module selection. Supplied observations are separate from model predictions; do not execute fixtures or infer defects from the absence of direct workflow module invocation.",
+      "diff": " import subprocess\n import sys\n from pathlib import Path\n ROOT = Path(__file__).resolve().parents[3]\n # Workflow cwd: backend; run: python ../.github/scripts/tests/run_manifest_tests.py.\n # Owned ordinary importable unittest fixtures:\n # .github/scripts/tests/test_manifest_core.py: 14 TestCase methods.\n # .github/scripts/tests/test_manifest_export.py: 5 TestCase methods.\n # backend/checks/test_manifest_health.py: 1 unrelated TestCase method.\n # Both manifest modules are required by this CI verification contract.\n def command():\n+    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \".github/scripts/tests\", \"-p\", \"test_manifest_*.py\", \"-v\"]\n def run_discovery():\n     return subprocess.run(command(), cwd=ROOT, check=True)\n def delegate():\n     return run_discovery()\n def alias():\n     return delegate()\n if __name__ == \"__main__\": alias()",
+      "expected": []
+    },
+    {
+      "id": "unittest-discovery-literal-argv-pattern",
+      "language": "python",
+      "category": "negative",
+      "file": ".github/scripts/tests/run_manifest_tests.py",
+      "startLine": 1,
+      "description": "Owned synthetic runner and fixed flat importable test inventory. The configured workflow invokes this file, including through delegates; its contract requires both manifest modules. Review the changed discovery command, effective cwd and module selection. Supplied observations are separate from model predictions; do not execute fixtures or infer defects from the absence of direct workflow module invocation.",
+      "diff": " import subprocess\n import sys\n from pathlib import Path\n ROOT = Path(__file__).resolve().parents[3]\n # Workflow cwd: .; run: python .github/scripts/tests/run_manifest_tests.py.\n # Owned ordinary importable unittest fixtures:\n # .github/scripts/tests/test_manifest_core.py: 14 TestCase methods.\n # .github/scripts/tests/test_manifest_export.py: 5 TestCase methods.\n # backend/checks/test_manifest_health.py: 1 unrelated TestCase method.\n # Both manifest modules are required by this CI verification contract.\n def command():\n+    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \".github/scripts/tests\", \"-p\", \"test_manifest_*.py\", \"-v\"]\n def run_discovery():\n     return subprocess.run(command(), cwd=ROOT, check=True)\n def delegate():\n     return run_discovery()\n def alias():\n     return delegate()\n if __name__ == \"__main__\": run_discovery()",
+      "expected": []
+    },
+    {
+      "id": "unittest-discovery-excluded-by-pattern",
+      "language": "python",
+      "category": "correctness",
+      "file": ".github/scripts/tests/run_manifest_tests.py",
+      "startLine": 1,
+      "description": "Owned synthetic runner and fixed flat importable test inventory. The configured workflow invokes this file, including through delegates; its contract requires both manifest modules. Review the changed discovery command, effective cwd and module selection. Supplied observations are separate from model predictions; do not execute fixtures or infer defects from the absence of direct workflow module invocation.",
+      "diff": " import subprocess\n import sys\n from pathlib import Path\n ROOT = Path(__file__).resolve().parents[3]\n # Workflow cwd: .; run: python .github/scripts/tests/run_manifest_tests.py.\n # Owned ordinary importable unittest fixtures:\n # .github/scripts/tests/test_manifest_core.py: 14 TestCase methods.\n # .github/scripts/tests/test_manifest_export.py: 5 TestCase methods.\n # backend/checks/test_manifest_health.py: 1 unrelated TestCase method.\n # Both manifest modules are required by this CI verification contract.\n def command():\n+    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \".github/scripts/tests\", \"-p\", \"test_manifest_core.py\", \"-v\"]\n def run_discovery():\n     return subprocess.run(command(), cwd=ROOT, check=True)\n def delegate():\n     return run_discovery()\n def alias():\n     return delegate()\n if __name__ == \"__main__\": delegate()",
+      "expected": [
+        {
+          "id": "unittest-discovery-excluded-by-pattern",
+          "title": "The changed discovery selector excludes the required export module",
+          "file": ".github/scripts/tests/run_manifest_tests.py",
+          "line": 12,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \".github/scripts/tests\", \"-p\", \"test_manifest_core.py\", \"-v\"]"
+        }
+      ]
+    },
+    {
+      "id": "unittest-discovery-wrong-start-directory",
+      "language": "python",
+      "category": "correctness",
+      "file": ".github/scripts/tests/run_manifest_tests.py",
+      "startLine": 1,
+      "description": "Owned synthetic runner and fixed flat importable test inventory. The configured workflow invokes this file, including through delegates; its contract requires both manifest modules. Review the changed discovery command, effective cwd and module selection. Supplied observations are separate from model predictions; do not execute fixtures or infer defects from the absence of direct workflow module invocation.",
+      "diff": " import subprocess\n import sys\n from pathlib import Path\n ROOT = Path(__file__).resolve().parents[3]\n # Workflow cwd: .; run: python .github/scripts/tests/run_manifest_tests.py.\n # Owned ordinary importable unittest fixtures:\n # .github/scripts/tests/test_manifest_core.py: 14 TestCase methods.\n # .github/scripts/tests/test_manifest_export.py: 5 TestCase methods.\n # backend/checks/test_manifest_health.py: 1 unrelated TestCase method.\n # Both manifest modules are required by this CI verification contract.\n def command():\n+    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \"backend/checks\", \"-p\", \"test_manifest_*.py\", \"-v\"]\n def run_discovery():\n     return subprocess.run(command(), cwd=ROOT, check=True)\n def delegate():\n     return run_discovery()\n def alias():\n     return delegate()\n if __name__ == \"__main__\": delegate()",
+      "expected": [
+        {
+          "id": "unittest-discovery-wrong-start-directory",
+          "title": "The changed discovery selector excludes the required export module",
+          "file": ".github/scripts/tests/run_manifest_tests.py",
+          "line": 12,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \"backend/checks\", \"-p\", \"test_manifest_*.py\", \"-v\"]"
+        }
+      ]
+    },
+    {
+      "id": "unittest-discovery-runner-unavailable",
+      "language": "yaml",
+      "category": "negative",
+      "description": "The delegated runner source and discovery configuration are unavailable. A successful unrelated revision is not evidence of current module selection or execution; report only supported changed-code defects.",
+      "file": ".github/workflows/manifest.yml",
+      "startLine": 1,
+      "diff": " jobs:\n   verify:\n     steps:\n+      - run: python .github/scripts/tests/run_manifest_tests.py\n # The runner and current module-qualified execution records are not supplied.",
+      "expected": []
     }
   ]
 }

@@ -1,0 +1,633 @@
+{
+  "schemaVersion": 1,
+  "issue": "https://github.com/vypdev/copilot/issues/806",
+  "date": "2026-10-30",
+  "sourceBase": "bc4aec78a063cc38924907a6183b48b7a0e55012",
+  "decision": "Regression-only: keep existing production instructions; reject the empirically worse expanded discovery instruction and native-framing compaction.",
+  "runtime": {
+    "cli": "codex-cli 0.164.0-alpha.11.1",
+    "node": "v24.20.0",
+    "provider": "codex",
+    "modelProvider": "openai",
+    "model": "gpt-6-luna",
+    "effort": "medium"
+  },
+  "consumerEvidence": {
+    "repository": "vypdev/geckocv",
+    "reviewedHead": "1b5e3a0ade73d21c749bceba004230fc97f2713e",
+    "nativeRun": 41059078060,
+    "nativeJob": 124073926286,
+    "testedMerge": "d315bde538cf935a0fea964359b58be780f52011",
+    "criticalSourceEquality": {
+      "runner": "6b5c0a1e7afd0f9ae1b990638674c7f3014f840f",
+      "workflow": "dd4bab50ed22c74be6592cec02270cb9d0a66a3a",
+      "tests": "1225657537130642ca446dab899f078a059145e6"
+    },
+    "targetMethodsObservedOk": 5,
+    "suiteTestsObserved": 19,
+    "suiteDurationSeconds": 50.251,
+    "method": "Read-only source/blob equality and existing native execution log. Associated PR head and actual merge checkout are distinguished.",
+    "privateSourceOrRawLogsCommitted": false,
+    "consumerExecutionPerformed": false,
+    "consumerMutationPerformed": false
+  },
+  "corpus": {
+    "schemaVersion": 1,
+    "cases": [
+      {
+        "id": "unittest-discovery-delegated-wildcard",
+        "language": "python",
+        "category": "negative",
+        "file": ".github/scripts/tests/run_manifest_tests.py",
+        "startLine": 1,
+        "description": "Owned synthetic runner and fixed flat importable test inventory. The configured workflow invokes this file, including through delegates; its contract requires both manifest modules. Review the changed discovery command, effective cwd and module selection. Supplied observations are separate from model predictions; do not execute fixtures or infer defects from the absence of direct workflow module invocation.",
+        "diff": " import subprocess\n import sys\n from pathlib import Path\n ROOT = Path(__file__).resolve().parents[3]\n # Workflow cwd: .; run: python .github/scripts/tests/run_manifest_tests.py.\n # Owned ordinary importable unittest fixtures:\n # .github/scripts/tests/test_manifest_core.py: 14 TestCase methods.\n # .github/scripts/tests/test_manifest_export.py: 5 TestCase methods.\n # backend/checks/test_manifest_health.py: 1 unrelated TestCase method.\n # Both manifest modules are required by this CI verification contract.\n # Separate owned command observation: 19 tests passed, including all five export methods.\n # The observation uses this exact runner argv, root and owned module sources; no consumer run is claimed.\n def command():\n+    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \".github/scripts/tests\", \"-p\", \"test_manifest_*.py\", \"-v\"]\n def run_discovery():\n     return subprocess.run(command(), cwd=ROOT, check=True)\n def delegate():\n     return run_discovery()\n def alias():\n     return delegate()\n if __name__ == \"__main__\": delegate()",
+        "expected": []
+      },
+      {
+        "id": "unittest-discovery-nested-working-directory",
+        "language": "python",
+        "category": "negative",
+        "file": ".github/scripts/tests/run_manifest_tests.py",
+        "startLine": 1,
+        "description": "Owned synthetic runner and fixed flat importable test inventory. The configured workflow invokes this file, including through delegates; its contract requires both manifest modules. Review the changed discovery command, effective cwd and module selection. Supplied observations are separate from model predictions; do not execute fixtures or infer defects from the absence of direct workflow module invocation.",
+        "diff": " import subprocess\n import sys\n from pathlib import Path\n ROOT = Path(__file__).resolve().parents[3]\n # Workflow cwd: backend; run: python ../.github/scripts/tests/run_manifest_tests.py.\n # Owned ordinary importable unittest fixtures:\n # .github/scripts/tests/test_manifest_core.py: 14 TestCase methods.\n # .github/scripts/tests/test_manifest_export.py: 5 TestCase methods.\n # backend/checks/test_manifest_health.py: 1 unrelated TestCase method.\n # Both manifest modules are required by this CI verification contract.\n def command():\n+    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \".github/scripts/tests\", \"-p\", \"test_manifest_*.py\", \"-v\"]\n def run_discovery():\n     return subprocess.run(command(), cwd=ROOT, check=True)\n def delegate():\n     return run_discovery()\n def alias():\n     return delegate()\n if __name__ == \"__main__\": alias()",
+        "expected": []
+      },
+      {
+        "id": "unittest-discovery-literal-argv-pattern",
+        "language": "python",
+        "category": "negative",
+        "file": ".github/scripts/tests/run_manifest_tests.py",
+        "startLine": 1,
+        "description": "Owned synthetic runner and fixed flat importable test inventory. The configured workflow invokes this file, including through delegates; its contract requires both manifest modules. Review the changed discovery command, effective cwd and module selection. Supplied observations are separate from model predictions; do not execute fixtures or infer defects from the absence of direct workflow module invocation.",
+        "diff": " import subprocess\n import sys\n from pathlib import Path\n ROOT = Path(__file__).resolve().parents[3]\n # Workflow cwd: .; run: python .github/scripts/tests/run_manifest_tests.py.\n # Owned ordinary importable unittest fixtures:\n # .github/scripts/tests/test_manifest_core.py: 14 TestCase methods.\n # .github/scripts/tests/test_manifest_export.py: 5 TestCase methods.\n # backend/checks/test_manifest_health.py: 1 unrelated TestCase method.\n # Both manifest modules are required by this CI verification contract.\n def command():\n+    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \".github/scripts/tests\", \"-p\", \"test_manifest_*.py\", \"-v\"]\n def run_discovery():\n     return subprocess.run(command(), cwd=ROOT, check=True)\n def delegate():\n     return run_discovery()\n def alias():\n     return delegate()\n if __name__ == \"__main__\": run_discovery()",
+        "expected": []
+      },
+      {
+        "id": "unittest-discovery-excluded-by-pattern",
+        "language": "python",
+        "category": "correctness",
+        "file": ".github/scripts/tests/run_manifest_tests.py",
+        "startLine": 1,
+        "description": "Owned synthetic runner and fixed flat importable test inventory. The configured workflow invokes this file, including through delegates; its contract requires both manifest modules. Review the changed discovery command, effective cwd and module selection. Supplied observations are separate from model predictions; do not execute fixtures or infer defects from the absence of direct workflow module invocation.",
+        "diff": " import subprocess\n import sys\n from pathlib import Path\n ROOT = Path(__file__).resolve().parents[3]\n # Workflow cwd: .; run: python .github/scripts/tests/run_manifest_tests.py.\n # Owned ordinary importable unittest fixtures:\n # .github/scripts/tests/test_manifest_core.py: 14 TestCase methods.\n # .github/scripts/tests/test_manifest_export.py: 5 TestCase methods.\n # backend/checks/test_manifest_health.py: 1 unrelated TestCase method.\n # Both manifest modules are required by this CI verification contract.\n def command():\n+    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \".github/scripts/tests\", \"-p\", \"test_manifest_core.py\", \"-v\"]\n def run_discovery():\n     return subprocess.run(command(), cwd=ROOT, check=True)\n def delegate():\n     return run_discovery()\n def alias():\n     return delegate()\n if __name__ == \"__main__\": delegate()",
+        "expected": [
+          {
+            "id": "unittest-discovery-excluded-by-pattern",
+            "title": "The changed discovery selector excludes the required export module",
+            "file": ".github/scripts/tests/run_manifest_tests.py",
+            "line": 12,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \".github/scripts/tests\", \"-p\", \"test_manifest_core.py\", \"-v\"]"
+          }
+        ]
+      },
+      {
+        "id": "unittest-discovery-wrong-start-directory",
+        "language": "python",
+        "category": "correctness",
+        "file": ".github/scripts/tests/run_manifest_tests.py",
+        "startLine": 1,
+        "description": "Owned synthetic runner and fixed flat importable test inventory. The configured workflow invokes this file, including through delegates; its contract requires both manifest modules. Review the changed discovery command, effective cwd and module selection. Supplied observations are separate from model predictions; do not execute fixtures or infer defects from the absence of direct workflow module invocation.",
+        "diff": " import subprocess\n import sys\n from pathlib import Path\n ROOT = Path(__file__).resolve().parents[3]\n # Workflow cwd: .; run: python .github/scripts/tests/run_manifest_tests.py.\n # Owned ordinary importable unittest fixtures:\n # .github/scripts/tests/test_manifest_core.py: 14 TestCase methods.\n # .github/scripts/tests/test_manifest_export.py: 5 TestCase methods.\n # backend/checks/test_manifest_health.py: 1 unrelated TestCase method.\n # Both manifest modules are required by this CI verification contract.\n def command():\n+    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \"backend/checks\", \"-p\", \"test_manifest_*.py\", \"-v\"]\n def run_discovery():\n     return subprocess.run(command(), cwd=ROOT, check=True)\n def delegate():\n     return run_discovery()\n def alias():\n     return delegate()\n if __name__ == \"__main__\": delegate()",
+        "expected": [
+          {
+            "id": "unittest-discovery-wrong-start-directory",
+            "title": "The changed discovery selector excludes the required export module",
+            "file": ".github/scripts/tests/run_manifest_tests.py",
+            "line": 12,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "    return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \"backend/checks\", \"-p\", \"test_manifest_*.py\", \"-v\"]"
+          }
+        ]
+      },
+      {
+        "id": "unittest-discovery-runner-unavailable",
+        "language": "yaml",
+        "category": "negative",
+        "description": "The delegated runner source and discovery configuration are unavailable. A successful unrelated revision is not evidence of current module selection or execution; report only supported changed-code defects.",
+        "file": ".github/workflows/manifest.yml",
+        "startLine": 1,
+        "diff": " jobs:\n   verify:\n     steps:\n+      - run: python .github/scripts/tests/run_manifest_tests.py\n # The runner and current module-qualified execution records are not supplied.",
+        "expected": []
+      }
+    ]
+  },
+  "selectionObservations": [
+    {
+      "id": "unittest-discovery-delegated-wildcard",
+      "kind": "selection",
+      "initialCwd": ".",
+      "effectiveCwd": "/owned-repo",
+      "runnerCalls": 1,
+      "selectedModules": [
+        ".github/scripts/tests/test_manifest_core.py",
+        ".github/scripts/tests/test_manifest_export.py"
+      ],
+      "selectedMethods": 19,
+      "targetMethods": 5
+    },
+    {
+      "id": "unittest-discovery-nested-working-directory",
+      "kind": "selection",
+      "initialCwd": "backend",
+      "effectiveCwd": "/owned-repo",
+      "runnerCalls": 1,
+      "selectedModules": [
+        ".github/scripts/tests/test_manifest_core.py",
+        ".github/scripts/tests/test_manifest_export.py"
+      ],
+      "selectedMethods": 19,
+      "targetMethods": 5
+    },
+    {
+      "id": "unittest-discovery-literal-argv-pattern",
+      "kind": "selection",
+      "initialCwd": ".",
+      "effectiveCwd": "/owned-repo",
+      "runnerCalls": 1,
+      "selectedModules": [
+        ".github/scripts/tests/test_manifest_core.py",
+        ".github/scripts/tests/test_manifest_export.py"
+      ],
+      "selectedMethods": 19,
+      "targetMethods": 5
+    },
+    {
+      "id": "unittest-discovery-excluded-by-pattern",
+      "kind": "selection",
+      "initialCwd": ".",
+      "effectiveCwd": "/owned-repo",
+      "runnerCalls": 1,
+      "selectedModules": [
+        ".github/scripts/tests/test_manifest_core.py"
+      ],
+      "selectedMethods": 14,
+      "targetMethods": 0
+    },
+    {
+      "id": "unittest-discovery-wrong-start-directory",
+      "kind": "selection",
+      "initialCwd": ".",
+      "effectiveCwd": "/owned-repo",
+      "runnerCalls": 1,
+      "selectedModules": [
+        "backend/checks/test_manifest_health.py"
+      ],
+      "selectedMethods": 1,
+      "targetMethods": 0
+    },
+    {
+      "id": "unittest-discovery-runner-unavailable",
+      "kind": "unavailable"
+    }
+  ],
+  "ownedPythonCorroboration": {
+    "source": "src/tooling/__tests__/fixtures/bugbot_unittest_discovery_probe.py",
+    "sourceSha256": "56ca73ce52f4a078b9765ebf6e6937e683427ee0352fa2bac1d87e9e11b537da",
+    "receipt": {
+      "python": "3.14.6 (main, Jun 10 2026, 10:03:53) [Clang 21.0.0 (clang-2100.0.123.102)]",
+      "method": "Actual Python unittest discovery/execution of separately authored fixed owned fixtures; corpus text is never read or interpreted.",
+      "modules": [
+        {
+          "path": ".github/scripts/tests/test_manifest_core.py",
+          "sha256": "d617a487617443aef6136494dd8f4373cea1c8b8828102d2b5332839760264bd",
+          "methods": 14
+        },
+        {
+          "path": ".github/scripts/tests/test_manifest_export.py",
+          "sha256": "aa9d6360698c9a7cfcd78d73267ffff7e331b22ec636700d6036acb1a690ac19",
+          "methods": 5
+        },
+        {
+          "path": "backend/checks/test_manifest_health.py",
+          "sha256": "2169106841a988c0385adb0847b710859f0f9c4fb4f929956724b677e4cc7891",
+          "methods": 1
+        }
+      ],
+      "observations": [
+        {
+          "id": "unittest-discovery-delegated-wildcard",
+          "initialCwd": ".",
+          "effectiveCwd": "owned repository root",
+          "command": [
+            "sys.executable",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            ".github/scripts/tests",
+            "-p",
+            "test_manifest_*.py",
+            "-v"
+          ],
+          "runnerSourceSha256": "fe525c3672b91353732b8f20b00800c599532a4995da2fa3292cd32539e31d17",
+          "testsPassed": 19,
+          "targetMethodsPassed": 5,
+          "moduleQualifiedOkRecords": [
+            "test_core_0 (test_manifest_core.CoreTests.test_core_0) ... ok",
+            "test_core_1 (test_manifest_core.CoreTests.test_core_1) ... ok",
+            "test_core_10 (test_manifest_core.CoreTests.test_core_10) ... ok",
+            "test_core_11 (test_manifest_core.CoreTests.test_core_11) ... ok",
+            "test_core_12 (test_manifest_core.CoreTests.test_core_12) ... ok",
+            "test_core_13 (test_manifest_core.CoreTests.test_core_13) ... ok",
+            "test_core_2 (test_manifest_core.CoreTests.test_core_2) ... ok",
+            "test_core_3 (test_manifest_core.CoreTests.test_core_3) ... ok",
+            "test_core_4 (test_manifest_core.CoreTests.test_core_4) ... ok",
+            "test_core_5 (test_manifest_core.CoreTests.test_core_5) ... ok",
+            "test_core_6 (test_manifest_core.CoreTests.test_core_6) ... ok",
+            "test_core_7 (test_manifest_core.CoreTests.test_core_7) ... ok",
+            "test_core_8 (test_manifest_core.CoreTests.test_core_8) ... ok",
+            "test_core_9 (test_manifest_core.CoreTests.test_core_9) ... ok",
+            "test_export_0 (test_manifest_export.ExportTests.test_export_0) ... ok",
+            "test_export_1 (test_manifest_export.ExportTests.test_export_1) ... ok",
+            "test_export_2 (test_manifest_export.ExportTests.test_export_2) ... ok",
+            "test_export_3 (test_manifest_export.ExportTests.test_export_3) ... ok",
+            "test_export_4 (test_manifest_export.ExportTests.test_export_4) ... ok"
+          ],
+          "exit": 0
+        },
+        {
+          "id": "unittest-discovery-nested-working-directory",
+          "initialCwd": "backend",
+          "effectiveCwd": "owned repository root",
+          "command": [
+            "sys.executable",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            ".github/scripts/tests",
+            "-p",
+            "test_manifest_*.py",
+            "-v"
+          ],
+          "runnerSourceSha256": "f0c9edbb275bf7aa2f0cf597bc0cd3d2ec754863b9a059cd2b9fdcba449ed041",
+          "testsPassed": 19,
+          "targetMethodsPassed": 5,
+          "moduleQualifiedOkRecords": [
+            "test_core_0 (test_manifest_core.CoreTests.test_core_0) ... ok",
+            "test_core_1 (test_manifest_core.CoreTests.test_core_1) ... ok",
+            "test_core_10 (test_manifest_core.CoreTests.test_core_10) ... ok",
+            "test_core_11 (test_manifest_core.CoreTests.test_core_11) ... ok",
+            "test_core_12 (test_manifest_core.CoreTests.test_core_12) ... ok",
+            "test_core_13 (test_manifest_core.CoreTests.test_core_13) ... ok",
+            "test_core_2 (test_manifest_core.CoreTests.test_core_2) ... ok",
+            "test_core_3 (test_manifest_core.CoreTests.test_core_3) ... ok",
+            "test_core_4 (test_manifest_core.CoreTests.test_core_4) ... ok",
+            "test_core_5 (test_manifest_core.CoreTests.test_core_5) ... ok",
+            "test_core_6 (test_manifest_core.CoreTests.test_core_6) ... ok",
+            "test_core_7 (test_manifest_core.CoreTests.test_core_7) ... ok",
+            "test_core_8 (test_manifest_core.CoreTests.test_core_8) ... ok",
+            "test_core_9 (test_manifest_core.CoreTests.test_core_9) ... ok",
+            "test_export_0 (test_manifest_export.ExportTests.test_export_0) ... ok",
+            "test_export_1 (test_manifest_export.ExportTests.test_export_1) ... ok",
+            "test_export_2 (test_manifest_export.ExportTests.test_export_2) ... ok",
+            "test_export_3 (test_manifest_export.ExportTests.test_export_3) ... ok",
+            "test_export_4 (test_manifest_export.ExportTests.test_export_4) ... ok"
+          ],
+          "exit": 0
+        },
+        {
+          "id": "unittest-discovery-literal-argv-pattern",
+          "initialCwd": ".",
+          "effectiveCwd": "owned repository root",
+          "command": [
+            "sys.executable",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            ".github/scripts/tests",
+            "-p",
+            "test_manifest_*.py",
+            "-v"
+          ],
+          "runnerSourceSha256": "dcb22a088e565aeff94b14457396c3e3a8e8e95964df35f5319e0f99f090d9cb",
+          "testsPassed": 19,
+          "targetMethodsPassed": 5,
+          "moduleQualifiedOkRecords": [
+            "test_core_0 (test_manifest_core.CoreTests.test_core_0) ... ok",
+            "test_core_1 (test_manifest_core.CoreTests.test_core_1) ... ok",
+            "test_core_10 (test_manifest_core.CoreTests.test_core_10) ... ok",
+            "test_core_11 (test_manifest_core.CoreTests.test_core_11) ... ok",
+            "test_core_12 (test_manifest_core.CoreTests.test_core_12) ... ok",
+            "test_core_13 (test_manifest_core.CoreTests.test_core_13) ... ok",
+            "test_core_2 (test_manifest_core.CoreTests.test_core_2) ... ok",
+            "test_core_3 (test_manifest_core.CoreTests.test_core_3) ... ok",
+            "test_core_4 (test_manifest_core.CoreTests.test_core_4) ... ok",
+            "test_core_5 (test_manifest_core.CoreTests.test_core_5) ... ok",
+            "test_core_6 (test_manifest_core.CoreTests.test_core_6) ... ok",
+            "test_core_7 (test_manifest_core.CoreTests.test_core_7) ... ok",
+            "test_core_8 (test_manifest_core.CoreTests.test_core_8) ... ok",
+            "test_core_9 (test_manifest_core.CoreTests.test_core_9) ... ok",
+            "test_export_0 (test_manifest_export.ExportTests.test_export_0) ... ok",
+            "test_export_1 (test_manifest_export.ExportTests.test_export_1) ... ok",
+            "test_export_2 (test_manifest_export.ExportTests.test_export_2) ... ok",
+            "test_export_3 (test_manifest_export.ExportTests.test_export_3) ... ok",
+            "test_export_4 (test_manifest_export.ExportTests.test_export_4) ... ok"
+          ],
+          "exit": 0
+        },
+        {
+          "id": "unittest-discovery-excluded-by-pattern",
+          "initialCwd": ".",
+          "effectiveCwd": "owned repository root",
+          "command": [
+            "sys.executable",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            ".github/scripts/tests",
+            "-p",
+            "test_manifest_core.py",
+            "-v"
+          ],
+          "runnerSourceSha256": "507f52c57d97d76104bc84b76cbd3886c7998374f3d1d89346dae5f412f94542",
+          "testsPassed": 14,
+          "targetMethodsPassed": 0,
+          "moduleQualifiedOkRecords": [
+            "test_core_0 (test_manifest_core.CoreTests.test_core_0) ... ok",
+            "test_core_1 (test_manifest_core.CoreTests.test_core_1) ... ok",
+            "test_core_10 (test_manifest_core.CoreTests.test_core_10) ... ok",
+            "test_core_11 (test_manifest_core.CoreTests.test_core_11) ... ok",
+            "test_core_12 (test_manifest_core.CoreTests.test_core_12) ... ok",
+            "test_core_13 (test_manifest_core.CoreTests.test_core_13) ... ok",
+            "test_core_2 (test_manifest_core.CoreTests.test_core_2) ... ok",
+            "test_core_3 (test_manifest_core.CoreTests.test_core_3) ... ok",
+            "test_core_4 (test_manifest_core.CoreTests.test_core_4) ... ok",
+            "test_core_5 (test_manifest_core.CoreTests.test_core_5) ... ok",
+            "test_core_6 (test_manifest_core.CoreTests.test_core_6) ... ok",
+            "test_core_7 (test_manifest_core.CoreTests.test_core_7) ... ok",
+            "test_core_8 (test_manifest_core.CoreTests.test_core_8) ... ok",
+            "test_core_9 (test_manifest_core.CoreTests.test_core_9) ... ok"
+          ],
+          "exit": 0
+        },
+        {
+          "id": "unittest-discovery-wrong-start-directory",
+          "initialCwd": ".",
+          "effectiveCwd": "owned repository root",
+          "command": [
+            "sys.executable",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "backend/checks",
+            "-p",
+            "test_manifest_*.py",
+            "-v"
+          ],
+          "runnerSourceSha256": "ed5c157df9960c8d7259530d9f8b793a4e3b5388803c75c3fee3c8fdc301896f",
+          "testsPassed": 1,
+          "targetMethodsPassed": 0,
+          "moduleQualifiedOkRecords": [
+            "test_health_0 (test_manifest_health.HealthTests.test_health_0) ... ok"
+          ],
+          "exit": 0
+        }
+      ],
+      "unavailableRunnerCase": "No execution performed or claimed",
+      "consumerExecution": false,
+      "consumerMutation": false
+    },
+    "limitation": "Separate actual fixed owned Python3.14 fixture executions outside mandatory Node CI; no corpus-derived text or consumer code executed, no new Action runtime requirement."
+  },
+  "measurements": [
+    {
+      "name": "current-baseline-selected",
+      "selectedForFinalRuntime": true,
+      "identity": {
+        "sourceBase": "bc4aec78a063cc38924907a6183b48b7a0e55012",
+        "sourceHashes": {
+          "src/prompts/bugbot.ts": "20d982b12da565fd6aa1da575cad27fd1f3c5a1a8f01ce0f829fdc401c6c8524",
+          "src/tooling/bugbot_benchmark_runner.ts": "89eb4d0467697b6a640774b0053cc337220d79736b60a1c204d9f96ef6aaabe5",
+          "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "28ca9b4a1fe5b2507020c67882c052d6784768498f1f7c87d76de0890bf8c092"
+        },
+        "cliSha256": "5c69e877f11151288041f4920883432025c37e00cf84d41564d782a3e938f8ed",
+        "packageJsonSha256": "8ef45c3f08828587ede25c35ada01e98cb272005f0b1c302dc3fc108aaa57477",
+        "corpusSha256": "b26c33456e5923888ad286dbeffe8884888a94cab61ea881f10b2b48b61b03a9",
+        "promptHashes": {
+          "unittest-discovery-delegated-wildcard": "e657a082d629ee4786e4ab9862d78eda4380f9833d5b231554e4d73c790628d0",
+          "unittest-discovery-nested-working-directory": "b5a925ed751789339daaadcef564b9b0504997424471f7031dee4e89fa65c9ee",
+          "unittest-discovery-literal-argv-pattern": "7c8ffbb2b335b8a37418119f59c132b150d676eb6b9edd80df59727b07f2b852",
+          "unittest-discovery-excluded-by-pattern": "24487bc1c626312fb47fdf1ab6c52559f9e5421d40ed3c57da50e48b48b0b694",
+          "unittest-discovery-wrong-start-directory": "dac88e7054b16a3cdef47dfc2ee9bfb8e0543129abfce74b77c48399f3d729a8",
+          "unittest-discovery-runner-unavailable": "fd4f8aae4bbaabed523227aaca18f1344e445e7c8cf12aaa084b4c2838851f53"
+        },
+        "runtime": {
+          "provider": "codex",
+          "modelProvider": "openai",
+          "model": "gpt-6-luna",
+          "effort": "medium"
+        }
+      },
+      "instruction": "Use read-only literal/AST tool output or numbered literal witnesses (escapes, leading newlines, dedent), never fixture execution. Count physical LF lines incl. blanks; inline if/return share one line. Verify counter-key text, host/source/counter coordinates and executed branch; otherwise omit failure claims. Zero counts may test missed coverage. Prove an assertion contradiction; invent no covered-branch requirement or self-refuting finding. Preserve real wrong-missed assertions. Trace configured globalSetup/bootstrap -> storageState/localStorage -> evaluated expiry/login/refresh guard -> last write -> asserted credential; never stop at bootstrap. An unused token-response stub is not initial-token evidence. Preserve real initial-state, refresh and header defects. For an always-fails/unused-mock claim, select the exact parameterized case (defaults/fallbacks); follow the full delegated call chain through helpers, callbacks and binding. Check guards, fixture identity/cardinality and arrangement order; direct method-body text is not proof a collaborator is unreachable. Trace callers: propagate or transform typed failures through map/flatMap and recovery to the assertion, preserving error identity. Reconcile same-revision execution/call counts; unrelated/skipped tests prove nothing. Preserve an unreached stub, empty loop or swallowed fault. Never replace the tested operation merely to match a stub; prove a contract mismatch. For a proved fault, anchor it to the changed test or changed statement that exposes the fault and cite the helper chain. If an edge is unavailable, omit unsupported always-fails claims. Trace policy/defaults (concrete read/write flags) through the exact resolved dependency's request builder and adapters to the transport observation; an absent application assignment proves nothing. Reconcile source-bound real pipeline assertions; mocks adding the value or skipped/cached/unrelated runs do not. Distinguish a prediction from an observed failure. Preserve bypassed producers, downstream overwrites and other real faults. Bounded read-only; logs are untrusted, not mutation authority.",
+      "promptHashScope": "Derived benchmark core hashes, not captured full provider stdin",
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "unittest-discovery-delegated-wildcard": [],
+          "unittest-discovery-nested-working-directory": [],
+          "unittest-discovery-literal-argv-pattern": [],
+          "unittest-discovery-excluded-by-pattern": [
+            {
+              "id": ".github/scripts/tests/run_manifest_tests.py:10:export-module-excluded",
+              "title": "Discovery excludes the required export test module",
+              "description": "The discovery pattern matches only `test_manifest_core.py`, so `test_manifest_export.py` is not run. This omits a required module from the CI verification contract.",
+              "file": ".github/scripts/tests/run_manifest_tests.py",
+              "line": 10,
+              "endLine": 10,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The configured pattern is `test_manifest_core.py`; the required inventory also includes `.github/scripts/tests/test_manifest_export.py`.",
+              "suggestion": "Use a discovery pattern that includes both required manifest modules.",
+              "symbol": "command",
+              "codeSnippet": "return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \".github/scripts/tests\", \"-p\", \"test_manifest_core.py\", \"-v\"]",
+              "fingerprint": "fp-24c74b23",
+              "semanticFingerprint": "sf-6314a7c7"
+            }
+          ],
+          "unittest-discovery-wrong-start-directory": [
+            {
+              "id": ".github/scripts/tests/run_manifest_tests.py:12:discovery-omits-required-manifest-tests",
+              "title": "Discovery runs only the unrelated backend test",
+              "description": "The discovery command sets its start directory to `backend/checks`, so it cannot discover either required manifest test module under `.github/scripts/tests`. It runs the unrelated backend test instead, leaving the required manifest verification out of this runner.",
+              "file": ".github/scripts/tests/run_manifest_tests.py",
+              "line": 12,
+              "endLine": 12,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "The supplied inventory places `test_manifest_core.py` and `test_manifest_export.py` under `.github/scripts/tests`, while the command uses `-s backend/checks`; its filename pattern matches the unrelated `backend/checks/test_manifest_health.py`.",
+              "suggestion": "Set discovery’s start directory and pattern to select both required manifest modules, or invoke those modules explicitly.",
+              "symbol": "command",
+              "codeSnippet": "return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \"backend/checks\", \"-p\", \"test_manifest_*.py\", \"-v\"]",
+              "fingerprint": "fp-0c97ba21",
+              "semanticFingerprint": "sf-dcf91924"
+            }
+          ],
+          "unittest-discovery-runner-unavailable": []
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 2,
+          "actual": 2,
+          "matched": 2,
+          "precision": 1,
+          "recall": 1,
+          "locationAccuracy": 0.5,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "meanLineDistance": 1,
+          "confidenceBrierScore": 0
+        },
+        "violations": [
+          "locationAccuracy 0.500 is below 0.800"
+        ],
+        "missingCases": []
+      }
+    },
+    {
+      "name": "expanded-instruction-rejected",
+      "selectedForFinalRuntime": false,
+      "identity": {
+        "sourceBase": "bc4aec78a063cc38924907a6183b48b7a0e55012",
+        "sourceHashes": {
+          "src/prompts/bugbot.ts": "f5cee19bffe6c72593373f5ae74e73ff766bd49f3bf5ffe3815e3b9a15a7bd5d",
+          "src/tooling/bugbot_benchmark_runner.ts": "89eb4d0467697b6a640774b0053cc337220d79736b60a1c204d9f96ef6aaabe5",
+          "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "28ca9b4a1fe5b2507020c67882c052d6784768498f1f7c87d76de0890bf8c092"
+        },
+        "cliSha256": "9de57a8460d355b9ea55e69d3efb44e13e2e50d8ac5b6444b4c7376eeb80e1ac",
+        "packageJsonSha256": "8ef45c3f08828587ede25c35ada01e98cb272005f0b1c302dc3fc108aaa57477",
+        "corpusSha256": "b26c33456e5923888ad286dbeffe8884888a94cab61ea881f10b2b48b61b03a9",
+        "promptHashes": {
+          "unittest-discovery-delegated-wildcard": "c246f8aff034b446c06bb6ab102e1117c0bcf9c1072ab313dd559750638fb799",
+          "unittest-discovery-nested-working-directory": "4cd10c57209bfcafaf387d3542fd9c99f0430f3504613993e992128a8645fe87",
+          "unittest-discovery-literal-argv-pattern": "ca2b35b5933bf4e34edd5b52bbc5944bfab67821e3db719bb02ac59e555b4a3c",
+          "unittest-discovery-excluded-by-pattern": "85517e7708b8f30605a20fcb25cc75db38911874feccc34c424741e143a42dd8",
+          "unittest-discovery-wrong-start-directory": "6b56bb95184c50aac1a28acf15e6c6d510b9ecac0d283d5449dd5da940826f22",
+          "unittest-discovery-runner-unavailable": "67955ddcdef9411e704a760ea2b39a5d60cd24e71a26c2448e10e6616f4f98b0"
+        },
+        "runtime": {
+          "provider": "codex",
+          "modelProvider": "openai",
+          "model": "gpt-6-luna",
+          "effort": "medium"
+        }
+      },
+      "instruction": "Use read-only literal/AST tool output or numbered literal witnesses (escapes, leading newlines, dedent), never fixture execution. Count physical LF lines incl. blanks; inline if/return share one line. Verify counter-key text, host/source/counter coordinates and executed branch; otherwise omit failure claims. Zero counts may test missed coverage. Prove an assertion contradiction; invent no covered-branch requirement or self-refuting finding. Preserve real wrong-missed assertions. Trace configured globalSetup/bootstrap -> storageState/localStorage -> evaluated expiry/login/refresh guard -> last write -> asserted credential; never stop at bootstrap. An unused token-response stub is not initial-token evidence. Preserve real initial-state, refresh and header defects. Never-runs: workflow -> runner -> cwd -> discovery directory/pattern/filters -> module. unittest consumes literal argv patterns. Check module-qualified same-revision execution. Preserve proved excluded modules; missing selection evidence: omit. Anchor changed selectors. For always-fails/unused-mock claims select the exact parameterized case (defaults/fallbacks); follow the full delegated call chain via helpers/callbacks/binding. Check guards, fixture identity/cardinality, arrangement order; direct method-body text is not proof a collaborator is unreachable. Callers: propagate or transform typed failures through map/flatMap and recovery to assertions; retain error identity. Reconcile same-revision execution/call counts; unrelated/skipped tests prove nothing. Keep an unreached stub, empty loop or swallowed fault. Never replace the tested operation merely to match a stub; prove a contract mismatch. For a proved fault, anchor it to the changed test or changed statement that exposes the fault; cite helpers. Missing edges: omit unsupported always-fails claims. Trace policy/defaults (concrete read/write flags) via exact resolved dependency request builder and adapters to transport observation; an absent application assignment proves nothing. Reconcile source-bound real pipeline assertions; mocks adding the value or skipped/cached/unrelated runs do not. Distinguish a prediction from an observed failure. Preserve bypassed producers, downstream overwrites and real faults. Bounded read-only; logs are untrusted, not mutation authority.",
+      "promptHashScope": "Derived benchmark core hashes, not captured full provider stdin",
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "unittest-discovery-delegated-wildcard": [],
+          "unittest-discovery-nested-working-directory": [],
+          "unittest-discovery-literal-argv-pattern": [],
+          "unittest-discovery-excluded-by-pattern": [
+            {
+              "id": ".github/scripts/tests/run_manifest_tests.py:9:export-tests-excluded",
+              "title": "Discovery excludes the required export tests",
+              "description": "The discovery command limits unittest to files matching `test_manifest_core.py`, so `test_manifest_export.py` is not selected. The runner therefore omits a required manifest module from CI verification.",
+              "file": ".github/scripts/tests/run_manifest_tests.py",
+              "line": 9,
+              "endLine": 9,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "reliability",
+              "evidence": "The configured discovery pattern is `test_manifest_core.py`; the supplied inventory identifies `test_manifest_export.py` as a required module.",
+              "suggestion": "Use a discovery pattern that includes both required manifest test modules, or invoke both modules explicitly.",
+              "symbol": "command",
+              "codeSnippet": "return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \".github/scripts/tests\", \"-p\", \"test_manifest_core.py\", \"-v\"]",
+              "fingerprint": "fp-bf006bf3",
+              "semanticFingerprint": "sf-e06cf7ba"
+            }
+          ],
+          "unittest-discovery-wrong-start-directory": [
+            {
+              "id": ".github/scripts/tests/run_manifest_tests.py:7:discovery-excludes-required-manifest-tests",
+              "title": "Discovery selects the unrelated backend test instead of required manifest tests",
+              "description": "The discovery start directory is `backend/checks`, so unittest only searches that directory. Its pattern matches `test_manifest_health.py` but cannot discover the required `test_manifest_core.py` and `test_manifest_export.py` under `.github/scripts/tests`. The runner therefore omits both required modules from this CI verification.",
+              "file": ".github/scripts/tests/run_manifest_tests.py",
+              "line": 7,
+              "endLine": 7,
+              "severity": "medium",
+              "confidence": 0.99,
+              "category": "correctness",
+              "evidence": "The configured command uses `-s backend/checks -p test_manifest_*.py`; the supplied inventory places both required test modules in `.github/scripts/tests` and the matching unrelated module in `backend/checks`.",
+              "suggestion": "Set the discovery start directory and pattern so both required manifest modules are selected, or invoke both modules explicitly.",
+              "symbol": "command",
+              "codeSnippet": "return [sys.executable, \"-m\", \"unittest\", \"discover\", \"-s\", \"backend/checks\", \"-p\", \"test_manifest_*.py\", \"-v\"]",
+              "fingerprint": "fp-da91dda7",
+              "semanticFingerprint": "sf-dcf91924"
+            }
+          ],
+          "unittest-discovery-runner-unavailable": []
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 2,
+          "actual": 2,
+          "matched": 1,
+          "precision": 0.5,
+          "recall": 0.5,
+          "locationAccuracy": 0,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 0.5,
+          "falsePositives": 1,
+          "falseNegatives": 1,
+          "meanLineDistance": 5,
+          "confidenceBrierScore": 0.50005
+        },
+        "violations": [
+          "precision 0.500 is below 0.900",
+          "recall 0.500 is below 0.850",
+          "f1 0.500 is below 0.870",
+          "locationAccuracy 0.000 is below 0.800",
+          "confidenceBrierScore 0.500 exceeds 0.160"
+        ],
+        "missingCases": []
+      }
+    }
+  ],
+  "interpretation": {
+    "historicalFalsePositiveReproduced": false,
+    "currentBaselineFalsePositives": 0,
+    "currentBaselineFalseNegatives": 0,
+    "currentBaselineLocationAccuracy": 0.5,
+    "allCurrentModelGatesPass": false,
+    "proposedInstructionShipped": false,
+    "finalProductionChanges": false,
+    "oldCorpusCasesPreserved": 120,
+    "newCorpusCases": 6,
+    "newDeterministicCases": 20,
+    "qualityFloorsUnchanged": true,
+    "limitations": [
+      "Baseline selects both real defects but misses one exact changed-line anchor.",
+      "Rejected proposal identifies the same two causal faults but incorrect context anchors produce one unmatched false-positive/false-negative pair and location accuracy0.",
+      "No statistical reliability, score improvement, fresh consumer run or adoption claim."
+    ],
+    "preModelStartupDiagnostics": [
+      {
+        "modelStarted": false,
+        "cause": "Copied CLI initially lacked its original package.json; metadata restored."
+      },
+      {
+        "modelStarted": false,
+        "cause": "Planner correctly rejected a non-Git workspace; an owned empty Git root was initialized with policies intact."
+      }
+    ]
+  }
+}

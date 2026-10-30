@@ -90,6 +90,35 @@ or threshold was changed to improve those scores. The historical false positive
 was not reproduced in this small sample, and no statistical or all-gates-passed
 model-quality claim is made.
 
+The six #806 unittest-discovery cases cover delegated selection, recovering the
+repository cwd from a nested workflow, literal wildcard argv, a narrower pattern,
+a wrong start directory and unavailable runner evidence. The compiled Node
+factories check fixed flat-file selection and delegation; they do not execute
+Python or interpret corpus text. Identity/source checks reject modified inputs
+before selecting a factory. A separately authored optional probe corroborates
+the five available scenarios with real owned unittest fixtures:
+
+```bash
+python3 src/tooling/__tests__/fixtures/bugbot_unittest_discovery_probe.py --output /tmp/unittest-discovery-receipt.json
+```
+
+This contributor probe is outside the mandatory Node suite and adds no Python
+requirement to the Action. It executes its fixed authored fixtures, never corpus
+or consumer source. Three scenarios run 19 methods including the five export
+methods; the excluded-pattern and wrong-directory controls run 14 and one
+unrelated method, respectively. These are separate observations, not additional
+unique tests or a fresh consumer execution.
+
+The actual current baseline identifies both exclusions and emits no findings on
+safe/unavailable cases, so this sample does not reproduce the historical false
+positive. One of two anchors is exact, failing the unchanged location floor. A
+proposed discovery instruction gives worse anchors and fails more score gates;
+it is rejected. Final runtime instructions remain byte-identical to the base.
+Both complete samples, identities and failed gates are retained in
+`quality/bugbot/evidence/issue-806.json`. Reference predictions remain separate
+scorer fixtures. This is regression coverage with an explicit location
+limitation, without a claimed statistical improvement or consumer adoption.
+
 The six #739 external Action cases pair declared inputs, version-specific renamed
 inputs and unavailable contracts with undeclared aliases, old-version keys and
 ignored disabling values. Native controls parse candidate YAML as inert data and
