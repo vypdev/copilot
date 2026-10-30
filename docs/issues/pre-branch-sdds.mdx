@@ -192,6 +192,32 @@ Retain the prospective documents while that upgrade is pending. Keep the
 repository's native schema and readiness rules if it uses another profile;
 the compatibility recovery below still applies.
 
+## Missing catalog in the trusted source
+
+When `specs/catalog.json` is absent from the pinned trusted revision, preparation
+stops before model analysis and branch or specification publication. The blocked
+card names the missing prerequisite and shows the immutable source SHA in its
+technical details. A catalog copied into the candidate workspace or an unmerged
+documentation PR does not change that revision.
+
+Review and merge the prerequisite through the enabled documentation workflow.
+Update the displayed trusted source through the normal managed-branch workflow,
+then retry the same issue after that source changes. An existing linked branch
+uses its own trusted source; advancing development alone may not update it.
+Answers, published specifications and retained branch state remain available.
+Retrying an unchanged missing source cannot recover it.
+
+| Observed condition | Result and next step |
+|---|---|
+| Catalog absent at the trusted commit | Missing prerequisite; review and merge it before retrying |
+| Catalog exists but its format/profile is unsupported | Follow catalog publication-profile recovery below |
+| Git object/read failure or missing template/standard | Resolve that distinct read/prerequisite failure; it is not proof the catalog is absent |
+
+The Action checks source and issue freshness before replacing its owned card. A
+moved or unavailable source preserves newer status. Once a reviewed catalog
+reaches the trusted revision, normal profile validation, clarification and
+publication checks still apply; catalog presence alone does not grant readiness.
+
 ## Catalog publication profiles
 
 The installed automatic writer supports the **SDK version-1** catalog profile:

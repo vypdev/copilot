@@ -81,6 +81,14 @@ before retrying the same issue. The diagnostic preserves repository-native
 schema/readiness, answers and historical publication; a rejected profile does
 not publish a branch or start the model.
 
+Confirmed catalog absence at the trusted revision uses `configuration.unsupported`
+with `sdd-catalog-missing-trusted-source`. The owned preparation card identifies
+`specs/catalog.json` and its immutable source SHA. Review and merge the prerequisite,
+update the displayed trusted source through the normal branch workflow, and retry
+the same issue after that source changes. Existing answers, specifications and any
+linked branch are retained. A Git object/read failure keeps its distinct error
+classification. See [missing trusted catalog recovery](/issues/pre-branch-sdds#missing-catalog-in-the-trusted-source).
+
 For progress, a unique exact same-repository PR owns the comparison base; only
 proven absence uses development. Inherited production libraries can therefore be
 unchanged in the real PR delta. If binary/non-text changes remain unsupported,

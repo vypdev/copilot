@@ -1685,7 +1685,7 @@
       "id": "issue-start-and-sdd-readiness",
       "title": "Uniform issue start and pre-branch SDD readiness",
       "status": "implemented",
-      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve complete navigable catalog links for accepted repository filenames and safely publish generated catalogs without following destination links; bootstrap truthful proposed SDK capabilities before implementation without changing readiness; reject incomplete specification discovery explicitly without following unregistered symbolic links",
+      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve complete navigable catalog links for accepted repository filenames and safely publish generated catalogs without following destination links; bootstrap truthful proposed SDK capabilities before implementation without changing readiness; reject incomplete specification discovery explicitly without following unregistered symbolic links; report confirmed missing trusted catalogs with immutable source provenance and prerequisite recovery before model or publication",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-10-30",
       "specs": [
@@ -1772,7 +1772,8 @@
         "src/application/policies/sdd_preparation_status_policy.ts",
         "src/domain/sdd_catalog_compatibility.ts",
         "src/infrastructure/specification_catalog_publication.cjs",
-        "jest.config.js"
+        "jest.config.js",
+        "src/domain/sdd_trusted_catalog_failure.ts"
       ],
       "tests": [
         "src/domain/__tests__/issue_workflow_runtime_policy.test.ts",
@@ -1828,7 +1829,8 @@
         "src/tooling/__tests__/proposed_sdd_catalog.test.ts",
         "src/tooling/__tests__/proposed_sdd_catalog_entrypoint.test.ts",
         "src/tooling/__tests__/specification_catalog_markdown_links.test.ts",
-        "src/tooling/__tests__/specification_catalog_discovery.test.ts"
+        "src/tooling/__tests__/specification_catalog_discovery.test.ts",
+        "src/domain/__tests__/sdd_trusted_catalog_failure.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

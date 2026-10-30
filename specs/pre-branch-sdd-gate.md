@@ -3,7 +3,7 @@
 - Status: Implemented — automated verification complete; live provider UX review pending
 - Date: 2026-09-17
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: 2026-10-30 (complete no-follow specification discovery, #804; navigable accepted catalog filenames, #782; truthful proposed SDK bootstrap, #777; safe portable catalog publication, #771; nested catalog links, #768; actionable blocked preparation and safe diagnostics, #714)
+- Last verified: 2026-10-30 (missing trusted-catalog prerequisite, #808; complete no-follow specification discovery, #804; navigable accepted catalog filenames, #782; truthful proposed SDK bootstrap, #777; safe portable catalog publication, #771; nested catalog links, #768; actionable blocked preparation and safe diagnostics, #714)
 - Owners: Copilot maintainers
 - Scope: clarify, update, validate, and publish the owning SDD before eligible branch-based work
 - Related issues/PRs: none; local design work; companion SDD `issue-start-and-branch-readiness.md`
@@ -2028,7 +2028,8 @@ again:
 | SDD planning and publication | 6 | New proposed entry, rejected promotion, update/companion/new scratch writes and metadata retention |
 | Generator/validator entrypoint | 4 | Generate, read-only validation, stale output and invalid evidence without false success |
 | Generated UX and documentation | 4 | Explicit not-implemented state, retained workflow semantics, populated links and executable bootstrap guidance |
-| **Total** | **34** | Deterministic, owned fixtures; no consumer mutations or claimed live application acceptance |
+| Recovery registry | 1 | Required closed-variant matrix covers the new EN/ES retained-state contract |
+| **Total** | **35** | Deterministic, owned fixtures; no consumer mutations or claimed live application acceptance |
 
 Collect the previously unmeasured CJS path policy and catalog validator in the
 mandatory root coverage run. Enforce 100% statements/branches/functions/lines
@@ -2257,3 +2258,111 @@ or branches intersecting added source lines. Four related doctor, branch-sync
 and workspace suites pass 115 tests with one existing platform skip. Fresh
 full-hook and remote gates remain required; these owned fixtures do not claim
 consumer application execution or adoption.
+
+### Missing catalog in the trusted revision — #808 (2026-10-30)
+
+The existing Git adapter reads the pinned catalog before its typed profile
+validation. An absent catalog therefore becomes generic workflow.failed and
+transient retry guidance. An owned Git reproduction confirms that absence at
+an existing commit and a missing Git object both currently produce Error 128;
+localized stderr cannot safely distinguish them. Read-only consumer evidence
+independently confirms the configured catalog is absent at its trusted commit;
+its unmerged documentation proposal and mutable failure card are separate facts.
+
+trusted-catalog-R01: the adapter MUST confirm catalog absence through a successful
+immutable Git tree lookup rooted at the validated commit, before loading it.
+A failed object/read/provider operation MUST retain its original failure class.
+Working-tree/candidate copies cannot replace this source. Existing catalog
+profile/malformed-data handling and missing template/standard failures retain
+separate semantics. Only the fixed specs/catalog.json path enters the new
+missing-catalog diagnostic; no repository text or raw Git output is copied.
+
+trusted-catalog-R02: use a frozen typed missing-catalog fact carrying a validated
+immutable SHA. Map it to configuration.unsupported and the operand-free recovery
+sdd-catalog-missing-trusted-source. Before publishing one owned status card,
+recheck issue body/title and the actual source reference, including an existing
+linked branch. Missing freshness, a moved source or failed publication stays
+blocked and preserves newer status and the original error. No model analysis,
+branch/specification publication, catalog initialization or readiness bypass is
+permitted by this diagnostic.
+
+```text
+immutable commit -> bounded catalog tree lookup -> missing catalog fact + SHA
+ -> independent issue/source freshness -> owned blocked card -> reviewed
+ prerequisite merged/synchronized -> new trusted revision -> normal gate
+```
+
+Text equivalent: prove absence at the pinned source, publish only fresh closed
+facts, and retry through the normal gate after the prerequisite reaches the
+trusted source. The domain owns the typed fact; the Git adapter owns object
+lookup; the use case maps semantics and freshness; static EN/ES catalogs and the
+existing renderer/upsert own presentation. Existing type/architecture, catalog,
+localization and workflow checks enforce those boundaries. No new port, setting,
+permission, credential, storage schema, repair budget or external provider integration is added.
+The existing read-only source-revision port supplies the freshness check.
+The existing 16,000-character card limit and whole-card locale fallback remain.
+
+Representative card:
+
+> ## Specification preparation is blocked
+>
+> **Impact:** specs/catalog.json is missing from the trusted source; model
+> analysis has not started.
+>
+> **Action:** Review and merge the prerequisite through the enabled documentation
+> workflow. Update the displayed trusted source through the normal managed-branch
+> workflow and retry this same issue after the source changes.
+>
+> **Retained state:** Answers, any linked branch and published specifications are
+> retained; this attempt published no specification or branch.
+>
+> **Technical details:** configuration.unsupported; correlation reference;
+> trusted revision aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; originating run.
+
+Pending/complete analysis, cancellation and successful recovery use the existing
+surfaces. An unchanged missing source remains blocked; provider failure retains
+its existing recovery. A moved issue/source withholds an obsolete card. A later
+reviewed valid source resumes the same issue and keeps historical answers/state.
+Normal package adoption delivers the diagnostic; rollback reverts the typed
+mapping and copy together without changing repository/catalog state. Source SHA
+is technical evidence, not an approval or branch-creation authority.
+
+Reserve **35 distinct additional cases before implementation**:
+
+| Area | Minimum | Behaviors |
+|---|---:|---|
+| Domain fact | 6 | Immutable source, canonical SHA, invalid/missing/non-string provenance without coercion |
+| Git adapter | 10 | Confirmed absence, candidate copy, valid regular catalog, malformed catalog, missing support files, unknown/tree/blob objects and non-file catalog |
+| Application/recovery | 9 | Fail before model/publication, replay, source/issue races, retained branch, Spanish/foreign marker, unavailable freshness, genuine provider failure, reviewed-source recovery, publication failure |
+| Presentation/security | 9 | EN/ES cause and SHA, invalid provenance, mutually exclusive diagnostic kinds, withheld untrusted recovery operands |
+| **Total** | **34** | No double counting with existing SDD cases |
+
+Keep unchanged global/module floors, 100% new pure-fact coverage, and fully hit
+added statements/branches. Acceptance requires RED absent-catalog diagnostics,
+all cases, full hooks, types/lint, build/package smoke, documentation,
+specification/catalog generation and validation, Graphify, exact-head CI/Codecov,
+three native final-cleanup footers and complete review without active findings
+before merge. Update docs/issues/pre-branch-sdds.mdx, error-reference recovery,
+this owner and the catalog evidence/index together. No material decision remains
+open. The immutable lookup follows the official
+[git-ls-tree contract](https://git-scm.com/docs/git-ls-tree).
+
+The budget includes four additional provenance cases before implementation:
+terminal line breaks, exact-length non-hex text and non-string renderer input.
+A hexadecimal revision must have exactly 40 characters, including at end of input.
+
+Before extending the existing closed-recovery registry matrix, reserve one
+additional case (35 total). Its completeness assertion intentionally rejects a
+new recovery ID without matching English/Spanish retained-state coverage.
+
+Executed local evidence: the 35 reserved cases pass within seven suites containing
+395 passing tests and one pre-existing platform-only skip. The new domain fact
+and both message catalogs/status renderer have 100% statements, branches,
+functions and lines. The focused changed-module group passes 94.57% lines and
+92.01% branches; these are focused observations, not the full-repository coverage
+certificate. No added runtime statement or branch is uncovered. The independent
+owned Git probe now emits the typed missing-catalog fact with its actual commit,
+while an unknown Git object remains Error 128. Actual EN/ES renderer previews
+include that source SHA and no raw Git command. No consumer code or live issue
+was executed or published by these probes. Keep full hooks and fresh remote
+merge gates separate and mandatory.

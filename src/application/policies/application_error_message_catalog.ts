@@ -294,6 +294,11 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     action: 'Review catalog profile support in the SDD guide. Preserve the native schema, readiness, requirements, evidence and blockers; have a maintainer provide a reviewed compatible adapter, then retry this same issue.',
     retainedState: 'The repository catalog, answers and published SDDs remain unchanged; no specification or branch was published by this attempt.',
   }),
+  'sdd-catalog-missing-trusted-source': Object.freeze({
+    impact: 'SDD preparation stopped before model analysis because specs/catalog.json is missing from the trusted source revision.',
+    action: 'Review and merge the catalog prerequisite through the enabled documentation workflow. Update the displayed trusted source through the normal managed-branch workflow, then retry this same issue after the source changes. An unchanged revision remains blocked.',
+    retainedState: 'Existing answers, published specifications and any linked branch are retained; this attempt published no specification or branch.',
+  }),
   'sdd-catalog-format-invalid': Object.freeze({
     impact: 'SDD preparation stopped before ownership operations because the catalog cannot establish one valid supported profile and unique owner paths.',
     action: 'Validate the catalog JSON, supported profile, required metadata and normalized unique owner-path arrays. Preserve repository-owned readiness rules and retry the same issue after maintainer review.',
@@ -453,6 +458,11 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
     impact: 'La preparación del SDD se detuvo antes del análisis del modelo porque el repositorio seleccionó un perfil de catálogo que el adaptador de publicación instalado no admite.',
     action: 'Revisa los perfiles admitidos en la guía de SDD. Conserva el esquema nativo, los estados, requisitos, evidencias y bloqueos; pide a un mantenedor un adaptador compatible revisado y reintenta esta misma incidencia.',
     retainedState: 'El catálogo, las respuestas y los SDD publicados permanecen intactos; este intento no publicó ninguna especificación ni rama.',
+  }),
+  'sdd-catalog-missing-trusted-source': Object.freeze({
+    impact: 'La preparación del SDD se detuvo antes del análisis del modelo porque falta specs/catalog.json en la revisión de origen confiable.',
+    action: 'Revisa e integra el catálogo requerido mediante el workflow de documentación habilitado. Actualiza el origen confiable mostrado mediante el flujo normal de ramas gestionadas y reintenta esta misma incidencia cuando cambie esa revisión. La revisión sin cambios permanece bloqueada.',
+    retainedState: 'Se conservan las respuestas, las especificaciones publicadas y cualquier rama enlazada; este intento no publicó ninguna especificación ni rama.',
   }),
   'sdd-catalog-format-invalid': Object.freeze({
     impact: 'La preparación del SDD se detuvo antes de las operaciones de propiedad porque el catálogo no permite establecer un único perfil admitido con rutas de propiedad válidas y únicas.',
