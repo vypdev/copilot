@@ -10,6 +10,7 @@ import { SETTINGS_KEY } from '../application/settings_repository.ts';
 import { createHistory } from './history_runtime.ts';
 import { HelperSamples } from '../application/helper_samples.ts';
 import { ProtectedSessionService } from '../application/protected_session.ts';
+import { PurposeIdentityVerifier } from '../application/purpose_identity_verifier.ts';
 import { MessageGateway } from '../application/message_gateway.ts';
 import { createCenter, centerIdentifier } from './center_runtime.ts';
 import { NAMED_SESSIONS_KEY, NamedSessions } from '../application/named_sessions.ts';
@@ -32,12 +33,14 @@ export function startBackground(api: BrowserApi): () => void {
     const closedPauses = new ClosedPauseCleanup(pauseStore);
     const pauses = new TemporaryPauseReader(session, () => session.protect(), () => pauseGuard.condition);
     const scheduler = new ReadScheduler(session, new GitHubGetReader(), () => Date.now(), () => Math.random() * 1000);
-    const sessions = new ProtectedSessionService(session, scheduler, {
+    const credentialPorts = {
         cancellation: () => new BrowserCancellation(),
         permitted: async () => api.extension?.inIncognitoContext !== true
             && await api.permissions.contains({ origins: ['https://api.github.com/*'] }),
         protected: () => session.protect(),
-    });
+    };
+    const sessions = new ProtectedSessionService(session, scheduler, credentialPorts);
+    const roleVerifier = new PurposeIdentityVerifier(scheduler, credentialPorts);
     const notify = () => {
         void api.runtime.sendMessage({ version: 1, method: 'center.invalidated' }).catch(() => undefined);
         void api.tabs.query({ url: 'https://github.com/*' }).then(tabs => {
@@ -54,9 +57,9 @@ export function startBackground(api: BrowserApi): () => void {
         admit: (fact, current) => history.writer.admit('diagnostics', fact, current), retention: ticket => history.writer.retention(ticket) });
     const settings = history.settings;
     const connections = new NamedSessions(session, sessions, { protected: () => session.protect(), identifier: () => `s-${centerIdentifier()}`,
-        changed: () => { gateway.invalidatePreferenceSources(); notify(); }, connected: async (id, current, trace) => {
+        changed: () => { gateway.invalidate(undefined, false); gateway.invalidatePreferenceSources(); notify(); }, connected: async (id, current, trace) => {
             await settings.updateObserved(value => ({ ...value, repositories: { ...value.repositories, [id]: { ...value.repositories[id], connected: true } } }), current, trace);
-        } });
+        } }, roleVerifier);
     const gateway = new MessageGateway(api.runtime.id, api.runtime.getURL(''), settings, sessions,
         { currentTab: id => api.tabs.get(id), sourceTree: buildSourceIdentity, openSettings: async (windowId, command, health) => {
             const opened = await api.tabs.create({ url: api.runtime.getURL('runtime.html') + (command === undefined ? '' : centerLocationHash({ route: centerCommandRoute(command) })), windowId });

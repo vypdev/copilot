@@ -1081,6 +1081,47 @@ owned node references and same-source state, preserving focus/expansion through
 pending delivery without stealing native editor focus. English, Spanish, French
 and Portuguese share these contracts. Full H3 native/human gates remain open.
 
+## Purpose-isolated native session roles
+
+The [credential-role refinement](https://github.com/vypdev/copilot/blob/develop/specs/github-browser-extension-credential-roles.md)
+owns the complete H3 manager. Pure `credential_roles`, `session_vault_entries`,
+`purpose_session_vault`, `connection_intent` and `session_vault_plan` modules
+define three fixed purposes, one shared five-entry/16 KiB vault, closed intents,
+schema1 compatibility and explicit schema2 upgrades. The read slot can select
+only a read entry; optional slots select only their own purpose. The retained
+credential cannot cross purposes, and the reserved H2 alias remains read-only.
+
+`NativeSessionVault` is the single named-vault persistence queue. It checks
+protection/current source, compares the observed native record immediately
+before writing, requires the next revision and forbids downgrade. It performs
+one write and one canonical readback, retaining acknowledgement separately from
+the observed result. Explicit forgetting queues behind admitted saves, including
+with future/unreadable schemas. It does not share the active read key's owner.
+
+`NamedSessions` orchestrates both purposes through that queue. The separate
+`PurposeIdentityVerifier` makes only semantic viewer/repository GETs through the
+shared budget, with purpose/attempt-isolated cache keys and cancellable source
+fences. It cannot activate the read service, save a read opt-in or certify a
+write grant. A selected optional identity's private proof binds the whole native
+vault and current read credential epoch; generic later metadata cannot recreate
+an unknown operation's proof. Suspension/restart loses that worker proof.
+
+The native gesture adapter snapshots purpose before waiting for permission,
+clears the unbound password and validates the lazy unknown input before sending
+any private message. Missing/invalid purposes never become a read fallback. The
+four-locale form, purpose summaries and exact-row review preserve drafts, focus
+and separate unknown-result state. Only a direct matching response can complete
+that local review. Background composition invalidates page leases before relevant
+identity changes. Actual native operation observations show the vault effect
+without inventing active-read or preference effects for optional role changes.
+
+The closed manager exposes no writer transport, credential getter, setup secret
+bridge or provider-mutation stub. Real issue/run operations remain in their
+owning milestone and need independent permission/target/intent checks. Native
+message and full page→client→background tests use deterministic provider/browser
+ports; they are not loaded-browser evidence or human H3 acceptance. No H3 source
+publication or PR is implied before the full milestone is complete.
+
 ## Reviewed temporary session preferences
 
 The native `#/repositories/session` route and its Profiles/Repositories links use
@@ -1118,3 +1159,9 @@ the content boundary. See the [session-preference SDD](https://github.com/vypdev
 and [user journey](/browser-extension/configuration#temporary-session-preferences).
 Deterministic composition tests remain separate from source-bound Chrome, Firefox,
 Safari and human H3 acceptance. The full milestone must be complete before publication.
+
+Named-session mutations retain the read credential generation through every
+provider and native-storage await. Only callbacks from the same operation’s own
+read connect/revoke can advance its private expected generation. An unrelated
+account change retires it. A save already submitted remains an observed local
+effect; retirement cannot certify that identity, replay the save or undo it.

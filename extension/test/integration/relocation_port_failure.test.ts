@@ -13,7 +13,7 @@ function fixture() {
         { id: 'work', name: 'Work', host: 'github.com', role: 'repository-read', connection: { ...CONNECTED, schemaVersion: 1 } },
     ] }, true);
     const pending = deferred<number | null>(); const close = vi.fn();
-    const actions = { refresh: vi.fn(), connect: vi.fn(), change: vi.fn(() => pending.promise), dirty: vi.fn() };
+    const actions = { focusReview: vi.fn(), focusSession: vi.fn(), refresh: vi.fn(), connect: vi.fn(), change: vi.fn(() => pending.promise), dirty: vi.fn() };
     const component = mount(RepositoryRelocation, { target, props: { target: captureRelocation(view.entries[0], 1), view, locale: 'en', editable: true, busy: false, actions, close } }); flushSync();
     change('relocation-address', 'team/renamed'); button('Review address').click(); flushSync(); button('Verify new address').click(); flushSync();
     return { pending, actions, close, stop: async () => { await unmount(component); target.remove(); } };

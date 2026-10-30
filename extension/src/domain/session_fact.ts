@@ -1,6 +1,6 @@
 import { deepFreeze, keys, record } from './value.ts';
 
-export const SESSION_ACTIONS = ['connect', 'select', 'disconnect', 'remove', 'revoke-all'] as const;
+export const SESSION_ACTIONS = ['connect', 'select', 'disconnect', 'remove', 'revoke-all', 'connect-role', 'disable-role'] as const;
 export type SessionAction = typeof SESSION_ACTIONS[number];
 export const SESSION_EFFECTS = ['retire-active', 'save-active', 'cleanup-active', 'save-repository-preference', 'save-vault', 'remove-vault'] as const;
 export type SessionEffect = typeof SESSION_EFFECTS[number];
@@ -16,6 +16,7 @@ export interface SessionFact {
 }
 export const sessionAction = (value: unknown): value is SessionAction => SESSION_ACTIONS.includes(value as SessionAction);
 export function sessionEffectAllowed(action: SessionAction, effect: SessionEffect): boolean {
+    if (action === 'connect-role' || action === 'disable-role') return effect === 'save-vault';
     return effect === 'remove-vault' ? action === 'revoke-all' : effect === 'save-vault' ? action !== 'revoke-all'
         : effect === 'save-active' || effect === 'save-repository-preference' ? action === 'connect' || action === 'select' : effect === 'cleanup-active' ? action !== 'revoke-all' : effect === 'retire-active';
 }

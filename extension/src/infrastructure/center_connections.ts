@@ -5,7 +5,9 @@ import type { ConnectionActions } from '../domain/connection_ui.ts';
 /** Native form values remain unbound; no reusable credential becomes a Svelte view value. */
 export function connectionActions(api: BrowserApi, document: Document, client: CenterClient,
     current: () => boolean, dirty: (value: boolean) => void): ConnectionActions {
-    return { dirty, refresh: () => { if (current()) void client.connections(); },
+    const focus = (id: string) => queueMicrotask(() => { if (current()) (document.getElementById(id) ?? document.getElementById('center-main'))?.focus(); });
+    return { dirty, focusReview: () => focus('connection-role-review-heading'), focusSession: id => focus(`connection-select-${id}`),
+        refresh: () => { if (current()) void client.connections(); },
         change: (intent, revision) => {
             if (!current()) return;
             if (intent.type === 'disconnect' || intent.type === 'revoke-all') {
@@ -28,8 +30,10 @@ export function connectionActions(api: BrowserApi, document: Document, client: C
                 const value = secret.value; secret.value = '';
                 const name = (form.elements.namedItem('name') as HTMLInputElement).value.trim();
                 const repository = (form.elements.namedItem('repository') as HTMLInputElement).value.trim();
+                const purpose = (form.elements.namedItem('purpose') as HTMLSelectElement | null)?.value;
                 if (!await permission || !current()) return null;
-                return { type: 'connect', name, repository, secret: value };
+                return purpose === 'repository-read' ? { type: 'connect', name, repository, secret: value }
+                    : { type: 'connect-role', purpose, name, repository, secret: value };
             }, revision).then(observedRevision => {
                 if (current() && observedRevision !== null && observedRevision > revision) { form.reset(); dirty(false); }
             });

@@ -16,5 +16,6 @@ export function relocationTarget(view: ConnectionOutcome | null, id: string): Re
 }
 export function relocationSource(view: ConnectionOutcome | null, target: RelocationTarget): RelocationTarget | null {
     const source = relocationTarget(view, target.entry.id);
-    return source && source.entry.viewerId === target.entry.viewerId && source.entry.repositoryId === target.entry.repositoryId ? source : null;
+    return source && source.entry.host === target.entry.host && source.entry.role === target.entry.role
+        && source.entry.viewerId === target.entry.viewerId && source.entry.repositoryId === target.entry.repositoryId ? source : null;
 }

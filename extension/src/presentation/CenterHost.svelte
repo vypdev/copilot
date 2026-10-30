@@ -4,6 +4,7 @@
     import { CENTER_ROUTES, centerLocationHash } from '../domain/center_routes.ts';
     import { pauseCopy } from '../domain/pause_copy.ts';
     import { sessionPreferenceCopy } from './session_preference_copy.ts';
+    import { credentialRoleCopy } from '../domain/credential_role_copy.ts';
     import { reviewCopy } from '../domain/review_copy.ts';
     import { currentCenterSettings } from '../domain/center_client_view.ts';
     import { isSupportRoute } from '../domain/support_context.ts';
@@ -45,6 +46,7 @@
                 <section class="notice" role="alert" aria-label={copy.messages.unsaved}>
                     <p>{copy.messages.unsaved}</p>{#if frame.pauses.review?.phase === 'unknown'}<p>{pauseCopy(copy.locale).noReplay}</p>{/if}<button type="button" onclick={() => surface.actions.stay()}>{copy.messages.stay}</button>
                     {#if frame.sessionPreferences.review?.phase === 'unknown'}<p>{sessionPreferenceCopy(copy.locale).noReplay}</p>{/if}
+                    {#if route === 'connections' || route === 'repositories'}<p>{credentialRoleCopy(copy.locale).navigation}</p>{/if}
                     <button type="button" disabled={frame.client.phase === 'committing' || frame.history.busy || frame.history.exportBusy || frame.pauses.busy || frame.sessionPreferences.busy} onclick={() => surface.actions.leave()}>{frame.pauses.review && frame.pauses.review.phase !== 'preview' || frame.sessionPreferences.review && frame.sessionPreferences.review.phase !== 'preview' ? pauseCopy(copy.locale).leave : copy.messages.discard}</button>
                 </section>
             {/if}

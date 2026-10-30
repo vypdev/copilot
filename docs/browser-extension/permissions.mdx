@@ -1,6 +1,6 @@
 ---
 title: Browser permissions and privacy
-description: Inspect browser-reported access, understand a selected GitHub read connection and find native revocation controls without granting access.
+description: Inspect browser access, understand separate GitHub credential purposes and find native revocation controls without granting access.
 ---
 
 # Browser permissions and privacy
@@ -52,7 +52,7 @@ The selected read identity is separate from browser access. Select **Read
 selected GitHub identity (may contact GitHub)** deliberately to use the existing
 protected connection service. The page does not make this read automatically.
 A native center session must be available, with no other active operation or
-settings review. Use **Connections** to manage read sessions.
+settings review. Use **Connections** to manage read and optional-purpose sessions.
 
 An admitted result displays only the selected github.com account and repository.
 It does not list other saved sessions, their private local labels or credentials.
@@ -65,6 +65,36 @@ does not prove that the provider credential has no other entitlements. Review
 and revoke those separately in [GitHub credential settings](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
 Future extension GitHub writes and CLI pairing remain unavailable here; this
 inspector does not create a write identity or CLI session.
+
+## Separate optional credential purposes
+
+The [Connections manager](/browser-extension/configuration#optional-github-roles)
+can retain user-owned selected-repository credentials for reading, issue triage
+and Actions operations. All purposes share five protected session entries. An
+optional credential is saved separately and stays unselected until its exact-row
+review and fresh identity verification. Selecting or disabling it leaves the
+read credential and personal preferences independent.
+
+Browser API permission, GitHub identity, a retained selection and provider write
+authorization are different facts. Only account/repository GETs verify an
+optional identity; token syntax, repository visibility and successful reads do
+not prove write grants. Every future operation must validate its own permission,
+current target and review. Issue/run write controls remain unavailable in this
+development stage; saving a role makes no GitHub change.
+
+Never provide setup/bot/provider secrets or an installation/Apply capability.
+Setup credential entry and privileged execution stay with the CLI. Content
+scripts cannot read, create or select these native roles. No read credential is
+silently reused under a write purpose, and no writer is saved into the active
+read key. Credentials, selections and private labels are excluded from preference
+backups and generated diagnostics. The native store is session-scoped, not an
+advertised encrypted vault or a persistent token remembrance feature.
+
+**Disable this purpose** clears only the optional selection. **Remove session**
+and **Forget all protected sessions** remove native credential data after their
+own confirmations; provider revocation is separate. An unconfirmed native
+removal remains unconfirmed. Read current sessions and use native disable or
+provider revocation when cleanup cannot be established.
 
 ## Revoke access in the browser
 

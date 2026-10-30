@@ -1,31 +1,34 @@
-import { connectionIntent, connectionsView, NAMED_SESSION_LIMIT, validVault, sameSessionVault, type ConnectionIntent,
+import { connectionIntent, connectionsView, NAMED_SESSION_LIMIT, sameSessionVault, type ConnectionIntent,
     type ConnectionOutcome, type SessionVault } from '../domain/named_sessions.ts';
 import { localIdentifier } from '../domain/center_routes.ts';
 import type { StoragePort } from './runtime_ports.ts';
 import type { ProtectedSessionService } from './protected_session.ts';
-import { SESSION_KEY } from './protected_session.ts';
-import { validSession } from '../domain/session.ts';
 import { deepFreeze } from '../domain/value.ts';
-import { protectedMutation, type ProtectedMutationTrace } from './protected_mutation.ts';
+import type { ProtectedMutationTrace } from './protected_mutation.ts';
 import { finishSession, sessionStep, type ObserveSessionOperation, type SessionOperationTrace } from './session_observation_ports.ts';
 import type { SessionPreferenceBinding } from '../domain/session_preference_binding.ts';
+import { NativeSessionVault, type NativeVaultObservation } from './native_session_vault.ts';
+import type { PurposeIdentityVerifier } from './purpose_identity_verifier.ts';
+import { writePurpose, type WritePurpose } from '../domain/credential_roles.ts';
+import { planSessionVault } from '../domain/session_vault_plan.ts';
+import type { PurposeSessionEntry } from '../domain/session_vault_entries.ts';
+import type { SessionIdentity } from '../domain/session.ts';
+import { CredentialEpochFence } from './credential_epoch_fence.ts';
 
-export const NAMED_SESSIONS_KEY = 'copilot.named-sessions.v1';
+export { NAMED_SESSIONS_KEY } from './native_session_vault.ts';
 export interface NamedSessionPorts {
     protected(): Promise<boolean>; identifier(): string; changed(): void;
     connected(repositoryId: string, current: () => boolean, trace?: ProtectedMutationTrace): Promise<void>;
 }
-const empty = (): SessionVault => ({ schemaVersion: 1, revision: 0, selected: null, entries: [] });
-
 /** One worker owns a protected, bounded vault. Only redacted summaries leave this use case. */
 export class NamedSessions {
     private busy = false;
     private generation = 0;
     private preferenceWitness: object = {};
-    private persistence: Promise<unknown> = Promise.resolve();
-    constructor(private readonly store: StoragePort, private readonly active: ProtectedSessionService, private readonly ports: NamedSessionPorts) {}
-    private persist<T>(operation: () => Promise<T>): Promise<T> {
-        const next = this.persistence.then(operation); this.persistence = next.catch(() => undefined); return next;
+    private roleProof: { readonly vault: SessionVault; readonly purpose: WritePurpose; readonly epoch: number } | null = null;
+    private readonly vault: NativeSessionVault;
+    constructor(store: StoragePort, private readonly active: ProtectedSessionService, private readonly ports: NamedSessionPorts, private readonly roleVerifier?: PurposeIdentityVerifier) {
+        this.vault = new NativeSessionVault(store, () => ports.protected());
     }
     private notify(): void { try { this.ports.changed(); } catch { /* Notifications cannot replace protected storage facts. */ } }
     /** Private application lease; never serialize it or treat it as native mutation authority. */
@@ -35,32 +38,30 @@ export class NamedSessions {
     }
     /** Native vault events retire preference sources without interrupting this owner's own connection transaction. */
     invalidatePreferenceSource(): void { this.preferenceWitness = {}; }
-    private async load(): Promise<SessionVault> {
-        if (!await this.ports.protected()) throw new Error('protected-storage-unavailable');
-        const value = await this.store.get(NAMED_SESSIONS_KEY);
-        if (value === undefined) {
-            const previous = await this.store.get(SESSION_KEY);
-            return validSession(previous) ? { ...empty(), selected: 'previous-session', entries: [{ id: 'previous-session', name: 'GitHub',
-                host: 'github.com', role: 'repository-read', connection: previous }] } : empty();
-        }
-        if (!validVault(value)) throw new Error('protected-vault-invalid');
-        return structuredClone(value);
+    private async load(): Promise<NativeVaultObservation> {
+        const observed = await this.vault.read();
+        if (observed.vault.schemaVersion === 2 && !this.roleVerifier) throw new Error('protected-vault-unavailable');
+        return observed;
     }
     private view(vault: SessionVault): ConnectionOutcome {
         const selected = vault.entries.find(entry => entry.id === vault.selected);
         const verified = this.active.verifiedIdentity();
         const epoch = this.active.status().epoch;
-        if (!selected || !verified || !this.active.matches(selected.connection)) return connectionsView(vault, false, epoch);
+        const roles = this.roleProof && this.roleProof.epoch === epoch && sameSessionVault(vault, this.roleProof.vault) ? [this.roleProof.purpose] : [];
+        if (!selected || !verified || !this.active.matches(selected.connection)) return connectionsView(vault, false, epoch, roles);
         // A restored connection may have a new canonical name or organization owner.
         // Current effective context uses the verified facts, never stale vault metadata.
-        const { organizationId: _oldOrganization, ...previous } = selected.connection;
-        return connectionsView({ ...vault, entries: vault.entries.map(entry => entry.id === selected.id
-            ? { ...entry, connection: { ...previous, ...verified } } : entry) }, true, epoch);
+        const result = connectionsView(vault, true, epoch, roles);
+        return deepFreeze({ ...result, entries: result.entries.map(entry => {
+            if (entry.id !== selected.id) return entry;
+            const { organizationId: _oldOrganization, ...previous } = entry;
+            return { ...previous, ...verified };
+        }) });
     }
     async read(current: () => boolean): Promise<ConnectionOutcome> {
         try {
             const generation = this.generation;
-            const vault = await this.load();
+            const { vault } = await this.load();
             return generation === this.generation && current() ? this.view(vault) : { state: 'stale' };
         } catch { return { state: 'unavailable' }; }
     }
@@ -70,7 +71,7 @@ export class NamedSessions {
             const source = this.capturePreferenceSource(); const epoch = this.active.status().epoch;
             const live = () => source() && current();
             if (!live()) return { state: 'stale' };
-            const vault = await this.load(); if (!live()) return { state: 'stale' };
+            const { vault } = await this.load(); if (!live()) return { state: 'stale' };
             const selected = vault.entries.find(entry => entry.id === vault.selected);
             if (!selected) return { state: 'disconnected' };
             if (selected.id === 'previous-session') return { state: 'legacy' };
@@ -78,7 +79,7 @@ export class NamedSessions {
             const retained = verified || this.active.status().state !== 'connected' && await this.active.matchesRetained(selected.connection);
             if (!live()) return { state: 'stale' };
             if (!retained) return { state: 'unavailable' };
-            const after = await this.load(); if (!live() || !sameSessionVault(after, vault)) return { state: 'stale' };
+            const { vault: after } = await this.load(); if (!live() || !sameSessionVault(after, vault)) return { state: 'stale' };
             const observed = this.active.verifiedIdentity(); const active = observed !== null && this.active.matches(selected.connection);
             if (verified && !active) return { state: 'stale' };
             const identity = active ? observed : selected.connection;
@@ -99,78 +100,89 @@ export class NamedSessions {
     }
     private async apply(input: ConnectionIntent, revision: number, current: () => boolean, capture: ObserveSessionOperation): Promise<ConnectionOutcome> {
         if (!connectionIntent(input)) return { state: 'invalid' };
+        if ((input.type === 'connect-role' || input.type === 'disable-role') && !this.roleVerifier) return { state: 'unavailable' };
         if (!current()) return { state: 'stale' };
         if (input.type === 'revoke-all') {
             try { await this.revokeAll(capture, current); return this.read(current); } catch { return { state: 'unavailable' }; }
         }
         if (this.busy) return { state: 'conflict' };
         this.busy = true; this.invalidatePreferenceSource(); const generation = this.generation;
-        const live = () => generation === this.generation && current();
+        const credentials = new CredentialEpochFence(() => this.active.status().epoch);
+        const live = () => generation === this.generation && current() && credentials.current();
         const intent = { ...input }; let admitted = false; let trace: SessionOperationTrace | null = null; let changedActive = false;
-        const cleanup = async () => { if (changedActive) await this.active.revoke(trace, 'cleanup-active'); };
+        const cleanup = async () => { if (changedActive && credentials.current()) await this.active.revoke(credentials.follow(trace), 'cleanup-active'); };
         try {
-            const vault = await this.load();
+            const observed = await this.load(); const vault = observed.vault;
             if (!live()) return { state: 'stale' };
             if (vault.revision !== revision || revision >= Number.MAX_SAFE_INTEGER) return { state: 'conflict' };
-            if (intent.type === 'connect' && vault.entries.length >= NAMED_SESSION_LIMIT) return { state: 'capacity' };
-            if (intent.type === 'connect' && vault.entries.some(entry => entry.name.toLowerCase() === intent.name.toLowerCase())) return { state: 'invalid' };
-            const selected = intent.type === 'select' || intent.type === 'remove' ? vault.entries.find(entry => entry.id === intent.id) : undefined;
+            const adding = intent.type === 'connect' || intent.type === 'connect-role';
+            if (adding && vault.entries.length >= NAMED_SESSION_LIMIT) return { state: 'capacity' };
+            if (adding && vault.entries.some(entry => entry.name.toLowerCase() === intent.name.toLowerCase()
+                || entry.connection.secret === intent.secret && entry.role !== (intent.type === 'connect-role' ? intent.purpose : 'repository-read'))) return { state: 'invalid' };
+            const selected = intent.type === 'select' || intent.type === 'remove' ? vault.entries.find(entry => entry.id === intent.id)
+                : intent.type === 'disable-role' && vault.schemaVersion === 2 ? vault.entries.find(entry => entry.id === vault.writeSelections[intent.purpose]) : undefined;
             if ((intent.type === 'select' || intent.type === 'remove') && !selected) return { state: 'invalid' };
+            if (intent.type === 'disable-role' && !selected) return this.view(vault);
+            const purpose = intent.type === 'connect-role' ? intent.purpose : selected?.role ?? 'repository-read';
+            // Optional creation/disable is gated above; loaded schema2 requires its verifier in load().
             admitted = true;
-            const target = intent.type === 'connect' ? intent.name : selected?.name ?? vault.entries.find(entry => entry.id === vault.selected)?.name ?? null;
+            this.roleProof = null; this.roleVerifier?.invalidate();
+            const target = adding ? intent.name : selected?.name ?? vault.entries.find(entry => entry.id === vault.selected)?.name ?? null;
             trace = capture(intent.type, { location: { route: 'connections' }, label: target }, live);
             if (!live()) return { state: 'stale' };
-            if (intent.type !== 'remove' || vault.selected === intent.id) {
+            const changesRead = intent.type === 'connect' || intent.type === 'disconnect' || intent.type === 'select' && purpose === 'repository-read'
+                || intent.type === 'remove' && vault.selected === intent.id;
+            if (changesRead) {
                 changedActive = true;
-                const revoked = this.active.revoke(trace); this.notify(); await revoked;
+                const revoked = this.active.revoke(credentials.follow(trace)); this.notify(); await revoked;
                 if (!live()) return { state: 'stale' };
                 if (this.active.status().state === 'unavailable') return { state: 'unavailable' };
-            }
-            let next: SessionVault;
-            if (intent.type === 'connect' || intent.type === 'select') {
-                const secret = intent.type === 'connect' ? intent.secret : selected!.connection.secret;
-                const repository = intent.type === 'connect' ? intent.repository : intent.repository ?? selected!.connection.repository;
-                const result = await this.active.connect(secret, repository, selected?.connection, live, trace);
-                if (!live()) { await cleanup(); return { state: 'stale' }; }
-                const verified = this.active.verifiedIdentity();
-                if (result.state !== 'connected' || !verified) return { state: ['limited', 'cooldown', 'budget'].includes(result.state)
-                    ? result.state as 'limited' | 'cooldown' | 'budget' : 'unavailable' };
-                const preference = sessionStep(trace, 'save-repository-preference');
-                if (preference) await this.ports.connected(verified.repositoryId, live, preference); else await this.ports.connected(verified.repositoryId, live);
+            } else this.notify();
+            let entry: PurposeSessionEntry | undefined;
+            if (adding || intent.type === 'select') {
+                const secret = adding ? intent.secret : selected!.connection.secret;
+                const repository = adding ? intent.repository : intent.repository ?? selected!.connection.repository;
+                let verified: SessionIdentity | null;
+                if (writePurpose(purpose)) {
+                    const result = await this.roleVerifier!.verify(purpose, secret, repository, live, selected?.connection);
+                    if (!live()) return { state: 'stale' };
+                    if (result.state !== 'verified') return { state: result.state };
+                    verified = result.identity;
+                } else {
+                    const result = await this.active.connect(secret, repository, selected?.connection, live, credentials.follow(trace));
+                    if (!live()) { await cleanup(); return { state: 'stale' }; }
+                    verified = this.active.verifiedIdentity();
+                    if (result.state !== 'connected' || !verified) return { state: ['limited', 'cooldown', 'budget'].includes(result.state)
+                        ? result.state as 'limited' | 'cooldown' | 'budget' : 'unavailable' };
+                    const preference = sessionStep(trace, 'save-repository-preference');
+                    if (preference) await this.ports.connected(verified.repositoryId, live, preference); else await this.ports.connected(verified.repositoryId, live);
+                }
                 const id = selected && selected.id !== 'previous-session' ? selected.id : this.ports.identifier();
                 if (!localIdentifier(id) || id === 'previous-session' || ((!selected || selected.id !== id) && vault.entries.some(entry => entry.id === id))) { await cleanup(); return { state: 'unavailable' }; }
-                const entry = { id, name: intent.type === 'connect' ? intent.name : selected!.name, host: 'github.com' as const,
-                    role: 'repository-read' as const, connection: { schemaVersion: 1 as const, secret, ...verified } };
-                next = { ...vault, revision: revision + 1, selected: id,
-                    entries: selected ? vault.entries.map(previous => previous.id === selected.id ? entry : previous) : [...vault.entries, entry] };
-            } else {
-                next = { ...vault, revision: revision + 1, selected: intent.type === 'disconnect' || vault.selected === intent.id ? null : vault.selected,
-                    entries: intent.type === 'remove' ? vault.entries.filter(entry => entry.id !== intent.id)
-                        : vault.entries.filter(entry => entry.id !== vault.selected) };
+                entry = { id, name: adding ? intent.name : selected!.name, host: 'github.com', role: purpose, connection: { schemaVersion: 1, secret, ...verified } };
             }
+            const proposed = planSessionVault(vault, intent, entry);
             if (!live()) { await cleanup(); return { state: 'stale' }; }
             // A read-back can establish an observed save after lost acknowledgement; never repeat the write.
-            const expected = deepFreeze(next);
-            const saved = await this.persist(async () => {
-                const step = sessionStep(trace, 'save-vault'); if (!live()) return null;
-                return protectedMutation(() => this.store.set(NAMED_SESSIONS_KEY, expected), async () => sameSessionVault(await this.store.get(NAMED_SESSIONS_KEY), expected), step);
-            });
-            if (!saved) { await cleanup(); return { state: 'stale' }; }
-            if (saved.observation !== 'committed') { await cleanup(); return { state: 'unknown' }; }
+            // The sole native owner validates even a rejected plan before any queue admission.
+            const saved = await this.vault.save(observed, proposed, live, () => sessionStep(trace, 'save-vault'));
+            if (saved.state !== 'saved') { await cleanup(); return { state: saved.state }; }
+            if (saved.fact.observation !== 'committed') { await cleanup(); return { state: 'unknown' }; }
             if (!live()) { await cleanup(); return { state: 'stale' }; }
-            return this.view(next);
+            if (intent.type === 'select' && writePurpose(purpose)) this.roleProof = { vault: saved.candidate, purpose, epoch: this.active.status().epoch };
+            return this.view(saved.candidate);
         } catch { await cleanup(); return { state: 'unavailable' }; }
         finally { this.busy = false; if (admitted) this.notify(); }
     }
     /** Permission removal is independent of preference-schema or center editing availability. */
     async revokeAll(observe?: ObserveSessionOperation, current: () => boolean = () => true): Promise<void> {
-        this.invalidatePreferenceSource();
+        this.invalidatePreferenceSource(); this.roleProof = null; this.roleVerifier?.invalidate();
         const generation = ++this.generation; const live = () => generation === this.generation && current();
         let trace: SessionOperationTrace | null = null;
         try { trace = observe?.('revoke-all', { location: { route: 'connections' }, label: null }, live) ?? null; } catch { /* Removal remains independent of recording. */ }
         const removal = this.active.revoke(trace);
         try {
-            const removed = await this.persist(() => protectedMutation(() => this.store.remove(NAMED_SESSIONS_KEY), async () => await this.store.get(NAMED_SESSIONS_KEY) === undefined, sessionStep(trace, 'remove-vault'))); await removal;
+            const removed = await this.vault.forget(sessionStep(trace, 'remove-vault')); await removal;
             if (removed.observation !== 'committed' || this.active.status().state === 'unavailable') throw new Error('protected-removal-unavailable');
         } finally { await removal; this.notify(); }
     }

@@ -10,7 +10,7 @@ the browser's extension options, or the runtime settings button on an eligible
 GitHub page. Preferences stay in this browser. No GitHub write, Action run or
 model request is started by opening the center.
 
-H3 is still in progress. Appearance, language, profiles, read sessions and preference data flows
+H3 is still in progress. Appearance, language, profiles, purpose-bound sessions and preference data flows
 are being implemented and tested. Sections marked as unfinished do not offer
 their advertised workflow yet. The full product, remaining CENTER acceptance
 cases and new native-browser and accessibility evidence remain required.
@@ -191,6 +191,68 @@ read credential; removing a repository pause cannot release an inherited global
 pause. These actions wait while a separate connection form has an unfinished
 draft. Full workspaces and rename recovery remain
 in progress.
+
+## Optional GitHub roles
+
+**Connections** has one shared limit of five named sessions, including reading,
+issue triage and Actions operations. **Read selected repository** is the default.
+Each saved credential has one fixed purpose and one selected repository; adding
+a field to an old read request cannot promote it to a writer.
+
+```text
+Choose purpose → authorize browser API access → verify account and repository
+→ save protected session → review the exact identity → explicitly select its purpose
+```
+
+To prepare an optional role:
+
+1. Choose **Issue triage** or **Actions operations**. Read its permission guidance
+   and availability. Issue/run operation controls are not available yet; storing
+   a role does not enable them or perform a GitHub write.
+2. Enter a unique local name, `owner/repository` and your own separate
+   fine-grained GitHub personal token for that selected repository. The optional
+   roles accept the `github_pat_` family; its format does not prove permissions.
+   Never enter a setup, bot, provider or deployment credential.
+3. Choose **Authorize and connect**. The native password clears before waiting
+   for browser approval. The background verifies only the GitHub account and
+   repository, then saves the protected identity. It does not change the selected
+   read identity, enable repository reading or select the new optional role.
+4. In that saved row, choose **Review selection**. Check its purpose, account and
+   repository, then choose **Verify and select this identity**. A changed source
+   requires closing the old review and choosing from current sessions again.
+
+There are separate optional selections for issue triage and Actions. Each can be
+**Disabled**, a **Stored selection**, or have its account/repository **verified
+for this selection**. A selected read account can differ from an optional-role
+account. Verify the displayed identity deliberately; a role selection alone is
+never authority to perform a future operation. That operation must check its
+own account, target, permissions and reviewed intent.
+
+**Disable this purpose** clears its selection while keeping the named credential
+and other roles. **Remove session** deletes that exact protected entry after
+confirmation. **Forget all protected sessions** removes all purposes and the
+active read key through its separate confirmation. None revokes the token at
+GitHub or resets personal settings. A credential already retained under another
+purpose cannot be reused for a new purpose; create a separately scoped token.
+
+If verification or native saving is uncertain, read current sessions. The review
+retains the uncertain operation separately; a later matching row is not proof
+of its outcome. It offers no automatic repeat or inverse. Leaving closes only
+local forms and never undoes previously requested or saved native changes.
+**Discard connection draft** clears an unsubmitted form, including its password,
+and restores the read-purpose default.
+
+Credentials, selections and their native schema are protected browser-session
+data, excluded from preferences, exports, rollback and generated history.
+Background restart can retain the selection as **Stored**, without its old
+in-memory verification. Browser restart can clear sessions entirely. Adding or
+changing a session/role retires prior enabling temporary session preferences;
+an existing positive pause still needs its own explicit review.
+
+The first optional-role mutation upgrades the known read-session vault in place
+to its purpose-aware format. Older or unsupported builds must preserve an
+unreadable vault. Reopen a compatible build to recover it; choose explicit
+forgetting/reconnection only if you intend to remove those credentials.
 
 ## Export, import, reset and rollback
 

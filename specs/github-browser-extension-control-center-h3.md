@@ -14,6 +14,11 @@ The focused [welcome and independent support refinement](github-browser-extensio
 defines CENTER13 progress, native package observations and recovery without
 readable settings. It preserves the full H3 and product acceptance requirements.
 
+The [purpose-isolated GitHub role refinement](github-browser-extension-credential-roles.md)
+defines the complete BEX-CENTER-05 manager, including optional issue/Actions
+identities, separate selections and protected recovery. It remains part of H3;
+its identity checks do not establish future operation-specific write authority.
+
 The [generated local journal refinement](github-browser-extension-local-journal.md)
 defines optional redacted activity/diagnostics, recent destinations and atomic
 generation-fenced clearing. Its transactional core is an implementation slice;

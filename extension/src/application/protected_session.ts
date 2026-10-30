@@ -6,7 +6,7 @@ import type { StoragePort } from './runtime_ports.ts';
 import type { CancellationOwner, ReadCancellation, SessionPorts } from './read_ports.ts';
 import { ReadScheduler, type ScheduledRead } from './read_scheduler.ts';
 import { protectedMutation } from './protected_mutation.ts';
-import { sessionStep, sessionCredential, type SessionOperationTrace } from './session_observation_ports.ts';
+import { sessionStep, sessionCredential, type SessionMutationTrace } from './session_observation_ports.ts';
 
 export const SESSION_KEY = 'copilot.connection.v1';
 export type SessionStatus = { readonly state: 'disconnected' | 'connected' | 'unavailable' | 'revalidating' | 'limited' | 'cooldown' | 'budget'; readonly epoch: number; readonly retryAt?: number };
@@ -78,7 +78,7 @@ export class ProtectedSessionService {
             if (epoch === this.epoch && !current() && !this.connection) this.state = 'disconnected';
         }
     }
-    async connect(secret: string, repository: string, expected?: ProtectedSession, current: () => boolean = () => true, observer?: SessionOperationTrace | null): Promise<SessionStatus> {
+    async connect(secret: string, repository: string, expected?: ProtectedSession, current: () => boolean = () => true, observer?: SessionMutationTrace | null): Promise<SessionStatus> {
         await this.start();
         if (!current()) return this.status();
         const removal = this.revoke(observer); const epoch = this.epoch;
@@ -93,7 +93,7 @@ export class ProtectedSessionService {
         return this.status();
     }
     private async establish(secret: string, repository: string, epoch: number, expected: ProtectedSession | undefined, current: () => boolean,
-        cancellation: ReadCancellation = this.cancellation, observer?: SessionOperationTrace | null): Promise<void> {
+        cancellation: ReadCancellation = this.cancellation, observer?: SessionMutationTrace | null): Promise<void> {
         // Both callers admit the current scope synchronously; asynchronous completions are fenced below.
         const activity = { visible: true, active: true, online: true, pending: false, manual: true };
         const identity = await this.scheduler.run(`connect/${epoch}/viewer`, 'connection', { type: 'viewer' }, secret, cancellation, activity);
@@ -128,7 +128,7 @@ export class ProtectedSessionService {
         return true;
     }
     /** Fence and abort synchronously, before the first storage await. */
-    async revoke(observer?: SessionOperationTrace | null, effect: 'retire-active' | 'cleanup-active' = 'retire-active'): Promise<void> {
+    async revoke(observer?: SessionMutationTrace | null, effect: 'retire-active' | 'cleanup-active' = 'retire-active'): Promise<void> {
         this.initialization ??= Promise.resolve();
         const previous = this.epoch; const epoch = ++this.epoch; this.retryAt = undefined; this.connection = undefined; this.state = 'disconnected';
         sessionCredential(observer, previous, epoch);

@@ -1,18 +1,16 @@
-import { validSession, validSessionIdentity, sameProtectedSession, type ProtectedSession } from './session.ts';
-import { deepFreeze, jsonBytesWithin, keys, natural, record } from './value.ts';
+import { validSessionIdentity } from './session.ts';
+import { deepFreeze, keys, natural, record } from './value.ts';
 import { localIdentifier } from './center_routes.ts';
+import { NAMED_SESSION_LIMIT, sessionName, type PurposeSessionEntry } from './session_vault_entries.ts';
+import { validNativeSessionVault, sameNativeSessionVault, type NativeSessionVault } from './purpose_session_vault.ts';
+import { sessionPurpose, validWriteSelectionsView, writeSelectionsView, type SessionPurpose, type WritePurpose, type WriteSelectionsView } from './credential_roles.ts';
 
-export const NAMED_SESSION_LIMIT = 5;
-export interface NamedSession {
-    readonly id: string; readonly name: string; readonly host: 'github.com'; readonly role: 'repository-read';
-    readonly connection: ProtectedSession;
-}
-export interface SessionVault {
-    readonly schemaVersion: 1; readonly revision: number; readonly selected: string | null;
-    readonly entries: readonly NamedSession[];
-}
+export { NAMED_SESSION_LIMIT, sessionName, repositoryAddress } from './session_vault_entries.ts';
+export { connectionIntent, type ConnectionIntent } from './connection_intent.ts';
+export type NamedSession = PurposeSessionEntry;
+export type SessionVault = NativeSessionVault;
 export interface ConnectionSummary {
-    readonly id: string; readonly name: string; readonly host: 'github.com'; readonly role: 'repository-read';
+    readonly id: string; readonly name: string; readonly host: 'github.com'; readonly role: SessionPurpose;
     readonly viewerId: string; readonly viewerLogin: string; readonly repositoryId: string; readonly repository: string;
     readonly organizationId?: string | null;
 }
@@ -20,61 +18,30 @@ export interface ConnectionsView {
     readonly state: 'ready'; readonly revision: number; readonly selected: string | null;
     readonly connected: boolean; readonly entries: readonly ConnectionSummary[];
     readonly credentialEpoch?: number;
+    readonly optionalWrites?: WriteSelectionsView;
 }
-export type ConnectionIntent = { readonly type: 'connect'; readonly name: string; readonly secret: string; readonly repository: string }
-    | { readonly type: 'select'; readonly id: string; readonly repository?: string }
-    | { readonly type: 'remove'; readonly id: string }
-    | { readonly type: 'disconnect' } | { readonly type: 'revoke-all' };
 export type ConnectionOutcome = ConnectionsView | { readonly state: 'invalid' | 'capacity' | 'conflict' | 'stale' | 'unavailable' | 'denied' | 'unknown' | 'limited' | 'cooldown' | 'budget' };
-export const sessionName = (value: unknown): value is string => typeof value === 'string' && value.trim() === value
-    && value.length >= 1 && value.length <= 64 && !/[\p{Cc}\p{Cf}]/u.test(value);
-export const repositoryAddress = (value: unknown): value is string => typeof value === 'string' && value.length <= 201
-    && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$(?![\s\S])/u.test(value)
-    && value.split('/').every(part => part !== '.' && part !== '..');
-export function connectionIntent(value: unknown): value is ConnectionIntent {
-    if (!record(value)) return false;
-    if (value.type === 'disconnect' || value.type === 'revoke-all') return keys(value, ['type']) && Object.keys(value).length === 1;
-    if (value.type === 'remove') return keys(value, ['type', 'id']) && Object.keys(value).length === 2 && localIdentifier(value.id);
-    if (value.type === 'select') return keys(value, ['type', 'id', 'repository']) && localIdentifier(value.id)
-        && Object.keys(value).length === (Object.hasOwn(value, 'repository') ? 3 : 2)
-        && (!Object.hasOwn(value, 'repository') || repositoryAddress(value.repository));
-    return value.type === 'connect' && keys(value, ['type', 'name', 'secret', 'repository']) && Object.keys(value).length === 4
-        && sessionName(value.name) && typeof value.secret === 'string' && /^[A-Za-z0-9_]{8,255}$(?![\s\S])/u.test(value.secret)
-        && repositoryAddress(value.repository);
-}
-export function validVault(value: unknown): value is SessionVault {
-    if (!record(value) || !keys(value, ['schemaVersion', 'revision', 'selected', 'entries']) || Object.keys(value).length !== 4
-        || value.schemaVersion !== 1 || !natural(value.revision) || !Array.isArray(value.entries) || value.entries.length > NAMED_SESSION_LIMIT
-        || Object.keys(value.entries).length !== value.entries.length || !jsonBytesWithin(value, 16 * 1024)) return false;
-    const ids = new Set<string>(); const names = new Set<string>();
-    for (const entry of value.entries) {
-        if (!record(entry) || !keys(entry, ['id', 'name', 'host', 'role', 'connection']) || Object.keys(entry).length !== 5
-            || !localIdentifier(entry.id) || !sessionName(entry.name) || entry.host !== 'github.com' || entry.role !== 'repository-read'
-            || !validSession(entry.connection) || entry.connection.repository.length > 201 || ids.has(entry.id) || names.has(entry.name.toLowerCase())) return false;
-        ids.add(entry.id); names.add(entry.name.toLowerCase());
-    }
-    return value.selected === null || (typeof value.selected === 'string' && ids.has(value.selected));
-}
-export function connectionsView(vault: SessionVault, connected: boolean, credentialEpoch?: number): ConnectionsView {
+export function validVault(value: unknown): value is SessionVault { return validNativeSessionVault(value); }
+export function connectionsView(vault: SessionVault, connected: boolean, credentialEpoch?: number, verifiedWrites: readonly WritePurpose[] = []): ConnectionsView {
     return deepFreeze({ state: 'ready', revision: vault.revision, selected: vault.selected, connected,
         ...(credentialEpoch === undefined ? {} : { credentialEpoch }),
+        ...(vault.schemaVersion === 2 ? { optionalWrites: writeSelectionsView(vault.writeSelections, verifiedWrites) } : {}),
         entries: vault.entries.map(({ connection, ...entry }) => ({ ...entry, viewerId: connection.viewerId, viewerLogin: connection.viewerLogin,
             repositoryId: connection.repositoryId, repository: connection.repository,
             ...(connection.organizationId === undefined ? {} : { organizationId: connection.organizationId }) })) });
 }
 /** Entire canonical vault, independent of object-key insertion order; entry order remains significant. */
 export function sameSessionVault(value: unknown, expected: SessionVault): boolean {
-    return validVault(value) && value.revision === expected.revision && value.selected === expected.selected && value.entries.length === expected.entries.length
-        && value.entries.every((entry, i) => entry.id === expected.entries[i].id && entry.name === expected.entries[i].name
-            && entry.host === expected.entries[i].host && entry.role === expected.entries[i].role && sameProtectedSession(entry.connection, expected.entries[i].connection));
+    return sameNativeSessionVault(value, expected);
 }
 export function decodeConnections(value: unknown): ConnectionOutcome | null {
     if (!record(value)) return null;
     if (value.state !== 'ready') return keys(value, ['state']) && Object.keys(value).length === 1
         && ['invalid', 'capacity', 'conflict', 'stale', 'unavailable', 'denied', 'unknown', 'limited', 'cooldown', 'budget'].includes(value.state as string)
         ? value as unknown as ConnectionOutcome : null;
-    if (!keys(value, ['state', 'revision', 'selected', 'connected', 'entries', 'credentialEpoch'])
-        || Object.keys(value).length !== (Object.hasOwn(value, 'credentialEpoch') ? 6 : 5) || !natural(value.revision)
+    const purposeAware = Object.hasOwn(value, 'optionalWrites');
+    if (!keys(value, ['state', 'revision', 'selected', 'connected', 'entries', 'credentialEpoch', 'optionalWrites'])
+        || Object.keys(value).length !== 5 + Number(Object.hasOwn(value, 'credentialEpoch')) + Number(purposeAware) || !natural(value.revision)
         || Object.hasOwn(value, 'credentialEpoch') && !natural(value.credentialEpoch)
         || typeof value.connected !== 'boolean' || !Array.isArray(value.entries) || value.entries.length > NAMED_SESSION_LIMIT
         || Object.keys(value.entries).length !== value.entries.length) return null;
@@ -82,12 +49,16 @@ export function decodeConnections(value: unknown): ConnectionOutcome | null {
     for (const entry of value.entries) {
         if (!record(entry) || !keys(entry, ['id', 'name', 'host', 'role', 'viewerId', 'viewerLogin', 'repositoryId', 'repository', 'organizationId'])
             || Object.keys(entry).length !== (Object.hasOwn(entry, 'organizationId') ? 9 : 8)
-            || !localIdentifier(entry.id) || !sessionName(entry.name) || entry.host !== 'github.com' || entry.role !== 'repository-read'
+            || !localIdentifier(entry.id) || !sessionName(entry.name) || entry.host !== 'github.com' || !(purposeAware ? sessionPurpose(entry.role) : entry.role === 'repository-read')
+            || entry.id === 'previous-session' && entry.role !== 'repository-read'
             || !validSessionIdentity(entry) || ids.has(entry.id) || names.has(entry.name.toLowerCase())) return null;
         ids.add(entry.id); names.add(entry.name.toLowerCase());
     }
-    if (!(value.selected === null || (typeof value.selected === 'string' && ids.has(value.selected))) || (value.connected && value.selected === null)) return null;
+    if (!(value.selected === null || typeof value.selected === 'string' && value.entries.some(entry => entry.id === value.selected && entry.role === 'repository-read'))
+        || value.connected && value.selected === null || purposeAware && !validWriteSelectionsView(value.optionalWrites, value.entries)) return null;
+    const slots = value.optionalWrites as WriteSelectionsView;
     return deepFreeze({ state: 'ready', revision: value.revision, connected: value.connected, selected: value.selected as string | null,
         ...(Object.hasOwn(value, 'credentialEpoch') ? { credentialEpoch: value.credentialEpoch } : {}),
+        ...(purposeAware ? { optionalWrites: { 'issues-write': { ...slots['issues-write'] }, 'actions-write': { ...slots['actions-write'] } } } : {}),
         entries: value.entries.map(entry => ({ ...entry })) }) as ConnectionsView;
 }

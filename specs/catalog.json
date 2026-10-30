@@ -2942,7 +2942,8 @@
         "specs/github-browser-extension-onboarding-and-support.md",
         "specs/github-browser-extension-local-journal.md",
         "specs/github-browser-extension-collection-consent.md",
-        "specs/github-browser-extension-session-preferences.md"
+        "specs/github-browser-extension-session-preferences.md",
+        "specs/github-browser-extension-credential-roles.md"
       ],
       "workflows": [
         ".github/workflows/ci_check.yml",
@@ -3330,7 +3331,18 @@
         "extension/src/presentation/SessionPreferenceValues.svelte",
         "extension/src/presentation/SessionPreferencesPage.svelte",
         "extension/src/presentation/session_preference_copy.ts",
-        "extension/src/presentation/session_preference_provenance_copy.ts"
+        "extension/src/presentation/session_preference_provenance_copy.ts",
+        "extension/src/domain/credential_roles.ts",
+        "extension/src/domain/session_vault_entries.ts",
+        "extension/src/domain/purpose_session_vault.ts",
+        "extension/src/application/purpose_identity_verifier.ts",
+        "extension/src/application/native_session_vault.ts",
+        "extension/src/application/credential_epoch_fence.ts",
+        "extension/src/domain/connection_intent.ts",
+        "extension/src/domain/credential_role_copy.ts",
+        "extension/src/domain/session_vault_plan.ts",
+        "extension/src/presentation/OptionalRoleStates.svelte",
+        "extension/src/presentation/RoleSelectionReview.svelte"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3707,7 +3719,29 @@
         "extension/test/integration/session_preference_review_limits.test.ts",
         "extension/test/integration/session_preference_route.test.ts",
         "extension/test/integration/session_preference_transport.test.ts",
-        "extension/test/integration/session_preferences_store_boundaries.test.ts"
+        "extension/test/integration/session_preferences_store_boundaries.test.ts",
+        "extension/test/contracts/credential_roles.test.ts",
+        "extension/test/contracts/purpose_session_vault.test.ts",
+        "extension/test/integration/purpose_identity_verifier.test.ts",
+        "extension/test/integration/native_session_vault.test.ts",
+        "extension/test/contracts/connection_roles.test.ts",
+        "extension/test/contracts/credential_epoch_fence.test.ts",
+        "extension/test/contracts/purpose_session_facts.test.ts",
+        "extension/test/contracts/session_vault_plan.test.ts",
+        "extension/test/fixtures/ConnectionRolesTestHost.svelte",
+        "extension/test/fixtures/connection_roles_ui.ts",
+        "extension/test/fixtures/credential_roles.ts",
+        "extension/test/fixtures/native_session_vault.ts",
+        "extension/test/fixtures/purpose_center.ts",
+        "extension/test/fixtures/purpose_identity.ts",
+        "extension/test/fixtures/purpose_sessions.ts",
+        "extension/test/integration/connection_context_roles.test.ts",
+        "extension/test/integration/connection_roles_presentation.test.ts",
+        "extension/test/integration/purpose_center.test.ts",
+        "extension/test/integration/purpose_native_gateway.test.ts",
+        "extension/test/integration/purpose_session_races.test.ts",
+        "extension/test/integration/purpose_sessions.test.ts",
+        "extension/test/integration/connection_focus.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

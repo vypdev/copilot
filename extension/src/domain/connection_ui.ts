@@ -1,8 +1,10 @@
 import type { ConnectionIntent, ConnectionOutcome } from './named_sessions.ts';
 export interface ConnectionActions {
+    focusReview(): void;
+    focusSession(id: string): void;
     refresh(): void;
     connect(form: unknown): void;
-    change(intent: Exclude<ConnectionIntent, { type: 'connect' }>, revision: number): Promise<number | null> | void;
+    change(intent: Exclude<ConnectionIntent, { type: 'connect' | 'connect-role' }>, revision: number): Promise<number | null> | void;
     dirty(value: boolean): void;
 }
 export interface ConnectionPanelProps {
