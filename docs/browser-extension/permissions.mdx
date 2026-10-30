@@ -183,3 +183,15 @@ session. Group names/private labels are absent from redacted operation history;
 current source-bound operation detail may show the authored group being
 reviewed. Workspace reset removes groups alone. Forgetting protected sessions
 removes their private bindings while leaving authored groups intact.
+
+
+The development **Repositories → Temporary pauses** page reads native state
+independently from saved preferences. An observer can inspect that state; only
+the current native editor can request a scoped review or its retained result.
+It does not restore a read credential, ask for new grants or call GitHub. The
+renderer never receives reusable native ownership or operation selectors. A
+changed owner/package or selected native target retires its review. Tab signals
+carry only an opaque native ID and retirement flag, without URLs or titles.
+Confirmed scopes have browser-session lifetime; extra precaution for uncertain
+effects has worker lifetime and is removed only by explicit observed-state
+adoption. Saved pauses remain separate.

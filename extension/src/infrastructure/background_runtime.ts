@@ -65,9 +65,11 @@ export function startBackground(api: BrowserApi): () => void {
     const message: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender, respond) => {
         void gateway.handle(value, sender).then(result => respond({ ...(record(result) ? result : { state: 'unavailable' }), sourceTree: buildSourceIdentity() })); return true;
     };
-    const removed = (id: number) => { gateway.invalidate(id); gateway.releaseCenterTab(id); gateway.releaseHelperTab(id); closedPauses.close(id); };
+    const pauseTargetsChanged = (tabId: number, retired: boolean) => { void api.runtime.sendMessage({ version: 1, method: 'center.pauses.targets.changed', tabId, retired }).catch(() => undefined); };
+    const removed = (id: number) => { gateway.invalidate(id); gateway.releaseCenterTab(id); gateway.releaseHelperTab(id); closedPauses.close(id); pauseTargetsChanged(id, true); };
     // Native tab events cancel the owning lease even on protected routes and same-URL reloads.
     const updated = (id: number, changes: { url?: string; status?: string }) => {
+        if (changes.url || changes.status === 'loading' || changes.status === 'complete') pauseTargetsChanged(id, !!changes.url || changes.status === 'loading');
         if (changes.url || changes.status === 'loading') gateway.invalidate(id);
         if (changes.status === 'loading' || (changes.url && !extensionSender({ id: api.runtime.id, url: changes.url }, api.runtime.id, api.runtime.getURL('')))) gateway.releaseCenterTab(id);
     };

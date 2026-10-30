@@ -1,3 +1,4 @@
+import type { PauseRouteProps } from '../domain/pause_ui.ts';
 import type { Component } from 'svelte';
 import type { CenterFrame } from '../domain/center_frame.ts';
 import type { CenterRoute } from '../domain/center_routes.ts';
@@ -12,5 +13,6 @@ export interface CenterSurface {
     loadInventory(detail?: string): Promise<Component<InventoryRouteProps>>;
     loadPrivacy(): Promise<Component<PrivacyRouteProps>>;
     loadSupport(): Promise<Component<SupportRouteProps>>;
+    loadPauses(): Promise<Component<PauseRouteProps>>;
     loadHistory(): Promise<Component<HistoryRouteProps>>;
 }

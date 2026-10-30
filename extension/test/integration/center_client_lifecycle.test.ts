@@ -21,18 +21,25 @@ it('unmounting while native open is pending releases its eventual handle and nev
     expect(h.port.send).toHaveBeenCalledTimes(2);
 });
 it('reentrant disposal before opening, reading, claiming or previewing prevents a native effect', async () => {
-    for (const phase of ['loading', 'reading', 'previewing'] as const) {
+    for (const phase of ['loading', 'reading', 'claiming', 'previewing'] as const) {
         const h = centerClientFixture();
         if (phase !== 'loading') await h.client.start();
         const calls = h.port.send.mock.calls.length;
         let loading = 0;
         const release = h.client.subscribe(view => { if (view.phase === phase && (phase !== 'loading' || ++loading > 1)) h.client.stop(); });
         if (phase === 'loading') await h.client.start();
-        if (phase === 'reading') await h.client.takeControl();
+        if (phase === 'reading') await h.client.refresh();
+        if (phase === 'claiming') await h.client.takeControl();
         if (phase === 'previewing') await h.client.preview(intent, 0);
         expect(h.client.view.phase).toBe('stopped');
         expect(h.port.send.mock.calls.slice(calls).every(([message]) => message.method === 'center.close')).toBe(true); release();
     }
+});
+it('disposal when a completed claim publishes its editor role releases that epoch and never starts a preference read', async () => {
+    const h = centerClientFixture(); h.native.open({ documentId: 'other-editor', tabId: 8 }); await h.client.start(); expect(h.client.view.role).toBe('observer');
+    const calls = h.port.send.mock.calls.length; h.client.subscribe(view => { if (view.role === 'editor') h.client.stop(); }); await h.client.takeControl();
+    expect(h.client.view.phase).toBe('stopped'); expect(h.port.send.mock.calls.slice(calls).map(([input]) => input.method)).toEqual(['center.claim', 'center.close']);
+    expect(h.native.open({ documentId: 'new-editor', tabId: 9 }).role).toBe('editor');
 });
 it('late reads cannot repaint a retired view, and a completed late takeover releases its new native epoch', async () => {
     for (const method of ['center.read', 'center.claim'] as const) {

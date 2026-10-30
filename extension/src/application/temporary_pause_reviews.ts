@@ -6,6 +6,7 @@ import { deepFreeze, natural } from '../domain/value.ts';
 import type { NativePauseTarget, PauseReviewPorts } from './temporary_pause_review_ports.ts';
 import type { TemporaryPauseStore } from './temporary_pause_store.ts';
 import { reportPause, completePause, type PauseOperationTrace } from './pause_observation_ports.ts';
+import type { ProtectedMutationTrace } from './protected_mutation.ts';
 
 interface Bound { readonly owner: string; readonly fence: SettingsOwnerFence; readonly revision: number;
     readonly createdAt: number; readonly expiresAt: number; readonly generation: number }
@@ -145,16 +146,20 @@ export class TemporaryPauseReviews {
     }
     private async execute(value: Pending): Promise<PauseReviewOutcome> {
         let applying = false;
+        let attempted = false;
+        const current = () => this.current(value) && (attempted || value.intent.type === 'adopt-observed' || value.intent.paused || !this.store.guard.uncertain);
+        const trace: ProtectedMutationTrace = { submitted: () => { attempted = true; value.trace?.submitted(); },
+            acknowledged: acknowledgement => value.trace?.acknowledged(acknowledgement), settled: fact => value.trace?.settled(fact) };
         try {
-            if (!this.current(value)) return { state: 'stale' };
+            if (!current()) return { state: 'stale' };
             if (value.intent.type === 'tab' && value.target) {
                 const target = await this.ports.target(value.intent.tabId);
-                if (!this.current(value)) return { state: 'stale' };
+                if (!current()) return { state: 'stale' };
                 if (!target || target.tabId !== value.intent.tabId || target.source !== value.target.source) return { state: 'conflict' };
             }
             applying = true;
-            return await (value.intent.type === 'adopt-observed' ? this.store.reconcile(value.before, value.witness, () => this.current(value))
-                : this.store.commit(value.before, value.after, () => this.current(value), value.trace));
+            return await (value.intent.type === 'adopt-observed' ? this.store.reconcile(value.before, value.witness, current)
+                : this.store.commit(value.before, value.after, current, trace));
         } catch {
             if (!applying) return { state: 'unavailable' };
             this.store.protectUnknown();

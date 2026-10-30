@@ -913,7 +913,8 @@ and its independent acknowledgement. Adoption explicitly says it writes no
 native record and certifies no earlier operation. Retained facts expose no
 confirm/resume buttons. Ship all content in en/es/fr/pt with proper heading
 hierarchy, readonly fact lists, escaped labels and existing keyboard/focus rules.
-The native pause authoring/recovery/provenance editor remains separate H3 work.
+The native authoring/recovery increment is specified in section 6.15; full
+runtime provenance and native/human H3 acceptance remain separate requirements.
 
 Minimum **64 distinct** component risk cases: 16 closed fact/redaction/transition,
 20 native event ordering/loss/reentry, 12 current/source/optional-retention, 10
@@ -926,6 +927,120 @@ remote Codecov no-missing/no-partial changed-line gate. Evidence families are
 `pause_effects_presentation`, `protected_mutation` and the actual background
 expiry regression. These deterministic native-port/composition/DOM cases do not
 replace loaded Chrome/Firefox/Safari or human acceptance.
+
+### 6.15 Native pause authoring and recovery
+
+The packaged local center MUST expose `#/repositories/pauses`, reachable from
+repository preferences, profiles and privacy. Emergency and native-tab scopes
+are distinct from saved global/profile/repository preferences. Confirming a
+native pause MUST NOT edit saved preferences, export/import or rollback, read a
+credential, prompt for a grant, call GitHub or approve an Action. An observer can
+read the independent native state but cannot preview, confirm, cancel or inspect
+another window's operation. Explicit control takeover retains its existing
+native identity/epoch admission; a suspended ordinary preference read MUST NOT
+block takeover or independently authorized native safety work. New editor role
+is visible before its saved-preference read completes. A pending native takeover
+exposes a distinct busy state and MUST NOT issue duplicate claims. Future/corrupt/unavailable
+preferences do not imply unavailable native pause controls. An incompatible
+package source or unknown native identity still fails closed.
+
+```text
+Repositories / Temporary pauses → independent native record + eligible tabs
+ → Pause / Resume one scope → complete before / after → Confirm / Cancel
+ → native response, acknowledgement, canonical observation, source sample
+Unknown delivery → Inspect that retained operation; no automatic confirmation
+Uncertain native effect → Read current native state → Review adoption → Confirm
+ → same emergency/tab scopes preserved; only worker precaution ends
+```
+
+Text equivalent: viewing/filtering/reading never writes. Preview reserves an
+exact native review; only its explicit confirmation requests its native effect.
+Cancellation retires the review without an inverse write. Unknown response or
+unknown effect MUST remain unknown after ordinary metadata reads. Inspect uses
+only the retained opaque ID and original revision; stronger exact completion
+can replace missing delivery, while weaker/expired/unavailable inspection
+cannot erase already observed uncertainty. Adoption writes no native record,
+acknowledges no older operation and preserves all observed native/saved scopes.
+
+Representative review content is “Resume tab 7 — Before: emergency paused,
+tabs 7 and 9 paused. After: emergency paused, tab 9 paused.” Show extra precaution
+as an explicit boolean on both sides, never merge it with emergency. For unknown
+effects show “The response is unconfirmed. Do not repeat the change. Inspect its
+retained result or read current pauses and explicitly review adoption.” The
+technical details disclose browser-session lifetime of native state, worker
+lifetime of extra precaution, and the longer lifetime of saved pauses. No
+resumption may claim to release a saved inherited pause or another native scope.
+
+The native record and tab inventory have separate availability. Future,
+corrupt or unavailable native state MUST remain preserved, explicitly unknown
+and unavailable for effects; no empty/unpaused default or repair. Pending native
+work disables new reviews. Extra precaution disables every resumption; it does
+not prevent a restrictive pause or explicit adoption. At confirmation, resumption
+rechecks precaution after target verification and inside the queued store before
+actual invocation. A newly acquired hold before invocation prevents the write;
+a hold acquired after invocation cannot erase its factual effect. Canonical
+revision observations reject rollback within one native client context; explicit
+context replacement permits a legitimate new browser-session document.
+
+`PauseClient`, `PauseReader` and `PauseReviewClient` own the view and private
+selectors. The renderer receives immutable closed copies, complete public plans
+and callbacks, never native client IDs, controller/credential epochs, operation
+IDs, witnesses, native paths or reusable authority. Decode every reply with
+strict bounded fields, complete canonical snapshots and an exact intended scope,
+revision and action match. These pure validators cannot authorize a native
+effect. `CenterClient` supplies native headers privately and fences post-await
+identity/role/epochs. Existing native gateway admission remains authoritative.
+Recheck retirement and eligibility after synchronous renderer notifications and
+immediately before dispatch: a notification that retires a view cannot send its
+obsolete work. After native invocation, retain observed scalar effect facts even
+if editing authority or target identity has since been retired.
+
+Fixed, nonconfigurable bounds are one native metadata request plus one coalesced
+trailing request, at most sixteen outstanding review/effect calls and one joined
+exact-result inspection, eight subscribers, native review deadline five minutes,
+128 eligible native candidates and 128 saved native-tab restrictions. The merged
+list is at most 256 rows and preserves missing restrictions with generic tab IDs
+and explicit unavailable labels. It MUST NOT render private URLs or titles. The
+local search trims and limits its query to 120 characters; it filters IDs and
+safe labels without storage, IO, a preference draft or a new history fact. Empty
+inventory and no matching filter have different messages. These bounds add no
+settings schema, provider configuration or user safety override.
+
+Native closure/navigation/reload signals carry only version, closed method,
+opaque tab ID and retirement boolean. Source-checked completion refreshes metadata
+without retiring a still-current target. Closure/navigation/reload retires only
+the selected pending target; after invocation purge its public label/plan but
+keep private selectors only for inspecting that exact retained result. Never
+include URLs/titles/grants in these notifications; reject foreign-extension and
+content-tab senders in the local center. Blur/hidden views drop current metadata
+and cannot confirm until a fresh eligible read; source identity/role/epoch change
+purges private plans and labels. Shutdown drops selectors and ignores late replies.
+
+Settings, connection and history mutations/reviews, unsaved drafts and native
+reviews exclude conflicting authoring. Ordinary saved-preference reading does
+not. Navigation and beforeunload protect pending/in-flight reviews. Staying keeps
+the review; leaving an unsubmitted review cancels its exact ID; leaving a settled
+or unknown result explicitly keeps native effects. In-flight work cannot be
+discarded. No automatic inverse, confirmation replay, renewal or resumption.
+The packaged lazy boundary exposes loading/unavailable locally and ignores late
+chunks after unmount; no remote code fallback. Ship all UI/copy in en/es/fr/pt,
+semantic headings, named controls, keyboard access, live status, filter focus
+preservation and focus on the new review/result heading. Color is supplemental.
+
+Minimum **160 distinct semantic cases**: 32 strict reply/schema/bounds, 40
+review/inspection/effect/retirement races, 32 native policy/transport/lifecycle,
+24 mounted authoring/recovery/accessibility, 24 actual composed native-route
+journeys and 8 local loader/filter/copy cases. Locale clones do not increase the
+semantic count. Require all prior regression cases, no skips and 100% local
+new executable lines/branches/functions/statements, plus final exact-head remote
+Codecov no-missing/no-partial changed lines against the correct base. Evidence
+families are `pause_reply`, `pause_ui`, `pause_transport`, `pause_reader`,
+`pause_review_client`, `pause_review_faults`, `pause_review_reentrancy`,
+`pause_resume_precaution`, `pause_target_notifications`, `pause_page`, `pause_route`,
+`pause_center`, `pause_center_lifecycle` and `pause_client_retirement`. Documentation MUST explain entrypoints,
+lifetimes, unknown recovery, retained facts, permissions and architecture.
+These deterministic native-port/background/DOM tests do not replace loaded
+Chrome/Firefox/Safari, full runtime provenance or the H3 human acceptance tasks.
 
 ## 7. User-facing configuration
 

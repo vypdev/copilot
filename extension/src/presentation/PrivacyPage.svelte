@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { pauseCopy } from '../domain/pause_copy.ts';
     import type { PrivacyRouteProps } from '../domain/center_ui.ts';
     import { BROWSER_CAPABILITIES } from '../domain/permission_inspection.ts';
     import { privacyCopy } from '../domain/privacy_copy.ts';
@@ -9,6 +10,7 @@
     const status = $derived(report.phase === 'checking' ? copy.checking : report.phase === 'timed-out' ? copy.timedOut
         : report.phase === 'ready' ? copy.complete : report.pending ? copy.waiting : copy.idle);
 </script>
+<a href="#/repositories/pauses">{pauseCopy(context.copy.locale).title}</a>
 <p>{copy.intro}</p>
 <a href="https://docs.page/vypdev/copilot/browser-extension/permissions">{copy.guide}</a>
 <section aria-labelledby="browser-permissions-heading" aria-busy={report.phase === 'checking'}>

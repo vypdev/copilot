@@ -10,10 +10,12 @@ import type { PrivacyConnection } from './privacy_context.ts';
 import type { SupportRoute, SupportStatus } from './support_context.ts';
 import type { PackageIdentity } from './package_identity.ts';
 import type { HistoryActions } from './history_ui.ts';
+import type { PauseActions } from './pause_ui.ts';
 
 export interface CenterActions extends ReviewActions {
     readonly connections: ConnectionActions;
     readonly history: HistoryActions;
+    readonly pauses: PauseActions;
     preview(intent: unknown, revision: number): void;
     dirty(value: boolean): void;
     takeControl(): void;

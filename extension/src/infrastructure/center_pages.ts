@@ -1,3 +1,4 @@
+import type { PauseRouteProps } from '../domain/pause_ui.ts';
 import type { Component } from 'svelte';
 import type { CenterRoute } from '../domain/center_routes.ts';
 import type { CenterRouteProps, InventoryRouteProps, PrivacyRouteProps, SupportRouteProps } from '../domain/center_ui.ts';
@@ -24,3 +25,5 @@ export async function loadInventoryPage(detail?: string): Promise<Component<Inve
 export async function loadPrivacyPage(): Promise<Component<PrivacyRouteProps>> { return (await import('../presentation/PrivacyPage.svelte')).default; }
 export async function loadSupportPage(): Promise<Component<SupportRouteProps>> { return (await import('../presentation/SupportPage.svelte')).default; }
 export async function loadHistoryPage(): Promise<Component<HistoryRouteProps>> { return (await import('../presentation/HistoryPage.svelte')).default; }
+
+export async function loadPausesPage(): Promise<Component<PauseRouteProps>> { return (await import('../presentation/PausesPage.svelte')).default; }

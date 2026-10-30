@@ -4,13 +4,15 @@ import { connectionIntent, decodeConnections, type ConnectionIntent } from '../d
 import type { CenterClientView } from '../domain/center_client_view.ts';
 import { sameSettingsContent } from '../domain/settings_operation.ts';
 import { deepFreeze, record } from '../domain/value.ts';
-import { HISTORY_EFFECTS, type HistoryMessage } from '../domain/history_protocol.ts';
+import type { HistoryMessage } from '../domain/history_protocol.ts';
+import type { PauseMessage } from '../domain/temporary_pause_protocol.ts';
+import type { PauseRequest } from '../domain/pause_request.ts';
+import { requestHistoryContext, requestPauseContext } from './center_request_context.ts';
 import type { HistoryRequest } from '../domain/history_request.ts';
 import { uncertainSettingsOutcome as uncertain, publicSettingsReview as publicReview } from '../domain/settings_review_projection.ts';
 import { RecentsClient } from './recents_client.ts';
 import { readCurrentOperation, readHelperSample, observationContextChanged } from './center_observation_context.ts';
-
-export interface CenterClientPort { readonly sourceTree: string; send(message: CenterMessage | ConnectionMessage | HistoryMessage): Promise<unknown>; contextChanged?(): void }
+export interface CenterClientPort { readonly sourceTree: string; send(message: CenterMessage | ConnectionMessage | HistoryMessage | PauseMessage): Promise<unknown>; contextChanged?(): void }
 /** One mounted view; reusable authority stays private, while committed receipts are inspectable facts. */
 export class CenterClient {
     private owner: CenterIdentity | null = null;
@@ -45,7 +47,7 @@ export class CenterClient {
         for (const listener of this.listeners) { try { listener(this.value); } catch { /* One renderer cannot erase saved facts. */ } }
     }
     private current(generation: number): boolean { return !this.stopped && this.generation === generation; }
-    private async request(message: CenterMessage | ConnectionMessage | HistoryMessage, secondary = false): Promise<Record<string, unknown> | null> {
+    private async request(message: CenterMessage | ConnectionMessage | HistoryMessage | PauseMessage, secondary = false): Promise<Record<string, unknown> | null> {
         try {
             const response = await this.port.send(message);
             const payload = centerPayload(response, this.port.sourceTree);
@@ -58,12 +60,10 @@ export class CenterClient {
             return payload;
         } catch { if (!this.stopped && !secondary) this.update({ issue: 'unavailable' }); return null; }
     }
-    async requestHistory(input: HistoryRequest): Promise<Record<string, unknown> | null> {
-        const owner = this.owner;
-        if (this.stopped || !owner || this.value.issue === 'incompatible') return { state: 'stale' };
-        if (HISTORY_EFFECTS[input.method] && (this.busy || this.value.review)) return { state: 'busy' };
-        if (input.method === 'center.history.read') return this.request({ ...input, version: 1, clientId: owner.clientId }, true);
-        return this.request({ ...input, version: 1, clientId: owner.clientId, controllerEpoch: owner.controllerEpoch, credentialEpoch: owner.credentialEpoch }, true);
+    async requestHistory(input: HistoryRequest): Promise<Record<string, unknown> | null> { return requestHistoryContext(input, this.owner, this.stopped || this.value.issue === 'incompatible', this.busy || !!this.value.review, message => this.request(message, true)); }
+    requestPauses(input: PauseRequest): Promise<Record<string, unknown> | null> {
+        return requestPauseContext(input, this.owner, this.stopped || this.value.issue === 'incompatible', ['claiming', 'previewing', 'committing'].includes(this.value.phase) || !!this.value.review,
+            message => this.request(message, true), () => this.owner);
     }
     private async finish(generation: number): Promise<void> {
         if (!this.current(generation)) return;
@@ -95,6 +95,7 @@ export class CenterClient {
         await this.load(generation); await this.finish(generation);
     }
     private async load(generation: number): Promise<void> {
+        if (!this.current(generation)) return;
         const owner = this.owner!;
         const body = await this.request({ version: 1, method: 'center.read', clientId: owner.clientId });
         if (!this.current(generation)) return;
@@ -128,13 +129,13 @@ export class CenterClient {
             ...(connections?.state === 'ready' && connections.credentialEpoch !== identity.credentialEpoch ? { connections: null } : {}) });
     }
     async takeControl(): Promise<void> {
-        if (this.stopped || this.busy || !this.owner) return;
+        if (this.stopped || !this.owner || this.busy && (this.owner.role !== 'observer' || !['loading', 'reading'].includes(this.value.phase))) return;
         this.busy = true; const generation = ++this.generation; const owner = this.owner;
-        this.pending = null; this.update({ phase: 'reading', review: null, issue: null });
+        this.pending = null; this.update({ phase: 'claiming', review: null, issue: null });
         if (!this.current(generation)) return;
         const next = decodeCenterIdentity(await this.request({ version: 1, method: 'center.claim', clientId: owner.clientId, controllerEpoch: owner.controllerEpoch }));
         if (this.current(generation)) {
-            if (next && next.clientId === owner.clientId) { this.owner = next; this.recents.contextChanged(); await this.load(generation); }
+            if (next && next.clientId === owner.clientId) { this.owner = next; this.recents.contextChanged(); this.update({ role: next.role, phase: 'reading' }); await this.load(generation); }
             else this.update({ issue: 'stale' });
         } else if (next && next.clientId === owner.clientId) {
             await this.request({ version: 1, method: 'center.close', clientId: next.clientId, controllerEpoch: next.controllerEpoch });

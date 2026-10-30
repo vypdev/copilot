@@ -278,5 +278,7 @@ record; reading current pauses never confirms that older response.
 Adoption explicitly reports no native write or acknowledgement. Closing a tab
 is native lifecycle cleanup and does not create a user operation in history.
 Retained facts contain no native tab IDs, URLs, pause snapshots or operation IDs,
-and offer no confirm/resume control. Complete pause authoring and native/human
-acceptance remain under H3 implementation.
+and offer no confirm/resume control. Use **Repositories → Temporary pauses** for
+an explicit new native review; generated history cannot authorize or replay it.
+That page can inspect its own retained unknown result without retransmitting the
+confirmation. Full native/human H3 acceptance remains pending.

@@ -12,7 +12,7 @@ export type ClientReview = Omit<CenterPlan, 'state' | 'operationId'> & { readonl
 export interface CenterClientView {
     readonly role?: 'editor' | 'observer' | null;
     readonly connections?: ConnectionOutcome | null;
-    readonly phase: 'loading' | 'reading' | 'ready' | 'previewing' | 'committing' | 'stopped';
+    readonly phase: 'loading' | 'reading' | 'ready' | 'claiming' | 'previewing' | 'committing' | 'stopped';
     readonly data: CenterData | null; readonly review: ClientReview | null;
     readonly issue: 'unavailable' | 'incompatible' | 'stale' | 'denied' | 'busy' | 'invalid' | 'unchanged' | 'conflict' | 'expired' | null;
 }

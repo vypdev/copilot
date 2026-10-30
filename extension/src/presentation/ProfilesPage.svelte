@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { pauseCopy } from '../domain/pause_copy.ts';
     import type { CenterRouteProps } from '../domain/center_ui.ts';
     import { centerLocationHash } from '../domain/center_routes.ts';
     import { profileScopeKey } from '../domain/center_profiles.ts';
@@ -9,6 +10,7 @@
     let editingDraft = $state(false);
     const editorActions = $derived({ ...actions, dirty: (value: boolean) => { editingDraft = value; actions.dirty(value); } });
 </script>
+<a href="#/repositories/pauses">{pauseCopy(context.copy.locale).title}</a>
 <p>{m.profileLimit}</p><p>{m.precedence}</p>
 <ProfileEffectiveState {context}/>
 {#if !context.location.detail}

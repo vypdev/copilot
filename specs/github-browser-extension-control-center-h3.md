@@ -1948,5 +1948,11 @@ The following observation increment installs the closed native pause family in
 current/retained operation views and four-locale readonly effects. Its source,
 privacy, event ordering, numeric risk budget and executable acceptance contract
 are in [native pause observations](github-browser-extension-collection-consent.md#614-native-pause-operation-observations).
-This does not complete the localized pause authoring/recovery/provenance editor,
-verified-session overrides, optional purpose management or native/human H3 gates.
+The next increment installs the localized authoring/recovery page at
+`#/repositories/pauses`, independently of saved-preference availability. Its
+state ownership, native effects, bounded configuration, keyboard/focus rules and
+executable acceptance contract are in
+[native pause authoring](github-browser-extension-collection-consent.md#615-native-pause-authoring-and-recovery).
+This does not complete full runtime provenance, verified-session overrides,
+optional purpose management or native/human H3 gates. The entire H3 remains in
+progress until those requirements and its full acceptance gates pass.
