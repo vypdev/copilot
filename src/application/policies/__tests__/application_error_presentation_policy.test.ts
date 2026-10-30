@@ -21,6 +21,11 @@ const RECOVERY_CASES: readonly Readonly<{
     spanish: string;
 }>[] = [
     {
+        recovery: { id: 'branch-sync-catalog-incompatible', variables: { phase: 'profile-compatibility', profile: 'legacy-evidence', field: 'workflows', capabilityNumber: 1, abort: 'completed' } },
+        english: 'No synchronization commit or push was attempted; remote branches were preserved. Local abort: completed. completed means the abort call finished; unverified requires operator inspection. This result does not certify application readiness.',
+        spanish: 'No se intentó crear ni subir un commit de sincronización; se conservaron las ramas remotas. Aborto local: completed. completed indica que terminó la llamada de aborto; unverified exige inspección del operador. Este resultado no certifica que la aplicación esté preparada.',
+    },
+    {
         recovery: { id: 'deployment-publication-context-missing', variables: {} },
         english: 'Existing persisted state and completed external effects were preserved; this attempt did not create a GitHub release.',
         spanish: 'Se conservaron el estado persistido y los efectos externos completados; este intento no creó una release de GitHub.',
@@ -165,6 +170,21 @@ const RECOVERY_CASES: readonly Readonly<{
 ];
 
 describe('application error presentation policy', () => {
+    it.each([['en-US', 'completed'], ['es-ES', 'completed'], ['en-US', 'unverified'], ['es-ES', 'unverified']] as const)(
+        'renders catalog recovery in %s with truthful %s abort state and trusted destinations', (locale, abort) => {
+            const error = new ApplicationError('configuration.unsupported', 'Catalog review required.', { correlationId: CORRELATION_ID,
+                recovery: { id: 'branch-sync-catalog-incompatible', variables: {
+                    phase: 'profile-compatibility', profile: 'legacy-evidence', field: 'workflows', capabilityNumber: 1, abort,
+                } } });
+            const message = jest.fn(resolveStaticApplicationErrorCatalog(locale).message);
+            const view = buildApplicationErrorPresentation(error, message);
+            expect(view.action).toContain('https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#branch-sync-catalog-compatibility');
+            expect(view.action).toContain('/copilot sync-branch'); expect(view.retainedState).toContain(abort);
+            expect(view.retryable).toBe('No'); expect(view.reference).toBe(CORRELATION_ID);
+            expect(view.impact).toContain('workflows'); expect(view.impact).toContain('legacy-evidence');
+            expect(message.mock.calls[0][1]).toMatchObject({ syncCommand: '/copilot sync-branch',
+                catalogGuide: 'https://docs.page/vypdev/copilot/security-operations/operations/troubleshooting#branch-sync-catalog-compatibility' });
+        });
     it.each(['en-US', 'es-ES'])('explains missing evidence as nonretryable with retained progress in %s', locale => {
         const error = new ApplicationError('validation.evidence-unavailable', 'Omitted patch.', { correlationId: CORRELATION_ID });
         const catalog = resolveStaticApplicationErrorCatalog(locale);

@@ -8,7 +8,10 @@ import type { BranchSyncValidationCode } from '../domain/branch_sync_validation'
 import { logInfo } from '../application/ports/logging_ports';
 import type { GitCommitPort } from "../application/ports/git_ports";
 import { listWorkspacePaths as inspectWorkspacePaths } from "../application/usecases/steps/commit/bugbot/workspace_changes";
-import { refreshBranchSyncSddCatalog, SDD_CATALOG_INDEX_PATH, SDD_CATALOG_PATH } from './branch_sync_sdd_catalog';
+import { inspectBranchSyncCatalogSource, inspectBranchSyncSddCatalogProfile, refreshBranchSyncSddCatalogDetailed,
+  SDD_CATALOG_INDEX_PATH, SDD_CATALOG_PATH } from './branch_sync_sdd_catalog';
+import { BRANCH_SYNC_CATALOG_MAX_BYTES, BranchSyncCatalogFailure, catalogDiagnostic,
+  type BranchSyncCatalogDiagnostic } from '../domain/branch_sync_catalog_diagnostic';
 
 interface MergeWorkspaceSnapshot {
   readonly parentSha: string;
@@ -62,8 +65,18 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
     }
 
     let workspacePaths = await this.listWorkspacePaths();
+    if (conflictPaths.includes(SDD_CATALOG_INDEX_PATH)) {
+      const diagnostic = inspectBranchSyncSddCatalogProfile(this.repositoryRoot);
+      if (diagnostic.phase === 'metadata-conflict-markers' && conflictPaths.includes(SDD_CATALOG_PATH)) {
+        // Immutable original objects establish compatibility before a fixer sees
+        // conflicted JSON. A clean, reviewed SDK migration uses merged bytes instead.
+        await this.assertOriginalCatalogProfile(childSha);
+        await this.assertOriginalCatalogProfile(parentSha);
+      } else this.assertSdkCatalogProfile(diagnostic);
+    }
     if (conflictPaths.length === 0 && workspacePaths.includes(SDD_CATALOG_PATH) && workspacePaths.includes(SDD_CATALOG_INDEX_PATH)) {
-      if (!refreshBranchSyncSddCatalog(this.repositoryRoot)) throw new Error('The merged SDD catalog is invalid.');
+      const refreshed = refreshBranchSyncSddCatalogDetailed(this.repositoryRoot);
+      if (!refreshed.valid) throw new BranchSyncCatalogFailure(refreshed.diagnostic);
       await this.git.stagePaths([SDD_CATALOG_INDEX_PATH]);
       workspacePaths = await this.listWorkspacePaths();
     }
@@ -107,8 +120,11 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
     try {
       if (!this.resolutionValidated && conflictPaths.includes(COMMUNICATION_BUDGET_PATH)
         && !refreshBranchSyncCommunicationBudget(this.repositoryRoot)) return invalid('The resolved communication budget is invalid.', 'communication-budget-invalid');
-      if (!this.resolutionValidated && conflictPaths.includes(SDD_CATALOG_INDEX_PATH)
-        && !refreshBranchSyncSddCatalog(this.repositoryRoot)) return invalid('The resolved SDD catalog is invalid.', 'sdd-catalog-invalid');
+      if (!this.resolutionValidated && conflictPaths.includes(SDD_CATALOG_INDEX_PATH)) {
+        const refreshed = refreshBranchSyncSddCatalogDetailed(this.repositoryRoot);
+        if (!refreshed.valid) return { ...invalid('The resolved SDD catalog is invalid.', 'sdd-catalog-invalid'),
+          catalogDiagnostic: refreshed.diagnostic };
+      }
       await this.checkResolvedDiff(false);
       // The agent edits files without Git write authority. Only this trusted
       // adapter stages the verified original conflict set, once before checks.
@@ -208,6 +224,32 @@ export class BranchSyncWorkspaceAdapter implements BranchSyncWorkspacePort {
   private async assertValidBranch(branch: string): Promise<void> {
     if (!branch.trim() || branch.startsWith("-")) throw new Error("Invalid branch name.");
     await this.git.execute("git", ["check-ref-format", "--branch", branch]);
+  }
+
+  private assertSdkCatalogProfile(diagnostic: BranchSyncCatalogDiagnostic): void {
+    if (diagnostic.profile !== 'sdk-v1' || diagnostic.phase !== 'profile-compatibility') this.rejectCatalogProfile(diagnostic);
+  }
+
+  private rejectCatalogProfile(diagnostic: BranchSyncCatalogDiagnostic): never {
+    const closed = catalogDiagnostic(diagnostic.phase, diagnostic.profile, diagnostic.field, diagnostic.capabilityNumber);
+    logInfo('Branch synchronization catalog compatibility rejected: ' + JSON.stringify(closed));
+    throw new BranchSyncCatalogFailure(closed);
+  }
+
+  private async assertOriginalCatalogProfile(revision: string): Promise<void> {
+    const boundary = catalogDiagnostic('catalog-file-boundary');
+    if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u.test(revision)) this.rejectCatalogProfile(boundary);
+    let source: string;
+    try {
+      const entry = await this.readRaw('git', ['ls-tree', '-z', revision, '--', SDD_CATALOG_PATH]);
+      const match = /^(?:100644|100755) blob ([0-9a-f]{40}|[0-9a-f]{64})\tspecs\/catalog\.json\0$/u.exec(entry);
+      if (!match) throw new Error('Catalog object boundary.');
+      const size = await this.read('git', ['cat-file', '-s', match[1]]);
+      if (!/^(?:0|[1-9][0-9]*)$/u.test(size) || Number(size) > BRANCH_SYNC_CATALOG_MAX_BYTES) throw new Error('Catalog object size.');
+      source = await this.readRaw('git', ['cat-file', 'blob', match[1]]);
+      if (Buffer.byteLength(source, 'utf8') !== Number(size)) throw new Error('Catalog object size changed.');
+    } catch { this.rejectCatalogProfile(boundary); }
+    this.assertSdkCatalogProfile(inspectBranchSyncCatalogSource(source));
   }
 
   private async isAncestor(ancestor: string, descendant: string): Promise<boolean> {

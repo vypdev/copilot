@@ -21,6 +21,14 @@ function translatedMessages(): Record<string, CatalogMessage> {
 }
 
 describe('application error message catalog', () => {
+  it.each(['impact', 'action', 'retainedState'] as const)('falls back atomically if catalog compatibility %s is untranslated', async field => {
+    const messages = translatedMessages(); delete messages['error.recovery.branch-sync-catalog-incompatible.' + field];
+    const resolver = new ResolveMessageCatalogUseCase({ query: jest.fn().mockResolvedValue({ targetLocale: 'fr-FR', messages }) });
+    const catalog = await resolveApplicationErrorCatalog('fr-FR', configuration, resolver);
+    expect(catalog).toMatchObject({ locale: 'en-US', resolutionSource: 'fallback', fallbackReason: 'dynamic-response-invalid' });
+    expect(catalog.message('error.recovery.branch-sync-catalog-incompatible.impact', { profile: 'legacy-evidence', phase: 'profile-compatibility', capabilityNumber: 1, field: 'workflows' })).toContain('Branch synchronization stopped for catalog review');
+    expect(catalog.message('error.label.action')).toBe('Action');
+  });
   it('ships complete, unique, immutable English and Spanish definitions', () => {
     expect(new Set(APPLICATION_ERROR_MESSAGE_IDS).size).toBe(APPLICATION_ERROR_MESSAGE_IDS.length);
     expect(APPLICATION_ERROR_CODES).toEqual(Object.keys(APPLICATION_ERROR_METADATA));

@@ -9,6 +9,7 @@ import { APPROVAL_EVIDENCE_PERMISSIONS, APPROVAL_EVIDENCE_REASONS, type Approval
 
 import { BRANCH_SYNC_VALIDATION_CODES, type BranchSyncValidationCode } from '../../domain/branch_sync_validation';
 import { isBranchSyncVerificationFailure, type BranchSyncVerificationFailure } from '../../domain/verification_failure';
+import { isBranchSyncCatalogDiagnostic, type BranchSyncCatalogDiagnostic } from '../../domain/branch_sync_catalog_diagnostic';
 
 export type ApplicationErrorKind =
     | 'configuration'
@@ -57,6 +58,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'branch-sync-fixer-unavailable',
     'branch-sync-resolution-invalid',
     'branch-sync-verification-failed',
+    'branch-sync-catalog-incompatible',
     'sdd-draft-size-exceeded',
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
@@ -104,6 +106,7 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'branch-sync-fixer-unavailable': Readonly<{ command: '/copilot sync-branch' }>;
     readonly 'branch-sync-resolution-invalid': Readonly<{ validationCode: BranchSyncValidationCode; command: '/copilot sync-branch' }>;
     readonly 'branch-sync-verification-failed': BranchSyncVerificationFailure;
+    readonly 'branch-sync-catalog-incompatible': BranchSyncCatalogDiagnostic & Readonly<{ abort: 'completed' | 'unverified' }>;
     readonly 'sdd-draft-size-exceeded': Readonly<Record<string, never>>;
     readonly 'sdd-catalog-unsupported-profile': Readonly<Record<string, never>>;
     readonly 'sdd-catalog-format-invalid': Readonly<Record<string, never>>;
@@ -392,6 +395,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'branch-sync-fixer-unavailable': Object.freeze(['command']),
     'branch-sync-resolution-invalid': Object.freeze(['validationCode', 'command']),
     'branch-sync-verification-failed': Object.freeze(['stage', 'reason', 'command', 'commandIndex', 'childSha', 'restoration']),
+    'branch-sync-catalog-incompatible': Object.freeze(['phase', 'profile', 'field', 'capabilityNumber', 'abort']),
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
@@ -460,6 +464,12 @@ function normalizeApplicationErrorRecovery(
     }
     if (recovery.id === 'branch-sync-verification-failed' && !isBranchSyncVerificationFailure(variables)) {
         throw new TypeError('Branch synchronization verification diagnostic is invalid.');
+    }
+    if (recovery.id === 'branch-sync-catalog-incompatible') {
+        const { abort, ...diagnostic } = variables;
+        if (!isBranchSyncCatalogDiagnostic(diagnostic) || !['completed', 'unverified'].includes(String(abort))) {
+            throw new TypeError('Branch synchronization catalog diagnostic is invalid.');
+        }
     }
     if (recovery.id === 'closed-issue-reconciliation-failed'
         && (!CLOSED_ISSUE_RESULTS.some(value => value === variables.resultId)

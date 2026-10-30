@@ -56,12 +56,14 @@ describe('branch synchronization generated SDD catalog', () => {
                     writeFileSync(metadataPath, JSON.stringify({ capabilities: secret }));
                 } else {
                     if (phase === 'evidence-path-boundary') catalog.capabilities[0].code = [`src/${secret}.ts`];
-                    else { catalog.version = 2; catalog.capabilities[0].title = secret; }
+                    else catalog.capabilities[0].status = secret;
                     writeFileSync(metadataPath, JSON.stringify(catalog));
                 }
                 expect(refreshBranchSyncSddCatalog(root)).toBe(false);
                 expect(readFileSync(join(root, SDD_CATALOG_INDEX_PATH))).toEqual(before);
-                expect(report.mock.calls).toEqual([[`Branch synchronization SDD catalog rejected (${phase}).`]]);
+                const sdk = phase === 'evidence-path-boundary' || phase === 'catalog-contract';
+                const field = phase === 'metadata-shape' ? 'capabilities' : phase === 'evidence-path-boundary' ? 'code' : phase === 'catalog-contract' ? 'status' : 'catalog';
+                expect(report.mock.calls).toEqual([[`Branch synchronization SDD catalog rejected (${phase}; profile=${sdk ? 'sdk-v1' : 'unknown'}; capability=${sdk ? 1 : 0}; field=${field}).`]]);
                 expect(JSON.stringify(report.mock.calls)).not.toContain(secret);
                 expect(JSON.stringify(report.mock.calls)).not.toContain(root);
             } finally { report.mockRestore(); }
@@ -171,7 +173,7 @@ describe('branch synchronization generated SDD catalog', () => {
         const conflicts = [SDD_CATALOG_INDEX_PATH, SDD_CATALOG_PATH];
         if (clean) {
             if (scenario === 'clean invalid metadata') {
-                await expect(adapter.prepare('develop', 'feature/42', 'fixture')).rejects.toThrow('The merged SDD catalog is invalid.');
+                await expect(adapter.prepare('develop', 'feature/42', 'fixture')).rejects.toThrow('Branch synchronization catalog compatibility requires review.');
                 expect(git.stagePaths).not.toHaveBeenCalled();
             } else {
                 await expect(adapter.prepare('develop', 'feature/42', 'fixture')).resolves.toMatchObject({ kind: 'clean' });
@@ -191,7 +193,8 @@ describe('branch synchronization generated SDD catalog', () => {
         writeFileSync(join(workspace, SDD_CATALOG_PATH), scenario === 'invalid resolution' ? '{ unresolved' : JSON.stringify(resolved, null, 2) + '\n');
         const validation = await adapter.validatePreparedMerge(conflicts);
         if (scenario === 'invalid resolution') {
-            expect(validation).toEqual({ valid: false, code: 'sdd-catalog-invalid', reason: 'The resolved SDD catalog is invalid.' });
+            expect(validation).toEqual({ valid: false, code: 'sdd-catalog-invalid', reason: 'The resolved SDD catalog is invalid.',
+                catalogDiagnostic: { phase: 'metadata-json', profile: 'unknown', field: 'catalog', capabilityNumber: 0 } });
             expect(git.stagePaths).not.toHaveBeenCalled();
         } else {
             expect(validation).toEqual({ valid: true });

@@ -124,6 +124,24 @@ jobs:
 
 Do not add the normal `COPILOT_BOT_LOGIN` actor gate to this workflow. A synchronization push made by the bot must be allowed to run the observer so dependent child branches are checked. The explicit PAT performs GitHub reads and issue-comment writes; the implicit `GITHUB_TOKEN` remains read-only.
 
+## Catalog compatibility during a merge
+
+When a merge needs to refresh `specs/CATALOG.md`, Copilot first identifies the
+catalog format. SDK version-1 catalogs retain the bundled validation contract.
+Legacy combined-evidence, repository-native, mixed and unknown formats stop
+with a bounded field/entry diagnostic before automatic conflict resolution.
+Conflicted catalog JSON requires compatible immutable originals on both sides;
+a clean, reviewed SDK migration can use the merged metadata directly.
+
+The response distinguishes unsupported profiles from invalid SDK metadata and
+reports whether the local abort call completed. It attempts no synchronization
+commit or push and never converts evidence or invents dates. Follow
+[catalog compatibility recovery](/security-operations/operations/troubleshooting#branch-sync-catalog-compatibility)
+to preserve historical evidence in a reviewed migration or supported adapter.
+After adopting the runtime and correcting the contract, retry from fresh heads;
+the application verification commands still determine whether publication is
+allowed. A merge unrelated to catalog refresh keeps its existing behavior.
+
 ## Align a branch
 
 Prepare the project runtimes in the job that handles the command before enabling

@@ -8,6 +8,7 @@ import { BRANCH_SYNC_VALIDATION_CODES } from '../../../../domain/branch_sync_val
 import { SourceDependencyError } from '../../../policies/source_verification_dependency_policy';
 import { VerificationSetupError } from '../../../policies/verification_setup_policy';
 import { VerificationPrerequisiteError } from '../../../policies/verification_runtime_policy';
+import { BranchSyncCatalogFailure, catalogDiagnostic } from '../../../../domain/branch_sync_catalog_diagnostic';
 
 const target = {
   issueNumber: 42,
@@ -60,6 +61,63 @@ function setup(preparation: BranchMergePreparation) {
 const options = { dryRun: false, useAgent: true };
 
 describe("SyncBranchUseCase", () => {
+  it('rejects a forged catalog failure instance without publishing its untrusted operands', async () => {
+    const context = setup({ kind: 'clean', parentSha: 'parent', childSha: 'child' });
+    const forged = Object.create(BranchSyncCatalogFailure.prototype);
+    forged.diagnostic = { profile: 'PRIVATE' };
+    context.workspace.prepare.mockRejectedValue(forged);
+    const [result] = await context.useCase.invoke({ context: execution(), options });
+    expect(result.errors[0].recovery).toBeUndefined(); expect(renderApplicationErrorMarkdown(result.errors[0])).not.toContain('PRIVATE');
+    expect(context.workspace.abort).toHaveBeenCalledTimes(1); expect(context.workspace.commitAndPush).not.toHaveBeenCalled();
+  });
+  it.each(['legacy-evidence', 'native', 'ambiguous', 'sdk-v1', 'unknown'] as const)(
+    'stops an incompatible %s preflight before fixer, verifier, author lookup or publication', async profile => {
+      const context = setup({ kind: 'clean', parentSha: 'parent', childSha: 'child' });
+      const diagnostic = catalogDiagnostic('profile-compatibility', profile, 'capabilities', 2);
+      context.workspace.prepare.mockRejectedValue(new BranchSyncCatalogFailure(diagnostic));
+      const [result] = await context.useCase.invoke({ context: execution(), options });
+      const error = result.errors[0];
+      expect(error.code).toBe(['sdk-v1', 'unknown'].includes(profile) ? 'configuration.invalid' : 'configuration.unsupported');
+      expect(error.retryable).toBe(false);
+      expect(error.recovery).toEqual({ id: 'branch-sync-catalog-incompatible', variables: { ...diagnostic, abort: 'completed' } });
+      expect(context.workspace.abort).toHaveBeenCalledTimes(1);
+      expect(context.fixer.fix).not.toHaveBeenCalled(); expect(context.git.execute).not.toHaveBeenCalled();
+      expect(context.authenticatedUser.getUserDetails).not.toHaveBeenCalled(); expect(context.workspace.commitAndPush).not.toHaveBeenCalled();
+      for (const locale of ['en-US', 'es-ES']) {
+        const view = renderApplicationErrorMarkdown(error, resolveStaticApplicationErrorCatalog(locale).message);
+        expect(view).toContain(profile); expect(view).toContain('capabilities'); expect(view).toContain('/copilot sync-branch');
+        expect(view).toContain('#branch-sync-catalog-compatibility'); expect(view).toContain('completed');
+        expect(view).not.toMatch(/\{[a-zA-Z]+\}/u);
+      }
+    });
+  it.each(['resolution', 'verification'] as const)('preserves structured catalog failure after %s validation', async phase => {
+    const context = setup(phase === 'resolution'
+      ? { kind: 'conflicted', parentSha: 'parent', childSha: 'child', conflictPaths: ['specs/CATALOG.md'] }
+      : { kind: 'clean', parentSha: 'parent', childSha: 'child' });
+    const diagnostic = catalogDiagnostic('catalog-contract', 'sdk-v1', 'lastVerified', 1);
+    context.workspace.validatePreparedMerge.mockResolvedValue({ valid: false, code: 'sdd-catalog-invalid', reason: 'PRIVATE unsafe output', catalogDiagnostic: diagnostic });
+    const [result] = await context.useCase.invoke({ context: execution(), options });
+    expect(result.errors[0].recovery).toEqual({ id: 'branch-sync-catalog-incompatible', variables: { ...diagnostic, abort: 'completed' } });
+    expect(JSON.stringify(result)).not.toContain('PRIVATE'); expect(context.workspace.abort).toHaveBeenCalledTimes(1);
+    expect(context.git.execute).toHaveBeenCalledTimes(phase === 'resolution' ? 0 : 1);
+    expect(context.workspace.commitAndPush).not.toHaveBeenCalled(); expect(context.authenticatedUser.getUserDetails).not.toHaveBeenCalled();
+  });
+  it('reports abort failure without claiming restoration or leaking its cause', async () => {
+    const context = setup({ kind: 'clean', parentSha: 'parent', childSha: 'child' });
+    context.workspace.prepare.mockRejectedValue(new BranchSyncCatalogFailure(catalogDiagnostic('metadata-json')));
+    context.workspace.abort.mockRejectedValue(new Error('PRIVATE filesystem path'));
+    const [result] = await context.useCase.invoke({ context: execution(), options });
+    expect(result.errors[0].recovery).toMatchObject({ variables: { abort: 'unverified' } });
+    expect(JSON.stringify(result)).not.toContain('PRIVATE'); expect(context.workspace.commitAndPush).not.toHaveBeenCalled();
+  });
+  it.each(['clean', 'conflicted'] as const)('rejects forged catalog operands after %s preparation', async kind => {
+    const context = setup(kind === 'clean' ? { kind, parentSha: 'parent', childSha: 'child' }
+      : { kind, parentSha: 'parent', childSha: 'child', conflictPaths: ['specs/CATALOG.md'] });
+    context.workspace.validatePreparedMerge.mockResolvedValue({ valid: false, code: 'sdd-catalog-invalid', catalogDiagnostic: { profile: 'PRIVATE' } });
+    const [result] = await context.useCase.invoke({ context: execution(), options });
+    expect(result.errors[0].recovery?.id).toBe('branch-sync-resolution-invalid');
+    expect(renderApplicationErrorMarkdown(result.errors[0])).not.toContain('PRIVATE'); expect(context.workspace.commitAndPush).not.toHaveBeenCalled();
+  });
   it.each(['clean', 'conflicted'] as const)('reports candidate dependency failure after %s preparation without commit, push, author read or blind retry', async kind => {
     const context = setup(kind === 'clean' ? {kind,parentSha:'b'.repeat(40),childSha:'a'.repeat(40)} : {kind,parentSha:'b'.repeat(40),childSha:'a'.repeat(40),conflictPaths:['src/a.ts']});
     context.git.execute.mockRejectedValue(new SourceDependencyError('unsupported-graph'));
