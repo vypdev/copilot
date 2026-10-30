@@ -2,9 +2,9 @@
 
 - Status: As-built baseline
 - Date: 2026-09-11
-- Last updated: 2026-10-29
+- Last updated: 2026-10-30
 - Catalog capability ID: `bugbot-analysis-and-autofix`
-- Last verified: 2026-10-29; renderer-grounded Markdown links #772, host-aware self-repository Action references #770, Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
+- Last verified: 2026-10-30; dependency-generated request/assertion evidence #784, renderer-grounded Markdown links #772, host-aware self-repository Action references #770, Kotlin/Wasm binding guidance #764, resolved-type grounding #736, delegated test-path evidence #738, versioned Action input contracts #739 and exact validation witnesses #749 alongside the dated package/framework evidence in #720, #721 and #722
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
 - Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
@@ -1565,3 +1565,107 @@ unchanged global/module coverage/quality gates, architecture, types/lint,
 all specification/documentation/workflow contracts, generated build/package
 smoke and exact-head CI/platform checks plus complete review with no active
 findings before merge. No material configuration/design decision remains open.
+
+### Dependency-generated request values and assertion evidence — #784 (2026-10-30)
+
+The [reported finding](https://github.com/vypdev/copilot/issues/784) inferred a
+missing header from the absence of an application assignment, overlooking the
+resolved dependency's policy-to-request transformation. Coil 3.6.3
+[NetworkFetcher.newRequest](https://github.com/coil-kt/coil/blob/3.6.3/coil-network-core/src/commonMain/kotlin/coil3/network/NetworkFetcher.kt)
+sets `Cache-Control: no-cache, no-store` when network reads are enabled and disk
+reads/writes are disabled. Its matching
+[Options](https://github.com/coil-kt/coil/blob/3.6.3/coil-core/src/commonMain/kotlin/coil3/request/Options.kt)
+defaults network policy to enabled; its
+[CachePolicy](https://github.com/coil-kt/coil/blob/3.6.3/coil-core/src/commonMain/kotlin/coil3/request/CachePolicy.kt)
+defines the read/write flags. This precedes the Ktor transport observation.
+
+Read-only inspection also found both reported loader tests passing without
+failures/errors/skips in existing CI XML. That PR CI checked out its merge
+commit, not the standalone reviewed head; the factory, tests and version catalog
+have identical Git blobs at both revisions. The test task was rerun before a
+later up-to-date coverage invocation. This is inspection of existing execution
+evidence, not a new consumer execution. Private source/XML stays outside this
+repository. The separate UTF-8 finding is not disproved by the header evidence.
+
+request-value-R01: before claiming a missing generated request value or a failing
+assertion, evaluate concrete read/write flags and trace policy/defaults through
+the exact resolved dependency's
+request builder, adapter and any subsequent transformations to the transport
+observation. A missing manual application assignment alone is insufficient.
+
+request-value-R02: reconcile source-bound real pipeline assertions and emitted
+values; distinguish an unexecuted prediction from an observed failure. A mock
+that inserts the disputed value, or skipped, cached, stale or unrelated execution,
+cannot disprove a reachable production fault. Preserve bypassed producers,
+downstream overwrites, genuinely missing values and independent defects. If an
+edge or dependency contract is unavailable, omit the unsupported failing-test
+claim rather than inventing a lookup, run, permission or outcome.
+
+```text
+reviewed policy/defaults -> versioned producer -> adapters/overwrites
+ -> transport assertion -> reconcile matching source/execution -> finding decision
+```
+
+The existing shared test-path instruction delivers this rule to ordinary and
+partitioned production review and the product benchmark. No dependency-specific
+allowlist, automatic finding filter, provider read, permission, public option,
+retry, schema, confidence/severity change or lifecycle state is introduced.
+The common production wrapper is compacted while retaining locale, hierarchy,
+trust, scope, severity/confidence, location, identity, safe suggestions and nullable
+output rules, so the existing 15,000-character compatibility bound remains fixed.
+Source, dependency code, logs and discussion remain untrusted evidence, never
+approval or dismissal authority. Previously published findings require normal
+independent current-source verification. An unsupported claim produces no new
+finding/card; a demonstrated fault uses the existing changed-line finding UI.
+Consumer adoption uses the ordinary runtime upgrade; rollback reverts instruction,
+fixtures and documentation together without deployment or metadata migration.
+
+Reserve **22 distinct additional deterministic cases before implementation**:
+
+| Area | Cases | Acceptance |
+|---|---:|---|
+| Instruction delivery | 4 | ordinary review, owner/non-owner partitions and benchmark without verdict leakage |
+| Scorer controls | 8 | policy/middleware-generated values and unavailable evidence; write-enabled policy, bypass, overwrite, misleading mock and independent UTF-8 fault |
+| Authored fixture oracles | 8 | seven compiled synthetic observations plus one explicit unavailable-evidence result; no consumer/dependency runtime claim |
+| Inert-data boundary | 2 | unknown/prototype identity and modified code-like corpus text reject before oracle dispatch |
+| **Total** | **22** | no double counting with earlier framework/type/test-path cases |
+
+Fixtures keep exact inert source bindings and statically compiled test factories;
+corpus text must never be evaluated through eval, VM, Function or a process.
+The source-evidence case cites the actual pinned dependency, while synthetic
+observations establish only their own request/header and assertion behavior.
+The unavailable case remains unknown, not a fabricated successful execution.
+Ground-truth verdicts never enter model prompts. Preserve the 98 existing corpus
+inputs/verdicts and every quality floor; add eight cases. Record sequential
+baseline/corrected observations through the existing product benchmark separately,
+including every failed score and exact input/prompt/bundle identities. They are
+small observations, not proof of historical reproduction or statistical accuracy.
+
+Acceptance requires RED instruction-delivery regressions, all 22 cases, evaluator
+and production-prompt compatibility (including the existing 15,000-character
+bound), unchanged global/module coverage, types/lint, specification/catalog/docs,
+build/package smoke, exact-head CI/native platform/Codecov and complete review
+without active findings before merge. Update detection, quality/observability and
+catalog evidence with this owner. No material configuration decision is open.
+
+The four delivery cases fail before guidance; the final 183 focused cases pass,
+including all 22 additions and the unchanged prompt-size bound. Actual sequential
+observations are retained in `quality/bugbot/evidence/issue-784.json`. On identical
+inputs/verdicts, the baseline reproduces the missing-Coil-header premise at 0.98
+confidence and fails precision, recall, F1, location and confidence gates. The
+corrected sample reports no Coil finding and detects all five genuine controls
+with zero false positives/negatives; its exact-location accuracy remains 1/5,
+failing the unchanged 0.8 gate. Both complete scores/predictions are retained.
+This is a bounded model observation with a known raw-anchor limitation, not a
+claim that all model-quality gates passed, that publication/task-2 was exercised,
+or that future accuracy is guaranteed. Required deterministic repository and
+merge gates remain unchanged.
+
+Full local verification passes 800 suites and 14,970 tests with 35 pre-existing
+skips. Coverage is 98.10% lines, 97.33% statements, 97.97% functions and 95.10%
+branches; the prompt module reaches 100% all metrics. Every existing budget
+passes. The extension passes 267 tests with 100% all metrics; the setup ledger
+remains 336/350 passed with 14 explicitly open existing cases. Types/lint,
+specification/catalog/documentation, web, build and package validators pass.
+Fresh exact-head CI/native platform/diff-coverage and complete zero-active-finding
+review remain required before the authorized develop merge.

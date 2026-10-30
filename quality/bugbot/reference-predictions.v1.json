@@ -164,6 +164,14 @@
         "category": "correctness",
         "codeSnippet": "function renderSpecLink(spec: string): string { return './' + spec.slice(spec.lastIndexOf('/') + 1); }"
       }
-    ]
+    ],
+    "request-transform-coil": [],
+    "request-transform-middleware": [],
+    "request-transform-unknown": [],
+    "request-transform-write": [{"id":"request-transform-write","title":"Write-enabled policy does not provide the required no-store header","file":"media/request.ts","line":1,"severity":"medium","category":"correctness","codeSnippet":"const policy = { diskRead: false, diskWrite: true, networkRead: true };","confidence":0.95}],
+    "request-transform-bypass": [{"id":"request-transform-bypass","title":"Raw request bypasses the header-producing middleware","file":"media/request.ts","line":11,"severity":"medium","category":"correctness","codeSnippet":"const request = { headers: {} };","confidence":0.95}],
+    "request-transform-overwrite": [{"id":"request-transform-overwrite","title":"Downstream assignment removes the required no-store directive","file":"media/request.ts","line":12,"severity":"medium","category":"correctness","codeSnippet":"request.headers[\"Cache-Control\"] = \"no-cache\";","confidence":0.95}],
+    "request-transform-mock": [{"id":"request-transform-mock","title":"Header-injecting mock hides a missing production request header","file":"media/request.ts","line":11,"severity":"medium","category":"correctness","codeSnippet":"const request = { headers: {} };","confidence":0.95}],
+    "request-transform-utf8": [{"id":"request-transform-utf8","title":"Byte truncation splits a multibyte UTF-8 character","file":"media/request.ts","line":23,"severity":"medium","category":"correctness","codeSnippet":"const preview = encoded.slice(0, 1);","confidence":0.95}]
   }
 }

@@ -255,3 +255,24 @@ describe('Markdown link evidence before persisting a path claim', () => {
     }
   });
 });
+
+describe('dependency-generated request values before a failing-test claim', () => {
+  it.each([undefined, true, false])('traces the producer without changing resolution ownership=%s', ownsResolution => {
+    const prompt = buildBugbotPrompt(mockExecution(), mockContext({
+      previousFindingsBlock: 'retained-header-finding',
+    }), ownsResolution === undefined ? undefined : { partition: {
+      id: 'request-values', ordinal: 1, total: 2, headSha: 'b'.repeat(40),
+      block: '+loader.diskCachePolicy(DISABLED)', files: ['media/Loader.kt'],
+      fragmentCount: 1, ownsResolution,
+    } });
+    for (const clause of ['policy/defaults', 'concrete read/write flags', 'resolved dependency', 'request builder and adapters',
+      'transport observation', 'absent application assignment', 'source-bound real pipeline assertions',
+      'mocks adding the value', 'prediction from an observed failure', 'downstream overwrites']) {
+      expect(prompt).toContain(clause);
+    }
+    if (ownsResolution === false) {
+      expect(prompt).not.toContain('retained-header-finding');
+      expect(prompt).toContain('must return an empty resolved_findings array');
+    } else expect(prompt).toContain('retained-header-finding');
+  });
+});

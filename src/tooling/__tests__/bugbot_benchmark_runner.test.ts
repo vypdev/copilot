@@ -7,6 +7,17 @@ const testCase: BugbotBenchmarkCase = {
     file: 'src/example.ts', startLine: 40, diff: '+return user.name;', expected: [{ title: 'Hidden ground truth title' }],
 };
 
+it('delivers dependency request-transform evidence without leaking the expected verdict', () => {
+    const prompt = buildBugbotBenchmarkPrompt(testCase);
+    for (const clause of ['policy/defaults', 'concrete read/write flags', 'resolved dependency', 'request builder and adapters',
+        'transport observation', 'absent application assignment', 'source-bound real pipeline assertions',
+        'mocks adding the value', 'prediction from an observed failure', 'downstream overwrites']) {
+        expect(prompt).toContain(clause);
+    }
+    expect(prompt).not.toContain('Hidden ground truth title');
+    expect(prompt).not.toContain('"expected"');
+});
+
 it('shares host-grounded Action reference guidance without leaking a private verdict', () => {
     const prompt = buildBugbotBenchmarkPrompt({ ...testCase, language: 'yaml',
         description: 'A workflow bootstraps an action in its own repository.',

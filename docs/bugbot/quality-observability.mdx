@@ -5,7 +5,7 @@ description: Measure Bugbot accuracy, latency, outcomes, feedback, and regressio
 
 # Bugbot quality and observability
 
-Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 90 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
+Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 106 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
 
 The #655 cases cover branch coverage enabled through repository configuration,
 inherited HTTP/1.0 connection behavior, correct arithmetic, short-circuit guards,
@@ -108,6 +108,25 @@ still fails: two anchors are off by one and a category differs from the referenc
 These limitations are retained rather than hidden by a reference prediction,
 threshold change or repeated identical sample. No statistical improvement or
 future accuracy guarantee is claimed.
+
+The eight #784 request-transform cases cover a pinned dependency's policy-derived
+header, a middleware producer and unavailable dependency evidence, paired with
+write-enabled policy, bypassed producer, downstream overwrite, header-injecting
+mock and independent UTF-8 truncation controls. Seven statically compiled
+synthetic observations check emitted headers, producer calls, assertion outcomes
+and UTF-8 validity; the unavailable case returns an explicit unknown result.
+Exact inert source bindings reject modified text and unknown identities before
+oracle dispatch. Existing consumer CI XML was inspected separately, with the
+relevant source blobs matched between its merge checkout and reviewed head.
+Reference predictions check scoring; actual model measurements retain their
+inputs, prompt/bundle identities and every failed score separately.
+The two measurements in `quality/bugbot/evidence/issue-784.json` use identical
+inputs/verdicts and runtime settings. The baseline reproduces the unsupported
+Coil header claim. The corrected sample has zero false positives/negatives and
+detects all five genuine controls, while its exact-location accuracy is 1/5 and
+fails the unchanged 0.8 gate. Both complete scores remain recorded. This sample
+does not pass every model-quality threshold and does not measure publication
+location remapping or historical-finding resolution.
 
 ## Quality gates
 
