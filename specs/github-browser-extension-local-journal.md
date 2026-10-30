@@ -1,7 +1,7 @@
 # Generated local activity, diagnostics and recent destinations
 
 - Status: Draft; implementation in progress, not H3 acceptance
-- Date: 2026-10-29
+- Date: 2026-10-30
 - Catalog capability ID: `github-browser-extension`
 - Last verified: not applicable; prospective refinement
 - Owners: Copilot maintainers
@@ -49,8 +49,11 @@ and recent-destination consent, both false.
 The application now has a bounded opaque-ticket writer and canonical-clear
 observer, composed with the background preference owner and closed native-center
 history/review gateway. The mounted four-locale controls now use a source-validated
-typed reader/review/export client and retain independent phase facts. Actual
-trusted producers and native/human acceptance remain required; this source
+typed reader/review/export client and retain independent phase facts. Accepted
+local destinations and actual preference-service observations are now composed.
+Preference operations also have a separate bounded current-window view even
+when history is off or unavailable. Session/compound-operation and helper
+producers and native/human acceptance remain required; this source
 increment does not complete CENTER09/10.
 
 ### 2.3 Evidence
@@ -290,6 +293,15 @@ facts or timestamps. Editor and observer windows may report their own consented
 navigation; authored controls remain editor-only. Off/unknown visits and canceled
 or hidden navigation are not backfilled. Delivery uncertainty stays separate from
 retained rows, and no unknown response is automatically resent.
+
+Native preference observations follow
+[the dedicated current-operation contract](github-browser-extension-collection-consent.md#69-native-preference-observations-and-current-operation).
+Only validated preview capture may acquire its optional history ticket. Actual
+store submission, acknowledgement and canonical readback stay distinct. A
+separate temporary current-window target is never copied into the journal or
+export. It has its own fixed five-minute lifetime and is outside generated-history
+clear. Later ordinary canonical settings reads can reconcile the exact retained
+unknown confirmation without retrying the write or rebuilding private targets.
 
 ## 12. Observability and operational UX
 

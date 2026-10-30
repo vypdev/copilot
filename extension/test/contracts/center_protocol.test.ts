@@ -6,6 +6,7 @@ import { MAX_CENTER_REQUEST_BYTES } from '../../src/domain/settings_change.ts';
 const client = { version: 1, clientId: 'a'.repeat(32), controllerEpoch: 1 };
 it('admits only exact local center methods and their complete operands', () => {
     const messages = [{ version: 1, method: 'center.open' }, { version: 1, method: 'center.read', clientId: client.clientId },
+        { version: 1, method: 'center.operation.read', clientId: client.clientId },
         ...['center.claim', 'center.close'].map(method => ({ ...client, method })),
         { ...client, method: 'center.preview', credentialEpoch: 0, expectedRevision: 0, intent: { type: 'preferences', values: { paused: true } } },
         ...['center.confirm', 'center.cancel'].map(method => ({ ...client, method, credentialEpoch: 0, operationId: 'b'.repeat(32), expectedRevision: 0 }))];

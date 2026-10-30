@@ -36,8 +36,10 @@ partial results and requires a fresh review after relevant state changes. Its
 localized activation, history, clear and exact-JSON export screens are now wired
 through a typed native client. Collection stays off by default. The actual center
 now captures accepted local destinations under verified consent, with profile
-details removed and uncertain delivery disclosed separately. Operation/diagnostic
-producers and complete native/human acceptance remain outstanding. See the
+details removed and uncertain delivery disclosed separately. Preference operations
+now expose independent current-window progress and optional redacted history,
+including acknowledgement versus verified saving. Connection/compound-operation
+and helper producers, and complete native/human acceptance remain outstanding. See the
 [local activity guide](/browser-extension/local-history) and
 [privacy and retention details](/browser-extension/permissions).
 
@@ -55,6 +57,13 @@ or system conflict uncertainty. Saving a combination never certifies delivery.
 4. Select **Confirm change** to save, or **Cancel change** to retain the saved
    configuration. Canceling a review keeps your local form draft for editing.
 5. The completed review confirms the saved result. Close it to keep working.
+
+**Last preference operation** keeps the last proved progress separately from
+the editable form and optional history. Its read-only metadata remains available
+when settings cannot be read. An unknown save is not automatically retried;
+**Read current settings** can establish its exact retained result. The
+[local activity guide](/browser-extension/local-history#inspect-the-last-preference-operation)
+explains its five-minute lifetime, private targets and independent history retention.
 
 Appearance reviews theme, density, text size, motion and contrast together in
 one change. **Follow browser** selects one complete language resource from

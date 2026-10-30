@@ -11,6 +11,7 @@ interface Mutation extends Editor { readonly credentialEpoch: number; readonly e
 interface Confirmation extends Mutation { readonly operationId: string }
 export type CenterMessage = Version & { readonly method: 'center.open' }
     | Client & { readonly method: 'center.read' }
+    | Client & { readonly method: 'center.operation.read' }
     | Editor & { readonly method: 'center.claim' }
     | Editor & { readonly method: 'center.close' }
     | Mutation & { readonly method: 'center.preview'; readonly intent: unknown }
@@ -26,10 +27,10 @@ export function parseCenterMessage(value: unknown): CenterMessage | ConnectionMe
     if (!record(value) || value.version !== 1 || typeof value.method !== 'string') return null;
     const fields = ['version', 'method'];
     if (value.method === 'center.open') return keys(value, fields) && Object.keys(value).length === 2 ? value as unknown as CenterMessage : null;
-    if (!['center.read', 'center.claim', 'center.close', 'center.preview', 'center.confirm', 'center.cancel', 'center.connections.read', 'center.connections.change'].includes(value.method)
+    if (!['center.read', 'center.operation.read', 'center.claim', 'center.close', 'center.preview', 'center.confirm', 'center.cancel', 'center.connections.read', 'center.connections.change'].includes(value.method)
         || !settingsOperationId(value.clientId)) return null;
     fields.push('clientId');
-    if (value.method !== 'center.read' && value.method !== 'center.connections.read') {
+    if (value.method !== 'center.read' && value.method !== 'center.operation.read' && value.method !== 'center.connections.read') {
         if (!natural(value.controllerEpoch)) return null;
         fields.push('controllerEpoch');
     }

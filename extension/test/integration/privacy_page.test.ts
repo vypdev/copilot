@@ -22,8 +22,9 @@ it('bexp-CENTER06-C01 entering privacy reads exactly three declared native scope
     const h = await open(); await observed();
     expect(vi.mocked(h.browser.api.permissions.contains).mock.calls.map(([query]) => query)).toEqual(BROWSER_CAPABILITIES.map(permissionQuery));
     const methods = h.port.send.mock.calls.map(([message]) => message.method);
-    expect(methods.filter(method => method !== 'center.recents.capture')).toEqual(['center.open', 'center.read', 'center.history.read', 'center.history.read']);
+    expect(methods.filter(method => !['center.recents.capture', 'center.operation.read'].includes(method))).toEqual(['center.open', 'center.read', 'center.history.read', 'center.history.read']);
     expect(methods.filter(method => method === 'center.recents.capture').length).toBeLessThanOrEqual(2);
+    expect(methods.filter(method => method === 'center.operation.read')).toHaveLength(1);
     expect(methods).not.toContain('center.recents.observe');
     expect(h.browser.api.permissions.request).not.toHaveBeenCalled(); expect(h.native.port.set).not.toHaveBeenCalled();
     expect(document.querySelector('[data-permission-status]')?.getAttribute('aria-live')).toBe('polite');

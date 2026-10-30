@@ -102,3 +102,10 @@ it('center composition rejects every direct legacy settings write while standalo
     expect(await legacy.call({ method: 'settings.write', expectedRevision: 0, settings: DEFAULT_SETTINGS })).toEqual({ state: 'unavailable' });
     expect(legacy.port.set).toHaveBeenCalledTimes(1);
 });
+it.each(['credential', 'shutdown'])('a %s during secondary canonical observation cannot publish preferences into a retired native source', async transition => {
+    const h = fixture(); const client = h.open(); vi.spyOn(h.operations, 'observeInspection').mockImplementationOnce(() => {
+        if (transition === 'credential') h.disconnect(); else h.gateway.shutdown();
+    });
+    expect(await h.call({ method: 'center.read', clientId: client.clientId })).toEqual({ state: 'stale' });
+    expect(h.port.set).not.toHaveBeenCalled(); expect(h.sessions.reader.read).not.toHaveBeenCalled();
+});

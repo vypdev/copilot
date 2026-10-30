@@ -18,7 +18,7 @@ export const HISTORY_ES: HistoryCopy = {
         historical: 'Estos hechos describen la observación de esta operación. El estado actual se muestra por separado.',
         notSubmitted: 'Este proceso aún no ha observado una confirmación. Una solicitud anterior podría llegar más tarde.',
         phasePreference: 'Paso de preferencia', phasePolicy: 'Paso de recopilación', verified: 'Verificado en aquella observación', unverified: 'No verificado en aquella observación',
-        clearScope: 'Borrar las entradas de historial generado incluidas en la revisión.', entries: 'Entradas incluidas en la revisión',
+        clearScope: 'Borrar las entradas de historial generado incluidas en la revisión. La operación actual temporal de esta ventana no cambia.', entries: 'Entradas incluidas en la revisión',
         clearControls: 'Se conservan los controles de generación, revisión y reloj. Las preferencias, credenciales, notas escritas y el contenido de GitHub quedan fuera de este borrado.',
         exportTitle: 'Revisar JSON del historial generado', exportScope: 'Descarga estos bytes exactos sin secretos. Se excluyen preferencias, credenciales, notas escritas y destinos privados.',
         download: 'Descargar JSON revisado', recovery: 'Abrir recuperación', guide: 'Guía de historial y privacidad',

@@ -2929,7 +2929,7 @@
       "status": "proposed",
       "scope": "Complete proposed desktop product: 150 required functions, local center, Action integration, shared setup and 803 product cases. H1 establishes builds; H2 implements shared runtime/session/settings/GET services and exact native-browser harnesses. Full product/core acceptance and signed delivery remain separate gates.",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-29",
+      "lastVerified": "2026-10-30",
       "specs": [
         "specs/github-browser-extension.md",
         "specs/github-browser-extension-action-integration.md",
@@ -3197,7 +3197,15 @@
         "extension/src/application/recents_client.ts",
         "extension/src/application/visit_delivery.ts",
         "extension/src/domain/center_visits.ts",
-        "extension/src/domain/center_limits.ts"
+        "extension/src/domain/center_limits.ts",
+        "extension/src/application/current_operation_reader.ts",
+        "extension/src/application/current_operations.ts",
+        "extension/src/application/settings_observation_ports.ts",
+        "extension/src/domain/current_operation.ts",
+        "extension/src/domain/operation_copy.ts",
+        "extension/src/domain/settings_observation.ts",
+        "extension/src/domain/settings_operation_target.ts",
+        "extension/src/presentation/CurrentOperationPanel.svelte"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3390,7 +3398,20 @@
         "extension/test/integration/recents_client.test.ts",
         "extension/test/integration/recents_gateway.test.ts",
         "extension/test/integration/recents_center.test.ts",
-        "extension/test/integration/visit_delivery.test.ts"
+        "extension/test/integration/visit_delivery.test.ts",
+        "extension/test/contracts/settings_observation.test.ts",
+        "extension/test/fixtures/current_operation_reader.ts",
+        "extension/test/fixtures/current_operations.ts",
+        "extension/test/fixtures/operation_center.ts",
+        "extension/test/fixtures/operation_gateway.ts",
+        "extension/test/fixtures/settings_observer.ts",
+        "extension/test/integration/center_client_operation.test.ts",
+        "extension/test/integration/current_operation_center.test.ts",
+        "extension/test/integration/current_operation_independent.test.ts",
+        "extension/test/integration/current_operation_reader.test.ts",
+        "extension/test/integration/current_operations.test.ts",
+        "extension/test/integration/settings_observer.test.ts",
+        "extension/test/integration/settings_operation_gateway.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

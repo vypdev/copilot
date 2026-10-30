@@ -10,7 +10,6 @@ import { uncertainSettingsOutcome as uncertain, publicSettingsReview as publicRe
 import { RecentsClient } from './recents_client.ts';
 
 export interface CenterClientPort { readonly sourceTree: string; send(message: CenterMessage | ConnectionMessage | HistoryMessage): Promise<unknown> }
-
 /** One mounted view; reusable authority stays private, while committed receipts are inspectable facts. */
 export class CenterClient {
     private owner: CenterIdentity | null = null;
@@ -32,6 +31,11 @@ export class CenterClient {
     refreshVisitCapture(): Promise<void> { return this.visitTracking ? this.recents.refresh() : Promise.resolve(); }
     startVisitCapture(): Promise<void> { this.visitTracking = true; return this.recents.refresh(); }
     observeDestination(location: unknown): boolean { return this.recents.observe(location); }
+    async readOperation(): Promise<Record<string, unknown> | null> {
+        const owner = this.owner; if (this.stopped || !owner) return null;
+        const value = await this.request({ version: 1, method: 'center.operation.read', clientId: owner.clientId }, true);
+        return (['clientId', 'controllerEpoch', 'credentialEpoch'] as const).every(key => this.owner?.[key] === owner[key]) ? value : null;
+    }
     get view(): CenterClientView { return this.value; }
     invalidateConnections(): void { if (!this.stopped) { this.connectionGeneration++; this.update({ connections: null }); } }
     subscribe(listener: (view: CenterClientView) => void): () => void {

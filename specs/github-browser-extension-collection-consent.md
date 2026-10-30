@@ -1,7 +1,7 @@
 # Durable local collection consent and activity retention
 
 - Status: Draft; prospective refinement, not implemented acceptance
-- Date: 2026-10-29
+- Date: 2026-10-30
 - Catalog capability ID: `github-browser-extension`
 - Last verified: not applicable
 - Owners: Copilot maintainers
@@ -41,8 +41,9 @@ start/stop application services and a bounded ticket writer are now present.
 The background now shares its preference repository with that collection owner
 and exposes closed, native-client-bound history/review use cases. The actual
 center now produces accepted recent destinations under private native consent
-and generation fences. Operation/diagnostic producers and native/human acceptance
-remain incomplete. The mounted center now
+and generation fences. Preference services now produce current-operation facts
+and optional redacted history. Session/compound-operation and helper producers,
+and native/human acceptance remain incomplete. The mounted center now
 has a source-validated typed client and four-locale read/start/stop/clear/export
 controls, independent of preference-read availability. Saved collection flags
 still default false; opening a screen does not opt into collection.
@@ -79,6 +80,13 @@ navigation and the first admitted current view. Native gateway, application and
 mounted DOM cases exercise consent/source/epoch fencing, no backfill or resend,
 private-detail removal and four-locale delivery uncertainty. They do not establish
 real-browser or human acceptance.
+`settings_observation.ts`, `settings_operation_target.ts`, `current_operations.ts`
+and the actual `settings_operations.ts`/`settings_repository.ts` observer compose
+validated intent, an observed store attempt and independent persistence facts.
+`current_operation_reader.ts`, `center_client.ts`, `center_app.ts` and
+`CurrentOperationPanel.svelte` expose bounded metadata and four-locale progress
+independently of optional history and primary preference reads. Deterministic
+native-gateway and mounted cases do not establish loaded-browser acceptance.
 
 ### 2.4 Retrospective classification
 
@@ -354,8 +362,9 @@ data separately; unknown settings never become invented off/on preferences.
 History changes notify only native centers and never reset content quarantine.
 Current compound collection results preserve their independent preference and
 policy facts. A collector MUST NOT flatten partial results into completed history;
-operation/diagnostic producers remain required delivery work. Localized controls
-and the narrow destination producer are composed in development source.
+session/compound-operation and helper producers remain required delivery work.
+Localized controls, the narrow destination producer and native preference
+observations are composed in development source.
 
 After a lost response, inspecting the exact retained review MUST NOT submit or
 repeat any effect. It reports pending, the same immutable historical result,
@@ -419,6 +428,77 @@ The Activity/Privacy recent-destination section discloses unconfirmed observatio
 in the current window separately from native writer pending/dropped facts. It
 does not claim that transport acknowledgement means a retained row. Opening with
 consent off performs no history write and reports no invented retention gap.
+
+### 6.9 Native preference observations and current operation
+
+The preference owner MUST retain the action returned by validated planning. It
+MUST NOT infer the action later from changed preferences. A narrow synchronous
+observer receives only that action, a separately captured ephemeral target and
+the original source fence. No renderer recording method is introduced.
+
+```text
+Validated retained preview → current operation and optional reviewed ticket
+ → confirmation registered as single-flight → confirmation pending
+ → actual preference-store attempt → submission observed
+ → independent acknowledgement and canonical readback
+```
+
+Text equivalent: preview capture precedes confirmation; current confirmation is
+distinct from an observed store submission. Optional history and private current
+state are separate outputs. Observer or retention failure cannot change the
+primary result, block a preference queue or trigger a write retry.
+
+The current operation is worker memory, available even with collection off or
+native history unavailable. Keep at most one current entry per native client,
+at most8 entries total, for five minutes from first observation. Reads and updates
+MUST NOT extend that lifetime. A profile label/detail or numeric repository target
+may appear only in this current source context. Source loss, replacement, expiry,
+clock failure, eviction and shutdown erase that target irreversibly. A subsequent
+read cannot reconstruct it from preferences, a receipt or generated history.
+Pruning other entries MUST NOT call their native authorization callbacks.
+
+`center.operation.read` is a closed native-client-bound metadata read, with only
+version and client ID. It performs no preference, store or provider I/O and exposes
+no native selectors, ticket or reusable approval. The existing source-tree,
+extension-origin, document/tab and controller fences apply. Secondary updates use
+only `center.operation.invalidated`; they never reset content quarantine.
+
+The current view distinguishes reviewed, confirmation pending, observed
+submission, cancelled, blocked, settled and unknown. It shows the last proved
+acknowledgement/canonical observation and history retention independently. An
+unexpected service failure without an observed submission MUST NOT fabricate a
+submitted history transition. A canonical replay establishes historical completion
+with unknown acknowledgement unless that acknowledgement was already proved.
+A later unavailable observation cannot erase an established committed result.
+An ordinary canonical preference read may reconcile the same retained unknown
+confirmation only after checking owner, lifetime, native fence, receipt ID,
+before revision and the complete expected after-state. No write is repeated and
+no private target is reconstructed. At most32 completed results retain an expected
+preference snapshot only while unknown, for the existing five-minute result-cache
+lifetime; invalidation, expiry, eviction or proved completion releases it. These
+private primary-service expectations never enter current metadata, journal or export.
+
+The store-attempt observer runs after invoking the native preference-store port,
+including synchronous failure, and before awaiting its outcome. Known preflight
+rejection has no submission event. Register the running confirmation before any
+observer can reenter; duplicates share its exact promise, and cancellation reports
+pending after confirmation has begun. A newer current operation is never replaced
+by an older completion. Already admitted history tickets may update their exact
+known row while collection is off, but no later phase may obtain a fresh ticket
+for a preview observed while off/unknown. Clear continues to fence old tickets.
+Completed primary results MUST be detached immutable copies at the secondary
+observer boundary; an observer cannot mutate their retained replay. Current
+metadata starts once native editor/observer binding is admitted, before waiting
+for the primary preference read. It has one active request and one coalesced
+trailing refresh. Source invalidation immediately redacts private targets;
+shutdown or a reentrant source change cannot publish a late private response.
+Clearing generated history MUST NOT claim to clear this independent temporary
+current-operation memory.
+
+This first family covers preference operations. Session vault/active-connection
+phases and compound collection preference/policy phases require their own closed
+projections; neither may be guessed from a top-level result or flattened into this
+family. Complete H3 still requires those producers and the mounted/native journeys.
 
 ## 7. User-facing configuration
 
@@ -533,11 +613,15 @@ upgrade or publication is implied.
 | Native destination permits/producer | 20 | Known consent/epoch, irreversible retirement, native document/editor-observer/credential boundaries, duplicate/capacity/reentry/fault isolation |
 | Bounded destination client | 18 | Captured scope, no backfill, single flight/latest pending, uncertain delivery, context/epoch rollover and late replies |
 | Actual navigation composition | 12 | Initial admitted view, accepted/canceled/stay/leave, observer, profile generalization/feature IDs, off/unknown consent, separate privacy queries and uncertainty UI |
+| Preference observation projection | 16 | Validated action/target, preflight versus submission, acknowledgement/readback, replay and unknown provenance |
+| Current-operation ownership | 24 | Eight lifetime/clock cases, six retention-isolation cases, four source boundaries and six replacement/reentry/disposal races |
+| Actual preference producers | 20 | Six admission/no-op cases, six outcome paths and eight duplicate/reentry/source/clear cases |
+| Mounted current-operation view | 12 | Four complete locales plus eight metadata failure, target retirement, independent state and lifecycle cases |
 | Typed client/response closure | 120 | Closed detached replies, source binding, wrong-family/scope, immutable independent facts |
 | Reader/review/export ownership | 35 | Read-after-clear/revision races, retained result inspection, known-fact preservation, explicit exact-byte download, retirement/single flight |
 | Mounted UI/locales/export/recovery | 40 | Independent phase facts, editor/observer, guarded navigation,4locales, accessible JSON, separate privacy inspectors |
 | Real targets and human | 9 | Three native journeys per target plus owning human gate |
-| **Total** | **551** | No substitution for semantic H3/catalog coverage |
+| **Total** | **623** | No substitution for semantic H3/catalog coverage |
 
 Count each case once. Pure branches and modified executable lines/branches100%,
 no exclusions/threshold weakening; keep root budgets. Request fixtures are not
@@ -559,6 +643,13 @@ reconciliation, clear composition, queue faults and frozen projections.
 `recents_gateway.test.ts` and `recents_center.test.ts` now exercise the actual
 destination producer and mounted navigation. Loaded-browser and human acceptance
 remain separate required evidence.
+`settings_observation.test.ts`, `current_operations.test.ts`,
+`settings_observer.test.ts`, `settings_operation_gateway.test.ts`,
+`current_operation_reader.test.ts`, `current_operation_center.test.ts`,
+`current_operation_independent.test.ts` and `center_client_operation.test.ts`
+cover the preference projection, native observation, independent metadata and
+mounted four-locale flow. Existing transaction-outcome cases verify observer
+failure isolation after the actual native store attempt.
 
 ## 15. Documentation and discoverability
 
@@ -600,6 +691,18 @@ docs/specs/catalog and concrete examples together.
 18. Equal source-sequence/destination replay returns its existing answer without
     appending; changed equal-sequence input is invalid and older input is stale.
     Metadata resumes the private delivery high-water mark without resetting journals.
+19. A validated preference preview captures its exact action and current target;
+    invalid/no-op input captures neither. Confirmation is distinct from submission,
+    and duplicate confirmation shares the one retained primary promise.
+20. Current metadata remains readable with history off/unavailable or a stalled
+    preference read. No observer or retention failure changes the primary result.
+    Source loss, expiry and disposal cannot restore private target detail.
+21. An uncertain save can be reconciled only by the same current owner, exact
+    receipt, before revision and complete expected after-state. No repeat write or
+    target reconstruction occurs; a later failure preserves proved completion.
+22. Enabling collection cannot backfill an earlier untracked preference preview.
+    Generated-history clear preserves current-operation memory and erases no
+    preferences, protected credentials or authored notes.
 
 ## 17. Requirements traceability
 
@@ -610,9 +713,10 @@ docs/specs/catalog and concrete examples together.
 | Truthful ordered phases | Application | Partial/ack/replay/queue | Activity/privacy |
 | Restriction-only save and owner lifetime | Settings/coordinator | Five application contract suites; native/UI evidence still required | Configuration/contributor |
 | Reviewed phase continuation and priority of a later stop | CollectionReviews/effects/private leases | Eight retained-plan/phase/ownership/staging suites; full native/UI evidence pending | Configuration/privacy/contributor |
-| Bounded secondary retention and unknown identity | JournalWriter/queue/IO/progress | Eight writer/domain/race suites; operation/diagnostic producers and native evidence pending | Privacy/recovery/contributor |
+| Bounded secondary retention and unknown identity | JournalWriter/queue/IO/progress | Eight writer/domain/race suites; session/compound/helper producers and native evidence pending | Privacy/recovery/contributor |
 | One production owner and closed native control | CollectionHistory/HistoryControls/HistoryGateway/native composition | Protocol/application/gateway/bootstrap and mounted UI suites; native/human acceptance pending | Contributor/privacy/recovery |
 | Accepted destinations and consent/source retirement | RecentsCapture/RecentsClient/VisitDelivery/centerDestination/center_app | Native source, delivery, gateway and 12 mounted navigation/localization cases; real-browser/human gates outstanding | Local history/privacy/contributor |
+| Actual preference observations and independent current view | SettingsOperations/SettingsRepository/CurrentOperations/CurrentOperationReader/CenterClient/center_app | Eight projection/native/reader/client/mounted suites plus direct store observer isolation; native/human gates outstanding | Local history/configuration/privacy/contributor |
 | Minimal discoverable facts | Presentation | Locales/a11y/export | User navigation |
 
 ## 18. Implementation sequence

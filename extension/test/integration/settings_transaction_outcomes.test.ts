@@ -86,3 +86,10 @@ it('two competing previews serialize against the latest complete revision and on
     expect((await repository.read()).settings).toMatchObject({ revision: 2, density: 'compact', locale: 'es' });
     expect(await repository.commit(desired, 0, ID, () => true)).toEqual({ state: 'conflict' });
 });
+it('a throwing submission callback cannot suppress readback or change the acknowledged native result', async () => {
+    const h = memoryStore(); const repository = new SettingsRepository(h.port); const submitted = vi.fn(() => {
+        expect(h.port.set).toHaveBeenCalledOnce(); throw new Error('private observer failure');
+    });
+    expect(await repository.commit(desired, 0, ID, () => true, submitted)).toEqual({ state: 'committed', revision: 1, acknowledgement: 'accepted', current: true });
+    expect(submitted).toHaveBeenCalledOnce(); expect(h.port.set).toHaveBeenCalledOnce();
+});

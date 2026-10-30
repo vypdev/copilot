@@ -1,5 +1,6 @@
 import type { Settings, SettingsLoad } from '../domain/settings.ts';
 import type { SettingsReceipt, SettingsOwnerFence } from '../domain/settings_result.ts';
+import type { ObserveSettingsOperation } from './settings_observation_ports.ts';
 export type { SettingsReceipt, SettingsOwnerFence, SettingsCommit, SettingsPreview, SettingsOperationOutcome } from '../domain/settings_result.ts';
 export interface SettingsInspection {
     readonly loaded: SettingsLoad;
@@ -11,4 +12,5 @@ export interface SettingsOperationPorts {
     identifier(): string;
     fence(owner: string): SettingsOwnerFence | null;
     notify(): void;
+    observe?: ObserveSettingsOperation;
 }

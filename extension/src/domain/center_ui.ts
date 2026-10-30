@@ -25,6 +25,7 @@ export interface CenterActions extends ReviewActions {
     browseInventory(value: InventoryNavigationState): void;
     inspectPermissions(): void;
     inspectConnection(): void;
+    inspectOperation(): void;
 }
 export interface CenterRouteContext {
     readonly connections?: ConnectionOutcome | null;

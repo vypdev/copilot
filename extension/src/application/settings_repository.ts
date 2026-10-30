@@ -37,7 +37,7 @@ export class SettingsRepository {
         return { loaded, operation, rollback: envelope?.previous !== undefined && previous.state === 'ready' ? previous.settings : null };
     }
     /** One operation receipt and the complete current/rollback pair share one atomic storage set. */
-    commit(value: unknown, expectedRevision: number, id: string, current: () => boolean): Promise<SettingsCommit> {
+    commit(value: unknown, expectedRevision: number, id: string, current: () => boolean, submitted?: () => void): Promise<SettingsCommit> {
         const admitted = settingsSnapshot(value);
         if (!settingsOperationId(id) || !natural(expectedRevision) || !admitted) return Promise.resolve({ state: 'invalid' });
         return this.mutations.run(async (): Promise<SettingsCommit> => {
@@ -61,7 +61,10 @@ export class SettingsRepository {
                 if (!eligible()) return { state: 'stale' };
                 if (!scope.allowed) return { state: 'unavailable' };
                 let acknowledgement: 'accepted' | 'unknown' = 'accepted';
-                try { await this.storage.set(SETTINGS_KEY, envelope); } catch { acknowledgement = 'unknown'; }
+                let attempt: Promise<void> | undefined;
+                try { attempt = this.storage.set(SETTINGS_KEY, envelope); } catch { acknowledgement = 'unknown'; }
+                try { submitted?.(); } catch { /* Submission observation cannot alter the native attempt or its outcome. */ }
+                try { await attempt; } catch { acknowledgement = 'unknown'; }
                 // Read even after an acknowledgement; partial or missing persistence is never success.
                 try {
                     const observed = await this.inspect();

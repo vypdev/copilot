@@ -11,6 +11,7 @@ const SETTINGS_ACTIONS: Readonly<Record<SettingsAction, true>> = Object.freeze({
     'reset-repository': true, 'reset-all': true,
 });
 export type JournalAction = SettingsAction | 'connect-read' | 'disconnect-read' | 'rename-session';
+export const settingsJournalAction = (value: unknown): value is SettingsAction => typeof value === 'string' && Object.hasOwn(SETTINGS_ACTIONS, value);
 export interface OperationFact {
     readonly kind: 'operation'; readonly action: JournalAction;
     readonly phase: 'reviewed' | 'cancelled' | 'blocked' | 'submitted' | 'settled';

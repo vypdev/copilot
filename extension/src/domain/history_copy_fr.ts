@@ -18,7 +18,7 @@ export const HISTORY_FR: HistoryCopy = {
         historical: 'Ces faits décrivent l’observation de cette opération. L’état actuel est présenté séparément.',
         notSubmitted: 'Ce processus n’a pas encore observé de confirmation. Une demande antérieure peut encore arriver.',
         phasePreference: 'Étape de préférence', phasePolicy: 'Étape de collecte', verified: 'Vérifié lors de cette observation', unverified: 'Non vérifié lors de cette observation',
-        clearScope: 'Effacer les entrées d’historique généré incluses dans cet examen.', entries: 'Entrées incluses dans cet examen',
+        clearScope: 'Effacer les entrées d’historique généré incluses dans cet examen. L’opération actuelle temporaire de cette fenêtre reste inchangée.', entries: 'Entrées incluses dans cet examen',
         clearControls: 'Les contrôles de génération, révision et horloge sont conservés. Préférences, identifiants secrets, notes rédigées et contenu GitHub sont exclus de cet effacement.',
         exportTitle: 'Examiner le JSON de l’historique généré', exportScope: 'Téléchargez exactement ces octets sans secrets. Préférences, identifiants secrets, notes rédigées et cibles privées sont exclus.',
         download: 'Télécharger le JSON examiné', recovery: 'Ouvrir la récupération', guide: 'Guide de l’historique et de la confidentialité',

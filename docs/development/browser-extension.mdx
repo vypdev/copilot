@@ -543,8 +543,9 @@ and rechecks the source. The scope remains owned through primary readback;
 cleanup failure cannot change an established settings result. Existing startup
 migrations are preserved. `CollectionHistory` now wires this preflight into the
 production background's same preference repository. Mounted center controls and
-the admitted-destination producer are now composed; operation/diagnostic producers
-and complete native/human acceptance remain delivery work.
+the admitted-destination and preference-observation producers are now composed;
+session/compound-operation and helper producers and complete native/human
+acceptance remain delivery work.
 
 Both kinds pause admission before a consent-change I/O wait. Off attempts a
 policy pause and independently permits the off preference to save. Every
@@ -630,7 +631,8 @@ release cannot resurrect them. Failed clear releases deferred admitted work
 without claiming deletion. Wire `JournalReviews.idle` to the actual writer's idle
 state, not coordinator eligibility, which is false while the reservation is held.
 The writer and review cores now share production ownership and a closed gateway;
-operation/diagnostic producers and independent real-browser acceptance remain.
+session/compound-operation and helper producers and independent real-browser
+acceptance remain. Actual preference observations are described below.
 
 `CollectionHistory` constructs the actual coordinator, preference repository,
 writer and observed store without I/O. Native bootstrap follows synchronous
@@ -653,8 +655,8 @@ The closed protocol supports one collection's read, start/stop or clear preview,
 confirmation/cancellation and read-only inspection of a retained public review ID. It accepts no raw
 facts, policy nonce, callback, store name or provider request. Current compound
 results preserve separate preference/policy facts; do not flatten partial success
-into a completed history record. Operation/diagnostic projections remain unfinished
-H3 deliverables. The localized typed client/UI is now composed in the options
+into a completed history record. Session/compound-operation and helper projections
+remain unfinished H3 deliverables. The localized typed client/UI is now composed in the options
 page; native-browser and human acceptance remain outstanding.
 
 `HistoryClient` owns one mutation review and one bounded read stream with at
@@ -708,3 +710,46 @@ their own consented visits. Four-locale Activity/Privacy views distinguish local
 delivery uncertainty from retained history and writer progress. Gateway and DOM
 integration tests exercise this composition; loaded-browser and human evidence
 remain separate gates.
+
+### Preference observations and independent current operation
+
+`SettingsOperations` retains the validated action with its exact plan, registers
+the running confirmation before observer callbacks, and shares that promise for
+duplicates. `SettingsRepository.commit` invokes the submission callback only
+after the native store port has actually been called, including synchronous
+failure. Confirmation alone is not proof of submission. Secondary callbacks
+receive a detached frozen result and cannot change the primary result, cached
+replay, write count or canonical readback.
+
+`CurrentOperations` owns one captured target per native client, eight entries
+maximum, for five minutes from first observation. Neither reads nor updates
+renew that lifetime. The current target is captured from the admitted detached
+intent; source loss, replacement, eviction, clock failure, expiry or shutdown
+retires it irreversibly. Pruning does not authorize another client or touch its
+idle lifetime. The optional writer ticket is acquired once at preview capture;
+later activation never backfills an untracked operation. Old completions may
+update only their original ticket and cannot replace a newer current entry.
+
+The closed `center.operation.read` accepts only version and the native client
+selector. After existing origin/document/tab/controller authorization, it reads
+memory only: no preference, history-store or provider I/O. The response contains
+closed settings-family facts, an optional current target and independent retention,
+never reusable native selectors or approval. `center.operation.invalidated`
+refreshes only this metadata and never resets content quarantine.
+
+The typed `CurrentOperationReader` has one active request and one coalesced
+trailing request, immediately redacts private target detail on invalidation and
+rechecks lifetime after external boundaries. Options starts metadata inspection
+after native role admission, independently of a stalled primary settings read.
+The four-locale `CurrentOperationPanel` preserves earlier proved facts while
+disclosing stale/unavailable metadata. Its read button never confirms or retries.
+
+An ordinary primary settings read may reconcile only an existing same-owner,
+current, unexpired unknown confirmation against its exact receipt, before revision
+and complete expected after-state. The existing32-result/five-minute primary
+cache retains this private expectation only while unknown, releasing it on
+invalidation, expiry, eviction or verified completion. It never enters metadata,
+history or export. Generated-history clear leaves the separate temporary current
+view intact. Session vault/active-connection and compound preference/policy
+outcomes still need their own closed projections; this settings family cannot
+stand in for them.

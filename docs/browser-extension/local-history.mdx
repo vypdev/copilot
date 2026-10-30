@@ -13,7 +13,8 @@ can inspect and export available generated history without taking control.
 
 H3 is still being implemented. These controls and their typed client are present
 in the development source, including consented recent destinations from the
-actual local navigation. Operation/diagnostic producers, complete native-browser
+actual local navigation and preference-operation observations. Session and
+compound collection-operation producers, helper diagnostics, complete native-browser
 acceptance and the owning human experience gate remain outstanding. Source-level
 and DOM tests do not certify those gates or a store-ready product.
 
@@ -65,6 +66,41 @@ destination. Replacing a waiting observation increases that local uncertainty
 count. Neither a confirmed delivery nor a successful primary action proves that
 history storage retained an entry. Reading state does not replay missing visits.
 
+## Inspect the last preference operation
+
+**Last preference operation** is available across the local center, expanded in
+Activity and Diagnostics. **Read last operation** inspects only the current
+window's background metadata. It remains independent of preference reads and
+optional history: collection can be off or history storage unavailable. Reading
+does not confirm, cancel, retry or start any write, permission request or GitHub
+request.
+
+The panel distinguishes a reviewed change, pending confirmation, an observed
+write attempt, cancellation, a preflight block, verified saving and an unknown
+result. It shows the last proved acknowledgement and observed persistence
+separately. A failed later inspection preserves those proved facts while
+retiring the private target. **Read current settings** can reconcile an uncertain
+save against its exact retained receipt and complete expected settings, without
+repeating the write. Reading last-operation metadata alone does not read settings
+or establish that reconciliation.
+
+A captured profile label or repository target belongs only to this current
+operation. It is never added to generated history or its JSON export. The native
+owner keeps one current entry per window, at most eight, for five minutes from
+first observation. Reads do not extend that period. Losing the current source,
+expiry, replacement or background shutdown removes the target; it cannot be
+rebuilt from saved preferences or history. Leaving focus hides current target
+detail until a new source-checked inspection. A cleared or unavailable current
+entry is not evidence that a submitted write did nothing.
+
+History retention is a separate result. A successful save does not prove a
+retained row. Preference previews observed with collection off or unknown are
+never added retrospectively after activation. A previously admitted operation
+may update its exact existing row while collection is off, until a clear or
+other generation change invalidates its ticket. This first implementation covers
+preference operations; connection and compound collection results require their
+own separate phase facts.
+
 ## Review enable or stop
 
 1. In the current editor window, choose **Review enable** or **Review stop**.
@@ -100,8 +136,9 @@ only those generated entries. It preserves the small generation, revision and
 clock controls that reject old writes after clear. These controls and consent
 receipts persist until native extension-data removal.
 
-Preferences, protected credentials, authored notes and GitHub content are outside
-this clear. Use their separate controls. Stopping alone preserves existing
+Preferences, protected credentials, authored notes, the temporary current-operation
+view and GitHub content are outside this clear. Use their separate controls.
+Stopping alone preserves existing
 history until expiry or a separately reviewed clear. An unknown clear response
 is not presented as a successful deletion; inspect its retained result and the
 current state separately.

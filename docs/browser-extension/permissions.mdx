@@ -98,8 +98,10 @@ or optional write controls as available because their descriptions are visible.
 Optional generated history is still under development. Its typed Activity,
 Diagnostics and Privacy controls now provide independent reads, reviewed
 start/stop/clear and exact-JSON export. Consented recent destinations are now
-composed from accepted local-center navigation; operation/diagnostic producers
-and full native/human acceptance remain outstanding. See the [local history guide](/browser-extension/local-history).
+composed from accepted local-center navigation. Preference operations now supply
+redacted observations from the native service. Connection/compound-operation and
+helper producers, and full native/human acceptance remain outstanding. See the
+[local history guide](/browser-extension/local-history).
 The defaults remain off: redacted diagnostics/operation facts at most200
 entries, recent extension destinations at most50, both for seven days. Stopping
 collection and explicitly clearing retained history are separate actions. Exact
@@ -113,6 +115,15 @@ Those controls, and the last consent receipt, persist until native extension-dat
 removal. A reviewed history clear removes entries and retains the disclosed safety
 controls. These screens are present in development source; complete product
 acceptance remains outstanding.
+
+The separate **Last preference operation** view uses temporary background memory,
+with one entry per native window, at most eight, for five minutes from first
+observation. Its exact profile label or repository target is captured only for
+that operation and never enters generated history or export. Source loss,
+replacement, expiry or shutdown retires it; later reads cannot reconstruct it.
+Clearing generated history does not clear this current-operation memory, saved
+preferences or credentials. Last-operation inspection performs no preference,
+history-store or provider read and grants no authority.
 
 The consent flow also distinguishes a pause in the current background process
 from a confirmed durable stop. If policy storage fails, an observed off preference

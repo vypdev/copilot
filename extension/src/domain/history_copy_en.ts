@@ -18,7 +18,7 @@ export const HISTORY_EN: HistoryCopy = {
         historical: 'These facts describe this operation’s observation. Current state is shown separately.',
         notSubmitted: 'This owner has not observed confirmation yet. An earlier request may still arrive.',
         phasePreference: 'Preference step', phasePolicy: 'Collection step', verified: 'Verified at that observation', unverified: 'Not verified at that observation',
-        clearScope: 'Clear the reviewed generated-history entries.', entries: 'Entries in this review',
+        clearScope: 'Clear the reviewed generated-history entries. The temporary current operation in this window is unchanged.', entries: 'Entries in this review',
         clearControls: 'Generation, revision and clock controls remain. Preferences, credentials, authored notes and GitHub content are outside this clear.',
         exportTitle: 'Review generated-history JSON', exportScope: 'Download these exact nonsecret bytes. Preferences, credentials, authored notes and private targets are excluded.',
         download: 'Download reviewed JSON', recovery: 'Open recovery', guide: 'History and privacy guide',

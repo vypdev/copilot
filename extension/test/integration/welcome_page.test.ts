@@ -53,8 +53,9 @@ it('shows only safely escaped selected local profile names without treating them
     const h = await render('welcome', false, initial); await observed();
     expect(document.querySelector('[data-welcome-profiles]')?.textContent).toBe('<img src=x>'); expect(document.querySelector('img')).toBeNull();
     expect(document.body.textContent).toContain(c.profileMeaning); expect(h.native.port.set).not.toHaveBeenCalled();
-    expect(h.port.send.mock.calls.map(([m]) => m.method).filter(method => method !== 'center.recents.capture')).toEqual(['center.open', 'center.read']);
+    expect(h.port.send.mock.calls.map(([m]) => m.method).filter(method => !['center.recents.capture', 'center.operation.read'].includes(method))).toEqual(['center.open', 'center.read']);
     expect(h.port.send.mock.calls.filter(([m]) => m.method === 'center.recents.capture').length).toBeLessThanOrEqual(2);
+    expect(h.port.send.mock.calls.filter(([m]) => m.method === 'center.operation.read')).toHaveLength(1);
     expect(h.native.values.get(SETTINGS_KEY)).toEqual(initial);
 });
 it('requires neither a selected profile nor a connection to advance and offers the native privacy inspector as a separate route', async () => {
@@ -94,7 +95,7 @@ it('native ownership takeover between preview and confirmation retires the old p
 });
 it.each([{ schemaVersion: 99 }, { schemaVersion: 2, broken: true }])('unreadable saved progress offers recovery without replacing it or inventing an editable welcome', async initial => {
     const h = await render('welcome', false, initial, false); await ready(() => !!document.querySelector('main a[href="#/recovery"]'));
-    expect(stage()).toBeUndefined(); expect(document.querySelector('main button:not(.toolbar button)')).toBeNull();
+    expect(stage()).toBeUndefined(); expect(document.querySelector('main button:not(.toolbar button):not([data-current-operation] button)')).toBeNull();
     expect(h.native.values.get(SETTINGS_KEY)).toEqual(initial); expect(h.native.port.set).not.toHaveBeenCalled();
 });
 it('a failed fresh read cannot redisplay retained profile selections as current welcome facts', async () => {

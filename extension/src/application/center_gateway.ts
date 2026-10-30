@@ -7,13 +7,15 @@ import { SettingsOperations } from './settings_operations.ts';
 import { SettingsRepository, SettingsMigrationError } from './settings_repository.ts';
 import { isHistoryMessage, type HistoryMessage } from '../domain/history_protocol.ts';
 import type { HistoryGateway } from './history_gateway.ts';
+import type { CurrentOperations } from './current_operations.ts';
 
 /** Called only after native extension-origin admission by MessageGateway. */
 export class CenterGateway {
     constructor(private readonly controller: CenterController, private readonly operations: SettingsOperations,
-        private readonly settings: SettingsRepository, private readonly connections?: NamedSessions, private readonly history?: HistoryGateway) {}
+        private readonly settings: SettingsRepository, private readonly connections?: NamedSessions, private readonly history?: HistoryGateway,
+        private readonly current?: CurrentOperations) {}
     releaseTab(id: number): void { this.controller.releaseTab(id); }
-    shutdown(): void { this.controller.shutdown(); }
+    shutdown(): void { this.current?.stop(); this.controller.shutdown(); }
     async handle(message: CenterMessage | ConnectionMessage | HistoryMessage, sender: Sender): Promise<unknown> {
         try {
             const result = await this.dispatch(message, sender);
@@ -26,9 +28,10 @@ export class CenterGateway {
         if (message.method === 'center.open') return this.controller.open(binding);
         if (message.method === 'center.claim') return this.controller.claim(message.clientId, binding, message.controllerEpoch);
         if (message.method === 'center.close') return this.controller.close(message.clientId, binding, message.controllerEpoch);
-        const epoch = message.method === 'center.read' || message.method === 'center.connections.read' || message.method === 'center.history.read' ? undefined : message.controllerEpoch;
+        const epoch = message.method === 'center.read' || message.method === 'center.operation.read' || message.method === 'center.connections.read' || message.method === 'center.history.read' ? undefined : message.controllerEpoch;
         const client = this.controller.authorize(message.clientId, binding, epoch);
         if (!client) return { state: 'stale' };
+        if (message.method === 'center.operation.read') return this.current?.read(client.clientId) ?? { state: 'unavailable' };
         if (isHistoryMessage(message)) return this.history?.handle(message, client, binding) ?? { state: 'unavailable' };
         if (message.method === 'center.connections.read') return this.connections?.read(() =>
             this.controller.authorize(message.clientId, binding, client.controllerEpoch) !== null) ?? { state: 'unavailable' };
@@ -46,7 +49,10 @@ export class CenterGateway {
             const inspection = await this.settings.inspect();
             const current = this.controller.authorize(message.clientId, binding, client.controllerEpoch);
             if (!current || current.credentialEpoch !== client.credentialEpoch) return { state: 'stale' };
-            return { ...current, loaded: inspection.loaded, rollbackAvailable: inspection.loaded.state === 'ready' && inspection.rollback !== null, lastOperation: inspection.operation };
+            this.operations.observeInspection(client.clientId, inspection);
+            const verified = this.controller.authorize(message.clientId, binding, client.controllerEpoch);
+            if (!verified || verified.credentialEpoch !== client.credentialEpoch) return { state: 'stale' };
+            return { ...verified, loaded: inspection.loaded, rollbackAvailable: inspection.loaded.state === 'ready' && inspection.rollback !== null, lastOperation: inspection.operation };
         }
         if (client.role !== 'editor') return { state: 'denied' };
         if (message.credentialEpoch !== client.credentialEpoch) return { state: 'stale' };

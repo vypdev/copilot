@@ -7,6 +7,7 @@
     import { isSupportRoute } from '../domain/support_context.ts';
     import SettingsReview from './SettingsReview.svelte';
     import CenterRouteContent from './CenterRouteContent.svelte';
+    import CurrentOperationPanel from './CurrentOperationPanel.svelte';
     let { surface }: { surface: CenterSurface } = $props();
     let frame = $state.raw(untrack(() => surface.initial));
     const route = $derived(frame.location.route);
@@ -45,6 +46,7 @@
             {/if}
             {#if frame.client.issue}<p role="alert" class="notice">{copy.issues[frame.client.issue]}</p>{/if}
             {#if frame.review}<SettingsReview view={frame.review} copy={reviewCopy(copy.locale)} actions={surface.actions}/>{/if}
+            <CurrentOperationPanel view={frame.operation} center={copy} read={surface.actions.inspectOperation} available={role === 'editor' || role === 'observer'} expanded={route === 'activity' || route === 'diagnostics'}/>
             <CenterRouteContent {frame} {surface} {editable} {busy}/>
             {#if knownSettings}<p class="revision"><span>{copy.messages.revision}</span>: <code>{knownSettings.revision}</code></p>{/if}
         </main>
