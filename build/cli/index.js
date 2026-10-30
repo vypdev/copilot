@@ -129004,8 +129004,8 @@ function renderCatalog(catalog) {
     const primarySpec = capability.specs[0];
     const companionCount = capability.specs.length - 1;
     const specLabel = companionCount > 0
-      ? `[${escapeCell(capability.title)}](${catalogPathTarget(primarySpec)}) + ${companionCount} companion`
-      : `[${escapeCell(capability.title)}](${catalogPathTarget(primarySpec)})`;
+      ? `[${escapeCatalogTitle(capability.title)}](${catalogPathTarget(primarySpec)}) + ${companionCount} companion`
+      : `[${escapeCatalogTitle(capability.title)}](${catalogPathTarget(primarySpec)})`;
     const evidenceCount = capability.workflows.length
       + capability.entrypoints.length
       + capability.code.length
@@ -129014,7 +129014,7 @@ function renderCatalog(catalog) {
     return `| \`${capability.id}\` | ${STATUS_LABELS[capability.status]} | ${escapeCell(capability.scope)} | ${specLabel} | ${evidenceCount} paths · ${capability.lastVerified} |`;
   });
   const evidenceSections = catalog.capabilities.flatMap(capability => [
-    `### \`${capability.id}\` — ${capability.title}`,
+    `### \`${capability.id}\` — ${escapeCatalogTitle(capability.title)}`,
     '',
     `- Owner: ${capability.owner}`,
     `- Last verified: ${capability.lastVerified}`,
@@ -129086,6 +129086,12 @@ function catalogPathLabel(relativePath) {
   const delimiter = '`'.repeat(runs.reduce((longest, run) => Math.max(longest, run.length), 0) + 1);
   const content = relativePath.startsWith('`') || relativePath.endsWith('`') ? ` ${relativePath} ` : relativePath;
   return `${delimiter}${content}${delimiter}`;
+}
+
+function escapeCatalogTitle(value) {
+  // Character references display punctuation without introducing Markdown structure.
+  return String(value).replace(/[\r\n]+/g, ' ')
+    .replace(/[\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]/g, character => `&#${character.charCodeAt(0)};`);
 }
 
 function escapeCell(value) {

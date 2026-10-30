@@ -1688,7 +1688,7 @@
       "status": "implemented",
       "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve complete navigable catalog links for accepted repository filenames and safely publish generated catalogs without following destination links; bootstrap truthful proposed SDK capabilities before implementation without changing readiness; reject incomplete specification discovery explicitly without following unregistered symbolic links; report confirmed missing trusted catalogs with immutable source provenance and prerequisite recovery before model or publication",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-30",
+      "lastVerified": "2026-10-31",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
         "specs/pre-branch-sdd-gate.md",
@@ -1831,7 +1831,8 @@
         "src/tooling/__tests__/proposed_sdd_catalog_entrypoint.test.ts",
         "src/tooling/__tests__/specification_catalog_markdown_links.test.ts",
         "src/tooling/__tests__/specification_catalog_discovery.test.ts",
-        "src/domain/__tests__/sdd_trusted_catalog_failure.test.ts"
+        "src/domain/__tests__/sdd_trusted_catalog_failure.test.ts",
+        "src/tooling/__tests__/specification_catalog_title_text.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

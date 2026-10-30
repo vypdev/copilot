@@ -3,7 +3,7 @@
 - Status: Implemented — automated verification complete; live provider UX review pending
 - Date: 2026-09-17
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: 2026-10-30 (missing trusted-catalog prerequisite, #808; complete no-follow specification discovery, #804; navigable accepted catalog filenames, #782; truthful proposed SDK bootstrap, #777; safe portable catalog publication, #771; nested catalog links, #768; actionable blocked preparation and safe diagnostics, #714)
+- Last verified: 2026-10-31 (literal accepted catalog titles, #820; missing trusted-catalog prerequisite, #808; complete no-follow specification discovery, #804; navigable accepted catalog filenames, #782; truthful proposed SDK bootstrap, #777; safe portable catalog publication, #771; nested catalog links, #768; actionable blocked preparation and safe diagnostics, #714)
 - Owners: Copilot maintainers
 - Scope: clarify, update, validate, and publish the owning SDD before eligible branch-based work
 - Related issues/PRs: none; local design work; companion SDD `issue-start-and-branch-readiness.md`
@@ -2366,3 +2366,108 @@ while an unknown Git object remains Error 128. Actual EN/ES renderer previews
 include that source SHA and no raw Git command. No consumer code or live issue
 was executed or published by these probes. Keep full hooks and fresh remote
 merge gates separate and mandatory.
+
+## Accepted catalog titles as literal text — #820 (2026-10-31)
+
+**Observed defect.** An owned reproduction against validator SHA256
+`d79519d7257cb1ba7fdbbe273de0951a2beea58f388301285b6cbcaf72de771f`
+passes catalog validation for a title containing a newline, a heading and a
+link. Parsing the generated catalog finds the additional heading and external
+destinations. The primary-SDD link label and the evidence heading are distinct
+affected contexts. This establishes document-fidelity impact, without evidence
+of execution or a privileged operation. The original reproduction uses only
+ordinary owned temporary files; no consumer is modified or executed.
+
+catalog-title-R01: render accepted capability titles as literal inline text in
+both primary/companion table link labels and evidence headings. Collapse CR/LF
+runs to a single display space and encode ASCII punctuation as numeric character
+references. Markdown delimiters, entity-looking strings, links, images, HTML,
+reference definitions and trailing heading markers remain title text; they MUST
+NOT introduce document structure or destinations. Ordinary and multilingual
+titles remain readable under normal renderer whitespace rules. Preserve the
+original title string and complete source catalog JSON.
+
+catalog-title-R02: preserve capability IDs, metadata, ordering, companion counts,
+primary/companion/evidence destinations and all ownership/readiness/status rules.
+Do not restrict accepted title forms, change the SDK schema, broaden path
+allowances or modify consumer sources as a workaround. Existing path containment,
+no-follow discovery/publication, regular-file and fixed size bounds remain
+mandatory. Presentation expansion must use the existing bounded publication
+path and never bypass its errors or truncate silently.
+
+```text
+author title in catalog.json -> ordinary validation -> literal title rendering
+ -> bounded atomic CATALOG.md publication -> inspect table/evidence map
+```
+
+Text equivalent: validation continues to accept the existing title data; only
+the generated presentation treats punctuation and line breaks as display data.
+The authored catalog and navigation targets remain unchanged.
+
+| Accepted title content | Generated presentation |
+|---|---|
+| `Café 東京 العربية` | Same readable multilingual text |
+| A newline followed by a heading marker | One inline title with a display space |
+| Markdown link/image or HTML syntax | Visible literal title text; no added link/image/HTML |
+| Backticks, pipes, emphasis, entity references or closing hashes | Literal characters in both contexts |
+
+The existing pure renderer in the shared CJS validator owns the formatter; the
+application/SDK entrypoints and publication adapter retain their responsibilities.
+No new dependency, fourth standalone SDK file, provider call, permission, setting,
+state, localization catalog or notification is introduced. Normal invalid-input,
+blocked publication, partial-I/O and retry/recovery behavior remains unchanged.
+Regenerate with the matching reviewed SDK to repair an index; rollback restores
+the previous formatting defect without a metadata migration or provider change.
+
+Reserve **20 distinct cases before implementation**:
+
+| Area | Cases | Observable acceptance |
+|---|---:|---|
+| Parsed title presentation | 18 | Ordinary, multilingual, heading/link injection, nested links, images, HTML image/comment, code, emphasis/strike, pipe, entity-looking text, autolink/bare URL, CRLF/thematic break, CR/quote, LF/list, backslash/closing hashes and reference definition |
+| Instrumented public generation/validation | 1 | Accepted adversarial source generates and validates, retaining source JSON and intended destinations |
+| Matching standalone three-file SDK | 1 | Same behavior and companion navigation with no consumer package/dependencies |
+| **Total** | **20** | No double counting; external renderer observations are separate evidence |
+
+The real CommonMark AST MUST retain only the expected headings/destinations,
+literal primary-link text and no title-induced HTML/images. Assert the unchanged
+catalog object/file, not only a raw output snapshot. Run the new cases against
+the unchanged validator first and retain the actual RED results. Preserve all
+existing path, alias, size, symlink/discovery, proposed-entry, publisher and
+branch-sync regressions. New formatter statements/functions and all added
+runtime lines require 100% coverage; retain the existing validator 95/90 and
+all project/module budgets without exclusions or relaxed thresholds.
+
+An early owned encoding experiment passed 18 CommonMark cases and independent
+GitHub Markdown API rendering: 18 tables, literal evidence headings, no injected
+external destinations and no images. That experiment did not apply the source
+fix. Corroborate the corrected actual renderer separately before claiming it
+implemented. API rendering is read-only evidence, not browser execution or a
+consumer adoption claim. The syntax basis is
+[CommonMark character references](https://spec.commonmark.org/0.31.2/#entity-and-numeric-character-references),
+whose decoded characters do not supply Markdown structure delimiters.
+
+Update this owner, catalog test evidence/index, developer guidance and generated
+bundles together. Acceptance R01 maps to the 18 AST cases and actual renderer
+evidence; R02 maps to unchanged-source/navigation assertions, both entrypoints
+and the retained path/publication suites. Require full normal hooks, focused
+coverage, specification/docs/workflow/type/lint/build/package checks, Graphify,
+exact-head CI/Codecov, all three native cleanup footers and complete review
+without active findings before the normal authorized merge.
+
+Local execution for #820: the unchanged admitted validator fails 16 of the 20
+new cases; four already satisfy the CommonMark assertions. The correction passes all 20 new cases and
+174 existing compatibility cases in eight suites. The shared validator reaches
+100% lines/functions, 97.93% statements and 95.10% branches; local counters fully
+hit the new formatter, statements and added branches. The existing publisher
+budgets and canonical repository thresholds are retained. An initial compatibility
+failure identified the generated index pending regeneration; final generation
+and validation pass. The corrected actual renderer's 18-case Markdown is
+byte-identical to the owned input already rendered independently by GitHub,
+so the original API observation is reused by exact input equality rather than
+claimed as a new API/browser execution. Full normal hooks and fresh remote gates
+remain required before merge.
+
+Four additional existing branch-sync suites pass all 83 compatibility cases.
+Together with the eight renderer/SDK suites, this is 277 directed cases;
+only the 20 title cases are new. No repository coverage configuration or
+threshold was changed.
