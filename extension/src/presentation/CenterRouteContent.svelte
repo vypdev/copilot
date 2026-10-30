@@ -11,6 +11,7 @@
     import RepositoryPreferencesPanel from './RepositoryPreferencesPanel.svelte';
     import HistoryRoute from './HistoryRoute.svelte';
     import PauseRoute from './PauseRoute.svelte';
+    import SessionPreferenceRoute from './SessionPreferenceRoute.svelte';
     let { surface, frame, editable, busy }: { surface: CenterSurface; frame: CenterFrame; editable: boolean; busy: boolean } = $props();
     let Page = $state.raw<Component<CenterRouteProps> | null>(null);
     let Inventory = $state.raw<Component<InventoryRouteProps> | null>(null);
@@ -21,7 +22,7 @@
     const detail = $derived(frame.location.detail);
     const data = $derived(frame.client.data);
     const copy = $derived(frame.copy);
-    const historyEditable = $derived(!frame.pauses.review && !frame.pauses.busy && frame.client.phase === 'ready' && frame.client.role === 'editor' && !frame.client.review && !frame.hasDraft
+    const historyEditable = $derived(!frame.sessionPreferences.review && !frame.sessionPreferences.busy && !frame.pauses.review && !frame.pauses.busy && frame.client.phase === 'ready' && frame.client.role === 'editor' && !frame.client.review && !frame.hasDraft
         && (frame.client.issue === null || frame.client.issue === 'invalid' || frame.client.issue === 'unchanged'));
     $effect(() => {
         const destination = route; const parameter = detail;
@@ -30,7 +31,7 @@
         if (destination === 'features') void surface.loadInventory(parameter).then(value => { if (current) Inventory = value; }, failed);
         else if (destination === 'privacy') void surface.loadPrivacy().then(value => { if (current) Privacy = value; }, failed);
         else if (isSupportRoute(destination)) void surface.loadSupport().then(value => { if (current) Support = value; }, failed);
-        else if (destination !== 'activity' && destination !== 'diagnostics' && !(destination === 'repositories' && parameter === 'pauses')) void surface.load(destination, parameter).then(value => { if (current) Page = value; }, failed);
+        else if (destination !== 'activity' && destination !== 'diagnostics' && !(destination === 'repositories' && ['pauses', 'session'].includes(parameter ?? ''))) void surface.load(destination, parameter).then(value => { if (current) Page = value; }, failed);
         return () => { current = false; };
     });
 </script>
@@ -48,9 +49,15 @@
     {#if loadFailed}<p role="alert">{copy.messages.unavailable}</p><a href="https://docs.page/vypdev/copilot/browser-extension/onboarding">{copy.messages.documentation}</a>
     {:else if Support}<Support context={{ copy, route, status: supportStatus(frame.client), packageIdentity: frame.packageIdentity }} actions={{ reload: surface.actions.reload }}/>
     {:else}<p role="status">{copy.messages.loading}</p>{/if}
+{:else if route === 'repositories' && detail === 'session'}
+    <SessionPreferenceRoute context={{ center: copy, view: frame.sessionPreferences, editable: frame.client.role === 'editor' && !frame.client.review
+        && !frame.history.busy && !frame.history.review && !frame.history.exportBusy && !frame.history.exportReview && !frame.pauses.busy && !frame.pauses.review
+        && !['claiming', 'previewing', 'committing', 'stopped'].includes(frame.client.phase) && frame.client.issue !== 'incompatible'
+        && frame.sessionPreferences.reader.current && frame.sessionPreferences.reader.data?.loaded.state === 'ready' && !frame.sessionPreferences.reader.data.pending,
+        available: (frame.client.role === 'editor' || frame.client.role === 'observer') && frame.client.issue !== 'incompatible' }} actions={surface.actions.sessionPreferences} load={surface.loadSessionPreferences}/>
 {:else if route === 'repositories' && detail === 'pauses'}
     <PauseRoute context={{ center: copy, view: frame.pauses, editable: frame.client.role === 'editor' && !frame.client.review && !frame.hasDraft
-        && !frame.history.busy && !frame.history.review && !frame.history.exportBusy && !frame.history.exportReview
+        && !frame.history.busy && !frame.history.review && !frame.history.exportBusy && !frame.history.exportReview && !frame.sessionPreferences.busy && !frame.sessionPreferences.review
         && !['claiming', 'previewing', 'committing', 'stopped'].includes(frame.client.phase) && frame.client.issue !== 'incompatible'
         && frame.pauses.reader.current && frame.pauses.reader.data?.loaded.state === 'ready' && !frame.pauses.reader.data.pending,
         available: (frame.client.role === 'editor' || frame.client.role === 'observer') && frame.client.issue !== 'incompatible' }} actions={surface.actions.pauses} load={surface.loadPauses}/>

@@ -1,18 +1,20 @@
 import { centerPayload, decodeCenterDocument, decodeCenterIdentity, decodeCenterOutcome, decodeCenterPreview, type CenterIdentity, type CenterPlan } from '../domain/center_reply.ts';
 import type { CenterMessage, ConnectionMessage } from '../domain/center_protocol.ts';
-import { connectionIntent, decodeConnections, type ConnectionIntent } from '../domain/named_sessions.ts';
+import { requestConnectionContext, type ConnectionInput } from './center_connection_context.ts';
 import type { CenterClientView } from '../domain/center_client_view.ts';
 import { sameSettingsContent } from '../domain/settings_operation.ts';
 import { deepFreeze, record } from '../domain/value.ts';
 import type { HistoryMessage } from '../domain/history_protocol.ts';
 import type { PauseMessage } from '../domain/temporary_pause_protocol.ts';
 import type { PauseRequest } from '../domain/pause_request.ts';
-import { requestHistoryContext, requestPauseContext } from './center_request_context.ts';
+import { requestHistoryContext, requestPauseContext, requestSessionPreferenceContext } from './center_request_context.ts';
+import type { SessionPreferenceRequest } from '../domain/session_preference_request.ts';
+import type { SessionPreferenceMessage } from '../domain/session_preference_protocol.ts';
 import type { HistoryRequest } from '../domain/history_request.ts';
 import { uncertainSettingsOutcome as uncertain, publicSettingsReview as publicReview } from '../domain/settings_review_projection.ts';
 import { RecentsClient } from './recents_client.ts';
 import { readCurrentOperation, readHelperSample, observationContextChanged } from './center_observation_context.ts';
-export interface CenterClientPort { readonly sourceTree: string; send(message: CenterMessage | ConnectionMessage | HistoryMessage | PauseMessage): Promise<unknown>; contextChanged?(): void }
+export interface CenterClientPort { readonly sourceTree: string; send(message: CenterMessage | ConnectionMessage | HistoryMessage | PauseMessage | SessionPreferenceMessage): Promise<unknown>; contextChanged?(): void }
 /** One mounted view; reusable authority stays private, while committed receipts are inspectable facts. */
 export class CenterClient {
     private owner: CenterIdentity | null = null;
@@ -47,7 +49,7 @@ export class CenterClient {
         for (const listener of this.listeners) { try { listener(this.value); } catch { /* One renderer cannot erase saved facts. */ } }
     }
     private current(generation: number): boolean { return !this.stopped && this.generation === generation; }
-    private async request(message: CenterMessage | ConnectionMessage | HistoryMessage | PauseMessage, secondary = false): Promise<Record<string, unknown> | null> {
+    private async request(message: CenterMessage | ConnectionMessage | HistoryMessage | PauseMessage | SessionPreferenceMessage, secondary = false): Promise<Record<string, unknown> | null> {
         try {
             const response = await this.port.send(message);
             const payload = centerPayload(response, this.port.sourceTree);
@@ -63,6 +65,10 @@ export class CenterClient {
     async requestHistory(input: HistoryRequest): Promise<Record<string, unknown> | null> { return requestHistoryContext(input, this.owner, this.stopped || this.value.issue === 'incompatible', this.busy || !!this.value.review, message => this.request(message, true)); }
     requestPauses(input: PauseRequest): Promise<Record<string, unknown> | null> {
         return requestPauseContext(input, this.owner, this.stopped || this.value.issue === 'incompatible', ['claiming', 'previewing', 'committing'].includes(this.value.phase) || !!this.value.review,
+            message => this.request(message, true), () => this.owner);
+    }
+    requestSessionPreferences(input: SessionPreferenceRequest): Promise<Record<string, unknown> | null> {
+        return requestSessionPreferenceContext(input, this.owner, this.stopped || this.value.issue === 'incompatible', ['claiming', 'previewing', 'committing'].includes(this.value.phase) || !!this.value.review,
             message => this.request(message, true), () => this.owner);
     }
     private async finish(generation: number): Promise<void> {
@@ -165,24 +171,17 @@ export class CenterClient {
     }
     async confirm(): Promise<void> { await this.complete('center.confirm'); }
     async cancel(): Promise<void> { await this.complete('center.cancel'); }
-    async connections(input: ConnectionIntent | null | (() => Promise<ConnectionIntent | null>) = null, expectedRevision = 0): Promise<number | null> {
+    async connections(input: ConnectionInput = null, expectedRevision = 0): Promise<number | null> {
         if (this.stopped || this.busy || !this.owner || this.value.review) return null;
         const owner = this.owner; const generation = this.generation; const connectionGeneration = this.connectionGeneration;
         if (input && owner.role !== 'editor') { this.update({ connections: { state: 'denied' } }); return null; }
         this.busy = true; this.update({ phase: input ? 'committing' : 'reading' });
-        let intent: ConnectionIntent | null;
-        try { intent = typeof input === 'function' ? await input() : input; }
-        catch { if (this.current(generation)) this.update({ connections: { state: 'unavailable' } }); await this.finish(generation); return null; }
-        if (!this.current(generation)) return null;
-        if (input && !intent) { this.update({ connections: { state: 'denied' } }); await this.finish(generation); return null; }
-        if (intent && !connectionIntent(intent)) { this.update({ connections: { state: 'invalid' } }); await this.finish(generation); return null; }
-        const response = decodeConnections(await this.request(intent ? { version: 1, method: 'center.connections.change',
-            clientId: owner.clientId, controllerEpoch: owner.controllerEpoch, credentialEpoch: owner.credentialEpoch, expectedRevision, intent }
-            : { version: 1, method: 'center.connections.read', clientId: owner.clientId }));
-        if (!this.current(generation)) return null;
-        if (connectionGeneration === this.connectionGeneration) this.update({ connections: response ?? { state: intent ? 'unknown' : 'unavailable' } });
+        const result = await requestConnectionContext(input, expectedRevision, owner, () => this.current(generation), message => this.request(message));
+        if (result.state === 'stale' || !this.current(generation)) return null;
+        if (result.state === 'not-sent') { this.update({ connections: { state: result.issue } }); await this.finish(generation); return null; }
+        if (connectionGeneration === this.connectionGeneration) this.update({ connections: result.response ?? { state: result.submitted ? 'unknown' : 'unavailable' } });
         this.queuedRead = true;
-        await this.finish(generation); return this.current(generation) && intent && response?.state === 'ready' ? response.revision : null;
+        await this.finish(generation); return this.current(generation) && result.submitted && result.response?.state === 'ready' ? result.response.revision : null;
     }
     private async complete(method: 'center.confirm' | 'center.cancel'): Promise<void> {
         if (this.stopped || this.busy || !this.owner || !this.pending) return;

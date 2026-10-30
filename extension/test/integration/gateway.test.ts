@@ -8,6 +8,8 @@ import { memoryStore, sessionHarness, CONNECTED, PAGE, deferred } from '../fixtu
 import type { ReadResult } from '../../src/application/read_ports.ts';
 import { TemporaryPauseReader } from '../../src/application/temporary_pause_reader.ts';
 
+import { emptyPreferenceAdmission } from '../fixtures/page_configuration.ts';
+
 const origin = 'chrome-extension://test/';
 const extension = { id: 'test', url: `${origin}runtime.html` };
 const sender = { id: 'test', url: PAGE.route, frameId: 0, tab: { id: 1, url: PAGE.route, incognito: false } };
@@ -16,7 +18,7 @@ function harness() {
     const ports = { currentTab: vi.fn(async (): Promise<{ url: string; incognito: boolean; active: boolean; windowId?: number }> => ({ url: PAGE.route, incognito: false, active: true, windowId: 1 })),
         openSettings: vi.fn(async (_windowId: number) => undefined),
         cancellation: () => new BrowserCancellation(), online: () => true, notify: vi.fn() };
-    const gateway = new MessageGateway('test', origin, settings, h.service, ports, undefined, undefined, undefined, new TemporaryPauseReader(memoryStore().port, async () => true));
+    const gateway = new MessageGateway('test', origin, settings, h.service, ports, undefined, undefined, undefined, new TemporaryPauseReader(memoryStore().port, async () => true), emptyPreferenceAdmission(h));
     const connect = () => gateway.handle({ version: 1, method: 'session.connect', secret: CONNECTED.secret, repository: CONNECTED.repository }, extension);
     return { ...h, local, settings, ports, gateway, connect };
 }

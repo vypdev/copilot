@@ -1,4 +1,5 @@
 import type { PauseRouteProps } from '../domain/pause_ui.ts';
+import type { SessionPreferenceRouteProps } from '../domain/session_preference_ui.ts';
 import type { Component } from 'svelte';
 import type { CenterRoute } from '../domain/center_routes.ts';
 import type { CenterRouteProps, InventoryRouteProps, PrivacyRouteProps, SupportRouteProps } from '../domain/center_ui.ts';
@@ -27,3 +28,4 @@ export async function loadSupportPage(): Promise<Component<SupportRouteProps>> {
 export async function loadHistoryPage(): Promise<Component<HistoryRouteProps>> { return (await import('../presentation/HistoryPage.svelte')).default; }
 
 export async function loadPausesPage(): Promise<Component<PauseRouteProps>> { return (await import('../presentation/PausesPage.svelte')).default; }
+export async function loadSessionPreferencesPage(): Promise<Component<SessionPreferenceRouteProps>> { return (await import('../presentation/SessionPreferencesPage.svelte')).default; }

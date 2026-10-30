@@ -13,6 +13,7 @@ import { PageConfigurationService } from './page_configuration.ts';
 import type { CenterCommand } from '../domain/shortcuts.ts';
 import type { HelperSamples, HelperSampleSource } from './helper_samples.ts';
 import type { TemporaryPauseReader } from './temporary_pause_reader.ts';
+import type { SessionPreferenceAdmission } from './session_preference_admission.ts';
 
 interface PageLease { readonly fence: PageFence; readonly cancel: CancellationOwner; readonly documentId: string | undefined;
     configuration: { readonly credentialEpoch: number; readonly settingsRevision: number } | null; configurationAttempt: object }
@@ -31,10 +32,12 @@ export class MessageGateway {
     private connectionOperation = 0;
     constructor(private readonly id: string, private readonly origin: string, private readonly settings: SettingsRepository,
         private readonly sessions: ProtectedSessionService, private readonly ports: GatewayPorts, private readonly center?: CenterGateway,
-        private readonly connections?: NamedSessions, private readonly helpers?: HelperSamples, private readonly pauses?: TemporaryPauseReader) {}
+        private readonly connections?: NamedSessions, private readonly helpers?: HelperSamples, private readonly pauses?: TemporaryPauseReader,
+        private readonly sessionPreferences?: SessionPreferenceAdmission) {}
     releaseHelperTab(id: number): void { this.helpers?.releaseTab(id); }
     releaseCenterTab(id: number): void { this.center?.releaseTab(id); }
     shutdown(): void { if (this.stopped) return; this.stopped = true; this.invalidate(); this.center?.shutdown(); this.helpers?.stop(); }
+    invalidatePreferenceSources(): void { this.center?.invalidatePreferenceSources(); }
     invalidate(tabId?: number, notify = true): void {
         if (tabId !== undefined) {
             this.pages.get(tabId)?.cancel.abort(); this.pages.delete(tabId); this.openings.delete(tabId); return;
@@ -116,8 +119,8 @@ export class MessageGateway {
             }
             if (message.method === 'session.connect') return await this.connect(message);
             if (message.method === 'session.status') {
-                // Legacy page status cannot start restoration outside the page/profile admission path.
-                if (extensionSender(sender, this.id, this.origin)) await this.sessions.start();
+                // Installed H3 status is observational, including old native views. H2-only compositions retain their original initialization.
+                if (!this.center && extensionSender(sender, this.id, this.origin)) await this.sessions.start();
                 return this.sessions.status();
             }
             const id = sender.tab!.id!;
@@ -143,7 +146,7 @@ export class MessageGateway {
             const online = this.ports.online();
             const currentPage = () => (!online || this.ports.online()) && !lease.cancel.aborted
                 && this.pages.get(id) === lease && lease.configurationAttempt === configurationAttempt;
-            const configuration = await new PageConfigurationService(this.settings, this.sessions, this.pauses)
+            const configuration = await new PageConfigurationService(this.settings, this.sessions, this.pauses, this.sessionPreferences)
                 .resolve(message, lease.cancel, currentPage, current.active === true, online, id);
             if (!currentPage()) return { state: 'stale' };
             if (!configuration) return { state: message.method === 'page.snapshot' ? 'paused' : 'unavailable' };

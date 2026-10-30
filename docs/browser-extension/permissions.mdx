@@ -202,3 +202,18 @@ carry only an opaque native ID and retirement flag, without URLs or titles.
 Confirmed scopes have browser-session lifetime; extra precaution for uncertain
 effects has worker lifetime and is removed only by explicit observed-state
 adoption. Saved pauses remain separate.
+
+Temporary session preferences have a separate protected browser-session document
+and a separate operation guard. The native page infers the selected materialized
+connection and current verification; callers cannot provide a target, credential,
+grant or replacement snapshot. Ordinary inspection performs no reconnect or API
+request. Only effective scalar preferences and generic scope/availability facts
+reach GitHub content; private names, native selection IDs, revisions and operation
+selectors stay in the native center. Settings backups/reset do not include this
+document, and generated history does not backfill authored overrides.
+
+Clearing or adopting these preferences cannot release the emergency/tab owner’s
+precaution. Likewise, adopting native pauses cannot release an unknown preference
+operation. Newer, malformed or inaccessible documents prevent connected effects
+while retaining their data. These controls add no permission, endpoint or Action
+approval. See [Temporary session preferences](configuration#temporary-session-preferences).

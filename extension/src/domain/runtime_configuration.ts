@@ -1,6 +1,6 @@
 import { pageIdentity } from './page.ts';
 import { FEATURE_DEFAULTS } from './feature_defaults.ts';
-import { resolveProfile, type ProfileContext } from './profile_resolution.ts';
+import { resolveProfile, type ProfileContext, type SessionProfile } from './profile_resolution.ts';
 import type { SessionIdentity } from './session.ts';
 import type { Settings } from './settings.ts';
 import type { Message } from './protocol.ts';
@@ -27,14 +27,15 @@ export function pageProfileContext(message: PageRequest, identity: SessionIdenti
         repositoryId: repository?.repositoryId ?? null, sessionEpoch: null };
 }
 export function runtimeConfiguration(settings: Settings, message: PageRequest, identity: SessionIdentity | null, epoch: number,
-    restriction: RuntimeRestriction = UNAVAILABLE_RUNTIME_RESTRICTION, connection: RuntimeConnectionFact = { state: identity ? 'connected' : 'disconnected', retryAt: null }): RuntimeConfiguration | null {
+    restriction: RuntimeRestriction = UNAVAILABLE_RUNTIME_RESTRICTION, connection: RuntimeConnectionFact = { state: identity ? 'connected' : 'disconnected', retryAt: null }, session?: SessionProfile): RuntimeConfiguration | null {
     if (identity && connection.state !== 'connected') return null;
-    const context = pageProfileContext(message, identity);
+    const base = pageProfileContext(message, identity);
+    const context = { ...base, sessionEpoch: session?.epoch === epoch && base.accountId === session.accountId && base.repositoryId === session.repositoryId ? epoch : null };
     const resolved = resolveProfile(settings, context.repositoryId ? settings.repositories[context.repositoryId] : undefined,
-        settings.center, context);
+        settings.center, context, session);
     const preferences = runtimePreferenceProvenance(settings, context, resolved);
     if (!preferences) return null;
-    const provenance = { preferences, restriction: { ...restriction, native: { ...restriction.native } }, connection: { ...connection } }; const paused = runtimeIsPaused(provenance);
+    const provenance = { preferences, restriction: { ...restriction, native: { ...restriction.native }, session: { ...restriction.session } }, connection: { ...connection } }; const paused = runtimeIsPaused(provenance);
     const connected = connection.state === 'connected' && !paused && context.repositoryId !== null && settings.repositories[context.repositoryId]?.connected === true;
     if (!validRuntimeProvenance(provenance, paused, connected)) return null;
     return deepFreeze({ state: 'ready', route: message.route, generation: message.generation, repositoryId: message.repositoryId,

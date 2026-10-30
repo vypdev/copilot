@@ -116,8 +116,8 @@ runtime now uses the same resolver. It checks the current account and both the
 canonical repository route and numeric repository identity before applying a
 repository profile. A different repository keeps its own preferences. Density
 changes the extension panel's spacing; later feature switches do not claim that
-their implementations are already available. Individual tab, emergency and
-transient-session controls remain part of H3. Feature details expose the winning
+their implementations are already available. The development H3 center has
+separate temporary preference and emergency/tab controls. Feature details expose the winning
 saved source for every registered feature in the selected verified context.
 Profiles never connect an account or authorize an Action command.
 
@@ -360,5 +360,53 @@ without repeating confirmation. Reading the current state cannot certify the
 older response. Cancel a preview to leave it unsubmitted. Leaving an already
 completed or unknown operation keeps its native effects; no inverse change is
 automatic. Another window, a tab reload or a changed package can retire the
-review. Native and human H3 acceptance, full runtime provenance and the remaining
+review. Native and human H3 acceptance and the remaining
 H3 capabilities are still pending.
+
+## Temporary session preferences
+
+Open **Profiles → Temporary session preferences** or the same link under
+**Repositories**. The native page shows the current verified saved connection,
+account and repository. Opening it does not reconnect or contact GitHub.
+
+```text
+Read current preferences → edit inherited values → review before/after
+ → confirm once → inspect native acknowledgement and observation
+```
+
+Leave **Inherit** selected unless you want a temporary override. You can choose
+comfortable/compact density, local shortcuts, a positive pause and individual
+preferences for all150 registered features. The local feature filter preserves
+hidden choices and sends no query. These preferences do not establish feature
+availability or authorize connected access. A false pause cannot remove a true
+pause inherited from saved preferences, an emergency or a tab.
+
+Temporary values use protected browser-session memory. They survive ordinary
+background suspension and are excluded from persistent profiles, settings exports,
+sync and rollback. Closing the browser, disabling/reloading the extension or the
+browser clearing that storage can end them. See the native
+[Chrome storage](https://developer.chrome.com/docs/extensions/reference/api/storage)
+and [Firefox session storage](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/storage/session)
+references; the development package must also pass each browser's native checks.
+
+Changing a saved connection retires enabling overrides. An earlier positive pause
+for the same selected account/repository remains a labelled retained restriction
+until explicitly reviewed. A different actual selection makes the old record
+inactive. A recreated background must verify the current native selection before
+applying density, shortcuts or feature choices; retained metadata grants nothing.
+
+If the source changes while you edit, the draft stays visible. Choose **Use current
+source for this draft** to target it explicitly, or **Discard draft and load observed
+values** to replace local edits. Review the complete before/after values before
+confirmation. **Review clearing temporary preferences** removes only this
+override, leaving inherited preferences and independent native pauses applicable.
+An observer can inspect but must explicitly take control before editing.
+
+An unknown response is never replayed. **Inspect this operation** asks about the
+same retained operation without another write. A later matching document does not
+prove that older result. Extra precaution remains until a separate **Review adopting
+the observed state** operation adopts the exact current document. That adoption
+neither writes the preference document nor clears emergency/tab precaution.
+Known native clear/adoption remains available when saved preferences are unreadable;
+their effective values are then shown as unavailable. Newer or malformed temporary
+documents are preserved for recovery instead of replaced with empty defaults.

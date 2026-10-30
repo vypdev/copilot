@@ -22,6 +22,6 @@ export function preferenceProvenanceFixture() {
 export function provenanceConfiguration(condition: TemporaryPauseCondition = 'clear', emergency = false, tab = false, global = false) {
     const native = nativePauseProvenance({ condition, loaded: { state: 'ready', value: { ...DEFAULT_TEMPORARY_PAUSES, emergency, tabs: tab ? [1] : [] } } }, 1);
     const settings = { ...DEFAULT_SETTINGS, paused: global, repositories: { '7': { connected: true } } };
-    const configuration = runtimeConfiguration(settings, CONFIG, CONNECTED, 9, { native, claimedRepository: false, retainedScope: false });
+    const configuration = runtimeConfiguration(settings, CONFIG, CONNECTED, 9, { native, claimedRepository: false, retainedScope: false, session: { worker: 'clear', native: 'ready', scope: 'empty', restricted: false } });
     if (!configuration) throw new Error('invalid-provenance-fixture'); return configuration;
 }

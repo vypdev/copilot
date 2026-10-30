@@ -15,13 +15,17 @@ import type { TemporaryPauseStore } from '../application/temporary_pause_store.t
 import { TemporaryPauseReviews } from '../application/temporary_pause_reviews.ts';
 import { TemporaryPauseGateway } from '../application/temporary_pause_gateway.ts';
 import { BrowserPauseTargets } from '../adapters/browser/temporary_pause_targets.ts';
+import type { SessionPreferencesStore } from '../application/session_preferences_store.ts';
+import { SessionPreferenceSources } from '../application/session_preference_sources.ts';
+import { SessionPreferenceReviews } from '../application/session_preference_reviews.ts';
+import { SessionPreferenceGateway } from '../application/session_preference_gateway.ts';
 
 /** Random authority identifiers are acquired only in the native background composition. */
 export function centerIdentifier(): string {
     return Array.from(globalThis.crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('');
 }
 export function createCenter(api: BrowserApi, settings: SettingsRepository, sessions: ProtectedSessionService, notify: () => void, connections?: NamedSessions,
-    history?: { readonly owner: CollectionHistory; readonly policies: CollectionPolicyStore }, helpers?: HelperSamples, pauseStore?: TemporaryPauseStore): CenterGateway {
+    history?: { readonly owner: CollectionHistory; readonly policies: CollectionPolicyStore }, helpers?: HelperSamples, pauseStore?: TemporaryPauseStore, sessionPreferences?: SessionPreferencesStore): CenterGateway {
     const current = new CurrentOperations({ now: () => Date.now(),
         changed: () => { void api.runtime.sendMessage({ version: 1, method: 'center.operation.invalidated' }).catch(() => undefined); },
         admit: (fact, source) => history?.owner.writer.admit('diagnostics', fact, source) ?? null,
@@ -30,7 +34,7 @@ export function createCenter(api: BrowserApi, settings: SettingsRepository, sess
         retention: ticket => history!.owner.writer.retention(ticket) });
     const controller = new CenterController({ now: () => Date.now(), identifier: centerIdentifier,
         permitted: () => api.extension?.inIncognitoContext !== true, credentialEpoch: () => sessions.status().epoch,
-        changed: () => { current.invalidate(); operations.invalidate(); controls?.invalidate(); pauseControls?.invalidate(); notify(); } });
+        changed: () => { current.invalidate(); operations.invalidate(); controls?.invalidate(); pauseControls?.invalidate(); preferenceControls?.invalidate(); notify(); } });
     const operations = new SettingsOperations(settings, { now: () => Date.now(), identifier: centerIdentifier,
         fence: id => controller.fence(id), notify, observe: (...args) => current.reviewSettings(...args) });
     const controls = history ? new HistoryControls(history.owner, history.policies, { now: () => Date.now(), identifier: centerIdentifier,
@@ -39,5 +43,9 @@ export function createCenter(api: BrowserApi, settings: SettingsRepository, sess
     const pauseReviews = pauseStore ? new TemporaryPauseReviews(pauseStore, { now: () => Date.now(), identifier: centerIdentifier,
         fence: id => controller.fence(id), target: id => targets!.target(id), observe: (...args) => current.reviewPause(...args) }) : null;
     const pauseControls = pauseStore ? new TemporaryPauseGateway(controller, pauseStore, pauseReviews!, targets!) : undefined;
-    return new CenterGateway(controller, operations, settings, connections, history ? new HistoryGateway(controller, history.owner, controls!) : undefined, current, helpers, pauseControls);
+    const preferenceSources = sessionPreferences && connections ? new SessionPreferenceSources(settings, connections) : null;
+    const preferenceReviews = preferenceSources ? new SessionPreferenceReviews(sessionPreferences!, { now: () => Date.now(), identifier: centerIdentifier,
+        fence: id => controller.fence(id), captureSource: () => preferenceSources.capture(), readSource: current => preferenceSources.read(current), reserveSettings: () => preferenceSources.reserve() }) : null;
+    const preferenceControls = preferenceSources ? new SessionPreferenceGateway(controller, sessionPreferences!, preferenceReviews!, preferenceSources) : undefined;
+    return new CenterGateway(controller, operations, settings, connections, history ? new HistoryGateway(controller, history.owner, controls!) : undefined, current, helpers, pauseControls, preferenceControls);
 }

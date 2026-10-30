@@ -183,6 +183,11 @@ across inherited scopes: a more specific false value cannot clear an active
 inherited pause. Emergency and tab pauses take priority and expose their own
 provenance. Explicit resumption edits the owning pause scope.
 
+The complete [verified session preference contract](github-browser-extension-session-preferences.md)
+defines protected session lifetime, stable native selection ownership across
+worker recreation, current credential-epoch fences, exact reviews and unknown
+write recovery. Its implementation and acceptance remain part of #704.
+
 Navigation accepts only packaged hash routes from a fixed route inventory.
 Feature details use known catalog IDs; profile details use bounded local IDs.
 Queries, encoded paths, arbitrary return URLs, commands, secrets, extra fields
@@ -589,7 +594,10 @@ options view. New connections use the named-session controller, epoch and
 revision checks; preference changes use retained previews and confirmation.
 This prevents an old view from creating a serving identity absent from the
 manager or bypassing its current editor. Legacy read/status methods remain
-available to packaged pages; page status is local-only and cannot start HTTP.
+available to packaged pages. With H3 installed, status is observational even for
+an old native view: it cannot restore credentials or start HTTP outside the
+admitted page path or the explicit named-session verification journey. An old
+native status query must not bypass a saved, emergency or temporary preference pause.
 An explicit old `session.disconnect` is an absolute safety action:
 it fences work and clears all protected connection keys, preserving authored
 preferences. It cannot grant authority or select another identity. Old views

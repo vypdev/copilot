@@ -19,7 +19,7 @@ it.each([{ emergency: false, tab: false }, { emergency: false, tab: true }, { em
 });
 it.each(['future', 'corrupt', 'unavailable'] as const)('%s native storage remains unknown with no invented emergency or tab pause', state => {
     const native = nativePauseProvenance({ condition: 'clear', loaded: { state } }, 1);
-    const configuration = runtimeConfiguration(DEFAULT_SETTINGS, CONFIG, null, 0, { native, claimedRepository: false, retainedScope: false });
+    const configuration = runtimeConfiguration(DEFAULT_SETTINGS, CONFIG, null, 0, { ...clearNativeRestriction(), native });
     expect(decode({ ...configuration, sourceTree: 'unbundled' })).toMatchObject({ settings: { paused: true }, provenance: { restriction: { native: { native: state, emergency: null, tab: null } } } });
 });
 it('missing native infrastructure is a restriction explanation, never an implicit connected or unpaused default', () => {
@@ -27,7 +27,7 @@ it('missing native infrastructure is a restriction explanation, never an implici
     expect(configuration.provenance.restriction.native).toMatchObject({ worker: 'unavailable', native: 'not-checked' }); expect(configuration.connected).toBe(false);
 });
 it('factory copies its source restriction and binding records rather than freezing a caller-owned native object', () => {
-    const restriction = { native: { ...clearNativeRestriction().native }, claimedRepository: false, retainedScope: false };
+    const restriction = { ...clearNativeRestriction(), native: { ...clearNativeRestriction().native }, session: { ...clearNativeRestriction().session } };
     const bindings = [{ command: 'open-center', binding: 'Alt+Shift+K', privateExtra: 'never-copy-this' }] as const;
     const settings = { ...DEFAULT_SETTINGS, center: { ...DEFAULT_SETTINGS.center, bindings } };
     const value = runtimeConfiguration(settings, CONFIG, null, 0, restriction)!; expect(value).not.toBeNull();

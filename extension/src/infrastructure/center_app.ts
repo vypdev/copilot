@@ -11,7 +11,8 @@ import { keys, record } from '../domain/value.ts';
 import type { CenterActions } from '../domain/center_ui.ts';
 import type { CenterSurface } from '../presentation/center_surface.ts';
 import CenterHost from '../presentation/CenterHost.svelte';
-import { loadCenterPage, loadInventoryPage, loadPrivacyPage, loadSupportPage, loadHistoryPage, loadPausesPage } from './center_pages.ts';
+import { loadCenterPage, loadInventoryPage, loadPrivacyPage, loadSupportPage, loadHistoryPage, loadPausesPage, loadSessionPreferencesPage } from './center_pages.ts';
+import { createCenterSessionPreferences } from './center_session_preferences.ts';
 import { downloadCenterSettings, readCenterImport } from './center_files.ts';
 import { buildSourceIdentity } from './build_identity.ts';
 import { connectionActions } from './center_connections.ts';
@@ -37,7 +38,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
         window.location.replace(`${canonical}#/recovery`); return () => undefined;
     }
     const client = new CenterClient({ sourceTree: buildSourceIdentity(), send: message => api.runtime.sendMessage(message), contextChanged: () => {
-        operation.clear(); void operation.read(); helpers.invalidate(); void helpers.read(); pauses.contextChanged(); readPauses();
+        operation.clear(); void operation.read(); helpers.invalidate(); void helpers.read(); pauses.contextChanged(); readPauses(); transient.contextChanged();
     } });
     const packageIdentity = readPackageIdentity(api, buildSourceIdentity());
     let stopped = false; let draftEpoch = 0; let savedRevision = -1; let savedCandidate: Settings | null = null; let importGeneration = 0;
@@ -69,17 +70,20 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
         canMutate: () => pauseVisible() && client.view.role === 'editor' && !['claiming', 'previewing', 'committing', 'stopped'].includes(client.view.phase)
             && !client.view.review && !navigation.hasDraft && !historyHeld() && pauses.reader.view.current
             && pauses.reader.view.data?.loaded.state === 'ready' && !pauses.reader.view.data.pending });
-    const pauseHeld = (): boolean => pauses.view.busy || !!pauses.view.review;
+    const transient = createCenterSessionPreferences(client, navigation, { foreground: () => !stopped && focused && document.visibilityState !== 'hidden',
+        blocked: () => historyHeld() || pauses.view.busy || !!pauses.view.review, changed: () => { protect(); publish(); }, focus: () => focus('#session-preference-review-heading') });
+    const pauseHeld = (): boolean => pauses.view.busy || !!pauses.view.review || transient.held();
     const historyHeld = (): boolean => history.view.busy || history.view.exportBusy || !!history.view.review || !!history.view.exportReview;
-    const protect = () => navigation.protect(!!pauses.view.review || !!history.view.review || !!history.view.exportReview || client.view.review?.state === 'preview'
-        || client.view.review?.state === 'unknown', client.view.phase === 'committing' || history.view.busy || history.view.exportBusy || pauses.view.busy);
-    const frame = () => centerFrame(client.view, navigation.location, navigation.pendingLocation, nativeLanguage, draftEpoch, navigation.hasDraft, inventory, inspector.view, packageIdentity, history.view, client.visitDelivery, operation.view, helpers.view, pauses.view);
+    const protect = () => navigation.protect(!!transient.client.view.review || !!pauses.view.review || !!history.view.review || !!history.view.exportReview || client.view.review?.state === 'preview'
+        || client.view.review?.state === 'unknown', client.view.phase === 'committing' || history.view.busy || history.view.exportBusy || pauses.view.busy || transient.client.view.busy);
+    const frame = () => centerFrame(client.view, navigation.location, navigation.pendingLocation, nativeLanguage, draftEpoch, navigation.hasDraft, inventory, inspector.view, packageIdentity, history.view, client.visitDelivery, operation.view, helpers.view, pauses.view, transient.client.view);
     function publish(): void {
         if (stopped) return;
         const value = frame(); document.documentElement.lang = value.copy.locale; document.title = value.copy.messages.title;
         for (const listener of listeners) listener(value);
     }
     const actions: CenterActions = {
+        sessionPreferences: transient.actions,
         connections: connectionActions(api, document, client, () => !stopped && !pauseHeld() && !historyHeld() && ['connections', 'repositories'].includes(navigation.location.route), value => { navigation.dirty(value); publish(); }),
         history: { read: kind => { if (historyVisible()) void history.reader.read(kind); },
             preview: (kind, action) => { void history.reviews.preview('collection', kind, action); }, clear: kind => { void history.reviews.preview('clear', kind); },
@@ -92,8 +96,8 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
         dismiss: () => { void client.dismiss(); }, reload: () => { retireObservations(); readPauses(); void client.refresh().then(readObservations); },
         takeControl: () => { operation.clear(); void client.takeControl(); }, dirty: value => { navigation.dirty(value); publish(); },
         stay: () => navigation.stay(), leave: () => {
-            if (client.view.phase !== 'committing' && !history.view.busy && !history.view.exportBusy && !pauses.view.busy) void history.reviews.dismiss().then(async accepted => {
-                if (!accepted || !await pauses.reviews.dismiss()) return; history.exports.invalidate(); await client.dismiss(); if (!stopped) navigation.leave();
+            if (client.view.phase !== 'committing' && !history.view.busy && !history.view.exportBusy && !pauses.view.busy && !transient.client.view.busy) void history.reviews.dismiss().then(async accepted => {
+                if (!accepted || !await pauses.reviews.dismiss() || !await transient.client.reviews.dismiss()) return; history.exports.invalidate(); await client.dismiss(); if (!stopped) navigation.leave();
             });
         },
         focusContent: () => { document.querySelector<HTMLElement>('main')?.focus(); },
@@ -112,8 +116,8 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     };
     let operationRole: typeof client.view.role;
     const unsubscribe = client.subscribe(view => {
-        if (view.role !== operationRole) { operationRole = view.role; pauses.contextChanged(); readPauses(); if (view.role === 'editor' || view.role === 'observer') { void operation.read(); void helpers.read(); } }
-        if (view.role === null || view.issue === 'incompatible') { operation.clear(); helpers.invalidate(); pauses.contextChanged(); }
+        if (view.role !== operationRole) { operationRole = view.role; pauses.contextChanged(); readPauses(); transient.contextChanged(); if (view.role === 'editor' || view.role === 'observer') { void operation.read(); void helpers.read(); } }
+        if (view.role === null || view.issue === 'incompatible') { operation.clear(); helpers.invalidate(); pauses.contextChanged(); transient.contextChanged(); }
         if (view.role === 'observer' || view.issue === 'incompatible') history.reviews.retire();
         if (view.issue === 'incompatible') history.reader.invalidate();
         protect();
@@ -141,12 +145,13 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
         if (view.review && view.review !== priorPauseReview && !['committing', 'cancelling'].includes(view.review.phase)) focus('#pause-review-heading');
         priorPauseReview = view.review;
     });
-    const surface: CenterSurface = { initial: frame(), actions, load: loadCenterPage, loadInventory: loadInventoryPage, loadPrivacy: loadPrivacyPage, loadSupport: loadSupportPage, loadHistory: loadHistoryPage, loadPauses: loadPausesPage,
+    transient.start();
+    const surface: CenterSurface = { initial: frame(), actions, load: loadCenterPage, loadInventory: loadInventoryPage, loadPrivacy: loadPrivacyPage, loadSupport: loadSupportPage, loadHistory: loadHistoryPage, loadPauses: loadPausesPage, loadSessionPreferences: loadSessionPreferencesPage,
         subscribe: listener => { listeners.add(listener); listener(frame()); return () => { listeners.delete(listener); }; } };
     const host = mount(CenterHost, { target: document.body, props: { surface } }); flushSync();
     function readConnections(): void {
         const route = navigation.location.route;
-        if (route === 'repositories' && navigation.location.detail === 'pauses') return;
+        if (route === 'repositories' && ['pauses', 'session'].includes(navigation.location.detail ?? '')) return;
         if (route === 'features' && currentCenterSettings(client.view) === null) return;
         if (['connections', 'repositories', 'profiles', 'features'].includes(route)) void client.connections();
     }
@@ -160,13 +165,14 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
             && client.observeDestination(navigation.location)) deliveredLocation = navigation.location;
     }
     function readHistory(): void { if (historyVisible()) { void history.reader.read('diagnostics'); if (navigation.location.route !== 'diagnostics') void history.reader.read('recents'); } }
-    function readObservations(): void { readConnections(); readPermissions(); readHistory(); readPauses(); void operation.read(); void helpers.read(); }
-    function retireObservations(): void { helpers.invalidate(); operation.invalidate(); client.invalidateConnections(); inspector.invalidate(); history.reader.invalidate(); pauses.reader.invalidate(); }
+    function readObservations(): void { readConnections(); readPermissions(); readHistory(); readPauses(); transient.read(); void operation.read(); void helpers.read(); }
+    function retireObservations(): void { helpers.invalidate(); operation.invalidate(); client.invalidateConnections(); inspector.invalidate(); history.reader.invalidate(); pauses.reader.invalidate(); transient.client.reader.invalidate(); }
     const hash = () => navigation.navigate(window.location.hash);
     const visible = () => {
         if (stopped) return;
         retireObservations();
         readPauses();
+        transient.read();
         if (focused && document.visibilityState !== 'hidden') { connectionReadPending = true; void client.refresh().then(() => { readHistory(); void operation.read(); void helpers.read(); }); readPermissions(); }
     };
     const blurred = () => { focused = false; retireObservations(); };
@@ -186,7 +192,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     const beforeUnload = (event: BeforeUnloadEvent) => { if (navigation.guarded) { event.preventDefault(); event.returnValue = ''; } };
     const stop = () => {
         if (stopped) return;
-        stopped = true; inspector.stop(); unobservePermissions(); unsubscribe(); unhistory(); unpauses(); history.stop(); pauses.stop(); operation.stop(); helpers.stop(); client.stop(); listeners.clear(); void unmount(host);
+        stopped = true; inspector.stop(); unobservePermissions(); unsubscribe(); unhistory(); unpauses(); history.stop(); pauses.stop(); transient.stop(); operation.stop(); helpers.stop(); client.stop(); listeners.clear(); void unmount(host);
         window.removeEventListener('hashchange', hash); document.removeEventListener('visibilitychange', visible);
         window.removeEventListener('beforeunload', beforeUnload); window.removeEventListener('pagehide', stop);
         window.removeEventListener('blur', blurred); window.removeEventListener('focus', foreground);
@@ -196,5 +202,5 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     window.addEventListener('beforeunload', beforeUnload); window.addEventListener('pagehide', stop);
     window.addEventListener('blur', blurred); window.addEventListener('focus', foreground);
     api.storage.onChanged.addListener(changed); api.runtime.onMessage.addListener(invalidated);
-    readPermissions(); void client.start().then(() => { readConnections(); readHistory(); void client.startVisitCapture().then(observeDestination); }); return stop;
+    readPermissions(); void client.start().then(() => { readConnections(); readHistory(); transient.read(); void client.startVisitCapture().then(observeDestination); }); return stop;
 }

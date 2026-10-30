@@ -1,4 +1,5 @@
 import type { PauseRouteProps } from '../domain/pause_ui.ts';
+import type { SessionPreferenceRouteProps } from '../domain/session_preference_ui.ts';
 import type { Component } from 'svelte';
 import type { CenterFrame } from '../domain/center_frame.ts';
 import type { CenterRoute } from '../domain/center_routes.ts';
@@ -14,5 +15,6 @@ export interface CenterSurface {
     loadPrivacy(): Promise<Component<PrivacyRouteProps>>;
     loadSupport(): Promise<Component<SupportRouteProps>>;
     loadPauses(): Promise<Component<PauseRouteProps>>;
+    loadSessionPreferences(): Promise<Component<SessionPreferenceRouteProps>>;
     loadHistory(): Promise<Component<HistoryRouteProps>>;
 }

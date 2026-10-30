@@ -8,6 +8,7 @@ import { validSession } from '../domain/session.ts';
 import { deepFreeze } from '../domain/value.ts';
 import { protectedMutation, type ProtectedMutationTrace } from './protected_mutation.ts';
 import { finishSession, sessionStep, type ObserveSessionOperation, type SessionOperationTrace } from './session_observation_ports.ts';
+import type { SessionPreferenceBinding } from '../domain/session_preference_binding.ts';
 
 export const NAMED_SESSIONS_KEY = 'copilot.named-sessions.v1';
 export interface NamedSessionPorts {
@@ -20,12 +21,20 @@ const empty = (): SessionVault => ({ schemaVersion: 1, revision: 0, selected: nu
 export class NamedSessions {
     private busy = false;
     private generation = 0;
+    private preferenceWitness: object = {};
     private persistence: Promise<unknown> = Promise.resolve();
     constructor(private readonly store: StoragePort, private readonly active: ProtectedSessionService, private readonly ports: NamedSessionPorts) {}
     private persist<T>(operation: () => Promise<T>): Promise<T> {
         const next = this.persistence.then(operation); this.persistence = next.catch(() => undefined); return next;
     }
     private notify(): void { try { this.ports.changed(); } catch { /* Notifications cannot replace protected storage facts. */ } }
+    /** Private application lease; never serialize it or treat it as native mutation authority. */
+    capturePreferenceSource(): () => boolean {
+        const witness = this.preferenceWitness; const epoch = this.active.status().epoch;
+        return () => !this.busy && witness === this.preferenceWitness && epoch === this.active.status().epoch;
+    }
+    /** Native vault events retire preference sources without interrupting this owner's own connection transaction. */
+    invalidatePreferenceSource(): void { this.preferenceWitness = {}; }
     private async load(): Promise<SessionVault> {
         if (!await this.ports.protected()) throw new Error('protected-storage-unavailable');
         const value = await this.store.get(NAMED_SESSIONS_KEY);
@@ -55,6 +64,29 @@ export class NamedSessions {
             return generation === this.generation && current() ? this.view(vault) : { state: 'stale' };
         } catch { return { state: 'unavailable' }; }
     }
+    /** Stable vault ownership plus current worker verification; inspection cannot connect a session. */
+    async preferenceBinding(current: () => boolean): Promise<SessionPreferenceBinding> {
+        try {
+            const source = this.capturePreferenceSource(); const epoch = this.active.status().epoch;
+            const live = () => source() && current();
+            if (!live()) return { state: 'stale' };
+            const vault = await this.load(); if (!live()) return { state: 'stale' };
+            const selected = vault.entries.find(entry => entry.id === vault.selected);
+            if (!selected) return { state: 'disconnected' };
+            if (selected.id === 'previous-session') return { state: 'legacy' };
+            const verified = this.active.matches(selected.connection);
+            const retained = verified || this.active.status().state !== 'connected' && await this.active.matchesRetained(selected.connection);
+            if (!live()) return { state: 'stale' };
+            if (!retained) return { state: 'unavailable' };
+            const after = await this.load(); if (!live() || !sameSessionVault(after, vault)) return { state: 'stale' };
+            const observed = this.active.verifiedIdentity(); const active = observed !== null && this.active.matches(selected.connection);
+            if (verified && !active) return { state: 'stale' };
+            const identity = active ? observed : selected.connection;
+            return deepFreeze({ state: 'ready', context: { scope: { host: 'github.com', entryId: selected.id,
+                selectionRevision: vault.revision, accountId: selected.connection.viewerId, repositoryId: selected.connection.repositoryId },
+                credentialEpoch: epoch, verified: active }, name: selected.name, account: identity.viewerLogin, repository: identity.repository, organizationId: identity.organizationId ?? null });
+        } catch { return { state: 'unavailable' }; }
+    }
     async change(input: ConnectionIntent, revision: number, current: () => boolean, observe?: ObserveSessionOperation): Promise<ConnectionOutcome> {
         let trace: SessionOperationTrace | null = null;
         const capture: ObserveSessionOperation = (action, target, live) => {
@@ -72,7 +104,7 @@ export class NamedSessions {
             try { await this.revokeAll(capture, current); return this.read(current); } catch { return { state: 'unavailable' }; }
         }
         if (this.busy) return { state: 'conflict' };
-        this.busy = true; const generation = this.generation;
+        this.busy = true; this.invalidatePreferenceSource(); const generation = this.generation;
         const live = () => generation === this.generation && current();
         const intent = { ...input }; let admitted = false; let trace: SessionOperationTrace | null = null; let changedActive = false;
         const cleanup = async () => { if (changedActive) await this.active.revoke(trace, 'cleanup-active'); };
@@ -132,6 +164,7 @@ export class NamedSessions {
     }
     /** Permission removal is independent of preference-schema or center editing availability. */
     async revokeAll(observe?: ObserveSessionOperation, current: () => boolean = () => true): Promise<void> {
+        this.invalidatePreferenceSource();
         const generation = ++this.generation; const live = () => generation === this.generation && current();
         let trace: SessionOperationTrace | null = null;
         try { trace = observe?.('revoke-all', { location: { route: 'connections' }, label: null }, live) ?? null; } catch { /* Removal remains independent of recording. */ }

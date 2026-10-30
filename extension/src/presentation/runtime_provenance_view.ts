@@ -5,6 +5,7 @@ import { featureText } from '../domain/feature_text.ts';
 import { deepFreeze } from '../domain/value.ts';
 import { runtimeProvenanceCopy } from './runtime_provenance_copy.ts';
 import { runtimeCopy, statusText } from './runtime_copy.ts';
+import { sessionPreferenceProvenanceCopy } from './session_preference_provenance_copy.ts';
 
 /** Renderable generic labels only; no private source identities survive the closed configuration. */
 export function runtimeProvenanceView(configuration: RuntimeConfiguration | null, locale: string, online: boolean | null = null): RuntimeExplanation {
@@ -22,6 +23,10 @@ export function runtimeProvenanceView(configuration: RuntimeConfiguration | null
         { label: copy.connection, value: connection.state === 'connected' ? stateCopy.connected : connection.state === 'disconnected' ? stateCopy.standalone : statusText(connection.state, stateCopy, connection.retryAt, undefined, locale) }];
     if (r.claimedRepository) rows.push({ label: copy.claimed, value: copy.yes });
     if (r.retainedScope) rows.push({ label: copy.retained, value: copy.yes });
+    const temporary = sessionPreferenceProvenanceCopy(locale); const session = r.session;
+    rows.push({ label: temporary.worker, value: copy.workers[session.worker] },
+        { label: temporary.document, value: session.native === 'ready' ? copy.yes : copy.natives[session.native] },
+        { label: temporary.scope, value: session.scope === null ? copy.unknown : temporary.scopes[session.scope] });
     return deepFreeze({ ...common, summary: configuration.settings.paused ? copy.restricted : copy.available, rows,
         scopes: (['account', 'organization', 'repository', 'session'] as const).map(key => ({ label: copy[key], value: p.scope[key] ? copy.scopeKnown : copy.scopeUnknown })),
         pauses: p.pauses.length ? p.pauses.map(source => copy.sources[source]) : [copy.noSaved],

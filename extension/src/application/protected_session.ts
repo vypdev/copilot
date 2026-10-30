@@ -33,6 +33,13 @@ export class ProtectedSessionService {
         return { ...identity };
     }
     status(): SessionStatus { return { state: this.state, epoch: this.epoch, ...(this.retryAt === undefined ? {} : { retryAt: this.retryAt }) }; }
+    /** Restriction-only native equality; never restores, revokes or returns credential material. */
+    async matchesRetained(expected: ProtectedSession): Promise<boolean> {
+        const epoch = this.epoch;
+        if (!await this.ports.protected() || !await this.ports.permitted()) return false;
+        const value = await this.store.get(SESSION_KEY);
+        return epoch === this.epoch && sameProtectedSession(value, expected);
+    }
     /** Retained identity is restriction-only until start() has verified it again. */
     async retainedIdentity(): Promise<SessionIdentity | null> {
         if (!await this.ports.protected() || !await this.ports.permitted()) { await this.revoke(); return null; }

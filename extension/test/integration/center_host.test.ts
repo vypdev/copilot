@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { pauseActionsFixture } from '../fixtures/pause_ui.ts';
+import { sessionPreferenceActionsFixture } from '../fixtures/session_preference_ui.ts';
 import { afterEach, expect, it, vi } from 'vitest';
 import { mount, unmount, flushSync, tick, type Component } from 'svelte';
 import CenterHost from '../../src/presentation/CenterHost.svelte';
@@ -14,7 +15,7 @@ import { centerClientFixture } from '../fixtures/center_client.ts';
 import { deferred } from '../fixtures/runtime.ts';
 import { DEFAULT_SETTINGS } from '../../src/domain/settings.ts';
 import { SETTINGS_KEY } from '../../src/application/settings_repository.ts';
-import { loadInventoryPage, loadPrivacyPage, loadSupportPage, loadHistoryPage, loadPausesPage } from '../../src/infrastructure/center_pages.ts';
+import { loadInventoryPage, loadPrivacyPage, loadSupportPage, loadHistoryPage, loadPausesPage, loadSessionPreferencesPage } from '../../src/infrastructure/center_pages.ts';
 import { historyActionsFixture } from '../fixtures/history_ui.ts';
 import { historyWireExamples } from '../fixtures/history_wire.ts';
 import { EMPTY_HISTORY_VIEW } from '../../src/domain/history_client_view.ts';
@@ -26,9 +27,9 @@ async function ready(predicate: () => boolean): Promise<void> { await vi.waitFor
 async function client() { const h = centerClientFixture(); clients.push(h); await h.client.start(); return h; }
 function render(view: CenterClientView, load: CenterSurface['load'] = async () => InformationPage, loadInventory: CenterSurface['loadInventory'] = loadInventoryPage, loadPrivacy: CenterSurface['loadPrivacy'] = loadPrivacyPage, loadSupport: CenterSurface['loadSupport'] = loadSupportPage, loadHistory: CenterSurface['loadHistory'] = loadHistoryPage) {
     const listeners = new Set<(frame: CenterFrame) => void>(); let frame = centerFrame(view, { route: 'work' }, null, 'en');
-    const actions: CenterActions = { pauses: pauseActionsFixture(), history: historyActionsFixture(), connections: { connect: vi.fn(), change: vi.fn(), refresh: vi.fn(), dirty: vi.fn() }, preview: vi.fn(), dirty: vi.fn(), takeControl: vi.fn(), stay: vi.fn(), leave: vi.fn(), confirm: vi.fn(), cancel: vi.fn(), dismiss: vi.fn(),
+    const actions: CenterActions = { sessionPreferences: sessionPreferenceActionsFixture(), pauses: pauseActionsFixture(), history: historyActionsFixture(), connections: { connect: vi.fn(), change: vi.fn(), refresh: vi.fn(), dirty: vi.fn() }, preview: vi.fn(), dirty: vi.fn(), takeControl: vi.fn(), stay: vi.fn(), leave: vi.fn(), confirm: vi.fn(), cancel: vi.fn(), dismiss: vi.fn(),
         reload: vi.fn(), focusContent: vi.fn(), browseInventory: vi.fn(), inspectPermissions: vi.fn(), inspectConnection: vi.fn(), inspectOperation: vi.fn(), inspectHelpers: vi.fn(), exportSettings: vi.fn(async () => false), importSettings: vi.fn(async () => false) };
-    const unsubscribe = vi.fn(); const surface: CenterSurface = { initial: frame, actions, loadPauses: loadPausesPage, load, loadInventory, loadPrivacy, loadSupport, loadHistory,
+    const unsubscribe = vi.fn(); const surface: CenterSurface = { initial: frame, actions, loadSessionPreferences: loadSessionPreferencesPage, loadPauses: loadPausesPage, load, loadInventory, loadPrivacy, loadSupport, loadHistory,
         subscribe: listener => { listeners.add(listener); listener(frame); return () => { listeners.delete(listener); unsubscribe(); }; } };
     const host = mount(CenterHost, { target: document.body, props: { surface } }); mounts.push(host); flushSync();
     return { host, actions, unsubscribe, publish: (next: CenterFrame) => { frame = next; listeners.forEach(listener => listener(next)); flushSync(); } };

@@ -12,19 +12,23 @@ import { HelperSamples } from '../application/helper_samples.ts';
 import { ProtectedSessionService } from '../application/protected_session.ts';
 import { MessageGateway } from '../application/message_gateway.ts';
 import { createCenter, centerIdentifier } from './center_runtime.ts';
-import { NamedSessions } from '../application/named_sessions.ts';
+import { NAMED_SESSIONS_KEY, NamedSessions } from '../application/named_sessions.ts';
 import { centerCommandRoute } from '../domain/shortcuts.ts';
 import { centerLocationHash } from '../domain/center_routes.ts';
 import { TEMPORARY_PAUSES_KEY, TemporaryPauseReader } from '../application/temporary_pause_reader.ts';
 import { TemporaryPauseGuard } from '../application/temporary_pause_guard.ts';
 import { TemporaryPauseStore } from '../application/temporary_pause_store.ts';
 import { ClosedPauseCleanup } from '../application/closed_pause_cleanup.ts';
+import { SessionPreferencesStore } from '../application/session_preferences_store.ts';
+import { SESSION_PREFERENCES_KEY, SessionPreferencesReader } from '../application/session_preferences_reader.ts';
+import { SessionPreferenceAdmission } from '../application/session_preference_admission.ts';
 
 export function startBackground(api: BrowserApi): () => void {
     const local = new BrowserStorage(api.storage.local);
     const session = new BrowserStorage(api.storage.session);
     const pauseGuard = new TemporaryPauseGuard();
     const pauseStore = new TemporaryPauseStore(session, pauseGuard, { protectedArea: () => session.protect(), changed: () => { gateway.invalidate(); } });
+    const sessionPreferences = new SessionPreferencesStore(session, { protectedArea: () => session.protect(), changed: () => { gateway.invalidate(); } });
     const closedPauses = new ClosedPauseCleanup(pauseStore);
     const pauses = new TemporaryPauseReader(session, () => session.protect(), () => pauseGuard.condition);
     const scheduler = new ReadScheduler(session, new GitHubGetReader(), () => Date.now(), () => Math.random() * 1000);
@@ -50,7 +54,7 @@ export function startBackground(api: BrowserApi): () => void {
         admit: (fact, current) => history.writer.admit('diagnostics', fact, current), retention: ticket => history.writer.retention(ticket) });
     const settings = history.settings;
     const connections = new NamedSessions(session, sessions, { protected: () => session.protect(), identifier: () => `s-${centerIdentifier()}`,
-        changed: notify, connected: async (id, current, trace) => {
+        changed: () => { gateway.invalidatePreferenceSources(); notify(); }, connected: async (id, current, trace) => {
             await settings.updateObserved(value => ({ ...value, repositories: { ...value.repositories, [id]: { ...value.repositories[id], connected: true } } }), current, trace);
         } });
     const gateway = new MessageGateway(api.runtime.id, api.runtime.getURL(''), settings, sessions,
@@ -61,7 +65,8 @@ export function startBackground(api: BrowserApi): () => void {
             return opened;
         },
             cancellation: () => new BrowserCancellation(),
-            online: () => globalThis.navigator?.onLine !== false, notify }, createCenter(api, settings, sessions, notify, connections, { owner: history, policies }, helpers, pauseStore), connections, helpers, pauses);
+            online: () => globalThis.navigator?.onLine !== false, notify }, createCenter(api, settings, sessions, notify, connections, { owner: history, policies }, helpers, pauseStore, sessionPreferences), connections, helpers, pauses,
+        new SessionPreferenceAdmission(new SessionPreferencesReader(session, () => session.protect(), () => sessionPreferences.guard.condition), connections));
     const message: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender, respond) => {
         void gateway.handle(value, sender).then(result => respond({ ...(record(result) ? result : { state: 'unavailable' }), sourceTree: buildSourceIdentity() })); return true;
     };
@@ -81,6 +86,8 @@ export function startBackground(api: BrowserApi): () => void {
         }
     };
     const storage = (changes: Record<string, unknown>, area: string) => {
+        if (area === 'session' && Object.hasOwn(changes, NAMED_SESSIONS_KEY)) { connections.invalidatePreferenceSource(); gateway.invalidatePreferenceSources(); gateway.invalidate(); }
+        if (area === 'session' && Object.hasOwn(changes, SESSION_PREFERENCES_KEY)) gateway.invalidate();
         if (area === 'session' && Object.hasOwn(changes, TEMPORARY_PAUSES_KEY)) gateway.invalidate();
         if (area === 'local' && Object.hasOwn(changes, SETTINGS_KEY)) {
             history.invalidate(); gateway.invalidate(); void history.refresh();
