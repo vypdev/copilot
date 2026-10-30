@@ -1679,9 +1679,9 @@
       "id": "issue-start-and-sdd-readiness",
       "title": "Uniform issue start and pre-branch SDD readiness",
       "status": "implemented",
-      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve nested catalog specification links and safely publish generated catalogs without following destination links; bootstrap truthful proposed SDK capabilities before implementation without changing readiness",
+      "scope": "Start every admitted issue with one explicit signal and publish a validated SDD before eligible Action-managed branch work; inspect verified SDD status and bounded structural publication comparisons and preserve complete navigable catalog links for accepted repository filenames and safely publish generated catalogs without following destination links; bootstrap truthful proposed SDK capabilities before implementation without changing readiness",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-29",
+      "lastVerified": "2026-10-30",
       "specs": [
         "specs/issue-start-and-branch-readiness.md",
         "specs/pre-branch-sdd-gate.md",
@@ -1820,7 +1820,8 @@
         "src/testing/fixtures/sdd-native-catalog/provenance.json",
         "src/tooling/__tests__/specification_catalog_publication.test.ts",
         "src/tooling/__tests__/proposed_sdd_catalog.test.ts",
-        "src/tooling/__tests__/proposed_sdd_catalog_entrypoint.test.ts"
+        "src/tooling/__tests__/proposed_sdd_catalog_entrypoint.test.ts",
+        "src/tooling/__tests__/specification_catalog_markdown_links.test.ts"
       ],
       "documentation": [
         "docs/issues/branch-management.mdx",

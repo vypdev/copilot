@@ -58,6 +58,14 @@ Root-level SDD links and `../` links to other repository evidence keep their
 existing format. Regenerate the catalog after upgrading to repair older flattened
 links; the source files and registered paths do not need to move.
 
+Accepted filenames containing parentheses, spaces, Unicode, hashes, percent signs
+or backticks also keep navigable links. For example, `specs/group/foo).md` becomes
+`./group/foo%29.md`, and `docs/literal%20.md` becomes `../docs/literal%2520.md`.
+The catalog preserves literal path labels and encodes each destination segment;
+do not pre-encode paths in `catalog.json`. Regenerate the catalog with the normal
+commands below after updating the shared SDK validator. The same renderer serves
+primary SDDs, companion SDDs and every evidence role.
+
 ## Initial catalog generation
 
 For a new product, register existing Draft specifications and user documentation

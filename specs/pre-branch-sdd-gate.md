@@ -3,7 +3,7 @@
 - Status: Implemented — automated verification complete; live provider UX review pending
 - Date: 2026-09-17
 - Catalog capability ID: `issue-start-and-sdd-readiness`
-- Last verified: 2026-10-29 (truthful proposed SDK bootstrap, #777; safe portable catalog publication, #771; nested catalog links, #768; actionable blocked preparation and safe diagnostics, #714)
+- Last verified: 2026-10-30 (navigable accepted catalog filenames, #782; truthful proposed SDK bootstrap, #777; safe portable catalog publication, #771; nested catalog links, #768; actionable blocked preparation and safe diagnostics, #714)
 - Owners: Copilot maintainers
 - Scope: clarify, update, validate, and publish the owning SDD before eligible branch-based work
 - Related issues/PRs: none; local design work; companion SDD `issue-start-and-branch-readiness.md`
@@ -2078,3 +2078,75 @@ the shared path policy and compatibility reader each reach 100% all metrics.
 The gate retains 98.14% statements/98.68% lines/97.56% functions/95.42% branches;
 the CJS validator retains its focused 100% lines/functions and 97.70% statements/
 94.73% branches. Fresh remote gates remain required before merge.
+
+## Navigable accepted catalog paths — #782 (2026-10-30)
+
+The shared renderer accepts a repository file such as `specs/foo).md` but emits
+an unescaped Markdown destination that ends before that filename does. The same
+defect affects the primary table link, companion SDDs and every evidence role.
+The complete product/SDD scope and the existing path policy remain authoritative;
+rejecting valid names or dropping entries is not a repair.
+
+catalog-link-R01: percent-encode each validated repository-path segment for its
+Markdown destination, including parentheses, spaces, Unicode, literal percent
+signs and fragment-like characters. Preserve slash separators, the full nested
+specification path after `specs/`, and the existing `./` versus `../` catalog
+base. Use the same UTF-8 representation as Node filesystem paths, including
+replacement of unpaired UTF-16 surrogates. Encode literal percent signs exactly
+once so URI-looking names still
+identify their real files. Primary and evidence links share this mapping.
+
+catalog-link-R02: display path labels literally, including accepted backticks,
+using unambiguous CommonMark code-span delimiters. Preserve ordinary labels,
+ordering, companion counts, metadata, ownership and readiness. No new state,
+notification, configuration, path allowance, consumer command or permission is
+introduced. This is pure rendering; containment, traversal, symlink and regular
+file checks remain mandatory and unchanged.
+
+| Registered example | Catalog destination |
+|---|---|
+| `specs/nested/foo).md` | `./nested/foo%29.md` |
+| `specs/(owner).md` | `./%28owner%29.md` |
+| `docs/guide #1.md` | `../docs/guide%20%231.md` |
+| `docs/literal%20.md` | `../docs/literal%2520.md` |
+
+Text equivalent: render a URI for the complete original file path, with every
+path separator retained and delimiter characters encoded within each segment.
+Parsing the resulting Markdown and decoding its destination once must resolve
+to that same contained regular file. Displayed path text remains the original
+value. Regenerate an existing catalog with the normal SDK commands to repair
+its links; no source-file move or metadata migration is required.
+
+Reserve **17 distinct additional cases before implementation**: twelve
+temporary-repository navigation variants covering unmatched/balanced parentheses,
+nested paths, spaces, Unicode, hashes, literal percent sequences, brackets,
+backtick runs, apostrophes and exclamation marks; two code-span boundary cases;
+one accepted evidence-name case with an unpaired UTF-16 surrogate, and two public
+generation/validation entrypoints, including a matching standalone
+three-file SDK with no consumer package. Use the real pinned CommonMark reference
+parser as a development-only dependency. Inspect its AST links and literal code
+labels, then resolve destinations against actual files; regex extraction or raw
+string equality alone cannot establish navigation. Preserve all existing unsafe
+path, alias, publication, proposed-entry and branch-sync regressions.
+
+The renderer's new executable lines require 100% exact-base diff coverage; the
+existing validator 95/90 and all project/module budgets remain unchanged.
+Update this owner, catalog evidence, developer/support documentation and generated
+artifacts together. Run specification generation/validation, focused parser and
+entrypoint tests, full coverage/acceptance, package/build/web/type/lint and native
+platform gates, then complete exact-head review without active findings before
+the authorized develop merge. This validates catalog navigation, not consumer
+application execution or readiness.
+
+The syntax reference is [CommonMark links](https://spec.commonmark.org/0.31.2/#links)
+and the AST oracle is the [CommonMark JavaScript reference implementation](https://github.com/commonmark/commonmark.js).
+
+Local verification for #782: the unchanged renderer first failed 12 of the 17
+new navigation cases; the repaired renderer passes all 17 and all 154 focused
+compatibility cases. Full serial coverage passes 799 suites and 14,948 tests
+with 35 pre-existing skips, all existing budgets, and 98.10% lines/97.33%
+statements/97.97% functions/95.10% branches. The shared validator reaches 100%
+lines/functions, 97.81% statements and 94.96% branches. Extension verification
+passes 267 tests with 100% all metrics. The setup ledger remains 336/350 passed
+with its 14 explicitly open existing cases. Exact-head remote platform checks,
+diff coverage and a complete review without active findings remain merge gates.
