@@ -393,3 +393,19 @@ it('retains multiple compact legacy literal witnesses with one trusted verificat
   expect(input.prompt).toContain('"line":2,"text":"b1"');
   expect(input.prompt).toContain('"line":2,"text":"b2"');
 });
+
+describe('configuration-selected initial session evidence', () => {
+  it.each([undefined, true, false])('traces bootstrap and stored credentials with resolution ownership=%s', ownsResolution => {
+    const prompt = buildBugbotPrompt(mockExecution(), mockContext({ previousFindingsBlock: 'retained-session-finding' }),
+      ownsResolution === undefined ? undefined : { partition: { id: 'session-source', ordinal: 1, total: 2,
+        headSha: 'a'.repeat(40), block: '+assert.equal(token.split(".").length, 3);', files: ['e2e/session.spec.ts'],
+        fragmentCount: 1, ownsResolution } });
+    for (const clause of ['configured globalSetup/bootstrap', 'storageState/localStorage', 'evaluated expiry/login/refresh guard',
+      'last write -> asserted credential', 'never stop at bootstrap',
+      'unused token-response stub is not initial-token evidence', 'Preserve real initial-state, refresh and header defects']) expect(prompt).toContain(clause);
+    if (ownsResolution === false) {
+      expect(prompt).not.toContain('retained-session-finding');
+      expect(prompt).toContain('must return an empty resolved_findings array');
+    } else expect(prompt).toContain('retained-session-finding');
+  });
+});

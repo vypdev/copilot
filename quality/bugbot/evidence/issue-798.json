@@ -1,0 +1,872 @@
+{
+  "schemaVersion": 1,
+  "issue": "https://github.com/vypdev/copilot/issues/798",
+  "date": "2026-10-30",
+  "sourceBase": "071044e96e25d5b7866b2ff6ccbd11a53d12645f",
+  "runtime": {
+    "cli": "codex-cli 0.164.0-alpha.11.1",
+    "node": "v24.20.0",
+    "provider": "codex",
+    "modelProvider": "openai",
+    "model": "gpt-6-luna",
+    "effort": "medium"
+  },
+  "consumerEvidence": {
+    "repository": "vypdev/geckocv",
+    "pullRequest": 42,
+    "reviewedSource": "ceb20097b6e83c7c216b224594f272313640d633",
+    "finding": 4419364220,
+    "review": 5706771341,
+    "observedProducerRuntime": "f5e5a4cf9a80248994469cd88ad55eecab5b95ca / 3.10.6",
+    "sourceReceipts": [
+      {
+        "key": "798-config",
+        "ref": "ceb20097b6e83c7c216b224594f272313640d633",
+        "blob": "941e3e397b7149d0ce600f13d1f99d228063b2a6",
+        "bytes": 1134,
+        "sha256": "534eb9afee49b95a507875cdea0e3b15879983ee98555112a794e54011b5bce9"
+      },
+      {
+        "key": "798-setup",
+        "ref": "ceb20097b6e83c7c216b224594f272313640d633",
+        "blob": "6067781fdb78da9e2e0fd65d15e7315971da5d3e",
+        "bytes": 3056,
+        "sha256": "fde3cc1c0fafb542114cfafdec58c99790d19c5ef6e1ba735e7f916dc07da6c6"
+      },
+      {
+        "key": "798-routes",
+        "ref": "ceb20097b6e83c7c216b224594f272313640d633",
+        "blob": "45b13d1bc02a48c4bd90790f5a4283de71c4374b",
+        "bytes": 10257,
+        "sha256": "fb814638e35b78d714e2a7968f0abec0b0c37ae44265ca8a5953f566d3cd85d8"
+      },
+      {
+        "key": "798-test",
+        "ref": "ceb20097b6e83c7c216b224594f272313640d633",
+        "blob": "edd6f27428b56ccb65d4c16ee8754b22c1ae03ad",
+        "bytes": 5084,
+        "sha256": "501ddba0ed2ccb30a6ff352f6d318fffbf6eda998c8198334778abe0b50c3318"
+      }
+    ],
+    "causalFacts": {
+      "config": {
+        "globalSetupLine": 14,
+        "storageStateLine": 19
+      },
+      "setup": {
+        "signJWTLine": 33,
+        "accessTokenLine": 49,
+        "futureExpiryLine": 51,
+        "localStorageLine": 74,
+        "writeStorageStateLine": 88
+      },
+      "tokenStub": {
+        "responseLine": 50,
+        "returnLine": 225
+      },
+      "assertionLines": [
+        39,
+        43,
+        44,
+        47
+      ]
+    },
+    "ci": {
+      "run": 40980801225,
+      "job": 123820079135,
+      "head": "ceb20097b6e83c7c216b224594f272313640d633",
+      "conclusion": "success",
+      "unitPassed": 296,
+      "e2ePassed": 86,
+      "e2eDuration": "1.8m",
+      "limitation": "The dot reporter does not name the individual administrative suite. This is existing complete same-head CI, not a fresh focused run here."
+    },
+    "reportedFocusedControl": {
+      "source": "Issue author report; not executed independently here.",
+      "passed": 5,
+      "durationSeconds": 14.041,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0,
+      "runnerErrors": 0
+    },
+    "method": "Read-only exact-source configuration/setup/storage/header tracing and existing CI log. No private source, raw logs, credentials, signatures or consumer code execution committed.",
+    "consumerExecutionPerformed": false,
+    "consumerMutationPerformed": false
+  },
+  "corpus": {
+    "schemaVersion": 1,
+    "cases": [
+      {
+        "id": "session-source-signed-bootstrap",
+        "language": "typescript",
+        "category": "negative",
+        "description": "Owned synthetic harness dispatches configuration-selected setup, persists the storageState JSON shape and reads its localStorage session. Real Node HMAC/base64url creates compact tokens. The token endpoint supplies only the explicitly selected initial or expiry path. The assertion checks the selected header under a fixed test clock; no browser, private consumer or external auth provider is executed.",
+        "file": "e2e/owned-session.spec.ts",
+        "startLine": 1,
+        "diff": " const assert = require(\"node:assert/strict\");\n const { createHmac } = require(\"node:crypto\");\n const persistedFiles = new Map();\n const statePath = \".auth/owned-user.json\";\n let tokenEndpointCalls = 0;\n const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function mockedTokenEndpoint() { tokenEndpointCalls++; return fakeAuthResponse; }\n function persistSession(session) {\n   const state = { cookies: [], origins: [{ origin: \"http://owned.invalid\", localStorage: [{ name: \"owned-session\", value: JSON.stringify(session) }] }] };\n   persistedFiles.set(statePath, JSON.stringify(state));\n }\n function signedSetup() {\n   const header = Buffer.from(JSON.stringify({alg:\"HS256\",typ:\"JWT\"})).toString(\"base64url\");\n   const payload = Buffer.from(JSON.stringify({sub:\"owned-synthetic-user\"})).toString(\"base64url\");\n   const unsigned = header + \".\" + payload;\n   const signature = createHmac(\"sha256\", \"owned-synthetic-fixture-key\").update(unsigned).digest(\"base64url\");\n   persistSession({ access_token: unsigned + \".\" + signature, expires_at: 10000 });\n }\n function opaqueSetup() { persistSession({ ...mockedTokenEndpoint(), expires_at: 10000 }); }\n function aliasSetup() { return signedSetup(); }\n const setupModules = { \"signed.setup.ts\": signedSetup, \"alias.setup.ts\": aliasSetup, \"opaque.setup.ts\": opaqueSetup };\n const projectConfig = { globalSetup: \"signed.setup.ts\", storageState: statePath };\n setupModules[projectConfig.globalSetup]();\n const browserState = JSON.parse(persistedFiles.get(projectConfig.storageState));\n const storedSession = JSON.parse(browserState.origins[0].localStorage.find(item => item.name === \"owned-session\").value);\n const testClock = 1000;\n let accessToken = storedSession.access_token;\n if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;\n const authorization = \"Bearer \" + accessToken;\n+assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+        "expected": []
+      },
+      {
+        "id": "session-source-storage-alias",
+        "language": "typescript",
+        "category": "negative",
+        "description": "Owned synthetic harness dispatches configuration-selected setup, persists the storageState JSON shape and reads its localStorage session. Real Node HMAC/base64url creates compact tokens. The token endpoint supplies only the explicitly selected initial or expiry path. The assertion checks the selected header under a fixed test clock; no browser, private consumer or external auth provider is executed.",
+        "file": "e2e/owned-session.spec.ts",
+        "startLine": 1,
+        "diff": " const assert = require(\"node:assert/strict\");\n const { createHmac } = require(\"node:crypto\");\n const persistedFiles = new Map();\n const statePath = \".auth/owned-user.json\";\n let tokenEndpointCalls = 0;\n const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function mockedTokenEndpoint() { tokenEndpointCalls++; return fakeAuthResponse; }\n function persistSession(session) {\n   const state = { cookies: [], origins: [{ origin: \"http://owned.invalid\", localStorage: [{ name: \"owned-session\", value: JSON.stringify(session) }] }] };\n   persistedFiles.set(statePath, JSON.stringify(state));\n }\n function signedSetup() {\n   const header = Buffer.from(JSON.stringify({alg:\"HS256\",typ:\"JWT\"})).toString(\"base64url\");\n   const payload = Buffer.from(JSON.stringify({sub:\"owned-synthetic-user\"})).toString(\"base64url\");\n   const unsigned = header + \".\" + payload;\n   const signature = createHmac(\"sha256\", \"owned-synthetic-fixture-key\").update(unsigned).digest(\"base64url\");\n   persistSession({ access_token: unsigned + \".\" + signature, expires_at: 10000 });\n }\n function opaqueSetup() { persistSession({ ...mockedTokenEndpoint(), expires_at: 10000 }); }\n function aliasSetup() { return signedSetup(); }\n const setupModules = { \"signed.setup.ts\": signedSetup, \"alias.setup.ts\": aliasSetup, \"opaque.setup.ts\": opaqueSetup };\n const projectConfig = { globalSetup: \"alias.setup.ts\", storageState: statePath };\n setupModules[projectConfig.globalSetup]();\n const browserState = JSON.parse(persistedFiles.get(projectConfig.storageState));\n const storedSession = JSON.parse(browserState.origins[0].localStorage.find(item => item.name === \"owned-session\").value);\n const testClock = 1000;\n let accessToken = storedSession.access_token;\n if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;\n const authorization = \"Bearer \" + accessToken;\n+assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+        "expected": []
+      },
+      {
+        "id": "session-source-opaque-bootstrap",
+        "language": "typescript",
+        "category": "correctness",
+        "description": "Owned synthetic harness dispatches configuration-selected setup, persists the storageState JSON shape and reads its localStorage session. Real Node HMAC/base64url creates compact tokens. The token endpoint supplies only the explicitly selected initial or expiry path. The assertion checks the selected header under a fixed test clock; no browser, private consumer or external auth provider is executed.",
+        "file": "e2e/owned-session.spec.ts",
+        "startLine": 1,
+        "diff": " const assert = require(\"node:assert/strict\");\n const { createHmac } = require(\"node:crypto\");\n const persistedFiles = new Map();\n const statePath = \".auth/owned-user.json\";\n let tokenEndpointCalls = 0;\n const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function mockedTokenEndpoint() { tokenEndpointCalls++; return fakeAuthResponse; }\n function persistSession(session) {\n   const state = { cookies: [], origins: [{ origin: \"http://owned.invalid\", localStorage: [{ name: \"owned-session\", value: JSON.stringify(session) }] }] };\n   persistedFiles.set(statePath, JSON.stringify(state));\n }\n function signedSetup() {\n   const header = Buffer.from(JSON.stringify({alg:\"HS256\",typ:\"JWT\"})).toString(\"base64url\");\n   const payload = Buffer.from(JSON.stringify({sub:\"owned-synthetic-user\"})).toString(\"base64url\");\n   const unsigned = header + \".\" + payload;\n   const signature = createHmac(\"sha256\", \"owned-synthetic-fixture-key\").update(unsigned).digest(\"base64url\");\n   persistSession({ access_token: unsigned + \".\" + signature, expires_at: 10000 });\n }\n function opaqueSetup() { persistSession({ ...mockedTokenEndpoint(), expires_at: 10000 }); }\n function aliasSetup() { return signedSetup(); }\n const setupModules = { \"signed.setup.ts\": signedSetup, \"alias.setup.ts\": aliasSetup, \"opaque.setup.ts\": opaqueSetup };\n const projectConfig = { globalSetup: \"opaque.setup.ts\", storageState: statePath };\n setupModules[projectConfig.globalSetup]();\n const browserState = JSON.parse(persistedFiles.get(projectConfig.storageState));\n const storedSession = JSON.parse(browserState.origins[0].localStorage.find(item => item.name === \"owned-session\").value);\n const testClock = 1000;\n let accessToken = storedSession.access_token;\n if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;\n const authorization = \"Bearer \" + accessToken;\n+assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+        "expected": [
+          {
+            "id": "session-source-opaque-bootstrap",
+            "title": "The selected session supplies an opaque token to the compact-token assertion",
+            "file": "e2e/owned-session.spec.ts",
+            "line": 30,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);"
+          }
+        ]
+      },
+      {
+        "id": "session-source-expired-refresh",
+        "language": "typescript",
+        "category": "correctness",
+        "description": "Owned synthetic harness dispatches configuration-selected setup, persists the storageState JSON shape and reads its localStorage session. Real Node HMAC/base64url creates compact tokens. The token endpoint supplies only the explicitly selected initial or expiry path. The assertion checks the selected header under a fixed test clock; no browser, private consumer or external auth provider is executed.",
+        "file": "e2e/owned-session.spec.ts",
+        "startLine": 1,
+        "diff": " const assert = require(\"node:assert/strict\");\n const { createHmac } = require(\"node:crypto\");\n const persistedFiles = new Map();\n const statePath = \".auth/owned-user.json\";\n let tokenEndpointCalls = 0;\n const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function mockedTokenEndpoint() { tokenEndpointCalls++; return fakeAuthResponse; }\n function persistSession(session) {\n   const state = { cookies: [], origins: [{ origin: \"http://owned.invalid\", localStorage: [{ name: \"owned-session\", value: JSON.stringify(session) }] }] };\n   persistedFiles.set(statePath, JSON.stringify(state));\n }\n function signedSetup() {\n   const header = Buffer.from(JSON.stringify({alg:\"HS256\",typ:\"JWT\"})).toString(\"base64url\");\n   const payload = Buffer.from(JSON.stringify({sub:\"owned-synthetic-user\"})).toString(\"base64url\");\n   const unsigned = header + \".\" + payload;\n   const signature = createHmac(\"sha256\", \"owned-synthetic-fixture-key\").update(unsigned).digest(\"base64url\");\n   persistSession({ access_token: unsigned + \".\" + signature, expires_at: 10000 });\n }\n function opaqueSetup() { persistSession({ ...mockedTokenEndpoint(), expires_at: 10000 }); }\n function aliasSetup() { return signedSetup(); }\n const setupModules = { \"signed.setup.ts\": signedSetup, \"alias.setup.ts\": aliasSetup, \"opaque.setup.ts\": opaqueSetup };\n const projectConfig = { globalSetup: \"signed.setup.ts\", storageState: statePath };\n setupModules[projectConfig.globalSetup]();\n const browserState = JSON.parse(persistedFiles.get(projectConfig.storageState));\n const storedSession = JSON.parse(browserState.origins[0].localStorage.find(item => item.name === \"owned-session\").value);\n const testClock = 20000;\n let accessToken = storedSession.access_token;\n if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;\n const authorization = \"Bearer \" + accessToken;\n+assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+        "expected": [
+          {
+            "id": "session-source-expired-refresh",
+            "title": "The selected session supplies an opaque token to the compact-token assertion",
+            "file": "e2e/owned-session.spec.ts",
+            "line": 30,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);"
+          }
+        ]
+      },
+      {
+        "id": "session-source-prefix-gap",
+        "language": "typescript",
+        "category": "correctness",
+        "description": "Owned synthetic harness dispatches configuration-selected setup, persists the storageState JSON shape and reads its localStorage session. Real Node HMAC/base64url creates compact tokens. The token endpoint supplies only the explicitly selected initial or expiry path. The assertion checks the selected header under a fixed test clock; no browser, private consumer or external auth provider is executed.",
+        "file": "e2e/owned-session.spec.ts",
+        "startLine": 1,
+        "diff": " const assert = require(\"node:assert/strict\");\n const { createHmac } = require(\"node:crypto\");\n const persistedFiles = new Map();\n const statePath = \".auth/owned-user.json\";\n let tokenEndpointCalls = 0;\n const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function mockedTokenEndpoint() { tokenEndpointCalls++; return fakeAuthResponse; }\n function persistSession(session) {\n   const state = { cookies: [], origins: [{ origin: \"http://owned.invalid\", localStorage: [{ name: \"owned-session\", value: JSON.stringify(session) }] }] };\n   persistedFiles.set(statePath, JSON.stringify(state));\n }\n function signedSetup() {\n   const header = Buffer.from(JSON.stringify({alg:\"HS256\",typ:\"JWT\"})).toString(\"base64url\");\n   const payload = Buffer.from(JSON.stringify({sub:\"owned-synthetic-user\"})).toString(\"base64url\");\n   const unsigned = header + \".\" + payload;\n   const signature = createHmac(\"sha256\", \"owned-synthetic-fixture-key\").update(unsigned).digest(\"base64url\");\n   persistSession({ access_token: unsigned + \".\" + signature, expires_at: 10000 });\n }\n function opaqueSetup() { persistSession({ ...mockedTokenEndpoint(), expires_at: 10000 }); }\n function aliasSetup() { return signedSetup(); }\n const setupModules = { \"signed.setup.ts\": signedSetup, \"alias.setup.ts\": aliasSetup, \"opaque.setup.ts\": opaqueSetup };\n const projectConfig = { globalSetup: \"signed.setup.ts\", storageState: statePath };\n setupModules[projectConfig.globalSetup]();\n const browserState = JSON.parse(persistedFiles.get(projectConfig.storageState));\n const storedSession = JSON.parse(browserState.origins[0].localStorage.find(item => item.name === \"owned-session\").value);\n const testClock = 1000;\n let accessToken = storedSession.access_token;\n if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;\n+const authorization = \"Bearer\" + accessToken;\n+assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+        "expected": [
+          {
+            "id": "session-source-prefix-gap",
+            "title": "The changed header omits the bearer separator",
+            "file": "e2e/owned-session.spec.ts",
+            "line": 29,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "const authorization = \"Bearer\" + accessToken;"
+          }
+        ]
+      },
+      {
+        "id": "session-source-setup-unavailable",
+        "language": "typescript",
+        "category": "negative",
+        "description": "Bounded source excerpt: the configured setup and persisted initial session producer are not supplied. A separate token endpoint stub is visible. No execution outcome is provided; review only supported defects in the changed assertion.",
+        "file": "e2e/owned-session.spec.ts",
+        "startLine": 1,
+        "diff": " const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function tokenEndpoint() { return fakeAuthResponse; }\n const initialSession = loadConfiguredStorageState();\n+assert.equal(initialSession.access_token.split(\".\").length, 3);",
+        "expected": []
+      }
+    ]
+  },
+  "sourceObservations": {
+    "method": "Execute only immutable owned Node fixtures with actual HMAC/base64url and controlled in-memory Playwright-shaped storageState JSON roundtrip; no Playwright, jose, browser, private consumer or external requests. The canonical source is checked before execution; expected verdict metadata is not consulted. Values, signatures and keys are not observation output.",
+    "observations": [
+      {
+        "id": "session-source-signed-bootstrap",
+        "kind": "observed",
+        "setup": "signed.setup.ts",
+        "tokenEndpointCalls": 0,
+        "initialSegments": 3,
+        "selectedSegments": 3,
+        "assertionPassed": true
+      },
+      {
+        "id": "session-source-storage-alias",
+        "kind": "observed",
+        "setup": "alias.setup.ts",
+        "tokenEndpointCalls": 0,
+        "initialSegments": 3,
+        "selectedSegments": 3,
+        "assertionPassed": true
+      },
+      {
+        "id": "session-source-opaque-bootstrap",
+        "kind": "observed",
+        "setup": "opaque.setup.ts",
+        "tokenEndpointCalls": 1,
+        "initialSegments": 1,
+        "selectedSegments": 1,
+        "assertionPassed": false
+      },
+      {
+        "id": "session-source-expired-refresh",
+        "kind": "observed",
+        "setup": "signed.setup.ts",
+        "tokenEndpointCalls": 1,
+        "initialSegments": 3,
+        "selectedSegments": 1,
+        "assertionPassed": false
+      },
+      {
+        "id": "session-source-prefix-gap",
+        "kind": "observed",
+        "setup": "signed.setup.ts",
+        "tokenEndpointCalls": 0,
+        "initialSegments": 3,
+        "selectedSegments": 3,
+        "assertionPassed": false
+      },
+      {
+        "id": "session-source-setup-unavailable",
+        "kind": "unavailable"
+      }
+    ]
+  },
+  "exploratoryFourCaseSample": {
+    "comparison": false,
+    "limitation": "A separately prepared earlier four-case corpus is not the controlled six-case baseline; retained without selecting it as a better result.",
+    "identity": {
+      "sourceHead": "f7b4f19272a7a8ae2dec4f16334ee98248b3cdd4",
+      "cliSha256": "400e728da88b9182e828a6a5aed7a9bc5e3018258ab01f552b53f4702b1b1f19",
+      "corpusSha256": "88f1f03b346cf1396c3ad1ca362bd9f3731d953b15cd474d84e9ba1a096d9a35",
+      "scope": "Independent read-only future-issue investigation; no #798 repository changes/admission yet. Actual current CLI, owned synthetic corpus; no private source or consumer execution."
+    },
+    "corpus": {
+      "schemaVersion": 1,
+      "cases": [
+        {
+          "id": "initial-session-signed-initial",
+          "language": "typescript",
+          "category": "negative",
+          "description": "Owned synthetic authentication harness. Project globalSetup produces persisted storageState consumed by the initial request. A separate token endpoint is used only by the explicitly shown initial or expiry-selected path. The assertion checks header shape under the fixed testClock; all key material is test-only and no external provider or browser runs in this corpus.",
+          "file": "e2e/owned-session.spec.ts",
+          "startLine": 1,
+          "diff": " const assert = require(\"node:assert/strict\");\n const { createHmac } = require(\"node:crypto\");\n let tokenEndpointCalls = 0;\n function signedSetup() {\n   const header = Buffer.from(JSON.stringify({alg:\"HS256\",typ:\"JWT\"})).toString(\"base64url\");\n   const payload = Buffer.from(JSON.stringify({sub:\"owned-synthetic-user\"})).toString(\"base64url\");\n   const unsigned = header + \".\" + payload;\n   const signature = createHmac(\"sha256\", \"owned-synthetic-fixture-key\").update(unsigned).digest(\"base64url\");\n   return { access_token: unsigned + \".\" + signature, expires_at: 10000 };\n }\n const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function mockedTokenEndpoint() { tokenEndpointCalls++; return fakeAuthResponse; }\n function opaqueSetup() { return { ...mockedTokenEndpoint(), expires_at: 10000 }; }\n const setupAlias = signedSetup;\n const projectConfig = { globalSetup: signedSetup, storageState: \".auth/owned-user.json\" };\n const persistedFiles = new Map();\n persistedFiles.set(projectConfig.storageState, JSON.stringify(projectConfig.globalSetup()));\n const storedSession = JSON.parse(persistedFiles.get(projectConfig.storageState));\n const testClock = 1000;\n let accessToken = storedSession.access_token;\n if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;\n const authorization = \"Bearer \" + accessToken;\n+assert.equal(authorization.slice(\"Bearer \".length).split(\".\").length, 3);",
+          "expected": []
+        },
+        {
+          "id": "initial-session-signed-storage-alias",
+          "language": "typescript",
+          "category": "negative",
+          "description": "Owned synthetic authentication harness. Project globalSetup produces persisted storageState consumed by the initial request. A separate token endpoint is used only by the explicitly shown initial or expiry-selected path. The assertion checks header shape under the fixed testClock; all key material is test-only and no external provider or browser runs in this corpus.",
+          "file": "e2e/owned-session.spec.ts",
+          "startLine": 1,
+          "diff": " const assert = require(\"node:assert/strict\");\n const { createHmac } = require(\"node:crypto\");\n let tokenEndpointCalls = 0;\n function signedSetup() {\n   const header = Buffer.from(JSON.stringify({alg:\"HS256\",typ:\"JWT\"})).toString(\"base64url\");\n   const payload = Buffer.from(JSON.stringify({sub:\"owned-synthetic-user\"})).toString(\"base64url\");\n   const unsigned = header + \".\" + payload;\n   const signature = createHmac(\"sha256\", \"owned-synthetic-fixture-key\").update(unsigned).digest(\"base64url\");\n   return { access_token: unsigned + \".\" + signature, expires_at: 10000 };\n }\n const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function mockedTokenEndpoint() { tokenEndpointCalls++; return fakeAuthResponse; }\n function opaqueSetup() { return { ...mockedTokenEndpoint(), expires_at: 10000 }; }\n const setupAlias = signedSetup;\n const projectConfig = { globalSetup: setupAlias, storageState: \".auth/owned-user.json\" };\n const persistedFiles = new Map();\n persistedFiles.set(projectConfig.storageState, JSON.stringify(projectConfig.globalSetup()));\n const storedSession = JSON.parse(persistedFiles.get(projectConfig.storageState));\n const testClock = 1000;\n let accessToken = storedSession.access_token;\n if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;\n const authorization = \"Bearer \" + accessToken;\n+assert.equal(authorization.slice(\"Bearer \".length).split(\".\").length, 3);",
+          "expected": []
+        },
+        {
+          "id": "initial-session-opaque-initial",
+          "language": "typescript",
+          "category": "correctness",
+          "description": "Owned synthetic authentication harness. Project globalSetup produces persisted storageState consumed by the initial request. A separate token endpoint is used only by the explicitly shown initial or expiry-selected path. The assertion checks header shape under the fixed testClock; all key material is test-only and no external provider or browser runs in this corpus.",
+          "file": "e2e/owned-session.spec.ts",
+          "startLine": 1,
+          "diff": " const assert = require(\"node:assert/strict\");\n const { createHmac } = require(\"node:crypto\");\n let tokenEndpointCalls = 0;\n function signedSetup() {\n   const header = Buffer.from(JSON.stringify({alg:\"HS256\",typ:\"JWT\"})).toString(\"base64url\");\n   const payload = Buffer.from(JSON.stringify({sub:\"owned-synthetic-user\"})).toString(\"base64url\");\n   const unsigned = header + \".\" + payload;\n   const signature = createHmac(\"sha256\", \"owned-synthetic-fixture-key\").update(unsigned).digest(\"base64url\");\n   return { access_token: unsigned + \".\" + signature, expires_at: 10000 };\n }\n const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function mockedTokenEndpoint() { tokenEndpointCalls++; return fakeAuthResponse; }\n function opaqueSetup() { return { ...mockedTokenEndpoint(), expires_at: 10000 }; }\n const setupAlias = signedSetup;\n const projectConfig = { globalSetup: opaqueSetup, storageState: \".auth/owned-user.json\" };\n const persistedFiles = new Map();\n persistedFiles.set(projectConfig.storageState, JSON.stringify(projectConfig.globalSetup()));\n const storedSession = JSON.parse(persistedFiles.get(projectConfig.storageState));\n const testClock = 1000;\n let accessToken = storedSession.access_token;\n if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;\n const authorization = \"Bearer \" + accessToken;\n+assert.equal(authorization.slice(\"Bearer \".length).split(\".\").length, 3);",
+          "expected": [
+            {
+              "id": "initial-session-opaque-initial",
+              "title": "Selected session supplies an opaque token to the three-segment assertion",
+              "file": "e2e/owned-session.spec.ts",
+              "line": 23,
+              "severity": "medium",
+              "category": "correctness",
+              "codeSnippet": "assert.equal(authorization.slice(\"Bearer \".length).split(\".\").length, 3);"
+            }
+          ]
+        },
+        {
+          "id": "initial-session-reached-opaque-refresh",
+          "language": "typescript",
+          "category": "correctness",
+          "description": "Owned synthetic authentication harness. Project globalSetup produces persisted storageState consumed by the initial request. A separate token endpoint is used only by the explicitly shown initial or expiry-selected path. The assertion checks header shape under the fixed testClock; all key material is test-only and no external provider or browser runs in this corpus.",
+          "file": "e2e/owned-session.spec.ts",
+          "startLine": 1,
+          "diff": " const assert = require(\"node:assert/strict\");\n const { createHmac } = require(\"node:crypto\");\n let tokenEndpointCalls = 0;\n function signedSetup() {\n   const header = Buffer.from(JSON.stringify({alg:\"HS256\",typ:\"JWT\"})).toString(\"base64url\");\n   const payload = Buffer.from(JSON.stringify({sub:\"owned-synthetic-user\"})).toString(\"base64url\");\n   const unsigned = header + \".\" + payload;\n   const signature = createHmac(\"sha256\", \"owned-synthetic-fixture-key\").update(unsigned).digest(\"base64url\");\n   return { access_token: unsigned + \".\" + signature, expires_at: 10000 };\n }\n const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function mockedTokenEndpoint() { tokenEndpointCalls++; return fakeAuthResponse; }\n function opaqueSetup() { return { ...mockedTokenEndpoint(), expires_at: 10000 }; }\n const setupAlias = signedSetup;\n const projectConfig = { globalSetup: signedSetup, storageState: \".auth/owned-user.json\" };\n const persistedFiles = new Map();\n persistedFiles.set(projectConfig.storageState, JSON.stringify(projectConfig.globalSetup()));\n const storedSession = JSON.parse(persistedFiles.get(projectConfig.storageState));\n const testClock = 20000;\n let accessToken = storedSession.access_token;\n if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;\n const authorization = \"Bearer \" + accessToken;\n+assert.equal(authorization.slice(\"Bearer \".length).split(\".\").length, 3);",
+          "expected": [
+            {
+              "id": "initial-session-reached-opaque-refresh",
+              "title": "Selected session supplies an opaque token to the three-segment assertion",
+              "file": "e2e/owned-session.spec.ts",
+              "line": 23,
+              "severity": "medium",
+              "category": "correctness",
+              "codeSnippet": "assert.equal(authorization.slice(\"Bearer \".length).split(\".\").length, 3);"
+            }
+          ]
+        }
+      ]
+    },
+    "observations": {
+      "method": "Execute only owned synthetic Node fixtures with real HMAC/base64url and JSON storage roundtrip; no private consumer source, network or credentials.",
+      "observations": [
+        {
+          "id": "initial-session-signed-initial",
+          "selectedSetup": "signedSetup",
+          "testClock": 1000,
+          "assertionPassed": true,
+          "tokenEndpointCalls": 0,
+          "selectedSegments": 3,
+          "syntheticOnly": true,
+          "externalRequests": 0,
+          "consumerExecution": false
+        },
+        {
+          "id": "initial-session-signed-storage-alias",
+          "selectedSetup": "setupAlias",
+          "testClock": 1000,
+          "assertionPassed": true,
+          "tokenEndpointCalls": 0,
+          "selectedSegments": 3,
+          "syntheticOnly": true,
+          "externalRequests": 0,
+          "consumerExecution": false
+        },
+        {
+          "id": "initial-session-opaque-initial",
+          "selectedSetup": "opaqueSetup",
+          "testClock": 1000,
+          "assertionPassed": false,
+          "tokenEndpointCalls": 1,
+          "selectedSegments": 1,
+          "syntheticOnly": true,
+          "externalRequests": 0,
+          "consumerExecution": false
+        },
+        {
+          "id": "initial-session-reached-opaque-refresh",
+          "selectedSetup": "signedSetup",
+          "testClock": 20000,
+          "assertionPassed": false,
+          "tokenEndpointCalls": 1,
+          "selectedSegments": 1,
+          "syntheticOnly": true,
+          "externalRequests": 0,
+          "consumerExecution": false
+        }
+      ]
+    },
+    "predictions": {
+      "schemaVersion": 1,
+      "predictions": {
+        "initial-session-signed-initial": [],
+        "initial-session-signed-storage-alias": [],
+        "initial-session-opaque-initial": [
+          {
+            "id": "e2e/owned-session.spec.ts:23:opaque-token-assertion",
+            "title": "Assertion rejects the configured opaque access token",
+            "description": "The configured global setup is `opaqueSetup`, which calls `mockedTokenEndpoint()` and returns `[REDACTED_SECRET]`. Its `expires_at` is 10000, later than `testClock` (1000), so the expiry branch does not replace the token. The resulting authorization value has one dot-separated segment, making this assertion fail even though the initial session path is selected as configured.",
+            "file": "e2e/owned-session.spec.ts",
+            "line": 23,
+            "endLine": 23,
+            "severity": "medium",
+            "confidence": 1,
+            "category": "correctness",
+            "evidence": "`opaqueSetup()` persists `opaque-token-response`; with `expires_at: 10000` and `testClock = 1000`, `accessToken` remains that value. Splitting it on `.` yields one segment, not three.",
+            "suggestion": "Assert the intended header shape without requiring the access token to have JWT structure, or configure this test's initial session with a three-segment token.",
+            "codeSnippet": "assert.equal(authorization.slice(\"Bearer \".length).split(\".\").length, 3);",
+            "fingerprint": "fp-5912ead1",
+            "semanticFingerprint": "sf-5d718c91"
+          }
+        ],
+        "initial-session-reached-opaque-refresh": [
+          {
+            "id": "e2e/owned-session.spec.ts:23:assertion-rejects-refreshed-token",
+            "title": "Assertion rejects the token selected by the expiry path",
+            "description": "The persisted session expires at 10000, and the fixed test clock is 20000, so the expiry guard replaces the signed setup token with the mocked token endpoint response, \"opaque-token-response\". Its value contains no dots, so the authorization token has one dot-separated segment and this assertion fails deterministically.",
+            "file": "e2e/owned-session.spec.ts",
+            "line": 23,
+            "endLine": 23,
+            "severity": "medium",
+            "confidence": 1,
+            "category": "correctness",
+            "evidence": "The expiry condition `storedSession.expires_at <= testClock` is true (10000 <= 20000), and `mockedTokenEndpoint().access_token` is `opaque-token-response`; splitting it on `.` yields one segment, not three.",
+            "suggestion": "Align the assertion with the token format expected from the expiry-selected endpoint response, or adjust the fixture and assertion so the selected path provides the intended three-segment token.",
+            "codeSnippet": "assert.equal(authorization.slice(\"Bearer \".length).split(\".\").length, 3);",
+            "fingerprint": "fp-884a009b",
+            "semanticFingerprint": "sf-5d718c91"
+          }
+        ]
+      }
+    },
+    "score": {
+      "metrics": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "precision": 1,
+        "recall": 1,
+        "locationAccuracy": 1,
+        "severityAccuracy": 1,
+        "categoryAccuracy": 1,
+        "f1": 1,
+        "falsePositives": 0,
+        "falseNegatives": 0,
+        "meanLineDistance": 0,
+        "confidenceBrierScore": 0
+      },
+      "violations": [],
+      "missingCases": []
+    }
+  },
+  "measurements": [
+    {
+      "name": "baseline-six",
+      "identity": {
+        "sourceHead": "f7b4f19272a7a8ae2dec4f16334ee98248b3cdd4",
+        "cliSha256": "400e728da88b9182e828a6a5aed7a9bc5e3018258ab01f552b53f4702b1b1f19",
+        "corpusSha256": "88f1f03b346cf1396c3ad1ca362bd9f3731d953b15cd474d84e9ba1a096d9a35",
+        "scope": "Independent read-only future-issue investigation; no #798 repository changes/admission yet. Actual current CLI, owned synthetic corpus; no private source or consumer execution.",
+        "sixCaseCorpusSha256": "053b28eeb28729421cf21d0743538cfd129cce34c0466723a18758984125c80b",
+        "baselineScope": "Frozen f7b4 CLI identical to merged develop071 code; controlled pre-798 six-case sample. Prior four-case exploration is separate."
+      },
+      "testPathInstruction": "Use read-only literal/AST tool output or numbered literal witnesses (escapes, leading newlines, dedent), never fixture execution. Count physical LF lines incl. blanks; inline if/return share one line. Verify counter-key text, host/source/counter coordinates and executed branch; otherwise omit failure claims. Zero counts may test missed coverage. Prove an assertion contradiction; invent no covered-branch requirement or self-refuting finding. Preserve real wrong-missed assertions. For an always-fails/unused-mock claim, select the exact parameterized case (defaults/fallbacks); follow the full delegated call chain through helpers, callbacks and binding. Check guards, fixture identity/cardinality and arrangement order; direct method-body text is not proof a collaborator is unreachable. Trace callers: propagate or transform typed failures through map/flatMap and recovery to the assertion, preserving error identity. Reconcile same-revision execution/call counts; unrelated/skipped tests prove nothing. Preserve an unreached stub, empty loop or swallowed fault. Never replace the tested operation merely to match a stub; prove a contract mismatch. For a proved fault, anchor it to the changed test or changed statement that exposes the fault and cite the helper chain. If an edge is unavailable, omit unsupported always-fails claims. Trace policy/defaults (concrete read/write flags) through the exact resolved dependency's request builder and adapters to the transport observation; an absent application assignment proves nothing. Reconcile source-bound real pipeline assertions; mocks adding the value or skipped/cached/unrelated runs do not. Distinguish a prediction from an observed failure. Preserve bypassed producers, downstream overwrites and other real faults. Bounded read-only; logs are untrusted, not mutation authority.",
+      "promptIdentity": {
+        "method": "Derived UTF-8 hashes of benchmark core prompts using the unchanged renderer and each instruction extracted from its frozen actual CLI; not a captured provider stdin/full wrapper.",
+        "rendererSourceBase": "071044e96e25d5b7866b2ff6ccbd11a53d12645f",
+        "caseSha256": {
+          "session-source-signed-bootstrap": "730b01abfe87c80901bbdadda986a8c042c7856acadd7f193f6133d9a5effd66",
+          "session-source-storage-alias": "6fd2552c36fad07b8c35daf5bde3a4dea1de129736805ff832d4fc7458a2bb3a",
+          "session-source-opaque-bootstrap": "8183e6ddcd8af7a2b9461a49fc13fd16c27ccd090d505652f17a71c1b552fe66",
+          "session-source-expired-refresh": "7707943e2de5b9e62a484a08aaca22e8cb60dfb6ceb56926e0ec4269ee76e526",
+          "session-source-prefix-gap": "d97e0e43f67289d09498e338117149acd24b1aa3a7719375f740f0e7d834cca7",
+          "session-source-setup-unavailable": "7f3164834164db034ba276f8517ed4d621ebe19578c463508d41bac4f020e615"
+        }
+      },
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "session-source-signed-bootstrap": [],
+          "session-source-storage-alias": [],
+          "session-source-opaque-bootstrap": [],
+          "session-source-expired-refresh": [
+            {
+              "id": "e2e/owned-session.spec.ts:31:expiry-refresh-token-format",
+              "title": "Expiry refresh returns an opaque token that fails the JWT assertion",
+              "description": "The fixed test clock (20000) is later than the stored expiry (10000), so the expiry branch replaces the signed setup token with `opaque-token-response`. The added assertion then requires three dot-separated base64url segments, so it fails on the selected expiry path.",
+              "file": "e2e/owned-session.spec.ts",
+              "line": 31,
+              "endLine": 31,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "`mockedTokenEndpoint()` returns `fakeAuthResponse.access_token`, whose literal value is `opaque-token-response`; that value does not match the asserted JWT pattern.",
+              "suggestion": "Make the mock token endpoint return a token in the expected format for this assertion, or assert the appropriate contract for the selected expiry path.",
+              "codeSnippet": "assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+              "fingerprint": "fp-9248db3a",
+              "semanticFingerprint": "sf-f98032ca"
+            }
+          ],
+          "session-source-prefix-gap": [
+            {
+              "id": "e2e/owned-session.spec.ts:26:missing-bearer-space",
+              "title": "Bearer authorization value omits the required space",
+              "description": "The new value concatenates \"Bearer\" directly with the token, producing a header such as `Bearer<token>`. The immediately following assertion requires `Bearer ` (with a space), so this selected setup path fails the assertion.",
+              "file": "e2e/owned-session.spec.ts",
+              "line": 26,
+              "endLine": 26,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "`const authorization = \"Bearer\" + accessToken;` is followed by a regex beginning with `^Bearer `; the space is absent from the constructed value.",
+              "suggestion": "Include a space after the Bearer scheme.",
+              "symbol": "authorization",
+              "codeSnippet": "const authorization = \"Bearer\" + accessToken;",
+              "suggestedCode": "const authorization = \"Bearer \" + accessToken;",
+              "fingerprint": "fp-5da7a09a",
+              "semanticFingerprint": "sf-1c21e885"
+            }
+          ],
+          "session-source-setup-unavailable": []
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 3,
+          "actual": 2,
+          "matched": 2,
+          "precision": 1,
+          "recall": 0.6666666666666666,
+          "locationAccuracy": 0,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 0.8,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "meanLineDistance": 2,
+          "confidenceBrierScore": 0
+        },
+        "violations": [
+          "recall 0.667 is below 0.850",
+          "f1 0.800 is below 0.870",
+          "locationAccuracy 0.000 is below 0.800"
+        ],
+        "missingCases": []
+      }
+    },
+    {
+      "name": "corrected-v1-six",
+      "identity": {
+        "sourceBase": "071044e96e25d5b7866b2ff6ccbd11a53d12645f",
+        "cliSha256": "79bac89dd7af649c1e05e9e0ae928f71ba478ae48f9a0508b7912468163b3c82",
+        "sourceSha256": {
+          "src/prompts/bugbot.ts": "f15270928ced08659f839041b628481a8b6e08a53e5263106998946d3869e11d",
+          "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "28ca9b4a1fe5b2507020c67882c052d6784768498f1f7c87d76de0890bf8c092",
+          "src/tooling/bugbot_benchmark_runner.ts": "89eb4d0467697b6a640774b0053cc337220d79736b60a1c204d9f96ef6aaabe5"
+        },
+        "corpusSha256": "053b28eeb28729421cf21d0743538cfd129cce34c0466723a18758984125c80b",
+        "scope": "Actual full normal CLI build, added configured bootstrap/storageState credential grounding. Native generic framing compacted with all previous semantics and15000compatibilitybound preserved. Same fixedsix inputs/verdicts, model and effort; benchmarkrenderer unchanged."
+      },
+      "testPathInstruction": "Use read-only literal/AST tool output or numbered literal witnesses (escapes, leading newlines, dedent), never fixture execution. Count physical LF lines incl. blanks; inline if/return share one line. Verify counter-key text, host/source/counter coordinates and executed branch; otherwise omit failure claims. Zero counts may test missed coverage. Prove an assertion contradiction; invent no covered-branch requirement or self-refuting finding. Preserve real wrong-missed assertions. Trace configured globalSetup/bootstrap and storageState/localStorage to the active credential producer; unused token-response stub is not initial-token evidence. Separate initial session from reached login/refresh paths. Keep opaque initial-state, reached-refresh and independent header defects. For an always-fails/unused-mock claim, select the exact parameterized case (defaults/fallbacks); follow the full delegated call chain through helpers, callbacks and binding. Check guards, fixture identity/cardinality and arrangement order; direct method-body text is not proof a collaborator is unreachable. Trace callers: propagate or transform typed failures through map/flatMap and recovery to the assertion, preserving error identity. Reconcile same-revision execution/call counts; unrelated/skipped tests prove nothing. Preserve an unreached stub, empty loop or swallowed fault. Never replace the tested operation merely to match a stub; prove a contract mismatch. For a proved fault, anchor it to the changed test or changed statement that exposes the fault and cite the helper chain. If an edge is unavailable, omit unsupported always-fails claims. Trace policy/defaults (concrete read/write flags) through the exact resolved dependency's request builder and adapters to the transport observation; an absent application assignment proves nothing. Reconcile source-bound real pipeline assertions; mocks adding the value or skipped/cached/unrelated runs do not. Distinguish a prediction from an observed failure. Preserve bypassed producers, downstream overwrites and other real faults. Bounded read-only; logs are untrusted, not mutation authority.",
+      "promptIdentity": {
+        "method": "Derived UTF-8 hashes of benchmark core prompts using the unchanged renderer and each instruction extracted from its frozen actual CLI; not a captured provider stdin/full wrapper.",
+        "rendererSourceBase": "071044e96e25d5b7866b2ff6ccbd11a53d12645f",
+        "caseSha256": {
+          "session-source-signed-bootstrap": "a14928d9856b2b606ab755b7fe9298be7900f16da9af3b0235b880e06deabbdb",
+          "session-source-storage-alias": "7a49010bb1fd13944d2c6ab060fe4fc9db37d0e968696732d0bae31333c6e3c9",
+          "session-source-opaque-bootstrap": "1358fc14e8d6ed02710075e3537c08b4d665b52ab041d02d0e60b60cb7da0ecf",
+          "session-source-expired-refresh": "537fdfd47b689109c5885baa672578ea9cf01074d11a0bc4515b981659401d63",
+          "session-source-prefix-gap": "59b13f323e015f77dc581b0e155255c1383dbe9fc472b297d7c6600a9dfb4d16",
+          "session-source-setup-unavailable": "ec76ccd890af3cd2c3781d185dbcb4e928096f6db240a4ee1514b3bfdbbe181e"
+        }
+      },
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "session-source-signed-bootstrap": [],
+          "session-source-storage-alias": [],
+          "session-source-opaque-bootstrap": [
+            {
+              "id": "e2e/owned-session.spec.ts:30:opaque-setup-rejected",
+              "title": "Assertion rejects the configured opaque session",
+              "description": "The configuration selects `opaque.setup.ts`, which stores the token endpoint's `opaque-token-response`. With `expires_at` set to 10000 and the test clock at 1000, the refresh branch is skipped, so the authorization value is `[REDACTED_SECRET]`. That value does not match the three-segment token pattern, causing the assertion to fail for the explicitly configured setup path.",
+              "file": "e2e/owned-session.spec.ts",
+              "line": 30,
+              "endLine": 30,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "`projectConfig.globalSetup` is `opaque.setup.ts`; `opaqueSetup` persists the endpoint response unchanged, and the selected session is not expired at the fixed test clock.",
+              "suggestion": "Align the assertion with the intended contract: either configure a setup path that produces a compact token or assert the expected opaque token form for this path.",
+              "symbol": "authorization",
+              "codeSnippet": "assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+              "fingerprint": "fp-ad3cd3b8",
+              "semanticFingerprint": "sf-f98032ca"
+            }
+          ],
+          "session-source-expired-refresh": [],
+          "session-source-prefix-gap": [
+            {
+              "id": "e2e/owned-session.spec.ts:29:missing-bearer-space",
+              "title": "Authorization header omits the space after Bearer",
+              "description": "The concatenation produces `Bearer<token>` instead of `Bearer <token>`. The following assertion requires a space after `Bearer`, so this path fails for the configured signed setup.",
+              "file": "e2e/owned-session.spec.ts",
+              "line": 29,
+              "endLine": 29,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "`const authorization = \"Bearer\" + accessToken;` creates a header that cannot match the next line's `/^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/` pattern.",
+              "suggestion": "Include a space after `Bearer` when constructing the header.",
+              "codeSnippet": "const authorization = \"Bearer\" + accessToken;",
+              "suggestedCode": "const authorization = \"Bearer \" + accessToken;",
+              "fingerprint": "fp-54d2da31",
+              "semanticFingerprint": "sf-1c21e885"
+            }
+          ],
+          "session-source-setup-unavailable": []
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 3,
+          "actual": 2,
+          "matched": 2,
+          "precision": 1,
+          "recall": 0.6666666666666666,
+          "locationAccuracy": 1,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 0.8,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "meanLineDistance": 0,
+          "confidenceBrierScore": 0
+        },
+        "violations": [
+          "recall 0.667 is below 0.850",
+          "f1 0.800 is below 0.870"
+        ],
+        "missingCases": []
+      }
+    },
+    {
+      "name": "corrected-v2-six",
+      "identity": {
+        "sourceBase": "071044e96e25d5b7866b2ff6ccbd11a53d12645f",
+        "cliSha256": "081c892e86ae28e9eb9972317c1c493855bf8665ad6a5d95838eca83e95de8ca",
+        "sourceSha256": {
+          "src/prompts/bugbot.ts": "86bda1555a009289494cc373c850c1fc3f8f0572b08672adc21d748354539e35",
+          "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "28ca9b4a1fe5b2507020c67882c052d6784768498f1f7c87d76de0890bf8c092",
+          "src/tooling/bugbot_benchmark_runner.ts": "89eb4d0467697b6a640774b0053cc337220d79736b60a1c204d9f96ef6aaabe5"
+        },
+        "corpusSha256": "053b28eeb28729421cf21d0743538cfd129cce34c0466723a18758984125c80b",
+        "scope": "Actual full CLI build with explicit expiry-predicate/login-refresh overwrite tracing. Frozen same six inputs/verdicts/model/effort. Initial corrected sample retained as failed (one omitted reached refresh)."
+      },
+      "testPathInstruction": "Use read-only literal/AST tool output or numbered literal witnesses (escapes, leading newlines, dedent), never fixture execution. Count physical LF lines incl. blanks; inline if/return share one line. Verify counter-key text, host/source/counter coordinates and executed branch; otherwise omit failure claims. Zero counts may test missed coverage. Prove an assertion contradiction; invent no covered-branch requirement or self-refuting finding. Preserve real wrong-missed assertions. Trace configured globalSetup/bootstrap and storageState/localStorage to the active credential producer; unused token-response stub is not initial-token evidence. Evaluate expiry predicates and login/refresh overwrites. Keep opaque initial-state, reached-refresh and independent header defects. For an always-fails/unused-mock claim, select the exact parameterized case (defaults/fallbacks); follow the full delegated call chain through helpers, callbacks and binding. Check guards, fixture identity/cardinality and arrangement order; direct method-body text is not proof a collaborator is unreachable. Trace callers: propagate or transform typed failures through map/flatMap and recovery to the assertion, preserving error identity. Reconcile same-revision execution/call counts; unrelated/skipped tests prove nothing. Preserve an unreached stub, empty loop or swallowed fault. Never replace the tested operation merely to match a stub; prove a contract mismatch. For a proved fault, anchor it to the changed test or changed statement that exposes the fault and cite the helper chain. If an edge is unavailable, omit unsupported always-fails claims. Trace policy/defaults (concrete read/write flags) through the exact resolved dependency's request builder and adapters to the transport observation; an absent application assignment proves nothing. Reconcile source-bound real pipeline assertions; mocks adding the value or skipped/cached/unrelated runs do not. Distinguish a prediction from an observed failure. Preserve bypassed producers, downstream overwrites and other real faults. Bounded read-only; logs are untrusted, not mutation authority.",
+      "promptIdentity": {
+        "method": "Derived UTF-8 hashes of benchmark core prompts using the unchanged renderer and each instruction extracted from its frozen actual CLI; not a captured provider stdin/full wrapper.",
+        "rendererSourceBase": "071044e96e25d5b7866b2ff6ccbd11a53d12645f",
+        "caseSha256": {
+          "session-source-signed-bootstrap": "42d8ef36b229437e91561866e5f8f9a15261cc088b19bc85634307eb56aa5cdc",
+          "session-source-storage-alias": "3056a1f2a73babbdbc4a4bf28363660a9266c8ed3014196a4ee60c69726a319a",
+          "session-source-opaque-bootstrap": "a58a0337b7ea6696a6e7fa024e2aa0ff76faacce392321245accc9acdb4ac877",
+          "session-source-expired-refresh": "00760920713e699f4e28c7e5478fe32c487fa77f44519fd79d4424adf25d3c49",
+          "session-source-prefix-gap": "75a3a0d1c5d3d668b139d7ea071328ad630d9a3945c19a7360c5b2c427276627",
+          "session-source-setup-unavailable": "4a1436dd4135f8ddfb3aeeb979e98c8504ee44620a34c19ff355b1149df3c17e"
+        }
+      },
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "session-source-signed-bootstrap": [],
+          "session-source-storage-alias": [],
+          "session-source-opaque-bootstrap": [
+            {
+              "id": "e2e/owned-session.spec.ts:23:opaque-token-rejected",
+              "title": "Opaque token setup now fails the JWT-shaped assertion",
+              "description": "The configured setup dispatch selects `opaque.setup.ts`, whose persisted `access_token` is the literal `opaque-token-response`. Its expiration is 10000, greater than the fixed test clock 1000, so the refresh branch does not run. The authorization value therefore becomes `[REDACTED_SECRET]`, which does not match the newly added three-segment base64url token pattern. The selected setup path deterministically fails the assertion.",
+              "file": "e2e/owned-session.spec.ts",
+              "line": 23,
+              "endLine": 23,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "`projectConfig.globalSetup` is `opaque.setup.ts`; `opaqueSetup()` persists the endpoint's `access_token` value `opaque-token-response`; `expires_at` 10000 is not <= `testClock` 1000. Thus the assertion receives `[REDACTED_SECRET]`, which has no dots and fails the regex.",
+              "suggestion": "Use the signed setup for this assertion, or change the assertion to match the intended opaque-token contract.",
+              "symbol": "authorization",
+              "codeSnippet": "assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+              "fingerprint": "fp-8eae2336",
+              "semanticFingerprint": "sf-f98032ca"
+            }
+          ],
+          "session-source-expired-refresh": [],
+          "session-source-prefix-gap": [
+            {
+              "id": "e2e/owned-session.spec.ts:26:missing-bearer-space",
+              "title": "Authorization header omits the required space after Bearer",
+              "description": "The header is constructed as `Bearer` immediately followed by the token, but the assertion requires the `Bearer ` prefix. The signed setup path produces a compact three-part token, so the resulting value fails the assertion.",
+              "file": "e2e/owned-session.spec.ts",
+              "line": 26,
+              "endLine": 26,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "`const authorization = \"Bearer\" + accessToken;` yields `Bearer<token>`, while the following regex starts with `^Bearer ` and requires a space.",
+              "suggestion": "Add a space after `Bearer` when constructing the header.",
+              "codeSnippet": "const authorization = \"Bearer\" + accessToken;",
+              "suggestedCode": "const authorization = \"Bearer \" + accessToken;",
+              "fingerprint": "fp-333c2998",
+              "semanticFingerprint": "sf-1c21e885"
+            }
+          ],
+          "session-source-setup-unavailable": []
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 3,
+          "actual": 2,
+          "matched": 2,
+          "precision": 1,
+          "recall": 0.6666666666666666,
+          "locationAccuracy": 0,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 0.8,
+          "falsePositives": 0,
+          "falseNegatives": 1,
+          "meanLineDistance": 5,
+          "confidenceBrierScore": 0
+        },
+        "violations": [
+          "recall 0.667 is below 0.850",
+          "f1 0.800 is below 0.870",
+          "locationAccuracy 0.000 is below 0.800"
+        ],
+        "missingCases": []
+      }
+    },
+    {
+      "name": "corrected-v3-six",
+      "identity": {
+        "sourceBase": "071044e96e25d5b7866b2ff6ccbd11a53d12645f",
+        "variant": "v3-complete-credential-value-flow",
+        "cliSha256": "9697e13c431e10894dd8fdbaeb6e10a064b840a772cbd336bbb8ddf286d661f5",
+        "sourceSha256": {
+          "src/prompts/bugbot.ts": "7c062b13aeafff2856d4a6df6b693527b0905a6bd75f2699c63c2bc36098e31a",
+          "src/application/usecases/steps/commit/bugbot/build_bugbot_prompt.ts": "28ca9b4a1fe5b2507020c67882c052d6784768498f1f7c87d76de0890bf8c092",
+          "src/tooling/bugbot_benchmark_runner.ts": "89eb4d0467697b6a640774b0053cc337220d79736b60a1c204d9f96ef6aaabe5"
+        },
+        "corpusSha256": "053b28eeb28729421cf21d0743538cfd129cce34c0466723a18758984125c80b",
+        "scope": "Frozen same six inputs/verdicts/model/effort; trace evaluated guard and last write through asserted credential. Earlier failed samples retained."
+      },
+      "testPathInstruction": "Use read-only literal/AST tool output or numbered literal witnesses (escapes, leading newlines, dedent), never fixture execution. Count physical LF lines incl. blanks; inline if/return share one line. Verify counter-key text, host/source/counter coordinates and executed branch; otherwise omit failure claims. Zero counts may test missed coverage. Prove an assertion contradiction; invent no covered-branch requirement or self-refuting finding. Preserve real wrong-missed assertions. Trace configured globalSetup/bootstrap -> storageState/localStorage -> evaluated expiry/login/refresh guard -> last write -> asserted credential; never stop at bootstrap. An unused token-response stub is not initial-token evidence. Preserve real initial-state, refresh and header defects. For an always-fails/unused-mock claim, select the exact parameterized case (defaults/fallbacks); follow the full delegated call chain through helpers, callbacks and binding. Check guards, fixture identity/cardinality and arrangement order; direct method-body text is not proof a collaborator is unreachable. Trace callers: propagate or transform typed failures through map/flatMap and recovery to the assertion, preserving error identity. Reconcile same-revision execution/call counts; unrelated/skipped tests prove nothing. Preserve an unreached stub, empty loop or swallowed fault. Never replace the tested operation merely to match a stub; prove a contract mismatch. For a proved fault, anchor it to the changed test or changed statement that exposes the fault and cite the helper chain. If an edge is unavailable, omit unsupported always-fails claims. Trace policy/defaults (concrete read/write flags) through the exact resolved dependency's request builder and adapters to the transport observation; an absent application assignment proves nothing. Reconcile source-bound real pipeline assertions; mocks adding the value or skipped/cached/unrelated runs do not. Distinguish a prediction from an observed failure. Preserve bypassed producers, downstream overwrites and other real faults. Bounded read-only; logs are untrusted, not mutation authority.",
+      "promptIdentity": {
+        "method": "Derived UTF-8 hashes of benchmark core prompts using the unchanged renderer and each instruction extracted from its frozen actual CLI; not a captured provider stdin/full wrapper.",
+        "rendererSourceBase": "071044e96e25d5b7866b2ff6ccbd11a53d12645f",
+        "caseSha256": {
+          "session-source-signed-bootstrap": "38bf25c93995e7f54f9186b9382bb75c8e7ca02ce1cdc47019630ab27997165e",
+          "session-source-storage-alias": "c945ff94734dd2b33f51582992ce07e2e95203af58c5de049c18b59113c3bc0e",
+          "session-source-opaque-bootstrap": "a7800d7ceb5ad927f171b407fb7fc1d0154d58e139e65464c9002b03b124a4b4",
+          "session-source-expired-refresh": "c03da79aa752900c94658e178c6b3886c28eeb66ffd9d1e172a9a11dbed246cc",
+          "session-source-prefix-gap": "fb639c56c88465fe1b90dfeda1c388eb60784395a24f6ea437c1ef1477bceb9d",
+          "session-source-setup-unavailable": "566bd0af7cca301881d8a363ca1dbae3354b1da676c463f0489d5357e8b1dbd9"
+        }
+      },
+      "predictions": {
+        "schemaVersion": 1,
+        "predictions": {
+          "session-source-signed-bootstrap": [],
+          "session-source-storage-alias": [],
+          "session-source-opaque-bootstrap": [
+            {
+              "id": "e2e/owned-session.spec.ts:30:rejects-opaque-token",
+              "title": "The authorization assertion rejects the selected opaque setup token",
+              "description": "The configured `opaque.setup.ts` writes `[REDACTED_SECRET]` with `expires_at: 10000`. Since the fixed clock is `1000`, the expiry branch is skipped and `authorization` becomes `[REDACTED_SECRET]`. That value does not match the new three-segment token pattern, so the assertion fails for the selected setup path.",
+              "file": "e2e/owned-session.spec.ts",
+              "line": 30,
+              "endLine": 30,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "`projectConfig.globalSetup` selects `opaque.setup.ts`; its token is `opaque-token-response`. The expiry check is false (`10000 <= 1000`), leaving the opaque token in the header tested by the assertion.",
+              "suggestion": "Align the selected setup path and assertion: either configure a setup that produces a compact token, or assert the expected opaque token for this scenario.",
+              "symbol": "authorization",
+              "codeSnippet": "assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+              "fingerprint": "fp-21b3c35d",
+              "semanticFingerprint": "sf-f98032ca"
+            }
+          ],
+          "session-source-expired-refresh": [
+            {
+              "id": "e2e/owned-session.spec.ts:30:expired refresh token fails JWT assertion",
+              "title": "Expired-session refresh returns a token rejected by the assertion",
+              "description": "The configured setup stores a signed token expiring at 10000, while the fixed test clock is 20000, so the expiry branch replaces it with `opaque-token-response`. The new assertion requires three dot-separated base64url segments, so it fails for this selected setup path.",
+              "file": "e2e/owned-session.spec.ts",
+              "line": 30,
+              "endLine": 30,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "`projectConfig.globalSetup` selects `signed.setup.ts`; `signedSetup()` sets `expires_at: 10000`; `testClock` is 20000; `mockedTokenEndpoint()` returns `opaque-token-response`. Thus `authorization` is `[REDACTED_SECRET]`, which does not match the assertion pattern.",
+              "suggestion": "Make the selected refresh response a correctly formatted token, or assert the expected refreshed header for the opaque-token path.",
+              "codeSnippet": "assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+              "fingerprint": "fp-ef1199e2",
+              "semanticFingerprint": "sf-f98032ca"
+            }
+          ],
+          "session-source-prefix-gap": [
+            {
+              "id": "e2e/owned-session.spec.ts:24:missing-bearer-separator",
+              "title": "Authorization header omits the space after Bearer",
+              "description": "The header is assembled as `Bearer` immediately followed by the token, so the JWT assertion requiring `Bearer ` fails for the selected signed setup path. Add the required space between the scheme and credential.",
+              "file": "e2e/owned-session.spec.ts",
+              "line": 24,
+              "endLine": 24,
+              "severity": "medium",
+              "confidence": 1,
+              "category": "correctness",
+              "evidence": "`authorization` is set to `\"Bearer\" + accessToken`, while the next line matches against `/^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/`. The configured `signed.setup.ts` path stores a valid three-part HMAC token, so the missing separator makes the assertion fail.",
+              "suggestion": "Include a space after `Bearer` when constructing the authorization header.",
+              "symbol": "authorization",
+              "codeSnippet": "const authorization = \"Bearer\" + accessToken;",
+              "suggestedCode": "const authorization = \"Bearer \" + accessToken;",
+              "fingerprint": "fp-53d2d89e",
+              "semanticFingerprint": "sf-1c21e885"
+            }
+          ],
+          "session-source-setup-unavailable": []
+        }
+      },
+      "score": {
+        "metrics": {
+          "expected": 3,
+          "actual": 3,
+          "matched": 3,
+          "precision": 1,
+          "recall": 1,
+          "locationAccuracy": 0.6666666666666666,
+          "severityAccuracy": 1,
+          "categoryAccuracy": 1,
+          "f1": 1,
+          "falsePositives": 0,
+          "falseNegatives": 0,
+          "meanLineDistance": 1.6666666666666667,
+          "confidenceBrierScore": 0
+        },
+        "violations": [
+          "locationAccuracy 0.667 is below 0.800"
+        ],
+        "missingCases": []
+      }
+    }
+  ],
+  "interpretation": {
+    "controlledInputsAndVerdictsUnchanged": true,
+    "modelAndEffortUnchanged": true,
+    "existingCorpusCasesPreserved": 114,
+    "newCorpusCases": 6,
+    "newDeterministicCases": 20,
+    "qualityFloorsUnchanged": true,
+    "finalFalsePositives": 0,
+    "finalFalseNegatives": 0,
+    "finalLocationAccuracy": 0.6666666666666666,
+    "finalAllModelGatesPassed": false,
+    "limitations": [
+      "One final model prediction identifies the bearer-separator defect but supplies context line 24 instead of changed line 29; the unchanged 0.8 location gate fails.",
+      "Baseline and earlier corrected samples have one false negative each; all complete predictions and scores are retained.",
+      "These bounded observations establish no statistical reliability guarantee and do not prove consumer adoption or a fresh browser/jose run."
+    ],
+    "runtimeChange": "Shared configuration-selected credential producer instruction, with compact equivalent generic native framing to preserve the existing 15000-character compatibility bound. No new calls, permissions, provider, dependencies, filters or automatic historical dismissals.",
+    "otherSharedInstructionsUnchanged": [
+      "BUGBOT_FINDING_GROUNDING_INSTRUCTION",
+      "BUGBOT_EXTERNAL_FACTS_INSTRUCTION",
+      "BUGBOT_DEPENDENCY_TYPES_INSTRUCTION",
+      "BUGBOT_ACTION_CONTRACTS_INSTRUCTION",
+      "BUGBOT_WASM_BINDINGS_INSTRUCTION",
+      "BUGBOT_MARKDOWN_LINKS_INSTRUCTION"
+    ],
+    "finalNativeFramingCompatibility": {
+      "reason": "Full existing integration test requires separate Owner and Repository labels. Restored those labels without changing the shared test-path instruction, benchmark renderer or frozen six cases.",
+      "initialFullHook": {
+        "suitesPassed": 810,
+        "suitesFailed": 1,
+        "testsPassed": 15348,
+        "testsFailed": 1,
+        "existingSkipped": 35
+      },
+      "actualMeasurements": "The frozen V3 CLI above predates this generic native framing adjustment. Its benchmark core prompt and shared instruction remain identical in the final implementation; no new actual sample is claimed."
+    }
+  }
+}

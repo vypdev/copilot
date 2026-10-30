@@ -1363,6 +1363,96 @@
           "codeSnippet": "return count >= 0"
         }
       ]
+    },
+    {
+      "id": "session-source-signed-bootstrap",
+      "language": "typescript",
+      "category": "negative",
+      "description": "Owned synthetic harness dispatches configuration-selected setup, persists the storageState JSON shape and reads its localStorage session. Real Node HMAC/base64url creates compact tokens. The token endpoint supplies only the explicitly selected initial or expiry path. The assertion checks the selected header under a fixed test clock; no browser, private consumer or external auth provider is executed.",
+      "file": "e2e/owned-session.spec.ts",
+      "startLine": 1,
+      "diff": " const assert = require(\"node:assert/strict\");\n const { createHmac } = require(\"node:crypto\");\n const persistedFiles = new Map();\n const statePath = \".auth/owned-user.json\";\n let tokenEndpointCalls = 0;\n const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function mockedTokenEndpoint() { tokenEndpointCalls++; return fakeAuthResponse; }\n function persistSession(session) {\n   const state = { cookies: [], origins: [{ origin: \"http://owned.invalid\", localStorage: [{ name: \"owned-session\", value: JSON.stringify(session) }] }] };\n   persistedFiles.set(statePath, JSON.stringify(state));\n }\n function signedSetup() {\n   const header = Buffer.from(JSON.stringify({alg:\"HS256\",typ:\"JWT\"})).toString(\"base64url\");\n   const payload = Buffer.from(JSON.stringify({sub:\"owned-synthetic-user\"})).toString(\"base64url\");\n   const unsigned = header + \".\" + payload;\n   const signature = createHmac(\"sha256\", \"owned-synthetic-fixture-key\").update(unsigned).digest(\"base64url\");\n   persistSession({ access_token: unsigned + \".\" + signature, expires_at: 10000 });\n }\n function opaqueSetup() { persistSession({ ...mockedTokenEndpoint(), expires_at: 10000 }); }\n function aliasSetup() { return signedSetup(); }\n const setupModules = { \"signed.setup.ts\": signedSetup, \"alias.setup.ts\": aliasSetup, \"opaque.setup.ts\": opaqueSetup };\n const projectConfig = { globalSetup: \"signed.setup.ts\", storageState: statePath };\n setupModules[projectConfig.globalSetup]();\n const browserState = JSON.parse(persistedFiles.get(projectConfig.storageState));\n const storedSession = JSON.parse(browserState.origins[0].localStorage.find(item => item.name === \"owned-session\").value);\n const testClock = 1000;\n let accessToken = storedSession.access_token;\n if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;\n const authorization = \"Bearer \" + accessToken;\n+assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+      "expected": []
+    },
+    {
+      "id": "session-source-storage-alias",
+      "language": "typescript",
+      "category": "negative",
+      "description": "Owned synthetic harness dispatches configuration-selected setup, persists the storageState JSON shape and reads its localStorage session. Real Node HMAC/base64url creates compact tokens. The token endpoint supplies only the explicitly selected initial or expiry path. The assertion checks the selected header under a fixed test clock; no browser, private consumer or external auth provider is executed.",
+      "file": "e2e/owned-session.spec.ts",
+      "startLine": 1,
+      "diff": " const assert = require(\"node:assert/strict\");\n const { createHmac } = require(\"node:crypto\");\n const persistedFiles = new Map();\n const statePath = \".auth/owned-user.json\";\n let tokenEndpointCalls = 0;\n const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function mockedTokenEndpoint() { tokenEndpointCalls++; return fakeAuthResponse; }\n function persistSession(session) {\n   const state = { cookies: [], origins: [{ origin: \"http://owned.invalid\", localStorage: [{ name: \"owned-session\", value: JSON.stringify(session) }] }] };\n   persistedFiles.set(statePath, JSON.stringify(state));\n }\n function signedSetup() {\n   const header = Buffer.from(JSON.stringify({alg:\"HS256\",typ:\"JWT\"})).toString(\"base64url\");\n   const payload = Buffer.from(JSON.stringify({sub:\"owned-synthetic-user\"})).toString(\"base64url\");\n   const unsigned = header + \".\" + payload;\n   const signature = createHmac(\"sha256\", \"owned-synthetic-fixture-key\").update(unsigned).digest(\"base64url\");\n   persistSession({ access_token: unsigned + \".\" + signature, expires_at: 10000 });\n }\n function opaqueSetup() { persistSession({ ...mockedTokenEndpoint(), expires_at: 10000 }); }\n function aliasSetup() { return signedSetup(); }\n const setupModules = { \"signed.setup.ts\": signedSetup, \"alias.setup.ts\": aliasSetup, \"opaque.setup.ts\": opaqueSetup };\n const projectConfig = { globalSetup: \"alias.setup.ts\", storageState: statePath };\n setupModules[projectConfig.globalSetup]();\n const browserState = JSON.parse(persistedFiles.get(projectConfig.storageState));\n const storedSession = JSON.parse(browserState.origins[0].localStorage.find(item => item.name === \"owned-session\").value);\n const testClock = 1000;\n let accessToken = storedSession.access_token;\n if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;\n const authorization = \"Bearer \" + accessToken;\n+assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+      "expected": []
+    },
+    {
+      "id": "session-source-opaque-bootstrap",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Owned synthetic harness dispatches configuration-selected setup, persists the storageState JSON shape and reads its localStorage session. Real Node HMAC/base64url creates compact tokens. The token endpoint supplies only the explicitly selected initial or expiry path. The assertion checks the selected header under a fixed test clock; no browser, private consumer or external auth provider is executed.",
+      "file": "e2e/owned-session.spec.ts",
+      "startLine": 1,
+      "diff": " const assert = require(\"node:assert/strict\");\n const { createHmac } = require(\"node:crypto\");\n const persistedFiles = new Map();\n const statePath = \".auth/owned-user.json\";\n let tokenEndpointCalls = 0;\n const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function mockedTokenEndpoint() { tokenEndpointCalls++; return fakeAuthResponse; }\n function persistSession(session) {\n   const state = { cookies: [], origins: [{ origin: \"http://owned.invalid\", localStorage: [{ name: \"owned-session\", value: JSON.stringify(session) }] }] };\n   persistedFiles.set(statePath, JSON.stringify(state));\n }\n function signedSetup() {\n   const header = Buffer.from(JSON.stringify({alg:\"HS256\",typ:\"JWT\"})).toString(\"base64url\");\n   const payload = Buffer.from(JSON.stringify({sub:\"owned-synthetic-user\"})).toString(\"base64url\");\n   const unsigned = header + \".\" + payload;\n   const signature = createHmac(\"sha256\", \"owned-synthetic-fixture-key\").update(unsigned).digest(\"base64url\");\n   persistSession({ access_token: unsigned + \".\" + signature, expires_at: 10000 });\n }\n function opaqueSetup() { persistSession({ ...mockedTokenEndpoint(), expires_at: 10000 }); }\n function aliasSetup() { return signedSetup(); }\n const setupModules = { \"signed.setup.ts\": signedSetup, \"alias.setup.ts\": aliasSetup, \"opaque.setup.ts\": opaqueSetup };\n const projectConfig = { globalSetup: \"opaque.setup.ts\", storageState: statePath };\n setupModules[projectConfig.globalSetup]();\n const browserState = JSON.parse(persistedFiles.get(projectConfig.storageState));\n const storedSession = JSON.parse(browserState.origins[0].localStorage.find(item => item.name === \"owned-session\").value);\n const testClock = 1000;\n let accessToken = storedSession.access_token;\n if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;\n const authorization = \"Bearer \" + accessToken;\n+assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+      "expected": [
+        {
+          "id": "session-source-opaque-bootstrap",
+          "title": "The selected session supplies an opaque token to the compact-token assertion",
+          "file": "e2e/owned-session.spec.ts",
+          "line": 30,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);"
+        }
+      ]
+    },
+    {
+      "id": "session-source-expired-refresh",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Owned synthetic harness dispatches configuration-selected setup, persists the storageState JSON shape and reads its localStorage session. Real Node HMAC/base64url creates compact tokens. The token endpoint supplies only the explicitly selected initial or expiry path. The assertion checks the selected header under a fixed test clock; no browser, private consumer or external auth provider is executed.",
+      "file": "e2e/owned-session.spec.ts",
+      "startLine": 1,
+      "diff": " const assert = require(\"node:assert/strict\");\n const { createHmac } = require(\"node:crypto\");\n const persistedFiles = new Map();\n const statePath = \".auth/owned-user.json\";\n let tokenEndpointCalls = 0;\n const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function mockedTokenEndpoint() { tokenEndpointCalls++; return fakeAuthResponse; }\n function persistSession(session) {\n   const state = { cookies: [], origins: [{ origin: \"http://owned.invalid\", localStorage: [{ name: \"owned-session\", value: JSON.stringify(session) }] }] };\n   persistedFiles.set(statePath, JSON.stringify(state));\n }\n function signedSetup() {\n   const header = Buffer.from(JSON.stringify({alg:\"HS256\",typ:\"JWT\"})).toString(\"base64url\");\n   const payload = Buffer.from(JSON.stringify({sub:\"owned-synthetic-user\"})).toString(\"base64url\");\n   const unsigned = header + \".\" + payload;\n   const signature = createHmac(\"sha256\", \"owned-synthetic-fixture-key\").update(unsigned).digest(\"base64url\");\n   persistSession({ access_token: unsigned + \".\" + signature, expires_at: 10000 });\n }\n function opaqueSetup() { persistSession({ ...mockedTokenEndpoint(), expires_at: 10000 }); }\n function aliasSetup() { return signedSetup(); }\n const setupModules = { \"signed.setup.ts\": signedSetup, \"alias.setup.ts\": aliasSetup, \"opaque.setup.ts\": opaqueSetup };\n const projectConfig = { globalSetup: \"signed.setup.ts\", storageState: statePath };\n setupModules[projectConfig.globalSetup]();\n const browserState = JSON.parse(persistedFiles.get(projectConfig.storageState));\n const storedSession = JSON.parse(browserState.origins[0].localStorage.find(item => item.name === \"owned-session\").value);\n const testClock = 20000;\n let accessToken = storedSession.access_token;\n if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;\n const authorization = \"Bearer \" + accessToken;\n+assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+      "expected": [
+        {
+          "id": "session-source-expired-refresh",
+          "title": "The selected session supplies an opaque token to the compact-token assertion",
+          "file": "e2e/owned-session.spec.ts",
+          "line": 30,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);"
+        }
+      ]
+    },
+    {
+      "id": "session-source-prefix-gap",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Owned synthetic harness dispatches configuration-selected setup, persists the storageState JSON shape and reads its localStorage session. Real Node HMAC/base64url creates compact tokens. The token endpoint supplies only the explicitly selected initial or expiry path. The assertion checks the selected header under a fixed test clock; no browser, private consumer or external auth provider is executed.",
+      "file": "e2e/owned-session.spec.ts",
+      "startLine": 1,
+      "diff": " const assert = require(\"node:assert/strict\");\n const { createHmac } = require(\"node:crypto\");\n const persistedFiles = new Map();\n const statePath = \".auth/owned-user.json\";\n let tokenEndpointCalls = 0;\n const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function mockedTokenEndpoint() { tokenEndpointCalls++; return fakeAuthResponse; }\n function persistSession(session) {\n   const state = { cookies: [], origins: [{ origin: \"http://owned.invalid\", localStorage: [{ name: \"owned-session\", value: JSON.stringify(session) }] }] };\n   persistedFiles.set(statePath, JSON.stringify(state));\n }\n function signedSetup() {\n   const header = Buffer.from(JSON.stringify({alg:\"HS256\",typ:\"JWT\"})).toString(\"base64url\");\n   const payload = Buffer.from(JSON.stringify({sub:\"owned-synthetic-user\"})).toString(\"base64url\");\n   const unsigned = header + \".\" + payload;\n   const signature = createHmac(\"sha256\", \"owned-synthetic-fixture-key\").update(unsigned).digest(\"base64url\");\n   persistSession({ access_token: unsigned + \".\" + signature, expires_at: 10000 });\n }\n function opaqueSetup() { persistSession({ ...mockedTokenEndpoint(), expires_at: 10000 }); }\n function aliasSetup() { return signedSetup(); }\n const setupModules = { \"signed.setup.ts\": signedSetup, \"alias.setup.ts\": aliasSetup, \"opaque.setup.ts\": opaqueSetup };\n const projectConfig = { globalSetup: \"signed.setup.ts\", storageState: statePath };\n setupModules[projectConfig.globalSetup]();\n const browserState = JSON.parse(persistedFiles.get(projectConfig.storageState));\n const storedSession = JSON.parse(browserState.origins[0].localStorage.find(item => item.name === \"owned-session\").value);\n const testClock = 1000;\n let accessToken = storedSession.access_token;\n if (storedSession.expires_at <= testClock) accessToken = mockedTokenEndpoint().access_token;\n+const authorization = \"Bearer\" + accessToken;\n+assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+      "expected": [
+        {
+          "id": "session-source-prefix-gap",
+          "title": "The changed header omits the bearer separator",
+          "file": "e2e/owned-session.spec.ts",
+          "line": 29,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "const authorization = \"Bearer\" + accessToken;"
+        }
+      ]
+    },
+    {
+      "id": "session-source-setup-unavailable",
+      "language": "typescript",
+      "category": "negative",
+      "description": "Bounded source excerpt: the configured setup and persisted initial session producer are not supplied. A separate token endpoint stub is visible. No execution outcome is provided; review only supported defects in the changed assertion.",
+      "file": "e2e/owned-session.spec.ts",
+      "startLine": 1,
+      "diff": " const fakeAuthResponse = { access_token: \"opaque-token-response\" };\n function tokenEndpoint() { return fakeAuthResponse; }\n const initialSession = loadConfiguredStorageState();\n+assert.equal(initialSession.access_token.split(\".\").length, 3);",
+      "expected": []
     }
   ]
 }

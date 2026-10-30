@@ -224,6 +224,45 @@
         "codeSnippet": "return count >= 0",
         "confidence": 1
       }
-    ]
+    ],
+    "session-source-signed-bootstrap": [],
+    "session-source-storage-alias": [],
+    "session-source-opaque-bootstrap": [
+      {
+        "id": "session-source-opaque-bootstrap",
+        "title": "The selected session supplies an opaque token to the compact-token assertion",
+        "file": "e2e/owned-session.spec.ts",
+        "line": 30,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+        "confidence": 1
+      }
+    ],
+    "session-source-expired-refresh": [
+      {
+        "id": "session-source-expired-refresh",
+        "title": "The selected session supplies an opaque token to the compact-token assertion",
+        "file": "e2e/owned-session.spec.ts",
+        "line": 30,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "assert.match(authorization, /^Bearer [A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/);",
+        "confidence": 1
+      }
+    ],
+    "session-source-prefix-gap": [
+      {
+        "id": "session-source-prefix-gap",
+        "title": "The changed header omits the bearer separator",
+        "file": "e2e/owned-session.spec.ts",
+        "line": 29,
+        "severity": "medium",
+        "category": "correctness",
+        "codeSnippet": "const authorization = \"Bearer\" + accessToken;",
+        "confidence": 1
+      }
+    ],
+    "session-source-setup-unavailable": []
   }
 }

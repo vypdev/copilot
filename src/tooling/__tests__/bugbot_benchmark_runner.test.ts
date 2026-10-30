@@ -295,3 +295,12 @@ it('preserves the serialized 200-candidate envelope through the shared real benc
     const result = await runBugbotBenchmarkAgent({ schemaVersion: 1, cases: [literal] }, { query }, {} as never);
     expect(result.predictions[literal.id]).toHaveLength(200); expect(query).toHaveBeenCalledTimes(11);
 });
+
+it('delivers initial credential ownership guidance without exposing the expected verdict', () => {
+    const prompt = buildBugbotBenchmarkPrompt(testCase);
+    for (const clause of ['configured globalSetup/bootstrap', 'storageState/localStorage', 'evaluated expiry/login/refresh guard',
+        'last write -> asserted credential', 'never stop at bootstrap',
+        'unused token-response stub is not initial-token evidence', 'Preserve real initial-state, refresh and header defects']) expect(prompt).toContain(clause);
+    expect(prompt).not.toContain('Hidden ground truth title');
+    expect(prompt).not.toContain('"expected"');
+});

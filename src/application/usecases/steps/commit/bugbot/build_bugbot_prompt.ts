@@ -50,7 +50,7 @@ export function buildBugbotReviewInput(
                       raw.length <= MAX_IGNORE_BLOCK_LENGTH
                           ? raw
                           : raw.slice(0, MAX_IGNORE_BLOCK_LENGTH - 3) + "...";
-                  return `\n**Files to ignore:** Do not report findings in files or paths matching these patterns: ${truncated}.`;
+                  return `\n**Files to ignore:** Exclude paths matching: ${truncated}.`;
               })()
             : "";
     const changes = (context.prContext?.changes ?? [])
@@ -84,7 +84,7 @@ export function buildBugbotReviewInput(
         diffBlock: assignment?.partition.block ?? [context.reviewDiffBlock, literalEvidence?.block].filter(Boolean).join('\n\n'),
         reviewConversationBlock: context.reviewConversationBlock,
         rulesBlock: context.reviewRulesBlock,
-        effortBlock: `**Review effort:** ${resolvedEffort}. ${resolvedEffort === 'high' ? 'Perform deeper cross-file and adversarial analysis.' : resolvedEffort === 'low' ? 'Prioritize high-signal changed-code defects and avoid speculative breadth.' : 'Balance depth, latency, and false-positive control.'}`,
+        effortBlock: `**Review effort:** ${resolvedEffort}. ${resolvedEffort === 'high' ? 'Perform deeper cross-file and adversarial analysis.' : resolvedEffort === 'low' ? 'Prioritize high-signal changed-code defects and avoid speculative breadth.' : 'Balance depth/latency; limit false positives.'}`,
         partitionBlock: assignment ? buildPartitionInstruction(assignment.partition) : undefined,
         outputContractBlock: assignment ? buildPartitionOutputContract(assignment.partition) : undefined,
         targetLocale: context.prContext && context.canonicalPullRequest
@@ -128,7 +128,7 @@ function buildCoverageBlock(
             return `- ${source.source}: ${details.join(', ')}`;
         });
     const coverage = limitedSources.length === 0
-        ? ['**Context coverage:** complete within every fixed provider budget.']
+        ? ['**Context coverage:** complete within fixed provider budgets.']
         : [
         '**Context coverage:** partial outside the partition plan.',
         ...limitedSources,
@@ -173,7 +173,7 @@ function buildChangeScopeInstruction(
         return `Review the canonical pull-request diff for "${headBranch}" compared to "${baseBranch}" and inspect the read-only workspace for any surrounding code required to prove a finding.`;
     }
 
-    return `No canonical pull-request diff is available. Determine the current change scope from the read-only local Git checkout: compare "${headBranch}" with "${baseBranch}" when both refs are available, otherwise inspect the current commit against its parent. Review only those changes and the surrounding code needed to prove a finding.`;
+    return `No canonical pull-request diff is available. In the read-only checkout compare "${headBranch}" to "${baseBranch}" if both refs exist; otherwise inspect the current commit against its parent. Review only those changes and surrounding code needed to prove a finding.`;
 }
 
 function buildPartitionInstruction(partition: BugbotReviewDiffPartition): string {

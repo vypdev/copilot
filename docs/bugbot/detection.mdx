@@ -492,6 +492,22 @@ contexts without retained witnesses use the existing path. Rejected hypotheses
 cannot resolve, dismiss or reopen historical findings. There is no new public
 configuration, provider permission or workflow step.
 
+## Initial session credential ownership
+
+Before attributing a tested credential to a stub, Bugbot follows the configured
+bootstrap/globalSetup, persisted storageState/localStorage and the actual request
+path. A signed initial session and a separate opaque login/refresh response can
+coexist. The endpoint stub supplies the tested value only when the selected setup
+or an actually reached login/refresh transition uses it.
+
+For example, a non-expired session written by global setup can supply a compact
+signed token while a different token-response fixture stays unused. Its mere
+presence does not prove that a header assertion fails. An opaque initial stored
+session, a reached refresh that overwrites the token, or an independent malformed
+header remains actionable when it contradicts the actual assertion. Missing setup
+evidence does not establish failure. Existing findings require normal eligible
+verification; this adds no automatic dismissal, token whitelist or permission.
+
 ## Delegated test paths
 
 Before claiming a parameterized test always fails or its stub is unused, Bugbot
