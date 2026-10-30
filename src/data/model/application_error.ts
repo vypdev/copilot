@@ -62,6 +62,7 @@ export const APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'sdd-draft-size-exceeded',
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
+    'sdd-catalog-missing-trusted-source',
     'sdd-draft-format-invalid',
     'sdd-draft-case-identity-invalid',
     'sdd-draft-case-budget-invalid',
@@ -110,6 +111,7 @@ interface ApplicationErrorRecoveryVariables extends Readonly<Record<CopilotComma
     readonly 'sdd-draft-size-exceeded': Readonly<Record<string, never>>;
     readonly 'sdd-catalog-unsupported-profile': Readonly<Record<string, never>>;
     readonly 'sdd-catalog-format-invalid': Readonly<Record<string, never>>;
+    readonly 'sdd-catalog-missing-trusted-source': Readonly<Record<string, never>>;
     readonly 'sdd-draft-format-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-draft-case-identity-invalid': Readonly<Record<string, never>>;
     readonly 'sdd-draft-case-budget-invalid': Readonly<Record<string, never>>;
@@ -399,6 +401,7 @@ const RECOVERY_VARIABLE_KEYS: Readonly<Record<ApplicationErrorRecoveryId, readon
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
+    'sdd-catalog-missing-trusted-source': Object.freeze([]),
     'sdd-draft-format-invalid': Object.freeze([]),
     'sdd-draft-case-identity-invalid': Object.freeze([]),
     'sdd-draft-case-budget-invalid': Object.freeze([]),

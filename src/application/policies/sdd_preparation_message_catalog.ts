@@ -5,6 +5,8 @@ import type { MessageCatalogResolutionPort } from '../ports/message_catalog_port
 import { resolveMessageCatalogView, resolveStaticMessageCatalogView } from './resolved_message_catalog_policy';
 
 const UI = Object.freeze({
+  missingCatalogSource: ['Trusted source revision', 'Revisión de origen confiable'] as const,
+  missingCatalogFact: ['Missing prerequisite: specs/catalog.json.', 'Requisito ausente: specs/catalog.json.'] as const,
   catalogCompatibility: ['Catalog compatibility', 'Compatibilidad del catálogo'] as const,
   catalogProfile: ['The installed automated writer supports the SDK version-1 profile with specs arrays. A repository-selected schema requires a reviewed compatible adapter.', 'El publicador automático instalado admite el perfil SDK de versión 1 con listas specs. Un esquema seleccionado por el repositorio requiere un adaptador compatible revisado.'] as const,
   catalogRetained: ['Native schema, readiness, requirements, design and implementation evidence, and blockers remain unchanged. Review the supported-profile boundary before retrying this same issue.', 'El esquema nativo, los estados, requisitos, evidencias de diseño e implementación y bloqueos permanecen intactos. Revisa los perfiles admitidos antes de reintentar esta misma incidencia.'] as const,

@@ -105,6 +105,11 @@ const RECOVERY_CASES: readonly Readonly<{
         spanish: 'El catálogo de origen, las respuestas y los SDD publicados permanecen intactos; no se intentó convertir el catálogo automáticamente.',
     },
     {
+        recovery: { id: 'sdd-catalog-missing-trusted-source', variables: {} },
+        english: 'Existing answers, published specifications and any linked branch are retained; this attempt published no specification or branch.',
+        spanish: 'Se conservan las respuestas, las especificaciones publicadas y cualquier rama enlazada; este intento no publicó ninguna especificación ni rama.',
+    },
+    {
         recovery: { id: 'sdd-draft-format-invalid', variables: {} },
         english: 'Existing answers and published SDDs were preserved; no draft was published.',
         spanish: 'Se conservaron las respuestas y los SDD publicados; no se publicó ningún borrador.',

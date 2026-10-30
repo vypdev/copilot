@@ -1,4 +1,5 @@
 import { allowsEmptySddCatalogPathField, SddCatalogCompatibilityFailure } from '../../../domain/sdd_catalog_compatibility';
+import { SddTrustedCatalogMissingFailure } from '../../../domain/sdd_trusted_catalog_failure';
 import { SddDraftPreparationFailure } from '../../errors/sdd_draft_preparation_failure';
 import { renderSddPreparationFailure, renderSddPreparationRecovered, type SddWorkflowRunFacts } from '../../policies/sdd_preparation_status_policy';
 import { resolveSddPreparationCatalog, resolveStaticSddPreparationCatalog } from '../../policies/sdd_preparation_message_catalog';
@@ -242,7 +243,7 @@ export class PreBranchSddGateUseCase {
       await this.assertFresh(context, snapshot.baseSha, sourceBranch);
       return { status: 'drafted', prepared, record, ...(card ? { cardId: card.id } : {}), results: [this.result(true, true, `Validated ${plan.path} before branch publication.`)] };
     } catch (error) {
-      if (error instanceof SddCatalogCompatibilityFailure && error.sourceCommit) {
+      if ((error instanceof SddCatalogCompatibilityFailure || error instanceof SddTrustedCatalogMissingFailure) && error.sourceCommit) {
         failureSource = { branch: failureBranch, sha: error.sourceCommit };
       }
       const failure = this.failure(error);
@@ -346,7 +347,7 @@ export class PreBranchSddGateUseCase {
   private async writePreparationFailure(context: PreBranchSddContext, error: ApplicationError, cause: unknown,
     publicationPending: boolean, source?: Readonly<{ branch: string; sha: string }>): Promise<void> {
     if (!context.tokenUser.trim()) throw new ApplicationError('configuration.unsupported', 'The SDD diagnostic card requires a trusted bot identity.');
-    if (cause instanceof SddCatalogCompatibilityFailure && !source) throw new ApplicationError('configuration.unsupported', 'The catalog compatibility diagnostic requires a verified source revision.');
+    if ((cause instanceof SddCatalogCompatibilityFailure || cause instanceof SddTrustedCatalogMissingFailure) && !source) throw new ApplicationError('configuration.unsupported', 'The catalog diagnostic requires a verified source revision.');
     const comments = await this.comments.listIssueComments(context.issueNumber);
     const [catalog, errorCatalog] = await Promise.all([
       resolveSddPreparationCatalog(context.issueLocale ?? 'en-US', context.agentConfiguration, this.presentation.catalogResolver),
@@ -357,6 +358,7 @@ export class PreBranchSddGateUseCase {
       error, publicationPending, run: this.presentation.run,
       ...(cause instanceof SddDraftPreparationFailure ? { diagnostic: cause.diagnostic, attempts: cause.attempts } : {}),
       ...(cause instanceof SddCatalogCompatibilityFailure ? { catalogReason: cause.reason } : {}),
+      ...(cause instanceof SddTrustedCatalogMissingFailure ? { missingCatalogSource: cause.sourceCommit } : {}),
     }, aligned ? catalog : resolveStaticSddPreparationCatalog('en-US'),
     aligned ? errorCatalog.message : resolveStaticApplicationErrorCatalog('en-US').message)
       + (aligned ? '' : '\n\n' + resolveStaticSddPreparationCatalog('en-US').message('sddPreparation.fallbackSlices'));
@@ -412,7 +414,10 @@ export class PreBranchSddGateUseCase {
   private failure(error: unknown): Result {
     // The runtime logger redacts credentials and makes workflow-command text inert.
     logError(`Pre-branch SDD gate failed: ${error instanceof Error ? error.message : 'unknown failure'}`);
-    const semanticError = error instanceof SddCatalogCompatibilityFailure
+    const semanticError = error instanceof SddTrustedCatalogMissingFailure
+      ? new ApplicationError('configuration.unsupported', error.message, { recovery: {
+        id: 'sdd-catalog-missing-trusted-source', variables: {},
+      } }) : error instanceof SddCatalogCompatibilityFailure
       ? new ApplicationError('configuration.unsupported', error.message, { recovery: {
         id: error.reason === 'unsupported-profile' ? 'sdd-catalog-unsupported-profile' : 'sdd-catalog-format-invalid', variables: {},
       } }) : toApplicationError(error, 'workflow.failed', 'The pre-branch SDD gate is blocked.');

@@ -41370,6 +41370,11 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
         action: 'Review catalog profile support in the SDD guide. Preserve the native schema, readiness, requirements, evidence and blockers; have a maintainer provide a reviewed compatible adapter, then retry this same issue.',
         retainedState: 'The repository catalog, answers and published SDDs remain unchanged; no specification or branch was published by this attempt.',
     }),
+    'sdd-catalog-missing-trusted-source': Object.freeze({
+        impact: 'SDD preparation stopped before model analysis because specs/catalog.json is missing from the trusted source revision.',
+        action: 'Review and merge the catalog prerequisite through the enabled documentation workflow. Update the displayed trusted source through the normal managed-branch workflow, then retry this same issue after the source changes. An unchanged revision remains blocked.',
+        retainedState: 'Existing answers, published specifications and any linked branch are retained; this attempt published no specification or branch.',
+    }),
     'sdd-catalog-format-invalid': Object.freeze({
         impact: 'SDD preparation stopped before ownership operations because the catalog cannot establish one valid supported profile and unique owner paths.',
         action: 'Validate the catalog JSON, supported profile, required metadata and normalized unique owner-path arrays. Preserve repository-owned readiness rules and retry the same issue after maintainer review.',
@@ -41527,6 +41532,11 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
         impact: 'La preparación del SDD se detuvo antes del análisis del modelo porque el repositorio seleccionó un perfil de catálogo que el adaptador de publicación instalado no admite.',
         action: 'Revisa los perfiles admitidos en la guía de SDD. Conserva el esquema nativo, los estados, requisitos, evidencias y bloqueos; pide a un mantenedor un adaptador compatible revisado y reintenta esta misma incidencia.',
         retainedState: 'El catálogo, las respuestas y los SDD publicados permanecen intactos; este intento no publicó ninguna especificación ni rama.',
+    }),
+    'sdd-catalog-missing-trusted-source': Object.freeze({
+        impact: 'La preparación del SDD se detuvo antes del análisis del modelo porque falta specs/catalog.json en la revisión de origen confiable.',
+        action: 'Revisa e integra el catálogo requerido mediante el workflow de documentación habilitado. Actualiza el origen confiable mostrado mediante el flujo normal de ramas gestionadas y reintenta esta misma incidencia cuando cambie esa revisión. La revisión sin cambios permanece bloqueada.',
+        retainedState: 'Se conservan las respuestas, las especificaciones publicadas y cualquier rama enlazada; este intento no publicó ninguna especificación ni rama.',
     }),
     'sdd-catalog-format-invalid': Object.freeze({
         impact: 'La preparación del SDD se detuvo antes de las operaciones de propiedad porque el catálogo no permite establecer un único perfil admitido con rutas de propiedad válidas y únicas.',
@@ -50610,6 +50620,8 @@ const sdd_validation_diagnostic_1 = __nccwpck_require__(34211);
 const message_catalog_1 = __nccwpck_require__(27097);
 const resolved_message_catalog_policy_1 = __nccwpck_require__(55069);
 const UI = Object.freeze({
+    missingCatalogSource: ['Trusted source revision', 'Revisión de origen confiable'],
+    missingCatalogFact: ['Missing prerequisite: specs/catalog.json.', 'Requisito ausente: specs/catalog.json.'],
     catalogCompatibility: ['Catalog compatibility', 'Compatibilidad del catálogo'],
     catalogProfile: ['The installed automated writer supports the SDK version-1 profile with specs arrays. A repository-selected schema requires a reviewed compatible adapter.', 'El publicador automático instalado admite el perfil SDK de versión 1 con listas specs. Un esquema seleccionado por el repositorio requiere un adaptador compatible revisado.'],
     catalogRetained: ['Native schema, readiness, requirements, design and implementation evidence, and blockers remain unchanged. Review the supported-profile boundary before retrying this same issue.', 'El esquema nativo, los estados, requisitos, evidencias de diseño e implementación y bloqueos permanecen intactos. Revisa los perfiles admitidos antes de reintentar esta misma incidencia.'],
@@ -50742,6 +50754,11 @@ function renderSddPreparationFailure(options, catalog = (0, sdd_preparation_mess
         || typeof options.error.retryable !== 'boolean' || !(0, application_error_1.isApplicationErrorCorrelationId)(options.error.correlationId)) {
         throw new TypeError('Invalid SDD status identity or semantic error facts.');
     }
+    const missingCatalogSource = options.missingCatalogSource;
+    if (missingCatalogSource !== undefined && (typeof missingCatalogSource !== 'string'
+        || !/^[a-f0-9]{40}$/u.test(missingCatalogSource) || options.catalogReason !== undefined || options.diagnostic !== undefined)) {
+        throw new TypeError('Invalid exclusive missing trusted-catalog facts.');
+    }
     if (options.catalogReason !== undefined && (!sdd_catalog_compatibility_1.SDD_CATALOG_COMPATIBILITY_REASONS.includes(options.catalogReason) || options.diagnostic)) {
         throw new TypeError('Invalid exclusive catalog compatibility facts.');
     }
@@ -50767,7 +50784,10 @@ function renderSddPreparationFailure(options, catalog = (0, sdd_preparation_mess
         `**${message('sddPreparation.code')}:** \`${view.code}\``,
         `**${message('sddPreparation.reference')}:** \`${view.reference}\``,
     ];
-    if (options.catalogReason) {
+    if (missingCatalogSource) {
+        lines.push(`**${message('sddPreparation.missingCatalogSource')}:** \`${missingCatalogSource}\``, '', message('sddPreparation.missingCatalogFact'));
+    }
+    else if (options.catalogReason) {
         lines.push(`**${message('sddPreparation.catalogCompatibility')}:** \`${options.catalogReason}\``, '', message('sddPreparation.catalogProfile'), '', message('sddPreparation.catalogRetained'));
     }
     else if (diagnostic) {
@@ -62056,6 +62076,7 @@ async function draftSddMarkdown(agent, configuration, plan, prompt, validate) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PreBranchSddGateUseCase = void 0;
 const sdd_catalog_compatibility_1 = __nccwpck_require__(95312);
+const sdd_trusted_catalog_failure_1 = __nccwpck_require__(44763);
 const sdd_draft_preparation_failure_1 = __nccwpck_require__(12321);
 const sdd_preparation_status_policy_1 = __nccwpck_require__(78345);
 const sdd_preparation_message_catalog_1 = __nccwpck_require__(88171);
@@ -62255,7 +62276,7 @@ class PreBranchSddGateUseCase {
             return { status: 'drafted', prepared, record, ...(card ? { cardId: card.id } : {}), results: [this.result(true, true, `Validated ${plan.path} before branch publication.`)] };
         }
         catch (error) {
-            if (error instanceof sdd_catalog_compatibility_1.SddCatalogCompatibilityFailure && error.sourceCommit) {
+            if ((error instanceof sdd_catalog_compatibility_1.SddCatalogCompatibilityFailure || error instanceof sdd_trusted_catalog_failure_1.SddTrustedCatalogMissingFailure) && error.sourceCommit) {
                 failureSource = { branch: failureBranch, sha: error.sourceCommit };
             }
             const failure = this.failure(error);
@@ -62369,8 +62390,8 @@ class PreBranchSddGateUseCase {
     async writePreparationFailure(context, error, cause, publicationPending, source) {
         if (!context.tokenUser.trim())
             throw new application_error_1.ApplicationError('configuration.unsupported', 'The SDD diagnostic card requires a trusted bot identity.');
-        if (cause instanceof sdd_catalog_compatibility_1.SddCatalogCompatibilityFailure && !source)
-            throw new application_error_1.ApplicationError('configuration.unsupported', 'The catalog compatibility diagnostic requires a verified source revision.');
+        if ((cause instanceof sdd_catalog_compatibility_1.SddCatalogCompatibilityFailure || cause instanceof sdd_trusted_catalog_failure_1.SddTrustedCatalogMissingFailure) && !source)
+            throw new application_error_1.ApplicationError('configuration.unsupported', 'The catalog diagnostic requires a verified source revision.');
         const comments = await this.comments.listIssueComments(context.issueNumber);
         const [catalog, errorCatalog] = await Promise.all([
             (0, sdd_preparation_message_catalog_1.resolveSddPreparationCatalog)(context.issueLocale ?? 'en-US', context.agentConfiguration, this.presentation.catalogResolver),
@@ -62381,6 +62402,7 @@ class PreBranchSddGateUseCase {
             error, publicationPending, run: this.presentation.run,
             ...(cause instanceof sdd_draft_preparation_failure_1.SddDraftPreparationFailure ? { diagnostic: cause.diagnostic, attempts: cause.attempts } : {}),
             ...(cause instanceof sdd_catalog_compatibility_1.SddCatalogCompatibilityFailure ? { catalogReason: cause.reason } : {}),
+            ...(cause instanceof sdd_trusted_catalog_failure_1.SddTrustedCatalogMissingFailure ? { missingCatalogSource: cause.sourceCommit } : {}),
         }, aligned ? catalog : (0, sdd_preparation_message_catalog_1.resolveStaticSddPreparationCatalog)('en-US'), aligned ? errorCatalog.message : (0, application_error_message_catalog_1.resolveStaticApplicationErrorCatalog)('en-US').message)
             + (aligned ? '' : '\n\n' + (0, sdd_preparation_message_catalog_1.resolveStaticSddPreparationCatalog)('en-US').message('sddPreparation.fallbackSlices'));
         if (source)
@@ -62437,7 +62459,10 @@ class PreBranchSddGateUseCase {
     failure(error) {
         // The runtime logger redacts credentials and makes workflow-command text inert.
         (0, logging_ports_1.logError)(`Pre-branch SDD gate failed: ${error instanceof Error ? error.message : 'unknown failure'}`);
-        const semanticError = error instanceof sdd_catalog_compatibility_1.SddCatalogCompatibilityFailure
+        const semanticError = error instanceof sdd_trusted_catalog_failure_1.SddTrustedCatalogMissingFailure
+            ? new application_error_1.ApplicationError('configuration.unsupported', error.message, { recovery: {
+                    id: 'sdd-catalog-missing-trusted-source', variables: {},
+                } }) : error instanceof sdd_catalog_compatibility_1.SddCatalogCompatibilityFailure
             ? new application_error_1.ApplicationError('configuration.unsupported', error.message, { recovery: {
                     id: error.reason === 'unsupported-profile' ? 'sdd-catalog-unsupported-profile' : 'sdd-catalog-format-invalid', variables: {},
                 } }) : (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'The pre-branch SDD gate is blocked.');
@@ -72592,6 +72617,7 @@ exports.APPLICATION_ERROR_RECOVERY_IDS = Object.freeze([
     'sdd-draft-size-exceeded',
     'sdd-catalog-unsupported-profile',
     'sdd-catalog-format-invalid',
+    'sdd-catalog-missing-trusted-source',
     'sdd-draft-format-invalid',
     'sdd-draft-case-identity-invalid',
     'sdd-draft-case-budget-invalid',
@@ -72838,6 +72864,7 @@ const RECOVERY_VARIABLE_KEYS = Object.freeze({
     'sdd-draft-size-exceeded': Object.freeze([]),
     'sdd-catalog-unsupported-profile': Object.freeze([]),
     'sdd-catalog-format-invalid': Object.freeze([]),
+    'sdd-catalog-missing-trusted-source': Object.freeze([]),
     'sdd-draft-format-invalid': Object.freeze([]),
     'sdd-draft-case-identity-invalid': Object.freeze([]),
     'sdd-draft-case-budget-invalid': Object.freeze([]),
@@ -90073,6 +90100,30 @@ function uniqueIdentifiers(values, pattern, reason, section) {
 
 /***/ }),
 
+/***/ 44763:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SddTrustedCatalogMissingFailure = void 0;
+/** Closed prerequisite fact; never carries provider stderr or candidate content. */
+class SddTrustedCatalogMissingFailure extends Error {
+    constructor(sourceCommit) {
+        if (typeof sourceCommit !== 'string' || !/^[a-f0-9]{40}$/iu.test(sourceCommit)) {
+            throw new TypeError('Invalid trusted SDD catalog source revision.');
+        }
+        super('The trusted source does not contain specs/catalog.json.');
+        this.name = 'SddTrustedCatalogMissingFailure';
+        this.sourceCommit = sourceCommit.toLowerCase();
+        Object.freeze(this);
+    }
+}
+exports.SddTrustedCatalogMissingFailure = SddTrustedCatalogMissingFailure;
+
+
+/***/ }),
+
 /***/ 34211:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -95993,6 +96044,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PreBranchSddWorkspaceAdapter = void 0;
 const sdd_catalog_compatibility_1 = __nccwpck_require__(95312);
+const sdd_trusted_catalog_failure_1 = __nccwpck_require__(44763);
 const fs = __importStar(__nccwpck_require__(87561));
 const os = __importStar(__nccwpck_require__(70612));
 const path = __importStar(__nccwpck_require__(49411));
@@ -96030,6 +96082,10 @@ class PreBranchSddWorkspaceAdapter {
         return this.readSnapshotAtSha(commitSha);
     }
     async readSnapshotAtSha(baseSha) {
+        // A successful immutable lookup proves absence; object/read failures remain Git failures.
+        const catalogEntry = await this.git(['ls-tree', '-z', '--full-tree', `${baseSha}^{commit}`, '--', 'specs/catalog.json']);
+        if (catalogEntry === '')
+            throw new sdd_trusted_catalog_failure_1.SddTrustedCatalogMissingFailure(baseSha);
         const raw = await this.git(['show', `${baseSha}:specs/catalog.json`]);
         let catalog;
         try {
