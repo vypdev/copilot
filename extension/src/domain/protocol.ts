@@ -3,6 +3,7 @@ import { pageIdentity } from './page.ts';
 import { parseCenterLocation } from './center_routes.ts';
 import { keys, natural, record, utf8Bytes } from './value.ts';
 import { CENTER_COMMANDS, type CenterCommand } from './shortcuts.ts';
+import { snapshotHelperIntent, type HelperSampleIntent } from './helper_sample.ts';
 
 export interface Sender {
     readonly id?: string; readonly url?: string; readonly origin?: string; readonly frameId?: number;
@@ -10,7 +11,7 @@ export interface Sender {
     readonly tab?: { readonly id?: number; readonly url?: string; readonly incognito?: boolean; readonly active?: boolean };
 }
 export type Message = { readonly method: 'settings.read'; readonly version: 1 }
-    | { readonly method: 'settings.open'; readonly version: 1; readonly command?: CenterCommand }
+    | { readonly method: 'settings.open'; readonly version: 1; readonly command?: CenterCommand; readonly health?: HelperSampleIntent }
     | { readonly method: 'session.status'; readonly version: 1 }
     | { readonly method: 'session.disconnect'; readonly version: 1 }
     | { readonly method: 'page.release'; readonly version: 1; readonly generation: number }
@@ -44,9 +45,13 @@ export function pageSender(sender: Sender, id: string): boolean {
 }
 export function parseMessage(value: unknown): Message | null {
     if (!record(value) || value.version !== 1 || typeof value.method !== 'string') return null;
-    if (value.method === 'settings.open') return keys(value, ['version', 'method', 'command'])
-        && Object.keys(value).length === (Object.hasOwn(value, 'command') ? 3 : 2)
-        && (!Object.hasOwn(value, 'command') || typeof value.command === 'string' && CENTER_COMMANDS.includes(value.command as CenterCommand)) ? value as Message : null;
+    if (value.method === 'settings.open') {
+        if (!keys(value, ['version', 'method', 'command', 'health']) || Object.keys(value).length !== 2 + Number(Object.hasOwn(value, 'command')) + Number(Object.hasOwn(value, 'health'))
+            || Object.hasOwn(value, 'command') && !(typeof value.command === 'string' && CENTER_COMMANDS.includes(value.command as CenterCommand))) return null;
+        const health = Object.hasOwn(value, 'health') ? snapshotHelperIntent(value.health) : undefined;
+        if (health === null) return null;
+        return { version: 1, method: 'settings.open', ...(Object.hasOwn(value, 'command') ? { command: value.command as CenterCommand } : {}), ...(health ? { health } : {}) };
+    }
     if (['settings.read', 'session.status', 'session.disconnect'].includes(value.method)) {
         return keys(value, ['version', 'method']) && Object.keys(value).length === 2 ? value as Message : null;
     }

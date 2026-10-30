@@ -8,6 +8,7 @@ import { GitHubGetReader } from '../adapters/github/get_reader.ts';
 import { ReadScheduler } from '../application/read_scheduler.ts';
 import { SETTINGS_KEY } from '../application/settings_repository.ts';
 import { createHistory } from './history_runtime.ts';
+import { HelperSamples } from '../application/helper_samples.ts';
 import { ProtectedSessionService } from '../application/protected_session.ts';
 import { MessageGateway } from '../application/message_gateway.ts';
 import { createCenter, centerIdentifier } from './center_runtime.ts';
@@ -36,20 +37,27 @@ export function startBackground(api: BrowserApi): () => void {
     const { history, policies } = createHistory(api, local, () => {
         void api.runtime.sendMessage({ version: 1, method: 'center.history.invalidated' }).catch(() => undefined);
     });
+    const helpers = new HelperSamples({ now: () => Date.now(),
+        changed: () => { void api.runtime.sendMessage({ version: 1, method: 'center.health.invalidated' }).catch(() => undefined); },
+        admit: (fact, current) => history.writer.admit('diagnostics', fact, current), retention: ticket => history.writer.retention(ticket) });
     const settings = history.settings;
     const connections = new NamedSessions(session, sessions, { protected: () => session.protect(), identifier: () => `s-${centerIdentifier()}`,
         changed: notify, connected: async (id, current, trace) => {
             await settings.updateObserved(value => ({ ...value, repositories: { ...value.repositories, [id]: { ...value.repositories[id], connected: true } } }), current, trace);
         } });
     const gateway = new MessageGateway(api.runtime.id, api.runtime.getURL(''), settings, sessions,
-        { currentTab: id => api.tabs.get(id), openSettings: (windowId, command) => api.tabs.create({
-            url: api.runtime.getURL('runtime.html') + (command === undefined ? '' : centerLocationHash({ route: centerCommandRoute(command) })), windowId }),
+        { currentTab: id => api.tabs.get(id), sourceTree: buildSourceIdentity, openSettings: async (windowId, command, health) => {
+            const opened = await api.tabs.create({ url: api.runtime.getURL('runtime.html') + (command === undefined ? '' : centerLocationHash({ route: centerCommandRoute(command) })), windowId });
+            try { if (health && record(opened) && typeof opened.id === 'number') helpers.attach(health, opened.id); }
+            catch { /* Source-sample delivery failure cannot change an already completed native open. */ }
+            return opened;
+        },
             cancellation: () => new BrowserCancellation(),
-            online: () => globalThis.navigator?.onLine !== false, notify }, createCenter(api, settings, sessions, notify, connections, { owner: history, policies }), connections);
+            online: () => globalThis.navigator?.onLine !== false, notify }, createCenter(api, settings, sessions, notify, connections, { owner: history, policies }, helpers), connections, helpers);
     const message: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender, respond) => {
         void gateway.handle(value, sender).then(result => respond({ ...(record(result) ? result : { state: 'unavailable' }), sourceTree: buildSourceIdentity() })); return true;
     };
-    const removed = (id: number) => { gateway.invalidate(id); gateway.releaseCenterTab(id); };
+    const removed = (id: number) => { gateway.invalidate(id); gateway.releaseCenterTab(id); gateway.releaseHelperTab(id); };
     // Native tab events cancel the owning lease even on protected routes and same-URL reloads.
     const updated = (id: number, changes: { url?: string; status?: string }) => {
         if (changes.url || changes.status === 'loading') gateway.invalidate(id);

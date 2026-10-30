@@ -3229,7 +3229,13 @@
         "extension/src/domain/clear_copy.ts",
         "extension/src/domain/clear_fact.ts",
         "extension/src/domain/clear_operation.ts",
-        "extension/src/presentation/ClearEffects.svelte"
+        "extension/src/presentation/ClearEffects.svelte",
+        "extension/src/application/helper_sample_reader.ts",
+        "extension/src/application/helper_samples.ts",
+        "extension/src/domain/helper_copy.ts",
+        "extension/src/domain/helper_sample.ts",
+        "extension/src/domain/helper_sample_view.ts",
+        "extension/src/presentation/HelperSamplePanel.svelte"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3480,7 +3486,21 @@
         "extension/test/integration/clear_operation_gateway.test.ts",
         "extension/test/integration/current_clear_operations.test.ts",
         "extension/test/integration/journal_review_observation.test.ts",
-        "extension/test/integration/clear_effects_presentation.test.ts"
+        "extension/test/integration/clear_effects_presentation.test.ts",
+        "extension/test/contracts/helper_sample.test.ts",
+        "extension/test/contracts/helper_sample_view.test.ts",
+        "extension/test/fixtures/helper_center.ts",
+        "extension/test/fixtures/helper_composition.ts",
+        "extension/test/fixtures/helper_gateway.ts",
+        "extension/test/fixtures/helper_samples.ts",
+        "extension/test/integration/helper_composition.test.ts",
+        "extension/test/integration/helper_open_gateway.test.ts",
+        "extension/test/integration/helper_sample_center.test.ts",
+        "extension/test/integration/helper_sample_presentation.test.ts",
+        "extension/test/integration/helper_sample_reader.test.ts",
+        "extension/test/integration/helper_samples.test.ts",
+        "extension/test/integration/helper_observation_context.test.ts",
+        "extension/test/integration/helper_background_history.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

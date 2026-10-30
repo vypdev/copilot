@@ -11,11 +11,14 @@ import { record } from '../domain/value.ts';
 import type { NamedSessions } from './named_sessions.ts';
 import { PageConfigurationService } from './page_configuration.ts';
 import type { CenterCommand } from '../domain/shortcuts.ts';
+import type { HelperSamples, HelperSampleSource } from './helper_samples.ts';
 
-interface PageLease { readonly fence: PageFence; readonly cancel: CancellationOwner }
+interface PageLease { readonly fence: PageFence; readonly cancel: CancellationOwner; readonly documentId: string | undefined;
+    configuration: { readonly credentialEpoch: number; readonly settingsRevision: number } | null; configurationAttempt: object }
 export interface GatewayPorts {
     currentTab(id: number): Promise<{ readonly url?: string; readonly active?: boolean; readonly incognito?: boolean; readonly windowId?: number }>;
-    openSettings(windowId: number, command?: CenterCommand): Promise<unknown>;
+    openSettings(windowId: number, command?: CenterCommand, health?: Readonly<object>): Promise<unknown>;
+    sourceTree?(): string;
     cancellation(): CancellationOwner;
     online(): boolean;
     notify(): void;
@@ -27,9 +30,10 @@ export class MessageGateway {
     private connectionOperation = 0;
     constructor(private readonly id: string, private readonly origin: string, private readonly settings: SettingsRepository,
         private readonly sessions: ProtectedSessionService, private readonly ports: GatewayPorts, private readonly center?: CenterGateway,
-        private readonly connections?: NamedSessions) {}
+        private readonly connections?: NamedSessions, private readonly helpers?: HelperSamples) {}
+    releaseHelperTab(id: number): void { this.helpers?.releaseTab(id); }
     releaseCenterTab(id: number): void { this.center?.releaseTab(id); }
-    shutdown(): void { if (this.stopped) return; this.stopped = true; this.invalidate(); this.center?.shutdown(); }
+    shutdown(): void { if (this.stopped) return; this.stopped = true; this.invalidate(); this.center?.shutdown(); this.helpers?.stop(); }
     invalidate(tabId?: number, notify = true): void {
         if (tabId !== undefined) {
             this.pages.get(tabId)?.cancel.abort(); this.pages.delete(tabId); this.openings.delete(tabId); return;
@@ -45,10 +49,24 @@ export class MessageGateway {
             const current = await this.ports.currentTab(id);
             if (this.openings.get(id) !== ticket) return { state: 'stale' };
             if (current.url !== sender.tab?.url || current.incognito !== false || current.active !== true || !natural(current.windowId)) return { state: 'rejected' };
-            if (message.command === undefined) await this.ports.openSettings(current.windowId);
+            let health: Readonly<object> | null = null;
+            try { if (message.health !== undefined) health = this.helpers?.capture(message.health, this.helperSource(id, sender, ticket)) ?? null; }
+            catch { /* Secondary sample failure cannot block opening the control center. */ }
+            if (this.stopped || this.openings.get(id) !== ticket) return { state: 'stale' };
+            if (health) await this.ports.openSettings(current.windowId, message.command, health);
+            else if (message.command === undefined) await this.ports.openSettings(current.windowId);
             else await this.ports.openSettings(current.windowId, message.command);
             return { state: 'opened' };
         } finally { if (this.openings.get(id) === ticket) this.openings.delete(id); }
+    }
+    private helperSource(id: number, sender: Sender, opening: object): HelperSampleSource | null {
+        try {
+            const lease = this.pages.get(id); const configuration = lease?.configuration;
+            if (!lease || !configuration || lease.documentId !== sender.documentId || !this.ports.sourceTree) return null;
+            return { sourceTree: this.ports.sourceTree(), generation: lease.fence.generation, ...configuration,
+                current: () => !this.stopped && this.openings.get(id) === opening && this.pages.get(id) === lease
+                    && lease.configuration === configuration && !lease.cancel.aborted && this.sessions.status().epoch === configuration.credentialEpoch };
+        } catch { return null; }
     }
     private async connect(message: Extract<Message, { method: 'session.connect' }>): Promise<unknown> {
         const operation = ++this.connectionOperation;
@@ -107,17 +125,20 @@ export class MessageGateway {
                 return { state: 'released' };
             }
             if (message.method === 'settings.open') return await this.open(message, sender);
-            const current = await this.ports.currentTab(id);
-            if (current.incognito !== false || current.url !== message.route) return { state: 'rejected' };
             const fence = { generation: message.generation, route: message.route, repositoryId: message.repositoryId };
             const previous = this.pages.get(id);
             if (!currentFence(previous?.fence, fence)) return { state: 'rejected' };
             let lease = previous;
-            if (!lease || lease.fence.generation !== fence.generation) {
+            if (!lease || lease.fence.generation !== fence.generation || lease.documentId !== sender.documentId) {
                 previous?.cancel.abort();
                 if (!previous && this.pages.size >= 128) return { state: 'busy' };
-                lease = { fence, cancel: this.ports.cancellation() }; this.pages.set(id, lease);
+                lease = { fence, cancel: this.ports.cancellation(), documentId: sender.documentId, configuration: null, configurationAttempt: {} }; this.pages.set(id, lease);
             }
+            // Reserve the known native source synchronously; a pending/failed observation cannot leave an older helper receipt current.
+            const configurationAttempt = {}; lease.configuration = null; lease.configurationAttempt = configurationAttempt;
+            const current = await this.ports.currentTab(id);
+            if (current.incognito !== false || current.url !== message.route) return { state: 'rejected' };
+            if (lease.cancel.aborted || this.pages.get(id) !== lease) return { state: 'stale' };
             const online = this.ports.online();
             const currentPage = () => !lease.cancel.aborted && this.pages.get(id) === lease && (!online || this.ports.online());
             const configuration = await new PageConfigurationService(this.settings, this.sessions)
@@ -130,6 +151,7 @@ export class MessageGateway {
                     : await this.sessions.snapshot(message, current.active === true, this.ports.online(), lease.cancel);
             const final = await this.ports.currentTab(id);
             if (epoch !== this.sessions.status().epoch || lease.cancel.aborted || this.pages.get(id) !== lease || final.url !== message.route || final.incognito !== false || final.active !== true) return { state: 'stale' };
+            if (lease.configurationAttempt === configurationAttempt) lease.configuration = { credentialEpoch: configuration.epoch, settingsRevision: configuration.settings.revision };
             return result;
         } catch {
             // Provider exceptions/raw payloads/credentials never cross this boundary.

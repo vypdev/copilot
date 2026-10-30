@@ -26,6 +26,7 @@ export interface CenterActions extends ReviewActions {
     inspectPermissions(): void;
     inspectConnection(): void;
     inspectOperation(): void;
+    inspectHelpers(): void;
 }
 export interface CenterRouteContext {
     readonly connections?: ConnectionOutcome | null;

@@ -24,6 +24,7 @@ import { HistoryClient } from '../application/history_client.ts';
 import { downloadHistory } from './history_files.ts';
 import type { HistoryReview } from '../domain/history_client_view.ts';
 import { CurrentOperationReader } from '../application/current_operation_reader.ts';
+import { HelperSampleReader } from '../application/helper_sample_reader.ts';
 
 /** Native options-page composition. The UI receives preferences and callbacks, never reusable authority. */
 export function startCenter(api: BrowserApi, document: Document, nativeLanguage: string): () => void {
@@ -34,13 +35,16 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
         window.location.replace(`${canonical}#/recovery`); return () => undefined;
     }
     const client = new CenterClient({ sourceTree: buildSourceIdentity(), send: message => api.runtime.sendMessage(message), contextChanged: () => {
-        operation.clear(); void operation.read();
+        operation.clear(); void operation.read(); helpers.invalidate(); void helpers.read();
     } });
     const packageIdentity = readPackageIdentity(api, buildSourceIdentity());
     let stopped = false; let draftEpoch = 0; let savedRevision = -1; let savedCandidate: Settings | null = null; let importGeneration = 0;
     let inventory = EMPTY_INVENTORY_NAVIGATION;
     let connectionReadPending = false; let focused = true;
     const operation = new CurrentOperationReader({ request: () => client.readOperation(), eligible: () => !stopped && focused && document.visibilityState !== 'hidden', changed: () => publish() });
+    const helpers = new HelperSampleReader({ request: () => client.readHelperSample(), eligible: () => !stopped && focused
+        && document.visibilityState !== 'hidden' && ['diagnostics', 'help'].includes(navigation.location.route)
+        && (client.view.role === 'editor' || client.view.role === 'observer') && client.view.issue !== 'incompatible', changed: () => publish() });
     const permissionReader = new BrowserPermissionReader(api);
     const inspector = new PermissionInspector({ query: capability => permissionReader.query(capability),
         after: (milliseconds, action) => { const id = window.setTimeout(action, milliseconds); return () => window.clearTimeout(id); }, changed: () => publish() });
@@ -62,7 +66,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     const historyHeld = () => history.view.busy || history.view.exportBusy || !!history.view.review || !!history.view.exportReview;
     const protect = () => navigation.protect(!!history.view.review || !!history.view.exportReview || client.view.review?.state === 'preview'
         || client.view.review?.state === 'unknown', client.view.phase === 'committing' || history.view.busy || history.view.exportBusy);
-    const frame = () => centerFrame(client.view, navigation.location, navigation.pendingLocation, nativeLanguage, draftEpoch, navigation.hasDraft, inventory, inspector.view, packageIdentity, history.view, client.visitDelivery, operation.view);
+    const frame = () => centerFrame(client.view, navigation.location, navigation.pendingLocation, nativeLanguage, draftEpoch, navigation.hasDraft, inventory, inspector.view, packageIdentity, history.view, client.visitDelivery, operation.view, helpers.view);
     function publish(): void {
         if (stopped) return;
         const value = frame(); document.documentElement.lang = value.copy.locale; document.title = value.copy.messages.title;
@@ -87,6 +91,7 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
         browseInventory: value => { inventory = value; publish(); },
         inspectPermissions: () => readPermissions(),
         inspectOperation: () => { void operation.read(); },
+        inspectHelpers: () => { void helpers.read(); },
         inspectConnection: () => { if (!stopped && focused && document.visibilityState !== 'hidden' && navigation.location.route === 'privacy') void client.connections(); },
         exportSettings: async () => downloadCenterSettings(document, client.view.data?.settings ?? null),
         importSettings: async revision => {
@@ -98,8 +103,8 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     };
     let operationRole: typeof client.view.role;
     const unsubscribe = client.subscribe(view => {
-        if (view.role !== operationRole) { operationRole = view.role; if (view.role === 'editor' || view.role === 'observer') void operation.read(); }
-        if (view.role === null || view.issue === 'incompatible') operation.clear();
+        if (view.role !== operationRole) { operationRole = view.role; if (view.role === 'editor' || view.role === 'observer') { void operation.read(); void helpers.read(); } }
+        if (view.role === null || view.issue === 'incompatible') { operation.clear(); helpers.invalidate(); }
         if (view.role === 'observer' || view.issue === 'incompatible') history.reviews.retire();
         if (view.issue === 'incompatible') history.reader.invalidate();
         protect();
@@ -136,13 +141,13 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
             && client.observeDestination(navigation.location)) deliveredLocation = navigation.location;
     }
     function readHistory(): void { if (historyVisible()) { void history.reader.read('diagnostics'); if (navigation.location.route !== 'diagnostics') void history.reader.read('recents'); } }
-    function readObservations(): void { readConnections(); readPermissions(); readHistory(); void operation.read(); }
-    function retireObservations(): void { operation.invalidate(); client.invalidateConnections(); inspector.invalidate(); history.reader.invalidate(); }
+    function readObservations(): void { readConnections(); readPermissions(); readHistory(); void operation.read(); void helpers.read(); }
+    function retireObservations(): void { helpers.invalidate(); operation.invalidate(); client.invalidateConnections(); inspector.invalidate(); history.reader.invalidate(); }
     const hash = () => navigation.navigate(window.location.hash);
     const visible = () => {
         if (stopped) return;
         retireObservations();
-        if (focused && document.visibilityState !== 'hidden') { connectionReadPending = true; void client.refresh().then(() => { readHistory(); void operation.read(); }); readPermissions(); }
+        if (focused && document.visibilityState !== 'hidden') { connectionReadPending = true; void client.refresh().then(() => { readHistory(); void operation.read(); void helpers.read(); }); readPermissions(); }
     };
     const blurred = () => { focused = false; retireObservations(); };
     const foreground = () => { focused = true; visible(); };
@@ -151,13 +156,14 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     const invalidated: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender) => {
         if (sender.id !== api.runtime.id || sender.tab || !record(value) || !keys(value, ['version', 'method']) || value.version !== 1) return;
         if (value.method === 'center.invalidated') { history.reviews.retire(); visible(); }
-        if (value.method === 'center.history.invalidated') { void client.refreshVisitCapture(); history.reader.invalidate(); readHistory(); operation.invalidate(); void operation.read(); }
+        if (value.method === 'center.history.invalidated') { void client.refreshVisitCapture(); history.reader.invalidate(); readHistory(); operation.invalidate(); void operation.read(); helpers.invalidate(); void helpers.read(); }
+        if (value.method === 'center.health.invalidated') { helpers.invalidate(); void helpers.read(); }
         if (value.method === 'center.operation.invalidated') { operation.invalidate(); void operation.read(); }
     };
     const beforeUnload = (event: BeforeUnloadEvent) => { if (navigation.guarded) { event.preventDefault(); event.returnValue = ''; } };
     const stop = () => {
         if (stopped) return;
-        stopped = true; inspector.stop(); unobservePermissions(); unsubscribe(); unhistory(); history.stop(); operation.stop(); client.stop(); listeners.clear(); void unmount(host);
+        stopped = true; inspector.stop(); unobservePermissions(); unsubscribe(); unhistory(); history.stop(); operation.stop(); helpers.stop(); client.stop(); listeners.clear(); void unmount(host);
         window.removeEventListener('hashchange', hash); document.removeEventListener('visibilitychange', visible);
         window.removeEventListener('beforeunload', beforeUnload); window.removeEventListener('pagehide', stop);
         window.removeEventListener('blur', blurred); window.removeEventListener('focus', foreground);

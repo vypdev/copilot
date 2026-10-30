@@ -5,8 +5,8 @@ import { CenterClient } from '../../src/application/center_client.ts';
 import type { Sender } from '../../src/domain/protocol.ts';
 
 /** Actual composition and wire protocol, deterministic browser/provider ports; not loaded-browser evidence. */
-export function backgroundCenterFixture() {
-    const h = browserFixture();
+export function backgroundCenterFixture(configure: (browser: ReturnType<typeof browserFixture>) => void = () => undefined) {
+    const h = browserFixture(); configure(h);
     const provider = vi.fn(async (url: string) => {
         const data = url.endsWith('/user') ? { id: 1, login: 'octo' }
             : url.endsWith('/repos/octo/other') ? { id: 8, full_name: 'octo/other' } : { id: 7, full_name: 'octo/example' };

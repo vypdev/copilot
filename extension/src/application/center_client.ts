@@ -8,7 +8,7 @@ import { HISTORY_EFFECTS, type HistoryMessage } from '../domain/history_protocol
 import type { HistoryRequest } from '../domain/history_request.ts';
 import { uncertainSettingsOutcome as uncertain, publicSettingsReview as publicReview } from '../domain/settings_review_projection.ts';
 import { RecentsClient } from './recents_client.ts';
-import { readCurrentOperation, observationContextChanged } from './center_observation_context.ts';
+import { readCurrentOperation, readHelperSample, observationContextChanged } from './center_observation_context.ts';
 
 export interface CenterClientPort { readonly sourceTree: string; send(message: CenterMessage | ConnectionMessage | HistoryMessage): Promise<unknown>; contextChanged?(): void }
 /** One mounted view; reusable authority stays private, while committed receipts are inspectable facts. */
@@ -32,9 +32,8 @@ export class CenterClient {
     refreshVisitCapture(): Promise<void> { return this.visitTracking ? this.recents.refresh() : Promise.resolve(); }
     startVisitCapture(): Promise<void> { this.visitTracking = true; return this.recents.refresh(); }
     observeDestination(location: unknown): boolean { return this.recents.observe(location); }
-    async readOperation(): Promise<Record<string, unknown> | null> {
-        return readCurrentOperation(this.owner, this.stopped, message => this.request(message, true), () => this.owner);
-    }
+    readOperation(): Promise<Record<string, unknown> | null> { return readCurrentOperation(this.owner, this.stopped, message => this.request(message, true), () => this.owner); }
+    readHelperSample(): Promise<Record<string, unknown> | null> { return readHelperSample(this.owner, this.stopped || this.value.issue === 'incompatible', message => this.request(message, true), () => this.owner); }
     get view(): CenterClientView { return this.value; }
     invalidateConnections(): void { if (!this.stopped) { this.connectionGeneration++; this.update({ connections: null }); } }
     subscribe(listener: (view: CenterClientView) => void): () => void {

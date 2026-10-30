@@ -42,7 +42,7 @@ The background now shares its preference repository with that collection owner
 and exposes closed, native-client-bound history/review use cases. The actual
 center now produces accepted recent destinations under private native consent
 and generation fences. Preference services now produce current-operation facts
-and optional redacted history. Native session services now produce separate active-credential, repository-preference and vault effects through the closed session family in section6.10. The actual compound start/stop producer now preserves independent native phase observations. Explicit clear operations now preserve actual submission, acknowledgement and canonical readback independently. Helper projections and native/human acceptance remain incomplete. The mounted center now
+and optional redacted history. Native session services now produce separate active-credential, repository-preference and vault effects through the closed session family in section6.10. The actual compound start/stop producer now preserves independent native phase observations. Explicit clear operations now preserve actual submission, acknowledgement and canonical readback independently. Helper samples now have a source-checked pre-open handoff and separate readonly view. Native/human acceptance remains incomplete. The mounted center now
 has a source-validated typed client and four-locale read/start/stop/clear/export
 controls, independent of preference-read availability. Saved collection flags
 still default false; opening a screen does not opt into collection.
@@ -361,7 +361,7 @@ data separately; unknown settings never become invented off/on preferences.
 History changes notify only native centers and never reset content quarantine.
 Current compound collection results preserve their independent preference and
 policy facts. A collector MUST NOT flatten partial results into completed history;
-compound start/stop producers now use the bounded projection in section6.11. Explicit clear-operation and helper projections and native/human evidence remain required delivery work.
+compound start/stop producers now use the bounded projection in section6.11. Explicit clear operations use section6.12. Helper samples use section6.13; native/human evidence remains required delivery work.
 Localized controls, the narrow destination producer and native preference
 observations are composed in development source.
 
@@ -494,7 +494,7 @@ shutdown or a reentrant source change cannot publish a late private response.
 Clearing generated history MUST NOT claim to clear this independent temporary
 current-operation memory.
 
-This first family covers preference operations. Session active-credential, repository-preference and vault effects now use the separate closed projection in section6.10. Compound collection preference/policy phases now use section6.11; neither family may be guessed from a top-level result or flattened into preference saving. Complete H3 still requires explicit clear/helper projections and the full native/human journeys.
+This first family covers preference operations. Session active-credential, repository-preference and vault effects now use the separate closed projection in section6.10. Compound collection preference/policy phases now use section6.11; neither family may be guessed from a top-level result or flattened into preference saving. Explicit clears use section6.12. Helper samples use section6.13. Complete H3 still requires the full native/human journeys.
 
 ### 6.10 Native session observations
 
@@ -575,7 +575,7 @@ such receipt; no automatic resubmission or draft-clearing guess is allowed.
 
 Full session delivery requires the actual native producer, current metadata,
 four-locale effect list, optional same-row history progress and clear/retention
-races. The active-key foundation alone does not satisfy this contract. Compound collection preference/policy operations use their own family below; explicit clear/helper projections and complete native/human evidence remain separate H3 work.
+races. The active-key foundation alone does not satisfy this contract. Compound collection preference/policy operations use their own family below; explicit clears use section6.12; helper samples use section6.13; complete native/human evidence remains separate H3 work.
 
 
 ### 6.11 Compound collection observations
@@ -636,7 +636,7 @@ before continuing.” No read button may confirm, request permission or resubmit
 A current-policy read describes the present; immutable history describes its
 original observation. Generated-history clear remains a separate retained native
 operation: its own current projection MUST NOT recreate the rows just cleared.
-Complete H3 also requires that clear projection and helper observations.
+Explicit clears use section6.12. Helper samples use section6.13; full H3 native/human gates remain.
 
 | State | Representative content | Safe next action |
 |---|---|---|
@@ -715,8 +715,131 @@ The application ports are per-call secondary capabilities, not recording IPC.
 A neutral closed issue vocabulary avoids journal/model dependency cycles. The
 owning clear service retains the plan, running promise and canonical readback;
 presentation receives no native selector or mutation callback from this fact.
-Complete H3 still requires helper producers, remaining CENTER semantics and full
-native-browser/human evidence.
+Helper samples use section6.13. Complete H3 still requires remaining CENTER
+semantics and full native-browser/human evidence.
+
+### 6.13 Pre-open helper sample and options handoff
+
+The development source now implements this contract with deterministic native
+application/gateway and mounted composition evidence. This is not loaded-browser
+or human acceptance. The content
+runtime currently owns a closed100-event health ring and independent quarantine.
+Its native query refuses hidden/retired contexts. Asking after opening options
+therefore cannot establish the original page's current health.
+
+```text
+User invokes a page control/shortcut to open the center
+ → content samples its admitted visible source before sending the open intent
+ → background validates native source and the exact configuration lease
+ → capture immutable historical sample; optionally admit at most2 diagnostics
+ → open native options tab; bind the sample to that native tab
+ → center reads its own sample metadata; no query of the now-hidden source page
+```
+
+Text equivalent: source capture precedes opening. The options page inspects an
+already-established historical observation; it does not certify live source
+health or infer a successful open from a retained fault. Failure of sampling,
+secondary retention, delivery or clock inspection cannot stop an otherwise valid
+center-open operation. After secondary callbacks, the primary opening ticket MUST
+still be current before invoking native creation; retirement/disposal is not an
+observer failure and cannot authorize an opening from the old source. Malformed/expanded native messages remain rejected.
+
+**Source and authority.** The existing page-origin `settings.open` MAY carry one
+closed health intent. It contains a source-build digest, known generation,
+credential epoch, settings revision and bounded `{blocked,events}` snapshot, or an
+explicit unavailable state. The native parser MUST detach input before async
+work. Only `runtime-health` and `center-shortcuts`, the three registered fault
+codes and the two historical scopes are allowed. No arbitrary fact, target, URL,
+selector, callback, raw error, setting or command is accepted. The original
+native top-frame extension sender, eligible active nonprivate tab/window and
+existing configuration lease MUST agree before a ready sample is admitted.
+Generation, credential and configuration receipt mismatch never become a ready
+sample. The handoff is observation only, with no permission/mutation authority.
+The native page lease is reserved before its first asynchronous inspection. A
+new observation immediately withdraws the previous helper receipt, and only the
+latest attempt may publish a replacement receipt; an older successful response
+cannot restore one after a newer failure. Native document identity participates
+when provided. A legacy open without a sample still opens normally and reports no available
+observation; it never substitutes an empty healthy result.
+
+Capture occurs in the originating open call, using the same existing native
+message transport on Chrome/Firefox/Safari. It does not require document-targeting
+browser API options, another host permission, a foreground tab scan, provider
+access or a background-to-arbitrary-page sender. Native navigation/activation
+invalidation and the source-build fence remain in force. The packet is untrusted
+data even when sent by the extension content context. Primary transport references:
+[Chrome messaging trust boundary](https://developer.chrome.com/docs/extensions/develop/concepts/messaging),
+[MDN native message semantics](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/runtime/sendMessage).
+
+**Temporary ownership.** A native application owner retains at most8 option-tab
+samples for5minutes from capture, sharing neither private targets nor mutation
+ownership with current operations. Native tab IDs are private map keys only;
+renderer requests carry no target-tab operand. Any native tab removal retires
+unbound receipts before a delayed created-tab result can attach an uncertain
+identifier; other already-bound historical samples remain independent. Install only against the native
+created-tab result. `center.health.read` is a closed metadata request from an
+already admitted options client and can read only that client's native tab sample.
+Editor and observer roles may inspect their own sample. Opening options in a
+browser menu/new window without an originating sample gives unavailable evidence,
+not “no faults”. Clock rollback/invalidity, expiry, replacement, native tab removal
+and background disposal retire the sample without reconstructing it from history.
+Reads do not renew its lifetime and perform no preferences/history/provider/grant
+I/O. Native install can race the first options read: a dedicated center-only
+invalidation schedules a fresh metadata read after client admission; an earlier
+missing sample cannot establish that no handoff occurred. No polling is added.
+
+**Historical semantics and optional retention.** The view preserves the complete
+closed ring snapshot and separately sampled blocked set, with one native capture
+time. Ring reasons have no original timestamps; capture MUST NOT invent them or
+represent an earlier fault as a newly occurred fault. Every scope is explicitly
+historical. An empty successfully captured snapshot differs from absent/failed
+capture. Resets of live quarantine, source hiding, later matching events and
+metadata refresh cannot rewrite the captured sample or retry a helper.
+
+Only when diagnostics already has verified consent/admission and a known journal
+generation at capture MAY the writer acquire one ticket per helper's latest reason,
+never more than2. The entire ring is not replayed into persistent history. These
+are observations of a user-requested sample, not retrospective activation of an
+automatic fault collector. The accepted historical sample has its own bounded
+observation lifetime after the source page hides; it is not a continuing live-page
+lease. Clearing/expiry of the journal, withdrawn admission or unknown append
+identity keep the existing writer fences. Install, metadata read, opt-in later,
+notification replay and failed retention MUST NOT acquire another ticket. No
+sample enters recents. Journal retention is shown separately from sample
+availability, and its failure cannot erase capture or block opening.
+
+**UI and four locales.** Diagnostics and Help expose a read-only source sample
+independently of settings availability and optional history. Source meaning comes
+first, then capture time, sampled blocked helpers, closed historical reasons and
+separate retention. Human helper names/reasons and the capture-versus-live warning
+are localized in en/es/fr/pt with atomic English fallback. No page/repository/account
+identity or exact target is displayed. Retained helper rows also show localized
+helper names, causes and historical scopes; one section notice distinguishes the
+retained-observation time from an unknown original failure time or live health. Static headings, keyboard controls, live
+pending status and explicit refresh apply; no retry, mutation or grant control is
+introduced through a sample.
+
+| Observation | Representative content | Next action |
+|---|---|---|
+| Reading | “Reading the source-page sample…” | Wait; duplicate read joins the current request |
+| No sample | “No source-page observation is available in this window.” | Open the center from the page to capture an observation |
+| Captured, empty | “No faults were present in this captured sample.” | Inspect normal configuration separately |
+| Captured, reasons | “Earlier page observation; this is not live helper health.” | Inspect each closed reason and troubleshooting guidance |
+| Retention failed | “The sample is available; optional history retention is unconfirmed.” | Inspect history separately; no automatic resend |
+| Source unavailable | “The source could not certify a current sample.” | Return to an admitted visible page before a new explicit open |
+| Expired/read failed | “Earlier sample unavailable; current helper state is unknown.” | Refresh metadata or make a new explicit source capture |
+
+Domain owns closed snapshot validation, projection, wire decoding and immutable
+view models. Application owns pre-open validation, one-time capture/admission,
+native-tab/lifetime ownership and independent single-flight reads. Content and
+background composition adapt the existing native open call and created tab;
+center composition adapts admitted-client reads and invalidation. Presentation
+receives no native source selector or mutation capability. All type/runtime imports,
+static markup, package/CI/size and existing source-tree checks remain enforced.
+The100-case risk budget below and native/human acceptance both remain mandatory.
+The reader registers its in-flight promise before notification callbacks; duplicate
+reads, including synchronous reentry, join it without recursive notifications.
+One invalidation can request one fresh generation without retrying capture.
 
 ## 7. User-facing configuration
 
@@ -859,7 +982,12 @@ upgrade or publication is implied.
 | Actual clear lifecycle and effect owner | 32 | Synchronous reservation order, reentrant confirmation/inspection/cancel, canonical readback, primary/secondary failure isolation and source races |
 | Clear current/history boundaries | 16 | No diagnostics self-record, optional recents-clear diagnostics, exact ticket/epoch retirement, shared bounds and readonly metadata |
 | Mounted clear-operation view | 16 | Four complete locales plus twelve pending/partial/unknown/recovery/source/privacy/native-cancel journeys |
-| **Total** | **929** | No substitution for semantic H3/catalog coverage |
+| Helper snapshot and closed projection | 20 | Whitelist, bounded ring, unavailable-versus-empty, immutable detachment and private-field rejection |
+| Pre-open native source admission | 24 | Actual content call before hiding, sender/source-tree/generation/epoch/revision fences, reentry, invalidation and primary-opening isolation |
+| Bounded handoff and optional retention | 24 | Native options binding,8/5minute/clock/replacement/removal limits, at-most2 tickets, no backfill/retry, clear/unknown identity and notification races |
+| Helper metadata reader and mounted UI | 16 | Single flight/source retirement, unavailable settings, four complete locales, static headings, focus/disposal and independent reads |
+| Actual helper composition journeys | 16 | Content panel/shortcut, native gateway/open/created-tab, listener-first late install, missing snapshot, secondary fault and lifecycle integration |
+| **Total** | **1029** | No substitution for semantic H3/catalog coverage |
 
 Count each case once. Pure branches and modified executable lines/branches100%,
 no exclusions/threshold weakening; keep root budgets. Request fixtures are not
@@ -913,6 +1041,18 @@ Clear evidence adds `clear_fact.test.ts`, `clear_observations.test.ts`,
 running-promise fix and pass after it; a third verifies synchronous preference
 reservation. The fixtures execute actual application/gateway/rendered ownership
 without claiming loaded-browser or human evidence.
+
+Helper evidence adds `helper_sample.test.ts`, `helper_sample_view.test.ts`,
+`helper_samples.test.ts`, `helper_open_gateway.test.ts`,
+`helper_sample_reader.test.ts`, `helper_observation_context.test.ts`, `helper_sample_center.test.ts`,
+`helper_composition.test.ts`, `helper_background_history.test.ts` and
+`helper_sample_presentation.test.ts`. Four native
+source-receipt regressions fail before synchronous withdrawal/latest-attempt
+publication. A separate reader case fails before the initial notification reentry
+guard. Two additional cases fail before primary-opening ticket revalidation after
+secondary reentry. Actual content/background composition covers source hiding, real helper
+failure, native creation/removal/disposal and secondary failure isolation; trusted
+key delivery remains a deterministic fixture, not native/browser acceptance.
 
 ## 15. Documentation and discoverability
 
@@ -1001,6 +1141,19 @@ docs/specs/catalog and concrete examples together.
 34. Four-locale current/history clear views use static nested headings and show a
     retrospective source indicator only when the primary service sampled it.
 
+35. An explicit page open captures helper data before hiding, under its exact
+    native configuration source. A pending/failed new observation withdraws the
+    prior helper receipt; an older success cannot restore it.
+36. Historical samples distinguish no evidence, unavailable source and a captured
+    ring with no reasons. Native options binding,8/5minute bounds and own-client
+    reads exclude selectors, private targets, provider/grant work and backfill.
+37. Only one latest reason per fixed helper can acquire a consenting diagnostic
+    ticket at capture. No metadata read, later opt-in, notification or native
+    install repeats admission, capture or opening.
+38. Four-locale Diagnostics/Help inspection remains available without usable
+    preferences. Read duplication/reentry joins the one registered native read;
+    invalidation, source loss and disposal cannot republish a retired sample.
+
 ## 17. Requirements traceability
 
 | Concern | Owner | Evidence | Documentation |
@@ -1010,7 +1163,7 @@ docs/specs/catalog and concrete examples together.
 | Truthful ordered phases | Application | Partial/ack/replay/queue | Activity/privacy |
 | Restriction-only save and owner lifetime | Settings/coordinator | Five application contract suites; native/UI evidence still required | Configuration/contributor |
 | Reviewed phase continuation and priority of a later stop | CollectionReviews/effects/private leases | Eight retained-plan/phase/ownership/staging suites; full native/UI evidence pending | Configuration/privacy/contributor |
-| Bounded secondary retention and unknown identity | JournalWriter/queue/IO/progress | Writer/domain/race suites plus session/compound gateway and capacity journeys; helper projections and native evidence pending | Privacy/recovery/contributor |
+| Bounded secondary retention and unknown identity | JournalWriter/queue/IO/progress | Writer/domain/race suites plus session/compound gateway and capacity journeys; full native/human evidence pending | Privacy/recovery/contributor |
 | One production owner and closed native control | CollectionHistory/HistoryControls/HistoryGateway/native composition | Protocol/application/gateway/bootstrap and mounted UI suites; native/human acceptance pending | Contributor/privacy/recovery |
 | Accepted destinations and consent/source retirement | RecentsCapture/RecentsClient/VisitDelivery/centerDestination/center_app | Native source, delivery, gateway and 12 mounted navigation/localization cases; real-browser/human gates outstanding | Local history/privacy/contributor |
 | Actual preference observations and independent current view | SettingsOperations/SettingsRepository/CurrentOperations/CurrentOperationReader/CenterClient/center_app | Eight projection/native/reader/client/mounted suites plus direct store observer isolation; native/human gates outstanding | Local history/configuration/privacy/contributor |
@@ -1018,6 +1171,7 @@ docs/specs/catalog and concrete examples together.
 | Generated byte capacity and irreversible row retirement | local_journal/JournalWriter | Session capacity/progress/gateway suites, exact reviewed export envelope | Local history/privacy/contributor |
 | Compound effects, exact attribution and staged reuse | CollectionReviews/effects/CollectionObservations/coordinator/native policy attempt | Compound domain/port/service/current/gateway/mounted suites plus two failing-before native regressions; full native/human gate outstanding | Local history/configuration/privacy/contributor |
 | Clear facts, reentry order and no self-record | JournalReviews/ClearObservations/CurrentOperations/ObservedJournalStore | Clear domain/service/current/gateway/mounted suites plus failing-before reservation reentry; full native/human gate outstanding | Local history/configuration/privacy/contributor |
+| Source-checked helper capture and historical options handoff | RuntimeHealth/content open/MessageGateway/HelperSamples/HelperSampleReader/center composition | Helper domain/owner/native source/reader/mounted/actual composition suites and failing-before source/reentry regressions; full native/human gate outstanding | Local history/runtime/privacy/contributor |
 | Minimal discoverable facts | Presentation | Locales/a11y/export | User navigation |
 
 ## 18. Implementation sequence

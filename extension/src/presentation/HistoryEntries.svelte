@@ -9,9 +9,11 @@
     import CollectionEffects from './CollectionEffects.svelte';
     import { collectionCopy } from '../domain/collection_copy.ts';
     import { clearCopy } from '../domain/clear_copy.ts';
+    import { helperCopy } from '../domain/helper_copy.ts';
     import ClearEffects from './ClearEffects.svelte';
     let { snapshot, copy, center }: { snapshot: JournalSnapshot; copy: HistoryCopy; center: CenterCopy } = $props();
 </script>
+{#if snapshot.entries.some(entry => entry.fact.kind === 'helper')}<p class="notice" data-helper-history-boundary>{helperCopy(center.locale).historyBoundary}</p>{/if}
 {#if snapshot.entries.length === 0}<p>{copy.text.empty}</p>
 {:else}<ol class="history-entries" reversed>
     {#each [...snapshot.entries].reverse() as entry (entry.sequence)}
@@ -33,7 +35,7 @@
                 <a href={centerLocationHash({ route: entry.fact.route, ...(entry.fact.featureId ? { detail: entry.fact.featureId } : {}) })}>
                     <span>{center.routes[entry.fact.route]}</span>{#if entry.fact.featureId} · <code>{entry.fact.featureId}</code>{/if}</a>
             {:else}
-                <h3>{copy.text.helper}</h3><p>{entry.fact.scope === 'active-at-observation' ? copy.text.activeHelper : copy.text.retiredHelper}</p>
+                <h3>{helperCopy(center.locale).helpers[entry.fact.helper]}</h3><p>{helperCopy(center.locale).codes[entry.fact.code]}</p><p>{helperCopy(center.locale).scopes[entry.fact.scope]}</p>
                 <details><summary>{copy.text.details}</summary><code>{entry.fact.helper}</code> · <code>{entry.fact.code}</code></details>
             {/if}
         </li>

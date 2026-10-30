@@ -12,6 +12,8 @@ import { mountShortcuts } from '../adapters/dom/shortcuts.ts';
 import { shortcutsCopy } from '../domain/shortcuts_copy.ts';
 import { centerCopy } from '../domain/center_copy.ts';
 import { RuntimeHealth } from '../domain/runtime_health.ts';
+import { snapshotHelperIntent, type HelperSampleIntent } from '../domain/helper_sample.ts';
+import type { CenterCommand } from '../domain/shortcuts.ts';
 
 export function startContent(api: BrowserApi, window: Window, document: Document): (() => void) | undefined {
     if (!pageIdentity(window.location.href) || api.extension?.inIncognitoContext === true || window.top !== window.self) return;
@@ -26,15 +28,25 @@ export function startContent(api: BrowserApi, window: Window, document: Document
         const identity = native();
         return { page, identity, key: JSON.stringify([page?.route, page?.object, identity.repositoryId, identity.viewer]) };
     };
+    const openCenter = (command?: CenterCommand): Promise<unknown> => {
+        const sourceTree = buildSourceIdentity(); let intent: HelperSampleIntent = { state: 'unavailable', sourceTree };
+        try {
+            if (!stopped && document.visibilityState === 'visible' && configuration && scopeKey === observation().key)
+                intent = { state: 'ready', sourceTree, generation: configuration.generation, credentialEpoch: configuration.epoch,
+                    settingsRevision: configuration.settings.revision, health: health.snapshot() as Extract<HelperSampleIntent, { state: 'ready' }>['health'] };
+        } catch { /* Preserve a closed unavailable sample without raw reasons or a hidden-page query. */ }
+        const sample = snapshotHelperIntent(intent) ?? snapshotHelperIntent({ state: 'unavailable', sourceTree });
+        return api.runtime.sendMessage({ version: 1, method: 'settings.open', ...(command === undefined ? {} : { command }), ...(sample ? { health: sample } : {}) });
+    };
     const runtime = new FeatureRuntime([{ id: 'runtime-health', enabled: () => health.canMount('runtime-health'),
         mount: (context, scope) => {
             const copy = { ...runtimeCopy(context.settings.locale === 'auto' ? window.navigator.language : context.settings.locale), sourceTree: buildSourceIdentity() };
             const connected = configuration !== null && configuration.connected;
             return mountRuntimePanel(context, scope, api, document, { ...copy, ready: enabled,
-                standalone: !enabled ? copy.unavailable : connected ? copy.connected : copy.standalone }, (state, retryAt) => statusText(state, copy, retryAt), native);
+                standalone: !enabled ? copy.unavailable : connected ? copy.connected : copy.standalone }, (state, retryAt) => statusText(state, copy, retryAt), native, () => openCenter());
         } }, { id: 'center-shortcuts', enabled: context => enabled && health.canMount('center-shortcuts') && context.settings.shortcuts && context.settings.features['BEX-CENTER-07'],
         mount: (context, scope) => mountShortcuts(context, scope, window, document, async command => {
-            const response = await api.runtime.sendMessage({ version: 1, method: 'settings.open', command });
+            const response = await openCenter(command);
             return record(response) && response.state === 'opened' && response.sourceTree === buildSourceIdentity();
         }, shortcutsCopy(centerCopy(context.settings.locale, window.navigator.language).locale)) }],
     { scope: valid => new BrowserResourceScope(valid), diagnostic: (id, code, current) => { if (!stopped) health.record(id, code, current); } });

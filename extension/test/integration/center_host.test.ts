@@ -26,7 +26,7 @@ async function client() { const h = centerClientFixture(); clients.push(h); awai
 function render(view: CenterClientView, load: CenterSurface['load'] = async () => InformationPage, loadInventory: CenterSurface['loadInventory'] = loadInventoryPage, loadPrivacy: CenterSurface['loadPrivacy'] = loadPrivacyPage, loadSupport: CenterSurface['loadSupport'] = loadSupportPage, loadHistory: CenterSurface['loadHistory'] = loadHistoryPage) {
     const listeners = new Set<(frame: CenterFrame) => void>(); let frame = centerFrame(view, { route: 'work' }, null, 'en');
     const actions: CenterActions = { history: historyActionsFixture(), connections: { connect: vi.fn(), change: vi.fn(), refresh: vi.fn(), dirty: vi.fn() }, preview: vi.fn(), dirty: vi.fn(), takeControl: vi.fn(), stay: vi.fn(), leave: vi.fn(), confirm: vi.fn(), cancel: vi.fn(), dismiss: vi.fn(),
-        reload: vi.fn(), focusContent: vi.fn(), browseInventory: vi.fn(), inspectPermissions: vi.fn(), inspectConnection: vi.fn(), inspectOperation: vi.fn(), exportSettings: vi.fn(async () => false), importSettings: vi.fn(async () => false) };
+        reload: vi.fn(), focusContent: vi.fn(), browseInventory: vi.fn(), inspectPermissions: vi.fn(), inspectConnection: vi.fn(), inspectOperation: vi.fn(), inspectHelpers: vi.fn(), exportSettings: vi.fn(async () => false), importSettings: vi.fn(async () => false) };
     const unsubscribe = vi.fn(); const surface: CenterSurface = { initial: frame, actions, load, loadInventory, loadPrivacy, loadSupport, loadHistory,
         subscribe: listener => { listeners.add(listener); listener(frame); return () => { listeners.delete(listener); unsubscribe(); }; } };
     const host = mount(CenterHost, { target: document.body, props: { surface } }); mounts.push(host); flushSync();
@@ -107,7 +107,7 @@ it('a failed independent support chunk preserves a fixed recovery guide without 
     const h = await client(); const view = render({ ...h.client.view, data: null }, undefined, undefined, undefined, async () => { throw new Error('private-support-chunk'); });
     view.publish(centerFrame({ ...h.client.view, data: null }, { route: 'help' }, null, 'en'));
     await ready(() => !!document.querySelector('main > [role=alert]'));
-    expect(document.querySelector('main a')?.getAttribute('href')).toBe('https://docs.page/vypdev/copilot/browser-extension/onboarding');
+    expect(document.querySelector('main > [role=alert] + a')?.getAttribute('href')).toBe('https://docs.page/vypdev/copilot/browser-extension/onboarding');
     expect(document.body.textContent).not.toContain('private-support-chunk'); expect(document.querySelector('form')).toBeNull();
 });
 it.each(['resolved', 'rejected'] as const)('a retired support chunk’s late %s result cannot render a former route or erase the current form', async outcome => {

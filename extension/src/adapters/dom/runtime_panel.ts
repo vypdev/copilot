@@ -5,7 +5,8 @@ import { record } from '../../domain/value.ts';
 /** Only extension-created nodes are written or removed. Native editors are never inspected. */
 export function mountRuntimePanel(context: RuntimeContext, scope: ResourceScope, api: BrowserApi,
     document: Document, copy: { title: string; standalone: string; read: string; settings: string; pending: string; unavailable: string; details: string; sourceTree?: string; ready?: boolean },
-    present: (state: string, retryAt?: unknown) => string, observed: () => { viewer: string | null; repositoryId: string }): FeatureController {
+    present: (state: string, retryAt?: unknown) => string, observed: () => { viewer: string | null; repositoryId: string },
+    openSettings: () => Promise<unknown> = () => api.runtime.sendMessage({ version: 1, method: 'settings.open' })): FeatureController {
     const anchor = document.querySelector('main');
     const existing = document.querySelector('[data-copilot-runtime]');
     if (!anchor || existing) return { refresh() {}, dispose() {} };
@@ -49,7 +50,7 @@ export function mountRuntimePanel(context: RuntimeContext, scope: ResourceScope,
         const failed = () => { if (scope.current() && operation === openings && reading === sequence) status.textContent = copy.unavailable; };
         const run = async () => {
             try {
-                const response = await api.runtime.sendMessage({ version: 1, method: 'settings.open' });
+                const response = await openSettings();
                 if (!record(response) || response.state !== 'opened') failed();
             } catch { failed(); }
             finally { if (scope.current() && operation === openings) settings.disabled = false; }

@@ -3,6 +3,7 @@ import { expect, it } from 'vitest';
 import { renderHistoryPage } from '../fixtures/history_page.ts';
 import { historyWireExamples } from '../fixtures/history_wire.ts';
 import { historyTime } from '../../src/domain/history_display.ts';
+import { helperCopy } from '../../src/domain/helper_copy.ts';
 import { EMPTY_HISTORY_VIEW } from '../../src/domain/history_client_view.ts';
 import type { HistoryDocument } from '../../src/domain/history_document.ts';
 
@@ -15,7 +16,11 @@ it.each(['en', 'es', 'fr', 'pt'])('renders actual retained facts in %s without e
         { sequence: 3, at: Number.MAX_SAFE_INTEGER, fact: { kind: 'helper', helper: 'center-shortcuts', code: 'mount-failed', scope: 'active-at-observation' } },
     ] } } };
     const h = renderHistoryPage({ slots: slot(data) }, 'diagnostics', locale);
-    expect(document.body.textContent).toContain(h.copy.observations.committed); expect(document.body.textContent).toContain(h.copy.text.retiredHelper); expect(document.body.textContent).toContain(h.copy.text.activeHelper);
+    expect(document.body.textContent).toContain(h.copy.observations.committed);
+    const helpers = helperCopy(locale);
+    expect(document.querySelector('[data-history-entry="2"]')?.textContent).toContain(helpers.scopes['retired-at-observation']);
+    expect(document.querySelector('[data-history-entry="3"]')?.textContent).toContain(helpers.scopes['active-at-observation']);
+    expect(document.querySelector('[data-helper-history-boundary]')?.textContent).toBe(helpers.historyBoundary);
     expect(document.querySelectorAll('[data-history]')).toHaveLength(1); expect(document.querySelector('[data-history-entry]')?.getAttribute('data-history-entry')).toBe('3');
     expect(document.querySelector('time')?.getAttribute('datetime')).toBe(new Date(1001).toISOString()); expect(document.body.textContent).toContain(h.copy.text.timeUnavailable);
     expect(document.body.textContent).not.toContain('operationId'); expect(historyTime(0, 'invalid_locale')).toBeNull();

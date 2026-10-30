@@ -148,3 +148,26 @@ This also applies while connection preferences are being saved: an older failed
 save or permission check cannot disconnect the newer session. Leaving a page or
 reloading the same URL cancels that page's pending background read through the
 browser's native navigation events.
+
+
+## Bring a helper sample to the local center
+
+Opening **Runtime settings** or a configured center shortcut captures the admitted
+visible page's closed health ring before the new options tab hides the page.
+**Diagnostics** and **Help** show this historical sample independently of current
+settings availability. **Read source sample** rereads only background metadata;
+it never queries the hidden page, retries a helper or requests GitHub access.
+An unavailable source cannot be presented as an empty healthy sample.
+
+The sample shows capture time, the helpers held at capture and earlier closed
+reasons with their original observation scope. It contains no original fault
+timestamps, page/repository/account identity, URLs, contents or raw exceptions.
+At most100 reasons remain in each of at most eight native option-tab samples for
+five minutes. Reads do not extend that lifetime. Background restart or native tab
+removal retires the sample. It is outside generated-history clear and preferences.
+
+With already-verified diagnostic consent/generation, only the latest reason per
+fixed helper may be observed in diagnostic history at this explicit capture.
+The content ring itself remains memory-only; the full ring is not backfilled.
+History retention failure does not block opening or erase the current sample.
+These source flows still require full source-bound native/human H3 acceptance.

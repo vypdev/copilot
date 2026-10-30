@@ -8,12 +8,13 @@ import { SettingsRepository, SettingsMigrationError } from './settings_repositor
 import { isHistoryMessage, type HistoryMessage } from '../domain/history_protocol.ts';
 import type { HistoryGateway } from './history_gateway.ts';
 import type { CurrentOperations } from './current_operations.ts';
+import type { HelperSamples } from './helper_samples.ts';
 
 /** Called only after native extension-origin admission by MessageGateway. */
 export class CenterGateway {
     constructor(private readonly controller: CenterController, private readonly operations: SettingsOperations,
         private readonly settings: SettingsRepository, private readonly connections?: NamedSessions, private readonly history?: HistoryGateway,
-        private readonly current?: CurrentOperations) {}
+        private readonly current?: CurrentOperations, private readonly helpers?: HelperSamples) {}
     releaseTab(id: number): void { this.controller.releaseTab(id); }
     shutdown(): void { this.current?.stop(); this.controller.shutdown(); }
     async handle(message: CenterMessage | ConnectionMessage | HistoryMessage, sender: Sender): Promise<unknown> {
@@ -28,10 +29,11 @@ export class CenterGateway {
         if (message.method === 'center.open') return this.controller.open(binding);
         if (message.method === 'center.claim') return this.controller.claim(message.clientId, binding, message.controllerEpoch);
         if (message.method === 'center.close') return this.controller.close(message.clientId, binding, message.controllerEpoch);
-        const epoch = message.method === 'center.read' || message.method === 'center.operation.read' || message.method === 'center.connections.read' || message.method === 'center.history.read' ? undefined : message.controllerEpoch;
+        const epoch = message.method === 'center.read' || message.method === 'center.operation.read' || message.method === 'center.health.read' || message.method === 'center.connections.read' || message.method === 'center.history.read' ? undefined : message.controllerEpoch;
         const client = this.controller.authorize(message.clientId, binding, epoch);
         if (!client) return { state: 'stale' };
         if (message.method === 'center.operation.read') return this.current?.read(client.clientId) ?? { state: 'unavailable' };
+        if (message.method === 'center.health.read') return binding.tabId === null ? { state: 'empty' } : this.helpers?.read(binding.tabId) ?? { state: 'unavailable' };
         if (isHistoryMessage(message)) return this.history?.handle(message, client, binding) ?? { state: 'unavailable' };
         if (message.method === 'center.connections.read') return this.connections?.read(() =>
             this.controller.authorize(message.clientId, binding, client.controllerEpoch) !== null) ?? { state: 'unavailable' };
