@@ -1113,6 +1113,136 @@
           "codeSnippet": "function renderSpecLink(spec: string): string { return './' + spec.slice(spec.lastIndexOf('/') + 1); }"
         }
       ]
+    },
+    {
+      "id": "request-transform-coil",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Source-evidence fixture for Coil 3.6.3, not a new Coil execution. Valid unchanged desktop imports, context, imageUrl and PNG fixtures surround the diff. Official NetworkFetcher.newRequest maps enabled network reads plus disabled disk reads/writes to Cache-Control: no-cache, no-store before Ktor: https://github.com/coil-kt/coil/blob/3.6.3/coil-network-core/src/commonMain/kotlin/coil3/network/NetworkFetcher.kt . Matching Options defaults networkCachePolicy to ENABLED; CachePolicy.DISABLED has both flags false. MockEngine observes the outgoing request and supplies a response PNG, not request headers. Review the added factory configuration.",
+      "file": "media/PrivateLoader.kt",
+      "startLine": 1,
+      "diff": " val engine = MockEngine { request ->\n     assertTrue(request.headers[HttpHeaders.CacheControl]!!.contains(\"no-store\"))\n     respond(validPng, headers = headersOf(HttpHeaders.ContentType, \"image/png\"))\n }\n val client = HttpClient(engine)\n+val loader = ImageLoader.Builder(context)\n+    .components { add(KtorNetworkFetcherFactory(client)) }\n+    .diskCachePolicy(CachePolicy.DISABLED)\n+    .build()\n assertIs<SuccessResult>(loader.execute(ImageRequest.Builder(context).data(imageUrl).build()))",
+      "expected": []
+    },
+    {
+      "id": "request-transform-middleware",
+      "language": "typescript",
+      "category": "negative",
+      "description": "Controlled executable JavaScript-subset request pipeline. The unchanged library builder and middleware are supplied as context. The application contract requires no-store at the transport. The new test traverses those real authored functions; it does not inject request headers. This is a synthetic oracle, not execution of Coil or a consumer application.",
+      "file": "media/request.ts",
+      "startLine": 1,
+      "diff": " const policy = { diskRead: false, diskWrite: false, networkRead: true };\n function newRequest() {\n   const headers = {};\n   if (policy.networkRead && !policy.diskRead) {\n     headers[\"Cache-Control\"] = policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\";\n   }\n   return { headers };\n }\n function middleware() { return newRequest(); }\n function applicationRequest() {\n   const request = middleware();\n   // Preserve the upstream request headers.\n   return request;\n }\n function transport(request) { return request.headers[\"Cache-Control\"]; }\n function testTransport(request) {\n   // The test observes the request without adding headers.\n   if (!String(transport(request)).includes(\"no-store\")) throw new Error(\"no-store required\");\n }\n const outgoing = applicationRequest();\n+testTransport(outgoing);",
+      "expected": []
+    },
+    {
+      "id": "request-transform-unknown",
+      "language": "typescript",
+      "category": "negative",
+      "description": "No version-matched dependency source, resolved artifact contract or source-bound execution observation is available. The application requires no-store at the transport. Inspect only the supplied change; do not invent library semantics or an execution result.",
+      "file": "media/request.ts",
+      "startLine": 1,
+      "diff": " import { createLoader } from \"unavailable-image-sdk\";\n+const loader = createLoader({ diskCache: \"disabled\" });\n // The resolved dependency request builder and execution evidence are unavailable.\n await loader.load(\"https://fixture.invalid/image.png\");",
+      "expected": []
+    },
+    {
+      "id": "request-transform-write",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Controlled executable request pipeline. Private image requests require no-store at the actual transport, not just no-cache. The unchanged versioned builder maps policy flags as shown. Review the changed policy; all shown functions are the actual authored fixture path.",
+      "file": "media/request.ts",
+      "startLine": 1,
+      "diff": "+const policy = { diskRead: false, diskWrite: true, networkRead: true };\n function newRequest() {\n   const headers = {};\n   if (policy.networkRead && !policy.diskRead) {\n     headers[\"Cache-Control\"] = policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\";\n   }\n   return { headers };\n }\n function middleware() { return newRequest(); }\n function applicationRequest() {\n   const request = middleware();\n   // Preserve the upstream request headers.\n   return request;\n }\n function transport(request) { return request.headers[\"Cache-Control\"]; }\n function testTransport(request) {\n   // The test observes the request without adding headers.\n   if (!String(transport(request)).includes(\"no-store\")) throw new Error(\"no-store required\");\n }\n const outgoing = applicationRequest();\n testTransport(outgoing);",
+      "expected": [
+        {
+          "id": "request-transform-write",
+          "title": "Write-enabled policy does not provide the required no-store header",
+          "file": "media/request.ts",
+          "line": 1,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "const policy = { diskRead: false, diskWrite: true, networkRead: true };"
+        }
+      ]
+    },
+    {
+      "id": "request-transform-bypass",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Controlled executable request pipeline requiring no-store at the transport. The unchanged middleware invokes the header-producing builder. Review the changed application request construction and the downstream assertion.",
+      "file": "media/request.ts",
+      "startLine": 1,
+      "diff": " const policy = { diskRead: false, diskWrite: false, networkRead: true };\n function newRequest() {\n   const headers = {};\n   if (policy.networkRead && !policy.diskRead) {\n     headers[\"Cache-Control\"] = policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\";\n   }\n   return { headers };\n }\n function middleware() { return newRequest(); }\n function applicationRequest() {\n+  const request = { headers: {} };\n   // Preserve the upstream request headers.\n   return request;\n }\n function transport(request) { return request.headers[\"Cache-Control\"]; }\n function testTransport(request) {\n   // The test observes the request without adding headers.\n   if (!String(transport(request)).includes(\"no-store\")) throw new Error(\"no-store required\");\n }\n const outgoing = applicationRequest();\n testTransport(outgoing);",
+      "expected": [
+        {
+          "id": "request-transform-bypass",
+          "title": "Raw request bypasses the header-producing middleware",
+          "file": "media/request.ts",
+          "line": 11,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "const request = { headers: {} };"
+        }
+      ]
+    },
+    {
+      "id": "request-transform-overwrite",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Controlled executable request pipeline requiring no-store at the transport. The unchanged upstream builder produces its policy-derived header. Review the added downstream assignment before the actual transport observes the request.",
+      "file": "media/request.ts",
+      "startLine": 1,
+      "diff": " const policy = { diskRead: false, diskWrite: false, networkRead: true };\n function newRequest() {\n   const headers = {};\n   if (policy.networkRead && !policy.diskRead) {\n     headers[\"Cache-Control\"] = policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\";\n   }\n   return { headers };\n }\n function middleware() { return newRequest(); }\n function applicationRequest() {\n   const request = middleware();\n+  request.headers[\"Cache-Control\"] = \"no-cache\";\n   return request;\n }\n function transport(request) { return request.headers[\"Cache-Control\"]; }\n function testTransport(request) {\n   // The test observes the request without adding headers.\n   if (!String(transport(request)).includes(\"no-store\")) throw new Error(\"no-store required\");\n }\n const outgoing = applicationRequest();\n testTransport(outgoing);",
+      "expected": [
+        {
+          "id": "request-transform-overwrite",
+          "title": "Downstream assignment removes the required no-store directive",
+          "file": "media/request.ts",
+          "line": 12,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "request.headers[\"Cache-Control\"] = \"no-cache\";"
+        }
+      ]
+    },
+    {
+      "id": "request-transform-mock",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Controlled executable request pipeline requiring no-store in production. The shown test mock mutates its input request before asserting. Production invokes applicationRequest followed by transport without testTransport. Review the changed production construction; a passing injecting mock is not production execution evidence.",
+      "file": "media/request.ts",
+      "startLine": 1,
+      "diff": " const policy = { diskRead: false, diskWrite: false, networkRead: true };\n function newRequest() {\n   const headers = {};\n   if (policy.networkRead && !policy.diskRead) {\n     headers[\"Cache-Control\"] = policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\";\n   }\n   return { headers };\n }\n function middleware() { return newRequest(); }\n function applicationRequest() {\n+  const request = { headers: {} };\n   // Preserve the upstream request headers.\n   return request;\n }\n function transport(request) { return request.headers[\"Cache-Control\"]; }\n function testTransport(request) {\n   request.headers[\"Cache-Control\"] = \"no-cache, no-store\";\n   if (!String(transport(request)).includes(\"no-store\")) throw new Error(\"no-store required\");\n }\n const outgoing = applicationRequest();\n testTransport(outgoing);",
+      "expected": [
+        {
+          "id": "request-transform-mock",
+          "title": "Header-injecting mock hides a missing production request header",
+          "file": "media/request.ts",
+          "line": 11,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "const request = { headers: {} };"
+        }
+      ]
+    },
+    {
+      "id": "request-transform-utf8",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "Controlled executable request pipeline plus UTF-8 preview. The header builder and transport assertion are supplied. The preview contract requires valid UTF-8; its unchanged strict decoder rejects malformed bytes. Review the added byte truncation independently of request-header correctness.",
+      "file": "media/request.ts",
+      "startLine": 1,
+      "diff": " const policy = { diskRead: false, diskWrite: false, networkRead: true };\n function newRequest() {\n   const headers = {};\n   if (policy.networkRead && !policy.diskRead) {\n     headers[\"Cache-Control\"] = policy.diskWrite ? \"no-cache\" : \"no-cache, no-store\";\n   }\n   return { headers };\n }\n function middleware() { return newRequest(); }\n function applicationRequest() {\n   const request = middleware();\n   // Preserve the upstream request headers.\n   return request;\n }\n function transport(request) { return request.headers[\"Cache-Control\"]; }\n function testTransport(request) {\n   // The test observes the request without adding headers.\n   if (!String(transport(request)).includes(\"no-store\")) throw new Error(\"no-store required\");\n }\n const outgoing = applicationRequest();\n testTransport(outgoing);\n const encoded = new TextEncoder().encode(\"é\");\n+const preview = encoded.slice(0, 1);\n new TextDecoder(\"utf-8\", { fatal: true }).decode(preview);",
+      "expected": [
+        {
+          "id": "request-transform-utf8",
+          "title": "Byte truncation splits a multibyte UTF-8 character",
+          "file": "media/request.ts",
+          "line": 23,
+          "severity": "medium",
+          "category": "correctness",
+          "codeSnippet": "const preview = encoded.slice(0, 1);"
+        }
+      ]
     }
   ]
 }

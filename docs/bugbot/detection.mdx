@@ -99,6 +99,26 @@ lifecycle contract cannot be verified, the reviewer must omit a speculative
 permanent-loader claim. This instruction improves evidence gathering; it does
 not guarantee model accuracy or suppress findings through a text-matching rule.
 
+## Dependency-generated request values
+
+Before claiming a required request value is missing, Bugbot follows policy and
+defaults through the resolved dependency's request builder and adapters to the
+transport observation. For example, Coil 3.6.3
+[builds `Cache-Control: no-cache, no-store`](https://github.com/coil-kt/coil/blob/3.6.3/coil-network-core/src/commonMain/kotlin/coil3/network/NetworkFetcher.kt)
+when network reads are enabled and disk reads/writes are disabled. Its matching
+[`Options` defaults](https://github.com/coil-kt/coil/blob/3.6.3/coil-core/src/commonMain/kotlin/coil3/request/Options.kt)
+and [`CachePolicy` flags](https://github.com/coil-kt/coil/blob/3.6.3/coil-core/src/commonMain/kotlin/coil3/request/CachePolicy.kt)
+explain the resulting request even when the application sets only the policy.
+
+Review reconciles source-bound pipeline assertions and emitted values, and
+distinguishes predicted failures from observed executions. A mock that inserts
+the disputed value can hide a production fault. Skipped, cached, unrelated or
+stale runs cannot establish the reviewed assertion's outcome. Bypassed producers,
+downstream overwrites, genuinely missing values and independent defects remain
+actionable. Missing dependency evidence requires withholding the unsupported
+claim. Existing findings still require normal current-source verification.
+See [quality evidence and limits](/bugbot/quality-observability).
+
 ## When Bugbot runs
 
 Draft pull requests are skipped while `bugbot-review-drafts` is `false` (the
