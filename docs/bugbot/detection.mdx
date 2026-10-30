@@ -492,6 +492,22 @@ contexts without retained witnesses use the existing path. Rejected hypotheses
 cannot resolve, dismiss or reopen historical findings. There is no new public
 configuration, provider permission or workflow step.
 
+## Kotlin Json instance and nullable input
+
+Before claiming a nullable input is required, Bugbot traces the `Json` instance
+actually used by the decoder, including inherited and overridden flags. For
+ordinary generated fields in the verified kotlinx.serialization versions,
+`explicitNulls=false` decodes an omitted nullable field without a default as
+`null`; `true` requires its presence. Defaults apply under either policy, and a
+non-nullable field without a default remains required. Annotations and custom
+serializers require their own evidence.
+
+A rejection observed with one instance does not prove that a differently
+configured instance rejects the same input. Missing policy or version evidence
+does not justify a speculative finding. Genuine missing required input remains
+reportable. This guidance uses existing review and verification surfaces and
+adds no setting, decoder change or consumer workaround.
+
 ## Initial session credential ownership
 
 Before attributing a tested credential to a stub, Bugbot follows the configured

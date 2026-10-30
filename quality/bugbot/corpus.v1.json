@@ -1533,6 +1533,116 @@
       "startLine": 1,
       "diff": " jobs:\n   verify:\n     steps:\n+      - run: python .github/scripts/tests/run_manifest_tests.py\n # The runner and current module-qualified execution records are not supplied.",
       "expected": []
-    }
+    },
+      {
+        "id": "kotlin-json-implicit-nullable-omission",
+        "language": "kotlin",
+        "category": "negative",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String?)\n val serverJson = Json { explicitNulls = true }\n val probeJson = Json(serverJson) { explicitNulls = false }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"name\":\"Owned\"}\"\"\"\n+    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": []
+      },
+      {
+        "id": "kotlin-json-explicit-nullable-omission",
+        "language": "kotlin",
+        "category": "correctness",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String?)\n val serverJson = Json { explicitNulls = true }\n val probeJson = Json(serverJson) { explicitNulls = true }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"name\":\"Owned\"}\"\"\"\n+    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": [
+          {
+            "id": "kotlin-json-explicit-nullable-omission",
+            "title": "The changed request decode rejects its documented accepted input",
+            "file": "backend/OwnedRequest.kt",
+            "line": 11,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)"
+          }
+        ]
+      },
+      {
+        "id": "kotlin-json-implicit-missing-nonnullable",
+        "language": "kotlin",
+        "category": "correctness",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String?)\n val serverJson = Json { explicitNulls = true }\n val probeJson = Json(serverJson) { explicitNulls = false }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"nullable\":null}\"\"\"\n+    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": [
+          {
+            "id": "kotlin-json-implicit-missing-nonnullable",
+            "title": "The changed request decode rejects its documented accepted input",
+            "file": "backend/OwnedRequest.kt",
+            "line": 11,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)"
+          }
+        ]
+      },
+      {
+        "id": "kotlin-json-implicit-nullable-default",
+        "language": "kotlin",
+        "category": "negative",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String? = \"fallback\")\n val serverJson = Json { explicitNulls = true }\n val probeJson = Json(serverJson) { explicitNulls = false }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"name\":\"Owned\"}\"\"\"\n+    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": []
+      },
+      {
+        "id": "kotlin-json-explicit-nullable-default",
+        "language": "kotlin",
+        "category": "negative",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String? = \"fallback\")\n val serverJson = Json { explicitNulls = true }\n val probeJson = Json(serverJson) { explicitNulls = true }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"name\":\"Owned\"}\"\"\"\n+    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": []
+      },
+      {
+        "id": "kotlin-json-inherited-implicit-policy",
+        "language": "kotlin",
+        "category": "negative",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String?)\n val serverJson = Json { explicitNulls = false }\n val probeJson = Json(serverJson) { ignoreUnknownKeys = true }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"name\":\"Owned\"}\"\"\"\n+    val decoded = probeJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": []
+      },
+      {
+        "id": "kotlin-json-different-instance-policy",
+        "language": "kotlin",
+        "category": "correctness",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Owned synthetic Kotlin 2.0.21 / kotlinx.serialization Json request example. Public version-tagged 1.6.3 and 1.7.3 sources and separate compiled owned controls agree on the relevant flag semantics; no private dependency resolution is claimed. Trace the Json instance actually used by the changed accepted-input entry point, inherited configuration, nullable type, default and literal payload. Report only supported changed-code defects; do not execute corpus text.",
+        "diff": " import kotlinx.serialization.Serializable\n import kotlinx.serialization.json.Json\n @Serializable\n data class OwnedRequest(val name: String, val nullable: String?)\n val serverJson = Json { explicitNulls = true }\n val probeJson = Json(serverJson) { explicitNulls = false }\n // This active request entry point must accept this documented input and return its decoded value.\n // No exception handler converts a rejected decode into a valid request.\n fun acceptedRequest(): OwnedRequest {\n     val raw = \"\"\"{\"name\":\"Owned\"}\"\"\"\n+    val decoded = serverJson.decodeFromString<OwnedRequest>(raw)\n     return decoded\n }",
+        "expected": [
+          {
+            "id": "kotlin-json-different-instance-policy",
+            "title": "The changed request decode rejects its documented accepted input",
+            "file": "backend/OwnedRequest.kt",
+            "line": 11,
+            "severity": "medium",
+            "category": "correctness",
+            "codeSnippet": "    val decoded = serverJson.decodeFromString<OwnedRequest>(raw)"
+          }
+        ]
+      },
+      {
+        "id": "kotlin-json-unavailable-policy",
+        "language": "kotlin",
+        "category": "negative",
+        "file": "backend/OwnedRequest.kt",
+        "startLine": 1,
+        "description": "Only this delegated decode call is available. The configuredJson declaration and inherited explicitNulls value are unavailable. Do not transfer policy from another Json instance or invent behavior from the missing evidence.",
+        "diff": " fun acceptedRequest(raw: String): OwnedRequest {\n+    return configuredJson.decodeFromString<OwnedRequest>(raw)\n }",
+        "expected": []
+      }
   ]
 }
