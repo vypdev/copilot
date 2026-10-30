@@ -247,6 +247,13 @@ Markdown under `specs/`; workflow evidence remains YAML under
 `.github/workflows/` or `setup/workflows/`. Ownership, SDD structure, numeric test
 budgets and the SDD/catalog-only publication allowlist remain enforced.
 
+Accepted names with parentheses, spaces, Unicode or Markdown punctuation do not
+need renaming. The generated catalog preserves their full paths and literal
+labels, with URI-escaped link destinations. Register the original filename,
+including any literal percent sign, and regenerate `specs/CATALOG.md` after
+updating the shared SDK validator. For example, `specs/foo).md` links to
+`./foo%29.md`; source files, capability ownership and readiness stay unchanged.
+
 | Convention | Verified coverage | Execution support |
 |---|---|---|
 | Kotlin/Gradle, Astro/Svelte JS/TS monorepos, Python SDKs | Metadata paths, nested READMEs, `.spec.ts`, `.test.js` | Toolchains are not executed by catalog validation |

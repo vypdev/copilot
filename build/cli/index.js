@@ -117382,6 +117382,7 @@ module.exports = { publishCatalogMarkdown, readCatalogMarkdown };
 
 /* module decorator */ module = __nccwpck_require__.nmd(module);
 
+const { Buffer } = __nccwpck_require__(72254);
 const fs = __nccwpck_require__(87561);
 const path = __nccwpck_require__(49411);
 const { isSafeRelativePath, matchesFieldBoundary, allowsEmptyPathField } = __nccwpck_require__(66014);
@@ -117581,8 +117582,8 @@ function renderCatalog(catalog) {
     const primarySpec = capability.specs[0];
     const companionCount = capability.specs.length - 1;
     const specLabel = companionCount > 0
-      ? `[${escapeCell(capability.title)}](./${primarySpec.slice('specs/'.length)}) + ${companionCount} companion`
-      : `[${escapeCell(capability.title)}](./${primarySpec.slice('specs/'.length)})`;
+      ? `[${escapeCell(capability.title)}](${catalogPathTarget(primarySpec)}) + ${companionCount} companion`
+      : `[${escapeCell(capability.title)}](${catalogPathTarget(primarySpec)})`;
     const evidenceCount = capability.workflows.length
       + capability.entrypoints.length
       + capability.code.length
@@ -117645,12 +117646,24 @@ function renderImplementationLinks(paths, status) {
 
 function renderPathLinks(paths) {
   if (paths.length === 0) return 'Not applicable for this capability.';
-  return paths.map(relativePath => {
-    const target = relativePath.startsWith('specs/')
-      ? `./${relativePath.slice('specs/'.length)}`
-      : `../${relativePath}`;
-    return `[\`${relativePath}\`](${target})`;
-  }).join(' · ');
+  return paths.map(relativePath => `[${catalogPathLabel(relativePath)}](${catalogPathTarget(relativePath)})`).join(' · ');
+}
+
+function catalogPathTarget(relativePath) {
+  const target = relativePath.startsWith('specs/')
+    ? `./${relativePath.slice('specs/'.length)}`
+    : `../${relativePath}`;
+  return target.split('/').map(segment =>
+    encodeURIComponent(Buffer.from(segment, 'utf8').toString('utf8'))
+      .replace(/[!'()*]/g, character => `%${character.charCodeAt(0).toString(16).toUpperCase()}`)
+  ).join('/');
+}
+
+function catalogPathLabel(relativePath) {
+  const runs = relativePath.match(/`+/g) || [];
+  const delimiter = '`'.repeat(runs.reduce((longest, run) => Math.max(longest, run.length), 0) + 1);
+  const content = relativePath.startsWith('`') || relativePath.endsWith('`') ? ` ${relativePath} ` : relativePath;
+  return `${delimiter}${content}${delimiter}`;
 }
 
 function escapeCell(value) {
