@@ -61354,10 +61354,11 @@ const comment_automation_use_case_1 = __nccwpck_require__(9661);
 const check_issue_comment_language_use_case_1 = __nccwpck_require__(93152);
 const comment_automation_context_1 = __nccwpck_require__(37055);
 const pull_request_workflow_context_1 = __nccwpck_require__(73447);
+const description_command_preparation_1 = __nccwpck_require__(59772);
 const pre_branch_sdd_1 = __nccwpck_require__(34730);
 const copilot_command_1 = __nccwpck_require__(11771);
 class IssueCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, preBranchSddContinuation, rememberBranchPorts, statusReadPorts, historyReadPort, sddQueryPort, sddDiffQueryPort, nativeStatusReadPort, doctorReadPorts) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, preBranchSddContinuation, rememberBranchPorts, statusReadPorts, historyReadPort, sddQueryPort, sddDiffQueryPort, nativeStatusReadPort, doctorReadPorts, pendingLinkRecoveryUseCase = undefined) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -61378,6 +61379,7 @@ class IssueCommentUseCase {
         this.sddDiffQueryPort = sddDiffQueryPort;
         this.nativeStatusReadPort = nativeStatusReadPort;
         this.doctorReadPorts = doctorReadPorts;
+        this.pendingLinkRecoveryUseCase = pendingLinkRecoveryUseCase;
         this.taskId = "IssueCommentUseCase";
     }
     async invoke(param) {
@@ -61418,10 +61420,12 @@ class IssueCommentUseCase {
             dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
             reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
             updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase
-                ? { invoke: () => this.updatePullRequestDescriptionUseCase.invoke({
+                ? { invoke: () => (0, description_command_preparation_1.runPreparedDescriptionCommand)({
                         context: (0, pull_request_workflow_context_1.projectPullRequestDescriptionContext)(param),
                         trigger: 'authorized-command',
-                    }) }
+                    }, this.updatePullRequestDescriptionUseCase, this.pendingLinkRecoveryUseCase
+                        ? () => this.pendingLinkRecoveryUseCase.invoke({ ...(0, pull_request_workflow_context_1.projectLinkPullRequestIssueContext)(param), recoveryOnly: true })
+                        : undefined) }
                 : undefined,
             rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
             rememberBranchPorts: this.rememberBranchPorts,
@@ -62109,8 +62113,9 @@ const comment_automation_use_case_1 = __nccwpck_require__(9661);
 const check_pull_request_comment_language_use_case_1 = __nccwpck_require__(21729);
 const comment_automation_context_1 = __nccwpck_require__(37055);
 const pull_request_workflow_context_1 = __nccwpck_require__(73447);
+const description_command_preparation_1 = __nccwpck_require__(59772);
 class PullRequestReviewCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, rememberBranchPorts, statusReadPorts, historyReadPort, sddDiffQueryPort, nativeStatusReadPort, doctorReadPorts) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase, rememberBranchPorts, statusReadPorts, historyReadPort, sddDiffQueryPort, nativeStatusReadPort, doctorReadPorts, pendingLinkRecoveryUseCase = undefined) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -62129,6 +62134,7 @@ class PullRequestReviewCommentUseCase {
         this.sddDiffQueryPort = sddDiffQueryPort;
         this.nativeStatusReadPort = nativeStatusReadPort;
         this.doctorReadPorts = doctorReadPorts;
+        this.pendingLinkRecoveryUseCase = pendingLinkRecoveryUseCase;
         this.taskId = "PullRequestReviewCommentUseCase";
     }
     async invoke(param) {
@@ -62156,10 +62162,12 @@ class PullRequestReviewCommentUseCase {
             dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
             reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
             updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase
-                ? { invoke: () => this.updatePullRequestDescriptionUseCase.invoke({
+                ? { invoke: () => (0, description_command_preparation_1.runPreparedDescriptionCommand)({
                         context: (0, pull_request_workflow_context_1.projectPullRequestDescriptionContext)(param),
                         trigger: 'authorized-command',
-                    }) }
+                    }, this.updatePullRequestDescriptionUseCase, this.pendingLinkRecoveryUseCase
+                        ? () => this.pendingLinkRecoveryUseCase.invoke({ ...(0, pull_request_workflow_context_1.projectLinkPullRequestIssueContext)(param), recoveryOnly: true })
+                        : undefined) }
                 : undefined,
             rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
             rememberBranchPorts: this.rememberBranchPorts,
@@ -62371,11 +62379,24 @@ function logPullRequestState(context) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectLinkPullRequestIssueContext = projectLinkPullRequestIssueContext;
 exports.projectPullRequestWorkflowStepContexts = projectPullRequestWorkflowStepContexts;
 exports.projectPullRequestDescriptionContext = projectPullRequestDescriptionContext;
 const pull_request_issue_link_state_1 = __nccwpck_require__(96074);
 const copilot_lifecycle_1 = __nccwpck_require__(72418);
 const issue_workflow_context_1 = __nccwpck_require__(98005);
+function projectLinkPullRequestIssueContext(source) {
+    return Object.freeze({
+        pullRequestNumber: source.pullRequest.number,
+        issueNumber: source.issueNumber,
+        originalBaseBranch: (0, pull_request_issue_link_state_1.pendingPullRequestParent)(source.pullRequest.body ?? '', source.pullRequest.number, source.issueNumber)
+            ?? source.currentConfiguration?.parentBranch ?? source.pullRequest.base,
+        expectedHeadSha: source.pullRequest.headSha,
+        expectedHeadRepository: source.pullRequest.headRepository,
+        expectedHeadRef: source.pullRequest.head || source.currentConfiguration?.workingBranch,
+        defaultBranch: source.branches.defaultBranch,
+    });
+}
 function projectPullRequestWorkflowStepContexts(source) {
     const projects = (0, issue_workflow_context_1.copyProjects)(source.project.getProjects());
     return Object.freeze({
@@ -62385,15 +62406,7 @@ function projectPullRequestWorkflowStepContexts(source) {
             desiredReviewersCount: source.pullRequest.desiredReviewersCount,
             creator: source.pullRequest.creator,
         }),
-        linkIssue: Object.freeze({
-            pullRequestNumber: source.pullRequest.number,
-            issueNumber: source.issueNumber,
-            originalBaseBranch: (0, pull_request_issue_link_state_1.pendingPullRequestParent)(source.pullRequest.body ?? '', source.pullRequest.number, source.issueNumber) ?? source.currentConfiguration?.parentBranch ?? source.pullRequest.base,
-            expectedHeadSha: source.pullRequest.headSha,
-            expectedHeadRepository: source.pullRequest.headRepository,
-            expectedHeadRef: source.pullRequest.head,
-            defaultBranch: source.branches.defaultBranch,
-        }),
+        linkIssue: projectLinkPullRequestIssueContext(source),
         syncLabels: Object.freeze({
             issueNumber: source.issueNumber,
             pullRequestNumber: source.pullRequest.number,
@@ -74853,6 +74866,27 @@ exports.CheckPriorityPullRequestSizeUseCase = CheckPriorityPullRequestSizeUseCas
 
 /***/ }),
 
+/***/ 59772:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.runPreparedDescriptionCommand = runPreparedDescriptionCommand;
+/** Called by the comment router only after its existing actor authorization. */
+async function runPreparedDescriptionCommand(request, description, prepare) {
+    if (request.trigger !== 'authorized-command' || request.context.mode === 'disabled' || !prepare) {
+        return description.invoke(request);
+    }
+    const recovery = await prepare();
+    if (recovery.some(result => !result.success))
+        return recovery;
+    return [...recovery, ...await description.invoke(request)];
+}
+
+
+/***/ }),
+
 /***/ 38259:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -74956,7 +74990,8 @@ async function runLinkPullRequestIssue(param, taskId, port, delay) {
     if (!issue || issue === pr)
         return [new result_1.Result({ id: taskId, success: true, executed: false,
                 steps: ['No separate linked issue was inferred; pull-request linkage was skipped.'] })];
-    if (!(0, deployment_configuration_1.isSafeBranchTree)(param.originalBaseBranch) || !(0, deployment_configuration_1.isSafeBranchTree)(param.defaultBranch)) {
+    if ((!(0, deployment_configuration_1.isSafeBranchTree)(param.originalBaseBranch) && !(param.recoveryOnly && param.originalBaseBranch === ''))
+        || !(0, deployment_configuration_1.isSafeBranchTree)(param.defaultBranch)) {
         return invalid(taskId, 'Pull-request linkage requires a positive issue number and safe non-empty base branches.');
     }
     let current = await port.getDetails(pr);
@@ -74978,6 +75013,8 @@ async function runLinkPullRequestIssue(param, taskId, port, delay) {
         throw new PullRequestIssueLinkOperationError(true, true);
     if (state.kind === 'none' && param.expectedHeadSha && param.expectedHeadSha !== identity.headSha)
         throw stale();
+    if (state.kind === 'none' && param.recoveryOnly && param.originalBaseBranch === '')
+        return [];
     if (current.baseBranch !== original && !(state.kind === 'pending' && current.baseBranch === param.defaultBranch)) {
         throw stale();
     }
@@ -101428,6 +101465,8 @@ exports.createPullRequestReviewCommentUseCaseCompositionRoot = createPullRequest
 exports.createCommitUseCaseCompositionRoot = createCommitUseCaseCompositionRoot;
 exports.createMainRunRouteCompositionRoot = createMainRunRouteCompositionRoot;
 exports.createClosedIssueRetirementUseCase = createClosedIssueRetirementUseCase;
+const link_pull_request_issue_use_case_1 = __nccwpck_require__(38259);
+const timer_delay_adapter_1 = __nccwpck_require__(71942);
 const deployment_candidate_replacement_composition_root_1 = __nccwpck_require__(95402);
 const change_size_diagnostics_composition_root_1 = __nccwpck_require__(80230);
 const sdd_diff_composition_root_1 = __nccwpck_require__(83434);
@@ -101564,7 +101603,7 @@ function createIssueCommentUseCaseCompositionRoot(binding, setup = verification_
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_evidence_composition_root_1.createSddEvidenceQueryPort)(binding, bugbot.scm.context), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_2.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(binding), rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_evidence_composition_root_1.createSddEvidenceQueryPort)(binding, bugbot.scm.context), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_2.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context), createDescriptionLinkRecovery(binding));
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot(binding, setup = verification_setup_ports_1.DISABLED_VERIFICATION_SETUP) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
@@ -101580,7 +101619,7 @@ function createPullRequestReviewCommentUseCaseCompositionRoot(binding, setup = v
         contextPorts: bugbot.scm.context,
         resolutionPorts: bugbot.scm.resolution,
         catalogResolver: new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language),
-    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_2.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context));
+    }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry, new resolve_message_catalog_use_case_1.ResolveMessageCatalogUseCase(language)), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync, rememberBranchPorts(binding, bugbot.scm.context), (0, pull_request_status_composition_root_1.createPullRequestStatusReadPorts)(binding, bugbot.scm.context), (0, copilot_history_port_factory_1.createCopilotHistoryReadPort)(bugbot.scm.context, process.env.GITHUB_SERVER_URL ?? 'https://github.com'), (0, sdd_diff_composition_root_1.createSddDiffQueryPort)(binding, bugbot.scm.context), (0, issue_completion_composition_root_2.createNativeStatusReadPort)(binding), (0, github_runtime_doctor_composition_root_1.createGithubRuntimeDoctorPorts)(binding, bugbot.scm.context), createDescriptionLinkRecovery(binding));
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
     const labels = (0, issue_labels_composition_root_1.createIssueLabelRepository)();
@@ -101650,6 +101689,9 @@ function createClosedIssueRetirementUseCase(binding) {
     const cards = (0, push_single_action_capability_port_binding_1.bindBranchSyncRetirementComments)((0, push_single_action_capability_port_binding_1.bindIssueCommentPublication)(comments, binding));
     const freshness = (0, reply_request_composition_root_1.createReplyRequestReadPort)(binding);
     return new reconcile_closed_issue_use_case_1.ReconcileClosedIssueUseCase(new reconcile_closed_issue_metadata_use_case_1.ReconcileClosedIssueMetadataUseCase((0, issue_completion_composition_root_1.bindIssueCompletionMetadata)((0, issue_completion_composition_root_1.createIssueCompletionRepository)(binding))), new retire_closed_issue_cards_use_case_1.RetireClosedIssueCardsUseCase(new retire_branch_sync_use_case_1.RetireBranchSyncUseCase(native, cards, freshness), new retire_progress_use_case_1.RetireProgressUseCase(native, cards, freshness)));
+}
+function createDescriptionLinkRecovery(binding) {
+    return new link_pull_request_issue_use_case_1.LinkPullRequestIssueUseCase((0, lifecycle_capability_port_binding_1.bindPullRequestIssueLink)(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), binding), new timer_delay_adapter_1.TimerDelayAdapter());
 }
 
 

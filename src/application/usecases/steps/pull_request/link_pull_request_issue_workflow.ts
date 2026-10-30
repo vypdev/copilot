@@ -27,7 +27,8 @@ export async function runLinkPullRequestIssue(
     if (!pr) return invalid(taskId, 'Pull-request linkage requires a positive pull-request number.');
     if (!issue || issue === pr) return [new Result({ id: taskId, success: true, executed: false,
         steps: ['No separate linked issue was inferred; pull-request linkage was skipped.'] })];
-    if (!isSafeBranchTree(param.originalBaseBranch) || !isSafeBranchTree(param.defaultBranch)) {
+    if ((!isSafeBranchTree(param.originalBaseBranch) && !(param.recoveryOnly && param.originalBaseBranch === ''))
+        || !isSafeBranchTree(param.defaultBranch)) {
         return invalid(taskId, 'Pull-request linkage requires a positive issue number and safe non-empty base branches.');
     }
     let current = await port.getDetails(pr);
@@ -44,6 +45,7 @@ export async function runLinkPullRequestIssue(
     if (state.kind === 'pending' && param.originalBaseBranch !== param.defaultBranch
         && param.originalBaseBranch !== original) throw new PullRequestIssueLinkOperationError(true, true);
     if (state.kind === 'none' && param.expectedHeadSha && param.expectedHeadSha !== identity.headSha) throw stale();
+    if (state.kind === 'none' && param.recoveryOnly && param.originalBaseBranch === '') return [];
     if (current.baseBranch !== original && !(state.kind === 'pending' && current.baseBranch === param.defaultBranch)) {
         throw stale();
     }

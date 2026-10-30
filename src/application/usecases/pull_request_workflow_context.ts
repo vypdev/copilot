@@ -76,7 +76,7 @@ interface ProjectSource {
 }
 
 export interface PullRequestWorkflowContextSource {
-  readonly currentConfiguration?: { readonly parentBranch?: string };
+  readonly currentConfiguration?: { readonly parentBranch?: string; readonly workingBranch?: string };
   readonly tokenUser?: string;
   readonly isIssue: boolean;
   readonly isPullRequest: boolean;
@@ -124,6 +124,19 @@ export interface PullRequestWorkflowContextSource {
   readonly locale: { readonly pullRequest: string; readonly issue?: string };
 }
 
+export function projectLinkPullRequestIssueContext(source: PullRequestWorkflowContextSource): LinkPullRequestIssueContext {
+  return Object.freeze({
+    pullRequestNumber: source.pullRequest.number,
+    issueNumber: source.issueNumber,
+    originalBaseBranch: pendingPullRequestParent(source.pullRequest.body ?? '', source.pullRequest.number, source.issueNumber)
+      ?? source.currentConfiguration?.parentBranch ?? source.pullRequest.base,
+    expectedHeadSha: source.pullRequest.headSha,
+    expectedHeadRepository: source.pullRequest.headRepository,
+    expectedHeadRef: source.pullRequest.head || source.currentConfiguration?.workingBranch,
+    defaultBranch: source.branches.defaultBranch,
+  });
+}
+
 export function projectPullRequestWorkflowStepContexts(
   source: PullRequestWorkflowContextSource,
 ): PullRequestWorkflowStepContexts {
@@ -135,15 +148,7 @@ export function projectPullRequestWorkflowStepContexts(
       desiredReviewersCount: source.pullRequest.desiredReviewersCount,
       creator: source.pullRequest.creator,
     }),
-    linkIssue: Object.freeze({
-      pullRequestNumber: source.pullRequest.number,
-      issueNumber: source.issueNumber,
-      originalBaseBranch: pendingPullRequestParent(source.pullRequest.body ?? '', source.pullRequest.number, source.issueNumber) ?? source.currentConfiguration?.parentBranch ?? source.pullRequest.base,
-      expectedHeadSha: source.pullRequest.headSha,
-      expectedHeadRepository: source.pullRequest.headRepository,
-      expectedHeadRef: source.pullRequest.head,
-      defaultBranch: source.branches.defaultBranch,
-    }),
+    linkIssue: projectLinkPullRequestIssueContext(source),
     syncLabels: Object.freeze({
       issueNumber: source.issueNumber,
       pullRequestNumber: source.pullRequest.number,

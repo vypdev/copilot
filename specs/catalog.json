@@ -2432,7 +2432,9 @@
         "src/manager/description/configuration_handler.ts",
         "src/application/ports/configuration_store_ports.ts",
         "src/application/usecases/steps/common/store_configuration_use_case.ts",
-        "src/manager/description/base/issue_content_interface.ts"
+        "src/manager/description/base/issue_content_interface.ts",
+        "src/application/usecases/steps/pull_request/description_command_preparation.ts",
+        "src/infrastructure/composition/main_run_route_composition_root.ts"
       ],
       "tests": [
         "src/application/usecases/execution/__tests__/execution_issue_number_policy.test.ts",
@@ -2467,7 +2469,9 @@
         "src/manager/description/__tests__/configuration_handler.test.ts",
         "src/application/usecases/steps/common/__tests__/store_configuration_use_case.test.ts",
         "src/application/usecases/steps/common/__tests__/shared_capability_context_projection.test.ts",
-        "src/manager/description/base/__tests__/issue_content_interface.test.ts"
+        "src/manager/description/base/__tests__/issue_content_interface.test.ts",
+        "src/application/usecases/steps/pull_request/__tests__/description_command_preparation.test.ts",
+        "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts"
       ],
       "documentation": [
         "docs/pull-requests/capabilities.mdx",

@@ -768,9 +768,11 @@ head; promotion/release/hotfix routing does not acquire this inference. This als
 blocks adoption of an already-poisoned PR parent when an older runtime removed
 the marker. A conflicting managed-parent state
 without sufficient recovery evidence blocks body/configuration adoption instead
-of guessing a new parent. Explicit description commands preserve pending metadata
-and withhold generation against a temporary target; they gain no new base-write
-capability. A stale PR workflow must not overwrite newer persisted configuration.
+of guessing a new parent. After the existing actor authorization, explicit description command coordinators
+run the same narrowly scoped pending repair before generation. The generator
+itself retains its description-only port and receives no base-write capability.
+Failed repair withholds generation and retains pending metadata; disabled modes
+and read-only commands do not invoke this preparation. A stale PR workflow must not overwrite newer persisted configuration.
 
 ```text
 pending native snapshot -> validate operation/identity -> restore original base
@@ -812,7 +814,7 @@ runtime, finish or explicitly reconcile pending V2 operations with the newer
 runtime; do not discard their recovery state. No public configuration/schema
 migration, consumer override or deployment is part of this change.
 
-Reserve **73 distinct new cases before implementation**, including the thirteen review/acceptance extensions recorded below:
+Reserve **80 distinct new cases before implementation**, including the twenty review/acceptance extensions recorded below:
 
 | Area | Cases | Acceptance |
 |---|---:|---|
@@ -820,8 +822,8 @@ Reserve **73 distinct new cases before implementation**, including the thirteen 
 | Setup/original-parent projection | 9 | absent/poisoned PR config, admitted parent, valid pending authority, conflicts, unchanged ordinary/unlinked/issue routes |
 | Link/recovery/compensation | 19 | interrupted writes, verified/unverified restore, new head, foreign owner/ref, lookup failure, changed body/lease and one real worker-kill recovery |
 | Description/configuration writers | 15 | replace/append/preserve/disabled or explicit commands, fresh metadata, model-time head drift and retained state on failure |
-| Routing/bindings/completion | 6 | newer synchronize first, original-event retry, review-only preparation, stale persistence fence and native identity binding |
-| **Total** | **73** | no double counting with existing compensation or #610 cases |
+| Routing/bindings/completion | 13 | newer synchronize first, original-event retry, review-only preparation, stale persistence fence and native identity binding |
+| **Total** | **80** | no double counting with existing compensation or #610 cases |
 
 The owned process-kill case has a **15-second** budget reserved here; it uses
 only a disposable fake-provider state file and a child Node process, never a
@@ -847,8 +849,8 @@ GraphQL error policy. A dedicated regression first reproduces the incorrect
 retryable outage and then verifies terminal, sanitized credential guidance.
 
 Local correction evidence for #785: the two regressions failed on the original
-implementation (2 failed, 63 passed). The reserved 73 new test cases and existing
-boundary suites now pass together: 631 tests across 23 suites. The concurrent
+implementation (2 failed, 63 passed). The reserved 80 new test cases and existing
+boundary suites now pass together: 644 tests across 25 suites. The concurrent
 missing-marker negative case first failed while its verified positive control
 passed. The five review
 extensions first failed on the initial correction (5 failed, 100 passed). The child-process
@@ -909,3 +911,33 @@ marker during a first save. They verify that explicit issue classification does
 not bypass stored-state validation and that failed rendering performs no write.
 These cover the existing error boundaries of the adapter touched by the role
 correction, retaining its 95/90 module floors instead of excluding it.
+
+Explicit-command recovery extension, reserved before implementation: five cases
+cover both ordinary and native review-comment transports recovering a temporary
+target before generation, blocked repair stopping generation/persistence, disabled
+description policy without preparation, and automatic-description passthrough
+without duplicate preparation. Existing command-routing regressions additionally
+verify the injected preparation is invoked only through the already-authorized
+description adapter. The coordinator reuses the credential-bound recovery use
+case with recoveryOnly=true; it cannot start a new linkage and exposes no user
+retarget argument. Frozen recovery context binds the remotely resolved managed
+head when the comment payload omits it. Generator ports, provider scopes, native
+identity/lease fences and the existing one-wait/read budgets remain unchanged.
+
+A sixth explicit-command case is reserved for an ordinary linked PR comment with
+no stored parent and no pending marker. Recovery-only inspection must be a no-op
+there, allowing generation from fresh native details; it must not require a
+webhook base omitted by the comment transport. A known canonical-parent conflict
+still blocks, and no fresh linkage is started by command preparation.
+
+One composition boundary case is additionally reserved to verify that workflow
+and local single-action surfaces retain their existing publication-capability
+separation while comment recovery is wired. It constructs capabilities against
+mocks only and invokes no publication/tag/release operation. This retains the
+changed composition module's branch/function floors without excluding it.
+
+The six explicit-command cases reproduce the previous direct-call behavior with
+four failures and two passing controls before preparation is enabled. Both real
+comment routers then verify preparation ordering and that denied actors invoke
+neither preparation nor generation. A defaulted optional dependency preserves
+existing constructor arity/introspection for older compositions.

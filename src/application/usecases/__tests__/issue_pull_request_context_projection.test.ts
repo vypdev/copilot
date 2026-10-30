@@ -5,6 +5,7 @@ import {
 } from '../issue_workflow_context';
 import {
   projectPullRequestDescriptionContext,
+  projectLinkPullRequestIssueContext,
   projectPullRequestWorkflowStepContexts,
 } from '../pull_request_workflow_context';
 
@@ -175,6 +176,8 @@ describe('P2-E issue and pull-request context projections', () => {
     source.pullRequest.body = undefined as never;
     expect(projectPullRequestDescriptionContext(source).pullRequest.body).toBe('');
     expect(projectPullRequestWorkflowStepContexts(source).linkIssue.originalBaseBranch).toBe('develop');
+    source.pullRequest.head = '';
+    expect(projectLinkPullRequestIssueContext({ ...source, currentConfiguration: { workingBranch: 'feature/42-resolved' } }).expectedHeadRef).toBe('feature/42-resolved');
   });
 
   it('freezes explicit configured Project Size mappings and copied Project references', () => {

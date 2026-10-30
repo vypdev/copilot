@@ -117,3 +117,10 @@ execution, independently of body text. Ordinary issue reports may quote recovery
 markers without being treated as pending PR operations. PR writes and legacy
 unclassified callers keep the conservative pending-state guard. This target kind
 is transient and is not a stored configuration field or user input.
+
+Authorized `/copilot description` commands on ordinary and native review comments
+run pending repair before calling the description generator. Repair failure stops
+generation and stale configuration persistence. The generator keeps its narrow
+body/diff port; it does not receive base-write authority. Read-only commands and
+disabled description policy do not run this preparation. An ordinary PR with no
+pending record or stored parent can still use its freshly queried native base.
