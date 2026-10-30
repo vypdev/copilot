@@ -20,7 +20,8 @@ Synchronize events refresh enabled generated content and review; metadata-only
 edits are ignored so Copilot's own body update cannot retrigger the pipeline. A
 merged PR closes only a distinct linked issue. Human-authored body content is
 preserved only in `append`, `preserve`, or `disabled` mode—the existing default
-is explicit full ownership with `replace`.
+is explicit prose ownership with `replace`. Verified closing references to the
+managed issue are retained separately from prose ownership.
 
 ```text
 opened/reopened -> resolve optional distinct issue -> enrich PR -> concise description -> review
@@ -50,7 +51,7 @@ descriptions can also overwrite human content unless ownership is explicit.
    status update; it does not sleep and re-list the board.
 3. `replace` or `append` automatically generates a sanitized, bounded
    description from the merge-base diff and optional distinct issue context.
-4. `replace` owns the body; `append` upserts a marker-bounded Copilot section;
+4. `replace` owns prose while retaining verified issue-closing intent; `append` upserts a marker-bounded Copilot section;
    `preserve` updates only on authorized `/copilot description`; `disabled` never updates.
 5. Open/reopen/synchronize and draft-to-ready events run read-only review when
    configured/authorized. Draft-to-ready activates only the reviewer and does
@@ -102,8 +103,8 @@ descriptions can also overwrite human content unless ownership is explicit.
 | Issue author | see delivery | linked PR merge | issue lifecycle |
 | Copilot | enrich consistently | PR workflow | PR/project/comments/summary |
 
-“Managed section” is content between stable Copilot markers. “Replace” is full
-body ownership. “Enrichment” is metadata mutation that does not merge code.
+“Managed section” is content between stable Copilot markers. “Replace” owns
+generated prose while retaining validated issue-closing intent. “Enrichment” is metadata mutation that does not merge code.
 
 ## 4. Goals, non-goals, and fixed invariants
 
@@ -430,7 +431,7 @@ body mutation that produces no follow-up PR workflow.
 
 1. An opened linked PR receives each deterministic enrichment exactly once.
 2. Synchronize refreshes enabled description/review without duplicating markers.
-3. Replace owns the full body; append only its section; preserve needs explicit
+3. Replace owns prose and retains validated closing references; append only its section; preserve needs explicit
    command; disabled performs no description update.
 4. A PR without a distinct linked issue still runs PR-native enrichment and
    never queries, links, labels, closes, or references its own PR number as an issue.
@@ -959,3 +960,107 @@ Two additional compatibility cases exercise each authorized comment transport
 with the optional legacy recovery dependency absent. They verify description
 delivery and the existing actor authorization guard, and cover the two partial
 added-line branches reported by exact-head Codecov before final acceptance.
+
+
+## Verified closing intent across description replacement — #803 (2026-10-30)
+
+Observed read-only GeckoCV PR46 history at `cfebacec8cacd0342f4af39eda3ab806c8db2957`
+contains an original standalone `Closes #45.` and two bot replacements without
+closing text; the same-repository native relationship still contains issue45.
+The original adapter derives linkage from current body text, so the replacement
+makes its `linkedIssue` fact false. This establishes the integration mismatch;
+it does not identify an unobserved internal model stage or prove a later native
+approval. The restored text and independently authorized human merge are distinct
+observations. Private history/source remains outside this repository.
+
+An owned reproducer executes the actual description workflow and approval adapter
+with in-memory providers. At source75dd, original closing intent yields linkedIssue
+true; two structured responses with `closesLinkedIssue=false` remove that intent
+and both resulting approval reads yield false. These are controlled repository
+executions, not consumer or live-provider executions.
+
+### Decision, flow, and visible result
+
+Use one bounded, Markdown-aware explicit closing-reference policy for preservation
+and approval evidence. A supported reference occupies a top-level single-line
+paragraph and names exactly the validated branch issue, either locally or with
+this repository's qualified name. Support the nine documented closing keywords,
+ASCII case variants, optional colon and terminal period. Inspect raw paragraph
+source, retaining Markdown structure so quoted/indented/fenced code, comments,
+inline examples, escaped/entity spellings, contextual mentions, wrong repository
+and wrong number do not become closing authority. `Refs` is nonclosing. The
+owned temporary linkage reference is excluded before interpretation; malformed
+pending state remains fail-closed under the existing recovery contract.
+
+[GitHub's closing-reference contract](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue)
+also distinguishes native default-branch interpretation. Keep the existing
+Action-owned linkage/base-restoration and merged-issue lifecycle unchanged.
+Preservation does not claim a new native relationship or closure from text alone.
+
+```text
+provider-bound PR identity + current body + exact branch issue
+  -> remove only owned pending-link bytes -> explicit closing-reference policy
+  -> preserve intent in the part being replaced -> strict structured renderer
+  -> re-read identical head/base/body -> publish -> same-policy approval evidence
+```
+
+For replace, retain a validated closing reference even when the new structured
+response omits it. For append/authorized preserve, retain it when the overwritten
+managed section contains it and no surviving outside reference already does.
+Render one canonical `Closes #45` within the existing 12,000-character output
+budget. Existing prose ownership and machine-configuration retention stay in
+force. Newly inferred closing intent still uses the strict `closesLinkedIssue`
+field and existing distinct-issue rules; preservation cannot turn staged `Refs`
+or arbitrary mentions into a closing reference.
+
+Example: original `Closes #45.` + valid generated summary with a false closing
+flag publishes the concise summary, material bullets, verified validation and
+`Closes #45`. Replaying keeps the same body and true linkage. A staged `Refs #45`
+with a false flag produces no new closing text and no closing approval evidence.
+The current strict payload validator still rejects missing/invalid fields even
+when an original closing reference exists. Drift or budget failure retains the
+current body through existing failure/recovery surfaces; no new prompt is needed.
+
+### Architecture, configuration, and bounded verification
+
+The pure domain policy owns Markdown/source coordinates, reference identity and
+replacement-region selection. Reuse installed commonmark0.31.2 and classify it
+as a bundled runtime dependency without changing its resolved version. The
+application workflow binds that policy to validated same-repository head/branch
+identity and preserves stale head/base/body barriers. Presentation retains strict
+schema validation and the hard body cap. The approval adapter consumes the same
+reference policy while retaining branch roles, repository identity, protected
+paths, reviews, producer attestation and coverage gates. No native approval,
+extra provider/agent query, permission, public setting, base mutation or automatic
+closing decision is added. Source interpretation is bounded by the existing
+65,536-character body limit; output stays at12,000. Existing invalid combinations
+and English/localized rendering behavior remain authoritative.
+
+The initial **56-case** budget was reserved before implementation. Before writing
+the tests, extend it to **62** to include invalid numeric identities, preservation
+alongside an owned pending reference a Unicode-confusable keyword control and a separate malformed-payload
+control that preservation must not mask, plus a nullable-provider-body control
+identified by the pre-push added-branch audit:
+
+| Area | Cases | Required behavior |
+|---|---:|---|
+| Pure reference/ownership policy | 40 | closing grammar; raw Markdown context; wrong identities; pending ownership; replaced/surviving sections; body bounds |
+| Strict presentation | 5 | preserved false flag; single canonical close; invalid missing issue/shape; unchanged output cap |
+| Description workflow | 8 | replace/retry and managed modes; nonclosing intent; branch/repository/self guards; unchanged invalid-response/race barriers |
+| Actual workflow plus approval adapter | 9 | published body and computed linkage after replay; retained/missing owned native relationship; contextual/wrong/self identity controls |
+| **Total** | **62** | independent cases, no double counting |
+
+Require100% of added executable lines fully hit, no partial/missing coverage,
+100% branch coverage of the new pure policy and all applicable existing budgets.
+Preserve all pre-existing tests and guards. The mandatory full hook, fresh CI,
+three-platform acceptance with final deferred cleanup, complete exact-head review
+with zero active findings and normal merge protection remain required.
+
+Update AI-description and guarded-approval user documentation, this owner SDD and
+catalog evidence together. Acceptance is executable: an omitted generated close
+cannot erase validated existing intent across retries; published body and actual
+adapter linkage agree; code/comment/Refs/wrong-identity controls never authorize
+closure; native relationship mocks remain unchanged; machine configuration,
+protected paths, strict schemas, body budgets and stale publication rejection
+remain intact. Live consumer mutations or a fabricated successful native approval
+are not required evidence. No migration or deployment is part of this bug fix.

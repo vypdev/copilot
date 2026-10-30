@@ -1,3 +1,4 @@
+import { MANAGED_PULL_REQUEST_DESCRIPTION_START as START, MANAGED_PULL_REQUEST_DESCRIPTION_END as END } from '../../../../../domain/pull_request_description';
 import { createPendingPullRequestLink, attachPendingPullRequestLink } from '../../../../../domain/pull_request_issue_link_state';
 import { UpdatePullRequestDescriptionUseCase } from '../update_pull_request_description_use_case';
 import { Ai } from '../../../../../data/model/ai';
@@ -428,6 +429,64 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
       pullRequest: { ...context().pullRequest, baseBranch: 'develop' } }, 'authorized-command'));
     expect(result[0].errors[0].code).toBe('workflow.stale');
     expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+
+  it('preserves the original explicit closing reference when replacement omits it', async () => {
+    mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body: 'Closes #42.', headBranch: nativeIdentity.headRef, baseBranch: 'develop' });
+    const results = await useCase.invoke(request());
+    expect(results[0].success).toBe(true);
+    expect(mockUpdateDescription.mock.calls[0][1]).toContain('Closes #42');
+  });
+  it('keeps closing publication identical across two replacements', async () => {
+    let body = 'Closes #42.';
+    mockGetDetails.mockImplementation(async () => ({ identity: nativeIdentity, body, headBranch: nativeIdentity.headRef, baseBranch: 'develop' }));
+    mockUpdateDescription.mockImplementation(async (_number, next) => { body = next; });
+    await useCase.invoke(request());
+    const first = body;
+    await useCase.invoke(request());
+    expect(body).toBe(first);
+    expect(body.match(/Closes #42/gu)).toHaveLength(1);
+  });
+  it('keeps closing intent in the overwritten append section', async () => {
+    const body = `Human context\n\n${START}\nCloses #42\n${END}`;
+    mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body, headBranch: nativeIdentity.headRef, baseBranch: 'develop' });
+    await useCase.invoke(request({ mode: 'append' }));
+    const published = mockUpdateDescription.mock.calls[0][1] as string;
+    expect(published).toContain('Human context');
+    expect(published.match(/Closes #42/gu)).toHaveLength(1);
+  });
+  it('keeps managed closing intent on authorized preserve refresh', async () => {
+    const body = `Human context\n\n${START}\nCloses #42\n${END}`;
+    mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body, headBranch: nativeIdentity.headRef, baseBranch: 'develop' });
+    const results = await useCase.invoke(request({ mode: 'preserve', eventName: 'issue_comment' }, 'authorized-command'));
+    expect(results[0].success).toBe(true);
+    expect(mockUpdateDescription.mock.calls[0][1]).toContain('Closes #42');
+  });
+  it('does not promote a staged reference when the response omits closing', async () => {
+    mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body: 'Refs #42', headBranch: nativeIdentity.headRef, baseBranch: 'develop' });
+    await useCase.invoke(request());
+    expect(mockUpdateDescription.mock.calls[0][1]).not.toContain('Closes #42');
+  });
+  it('retains closing body without querying the model when head repository drifts', async () => {
+    mockGetDetails.mockResolvedValue({ identity: { ...nativeIdentity, headRepository: 'foreign/repo' },
+      body: 'Closes #42', headBranch: nativeIdentity.headRef, baseBranch: 'develop' });
+    const results = await useCase.invoke(request({ pullRequest: { ...context().pullRequest, headRepository: 'owner/repo' } }));
+    expect(results[0].errors[0].code).toBe('workflow.stale');
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+  it('does not preserve an issue number different from the verified head branch', async () => {
+    const headRef = 'feature/43-work';
+    mockGetDetails.mockResolvedValue({ identity: { ...nativeIdentity, headRef }, body: 'Closes #42', headBranch: headRef, baseBranch: 'develop' });
+    await useCase.invoke(request({ pullRequest: { ...context().pullRequest, headBranch: headRef } }));
+    expect(mockUpdateDescription.mock.calls[0][1]).not.toContain('Closes #42');
+  });
+  it('retains original closing intent when the generated closing field is malformed', async () => {
+    mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body: 'Closes #42', headBranch: nativeIdentity.headRef, baseBranch: 'develop' });
+    mockAskAgent.mockResolvedValue(descriptionContent('A concise outcome.', { closesLinkedIssue: 'false' }));
+    const results = await useCase.invoke(request());
+    expect(results[0].errors[0].code).toBe('agent.failed');
     expect(mockUpdateDescription).not.toHaveBeenCalled();
   });
 

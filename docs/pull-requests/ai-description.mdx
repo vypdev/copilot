@@ -62,7 +62,7 @@ Use `ai-pull-request-description-mode` when a team needs a different ownership m
 
 | Mode | Automatic runs | `/copilot description` | Behavior |
 | --- | --- | --- | --- |
-| `replace` | Yes | Yes | Default. Generated prose replaces the body while retaining host-owned pending recovery metadata. |
+| `replace` | Yes | Yes | Default. Generated prose replaces the body while retaining verified closing intent and host-owned pending recovery metadata. |
 | `append` | Yes | Yes | Keeps human-authored text and replaces only the bounded Copilot-managed section. |
 | `preserve` | No | Yes | Does not touch the body automatically; a maintainer can request an update explicitly from a PR comment. |
 | `disabled` | No | No | Description automation is fully disabled. |
@@ -74,6 +74,21 @@ authorized explicit description command first runs the same narrow pending
 repair. The generator itself cannot retarget a PR; failed repair retains the
 body and withholds generation. Disabled description policy performs no repair. Native head, base and body changes during generation
 retain the current body and require a fresh invocation.
+
+A verified standalone closing reference such as `Closes #45.` survives a rewrite
+for that same-repository managed issue, including when the generated response
+omits it. The published body uses one canonical `Closes #45`. Append and authorized
+preserve refreshes retain a closing reference removed with the managed section;
+a surviving reference outside that section remains untouched.
+
+Closing keywords are recognized in a top-level single-line paragraph, with an
+optional colon and period. A qualified reference must name this repository.
+Quoted or fenced examples, inline code, HTML comments, escaped/entity spellings,
+contextual mentions and references to another issue or repository do not establish
+closing intent. `Refs #45` remains nonclosing; a retained native link does not
+promote it to a closing reference. Original intent must match the current branch
+issue and a distinct PR identity. The generated body still has the same strict
+schema and 12,000-character cap. Identity/body drift retains the current body.
 
 The mode can be set directly on the Action input or through the `AI_PULL_REQUEST_DESCRIPTION_MODE` Repository Variable written by `copilot setup`.
 
