@@ -2397,7 +2397,7 @@
       "id": "pull-request-lifecycle",
       "title": "Pull request lifecycle and enrichment",
       "status": "implemented",
-      "scope": "Enrich linked and unlinked pull requests with safe issue linkage, projects, metadata, reviewers, concise descriptions, and distinct workflow evidence",
+      "scope": "Enrich linked and unlinked pull requests with safe issue linkage, metadata, concise descriptions preserving validated closing intent, and distinct workflow evidence",
       "owner": "Copilot maintainers",
       "lastVerified": "2026-10-30",
       "specs": [
@@ -2457,7 +2457,8 @@
         "src/application/usecases/steps/common/store_configuration_use_case.ts",
         "src/manager/description/base/issue_content_interface.ts",
         "src/application/usecases/steps/pull_request/description_command_preparation.ts",
-        "src/infrastructure/composition/main_run_route_composition_root.ts"
+        "src/infrastructure/composition/main_run_route_composition_root.ts",
+        "src/domain/pull_request_closing_reference.ts"
       ],
       "tests": [
         "src/application/usecases/execution/__tests__/execution_issue_number_policy.test.ts",
@@ -2494,7 +2495,9 @@
         "src/application/usecases/steps/common/__tests__/shared_capability_context_projection.test.ts",
         "src/manager/description/base/__tests__/issue_content_interface.test.ts",
         "src/application/usecases/steps/pull_request/__tests__/description_command_preparation.test.ts",
-        "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts"
+        "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts",
+        "src/domain/__tests__/pull_request_closing_reference.test.ts",
+        "src/data/repository/pull_request/__tests__/pull_request_approval_repository.test.ts"
       ],
       "documentation": [
         "docs/pull-requests/capabilities.mdx",
@@ -2915,9 +2918,9 @@
       "id": "guarded-pull-request-approval",
       "title": "Guarded pull-request approval and setup readiness",
       "status": "proposed",
-      "scope": "Specify and locally implement revision-bound, evidence-gated native bot approvals for eligible human pull requests, with safe setup defaults, read-only doctor checks, and explainable recovery",
+      "scope": "Provide revision-bound native bot approvals using validated explicit issue references, evidence gates, safe setup defaults and explainable recovery",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-10-22",
+      "lastVerified": "2026-10-30",
       "specs": [
         "specs/guarded-pull-request-approval.md",
         "specs/guarded-pull-request-approval-setup-and-doctor.md",
@@ -2982,7 +2985,8 @@
         "src/data/repository/pull_request/current_base_revision_query.ts",
         "src/domain/approval_evidence_diagnostic.ts",
         "src/application/errors/approval_evidence_error.ts",
-        "src/data/repository/pull_request/approval_evidence_read.ts"
+        "src/data/repository/pull_request/approval_evidence_read.ts",
+        "src/domain/pull_request_closing_reference.ts"
       ],
       "tests": [
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
@@ -3014,7 +3018,10 @@
         "src/infrastructure/composition/__tests__/main_run_route_composition_root.test.ts",
         "src/application/policies/__tests__/setup_approval_operator_permissions.test.ts",
         "src/application/usecases/setup/__tests__/audit_configured_setup_pat_use_case.test.ts",
-        "src/data/repository/pull_request/__tests__/approval_evidence_read.test.ts"
+        "src/data/repository/pull_request/__tests__/approval_evidence_read.test.ts",
+        "src/domain/__tests__/pull_request_closing_reference.test.ts",
+        "src/application/policies/__tests__/pull_request_description_content_policy.test.ts",
+        "src/application/usecases/steps/pull_request/__tests__/update_pull_request_description_use_case.test.ts"
       ],
       "documentation": [
         "docs/authentication.mdx",

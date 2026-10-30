@@ -23,6 +23,7 @@ import {
     validateAgentOutputLocale,
 } from '../../../policies/agent_output_locale_policy';
 import { renderPullRequestDescriptionContent } from '../../../policies/pull_request_description_content_policy';
+import { shouldPreserveClosingReference } from '../../../../domain/pull_request_closing_reference';
 import type {
     PullRequestDescriptionRequest,
     PullRequestDescriptionContext,
@@ -138,7 +139,8 @@ export async function runUpdatePullRequestDescriptionWorkflow(
                 PULL_REQUEST_DESCRIPTION_RESPONSE_SCHEMA,
             ),
         });
-        const generatedDescription = extractDescription(response, context.targetLocale, linkedIssueNumber);
+        const generatedDescription = extractDescription(response, context.targetLocale, linkedIssueNumber,
+            shouldPreserveClosingReference(currentBody, context.mode, identity, linkedIssueNumber));
 
         const latest = await dependencies.pullRequestDescriptionCommandPort.getDetails(context.pullRequest.number);
         if (!isOpenPullRequestLinkIdentity(latest.identity, context.pullRequest.number)
@@ -195,7 +197,8 @@ function staleDescription(): ApplicationError {
 function extractDescription(
     response: string | Record<string, unknown> | undefined,
     targetLocale: string,
-    linkedIssueNumber?: number,
+    linkedIssueNumber: number | undefined,
+    preserveClosingReference: boolean,
 ): string {
     if (response == null) {
         throw new ApplicationError('agent.failed', 'Configured agent did not return PR description content. Existing body retained.');
@@ -204,7 +207,7 @@ function extractDescription(
     if (validation.kind === 'invalid') {
         throw new ApplicationError('locale.output-invalid', agentOutputLocaleFailureMessage(validation));
     }
-    const rendered = renderPullRequestDescriptionContent(validation.payload, targetLocale, linkedIssueNumber);
+    const rendered = renderPullRequestDescriptionContent(validation.payload, targetLocale, linkedIssueNumber, preserveClosingReference);
     if (rendered.kind === 'invalid') {
         throw new ApplicationError(
             'agent.failed',

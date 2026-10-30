@@ -107,6 +107,16 @@ Setup stores one versioned JSON policy in the non-secret `PR_APPROVAL_POLICY` Va
 | `allowHumanDismissed` | boolean; never bypasses unknown findings | `false` |
 | `skipWhenHumanApproved` | boolean | `true` |
 
+When `requireLinkedIssue` is enabled, the current body must contain an explicit
+standalone closing reference to the configured managed branch's distinct issue.
+It must belong to the same repository, using either `Closes #45` or a matching
+qualified name. Description replacement preserves verified original closing
+intent so this evidence remains stable across retries. Examples in code, quotes
+or comments, unrelated mentions, wrong targets, staged `Refs`, missing bodies and
+owned temporary linkage references do not satisfy it. A retained native link
+alone does not turn staged work into closing approval evidence. All other review,
+protected-path, producer and coverage requirements continue to apply.
+
 Numeric mode consumes a single `copilot-diff-coverage-v1` workflow artifact containing one `copilot-diff-coverage.json` file (16 KiB maximum). Your selected CI workflow must publish this artifact; setup asks whether that reporter is installed but does not add it to an unmanaged CI workflow. Its schema has `version: 1`, `repositoryId`, `pullNumber`, exact `headSha` and `baseSha`, `workflowRunId`, `workflowRunAttempt`, `coveredChangedLines`, and `totalChangedLines`. All counts are nonnegative safe integers and covered lines cannot exceed total lines. Missing, ambiguous, malformed, or stale evidence blocks approval. A completely classified documentation-only diff is exempt from numeric changed-line coverage while still requiring CI and Bugbot; zero measurable lines in a code diff are not exempt. Copilot computes the percentage from the counts. The artifact is CI evidence, not proof against a contributor who controls CI test code.
 
 No setting can make the bot approve its own PR, a fork, a draft, a deployment/release/hotfix PR, a changed file hidden from Bugbot by `AI_IGNORE_FILES`, or a change to protected workflow/policy files. Effective branch rules must be readable and dismiss stale approvals; `Copilot / Approval` must not be its own required check. The workflow PAT used at runtime is separate from the local setup PAT. The observer never checks out or runs PR-head code.

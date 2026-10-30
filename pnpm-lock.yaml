@@ -34,6 +34,9 @@ importers:
       commander:
         specifier: ^12.0.0
         version: 12.1.0
+      commonmark:
+        specifier: 0.31.2
+        version: 0.31.2
       js-yaml:
         specifier: ^5.4.1
         version: 5.4.1
@@ -65,9 +68,6 @@ importers:
       ajv:
         specifier: 6.15.0
         version: 6.15.0
-      commonmark:
-        specifier: 0.31.2
-        version: 0.31.2
       eslint:
         specifier: ^10.10.0
         version: 10.10.0

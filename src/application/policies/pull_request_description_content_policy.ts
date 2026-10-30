@@ -38,6 +38,7 @@ export function renderPullRequestDescriptionContent(
     payload: Readonly<Record<string, unknown>>,
     targetLocale: string,
     linkedIssueNumber?: number,
+    preserveClosingReference = false,
 ): PullRequestDescriptionContentResult {
     const parsed = parseContent(payload);
     if (!parsed) return { kind: 'invalid', reason: 'shape' };
@@ -46,7 +47,7 @@ export function renderPullRequestDescriptionContent(
         && linkedIssueNumber > 0
         ? linkedIssueNumber
         : undefined;
-    if (parsed.closesLinkedIssue && safeLinkedIssueNumber === undefined) {
+    if ((parsed.closesLinkedIssue || preserveClosingReference) && safeLinkedIssueNumber === undefined) {
         return { kind: 'invalid', reason: 'shape' };
     }
     const rawContent = [
@@ -105,7 +106,7 @@ export function renderPullRequestDescriptionContent(
     if (reviewNotesHeading && reviewNotes) {
         sections.push(`## ${reviewNotesHeading}\n\n${renderList(reviewNotes)}`);
     }
-    if (parsed.closesLinkedIssue && safeLinkedIssueNumber !== undefined) {
+    if ((parsed.closesLinkedIssue || preserveClosingReference) && safeLinkedIssueNumber !== undefined) {
         sections.push(`Closes #${safeLinkedIssueNumber}`);
     }
 
