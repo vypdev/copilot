@@ -60,7 +60,10 @@ export async function runPullRequestWorkflow(
       results.push(...(await ports.workflowSteps.assignMemberToIssue.invoke(ports.sharedContexts.steps.assignment)));
       results.push(...(await ports.workflowSteps.assignReviewersToIssue.invoke(ports.sharedContexts.steps.reviewers)));
       results.push(...(await ports.workflowSteps.linkPullRequestProject.invoke(ports.sharedContexts.projectLink)));
-      const linkage = await ports.workflowSteps.linkPullRequestIssue.invoke(ports.sharedContexts.steps.linkIssue);
+      // Successful pending repair already verified this relationship. Do not
+      // restart its observation window during the same opened invocation.
+      const linkage = recovery.some(result => result.executed)
+        ? [] : await ports.workflowSteps.linkPullRequestIssue.invoke(ports.sharedContexts.steps.linkIssue);
       results.push(...linkage);
       if (linkage.some(result => !result.success)) return results;
       results.push(...(await ports.workflowSteps.syncSizeAndProgressLabels.invoke(ports.sharedContexts.steps.syncLabels)));

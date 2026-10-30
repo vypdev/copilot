@@ -57,6 +57,7 @@ export async function runUpdatePullRequestDescriptionWorkflow(
             || (context.pullRequest.headSha && identity.headSha !== context.pullRequest.headSha)
             || (context.pullRequest.headRepository && identity.headRepository !== context.pullRequest.headRepository)
             || (context.pullRequest.headBranch && identity.headRef !== context.pullRequest.headBranch)) throw staleDescription();
+        if (context.pullRequest.baseBranch && details.baseBranch !== context.pullRequest.baseBranch) throw staleDescription();
         const pending = readPendingPullRequestLink(details.body);
         if (pending.kind === 'pending' && identity.headRepository !== identity.repository) throw staleDescription();
         if (pending.kind === 'pending' && pending.record.version === 2

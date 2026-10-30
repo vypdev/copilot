@@ -379,6 +379,8 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     expect(results[0].errors[0].code).toBe('workflow.stale');
     expect(mockAskAgent).not.toHaveBeenCalled();
     expect(mockUpdateDescription).not.toHaveBeenCalled();
+    const missingCanonical = await useCase.invoke(request({ pullRequest: { ...context().pullRequest, baseBranch: '' } }, 'authorized-command'));
+    expect(missingCanonical[0].errors[0].code).toBe('workflow.stale');
     mockGetDetails.mockResolvedValue({ identity: { ...nativeIdentity, headRepository: 'fork/repo' },
       body: `Human\n\nResolves #42\n\n${marker}`, headBranch: nativeIdentity.headRef, baseBranch: 'develop' });
     expect((await useCase.invoke(request({}, 'authorized-command')))[0].errors[0].code).toBe('workflow.stale');
@@ -417,6 +419,16 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     const results = await useCase.invoke(request());
     expect(results[0].success).toBe(true);
     expect(mockUpdateDescription.mock.calls[0][1]).not.toContain('<!-- copilot:pr-issue-link:');
+  });
+
+  it('withholds a comment description when the marker was lost and the native target conflicts with the canonical parent', async () => {
+    mockGetDetails.mockResolvedValue({ identity: nativeIdentity, body: 'Human without a pending marker',
+      headBranch: nativeIdentity.headRef, baseBranch: 'main' });
+    const result = await useCase.invoke(request({ eventName: 'issue_comment',
+      pullRequest: { ...context().pullRequest, baseBranch: 'develop' } }, 'authorized-command'));
+    expect(result[0].errors[0].code).toBe('workflow.stale');
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
   });
 
 });

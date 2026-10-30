@@ -39842,7 +39842,7 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     }),
     'pull-request-link-reference-retained': Object.freeze({
         impact: 'The pull request could not be linked to its issue.',
-        action: 'Rerun the current PR workflow to finish owned-reference cleanup; retain its recovery marker until the base is verified.',
+        action: 'Rerun the current PR workflow to finish owned-reference cleanup; retain its recovery marker until the base and intended link are verified.',
         retainedState: 'The original base branch was restored; the temporary issue reference remains in the description.',
     }),
     'pull-request-link-base-and-reference-retained': Object.freeze({
@@ -40000,7 +40000,7 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
     }),
     'pull-request-link-reference-retained': Object.freeze({
         impact: 'No se pudo vincular la pull request con su issue.',
-        action: 'Vuelve a ejecutar el workflow actual de la PR para limpiar la referencia propia; conserva el marcador hasta verificar la base.',
+        action: 'Vuelve a ejecutar el workflow actual de la PR para limpiar la referencia propia; conserva el marcador hasta verificar la base y el enlace previsto.',
         retainedState: 'Se restauró la rama base original; la referencia temporal a la issue permanece en la descripción.',
     }),
     'pull-request-link-base-and-reference-retained': Object.freeze({
@@ -61253,7 +61253,8 @@ async function runSetupExecution(context, dependencies) {
         const admitted = issueResolution.issueNumber !== undefined && issueAdmission?.status === 'eligible'
             && ['feature', 'bugfix', 'documentation', 'chore'].includes(issueAdmission.kind)
             ? await dependencies.configurationPort.get(issueResolution.issueNumber) : undefined;
-        const admittedParent = admitted?.workingBranch === context.pullRequest.head ? admitted?.parentBranch : undefined;
+        const resolvedHead = issueResolution.pullRequestHeadBranch || context.pullRequest.head;
+        const admittedParent = admitted?.workingBranch === resolvedHead ? admitted?.parentBranch : undefined;
         if (admittedParent && !(0, deployment_configuration_1.isSafeBranchTree)(admittedParent)) {
             throw new application_error_1.ApplicationError('configuration.invalid', 'The admitted managed parent is not a safe branch.');
         }
@@ -62284,7 +62285,10 @@ async function runPullRequestWorkflow(context, taskId, ports) {
             results.push(...(await ports.workflowSteps.assignMemberToIssue.invoke(ports.sharedContexts.steps.assignment)));
             results.push(...(await ports.workflowSteps.assignReviewersToIssue.invoke(ports.sharedContexts.steps.reviewers)));
             results.push(...(await ports.workflowSteps.linkPullRequestProject.invoke(ports.sharedContexts.projectLink)));
-            const linkage = await ports.workflowSteps.linkPullRequestIssue.invoke(ports.sharedContexts.steps.linkIssue);
+            // Successful pending repair already verified this relationship. Do not
+            // restart its observation window during the same opened invocation.
+            const linkage = recovery.some(result => result.executed)
+                ? [] : await ports.workflowSteps.linkPullRequestIssue.invoke(ports.sharedContexts.steps.linkIssue);
             results.push(...linkage);
             if (linkage.some(result => !result.success))
                 return results;
@@ -74873,7 +74877,8 @@ class LinkPullRequestIssueUseCase {
             return await (0, link_pull_request_issue_workflow_1.runLinkPullRequestIssue)(param, this.taskId, this.pullRequestIssueLinkPort, this.eventualConsistencyDelayPort);
         }
         catch (error) {
-            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to link the pull request to its issue.', error instanceof link_pull_request_issue_workflow_1.PullRequestIssueLinkOperationError
+            const semanticError = (0, application_error_1.toApplicationError)(error, error instanceof link_pull_request_issue_workflow_1.PullRequestIssueLinkOperationError && error.primaryError instanceof application_error_1.ApplicationError
+                ? error.primaryError.code : 'provider.unavailable', 'Unable to link the pull request to its issue.', error instanceof link_pull_request_issue_workflow_1.PullRequestIssueLinkOperationError
                 ? {
                     recovery: pullRequestLinkRecovery(error),
                 }
@@ -74933,10 +74938,11 @@ const deployment_configuration_1 = __nccwpck_require__(22495);
 const application_error_1 = __nccwpck_require__(75999);
 const pull_request_issue_link_state_1 = __nccwpck_require__(96074);
 class PullRequestIssueLinkOperationError extends Error {
-    constructor(retainedBaseBranch, retainedIssueReference) {
+    constructor(retainedBaseBranch, retainedIssueReference, primaryError) {
         super('Unable to complete pull-request issue linkage with fully restored provider state.');
         this.retainedBaseBranch = retainedBaseBranch;
         this.retainedIssueReference = retainedIssueReference;
+        this.primaryError = primaryError;
         this.name = 'PullRequestIssueLinkOperationError';
     }
 }
@@ -74979,6 +74985,8 @@ async function runLinkPullRequestIssue(param, taskId, port, delay) {
         return [];
     let marker = state.kind === 'pending' ? state.marker : undefined;
     let primaryError;
+    let linkageObserved = false;
+    const obsoleteEvent = Boolean(param.expectedHeadSha && param.expectedHeadSha !== identity.headSha);
     if (!marker) {
         if (await port.isLinked(pr, issue))
             return [];
@@ -75002,6 +75010,30 @@ async function runLinkPullRequestIssue(param, taskId, port, delay) {
                     throw stale();
             }
             await delay.wait(20000);
+            linkageObserved = await port.isLinked(pr, issue);
+        }
+        catch (cause) {
+            primaryError = cause;
+        }
+    }
+    else {
+        try {
+            linkageObserved = await port.isLinked(pr, issue);
+            if (!linkageObserved) {
+                if (obsoleteEvent)
+                    throw stale();
+                current = await inspectOwned(port, pr, identity, marker, true);
+                if (![original, param.defaultBranch].includes(current.baseBranch))
+                    throw stale();
+                if (current.baseBranch !== param.defaultBranch) {
+                    await port.updateBaseBranch(pr, param.defaultBranch);
+                    current = await inspectOwned(port, pr, identity, marker, true);
+                    if (current.baseBranch !== param.defaultBranch)
+                        throw stale();
+                }
+                await delay.wait(20000);
+                linkageObserved = await port.isLinked(pr, issue);
+            }
         }
         catch (cause) {
             primaryError = cause;
@@ -75032,6 +75064,8 @@ async function runLinkPullRequestIssue(param, taskId, port, delay) {
             if (current.baseBranch !== original)
                 throw stale();
             baseRestored = true;
+            if (!linkageObserved)
+                throw new Error('The intended PR-to-issue relationship is not verified.');
             await port.updateDescription(pr, (0, pull_request_issue_link_state_1.removePendingPullRequestLink)(current.body, marker));
             baseRestored = false;
             current = await port.getDetails(pr);
@@ -75044,7 +75078,7 @@ async function runLinkPullRequestIssue(param, taskId, port, delay) {
         }
     }
     catch {
-        throw new PullRequestIssueLinkOperationError(!baseRestored, !referenceRemoved);
+        throw new PullRequestIssueLinkOperationError(!baseRestored, !referenceRemoved, primaryError);
     }
     if (primaryError !== undefined) {
         if (primaryError instanceof application_error_1.ApplicationError)
@@ -75054,7 +75088,7 @@ async function runLinkPullRequestIssue(param, taskId, port, delay) {
     if (headAdvanced || (param.expectedHeadSha && param.expectedHeadSha !== current.identity.headSha))
         throw stale();
     return [new result_1.Result({ id: taskId, success: true, executed: true,
-            steps: ['The original pull-request base was verified and the owned temporary issue reference removed.'] })];
+            steps: ['The intended issue relationship and original pull-request base were verified; the owned temporary reference was removed.'] })];
 }
 function requireIdentity(details, pr) {
     if (!(0, pull_request_issue_link_state_1.isOpenPullRequestLinkIdentity)(details.identity, pr))
@@ -75300,6 +75334,8 @@ async function runUpdatePullRequestDescriptionWorkflow(request, taskId, dependen
             || (context.pullRequest.headSha && identity.headSha !== context.pullRequest.headSha)
             || (context.pullRequest.headRepository && identity.headRepository !== context.pullRequest.headRepository)
             || (context.pullRequest.headBranch && identity.headRef !== context.pullRequest.headBranch))
+            throw staleDescription();
+        if (context.pullRequest.baseBranch && details.baseBranch !== context.pullRequest.baseBranch)
             throw staleDescription();
         const pending = (0, pull_request_issue_link_state_1.readPendingPullRequestLink)(details.body);
         if (pending.kind === 'pending' && identity.headRepository !== identity.repository)

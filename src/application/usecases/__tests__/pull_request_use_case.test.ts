@@ -159,6 +159,11 @@ describe("PullRequestUseCase", () => {
     expect(blocked.some(result => !result.success)).toBe(true);
     expect(mockSyncLabelsInvoke).not.toHaveBeenCalled();
     expect(mockUpdateDescriptionInvoke).not.toHaveBeenCalled();
+    mockLinkIssueInvoke.mockClear();
+    mockLinkIssueInvoke.mockResolvedValueOnce([new Result({ success: true, executed: true })]);
+    await useCase.invoke(minimalExecution({ issueNumber: 42 }));
+    expect(mockLinkIssueInvoke).toHaveBeenCalledTimes(1);
+    expect(mockSyncLabelsInvoke).toHaveBeenCalledTimes(1);
   });
 
   it("reviews opened and synchronized PRs, but not label-only events", async () => {

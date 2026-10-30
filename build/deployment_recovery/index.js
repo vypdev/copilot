@@ -32658,7 +32658,7 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     }),
     'pull-request-link-reference-retained': Object.freeze({
         impact: 'The pull request could not be linked to its issue.',
-        action: 'Rerun the current PR workflow to finish owned-reference cleanup; retain its recovery marker until the base is verified.',
+        action: 'Rerun the current PR workflow to finish owned-reference cleanup; retain its recovery marker until the base and intended link are verified.',
         retainedState: 'The original base branch was restored; the temporary issue reference remains in the description.',
     }),
     'pull-request-link-base-and-reference-retained': Object.freeze({
@@ -32816,7 +32816,7 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
     }),
     'pull-request-link-reference-retained': Object.freeze({
         impact: 'No se pudo vincular la pull request con su issue.',
-        action: 'Vuelve a ejecutar el workflow actual de la PR para limpiar la referencia propia; conserva el marcador hasta verificar la base.',
+        action: 'Vuelve a ejecutar el workflow actual de la PR para limpiar la referencia propia; conserva el marcador hasta verificar la base y el enlace previsto.',
         retainedState: 'Se restauró la rama base original; la referencia temporal a la issue permanece en la descripción.',
     }),
     'pull-request-link-base-and-reference-retained': Object.freeze({

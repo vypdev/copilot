@@ -35,7 +35,8 @@ export class LinkPullRequestIssueUseCase implements ParamUseCase<LinkPullRequest
         } catch (error) {
             const semanticError = toApplicationError(
                 error,
-                'provider.unavailable',
+                error instanceof PullRequestIssueLinkOperationError && error.primaryError instanceof ApplicationError
+                    ? error.primaryError.code : 'provider.unavailable',
                 'Unable to link the pull request to its issue.',
                 error instanceof PullRequestIssueLinkOperationError
                     ? {

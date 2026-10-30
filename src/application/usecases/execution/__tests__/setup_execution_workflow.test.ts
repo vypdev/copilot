@@ -37,7 +37,7 @@ function dependencies(labels: string[], body: string, previousConfiguration?: ob
     issueSetupPort: {
       isPullRequest: jest.fn(),
       isIssue: jest.fn(),
-      getHeadBranch: jest.fn(),
+      getHeadBranch: jest.fn(async () => undefined as string | undefined),
       getLabels: jest.fn(async () => labels),
       getDescription: jest.fn(async (_number?: number) => body),
       getTitle: jest.fn(async () => 'Current normalized title'),
@@ -192,3 +192,17 @@ it.each(['<!-- copilot:pr-issue-link:invalid', `Human\n\nResolves #42\n\n${pendi
     await expect(runSetupExecution(context({ isIssue: false, isPullRequest: true,
       eventName: 'pull_request', pullRequest: { number: 10, head: 'feature/42-work', base: 'main' } }), ports)).rejects.toThrow();
   });
+
+
+it('binds an admitted original parent to the remote head resolved for a PR conversation', async () => {
+  const ports = dependencies(['feature'], '', { parentBranch: 'main' });
+  ports.issueSetupPort.getHeadBranch.mockResolvedValue('feature/42-work');
+  ports.issueSetupPort.getDescription.mockImplementation(async number => number === 10 ? 'Human' :
+    '### Description of the idea or improvement\nUseful\n### Current limitations or challenges\nMissing\n### Expected impact\nImprovement');
+  ports.configurationPort.get.mockImplementation(async number => (number === 42
+    ? { parentBranch: 'develop', workingBranch: 'feature/42-work' } : { parentBranch: 'main' }) as never);
+  const result = await runSetupExecution(context({ isIssue: false, isPullRequest: true,
+    eventName: 'issue_comment', pullRequest: { number: 10, head: '', base: '' } }), ports);
+  expect(result).toMatchObject({ status: 'configured', state: { configuration: {
+    parentBranch: 'develop', workingBranch: 'feature/42-work' } } });
+});

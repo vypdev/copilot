@@ -60,7 +60,7 @@ Linkage inspection uses the configured token with GitHub GraphQL
 `closingIssuesReferences`; it never requests a public HTML page. Private and
 public PRs follow the same path. The exact repository, PR and intended issue
 must match; a link to another issue or repository does not skip linkage. Reads
-are fixed at two pages of 100 references. Incomplete or malformed evidence stops
+are capped at two lookups per invocation, each with two pages of 100 references. Incomplete or malformed evidence stops
 the operation rather than claiming the PR is unlinked.
 
 If inspection fails before temporary edits, the current base and description
@@ -98,3 +98,11 @@ Existing V1 pending records remain recoverable. New V2 records bind the native
 head repository/ref and an operation ID. Finish or reconcile pending V2 recovery
 with the newer runtime before rolling back to a runtime that cannot read V2.
 No input, storage backend or extra credential permission is required.
+
+
+Recovery verifies the intended GitHub issue relationship before removing its
+temporary reference. A current invocation can finish the existing pending
+operation with at most one observation wait; an already-observed link does not
+wait again. If indexing remains unconfirmed, the original base is restored and
+the pending reference is retained for retry. An obsolete event can restore the
+base but cannot restart the temporary retarget or erase an unconfirmed link.

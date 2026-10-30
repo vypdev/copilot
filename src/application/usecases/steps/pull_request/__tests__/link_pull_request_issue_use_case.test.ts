@@ -1,3 +1,4 @@
+import { ApplicationError } from '../../../../errors/application_error';
 import { createPendingPullRequestLink, attachPendingPullRequestLink, readPendingPullRequestLink } from '../../../../../domain/pull_request_issue_link_state';
 import { LinkPullRequestIssueUseCase } from '../link_pull_request_issue_use_case';
 import type { LinkPullRequestIssueContext } from '../../../pull_request_workflow_context';
@@ -10,8 +11,10 @@ const mockUpdateBaseBranch = jest.fn();
 const mockUpdateDescription = jest.fn();
 const mockWait = jest.fn();
 const identity = { number: 10, state: 'open' as const, repository: 'owner/repo', headRepository: 'owner/repo', headRef: 'bugfix/42-work', headSha: 'a'.repeat(40) };
+let linkChecks = 0;
 let snapshot: { body: string; baseBranch: string; identity: typeof identity };
 function setDetails(value: { body: string; baseBranch: string }) {
+  linkChecks = 0;
   snapshot = { ...value, identity: { ...identity } };
   mockGetDetails.mockImplementation(async () => ({ ...snapshot, identity: { ...snapshot.identity } }));
 }
@@ -31,7 +34,7 @@ describe('LinkPullRequestIssueUseCase', () => {
 
   beforeEach(() => {
     for (const mock of [mockIsLinked, mockGetDetails, mockUpdateBaseBranch, mockUpdateDescription, mockWait]) mock.mockReset();
-    mockIsLinked.mockResolvedValue(false);
+    mockIsLinked.mockImplementation(async () => ++linkChecks > 1);
     setDetails({ body: 'Current PR body', baseBranch: 'develop' });
     mockUpdateBaseBranch.mockImplementation(async (_pr, base) => { snapshot.baseBranch = base; });
     mockUpdateDescription.mockImplementation(async (_pr, body) => { snapshot.body = body; });
@@ -59,6 +62,7 @@ describe('LinkPullRequestIssueUseCase', () => {
     expect(mockUpdateDescription).toHaveBeenNthCalledWith(2, 10, 'Current PR body');
     expect(results.every((result) => result.success)).toBe(true);
     snapshot.identity.headRepository = 'fork/repo';
+    linkChecks = 0;
     expect((await useCase.invoke(context())).every(result => result.success)).toBe(true);
     expect(snapshot.baseBranch).toBe('develop');
   });
@@ -128,7 +132,7 @@ describe('LinkPullRequestIssueUseCase', () => {
     expect(mockWait).not.toHaveBeenCalled();
   });
 
-  it('cleans an owned pending operation when linkage inspection fails', async () => {
+  it('restores the base and retains pending evidence when linkage inspection fails', async () => {
     const pending = '<!-- copilot:pr-issue-link:v1;pr=10;issue=42;base=develop;state=pending -->';
     setDetails({ body: `Original\n\nResolves #42\n\n${pending}`, baseBranch: 'main' });
     mockIsLinked.mockRejectedValue(new Error('inspection failed'));
@@ -137,9 +141,14 @@ describe('LinkPullRequestIssueUseCase', () => {
 
     expect(mockWait).not.toHaveBeenCalled();
     expect(mockUpdateBaseBranch).toHaveBeenCalledWith(10, 'develop');
-    expect(mockUpdateDescription).toHaveBeenCalledWith(10, 'Original');
-    expect(mockIsLinked).not.toHaveBeenCalled();
-    expect(results.at(-1)?.success).toBe(true);
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+    expect(readPendingPullRequestLink(snapshot.body).kind).toBe('pending');
+    expect(results.at(-1)?.errors[0].recovery?.id).toBe('pull-request-link-reference-retained');
+    setDetails({ body: `Original\n\nResolves #42\n\n${pending}`, baseBranch: 'main' });
+    mockIsLinked.mockRejectedValue(new ApplicationError('authorization.denied', 'Link query denied.'));
+    const denied = await useCase.invoke(context());
+    expect(denied[0].errors[0].code).toBe('authorization.denied');
+    expect(readPendingPullRequestLink(snapshot.body).kind).toBe('pending');
   });
 
   it('does not change an already-default base but still restores the body', async () => {
@@ -149,19 +158,18 @@ describe('LinkPullRequestIssueUseCase', () => {
     expect(mockUpdateDescription).toHaveBeenCalledTimes(2);
   });
 
-  it('compensates the temporary body when changing the base fails', async () => {
+  it('retains an unconfirmed reference when changing the base fails', async () => {
     mockUpdateBaseBranch.mockRejectedValueOnce(new Error('base failed'));
     const results = await useCase.invoke(context());
     expect(results.at(-1)?.success).toBe(false);
-    expect(results.at(-1)?.steps).toEqual([
-      'Pull-request issue linkage failed, but the original base and description were restored. Re-run the workflow.',
-    ]);
-    expect(mockUpdateDescription).toHaveBeenNthCalledWith(2, 10, 'Current PR body');
+    expect(results.at(-1)?.errors[0].recovery?.id).toBe('pull-request-link-reference-retained');
+    expect(readPendingPullRequestLink(snapshot.body).kind).toBe('pending');
     setDetails({ body: 'Human', baseBranch: 'develop' });
     mockUpdateBaseBranch.mockImplementation(async () => {});
     const ignoredRetarget = await useCase.invoke(context());
     expect(ignoredRetarget[0].errors[0].code).toBe('workflow.stale');
-    expect(snapshot).toMatchObject({ body: 'Human', baseBranch: 'develop' });
+    expect(snapshot.baseBranch).toBe('develop');
+    expect(readPendingPullRequestLink(snapshot.body).kind).toBe('pending');
   });
 
   it('reports a pre-mutation provider read failure without claiming retained state', async () => {
@@ -190,14 +198,19 @@ describe('LinkPullRequestIssueUseCase', () => {
     expect(mockUpdateDescription).toHaveBeenCalledTimes(1);
     expect(mockUpdateBaseBranch).not.toHaveBeenCalled();
     expect(mockWait).not.toHaveBeenCalled();
+    setDetails({ body: 'Human', baseBranch: 'develop' });
+    mockUpdateDescription.mockRejectedValueOnce(new ApplicationError('provider.rate-limited', 'Rate limited.'));
+    const limited = await useCase.invoke(context());
+    expect(limited[0].errors[0].code).toBe('provider.rate-limited');
+    expect(snapshot).toMatchObject({ body: 'Human', baseBranch: 'develop' });
   });
 
-  it('restores base and body when the observation delay fails', async () => {
+  it('restores the base and retains evidence when the observation delay fails', async () => {
     mockWait.mockRejectedValue(new Error('delay failed'));
     const results = await useCase.invoke(context());
     expect(results.at(-1)?.success).toBe(false);
     expect(mockUpdateBaseBranch).toHaveBeenLastCalledWith(10, 'develop');
-    expect(mockUpdateDescription).toHaveBeenLastCalledWith(10, 'Current PR body');
+    expect(readPendingPullRequestLink(snapshot.body).kind).toBe('pending');
   });
 
   it('retains recovery metadata when base restoration fails', async () => {
@@ -340,11 +353,12 @@ describe('LinkPullRequestIssueUseCase', () => {
   it('repairs a V2 record from a newer head before stopping an old retry', async () => {
     setDetails({ body: attachPendingPullRequestLink('Human', pendingV2()), baseBranch: 'main' });
     snapshot.identity.headSha = 'b'.repeat(40);
+    mockIsLinked.mockResolvedValue(true);
     const results = await useCase.invoke(context({ expectedHeadSha: identity.headSha, recoveryOnly: true }));
     expect(snapshot).toMatchObject({ body: 'Human', baseBranch: 'develop' });
     expect(results[0].errors[0].code).toBe('workflow.stale');
     expect(mockWait).not.toHaveBeenCalled();
-    expect(mockIsLinked).not.toHaveBeenCalled();
+    expect(mockIsLinked).toHaveBeenCalledWith(10, 42);
   });
   it('does not start a fresh operation from an obsolete event head', async () => {
     const result = await useCase.invoke(context({ expectedHeadSha: 'b'.repeat(40) }));
@@ -414,7 +428,8 @@ describe('LinkPullRequestIssueUseCase', () => {
       if (base === 'main') snapshot.identity.headSha = 'b'.repeat(40); });
     const advancedDuringWrite = await useCase.invoke(context());
     expect(advancedDuringWrite[0].errors[0].code).toBe('workflow.stale');
-    expect(snapshot).toMatchObject({ body: 'Human', baseBranch: 'develop' });
+    expect(snapshot.baseBranch).toBe('develop');
+    expect(readPendingPullRequestLink(snapshot.body).kind).toBe('pending');
   });
   it('retains the record if a successful restore response did not restore the base', async () => {
     mockUpdateBaseBranch.mockImplementation(async (_pr, base) => { if (base === 'main') snapshot.baseBranch = base; });
@@ -454,6 +469,48 @@ describe('LinkPullRequestIssueUseCase', () => {
     }
     expect(mockUpdateBaseBranch).not.toHaveBeenCalled();
     expect(mockUpdateDescription).not.toHaveBeenCalled();
+  });
+
+  it('finishes an unindexed pending operation interrupted before its temporary retarget', async () => {
+    setDetails({ body: attachPendingPullRequestLink('Human', pendingV2()), baseBranch: 'develop' });
+    mockIsLinked.mockResolvedValueOnce(false).mockResolvedValue(true);
+    const result = await useCase.invoke(context({ recoveryOnly: true, expectedHeadSha: identity.headSha }));
+    expect(mockIsLinked).toHaveBeenCalledTimes(2);
+    expect(mockWait).toHaveBeenCalledWith(20_000);
+    expect(mockUpdateBaseBranch).toHaveBeenNthCalledWith(1, 10, 'main');
+    expect(snapshot).toMatchObject({ body: 'Human', baseBranch: 'develop' });
+    expect(result.every(item => item.success)).toBe(true);
+    for (const change of ['concurrent-base', 'ignored-retarget']) {
+      setDetails({ body: attachPendingPullRequestLink('Human', pendingV2()), baseBranch: 'develop' });
+      mockIsLinked.mockReset().mockResolvedValue(false);
+      if (change === 'concurrent-base') mockIsLinked.mockImplementationOnce(async () => {
+        snapshot.baseBranch = 'release/2.0'; return false;
+      });
+      else mockUpdateBaseBranch.mockImplementationOnce(async () => {});
+      const blocked = await useCase.invoke(context({ recoveryOnly: true }));
+      expect(blocked[0].errors[0].code).toBe('workflow.stale');
+      expect(readPendingPullRequestLink(snapshot.body).kind).toBe('pending');
+    }
+  });
+  it('restores the original base but retains a pending reference still unobservable after the bounded wait', async () => {
+    setDetails({ body: attachPendingPullRequestLink('Human', pendingV2()), baseBranch: 'main' });
+    mockIsLinked.mockResolvedValue(false);
+    const result = await useCase.invoke(context({ recoveryOnly: true }));
+    expect(mockWait).toHaveBeenCalledTimes(1);
+    expect(snapshot.baseBranch).toBe('develop');
+    expect(readPendingPullRequestLink(snapshot.body).kind).toBe('pending');
+    expect(result[0].errors[0].recovery?.id).toBe('pull-request-link-reference-retained');
+  });
+  it('allows an obsolete event to restore the base without erasing or restarting an unconfirmed link', async () => {
+    setDetails({ body: attachPendingPullRequestLink('Human', pendingV2()), baseBranch: 'main' });
+    snapshot.identity.headSha = 'b'.repeat(40);
+    mockIsLinked.mockResolvedValue(false);
+    const result = await useCase.invoke(context({ recoveryOnly: true, expectedHeadSha: identity.headSha }));
+    expect(snapshot.baseBranch).toBe('develop');
+    expect(readPendingPullRequestLink(snapshot.body).kind).toBe('pending');
+    expect(mockWait).not.toHaveBeenCalled();
+    expect(mockUpdateBaseBranch).toHaveBeenCalledTimes(1);
+    expect(result[0].errors[0].code).toBe('workflow.stale');
   });
 
 });

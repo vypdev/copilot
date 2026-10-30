@@ -151,7 +151,8 @@ export async function runSetupExecution(
         const admitted = issueResolution.issueNumber !== undefined && issueAdmission?.status === 'eligible'
             && ['feature', 'bugfix', 'documentation', 'chore'].includes(issueAdmission.kind)
             ? await dependencies.configurationPort.get(issueResolution.issueNumber) : undefined;
-        const admittedParent = admitted?.workingBranch === context.pullRequest.head ? admitted?.parentBranch : undefined;
+        const resolvedHead = issueResolution.pullRequestHeadBranch || context.pullRequest.head;
+        const admittedParent = admitted?.workingBranch === resolvedHead ? admitted?.parentBranch : undefined;
         if (admittedParent && !isSafeBranchTree(admittedParent)) {
             throw new ApplicationError('configuration.invalid', 'The admitted managed parent is not a safe branch.');
         }

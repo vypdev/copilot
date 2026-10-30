@@ -11,7 +11,7 @@ import { attachPendingPullRequestLink, createPendingPullRequestLink, isOpenPullR
     type PullRequestLinkIdentity } from '../../../../domain/pull_request_issue_link_state';
 
 export class PullRequestIssueLinkOperationError extends Error {
-    constructor(readonly retainedBaseBranch: boolean, readonly retainedIssueReference: boolean) {
+    constructor(readonly retainedBaseBranch: boolean, readonly retainedIssueReference: boolean, readonly primaryError?: unknown) {
         super('Unable to complete pull-request issue linkage with fully restored provider state.');
         this.name = 'PullRequestIssueLinkOperationError';
     }
@@ -50,6 +50,8 @@ export async function runLinkPullRequestIssue(
     if (state.kind === 'none' && param.recoveryOnly) return [];
     let marker = state.kind === 'pending' ? state.marker : undefined;
     let primaryError: unknown;
+    let linkageObserved = false;
+    const obsoleteEvent = Boolean(param.expectedHeadSha && param.expectedHeadSha !== identity.headSha);
     if (!marker) {
         if (await port.isLinked(pr, issue)) return [];
         const fresh = await port.getDetails(pr);
@@ -69,6 +71,23 @@ export async function runLinkPullRequestIssue(
                 if (current.baseBranch !== param.defaultBranch) throw stale();
             }
             await delay.wait(20_000);
+            linkageObserved = await port.isLinked(pr, issue);
+        } catch (cause) { primaryError = cause; }
+    } else {
+        try {
+            linkageObserved = await port.isLinked(pr, issue);
+            if (!linkageObserved) {
+                if (obsoleteEvent) throw stale();
+                current = await inspectOwned(port, pr, identity, marker, true);
+                if (![original, param.defaultBranch].includes(current.baseBranch)) throw stale();
+                if (current.baseBranch !== param.defaultBranch) {
+                    await port.updateBaseBranch(pr, param.defaultBranch);
+                    current = await inspectOwned(port, pr, identity, marker, true);
+                    if (current.baseBranch !== param.defaultBranch) throw stale();
+                }
+                await delay.wait(20_000);
+                linkageObserved = await port.isLinked(pr, issue);
+            }
         } catch (cause) { primaryError = cause; }
     }
     // Never restore an old whole body. Each mutation uses freshly observed native
@@ -93,6 +112,7 @@ export async function runLinkPullRequestIssue(
             }
             if (current.baseBranch !== original) throw stale();
             baseRestored = true;
+            if (!linkageObserved) throw new Error('The intended PR-to-issue relationship is not verified.');
             await port.updateDescription(pr, removePendingPullRequestLink(current.body, marker));
             baseRestored = false;
             current = await port.getDetails(pr);
@@ -102,14 +122,14 @@ export async function runLinkPullRequestIssue(
             referenceRemoved = true;
             headAdvanced ||= current.identity!.headSha !== identity.headSha;
         }
-    } catch { throw new PullRequestIssueLinkOperationError(!baseRestored, !referenceRemoved); }
+    } catch { throw new PullRequestIssueLinkOperationError(!baseRestored, !referenceRemoved, primaryError); }
     if (primaryError !== undefined) {
         if (primaryError instanceof ApplicationError) throw primaryError;
         throw new PullRequestIssueLinkOperationError(false, false);
     }
     if (headAdvanced || (param.expectedHeadSha && param.expectedHeadSha !== current.identity!.headSha)) throw stale();
     return [new Result({ id: taskId, success: true, executed: true,
-        steps: ['The original pull-request base was verified and the owned temporary issue reference removed.'] })];
+        steps: ['The intended issue relationship and original pull-request base were verified; the owned temporary reference was removed.'] })];
 }
 function requireIdentity(details: PullRequestLinkDetails, pr: number): PullRequestLinkIdentity {
     if (!isOpenPullRequestLinkIdentity(details.identity, pr)) throw stale();

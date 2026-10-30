@@ -793,7 +793,7 @@ existing provider body boundary. Reject duplicate/unknown/oversized records.
 Use at most twelve PR-detail reads across linkage/recovery in one route, without
 polling. Setup may read the distinct admitted ordinary issue configuration once
 through its existing port to bind original-parent evidence to the managed head.
-Keep the existing two-page/100-reference linkage lookup and at most one
+Keep at most two relation lookups per route, each capped at the existing two pages of 100 references, and at most one
 20-second observation wait for a fresh proven-absent linkage. Recovery must not
 repeat that wait merely to restore an already-established relationship. Add no
 public option, model call, provider permission or external state backend.
@@ -812,16 +812,16 @@ runtime, finish or explicitly reconcile pending V2 operations with the newer
 runtime; do not discard their recovery state. No public configuration/schema
 migration, consumer override or deployment is part of this change.
 
-Reserve **60 distinct new cases before implementation**:
+Reserve **65 distinct new cases before implementation**, including the five review/acceptance extensions recorded below:
 
 | Area | Cases | Acceptance |
 |---|---:|---|
 | Pure record/preservation policy | 24 | V1/V2 round trips, encoded bases, identity/nonce, malformed/unknown/duplicate/bounded records and exact owned-state removal |
-| Setup/original-parent projection | 8 | absent/poisoned PR config, admitted parent, valid pending authority, conflicts, unchanged ordinary/unlinked/issue routes |
-| Link/recovery/compensation | 14 | interrupted writes, verified/unverified restore, new head, foreign owner/ref, lookup failure, changed body/lease and one real worker-kill recovery |
-| Description/configuration writers | 8 | replace/append/preserve/disabled or explicit commands, fresh metadata, model-time head drift and retained state on failure |
+| Setup/original-parent projection | 9 | absent/poisoned PR config, admitted parent, valid pending authority, conflicts, unchanged ordinary/unlinked/issue routes |
+| Link/recovery/compensation | 17 | interrupted writes, verified/unverified restore, new head, foreign owner/ref, lookup failure, changed body/lease and one real worker-kill recovery |
+| Description/configuration writers | 9 | replace/append/preserve/disabled or explicit commands, fresh metadata, model-time head drift and retained state on failure |
 | Routing/bindings/completion | 6 | newer synchronize first, original-event retry, review-only preparation, stale persistence fence and native identity binding |
-| **Total** | **60** | no double counting with existing compensation or #610 cases |
+| **Total** | **65** | no double counting with existing compensation or #610 cases |
 
 The owned process-kill case has a **15-second** budget reserved here; it uses
 only a disposable fake-provider state file and a child Node process, never a
@@ -847,8 +847,9 @@ GraphQL error policy. A dedicated regression first reproduces the incorrect
 retryable outage and then verifies terminal, sanitized credential guidance.
 
 Local correction evidence for #785: the two regressions failed on the original
-implementation (2 failed, 63 passed). The reserved 60 new test cases and existing
-boundary suites now pass together: 570 tests across 19 suites. The child-process
+implementation (2 failed, 63 passed). The reserved 65 new test cases and existing
+boundary suites now pass together: 575 tests across 19 suites. The five review
+extensions first failed on the initial correction (5 failed, 100 passed). The child-process
 case confirms that SIGKILL leaves native default-base/pending state, then a newer
 synchronize restores the original base, removes only owned bytes, persists the
 original parent and blocks the original-head retry. Focused coverage is 100% all
@@ -856,3 +857,22 @@ metrics for the pure pending-state policy and linkage/description workflows;
 other changed measured modules meet the reserved 95/90 floors. This local receipt
 is not consumer-deployment evidence. Exact-head CI/global/platform coverage,
 review and merge receipts remain required.
+
+Review/acceptance extension reserved before the follow-up implementation: three
+additional linkage cases cover an unindexed pending record before retarget, an
+unindexed record still unobservable after its bounded wait, and an obsolete
+invocation that may restore the base but must retain unconfirmed linkage state.
+A recovered reference may be removed only after both native original-base
+restoration and the intended GraphQL relationship are verified. Proven existing
+relationships do not wait again. Fresh recovery may finish the existing owned
+operation within the same one-wait/read bounds; stale recovery does not restart
+its temporary retarget/observation. Lookup failures retain pending evidence.
+Two additional conversation cases cover original-parent binding to the remotely
+resolved head (absent from comment webhooks), and description rejection when the
+fresh native base differs from that canonical parent even after an older runtime
+lost the marker. These extend the original sixty cases rather than weakening
+coverage, timeouts or any existing assertion.
+
+A verified pending repair on an opened invocation replaces its later ordinary
+linkage step; it must not start a second observation window. Relation reads
+remain bounded to two lookups per route (two pages of 100 references each).
