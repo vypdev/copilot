@@ -162,3 +162,24 @@ existing permission is no longer available, verification cannot establish the
 candidate. Review the current browser permission/session state before another
 explicit attempt. The named record remains separate from preferences and
 backups; failure is not proof of credential revocation at GitHub.
+
+## Workspace references and backups
+
+Workspace names are authored personal state. Their membership stores opaque
+local session references, not copied account/repository names, server evidence
+or credentials. Private labels resolve only from currently admitted protected
+session summaries; after disconnect/removal they are unavailable. An unresolved
+slot remains in the authored group until you explicitly edit it.
+
+Preference backups include authored group names, local IDs and reference slots.
+Import deliberately makes **every imported association unbound**, even for a
+backup from the same installation. Group names and slot order remain; explicitly
+choose local saved sessions to restore associations. A coinciding ID or the
+fixed old H2 alias cannot silently choose another account/repository. Import,
+group selection and metadata inspection do not grant access or start HTTP.
+
+Only an explicit verification/selection can activate a chosen saved read
+session. Group names/private labels are absent from redacted operation history;
+current source-bound operation detail may show the authored group being
+reviewed. Workspace reset removes groups alone. Forgetting protected sessions
+removes their private bindings while leaving authored groups intact.

@@ -2,6 +2,7 @@ import { DEFAULT_SETTINGS, importedSettings, loadSettings, validSettings, type S
 import { DEFAULT_CENTER_SETTINGS } from './center_settings.ts';
 import { numericIdentity } from './center_profiles.ts';
 import { FEATURE_DEFAULTS } from './feature_defaults.ts';
+import { planWorkspaceChange } from './workspace_change.ts';
 import { planProfileChange } from './profile_change.ts';
 import { sameSettingsContent } from './settings_operation.ts';
 import { deepFreeze, jsonBytesWithin, keys, record } from './value.ts';
@@ -51,6 +52,11 @@ export function planSettingsChange(current: Settings, intent: unknown, rollback:
             'capacity': 'profile-capacity', 'not-found': 'profile-not-found', 'conflicting-scopes': 'profile-conflict' } as const)[plan.reason] };
         if (plan.state === 'unchanged') return plan;
         return complete(current, { ...current, center: { ...current.center, ...plan.next } }, `profile-${plan.action}`);
+    }
+    if (intent.type === 'workspace' && keys(intent, ['type', 'change']) && Object.keys(intent).length === 2) {
+        const plan = planWorkspaceChange({ workspaces: current.center.workspaces, selectedWorkspace: current.center.selectedWorkspace }, intent.change);
+        if (plan.state === 'invalid') return { state: 'invalid', reason: 'invalid-input' };
+        return plan.state === 'unchanged' ? plan : complete(current, { ...current, center: { ...current.center, ...plan.next } }, 'center-preferences');
     }
     if (intent.type === 'preferences' && keys(intent, ['type', 'values']) && record(intent.values)
         && keys(intent.values, ['features', 'locale', 'theme', 'density', 'shortcuts', 'paused'])) {

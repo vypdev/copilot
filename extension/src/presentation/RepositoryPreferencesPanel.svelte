@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { workspaceCopy } from '../domain/workspace_copy.ts';
     import type { CenterRouteProps } from '../domain/center_ui.ts';
     import { repositoryPreferenceRows } from '../domain/profile_context.ts';
     import { profileContextCopy } from '../domain/profile_context_copy.ts';
@@ -8,6 +9,7 @@
 </script>
 <section aria-labelledby="repository-preferences-heading">
     <h2 id="repository-preferences-heading">{copy.localRepository}</h2><p>{copy.repositoryHint}</p>
+    <a href="#/repositories/workspaces">{workspaceCopy(context.copy.locale).open}</a>
     {#if context.settings.paused}<p role="status">{copy.globalPause}</p>{/if}
     {#if rows.length === 0}<p>{copy.noIdentities}</p>{/if}
     <ul class="cards">

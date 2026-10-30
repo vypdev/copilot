@@ -14,6 +14,11 @@ const ROUTES: Readonly<Record<SettingsAction, CenterRoute>> = {
 export function settingsOperationTarget(action: SettingsAction, input: unknown, before: Settings, after: Settings): CurrentTarget {
     const location = { route: ROUTES[action] }; const fallback = { location, label: null };
     if (!record(input)) return deepFreeze(fallback);
+    if (action === 'center-preferences' && input.type === 'workspace' && record(input.change)) {
+        const id = record(input.change.workspace) ? input.change.workspace.id : input.change.id;
+        const workspace = after.center.workspaces.find(value => value.id === id) ?? before.center.workspaces.find(value => value.id === id);
+        return deepFreeze({ location: { route: 'repositories', detail: 'workspaces' }, label: workspace?.name ?? null });
+    }
     if (action.startsWith('profile-') && record(input.change)) {
         const id = record(input.change.profile) ? input.change.profile.id : input.change.id;
         const profile = after.center.profiles.find(value => value.id === id) ?? before.center.profiles.find(value => value.id === id);

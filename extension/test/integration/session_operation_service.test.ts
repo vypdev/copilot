@@ -86,9 +86,15 @@ it('a failing native admission query returns an unavailable service result witho
     expect(await f.change(CONNECTION_INPUT)).toEqual({ state: 'unavailable' }); expect(f.observe).not.toHaveBeenCalled();
     expect(f.reader.read).not.toHaveBeenCalled(); expect(f.port.set).not.toHaveBeenCalled();
 });
-it('source loss while native restoration completes stops before capture or an attributed storage effect', async () => {
+it('source loss at candidate startup preserves attributed retirement but stops provider and save effects', async () => {
     const f = fixture(); vi.spyOn(f.service, 'start').mockImplementationOnce(async () => { f.current.mockReturnValue(false); });
+    expect(await f.change(CONNECTION_INPUT)).toEqual({ state: 'stale' }); expect(f.observe).toHaveBeenCalledOnce(); expect(f.port.set).not.toHaveBeenCalled();
+    expect(f.reader.read).not.toHaveBeenCalled(); expect(f.last().engine.fact.effects.some(effect => effect.effect === 'retire-active')).toBe(true);
+});
+it('source loss during the protected native read stops before capture or an attributed storage effect', async () => {
+    const f = fixture(); f.namedPorts.protected.mockImplementationOnce(async () => { f.current.mockReturnValue(false); return true; });
     expect(await f.change(CONNECTION_INPUT)).toEqual({ state: 'stale' }); expect(f.observe).not.toHaveBeenCalled(); expect(f.port.set).not.toHaveBeenCalled();
+    expect(f.port.remove).not.toHaveBeenCalled(); expect(f.reader.read).not.toHaveBeenCalled();
 });
 it('disconnect with no selected entry captures no fabricated private name and still reports its actual effects', async () => {
     const f = fixture(); expect(await f.change({ type: 'disconnect' })).toMatchObject({ state: 'ready', entries: [] });

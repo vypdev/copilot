@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { workspaceCopy } from '../domain/workspace_copy.ts';
     import { onDestroy, untrack } from 'svelte';
     import type { CenterRouteProps } from '../domain/center_ui.ts';
     let { context, actions }: CenterRouteProps = $props();
@@ -13,7 +14,7 @@
     }
     async function exportFile(): Promise<void> { exportError = !await actions.exportSettings(); }
 </script>
-<p>{m.dataPrivacy}</p>
+<p>{m.dataPrivacy}</p><p>{workspaceCopy(context.copy.locale).export}</p><p>{workspaceCopy(context.copy.locale).restore}</p>
 <button type="button" onclick={exportFile}>{m.export}</button>
 {#if exportError}<p role="alert">{m.downloadFailed}</p>{/if}
 <form aria-busy={readingFile} onsubmit={event => { event.preventDefault(); void importFile(); }}>

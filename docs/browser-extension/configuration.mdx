@@ -259,3 +259,40 @@ earlier missing response meant. A changed session list requires a fresh review;
 a missing or different saved identity keeps confirmation unavailable. **Discard
 address draft** leaves the protected record alone. Normal navigation also offers
 keep editing or discard, including between these two session routes.
+
+## Workspaces and saved repository references
+
+In the development center, open **Repositories → Manage workspaces**. Create a
+local identifier and name, choose saved reference entries, then review and
+confirm the complete change. You can keep up to **10 groups of 20 references**;
+the separate limit of **5 protected read sessions** still applies. Selecting a
+group organizes personal references. It does not connect repositories, change
+feature settings or release an inherited pause.
+
+Only group names, local identifiers and opaque reference IDs persist in these
+preferences. Repository/account names and credentials remain in protected
+sessions. The grouped view labels saved metadata and the independently selected
+connected read session separately. Reading saved references is local and cannot
+start GitHub verification. **Verify and select this read session** is a separate
+explicit action.
+
+A removed/disconnected session leaves an unavailable slot in the authored group.
+Edit the group to replace that reference with a chosen saved session; the
+extension never guesses by repository name. A previous H2 session has a fixed
+legacy alias. Use the offered verification first to establish a unique local
+reference for it; no password or additional browser grant is requested by that
+existing-session verification.
+
+Every edit, selection, removal and workspace-only reset uses the normal retained
+preview and confirmation. The preview includes names, ordering, membership and
+selection changes, including removals. Cancellation keeps your draft. A changed
+revision or unknown save requires inspection before another decision; no write
+is retried automatically. Workspace-only reset preserves other preferences,
+pauses and protected sessions. The normal rollback restores the previous
+preference revision when available.
+
+The nested center schema is now **2**, inside root settings schema **2**. An
+exact valid nested schema 1 gains empty groups and no selection without changing
+its old preferences. Future/corrupt or oversized data stays preserved and
+uneditable until recovered; it is never treated as an empty saved collection.
+The shared **64 KiB** preference limit applies in addition to collection bounds.

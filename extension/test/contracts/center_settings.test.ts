@@ -23,7 +23,7 @@ it('rejects unknown, duplicate, malformed and oversized bindings without accepti
 it('bounds appearance, onboarding and explicitly opted-in retention independently of feature authority', () => {
     for (const onboarding of ['welcome', 'profile', 'permissions', 'complete']) expect(validCenterSettings({ ...DEFAULT_CENTER_SETTINGS,
         onboarding, recents: true, diagnostics: true, notes: 'local', appearance: { text: 'large', motion: 'reduced', contrast: 'high' } })).toBe(true);
-    for (const patch of [{ schemaVersion: 2 }, { profiles: null }, { selected: ['missing'] },
+    for (const patch of [{ schemaVersion: 3 }, { profiles: null }, { selected: ['missing'] },
         { appearance: null }, { appearance: { text: 'standard', motion: 'system' } },
         { appearance: { text: 'standard', motion: 'system', contrast: 'system', extra: true } },
         { appearance: { text: 'tiny', motion: 'system', contrast: 'system' } },

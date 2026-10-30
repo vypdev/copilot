@@ -19,7 +19,7 @@ export function parseCenterLocation(hash: string): CenterLocation | null {
     const detail = match[2];
     if (detail === undefined) return Object.freeze({ route });
     if (!(route === 'features' && Object.hasOwn(FEATURE_DEFAULTS, detail))
-        && !(route === 'profiles' && localIdentifier(detail))) return null;
+        && !(route === 'profiles' && localIdentifier(detail)) && !(route === 'repositories' && detail === 'workspaces')) return null;
     return Object.freeze({ route, detail });
 }
 

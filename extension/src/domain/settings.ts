@@ -1,5 +1,6 @@
+import { importedWorkspaces } from './workspaces.ts';
 import { FEATURE_DEFAULTS } from './feature_defaults.ts';
-import { DEFAULT_CENTER_SETTINGS, validCenterSettings, type CenterSettings } from './center_settings.ts';
+import { DEFAULT_CENTER_SETTINGS, validCenterSettings, migrateCenterSettings, type CenterSettings } from './center_settings.ts';
 import { profileScopeKey } from './center_profiles.ts';
 import type { Preferences, RepositoryPreferences } from './preferences.ts';
 import { deepFreeze, keys, natural, record, jsonBytesWithin } from './value.ts';
@@ -44,8 +45,12 @@ export type SettingsLoad = { readonly state: 'ready'; readonly settings: Setting
 export function loadSettings(value: unknown): SettingsLoad {
     if (value === undefined) return { state: 'ready', settings: DEFAULT_SETTINGS, migrated: false };
     if (record(value) && ((natural(value.schemaVersion) && value.schemaVersion > 2)
-        || (value.schemaVersion === 2 && record(value.center) && natural(value.center.schemaVersion) && value.center.schemaVersion > 1))) {
+        || (value.schemaVersion === 2 && record(value.center) && natural(value.center.schemaVersion) && value.center.schemaVersion > 2))) {
         return { state: 'future', settings: DEFAULT_SETTINGS, migrated: false };
+    }
+    if (record(value) && value.schemaVersion === 2) {
+        const center = migrateCenterSettings(value.center); const migrated = { ...value, center };
+        if (center && validSettings(migrated)) return { state: 'ready', settings: deepFreeze(JSON.parse(JSON.stringify(migrated)) as Settings), migrated: true };
     }
     if (record(value) && value.schemaVersion === 0 && keys(value, ['schemaVersion', 'compact']) && typeof value.compact === 'boolean') {
         return { state: 'ready', settings: deepFreeze({ ...DEFAULT_SETTINGS, density: value.compact ? 'compact' : 'comfortable' }), migrated: true };
@@ -77,7 +82,7 @@ export function importedSettings(current: Settings, incoming: Settings): Setting
     const repositories = Object.fromEntries([...ids].map(id => [id,
         { ...incoming.repositories[id], connected: current.repositories[id]?.connected === true,
             paused: current.repositories[id]?.paused === true || incoming.repositories[id]?.paused === true }]));
-    const next = { ...incoming, revision: current.revision + 1, paused: current.paused || incoming.paused, repositories };
+    const next = { ...incoming, center: { ...incoming.center, ...importedWorkspaces(incoming.center) }, revision: current.revision + 1, paused: current.paused || incoming.paused, repositories };
     if (!validSettings(next)) throw new Error('settings-import-invalid-result');
     return deepFreeze(JSON.parse(JSON.stringify(next)) as Settings);
 }

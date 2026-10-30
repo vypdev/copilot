@@ -106,7 +106,7 @@ it('rejects malformed vaults and unavailable protection, and does not expose pro
 });
 it('preserves an existing verified H2 connection as an explicit previous session without rewriting it just to display it', async () => {
     const h = namedSessionsFixture(); h.values.set(SESSION_KEY, CONNECTED);
-    expect(await h.connections.read(h.current)).toMatchObject({ state: 'ready', revision: 0, selected: 'previous-session', connected: true,
+    expect(await h.connections.read(h.current)).toMatchObject({ state: 'ready', revision: 0, selected: 'previous-session', connected: false,
         entries: [{ name: 'GitHub', repositoryId: '7' }] });
     expect(h.values.has(NAMED_SESSIONS_KEY)).toBe(false);
     await h.connections.change({ type: 'disconnect' }, 0, h.current);

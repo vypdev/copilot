@@ -47,7 +47,7 @@
     {#if loadFailed}<p role="alert">{copy.messages.unavailable}</p><a href="https://docs.page/vypdev/copilot/browser-extension/onboarding">{copy.messages.documentation}</a>
     {:else if Support}<Support context={{ copy, route, status: supportStatus(frame.client), packageIdentity: frame.packageIdentity }} actions={{ reload: surface.actions.reload }}/>
     {:else}<p role="status">{copy.messages.loading}</p>{/if}
-{:else if route === 'connections' || route === 'repositories'}
+{:else if route === 'connections' || route === 'repositories' && detail !== 'workspaces'}
     {#if route === 'repositories' && data?.settings && data.state === 'ready'}
         <RepositoryPreferencesPanel context={{ settings: data.settings, copy, editable: editable && !frame.hasDraft,
             location: frame.location, rollbackAvailable: data.rollbackAvailable, connections: frame.client.connections,

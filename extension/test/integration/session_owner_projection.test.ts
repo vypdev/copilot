@@ -10,6 +10,7 @@ it.each(['99', undefined])('projects fresh verified owner facts after restore in
     h.values.set(SESSION_KEY, stored); h.values.set(NAMED_SESSIONS_KEY, { schemaVersion: 1, revision: 3, selected: 'work', entries: [{ id: 'work', name: 'Work', host: 'github.com', role: 'repository-read', connection: stored }] });
     vi.mocked(h.reader.read).mockImplementation(async request => ({ state: 'ok', etag: '', bytes: 12,
         data: request.type === 'viewer' ? { id: '1', login: 'octo' } : { id: '7', name: 'octo/example', ...(organizationId === undefined ? {} : { organizationId }) } }));
+    await h.service.start(); // Separate restoration supplies fresh provider facts; metadata inspection itself stays local.
     const result = await h.connections.read(h.current); expect(result).toMatchObject({ state: 'ready', connected: true });
     if (result.state !== 'ready') throw new Error('expected-readable-projection');
     expect(result.entries[0].organizationId).toBe(organizationId);

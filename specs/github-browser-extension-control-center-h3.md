@@ -1500,3 +1500,145 @@ presents the exact destination without exposing a credential. Required evidence
 maps this refinement to closed-wire tests, actual named-session/center composition,
 mounted four-locale review tests and the user recovery documentation. Workspaces,
 optional write-purpose management and remaining H3 acceptance stay required.
+
+### Bounded authored workspaces refinement (2026-10-30)
+
+H3-R03/R04/R07/R08/R11 and the owning local-center contract require **ten
+workspaces with at most twenty references each**. A workspace is an authored
+local grouping, not an API subscription, connection grant, shared credential or
+H11 work queue. Default: no workspace and no selected group. The five protected
+read-session limit remains independent. Consequently only references with a
+currently saved protected session can display private metadata; a larger group
+can contain unavailable references. Do not claim twenty concurrent connections.
+
+Persist only a stable local workspace ID, an authored name and opaque native
+named-session reference IDs. Never copy repository/account names, numeric server
+identities, credentials or provider evidence into this preference collection.
+Workspace IDs use the existing local-ID grammar, names are trimmed 1–60 UTF-16
+units without control/format characters, names are case-insensitively unique,
+and each dense reference array contains unique known-format local IDs. The
+collection is ordered and bounded; selecting a workspace requires an existing
+ID. A selected group removed by an explicit change clears that selection.
+Invalid, extra-key, sparse, cyclic or oversized data cannot be partially saved.
+The complete 64-KiB preference limit and existing import/request limits remain.
+
+```text
+Repositories → create/edit authored group → choose saved session references
+ → inspect complete changes → confirm retained preference preview
+ → saved group with current saved references / unavailable placeholders
+Explicit Verify and select → existing protected session verification, separately
+```
+
+Text equivalent: grouping is a preference operation. Verification is a separate
+user action through the existing native session controller. Rendering, selecting
+or importing a group cannot request permission, start HTTP, connect an account,
+change feature preferences, or resume any pause. Native account/repository
+identity, purpose, controller, credential epoch and vault revision remain the
+session authority. Resolve display metadata only from the current admitted
+protected session summary. Clearly label saved reference metadata and selected
+connected identity; a saved name is not a fresh GitHub observation.
+
+Disconnect/removal makes affected references unavailable without erasing the
+user's authored group. Do not rebind by a repository name, another account,
+array position or guessed ID. An explicit edit can replace an unavailable
+reference with a chosen saved session. Import replaces every reference binding with an explicit unbound slot, including
+a same-installation backup; names, group IDs, selection and slot order remain
+authored state. Rebind slots explicitly to local saved sessions. This prevents
+foreign aliases or colliding IDs from implying the same private target. Current private metadata is absent
+from preference export and redacted history. Authored group names and opaque
+IDs are portable personal state; the export disclosure must identify them.
+
+Use the existing Repositories route with the fixed local
+`#/repositories/workspaces` subroute and retained settings preview/confirm/
+cancel/readback/rollback pipeline. Workspace intents are closed save/select/
+clear-selection/remove/reset choices. They produce the existing local-center
+preference action; current operation metadata captures the exact group label
+and Repositories destination, while optional history keeps its existing redacted
+action. No new journal schema, command, RPC, timer, endpoint or browser grant. The
+subroute is an exact parser literal, not a free-form repository/return path; it
+uses the normal lazy preference page and draft lifecycle.
+The complete localized preview lists group-name, membership and selection
+changes, including removals and unavailable references, without raw object paths
+or silent truncation. Group membership does not silently filter or alter global
+repository pause controls or the independently selected read identity.
+
+| State | Primary action/content | Retained state and recovery |
+|---|---|---|
+| Empty | Create workspace | No connection or implicit repository selection |
+| Editing | Name, local ID and saved reference choices; Review changes | Unsaved-draft navigation guard, source revision preserved |
+| Preview | Complete authored/membership/selection delta; Confirm or cancel | Native single-use retained plan; cancel keeps draft |
+| Saved | Selected group and saved/unavailable references | Explicit edit, remove, clear selection and rollback |
+| Unavailable reference | Saved target is no longer available; edit reference | Authored slot retained; no name guessing or automatic HTTP |
+| Stale/quota/unknown | Read current preferences and inspect before deciding | Draft/source document retained, no automatic second write |
+| Future/corrupt | Group editing unavailable; recovery remains discoverable | Preserve original document, never synthesize an empty saved group |
+
+Presentation has four complete locales, explicit selected/empty/unavailable
+states, semantic labels/headings and keyboard controls, one page scroll and the
+normal unsaved-draft guard. Multiple unknown references have distinct visible
+slot labels and optional technical opaque IDs. Existing connection and relocation
+drafts cannot be discarded by starting another editor. No authored identifier,
+name or imported string is HTML, navigation, selector or provider authority.
+Example: “Release work · 3 references · 1 unavailable. Selecting this group does
+not connect its repositories. Review an unavailable reference to replace it.”
+
+Domain owns immutable bounded workspace/selection validation, pure changes and
+reference projection. Application reuses SettingsOperations for revision-bound
+preview, canonical persistence, one rollback and secondary observations. Native
+connection actions remain separate. Infrastructure composes existing ports and
+pages; Svelte gets nonsecret preferences, admitted summaries and semantic
+callbacks. Enforce current all-import cycles, pure environments, strict static
+navigation and module/component limits. Optional write-purpose management and
+later workspace runtime capabilities remain separate obligations.
+
+Nested center schema **2** adds workspaces and selectedWorkspace; root settings
+remain schema 2. Migrate an exact valid nested schema 1 additively to empty groups
+and null selection, preserving every old preference/revision and introducing no
+grant. Never overwrite an unexpected old key while migrating. Unknown future
+nested schema 3+ stays inert; malformed/over-limit migration preserves the raw
+input. Existing H2 root-v1 and compact-v0 migrations must still work. Old packages
+preserve the newer nested document as future. Import/export/reset-all/rollback
+must include validated authored grouping without copying protected metadata;
+workspace-only reset leaves profiles, pauses, sessions and other preferences.
+
+Add **48 distinct cases**: 16 domain/schema/migration/closed-intent cases,
+14 application/preview/persistence/replay cases, 12 mounted editing/localization/
+navigation/preview cases, and 6 actual composition/privacy/unavailable-reference
+cases. Translation/platform reruns count once. All changed executable lines and
+branches must be covered; the 160 H3 risk floor, 56+56 CENTER obligations and 803
+product cases remain required. Document bounds/defaults, private-reference expiry,
+explicit repair, backup/migration/reset/rollback and separate verification in
+configuration, privacy/data, troubleshooting and contributor guides. Required
+native/browser and human acceptance remain separate from deterministic fixtures.
+
+Acceptance: create/select/edit/remove/reset bounded groups with complete reviewed
+changes and idempotent confirmation; preserve an unsaved or uncertain draft;
+retain a disconnected reference without exposing old private names; replace it
+only through explicit authored selection; preserve future/corrupt/oversized input;
+migrate exact old documents without grants; export no protected metadata; keep
+pause and credential state independent. Map these scenarios to pure workspace/
+migration contracts, actual SettingsOperations and native-session composition,
+mounted four-locale workflows and the corresponding user documentation.
+
+The fixed H2 `previous-session` alias cannot resolve workspace membership. The
+existing explicit Verify/select operation promotes it to a fresh unique native
+ID only after numeric account/repository verification; merely reading it never
+writes or changes identity. Keep its read purpose, credential partition and
+canonical acknowledgement/readback rules. The workspace page offers this
+verification before editing; an old alias remains an unavailable slot until
+explicitly replaced. Reserved `unbound-` slots never resolve or grant authority.
+
+Browser messages MUST contain detached immutable validated values, never
+reactive view-model proxies. The actual mounted center transport exercises
+structured cloning as well as the JSON-compatible contract
+([Chrome messaging](https://developer.chrome.com/docs/extensions/develop/concepts/messaging),
+[Mozilla messaging](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/runtime/sendMessage)).
+No messaging-serialization manifest opt-in or permission change is introduced.
+
+Named-session metadata inspection MUST be local-only, including cold protected
+records: no provider GET, protected mutation or implicit connection restoration.
+A cold entry is saved metadata, not a verified connected context. Explicit
+Connect/Verify/select fences the prior context and verifies only its chosen
+candidate; it must not first restore another saved identity. Independently
+admitted GitHub page restoration retains its existing policy and is not supplied
+by grouping or metadata inspection. Test cold reads and first explicit legacy
+verification through the actual background, not only a mock metadata port.

@@ -28,7 +28,7 @@ it('refuses partial, malformed and extra-key legacy records instead of silently 
 });
 it('bexh3-center-C44 keeps future root and nested center schemas inert without a destructive downgrade', () => {
     for (const value of [{ ...DEFAULT_SETTINGS, schemaVersion: 3 }, { ...DEFAULT_SETTINGS, center: {
-        ...DEFAULT_CENTER_SETTINGS, schemaVersion: 2, unknownFutureValue: 'preserved' } }]) {
+        ...DEFAULT_CENTER_SETTINGS, schemaVersion: 3, unknownFutureValue: 'preserved' } }]) {
         const before = JSON.stringify(value); expect(loadSettings(value).state).toBe('future'); expect(JSON.stringify(value)).toBe(before);
     }
 });

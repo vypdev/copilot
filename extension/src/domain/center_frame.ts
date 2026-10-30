@@ -1,3 +1,5 @@
+import type { ConnectionOutcome } from './named_sessions.ts';
+import { workspaceReviewChanges } from './workspace_review.ts';
 import type { CenterClientView } from './center_client_view.ts';
 import type { CenterLocation } from './center_routes.ts';
 import type { CenterReview, ReviewChange } from './center_review.ts';
@@ -26,8 +28,9 @@ export interface CenterFrame {
     readonly helperSample: HelperSampleView;
 }
 /** Complete local preference delta, including removals. Input is validated credential-free Settings. */
-export function settingsReviewChanges(before: unknown, after: unknown, copy: CenterCopy): readonly ReviewChange[] {
+export function settingsReviewChanges(before: unknown, after: unknown, copy: CenterCopy, connections?: ConnectionOutcome | null): readonly ReviewChange[] {
     const changes: ReviewChange[] = [];
+    const workspace = workspaceReviewChanges(before, after, copy.locale, connections);
     const welcome = welcomeCopy(copy.locale);
     const fields: Readonly<Record<string, string>> = { ...copy.routes, ...copy.messages, onboarding: welcome.progress };
     const label = (path: readonly string[]) => path.map(key => Object.hasOwn(fields, key) ? fields[key] : key).join(' › ');
@@ -38,6 +41,8 @@ export function settingsReviewChanges(before: unknown, after: unknown, copy: Cen
             : typeof value === 'string' && localized.has(path[path.length - 1]) && Object.hasOwn(fields, value) ? fields[value]
                 : typeof value === 'object' && value !== null ? copy.messages.inherit : String(value);
     function walk(old: unknown, next: unknown, path: readonly string[]): void {
+        if (workspace && path.join('/') === 'center/workspaces') { changes.push(...workspace); return; }
+        if (workspace && path.join('/') === 'center/selectedWorkspace') return;
         if (old === next) return;
         if (path.join('/') === 'center/bindings') {
             const before = old as readonly CenterBinding[]; const after = next as readonly CenterBinding[];
@@ -67,6 +72,6 @@ export function centerFrame(client: CenterClientView, location: CenterLocation, 
     const review: CenterReview | null = plan ? { state: plan.state, title: copy.messages.reviewTitle,
         summary: copy.messages.reviewSummary, revision: plan.revision,
         editable: client.data?.role === 'editor' && client.issue === null,
-        changes: settingsReviewChanges(plan.before, plan.after, copy) } : null;
+        changes: settingsReviewChanges(plan.before, plan.after, copy, client.connections) } : null;
     return deepFreeze({ client, location, pendingLocation, copy, review, draftEpoch, hasDraft, inventory, inspection, packageIdentity, history, visits, operation, helperSample });
 }

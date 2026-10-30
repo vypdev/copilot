@@ -4,13 +4,15 @@ import type { CenterRouteProps, InventoryRouteProps, PrivacyRouteProps, SupportR
 import type { SupportRoute } from '../domain/support_context.ts';
 import type { HistoryRouteProps } from '../domain/history_ui.ts';
 /** Every operand is a packaged literal; no location, imported setting or message supplies an import URL. */
-export async function loadCenterPage(route: Exclude<CenterRoute, 'features' | 'privacy' | 'activity' | 'diagnostics' | SupportRoute>): Promise<Component<CenterRouteProps>> {
+export async function loadCenterPage(route: Exclude<CenterRoute, 'features' | 'privacy' | 'activity' | 'diagnostics' | SupportRoute>, detail?: string): Promise<Component<CenterRouteProps>> {
     switch (route) {
         case 'overview': return (await import('../presentation/OverviewPage.svelte')).default;
         case 'welcome': return (await import('../presentation/WelcomePage.svelte')).default;
         case 'appearance': return (await import('../presentation/AppearancePage.svelte')).default;
         case 'language': return (await import('../presentation/LanguagePage.svelte')).default;
         case 'shortcuts': return (await import('../presentation/ShortcutsPage.svelte')).default;
+        case 'repositories': return detail === 'workspaces' ? (await import('../presentation/WorkspacesPage.svelte')).default
+            : (await import('../presentation/InformationPage.svelte')).default;
         case 'profiles': return (await import('../presentation/ProfilesPage.svelte')).default;
         case 'data': return (await import('../presentation/DataPage.svelte')).default;
         default: return (await import('../presentation/InformationPage.svelte')).default;

@@ -51,7 +51,7 @@ export class NamedSessions {
     async read(current: () => boolean): Promise<ConnectionOutcome> {
         try {
             const generation = this.generation;
-            await this.active.start(); const vault = await this.load();
+            const vault = await this.load();
             return generation === this.generation && current() ? this.view(vault) : { state: 'stale' };
         } catch { return { state: 'unavailable' }; }
     }
@@ -84,7 +84,6 @@ export class NamedSessions {
             if (intent.type === 'connect' && vault.entries.some(entry => entry.name.toLowerCase() === intent.name.toLowerCase())) return { state: 'invalid' };
             const selected = intent.type === 'select' || intent.type === 'remove' ? vault.entries.find(entry => entry.id === intent.id) : undefined;
             if ((intent.type === 'select' || intent.type === 'remove') && !selected) return { state: 'invalid' };
-            if (intent.type === 'connect' || intent.type === 'select') { await this.active.start(); if (!live()) return { state: 'stale' }; }
             admitted = true;
             const target = intent.type === 'connect' ? intent.name : selected?.name ?? vault.entries.find(entry => entry.id === vault.selected)?.name ?? null;
             trace = capture(intent.type, { location: { route: 'connections' }, label: target }, live);
@@ -106,12 +105,12 @@ export class NamedSessions {
                     ? result.state as 'limited' | 'cooldown' | 'budget' : 'unavailable' };
                 const preference = sessionStep(trace, 'save-repository-preference');
                 if (preference) await this.ports.connected(verified.repositoryId, live, preference); else await this.ports.connected(verified.repositoryId, live);
-                const id = selected?.id ?? this.ports.identifier();
-                if (!localIdentifier(id) || (!selected && vault.entries.some(entry => entry.id === id))) { await cleanup(); return { state: 'unavailable' }; }
+                const id = selected && selected.id !== 'previous-session' ? selected.id : this.ports.identifier();
+                if (!localIdentifier(id) || id === 'previous-session' || ((!selected || selected.id !== id) && vault.entries.some(entry => entry.id === id))) { await cleanup(); return { state: 'unavailable' }; }
                 const entry = { id, name: intent.type === 'connect' ? intent.name : selected!.name, host: 'github.com' as const,
                     role: 'repository-read' as const, connection: { schemaVersion: 1 as const, secret, ...verified } };
                 next = { ...vault, revision: revision + 1, selected: id,
-                    entries: selected ? vault.entries.map(previous => previous.id === id ? entry : previous) : [...vault.entries, entry] };
+                    entries: selected ? vault.entries.map(previous => previous.id === selected.id ? entry : previous) : [...vault.entries, entry] };
             } else {
                 next = { ...vault, revision: revision + 1, selected: intent.type === 'disconnect' || vault.selected === intent.id ? null : vault.selected,
                     entries: intent.type === 'remove' ? vault.entries.filter(entry => entry.id !== intent.id)
