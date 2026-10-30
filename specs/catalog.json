@@ -3206,7 +3206,15 @@
         "extension/src/domain/settings_observation.ts",
         "extension/src/domain/settings_operation_target.ts",
         "extension/src/presentation/CurrentOperationPanel.svelte",
-        "extension/src/application/protected_mutation.ts"
+        "extension/src/application/protected_mutation.ts",
+        "extension/src/application/center_observation_context.ts",
+        "extension/src/application/session_observation_ports.ts",
+        "extension/src/application/session_observation_source.ts",
+        "extension/src/application/session_observations.ts",
+        "extension/src/domain/history_export_format.ts",
+        "extension/src/domain/session_copy.ts",
+        "extension/src/domain/session_fact.ts",
+        "extension/src/presentation/SessionEffects.svelte"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3415,7 +3423,23 @@
         "extension/test/integration/settings_operation_gateway.test.ts",
         "extension/test/contracts/protected_session_equality.test.ts",
         "extension/test/integration/protected_mutation.test.ts",
-        "extension/test/integration/protected_persistence.test.ts"
+        "extension/test/integration/protected_persistence.test.ts",
+        "extension/test/contracts/session_fact.test.ts",
+        "extension/test/contracts/session_journal_progress.test.ts",
+        "extension/test/contracts/session_operation_view.test.ts",
+        "extension/test/fixtures/session_center.ts",
+        "extension/test/fixtures/session_gateway.ts",
+        "extension/test/fixtures/session_observer.ts",
+        "extension/test/integration/current_session_operations.test.ts",
+        "extension/test/integration/session_effects_presentation.test.ts",
+        "extension/test/integration/session_journal_capacity.test.ts",
+        "extension/test/integration/session_observation_context.test.ts",
+        "extension/test/integration/session_observation_source.test.ts",
+        "extension/test/integration/session_observations.test.ts",
+        "extension/test/integration/session_operation_center.test.ts",
+        "extension/test/integration/session_operation_gateway.test.ts",
+        "extension/test/integration/session_operation_service.test.ts",
+        "extension/test/integration/session_repository_observation.test.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

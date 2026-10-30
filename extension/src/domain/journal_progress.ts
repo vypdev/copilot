@@ -1,5 +1,6 @@
-import { journalFact, operationTransition, type JournalFact, type JournalKind, type OperationFact } from './journal_facts.ts';
+import { journalFact, operationTransition, type JournalFact, type JournalKind, type OperationFact, type ProgressiveFact } from './journal_facts.ts';
 import { deepFreeze } from './value.ts';
+import { sameSessionFact, mergeSessionFact } from './session_fact.ts';
 
 export function snapshotJournalFact(kind: JournalKind, value: unknown): JournalFact | null {
     try {
@@ -9,8 +10,17 @@ export function snapshotJournalFact(kind: JournalKind, value: unknown): JournalF
     } catch { return null; }
 }
 export function sameJournalFact(before: JournalFact, after: JournalFact): boolean {
+    if (before.kind !== after.kind) return false;
+    if (before.kind === 'session-operation' && after.kind === 'session-operation') return sameSessionFact(before, after);
     return Object.keys(before).length === Object.keys(after).length
         && Object.entries(before).every(([key, value]) => after[key as keyof JournalFact] === value);
+}
+export function mergeProgressiveFact(before: ProgressiveFact, after: ProgressiveFact): ProgressiveFact | null {
+    return before.kind === 'operation' && after.kind === 'operation' ? mergeOperationFact(before, after)
+        : before.kind === 'session-operation' && after.kind === 'session-operation' ? mergeSessionFact(before, after) : null;
+}
+export function nextStoredProgress(before: ProgressiveFact, desired: ProgressiveFact): ProgressiveFact {
+    return before.kind === 'operation' && desired.kind === 'operation' ? nextStoredOperation(before, desired) : desired;
 }
 /** A later read cannot erase an acknowledgement or already established completion of this same operation. */
 export function mergeOperationFact(before: OperationFact, after: OperationFact): OperationFact | null {

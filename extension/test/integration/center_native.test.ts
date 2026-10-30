@@ -4,6 +4,9 @@ import { centerIdentifier } from '../../src/infrastructure/center_runtime.ts';
 import { SETTINGS_KEY } from '../../src/application/settings_repository.ts';
 import { browserFixture } from '../fixtures/browser.ts';
 import { CENTER_SENDER } from '../fixtures/center.ts';
+import { NAMED_SESSIONS_KEY } from '../../src/application/named_sessions.ts';
+import { SESSION_KEY } from '../../src/application/protected_session.ts';
+import { CONNECTED } from '../fixtures/runtime.ts';
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 function fixture() {
@@ -60,4 +63,12 @@ it('missing foreground receivers cannot reject a native ownership transition or 
     const h = fixture(); vi.mocked(h.api.runtime.sendMessage).mockRejectedValue(new Error('no-receiver'));
     expect(await h.call({ method: 'center.open' })).toMatchObject({ state: 'ready', role: 'editor' });
     await Promise.resolve(); expect(h.api.runtime.sendMessage).toHaveBeenCalledWith({ version: 1, method: 'center.invalidated' }); h.stop();
+});
+it('native permission revocation contains failed protected cleanup and never reports retained credentials as a usable connection', async () => {
+    const h = fixture(); h.sessionValues.set(SESSION_KEY, CONNECTED); h.sessionValues.set(NAMED_SESSIONS_KEY, { schemaVersion: 99 });
+    vi.mocked(h.sessionArea.remove).mockRejectedValue(new Error('private protected cleanup'));
+    [...h.permissionRemoved.listeners][0]({ origins: ['https://api.github.com/*'] });
+    await vi.waitFor(() => expect(h.sessionArea.remove).toHaveBeenCalledWith(NAMED_SESSIONS_KEY));
+    await vi.waitFor(async () => expect(await h.call({ method: 'session.status' })).toMatchObject({ state: 'unavailable' }));
+    expect(h.sessionValues.has(SESSION_KEY)).toBe(true); expect(h.localArea.set).not.toHaveBeenCalled(); h.stop();
 });

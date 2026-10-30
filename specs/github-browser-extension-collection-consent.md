@@ -42,8 +42,7 @@ The background now shares its preference repository with that collection owner
 and exposes closed, native-client-bound history/review use cases. The actual
 center now produces accepted recent destinations under private native consent
 and generation fences. Preference services now produce current-operation facts
-and optional redacted history. Session/compound-operation and helper producers,
-and native/human acceptance remain incomplete. The mounted center now
+and optional redacted history. Native session services now produce separate active-credential, repository-preference and vault effects through the closed session family in section6.10. Compound collection-operation and helper producers, and native/human acceptance remain incomplete. The mounted center now
 has a source-validated typed client and four-locale read/start/stop/clear/export
 controls, independent of preference-read availability. Saved collection flags
 still default false; opening a screen does not opt into collection.
@@ -362,7 +361,7 @@ data separately; unknown settings never become invented off/on preferences.
 History changes notify only native centers and never reset content quarantine.
 Current compound collection results preserve their independent preference and
 policy facts. A collector MUST NOT flatten partial results into completed history;
-session/compound-operation and helper producers remain required delivery work.
+compound collection-operation and helper producers remain required delivery work. Session producers use their own bounded projection below.
 Localized controls, the narrow destination producer and native preference
 observations are composed in development source.
 
@@ -495,10 +494,90 @@ shutdown or a reentrant source change cannot publish a late private response.
 Clearing generated history MUST NOT claim to clear this independent temporary
 current-operation memory.
 
-This first family covers preference operations. Session vault/active-connection
-phases and compound collection preference/policy phases require their own closed
-projections; neither may be guessed from a top-level result or flattened into this
-family. Complete H3 still requires those producers and the mounted/native journeys.
+This first family covers preference operations. Session active-credential, repository-preference and vault effects now use the separate closed projection in section6.10. Compound collection preference/policy phases still require their own projection; neither family may be guessed from a top-level result or flattened into preference saving. Complete H3 still requires compound/helper producers and the full native/human journeys.
+
+### 6.10 Native session observations
+
+Connect, select, disconnect, remove and explicit forget-all MUST have a separate
+closed session-operation family. Capture only after the native service admits
+the validated intent, vault revision and selected entry. Preflight restoration
+is not retrospectively attributed to that operation. Explicit forget-all remains
+available with an unreadable vault; native permission-driven revocation creates
+no attributed user operation. No renderer recording method is added.
+
+```text
+Native admission → captured current target and optional one history ticket
+ → prior active retirement → candidate verification/save → repository preference
+ → named-vault save
+ → independent cleanup if required → observed service result
+```
+
+Text equivalent: each actual protected mutation keeps its own ordered result.
+Forget-all independently removes the active key and named vault. Inactive-entry
+removal need not retire the selected connection. A top-level ready, unavailable
+or unknown response is not proof that every storage phase completed.
+
+The repository's nonsecret read opt-in is another independently attempted and
+verified phase. It is not a browser permission or a provider credential grant.
+Its observed update uses the same preference queue and full canonical readback;
+secondary observer availability never selects a weaker primary save path.
+
+Each fact contains only the closed action, running/settled state, closed service
+result and at most16 ordered effects. Each effect has its ordinal, one of prior
+active retirement, active save, candidate cleanup, repository preference, vault save or vault removal,
+submitted/settled state, accepted/unknown acknowledgement and
+not-observed/committed/different/unavailable observation. No target, credential,
+account/repository, native selector or raw exception enters this fact. An
+additional effect beyond the bound sets an irreversible incomplete flag rather
+than inventing completion or retaining an unbounded event stream.
+
+Register an effect only after invoking its real native mutation port, including
+synchronous failure. Inspect each attempted mutation once without retrying it.
+Settled effect facts cannot be rewritten; later cleanup remains a separate
+effect. The final service result is terminal and cannot erase prior effects.
+Unknown delivery or retention remains independent from primary session success.
+
+The initial native credential admission remains mandatory. After admitted
+preflight, the observation source binds the current editor/controller and service
+generation, plus a private credential witness. Only a synchronous callback from
+this operation's own active-session mutation can advance that witness from its
+exact previous epoch to the actual next epoch. Another epoch, controller,
+document, service-generation change or failed query retires it irreversibly.
+Queries do not renew another client's idle lease. No witness or advance method
+is exposed through IPC. Secondary observer faults cannot change primary results.
+
+Current session targets share the existing eight-client/five-minute memory
+bound with preference operations; a newer family replaces the old private target.
+Only the captured local session label/Connections destination is displayed in
+the verified source context. Observations cannot reconstruct a target after
+source retirement, expiry or restart. A generated-history clear leaves this
+independent current memory intact. Settled service facts and individual
+effects remain inspectable even when the private target is unavailable.
+
+Generated retention remains at most200 diagnostic rows and64KiB per journal.
+When an appended/updated safe fact grows the envelope, evict the oldest other
+generated rows until it fits, retaining the explicitly updated row. Never trim
+authored preferences or phase facts to manufacture a fit. Canonically evicted
+known-row tickets are retired, so late updates cannot recreate the missing row.
+Readers and exports disclose the retained count; row-count limits are maxima.
+Capacity accounting includes the exact reviewed JSON export envelope. A canonical
+read may apply this generated-data capacity policy to older valid records; unknown,
+future or malformed records remain preserved. No phase fields are trimmed to fit.
+
+A later session read MUST NOT match an unknown old effect solely by its current
+payload. Without an operation receipt, a new observation cannot attribute who
+wrote that state. Current connection state stays separate from terminal history.
+The connection client may return only the directly observed vault revision to
+its native form handler to clear the submitted draft. That receipt is separate
+from a retired private summary, carries no identity or reusable authority, and
+cannot re-publish a connection after invalidation. A lost response provides no
+such receipt; no automatic resubmission or draft-clearing guess is allowed.
+
+Full session delivery requires the actual native producer, current metadata,
+four-locale effect list, optional same-row history progress and clear/retention
+races. The active-key foundation alone does not satisfy this contract. Compound
+collection preference/policy operations still require their own family.
+
 
 ## 7. User-facing configuration
 
@@ -591,6 +670,8 @@ on opt-in. An explicit old-ring sample is an observation at capture time.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
+The unpublished H3 version1 journal admits the closed session fact alongside existing operation/helper facts. Existing supported rows keep their meaning. An older draft reader that does not recognize this fact MUST preserve the record as unavailable rather than downgrade or delete it. No native database upgrade or H2 rollback claim follows from this addition.
+
 Database0 creates three fixed stores. Known database1 with exactly the two owned
 stores adds policy without changing records; missing policy is paused. Unexpected
 layouts abort/preserve; no deletion/recreation. Close stale connections on version
@@ -617,11 +698,15 @@ upgrade or publication is implied.
 | Current-operation ownership | 24 | Eight lifetime/clock cases, six retention-isolation cases, four source boundaries and six replacement/reentry/disposal races |
 | Actual preference producers | 20 | Six admission/no-op cases, six outcome paths and eight duplicate/reentry/source/clear cases |
 | Mounted current-operation view | 12 | Four complete locales plus eight metadata failure, target retirement, independent state and lifecycle cases |
+| Session projection and causal source | 30 | Sixteen closed/order/immutability cases and fourteen native controller/credential/generation races |
+| Actual session service effects | 32 | Admission, two protected stores, acknowledged/unknown readback, cleanup, duplicate/busy and source loss |
+| Session retention and generated byte eviction | 20 | Twelve ticket/clear/off/unknown cases, six byte-bound cases and two canonical ticket-retirement cases |
+| Mounted session-operation view | 16 | Four complete locales and twelve pending/partial/retired/independent metadata journeys |
 | Typed client/response closure | 120 | Closed detached replies, source binding, wrong-family/scope, immutable independent facts |
 | Reader/review/export ownership | 35 | Read-after-clear/revision races, retained result inspection, known-fact preservation, explicit exact-byte download, retirement/single flight |
 | Mounted UI/locales/export/recovery | 40 | Independent phase facts, editor/observer, guarded navigation,4locales, accessible JSON, separate privacy inspectors |
 | Real targets and human | 9 | Three native journeys per target plus owning human gate |
-| **Total** | **623** | No substitution for semantic H3/catalog coverage |
+| **Total** | **721** | No substitution for semantic H3/catalog coverage |
 
 Count each case once. Pure branches and modified executable lines/branches100%,
 no exclusions/threshold weakening; keep root budgets. Request fixtures are not
@@ -650,6 +735,15 @@ remain separate required evidence.
 cover the preference projection, native observation, independent metadata and
 mounted four-locale flow. Existing transaction-outcome cases verify observer
 failure isolation after the actual native store attempt.
+Session evidence adds `session_fact.test.ts`, `session_operation_view.test.ts`,
+`session_observation_source.test.ts`, `session_observations.test.ts`,
+`current_session_operations.test.ts`, `session_operation_service.test.ts`,
+`session_repository_observation.test.ts`, `session_observation_context.test.ts`,
+`session_journal_progress.test.ts`, `session_journal_capacity.test.ts`,
+`session_operation_gateway.test.ts`, `session_effects_presentation.test.ts` and
+`session_operation_center.test.ts`. These cover actual service/gateway ownership,
+independent state, generated byte bounds and the mounted form's own-notification
+race. Contract and DOM cases remain distinct from required native/human evidence.
 
 ## 15. Documentation and discoverability
 
@@ -703,6 +797,18 @@ docs/specs/catalog and concrete examples together.
 22. Enabling collection cannot backfill an earlier untracked preference preview.
     Generated-history clear preserves current-operation memory and erases no
     preferences, protected credentials or authored notes.
+23. An admitted session operation records only real storage attempts, each with
+    its own acknowledgement and canonical observation. Repository preference,
+    active key, named vault and later cleanup cannot stand in for each other.
+24. This operation's own native epoch advance preserves its captured current
+    source; another controller, credential or service generation retires it.
+    Later matching data without a receipt cannot rewrite an unknown old effect.
+25. A growing generated row keeps its complete facts while oldest other rows
+    leave to fit the exact64KiB export bound. A canonically evicted/cleared row
+    cannot be recreated by an old ticket; unknown/future data are preserved.
+26. The actual connection form clears its submitted draft after a directly
+    observed successful response even if its own notifications retire the private
+    summary. A missing response grants no revision receipt or automatic retry.
 
 ## 17. Requirements traceability
 
@@ -713,10 +819,12 @@ docs/specs/catalog and concrete examples together.
 | Truthful ordered phases | Application | Partial/ack/replay/queue | Activity/privacy |
 | Restriction-only save and owner lifetime | Settings/coordinator | Five application contract suites; native/UI evidence still required | Configuration/contributor |
 | Reviewed phase continuation and priority of a later stop | CollectionReviews/effects/private leases | Eight retained-plan/phase/ownership/staging suites; full native/UI evidence pending | Configuration/privacy/contributor |
-| Bounded secondary retention and unknown identity | JournalWriter/queue/IO/progress | Eight writer/domain/race suites; session/compound/helper producers and native evidence pending | Privacy/recovery/contributor |
+| Bounded secondary retention and unknown identity | JournalWriter/queue/IO/progress | Writer/domain/race suites plus session gateway/capacity journeys; compound/helper producers and native evidence pending | Privacy/recovery/contributor |
 | One production owner and closed native control | CollectionHistory/HistoryControls/HistoryGateway/native composition | Protocol/application/gateway/bootstrap and mounted UI suites; native/human acceptance pending | Contributor/privacy/recovery |
 | Accepted destinations and consent/source retirement | RecentsCapture/RecentsClient/VisitDelivery/centerDestination/center_app | Native source, delivery, gateway and 12 mounted navigation/localization cases; real-browser/human gates outstanding | Local history/privacy/contributor |
 | Actual preference observations and independent current view | SettingsOperations/SettingsRepository/CurrentOperations/CurrentOperationReader/CenterClient/center_app | Eight projection/native/reader/client/mounted suites plus direct store observer isolation; native/human gates outstanding | Local history/configuration/privacy/contributor |
+| Independent session effects and causal source | NamedSessions/ProtectedSessionService/SettingsRepository/SessionObservations/SessionObservationSource | Session contract/source/service/current/gateway/repository/mounted suites; native/human gates outstanding | Local history/configuration/privacy/contributor |
+| Generated byte capacity and irreversible row retirement | local_journal/JournalWriter | Session capacity/progress/gateway suites, exact reviewed export envelope | Local history/privacy/contributor |
 | Minimal discoverable facts | Presentation | Locales/a11y/export | User navigation |
 
 ## 18. Implementation sequence

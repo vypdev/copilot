@@ -1,5 +1,7 @@
-import { journalFact, journalKind, operationTransition, type JournalFact, type JournalKind, type OperationFact } from './journal_facts.ts';
-import { deepFreeze, jsonBytesWithin, keys, natural, record } from './value.ts';
+import { journalFact, journalKind, progressiveFact, progressiveTransition, type JournalFact, type JournalKind, type ProgressiveFact } from './journal_facts.ts';
+import { deepFreeze, jsonBytesWithin, keys, natural, record, utf8Bytes } from './value.ts';
+import { sameJournalFact } from './journal_progress.ts';
+import { historyExportContent } from './history_export_format.ts';
 
 export const JOURNAL_TTL = 7 * 24 * 60 * 60 * 1000;
 export const JOURNAL_LIMITS = Object.freeze({ diagnostics: 200, recents: 50 });
@@ -10,7 +12,7 @@ export interface JournalSnapshot {
 }
 export type JournalCommand = { readonly type: 'read'; readonly now: number }
     | { readonly type: 'append'; readonly now: number; readonly epoch: number; readonly at: number; readonly fact: JournalFact }
-    | { readonly type: 'update'; readonly now: number; readonly epoch: number; readonly sequence: number; readonly fact: OperationFact }
+    | { readonly type: 'update'; readonly now: number; readonly epoch: number; readonly sequence: number; readonly fact: ProgressiveFact }
     | { readonly type: 'clear'; readonly now: number; readonly epoch: number; readonly revision: number };
 export type JournalResult = { readonly state: 'ready' | 'written' | 'unchanged'; readonly snapshot: JournalSnapshot; readonly sequence?: number }
     | { readonly state: 'stale' | 'invalid' | 'future' | 'corrupt' | 'clock-invalid' | 'exhausted' | 'collection-active' | 'collection-inactive' }
@@ -27,7 +29,7 @@ export function validJournalCommand(kind: unknown, value: unknown): value is Jou
         && natural(value.at) && journalFact(kind, value.fact);
     return value.type === 'update' && kind === 'diagnostics' && keys(value, ['type', 'now', 'epoch', 'sequence', 'fact'])
         && Object.keys(value).length === 5 && natural(value.sequence) && value.sequence > 0
-        && journalFact(kind, value.fact) && value.fact.kind === 'operation';
+        && journalFact(kind, value.fact) && progressiveFact(value.fact);
 }
 export function validJournalSnapshot(kind: JournalKind, value: unknown): value is JournalSnapshot {
     if (!record(value) || !keys(value, ['schemaVersion', 'kind', 'epoch', 'revision', 'nextSequence', 'lastTime', 'entries'])
@@ -68,18 +70,28 @@ function decide(kind: JournalKind, raw: unknown, input: JournalCommand): Journal
         const index = entries.findIndex(entry => entry.sequence === input.sequence);
         if (index < 0) return { result: { state: 'stale' } };
         const prior = entries[index];
-        if (prior.fact.kind !== 'operation') return { result: { state: 'invalid' } };
+        if (!progressiveFact(prior.fact)) return { result: { state: 'invalid' } };
         // Exact semantic field comparison does not depend on caller property insertion order.
-        const same = Object.entries(prior.fact).every(([key, value]) => input.fact[key as keyof OperationFact] === value);
+        const same = sameJournalFact(prior.fact, input.fact);
         identical = same;
-        if (!same && !operationTransition(prior.fact, input.fact)) return { result: { state: 'invalid' } };
+        if (!same && !progressiveTransition(prior.fact, input.fact)) return { result: { state: 'invalid' } };
         sequence = prior.sequence; entries[index] = { ...prior, fact: input.fact };
     } else if (input.type === 'clear') { epoch++; nextSequence = 1; entries = []; }
-    const changed = (input.type !== 'read' && !identical) || entries.length !== before.entries.length;
+    const changed = (input.type !== 'read' && !identical) || entries.length !== before.entries.length || utf8Bytes(historyExportContent(kind, before)) > 65536;
     if (!changed) return { result: { state: identical ? 'unchanged' : 'ready', snapshot: deepFreeze(before), ...(sequence === undefined ? {} : { sequence }) } };
-    const next = { ...before, epoch, revision: before.revision + 1, nextSequence, lastTime: input.now, entries };
+    const next = fitGeneratedRows({ ...before, epoch, revision: before.revision + 1, nextSequence, lastTime: input.now, entries }, sequence);
     if (!natural(next.revision) || !natural(epoch) || !natural(nextSequence)) return { result: { state: 'exhausted' } };
     if (!validJournalSnapshot(kind, next)) return { result: { state: 'invalid' } };
     const snapshot = deepFreeze(JSON.parse(JSON.stringify(next)) as JournalSnapshot);
     return { result: { state: input.type === 'read' ? 'ready' : 'written', snapshot, ...(sequence === undefined ? {} : { sequence }) }, write: snapshot };
+}
+/** Generated rows may expire/evict; authored configuration and individual phase facts are never trimmed. */
+function fitGeneratedRows(value: JournalSnapshot, keep: number | undefined): JournalSnapshot {
+    const entries = [...value.entries]; const costs = entries.map(entry => utf8Bytes(JSON.stringify(entry)));
+    let bytes = utf8Bytes(historyExportContent(value.kind, { ...value, entries: [] })) + costs.reduce((sum, cost) => sum + cost, 0) + Math.max(0, entries.length - 1);
+    while (bytes > 65536 && entries.length > 1) {
+        const index = entries.findIndex(entry => entry.sequence !== keep);
+        bytes -= costs[index] + 1; costs.splice(index, 1); entries.splice(index, 1);
+    }
+    return { ...value, entries };
 }

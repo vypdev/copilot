@@ -39,7 +39,8 @@ export class CenterGateway {
             if (client.role !== 'editor') return { state: 'denied' };
             if (client.credentialEpoch !== message.credentialEpoch) return { state: 'stale' };
             return this.connections?.change(message.intent, message.expectedRevision, () =>
-                this.controller.authorize(message.clientId, binding, client.controllerEpoch)?.role === 'editor') ?? { state: 'unavailable' };
+                this.controller.authorize(message.clientId, binding, client.controllerEpoch)?.role === 'editor',
+            (action, target, live) => this.current?.observeSession(client.clientId, action, target, live, () => this.controller.fence(client.clientId)) ?? null) ?? { state: 'unavailable' };
         }
         if (message.method === 'center.read') {
             // A failed migration acknowledgement is not proof that storage is unavailable.

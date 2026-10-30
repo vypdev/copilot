@@ -30,9 +30,8 @@ export function connectionActions(api: BrowserApi, document: Document, client: C
                 const repository = (form.elements.namedItem('repository') as HTMLInputElement).value.trim();
                 if (!await permission || !current()) return null;
                 return { type: 'connect', name, repository, secret: value };
-            }, revision).then(() => {
-                const result = client.view.connections;
-                if (current() && result?.state === 'ready' && result.revision > revision) { form.reset(); dirty(false); }
+            }, revision).then(observedRevision => {
+                if (current() && observedRevision !== null && observedRevision > revision) { form.reset(); dirty(false); }
             });
         } };
 }

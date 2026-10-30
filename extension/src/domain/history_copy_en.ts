@@ -2,7 +2,7 @@ import type { HistoryCopy } from './history_copy_types.ts';
 export const HISTORY_EN: HistoryCopy = {
     text: {
         diagnostics: 'Diagnostics and operation history', recents: 'Recent extension destinations',
-        diagnosticIntro: 'Optional redacted history: up to 200 entries for 7 days. Credentials, private targets and authored notes are excluded.',
+        diagnosticIntro: 'Optional redacted history: up to 200 entries for 7 days and 64 KiB of exported JSON; older entries may leave sooner. Credentials, private targets and authored notes are excluded.',
         recentIntro: 'Optional visits inside this extension: up to 50 entries for 7 days. This does not read browser history.',
         read: 'Read current state', enable: 'Review enable', stop: 'Review stop', clear: 'Review clear', export: 'Review JSON export',
         idle: 'Read state to inspect consent and retained data.', reading: 'Checking local state…', unavailable: 'Current history could not be established. Read state again.',

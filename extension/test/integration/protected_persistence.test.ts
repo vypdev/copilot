@@ -72,3 +72,14 @@ it('a source-fence failure in queued persistence cannot write a credential or we
     expect(f.port.set).not.toHaveBeenCalledWith(SESSION_KEY, expect.anything()); expect(f.service.verifiedIdentity()).toBeNull();
     run.mockRestore(); expect(await f.service.connect(CONNECTED.secret, CONNECTED.repository)).toMatchObject({ state: 'connected' });
 });
+it('cold explicit revocation cannot silently restore a retained credential after an unconfirmed removal', async () => {
+    const f = sessionHarness(); f.values.set(SESSION_KEY, CONNECTED); vi.mocked(f.port.remove).mockRejectedValue(new Error('private'));
+    await f.service.revoke(); expect(f.service.status().state).toBe('unavailable'); await f.service.start();
+    expect(f.reader.read).not.toHaveBeenCalled(); expect(f.service.verifiedIdentity()).toBeNull(); expect(f.values.has(SESSION_KEY)).toBe(true);
+});
+it('a scoped restoration cannot become retryable after explicit revocation interrupts its provider read', async () => {
+    const f = sessionHarness(); f.values.set(SESSION_KEY, CONNECTED); const gate = deferred<Awaited<ReturnType<typeof f.reader.read>>>(); vi.mocked(f.reader.read).mockReturnValueOnce(gate.promise);
+    const restoring = f.service.start({ current: () => true, cancellation: f.ports.cancellation() }); await vi.waitFor(() => expect(f.reader.read).toHaveBeenCalledOnce()); await f.service.revoke();
+    gate.resolve({ state: 'ok', data: { id: '1', login: 'octo' }, bytes: 1, etag: '' }); await restoring;
+    f.values.set(SESSION_KEY, CONNECTED); await f.service.start({ current: () => true, cancellation: f.ports.cancellation() }); expect(f.reader.read).toHaveBeenCalledOnce(); expect(f.service.verifiedIdentity()).toBeNull();
+});

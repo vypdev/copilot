@@ -544,7 +544,7 @@ cleanup failure cannot change an established settings result. Existing startup
 migrations are preserved. `CollectionHistory` now wires this preflight into the
 production background's same preference repository. Mounted center controls and
 the admitted-destination and preference-observation producers are now composed;
-session/compound-operation and helper producers and complete native/human
+compound collection-operation and helper producers and complete native/human
 acceptance remain delivery work.
 
 Both kinds pause admission before a consent-change I/O wait. Off attempts a
@@ -631,7 +631,7 @@ release cannot resurrect them. Failed clear releases deferred admitted work
 without claiming deletion. Wire `JournalReviews.idle` to the actual writer's idle
 state, not coordinator eligibility, which is false while the reservation is held.
 The writer and review cores now share production ownership and a closed gateway;
-session/compound-operation and helper producers and independent real-browser
+compound collection-operation and helper producers and independent real-browser
 acceptance remain. Actual preference observations are described below.
 
 `CollectionHistory` constructs the actual coordinator, preference repository,
@@ -655,8 +655,7 @@ The closed protocol supports one collection's read, start/stop or clear preview,
 confirmation/cancellation and read-only inspection of a retained public review ID. It accepts no raw
 facts, policy nonce, callback, store name or provider request. Current compound
 results preserve separate preference/policy facts; do not flatten partial success
-into a completed history record. Session/compound-operation and helper projections
-remain unfinished H3 deliverables. The localized typed client/UI is now composed in the options
+into a completed history record. Compound collection-operation and helper projections remain unfinished H3 deliverables. Session observations use their own closed family below. The localized typed client/UI is now composed in the options
 page; native-browser and human acceptance remain outstanding.
 
 `HistoryClient` owns one mutation review and one bounded read stream with at
@@ -733,7 +732,7 @@ update only their original ticket and cannot replace a newer current entry.
 The closed `center.operation.read` accepts only version and the native client
 selector. After existing origin/document/tab/controller authorization, it reads
 memory only: no preference, history-store or provider I/O. The response contains
-closed settings-family facts, an optional current target and independent retention,
+closed settings/session-family facts, an optional current target and independent retention,
 never reusable native selectors or approval. `center.operation.invalidated`
 refreshes only this metadata and never resets content quarantine.
 
@@ -750,9 +749,7 @@ and complete expected after-state. The existing32-result/five-minute primary
 cache retains this private expectation only while unknown, releasing it on
 invalidation, expiry, eviction or verified completion. It never enters metadata,
 history or export. Generated-history clear leaves the separate temporary current
-view intact. Session vault/active-connection and compound preference/policy
-outcomes still need their own closed projections; this settings family cannot
-stand in for them.
+view intact. Session effects use their own closed family below; compound preference/policy outcomes still need their own projection. This settings family cannot stand in for either.
 
 ### Active-session persistence foundation
 
@@ -764,5 +761,39 @@ including optional organization identity, independently of key order. A matching
 save or absent removed key can establish completion after lost acknowledgement;
 accepted-but-unapplied effects and failed inspections remain unconfirmed.
 Existing epoch, permission and source gates still control publication. These
-internal facts are a foundation: session current-operation and optional journal
-projections remain separate unfinished H3 work.
+internal persistence facts now feed the per-call session projection below. Compound collection-operation and helper projections remain unfinished H3 work.
+
+
+### Native session-operation observations
+
+`NamedSessions` captures a per-call observation only after native validation and
+preflight restoration. `SessionObservationSource` owns the private controller and
+credential witness; only the active service's synchronous own-epoch notification
+can advance it. External source loss retires it permanently. Neither selectors
+nor epoch callbacks enter renderer events or generated facts.
+
+`SessionObservations` is an inert bounded accumulator. It records submission only
+after the actual mutation port is invoked and preserves each independent canonical
+readback: active retirement/save/cleanup, repository read preference, vault
+save/removal. `SettingsRepository.updateObserved` uses canonical verification even
+without a working observer. Secondary faults never choose a weaker primary path.
+Permission-driven revocation supplies no attributed user observer. Cold explicit
+revocation prevents silent restoration in this worker; unconfirmed native removal
+still cannot establish durable deletion after restart.
+
+The closed session fact has at most16 ordered effects and no private payload.
+`CurrentOperations` shares its eight-client/five-minute bound between settings
+and sessions. `SessionEffects` renders immutable facts in all four locales.
+`CenterClient` keeps its private summary fenced; only a directly observed vault
+revision returns to the native form handler to clear a successful submitted draft.
+The context-change callback refreshes metadata without carrying native IDs or
+restoring a retired identity. Missing responses never trigger a guessed success.
+
+The writer supports same-row session progress alongside the existing mandatory
+settings transition. Canonical absence retires a known ticket. The generated
+journal counts its exact JSON export envelope toward64KiB and evicts oldest other
+rows before publishing an append/update; it keeps the updated row's complete facts
+and never trims authored data. Current metadata reads perform no store/provider
+I/O and cannot reconcile an old session write solely from a matching payload.
+See the session fact/source/service/gateway/capacity/mounted-view suites for
+executable contracts. These do not replace native-browser or human acceptance.

@@ -38,8 +38,9 @@ through a typed native client. Collection stays off by default. The actual cente
 now captures accepted local destinations under verified consent, with profile
 details removed and uncertain delivery disclosed separately. Preference operations
 now expose independent current-window progress and optional redacted history,
-including acknowledgement versus verified saving. Connection/compound-operation
-and helper producers, and complete native/human acceptance remain outstanding. See the
+including acknowledgement versus verified saving. Session operations now retain
+separate active-connection, repository preference, vault and cleanup facts.
+Compound collection/helper producers and complete native/human acceptance remain outstanding. See the
 [local activity guide](/browser-extension/local-history) and
 [privacy and retention details](/browser-extension/permissions).
 
@@ -58,11 +59,11 @@ or system conflict uncertainty. Saving a combination never certifies delivery.
    configuration. Canceling a review keeps your local form draft for editing.
 5. The completed review confirms the saved result. Close it to keep working.
 
-**Last preference operation** keeps the last proved progress separately from
+**Last observed operation** keeps the last proved progress separately from
 the editable form and optional history. Its read-only metadata remains available
 when settings cannot be read. An unknown save is not automatically retried;
 **Read current settings** can establish its exact retained result. The
-[local activity guide](/browser-extension/local-history#inspect-the-last-preference-operation)
+[local activity guide](/browser-extension/local-history#inspect-the-last-observed-operation)
 explains its five-minute lifetime, private targets and independent history retention.
 
 Appearance reviews theme, density, text size, motion and contrast together in
@@ -167,7 +168,7 @@ establish that deletion succeeded, keep the error visible and read the current
 state before deciding how to recover.
 
 If a response is uncertain, select **Read current sessions** to inspect the
-actual result. Do not repeat Connect automatically. Permission denial, changed
+actual result. Do not repeat Connect automatically. **Last observed operation** lists each actual active-credential, repository-preference and named-session storage attempt independently. A returned session view does not prove every effect succeeded. A verified direct response clears the submitted form; if that response is lost, inspect current sessions before deciding what to do next. Permission denial, changed
 editing ownership and unavailable protected storage leave an explicit recovery
 message. Session inspection and disconnect remain available even when saved
 preferences need recovery. The development **Repositories** route also offers **Pause this repository**,

@@ -2,7 +2,7 @@ import type { HistoryCopy } from './history_copy_types.ts';
 export const HISTORY_ES: HistoryCopy = {
     text: {
         diagnostics: 'Diagnóstico e historial de operaciones', recents: 'Destinos recientes de la extensión',
-        diagnosticIntro: 'Historial opcional redactado: hasta 200 entradas durante 7 días. Excluye credenciales, destinos privados y notas escritas.',
+        diagnosticIntro: 'Historial opcional redactado: hasta 200 entradas durante 7 días y 64 KiB de JSON exportado; las más antiguas pueden salir antes. Excluye credenciales, destinos privados y notas escritas.',
         recentIntro: 'Visitas opcionales dentro de esta extensión: hasta 50 entradas durante 7 días. No consulta el historial del navegador.',
         read: 'Consultar estado actual', enable: 'Revisar activación', stop: 'Revisar parada', clear: 'Revisar borrado', export: 'Revisar exportación JSON',
         idle: 'Consulta el estado para inspeccionar el consentimiento y los datos conservados.', reading: 'Consultando el estado local…', unavailable: 'No se pudo establecer el historial actual. Consulta de nuevo el estado.',

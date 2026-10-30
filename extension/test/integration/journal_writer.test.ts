@@ -17,7 +17,7 @@ it('records admitted closed facts and updates one known row through required sub
     const f = await journalWriterFixture(); await f.ready(); const ticket = f.writer.admit('diagnostics', writerFact(), () => true)!;
     await f.writer.flush(); expect(f.writer.retention(ticket)).toBe('stored');
     expect(f.writer.update(ticket, writerFact('settled'))).toBe('queued'); await f.writer.flush();
-    const commands = f.commands.map(c => c[1]); expect(commands.filter(c => c.type === 'update').map(c => c.fact.phase)).toEqual(['submitted', 'settled']);
+    const commands = f.commands.map(c => c[1]); expect(commands.filter(c => c.type === 'update').map(c => c.fact.kind === 'operation' ? c.fact.phase : c.fact.kind)).toEqual(['submitted', 'settled']);
     expect((f.journals.get('diagnostics') as JournalSnapshot).entries).toHaveLength(1);
     expect((f.journals.get('diagnostics') as JournalSnapshot).entries[0]).toMatchObject({ at: 1000, fact: { phase: 'settled', observation: 'committed' } });
 });

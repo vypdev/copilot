@@ -13,8 +13,8 @@ can inspect and export available generated history without taking control.
 
 H3 is still being implemented. These controls and their typed client are present
 in the development source, including consented recent destinations from the
-actual local navigation and preference-operation observations. Session and
-compound collection-operation producers, helper diagnostics, complete native-browser
+actual local navigation, preference operations and session operations. Compound
+collection-operation producers, helper diagnostics, complete native-browser
 acceptance and the owning human experience gate remain outstanding. Source-level
 and DOM tests do not certify those gates or a store-ready product.
 
@@ -34,8 +34,8 @@ and future data remain unavailable and preserved. Moving away from the route,
 hiding the page or losing focus retires old read observations. Returning obtains
 new ones. An old response cannot restore entries from before a confirmed clear.
 
-The optional limits are fixed: at most200 diagnostic/operation entries and50
-recent extension destinations, each for seven days. Collection defaults off.
+The optional limits are fixed: at most 200 diagnostic/operation entries and50
+recent extension destinations, each for seven days and at most64KiB of its exact exported JSON. Older generated rows can leave sooner to fit that bound. Collection defaults off.
 Recent destinations concern routes inside this extension; no browser history
 permission is requested. Credentials, exact private targets, URLs, raw errors,
 authored notes and private profile labels do not enter these journals.
@@ -66,9 +66,9 @@ destination. Replacing a waiting observation increases that local uncertainty
 count. Neither a confirmed delivery nor a successful primary action proves that
 history storage retained an entry. Reading state does not replay missing visits.
 
-## Inspect the last preference operation
+## Inspect the last observed operation
 
-**Last preference operation** is available across the local center, expanded in
+**Last observed operation** is available across the local center, expanded in
 Activity and Diagnostics. **Read last operation** inspects only the current
 window's background metadata. It remains independent of preference reads and
 optional history: collection can be off or history storage unavailable. Reading
@@ -85,7 +85,7 @@ repeating the write. Reading last-operation metadata alone does not read setting
 or establish that reconciliation.
 
 A captured profile label or repository target belongs only to this current
-operation. It is never added to generated history or its JSON export. The native
+operation. A local session label follows the same rule. It is never added to generated history or its JSON export. The native
 owner keeps one current entry per window, at most eight, for five minutes from
 first observation. Reads do not extend that period. Losing the current source,
 expiry, replacement or background shutdown removes the target; it cannot be
@@ -97,9 +97,39 @@ History retention is a separate result. A successful save does not prove a
 retained row. Preference previews observed with collection off or unknown are
 never added retrospectively after activation. A previously admitted operation
 may update its exact existing row while collection is off, until a clear or
-other generation change invalidates its ticket. This first implementation covers
-preference operations; connection and compound collection results require their
-own separate phase facts.
+other generation change invalidates its ticket. An untracked operation does not
+prove that a historical row is absent: read retained history separately.
+
+## Inspect session operations
+
+Connect, select, disconnect, remove and explicit **Forget all protected sessions**
+now have their own operation view. Each actual storage attempt is listed in order:
+removing the previous active credential, saving a verified candidate, saving the
+repository read preference, saving/removing named sessions, and any candidate
+cleanup needed after a partial result. Inactive-entry removal can save just the
+vault; its failure keeps the unrelated selected connection available.
+
+Each step distinguishes acknowledgement from its one canonical inspection. A
+different record or failed inspection does not become verified saving. Cleanup
+does not erase a previously verified step. An updated session view from the
+service is separate from these individual facts and from a new **Read current
+sessions** observation. Later reads cannot attribute an old unconfirmed mutation
+solely because its desired data is present now.
+
+The private target is captured from the admitted session intent. This operation's
+own credential changes can continue the same verified source; an unrelated
+revocation, controller replacement or lost source retires it. Background
+permission revocation is not recorded as a new user operation. Session effects
+default to no retained history, share the current eight-window/five-minute bound,
+and keep at most 16 effect observations. Any overflow or incomplete observation is
+disclosed. No effect is automatically retried.
+
+Generated diagnostics hold at most 200 entries for seven days, within 64 KiB including
+the reviewed JSON envelope. Larger effect lists may mean fewer rows. At capacity,
+the oldest other generated rows are evicted while the explicitly updated row and
+all its phase facts are kept. A read may apply this capacity policy to older valid
+data. Authored notes, preferences, credentials and malformed/future records are
+never trimmed to fit. An evicted row cannot be recreated by a late old ticket.
 
 ## Review enable or stop
 

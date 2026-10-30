@@ -4,6 +4,8 @@
     import type { JournalSnapshot } from '../domain/local_journal.ts';
     import { historyTime } from '../domain/history_display.ts';
     import { centerLocationHash } from '../domain/center_routes.ts';
+    import { sessionCopy } from '../domain/session_copy.ts';
+    import SessionEffects from './SessionEffects.svelte';
     let { snapshot, copy, center }: { snapshot: JournalSnapshot; copy: HistoryCopy; center: CenterCopy } = $props();
 </script>
 {#if snapshot.entries.length === 0}<p>{copy.text.empty}</p>
@@ -17,6 +19,8 @@
                 <dl><dt>{copy.text.intent}</dt><dd>{copy.phases[entry.fact.phase]}</dd>
                     <dt>{copy.text.acknowledgement}</dt><dd>{copy.acknowledgements[entry.fact.acknowledgement]}</dd>
                     <dt>{copy.text.observation}</dt><dd>{copy.observations[entry.fact.observation]}</dd></dl>
+            {:else if entry.fact.kind === 'session-operation'}
+                <h3>{sessionCopy(center.locale).actions[entry.fact.action]}</h3><SessionEffects fact={entry.fact} locale={center.locale} />
             {:else if entry.fact.kind === 'destination'}
                 <a href={centerLocationHash({ route: entry.fact.route, ...(entry.fact.featureId ? { detail: entry.fact.featureId } : {}) })}>
                     <span>{center.routes[entry.fact.route]}</span>{#if entry.fact.featureId} · <code>{entry.fact.featureId}</code>{/if}</a>

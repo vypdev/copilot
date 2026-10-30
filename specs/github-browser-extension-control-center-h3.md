@@ -553,10 +553,25 @@ an old observation cannot replace a newer session. Unconfirmed removal invalidat
 in-memory access immediately and reports unavailable protected cleanup. No secret,
 raw exception or protected record appears in public persistence facts.
 
-These internal observations are a foundation for the session operation family,
-not proof that its current-operation UI or optional journal producer is delivered.
-Active-session and named-vault phases remain independently owned. No schema,
-permission, automatic retry, persistent-local fallback or publication is introduced.
+The native session operation family now projects each actual active-key,
+repository-preference and named-vault attempt through a per-call observer. Current
+metadata and optional same-row history preserve ordered acknowledgement and
+canonical observations separately from the returned session view. Private labels
+stay only in source-bound current memory. Only this operation's synchronous own
+epoch advance can preserve its private observation witness; external revocation
+or controller replacement retires it. A later matching payload without an
+operation receipt cannot prove that an earlier unknown effect completed.
+
+Explicit cold revocation fences automatic restoration in the current worker,
+even if cleanup cannot be verified. That is not proof of durable physical deletion
+across a restart: uncertain cleanup still requires native disable/recovery. The
+local form may clear its submitted draft only on the directly observed vault
+revision, independently from invalidation of its private summary; a lost response
+supplies no receipt and causes no automatic retry. The four-locale current/history
+view and bounded generated-row capacity tests are source evidence, not complete
+native-browser or human H3 acceptance. The detailed contract is in the
+[collection refinement](github-browser-extension-collection-consent.md#610-native-session-observations).
+No new permission, persistent-local fallback or publication is introduced.
 
 The authenticated session read/disconnect path works independently of corrupt or
 future preference schemas; it never invents default settings to mount a page.

@@ -1,4 +1,4 @@
-import { validSession, validSessionIdentity, type ProtectedSession } from './session.ts';
+import { validSession, validSessionIdentity, sameProtectedSession, type ProtectedSession } from './session.ts';
 import { deepFreeze, jsonBytesWithin, keys, natural, record } from './value.ts';
 import { localIdentifier } from './center_routes.ts';
 
@@ -54,6 +54,12 @@ export function connectionsView(vault: SessionVault, connected: boolean, credent
         entries: vault.entries.map(({ connection, ...entry }) => ({ ...entry, viewerId: connection.viewerId, viewerLogin: connection.viewerLogin,
             repositoryId: connection.repositoryId, repository: connection.repository,
             ...(connection.organizationId === undefined ? {} : { organizationId: connection.organizationId }) })) });
+}
+/** Entire canonical vault, independent of object-key insertion order; entry order remains significant. */
+export function sameSessionVault(value: unknown, expected: SessionVault): boolean {
+    return validVault(value) && value.revision === expected.revision && value.selected === expected.selected && value.entries.length === expected.entries.length
+        && value.entries.every((entry, i) => entry.id === expected.entries[i].id && entry.name === expected.entries[i].name
+            && entry.host === expected.entries[i].host && entry.role === expected.entries[i].role && sameProtectedSession(entry.connection, expected.entries[i].connection));
 }
 export function decodeConnections(value: unknown): ConnectionOutcome | null {
     if (!record(value)) return null;

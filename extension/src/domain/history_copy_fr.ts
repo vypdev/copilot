@@ -2,7 +2,7 @@ import type { HistoryCopy } from './history_copy_types.ts';
 export const HISTORY_FR: HistoryCopy = {
     text: {
         diagnostics: 'Diagnostic et historique des opérations', recents: 'Destinations récentes de l’extension',
-        diagnosticIntro: 'Historique expurgé facultatif : 200 entrées au maximum pendant 7 jours. Identifiants secrets, cibles privées et notes rédigées sont exclus.',
+        diagnosticIntro: 'Historique expurgé facultatif : au plus 200 entrées pendant 7 jours et 64 Kio de JSON exporté ; les plus anciennes peuvent disparaître avant. Identifiants secrets, cibles privées et notes rédigées sont exclus.',
         recentIntro: 'Visites facultatives dans cette extension : 50 entrées au maximum pendant 7 jours. L’historique du navigateur n’est pas consulté.',
         read: 'Consulter l’état actuel', enable: 'Examiner l’activation', stop: 'Examiner l’arrêt', clear: 'Examiner l’effacement', export: 'Examiner l’export JSON',
         idle: 'Consultez l’état pour examiner le consentement et les données conservées.', reading: 'Consultation de l’état local…', unavailable: 'L’historique actuel n’a pas pu être établi. Consultez à nouveau l’état.',

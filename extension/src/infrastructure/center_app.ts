@@ -33,7 +33,9 @@ export function startCenter(api: BrowserApi, document: Document, nativeLanguage:
     if (window.location.search || !parseCenterLocation(window.location.hash)) {
         window.location.replace(`${canonical}#/recovery`); return () => undefined;
     }
-    const client = new CenterClient({ sourceTree: buildSourceIdentity(), send: message => api.runtime.sendMessage(message) });
+    const client = new CenterClient({ sourceTree: buildSourceIdentity(), send: message => api.runtime.sendMessage(message), contextChanged: () => {
+        operation.clear(); void operation.read();
+    } });
     const packageIdentity = readPackageIdentity(api, buildSourceIdentity());
     let stopped = false; let draftEpoch = 0; let savedRevision = -1; let savedCandidate: Settings | null = null; let importGeneration = 0;
     let inventory = EMPTY_INVENTORY_NAVIGATION;

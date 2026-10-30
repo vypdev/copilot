@@ -1,15 +1,18 @@
-import { connectionIntent, connectionsView, NAMED_SESSION_LIMIT, validVault, type ConnectionIntent,
+import { connectionIntent, connectionsView, NAMED_SESSION_LIMIT, validVault, sameSessionVault, type ConnectionIntent,
     type ConnectionOutcome, type SessionVault } from '../domain/named_sessions.ts';
 import { localIdentifier } from '../domain/center_routes.ts';
 import type { StoragePort } from './runtime_ports.ts';
 import type { ProtectedSessionService } from './protected_session.ts';
 import { SESSION_KEY } from './protected_session.ts';
 import { validSession } from '../domain/session.ts';
+import { deepFreeze } from '../domain/value.ts';
+import { protectedMutation, type ProtectedMutationTrace } from './protected_mutation.ts';
+import { finishSession, sessionStep, type ObserveSessionOperation, type SessionOperationTrace } from './session_observation_ports.ts';
 
 export const NAMED_SESSIONS_KEY = 'copilot.named-sessions.v1';
 export interface NamedSessionPorts {
     protected(): Promise<boolean>; identifier(): string; changed(): void;
-    connected(repositoryId: string, current: () => boolean): Promise<void>;
+    connected(repositoryId: string, current: () => boolean, trace?: ProtectedMutationTrace): Promise<void>;
 }
 const empty = (): SessionVault => ({ schemaVersion: 1, revision: 0, selected: null, entries: [] });
 
@@ -19,7 +22,7 @@ export class NamedSessions {
     private generation = 0;
     private persistence: Promise<unknown> = Promise.resolve();
     constructor(private readonly store: StoragePort, private readonly active: ProtectedSessionService, private readonly ports: NamedSessionPorts) {}
-    private persist(operation: () => Promise<void>): Promise<void> {
+    private persist<T>(operation: () => Promise<T>): Promise<T> {
         const next = this.persistence.then(operation); this.persistence = next.catch(() => undefined); return next;
     }
     private notify(): void { try { this.ports.changed(); } catch { /* Notifications cannot replace protected storage facts. */ } }
@@ -52,16 +55,27 @@ export class NamedSessions {
             return generation === this.generation && current() ? this.view(vault) : { state: 'stale' };
         } catch { return { state: 'unavailable' }; }
     }
-    async change(input: ConnectionIntent, revision: number, current: () => boolean): Promise<ConnectionOutcome> {
+    async change(input: ConnectionIntent, revision: number, current: () => boolean, observe?: ObserveSessionOperation): Promise<ConnectionOutcome> {
+        let trace: SessionOperationTrace | null = null;
+        const capture: ObserveSessionOperation = (action, target, live) => {
+            try { trace = observe?.(action, target, live) ?? null; } catch { /* A secondary capture cannot reject an admitted action. */ }
+            return trace;
+        };
+        let result: ConnectionOutcome;
+        try { result = await this.apply(input, revision, current, capture); } catch { result = { state: 'unavailable' }; }
+        finishSession(trace, result.state); return result;
+    }
+    private async apply(input: ConnectionIntent, revision: number, current: () => boolean, capture: ObserveSessionOperation): Promise<ConnectionOutcome> {
         if (!connectionIntent(input)) return { state: 'invalid' };
         if (!current()) return { state: 'stale' };
         if (input.type === 'revoke-all') {
-            try { await this.revokeAll(); return this.read(current); } catch { return { state: 'unavailable' }; }
+            try { await this.revokeAll(capture, current); return this.read(current); } catch { return { state: 'unavailable' }; }
         }
         if (this.busy) return { state: 'conflict' };
         this.busy = true; const generation = this.generation;
         const live = () => generation === this.generation && current();
-        const intent = { ...input }; let admitted = false;
+        const intent = { ...input }; let admitted = false; let trace: SessionOperationTrace | null = null; let changedActive = false;
+        const cleanup = async () => { if (changedActive) await this.active.revoke(trace, 'cleanup-active'); };
         try {
             const vault = await this.load();
             if (!live()) return { state: 'stale' };
@@ -70,9 +84,14 @@ export class NamedSessions {
             if (intent.type === 'connect' && vault.entries.some(entry => entry.name.toLowerCase() === intent.name.toLowerCase())) return { state: 'invalid' };
             const selected = intent.type === 'select' || intent.type === 'remove' ? vault.entries.find(entry => entry.id === intent.id) : undefined;
             if ((intent.type === 'select' || intent.type === 'remove') && !selected) return { state: 'invalid' };
+            if (intent.type === 'connect' || intent.type === 'select') { await this.active.start(); if (!live()) return { state: 'stale' }; }
             admitted = true;
+            const target = intent.type === 'connect' ? intent.name : selected?.name ?? vault.entries.find(entry => entry.id === vault.selected)?.name ?? null;
+            trace = capture(intent.type, { location: { route: 'connections' }, label: target }, live);
+            if (!live()) return { state: 'stale' };
             if (intent.type !== 'remove' || vault.selected === intent.id) {
-                const revoked = this.active.revoke(); this.notify(); await revoked;
+                changedActive = true;
+                const revoked = this.active.revoke(trace); this.notify(); await revoked;
                 if (!live()) return { state: 'stale' };
                 if (this.active.status().state === 'unavailable') return { state: 'unavailable' };
             }
@@ -80,14 +99,15 @@ export class NamedSessions {
             if (intent.type === 'connect' || intent.type === 'select') {
                 const secret = intent.type === 'connect' ? intent.secret : selected!.connection.secret;
                 const repository = intent.type === 'connect' ? intent.repository : selected!.connection.repository;
-                const result = await this.active.connect(secret, repository, selected?.connection, live);
-                if (!live()) { await this.active.revoke(); return { state: 'stale' }; }
+                const result = await this.active.connect(secret, repository, selected?.connection, live, trace);
+                if (!live()) { await cleanup(); return { state: 'stale' }; }
                 const verified = this.active.verifiedIdentity();
                 if (result.state !== 'connected' || !verified) return { state: ['limited', 'cooldown', 'budget'].includes(result.state)
                     ? result.state as 'limited' | 'cooldown' | 'budget' : 'unavailable' };
-                await this.ports.connected(verified.repositoryId, live);
+                const preference = sessionStep(trace, 'save-repository-preference');
+                if (preference) await this.ports.connected(verified.repositoryId, live, preference); else await this.ports.connected(verified.repositoryId, live);
                 const id = selected?.id ?? this.ports.identifier();
-                if (!localIdentifier(id) || (!selected && vault.entries.some(entry => entry.id === id))) { await this.active.revoke(); return { state: 'unavailable' }; }
+                if (!localIdentifier(id) || (!selected && vault.entries.some(entry => entry.id === id))) { await cleanup(); return { state: 'unavailable' }; }
                 const entry = { id, name: intent.type === 'connect' ? intent.name : selected!.name, host: 'github.com' as const,
                     role: 'repository-read' as const, connection: { schemaVersion: 1 as const, secret, ...verified } };
                 next = { ...vault, revision: revision + 1, selected: id,
@@ -97,24 +117,29 @@ export class NamedSessions {
                     entries: intent.type === 'remove' ? vault.entries.filter(entry => entry.id !== intent.id)
                         : vault.entries.filter(entry => entry.id !== vault.selected) };
             }
-            if (!live()) { await this.active.revoke(); return { state: 'stale' }; }
+            if (!live()) { await cleanup(); return { state: 'stale' }; }
             // A read-back can establish an observed save after lost acknowledgement; never repeat the write.
-            try { await this.persist(async () => { if (live()) await this.store.set(NAMED_SESSIONS_KEY, next); }); }
-            catch {
-                const observed = await this.store.get(NAMED_SESSIONS_KEY);
-                if (!validVault(observed) || JSON.stringify(observed) !== JSON.stringify(next)) { await this.active.revoke(); return { state: 'unknown' }; }
-            }
-            if (!live()) { await this.active.revoke(); return { state: 'stale' }; }
+            const expected = deepFreeze(next);
+            const saved = await this.persist(async () => {
+                const step = sessionStep(trace, 'save-vault'); if (!live()) return null;
+                return protectedMutation(() => this.store.set(NAMED_SESSIONS_KEY, expected), async () => sameSessionVault(await this.store.get(NAMED_SESSIONS_KEY), expected), step);
+            });
+            if (!saved) { await cleanup(); return { state: 'stale' }; }
+            if (saved.observation !== 'committed') { await cleanup(); return { state: 'unknown' }; }
+            if (!live()) { await cleanup(); return { state: 'stale' }; }
             return this.view(next);
-        } catch { await this.active.revoke(); return { state: 'unavailable' }; }
+        } catch { await cleanup(); return { state: 'unavailable' }; }
         finally { this.busy = false; if (admitted) this.notify(); }
     }
     /** Permission removal is independent of preference-schema or center editing availability. */
-    async revokeAll(): Promise<void> {
-        this.generation++; const removal = this.active.revoke();
+    async revokeAll(observe?: ObserveSessionOperation, current: () => boolean = () => true): Promise<void> {
+        const generation = ++this.generation; const live = () => generation === this.generation && current();
+        let trace: SessionOperationTrace | null = null;
+        try { trace = observe?.('revoke-all', { location: { route: 'connections' }, label: null }, live) ?? null; } catch { /* Removal remains independent of recording. */ }
+        const removal = this.active.revoke(trace);
         try {
-            await this.persist(() => this.store.remove(NAMED_SESSIONS_KEY)); await removal;
-            if (this.active.status().state === 'unavailable') throw new Error('protected-removal-unavailable');
+            const removed = await this.persist(() => protectedMutation(() => this.store.remove(NAMED_SESSIONS_KEY), async () => await this.store.get(NAMED_SESSIONS_KEY) === undefined, sessionStep(trace, 'remove-vault'))); await removal;
+            if (removed.observation !== 'committed' || this.active.status().state === 'unavailable') throw new Error('protected-removal-unavailable');
         } finally { await removal; this.notify(); }
     }
 }

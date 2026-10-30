@@ -1,6 +1,6 @@
-import { journalKind, type JournalFact, type JournalKind, type OperationFact } from '../domain/journal_facts.ts';
+import { journalKind, progressiveFact, progressiveTerminal, type JournalFact, type JournalKind, type ProgressiveFact } from '../domain/journal_facts.ts';
 import { validJournalSnapshot, type JournalSnapshot } from '../domain/local_journal.ts';
-import { mergeOperationFact, sameJournalFact, snapshotJournalFact } from '../domain/journal_progress.ts';
+import { mergeProgressiveFact, sameJournalFact, snapshotJournalFact } from '../domain/journal_progress.ts';
 import { deepFreeze, natural } from '../domain/value.ts';
 import type { JournalStore } from './journal_ports.ts';
 import { JournalWorkQueue } from './journal_work_queue.ts';
@@ -72,9 +72,10 @@ export class JournalWriter {
         const rows = new Map(value.entries.map(entry => [entry.sequence, entry]));
         for (const work of this.records.values()) if (work.kind === kind && work.sequence !== null) {
             const row = rows.get(work.sequence);
-            if (row?.at !== work.at) continue;
-            if (row?.fact.kind !== 'operation' || work.desired.kind !== 'operation') continue;
-            const desired = mergeOperationFact(row.fact, work.desired); if (!desired) continue;
+            if (!row) { this.forget(work); continue; }
+            if (row.at !== work.at) continue;
+            if (!progressiveFact(row.fact) || !progressiveFact(work.desired)) continue;
+            const desired = mergeProgressiveFact(row.fact, work.desired); if (!desired) continue;
             work.stored = row.fact; work.desired = desired; work.needsRead = false;
             if (sameJournalFact(row.fact, desired)) { work.retention = 'stored'; this.queue.remove(work); }
         }
@@ -106,8 +107,7 @@ export class JournalWriter {
         const epoch = this.slots[kind].epoch; if (epoch === null) { this.drop(kind, 'not-ready'); return null; }
         this.prune(now);
         if (this.records.size >= 200) {
-            const closed = [...this.records.values()].find(work => !this.queue.contains(work) && (work.desired.kind !== 'operation'
-                || ['cancelled', 'blocked'].includes(work.desired.phase) || work.desired.phase === 'settled' && work.desired.observation === 'committed'
+            const closed = [...this.records.values()].find(work => !this.queue.contains(work) && (!progressiveFact(work.desired) || progressiveTerminal(work.desired)
                 || work.sequence === null && work.retention !== 'pending'));
             if (closed) this.forget(closed);
         }
@@ -118,11 +118,11 @@ export class JournalWriter {
     }
     update(ticket: JournalTicket, input: unknown): 'queued' | 'unchanged' | 'invalid' | 'untracked' {
         const work = this.records.get(ticket);
-        if (this.disposed || !work || work.desired.kind !== 'operation' || work.sequence === null && work.retention !== 'pending') return 'untracked';
+        if (this.disposed || !work || !progressiveFact(work.desired) || work.sequence === null && work.retention !== 'pending') return 'untracked';
         const now = this.time(); if (now === null) { this.drop(work.kind, 'clock-invalid'); return 'invalid'; }
         this.prune(now); if (!this.records.has(ticket)) return 'untracked';
         const value = snapshotJournalFact('diagnostics', input);
-        const desired = value?.kind === 'operation' ? mergeOperationFact(work.desired, value) : null;
+        const desired = progressiveFact(value) ? mergeProgressiveFact(work.desired, value) : null;
         if (!desired) { this.drop(work.kind, 'invalid'); return 'invalid'; }
         if (sameJournalFact(work.desired, desired)) return 'unchanged';
         work.desired = desired; work.retention = 'pending'; this.queue.enqueue(work); return 'queued';
@@ -137,8 +137,8 @@ export class JournalWriter {
         if (result.sequence !== undefined) work.sequence = result.sequence;
         if (result.stored) {
             // IO validates the same action and legal progress; observations and updates preserve those invariants.
-            work.stored = work.stored ? mergeOperationFact(work.stored, result.stored)! : result.stored;
-            work.desired = mergeOperationFact(work.stored, work.desired as OperationFact)!;
+            work.stored = work.stored ? mergeProgressiveFact(work.stored, result.stored)! : result.stored;
+            work.desired = mergeProgressiveFact(work.stored, work.desired as ProgressiveFact)!;
         }
         if (result.issue !== 'none') this.drop(work.kind, result.issue);
         if (result.retention === 'stored' && work.stored && !sameJournalFact(work.stored, work.desired)) {

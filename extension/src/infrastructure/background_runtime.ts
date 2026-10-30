@@ -38,8 +38,8 @@ export function startBackground(api: BrowserApi): () => void {
     });
     const settings = history.settings;
     const connections = new NamedSessions(session, sessions, { protected: () => session.protect(), identifier: () => `s-${centerIdentifier()}`,
-        changed: notify, connected: async (id, current) => {
-            await settings.update(value => ({ ...value, repositories: { ...value.repositories, [id]: { ...value.repositories[id], connected: true } } }), current);
+        changed: notify, connected: async (id, current, trace) => {
+            await settings.updateObserved(value => ({ ...value, repositories: { ...value.repositories, [id]: { ...value.repositories[id], connected: true } } }), current, trace);
         } });
     const gateway = new MessageGateway(api.runtime.id, api.runtime.getURL(''), settings, sessions,
         { currentTab: id => api.tabs.get(id), openSettings: (windowId, command) => api.tabs.create({

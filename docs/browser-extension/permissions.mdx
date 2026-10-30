@@ -99,11 +99,10 @@ Optional generated history is still under development. Its typed Activity,
 Diagnostics and Privacy controls now provide independent reads, reviewed
 start/stop/clear and exact-JSON export. Consented recent destinations are now
 composed from accepted local-center navigation. Preference operations now supply
-redacted observations from the native service. Connection/compound-operation and
-helper producers, and full native/human acceptance remain outstanding. See the
+redacted observations from the native service. Session operations now have their own ordered storage observations. Compound collection-operation and helper producers, and full native/human acceptance remain outstanding. See the
 [local history guide](/browser-extension/local-history).
-The defaults remain off: redacted diagnostics/operation facts at most200
-entries, recent extension destinations at most50, both for seven days. Stopping
+The defaults remain off: redacted diagnostics/operation facts at most 200
+entries, recent extension destinations at most 50, both for seven days. Each collection also fits within 64 KiB of its exact exported JSON, so older generated entries can leave sooner. Stopping
 collection and explicitly clearing retained history are separate actions. Exact
 private targets, credentials, authored notes and browser history are outside that
 generated-data journal. Its presence in source does not change current collection
@@ -116,9 +115,9 @@ removal. A reviewed history clear removes entries and retains the disclosed safe
 controls. These screens are present in development source; complete product
 acceptance remains outstanding.
 
-The separate **Last preference operation** view uses temporary background memory,
+The separate **Last observed operation** view uses temporary background memory,
 with one entry per native window, at most eight, for five minutes from first
-observation. Its exact profile label or repository target is captured only for
+observation. Its exact profile label, repository target or session label is captured only for
 that operation and never enters generated history or export. Source loss,
 replacement, expiry or shutdown retires it; later reads cannot reconstruct it.
 Clearing generated history does not clear this current-operation memory, saved

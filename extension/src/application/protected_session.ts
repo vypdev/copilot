@@ -6,6 +6,7 @@ import type { StoragePort } from './runtime_ports.ts';
 import type { CancellationOwner, ReadCancellation, SessionPorts } from './read_ports.ts';
 import { ReadScheduler, type ScheduledRead } from './read_scheduler.ts';
 import { protectedMutation } from './protected_mutation.ts';
+import { sessionStep, sessionCredential, type SessionOperationTrace } from './session_observation_ports.ts';
 
 export const SESSION_KEY = 'copilot.connection.v1';
 export type SessionStatus = { readonly state: 'disconnected' | 'connected' | 'unavailable' | 'revalidating' | 'limited' | 'cooldown' | 'budget'; readonly epoch: number; readonly retryAt?: number };
@@ -41,11 +42,12 @@ export class ProtectedSessionService {
         const { schemaVersion: _schema, secret: _secret, ...identity } = value; return identity;
     }
     async start(scope?: RestorationScope): Promise<void> {
+        const epoch = this.epoch;
         this.initialization ??= this.restore(scope);
         const pending = this.initialization;
         await pending;
         // A fresh eligible request may retry; the scheduler retains cooldown/budget and no loop is started here.
-        if (scope && this.initialization === pending && !this.connection) this.initialization = undefined;
+        if (scope && epoch === this.epoch && this.initialization === pending && !this.connection) this.initialization = undefined;
     }
     private async restore(scope?: RestorationScope): Promise<void> {
         const epoch = this.epoch;
@@ -69,22 +71,22 @@ export class ProtectedSessionService {
             if (epoch === this.epoch && !current() && !this.connection) this.state = 'disconnected';
         }
     }
-    async connect(secret: string, repository: string, expected?: ProtectedSession, current: () => boolean = () => true): Promise<SessionStatus> {
+    async connect(secret: string, repository: string, expected?: ProtectedSession, current: () => boolean = () => true, observer?: SessionOperationTrace | null): Promise<SessionStatus> {
         await this.start();
         if (!current()) return this.status();
-        const removal = this.revoke(); const epoch = this.epoch;
+        const removal = this.revoke(observer); const epoch = this.epoch;
         await removal;
         try {
             if (epoch !== this.epoch || !current()) return this.status();
             const ready = await this.ports.protected() && await this.ports.permitted();
             if (epoch !== this.epoch || !current()) return this.status();
             if (!ready) { this.state = 'unavailable'; return this.status(); }
-            await this.establish(secret, repository, epoch, expected, current);
-        } catch { if (epoch === this.epoch) { await this.revoke(); this.state = 'unavailable'; } }
+            await this.establish(secret, repository, epoch, expected, current, this.cancellation, observer);
+        } catch { if (epoch === this.epoch) { await this.revoke(observer, 'cleanup-active'); this.state = 'unavailable'; } }
         return this.status();
     }
     private async establish(secret: string, repository: string, epoch: number, expected: ProtectedSession | undefined, current: () => boolean,
-        cancellation: ReadCancellation = this.cancellation): Promise<void> {
+        cancellation: ReadCancellation = this.cancellation, observer?: SessionOperationTrace | null): Promise<void> {
         // Both callers admit the current scope synchronously; asynchronous completions are fenced below.
         const activity = { visible: true, active: true, online: true, pending: false, manual: true };
         const identity = await this.scheduler.run(`connect/${epoch}/viewer`, 'connection', { type: 'viewer' }, secret, cancellation, activity);
@@ -99,17 +101,18 @@ export class ProtectedSessionService {
         const repo = target.data as Repository;
         if (identity.bytes + target.bytes > 1024 * 1024) return;
         if (expected && (expected.viewerId !== viewer.id || expected.repositoryId !== repo.id)) throw new Error('identity-changed');
-        const connection: ProtectedSession = { schemaVersion: 1, secret, viewerId: viewer.id, viewerLogin: viewer.login,
-            repositoryId: repo.id, repository: repo.name, ...(repo.organizationId === undefined ? {} : { organizationId: repo.organizationId }) };
+        const connection: ProtectedSession = Object.freeze({ schemaVersion: 1, secret, viewerId: viewer.id, viewerLogin: viewer.login,
+            repositoryId: repo.id, repository: repo.name, ...(repo.organizationId === undefined ? {} : { organizationId: repo.organizationId }) });
         const saved = await this.persist(async () => {
+            const trace = sessionStep(observer, 'save-active');
             if (epoch !== this.epoch || !current()) return null;
-            return protectedMutation(() => this.store.set(SESSION_KEY, connection), async () => sameProtectedSession(await this.store.get(SESSION_KEY), connection));
+            return protectedMutation(() => this.store.set(SESSION_KEY, connection), async () => sameProtectedSession(await this.store.get(SESSION_KEY), connection), trace);
         });
         if (!saved) return;
         if (saved.observation !== 'committed') throw new Error('protected-save-unconfirmed');
         const permitted = await this.ports.permitted();
         if (epoch !== this.epoch) return;
-        if (!permitted || !current()) { await this.revoke(); return; }
+        if (!permitted || !current()) { await this.revoke(observer, 'cleanup-active'); return; }
         this.connection = connection; this.state = 'connected';
     }
     private defer(result: ScheduledRead): boolean {
@@ -118,10 +121,12 @@ export class ProtectedSessionService {
         return true;
     }
     /** Fence and abort synchronously, before the first storage await. */
-    async revoke(): Promise<void> {
-        const epoch = ++this.epoch; this.retryAt = undefined; this.connection = undefined; this.state = 'disconnected';
+    async revoke(observer?: SessionOperationTrace | null, effect: 'retire-active' | 'cleanup-active' = 'retire-active'): Promise<void> {
+        this.initialization ??= Promise.resolve();
+        const previous = this.epoch; const epoch = ++this.epoch; this.retryAt = undefined; this.connection = undefined; this.state = 'disconnected';
+        sessionCredential(observer, previous, epoch);
         this.cancellation.abort(); this.cancellation = this.ports.cancellation(); this.scheduler.invalidate();
-        const removed = await this.persist(() => protectedMutation(() => this.store.remove(SESSION_KEY), async () => await this.store.get(SESSION_KEY) === undefined));
+        const removed = await this.persist(() => protectedMutation(() => this.store.remove(SESSION_KEY), async () => await this.store.get(SESSION_KEY) === undefined, sessionStep(observer, effect)));
         if (epoch === this.epoch && removed.observation !== 'committed') this.state = 'unavailable';
     }
     private persist<T>(operation: () => Promise<T>): Promise<T> {

@@ -8,8 +8,9 @@ import { HISTORY_EFFECTS, type HistoryMessage } from '../domain/history_protocol
 import type { HistoryRequest } from '../domain/history_request.ts';
 import { uncertainSettingsOutcome as uncertain, publicSettingsReview as publicReview } from '../domain/settings_review_projection.ts';
 import { RecentsClient } from './recents_client.ts';
+import { readCurrentOperation, observationContextChanged } from './center_observation_context.ts';
 
-export interface CenterClientPort { readonly sourceTree: string; send(message: CenterMessage | ConnectionMessage | HistoryMessage): Promise<unknown> }
+export interface CenterClientPort { readonly sourceTree: string; send(message: CenterMessage | ConnectionMessage | HistoryMessage): Promise<unknown>; contextChanged?(): void }
 /** One mounted view; reusable authority stays private, while committed receipts are inspectable facts. */
 export class CenterClient {
     private owner: CenterIdentity | null = null;
@@ -32,9 +33,7 @@ export class CenterClient {
     startVisitCapture(): Promise<void> { this.visitTracking = true; return this.recents.refresh(); }
     observeDestination(location: unknown): boolean { return this.recents.observe(location); }
     async readOperation(): Promise<Record<string, unknown> | null> {
-        const owner = this.owner; if (this.stopped || !owner) return null;
-        const value = await this.request({ version: 1, method: 'center.operation.read', clientId: owner.clientId }, true);
-        return (['clientId', 'controllerEpoch', 'credentialEpoch'] as const).every(key => this.owner?.[key] === owner[key]) ? value : null;
+        return readCurrentOperation(this.owner, this.stopped, message => this.request(message, true), () => this.owner);
     }
     get view(): CenterClientView { return this.value; }
     invalidateConnections(): void { if (!this.stopped) { this.connectionGeneration++; this.update({ connections: null }); } }
@@ -110,6 +109,7 @@ export class CenterClient {
             return;
         }
         this.owner = document.identity;
+        observationContextChanged(owner, document.identity, () => this.port.contextChanged?.());
         if (this.visitTracking) void this.recents.refresh();
         const { identity: identity, ...data } = document;
         let review = this.value.review;
@@ -165,24 +165,24 @@ export class CenterClient {
     }
     async confirm(): Promise<void> { await this.complete('center.confirm'); }
     async cancel(): Promise<void> { await this.complete('center.cancel'); }
-    async connections(input: ConnectionIntent | null | (() => Promise<ConnectionIntent | null>) = null, expectedRevision = 0): Promise<void> {
-        if (this.stopped || this.busy || !this.owner || this.value.review) return;
+    async connections(input: ConnectionIntent | null | (() => Promise<ConnectionIntent | null>) = null, expectedRevision = 0): Promise<number | null> {
+        if (this.stopped || this.busy || !this.owner || this.value.review) return null;
         const owner = this.owner; const generation = this.generation; const connectionGeneration = this.connectionGeneration;
-        if (input && owner.role !== 'editor') { this.update({ connections: { state: 'denied' } }); return; }
+        if (input && owner.role !== 'editor') { this.update({ connections: { state: 'denied' } }); return null; }
         this.busy = true; this.update({ phase: input ? 'committing' : 'reading' });
         let intent: ConnectionIntent | null;
         try { intent = typeof input === 'function' ? await input() : input; }
-        catch { if (this.current(generation)) this.update({ connections: { state: 'unavailable' } }); await this.finish(generation); return; }
-        if (!this.current(generation)) return;
-        if (input && !intent) { this.update({ connections: { state: 'denied' } }); await this.finish(generation); return; }
-        if (intent && !connectionIntent(intent)) { this.update({ connections: { state: 'invalid' } }); await this.finish(generation); return; }
+        catch { if (this.current(generation)) this.update({ connections: { state: 'unavailable' } }); await this.finish(generation); return null; }
+        if (!this.current(generation)) return null;
+        if (input && !intent) { this.update({ connections: { state: 'denied' } }); await this.finish(generation); return null; }
+        if (intent && !connectionIntent(intent)) { this.update({ connections: { state: 'invalid' } }); await this.finish(generation); return null; }
         const response = decodeConnections(await this.request(intent ? { version: 1, method: 'center.connections.change',
             clientId: owner.clientId, controllerEpoch: owner.controllerEpoch, credentialEpoch: owner.credentialEpoch, expectedRevision, intent }
             : { version: 1, method: 'center.connections.read', clientId: owner.clientId }));
-        if (!this.current(generation)) return;
+        if (!this.current(generation)) return null;
         if (connectionGeneration === this.connectionGeneration) this.update({ connections: response ?? { state: intent ? 'unknown' : 'unavailable' } });
         this.queuedRead = true;
-        await this.finish(generation);
+        await this.finish(generation); return this.current(generation) && intent && response?.state === 'ready' ? response.revision : null;
     }
     private async complete(method: 'center.confirm' | 'center.cancel'): Promise<void> {
         if (this.stopped || this.busy || !this.owner || !this.pending) return;

@@ -5,6 +5,7 @@ import type { StoragePort } from './runtime_ports.ts';
 import type { SettingsCommit, SettingsInspection, SettingsReceipt } from './settings_transaction_ports.ts';
 import { SettingsMutationQueue, type SettingsMutationReservation } from './settings_mutation_queue.ts';
 import { settingsWriteScope, type SettingsWriteEffects } from './settings_write_effects.ts';
+import { protectedMutation, type ProtectedMutationTrace } from './protected_mutation.ts';
 
 export const SETTINGS_KEY = 'copilot.settings.v1';
 interface Envelope { readonly current: unknown; readonly previous?: unknown; readonly operation?: SettingsReceipt }
@@ -87,6 +88,13 @@ export class SettingsRepository {
     }
     /** Serialize application mutations against the latest complete settings envelope. */
     update(change: (settings: Settings) => unknown, current: () => boolean = () => true): Promise<Settings> {
+        return this.change(change, current, false);
+    }
+    /** Native session opt-in: verify complete persistence independently from its secondary observer. */
+    updateObserved(change: (settings: Settings) => unknown, current: () => boolean, trace?: ProtectedMutationTrace): Promise<Settings> {
+        return this.change(change, current, true, trace);
+    }
+    private change(change: (settings: Settings) => unknown, current: () => boolean, canonical: boolean, trace?: ProtectedMutationTrace): Promise<Settings> {
         return this.mutations.run(async () => {
             const loaded = await this.read();
             if (loaded.state !== 'ready' || !current()) throw new Error('settings-conflict-or-invalid');
@@ -99,7 +107,12 @@ export class SettingsRepository {
                 if (!current()) throw new Error('settings-conflict-or-invalid');
                 if (!scope.allowed) throw new Error('settings-collection-unavailable');
                 // One storage operation atomically publishes current + one nonsecret rollback.
-                await this.storage.set(SETTINGS_KEY, envelope);
+                if (canonical) {
+                    const result = await protectedMutation(() => this.storage.set(SETTINGS_KEY, envelope), async () => {
+                        const observed = await this.inspect(); return observed.loaded.state === 'ready' && !observed.loaded.migrated && sameSettingsContent(observed.loaded.settings, next);
+                    }, trace);
+                    if (result.observation !== 'committed') throw new Error('settings-write-unconfirmed');
+                } else await this.storage.set(SETTINGS_KEY, envelope);
                 return next;
             } finally { scope.release(); }
         });

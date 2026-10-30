@@ -3,6 +3,7 @@ import { journalFact, settingsJournalAction, type OperationFact } from './journa
 import type { JournalRetention } from './history_state.ts';
 import { decodeHistoryValue, exactHistoryFields } from './history_decode.ts';
 import { natural, record } from './value.ts';
+import { validSessionFact, type SessionFact } from './session_fact.ts';
 
 /** Private target detail is current-worker memory only, never a generated journal fact. */
 export interface CurrentTarget { readonly location: CenterLocation; readonly label: string | null }
@@ -13,7 +14,11 @@ export interface CurrentSettingsOperation {
     readonly target: CurrentTarget | null; readonly sourceCurrent: boolean; readonly firstObserved: number;
     readonly retention: JournalRetention;
 }
-export type CurrentOperationReply = { readonly state: 'empty' } | { readonly state: 'current'; readonly operation: CurrentSettingsOperation };
+export interface CurrentSessionOperation {
+    readonly family: 'sessions'; readonly stage: SessionFact['state']; readonly fact: SessionFact;
+    readonly target: CurrentTarget | null; readonly sourceCurrent: boolean; readonly firstObserved: number; readonly retention: JournalRetention;
+}
+export type CurrentOperationReply = { readonly state: 'empty' } | { readonly state: 'current'; readonly operation: CurrentSettingsOperation | CurrentSessionOperation };
 export interface CurrentOperationView {
     readonly phase: 'idle' | 'reading' | 'ready' | 'unavailable'; readonly current: boolean; readonly value: CurrentOperationReply | null;
 }
@@ -34,7 +39,14 @@ export function currentSettingsOperation(value: unknown): value is CurrentSettin
     return value.stage === 'confirming' ? phase === 'reviewed' : value.stage === 'unknown'
         ? phase === 'reviewed' || phase === 'submitted' || phase === 'settled' : value.stage === phase;
 }
+export function currentSessionOperation(value: unknown): value is CurrentSessionOperation {
+    return exactHistoryFields(value, ['family', 'stage', 'fact', 'target', 'sourceCurrent', 'firstObserved', 'retention'])
+        && value.family === 'sessions' && validSessionFact(value.fact) && value.stage === value.fact.state
+        && typeof value.sourceCurrent === 'boolean' && natural(value.firstObserved)
+        && (value.target === null || value.sourceCurrent && currentTarget(value.target))
+        && ['pending', 'stored', 'not-retained', 'unknown', 'untracked'].includes(value.retention as string);
+}
 export function decodeCurrentOperation(value: unknown): CurrentOperationReply | null {
     return decodeHistoryValue(value, (v): v is CurrentOperationReply => exactHistoryFields(v, ['state']) && v.state === 'empty'
-        || exactHistoryFields(v, ['state', 'operation']) && v.state === 'current' && currentSettingsOperation(v.operation));
+        || exactHistoryFields(v, ['state', 'operation']) && v.state === 'current' && (currentSettingsOperation(v.operation) || currentSessionOperation(v.operation)));
 }
