@@ -15,10 +15,12 @@ import { createCenter, centerIdentifier } from './center_runtime.ts';
 import { NamedSessions } from '../application/named_sessions.ts';
 import { centerCommandRoute } from '../domain/shortcuts.ts';
 import { centerLocationHash } from '../domain/center_routes.ts';
+import { TEMPORARY_PAUSES_KEY, TemporaryPauseReader } from '../application/temporary_pause_reader.ts';
 
 export function startBackground(api: BrowserApi): () => void {
     const local = new BrowserStorage(api.storage.local);
     const session = new BrowserStorage(api.storage.session);
+    const pauses = new TemporaryPauseReader(session, () => session.protect());
     const scheduler = new ReadScheduler(session, new GitHubGetReader(), () => Date.now(), () => Math.random() * 1000);
     const sessions = new ProtectedSessionService(session, scheduler, {
         cancellation: () => new BrowserCancellation(),
@@ -53,7 +55,7 @@ export function startBackground(api: BrowserApi): () => void {
             return opened;
         },
             cancellation: () => new BrowserCancellation(),
-            online: () => globalThis.navigator?.onLine !== false, notify }, createCenter(api, settings, sessions, notify, connections, { owner: history, policies }, helpers), connections, helpers);
+            online: () => globalThis.navigator?.onLine !== false, notify }, createCenter(api, settings, sessions, notify, connections, { owner: history, policies }, helpers), connections, helpers, pauses);
     const message: Parameters<typeof api.runtime.onMessage.addListener>[0] = (value, sender, respond) => {
         void gateway.handle(value, sender).then(result => respond({ ...(record(result) ? result : { state: 'unavailable' }), sourceTree: buildSourceIdentity() })); return true;
     };
@@ -71,6 +73,7 @@ export function startBackground(api: BrowserApi): () => void {
         }
     };
     const storage = (changes: Record<string, unknown>, area: string) => {
+        if (area === 'session' && Object.hasOwn(changes, TEMPORARY_PAUSES_KEY)) gateway.invalidate();
         if (area === 'local' && Object.hasOwn(changes, SETTINGS_KEY)) {
             history.invalidate(); gateway.invalidate(); void history.refresh();
         }

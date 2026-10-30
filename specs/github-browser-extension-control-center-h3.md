@@ -1642,3 +1642,112 @@ candidate; it must not first restore another saved identity. Independently
 admitted GitHub page restoration retains its existing policy and is not supplied
 by grouping or metadata inspection. Test cold reads and first explicit legacy
 verification through the actual background, not only a mock metadata port.
+
+### Temporary pause admission foundation (2026-10-30)
+
+H3-R03/R04/R05/R11 and BEX-CENTER-03 require separate emergency, native-tab
+and verified-session controls. This increment implements **the browser-session
+pause document, pure planning and read admission**, not the complete authoring,
+review, resumption or provenance UI. Those remaining flows, verified-session
+overrides, native browser runs and human acceptance remain mandatory for H3.
+No source checkpoint or isolated policy case establishes their completion.
+
+Browser-session restrictions MUST survive a background worker restart. Native
+`storage.session` supplies that lifetime; a JavaScript global is insufficient.
+Chrome clears this storage on browser restart or extension disable/reload/update
+([Chrome storage](https://developer.chrome.com/docs/extensions/reference/api/storage),
+[Mozilla storage.session](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/storage/session)).
+The implementation uses the existing protected session-storage port, never
+local/sync storage, a timer keeping the worker alive, or a new permission.
+The user's saved global/repository/profile pauses retain their own longer
+lifetimes. Releasing a temporary scope cannot release one of those pauses.
+
+| Input | Default and bound | Meaning and owner |
+|---|---|---|
+| `schemaVersion` | Exact 1 | Separate protected session record; no settings-schema migration |
+| `revision` | 0; nonnegative safe integer | Expected-revision preview; no overflow or implicit write |
+| `emergency` | false; boolean | Restrict every admitted native GitHub tab |
+| `tabs` | Empty; at most 128 distinct native IDs | Restrict only those native tabs, canonical numeric order |
+
+The closed document contains exactly those four keys and fits 16 KiB. Native
+tab IDs are nonnegative safe integers; sparse arrays, duplicate IDs, extra keys
+and unsafe values are invalid. No URL, title, account/repository identity,
+credential, provider detail or connection grant belongs here. Only an actually
+absent native key means the safe default. Null/corrupt, unavailable or future
+data is an **unknown restriction**, never an observed empty unpaused record.
+Keep its native input untouched. Imported preferences, profile selection,
+preference reset and rollback cannot author or erase this separate document.
+
+```text
+Native admitted page → protected local pause read → current source check
+ → emergency/tab/unknown restriction: stop before credential inspection or HTTP
+ → otherwise existing preference/identity/provider admission
+ → reread pauses + settings → publish only matching current observations
+```
+
+Text equivalent: a positive pause or unknown observation restricts before any
+credential restoration. An unpaused observation grants nothing; all existing
+identity, permission, visibility, online, source, profile and GET checks still
+apply. Native tab identity comes from the admitted sender and native API, not a
+page's repository/viewer/generation operands. Emergency takes precedence over
+tab pause. The pure policy also distinguishes `unavailable` and `none` sources;
+the final controls and runtime explanation MUST expose these differences before
+full H3 acceptance, without claiming the user chose a pause when data is unknown.
+
+Closed pure change intents are emergency pause/resume or one native tab's
+pause/resume. The planner snapshots and revalidates an owned immutable copy,
+preserves unrelated scopes, increments only a real change and rejects stale
+revision, capacity, overflow and authority-bearing fields. A pure plan is
+neither native tab admission, controller authorization, a storage write nor a
+commit receipt. The future authoring coordinator MUST supply all of those
+boundaries and explicit reviewed resumption; do not expose the planner directly
+as a mutating content method. There is no new message method in this increment.
+
+Domain owns the closed schema, canonical snapshot, plan and restriction
+provenance. `TemporaryPauseReader` owns one protected native observation through
+existing `StoragePort`; it never initializes, repairs or mutates the key.
+`PageConfigurationService` shares the restriction with rendered configuration
+and actual object-GET admission. Composition always installs the reader and
+invalidates native page leases on that exact session key's change. A different
+session-storage key cannot retire an unrelated page. Recheck the pause document
+after asynchronous identity/settings work even before a change event arrives;
+a changed revision, disappeared record or unavailable final read cannot publish
+the earlier unpaused observation. A native event also aborts in-flight effects.
+Existing deterministic H2 constructor fixtures may omit this H3 adapter; the
+actual background composition cannot. Architecture/package/CI and pure-boundary
+checks remain in force.
+
+Failures preserve the saved profile and protected credential unless their own
+existing authority rules revoke them. The local center remains available for
+inspection/recovery; no API grant, HTTP retry, automatic empty initialization or
+fallback storage is requested. Runtime unavailability, future/corrupt storage
+and unavailable browser support remain distinct from an affirmative resume.
+Unknown and known restrictions intentionally block network admission. Logging
+must not export raw native values/errors. There are no GitHub comments, new
+timers, host permissions or notifications beyond existing invalidation.
+
+This foundation has a **minimum 64 distinct-case risk budget**: 36 closed/pure
+schema and revision/scope planning, 12 protected reader/admission, 8 actual native
+composition and 8 asynchronous source/observation races. Each test counts once;
+parameter rows count only distinct invalid/native states. The full H3 160-case
+risk floor, complete 56+56 CENTER obligations and 803 catalog cases remain.
+New pure/runtime lines, branches, functions and statements require 100% local
+coverage; final PR acceptance still requires every modified line covered without
+partials in remote Codecov against the then-current base. No exclusion or
+threshold reduction is authorized.
+
+Acceptance: absent key causes no write or grant; cold emergency/current-tab/
+unknown restriction causes zero credential/provider reads; another native tab
+does not inherit that tab's pause; a newer/unknown final observation prevents
+the object GET; native invalidation retires an actual pending provider response;
+a newer same-generation observation retires an older suspended admission before
+credential restoration, without waiting for the native storage event;
+an independently started worker observes the same stored browser-session pause;
+releasing one scope preserves the others; corrupt/future input is preserved;
+all closed bounds and immutable source rules hold. Tests map these invariants
+through `temporary_pauses.test.ts`, `temporary_pause_admission.test.ts` and
+`temporary_pause_background.test.ts` and `temporary_pause_races.test.ts`. Configuration documentation explains the
+lifetimes/restriction rules; the contributor guide records the read/write trust
+boundary. Loaded-browser restart/storage behavior, complete authoring UX,
+four-locale provenance and human acceptance remain required evidence, not claims
+made by deterministic composition tests.

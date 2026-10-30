@@ -296,3 +296,19 @@ exact valid nested schema 1 gains empty groups and no selection without changing
 its old preferences. Future/corrupt or oversized data stays preserved and
 uneditable until recovered; it is never treated as an empty saved collection.
 The shared **64 KiB** preference limit applies in addition to collection bounds.
+
+### Temporary restriction lifetimes
+
+Saved global, repository and profile pauses remain separate from temporary
+browser-session restrictions. An emergency restriction takes precedence over a
+tab restriction; releasing either must preserve every other active pause.
+Temporary pause state belongs to protected browser-session storage, outside
+settings export, import and rollback. A worker restart must not clear it.
+Browser restart or extension reload can end that browser-session lifetime;
+use a saved pause when you need persistence beyond it.
+
+The current H3 admission foundation checks this state before credential
+restoration and GitHub reads. An unavailable, corrupt or newer pause document
+blocks those reads and preserves the document. It never means that a resume
+succeeded. The complete temporary-control editor, reviewed resumption and
+visible provenance remain part of the ongoing H3 implementation.

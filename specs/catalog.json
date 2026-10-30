@@ -3246,7 +3246,9 @@
         "extension/src/domain/workspace_review.ts",
         "extension/src/presentation/WorkspacesPage.svelte",
         "extension/src/presentation/WorkspaceEditor.svelte",
-        "extension/src/presentation/WorkspaceReferences.svelte"
+        "extension/src/presentation/WorkspaceReferences.svelte",
+        "extension/src/domain/temporary_pauses.ts",
+        "extension/src/application/temporary_pause_reader.ts"
       ],
       "tests": [
         "src/application/usecases/__tests__/read_copilot_status_workflow.test.ts",
@@ -3524,7 +3526,12 @@
         "extension/test/integration/workspace_center.test.ts",
         "extension/test/integration/workspace_reference_boundaries.test.ts",
         "extension/test/integration/workspace_background.test.ts",
-        "extension/test/fixtures/workspace_center.ts"
+        "extension/test/fixtures/workspace_center.ts",
+        "extension/test/contracts/temporary_pauses.test.ts",
+        "extension/test/integration/temporary_pause_admission.test.ts",
+        "extension/test/integration/temporary_pause_background.test.ts",
+        "extension/test/integration/temporary_pause_races.test.ts",
+        "extension/test/fixtures/temporary_pause.ts"
       ],
       "documentation": [
         "docs/development/specifications.mdx",

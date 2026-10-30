@@ -939,3 +939,21 @@ Tests exercise actual native background/settings/session composition with
 deterministic browser/provider ports, alongside mounted four-locale pages,
 closed-schema migration, rollback/replay, unknown outcomes and privacy boundaries.
 These results remain separate from loaded-browser and human H3 evidence.
+
+The H3 temporary-pause admission foundation uses a separate, closed
+`copilot.temporary-pauses.v1` protected session record: schema/revision,
+emergency boolean and at most 128 native tab IDs. Its 16-KiB bound contains no
+URLs, repository metadata or credentials. `TemporaryPauseReader` has no write,
+repair, permission-request or fallback-storage path. An absent key is the only
+empty default; unavailable/corrupt/future data restricts admission. The actual
+background installs this dependency before credential restoration and shares
+its result with configuration and object-GET admission. It rereads before
+publication and invalidates native page leases on this exact session key.
+
+Pure emergency/tab change plans do not authorize native writes. Authoring,
+retained review, native target/controller admission, canonical commit/readback,
+resumption UX and four-locale provenance still need their separate coordinator
+and presentation integration before H3 is complete. Deterministic independent
+worker instances prove composition against retained fake session storage; they
+do not prove Chrome, Firefox or Safari restart behavior. The existing loaded
+H2 receipts cannot substitute for that evidence.

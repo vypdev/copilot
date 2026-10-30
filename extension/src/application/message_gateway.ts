@@ -12,6 +12,7 @@ import type { NamedSessions } from './named_sessions.ts';
 import { PageConfigurationService } from './page_configuration.ts';
 import type { CenterCommand } from '../domain/shortcuts.ts';
 import type { HelperSamples, HelperSampleSource } from './helper_samples.ts';
+import type { TemporaryPauseReader } from './temporary_pause_reader.ts';
 
 interface PageLease { readonly fence: PageFence; readonly cancel: CancellationOwner; readonly documentId: string | undefined;
     configuration: { readonly credentialEpoch: number; readonly settingsRevision: number } | null; configurationAttempt: object }
@@ -30,7 +31,7 @@ export class MessageGateway {
     private connectionOperation = 0;
     constructor(private readonly id: string, private readonly origin: string, private readonly settings: SettingsRepository,
         private readonly sessions: ProtectedSessionService, private readonly ports: GatewayPorts, private readonly center?: CenterGateway,
-        private readonly connections?: NamedSessions, private readonly helpers?: HelperSamples) {}
+        private readonly connections?: NamedSessions, private readonly helpers?: HelperSamples, private readonly pauses?: TemporaryPauseReader) {}
     releaseHelperTab(id: number): void { this.helpers?.releaseTab(id); }
     releaseCenterTab(id: number): void { this.center?.releaseTab(id); }
     shutdown(): void { if (this.stopped) return; this.stopped = true; this.invalidate(); this.center?.shutdown(); this.helpers?.stop(); }
@@ -140,9 +141,10 @@ export class MessageGateway {
             if (current.incognito !== false || current.url !== message.route) return { state: 'rejected' };
             if (lease.cancel.aborted || this.pages.get(id) !== lease) return { state: 'stale' };
             const online = this.ports.online();
-            const currentPage = () => !lease.cancel.aborted && this.pages.get(id) === lease && (!online || this.ports.online());
-            const configuration = await new PageConfigurationService(this.settings, this.sessions)
-                .resolve(message, lease.cancel, currentPage, current.active === true, online);
+            const currentPage = () => (!online || this.ports.online()) && !lease.cancel.aborted
+                && this.pages.get(id) === lease && lease.configurationAttempt === configurationAttempt;
+            const configuration = await new PageConfigurationService(this.settings, this.sessions, this.pauses)
+                .resolve(message, lease.cancel, currentPage, current.active === true, online, id);
             if (!currentPage()) return { state: 'stale' };
             if (!configuration) return { state: message.method === 'page.snapshot' ? 'paused' : 'unavailable' };
             const epoch = this.sessions.status().epoch;
@@ -150,8 +152,8 @@ export class MessageGateway {
                 : !configuration.connected ? { state: 'paused' }
                     : await this.sessions.snapshot(message, current.active === true, this.ports.online(), lease.cancel);
             const final = await this.ports.currentTab(id);
-            if (epoch !== this.sessions.status().epoch || lease.cancel.aborted || this.pages.get(id) !== lease || final.url !== message.route || final.incognito !== false || final.active !== true) return { state: 'stale' };
-            if (lease.configurationAttempt === configurationAttempt) lease.configuration = { credentialEpoch: configuration.epoch, settingsRevision: configuration.settings.revision };
+            if (epoch !== this.sessions.status().epoch || !currentPage() || final.url !== message.route || final.incognito !== false || final.active !== true) return { state: 'stale' };
+            lease.configuration = { credentialEpoch: configuration.epoch, settingsRevision: configuration.settings.revision };
             return result;
         } catch {
             // Provider exceptions/raw payloads/credentials never cross this boundary.
