@@ -79,7 +79,7 @@ function describeRecovery(error: PullRequestIssueLinkOperationError): string {
         error.retainedIssueReference ? 'the temporary issue reference in the description' : undefined,
     ].filter((state): state is string => state !== undefined);
     if (retainedState.length === 0) {
-        return 'Pull-request issue linkage failed, but the original base and description were restored. Re-run the workflow.';
+        return 'Pull-request issue linkage failed, but the original base and owned temporary-reference cleanup were verified. Re-run the workflow.';
     }
     return `Pull-request issue linkage failed and retained ${retainedState.join(' and ')}. Re-run the current PR workflow to recover pending state; inspect ownership if recovery remains blocked.`;
 }

@@ -39833,7 +39833,7 @@ const ENGLISH_RECOVERY_CONTENT = Object.freeze({
     'pull-request-link-restored': Object.freeze({
         impact: 'The pull request could not be linked to its issue.',
         action: 'Rerun the workflow; no temporary pull-request state needs manual recovery.',
-        retainedState: 'The original pull-request base and description were restored.',
+        retainedState: 'The original pull-request base and owned temporary-reference cleanup were verified.',
     }),
     'pull-request-link-base-retained': Object.freeze({
         impact: 'The pull request could not be linked to its issue.',
@@ -39991,7 +39991,7 @@ const SPANISH_RECOVERY_CONTENT = Object.freeze({
     'pull-request-link-restored': Object.freeze({
         impact: 'No se pudo vincular la pull request con su issue.',
         action: 'Vuelve a ejecutar el workflow; ningún estado temporal de la pull request requiere recuperación manual.',
-        retainedState: 'Se restauraron la rama base y la descripción originales de la pull request.',
+        retainedState: 'Se verificaron la rama base original y la limpieza de la referencia temporal propia.',
     }),
     'pull-request-link-base-retained': Object.freeze({
         impact: 'No se pudo vincular la pull request con su issue.',
@@ -74915,7 +74915,7 @@ function describeRecovery(error) {
         error.retainedIssueReference ? 'the temporary issue reference in the description' : undefined,
     ].filter((state) => state !== undefined);
     if (retainedState.length === 0) {
-        return 'Pull-request issue linkage failed, but the original base and description were restored. Re-run the workflow.';
+        return 'Pull-request issue linkage failed, but the original base and owned temporary-reference cleanup were verified. Re-run the workflow.';
     }
     return `Pull-request issue linkage failed and retained ${retainedState.join(' and ')}. Re-run the current PR workflow to recover pending state; inspect ownership if recovery remains blocked.`;
 }
@@ -75085,6 +75085,8 @@ async function runLinkPullRequestIssue(param, taskId, port, delay) {
             throw primaryError;
         throw new PullRequestIssueLinkOperationError(false, false);
     }
+    if (!linkageObserved)
+        throw new application_error_1.ApplicationError('workflow.stale', 'The pending reference disappeared before the intended issue relationship was verified. Original base verified; current body retained. Inspect current PR linkage before starting a new owned operation.');
     if (headAdvanced || (param.expectedHeadSha && param.expectedHeadSha !== current.identity.headSha))
         throw stale();
     return [new result_1.Result({ id: taskId, success: true, executed: true,
@@ -97731,15 +97733,15 @@ function isV2(value) {
         && validBaseRecord(value) && typeof value.operationId === 'string'
         && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.operationId)
         && typeof value.headRepository === 'string' && value.headRepository.length <= 512
-        && /^[A-Za-z0-9][A-Za-z0-9_.-]*\/[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(value.headRepository)
+        && /^[A-Za-z0-9][A-Za-z0-9_.-]*\/(?!\.{1,2}$)[A-Za-z0-9_.-]+$/.test(value.headRepository)
         && typeof value.headRef === 'string' && safeRef(value.headRef)
         && typeof value.headSha === 'string' && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(value.headSha);
 }
 function temporaryReference(issueNumber) { return `\n\nResolves #${issueNumber}\n\n`; }
 function isOpenPullRequestLinkIdentity(value, number) {
     return value !== undefined && value.number === number && value.state === 'open'
-        && /^[A-Za-z0-9][A-Za-z0-9_.-]*\/[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(value.repository)
-        && /^[A-Za-z0-9][A-Za-z0-9_.-]*\/[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(value.headRepository)
+        && /^[A-Za-z0-9][A-Za-z0-9_.-]*\/(?!\.{1,2}$)[A-Za-z0-9_.-]+$/.test(value.repository)
+        && /^[A-Za-z0-9][A-Za-z0-9_.-]*\/(?!\.{1,2}$)[A-Za-z0-9_.-]+$/.test(value.headRepository)
         && safeRef(value.headRef) && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(value.headSha);
 }
 function safeRef(value) {

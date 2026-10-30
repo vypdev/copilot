@@ -26,6 +26,9 @@ describe('durable pending PR link policy', () => {
     const encoded = create({ ...input, originalBaseBranch: 'release/2.0', headSha: 'B'.repeat(64) });
     expect(read(attach('', encoded))).toMatchObject({ kind: 'pending', record: { ...input,
       version: 2, originalBaseBranch: 'release/2.0', headSha: 'B'.repeat(64) } });
+    const dotRepository = create({ ...input, headRepository: 'owner/.github' });
+    expect(read(attach('', dotRepository))).toMatchObject({ kind: 'pending', record: { headRepository: 'owner/.github' } });
+    expect(open({ number: 10, state: 'open', repository: 'owner/.github', headRepository: 'owner/.github', headRef: input.headRef, headSha: input.headSha }, 10)).toBe(true);
   });
   it('blocks invalid percent encoding and incomplete markers', () => {
     expect(read(legacyBody.replace('develop', '%XX')).kind).toBe('blocked');
@@ -72,7 +75,7 @@ describe('durable pending PR link policy', () => {
     for (const operationId of ['', 'same-operation', undefined]) expect(() => create({ ...input, operationId } as never)).toThrow();
   });
   it('requires a bounded native repository identity', () => {
-    for (const headRepository of ['', '../repo', 'owner/a/b', 'x'.repeat(513), undefined]) {
+    for (const headRepository of ['', '../repo', 'owner/..', 'owner/a/b', 'x'.repeat(513), undefined]) {
       expect(() => create({ ...input, headRepository } as never)).toThrow();
     }
   });

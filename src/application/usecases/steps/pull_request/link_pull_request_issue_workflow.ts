@@ -127,6 +127,8 @@ export async function runLinkPullRequestIssue(
         if (primaryError instanceof ApplicationError) throw primaryError;
         throw new PullRequestIssueLinkOperationError(false, false);
     }
+    if (!linkageObserved) throw new ApplicationError('workflow.stale',
+        'The pending reference disappeared before the intended issue relationship was verified. Original base verified; current body retained. Inspect current PR linkage before starting a new owned operation.');
     if (headAdvanced || (param.expectedHeadSha && param.expectedHeadSha !== current.identity!.headSha)) throw stale();
     return [new Result({ id: taskId, success: true, executed: true,
         steps: ['The intended issue relationship and original pull-request base were verified; the owned temporary reference was removed.'] })];

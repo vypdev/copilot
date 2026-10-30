@@ -812,16 +812,16 @@ runtime, finish or explicitly reconcile pending V2 operations with the newer
 runtime; do not discard their recovery state. No public configuration/schema
 migration, consumer override or deployment is part of this change.
 
-Reserve **65 distinct new cases before implementation**, including the five review/acceptance extensions recorded below:
+Reserve **67 distinct new cases before implementation**, including the seven review/acceptance extensions recorded below:
 
 | Area | Cases | Acceptance |
 |---|---:|---|
 | Pure record/preservation policy | 24 | V1/V2 round trips, encoded bases, identity/nonce, malformed/unknown/duplicate/bounded records and exact owned-state removal |
 | Setup/original-parent projection | 9 | absent/poisoned PR config, admitted parent, valid pending authority, conflicts, unchanged ordinary/unlinked/issue routes |
-| Link/recovery/compensation | 17 | interrupted writes, verified/unverified restore, new head, foreign owner/ref, lookup failure, changed body/lease and one real worker-kill recovery |
+| Link/recovery/compensation | 19 | interrupted writes, verified/unverified restore, new head, foreign owner/ref, lookup failure, changed body/lease and one real worker-kill recovery |
 | Description/configuration writers | 9 | replace/append/preserve/disabled or explicit commands, fresh metadata, model-time head drift and retained state on failure |
 | Routing/bindings/completion | 6 | newer synchronize first, original-event retry, review-only preparation, stale persistence fence and native identity binding |
-| **Total** | **65** | no double counting with existing compensation or #610 cases |
+| **Total** | **67** | no double counting with existing compensation or #610 cases |
 
 The owned process-kill case has a **15-second** budget reserved here; it uses
 only a disposable fake-provider state file and a child Node process, never a
@@ -847,8 +847,10 @@ GraphQL error policy. A dedicated regression first reproduces the incorrect
 retryable outage and then verifies terminal, sanitized credential guidance.
 
 Local correction evidence for #785: the two regressions failed on the original
-implementation (2 failed, 63 passed). The reserved 65 new test cases and existing
-boundary suites now pass together: 575 tests across 19 suites. The five review
+implementation (2 failed, 63 passed). The reserved 67 new test cases and existing
+boundary suites now pass together: 577 tests across 19 suites. The concurrent
+missing-marker negative case first failed while its verified positive control
+passed. The five review
 extensions first failed on the initial correction (5 failed, 100 passed). The child-process
 case confirms that SIGKILL leaves native default-base/pending state, then a newer
 synchronize restores the original base, removes only owned bytes, persists the
@@ -876,3 +878,11 @@ coverage, timeouts or any existing assertion.
 A verified pending repair on an opened invocation replaces its later ordinary
 linkage step; it must not start a second observation window. Relation reads
 remain bounded to two lookups per route (two pages of 100 references each).
+
+Second review extension, reserved before its code change: two complementary
+concurrent-cleanup cases verify that a missing marker plus restored base cannot
+report linkage success when the relationship remains unobserved, and that an
+independently completed cleanup with a verified relationship remains successful.
+An absent record is not proof of completed linkage. Lost ownership retains the
+current body and reports actionable stale state rather than recreating authority
+or overwriting concurrent text.

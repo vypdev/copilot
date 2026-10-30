@@ -106,3 +106,8 @@ operation with at most one observation wait; an already-observed link does not
 wait again. If indexing remains unconfirmed, the original base is restored and
 the pending reference is retained for retry. An obsolete event can restore the
 base but cannot restart the temporary retarget or erase an unconfirmed link.
+
+If another writer has already removed the pending record, an original base alone
+does not prove linkage completed. An unverified relationship fails with stale
+state, keeps the current body and requires inspection before a new owned
+operation; Copilot does not recreate lost authority or report successful linkage.

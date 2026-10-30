@@ -137,7 +137,7 @@ function isV2(value: unknown): value is PendingPullRequestLinkV2 {
     && validBaseRecord(value) && typeof value.operationId === 'string'
     && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.operationId)
     && typeof value.headRepository === 'string' && value.headRepository.length <= 512
-    && /^[A-Za-z0-9][A-Za-z0-9_.-]*\/[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(value.headRepository)
+    && /^[A-Za-z0-9][A-Za-z0-9_.-]*\/(?!\.{1,2}$)[A-Za-z0-9_.-]+$/.test(value.headRepository)
     && typeof value.headRef === 'string' && safeRef(value.headRef)
     && typeof value.headSha === 'string' && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(value.headSha);
 }
@@ -154,8 +154,8 @@ export interface PullRequestLinkIdentity {
 }
 export function isOpenPullRequestLinkIdentity(value: PullRequestLinkIdentity | undefined, number: number): value is PullRequestLinkIdentity {
   return value !== undefined && value.number === number && value.state === 'open'
-    && /^[A-Za-z0-9][A-Za-z0-9_.-]*\/[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(value.repository)
-    && /^[A-Za-z0-9][A-Za-z0-9_.-]*\/[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(value.headRepository)
+    && /^[A-Za-z0-9][A-Za-z0-9_.-]*\/(?!\.{1,2}$)[A-Za-z0-9_.-]+$/.test(value.repository)
+    && /^[A-Za-z0-9][A-Za-z0-9_.-]*\/(?!\.{1,2}$)[A-Za-z0-9_.-]+$/.test(value.headRepository)
     && safeRef(value.headRef) && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i.test(value.headSha);
 }
 

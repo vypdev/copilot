@@ -131,8 +131,8 @@ const RECOVERY_CASES: readonly Readonly<{
     },
     {
         recovery: { id: 'pull-request-link-restored', variables: {} },
-        english: 'The original pull-request base and description were restored.',
-        spanish: 'Se restauraron la rama base y la descripción originales de la pull request.',
+        english: 'The original pull-request base and owned temporary-reference cleanup were verified.',
+        spanish: 'Se verificaron la rama base original y la limpieza de la referencia temporal propia.',
     },
     {
         recovery: { id: 'pull-request-link-base-retained', variables: {} },

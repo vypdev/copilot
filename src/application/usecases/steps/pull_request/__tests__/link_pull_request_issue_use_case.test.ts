@@ -193,7 +193,7 @@ describe('LinkPullRequestIssueUseCase', () => {
     const results = await useCase.invoke(context());
 
     expect(results.at(-1)?.steps).toEqual([
-      'Pull-request issue linkage failed, but the original base and description were restored. Re-run the workflow.',
+      'Pull-request issue linkage failed, but the original base and owned temporary-reference cleanup were verified. Re-run the workflow.',
     ]);
     expect(mockUpdateDescription).toHaveBeenCalledTimes(1);
     expect(mockUpdateBaseBranch).not.toHaveBeenCalled();
@@ -511,6 +511,19 @@ describe('LinkPullRequestIssueUseCase', () => {
     expect(mockWait).not.toHaveBeenCalled();
     expect(mockUpdateBaseBranch).toHaveBeenCalledTimes(1);
     expect(result[0].errors[0].code).toBe('workflow.stale');
+  });
+
+  it.each([false, true])('checks the intended relationship after concurrent missing-marker cleanup (observed=%s)', async observed => {
+    setDetails({ body: attachPendingPullRequestLink('Human', pendingV2()), baseBranch: 'main' });
+    mockIsLinked.mockReset().mockResolvedValueOnce(false).mockResolvedValue(observed);
+    mockWait.mockImplementation(async () => { snapshot.body = 'Concurrent human body'; snapshot.baseBranch = 'develop'; });
+    const result = await useCase.invoke(context({ recoveryOnly: true }));
+    expect(result[0].success).toBe(observed);
+    if (!observed) expect(result[0].errors[0].code).toBe('workflow.stale');
+    expect(snapshot).toMatchObject({ body: 'Concurrent human body', baseBranch: 'develop' });
+    expect(mockUpdateDescription).not.toHaveBeenCalled();
+    expect(mockUpdateBaseBranch).not.toHaveBeenCalled();
+    expect(mockIsLinked).toHaveBeenCalledTimes(2);
   });
 
 });

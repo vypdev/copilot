@@ -337,7 +337,7 @@ const ENGLISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
   'pull-request-link-restored': Object.freeze({
     impact: 'The pull request could not be linked to its issue.',
     action: 'Rerun the workflow; no temporary pull-request state needs manual recovery.',
-    retainedState: 'The original pull-request base and description were restored.',
+    retainedState: 'The original pull-request base and owned temporary-reference cleanup were verified.',
   }),
   'pull-request-link-base-retained': Object.freeze({
     impact: 'The pull request could not be linked to its issue.',
@@ -497,7 +497,7 @@ const SPANISH_RECOVERY_CONTENT: RecoveryContent = Object.freeze({
   'pull-request-link-restored': Object.freeze({
     impact: 'No se pudo vincular la pull request con su issue.',
     action: 'Vuelve a ejecutar el workflow; ningún estado temporal de la pull request requiere recuperación manual.',
-    retainedState: 'Se restauraron la rama base y la descripción originales de la pull request.',
+    retainedState: 'Se verificaron la rama base original y la limpieza de la referencia temporal propia.',
   }),
   'pull-request-link-base-retained': Object.freeze({
     impact: 'No se pudo vincular la pull request con su issue.',
